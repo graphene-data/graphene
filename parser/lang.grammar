@@ -1,0 +1,237 @@
+@top Program {
+  statement*
+}
+
+statement {
+  (SelectStatement | CreateTableStatement) ";"?
+}
+
+// SELECT statement
+SelectStatement {
+  kw<"select"> 
+  selectList
+  (kw<"from"> tableExpression)?
+  whereClause?
+  groupByClause?
+  havingClause?
+  orderByClause?
+  limitClause?
+}
+
+selectList {
+  "*" |
+  selectItem ("," selectItem)*
+}
+
+selectItem {
+  expression (kw<"as">? Identifier)?
+}
+
+tableExpression {
+  tablePrimary (joinClause)*
+}
+
+tablePrimary {
+  tableName (kw<"as">? Identifier)? |
+  "(" SelectStatement ")" (kw<"as">? Identifier)?
+}
+
+tableName {
+  (Identifier ".")? Identifier
+}
+
+joinClause {
+  (kw<"inner"> | kw<"left"> | kw<"right"> | kw<"full"> | kw<"cross">)? kw<"join"> tablePrimary (kw<"on"> expression)?
+}
+
+whereClause {
+  kw<"where"> expression
+}
+
+groupByClause {
+  kw<"group"> kw<"by"> expression ("," expression)*
+}
+
+havingClause {
+  kw<"having"> expression
+}
+
+orderByClause {
+  kw<"order"> kw<"by"> orderItem ("," orderItem)*
+}
+
+orderItem {
+  expression (kw<"asc"> | kw<"desc">)?
+}
+
+limitClause {
+  kw<"limit"> Number (kw<"offset"> Number)?
+}
+
+// CREATE TABLE statement
+CreateTableStatement {
+  kw<"create"> kw<"table"> (kw<"if"> kw<"not"> kw<"exists">)? tableName
+  "(" columnDefinition ("," columnDefinition)* ")"
+}
+
+columnDefinition {
+  Identifier dataType
+}
+
+dataType {
+  kw<"integer"> | kw<"int"> |
+  kw<"bigint"> |
+  kw<"smallint"> |
+  kw<"tinyint"> |
+  kw<"real"> |
+  kw<"double"> kw<"precision">? |
+  kw<"float"> |
+  kw<"decimal"> ("(" Number ("," Number)? ")")? |
+  kw<"numeric"> ("(" Number ("," Number)? ")")? |
+  kw<"boolean"> | kw<"bool"> |
+  kw<"date"> |
+  kw<"time"> |
+  kw<"timestamp"> |
+  kw<"varchar"> ("(" Number ")")? |
+  kw<"char"> ("(" Number ")")? |
+  kw<"text"> |
+  kw<"blob">
+}
+
+// Expressions
+expression {
+  orExpression
+}
+
+orExpression {
+  andExpression (kw<"or"> andExpression)*
+}
+
+andExpression {
+  notExpression (kw<"and"> notExpression)*
+}
+
+notExpression {
+  kw<"not">? comparisonExpression
+}
+
+comparisonExpression {
+  addExpression (comparisonOp addExpression)?
+}
+
+comparisonOp {
+  "=" | "!=" | "<>" | "<" | ">" | "<=" | ">=" |
+  kw<"like"> | kw<"not"> kw<"like"> |
+  kw<"in"> | kw<"not"> kw<"in"> |
+  kw<"is"> kw<"null"> | kw<"is"> kw<"not"> kw<"null">
+}
+
+addExpression {
+  mulExpression (("+"|"-") mulExpression)*
+}
+
+mulExpression {
+  unaryExpression (("*"|"/"|"%") unaryExpression)*
+}
+
+unaryExpression {
+  ("-"|"+")? primaryExpression
+}
+
+primaryExpression {
+  literal |
+  columnRef |
+  functionCall |
+  "(" expression ")" |
+  "(" SelectStatement ")"
+}
+
+columnRef {
+  (Identifier ".")? Identifier
+}
+
+functionCall {
+  Identifier "(" (expression ("," expression)*)? ")"
+}
+
+literal {
+  Number |
+  String |
+  kw<"true"> |
+  kw<"false"> |
+  kw<"null">
+}
+
+kw<term> { @specialize[@name={term}]<Identifier, term> }
+
+@skip { whitespace | Comment }
+
+@tokens {
+  whitespace { @whitespace+ }
+  Comment { "--" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
+  
+  Identifier { @asciiLetter (@asciiLetter | @digit | "_")* }
+  Number { @digit+ ("." @digit+)? }
+  String { "'" ![']* "'" | '"' !["]* '"' }
+  
+  ";" "," "(" ")" "." "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">="
+  
+  @precedence { Comment, "-" }
+  @precedence { Comment, "*" }
+  @precedence { Comment, "/" }
+}
+
+@external specialize {Identifier} specializeIdentifier from "./tokens.js" {
+  select,
+  not,
+  true,
+  false,
+  null,
+  like,
+  in,
+  is,
+  and,
+  or,
+  as,
+  from,
+  inner,
+  left,
+  right,
+  full,
+  cross,
+  join,
+  on,
+  where,
+  group,
+  by,
+  having,
+  order,
+  asc,
+  desc,
+  limit,
+  offset,
+  create,
+  table,
+  if,
+  exists,
+  integer,
+  int,
+  bigint,
+  smallint,
+  tinyint,
+  real,
+  double,
+  precision,
+  float,
+  decimal,
+  numeric,
+  boolean,
+  bool,
+  date,
+  time,
+  timestamp,
+  varchar,
+  char,
+  text,
+  blob
+}
