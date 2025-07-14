@@ -1,62 +1,49 @@
 @top Program {
-  statement*
+  (QueryStatement | TableStatement)*
 }
 
-statement {
-  (SelectStatement | CreateTableStatement) ";"?
+QueryStatement {
+  (SelectClause | FromClause | GroupByClause | WhereClause | OrderByClause | LimitClause)+ ";"
 }
 
-// SELECT statement
-SelectStatement {
-  kw<"select"> 
-  selectList
-  (kw<"from"> tableExpression)?
-  whereClause?
-  groupByClause?
-  havingClause?
-  orderByClause?
-  limitClause?
+SelectClause {
+  kw<"select"> SelectItem ("," SelectItem)*
 }
 
-selectList {
-  "*" |
-  selectItem ("," selectItem)*
+SelectItem {
+  ("*" | (expression (kw<"as">? Identifier)?))
 }
 
-selectItem {
-  expression (kw<"as">? Identifier)?
-}
-
-tableExpression {
-  tablePrimary (joinClause)*
+FromClause {
+  kw<"from"> tablePrimary (JoinClause)*
 }
 
 tablePrimary {
-  tableName (kw<"as">? Identifier)? |
-  "(" SelectStatement ")" (kw<"as">? Identifier)?
+  TableName (kw<"as">? Identifier)? |
+  "(" QueryStatement ")" (kw<"as">? Identifier)?
 }
 
-tableName {
+TableName {
   (Identifier ".")? Identifier
 }
 
-joinClause {
+JoinClause {
   (kw<"inner"> | kw<"left"> | kw<"right"> | kw<"full"> | kw<"cross">)? kw<"join"> tablePrimary (kw<"on"> expression)?
 }
 
-whereClause {
+Expression {
+  expression
+}
+
+WhereClause {
   kw<"where"> expression
 }
 
-groupByClause {
-  kw<"group"> kw<"by"> expression ("," expression)*
+GroupByClause {
+  kw<"group"> kw<"by"> Expression ("," Expression)*
 }
 
-havingClause {
-  kw<"having"> expression
-}
-
-orderByClause {
+OrderByClause {
   kw<"order"> kw<"by"> orderItem ("," orderItem)*
 }
 
@@ -64,21 +51,31 @@ orderItem {
   expression (kw<"asc"> | kw<"desc">)?
 }
 
-limitClause {
+LimitClause {
   kw<"limit"> Number (kw<"offset"> Number)?
 }
 
-// CREATE TABLE statement
-CreateTableStatement {
-  kw<"create"> kw<"table"> (kw<"if"> kw<"not"> kw<"exists">)? tableName
-  "(" columnDefinition ("," columnDefinition)* ")"
+TableStatement {
+  kw<"table"> Identifier "(" tableItem ("," tableItem)* ")" ";"?
 }
 
-columnDefinition {
-  Identifier dataType
+tableItem {
+  (ColumnDef | JoinDef | ComputedDef)
 }
 
-dataType {
+ColumnDef {
+  Identifier DataType
+}
+
+JoinDef {
+  kw<"join_one"> Identifier kw<"on"> Expression
+}
+
+ComputedDef {
+  kw<"measure"> Identifier "(" Expression ")"
+}
+
+DataType {
   kw<"integer"> | kw<"int"> |
   kw<"bigint"> |
   kw<"smallint"> |
@@ -140,17 +137,17 @@ unaryExpression {
 
 primaryExpression {
   literal |
-  columnRef |
-  functionCall |
+  ColumnRef |
+  FunctionCall |
   "(" expression ")" |
-  "(" SelectStatement ")"
+  "(" QueryStatement ")"
 }
 
-columnRef {
+ColumnRef {
   (Identifier ".")? Identifier
 }
 
-functionCall {
+FunctionCall {
   Identifier "(" (expression ("," expression)*)? ")"
 }
 
@@ -169,13 +166,12 @@ kw<term> { @specialize[@name={term}]<Identifier, term> }
 @tokens {
   whitespace { @whitespace+ }
   Comment { "--" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
-  
+
   Identifier { @asciiLetter (@asciiLetter | @digit | "_")* }
   Number { @digit+ ("." @digit+)? }
   String { "'" ![']* "'" | '"' !["]* '"' }
-  
-  ";" "," "(" ")" "." "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">="
-  
+  "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">="
+
   @precedence { Comment, "-" }
   @precedence { Comment, "*" }
   @precedence { Comment, "/" }
