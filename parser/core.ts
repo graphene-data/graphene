@@ -23,151 +23,122 @@ analyze(`
   from flights select carrier, avg(percent_filled), avg(aircraft.seats);
 `)
 
-interface Field {
-  type: "column" | "join" | "computed"
+interface ColumnDef {
   name: string
-  dataType?: string
-  tableName?: string
-  expression?: string
-  expandedExpression?: string
-  joins?: Field[]
+  dataType: string
+}
+
+interface JoinDef {
+  name: string
+  tableName: string
+  fromTable: TableDef
+  expression: SyntaxNode | null
+}
+
+interface ComputedDef {
+  name: string
+  expression: SyntaxNode
 }
 
 interface TableDef {
   name: string
-  fields: Field[]
+  columns: ColumnDef[]
+  joins: JoinDef[]
+  computed: ComputedDef[]
 }
 
 export function analyze (source:string) {
   currentSource = source
-  let r = {source, queries: [], tables: []}
   let tree = parser.parse(source)
 
-  let tableNodes = tree.topNode.getChildren('TableStatement')
-  analyzeTables(tableNodes)
-  console.dir(TABLE_MAP, {depth: null})
-  console.log('---------------------------------------------------')
-
+  analyzeTables(tree.topNode.getChildren('TableStatement'))
   tree.topNode.getChildren('QueryStatement').forEach(analyzeQuery)
 }
 
 function analyzeTables (tableNodes: SyntaxNode[]) {
-  // first find all the tables defined, and their regular columns
   for (let tn of tableNodes) {
     let name = txt(tn.firstChild?.nextSibling)
-    let columns = tn.getChildren("ColumnDef").map(cn => {
-      return {
-        type: 'column',
-        name: txt(cn.getChild("Identifier")),
-        dataType: txt(cn.getChild("DataType")),
-      }
-    })
-    TABLE_MAP[name] = { name, fields: columns }
+    let table:TableDef = TABLE_MAP[name] = {name, columns: [], joins: [], computed: []}
+
+    table.columns = tn.getChildren("ColumnDef").map(cn => ({
+      name: txt(cn.getChild("Identifier")),
+      dataType: txt(cn.getChild("DataType")),
+    }))
+
+    table.joins = tn.getChildren("JoinDef").map(jn => ({
+      name: txt(jn.getChild("Identifier")),
+      fromTable: table,
+      tableName: txt(jn.getChild("Identifier")),
+      expression: jn.getChild("Expression"),
+    }))
+
+    table.computed = tn.getChildren("ComputedDef").map(cn => ({
+      name: txt(cn.getChild("Identifier")),
+      expression: cn.getChild("Expression")!,
+    }))
   }
 
-
-  for (let tn of tableNodes) {
-    let name = txt(tn.firstChild?.nextSibling)
-    let tableDef = TABLE_MAP[name]
-
-    // next, look for joins between tables
-    for (let jn of tn.getChildren("JoinDef")) {
-      let destName = txt(jn.getChild("Identifier"))
-      tableDef.fields.push({
-        type: 'join',
-        name: destName,
-        tableName: destName,
-        expression: txt(jn.getChild("Expression")),
-      })
-    }
-
-    for (let mn of tn.getChildren("ComputedDef")) {
-      let mname = txt(mn.getChild("Identifier"))
-      let expression = mn.getChild("Expression")!
-      let joins = [] as Field[]
-      let expanded = expandComputedRefs(expression, tableDef, joins)
-      tableDef.fields.push({
-        type: 'computed',
-        name: mname,
-        expression: txt(expression),
-        expandedExpression: expanded,
-        joins,
-      })
-    }
-  }
+  // we could now walk the tree of measures to optimistically link them together and compute expanded sql or data types
 }
 
 function analyzeQuery (queryNode: SyntaxNode) {
   let from = queryNode.getChild("FromClause")
   let tableName = txt(from?.getChild("TableName"))
-  let table = TABLE_MAP[tableName]
-  let joins = [] as Field[]
+  let rootTable = TABLE_MAP[tableName]
+  let joins = new Set<JoinDef>()
+  let isAgg = false
 
-  // selects and groups get the same join/measure expansion
-  // ensure groupBys are in the select
-  // ensure if there are agg functions,
-  let select = expandComputedRefs(queryNode.getChild('SelectClause')!, table, joins)
+  let selectClause = queryNode.getChild('SelectClause')
+  let select = selectClause ? analyzeRefs(selectClause, rootTable) : 'select *'
 
-  let joinMap = new Set()
-  joins = joins.filter(j => {
-    let inc = !joinMap.has(j.name)
-    joinMap.add(j.name)
-    return inc
-  })
+  let whereClause = queryNode.getChild('WhereClause')
+  let where = whereClause && analyzeRefs(whereClause, rootTable)
+
+  let groupByNode = queryNode.getChild('GroupByClause')
+  let groupBy = groupByNode && analyzeRefs(groupByNode, rootTable)
+  // TODO: ensure groupBys are in the select
 
   let sql = [
     select,
-    `FROM ${table.name}`,
-    ...joins.map(j => `join ${j.name} ON (${j.expression})`)
-  ].join(' ')
+    `FROM ${rootTable.name}`,
+    ...Array.from(joins.values()).map(j => `join ${j.name} ON (${txt(j.expression)})`),
+    where,
+    isAgg ? 'group by all' : null,
+    ';'
+  ].filter(x => !!x).join('\n')
   console.log('SQL:', sql)
 
-//   console.log('Malloy:', `run ${tableName} -> {
-//     select: ${txt(queryNode.getChild('SelectClause'))}
-// }`)
-}
+  function analyzeRefs (expression:SyntaxNode, table: TableDef): string {
+    let expanded = txt(expression)
+    let offset = expression.from
 
-function toSql (node:SyntaxNode, source:string):string {
-  let content = source.substring(node.from, node.to)
+    getDescendants(expression, 'FunctionCall').forEach(fn => {
+      let fnName = txt(fn.getChild('Identifier'))
+      isAgg = isAgg || ['min', 'max', 'avg', 'count'].includes(fnName)
+    })
 
-  switch (node.name) {
-    case "QueryStatement":
-      let parts = [
-        node.getChild("SelectClause"),
-        node.getChild("FromClause"),
-        node.getChild("WhereClause"),
-      ].filter(n => !! n)
-      return parts.map(n => toSql(n, source)).join('\n')
-    case "SelectClause":
-      return "SELECT " + node.getChildren("SelectItem").map(c => toSql(c, source)).join(', ')
-    case "FromClause":
-    case "WhereClause":
-      return content
-    default:
-      return content
+    // going back to front is important, otherwise the first replace would break the others
+    getDescendants(expression, 'ColumnRef').reverse().map(cn => {
+      let parts = cn.getChildren('Identifier').map(n => txt(n))
+
+      // step through each dotted path finding joins
+      let currTable = table
+      for (let i = 0; i < parts.length - 1; i++) {
+        let join = currTable.joins.find(j => j.name == parts[i])!
+        currTable = TABLE_MAP[join.tableName]
+        joins.add(join)
+      }
+
+      let colName = parts[parts.length - 1]
+      let comp = currTable.computed.find(c => c.name == colName)
+      if (comp) {
+        let refExpanded = analyzeRefs(comp.expression, currTable)
+        expanded = expanded.slice(0, cn.from - offset) + refExpanded + expanded.slice(cn.to - offset)
+      }
+    })
+
+    return expanded
   }
-}
-
-function expandComputedRefs (expression:SyntaxNode, rootTable: TableDef, joins: Field[]): string {
-  let expanded = txt(expression)
-  let offset = expression.from
-
-  // going back to front is important, otherwise the first replace would break the others
-  getDescendants(expression, 'ColumnRef').reverse().map(cn => {
-    let parts = txt(cn).split('.')
-    const [paths, col] = [parts.slice(0,-1), ...parts.slice(-1)]
-
-    // follow paths to add joins
-    paths.forEach(p => joins.push(rootTable.fields.find(f => f.name == p)!))
-
-    let field = rootTable.fields.find(f => f.name == col)
-    if (field?.type == 'computed') {
-      field.joins?.forEach(j => joins.push(j))
-      expanded = expanded.slice(0, cn.from - offset) + field.expandedExpression + expanded.slice(cn.to - offset)
-    }
-  })
-
-  return expanded
 }
 
 function txt(node:SyntaxNode | null | undefined) {
@@ -175,24 +146,10 @@ function txt(node:SyntaxNode | null | undefined) {
   return currentSource.substring(node.from, node.to)
 }
 
-
-
-
 function getDescendants (node:SyntaxNode, type:string) {
   let res = [] as SyntaxNode[]
-  let curr = node.cursor()
-  do {
-    if (curr.name == type) res.push(curr.node)
-  } while (curr.next())
+  node.cursor().iterate(n => {
+    if (n.name == type) res.push(n.node)
+  })
   return res
-}
-
-function getChildren (node:SyntaxNode) {
-  let children = [] as SyntaxNode[]
-  let curr = node.firstChild
-  while (curr) {
-    children.push(curr)
-    curr = curr.nextSibling
-  }
-  return children
 }
