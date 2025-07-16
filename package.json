@@ -1,0 +1,8 @@
+{
+  "name": "datar",
+  "private": true,
+  "workspaces": [
+    "lang",
+    "cli"
+  ]
+}

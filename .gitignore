@@ -1,2 +1,4 @@
-parser/parser.*
+lang/parser.*
 node_modules
+
+.DS_Store
