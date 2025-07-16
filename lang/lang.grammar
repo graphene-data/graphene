@@ -1,0 +1,272 @@
+@top Program {
+  (QueryStatement | TableStatement)*
+}
+
+QueryStatement {
+  (SelectClause | FromClause | GroupByClause | WhereClause | OrderByClause | LimitClause)+ ";"
+}
+
+SelectClause {
+  Kw<"select"> SelectItem ("," SelectItem)*
+}
+
+SelectItem {
+  ("*" | (expression (Kw<"as">? Identifier)?))
+}
+
+FromClause {
+  Kw<"from"> tablePrimary (JoinClause)*
+}
+
+tablePrimary {
+  TableName (Kw<"as">? Identifier)? |
+  "(" QueryStatement ")" (Kw<"as">? Identifier)?
+}
+
+TableName {
+  (Identifier ".")? Identifier
+}
+
+JoinClause {
+  (Kw<"inner"> | Kw<"left"> | Kw<"right"> | Kw<"full"> | Kw<"cross">)? Kw<"join"> tablePrimary (Kw<"on"> expression)?
+}
+
+WhereClause {
+  Kw<"where"> expression
+}
+
+GroupByClause {
+  Kw<"group"> Kw<"by"> expression ("," expression)*
+}
+
+OrderByClause {
+  Kw<"order"> Kw<"by"> OrderItem ("," OrderItem)*
+}
+
+OrderItem {
+  expression (Kw<"asc"> | Kw<"desc">)?
+}
+
+LimitClause {
+  Kw<"limit"> Number (Kw<"offset"> Number)?
+}
+
+TableStatement {
+  Kw<"table"> Identifier "(" tableItem ("," tableItem)* ")" ";"?
+}
+
+tableItem {
+  (ColumnDef | JoinDef | ComputedDef)
+}
+
+ColumnDef {
+  Identifier DataType
+}
+
+JoinDef {
+  Kw<"join_one"> Identifier Kw<"on"> expression
+}
+
+ComputedDef {
+  Kw<"measure"> Identifier "(" expression ")"
+}
+
+DataType {
+  Kw<"integer"> | Kw<"int"> |
+  Kw<"bigint"> |
+  Kw<"smallint"> |
+  Kw<"tinyint"> |
+  Kw<"real"> |
+  Kw<"double"> Kw<"precision">? |
+  Kw<"float"> |
+  Kw<"decimal"> ("(" Number ("," Number)? ")")? |
+  Kw<"numeric"> ("(" Number ("," Number)? ")")? |
+  Kw<"boolean"> | Kw<"bool"> |
+  Kw<"date"> |
+  Kw<"time"> |
+  Kw<"timestamp"> |
+  Kw<"varchar"> ("(" Number ")")? |
+  Kw<"char"> ("(" Number ")")? |
+  Kw<"text"> |
+  Kw<"blob">
+}
+
+// Expressions
+expression[@isGroup=Expression] {
+  BinaryExpression |
+  UnaryExpression |
+  CaseExpression |
+  ExistsExpression |
+  InExpression |
+  primaryExpression
+}
+
+BinaryExpression {
+  expression !or Kw<"or"> expression |
+  expression !and Kw<"and"> expression |
+  expression !compare ComparisonOp expression |
+  expression !add AddOp expression |
+  expression !multiply MulOp expression
+}
+
+UnaryExpression {
+  UnaryOperator !unary expression
+}
+
+ComparisonOp {
+  "=" | "!=" | "<>" | "<" | ">" | "<=" | ">=" |
+  Kw<"like"> | Kw<"not"> Kw<"like"> |
+  Kw<"is"> Kw<"null"> | Kw<"is"> Kw<"not"> Kw<"null">
+}
+
+AddOp { "+" | "-" }
+MulOp { "*" | "/" | "%" }
+
+UnaryOperator {
+  Kw<"not"> | "-" | "+"
+}
+
+CaseExpression {
+  Kw<"case"> (expression)? (WhenClause)+ (ElseClause)? Kw<"end">
+}
+
+WhenClause {
+  Kw<"when"> expression Kw<"then"> expression
+}
+
+ElseClause {
+  Kw<"else"> expression
+}
+
+ExistsExpression {
+  Kw<"exists"> "(" QueryStatement ")"
+}
+
+InExpression {
+  expression !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
+  expression !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
+}
+
+InValueList {
+  expression ("," expression)*
+}
+
+@precedence {
+  unary @left,
+  multiply @left,
+  add @left,
+  compare @left,
+  and @left,
+  or @left,
+  binary @cut
+}
+
+primaryExpression {
+  Literal |
+  ColumnRef |
+  FunctionCall |
+  Parenthetical |
+  SubqueryExpression
+}
+
+Parenthetical {
+  "(" expression ")"
+}
+
+SubqueryExpression {
+  "(" QueryStatement ")"
+}
+
+ColumnRef {
+  (Identifier ".")? Identifier
+}
+
+FunctionCall {
+  Identifier "(" (expression ("," expression)*)? ")"
+}
+
+Literal {
+  Number |
+  String |
+  Kw<"true"> |
+  Kw<"false"> |
+  Kw<"null">
+}
+
+Kw<term> { @specialize[@name={term}]<Identifier, term> }
+
+@skip { whitespace | Comment }
+
+@tokens {
+  whitespace { @whitespace+ }
+  Comment { "--" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
+
+  Identifier { @asciiLetter (@asciiLetter | @digit | "_")* }
+  Number { @digit+ ("." @digit+)? }
+  String { "'" ![']* "'" | '"' !["]* '"' }
+  "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">="
+
+  @precedence { Comment, "-" }
+  @precedence { Comment, "*" }
+  @precedence { Comment, "/" }
+}
+
+@external specialize {Identifier} specializeIdentifier from "./tokens.js" {
+  select,
+  not,
+  true,
+  false,
+  null,
+  like,
+  in,
+  is,
+  and,
+  or,
+  as,
+  from,
+  inner,
+  left,
+  right,
+  full,
+  cross,
+  join,
+  on,
+  where,
+  group,
+  by,
+  having,
+  order,
+  asc,
+  desc,
+  limit,
+  offset,
+  create,
+  table,
+  if,
+  exists,
+  case,
+  when,
+  then,
+  else,
+  end,
+  integer,
+  int,
+  bigint,
+  smallint,
+  tinyint,
+  real,
+  double,
+  precision,
+  float,
+  decimal,
+  numeric,
+  boolean,
+  bool,
+  date,
+  time,
+  timestamp,
+  varchar,
+  char,
+  text,
+  blob
+}
