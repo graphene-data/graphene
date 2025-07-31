@@ -1,27 +1,8 @@
-import type {NodeType, SyntaxNode} from "@lezer/common"
+import type {NodeType, SyntaxNode, Tree} from "@lezer/common"
 import { parser } from './parser.js'
 
 const TABLE_MAP: Record<string, TableDef> = {}
 let currentSource = ""
-
-analyze(`
-  table flights (
-    flight_num varchar,
-    tail_num varchar,
-    carrier varchar,
-    purchased_seats int,
-
-    join_one aircraft on aircraft.tail_num = tail_num,
-    measure percent_filled (purchased_seats / aircraft.seats * 100.0),
-  );
-
-  table aircraft (
-    tail_num varchar,
-    seats int,
-  );
-
-  from flights select carrier, avg(percent_filled), avg(aircraft.seats);
-`)
 
 interface ColumnDef {
   type: 'column'
@@ -50,12 +31,13 @@ interface TableDef {
   fields: Record<string, FieldDef>
 }
 
-export function analyze (source:string) {
+export function analyze (source:string): string[] {
   currentSource = source
   let tree = parser.parse(source)
 
   analyzeTables(tree.topNode.getChildren('TableStatement'))
-  tree.topNode.getChildren('QueryStatement').forEach(analyzeQuery)
+  let queries = tree.topNode.getChildren('QueryStatement').map(analyzeQuery)
+  return queries
 }
 
 function analyzeTables (tableNodes: SyntaxNode[]) {
@@ -68,13 +50,11 @@ function analyzeTables (tableNodes: SyntaxNode[]) {
         name: txt(cn.getChild("Identifier")),
         dataType: txt(cn.getChild("DataType")),
       })),
-      ...tn.getChildren("JoinDef").map(jn => ({
-        type: 'join',
-        name: txt(jn.getChild("Identifier")),
-        fromTable: table,
-        tableName: txt(jn.getChild("Identifier")),
-        expression: jn.getChild("Expression"),
-      })),
+      ...tn.getChildren("JoinDef").map(jn => {
+        let [tableName, name] = jn.getChildren("Identifier").map(n => txt(n))
+        let expression = jn.getChild("Expression")
+        return { type: 'join', name: name || tableName, tableName, expression }
+      }),
       ...tn.getChildren("ComputedDef").map(cn => ({
         type: 'computed',
         name: txt(cn.getChild("Identifier")),
@@ -86,93 +66,106 @@ function analyzeTables (tableNodes: SyntaxNode[]) {
       table.fields[f.name] = f
     })
   }
-
-  // we could now walk the tree of measures to optimistically link them together and compute expanded sql or data types
 }
 
-function analyzeQuery (queryNode: SyntaxNode) {
+function analyzeQuery (queryNode: SyntaxNode): string {
   let from = queryNode.getChild("FromClause")
   let tableName = txt(from?.getChild("TableName"))
   let rootTable = TABLE_MAP[tableName]
   let joins = new Set<JoinDef>()
   let isAgg = false
   let aliases:Record<string, SyntaxNode> = {}
+  let scope = {name: tableName, tableName} as JoinDef
 
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
   selects.forEach(s => {
     let alias = txt(s.getChild('Identifier'))
     let expr = s.getChild('Expression')!
     if (alias) aliases[alias] = expr
-    analyzeExpression(expr, rootTable)
+    analyzeExpression(expr, scope)
     s.sql = [expr.sql, alias && `as ${alias}`].filter(x => !!x).join(' ')
   })
 
-  // TODO if expressions past this point refer to a Computed
-
   let where = queryNode.getChild('WhereClause')?.getChild('Expression')
-  if (where) analyzeExpression(where, rootTable)
+  if (where) analyzeExpression(where, scope)
 
   let groupBys = queryNode.getChild('GroupByClause')?.getChildren('Expression') || []
   groupBys.forEach(g => {
     // TODO if an expression isn't also in `selects`, add it
-    analyzeExpression(g, rootTable)
+    analyzeExpression(g, scope)
   })
 
   let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
   orderBys.forEach(o => {
-    analyzeExpression(o.getChild('Expression')!, rootTable)
+    analyzeExpression(o.getChild('Expression')!, scope)
+  })
+
+  let joinStrings = Array.from(joins.values()).map(joinDef => {
+    let alias = joinDef.name !== joinDef.tableName ? `AS ${joinDef.name}` : ''
+    return `LEFT JOIN ${joinDef.tableName} ${alias} ON (${txt(joinDef.expression)})`
   })
 
   let sql = [
     `SELECT ${selects.map(s => s.sql).join(', ')}`,
     `FROM ${rootTable.name}`,
-    ...Array.from(joins.values()).map(j => `JOIN ${j.name} ON (${txt(j.expression)})`),
+    ...joinStrings,
     where && `WHERE ${where.sql}`,
     isAgg ? 'group by all' : null,
-    ';'
   ].filter(x => !!x).join('\n')
-  console.log('SQL:', sql)
+  return sql
 
-  function analyzeExpression (expr:SyntaxNode, table: TableDef): SyntaxNode {
+  // Called for each expression in a query, recursively for complex expressions, including computed columns.
+  // This reports errors and warnings for symantic issues, as well as generating the final SQL.
+  function analyzeExpression (expr:SyntaxNode, scope: JoinDef): SyntaxNode {
     switch (expr.name) {
       case 'Literal':
         expr.sql = txt(expr)
         break
       case 'ColumnRef':
         let parts = expr.getChildren("Identifier").map(i => txt(i))
-        let currTable = table // step through each dotted path finding joins
+        let currJoin = scope
         for (let i = 0; i < parts.length - 1; i++) {
-          let field = currTable.fields[parts[i]]
-          if (field.type != 'join') throw new Error("Tried to join through a column")
-          currTable = TABLE_MAP[field.tableName]
-          joins.add(field)
+          currJoin = TABLE_MAP[currJoin.tableName].fields[parts[i]] as JoinDef
+          if (currJoin.type != 'join') throw new Error("Trying to join on a column that isn't a join.")
+          joins.add(currJoin)
         }
 
-        let field = currTable.fields[parts[parts.length - 1]]
+        let colName = parts[parts.length - 1]
+        let field = TABLE_MAP[currJoin.tableName].fields[colName]
         if (field.type == 'computed') {
-          expr.sql = analyzeExpression(field.expression, currTable).sql
+          expr.sql = analyzeExpression(field.expression, currJoin).sql
         } else {
-          expr.sql = txt(expr)
+          expr.sql = `${currJoin.name}.${colName}`
         }
         break
       case 'FunctionCall':
         let name = txt(expr.getChild("Identifier"))
-        let args = expr.getChildren("Expression").map(e => analyzeExpression(e, table))
+        let args = expr.getChildren("Expression").map(e => analyzeExpression(e, scope))
         isAgg = ['avg', 'sum', 'min', 'max', 'count'].includes(name)
         expr.sql = `${name}(${args.map(a => a.sql).join(', ')})`
         break
       case 'Parenthetical':
-        expr.sql = analyzeExpression(expr.getChild("Expression")!, table)
+        expr.sql = analyzeExpression(expr.getChild("Expression")!, scope)
         break
       case 'BinaryExpression':
-        let left = analyzeExpression(expr.firstChild!, table)
-        let right = analyzeExpression(expr.lastChild!, table)
+        let left = analyzeExpression(expr.firstChild!, scope)
+        let right = analyzeExpression(expr.lastChild!, scope)
         let op = txt(left.nextSibling)
         expr.sql = `${left.sql} ${op} ${right.sql}`
         break
       case 'UnaryExpression':
-      case 'CaseExpression':
+        let unary = analyzeExpression(expr.getChild("Expression")!, scope)
+        expr.sql = `${txt(expr.getChild("UnaryOperator"))} ${inner.sql}`
+        break
       case 'ExistsExpression':
+        let exists = analyzeExpression(expr.getChild("Expression")!, scope)
+        expr.sql = `${exists.sql} EXISTS`
+        break
+      case 'CaseExpression':
+        let first = analyzeExpression(expr.getChild("Expression")!, scope)
+        let conds = expr.getChildren("WhenClause").map(c => analyzeExpression(c, scope))
+        // expr.sql = `CASE ${first.sql} ${conds.join(' ')} END`
+        // break
       case 'InExpression':
       case 'SubqueryExpression':
       default:

@@ -1,5 +1,7 @@
 {
+  "name": "@datar/lang",
   "type": "module",
+  "main": "core.ts",
   "scripts": {
     "prepare": "lezer-generator lang.grammar -o parser.js"
   },

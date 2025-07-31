@@ -1,0 +1,79 @@
+table flights (
+  carrier VARCHAR,
+  origin VARCHAR,
+  destination VARCHAR,
+  flight_num VARCHAR,
+  flight_time BIGINT,
+  tail_num VARCHAR,
+  dep_time TIMESTAMP,
+  arr_time TIMESTAMP,
+  dep_delay BIGINT,
+  arr_delay BIGINT,
+  taxi_out BIGINT,
+  taxi_in BIGINT,
+  distance BIGINT,
+  cancelled VARCHAR,
+  diverted VARCHAR,
+  id2 BIGINT,
+
+  join_one aircraft on aircraft.tail_num = flights.tail_num,
+  join_one carriers on carriers.code = flights.code,
+  measure long_haul distance > 2000,
+  measure seats_per_flight sum(aircraft.model.seats) / count(*),
+);
+
+table aircraft (
+  tail_num VARCHAR,
+  aircraft_serial VARCHAR,
+  aircraft_model_code VARCHAR,
+  aircraft_engine_code VARCHAR,
+  year_built BIGINT,
+  aircraft_type_id BIGINT,
+  aircraft_engine_type_id BIGINT,
+  registrant_type_id BIGINT,
+  name VARCHAR,
+  address1 VARCHAR,
+  address2 VARCHAR,
+  city VARCHAR,
+  state VARCHAR,
+  zip VARCHAR,
+  region VARCHAR,
+  county VARCHAR,
+  country VARCHAR,
+  certification VARCHAR,
+  status_code VARCHAR,
+  mode_s_code VARCHAR,
+  fract_owner VARCHAR,
+  last_action_date DATE,
+  cert_issue_date DATE,
+  air_worth_date DATE,
+
+  join_one aircraft_models as model on aircraft.aircraft_model_code = model.aircraft_model_code,
+);
+
+table aircraft_models (
+  aircraft_model_code VARCHAR,
+  manufacturer VARCHAR,
+  model VARCHAR,
+  aircraft_type_id BIGINT,
+  aircraft_engine_type_id BIGINT,
+  aircraft_category_id BIGINT,
+  amateur BIGINT,
+  engines BIGINT,
+  seats BIGINT,
+  weight BIGINT,
+  speed BIGINT,
+
+  join_many aircraft on aircraft.aircraft_model_code = model.aircraft_model_code,
+);
+
+table carriers (
+  code VARCHAR,
+  name VARCHAR,
+  nickname VARCHAR,
+);
+
+
+from flights select carrier, avg(distance), avg(seats_per_flight);
+
+-- from aircraft_models where manufacturer = 'WHITE' select avg(aircraft.year_built); -- fanout query
