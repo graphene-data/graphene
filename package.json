@@ -4,5 +4,11 @@
   "workspaces": [
     "lang",
     "cli"
-  ]
+  ],
+  "dependencies": {
+    "@datar/lang": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.3"
+  }
 }

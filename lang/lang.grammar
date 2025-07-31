@@ -64,7 +64,7 @@ ColumnDef {
 }
 
 JoinDef {
-  Kw<"join_one"> Identifier Kw<"on"> expression
+  Kw<"join_one"> Identifier (Kw<"as"> Identifier)? Kw<"on"> expression
 }
 
 ComputedDef {
@@ -178,7 +178,7 @@ SubqueryExpression {
 }
 
 ColumnRef {
-  (Identifier ".")? Identifier
+  (Identifier ".")* Identifier
 }
 
 FunctionCall {
