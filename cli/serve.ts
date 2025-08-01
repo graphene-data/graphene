@@ -183,7 +183,7 @@ Documentation: https://docs.evidence.dev/core-concepts/data-sources/
 	const flatArgs = flattenArguments([]);
 
 	// Run svelte kit dev in the hidden directory
-	const child = spawn(`npx vite dev --port 3000`, flatArgs, {
+	const child = spawn(`tsx --inspect ../../node_modules/vite/bin/vite.js dev --port 3000`, flatArgs, {
 		shell: true,
 		detached: false,
 		cwd: '.evidence/template',
