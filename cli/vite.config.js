@@ -8,6 +8,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { DuckDBInstance } from '@duckdb/node-api';
 import { readFile, readdir } from 'node:fs/promises'
 import * as path from 'node:path';
+import { analyze } from "@datar/lang";
+
 // 	import {
 // 		tableFromIPC,
 // 		initDB,
@@ -56,6 +58,16 @@ const queryServer = {
       const buffer = Buffer.concat(chunks);
       const body = buffer.toString();
       const { sql, query_name } = JSON.parse(body);
+
+      if (sql.match(/---- (Length|Columns)/)) {
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({ sql, query_name, rows: [], rowCount: 0}))
+        return
+      }
+
+      debugger
+      const ast = analyze(sql)
+      console.log(ast)
       await connectDb()
 
       try {
