@@ -69,21 +69,38 @@ function analyzeTables (tableNodes: SyntaxNode[]) {
 }
 
 function analyzeQuery (queryNode: SyntaxNode): string {
-  let from = queryNode.getChild("FromClause")
-  let tableName = txt(from?.getChild("TableName"))
-  let rootTable = TABLE_MAP[tableName]
+  let scope: JoinDef
+  let rootTable: SyntaxNode
   let joins = new Set<JoinDef>()
   let isAgg = false
   let aliases:Record<string, SyntaxNode> = {}
-  let scope = {name: tableName, tableName} as JoinDef
+
+  let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
+  let rootFrom = froms[0] // TODO: handle explicit joins
+
+  if (rootFrom.name == 'TableName') {
+    let tableName = txt(rootFrom?.getChild('Identifier'))
+    scope = {name: tableName, tableName} as JoinDef
+    rootFrom.sql = `FROM ${tableName}`
+  } else if (rootFrom.name == 'Subquery') {
+    let sqn = rootFrom.getChild('SubqueryExpression')?.getChild('QueryStatement')!
+    scope = {name: '', tableName: ''} as JoinDef
+    rootFrom.sql = `FROM (${analyzeQuery(sqn)})`
+  }
 
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
   selects.forEach(s => {
-    let alias = txt(s.getChild('Identifier'))
-    let expr = s.getChild('Expression')!
-    if (alias) aliases[alias] = expr
-    analyzeExpression(expr, scope)
-    s.sql = [expr.sql, alias && `as ${alias}`].filter(x => !!x).join(' ')
+    let wc = s.getChild('Wildcard')
+    if (wc) {
+      analyzeExpression(wc, scope)
+      s.sql = wc.sql
+    } else {
+      let alias = txt(s.getChild('Identifier'))
+      let expr = s.getChild('Expression')!
+      if (alias) aliases[alias] = expr
+      analyzeExpression(expr, scope)
+      s.sql = [expr.sql, alias && `as ${alias}`].filter(x => !!x).join(' ')
+    }
   })
 
   let where = queryNode.getChild('WhereClause')?.getChild('Expression')
@@ -107,7 +124,7 @@ function analyzeQuery (queryNode: SyntaxNode): string {
 
   let sql = [
     `SELECT ${selects.map(s => s.sql).join(', ')}`,
-    `FROM ${rootTable.name}`,
+    rootFrom.sql,
     ...joinStrings,
     where && `WHERE ${where.sql}`,
     isAgg ? 'group by all' : null,
@@ -121,16 +138,12 @@ function analyzeQuery (queryNode: SyntaxNode): string {
       case 'Literal':
         expr.sql = txt(expr)
         break
+      case 'Wildcard': // * or tableA.tableB.*
+        let [wJoin] = lookup(expr, scope)
+        expr.sql = wJoin.name ? `${wJoin.name}.*` : '*'
+        break
       case 'ColumnRef':
-        let parts = expr.getChildren("Identifier").map(i => txt(i))
-        let currJoin = scope
-        for (let i = 0; i < parts.length - 1; i++) {
-          currJoin = TABLE_MAP[currJoin.tableName].fields[parts[i]] as JoinDef
-          if (currJoin.type != 'join') throw new Error("Trying to join on a column that isn't a join.")
-          joins.add(currJoin)
-        }
-
-        let colName = parts[parts.length - 1]
+        let [currJoin, colName] = lookup(expr, scope)
         let field = TABLE_MAP[currJoin.tableName].fields[colName]
         if (field.type == 'computed') {
           expr.sql = analyzeExpression(field.expression, currJoin).sql
@@ -166,15 +179,31 @@ function analyzeQuery (queryNode: SyntaxNode): string {
         let conds = expr.getChildren("WhenClause").map(c => analyzeExpression(c, scope))
         // expr.sql = `CASE ${first.sql} ${conds.join(' ')} END`
         // break
-      case 'InExpression':
       case 'SubqueryExpression':
+        let subSql = analyzeQuery(expr.getChild('QueryStatement')!)
+        expr.sql = `(${subSql})`
+        break
+      case 'InExpression':
       default:
         throw new Error(`Unsupported expression: ${txt(expr)}`)
     }
 
     return expr
   }
+
+  function lookup(node:SyntaxNode, currJoin: JoinDef): [JoinDef, string] {
+    let parts = node.getChildren("Identifier").map(i => txt(i))
+    for (let i = 0; i < parts.length - 1; i++) {
+      currJoin = TABLE_MAP[currJoin.tableName].fields[parts[i]] as JoinDef
+      if (currJoin.type != 'join') throw new Error("Trying to join on a column that isn't a join.")
+      joins.add(currJoin)
+    }
+
+    return [currJoin, parts[parts.length - 1]]
+  }
 }
+
+
 
 function txt(node:SyntaxNode | null | undefined) {
   if (!node) return ""

@@ -10,16 +10,8 @@ import { readFile, readdir } from 'node:fs/promises'
 import * as path from 'node:path';
 import { analyze } from "@datar/lang";
 
-// 	import {
-// 		tableFromIPC,
-// 		initDB,
-// 		setParquetURLs,
-// 		query as usqlQuery,
-// 		updateSearchPath,
-// 		arrowTableToJSON
-// } from '@evidence-dev/universal-sql/client-duckdb';
-
 let conn
+let baseSql = ''
 
 async function connectDb () {
   if (conn) return
@@ -32,6 +24,16 @@ async function connectDb () {
   let db = await DuckDBInstance.create(duckFiles[0], {access_mode: 'READ_ONLY'})
   conn = await db.connect()
 }
+
+async function readSql () {
+  let files = await readdir(path.join(__dirname, '../..'))
+  for (let f of files) {
+    if (!f.endsWith('.dsql')) continue
+    console.log('reading', f)
+    baseSql = await readFile(path.join(__dirname, '../..', f), 'utf-8')
+  }
+}
+readSql()
 
 process.removeAllListeners('warning');
 process.on('warning', (warning) => {
@@ -59,22 +61,22 @@ const queryServer = {
       const body = buffer.toString();
       const { sql, query_name } = JSON.parse(body);
 
-      if (sql.match(/---- (Length|Columns)/)) {
+      if (sql.match(/DESCRIBE SELECT/)) {
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify({ sql, query_name, rows: [], rowCount: 0}))
         return
       }
 
-      debugger
-      const ast = analyze(sql)
-      console.log(ast)
+      const parsed = analyze(baseSql + '\n\n' + sql)
+      const query = parsed[parsed.length - 1]
+      console.log(query)
       await connectDb()
 
       try {
-        let reader = await conn.runAndReadAll(sql)
+        let reader = await conn.runAndReadAll(query)
         let rows = await reader.getRowObjects()
         res.setHeader('Content-Type', 'application/json')
-        res.end(JSON.stringify({ sql, query_name, rows, rowCount: rows.length}))
+        res.end(JSON.stringify({ sql, query_name, rows, rowCount: rows.length}, safeBigIntReplacer))
       } catch (e) {
         res.statusCode = 400
         console.error(e)
@@ -82,6 +84,10 @@ const queryServer = {
       }
     })
   },
+}
+
+function safeBigIntReplacer(key, value) {
+  return typeof value === 'bigint' ? value.toString() : value;
 }
 
 const logger = createLogger();

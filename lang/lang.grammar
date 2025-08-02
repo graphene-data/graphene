@@ -11,20 +11,28 @@ SelectClause {
 }
 
 SelectItem {
-  ("*" | (expression (Kw<"as">? Identifier)?))
+  Wildcard | (expression (Kw<"as">? Identifier)?)
+}
+
+Wildcard {
+  (Identifier ".")* "*"
 }
 
 FromClause {
   Kw<"from"> tablePrimary (JoinClause)*
 }
 
-tablePrimary {
-  TableName (Kw<"as">? Identifier)? |
-  "(" QueryStatement ")" (Kw<"as">? Identifier)?
+tablePrimary[@isGroup=TablePrimary] {
+  TableName | Subquery
 }
 
 TableName {
-  (Identifier ".")? Identifier
+  // TODO handle namespaces
+  Identifier (Kw<"as">? Identifier)?
+}
+
+Subquery {
+  SubqueryExpression (Kw<"as">? Identifier)?
 }
 
 JoinClause {
