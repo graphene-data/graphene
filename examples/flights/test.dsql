@@ -17,7 +17,7 @@ table flights (
   id2 BIGINT,
 
   join_one aircraft on aircraft.tail_num = flights.tail_num,
-  join_one carriers on carriers.code = flights.code,
+  join_one carriers on carriers.code = flights.carrier,
   measure long_haul distance > 2000,
   measure seats_per_flight sum(aircraft.model.seats) / count(*),
 );
@@ -74,6 +74,7 @@ table carriers (
 );
 
 
-from flights select carrier, avg(distance), avg(seats_per_flight);
-
+-- from flights select carrier, avg(distance), avg(seats_per_flight);
 -- from aircraft_models where manufacturer = 'WHITE' select avg(aircraft.year_built); -- fanout query
+-- select count(*) from (from carriers select *);
+describe select * from carriers;
