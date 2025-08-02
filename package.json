@@ -1,12 +1,12 @@
 {
-  "name": "datar",
+  "name": "graphene",
   "private": true,
   "workspaces": [
     "lang",
     "cli"
   ],
   "dependencies": {
-    "@datar/lang": "workspace:*"
+    "@graphene/lang": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.20.3"

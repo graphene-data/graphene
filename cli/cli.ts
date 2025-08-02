@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import { readFileSync } from 'node:fs'
 import * as fsSync from 'node:fs';
 import * as path from 'node:path';
-import { analyze } from '@datar/lang';
+import { analyze } from '@graphene/lang';
 import {DiagnosticSeverity, type Diagnostic} from 'vscode-languageserver-types';
 import Table from 'cli-table3';
 import chalk from 'chalk';
@@ -68,7 +68,7 @@ function printTable(rows: any[]) {
 const program = new Command()
 
 program
-  .name('datar')
+  .name('graphene')
   .description('Translator')
   .version('1.0.0')
   .argument('[file]', 'MyDialect query file; STDIN if omitted')
