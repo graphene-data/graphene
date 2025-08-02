@@ -6,7 +6,7 @@
     "dev": "(cd ../examples/flights && node --experimental-strip-types ../../cli/cli.ts test.dsql)"
   },
   "bin": {
-    "datar": "./cli.ts"
+    "graphene": "./cli.ts"
   },
   "dependencies": {
     "chalk": "^5.3.0",

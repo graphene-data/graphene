@@ -1,5 +1,5 @@
 {
-  "name": "@datar/lang",
+  "name": "@graphene/lang",
   "type": "module",
   "main": "core.ts",
   "scripts": {

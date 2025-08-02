@@ -8,7 +8,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { DuckDBInstance } from '@duckdb/node-api';
 import { readFile, readdir } from 'node:fs/promises'
 import * as path from 'node:path';
-import { analyze } from "@datar/lang";
+import { analyze } from "@graphene/lang";
 
 let conn
 let baseSql = ''
