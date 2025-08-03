@@ -6,7 +6,9 @@
     "lang",
     "cli"
   ],
-  "scripts": {},
+  "scripts": {
+    "test": "vitest run"
+  },
   "dependencies": {
     "@graphene/lang": "workspace:*"
   },

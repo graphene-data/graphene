@@ -75,6 +75,7 @@ function analyzeQuery (queryNode: SyntaxNode): string {
   let isAgg = false
   let aliases:Record<string, SyntaxNode> = {}
 
+
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   let rootFrom = froms[0] // TODO: handle explicit joins
 
@@ -156,6 +157,7 @@ function analyzeQuery (queryNode: SyntaxNode): string {
         let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
         isAgg = ['avg', 'sum', 'min', 'max', 'count'].includes(name)
         expr.sql = `${name}(${args.map(a => a.sql).join(', ')})`
+        if (name == 'count' && args.length == 0) expr.sql = 'count(*)' // special case. Don't think * is valid anywhere else as an expression
         break
       case 'Parenthetical':
         expr.sql = analyzeExpression(expr.getChild('Expression')!, scope)
@@ -178,7 +180,7 @@ function analyzeQuery (queryNode: SyntaxNode): string {
         let first = analyzeExpression(expr.getChild('Expression')!, scope)
         let conds = expr.getChildren('WhenClause').map(c => analyzeExpression(c, scope))
         // expr.sql = `CASE ${first.sql} ${conds.join(' ')} END`
-        // break
+        break
       case 'SubqueryExpression':
         let subSql = analyzeQuery(expr.getChild('QueryStatement')!)
         expr.sql = `(${subSql})`
