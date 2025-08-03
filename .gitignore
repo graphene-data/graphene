@@ -5,3 +5,5 @@ node_modules
 .evidence
 .svelte-kit
 *.duckdb
+
+CLAUDE.md

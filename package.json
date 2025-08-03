@@ -1,14 +1,21 @@
 {
   "name": "graphene",
   "private": true,
+  "type": "module",
   "workspaces": [
     "lang",
     "cli"
   ],
+  "scripts": {},
   "dependencies": {
     "@graphene/lang": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4.20.3"
+    "eslint": "^9.32.0",
+    "eslint-plugin-prefer-let": "^4.0.0",
+    "tsx": "^4.20.3",
+    "typescript-eslint": "^8.38.0",
+    "vitest": "^3.0.5",
+    "zx": "^8.7.2"
   }
 }
