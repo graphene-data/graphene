@@ -76,7 +76,7 @@ JoinDef {
 }
 
 ComputedDef {
-  Kw<"measure"> Identifier "(" expression ")"
+  Kw<"measure"> Identifier expression
 }
 
 DataType {
