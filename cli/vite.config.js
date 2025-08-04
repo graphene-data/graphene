@@ -6,12 +6,11 @@ import {log} from '@evidence-dev/sdk/logger'
 import {evidenceThemes} from '@evidence-dev/tailwind/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import {DuckDBInstance} from '@duckdb/node-api'
-import {readFile, readdir} from 'node:fs/promises'
+import {readdir} from 'node:fs/promises'
 import * as path from 'node:path'
-import {analyze} from '@graphene/lang'
+import {analyze, loadWorkspace} from '@graphene/lang'
 
 let conn
-let baseSql = ''
 
 async function connectDb () {
   if (conn) return
@@ -25,15 +24,7 @@ async function connectDb () {
   conn = await db.connect()
 }
 
-async function readSql () {
-  let files = await readdir(path.join(__dirname, '../..'))
-  for (let f of files) {
-    if (!f.endsWith('.dsql')) continue
-    console.log('reading', f)
-    baseSql = await readFile(path.join(__dirname, '../..', f), 'utf-8')
-  }
-}
-readSql()
+loadWorkspace(path.join(__dirname, '../..'))
 
 process.removeAllListeners('warning')
 process.on('warning', (warning) => {
@@ -67,7 +58,7 @@ const queryServer = {
         return
       }
 
-      let parsed = analyze(baseSql + '\n\n' + sql)
+      let parsed = analyze(sql)
       let query = parsed[parsed.length - 1]
       console.log(query)
       await connectDb()

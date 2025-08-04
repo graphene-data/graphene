@@ -11,7 +11,7 @@ SelectClause {
 }
 
 SelectItem {
-  Wildcard | (expression (Kw<"as">? Identifier)?)
+  expression (Kw<"as">? Identifier)?
 }
 
 Wildcard {
@@ -106,6 +106,7 @@ expression[@isGroup=Expression] {
   CaseExpression |
   ExistsExpression |
   InExpression |
+  Wildcard |
   primaryExpression
 }
 
