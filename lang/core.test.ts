@@ -42,7 +42,6 @@ const testTables = `
 function testQuery (grapheneSql: string, expectedSql: string) {
   let sql = testTables + '\n\n' + grapheneSql
   let [result] = analyze(sql)
-  console.log('got', JSON.stringify(result))
   let clean = (s:string) => s.toLowerCase().replace(/\s+/g, ' ')
   expect(clean(result)).toBe(clean(expectedSql))
 }

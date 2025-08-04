@@ -3,7 +3,7 @@ title: Flights
 ---
 
 ```sql flights
-  from flights select carriers.name, avg(distance) as avg_dist, avg(seats_per_flight);
+  from flights select carriers.name, avg(distance) as avg_dist;
 ```
 
 <BarChart
