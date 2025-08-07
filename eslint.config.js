@@ -2,6 +2,7 @@ import globals from 'globals'
 import pluginJs from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import pluginPreferLet from 'eslint-plugin-prefer-let'
+import * as zxGlobals from 'zx'
 
 
 /** @type {import('eslint').Linter.Config[]} */
@@ -10,6 +11,23 @@ export default [
   {languageOptions: {globals: globals.browser}},
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2021,
+      sourceType: 'module',
+      globals: {
+        ...globals.node,
+        ...Object.fromEntries( // https://github.com/infrakiwi/kiwi-blog/blob/main/0014-zx-scripting-in-typescript/eslint.config.mjs
+          Object.entries(zxGlobals).map(([key]) => [key, false]),
+        ),
+      },
+    },
+    rules: {
+      'no-console':           'off',  // allow console in scripts
+      'no-unused-expressions':'off',  // permit `$\`…\`` template tags
+    },
+  },
   {
     plugins: {'prefer-let': pluginPreferLet},
     rules: {
@@ -45,6 +63,7 @@ export default [
       'prefer-let/prefer-let': ['error'],
       '@typescript-eslint/no-explicit-any': 'off',
       'no-case-declarations': 'off',
+      'allowSeparateTypeImports': true,
     },
   },
 ]

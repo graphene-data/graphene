@@ -1,5 +1,8 @@
-import {describe, it, expect} from 'vitest'
-import {analyze} from './core'
+/// <reference types="vitest/globals" />
+import {analyze} from './analyze.ts'
+import {expect} from 'vitest'
+
+const DEBUG = !!process.env.DEBUG
 
 const testTables = `
   table users (
@@ -41,6 +44,7 @@ const testTables = `
 
 function testQuery (grapheneSql: string, expectedSql: string) {
   let sql = testTables + '\n\n' + grapheneSql
+  if (DEBUG) console.log('Query: ', grapheneSql)
   let [result] = analyze(sql)
   let clean = (s:string) => s.toLowerCase().replace(/\s+/g, ' ')
   expect(clean(result)).toBe(clean(expectedSql))
@@ -57,7 +61,7 @@ describe('lang', () => {
   it('supports from-first syntax', () => {
     testQuery(
       "from users select id, name where email like '%@example.com'",
-      "SELECT users.id, users.name FROM users WHERE users.email like '%@example.com'",
+      "SELECT users.idz, users.name FROM users WHERE users.email like '%@example.com'",
     )
   })
 
