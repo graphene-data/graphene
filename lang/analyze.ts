@@ -2,8 +2,8 @@ import {parser} from './parser.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
 import type {SyntaxNode} from '@lezer/common'
-import {txt, TABLE_MAP, Query} from './core.ts'
-import type {Column, Join, Computed} from './core.ts'
+import {txt, TABLE_MAP, Query, type Diagnostic} from './core.ts'
+import type {Column, Join, Computed, Table} from './core.ts'
 import {lookup} from './lookup.ts'
 
 // Loads and parses all gsql files within a directory
@@ -15,19 +15,19 @@ export async function loadWorkspace (dir:string) {
   }
 }
 
-// Entry point for analyzing gsql
-export function analyze (source:string): string[] {
+export function analyze (source:string): { tables: Table[], queries: Query[] } {
   let tree = parser.parse(source)
   tree.rawText = source
-  tree.topNode.getChildren('TableStatement').forEach(analyzeTable)
+  let tables = tree.topNode.getChildren('TableStatement').map(analyzeTable).filter((t): t is Table => !!t)
   let queries = tree.topNode.getChildren('QueryStatement').map(analyzeQuery)
-  return queries.map(q => q.sql)
+  return {tables, queries}
 }
 
 // Parses a table (model) declaration. Most analysis is done lazily, so this just gets the tables name and fields.
-function analyzeTable (tableNode: SyntaxNode) {
+function analyzeTable (tableNode: SyntaxNode): Table {
   let name = txt(tableNode.firstChild?.nextSibling)
-  let table = TABLE_MAP[name] = {name, fields: {}}
+  let diagnostics: Diagnostic[] = getParseErrors(tableNode)
+  let table = TABLE_MAP[name] = {name, fields: {}, diagnostics}
   let fields = [
     ...tableNode.getChildren('ColumnDef').map(cn => ({
       type: 'column',
@@ -50,12 +50,14 @@ function analyzeTable (tableNode: SyntaxNode) {
     // TODO error on duplicate definitions
     table.fields[f.type == 'join' ? f.alias : f.name] = f
   })
+  return table
 }
 
 // Walks each part of the query checking types, rendering sql
 // NB that this creates a scope for the query, and function like analyzeExpression and lookup operate within that scope, which is crucial for subquery support.
 function analyzeQuery (queryNode: SyntaxNode): Query {
   let query = new Query()
+  query.diagnostics = getParseErrors(queryNode)
 
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   froms.forEach(f => {
@@ -67,7 +69,7 @@ function analyzeQuery (queryNode: SyntaxNode): Query {
     } else if (f.name == 'Subquery') {
       let sub = analyzeQuery(f.getChild('SubqueryExpression')!.getChild('QueryStatement')!)
       query.tables[alias || '~'] = {type: 'join', alias, subquery: sub}
-      f.sql = `(${sub.sql}${alias ? ' as ' + alias : ''}`
+      f.sql = `(${sub.sql}${alias ? ' as ' + alias : ''})`
     } else if (f.name == 'JoinClause') {
       throw new Error('exlicit joins not yet supported')
     }
@@ -117,6 +119,11 @@ function analyzeQuery (queryNode: SyntaxNode): Query {
 // This reports errors and warnings for symantic issues, as well as generating the final SQL.
 // Scope is used to track the current table we're operating within when analyzing measures. If it's null, the scope is the entire query.
 function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): SyntaxNode {
+  if (expr.type.isError) {
+    expr.sql = txt(expr)
+    return expr
+  }
+
   switch (expr.name) {
     case 'Literal':
       expr.sql = txt(expr)
@@ -173,4 +180,35 @@ function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): 
   }
 
   return expr
+}
+
+function getParseErrors (node: SyntaxNode): Diagnostic[] {
+  const errorNodes: SyntaxNode[] = []
+  node.cursor().iterate(n => {
+    if (n.type.isError) errorNodes.push(n.node)
+  })
+  return errorNodes.map(n => diag(n, 'error', 'Syntax error'))
+}
+
+function diag (node: SyntaxNode, severity: 'error' | 'warn', message: string): Diagnostic {
+  let top: SyntaxNode = node
+  while (top.parent) top = top.parent
+  let src = top.tree?.rawText || ''
+
+  let from = posFromOffset(src, node.from)
+  let to = posFromOffset(src, Math.max(node.to, node.from))
+
+  return {range: {from, to}, message, severity}
+}
+
+function posFromOffset(source: string, offset: number): {line:number, character:number} {
+  let line = 0
+  let lastLineStart = 0
+  for (let i = 0; i < offset; i++) {
+    if (source.charCodeAt(i) === 10 /* \n */) {
+      line++
+      lastLineStart = i + 1
+    }
+  }
+  return {line, character: Math.max(0, offset - lastLineStart)}
 }
