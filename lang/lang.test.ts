@@ -45,9 +45,9 @@ const testTables = `
 function testQuery (grapheneSql: string, expectedSql: string) {
   let sql = testTables + '\n\n' + grapheneSql
   if (DEBUG) console.log('Query: ', grapheneSql)
-  let [result] = analyze(sql)
+  let result = analyze(sql)
   let clean = (s:string) => s.toLowerCase().replace(/\s+/g, ' ')
-  expect(clean(result)).toBe(clean(expectedSql))
+  expect(clean(result.queries[0].sql)).toBe(clean(expectedSql))
 }
 
 describe('lang', () => {
@@ -61,7 +61,7 @@ describe('lang', () => {
   it('supports from-first syntax', () => {
     testQuery(
       "from users select id, name where email like '%@example.com'",
-      "SELECT users.idz, users.name FROM users WHERE users.email like '%@example.com'",
+      "SELECT users.id, users.name FROM users WHERE users.email like '%@example.com'",
     )
   })
 
@@ -98,5 +98,24 @@ describe('lang', () => {
       'from products select name, category, total_sold where popular_item',
       'SELECT products.name, products.category, SUM(orders.amount) FROM products LEFT JOIN orders ON (orders.product_id = products.id) GROUP BY ALL HAVING SUM(orders.amount) > 1000',
     )
+  })
+
+  it('reports syntax diagnostics on invalid query and still analyzes others', () => {
+    const sql = testTables + '\n' + 'from users select id; from users select id = ; from users select name;'
+    const {queries} = analyze(sql)
+    expect(queries.length).toBe(3)
+    expect(queries[0].diagnostics.length).toBe(0)
+    expect(queries[1].diagnostics.length).toBeGreaterThan(0)
+    expect(queries[1].diagnostics[0].message.toLowerCase()).toContain('syntax')
+    expect(queries[2].diagnostics.length).toBe(0)
+  })
+
+  it('reports syntax diagnostics on invalid table and still registers table name', () => {
+    const sql = 'table t (a int, ; ) ; from t select a;'
+    const {tables, queries} = analyze(sql)
+    expect(tables.length).toBe(1)
+    expect(tables[0].name.toLowerCase()).toBe('t')
+    expect((tables[0].diagnostics?.length || 0)).toBeGreaterThan(0)
+    expect(queries[0].sql.toLowerCase()).toContain('from t')
   })
 })

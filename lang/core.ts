@@ -53,6 +53,7 @@ type Field = Column | Join | Computed
 export interface Table {
   name: string
   fields: Record<string, Field>
+  diagnostics?: Diagnostic[]
 }
 
 export class Query {
@@ -60,4 +61,12 @@ export class Query {
   tables: Record<string, Join> = {}
   fields: Record<string, Column> = {}
   isAgg = false
+  diagnostics: Diagnostic[] = []
+}
+
+interface Position {line: number, character: number}
+export interface Diagnostic {
+  range: {from: Position, to: Position}
+  message: string
+  severity: 'error' | 'warn'
 }
