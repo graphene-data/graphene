@@ -11,7 +11,7 @@ SelectClause {
 }
 
 SelectItem {
-  expression (Kw<"as">? Identifier)?
+  expression (Kw<"as">? Alias)?
 }
 
 Wildcard {
@@ -28,11 +28,11 @@ tablePrimary[@isGroup=TablePrimary] {
 
 TableName {
   // TODO handle namespaces
-  Identifier (Kw<"as">? Identifier)?
+  Identifier (Kw<"as">? Alias)?
 }
 
 Subquery {
-  SubqueryExpression (Kw<"as">? Identifier)?
+  SubqueryExpression (Kw<"as">? Alias)?
 }
 
 JoinClause {
@@ -72,7 +72,7 @@ ColumnDef {
 }
 
 JoinDef {
-  Kw<"join_one"> Identifier (Kw<"as"> Identifier)? Kw<"on"> expression
+  Kw<"join_one"> Identifier (Kw<"as"> Alias)? Kw<"on"> expression
 }
 
 ComputedDef {
@@ -203,6 +203,7 @@ Literal {
 }
 
 Kw<term> { @specialize[@name={term}]<Identifier, term> }
+Alias { Identifier }
 
 @skip { whitespace | Comment }
 
