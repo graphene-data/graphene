@@ -4,6 +4,7 @@
   "publisher": "graphene",
   "description": "Syntax highlighting and diagnostics stubs for Graphene GQL/GSQL using a Lezer-based pipeline.",
   "version": "0.0.1",
+  "type": "module",
   "engines": {
     "vscode": "^1.84.0"
   },
@@ -45,11 +46,16 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p .",
-    "watch": "tsc -w -p ."
+    "generate:lang": "npm --prefix ../lang run generate",
+    "compile": "npm run generate:lang && tsc -p .",
+    "watch": "npm run generate:lang && tsc -w -p ."
+  },
+  "dependencies": {
+    "@graphene/lang": "file:../lang"
   },
   "devDependencies": {
     "@types/vscode": "^1.84.0",
+    "@lezer/common": "^1.2.1",
     "tslib": "^2.6.2",
     "typescript": "^5.4.0"
   }

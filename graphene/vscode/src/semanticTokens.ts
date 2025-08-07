@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import type {TreeCursor} from '@lezer/common';
 
 const tokenTypes = [
   'keyword',
@@ -22,56 +23,73 @@ const tokenTypeToIndex: Record<TokenType, number> = Object.fromEntries(
 
 const legend = new vscode.SemanticTokensLegend(tokenTypes as unknown as string[], []);
 
-// TODO: Replace with real Lezer-based parsing from ../lang once available
-function* scanTokens(document: vscode.TextDocument): Generator<{ line: number; start: number; length: number; type: TokenType }> {
-  const keyword = /\b(type|schema|query|mutation|subscription|scalar|enum|interface|union|input|directive|fragment|on|implements|extend)\b/g;
-  const boolean = /\b(true|false|null)\b/g;
-  const number = /(?<![A-Za-z_])-?\b\d+(?:\.\d+)?\b/g;
-  const string = /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g;
-  const comment = /#.*/g;
-  const operator = /[!:=@|&(){}[\],.]/g;
+const KEYWORDS = new Set<string>([
+  'select','from','where','group','by','order','limit','join','on','as','having','asc','desc',
+  'true','false','null','not','like','in','is','and','or','case','when','then','else','end',
+  'create','table','exists','offset','inner','left','right','full','cross','integer','int','bigint','smallint','tinyint','real','double','precision','float','decimal','numeric','boolean','bool','date','time','timestamp','varchar','char','text','blob'
+]);
 
-  for (let line = 0; line < document.lineCount; line++) {
-    const text = document.lineAt(line).text;
+function classify(nodeName: string): TokenType | undefined {
+  if (KEYWORDS.has(nodeName)) return 'keyword';
+  switch (nodeName) {
+    case 'Identifier': return 'variable';
+    case 'Number': return 'number';
+    case 'String': return 'string';
+    case 'FunctionCall': return 'function';
+    case 'DataType': return 'type';
+    case 'Comment': return 'comment';
+    default: return undefined;
+  }
+}
 
-    comment.lastIndex = 0;
-    for (let m; (m = comment.exec(text)); ) {
-      yield { line, start: m.index, length: m[0].length, type: 'comment' };
+function pushToken(builder: vscode.SemanticTokensBuilder, document: vscode.TextDocument, from: number, to: number, type: TokenType) {
+  const start = document.positionAt(from);
+  builder.push(start.line, start.character, to - from, tokenTypeToIndex[type], 0);
+}
+
+function walkTree(builder: vscode.SemanticTokensBuilder, document: vscode.TextDocument, cursor: TreeCursor, text: string) {
+  do {
+    const type = classify(cursor.node.type.name);
+    if (type) pushToken(builder, document, cursor.from, cursor.to, type);
+    if (cursor.firstChild()) {
+      walkTree(builder, document, cursor, text);
+      cursor.parent();
     }
+  } while (cursor.nextSibling());
+}
 
-    string.lastIndex = 0;
-    for (let m; (m = string.exec(text)); ) {
-      yield { line, start: m.index, length: m[0].length, type: 'string' };
-    }
-
-    number.lastIndex = 0;
-    for (let m; (m = number.exec(text)); ) {
-      yield { line, start: m.index, length: m[0].length, type: 'number' };
-    }
-
-    keyword.lastIndex = 0;
-    for (let m; (m = keyword.exec(text)); ) {
-      yield { line, start: m.index, length: m[0].length, type: 'keyword' };
-    }
-
-    boolean.lastIndex = 0;
-    for (let m; (m = boolean.exec(text)); ) {
-      yield { line, start: m.index, length: m[0].length, type: 'boolean' };
-    }
-
-    operator.lastIndex = 0;
-    for (let m; (m = operator.exec(text)); ) {
-      yield { line, start: m.index, length: m[0].length, type: 'operator' };
-    }
+async function tryParse(text: string): Promise<{ cursor: TreeCursor } | null> {
+  try {
+    // Dynamic import to avoid hard dependency when developing extension standalone
+    const mod: any = await import('@graphene/lang/parser.js');
+    const tree = mod.parser.parse(text);
+    return { cursor: tree.cursor() };
+  } catch (_) {
+    return null;
   }
 }
 
 class GrapheneSemanticTokensProvider implements vscode.DocumentSemanticTokensProvider {
   async provideDocumentSemanticTokens(document: vscode.TextDocument): Promise<vscode.SemanticTokens> {
     const builder = new vscode.SemanticTokensBuilder(legend);
+    const text = document.getText();
 
-    for (const tok of scanTokens(document)) {
-      builder.push(tok.line, tok.start, tok.length, tokenTypeToIndex[tok.type], 0);
+    const parsed = await tryParse(text);
+    if (parsed) {
+      walkTree(builder, document, parsed.cursor, text);
+    } else {
+      // Fallback minimal highlighting when parser isn't available
+      for (let line = 0; line < document.lineCount; line++) {
+        const t = document.lineAt(line).text;
+        const comment = /--.*/g;
+        for (let m; (m = comment.exec(t)); ) {
+          builder.push(line, m.index, m[0].length, tokenTypeToIndex['comment'], 0);
+        }
+        const string = /"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g;
+        for (let m; (m = string.exec(t)); ) {
+          builder.push(line, m.index, m[0].length, tokenTypeToIndex['string'], 0);
+        }
+      }
     }
 
     return builder.build();
