@@ -1,0 +1,56 @@
+{
+  "name": "graphene-vscode",
+  "displayName": "Graphene Language Support",
+  "publisher": "graphene",
+  "description": "Syntax highlighting and diagnostics stubs for Graphene GQL/GSQL using a Lezer-based pipeline.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:gql",
+    "onLanguage:gsql"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "gql",
+        "aliases": ["Graphene GQL", "GQL"],
+        "extensions": [".gql"],
+        "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "gsql",
+        "aliases": ["Graphene GSQL", "GSQL"],
+        "extensions": [".gsql"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "semanticTokenTypes": [
+      { "id": "keyword", "superType": "" },
+      { "id": "string", "superType": "" },
+      { "id": "number", "superType": "" },
+      { "id": "type", "superType": "" },
+      { "id": "function", "superType": "" },
+      { "id": "variable", "superType": "" },
+      { "id": "property", "superType": "" },
+      { "id": "operator", "superType": "" },
+      { "id": "comment", "superType": "" },
+      { "id": "boolean", "superType": "" },
+      { "id": "enumMember", "superType": "" }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -w -p ."
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.84.0",
+    "tslib": "^2.6.2",
+    "typescript": "^5.4.0"
+  }
+}
