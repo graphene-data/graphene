@@ -10,7 +10,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npm exec zx $CLAUDE_PROJECT_DIR/agent/lint.js"
+            "command": "npm exec zx $CLAUDE_PROJECT_DIR/scripts/lint.js"
           }
         ]
       }

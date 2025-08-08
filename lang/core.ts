@@ -53,7 +53,7 @@ type Field = Column | Join | Computed
 export interface Table {
   name: string
   fields: Record<string, Field>
-  diagnostics?: Diagnostic[]
+  diagnostics: Diagnostic[]
 }
 
 export class Query {
