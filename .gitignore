@@ -1,5 +1,6 @@
 lang/parser.*
 node_modules
+out/
 
 .DS_Store
 .evidence

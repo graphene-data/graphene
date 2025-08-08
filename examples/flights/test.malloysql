@@ -1,27 +1,27 @@
 >>>malloy
-source: carriers is duckdb.table('./carriers.parquet') extend {
+source: carriers is duckdb.table('carriers') extend {
   primary_key: code
   measure: carrier_count is count()
 }
 
-source: airports is duckdb.table('./airports.parquet') extend {
+source: airports is duckdb.table('airports') extend {
   primary_key: code
   measure: airport_count is count()
   dimension: name is concat(code, '-', full_name )
 }
 
-source: aircraft_models is duckdb.table('./aircraft_models.parquet') extend {
+source: aircraft_models is duckdb.table('aircraft_models') extend {
   primary_key: aircraft_model_code
   measure: aircraft_model_count is count()
 }
 
-source: aircraft is duckdb.table('./aircraft.parquet') extend {
+source: aircraft is duckdb.table('aircraft') extend {
   primary_key: tail_num
   measure: aircraft_count is count()
   join_one: aircraft_models with aircraft_model_code
 }
 
-source: flights is duckdb.table('./flights.parquet') extend {
+source: flights is duckdb.table('flights') extend {
   primary_key: id2
 
   // rename some fields as from their physical names
@@ -34,15 +34,13 @@ source: flights is duckdb.table('./flights.parquet') extend {
   join_one: aircraft with tail_num
 
   measure: flight_count     is count()                      -- total flights
-  measure: seats_for_sale   is sum(aircraft.seats)   -- seats repeated per flight
   measure: seats_per_flight is seats_for_sale / flight_count
 
   # wide-body sub-measures ------------------------------------------
-  measure: widebody_flights is flight_count    { where: aircraft_models.seats > 250 }
+  measure: widebody_flights is flight_count    { where: aircraft.aircraft_models.seats > 250 }
   measure: percent_widebody is widebody_flights / flight_count
 
   measure:
-    flight_count is count()
     total_distance is sum(distance)
     destination_count is destination.airport_count
     origin_count is origin.count()
@@ -53,6 +51,10 @@ source: flights is duckdb.table('./flights.parquet') extend {
     average_flight_distance is distance.avg()
 }
 >>>malloy
+source: flights2 is from flights {
+  
+}
+
 run: flights -> {
   group_by: carrier
   aggregate:

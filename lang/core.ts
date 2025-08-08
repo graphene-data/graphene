@@ -64,9 +64,9 @@ export class Query {
   diagnostics: Diagnostic[] = []
 }
 
-interface Position {line: number, character: number}
 export interface Diagnostic {
-  range: {from: Position, to: Position}
+  from: number
+  to: number
   message: string
   severity: 'error' | 'warn'
 }

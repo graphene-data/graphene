@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Graphene VSCode Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode"
+      ],
+      "preLaunchTask": "npm: build - vscode",
+      "outFiles": [
+        "${workspaceFolder}/vscode/out/**/*.js"
+      ]
+    }
+  ]
+}
