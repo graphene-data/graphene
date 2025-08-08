@@ -22,15 +22,12 @@ import {
   where,
   group,
   by,
-  having,
   order,
   asc,
   desc,
   limit,
   offset,
-  create,
   table,
-  _if,
   exists,
   integer,
   int,
@@ -51,8 +48,8 @@ import {
   varchar,
   char,
   text,
-  blob
-} from "./parser.terms.js";
+  blob,
+} from './parser.terms.js'
 
 // Map of lowercase keywords to their token IDs
 const keywords = {
@@ -78,15 +75,12 @@ const keywords = {
   where: where,
   group: group,
   by: by,
-  having: having,
   order: order,
   asc: asc,
   desc: desc,
   limit: limit,
   offset: offset,
-  create: create,
   table: table,
-  if: _if,
   exists: exists,
   integer: integer,
   int: int,
@@ -107,10 +101,10 @@ const keywords = {
   varchar: varchar,
   char: char,
   text: text,
-  blob: blob
-};
+  blob: blob,
+}
 
-export function specializeIdentifier(value, stack) {
-  const lower = value.toLowerCase();
-  return keywords[lower] || -1;
+export function specializeIdentifier (value) {
+  let lower = value.toLowerCase()
+  return keywords[lower] || -1
 }
