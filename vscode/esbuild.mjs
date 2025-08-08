@@ -6,9 +6,6 @@ import {execSync} from 'node:child_process'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Ensure the parser is generated before bundling
-execSync('npm --prefix ../lang run generate', {stdio: 'inherit', cwd: __dirname})
-
 const isWatch = process.argv.includes('--watch')
 
 const aliasPlugin = {
@@ -39,5 +36,3 @@ if (isWatch) {
 } else {
   await build(options)
 }
-
-
