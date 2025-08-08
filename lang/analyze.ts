@@ -1,7 +1,7 @@
 import {parser} from './parser.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
-import type {SyntaxNode} from '@lezer/common'
+import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 import {txt, TABLE_MAP, Query, type Diagnostic} from './core.ts'
 import type {Column, Join, Computed, Table} from './core.ts'
 import {lookup} from './lookup.ts'
@@ -184,31 +184,14 @@ function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): 
 
 function getParseErrors (node: SyntaxNode): Diagnostic[] {
   const errorNodes: SyntaxNode[] = []
-  node.cursor().iterate(n => {
+  node.cursor().iterate((n: SyntaxNodeRef) => {
     if (n.type.isError) errorNodes.push(n.node)
   })
   return errorNodes.map(n => diag(n, 'error', 'Syntax error'))
 }
 
 function diag (node: SyntaxNode, severity: 'error' | 'warn', message: string): Diagnostic {
-  let top: SyntaxNode = node
-  while (top.parent) top = top.parent
-  let src = top.tree?.rawText || ''
-
-  let from = posFromOffset(src, node.from)
-  let to = posFromOffset(src, Math.max(node.to, node.from))
-
-  return {range: {from, to}, message, severity}
-}
-
-function posFromOffset(source: string, offset: number): {line:number, character:number} {
-  let line = 0
-  let lastLineStart = 0
-  for (let i = 0; i < offset; i++) {
-    if (source.charCodeAt(i) === 10 /* \n */) {
-      line++
-      lastLineStart = i + 1
-    }
-  }
-  return {line, character: Math.max(0, offset - lastLineStart)}
+  const from = node.from
+  const to = Math.max(node.to, node.from)
+  return {from, to, message, severity}
 }

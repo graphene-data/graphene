@@ -1,0 +1,48 @@
+{
+  "name": "@graphene/vscode",
+  "displayName": "Graphene VSCode Language Support",
+  "publisher": "graphene",
+  "description": "",
+  "version": "0.0.1",
+  "type": "commonjs",
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onLanguage:gsql"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "gsql",
+        "aliases": ["Graphene GSQL", "GSQL"],
+        "extensions": [".gsql"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "gsql",
+        "scopeName": "source.gsql",
+        "path": "./gsql.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node ./esbuild.mjs",
+    "watch": "node ./esbuild.mjs --watch"
+  },
+  "dependencies": {
+    "@graphene/lang": "workspace:*"
+    
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5",
+    "@types/vscode": "^1.84.0"
+  }
+}
