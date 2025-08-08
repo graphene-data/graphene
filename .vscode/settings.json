@@ -5,5 +5,8 @@
         "comments": false,
         "strings": false
     },
-    "editor.quickSuggestionsDelay": 300
+    "editor.quickSuggestionsDelay": 300,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": "explicit"
+    }
 }

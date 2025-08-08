@@ -2,8 +2,7 @@ import {parser} from './parser.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
-import {txt, TABLE_MAP, Query, type Diagnostic} from './core.ts'
-import type {Column, Join, Computed, Table} from './core.ts'
+import {txt, TABLE_MAP, Query, type Diagnostic, type Column, type Join, type Computed, type Table} from './core.ts'
 import {lookup} from './lookup.ts'
 
 // Loads and parses all gsql files within a directory
@@ -168,8 +167,6 @@ function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): 
       // let first = analyzeExpression(expr.getChild('Expression')!, scope)
       // let conds = expr.getChildren('WhenClause').map(c => analyzeExpression(c, scope))
       throw new Error('CASE unsupported')
-      // expr.sql = `CASE ${first.sql} ${conds.join(' ')} END`
-      break
     case 'SubqueryExpression':
       let subSql = analyzeQuery(expr.getChild('QueryStatement')!)
       expr.sql = `(${subSql})`
@@ -183,15 +180,24 @@ function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): 
 }
 
 function getParseErrors (node: SyntaxNode): Diagnostic[] {
-  const errorNodes: SyntaxNode[] = []
+  let errorNodes: SyntaxNode[] = []
+
+  let top = node
+  while (top.parent) top = top.parent
+  let src = top.tree?.rawText || ''
+
   node.cursor().iterate((n: SyntaxNodeRef) => {
-    if (n.type.isError) errorNodes.push(n.node)
+    if (n.type.isError) {
+      console.log(src.slice(n.from - 10, n.to + 10))
+      debugger
+      errorNodes.push(n.node)
+    }
   })
   return errorNodes.map(n => diag(n, 'error', 'Syntax error'))
 }
 
 function diag (node: SyntaxNode, severity: 'error' | 'warn', message: string): Diagnostic {
-  const from = node.from
-  const to = Math.max(node.to, node.from)
+  let from = node.from
+  let to = Math.max(node.to, node.from)
   return {from, to, message, severity}
 }

@@ -6,9 +6,9 @@ const DEBUG = !!process.env.DEBUG
 
 const testTables = `
   table users (
-    id number,
-    name string,
-    email string,
+    id int,
+    name text,
+    email text,
     created_at timestamp,
 
     join_one orders on orders.user_id = users.id,
@@ -17,11 +17,11 @@ const testTables = `
   )
 
   table orders (
-    id number,
-    user_id number,
-    product_id number,
-    amount number,
-    status string,
+    id int,
+    user_id int,
+    product_id int,
+    amount numeric,
+    status text,
 
     join_one users on users.id = orders.user_id,
     join_one products on products.id = orders.product_id,
@@ -31,12 +31,11 @@ const testTables = `
   )
 
   table products (
-    id number,
-    name string,
-    price number,
-    category string,
+    id int,
+    name text,
+    price numeric,
+    category text,
 
-    join_many orders on orders.product_id = products.id,
     measure total_sold sum(orders.amount),
     measure popular_item total_sold > 1000
   )
@@ -46,6 +45,11 @@ function testQuery (grapheneSql: string, expectedSql: string) {
   let sql = testTables + '\n\n' + grapheneSql
   if (DEBUG) console.log('Query: ', grapheneSql)
   let result = analyze(sql)
+
+  // Assert there are no diagnostics for valid inputs
+  let diagnostics = [...result.tables, ...result.queries].flatMap(t => t.diagnostics || [])
+  expect(diagnostics).toHaveLength(0)
+
   let clean = (s:string) => s.toLowerCase().replace(/\s+/g, ' ')
   expect(clean(result.queries[0].sql)).toBe(clean(expectedSql))
 }
@@ -101,8 +105,8 @@ describe('lang', () => {
   })
 
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
-    const sql = testTables + '\n' + 'from users select id; from users select id = ; from users select name;'
-    const {queries} = analyze(sql)
+    let sql = testTables + '\n' + 'from users select id; from users select id = ; from users select name;'
+    let {queries} = analyze(sql)
     expect(queries.length).toBe(3)
     expect(queries[0].diagnostics.length).toBe(0)
     expect(queries[1].diagnostics.length).toBeGreaterThan(0)
@@ -111,8 +115,8 @@ describe('lang', () => {
   })
 
   it('reports syntax diagnostics on invalid table and still registers table name', () => {
-    const sql = 'table t (a int, ; ) ; from t select a;'
-    const {tables, queries} = analyze(sql)
+    let sql = 'table t (a int, ; ) ; from t select a;'
+    let {tables, queries} = analyze(sql)
     expect(tables.length).toBe(1)
     expect(tables[0].name.toLowerCase()).toBe('t')
     expect((tables[0].diagnostics?.length || 0)).toBeGreaterThan(0)

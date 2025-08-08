@@ -63,7 +63,6 @@ export default [
       'prefer-let/prefer-let': ['error'],
       '@typescript-eslint/no-explicit-any': 'off',
       'no-case-declarations': 'off',
-      'allowSeparateTypeImports': true,
     },
   },
 ]
