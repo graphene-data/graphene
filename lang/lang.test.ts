@@ -57,7 +57,7 @@ function testQuery (grapheneSql: string, expectedSql: string) {
 describe('lang', () => {
   it('handles basic select query', () => {
     testQuery(
-      'select id, name from users where id = 1',
+      'SELECT id, name from users where id = 1',
       'SELECT users.id, users.name FROM users WHERE users.id = 1',
     )
   })
