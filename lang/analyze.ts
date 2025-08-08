@@ -189,7 +189,6 @@ function getParseErrors (node: SyntaxNode): Diagnostic[] {
   node.cursor().iterate((n: SyntaxNodeRef) => {
     if (n.type.isError) {
       console.log(src.slice(n.from - 10, n.to + 10))
-      debugger
       errorNodes.push(n.node)
     }
   })

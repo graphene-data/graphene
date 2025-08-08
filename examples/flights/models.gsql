@@ -19,7 +19,7 @@ table flights (
   join_one aircraft on aircraft.tail_num = flights.tail_num,
   join_one carriers on carriers.code = flights.carrier,
   measure long_haul distance > 2000,
-  measure seats_per_flight sum(aircraft.model.seats) / count(*),
+  measure seats_per_flight sum(aircraft.model.seats) / count(*)
 );
 
 table aircraft (
@@ -48,7 +48,7 @@ table aircraft (
   cert_issue_date DATE,
   air_worth_date DATE,
 
-  join_one aircraft_models as model on aircraft.aircraft_model_code = model.aircraft_model_code,
+  join_one aircraft_models as model on aircraft.aircraft_model_code = model.aircraft_model_code
 );
 
 table aircraft_models (
@@ -62,15 +62,13 @@ table aircraft_models (
   engines BIGINT,
   seats BIGINT,
   weight BIGINT,
-  speed BIGINT,
-
-  join_many aircraft on aircraft.aircraft_model_code = model.aircraft_model_code,
+  speed BIGINT
 );
 
 table carriers (
   code VARCHAR,
   name VARCHAR,
-  nickname VARCHAR,
+  nickname VARCHAR
 );
 
 
