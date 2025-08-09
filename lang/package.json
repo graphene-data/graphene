@@ -1,7 +1,7 @@
 {
   "name": "@graphene/lang",
   "type": "module",
-  "main": "dist/analyze.js",
+  "main": "analyze.ts",
   "scripts": {
     "test": "vitest run --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
     "test-one": "DEBUG=1 node --experimental-strip-types --inspect ../scripts/turboTest.js",

@@ -5,6 +5,8 @@ import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 import {txt, TABLE_MAP, Query, type Diagnostic, type Column, type Join, type Computed, type Table} from './core.ts'
 import {lookup} from './lookup.ts'
 
+export type {Query, Table, Diagnostic} from './core.ts'
+
 // Loads and parses all gsql files within a directory
 export async function loadWorkspace (dir:string) {
   for (let f of await readdir(dir)) {

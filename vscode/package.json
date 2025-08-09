@@ -38,8 +38,7 @@
     "watch": "node ./esbuild.mjs --watch"
   },
   "dependencies": {
-    "@graphene/lang": "workspace:*"
-    
+    "@graphene/lang": "file:../lang"
   },
   "devDependencies": {
     "esbuild": "^0.21.5",
