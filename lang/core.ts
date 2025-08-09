@@ -9,15 +9,6 @@ export function txt (node:SyntaxNode | null | undefined) {
   return top?.tree?.rawText.substring(node.from, node.to) || ''
 }
 
-// function getDescendants (node:SyntaxNode, type:string) {
-//   let res = [] as SyntaxNode[]
-//   node.cursor().iterate(n => {
-//     if (n.name == type) res.push(n.node)
-//   })
-//   return res
-// }
-//
-
 declare module '@lezer/common' {
   interface Tree {
     rawText: string
@@ -52,11 +43,21 @@ export interface Computed {
 
 type Field = Column | Join | Computed
 
-export interface Table {
+export class Table {
   name: string
-  fields: Record<string, Field>
-  diagnostics: Diagnostic[]
-  metadata: Record<string, string>
+  fields: Record<string, Field> = {}
+  diagnostics: Diagnostic[] = []
+  metadata: Record<string, string> = {}
+
+  constructor (name: string) {
+    this.name = name
+  }
+
+  diag (node: SyntaxNode, message: string, severity: 'error' | 'warn' = 'error') {
+    let from = node.from
+    let to = Math.max(node.to, node.from)
+    this.diagnostics.push({from, to, message, severity})
+  }
 }
 
 export class Query {
@@ -66,6 +67,12 @@ export class Query {
   isAgg = false
   diagnostics: Diagnostic[] = []
   treeNode: SyntaxNode | null = null
+
+  diag (node: SyntaxNode, message: string, severity: 'error' | 'warn' = 'error') {
+    let from = node.from
+    let to = Math.max(node.to, node.from)
+    this.diagnostics.push({from, to, message, severity})
+  }
 }
 
 export interface Diagnostic {
