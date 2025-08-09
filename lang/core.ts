@@ -62,6 +62,7 @@ export class Query {
   fields: Record<string, Column> = {}
   isAgg = false
   diagnostics: Diagnostic[] = []
+  treeNode: SyntaxNode | null = null
 }
 
 export interface Diagnostic {

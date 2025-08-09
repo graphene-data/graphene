@@ -6,5 +6,6 @@ notes.md
 .evidence
 .svelte-kit
 *.duckdb
+**/.vscode/settings.json
 
 CLAUDE.md
