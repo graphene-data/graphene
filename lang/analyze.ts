@@ -2,7 +2,7 @@ import {parser} from './parser.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
-import {txt, TABLE_MAP, Query, type Diagnostic, type Column, type Join, type Computed, type Table} from './core.ts'
+import {Table, txt, TABLE_MAP, Query, type Column, type Join, type Computed} from './core.ts'
 import {lookup} from './lookup.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 
@@ -27,9 +27,11 @@ export function analyze (source:string): { tables: Table[], queries: Query[] } {
 
 // Parses a table (model) declaration. Most analysis is done lazily, so this just gets the tables name and fields.
 function analyzeTable (tableNode: SyntaxNode): Table {
-  let name = txt(tableNode.firstChild?.nextSibling)
-  let diagnostics: Diagnostic[] = getParseErrors(tableNode)
-  let table: Table = TABLE_MAP[name] = {name, fields: {}, diagnostics, metadata: extractLeadingMetadata(tableNode)}
+  let table = new Table(txt(tableNode.firstChild?.nextSibling))
+  TABLE_MAP[table.name] = table
+  getParseErrors(tableNode).forEach(n => table.diag(n, 'Syntax error'))
+  table.metadata = extractLeadingMetadata(tableNode)
+
   let fields = [
     ...tableNode.getChildren('ColumnDef').map(cn => ({
       type: 'column',
@@ -61,13 +63,16 @@ function analyzeTable (tableNode: SyntaxNode): Table {
 // NB that this creates a scope for the query, and function like analyzeExpression and lookup operate within that scope, which is crucial for subquery support.
 function analyzeQuery (queryNode: SyntaxNode): Query {
   let query = new Query()
-  query.diagnostics = getParseErrors(queryNode)
+  getParseErrors(queryNode).forEach(n => query.diag(n, 'Syntax error'))
 
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   froms.forEach(f => {
     let name = txt(f.getChild('Identifier'))
     let alias = txt(f.getChild('Alias')) || name
     if (f.name == 'TableName') {
+      if (!TABLE_MAP[name]) {
+        query.diag(f.getChild('Identifier') || f, `Unknown table ${name}`)
+      }
       query.tables[alias || name] = {type: 'join', alias, tableName: name}
       f.sql = alias
     } else if (f.name == 'Subquery') {
@@ -137,6 +142,7 @@ function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): 
       break
     case 'ColumnRef':
       let [newScope, field] = lookup(expr, query, scope)
+      if (!newScope || !field) return expr
       if (field.type == 'computed') {
         expr.sql = analyzeExpression(field.expression, query, newScope).sql
       } else if (field.type == 'column') {
@@ -184,7 +190,7 @@ function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): 
   return expr
 }
 
-function getParseErrors (node: SyntaxNode): Diagnostic[] {
+function getParseErrors (node: SyntaxNode): SyntaxNode[] {
   let errorNodes: SyntaxNode[] = []
 
   node.cursor().iterate((n: SyntaxNodeRef) => {
@@ -192,11 +198,5 @@ function getParseErrors (node: SyntaxNode): Diagnostic[] {
       errorNodes.push(n.node)
     }
   })
-  return errorNodes.map(n => diag(n, 'error', 'Syntax error'))
-}
-
-function diag (node: SyntaxNode, severity: 'error' | 'warn', message: string): Diagnostic {
-  let from = node.from
-  let to = Math.max(node.to, node.from)
-  return {from, to, message, severity}
+  return errorNodes
 }
