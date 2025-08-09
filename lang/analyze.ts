@@ -59,6 +59,7 @@ function analyzeTable (tableNode: SyntaxNode): Table {
 function analyzeQuery (queryNode: SyntaxNode): Query {
   let query = new Query()
   query.diagnostics = getParseErrors(queryNode)
+  query.treeNode = queryNode
 
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   froms.forEach(f => {

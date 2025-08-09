@@ -3,6 +3,7 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import {styleText as nodeStyleText} from 'node:util'
 import {analyze, type Diagnostic, loadWorkspace, type Query} from '@graphene/lang'
+import {logTree} from './logTree.ts'
 
 export async function readAndCompile (inputArg?: string, debug?: boolean): Promise<Query[]> {
   await loadWorkspace(process.cwd())
@@ -11,8 +12,8 @@ export async function readAndCompile (inputArg?: string, debug?: boolean): Promi
   let {tables, queries} = analyze(src)
   let diags = [...tables, ...queries].flatMap(x => x.diagnostics)
 
-  if (debug) {
-    console.log(queries[0].treeNode?.toString())
+  if (debug && queries[0]?.treeNode) {
+    logTree(queries[0].treeNode, src)
   }
 
   let errors = diags.filter((d) => d.severity === 'error')

@@ -1,5 +1,4 @@
-import {Query, TABLE_MAP, txt} from './core.ts'
-import type {Join, Computed, Column} from './core.ts'
+import {Query, TABLE_MAP, txt, type Join, type Computed, type Column} from './core.ts'
 import type {SyntaxNode} from '@lezer/common'
 
 type Field = Column | Join | Computed
