@@ -13,10 +13,13 @@
 import type {Query as GrapheneQuery, Table as GrapheneTable, Column as GrapheneColumn, Join as GrapheneJoin} from './core.ts'
 import {TABLE_MAP, txt} from './core.ts'
 
-// Malloy types are not installed as a dependency here; declare minimal shapes used below based on the PoC
-// If the project later adds Malloy as a dep, replace these with real imports.
+// Prefer the real Malloy QueryModel from the installed package
+// Ensure dialects are registered for compilation
+// These are deep imports which exist in the published package
+import {QueryModel as RealQueryModel} from '@malloydata/malloy/dist/model/malloy_query.js'
+import '@malloydata/malloy/dist/dialect/dialect_map.js'
 
-// Minimal Malloy IR type declarations
+// Minimal Malloy IR type declarations (kept for construction typing)
 namespace malloy {
   export type AtomicType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp'
 
@@ -103,39 +106,23 @@ namespace malloy {
     structRef: string
     pipeline: PipelineStage[]
   }
-
-  export class QueryModel {
-    private model: ModelDef
-    constructor (m: ModelDef) { this.model = m }
-    // Placeholder compileQuery; in real usage, this should call Malloy's compiler
-    compileQuery (_q: Query): {sql: string} {
-      throw new Error('Malloy not installed in this workspace. Install Malloy and replace stubs, or invoke toMalloy() and compile externally.')
-    }
-  }
 }
 
-export type MalloyQueryModel = any // will be malloy.QueryModel once wired to real lib
-export type MalloyQuery = any // will be malloy.Query once wired to real lib
+export type MalloyQueryModel = any
+export type MalloyQuery = any
 
-// Public API: best-effort rendering using Malloy. This relies on Malloy being available at runtime.
+// Public API: rendering using Malloy compiler
 export function renderSql (query: GrapheneQuery): string {
   const [qm, mq] = toMalloy(query)
-  // If the stub QueryModel is still in use, this throws; surface a clear message.
-  try {
-    const compiled = (qm as any).compileQuery(mq)
-    return compiled.sql
-  } catch (err) {
-    throw new Error('Malloy compilation is not available in this environment. Use toMalloy() and compile where Malloy is installed. Original error: ' + (err as Error).message)
-  }
+  const compiled = (qm as any).compileQuery(mq)
+  return compiled.sql
 }
 
 // Translate Graphene Query + TABLE_MAP into Malloy IR
 export function toMalloy (query: GrapheneQuery): [MalloyQueryModel, MalloyQuery] {
-  // Build ModelDef from TABLE_MAP and any table.asQuery
   const contents: Record<string, malloy.StructContent> = {}
   for (const [name, t] of Object.entries(TABLE_MAP)) {
     if (t.asQuery) {
-      // Represent as a query_source with guessed field list (no types known → default number)
       const q = translateQuery(t.asQuery, name)
       const fields = inferFieldsFromQuery(t.asQuery)
       contents[name] = {
@@ -159,7 +146,7 @@ export function toMalloy (query: GrapheneQuery): [MalloyQueryModel, MalloyQuery]
     dependencies: {},
   }
 
-  const qm = new malloy.QueryModel(model)
+  const qm = new RealQueryModel(model)
   const mq = translateQuery(query)
   return [qm as MalloyQueryModel, mq as MalloyQuery]
 }
@@ -176,15 +163,12 @@ function translateTable (t: GrapheneTable): malloy.TableSourceDef {
       if (!target) throw new Error(`Unknown join target table: ${j.tableName}`)
       const joined = translateTable(target) as malloy.JoinFieldDef
       joined.name = j.alias
-      joined.join = 'one' // only join_one in grammar currently
+      joined.join = 'one'
       if (j.expression) {
         joined.onExpression = translateExpressionSql(txt(j.expression))
       }
       fields.push(joined)
     } else {
-      // Computed measures are not yet modeled in Malloy table fields here; skip or could add later
-      // For now, skip with a note
-      // eslint-disable-next-line no-continue
       continue
     }
   }
@@ -199,7 +183,6 @@ function translateTable (t: GrapheneTable): malloy.TableSourceDef {
 }
 
 function translateQuery (q: GrapheneQuery, structNameHint?: string): malloy.Query {
-  // Determine base structRef from q.tables
   const structRef = pickPrimaryStruct(q, structNameHint)
   const selectExprs = collectSelects(q)
   const filter = collectFilter(q)
@@ -216,14 +199,12 @@ function translateQuery (q: GrapheneQuery, structNameHint?: string): malloy.Quer
 
 function pickPrimaryStruct (q: GrapheneQuery, hint?: string): string {
   if (hint) return hint
-  // Choose first FROM table alias
   const first = Object.values(q.tables)[0]
   if (!first) throw new Error('Query has no tables in FROM')
   return first.alias || first.tableName || 'unknown'
 }
 
 function collectSelects (q: GrapheneQuery): (malloy.RefToField | malloy.AtomicFieldDef)[] {
-  // We rely on the parsed/annotated query treeNode to re-walk selects; otherwise we cannot reconstruct expressions.
   const node = q.treeNode
   if (!node) throw new Error('Query.treeNode missing; ensure analyze() sets treeNode on Query')
 
@@ -237,7 +218,6 @@ function collectSelects (q: GrapheneQuery): (malloy.RefToField | malloy.AtomicFi
     const expr = it.getChild('Expression')
     if (!expr) continue
 
-    // If expression is a simple ColumnRef, emit fieldref; otherwise, emit computed AtomicFieldDef with guessed type
     if (expr.name === 'ColumnRef') {
       const path = expr.getChildren('Identifier').map(id => txt(id))
       out.push({type: 'fieldref', path})
@@ -277,12 +257,11 @@ function translateExpr (expr: any, q: GrapheneQuery): malloy.Expression {
       if ((raw.startsWith("'") && raw.endsWith("'")) || (raw.startsWith('"') && raw.endsWith('"'))) {
         return {node: 'stringLiteral', literal: raw.slice(1, -1)}
       }
-      // true/false/null currently not mapped; treat as string literal stub
       return {node: 'stringLiteral', literal: raw}
     }
     case 'ColumnRef':
       return {node: 'field', path: expr.getChildren('Identifier').map((i: any) => txt(i))}
-    case 'FunctionCall': { // map a few common aggregates
+    case 'FunctionCall': {
       const fn = txt(expr.getChild('Identifier')).toLowerCase()
       const args = expr.getChildren('Expression')
       if (['sum', 'avg', 'min', 'max', 'count'].includes(fn)) {
@@ -308,7 +287,6 @@ function translateExpr (expr: any, q: GrapheneQuery): malloy.Expression {
       const u = txt(expr.getChild('UnaryOperator')).toLowerCase()
       if (u === 'not') return {node: 'not', e: inner}
       if (u === '+' || u === '-') {
-        // Represent unary +/- as binary with 0 op for now
         const zero: malloy.Expression = {node: 'numberLiteral', literal: '0'}
         return {node: u === '+' ? '+' : '-', kids: {left: zero, right: inner}}
       }
@@ -322,7 +300,6 @@ function translateExpr (expr: any, q: GrapheneQuery): malloy.Expression {
 }
 
 function translateExpressionSql (sql: string): malloy.Expression {
-  // Extremely limited parser for join ON expressions: expect "a = b"
   const m = sql.match(/\s*([\w\.]+)\s*(=)\s*([\w\.]+)\s*/i)
   if (!m) throw new Error(`Unsupported join expression: ${sql}`)
   const left = {node: 'field', path: m[1].split('.')}
@@ -331,8 +308,6 @@ function translateExpressionSql (sql: string): malloy.Expression {
 }
 
 function inferFieldsFromQuery (_q: GrapheneQuery): malloy.AtomicFieldDef[] {
-  // Without full column lineage, just return empty; Malloy PoC had explicit fields. For now, assume none.
-  // Alternatively, a very rough heuristic: if the query has a SelectClause with ColumnRefs, include them with number type.
   const node = _q.treeNode
   if (!node) return []
   const select = node.getChild('SelectClause')
@@ -343,7 +318,6 @@ function inferFieldsFromQuery (_q: GrapheneQuery): malloy.AtomicFieldDef[] {
     const expr = it.getChild('Expression')
     if (!expr) continue
     const name = it.getChild('Alias') ? txt(it.getChild('Alias')) : deriveExprAlias(expr)
-    // Default to number as requested
     fields.push({type: 'number', name})
   }
   return fields
@@ -356,6 +330,5 @@ function guessType (sqlType: string): malloy.AtomicType {
   if (t.includes('bool')) return 'boolean'
   if (t.includes('date') && !t.includes('time')) return 'date'
   if (t.includes('time')) return 'timestamp'
-  // numeric-ish
   return 'number'
 }
