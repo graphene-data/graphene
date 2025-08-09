@@ -48,6 +48,7 @@ export class Table {
   fields: Record<string, Field> = {}
   diagnostics: Diagnostic[] = []
   metadata: Record<string, string> = {}
+  asQuery: Query | null = null
 
   constructor (name: string) {
     this.name = name
