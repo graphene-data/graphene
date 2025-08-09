@@ -84,8 +84,9 @@ function bad () {
 }
 
 ### Only use meaningful comments
-Comments are best when they describe a function, or a section of 2-4 code lines whose purpose might be less obvious from the code.
+Most functions should have a comment describing what they do. For longer methods it's a good idea to add some high-level comments to help readers understand the flow.
 
+Comments are also great when there is code whose purpose isn't obvious from first reading it.
 DO NOT add silly little comments that say something the code obviously says. This is bad:
 > // process element
 > processEleme(e)

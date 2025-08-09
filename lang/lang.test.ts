@@ -5,9 +5,13 @@ import {expect} from 'vitest'
 const DEBUG = !!process.env.DEBUG
 
 const testTables = `
+  -- people who purchase things
+  --# domain=sales
   table users (
     id int,
     name text,
+    -- email address of the user
+    --# pii=true
     email text,
     created_at timestamp,
 
@@ -20,6 +24,8 @@ const testTables = `
     id int,
     user_id int,
     product_id int,
+    -- amount in usd
+    --# units=usd
     amount numeric,
     status text,
 
@@ -121,5 +127,33 @@ describe('lang', () => {
     expect(tables[0].name.toLowerCase()).toBe('t')
     expect((tables[0].diagnostics?.length || 0)).toBeGreaterThan(0)
     expect(queries[0].sql.toLowerCase()).toContain('from t')
+  })
+
+  it('parses metadata from comments on tables and fields (from testTables)', () => {
+    let {tables} = analyze(testTables + '\nfrom users select id')
+    let users = tables.find(t => t.name.toLowerCase() === 'users')!
+    expect(users.metadata.description.toLowerCase()).toContain('people who purchase things')
+    expect(users.metadata.domain).toBe('sales')
+    let email = users.fields['email'] as any
+    expect(email.metadata.description.toLowerCase()).toContain('email address')
+    expect(email.metadata.pii).toBe('true')
+    let orders = tables.find(t => t.name.toLowerCase() === 'orders')!
+    let amount = orders.fields['amount'] as any
+    expect(amount.metadata.units).toBe('usd')
+  })
+
+  it('does not attach a single leading comment to multiple fields on the same line', () => {
+    let sql = `
+    table foo (
+      -- the name field
+      id bigint, name varchar
+    )
+    from foo select id` // include a query to force parse
+    let {tables} = analyze(sql)
+    let t = tables[0]
+    let id = t.fields['id'] as any
+    let name = t.fields['name'] as any
+    expect(id.metadata.description.toLowerCase()).toContain('name field')
+    expect(name.metadata?.description).toBeUndefined()
   })
 })

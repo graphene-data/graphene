@@ -4,6 +4,7 @@ import path from 'path'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 import {txt, TABLE_MAP, Query, type Diagnostic, type Column, type Join, type Computed, type Table} from './core.ts'
 import {lookup} from './lookup.ts'
+import {extractLeadingMetadata} from './metadata.ts'
 
 export type {Query, Table, Diagnostic} from './core.ts'
 
@@ -28,12 +29,13 @@ export function analyze (source:string): { tables: Table[], queries: Query[] } {
 function analyzeTable (tableNode: SyntaxNode): Table {
   let name = txt(tableNode.firstChild?.nextSibling)
   let diagnostics: Diagnostic[] = getParseErrors(tableNode)
-  let table = TABLE_MAP[name] = {name, fields: {}, diagnostics}
+  let table: Table = TABLE_MAP[name] = {name, fields: {}, diagnostics, metadata: extractLeadingMetadata(tableNode)}
   let fields = [
     ...tableNode.getChildren('ColumnDef').map(cn => ({
       type: 'column',
       name: txt(cn.getChild('Identifier')),
       dataType: txt(cn.getChild('DataType')),
+      metadata: extractLeadingMetadata(cn),
     })) satisfies Column[],
     ...tableNode.getChildren('JoinDef').map(jn => {
       let tableName = txt(jn.getChild('Identifier'))
@@ -45,6 +47,7 @@ function analyzeTable (tableNode: SyntaxNode): Table {
       type: 'computed',
       name: txt(cn.getChild('Identifier')),
       expression: cn.getChild('Expression')!,
+      metadata: extractLeadingMetadata(cn),
     })) satisfies Computed[],
   ]
   fields.forEach(f => {
@@ -59,7 +62,6 @@ function analyzeTable (tableNode: SyntaxNode): Table {
 function analyzeQuery (queryNode: SyntaxNode): Query {
   let query = new Query()
   query.diagnostics = getParseErrors(queryNode)
-  query.treeNode = queryNode
 
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   froms.forEach(f => {
@@ -185,13 +187,8 @@ function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): 
 function getParseErrors (node: SyntaxNode): Diagnostic[] {
   let errorNodes: SyntaxNode[] = []
 
-  let top = node
-  while (top.parent) top = top.parent
-  let src = top.tree?.rawText || ''
-
   node.cursor().iterate((n: SyntaxNodeRef) => {
     if (n.type.isError) {
-      console.log(src.slice(n.from - 10, n.to + 10))
       errorNodes.push(n.node)
     }
   })
