@@ -24,27 +24,82 @@ export function analyze (source:string): { tables: Table[], queries: Query[] } {
   return {tables, queries}
 }
 
+// Helper to get the raw source for a node
+function getSourceForNode (node: SyntaxNode): string {
+  let top: SyntaxNode = node
+  while (top.parent) top = top.parent
+  return top.tree?.rawText || ''
+}
+
+// Extracts metadata from leading comment lines directly above a node.
+// Supports multi-line description with `--` prefix and key-value pairs with `--# key=value`.
+function extractLeadingMetadata (node: SyntaxNode): Record<string, string> {
+  const src = getSourceForNode(node)
+  if (!src) return {}
+  let pos = node.from
+  // Find start of the current line
+  let currentLineStart = src.lastIndexOf('\n', Math.max(0, pos - 1)) + 1
+  let endOfPrevLine = currentLineStart - 1
+  if (endOfPrevLine < 0) return {}
+
+  const commentLines: string[] = []
+  let cursor = endOfPrevLine
+  while (cursor >= 0) {
+    const startOfLine = src.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1
+    const line = src.slice(startOfLine, cursor).trimEnd()
+    const trimmed = line.trim()
+    if (trimmed.length === 0) break // blank line breaks adjacency
+    if (!trimmed.startsWith('--')) break // non-comment line breaks adjacency
+    commentLines.push(trimmed)
+    cursor = startOfLine - 1
+  }
+  if (commentLines.length === 0) return {}
+
+  commentLines.reverse()
+
+  const metadata: Record<string, string> = {}
+  const descriptionLines: string[] = []
+  for (const raw of commentLines) {
+    const withoutPrefix = raw.slice(2).trimStart() // remove '--'
+    if (withoutPrefix.startsWith('#')) {
+      const kv = withoutPrefix.slice(1).trim()
+      const eqIdx = kv.indexOf('=')
+      if (eqIdx > 0) {
+        const key = kv.slice(0, eqIdx).trim()
+        const value = kv.slice(eqIdx + 1).trim()
+        if (key) metadata[key] = value
+      }
+      continue
+    }
+    if (withoutPrefix) descriptionLines.push(withoutPrefix)
+  }
+  if (descriptionLines.length) metadata.description = descriptionLines.join(' ')
+  return metadata
+}
+
 // Parses a table (model) declaration. Most analysis is done lazily, so this just gets the tables name and fields.
 function analyzeTable (tableNode: SyntaxNode): Table {
   let name = txt(tableNode.firstChild?.nextSibling)
   let diagnostics: Diagnostic[] = getParseErrors(tableNode)
-  let table = TABLE_MAP[name] = {name, fields: {}, diagnostics}
+  let table: Table = TABLE_MAP[name] = {name, fields: {}, diagnostics, metadata: extractLeadingMetadata(tableNode)}
   let fields = [
     ...tableNode.getChildren('ColumnDef').map(cn => ({
       type: 'column',
       name: txt(cn.getChild('Identifier')),
       dataType: txt(cn.getChild('DataType')),
+      metadata: extractLeadingMetadata(cn),
     })) satisfies Column[],
     ...tableNode.getChildren('JoinDef').map(jn => {
       let tableName = txt(jn.getChild('Identifier'))
       let alias = txt(jn.getChild('Alias'))
       let expression = jn.getChild('Expression')
-      return {type: 'join', alias: alias || tableName, tableName, expression}
+      return {type: 'join', alias: alias || tableName, tableName, expression, metadata: extractLeadingMetadata(jn)}
     }) satisfies Join[],
     ...tableNode.getChildren('ComputedDef').map(cn => ({
       type: 'computed',
       name: txt(cn.getChild('Identifier')),
       expression: cn.getChild('Expression')!,
+      metadata: extractLeadingMetadata(cn),
     })) satisfies Computed[],
   ]
   fields.forEach(f => {

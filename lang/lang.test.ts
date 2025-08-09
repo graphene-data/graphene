@@ -123,3 +123,44 @@ describe('lang', () => {
     expect(queries[0].sql.toLowerCase()).toContain('from t')
   })
 })
+
+describe('metadata from comments', () => {
+  it('extracts description and key=value metadata for tables and fields', () => {
+    const sql = `
+-- A table of flight records
+--# source=etl
+--# owner=data-eng
+ table flights (
+   id bigint,
+
+   -- the total spent on fuel at the start of this flight
+   --# units=usd
+   fuel_cost bigint,
+
+   -- a join to users table
+   --# relation=owner
+   join_one users on users.id = flights.id,
+
+   -- computed value
+   --# quality=derived
+   measure cost_per_unit fuel_cost / 100
+ )
+ from flights select id` // include a dummy query to avoid empty queries
+    const {tables} = analyze(sql)
+    expect(tables.length).toBe(1)
+    const t = tables[0]
+    expect(t.metadata.description.toLowerCase()).toContain('table of flight records')
+    expect(t.metadata.source).toBe('etl')
+    expect(t.metadata.owner).toBe('data-eng')
+
+    const fuel = (t.fields['fuel_cost'] as any)
+    expect(fuel.metadata.description.toLowerCase()).toContain('total spent on fuel')
+    expect(fuel.metadata.units).toBe('usd')
+
+    const j = (t.fields['users'] as any)
+    expect(j.metadata.relation).toBe('owner')
+
+    const m = (t.fields['cost_per_unit'] as any)
+    expect(m.metadata.quality).toBe('derived')
+  })
+})

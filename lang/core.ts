@@ -32,6 +32,7 @@ export interface Column {
   type: 'column'
   name: string
   dataType: string
+  metadata: Record<string, string>
 }
 
 export interface Join {
@@ -40,12 +41,14 @@ export interface Join {
   tableName?: string
   expression?: SyntaxNode | null
   subquery?: Query
+  metadata: Record<string, string>
 }
 
 export interface Computed {
   type: 'computed'
   name: string
   expression: SyntaxNode
+  metadata: Record<string, string>
 }
 
 type Field = Column | Join | Computed
@@ -54,6 +57,7 @@ export interface Table {
   name: string
   fields: Record<string, Field>
   diagnostics: Diagnostic[]
+  metadata: Record<string, string>
 }
 
 export class Query {
