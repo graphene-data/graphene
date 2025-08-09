@@ -20,7 +20,10 @@ export async function loadWorkspace (dir:string) {
 export function analyze (source:string): { tables: Table[], queries: Query[] } {
   let tree = parser.parse(source)
   tree.rawText = source
-  let tables = tree.topNode.getChildren('TableStatement').map(analyzeTable).filter((t): t is Table => !!t)
+  let tables = [
+    ...tree.topNode.getChildren('TableStatement').map(analyzeTable).filter((t): t is Table => !!t),
+    ...tree.topNode.getChildren('TableAsQuery').map(analyzeTableAsQuery).filter((t): t is Table => !!t),
+  ]
   let queries = tree.topNode.getChildren('QueryStatement').map(analyzeQuery)
   return {tables, queries}
 }
@@ -59,10 +62,25 @@ function analyzeTable (tableNode: SyntaxNode): Table {
   return table
 }
 
+// Parses a `table <name> as (<query>)` statement into a Table with an attached Query
+function analyzeTableAsQuery (node: SyntaxNode): Table {
+  let name = txt(node.getChild('Identifier'))
+  let table = new Table(name)
+  TABLE_MAP[table.name] = table
+  getParseErrors(node).forEach(n => table.diag(n, 'Syntax error'))
+  table.metadata = extractLeadingMetadata(node)
+  let qn = node.getChild('QueryStatement')
+  if (qn) {
+    table.asQuery = analyzeQuery(qn)
+  }
+  return table
+}
+
 // Walks each part of the query checking types, rendering sql
 // NB that this creates a scope for the query, and function like analyzeExpression and lookup operate within that scope, which is crucial for subquery support.
 function analyzeQuery (queryNode: SyntaxNode): Query {
   let query = new Query()
+  query.treeNode = queryNode
   getParseErrors(queryNode).forEach(n => query.diag(n, 'Syntax error'))
 
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []

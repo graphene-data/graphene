@@ -11,12 +11,11 @@
     "test": "vitest run",
     "watch": "npm run watch --workspace=vscode"
   },
-  "dependencies": {},
   "devDependencies": {
     "eslint": "^9.32.0",
     "eslint-plugin-prefer-let": "^4.0.0",
     "typescript-eslint": "^8.38.0",
-    "vitest": "^3.0.5",
+    "vitest": "^3.2.4",
     "zx": "^8.7.2"
   }
 }
