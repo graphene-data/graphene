@@ -122,4 +122,18 @@ describe('lang', () => {
     expect((tables[0].diagnostics?.length || 0)).toBeGreaterThan(0)
     expect(queries[0].sql.toLowerCase()).toContain('from t')
   })
+
+  it('reports diagnostics for unknown table in FROM', () => {
+    let sql = testTables + '\n' + 'from not_a_table select id'
+    let {queries} = analyze(sql)
+    expect(queries[0].diagnostics.length).toBeGreaterThan(0)
+    expect(queries[0].diagnostics[0].message.toLowerCase()).toContain('unknown table')
+  })
+
+  it('reports diagnostics for unknown column', () => {
+    let sql = testTables + '\n' + 'from users select does_not_exist'
+    let {queries} = analyze(sql)
+    expect(queries[0].diagnostics.length).toBeGreaterThan(0)
+    expect(queries[0].diagnostics[0].message.toLowerCase()).toContain("couldn't find column")
+  })
 })

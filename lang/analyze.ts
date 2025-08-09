@@ -63,6 +63,10 @@ function analyzeQuery (queryNode: SyntaxNode): Query {
     let name = txt(f.getChild('Identifier'))
     let alias = txt(f.getChild('Alias')) || name
     if (f.name == 'TableName') {
+      // validate the table exists
+      if (!TABLE_MAP[name]) {
+        query.diagnostics.push(diag(f.getChild('Identifier') || f, 'error', `Unknown table ${name}`))
+      }
       query.tables[alias || name] = {type: 'join', alias, tableName: name}
       f.sql = alias
     } else if (f.name == 'Subquery') {
@@ -131,11 +135,16 @@ function analyzeExpression (expr:SyntaxNode, query: Query, scope: Join | null): 
       expr.sql = '*'
       break
     case 'ColumnRef':
-      let [newScope, field] = lookup(expr, query, scope)
-      if (field.type == 'computed') {
-        expr.sql = analyzeExpression(field.expression, query, newScope).sql
-      } else if (field.type == 'column') {
-        expr.sql = `${newScope.alias}.${field.name}`
+      try {
+        let [newScope, field] = lookup(expr, query, scope)
+        if (field.type == 'computed') {
+          expr.sql = analyzeExpression(field.expression, query, newScope).sql
+        } else if (field.type == 'column') {
+          expr.sql = `${newScope.alias}.${field.name}`
+        }
+      } catch (e:any) {
+        query.diagnostics.push({from: expr.from, to: expr.to, message: e?.message || 'Unknown reference', severity: 'error'})
+        expr.sql = txt(expr)
       }
       break
     case 'FunctionCall':

@@ -19,7 +19,8 @@ export function lookup (node:SyntaxNode, query:Query, scope:Join | null): [Join,
   let searchAllTablesInQuery = (name:string): {join: Join, field: Field} => {
     let matches = Object.values(query.tables).map(join => {
       let tablish = join.subquery || TABLE_MAP[join.tableName || '']
-      return {join, field: tablish.fields[name]}
+      let field = tablish ? tablish.fields[name] : undefined
+      return {join, field}
     }).filter(a => !!a.field)
     if (matches.length == 0) throw new Error(`Couldn't find ${name}`)
     if (matches.length > 1) throw new Error(`Ambiguous reference to ${name}`)
@@ -31,7 +32,9 @@ export function lookup (node:SyntaxNode, query:Query, scope:Join | null): [Join,
   for (let part of pathSegments) {
     if (scope) { // our lookup is constrained to a single table (ie, you're in the middle of a dot-join or a measure)
       if (!scope.tableName) throw new Error('Missing tableName in scope')
-      let field = TABLE_MAP[scope.tableName].fields[part]
+      let table = TABLE_MAP[scope.tableName]
+      if (!table) throw new Error(`Unknown table ${scope.tableName}`)
+      let field = table.fields[part]
       if (field.type != 'join') throw new Error("Trying to join on a column that isn't a join.")
       scope = query.tables[field.alias] = field
     } else if (query.tables[part]) { // you're referring to a table joined in to the query. It could be a subquery!
@@ -47,6 +50,7 @@ export function lookup (node:SyntaxNode, query:Query, scope:Join | null): [Join,
   // if we're looking up a column without a path, we need to search all the tables in the query's scope, as well as select aliases
   if (scope) {
     let tablish = scope.subquery || TABLE_MAP[scope.tableName || '']
+    if (!tablish) throw new Error(`Unknown table ${scope.tableName}`)
     if (!tablish.fields[colName]) throw new Error(`Couldn't find column ${colName} in ${scope.alias}`)
     return [scope, tablish.fields[colName]]
   } else {
