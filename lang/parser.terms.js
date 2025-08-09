@@ -96,4 +96,5 @@ export const
   JoinDef = 160,
   join_one = 162,
   ComputedDef = 163,
-  measure = 165
+  measure = 165,
+  TableAsQuery = 166
