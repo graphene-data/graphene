@@ -1,4 +1,6 @@
 import type {SyntaxNode} from '@lezer/common'
+import type * as malloy from './malloyTypes.ts'
+import type {Query as MalloyQuery} from '@malloydata/malloy'
 
 export const TABLE_MAP: Record<string, Table> = {}
 
@@ -13,67 +15,41 @@ declare module '@lezer/common' {
   interface Tree {
     rawText: string
   }
-
-  interface SyntaxNode {
-    sql?: string
-  }
 }
 
-export interface Column {
-  type: 'column'
-  name: string
-  dataType: string
-  metadata: Record<string, string>
+export type Expression = malloy.Expression & {
+  type: string
+  isAgg?: boolean
 }
 
-export interface Join {
-  type: 'join'
-  alias: string
-  tableName?: string
+export interface Join extends malloy.JoinFieldDef {
   expression?: SyntaxNode | null
-  subquery?: Query
 }
 
-export interface Computed {
-  type: 'computed'
+export interface Field {
   name: string
-  expression: SyntaxNode
+  type: string
   metadata: Record<string, string>
+  e?: Expression
+  path?: string[]
+  isAgg?: boolean
 }
 
-type Field = Column | Join | Computed
-
-export class Table {
+export interface Table {
+  type: 'table' | 'view'
   name: string
-  fields: Record<string, Field> = {}
-  diagnostics: Diagnostic[] = []
-  metadata: Record<string, string> = {}
-  asQuery: Query | null = null
-
-  constructor (name: string) {
-    this.name = name
-  }
-
-  diag (node: SyntaxNode, message: string, severity: 'error' | 'warn' = 'error') {
-    let from = node.from
-    let to = Math.max(node.to, node.from)
-    this.diagnostics.push({from, to, message, severity})
-  }
+  analyzed: boolean
+  syntaxNode: SyntaxNode
+  fields: (Field | Join)[]
+  metadata: Record<string, string>
+  connection?: string
+  dialect?: string
+  tablePath?: string
 }
 
-export class Query {
-  sql = ''
-  tables: Record<string, Join> = {}
-  fields: Record<string, Column> = {}
-  isAgg = false
-  diagnostics: Diagnostic[] = []
-  treeNode: SyntaxNode | null = null
-
-  diag (node: SyntaxNode, message: string, severity: 'error' | 'warn' = 'error') {
-    let from = node.from
-    let to = Math.max(node.to, node.from)
-    this.diagnostics.push({from, to, message, severity})
-  }
+export interface Query {
+  fields: Field[]
+  malloyQuery: MalloyQuery
 }
 
 export interface Diagnostic {
