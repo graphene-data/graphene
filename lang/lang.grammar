@@ -1,10 +1,9 @@
 @top Program {
-  // We need a semi-delimiter for now. If a file has multiple queries, it's hard to know where one stops and another begins since we allow clauses in any order.
-  ((QueryStatement | TableStatement | TableAsQuery) ";")* (QueryStatement | TableStatement | TableAsQuery)?
+  (TableStatement | ViewStatement)* QueryStatement?
 }
 
 QueryStatement {
-  (SelectClause | WhereClause | GroupByClause | OrderByClause | LimitClause)* FromClause (SelectClause | WhereClause | GroupByClause | OrderByClause | LimitClause)*
+  (FromClause | SelectClause | WhereClause | GroupByClause | OrderByClause | LimitClause)*
 }
 
 SelectClause {
@@ -64,7 +63,7 @@ TableStatement {
   Kw<"table"> Identifier "(" tableItem ("," tableItem)* ")"
 }
 
-TableAsQuery {
+ViewStatement {
   Kw<"table"> Identifier Kw<"as"> "(" QueryStatement ")"
 }
 

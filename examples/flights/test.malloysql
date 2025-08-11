@@ -51,11 +51,12 @@ source: flights is duckdb.table('flights') extend {
     average_flight_distance is distance.avg()
 }
 >>>malloy
-source: flights2 is from flights {
-  
+source: flights2 is flights extend {
+  where:
+    carriers.code = 'WN'
 }
 
-run: flights -> {
+run: flights2 -> {
   group_by: carrier
   aggregate:
     flight_count
