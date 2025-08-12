@@ -66,6 +66,10 @@ function testQuery (grapheneSql: string, expectedSql: string) {
 }
 
 describe('lang', () => {
+  beforeEach(() => {
+    clearWorkspace()
+  })
+
   it('handles basic select query', () => {
     testQuery(
       'SELECT id, name from users where id = 1',

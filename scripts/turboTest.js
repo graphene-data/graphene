@@ -50,6 +50,7 @@ global.it = (name, fn) => {
   fn()
 }
 
+global.beforeEach = (fn) => fn()
 global.it.skip = () => {}
 
 await import(firstTest.file)
