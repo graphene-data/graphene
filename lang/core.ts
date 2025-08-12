@@ -33,10 +33,11 @@ export interface Field {
   e?: Expression
   path?: string[]
   isAgg?: boolean
+  targetType?: string
 }
 
 export interface Table {
-  type: 'table' | 'view'
+  type: 'table' | 'query_source'
   name: string
   analyzed: boolean
   syntaxNode: SyntaxNode
@@ -45,6 +46,7 @@ export interface Table {
   connection?: string
   dialect?: string
   tablePath?: string
+  query?: MalloyQuery
 }
 
 export interface Query {

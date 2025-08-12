@@ -79,7 +79,7 @@ describe('lang', () => {
   it('expands dot-join syntax', () => {
     testQuery(
       'from orders select id, users.name',
-      'select base."id" as "id", users_0."name" as "name" from orders as base left join users as users_0 on users_0."id"=base."user_id"',
+      'select base."id" as "id", users_0."name" as "users_name" from orders as base left join users as users_0 on users_0."id"=base."user_id"',
     )
   })
 
@@ -90,18 +90,17 @@ describe('lang', () => {
     )
   })
 
-
   it('expands measures', () => {
     testQuery(
       'from users select name, total_orders',
-      'select base."name" as "name", count(1) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1,2 order by 1 asc nulls last',
+      'select base."name" as "name", (count(1)) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1,2 order by 1 asc nulls last',
     )
   })
 
   it('handles nested measure references', () => {
     testQuery(
       'from orders select user_id, avg_order_value',
-      'select base."user_id" as "user_id", coalesce(sum(base."amount"),0)*1.0/count(1) as "avg_order_value" from orders as base',
+      'select base."user_id" as "user_id", (coalesce(sum(base."amount"),0)*1.0/count(1)) as "avg_order_value" from orders as base',
     )
   })
 
@@ -109,6 +108,14 @@ describe('lang', () => {
     testQuery(
       'from products select name, category, total_sold where popular_item',
       'SELECT products.name, products.category, SUM(orders.amount) FROM products LEFT JOIN orders ON (orders.product_id = products.id) GROUP BY ALL HAVING SUM(orders.amount) > 1000',
+    )
+  })
+
+  it('handles subqueries', () => {
+    testQuery(
+      'from (select id, name from users) as u select id, name',
+      `WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
+      SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`,
     )
   })
 
