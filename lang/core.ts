@@ -1,8 +1,5 @@
 import type {SyntaxNode} from '@lezer/common'
-import type * as malloy from './malloyTypes.ts'
-import type {Query as MalloyQuery} from '@malloydata/malloy'
-
-export const TABLE_MAP: Record<string, Table> = {}
+import type {Expr, JoinFieldDef, Query as MalloyQuery} from '@malloydata/malloy'
 
 export function txt (node:SyntaxNode | null | undefined) {
   if (!node) return ''
@@ -17,18 +14,21 @@ declare module '@lezer/common' {
   }
 }
 
-export type Expression = malloy.Expression & {
-  type: string
+export type Expression = Expr & {
+  type: FieldType
   isAgg?: boolean
 }
 
-export interface Join extends malloy.JoinFieldDef {
+export type Join = JoinFieldDef & {
   expression?: SyntaxNode | null
+  tablePath?: string // we set this on tables, which get cloned in to joins.
 }
 
-export interface Field {
+export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'fieldref' | 'array' | 'record';
+
+export interface ColumnField {
   name: string
-  type: string
+  type: FieldType
   metadata: Record<string, string>
   e?: Expression
   path?: string[]
@@ -36,13 +36,15 @@ export interface Field {
   targetType?: string
 }
 
+export type Field = ColumnField | Join
+
 export interface Table {
   type: 'table' | 'query_source'
   name: string
-  analyzed: boolean
-  syntaxNode: SyntaxNode
   fields: (Field | Join)[]
-  metadata: Record<string, string>
+  syntaxNode: SyntaxNode
+  analyzed?: boolean
+  metadata?: Record<string, string>
   connection?: string
   dialect?: string
   tablePath?: string

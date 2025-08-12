@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import {analyze, toSql} from './analyze.ts'
+import {analyze, clearWorkspace, toSql} from './analyze.ts'
 import {expect} from 'vitest'
 
 const DEBUG = !!process.env.DEBUG
@@ -36,6 +36,10 @@ const testTables = `
     measure completed status = 'completed'
   )
 
+  table completed_orders as (
+    from orders where status = 'completed' select id
+  )
+
   table products (
     id int,
     name text,
@@ -66,6 +70,20 @@ describe('lang', () => {
     testQuery(
       'SELECT id, name from users where id = 1',
       'SELECT base."id" as "id", base."name" as "name" FROM users as base WHERE base."id"=1',
+    )
+  })
+
+  it.skip('expands plain wildcard', () => {
+    testQuery(
+      'from users select *',
+      'select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from users as base',
+    )
+  })
+
+  it.skip('expands wildcards on a specific join', () => {
+    testQuery(
+      'from orders select users.*',
+      'select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from orders as base left join users as users_0 on users_0."id"=base."user_id"',
     )
   })
 
@@ -112,6 +130,14 @@ describe('lang', () => {
   })
 
   it('handles subqueries', () => {
+    testQuery(
+      'from (select id, name from users) select id, name',
+      `WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
+      SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`,
+    )
+  })
+
+  it('handles subqueries with alias', () => {
     testQuery(
       'from (select id, name from users) as u select id, name',
       `WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
@@ -175,5 +201,12 @@ describe('lang', () => {
     let {diagnostics} = analyze(sql)
     expect(diagnostics.length).toBeGreaterThan(0)
     expect(diagnostics[0].message.toLowerCase()).toContain('could not find does_not_exist on users')
+  })
+
+  it('can create tables from queries', () => {
+    testQuery(
+      'from completed_orders select id',
+      'WITH __stage0 AS ( SELECT base."id" as "id" FROM orders as base WHERE base."status"=\'completed\' ) SELECT base."id" as "id" FROM __stage0 as base',
+    )
   })
 })
