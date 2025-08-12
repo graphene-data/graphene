@@ -2,17 +2,24 @@ import {parser} from './parser.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
-import {type Table, txt, TABLE_MAP, type Query, type Join, type Diagnostic, type Expression, type Field} from './core.ts'
+import {type Table, txt, type Query, type Join, type Diagnostic, type Expression, type Field, type ColumnField, FieldType} from './core.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import malloy from '../node_modules/@malloydata/malloy/dist/model/index.js'
+import malloy, {AggregateFunctionType, type StructRef} from '../node_modules/@malloydata/malloy/dist/model/index.js'
 
 export type {Query, Table, Diagnostic} from './core.ts'
 
+let TABLE_MAP: Record<string, Table> = {}
 let diagnostics: Diagnostic[] = []
 let queryModelContents: Record<string, any> = {}
 
 function diag (node: SyntaxNode | SyntaxNodeRef, message: string): void {
   diagnostics.push({from: node.from, to: node.to, message, severity: 'error'})
+}
+
+export function clearWorkspace () {
+  TABLE_MAP = {}
+  diagnostics = []
+  queryModelContents = {}
 }
 
 // Loads and parses all gsql files within a directory
@@ -53,18 +60,13 @@ export function analyze (source:string): {queries: Query[], diagnostics: Diagnos
   return {queries, diagnostics: Array.from(diagnostics)}
 }
 
-function registerTable (t: SyntaxNode) {
-  let name = txt(t.firstChild?.nextSibling)
-  let query = t.getChild('QueryStatement')
-  let table = TABLE_MAP[name] = {
-    type: query ? 'query_source' : 'table',
-    name,
-    fields: [],
-    analyzed: false,
-    syntaxNode: t,
-    metadata: extractLeadingMetadata(t),
-  } as Table
-  return table
+// Stores the table without analyzing it, since we don't
+function registerTable (syntaxNode: SyntaxNode) {
+  let name = txt(syntaxNode.firstChild?.nextSibling)
+  let query = syntaxNode.getChild('QueryStatement')
+  let type = query ? 'query_source' : 'table'
+  let metadata = extractLeadingMetadata(syntaxNode)
+  return TABLE_MAP[name] = {type, name, syntaxNode, metadata, fields: []} as Table
 }
 
 // Parses a table (model) declaration. Most analysis is done lazily, so this just gets the tables name and fields.
@@ -74,9 +76,15 @@ function analyzeTable (table: Table) {
   table.connection = 'duckdb'
   table.dialect = 'duckdb'
   table.tablePath = table.name
-
+  table.fields = []
   queryModelContents[table.name] = table
 
+  if (table.type == 'table') analyzeDatabaseTable(table)
+  else analyzeQueryTable(table)
+}
+
+// Actual table with columns that lives in the database
+function analyzeDatabaseTable (table: Table) {
   // regular columns in the db, like `full_name VARCHAR`
   table.syntaxNode.getChildren('ColumnDef').forEach(cn => {
     table.fields.push({
@@ -119,17 +127,22 @@ function analyzeTable (table: Table) {
   })
 }
 
-// QuerySource is the result of a query that we can treat like a table.
-// It's used to support subqueries, as well as `table foo as (select * from bar)` style tables
-function constructQuerySource (name: string, syntaxNode: SyntaxNode): Table | void {
-  if (syntaxNode.name != 'QueryStatement') throw new Error('Expected a QueryStatement')
-  let query = analyzeQuery(syntaxNode)
+function analyzeQueryTable (table: Table) {
+  let query = analyzeQuery(table.syntaxNode.getChild('QueryStatement')!)
   if (!query) return
 
-  let fields = query.fields.map(f => ({type: f.type, name: f.name}))
-  let table = {type: 'query_source', name, fields, analyzed: true, metadata: {}, query: query.malloyQuery} as Table
-  queryModelContents[name] = table
-  return table
+  table.fields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: (f as any).metadata}))
+  table.query = query.malloyQuery
+
+  // another crazy malloyism. Seems like this should always be a string, but if it is, malloy will hit an error
+  // if it happens to load a query_source before the table it depends on.
+  // I also experimented with forcing queryModelContents to be an array in the correct order (ie dependencies first),
+  // which seems to work, but I opted for this because it's what malloy does normally.
+  if (typeof table.query.structRef == 'string') {
+    table.query.structRef = TABLE_MAP[table.query.structRef] as StructRef
+  }
+
+  queryModelContents[table.name] = table
 }
 
 // Walks each part of the query checking types, rendering sql
@@ -137,10 +150,10 @@ function constructQuerySource (name: string, syntaxNode: SyntaxNode): Table | vo
 function analyzeQuery (queryNode: SyntaxNode): Query | void {
   let structRef: string
   let baseTable: Table
-  let queryFields: Field[] = []
+  let queryFields: ColumnField[] = []
   let isAgg = false
 
-
+  // For now, we only support queries with exactly one table in the FROM clause.
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   if (froms.find(f => f.name == 'JoinClause')) diag(froms[0], 'Query joins not yet supported')
   if (froms.length == 0) diag(queryNode, 'No tables in FROM clause')
@@ -149,29 +162,35 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
   // First, figure out the base table we're querying from.
   if (froms[0].name == 'Subquery') {
     // Malloy doesn't support subqueries in FROM, so we need to construct a querySource for it
+    let syntaxNode = froms[0].getChild('SubqueryExpression')!
     structRef = txt(froms[0].getChild('Alias')) || 'subquery'
-    let subq = froms[0].getChild('SubqueryExpression')?.getChild('QueryStatement')
-    baseTable = constructQuerySource(structRef, subq!)!
-    if (!baseTable) return
+    baseTable = TABLE_MAP[structRef] = {type: 'query_source', name: structRef, syntaxNode} as Table
   } else { // from a regular table
     structRef = txt(froms[0].getChild('Identifier'))
     baseTable = TABLE_MAP[structRef]
-    if (!baseTable) return diag(froms[0], `Could not find table ${structRef}`)
-    analyzeTable(baseTable)
+    if (!baseTable) return diag(froms[0], `could not find table ${structRef}`)
   }
+  analyzeTable(baseTable)
 
   // Next, get the columns this query will return (including wildcard expansion)
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
   selects.forEach(s => {
+    if (s.getChild('Wildcard')) {
+      let expandedFields = lookup(s.getChild('Wildcard')!, baseTable) || []
+      expandedFields.forEach(f => queryFields.push(f))
+      return
+    }
+
     let alias = txt(s.getChild('Alias'))
     let expr = analyzeExpression(s.getChild('Expression')!, baseTable)
     isAgg ||= !!expr.isAgg
     let metadata = {}
     let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${queryFields.length}`)
 
-    // Malloy normally returns a fieldref if expr.node == 'field', but we just always use a regular field.
-    // This means we'll always properly name the field, and have the right type.
-    // The downnside seems to be that we'll add extra parentheses to the rendered sql in some cases.
+    // If a select is pointing to a field (ie `tableA.name`) malloy will use {type: 'fieldref', path: ['tableA', 'name']}
+    // This kinda sucks, because it will always call the field `name` and throw an error if you select another column called `name` from a different join.
+    // Instead, we're opting to pass this to malloy as an expression field, which lets us control the field's name.
+    // The one minor downside I'm aware of is that malloy sometimes renders extra parenthesis it doesn't need in this case.
     queryFields.push({type: expr.type, name, e: expr, metadata})
   })
 
@@ -194,14 +213,16 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
   // })
 
   return {
-    type: 'query',
     fields: queryFields,
     malloyQuery: {
+      type: 'query',
       structRef,
       pipeline: [{
         type: isAgg ? 'reduce' : 'project',
-        queryFields,
-        filterList,
+        queryFields: queryFields as any,
+        filterList: filterList as any,
+        outputStruct: null as any,
+        isRepeated: false,
       }],
     },
   }
@@ -223,19 +244,16 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
       if (/^\d+(\.\d+)?$/.test(raw)) return {node: 'numberLiteral', literal: raw, type: 'number'}
       diag(expr, `Unknown literal type: ${raw}`)
       return {node: 'stringLiteral', literal: raw, type: 'string'}
-    case 'Wildcard':
-      // I think this is just implied in there are no selects?
-      throw new Error('Wildcard not yet supported')
     case 'ColumnRef':
       let path = expr.getChildren('Identifier').map(i => txt(i))
-      let field = lookup(expr.getChildren('Identifier'), scope)
+      let field = (lookup(expr, scope) || [])[0]
       return {node: 'field', path, type: field?.type || 'unknown', isAgg: field?.isAgg}
     case 'FunctionCall':
       let name = txt(expr.getChild('Identifier')).toLowerCase()
       let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
       if (isAggregate(name)) {
         if (name == 'count' && args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
-        return {node: 'aggregate', function: name.toLowerCase(), e: args[0], type: 'number'}
+        return {node: 'aggregate', function: name.toLowerCase() as AggregateFunctionType, e: args[0], type: 'number'}
       } else {
         throw new Error(`Unknown function: ${name}`)
       }
@@ -258,34 +276,44 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
 
 // Follow a dotted path to get the field it refers to.
 // Malloy does this when rendering SQL, but we do it earlier to give type diagnostics
-function lookup (pathNodes: SyntaxNode[], table: Table): Field | void {
+// This also handles wildcards, returning all fields that match the path
+function lookup (ref: SyntaxNode, table: Table): ColumnField[] | void {
   let curr = table
+  let pathNodes = ref.getChildren('Identifier')
   for (let part of pathNodes.slice(0, -1)) {
     let name = txt(part)
     let next = curr.fields.find(f => f.name == name)
 
     if (!next)                return diag(part, `Join ${name} does not exist on table ${curr.name}`)
-    if (next.type != 'table') return diag(part, `${name} is not a join on ${curr.name}`)
+    if (!isJoin(next))        return diag(part, `${name} is not a join on ${curr.name}`)
 
-    let table = TABLE_MAP[(next as Join).tablePath || '']
+    let table = TABLE_MAP[next.tablePath || '']
     if (!table) throw new Error('Following valid join but we couldnt find the table')
     curr = table
   }
 
   let last = pathNodes[pathNodes.length - 1]
   let fieldName = txt(last)
-  let field = curr.fields.find(f => f.name == fieldName)
-  if (!field) return diag(last, `Could not find ${txt(last)} on ${curr.name}`)
-  if (field.type == 'table') return diag(last, `${fieldName} is a join, but is used as a colum here`)
-
-  return field as Field
+  if (ref.name == 'Wildcard') {
+    return curr.fields.filter(f => !isJoin(f)) as ColumnField[]
+  } else {
+    let field = curr.fields.find(f => f.name == fieldName)
+    if (!field)                return diag(last, `Could not find ${fieldName} on ${curr.name}`)
+    if (isJoin(field)) return diag(last, `${fieldName} is a join, but is used as a colum here`)
+    return [field]
+  }
 }
 
 function isAggregate (name: string): boolean {
   return ['avg', 'sum', 'min', 'max', 'count'].includes(name.toLowerCase())
 }
 
-function convertDataType (dataType: string): string {
+function isJoin (field: Field): field is Join {
+  // I think the types here are a bit wrong. Join says it can only point
+  return field.type == 'table' || (field as any).type == 'query_source'
+}
+
+function convertDataType (dataType: string): FieldType {
   switch (dataType.toUpperCase()) {
     case 'INT': return 'number'
     case 'TEXT': return 'string'
@@ -294,8 +322,8 @@ function convertDataType (dataType: string): string {
     case 'FLOAT': return 'number'
     case 'BOOLEAN': return 'boolean'
     case 'DATE': return 'date'
-    case 'DATETIME': return 'datetime'
-    case 'TIME': return 'time'
+    case 'DATETIME': return 'timestamp'
+    case 'TIME': return 'timestamp'
     case 'TIMESTAMP': return 'timestamp'
     case 'DECIMAL': return 'number'
     case 'DOUBLE': return 'number'
