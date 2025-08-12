@@ -25,6 +25,7 @@ export async function loadWorkspace (dir:string) {
 }
 
 export function toSql (query: Query): string {
+  Object.values(queryModelContents).forEach(t => t.dialect = 'duckdb')
   let qm = new malloy.QueryModel({
     name: 'generated_model',
     contents: queryModelContents,
@@ -120,58 +121,58 @@ function analyzeTable (table: Table) {
 
 // QuerySource is the result of a query that we can treat like a table.
 // It's used to support subqueries, as well as `table foo as (select * from bar)` style tables
-function constructQuerySource (name: string, node: SyntaxNode) {
-  if (node.name != 'QueryStatement') throw new Error('Expected a QueryStatement')
-  // let query = analyzeQuery(node)
+function constructQuerySource (name: string, syntaxNode: SyntaxNode): Table | void {
+  if (syntaxNode.name != 'QueryStatement') throw new Error('Expected a QueryStatement')
+  let query = analyzeQuery(syntaxNode)
+  if (!query) return
 
-  // modelsToUse.push({
-  //   type: 'query_source',
-  //   name,
-  //   fields: [],
-  //   analyzed: false,
-  //   syntaxNode: node,
-  // })
+  let fields = query.fields.map(f => ({type: f.type, name: f.name}))
+  let table = {type: 'query_source', name, fields, analyzed: true, metadata: {}, query: query.malloyQuery} as Table
+  queryModelContents[name] = table
+  return table
 }
 
 // Walks each part of the query checking types, rendering sql
 // NB that this creates a scope for the query, and function like analyzeExpression and lookup operate within that scope, which is crucial for subquery support.
 function analyzeQuery (queryNode: SyntaxNode): Query | void {
+  let structRef: string
+  let baseTable: Table
+  let queryFields: Field[] = []
+  let isAgg = false
+
+
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   if (froms.find(f => f.name == 'JoinClause')) diag(froms[0], 'Query joins not yet supported')
   if (froms.length == 0) diag(queryNode, 'No tables in FROM clause')
   if (froms.length > 1) diag(froms[0], 'Multiple tables/joins in FROM clause not yet supported')
 
-  let structRef: string
-  let baseTable: Table
+  // First, figure out the base table we're querying from.
   if (froms[0].name == 'Subquery') {
     // Malloy doesn't support subqueries in FROM, so we need to construct a querySource for it
-    let alias = txt(froms[0].getChild('Alias')) || 'subquery'
+    structRef = txt(froms[0].getChild('Alias')) || 'subquery'
     let subq = froms[0].getChild('SubqueryExpression')?.getChild('QueryStatement')
-    baseTable = constructQuerySource(alias, subq!)
-    structRef = alias
-  } else {
-    // from a regular table
+    baseTable = constructQuerySource(structRef, subq!)!
+    if (!baseTable) return
+  } else { // from a regular table
     structRef = txt(froms[0].getChild('Identifier'))
     baseTable = TABLE_MAP[structRef]
     if (!baseTable) return diag(froms[0], `Could not find table ${structRef}`)
     analyzeTable(baseTable)
   }
 
-  // TODO: build up an array of all the columns this query wiil return (including wildcard expansion)
+  // Next, get the columns this query will return (including wildcard expansion)
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
-  let queryFields: Field[] = []
   selects.forEach(s => {
     let alias = txt(s.getChild('Alias'))
     let expr = analyzeExpression(s.getChild('Expression')!, baseTable)
-    if (expr.node == 'field') {
-      // TODO: malloy ignores this name, but it'd be great to use it. Maybe we should just not use fieldref?
-      // In malloy if you alias `name as name2` you'll get an expression that refers to name as a "field"
-      let name = alias || expr.path.join('_')
-      queryFields.push({type: 'fieldref', name, path: expr.path, isAgg: expr.isAgg})
-    } else {
-      let name = alias || `col_${queryFields.length}`
-      queryFields.push({type: expr.type, name, e: expr, isAgg: expr.isAgg})
-    }
+    isAgg ||= !!expr.isAgg
+    let metadata = {}
+    let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${queryFields.length}`)
+
+    // Malloy normally returns a fieldref if expr.node == 'field', but we just always use a regular field.
+    // This means we'll always properly name the field, and have the right type.
+    // The downnside seems to be that we'll add extra parentheses to the rendered sql in some cases.
+    queryFields.push({type: expr.type, name, e: expr, metadata})
   })
 
   let where = queryNode.getChild('WhereClause')?.getChildren('Expression') || []
@@ -198,7 +199,7 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
     malloyQuery: {
       structRef,
       pipeline: [{
-        type: queryFields.find(f => f.isAgg) ? 'reduce' : 'project',
+        type: isAgg ? 'reduce' : 'project',
         queryFields,
         filterList,
       }],
