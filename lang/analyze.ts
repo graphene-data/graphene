@@ -22,6 +22,10 @@ export function clearWorkspace () {
   queryModelContents = {}
 }
 
+export function getTable (name: string): Table | undefined {
+  return TABLE_MAP[name]
+}
+
 // Loads and parses all gsql files within a directory
 export async function loadWorkspace (dir:string) {
   for (let f of await readdir(dir)) {
@@ -299,8 +303,8 @@ function lookup (ref: SyntaxNode, table: Table): ColumnField[] | void {
   } else {
     let fieldName = txt(last)
     let field = curr.fields.find(f => f.name == fieldName)
-    if (!field)                return diag(last, `Could not find ${fieldName} on ${curr.name}`)
-    if (isJoin(field)) return diag(last, `${fieldName} is a join, but is used as a colum here`)
+    if (!field)                return diag(last!, `Could not find ${fieldName} on ${curr.name}`)
+    if (isJoin(field)) return diag(last!, `${fieldName} is a join, but is used as a colum here`)
     return [field]
   }
 }

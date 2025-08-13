@@ -44,7 +44,7 @@ export interface Table {
   fields: (Field | Join)[]
   syntaxNode: SyntaxNode
   analyzed?: boolean
-  metadata?: Record<string, string>
+  metadata: Record<string, string>
   connection?: string
   dialect?: string
   tablePath?: string

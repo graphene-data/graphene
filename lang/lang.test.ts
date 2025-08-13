@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import {analyze, clearWorkspace, toSql} from './analyze.ts'
+import {analyze, clearWorkspace, getTable, toSql} from './analyze.ts'
 import {expect} from 'vitest'
 
 const DEBUG = !!process.env.DEBUG
@@ -126,10 +126,10 @@ describe('lang', () => {
     )
   })
 
-  it.skip('handles complex joins with measures', () => {
+  it.skip('handles complex joins with measures', () => { // needs join_many first
     testQuery(
       'from products select name, category, total_sold where popular_item',
-      'SELECT products.name, products.category, SUM(orders.amount) FROM products LEFT JOIN orders ON (orders.product_id = products.id) GROUP BY ALL HAVING SUM(orders.amount) > 1000',
+      'select users_0."name" as "users_name", products_0."name" as "products_name" from orders as base left join users as users_0 on users_0."id"=base."user_id" left join products as products_0 on products_0."id"=base."product_id"',
     )
   })
 
@@ -165,28 +165,26 @@ describe('lang', () => {
     expect(queries[0].malloyQuery.structRef).toEqual('t')
   })
 
-  it.skip('parses metadata from comments on tables and fields (from testTables)', () => {
-    let {tables} = analyze(testTables + '\nfrom users select id')
-    let users = tables.find(t => t.name.toLowerCase() === 'users')!
+  it('parses metadata from comments on tables and fields (from testTables)', () => {
+    analyze(testTables + '\nfrom users select id')
+    let users = getTable('users')!
     expect(users.metadata.description.toLowerCase()).toContain('people who purchase things')
     expect(users.metadata.domain).toBe('sales')
-    let email = users.fields['email'] as any
+    let email = users.fields.find(f => f.name == 'email') as any
     expect(email.metadata.description.toLowerCase()).toContain('email address')
     expect(email.metadata.pii).toBe('true')
-    let orders = tables.find(t => t.name.toLowerCase() === 'orders')!
-    let amount = orders.fields['amount'] as any
+    let amount = getTable('orders')?.fields.find(f => f.name == 'amount') as any
     expect(amount.metadata.units).toBe('usd')
   })
 
   it.skip('does not attach a single leading comment to multiple fields on the same line', () => {
-    let sql = `
+    analyze(`
     table foo (
       -- the name field
       id bigint, name varchar
     )
-    from foo select id` // include a query to force parse
-    let {tables} = analyze(sql)
-    let t = tables[0]
+    from foo select id`)
+    let t = getTable('foo')!
     let id = t.fields['id'] as any
     let name = t.fields['name'] as any
     expect(id.metadata.description.toLowerCase()).toContain('name field')
