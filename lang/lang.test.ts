@@ -77,17 +77,17 @@ describe('lang', () => {
     )
   })
 
-  it.skip('expands plain wildcard', () => {
+  it('expands plain wildcard', () => {
     testQuery(
       'from users select *',
       'select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from users as base',
     )
   })
 
-  it.skip('expands wildcards on a specific join', () => {
+  it('expands wildcards on a specific join', () => {
     testQuery(
       'from orders select users.*',
-      'select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from orders as base left join users as users_0 on users_0."id"=base."user_id"',
+      'select users_0."id" as "id", users_0."name" as "name", users_0."email" as "email", users_0."created_at" as "created_at" from orders as base left join users as users_0 on users_0."id"=base."user_id"',
     )
   })
 

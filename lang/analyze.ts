@@ -2,9 +2,9 @@ import {parser} from './parser.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
-import {type Table, txt, type Query, type Join, type Diagnostic, type Expression, type Field, type ColumnField, FieldType} from './core.ts'
+import {type Table, txt, type Query, type Join, type Diagnostic, type Expression, type Field, type ColumnField, type FieldType} from './core.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import malloy, {AggregateFunctionType, type StructRef} from '../node_modules/@malloydata/malloy/dist/model/index.js'
+import malloy, {type AggregateFunctionType, type StructRef} from '../node_modules/@malloydata/malloy/dist/model/index.js'
 
 export type {Query, Table, Diagnostic} from './core.ts'
 
@@ -175,23 +175,25 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
   // Next, get the columns this query will return (including wildcard expansion)
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
   selects.forEach(s => {
-    if (s.getChild('Wildcard')) {
-      let expandedFields = lookup(s.getChild('Wildcard')!, baseTable) || []
-      expandedFields.forEach(f => queryFields.push(f))
-      return
-    }
-
-    let alias = txt(s.getChild('Alias'))
-    let expr = analyzeExpression(s.getChild('Expression')!, baseTable)
-    isAgg ||= !!expr.isAgg
-    let metadata = {}
-    let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${queryFields.length}`)
-
     // If a select is pointing to a field (ie `tableA.name`) malloy will use {type: 'fieldref', path: ['tableA', 'name']}
     // This kinda sucks, because it will always call the field `name` and throw an error if you select another column called `name` from a different join.
     // Instead, we're opting to pass this to malloy as an expression field, which lets us control the field's name.
     // The one minor downside I'm aware of is that malloy sometimes renders extra parenthesis it doesn't need in this case.
-    queryFields.push({type: expr.type, name, e: expr, metadata})
+
+    if (s.getChild('Wildcard')) {
+      let path = s.getChild('Wildcard')?.getChildren('Identifier').map(i => txt(i)) || []
+      let expandedFields = lookup(s.getChild('Wildcard')!, baseTable) || []
+      expandedFields.forEach(f => {
+        queryFields.push({...f,  e: {node: 'field', path: [...path, f.name], type: f.type}})
+      })
+    } else {
+      let alias = txt(s.getChild('Alias'))
+      let expr = analyzeExpression(s.getChild('Expression')!, baseTable)
+      isAgg ||= !!expr.isAgg
+      let metadata = {}
+      let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${queryFields.length}`)
+      queryFields.push({type: expr.type, name, e: expr, metadata})
+    }
   })
 
   let where = queryNode.getChild('WhereClause')?.getChildren('Expression') || []
@@ -280,23 +282,22 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
 function lookup (ref: SyntaxNode, table: Table): ColumnField[] | void {
   let curr = table
   let pathNodes = ref.getChildren('Identifier')
-  for (let part of pathNodes.slice(0, -1)) {
+  let last = ref.name == 'Wildcard' ? null : pathNodes.pop()
+  for (let part of pathNodes) {
     let name = txt(part)
     let next = curr.fields.find(f => f.name == name)
 
     if (!next)                return diag(part, `Join ${name} does not exist on table ${curr.name}`)
     if (!isJoin(next))        return diag(part, `${name} is not a join on ${curr.name}`)
 
-    let table = TABLE_MAP[next.tablePath || '']
-    if (!table) throw new Error('Following valid join but we couldnt find the table')
-    curr = table
+    curr = TABLE_MAP[next.tablePath || '']
+    if (!curr) throw new Error('Following valid join but we couldnt find the table')
   }
 
-  let last = pathNodes[pathNodes.length - 1]
-  let fieldName = txt(last)
   if (ref.name == 'Wildcard') {
-    return curr.fields.filter(f => !isJoin(f)) as ColumnField[]
+    return curr.fields.filter(f => !isJoin(f) && !f.isAgg) as ColumnField[]
   } else {
+    let fieldName = txt(last)
     let field = curr.fields.find(f => f.name == fieldName)
     if (!field)                return diag(last, `Could not find ${fieldName} on ${curr.name}`)
     if (isJoin(field)) return diag(last, `${fieldName} is a join, but is used as a colum here`)
