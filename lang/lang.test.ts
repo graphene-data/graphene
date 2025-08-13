@@ -105,10 +105,10 @@ describe('lang', () => {
     )
   })
 
-  it.skip('handles column naming when mutliple columns have the same name', () => {
+  it('handles column naming when mutliple columns have the same name', () => {
     testQuery(
       'from orders select users.name, products.name',
-      'SELECT orders.id, users.name, products.name FROM orders LEFT JOIN users ON (users.id = orders.user_id) LEFT JOIN products ON (products.id = orders.product_id)',
+      'select users_0."name" as "users_name", products_0."name" as "products_name" from orders as base left join users as users_0 on users_0."id"=base."user_id" left join products as products_0 on products_0."id"=base."product_id"',
     )
   })
 
