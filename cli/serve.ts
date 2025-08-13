@@ -7,7 +7,6 @@ import * as chokidar from 'chokidar'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import {loadEnv} from 'vite'
-import {analyze} from '@graphene/lang'
 
 const increaseNodeMemoryLimit = () => {
   // Don't override the memory limit if it's already set

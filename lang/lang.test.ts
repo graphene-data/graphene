@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import {analyze, clearWorkspace, getTable, toSql} from './analyze.ts'
+import {analyze, clearWorkspace, getDiagnostics, getTable, toSql} from './analyze.ts'
 import {expect} from 'vitest'
 
 const DEBUG = !!process.env.DEBUG
@@ -55,7 +55,8 @@ const testTables = `
 function testQuery (grapheneSql: string, expectedSql: string) {
   let sql = testTables + '\n\n' + grapheneSql
   if (DEBUG) console.log('Query: ', grapheneSql)
-  let {queries, diagnostics} = analyze(sql)
+  let queries = analyze(sql)
+  let diagnostics = getDiagnostics()
   expect(diagnostics).toHaveLength(0)
   expect(queries).toHaveLength(1)
 
@@ -98,6 +99,13 @@ describe('lang', () => {
     )
   })
 
+  it('can query aggregates', () => {
+    testQuery(
+      'from orders select users.name, avg(amount) as avg_amount',
+      'select users_0."name" as "users_name", avg(base."amount") as "avg_amount" from orders as base left join users as users_0 on users_0."id"=base."user_id" group by 1 order by 2 desc nulls last',
+    )
+  })
+
   it('expands dot-join syntax', () => {
     testQuery(
       'from orders select id, users.name',
@@ -115,7 +123,7 @@ describe('lang', () => {
   it('expands measures', () => {
     testQuery(
       'from users select name, total_orders',
-      'select base."name" as "name", (count(1)) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1,2 order by 1 asc nulls last',
+      'select base."name" as "name", (count(1)) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last',
     )
   })
 
@@ -151,7 +159,8 @@ describe('lang', () => {
 
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
     let sql = testTables + '\n' + 'from users select id = >>;'
-    let {queries, diagnostics} = analyze(sql)
+    let queries = analyze(sql)
+    let diagnostics = getDiagnostics()
     expect(queries.length).toBe(1)
     expect(diagnostics.length).toBeGreaterThan(0)
     expect(diagnostics[0].message.toLowerCase()).toContain('syntax')
@@ -159,7 +168,8 @@ describe('lang', () => {
 
   it('reports syntax diagnostics on invalid table and still registers table name', () => {
     let sql = 'table t (a int, ; ) ; from t select a;'
-    let {queries, diagnostics} = analyze(sql)
+    let queries = analyze(sql)
+    let diagnostics = getDiagnostics()
     expect(queries.length).toBe(1)
     expect(diagnostics.length).toBeGreaterThan(0)
     expect(queries[0].malloyQuery.structRef).toEqual('t')
@@ -193,14 +203,16 @@ describe('lang', () => {
 
   it('reports diagnostics for unknown table in FROM', () => {
     let sql = testTables + '\n' + 'from not_a_table select id'
-    let {diagnostics} = analyze(sql)
+    analyze(sql)
+    let diagnostics = getDiagnostics()
     expect(diagnostics.length).toBeGreaterThan(0)
     expect(diagnostics[0].message.toLowerCase()).toContain('could not find table not_a_table')
   })
 
   it('reports diagnostics for unknown column', () => {
     let sql = testTables + '\n' + 'from orders select users.does_not_exist'
-    let {diagnostics} = analyze(sql)
+    analyze(sql)
+    let diagnostics = getDiagnostics()
     expect(diagnostics.length).toBeGreaterThan(0)
     expect(diagnostics[0].message.toLowerCase()).toContain('could not find does_not_exist on users')
   })

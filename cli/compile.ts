@@ -2,26 +2,21 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import {styleText as nodeStyleText} from 'node:util'
-import {analyze, type Diagnostic, loadWorkspace, type Query} from '@graphene/lang'
-import {logTree} from './logTree.ts'
+import {analyze, type Diagnostic, getDiagnostics, getFile, loadWorkspace, toSql} from '@graphene/lang'
+// import {logTree} from './logTree.ts'
 
-export async function readAndCompile (inputArg?: string, debug?: boolean): Promise<Query[]> {
+export async function readAndCompile (inputArg?: string, debug?: boolean): Promise<string> {
   await loadWorkspace(process.cwd())
   let src = await readInput(inputArg)
+  let queries = analyze(src)
+  debugger
 
-  let {tables, queries} = analyze(src)
-  let diags = [...tables, ...queries].flatMap(x => x.diagnostics)
+  // if (debug && queries[0]?.treeNode) {
+  //   logTree(queries[0].treeNode, src)
+  // }
 
-  if (debug && queries[0]?.treeNode) {
-    logTree(queries[0].treeNode, src)
-  }
-
-  let errors = diags.filter((d) => d.severity === 'error')
-  if (errors.length) {
-    printDiagnostics(errors, src)
-  }
-
-  return queries
+  printDiagnostics(getDiagnostics())
+  return toSql(queries[0])
 }
 
 const styleText = (style: string, text: string) => {
@@ -70,9 +65,10 @@ function offsetToLineCol (src: string, offset: number): { line: number; col: num
   return {line: 1, col: 0, lineStart: 0, lineText: lines[0] || ''}
 }
 
-export function printDiagnostics (diags: Diagnostic[], src: string) {
+export function printDiagnostics (diags: Diagnostic[]) {
   let parts: string[] = []
   for (let d of diags) {
+    let src = getFile(d.file) || ''
     let {line, col, lineStart, lineText} = offsetToLineCol(src, d.from)
     let endCol = Math.max(col + 1, Math.min(lineText.length, d.to - lineStart))
     let caretLen = Math.max(1, endCol - col)

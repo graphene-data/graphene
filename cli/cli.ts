@@ -20,13 +20,13 @@ program
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('--debug', 'Print the parse tree for the input')
   .action(async (input: string | undefined, opts: { debug?: boolean }) => {
-    let queries = await readAndCompile(input, opts.debug)
+    let sql = await readAndCompile(input, opts.debug)
 
-    if (queries.length === 0) {
+    if (!sql) {
       console.log(chalk.yellow('No queries found in input'))
       return
     }
-    console.log(queries[0].sql)
+    console.log(sql)
   })
 
 program
@@ -34,16 +34,16 @@ program
   .description('Run a query against a DuckDB database')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
-    let queries = await readAndCompile(input, false)
+    let sql = await readAndCompile(input, false)
 
-    if (queries.length === 0) {
+    if (!sql) {
       console.log(chalk.yellow('No queries found in input'))
       return
     }
 
     let db = await connectToDuckDB()
     if (!db) return
-    let res = await db.query(queries[0].sql)
+    let res = await db.query(sql)
     printTable(res.rows)
   })
 

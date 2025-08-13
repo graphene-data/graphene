@@ -9,7 +9,7 @@ title: Flights
 <BarChart
   data={flights}
   title="By Carrier"
-  x=name
+  x=carriers_name
   y="avg_dist"
   swapXY=true
 />
