@@ -16,11 +16,11 @@ table flights (
   diverted VARCHAR,
   id2 BIGINT,
 
-  join_one aircraft on aircraft.tail_num = flights.tail_num,
-  join_one carriers on carriers.code = flights.carrier,
+  join_one aircraft on aircraft.tail_num = tail_num,
+  join_one carriers on carriers.code = carrier,
   measure long_haul distance > 2000,
   measure seats_per_flight sum(aircraft.model.seats) / count(*)
-);
+)
 
 table aircraft (
   tail_num VARCHAR,
@@ -48,8 +48,8 @@ table aircraft (
   cert_issue_date DATE,
   air_worth_date DATE,
 
-  join_one aircraft_models as model on aircraft.aircraft_model_code = model.aircraft_model_code
-);
+  join_one aircraft_models as model on aircraft_model_code = model.aircraft_model_code
+)
 
 table aircraft_models (
   aircraft_model_code VARCHAR,
@@ -63,16 +63,10 @@ table aircraft_models (
   seats BIGINT,
   weight BIGINT,
   speed BIGINT
-);
+)
 
 table carriers (
   code VARCHAR,
   name VARCHAR,
   nickname VARCHAR
-);
-
-
--- from flights select carrier, avg(distance), avg(seats_per_flight);
--- from aircraft_models where manufacturer = 'WHITE' select avg(aircraft.year_built); -- fanout query
--- select count(*) from (from carriers select *);
-describe select * from carriers;
+)

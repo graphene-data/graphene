@@ -34,6 +34,7 @@ export interface ColumnField {
   path?: string[]
   isAgg?: boolean
   targetType?: string
+  expressionType?: string
 }
 
 export type Field = ColumnField | Join
@@ -57,6 +58,7 @@ export interface Query {
 }
 
 export interface Diagnostic {
+  file: string
   from: number
   to: number
   message: string

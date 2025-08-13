@@ -9,29 +9,32 @@ import malloy, {type AggregateFunctionType, type StructRef} from '../node_module
 export type {Query, Table, Diagnostic} from './core.ts'
 
 let TABLE_MAP: Record<string, Table> = {}
+let FILE_MAP: Record<string, string> = {}
 let diagnostics: Diagnostic[] = []
 let queryModelContents: Record<string, any> = {}
+let currentFile: string | undefined
 
 function diag (node: SyntaxNode | SyntaxNodeRef, message: string): void {
-  diagnostics.push({from: node.from, to: node.to, message, severity: 'error'})
+  diagnostics.push({from: node.from, to: node.to, message, severity: 'error', file: currentFile})
 }
 
 export function clearWorkspace () {
+  FILE_MAP = {}
   TABLE_MAP = {}
   diagnostics = []
   queryModelContents = {}
 }
 
-export function getTable (name: string): Table | undefined {
-  return TABLE_MAP[name]
-}
+export function getTable (name: string) { return TABLE_MAP[name] }
+export function getDiagnostics () { return diagnostics }
+export function getFile (name: string) { return FILE_MAP[name] }
 
 // Loads and parses all gsql files within a directory
 export async function loadWorkspace (dir:string) {
   for (let f of await readdir(dir)) {
     if (!f.endsWith('.gsql')) continue
     let contents = await readFile(path.join(dir, f), 'utf-8')
-    analyze(contents)
+    analyze(contents, f)
   }
 }
 
@@ -48,12 +51,12 @@ export function toSql (query: Query): string {
   return compiled.sql
 }
 
-export function analyze (source:string): {queries: Query[], diagnostics: Diagnostic[]} {
+export function analyze (source:string, file: string = 'input'): Query[] {
+  currentFile = file
   let tree = parser.parse(source)
-  tree.rawText = source
+  FILE_MAP[file] = tree.rawText = source
 
   // Collect syntax errors within the source.
-  diagnostics = []
   tree.topNode.cursor().iterate(n => {
     if (n.type.isError) diag(n, 'Syntax error')
   })
@@ -61,7 +64,7 @@ export function analyze (source:string): {queries: Query[], diagnostics: Diagnos
   tree.topNode.getChildren('TableStatement').forEach(registerTable)
   tree.topNode.getChildren('ViewStatement').forEach(registerTable)
   let queries = tree.topNode.getChildren('QueryStatement').map(analyzeQuery).filter(q => !!q)
-  return {queries, diagnostics: Array.from(diagnostics)}
+  return queries
 }
 
 // Stores the table without analyzing it, since we don't
@@ -157,6 +160,8 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
   let queryFields: ColumnField[] = []
   let isAgg = false
 
+  if (!txt(queryNode)) return // lezer sometimes parses an empty string as a query, if the file doesn't have one.
+
   // For now, we only support queries with exactly one table in the FROM clause.
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   if (froms.find(f => f.name == 'JoinClause')) diag(froms[0], 'Query joins not yet supported')
@@ -193,10 +198,15 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
     } else {
       let alias = txt(s.getChild('Alias'))
       let expr = analyzeExpression(s.getChild('Expression')!, baseTable)
+      let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${queryFields.length}`)
       isAgg ||= !!expr.isAgg
       let metadata = {}
-      let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${queryFields.length}`)
-      queryFields.push({type: expr.type, name, e: expr, metadata})
+
+      if (expr.isAgg) {
+        queryFields.push({type: expr.type, name, metadata, e: expr, expressionType: 'aggregate'})
+      } else {
+        queryFields.push({type: expr.type, name, metadata, e: expr})
+      }
     }
   })
 
@@ -250,6 +260,8 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
       if (/^\d+(\.\d+)?$/.test(raw)) return {node: 'numberLiteral', literal: raw, type: 'number'}
       diag(expr, `Unknown literal type: ${raw}`)
       return {node: 'stringLiteral', literal: raw, type: 'string'}
+    case 'Wildcard':
+      return {node: ''} as Expression // what malloy expects for count(*)
     case 'ColumnRef':
       let path = expr.getChildren('Identifier').map(i => txt(i))
       let field = (lookup(expr, scope) || [])[0]
@@ -259,7 +271,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
       let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
       if (isAggregate(name)) {
         if (name == 'count' && args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
-        return {node: 'aggregate', function: name.toLowerCase() as AggregateFunctionType, e: args[0], type: 'number'}
+        return {node: 'aggregate', function: name.toLowerCase() as AggregateFunctionType, e: args[0], type: 'number', isAgg: true}
       } else {
         throw new Error(`Unknown function: ${name}`)
       }
@@ -269,7 +281,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
       let left = analyzeExpression(expr.firstChild!, scope)
       let right = analyzeExpression(expr.lastChild!, scope)
       let op = txt(expr.firstChild?.nextSibling).toLowerCase()
-      return {node: op as any, kids: {left, right}, type: 'boolean'}
+      return {node: op as any, kids: {left, right}, type: 'boolean', isAgg: left.isAgg || right.isAgg}
     case 'UnaryExpression':
     case 'ExistsExpression':
     case 'CaseExpression':

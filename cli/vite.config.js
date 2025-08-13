@@ -8,7 +8,7 @@ import tailwindcss from '@tailwindcss/vite'
 import {DuckDBInstance} from '@duckdb/node-api'
 import {readdir} from 'node:fs/promises'
 import * as path from 'node:path'
-import {analyze, loadWorkspace} from '@graphene/lang'
+import {analyze, loadWorkspace, clearWorkspace, getDiagnostics, toSql} from '@graphene/lang'
 
 let conn
 
@@ -23,8 +23,6 @@ async function connectDb () {
   let db = await DuckDBInstance.create(duckFiles[0], {access_mode: 'READ_ONLY'})
   conn = await db.connect()
 }
-
-loadWorkspace(path.join(__dirname, '../..'))
 
 process.removeAllListeners('warning')
 process.on('warning', (warning) => {
@@ -58,13 +56,26 @@ const queryServer = {
         return
       }
 
-      let parsed = analyze(sql)
-      let query = parsed[parsed.length - 1]
-      console.log(query)
+      // hack work around quoted identifiers, which we don't support yet
+      sql = sql.replace(/ AS "(.+)"/, (a, m) => ' AS ' + m.replace('-', '_'))
+
+      clearWorkspace()
+      await loadWorkspace(path.join(__dirname, '../..'))
+      let queries = analyze(sql)
+      let diagnostics = getDiagnostics()
+
+      if (diagnostics.length) {
+        res.statusCode = 400
+        res.setHeader('Content-Type', 'application/json')
+        res.end(JSON.stringify({sql, query_name, rows: [], rowCount: 0, diagnostics}))
+        return
+      }
       await connectDb()
 
       try {
-        let reader = await conn.runAndReadAll(query)
+        let rendered = toSql(queries[0])
+        console.log('RENDERED', rendered)
+        let reader = await conn.runAndReadAll(rendered)
         let rows = await reader.getRowObjects()
         res.setHeader('Content-Type', 'application/json')
         res.end(JSON.stringify({sql, query_name, rows, rowCount: rows.length}, safeBigIntReplacer))

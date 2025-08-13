@@ -24,10 +24,11 @@ In addition to columns, you define joins and measures on a table.
 * Automatic group by - if your query contains aggregate functions, `group by all` is automatically added.
 
 
-# Features to add in the future
-diagnostics - errors about non-existent references, or type mismatches
-views - define a table/model as a query. Usually turned in to a CTE or temp table.
-output dialects - ability to write sql into different dialects
-symetric aggregates - avoid (or at least warn about) fanout issues
-level of detail - like a "percent of total" column
-automatic "having" - filters on aggregates should get moved to "having"
+# Features we might add in the future
+* output dialects - ability to write sql into different dialects
+* symetric aggregates - avoid (or at least warn about) fanout issues
+* level of detail - like a "percent of total" column
+* automatic "having" - filters on aggregates should get moved to "having"
+* `count(name)` should give the count of rows where name isn't null.
+* `union` and `union all`
+* subqueries outside `from` - `where id in (select id from users where disabled)`
