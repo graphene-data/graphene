@@ -1,5 +1,6 @@
 /// <reference types="vitest/globals" />
-import {analyze, clearWorkspace, toSql} from './analyze.ts'
+import {analyze, clearWorkspace} from './analyze.ts'
+import {setTestPrelude} from './testHelpers'
 import {expect} from 'vitest'
 
 const DEBUG = !!process.env.DEBUG
@@ -53,21 +54,13 @@ const testTables = `
 `
 
 function testQuery (grapheneSql: string, expectedSql: string) {
-  let sql = testTables + '\n\n' + grapheneSql
-  if (DEBUG) console.log('Query: ', grapheneSql)
-  let {queries, diagnostics} = analyze(sql)
-  expect(diagnostics).toHaveLength(0)
-  expect(queries).toHaveLength(1)
-
-  let result = toSql(queries[0])
-  if (DEBUG) console.log('Result: ', result)
-  let clean = (s:string) => s.toLowerCase().replace(/\s+/g, ' ').replace(/\s+$/, '')
-  expect(clean(result)).toBe(clean(expectedSql))
+  expect(grapheneSql).toRenderSql(expectedSql)
 }
 
 describe('lang', () => {
   beforeEach(() => {
     clearWorkspace()
+    setTestPrelude(testTables)
   })
 
   it('handles basic select query', () => {
@@ -94,7 +87,7 @@ describe('lang', () => {
   it('supports from-first syntax', () => {
     testQuery(
       "from users select id, name where email like '%@example.com'",
-      'select base."id" as "id", base."name" as "name" from users as base where base."email" like \'%@example.com\'',
+      "select base.\"id\" as \"id\", base.\"name\" as \"name\" from users as base where base.\"email\" like '%@example.com'",
     )
   })
 
@@ -194,17 +187,11 @@ describe('lang', () => {
   })
 
   it('reports diagnostics for unknown table in FROM', () => {
-    let sql = testTables + '\n' + 'from not_a_table select id'
-    let {diagnostics} = analyze(sql)
-    expect(diagnostics.length).toBeGreaterThan(0)
-    expect(diagnostics[0].message.toLowerCase()).toContain('could not find table not_a_table')
+    expect('from not_a_table select id').toHaveDiagnostic(/could not find table not_a_table/i)
   })
 
   it('reports diagnostics for unknown column', () => {
-    let sql = testTables + '\n' + 'from orders select users.does_not_exist'
-    let {diagnostics} = analyze(sql)
-    expect(diagnostics.length).toBeGreaterThan(0)
-    expect(diagnostics[0].message.toLowerCase()).toContain('could not find does_not_exist on users')
+    expect('from orders select users.does_not_exist').toHaveDiagnostic(/could not find does_not_exist on users/i)
   })
 
   it('can create tables from queries', () => {
