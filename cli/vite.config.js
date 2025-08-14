@@ -17,7 +17,6 @@ async function connectDb () {
 
   let files = await readdir(path.join(__dirname, '../..'))
   let duckFiles = files.filter((file) => file.endsWith('.duckdb')).map(f => path.join(__dirname, '../..', f))
-  console.log(duckFiles)
   if (duckFiles.length != 1) throw new Error(`Can only handle a single duckdb database, found: ${duckFiles}`)
 
   let db = await DuckDBInstance.create(duckFiles[0], {access_mode: 'READ_ONLY'})
@@ -74,7 +73,6 @@ const queryServer = {
 
       try {
         let rendered = toSql(queries[0])
-        console.log('RENDERED', rendered)
         let reader = await conn.runAndReadAll(rendered)
         let rows = await reader.getRowObjects()
         res.setHeader('Content-Type', 'application/json')
