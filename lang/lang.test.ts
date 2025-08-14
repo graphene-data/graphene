@@ -54,7 +54,8 @@ const testTables = `
 `
 
 function testQuery (grapheneSql: string, expectedSql: string) {
-  expect(grapheneSql).toRenderSql(expectedSql)
+  expect(grapheneSql)
+    .toRenderSql(expectedSql)
 }
 
 describe('lang', () => {
@@ -187,11 +188,13 @@ describe('lang', () => {
   })
 
   it('reports diagnostics for unknown table in FROM', () => {
-    expect('from not_a_table select id').toHaveDiagnostic(/could not find table not_a_table/i)
+    expect('from not_a_table select id')
+      .toHaveDiagnostic(/could not find table not_a_table/i)
   })
 
   it('reports diagnostics for unknown column', () => {
-    expect('from orders select users.does_not_exist').toHaveDiagnostic(/could not find does_not_exist on users/i)
+    expect('from orders select users.does_not_exist')
+      .toHaveDiagnostic(/could not find does_not_exist on users/i)
   })
 
   it('can create tables from queries', () => {

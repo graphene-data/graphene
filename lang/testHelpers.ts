@@ -1,4 +1,5 @@
 import {analyze, clearWorkspace, toSql} from './analyze.ts'
+import {expect as vitestExpect} from 'vitest'
 
 const DEBUG = !!process.env.DEBUG
 
@@ -31,7 +32,7 @@ function formatDiagnostics (source: string, diagnostics: {from:number; to:number
 	}).join('\n\n')
 }
 
-expect.extend({
+vitestExpect.extend({
 	toRenderSql (received: string, expectedSql: string) {
 		clearWorkspace()
 		const sql = `${TEST_PRELUDE}\n\n${received}`
