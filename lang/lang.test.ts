@@ -62,14 +62,20 @@ describe('lang', () => {
       .toRenderSql('SELECT base."id" as "id", base."name" as "name" FROM users as base WHERE base."id"=1')
   })
 
-  it.skip('expands plain wildcard', () => {
+  it('expands plain wildcard', () => {
     expect('from users select *')
       .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from users as base')
   })
 
-  it.skip('expands wildcards on a specific join', () => {
+  it('expands wildcards on a specific join', () => {
     expect('from orders select users.*')
-      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
+      .toRenderSql('select users_0."id" as "id", users_0."name" as "name", users_0."email" as "email", users_0."created_at" as "created_at" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
+  })
+
+  it('excludes aggregates from wildcard expansion', () => {
+    // especially if those aggs are indirectly an agg agg expression
+    expect(`table t (amount int, measure weird_avg sum(amount) / count())
+    from t select *`).toRenderSql('select base."amount" as "amount" from t as base')
   })
 
   it('supports from-first syntax', () => {
