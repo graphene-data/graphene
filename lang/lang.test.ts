@@ -53,11 +53,6 @@ const testTables = `
   )
 `
 
-function testQuery (grapheneSql: string, expectedSql: string) {
-  expect(grapheneSql)
-    .toRenderSql(expectedSql)
-}
-
 describe('lang', () => {
   beforeEach(() => {
     clearWorkspace()
@@ -65,82 +60,60 @@ describe('lang', () => {
   })
 
   it('handles basic select query', () => {
-    testQuery(
-      'SELECT id, name from users where id = 1',
-      'SELECT base."id" as "id", base."name" as "name" FROM users as base WHERE base."id"=1',
-    )
+    expect('SELECT id, name from users where id = 1')
+      .toRenderSql('SELECT base."id" as "id", base."name" as "name" FROM users as base WHERE base."id"=1')
   })
 
   it.skip('expands plain wildcard', () => {
-    testQuery(
-      'from users select *',
-      'select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from users as base',
-    )
+    expect('from users select *')
+      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from users as base')
   })
 
   it.skip('expands wildcards on a specific join', () => {
-    testQuery(
-      'from orders select users.*',
-      'select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from orders as base left join users as users_0 on users_0."id"=base."user_id"',
-    )
+    expect('from orders select users.*')
+      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 
   it('supports from-first syntax', () => {
-    testQuery(
-      "from users select id, name where email like '%@example.com'",
-      "select base.\"id\" as \"id\", base.\"name\" as \"name\" from users as base where base.\"email\" like '%@example.com'",
-    )
+    expect("from users select id, name where email like '%@example.com'")
+      .toRenderSql("select base.\"id\" as \"id\", base.\"name\" as \"name\" from users as base where base.\"email\" like '%@example.com'")
   })
 
   it('expands dot-join syntax', () => {
-    testQuery(
-      'from orders select id, users.name',
-      'select base."id" as "id", users_0."name" as "users_name" from orders as base left join users as users_0 on users_0."id"=base."user_id"',
-    )
+    expect('from orders select id, users.name')
+      .toRenderSql('select base."id" as "id", users_0."name" as "users_name" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 
   it.skip('handles column naming when mutliple columns have the same name', () => {
-    testQuery(
-      'from orders select users.name, products.name',
-      'SELECT orders.id, users.name, products.name FROM orders LEFT JOIN users ON (users.id = orders.user_id) LEFT JOIN products ON (products.id = orders.product_id)',
-    )
+    expect('from orders select users.name, products.name')
+      .toRenderSql('SELECT orders.id, users.name, products.name FROM orders LEFT JOIN users ON (users.id = orders.user_id) LEFT JOIN products ON (products.id = orders.product_id)')
   })
 
   it('expands measures', () => {
-    testQuery(
-      'from users select name, total_orders',
-      'select base."name" as "name", (count(1)) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1,2 order by 1 asc nulls last',
-    )
+    expect('from users select name, total_orders')
+      .toRenderSql('select base."name" as "name", (count(1)) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1,2 order by 1 asc nulls last')
   })
 
   it('handles nested measure references', () => {
-    testQuery(
-      'from orders select user_id, avg_order_value',
-      'select base."user_id" as "user_id", (coalesce(sum(base."amount"),0)*1.0/count(1)) as "avg_order_value" from orders as base',
-    )
+    expect('from orders select user_id, avg_order_value')
+      .toRenderSql('select base."user_id" as "user_id", (coalesce(sum(base."amount"),0)*1.0/count(1)) as "avg_order_value" from orders as base')
   })
 
   it.skip('handles complex joins with measures', () => {
-    testQuery(
-      'from products select name, category, total_sold where popular_item',
-      'SELECT products.name, products.category, SUM(orders.amount) FROM products LEFT JOIN orders ON (orders.product_id = products.id) GROUP BY ALL HAVING SUM(orders.amount) > 1000',
-    )
+    expect('from products select name, category, total_sold where popular_item')
+      .toRenderSql('SELECT products.name, products.category, SUM(orders.amount) FROM products LEFT JOIN orders ON (orders.product_id = products.id) GROUP BY ALL HAVING SUM(orders.amount) > 1000')
   })
 
   it('handles subqueries', () => {
-    testQuery(
-      'from (select id, name from users) select id, name',
-      `WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
-      SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`,
-    )
+    expect('from (select id, name from users) select id, name')
+      .toRenderSql(`WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
+      SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
   })
 
   it('handles subqueries with alias', () => {
-    testQuery(
-      'from (select id, name from users) as u select id, name',
-      `WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
-      SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`,
-    )
+    expect('from (select id, name from users) as u select id, name')
+      .toRenderSql(`WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
+      SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
   })
 
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
@@ -198,9 +171,7 @@ describe('lang', () => {
   })
 
   it('can create tables from queries', () => {
-    testQuery(
-      'from completed_orders select id',
-      'WITH __stage0 AS ( SELECT base."id" as "id" FROM orders as base WHERE base."status"=\'completed\' ) SELECT base."id" as "id" FROM __stage0 as base',
-    )
+    expect('from completed_orders select id')
+      .toRenderSql('WITH __stage0 AS ( SELECT base."id" as "id" FROM orders as base WHERE base."status"=\'completed\' ) SELECT base."id" as "id" FROM __stage0 as base')
   })
 })
