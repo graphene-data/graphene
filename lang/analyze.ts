@@ -129,7 +129,7 @@ function analyzeDatabaseTable (table: Table) {
       type: expression.type,
       metadata: extractLeadingMetadata(cn),
       e: expression,
-      isAgg: expression.node == 'aggregate',
+      isAgg: expression.isAgg,
     })
   })
 }
