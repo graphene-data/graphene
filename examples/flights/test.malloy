@@ -1,4 +1,3 @@
->>>malloy
 source: carriers is duckdb.table('carriers') extend {
   primary_key: code
   measure: carrier_count is count()
@@ -50,17 +49,12 @@ source: flights is duckdb.table('flights') extend {
     average_plane_size is aircraft.avg(aircraft.aircraft_models.seats)
     average_flight_distance is distance.avg()
 }
->>>malloy
+
 source: flights2 is flights extend {
   where:
     carriers.code = 'WN'
 }
 
-run: flights2 -> {
-  group_by: carrier
-  aggregate:
-    flight_count
-    seats_per_flight
-    percent_widebody
-  order_by: flight_count desc
+run: aircraft -> {
+  aggregate: seats is avg(aircraft_models.seats)
 }
