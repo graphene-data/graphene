@@ -33,6 +33,8 @@ const EXAMPLE = `
   }
 
   source: aircraft is duckdb.table('aircraft') extend {
+    measure:
+      avg_seats is aircraft_models.avg(aircraft_models.seats / 2) + 5
     primary_key: tail_num
     join_one: aircraft_models with aircraft_model_code
   }
@@ -50,8 +52,8 @@ const EXAMPLE = `
   }
 
   run: aircraft -> {
-    aggregate: wtf is aircraft_models.count()
-    limit: 10
+    group_by: country
+    aggregate: wtf is avg_seats
   }`
 
 class FileURLReader implements URLReader {
@@ -156,13 +158,6 @@ async function main () {
   let cloned = structuredClone(model._modelDef)
   if (noLocs) removeLocationAndAtWithRange(cloned)
 
-  console.log('=== ModelDef ===')
-  if (format === 'json') {
-    console.log(JSON.stringify(cloned, null, 2))
-  } else {
-    console.log(inspect(cloned, {depth: Infinity, colors: false, breakLength: 80}))
-  }
-
   let selectedNames: string[] = []
   if (queryNamesCsv) {
     selectedNames = queryNamesCsv.split(',').map(s => s.trim()).filter(Boolean)
@@ -179,6 +174,13 @@ async function main () {
   } else {
     let finalSQL = await materializer.loadFinalQuery().getSQL()
     console.log(`\n=== SQL (final) ===\n${finalSQL}`)
+  }
+
+  console.log('=== ModelDef ===')
+  if (format === 'json') {
+    console.log(JSON.stringify(cloned, null, 2))
+  } else {
+    console.log(inspect(cloned, {depth: Infinity, colors: false, breakLength: 80}))
   }
 
   if ('close' in connection && typeof (connection as any).close === 'function') {

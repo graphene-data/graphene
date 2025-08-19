@@ -5,13 +5,13 @@ import {styleText as nodeStyleText} from 'node:util'
 import {analyze, type Diagnostic, getDiagnostics, getFile, loadWorkspace, toSql} from '@graphene/lang'
 // import {logTree} from './logTree.ts'
 
-export async function readAndCompile (inputArg?: string): Promise<string | null> {
+export async function readAndCompile (inputArg?: string, debug?: boolean): Promise<string | null> {
   await loadWorkspace(process.cwd())
   let src = await readInput(inputArg)
   let queries = analyze(src)
 
   // if (debug && queries[0]?.treeNode) {
-  //   logTree(queries[0].treeNode, src)
+  // logTree(queries[0].treeNode, src)
   // }
 
   let diags = getDiagnostics()
