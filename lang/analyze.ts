@@ -12,7 +12,7 @@ let TABLE_MAP: Record<string, Table> = {}
 let FILE_MAP: Record<string, string> = {}
 let diagnostics: Diagnostic[] = []
 let queryModelContents: Record<string, any> = {}
-let currentFile: string | undefined
+let currentFile: string = ''
 
 function diag (node: SyntaxNode | SyntaxNodeRef, message: string): void {
   diagnostics.push({from: node.from, to: node.to, message, severity: 'error', file: currentFile})
