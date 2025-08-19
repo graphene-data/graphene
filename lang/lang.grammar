@@ -72,7 +72,11 @@ tableItem {
 }
 
 ColumnDef {
-  Identifier DataType
+  Identifier DataType PrimaryKey?
+}
+
+PrimaryKey {
+  Kw<"primary_key">
 }
 
 JoinDef {

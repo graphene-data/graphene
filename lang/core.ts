@@ -49,6 +49,7 @@ export interface Table {
   connection?: string
   dialect?: string
   tablePath?: string
+  primaryKey?: string
   query?: MalloyQuery
 }
 
