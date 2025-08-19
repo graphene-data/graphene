@@ -3,7 +3,7 @@
   "main": "cli.ts",
   "type": "module",
   "scripts": {
-    "dev": "(cd ../examples/flights && node --experimental-strip-types ../../cli/cli.ts test.dsql)"
+    "test": "vitest run -c ../vitest.config.ts"
   },
   "bin": {
     "graphene": "./cli.ts"
