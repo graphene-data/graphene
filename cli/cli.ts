@@ -21,11 +21,7 @@ program
   .option('--debug', 'Print the parse tree for the input')
   .action(async (input: string | undefined, opts: { debug?: boolean }) => {
     let sql = await readAndCompile(input, opts.debug)
-
-    if (!sql) {
-      console.log(chalk.yellow('No queries found in input'))
-      return
-    }
+    if (!sql) return
     console.log(sql)
   })
 
@@ -35,11 +31,7 @@ program
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
     let sql = await readAndCompile(input, false)
-
-    if (!sql) {
-      console.log(chalk.yellow('No queries found in input'))
-      return
-    }
+    if (!sql) return
 
     let db = await connectToDuckDB()
     if (!db) return

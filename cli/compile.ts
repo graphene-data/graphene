@@ -5,18 +5,18 @@ import {styleText as nodeStyleText} from 'node:util'
 import {analyze, type Diagnostic, getDiagnostics, getFile, loadWorkspace, toSql} from '@graphene/lang'
 // import {logTree} from './logTree.ts'
 
-export async function readAndCompile (inputArg?: string, debug?: boolean): Promise<string> {
+export async function readAndCompile (inputArg?: string): Promise<string | null> {
   await loadWorkspace(process.cwd())
   let src = await readInput(inputArg)
   let queries = analyze(src)
-  debugger
 
   // if (debug && queries[0]?.treeNode) {
   //   logTree(queries[0].treeNode, src)
   // }
 
-  printDiagnostics(getDiagnostics())
-  return toSql(queries[0])
+  let diags = getDiagnostics()
+  printDiagnostics(diags)
+  return diags.length ? null : toSql(queries[0])
 }
 
 const styleText = (style: string, text: string) => {
@@ -73,7 +73,7 @@ export function printDiagnostics (diags: Diagnostic[]) {
     let endCol = Math.max(col + 1, Math.min(lineText.length, d.to - lineStart))
     let caretLen = Math.max(1, endCol - col)
     let sev = d.severity === 'error' ? 'red' : 'yellow'
-    let header = `${styleText(sev, d.severity.toUpperCase())}: At line ${line}, column ${col + 1}: ${d.message}`
+    let header = `${styleText(sev, d.severity.toUpperCase())}: ${d.file} line ${line}: ${d.message}`
     let gutter = '   | '
     let caretLine = `${' '.repeat(col)}${styleText(sev, '^'.repeat(caretLen))}`
     parts.push([header, `${gutter}${lineText}`, `${gutter}${caretLine}`].join('\n'))
