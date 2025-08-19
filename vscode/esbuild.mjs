@@ -14,6 +14,9 @@ const aliasPlugin = {
     b.onResolve({filter: /^@graphene\/lang\/analyze$/}, args => {
       return {path: path.resolve(__dirname, '../lang/analyze.ts')}
     })
+    b.onResolve({filter: /^@graphene\/lang\/autocomplete$/}, args => {
+      return {path: path.resolve(__dirname, '../lang/autocomplete.ts')}
+    })
   },
 }
 
