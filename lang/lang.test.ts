@@ -100,7 +100,7 @@ describe('lang', () => {
 
   it('handles nested measure references', () => {
     expect('from orders select user_id, avg_order_value')
-      .toRenderSql('select base."user_id" as "user_id", (coalesce(sum(base."amount"),0)*1.0/count(1)) as "avg_order_value" from orders as base')
+      .toRenderSql('select base."user_id" as "user_id", (coalesce(sum(base."amount"),0)*1.0/count(1)) as "avg_order_value" from orders as base group by 1 order by 2 desc nulls last')
   })
 
   it.skip('handles complex joins with measures', () => {
