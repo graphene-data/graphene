@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 
 import {Command} from 'commander'
-import chalk from 'chalk'
-
 import {serve} from './serve.ts'
 import {readAndCompile} from './compile.ts'
 import {connectToDuckDB, printTable} from './run.ts'
