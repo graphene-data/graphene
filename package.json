@@ -12,6 +12,7 @@
     "watch": "npm run watch --workspace=vscode"
   },
   "devDependencies": {
+    "@malloydata/db-duckdb": "^0.0.304",
     "eslint": "^9.32.0",
     "eslint-plugin-prefer-let": "^4.0.0",
     "typescript-eslint": "^8.38.0",
