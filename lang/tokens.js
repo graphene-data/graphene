@@ -50,6 +50,8 @@ import {
   text,
   blob,
   primary_key,
+  join_one,
+  join_many,
 } from './parser.terms.js'
 
 // Map of lowercase keywords to their token IDs
@@ -104,6 +106,8 @@ const keywords = {
   text: text,
   blob: blob,
   primary_key: primary_key,
+  join_one: join_one,
+  join_many: join_many,
 }
 
 export function specializeIdentifier (value) {

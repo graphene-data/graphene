@@ -116,11 +116,12 @@ function analyzeDatabaseTable (table: Table) {
     if (!target) diag(jn, 'Unknown table to join')
     if (!target.analyzed) analyzeTable(target)
     let name = txt(jn.getChild('Alias')) || target.name
+    let joinKeyword = txt(jn.firstChild) // join_one or join_many
 
     // Malloy does this bonkers thing where a JoinField contains both the details of that join, and the entire target table.
     // This clone is important, otherwise two tables that join each other create an infinite loop when we give them to Malloy.
     let clone = structuredClone(target)
-    let join = {...clone, name, join: 'one'} as Join
+    let join = {...clone, name, join: joinKeyword.includes('many') ? 'many' : 'one'} as Join
 
     // It's important we add the join before processing its expression, since the expression will refer to it
     table.fields.push(join)

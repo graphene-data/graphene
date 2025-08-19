@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import {analyze, clearWorkspace} from './analyze.ts'
+import {analyze, clearWorkspace, getTable} from './analyze.ts'
 import {setTestPrelude} from './testHelpers.ts'
 import {expect} from 'vitest'
 
@@ -85,9 +85,9 @@ describe('lang', () => {
       .toRenderSql('select base."id" as "id", users_0."name" as "users_name" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 
-  it.skip('handles column naming when mutliple columns have the same name', () => {
+  it('handles column naming when mutliple columns have the same name', () => {
     expect('from orders select users.name, products.name')
-      .toRenderSql('SELECT orders.id, users.name, products.name FROM orders LEFT JOIN users ON (users.id = orders.user_id) LEFT JOIN products ON (products.id = orders.product_id)')
+      .toRenderSql('select users_0."name" as "users_name", products_0."name" as "products_name" from orders as base left join users as users_0 on users_0."id"=base."user_id" left join products as products_0 on products_0."id"=base."product_id"')
   })
 
   it('expands measures', () => {
@@ -102,7 +102,7 @@ describe('lang', () => {
 
   it.skip('handles complex joins with measures', () => {
     expect('from products select name, category, total_sold where popular_item')
-      .toRenderSql('SELECT products.name, products.category, SUM(orders.amount) FROM products LEFT JOIN orders ON (orders.product_id = products.id) GROUP BY ALL HAVING SUM(orders.amount) > 1000')
+      .toRenderSql('select base."name" as "name", base."category" as "category", (sum(orders_0."amount")) as "total_sold" from products as base left join orders as orders_0 on orders_0."product_id"=base."id" group by 1, 2 having sum(orders_0."amount")>1000 order by 3 desc nulls last')
   })
 
   it('handles subqueries', () => {
@@ -125,30 +125,30 @@ describe('lang', () => {
     expect('table t (a int, ; ) ; from t select a;').toHaveDiagnostic(/syntax error/i)
   })
 
-  it.skip('parses metadata from comments on tables and fields (from testTables)', () => {
+  it('parses metadata from comments on tables and fields (from testTables)', () => {
     analyze(testTables + '\nfrom users select id')
-    let users = tables.find(t => t.name.toLowerCase() === 'users')!
+    let users = getTable('users')!
     expect(users.metadata.description.toLowerCase()).toContain('people who purchase things')
     expect(users.metadata.domain).toBe('sales')
-    let email = users.fields['email'] as any
+    let email = (users.fields as any[]).find(f => f.name === 'email') as any
     expect(email.metadata.description.toLowerCase()).toContain('email address')
     expect(email.metadata.pii).toBe('true')
-    let orders = tables.find(t => t.name.toLowerCase() === 'orders')!
-    let amount = orders.fields['amount'] as any
+    let orders = getTable('orders')!
+    let amount = (orders.fields as any[]).find(f => f.name === 'amount') as any
     expect(amount.metadata.units).toBe('usd')
   })
 
-  it.skip('does not attach a single leading comment to multiple fields on the same line', () => {
+  it('does not attach a single leading comment to multiple fields on the same line', () => {
     let sql = `
     table foo (
       -- the name field
       id bigint, name varchar
     )
     from foo select id` // include a query to force parse
-    let {tables} = analyze(sql)
-    let t = tables[0]
-    let id = t.fields['id'] as any
-    let name = t.fields['name'] as any
+    analyze(sql)
+    let t = getTable('foo')!
+    let id = (t.fields as any[]).find(f => f.name === 'id') as any
+    let name = (t.fields as any[]).find(f => f.name === 'name') as any
     expect(id.metadata.description.toLowerCase()).toContain('name field')
     expect(name.metadata?.description).toBeUndefined()
   })
