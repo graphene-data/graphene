@@ -7,12 +7,13 @@ const testTables = `
   -- people who purchase things
   --# domain=sales
   table users (
-    id int,
+    id int primary_key,
     name text,
     -- email address of the user
     --# pii=true
     email text,
     created_at timestamp,
+    age int,
 
     join_one orders on orders.user_id = id,
     measure total_orders count(orders.id)
@@ -33,10 +34,6 @@ const testTables = `
     measure total_revenue sum(amount),
     measure avg_order_value sum(amount) / count(),
     measure completed status = 'completed'
-  )
-
-  table completed_orders as (
-    from orders where status = 'completed' select id
   )
 
   table products (
@@ -64,12 +61,12 @@ describe('lang', () => {
 
   it('expands plain wildcard', () => {
     expect('from users select *')
-      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at" from users as base')
+      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base')
   })
 
   it('expands wildcards on a specific join', () => {
     expect('from orders select users.*')
-      .toRenderSql('select users_0."id" as "id", users_0."name" as "name", users_0."email" as "email", users_0."created_at" as "created_at" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
+      .toRenderSql('select users_0."id" as "id", users_0."name" as "name", users_0."email" as "email", users_0."created_at" as "created_at", users_0."age" as "age" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 
   it('excludes aggregates from wildcard expansion', () => {
@@ -95,7 +92,7 @@ describe('lang', () => {
 
   it('expands measures', () => {
     expect('from users select name, total_orders')
-      .toRenderSql('select base."name" as "name", (count(1)) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
+      .toRenderSql('select base."name" as "name", (count(distinct orders_0."id")) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
   })
 
   it('handles nested measure references', () => {
@@ -156,6 +153,11 @@ describe('lang', () => {
     expect(name.metadata?.description).toBeUndefined()
   })
 
+  it('reports diagnostics for multiple primary keys', () => {
+    expect('table t (id int primary_key, id2 int primary_key) from t select id')
+      .toHaveDiagnostic(/Table t has multiple primary keys/i)
+  })
+
   it('reports diagnostics for unknown table in FROM', () => {
     expect('from not_a_table select id')
       .toHaveDiagnostic(/could not find table not_a_table/i)
@@ -167,7 +169,23 @@ describe('lang', () => {
   })
 
   it('can create new tables from queries', () => {
-    expect('from completed_orders select id')
+    expect(`table completed_orders as (from orders where status = 'completed' select id)
+      from completed_orders select id`)
       .toRenderSql('WITH __stage0 AS ( SELECT base."id" as "id" FROM orders as base WHERE base."status"=\'completed\' ) SELECT base."id" as "id" FROM __stage0 as base')
+  })
+
+  it('handles asymmetric aggregates (avg, sum)', () => {
+    expect('from orders select avg(users.age)')
+      .toRenderSql('select ( select avg(a.val) as value from ( select unnest(list(distinct {key:users_0."id", val: users_0."age"})) a ) ) as "col_0" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
+  })
+
+  it('can correctly count through a join', () => {
+    expect('from orders select count(users.id)')
+      .toRenderSql('select count(distinct users_0."id") as "col_0" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
+  })
+
+  it('handles min/max through a join', () => {
+    expect('from orders select min(users.age)')
+      .toRenderSql('select min(users_0."age") as "col_0" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 })

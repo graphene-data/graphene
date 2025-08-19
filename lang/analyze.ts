@@ -4,7 +4,8 @@ import path from 'path'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 import {type Table, txt, type Query, type Join, type Diagnostic, type Expression, type Field, type ColumnField, type FieldType} from './core.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import malloy, {type AggregateFunctionType, type StructRef} from '../node_modules/@malloydata/malloy/dist/model/index.js'
+import malloy, {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode} from '../node_modules/@malloydata/malloy/dist/model/index.js'
+
 
 export type {Query, Table, Diagnostic} from './core.ts'
 
@@ -94,8 +95,15 @@ function analyzeTable (table: Table) {
 function analyzeDatabaseTable (table: Table) {
   // regular columns in the db, like `full_name VARCHAR`
   table.syntaxNode.getChildren('ColumnDef').forEach(cn => {
+    let name = txt(cn.getChild('Identifier'))
+
+    if (cn.getChild('PrimaryKey')) {
+      if (table.primaryKey) diag(cn, `Table ${table.name} has multiple primary keys`)
+      table.primaryKey = name
+    }
+
     table.fields.push({
-      name: txt(cn.getChild('Identifier')),
+      name,
       type: convertDataType(txt(cn.getChild('DataType'))),
       metadata: extractLeadingMetadata(cn),
     })
@@ -267,11 +275,28 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
       let field = (lookup(expr, scope) || [])[0]
       return {node: 'field', path, type: field?.type || 'unknown', isAgg: field?.isAgg}
     case 'FunctionCall':
-      let name = txt(expr.getChild('Identifier')).toLowerCase()
+      let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
       let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
-      if (isAggregate(name)) {
-        if (name == 'count' && args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
-        return {node: 'aggregate', function: name.toLowerCase() as AggregateFunctionType, e: args[0], type: 'number', isAgg: true}
+      if (name == 'count') {
+        if (args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
+        if (args[0].node) name = 'distinct' // anything besides `count()` or `count(*)` is a distinct count
+        return {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
+      } else if (isAggregate(name)) {
+        let res = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true} as Expression & AggregateExpr
+
+        // Aggregates need a `structPath`, which in malloy is the `users` in `users.avg(age)`. We'd rather you write `avg(users.age)`, so we
+        // need to get that path from the arguments, and pass it to malloy as the structPath.
+        // NB that malloy is unhappy if structPath is undefined or empty, so only set it if we have one.
+        // TODO this assumes args[0] is a ColumnRef, so `avg(users.age / 2)` wouldn't work. We should make that work.
+        if (isAsymmetricAggregate(name)) {
+          if (args[0]?.node !== 'field') diag(expr, 'Aggregate requires a column or expression')
+          let path = (args[0] as FieldnameNode).path
+          if (path.length > 1) {
+            res.structPath = path.slice(0, -1)
+          }
+        }
+
+        return res
       } else {
         throw new Error(`Unknown function: ${name}`)
       }
@@ -321,8 +346,12 @@ function lookup (ref: SyntaxNode, table: Table): ColumnField[] | void {
   }
 }
 
+function isAsymmetricAggregate (name: string): boolean {
+  return ['avg', 'sum'].includes(name.toLowerCase())
+}
+
 function isAggregate (name: string): boolean {
-  return ['avg', 'sum', 'min', 'max', 'count'].includes(name.toLowerCase())
+  return ['count', 'min', 'max', 'avg', 'sum'].includes(name.toLowerCase())
 }
 
 function isJoin (field: Field): field is Join {

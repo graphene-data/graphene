@@ -49,6 +49,7 @@ import {
   char,
   text,
   blob,
+  primary_key,
 } from './parser.terms.js'
 
 // Map of lowercase keywords to their token IDs
@@ -102,6 +103,7 @@ const keywords = {
   char: char,
   text: text,
   blob: blob,
+  primary_key: primary_key,
 }
 
 export function specializeIdentifier (value) {
