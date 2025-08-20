@@ -48,7 +48,8 @@ table aircraft (
   cert_issue_date DATE,
   air_worth_date DATE,
 
-  join_one aircraft_models as model on aircraft_model_code = model.aircraft_model_code
+  join_one aircraft_models as model on aircraft_model_code = model.aircraft_model_code,
+  join_many flights on tail_num = flights.tail_num
 )
 
 table aircraft_models (
@@ -62,11 +63,15 @@ table aircraft_models (
   engines BIGINT,
   seats BIGINT,
   weight BIGINT,
-  speed BIGINT
+  speed BIGINT,
+
+  join_many aircraft on aircraft_model_code = aircraft.aircraft_model_code
 )
 
 table carriers (
   code VARCHAR,
   name VARCHAR,
-  nickname VARCHAR
+  nickname VARCHAR,
+
+  join_many flights on code = flights.carrier
 )

@@ -39,6 +39,12 @@ const EXAMPLE = `
     join_one: aircraft_models with aircraft_model_code
   }
 
+  source: models_extended is aircraft_models extend {
+    join_many: aircraft on aircraft.aircraft_model_code = aircraft_model_code
+    measure:
+      aircraft_count is aircraft.count()
+  }
+
   source: flights is duckdb.table('flights') extend {
     primary_key: id2
 
@@ -51,9 +57,9 @@ const EXAMPLE = `
     join_one: aircraft with tail_num
   }
 
-  run: aircraft -> {
-    group_by: country
-    aggregate: wtf is avg_seats
+  run: models_extended -> {
+    group_by: manufacturer
+    aggregate: aircraft_count
   }`
 
 class FileURLReader implements URLReader {
