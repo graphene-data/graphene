@@ -15,7 +15,7 @@ const testTables = `
     created_at timestamp,
     age int,
 
-    join_one orders on orders.user_id = id,
+    join_many orders on orders.user_id = id,
     measure total_orders count(orders.id)
     -- measure active_recently created_at > current_date - 30
   )
@@ -40,9 +40,9 @@ const testTables = `
     id int,
     name text,
     price int,
-    category text
+    category text,
 
-    -- join_many orders on orders.product_id = id
+    join_many orders on orders.product_id = id
     -- measure total_sold sum(orders.amount),
     -- measure popular_item total_sold > 1000
   )
@@ -187,5 +187,10 @@ describe('lang', () => {
   it('handles min/max through a join', () => {
     expect('from orders select min(users.age)')
       .toRenderSql('select min(users_0."age") as "col_0" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
+  })
+
+  it.skip('supports join_many', () => {
+    expect('from users select id, total_orders')
+      .toRenderSql('')
   })
 })

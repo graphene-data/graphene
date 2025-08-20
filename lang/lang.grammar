@@ -80,7 +80,11 @@ PrimaryKey {
 }
 
 JoinDef {
-  Kw<"join_one"> Identifier (Kw<"as"> Alias)? Kw<"on"> expression
+  JoinType Identifier (Kw<"as"> Alias)? Kw<"on"> expression
+}
+
+JoinType {
+  Kw<"join_one"> | Kw<"join_many">
 }
 
 ComputedDef {
