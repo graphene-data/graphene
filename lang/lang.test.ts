@@ -144,12 +144,12 @@ describe('lang', () => {
 
   it('adds groupBy to select if needed', () => {
     expect('from users select count(orders.id) as total group by name')
-      .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "total" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1')
+      .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "total" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
   })
 
-  it('doesnt duplicate group bys', () => {
+  it('doesnt duplicate groupBys', () => {
     expect('from users select name, count(orders.id) group by name')
-      .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "col_1" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1')
+      .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "col_1" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
   })
 
   it('supports having clause with aggregate', async () => {
@@ -160,6 +160,11 @@ describe('lang', () => {
   it('supports post-agg filters without the need for "having"', async () => {
     await expect('from users select name, sum(payments.amount) as amt where amt > 50 group by name')
       .toReturnRows(['Alice', 100])
+  })
+
+  it('supports order by with direction', async () => {
+    await expect('from users select name, total_orders order by total_orders desc')
+      .toReturnRows(['Alice', 2], ['Bob', 1])
   })
 
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
