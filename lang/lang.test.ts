@@ -142,6 +142,33 @@ describe('lang', () => {
       SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
   })
 
+  it('supports group by explicit clause', async () => {
+    expect('from users select name, count(orders.id) group by name')
+      .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "col_1" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1')
+    await expect('from users select name, count(orders.id) group by name')
+      .toReturnRows(['Alice', 2], ['Bob', 1])
+  })
+
+  it('supports having clause with aggregate', async () => {
+    await expect('from users select name, sum(payments.amount) as amt group by name having amt > 50')
+      .toReturnRows(['Alice', 100])
+  })
+
+  it('supports order by with direction', async () => {
+    await expect('from users select name, total_orders order by total_orders desc')
+      .toReturnRows(['Alice', 2], ['Bob', 1])
+  })
+
+  it('supports in expressions', () => {
+    expect("from users select id where name in ('Alice','Bob')")
+      .toRenderSql('select base."id" as "id" from users as base where base."name" in (\'Alice\',\'Bob\')')
+  })
+
+  it('supports case expressions', () => {
+    expect("from users select case when age > 35 then 'old' else 'young' end as bucket")
+      .toRenderSql("select case when (base.\"age\">35) then 'old' else 'young' end as \"bucket\" from users as base")
+  })
+
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
     expect('from users select id = >>;').toHaveDiagnostic(/syntax error/i)
   })

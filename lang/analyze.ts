@@ -226,16 +226,61 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
     e: analyzeExpression(w, baseTable),
   }))
 
-  // let groupBys = queryNode.getChild('GroupByClause')?.getChildren('Expression') || []
-  // groupBys.forEach(g => {
-  //   // TODO if an expression isn't also in `selects`, add it
-  //   analyzeExpression(g, query, null)
-  // })
+  // GROUP BY: ensure any grouping expressions are analyzed and included in result fields when needed
+  let groupBys = queryNode.getChild('GroupByClause')?.getChildren('Expression') || []
+  let groupByFields: string[] = []
+  groupBys.forEach(g => {
+    let expr = analyzeExpression(g, baseTable)
+    // If the group by is a bare field, ensure we have it in selects
+    if (expr.node === 'field') {
+      let name = (expr as any).path[(expr as any).path.length - 1]
+      groupByFields.push(name)
+      if (!queryFields.find(f => f.name === name)) {
+        queryFields.push({type: expr.type, name, metadata: {}, e: expr})
+      }
+    } else {
+      // For non-field expressions, add a synthetic column
+      let name = `group_${groupByFields.length}`
+      groupByFields.push(name)
+      queryFields.push({type: expr.type, name, metadata: {}, e: expr})
+    }
+  })
 
-  // let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
-  // orderBys.forEach(o => {
-  //   analyzeExpression(o.getChild('Expression')!, query, null)
-  // })
+  // ORDER BY
+  let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
+  let orderByList: {field: string, dir: 'asc' | 'desc'}[] = []
+  orderBys.forEach(o => {
+    let expr = analyzeExpression(o.getChild('Expression')!, baseTable)
+    // Prefer ordering by output field names
+    if (expr.node === 'field') {
+      let fieldName = (expr as any).path[(expr as any).path.length - 1]
+      // Ensure the field is selected so we can reference it
+      if (!queryFields.find(f => f.name === fieldName)) {
+        queryFields.push({type: expr.type, name: fieldName, metadata: {}, e: expr})
+      }
+      let dirStr = txt(o).toLowerCase()
+      let dir: 'asc' | 'desc' = dirStr.includes('desc') ? 'desc' : 'asc'
+      orderByList.push({field: fieldName, dir})
+    } else {
+      // For complex order expressions, add a synthetic select and order by it
+      let name = `order_${orderByList.length}`
+      queryFields.push({type: expr.type, name, metadata: {}, e: expr})
+      let dirStr = txt(o).toLowerCase()
+      let dir: 'asc' | 'desc' = dirStr.includes('desc') ? 'desc' : 'asc'
+      orderByList.push({field: name, dir})
+    }
+  })
+
+  // HAVING
+  let havingExpr = queryNode.getChild('HavingClause')?.getChild('Expression')
+  let havingList = [] as any[]
+  if (havingExpr) {
+    // Build a map of output field names for use in having expression resolution
+    let outputMap: Record<string, ColumnField> = {}
+    for (let f of queryFields) outputMap[f.name] = f
+    let e = analyzeExpression(havingExpr, baseTable, outputMap)
+    havingList.push({node: 'filterCondition', expressionType: 'aggregate', e})
+  }
 
   return {
     fields: queryFields,
@@ -245,9 +290,12 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
       pipeline: [{
         type: isAgg ? 'reduce' : 'project',
         queryFields: queryFields as any,
-        filterList: filterList as any,
+        filterList: (filterList as any).concat(havingList as any),
         outputStruct: null as any,
         isRepeated: false,
+        ...(orderByList.length
+          ? {orderBy: orderByList as any, defaultOrderBy: false}
+          : (groupBys.length ? {orderBy: [] as any, defaultOrderBy: false} : {})),
       }],
     },
   }
@@ -256,7 +304,7 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
 // Called for each expression in a query, recursively for complex expressions, including computed columns.
 // This reports errors and warnings for symantic issues, as well as generating the final SQL.
 // Scope is used to track the current table we're operating within when analyzing measures. If it's null, the scope is the entire query.
-function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
+function analyzeExpression (expr:SyntaxNode, scope:Table, outputFields?: Record<string, ColumnField>): Expression {
   if (expr.type.isError) {
     diag(expr, 'Invalid expression')
     return {} as Expression
@@ -271,13 +319,19 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
       return {node: 'stringLiteral', literal: raw, type: 'string'}
     case 'Wildcard':
       return {node: ''} as Expression // what malloy expects for count(*)
-    case 'ColumnRef':
-      let path = expr.getChildren('Identifier').map(i => txt(i))
+    case 'ColumnRef': {
+      let idents = expr.getChildren('Identifier')
+      let path = idents.map(i => txt(i))
+      if (outputFields && path.length === 1 && outputFields[path[0]]) {
+        let f = outputFields[path[0]]
+        return {node: 'outputField', name: path[0], type: f.type, isAgg: f.isAgg} as any
+      }
       let field = (lookup(expr, scope) || [])[0]
       return {node: 'field', path, type: field?.type || 'unknown', isAgg: field?.isAgg}
+    }
     case 'FunctionCall':
       let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
-      let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
+      let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope, outputFields))
       if (name == 'count') {
         if (args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
         if (args[0].node) name = 'distinct' // anything besides `count()` or `count(*)` is a distinct count
@@ -302,17 +356,54 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
         throw new Error(`Unknown function: ${name}`)
       }
     case 'Parenthetical':
-      return analyzeExpression(expr.getChild('Expression')!, scope)
+      return analyzeExpression(expr.getChild('Expression')!, scope, outputFields)
     case 'BinaryExpression':
-      let left = analyzeExpression(expr.firstChild!, scope)
-      let right = analyzeExpression(expr.lastChild!, scope)
+      let left = analyzeExpression(expr.firstChild!, scope, outputFields)
+      let right = analyzeExpression(expr.lastChild!, scope, outputFields)
       let op = txt(expr.firstChild?.nextSibling).toLowerCase()
       return {node: op as any, kids: {left, right}, type: 'boolean', isAgg: left.isAgg || right.isAgg}
-    case 'UnaryExpression':
-    case 'ExistsExpression':
-    case 'CaseExpression':
-    case 'SubqueryExpression':
-    case 'InExpression':
+    case 'UnaryExpression': {
+      let opTxt = txt(expr.firstChild).toLowerCase()
+      let child = analyzeExpression(expr.lastChild!, scope, outputFields)
+      if (opTxt === 'not') return {node: 'not', e: child, type: 'boolean', isAgg: child.isAgg}
+      if (opTxt === '-') return {node: 'unary-', e: child, type: child.type, isAgg: child.isAgg}
+      if (opTxt === '+') return {node: '()', e: child, type: child.type, isAgg: child.isAgg}
+      return {node: '()', e: child, type: child.type, isAgg: child.isAgg}
+    }
+    case 'CaseExpression': {
+      let caseValue = expr.getChild('Expression')
+      let whens = expr.getChildren('WhenClause')
+      let els = expr.getChild('ElseClause')
+      let kids: any = {
+        caseWhen: whens.map(w => analyzeExpression(w.getChildren('Expression')[0]!, scope, outputFields)),
+        caseThen: whens.map(w => analyzeExpression(w.getChildren('Expression')[1]!, scope, outputFields)),
+      }
+      if (caseValue) kids.caseValue = analyzeExpression(caseValue, scope, outputFields)
+      if (els) kids.caseElse = analyzeExpression(els.getChild('Expression')!, scope, outputFields)
+      // type: use then type if available
+      let thenType = (kids.caseThen[0]?.type) || 'string'
+      let isAgg = [...kids.caseWhen, ...kids.caseThen, kids.caseElse].some((e:any) => e?.isAgg)
+      return {node: 'case', kids, type: thenType as FieldType, isAgg}
+    }
+    case 'SubqueryExpression': {
+      // Represent subquery as generic SQL expr to let Malloy handle it
+      return {node: 'genericSQLExpr', kids: {args: []}, type: 'record'} as any
+    }
+    case 'InExpression': {
+      let not = !!expr.getChild('Kw<"not">')
+      let eNode = analyzeExpression(expr.firstChild!, scope, outputFields)
+      // Values list or subquery
+      let oneOf: Expression[] = []
+      let valueList = expr.getChild('InValueList')
+      if (valueList) {
+        oneOf = valueList.getChildren('Expression').map(v => analyzeExpression(v, scope, outputFields))
+      } else {
+        // Subquery variant: use genericSQLExpr as a placeholder
+        oneOf = [{node: 'genericSQLExpr', kids: {args: []}, type: 'array'} as any]
+      }
+      let isAgg = eNode.isAgg || oneOf.some(v => (v as any).isAgg)
+      return {node: 'in', not, kids: {e: eNode as any, oneOf: oneOf as any}, type: 'boolean', isAgg} as any
+    }
     default:
       throw new Error(`Unsupported expression: ${txt(expr)}`)
   }
