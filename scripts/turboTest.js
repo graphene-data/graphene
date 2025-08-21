@@ -43,18 +43,24 @@ console.log(`🔍 Running failed test: ${path.basename(firstTest.file)} - ${firs
 
 global['__vitest_worker__'] = {environment: {name: 'TEST'}}
 
-let describeBlocks = {}
-global.describe = (name, fn) => describeBlocks[name] = fn
+let beforeAllFns = []
+let beforeEachFns = []
+let testToRun = null
+
+global.describe = (name, fn) => fn()
 global.it = (name, fn) => {
   if (name !== firstTest.name) return
-  fn()
+  testToRun = fn
 }
 
-global.beforeEach = (fn) => fn()
+global.beforeAll = (fn) => beforeAllFns.push(fn)
+global.beforeEach = (fn) => beforeEachFns.push(fn)
 global.it.skip = () => {}
 
 await import(firstTest.file)
 // https://github.com/nodejs/node/issues/50430#issuecomment-2449419913
-process.nextTick(() => {
-  Object.values(describeBlocks).forEach(fn => fn())
+process.nextTick(async () => {
+  for (let fn of beforeAllFns) await fn()
+  for (let fn of beforeEachFns) await fn()
+  await testToRun()
 })
