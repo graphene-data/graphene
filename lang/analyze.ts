@@ -236,6 +236,14 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
     scope.outputFields.unshift({type: expr.type, name, metadata: {}, e: expr})
   })
 
+  // ORDER BY
+  let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
+  let orderByList = orderBys.map(o => {
+    let field = txt(o.getChild('Identifier'))
+    let dir = txt(o.getChild('Kw')).toLowerCase() == 'desc' ? 'desc' : 'asc' as 'asc' | 'desc'
+    return {field, dir}
+  })
+
   return {
     fields: scope.outputFields,
     malloyQuery: {
@@ -247,6 +255,7 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
         filterList: filterList as any,
         outputStruct: null as any,
         isRepeated: false,
+        orderBy: orderByList.length ? orderByList : undefined,
       }],
     },
   }

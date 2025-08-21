@@ -56,7 +56,7 @@ OrderByClause {
 }
 
 OrderItem {
-  expression (Kw<"asc"> | Kw<"desc">)?
+  Identifier (Kw<"asc"> | Kw<"desc">)?
 }
 
 LimitClause {
