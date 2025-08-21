@@ -142,6 +142,16 @@ describe('lang', () => {
       SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
   })
 
+  it('adds groupBy to select if needed', () => {
+    expect('from users select count(orders.id) as total group by name')
+      .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "total" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1')
+  })
+
+  it('doesnt duplicate group bys', () => {
+    expect('from users select name, count(orders.id) group by name')
+      .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "col_1" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1')
+  })
+
   it('supports having clause with aggregate', async () => {
     await expect('from users select name, sum(payments.amount) as amt group by name having amt > 50')
       .toReturnRows(['Alice', 100])

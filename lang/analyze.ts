@@ -15,8 +15,9 @@ let diagnostics: Diagnostic[] = []
 let queryModelContents: Record<string, any> = {}
 let currentFile: string = ''
 
-function diag (node: SyntaxNode | SyntaxNodeRef, message: string): void {
+function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
   diagnostics.push({from: node.from, to: node.to, message, severity: 'error', file: currentFile})
+  return defaultReturn!
 }
 
 export function clearWorkspace () {
@@ -192,21 +193,15 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
   // Next, get the columns this query will return (including wildcard expansion)
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
   selects.forEach(s => {
-    // If a select is pointing to a field (ie `tableA.name`) malloy will use {type: 'fieldref', path: ['tableA', 'name']}
-    // This kinda sucks, because it will always call the field `name` and throw an error if you select another column called `name` from a different join.
-    // Instead, we're opting to pass this to malloy as an expression field, which lets us control the field's name.
-    // The one minor downside I'm aware of is that malloy sometimes renders extra parenthesis it doesn't need in this case.
-
     if (s.getChild('Wildcard')) {
       let path = s.getChild('Wildcard')?.getChildren('Identifier').map(i => txt(i)) || []
-      let expandedFields = lookup(s.getChild('Wildcard')!, scope) || []
-      expandedFields.forEach(f => {
+      let {fields} = lookup(s.getChild('Wildcard')!, scope)
+      fields.forEach(f => {
         scope.outputFields.push({...f,  e: {node: 'field', path: [...path, f.name], type: f.type}})
       })
     } else {
-      let alias = txt(s.getChild('Alias'))
       let expr = analyzeExpression(s.getChild('Expression')!, scope)
-      let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${scope.outputFields.length}`)
+      let name = nameExpression(expr, scope, s.getChild('Alias'))
       isAgg ||= !!expr.isAgg
       let metadata = {}
 
@@ -229,6 +224,16 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
       expressionType: e.isAgg ? 'aggregate' : 'scalar',
       e: e,
     }))
+  })
+
+  // In Malloy, group by's are just query fields. If you specify a `group by` that isn't in your `select`, we'll auto-add it.
+  let groupBys = queryNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
+  groupBys.forEach(g => {
+    let expr = analyzeExpression(g.getChild('Expression')!, scope)
+    let name = nameExpression(expr, scope, g.getChild('Alias'))
+    if (expr.isAgg) return diag(g, 'Cannot group by aggregate expressions')
+    if (scope.outputFields.find(f => f.name == name)) return // do nothing, it's already in there
+    scope.outputFields.unshift({type: expr.type, name, metadata: {}, e: expr})
   })
 
   return {
@@ -257,24 +262,26 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   }
 
   switch (expr.name) {
-    case 'Literal':
+    case 'Literal': {
       let raw = txt(expr)
       if (raw.startsWith("'")) return {node: 'stringLiteral', literal: raw.slice(1, -1), type: 'string'}
       if (/^\d+(\.\d+)?$/.test(raw)) return {node: 'numberLiteral', literal: raw, type: 'number'}
       diag(expr, `Unknown literal type: ${raw}`)
       return {node: 'stringLiteral', literal: raw, type: 'string'}
-    case 'Wildcard':
+    }
+    case 'Wildcard': {
       return {node: ''} as Expression // what malloy expects for count(*)
-    case 'ColumnRef':
+    }
+    case 'ColumnRef': {
       let path = expr.getChildren('Identifier').map(i => txt(i))
-      let outField = path.length == 1 && scope.outputFields.find(f => f.name == path[0])
-      if (outField && outField.isAgg) {
-        return {node: 'outputField', name: path[0], type: outField.type, isAgg: outField.isAgg} as Expression & OutputFieldNode
+      let {fields, inOutput} = lookup(expr, scope)
+      if (inOutput && fields[0].isAgg) {
+        return {node: 'outputField', name: path[0], type: fields[0].type, isAgg: fields[0].isAgg} as Expression & OutputFieldNode
       } else {
-        let field = (lookup(expr, scope) || [])[0]
-        return {node: 'field', path, type: field?.type || 'unknown', isAgg: field?.isAgg} as Expression & FieldnameNode
+        return {node: 'field', path, type: fields[0]?.type || 'unknown', isAgg: fields[0]?.isAgg} as Expression & FieldnameNode
       }
-    case 'FunctionCall':
+    }
+    case 'FunctionCall': {
       let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
       let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
       if (name == 'count') {
@@ -300,9 +307,11 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       } else {
         throw new Error(`Unknown function: ${name}`)
       }
-    case 'Parenthetical':
+    }
+    case 'Parenthetical': {
       return analyzeExpression(expr.getChild('Expression')!, scope)
-    case 'BinaryExpression':
+    }
+    case 'BinaryExpression': {
       let left = analyzeExpression(expr.firstChild!, scope)
       let right = analyzeExpression(expr.lastChild!, scope)
       let op = txt(expr.firstChild?.nextSibling).toLowerCase()
@@ -317,33 +326,58 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   }
 }
 
-// Follow a dotted path to get the field it refers to.
-// Malloy does this when rendering SQL, but we do it earlier to give type diagnostics
-// This also handles wildcards, returning all fields that match the path
-function lookup (ref: SyntaxNode, scope: Scope): ColumnField[] | void {
-  let curr = scope.table
+// Get the field that a ColumnRef refers to.
+// This could be a column on a table, the alias of a column in the query, or a wildcard. We'll also follow dotted paths to traverse joins.
+// The lookup is redundant with Malloy, but doing it means we get type info and metadata on all fields.
+function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutput: boolean} {
+  let curr = scope
   let pathNodes = ref.getChildren('Identifier')
   let last = ref.name == 'Wildcard' ? null : pathNodes.pop()
+  let fieldName = txt(last)
+  let def = {fields: [] as ColumnField[], inOutput: false}
+
+  // first step through all the parts of the dotted path (except the last one) to get the right table
   for (let part of pathNodes) {
     let name = txt(part)
-    let next = curr.fields.find(f => f.name == name)
+    let next = curr.table.fields.find(f => f.name == name)
 
-    if (!next)                return diag(part, `Join ${name} does not exist on table ${curr.name}`)
-    if (!isJoin(next))        return diag(part, `${name} is not a join on ${curr.name}`)
+    if (!next)         return diag(part, `Join ${name} does not exist on table ${curr.table.name}`, def)
+    if (!isJoin(next)) return diag(part, `${name} is not a join on ${curr.table.name}`, def)
 
-    curr = TABLE_MAP[next.tablePath || '']
+    curr = {table: TABLE_MAP[next.tablePath || ''], outputFields: []}
     if (!curr) throw new Error('Following valid join but we couldnt find the table')
   }
 
+  // now that we have the right table, get the field(s) that match. First handle wildcards
   if (ref.name == 'Wildcard') {
-    return curr.fields.filter(f => !isJoin(f) && !f.isAgg) as ColumnField[]
-  } else {
-    let fieldName = txt(last)
-    let field = curr.fields.find(f => f.name == fieldName)
-    if (!field)                return diag(last!, `Could not find ${fieldName} on ${curr.name}`)
-    if (isJoin(field)) return diag(last!, `${fieldName} is a join, but is used as a colum here`)
-    return [field]
+    return {fields: curr.table.fields.filter(f => !isJoin(f) && !f.isAgg) as ColumnField[], inOutput: false}
   }
+
+  // otherwise, look for a field in the current table
+  let field = curr.table.fields.find(f => f.name == fieldName)
+  if (field) {
+    if (isJoin(field)) return diag(last!, `${fieldName} is a join, but is used as a colum here`, def)
+    return {fields: [field], inOutput: false}
+  }
+
+  // finally, look at the output fields in the query. This is lower precedence than fields on the table.
+  let outField = curr.outputFields.find(f => f.name == fieldName)
+  if (outField) {
+    return {fields: [outField], inOutput: true}
+  }
+
+  return diag(ref, `Could not find ${fieldName} on ${curr.table.name}`, def)
+}
+
+// Pick a sensible name for a column
+// If a select is pointing to a field (ie `tableA.name`) malloy will use {type: 'fieldref', path: ['tableA', 'name']}
+// This kinda sucks, because it will always call the field `name` and throw an error if you select another column called `name` from a different join.
+// Instead, we're opting to pass this to malloy as an expression field, which lets us control the field's name.
+// The one minor downside I'm aware of is that malloy sometimes renders extra parenthesis it doesn't need in this case.
+function nameExpression (expr: Expression, scope: Scope, aliasNode: SyntaxNode | null) {
+  if (aliasNode) return txt(aliasNode)
+  if (expr.node == 'field') return expr.path.join('_')
+  return `col_${scope.outputFields.length}`
 }
 
 // turn `a and b and c` into `[a, b, c]`
