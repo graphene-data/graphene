@@ -1,11 +1,9 @@
 /// <reference types="vitest/globals" />
 import {analyze, clearWorkspace, getTable} from './analyze.ts'
-import {setTestPrelude} from './testHelpers.ts'
+import {prepareEcommerceTables, setTestPrelude} from './testHelpers.ts'
 import {expect} from 'vitest'
 
 const testTables = `
-  -- people who purchase things
-  --# domain=sales
   table users (
     id int primary_key,
     name text,
@@ -16,47 +14,59 @@ const testTables = `
     age int,
 
     join_many orders on orders.user_id = id,
-    measure total_orders count(orders.id)
+    join_many payments on payments.user_id = id,
+    measure total_orders count(orders.id),
+    measure amount_paid sum(payments.amount)
     -- measure active_recently created_at > current_date - 30
   )
 
   table orders (
-    id int,
+    id int primary_key,
     user_id int,
-    product_id int,
-    -- amount in usd
-    --# units=usd
     amount int,
     status text,
 
     join_one users on users.id = user_id,
-    join_one products on products.id = product_id,
+    join_many order_items on order_items.order_id = id,
     measure total_revenue sum(amount),
     measure avg_order_value sum(amount) / count(),
     measure completed status = 'completed'
   )
 
-  table products (
-    id int,
-    name text,
-    price int,
-    category text,
+  table order_items (
+    id int primary_key,
+    order_id int,
+    sku text,
+    quantity int,
 
-    join_many orders on orders.product_id = id
-    -- measure total_sold sum(orders.amount),
-    -- measure popular_item total_sold > 1000
+    join_one orders on orders.id = order_id
+  )
+
+  table payments (
+    id int primary_key,
+    user_id int,
+    payment_date timestamp,
+    amount int,
+
+    join_one users on users.id = user_id
   )
 `
 
 describe('lang', () => {
+  beforeAll(async () => {
+    await prepareEcommerceTables()
+  })
+
   beforeEach(() => {
     clearWorkspace()
     setTestPrelude(testTables)
   })
 
-  it('handles basic select query', () => {
-    expect('SELECT id, name from users where id = 1')
+  it('handles basic select query', async () => {
+    expect('from users select id, name where id = 1')
       .toRenderSql('SELECT base."id" as "id", base."name" as "name" FROM users as base WHERE base."id"=1')
+    await expect('from users select id, name where id = 1')
+      .toReturnRows([1, 'Alice'])
   })
 
   it('expands plain wildcard', () => {
@@ -75,19 +85,14 @@ describe('lang', () => {
     from t select *`).toRenderSql('select base."amount" as "amount" from t as base')
   })
 
-  it('supports from-first syntax', () => {
-    expect("from users select id, name where email like '%@example.com'")
-      .toRenderSql("select base.\"id\" as \"id\", base.\"name\" as \"name\" from users as base where base.\"email\" like '%@example.com'")
-  })
-
   it('expands dot-join syntax', () => {
     expect('from orders select id, users.name')
       .toRenderSql('select base."id" as "id", users_0."name" as "users_name" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 
   it('handles column naming when mutliple columns have the same name', () => {
-    expect('from orders select users.name, products.name')
-      .toRenderSql('select users_0."name" as "users_name", products_0."name" as "products_name" from orders as base left join users as users_0 on users_0."id"=base."user_id" left join products as products_0 on products_0."id"=base."product_id"')
+    expect('from orders select users.id, order_items.id')
+      .toRenderSql('select users_0."id" as "users_id", order_items_0."id" as "order_items_id" from orders as base left join users as users_0 on users_0."id"=base."user_id" left join order_items as order_items_0 on order_items_0."order_id"=base."id"')
   })
 
   it('expands measures', () => {
@@ -95,9 +100,29 @@ describe('lang', () => {
       .toRenderSql('select base."name" as "name", (count(distinct orders_0."id")) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
   })
 
+  it('computes a measure result', async () => {
+    await expect('from users select name, total_orders')
+      .toReturnRows(['Alice', 2], ['Bob', 1])
+  })
+
   it('handles nested measure references', () => {
     expect('from orders select user_id, avg_order_value')
       .toRenderSql('select base."user_id" as "user_id", (coalesce(sum(base."amount"),0)*1.0/count(1)) as "avg_order_value" from orders as base group by 1 order by 2 desc nulls last')
+  })
+
+  it('returns rows for nested measure', async () => {
+    await expect('from orders select user_id, avg_order_value')
+      .toReturnRows([2, 40], [1, 30])
+  })
+
+  it('executes asymmetric chasm avg through join', async () => {
+    await expect('from orders select avg(users.age)')
+      .toReturnRows([35])
+  })
+
+  it('counts across two unrelated joins (chasm trap safe)', async () => {
+    await expect('from users select count(orders.id), count(payments.id)')
+      .toReturnRows([3, 2])
   })
 
   it.skip('handles complex joins with measures', () => {
@@ -126,16 +151,21 @@ describe('lang', () => {
   })
 
   it('parses metadata from comments on tables and fields (from testTables)', () => {
-    analyze(testTables + '\nfrom users select id')
-    let users = getTable('users')!
-    expect(users.metadata.description.toLowerCase()).toContain('people who purchase things')
-    expect(users.metadata.domain).toBe('sales')
-    let email = (users.fields as any[]).find(f => f.name === 'email') as any
-    expect(email.metadata.description.toLowerCase()).toContain('email address')
-    expect(email.metadata.pii).toBe('true')
-    let orders = getTable('orders')!
-    let amount = (orders.fields as any[]).find(f => f.name === 'amount') as any
-    expect(amount.metadata.units).toBe('usd')
+    analyze(`
+      -- this is my test table
+      table t (
+        id int primary_key,
+        -- a description
+        --# format=first_last
+        name text
+      )
+      from t select name
+    `)
+    let table = getTable('t')
+    expect(table.metadata.description.toLowerCase()).toContain('this is my test table')
+    let name = table.fields.find(f => f.name === 'name') as any
+    expect(name.metadata.description.toLowerCase()).toContain('a description')
+    expect(name.metadata.format).toBe('first_last')
   })
 
   it('does not attach a single leading comment to multiple fields on the same line', () => {
@@ -189,8 +219,13 @@ describe('lang', () => {
       .toRenderSql('select min(users_0."age") as "col_0" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 
-  it.skip('supports join_many', () => {
-    expect('from users select id, total_orders')
-      .toRenderSql('')
+  it('can handle measures on unconnected join_manys', async () => {
+    await expect('from users select name, total_orders, amount_paid, sum(orders.amount) as owed')
+      .toReturnRows(['Alice', 2, 100, 60], ['Bob', 1, 50, 40])
+  })
+
+  it('handles measures across multiple fanouts', async () => {
+    await expect('from users select name, orders.total_revenue, sum(orders.order_items.quantity)')
+      .toReturnRows(['Alice', 60, 6], ['Bob', 40, 5])
   })
 })
