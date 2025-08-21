@@ -14,6 +14,11 @@ declare module '@lezer/common' {
   }
 }
 
+export interface Scope {
+  table: Table,
+  outputFields: ColumnField[]
+}
+
 export type Expression = Expr & {
   type: FieldType
   isAgg?: boolean

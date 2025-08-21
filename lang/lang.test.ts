@@ -142,6 +142,16 @@ describe('lang', () => {
       SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
   })
 
+  it('supports having clause with aggregate', async () => {
+    await expect('from users select name, sum(payments.amount) as amt group by name having amt > 50')
+      .toReturnRows(['Alice', 100])
+  })
+
+  it('supports post-agg filters without the need for "having"', async () => {
+    await expect('from users select name, sum(payments.amount) as amt where amt > 50 group by name')
+      .toReturnRows(['Alice', 100])
+  })
+
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
     expect('from users select id = >>;').toHaveDiagnostic(/syntax error/i)
   })

@@ -19,7 +19,6 @@ import {
   SingleConnectionRuntime,
   type URLReader,
   Model,
-  QueryMaterializer,
   type ModelURL,
   type ModelString,
   type InvalidationKey,
@@ -226,7 +225,7 @@ async function main () {
     return obj
   }
 
-  let collapsed = collapseJoinTables(cloned)
+  let collapsed = collapseJoinTables(cloned) as any
   collapsed.references = 'hidden for howDoesMalloy brevity'
 
   let finalSQL = await materializer.loadFinalQuery().getSQL()
