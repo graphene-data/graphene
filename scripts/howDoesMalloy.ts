@@ -1,8 +1,15 @@
 #!/usr/bin/env node
 
-// This script lets us see Malloy's IR for given Malloy code.
-// node scripts/howDoesMalloy.ts > /tmp/malloy && cursor /tmp/malloy
-// node scripts/howDoesMalloy.ts examples/flights/test.malloysql --duckdb=examples/flights/flights.duckdb
+// This script lets us see Malloy's IR for given Malloy code against an in-memory DuckDB
+// that is pre-populated with the same ecommerce tables/data used in tests.
+//
+// Usage:
+//   node scripts/howDoesMalloy.ts                 # run with default example
+//   node scripts/howDoesMalloy.ts path/to/model   # run with a model file
+//   node scripts/howDoesMalloy.ts -               # read model from stdin
+//
+// Examples:
+//   node scripts/howDoesMalloy.ts > /tmp/malloy && cursor /tmp/malloy
 
 import {fileURLToPath, pathToFileURL} from 'url'
 import fs from 'fs/promises'
@@ -19,48 +26,82 @@ import {
 } from '@malloydata/malloy'
 import {DuckDBConnection} from '@malloydata/db-duckdb'
 
+// Default example that matches the in-memory ecommerce schema created below
 const EXAMPLE = `
-  source: carriers is duckdb.table('carriers') extend {
-    primary_key: code
+  source: orders is duckdb.table('orders') extend {
+    primary_key: id
+    // join_one: users with user_id
   }
 
-  source: airports is duckdb.table('airports') extend {
-    primary_key: code
+  source: payments is duckdb.table('payments') extend {
+    primary_key: id
+    // join_one: users with user_id
   }
 
-  source: aircraft_models is duckdb.table('aircraft_models') extend {
-    primary_key: aircraft_model_code
-  }
-
-  source: aircraft is duckdb.table('aircraft') extend {
+  source: users is duckdb.table('users') extend {
+    primary_key: id
+    join_many: orders on orders.user_id = id
+    join_many: payments on payments.user_id = id
     measure:
-      avg_seats is aircraft_models.avg(aircraft_models.seats / 2) + 5
-    primary_key: tail_num
-    join_one: aircraft_models with aircraft_model_code
+      total_orders is orders.count()
+      amount_paid is payments.sum(payments.amount)
   }
 
-  source: models_extended is aircraft_models extend {
-    join_many: aircraft on aircraft.aircraft_model_code = aircraft_model_code
-    measure:
-      aircraft_count is aircraft.count()
-  }
-
-  source: flights is duckdb.table('flights') extend {
-    primary_key: id2
-
-    rename: origin_code is origin
-    rename: destination_code is destination
-
-    join_one: carriers with carrier
-    join_one: origin is airports with origin_code
-    join_one: destination is airports with destination_code
-    join_one: aircraft with tail_num
-  }
-
-  run: models_extended -> {
-    group_by: manufacturer
-    aggregate: aircraft_count
+  run: users -> {
+    group_by: name
+    aggregate: total_orders, amount_paid
   }`
+
+// Same ecommerce tables/data as in lang/testHelpers.ts
+const ECOMM_SETUP = `
+  create table users (
+    id integer primary key,
+    name varchar,
+    email varchar,
+    created_at timestamp,
+    age integer
+  );
+
+  create table orders (
+    id integer primary key,
+    user_id integer,
+    amount integer,
+    status varchar
+  );
+
+  create table order_items (
+    id integer primary key,
+    order_id integer,
+    sku varchar,
+    quantity integer
+  );
+
+  create table payments (
+    id integer primary key,
+    user_id integer,
+    payment_date date,
+    amount integer
+  );
+
+  insert into users values
+    (1, 'Alice', 'alice@example.com', '2024-01-01', 30),
+    (2, 'Bob',   'bob@example.com',   '2024-01-10', 40);
+
+  insert into orders values
+    (100, 1, 20, 'completed'),
+    (101, 1, 40, 'pending'),
+    (102, 2, 40, 'completed');
+
+  insert into order_items values
+    (1000, 100, 'WIDGET', 3),
+    (1001, 100, 'GADGET', 2),
+    (1002, 101, 'WIDGET', 1),
+    (1003, 102, 'GIZMO', 5);
+
+  insert into payments values
+    (500, 1, '2024-01-05', 100),
+    (501, 2, '2024-01-12', 50);
+`
 
 class FileURLReader implements URLReader {
   async readURL (url: URL): Promise<{contents: string; invalidationKey?: InvalidationKey}> {
@@ -119,9 +160,6 @@ async function readStdinUTF8 (): Promise<string> {
 async function main () {
   let args = parseArgs(process.argv)
   let fileArg = (args.get('_') as string) || ''
-  let duckdbPath = (args.get('--duckdb') as string) || ':memory:'
-  let dumpAllNamed = Boolean(args.get('--all-named'))
-  let queryNamesCsv = (args.get('--queries') as string) || ''
   let format = ((args.get('--format') as string) || 'inspect').toLowerCase() // 'inspect' | 'json'
   let noLocs = args.get('--keep-locations') ? false : true
   let noUserArgs = process.argv.length <= 2
@@ -131,16 +169,8 @@ async function main () {
   let urlReader: URLReader | undefined
 
   if (noUserArgs) {
-    // Default: minimal flights model with a simple query
+    // Default: minimal ecommerce model with a simple query
     modelInput = EXAMPLE
-    // Prefer the example DuckDB if present
-    let defaultDb = path.resolve(process.cwd(), 'examples/flights/flights.duckdb')
-    try {
-      await fs.stat(defaultDb)
-      duckdbPath = defaultDb
-    } catch {
-      // keep ':memory:'
-    }
   } else if (fileArg && fileArg !== '-') {
     let abs = path.resolve(process.cwd(), fileArg)
     modelInput = pathToFileURL(abs)
@@ -149,13 +179,22 @@ async function main () {
   } else {
     let stdin = await readStdinUTF8().catch(() => '')
     if (!stdin.trim()) {
-      console.error('Usage: malloy-ir [path/to/model.malloy | -] [--duckdb=/path/to.db] [--all-named] [--queries=name1,name2] [--format=json|inspect] [--keep-locations]')
+      console.error('Usage: howDoesMalloy [path/to/model.malloy | -] [--format=json|inspect] [--keep-locations]')
       process.exit(2)
     }
     modelInput = stdin
   }
 
-  let connection = new DuckDBConnection({name: 'duckdb', databasePath: duckdbPath})
+  // Always use an in-memory DuckDB
+  let connection = new DuckDBConnection({name: 'duckdb', databasePath: ':memory:'})
+  // Initialize tables/data
+  await (connection as any).connecting
+  // Run each statement individually to avoid issues with streaming
+  for (let stmt of ECOMM_SETUP.split(';')) {
+    let s = stmt.trim()
+    if (!s) continue
+    await (connection as any).runDuckDBQuery(s)
+  }
   let runtime = new SingleConnectionRuntime({connection, urlReader})
 
   let materializer = runtime.loadModel(modelInput, importBase ? {importBaseURL: importBase} : undefined)
@@ -164,29 +203,40 @@ async function main () {
   let cloned = structuredClone(model._modelDef)
   if (noLocs) removeLocationAndAtWithRange(cloned)
 
-  let selectedNames: string[] = []
-  if (queryNamesCsv) {
-    selectedNames = queryNamesCsv.split(',').map(s => s.trim()).filter(Boolean)
-  } else if (dumpAllNamed) {
-    selectedNames = model.namedQueries.map(q => q.name)
+  function collapseJoinTables (obj: unknown): unknown {
+    if (Array.isArray(obj)) return obj.map(collapseJoinTables)
+    if (obj && typeof obj === 'object') {
+      // If this is a joined table field, collapse for brevity
+      let rec: any = obj
+      if (rec.type === 'table' && typeof rec.join === 'string') {
+        return {
+          type: 'table',
+          name: rec.name,
+          join: rec.join,
+          note: 'collapsed for howDoesMalloy output brevity',
+        }
+      }
+      // Otherwise, recurse into properties
+      let out: any = Array.isArray(rec) ? [] : {}
+      for (let [k, v] of Object.entries(rec)) {
+        out[k] = collapseJoinTables(v)
+      }
+      return out
+    }
+    return obj
   }
 
-  if (selectedNames.length > 0) {
-    for (let name of selectedNames) {
-      let qm: QueryMaterializer = materializer.loadQueryByName(name)
-      let sql = await qm.getSQL()
-      console.log(`\n=== SQL (${name}) ===\n${sql}`)
-    }
-  } else {
-    let finalSQL = await materializer.loadFinalQuery().getSQL()
-    console.log(`\n=== SQL (final) ===\n${finalSQL}`)
-  }
+  let collapsed = collapseJoinTables(cloned)
+  collapsed.references = 'hidden for howDoesMalloy brevity'
+
+  let finalSQL = await materializer.loadFinalQuery().getSQL()
+  console.log(`\n=== SQL (final) ===\n${finalSQL}`)
 
   console.log('=== ModelDef ===')
   if (format === 'json') {
-    console.log(JSON.stringify(cloned, null, 2))
+    console.log(JSON.stringify(collapsed, null, 2))
   } else {
-    console.log(inspect(cloned, {depth: Infinity, colors: false, breakLength: 80}))
+    console.log(inspect(collapsed, {depth: Infinity, colors: false, breakLength: 80}))
   }
 
   if ('close' in connection && typeof (connection as any).close === 'function') {

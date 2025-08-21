@@ -12,8 +12,14 @@ At a high level, we provide a superset of sql that allows for defining semantic 
 
 
 # Tech stack
-Graphene is mostly written in typescript. For the moment we wrap Evidence (evidence.dev) to render reports.
+Graphene is mostly written in typescript. We parse Graphene SQL with Lezer, then translate it to an IR used my Malloy, which we then use to render the final, dialect-specfic SQL.
 
+We use Evidence to to turn markdown files into interactive data pages. Under the hood, Evidence uses vite, svelte, and mdsevx to make this work.
+
+# Testing
+Most directories have test files you can run to ensure they work correctly. You can run them via `npm test -w <workspace>`, where workspace is one of 'cli', 'lang', etc.
+
+Often, it's helpful to know how Malloy would compile given to to it's IR. `node scripts/howDoesMalloy.ts` will print out the final SQL, along with the IR. There's some example code within `howDoesMalloy` that gets run, and it's easiest to just modify this to your needs before running.
 
 # Code style
 In Graphene, our primary stylistic goal is "high-level readability". We want easily skim a file or function and get a sense of what it does. We care less about the tactical details of how it accomplishes that.
