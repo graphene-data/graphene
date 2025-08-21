@@ -7,6 +7,9 @@
     "cli",
     "vscode"
   ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "test": "vitest run",
     "watch": "npm run watch --workspace=vscode"
