@@ -1,0 +1,18 @@
+# Repo structure
+* /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
+* /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
+* /vscode - an extension that provides syntax highlighting and diagnostics on queries.
+* /examples - a series of example datasets
+
+# Agents
+The main agents we use today are Claude Code and Cursor. Use `npm run agent-setup` to set up various symlinks and configs.
+
+If you want to use background agents, make sure your snapshot uses node 24 (cursor's default is 22).
+
+# Examples
+`/examples` contains different datasets and Graphene projects. For each, you'l want to run `npm run setup` to download the dataset. Then you can use:
+
+`npm run cli compile "<some graphene>"` to compile to sql
+`npm run cli run "<some graphene>"` to execute that query against the db
+`npm run cli serve` to start up the evidence server for that project
+
