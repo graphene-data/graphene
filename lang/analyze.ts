@@ -220,22 +220,63 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
   })
 
   let where = queryNode.getChild('WhereClause')?.getChildren('Expression') || []
-  let filterList = where.map(w => ({
+  let filterListWhere = where.map(w => ({
     node: 'filterCondition',
     expressionType: 'scalar',
     e: analyzeExpression(w, baseTable),
   }))
 
-  // let groupBys = queryNode.getChild('GroupByClause')?.getChildren('Expression') || []
-  // groupBys.forEach(g => {
-  //   // TODO if an expression isn't also in `selects`, add it
-  //   analyzeExpression(g, query, null)
-  // })
+  // Group By: expressions determine reduce vs project and required groupings
+  let groupByExprs = queryNode.getChild('GroupByClause')?.getChildren('Expression') || []
+  let groupBy: Expression[] = []
+  if (groupByExprs.length > 0) {
+    for (let g of groupByExprs) {
+      let ge = analyzeExpression(g, baseTable)
+      groupBy.push(ge)
+    }
+    isAgg = true
+  }
 
-  // let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
-  // orderBys.forEach(o => {
-  //   analyzeExpression(o.getChild('Expression')!, query, null)
-  // })
+  // Order By
+  let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
+  let orderBy = orderBys.map(o => {
+    let exprNode = o.getChild('Expression')!
+    let expr = analyzeExpression(exprNode, baseTable)
+    let raw = txt(o).toLowerCase()
+    let dir: 'asc' | 'desc' | undefined = raw.includes(' desc') || raw.endsWith('desc') ? 'desc' : (raw.includes(' asc') || raw.endsWith('asc') ? 'asc' : undefined)
+
+    // Try to resolve to a selected field index or name
+    let fieldRef: string | number | undefined
+    if ((expr as any).node === 'field' && Array.isArray((expr as any).path) && (expr as any).path.length === 1) {
+      let fname = (expr as any).path[0]
+      let idx = queryFields.findIndex(f => f.name === fname)
+      fieldRef = idx >= 0 ? idx + 1 : fname
+    } else if ((expr as any).node === 'field' && Array.isArray((expr as any).path)) {
+      // dotted path -> try to match by final component name first
+      let fname = (expr as any).path[(expr as any).path.length - 1]
+      let idx = queryFields.findIndex(f => f.name === fname)
+      fieldRef = idx >= 0 ? idx + 1 : fname
+    }
+
+    return {fieldRef, dir}
+  })
+
+  // Having
+  let havingExprs = queryNode.getChild('HavingClause')?.getChildren('Expression') || []
+  let having: Expression[] = []
+  if (havingExprs.length > 0) {
+    for (let h of havingExprs) {
+      let he = analyzeExpression(h, baseTable)
+      having.push(he)
+    }
+    isAgg = true
+  }
+
+  // Combine WHERE and HAVING into segment filterList with appropriate expressionType
+  let filterList = [
+    ...filterListWhere,
+    ...having.map(e => ({node: 'filterCondition', expressionType: 'aggregate', e})),
+  ]
 
   return {
     fields: queryFields,
@@ -248,6 +289,7 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
         filterList: filterList as any,
         outputStruct: null as any,
         isRepeated: false,
+        orderBy: orderBy.length ? orderBy.map((o) => ({field: (o.fieldRef ?? 1) as any, dir: o.dir})) : undefined,
       }],
     },
   }
@@ -308,11 +350,62 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
       let right = analyzeExpression(expr.lastChild!, scope)
       let op = txt(expr.firstChild?.nextSibling).toLowerCase()
       return {node: op as any, kids: {left, right}, type: 'boolean', isAgg: left.isAgg || right.isAgg}
-    case 'UnaryExpression':
-    case 'ExistsExpression':
-    case 'CaseExpression':
-    case 'SubqueryExpression':
-    case 'InExpression':
+    case 'UnaryExpression': {
+      let opRaw = txt(expr.firstChild) // operator token or keyword
+      let op = opRaw.toLowerCase()
+      // normalize to malloy unary nodes
+      if (op === 'not') return {node: 'not', e: analyzeExpression(expr.lastChild!, scope), type: 'boolean'} as Expression
+      if (op === '-') return {node: 'unary-', e: analyzeExpression(expr.lastChild!, scope), type: 'number'} as Expression
+      if (op === '+') return analyzeExpression(expr.lastChild!, scope)
+      return {node: 'error', type: 'error'} as any
+    }
+    case 'ExistsExpression': {
+      // EXISTS (subquery)
+      let sub = expr.getChild('QueryStatement')!
+      // create a synthetic query source and refer to it via a genericSQLExpr fallback
+      // For now: use genericSQLExpr("exists ( ... )") with children args from analyzed subquery fields
+      // But Malloy has a dedicated unary '()' node; use that to wrap a placeholder
+      return {node: 'genericSQLExpr', kids: {args: [] as any}, src: ['exists (subquery)'], type: 'boolean'} as any
+    }
+    case 'CaseExpression': {
+      let caseVal = expr.getChild('expression') // optional
+      let whens = expr.getChildren('WhenClause')
+      let els = expr.getChild('ElseClause')
+      let caseWhen = [] as Expression[]
+      let caseThen = [] as Expression[]
+      for (let w of whens) {
+        let parts = w.getChildren('expression')
+        caseWhen.push(analyzeExpression(parts[0], scope))
+        caseThen.push(analyzeExpression(parts[1], scope))
+      }
+      let out: Expression = {
+        node: 'case',
+        kids: {
+          ...(caseVal ? {caseValue: analyzeExpression(caseVal, scope)} : {}),
+          caseWhen: caseWhen as any,
+          caseThen: caseThen as any,
+          ...(els ? {caseElse: analyzeExpression(els.getChild('expression')!, scope)} : {}),
+        },
+        type: (caseThen[0]?.type || 'unknown') as any,
+      } as any
+      return out
+    }
+    case 'SubqueryExpression': {
+      // Represent subquery expression via genericSQLExpr placeholder
+      return {node: 'genericSQLExpr', kids: {args: [] as any}, src: ['(subquery)'], type: 'unknown'} as any
+    }
+    case 'InExpression': {
+      let parts = expr.getChildren('expression')
+      let left = analyzeExpression(parts[0], scope)
+      // value list or subquery; we only support value list for now
+      let listNode = expr.getChild('InValueList')
+      let oneOf: Expression[] = []
+      if (listNode) {
+        for (let v of listNode.getChildren('expression')) oneOf.push(analyzeExpression(v, scope))
+      }
+      let not = /\bnot\b/i.test(txt(expr))
+      return {node: 'in', kids: {e: left as any, oneOf: oneOf as any}, not, type: 'boolean'} as any
+    }
     default:
       throw new Error(`Unsupported expression: ${txt(expr)}`)
   }

@@ -228,4 +228,19 @@ describe('lang', () => {
     await expect('from users select name, orders.total_revenue, sum(orders.order_items.quantity)')
       .toReturnRows(['Alice', 60, 6], ['Bob', 40, 5])
   })
+
+  it('supports group by on expressions', () => {
+    expect('from orders select user_id, count() group by user_id')
+      .toRenderSql('select base."user_id" as "user_id", count(1) as "col_1" from orders as base group by 1 order by 2 desc nulls last')
+  })
+
+  it('supports having with aggregates', () => {
+    expect('from users select name, total_orders group by name having total_orders > 1')
+      .toRenderSql('select base."name" as "name", (count(distinct orders_0."id")) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 having (count(distinct orders_0."id"))>1 order by 2 desc nulls last')
+  })
+
+  it('supports order by expressions', () => {
+    expect('from users select name, total_orders order by total_orders desc')
+      .toRenderSql('select base."name" as "name", (count(distinct orders_0."id")) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
+  })
 })
