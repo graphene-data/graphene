@@ -2,9 +2,9 @@ import {parser} from './parser.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
-import {type Table, txt, type Query, type Join, type Diagnostic, type Expression, type Field, type ColumnField, type FieldType} from './core.ts'
+import {type Table, txt, type Query, type Join, type Diagnostic, type Expression, type Field, type ColumnField, type FieldType, type Scope} from './core.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import malloy, {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode} from '../node_modules/@malloydata/malloy/dist/model/index.js'
+import malloy, {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode} from '../node_modules/@malloydata/malloy/dist/model/index.js'
 
 
 export type {Query, Table, Diagnostic} from './core.ts'
@@ -68,7 +68,7 @@ export function analyze (source:string, file: string = 'input'): Query[] {
   return queries
 }
 
-// Stores the table without analyzing it, since we don't
+// Stores the table without analyzing it. We need to know all the tables before we can analyze any table, since they refer to each other.
 function registerTable (syntaxNode: SyntaxNode) {
   let name = txt(syntaxNode.firstChild?.nextSibling)
   let query = syntaxNode.getChild('QueryStatement')
@@ -125,14 +125,14 @@ function analyzeDatabaseTable (table: Table) {
 
     // It's important we add the join before processing its expression, since the expression will refer to it
     table.fields.push(join)
-    join.onExpression = analyzeExpression(jn.getChild('Expression')!, table)
+    join.onExpression = analyzeExpression(jn.getChild('Expression')!, {table, outputFields: []})
   })
 
   // measures/dimensions, like `measure total_price AS SUM(price)`
   // malloy represents them as just a regular field, plus an expression
   // TODO: I think one measure can ref another, so we need to process these bottom up to resolve types
   table.syntaxNode.getChildren('ComputedDef').forEach(cn => {
-    let expression = analyzeExpression(cn.getChild('Expression')!, table)
+    let expression = analyzeExpression(cn.getChild('Expression')!, {table, outputFields: []})
     table.fields.push({
       name: txt(cn.getChild('Identifier')),
       type: expression.type,
@@ -165,8 +165,7 @@ function analyzeQueryTable (table: Table) {
 // NB that this creates a scope for the query, and function like analyzeExpression and lookup operate within that scope, which is crucial for subquery support.
 function analyzeQuery (queryNode: SyntaxNode): Query | void {
   let structRef: string
-  let baseTable: Table
-  let queryFields: ColumnField[] = []
+  let scope: Scope = {table: null as any, outputFields: []}
   let isAgg = false
 
   if (!txt(queryNode)) return // lezer sometimes parses an empty string as a query, if the file doesn't have one.
@@ -182,13 +181,13 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
     // Malloy doesn't support subqueries in FROM, so we need to construct a querySource for it
     let syntaxNode = froms[0].getChild('SubqueryExpression')!
     structRef = txt(froms[0].getChild('Alias')) || 'subquery'
-    baseTable = TABLE_MAP[structRef] = {type: 'query_source', name: structRef, syntaxNode} as Table
+    scope.table = TABLE_MAP[structRef] = {type: 'query_source', name: structRef, syntaxNode} as Table
   } else { // from a regular table
     structRef = txt(froms[0].getChild('Identifier'))
-    baseTable = TABLE_MAP[structRef]
-    if (!baseTable) return diag(froms[0], `could not find table ${structRef}`)
+    scope.table = TABLE_MAP[structRef]
+    if (!scope.table) return diag(froms[0], `could not find table ${structRef}`)
   }
-  analyzeTable(baseTable)
+  analyzeTable(scope.table)
 
   // Next, get the columns this query will return (including wildcard expansion)
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
@@ -200,51 +199,46 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
 
     if (s.getChild('Wildcard')) {
       let path = s.getChild('Wildcard')?.getChildren('Identifier').map(i => txt(i)) || []
-      let expandedFields = lookup(s.getChild('Wildcard')!, baseTable) || []
+      let expandedFields = lookup(s.getChild('Wildcard')!, scope) || []
       expandedFields.forEach(f => {
-        queryFields.push({...f,  e: {node: 'field', path: [...path, f.name], type: f.type}})
+        scope.outputFields.push({...f,  e: {node: 'field', path: [...path, f.name], type: f.type}})
       })
     } else {
       let alias = txt(s.getChild('Alias'))
-      let expr = analyzeExpression(s.getChild('Expression')!, baseTable)
-      let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${queryFields.length}`)
+      let expr = analyzeExpression(s.getChild('Expression')!, scope)
+      let name = alias || (expr.node == 'field' ? expr.path.join('_') : `col_${scope.outputFields.length}`)
       isAgg ||= !!expr.isAgg
       let metadata = {}
 
       if (expr.isAgg) {
-        queryFields.push({type: expr.type, name, metadata, e: expr, expressionType: 'aggregate'})
+        scope.outputFields.push({type: expr.type, name, metadata, e: expr, expressionType: 'aggregate', isAgg: true})
       } else {
-        queryFields.push({type: expr.type, name, metadata, e: expr})
+        scope.outputFields.push({type: expr.type, name, metadata, e: expr})
       }
     }
   })
 
-  let where = queryNode.getChild('WhereClause')?.getChildren('Expression') || []
-  let filterList = where.map(w => ({
-    node: 'filterCondition',
-    expressionType: 'scalar',
-    e: analyzeExpression(w, baseTable),
-  }))
-
-  // let groupBys = queryNode.getChild('GroupByClause')?.getChildren('Expression') || []
-  // groupBys.forEach(g => {
-  //   // TODO if an expression isn't also in `selects`, add it
-  //   analyzeExpression(g, query, null)
-  // })
-
-  // let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
-  // orderBys.forEach(o => {
-  //   analyzeExpression(o.getChild('Expression')!, query, null)
-  // })
+  // In Malloy, `where` and `having` are both in the `filterList`, just the `expressionType` is different
+  let where = queryNode.getChild('WhereClause')?.getChild('Expression')
+  let having = queryNode.getChild('HavingClause')?.getChild('Expression')
+  let filterList = [where, having].flatMap(node => {
+    if (!node) return []
+    let ands = unpackAnds(analyzeExpression(node, scope))
+    return ands.map(e => ({
+      node: 'filterCondition',
+      expressionType: e.isAgg ? 'aggregate' : 'scalar',
+      e: e,
+    }))
+  })
 
   return {
-    fields: queryFields,
+    fields: scope.outputFields,
     malloyQuery: {
       type: 'query',
       structRef,
       pipeline: [{
         type: isAgg ? 'reduce' : 'project',
-        queryFields: queryFields as any,
+        queryFields: scope.outputFields as any,
         filterList: filterList as any,
         outputStruct: null as any,
         isRepeated: false,
@@ -256,7 +250,7 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
 // Called for each expression in a query, recursively for complex expressions, including computed columns.
 // This reports errors and warnings for symantic issues, as well as generating the final SQL.
 // Scope is used to track the current table we're operating within when analyzing measures. If it's null, the scope is the entire query.
-function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
+function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   if (expr.type.isError) {
     diag(expr, 'Invalid expression')
     return {} as Expression
@@ -273,8 +267,13 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
       return {node: ''} as Expression // what malloy expects for count(*)
     case 'ColumnRef':
       let path = expr.getChildren('Identifier').map(i => txt(i))
-      let field = (lookup(expr, scope) || [])[0]
-      return {node: 'field', path, type: field?.type || 'unknown', isAgg: field?.isAgg}
+      let outField = path.length == 1 && scope.outputFields.find(f => f.name == path[0])
+      if (outField && outField.isAgg) {
+        return {node: 'outputField', name: path[0], type: outField.type, isAgg: outField.isAgg} as Expression & OutputFieldNode
+      } else {
+        let field = (lookup(expr, scope) || [])[0]
+        return {node: 'field', path, type: field?.type || 'unknown', isAgg: field?.isAgg} as Expression & FieldnameNode
+      }
     case 'FunctionCall':
       let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
       let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
@@ -321,8 +320,8 @@ function analyzeExpression (expr:SyntaxNode, scope:Table): Expression {
 // Follow a dotted path to get the field it refers to.
 // Malloy does this when rendering SQL, but we do it earlier to give type diagnostics
 // This also handles wildcards, returning all fields that match the path
-function lookup (ref: SyntaxNode, table: Table): ColumnField[] | void {
-  let curr = table
+function lookup (ref: SyntaxNode, scope: Scope): ColumnField[] | void {
+  let curr = scope.table
   let pathNodes = ref.getChildren('Identifier')
   let last = ref.name == 'Wildcard' ? null : pathNodes.pop()
   for (let part of pathNodes) {
@@ -345,6 +344,14 @@ function lookup (ref: SyntaxNode, table: Table): ColumnField[] | void {
     if (isJoin(field)) return diag(last!, `${fieldName} is a join, but is used as a colum here`)
     return [field]
   }
+}
+
+// turn `a and b and c` into `[a, b, c]`
+function unpackAnds (expr: Expression): Expression[] {
+  if (expr.node == 'and') {
+    return [expr.kids.left as Expression, expr.kids.right as Expression].flatMap(unpackAnds)
+  }
+  return [expr]
 }
 
 function isAsymmetricAggregate (name: string): boolean {

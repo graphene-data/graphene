@@ -3,7 +3,7 @@
 }
 
 QueryStatement {
-  (FromClause | SelectClause | WhereClause | GroupByClause | OrderByClause | LimitClause)*
+  (FromClause | SelectClause | WhereClause | GroupByClause | HavingClause | OrderByClause | LimitClause)*
 }
 
 SelectClause {
@@ -45,6 +45,10 @@ WhereClause {
 
 GroupByClause {
   Kw<"group"> Kw<"by"> expression ("," expression)*
+}
+
+HavingClause {
+  Kw<"having"> expression
 }
 
 OrderByClause {
