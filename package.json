@@ -12,6 +12,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test-one": "DEBUG=1 node --inspect ./scripts/turboTest.js",
     "watch": "npm run watch --workspace=vscode",
     "agent-setup": "zx scripts/agentSetup.ts"
   },

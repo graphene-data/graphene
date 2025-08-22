@@ -22,13 +22,13 @@ In addition to columns, you define joins and measures on a table.
 * Dot joins - When joins are defined on a table, you can expand them at query time. `from flights select aircraft.tail_number` will automatically join aircraft to flights.
 * Measure expansion - you can refer to a measure as if it was a column, and in the final sql this gets expanded out. Measures can refer to other measures.
 * Automatic group by - if your query contains aggregate functions, `group by all` is automatically added.
+* LIMIT - `limit N` is supported on queries. `offset` is parsed but currently reports a diagnostic and is not executed.
 
 
 # Features we might add in the future
 * output dialects - ability to write sql into different dialects
 * symetric aggregates - avoid (or at least warn about) fanout issues
 * level of detail - like a "percent of total" column
-* automatic "having" - filters on aggregates should get moved to "having"
-* `count(name)` should give the count of rows where name isn't null.
+
 * `union` and `union all`
 * subqueries outside `from` - `where id in (select id from users where disabled)`
