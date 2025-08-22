@@ -325,11 +325,44 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       let right = analyzeExpression(expr.lastChild!, scope)
       let op = txt(expr.firstChild?.nextSibling).toLowerCase()
       return {node: op as any, kids: {left, right}, type: 'boolean', isAgg: left.isAgg || right.isAgg}
-    case 'UnaryExpression':
-    case 'ExistsExpression':
-    case 'CaseExpression':
+    }
+    case 'UnaryExpression': {
+      let opTxt = txt(expr.firstChild).toLowerCase()
+      let child = analyzeExpression(expr.lastChild!, scope)
+      if (opTxt === 'not') return {node: 'not', e: child, type: 'boolean', isAgg: child.isAgg}
+      if (opTxt === '-') return {node: 'unary-', e: child, type: child.type, isAgg: child.isAgg}
+      if (opTxt === '+') return {node: '()', e: child, type: child.type, isAgg: child.isAgg}
+      throw new Error(`Unknown unary operator: ${opTxt}`)
+    }
+    case 'CaseExpression': {
+      let caseValue = expr.getChild('Expression')
+      let whens = expr.getChildren('WhenClause')
+      let els = expr.getChild('ElseClause')
+      let kids: any = {
+        caseValue: caseValue ? analyzeExpression(caseValue, scope) : undefined,
+        caseElse: els ? analyzeExpression(els.getChild('Expression')!, scope) : undefined,
+        caseWhen: whens.map(w => analyzeExpression(w.getChildren('Expression')[0]!, scope)),
+        caseThen: whens.map(w => analyzeExpression(w.getChildren('Expression')[1]!, scope)),
+      }
+      let thenType = (kids.caseThen[0]?.type) || 'string' // TODO ensure that all thens have the same type
+      return {node: 'case', kids, type: thenType as FieldType, isAgg: false}
+    }
+    case 'InExpression': {
+      let not = !!expr.getChild('Kw<"not">')
+      let eNode = analyzeExpression(expr.firstChild!, scope)
+      // Values list or subquery
+      let oneOf: Expression[] = []
+      let valueList = expr.getChild('InValueList')
+      if (valueList) {
+        oneOf = valueList.getChildren('Expression').map(v => analyzeExpression(v, scope))
+      } else {
+        // Subquery variant: use genericSQLExpr as a placeholder
+        oneOf = [{node: 'genericSQLExpr', kids: {args: []}, type: 'array'} as any]
+      }
+      let isAgg = eNode.isAgg || oneOf.some(v => (v as any).isAgg)
+      return {node: 'in', not, kids: {e: eNode as any, oneOf: oneOf as any}, type: 'boolean', isAgg} as any
+    }
     case 'SubqueryExpression':
-    case 'InExpression':
     default:
       throw new Error(`Unsupported expression: ${txt(expr)}`)
   }
