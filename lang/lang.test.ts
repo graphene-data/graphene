@@ -167,6 +167,16 @@ describe('lang', () => {
       .toReturnRows(['Alice', 2], ['Bob', 1])
   })
 
+  it('supports in expressions', () => {
+    expect("from users select id where name in ('Alice','Bob')")
+      .toRenderSql('select base."id" as "id" from users as base where base."name" in (\'Alice\',\'Bob\')')
+  })
+
+  it('supports case expressions', () => {
+    expect("from users select case when age > 35 then 'old' else 'young' end as bucket")
+      .toRenderSql("select case when (base.\"age\">35) then 'old' else 'young' end as \"bucket\" from users as base")
+  })
+
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
     expect('from users select id = >>;').toHaveDiagnostic(/syntax error/i)
   })
