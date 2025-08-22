@@ -167,6 +167,16 @@ describe('lang', () => {
       .toReturnRows(['Alice', 2], ['Bob', 1])
   })
 
+  it('supports limit clause', async () => {
+    await expect('from users select name order by name asc limit 1')
+      .toReturnRows(['Alice'])
+  })
+
+  it('parses offset but reports diagnostic', () => {
+    expect('from users select name order by name asc limit 1 offset 1')
+      .toHaveDiagnostic(/offset is not supported yet/i)
+  })
+
   it('supports in expressions', () => {
     expect("from users select id where name in ('Alice','Bob')")
       .toRenderSql('select base."id" as "id" from users as base where base."name" in (\'Alice\',\'Bob\')')

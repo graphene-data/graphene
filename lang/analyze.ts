@@ -244,6 +244,12 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
     return {field, dir}
   })
 
+  // LIMIT / OFFSET
+  let limts = queryNode.getChild('LimitClause')?.getChildren('Number') || []
+  let queryLimit = limts[0] ? Number(txt(limts[0])) : undefined
+  let queryOffset = limts[1] ? Number(txt(limts[1])) : undefined
+  if (queryOffset) diag(limts[1], 'OFFSET is not supported yet')
+
   return {
     fields: scope.outputFields,
     malloyQuery: {
@@ -256,6 +262,7 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
         outputStruct: null as any,
         isRepeated: false,
         orderBy: orderByList.length ? orderByList : undefined,
+        limit: queryLimit,
       }],
     },
   }
@@ -345,7 +352,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
         caseThen: whens.map(w => analyzeExpression(w.getChildren('Expression')[1]!, scope)),
       }
       let thenType = (kids.caseThen[0]?.type) || 'string' // TODO ensure that all thens have the same type
-      return {node: 'case', kids, type: thenType as FieldType, isAgg: false}
+      return {node: 'case', kids: compact(kids), type: thenType as FieldType, isAgg: false}
     }
     case 'InExpression': {
       let not = !!expr.getChild('Kw<"not">')
@@ -441,6 +448,10 @@ function isAggregate (name: string): boolean {
 function isJoin (field: Field): field is Join {
   // I think the types here are a bit wrong. Join says it can only point
   return field.type == 'table' || (field as any).type == 'query_source'
+}
+
+function compact<T> (obj: T): T {
+  return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined)) as T
 }
 
 function convertDataType (dataType: string): FieldType {
