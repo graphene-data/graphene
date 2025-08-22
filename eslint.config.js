@@ -52,6 +52,7 @@ export default [
       'no-tabs': ['error'],
       'no-trailing-spaces': ['error'],
       'no-whitespace-before-property': ['error'],
+      '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', varsIgnorePattern: '^_'}],
       'padded-blocks': ['error', 'never'],
       'space-before-function-paren': ['error', 'always'],
       'space-in-parens': ['error', 'never'],

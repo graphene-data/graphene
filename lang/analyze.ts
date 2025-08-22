@@ -451,7 +451,7 @@ function isJoin (field: Field): field is Join {
 }
 
 function compact<T> (obj: T): T {
-  return Object.fromEntries(Object.entries(obj).filter(([_, v]) => v !== undefined)) as T
+  return Object.fromEntries(Object.entries(obj as any).filter(([_, v]) => v !== undefined)) as T
 }
 
 function convertDataType (dataType: string): FieldType {
