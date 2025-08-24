@@ -22,23 +22,26 @@
         "id": "gsql",
         "aliases": ["Graphene GSQL", "GSQL"],
         "extensions": [".gsql"],
-        "configuration": "./language-configuration.json"
+        "configuration": "./src/language-configuration.json"
       }
     ],
     "grammars": [
       {
         "language": "gsql",
         "scopeName": "source.gsql",
-        "path": "./gsql.tmLanguage.json"
+        "path": "./src/gsql.tmLanguage.json"
       }
     ]
   },
   "scripts": {
-    "build": "node ./esbuild.mjs",
-    "watch": "node ./esbuild.mjs --watch"
+    "build": "node ./esbuild.mjs"
   },
   "dependencies": {
-    "@graphene/lang": "file:../lang"
+    "@graphene/lang": "file:../lang",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11",
+    "glob": "^11.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.21.5",

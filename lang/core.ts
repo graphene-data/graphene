@@ -2,7 +2,7 @@
 import malloy from '../node_modules/@malloydata/malloy/dist/model/index.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
-import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics} from './analyze.ts'
+import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics} from './analyze.ts'
 import {parser} from './parser.js'
 import {type Query} from './types.ts'
 
@@ -10,6 +10,7 @@ export {clearWorkspace}
 export type {Query, Table, Diagnostic} from './types.ts'
 export function getTable (name: string) { return Object.values(FILE_MAP).flatMap(f => f.tables).find(t => t.name == name) }
 export function getFile (name: string) { return FILE_MAP[name] }
+export function getFiles () { return Object.values(FILE_MAP) }
 export function getDiagnostics () { return diagnostics }
 
 // we also need to support table defs in md files. Eventually handle them natively,
@@ -32,18 +33,19 @@ export async function loadWorkspace (dir:string) {
 }
 
 // when a file changes, it's parse tree becomes invalid.
-export function updateFile (contents: string, uri: string) {
-  FILE_MAP[uri] ||= {uri, contents, tree: null, tables: []}
-  FILE_MAP[uri].contents = contents
-  FILE_MAP[uri].tree = null
-  return FILE_MAP[uri]
+export function updateFile (contents: string, path: string) {
+  FILE_MAP[path] ||= {path, contents, tree: null, tables: []}
+  FILE_MAP[path].contents = contents
+  FILE_MAP[path].tree = null
+  return FILE_MAP[path]
 }
 
 // Analyzes all tables and queries in all files. You can optionally provide a file,
 // which is useful in the case where you want to know the queries in that file.
 // This could be more efficient, but for now we just re-analyze everything.
-export function analyze (contents?: string, uri?: string): Query[] {
-  let fi = contents ? updateFile(contents, uri || 'input') : null
+export function analyze (contents?: string, path?: string): Query[] {
+  let fi = contents ? updateFile(contents, path || 'input') : null
+  clearDiagnostics()
 
   Object.values(FILE_MAP).forEach(f => {
     f.tables = [] // clear out everything we've computed for now
