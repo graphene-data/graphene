@@ -68,16 +68,22 @@ export interface Query {
   malloyQuery: MalloyQuery
 }
 
+export interface Position {
+  offset: number
+  line: number
+  col: number
+}
+
 export interface Diagnostic {
   file: string
-  from: number
-  to: number
+  from: Position
+  to: Position
   message: string
   severity: 'error' | 'warn'
 }
 
 export interface FileInfo {
-  uri: string
+  path: string
   contents: string
   tree: Tree | null
   tables: Table[]

@@ -384,7 +384,7 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
 }
 
 function lookupTable (name: string, node: SyntaxNode): Table | void {
-  let currentUri = getFile(node).uri
+  let currentUri = getFile(node).path
 
   if (currentUri.endsWith('.md')) {
     let match = hackyTablesDefinedInTheCurrentMdFile.find(t => t.name == name)
@@ -392,7 +392,7 @@ function lookupTable (name: string, node: SyntaxNode): Table | void {
   }
 
   for (let file of Object.values(FILE_MAP)) {
-    if (file.uri.endsWith('.gsql') || file.uri == currentUri) {
+    if (file.path.endsWith('.gsql') || file.path == currentUri) {
       let match = file.tables.find(t => t.name == name)
       if (match) return match
     }
@@ -403,7 +403,9 @@ export function clearWorkspace () {
   FILE_MAP = {}
   TABLE_NODE_MAP = new WeakMap()
   diagnostics = []
-  hackyTablesDefinedInTheCurrentMdFile = []
+}
+export function clearDiagnostics () {
+  diagnostics = []
 }
 
 // Pick a sensible name for a column
@@ -419,8 +421,25 @@ function nameExpression (expr: Expression, scope: Scope, aliasNode: SyntaxNode |
 
 function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
   let file = getFile(node)
-  diagnostics.push({from: node.from, to: node.to, message, severity: 'error', file: file.uri})
+  let from = getPosition(node.from, file)
+  let to = getPosition(node.to, file)
+  diagnostics.push({from, to, message, severity: 'error', file: file.path})
   return defaultReturn!
+}
+
+function getPosition (offset: number, file: FileInfo) {
+  let lines = file.contents.split(/\r?\n/)
+  let acc = 0
+  for (let i = 0; i < lines.length; i++) {
+    let lineText = lines[i]
+    let nextAcc = acc + lineText.length + 1 // +1 for newline
+    if (offset < nextAcc || i === lines.length - 1) {
+      let col = Math.max(0, offset - acc)
+      return {offset, line: i, col, lineStart: acc, lineText}
+    }
+    acc = nextAcc
+  }
+  return {offset, line: 1, col: 0}
 }
 
 // turn `a and b and c` into `[a, b, c]`
