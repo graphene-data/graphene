@@ -16,7 +16,7 @@ const aliasPlugin = {
 
 await build({
   entryPoints: [path.resolve(__dirname, 'src/extension.ts')],
-  outfile: path.resolve(__dirname, 'out/extension.js'),
+  outfile: path.resolve(__dirname, 'dist/extension.js'),
   bundle: true,
   platform: 'node',
   format: 'cjs',
@@ -28,7 +28,7 @@ await build({
 
 await build({
   entryPoints: [path.resolve(__dirname, 'src/languageServer.ts')],
-  outfile: path.resolve(__dirname, 'out/server.js'),
+  outfile: path.resolve(__dirname, 'dist/server.js'),
   bundle: true,
   platform: 'node',
   format: 'cjs',

@@ -1,5 +1,6 @@
 node_modules
 out/
+dist/
 notes.md
 
 .DS_Store
@@ -7,5 +8,5 @@ notes.md
 .svelte-kit
 *.duckdb
 **/.vscode/settings.json
-
+vscode/*.vsix
 CLAUDE.md
