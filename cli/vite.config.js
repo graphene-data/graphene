@@ -55,6 +55,11 @@ const queryServer = {
         return
       }
 
+      // quick hack since we don't support nested subqueries yet
+      if (sql.match(/^---- Length/)) {
+        sql = sql.replace('FROM (SELECT * FROM (', 'FROM (').replace(/\)\s*$/, '')
+      }
+
       // hack work around quoted identifiers, which we don't support yet
       sql = sql.replace(/ AS "(.+)"/, (a, m) => ' AS ' + m.replace('-', '_'))
 

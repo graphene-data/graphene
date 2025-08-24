@@ -1,4 +1,4 @@
-import {analyze, toSql, getDiagnostics} from './analyze.ts'
+import {toSql, analyze, getDiagnostics} from './core.ts'
 import {expect as vitestExpect} from 'vitest'
 import {DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 
@@ -93,11 +93,10 @@ export async function prepareEcommerceTables () {
 
 vitestExpect.extend({
   toRenderSql (received: string, expectedSql: string) {
-    let sql = `${TEST_PRELUDE}\n\n${received}`
-    let queries = analyze(sql)
-    let diagnostics = getDiagnostics()
-
     if (DEBUG) console.log('Query:', received)
+    let queries = analyze(`${TEST_PRELUDE}\n\n${received}`, 'test.gsql')
+    let diagnostics = getDiagnostics()
+    let sql = toSql(queries[0])
 
     if (diagnostics.length > 0) {
       return {
@@ -106,48 +105,32 @@ vitestExpect.extend({
       }
     }
 
-    if (queries.length !== 1) {
-      return {
-        pass: false,
-        message: () => `Expected exactly one query, but found ${queries.length}`,
-      }
-    }
-
-    let result = toSql(queries[0])
-    let pass = normalizeSql(result) === normalizeSql(expectedSql)
+    let pass = normalizeSql(sql) === normalizeSql(expectedSql)
     return {
       pass,
       message: () => pass
         ? 'expected SQL not to match (but it did)'
         : 'Rendered SQL did not match.',
-      actual: normalizeSql(result),
+      actual: normalizeSql(sql),
       expected: normalizeSql(expectedSql),
     }
   },
 
   async toReturnRows (received: string, ...expectedRows: unknown[][]) {
-    let sqlSource = `${TEST_PRELUDE}\n\n${received}`
-    let queries = analyze(sqlSource)
+    if (DEBUG) console.log('Query:', received)
+    let queries = analyze(`${TEST_PRELUDE}\n\n${received}`, 'test.gsql')
     let diagnostics = getDiagnostics()
+    let sql = toSql(queries[0])
 
     if (diagnostics.length > 0) {
       return {
         pass: false,
-        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(sqlSource, diagnostics)}`,
+        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(received, diagnostics)}`,
       }
     }
-
-    if (queries.length !== 1) {
-      return {
-        pass: false,
-        message: () => `Expected exactly one query, but found ${queries.length}`,
-      }
-    }
-
-    let renderedSql = toSql(queries[0])
 
     try {
-      let reader = await conn.runAndReadAll(renderedSql)
+      let reader = await conn.runAndReadAll(sql)
       let actualRows: any[][] = reader.getRowObjects().map(r => {
         return Object.keys(r).map(k => typeof r[k] === 'bigint' ? Number(r[k]) : r[k])
       })
@@ -164,14 +147,15 @@ vitestExpect.extend({
     } catch (err: any) {
       return {
         pass: false,
-        message: () => `Execution failed: ${err?.message || String(err)}\nSQL: ${renderedSql}`,
+        message: () => `Execution failed: ${err?.message || String(err)}\nSQL: ${sql}`,
       }
     }
   },
 
   toHaveDiagnostic (received: string, pattern: RegExp | string) {
-    let sql = `${TEST_PRELUDE}\n\n${received}`
-    analyze(sql)
+    if (DEBUG) console.log('Query:', received)
+    let testSql = `${TEST_PRELUDE}\n\n${received}`
+    analyze(testSql, 'test.gsql')
     let diagnostics = getDiagnostics()
 
     let regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern
@@ -181,8 +165,8 @@ vitestExpect.extend({
     return {
       pass,
       message: () => pass
-        ? `Expected no diagnostic matching ${regex}, but found one:\n${formatDiagnostics(sql, [match!])}`
-        : `Expected a diagnostic matching ${regex}, but found ${diagnostics.length}.\n\n${formatDiagnostics(sql, diagnostics) || 'No diagnostics.'}`,
+        ? `Expected no diagnostic matching ${regex}, but found one:\n${formatDiagnostics(testSql, [match!])}`
+        : `Expected a diagnostic matching ${regex}, but found ${diagnostics.length}.\n\n${formatDiagnostics(testSql, diagnostics) || 'No diagnostics.'}`,
     }
   },
 })

@@ -1,5 +1,5 @@
 /// <reference types="vitest/globals" />
-import {analyze, clearWorkspace, getTable} from './analyze.ts'
+import {clearWorkspace, getTable, analyze} from './core.ts'
 import {prepareEcommerceTables, setTestPrelude} from './testHelpers.ts'
 import {expect} from 'vitest'
 
@@ -206,7 +206,7 @@ describe('lang', () => {
       )
       from t select name
     `)
-    let table = getTable('t')
+    let table = getTable('t')!
     expect(table.metadata.description.toLowerCase()).toContain('this is my test table')
     let name = table.fields.find(f => f.name === 'name') as any
     expect(name.metadata.description.toLowerCase()).toContain('a description')
@@ -214,13 +214,11 @@ describe('lang', () => {
   })
 
   it('does not attach a single leading comment to multiple fields on the same line', () => {
-    let sql = `
-    table foo (
-      -- the name field
-      id bigint, name varchar
-    )
-    from foo select id` // include a query to force parse
-    analyze(sql)
+    analyze(`
+      table foo (
+        -- the name field
+        id bigint, name varchar
+      )`)
     let t = getTable('foo')!
     let id = (t.fields as any[]).find(f => f.name === 'id') as any
     let name = (t.fields as any[]).find(f => f.name === 'name') as any
