@@ -3,6 +3,7 @@ node_modules
 out/
 src/
 esbuild.mjs
+dist/*.map
 
 # Only include this directory, not our whole monorepo
 ../../**
