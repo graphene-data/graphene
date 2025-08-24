@@ -1,92 +1,44 @@
-import {parser} from './parser.js'
-import {readFile, readdir} from 'fs/promises'
-import path from 'path'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
-import {type Table, txt, type Query, type Join, type Diagnostic, type Expression, type Field, type ColumnField, type FieldType, type Scope} from './core.ts'
+import {type Table, txt, type Query, type Join, type Expression, type Field, type ColumnField, type FieldType, type Scope, getFile, type FileInfo, type Diagnostic} from './types.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import malloy, {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode} from '../node_modules/@malloydata/malloy/dist/model/index.js'
+import {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode} from '../node_modules/@malloydata/malloy/dist/model/index.js'
 
+export let FILE_MAP: Record<string, FileInfo> = {}
+export let diagnostics: Diagnostic[] = []
+export let hackyTablesDefinedInTheCurrentMdFile: Table[] = [] // stopgap until we properly analyze md files
 
-export type {Query, Table, Diagnostic} from './core.ts'
+// Because tables are sent to Malloy, I want to avoid putting large objects on it that Malloy isn't expecting.
+let TABLE_NODE_MAP = new WeakMap<Table, SyntaxNode>()
 
-let TABLE_MAP: Record<string, Table> = {}
-let FILE_MAP: Record<string, string> = {}
-let diagnostics: Diagnostic[] = []
-let queryModelContents: Record<string, any> = {}
-let currentFile: string = ''
-
-function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
-  diagnostics.push({from: node.from, to: node.to, message, severity: 'error', file: currentFile})
-  return defaultReturn!
-}
-
-export function clearWorkspace () {
-  FILE_MAP = {}
-  TABLE_MAP = {}
-  diagnostics = []
-  queryModelContents = {}
-}
-
-export function getTable (name: string) { return TABLE_MAP[name] }
-export function getDiagnostics () { return diagnostics }
-export function getFile (name: string) { return FILE_MAP[name] }
-
-// Loads and parses all gsql files within a directory
-export async function loadWorkspace (dir:string) {
-  for (let f of await readdir(dir)) {
-    if (!f.endsWith('.gsql')) continue
-    let contents = await readFile(path.join(dir, f), 'utf-8')
-    analyze(contents, f)
-  }
-}
-
-export function toSql (query: Query): string {
-  Object.values(queryModelContents).forEach(t => t.dialect = 'duckdb')
-  let qm = new malloy.QueryModel({
-    name: 'generated_model',
-    contents: queryModelContents,
-    queryList: [],
-    dependencies: {},
-    exports: [],
-  })
-  let compiled = qm.compileQuery(query.malloyQuery)
-  return compiled.sql
-}
-
-export function analyze (source:string, file: string = 'input'): Query[] {
-  currentFile = file
-  let tree = parser.parse(source)
-  FILE_MAP[file] = tree.rawText = source
-
-  // Collect syntax errors within the source.
-  tree.topNode.cursor().iterate(n => {
-    if (n.type.isError) diag(n, 'Syntax error')
+// Creates tables without analyzing them.
+// We need to know all the tables before we can analyze any table, since they refer to each other.
+export function findTables (file: FileInfo): Table[] {
+  file.tree!.topNode.cursor().iterate(n => {
+    if (n.type.isError) diag(n.node, 'Syntax error')
   })
 
-  tree.topNode.getChildren('TableStatement').forEach(registerTable)
-  tree.topNode.getChildren('ViewStatement').forEach(registerTable)
-  let queries = tree.topNode.getChildren('QueryStatement').map(analyzeQuery).filter(q => !!q)
-  return queries
-}
-
-// Stores the table without analyzing it. We need to know all the tables before we can analyze any table, since they refer to each other.
-function registerTable (syntaxNode: SyntaxNode) {
-  let name = txt(syntaxNode.firstChild?.nextSibling)
-  let query = syntaxNode.getChild('QueryStatement')
-  let type = query ? 'query_source' : 'table'
-  let metadata = extractLeadingMetadata(syntaxNode)
-  return TABLE_MAP[name] = {type, name, syntaxNode, metadata, fields: []} as Table
+  let tn = file.tree!.topNode
+  let nodes = tn.getChildren('TableStatement').concat(tn.getChildren('ViewStatement'))
+  return nodes.map(syntaxNode => {
+    let name = txt(syntaxNode.firstChild?.nextSibling)
+    let type = syntaxNode.getChild('QueryStatement') ? 'query_source' : 'table' as 'query_source' | 'table'
+    let metadata = extractLeadingMetadata(syntaxNode)
+    let table: Table = {type, name, metadata, fields: []}
+    TABLE_NODE_MAP.set(table, syntaxNode)
+    return table
+  })
 }
 
 // Parses a table (model) declaration. Most analysis is done lazily, so this just gets the tables name and fields.
-function analyzeTable (table: Table) {
+// TODO: detect cycles. It's possible for two tables to refer to each other. For joins that's ok, for measures it's problematic.
+// if tableA.measureA depends on tableB.measureB, but measureB depends on tableA.measureC, we can't compute the type right now.
+export function analyzeTable (table: Table) {
   if (table.analyzed) return
   table.analyzed = true
   table.connection = 'duckdb'
   table.dialect = 'duckdb'
   table.tablePath = table.name
   table.fields = []
-  queryModelContents[table.name] = table
 
   if (table.type == 'table') analyzeDatabaseTable(table)
   else analyzeQueryTable(table)
@@ -94,8 +46,9 @@ function analyzeTable (table: Table) {
 
 // Actual table with columns that lives in the database
 function analyzeDatabaseTable (table: Table) {
+  let node = TABLE_NODE_MAP.get(table)!
   // regular columns in the db, like `full_name VARCHAR`
-  table.syntaxNode.getChildren('ColumnDef').forEach(cn => {
+  node.getChildren('ColumnDef').forEach(cn => {
     let name = txt(cn.getChild('Identifier'))
 
     if (cn.getChild('PrimaryKey')) {
@@ -112,9 +65,9 @@ function analyzeDatabaseTable (table: Table) {
 
   // joins, like `join_one orders as order ON order.id = item.order_id`
   // NB that in Malloy, a join contains the entire target table in the join object.
-  table.syntaxNode.getChildren('JoinDef').forEach(jn => {
-    let target = TABLE_MAP[txt(jn.getChild('Identifier'))]
-    if (!target) diag(jn, 'Unknown table to join')
+  node.getChildren('JoinDef').forEach(jn => {
+    let target = lookupTable(txt(jn.getChild('Identifier')), jn)
+    if (!target) return diag(jn, 'Unknown table to join')
     if (!target.analyzed) analyzeTable(target)
     let name = txt(jn.getChild('Alias')) || target.name
     let joinType = jn.getChild('JoinType')?.name == 'join_many' ? 'many' : 'one'
@@ -132,7 +85,7 @@ function analyzeDatabaseTable (table: Table) {
   // measures/dimensions, like `measure total_price AS SUM(price)`
   // malloy represents them as just a regular field, plus an expression
   // TODO: I think one measure can ref another, so we need to process these bottom up to resolve types
-  table.syntaxNode.getChildren('ComputedDef').forEach(cn => {
+  node.getChildren('ComputedDef').forEach(cn => {
     let expression = analyzeExpression(cn.getChild('Expression')!, {table, outputFields: []})
     table.fields.push({
       name: txt(cn.getChild('Identifier')),
@@ -145,7 +98,8 @@ function analyzeDatabaseTable (table: Table) {
 }
 
 function analyzeQueryTable (table: Table) {
-  let query = analyzeQuery(table.syntaxNode.getChild('QueryStatement')!)
+  let node = TABLE_NODE_MAP.get(table)!
+  let query = analyzeQuery(node.getChild('QueryStatement')!)
   if (!query) return
 
   table.fields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: (f as any).metadata}))
@@ -156,21 +110,21 @@ function analyzeQueryTable (table: Table) {
   // I also experimented with forcing queryModelContents to be an array in the correct order (ie dependencies first),
   // which seems to work, but I opted for this because it's what malloy does normally.
   if (typeof table.query.structRef == 'string') {
-    table.query.structRef = TABLE_MAP[table.query.structRef] as StructRef
+    table.query.structRef = lookupTable(table.query.structRef, node) as StructRef
   }
-
-  queryModelContents[table.name] = table
 }
 
 // Walks each part of the query checking types, rendering sql
 // NB that this creates a scope for the query, and function like analyzeExpression and lookup operate within that scope, which is crucial for subquery support.
-function analyzeQuery (queryNode: SyntaxNode): Query | void {
+export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   let structRef: string
   let scope: Scope = {table: null as any, outputFields: []}
   let isAgg = false
+  let subQuerySources: Table[] = []
 
   if (!txt(queryNode)) return // lezer sometimes parses an empty string as a query, if the file doesn't have one.
 
+  // FROM
   // For now, we only support queries with exactly one table in the FROM clause.
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   if (froms.find(f => f.name == 'JoinClause')) diag(froms[0], 'Query joins not yet supported')
@@ -179,17 +133,20 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
 
   // First, figure out the base table we're querying from.
   if (froms[0].name == 'Subquery') {
-    // Malloy doesn't support subqueries in FROM, so we need to construct a querySource for it
-    let syntaxNode = froms[0].getChild('SubqueryExpression')!
+    // Malloy doesn't support subqueries in FROM. We could either add the subquery to the pipeline, or create a "query_source" table for it.
+    // I'm opting for query_source, because it's easier to reason about how multiple subqueries might work.
     structRef = txt(froms[0].getChild('Alias')) || 'subquery'
-    scope.table = TABLE_MAP[structRef] = {type: 'query_source', name: structRef, syntaxNode} as Table
+    scope.table = {type: 'query_source', name: structRef} as Table
+    TABLE_NODE_MAP.set(scope.table, froms[0].getChild('SubqueryExpression')!)
+    analyzeTable(scope.table)
+    subQuerySources.push(scope.table)
   } else { // from a regular table
     structRef = txt(froms[0].getChild('Identifier'))
-    scope.table = TABLE_MAP[structRef]
+    scope.table = lookupTable(structRef, froms[0])!
     if (!scope.table) return diag(froms[0], `could not find table ${structRef}`)
   }
-  analyzeTable(scope.table)
 
+  // SELECT
   // Next, get the columns this query will return (including wildcard expansion)
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
   selects.forEach(s => {
@@ -213,7 +170,10 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
     }
   })
 
-  // In Malloy, `where` and `having` are both in the `filterList`, just the `expressionType` is different
+  // WHERE / HAVING
+  // In Malloy, `where` and `having` are both in the `filterList`, just the `expressionType` is different.
+  // We want to allow you to write both pre- and post-agg filters in the `where`, clause, which seems mostly safe if they're and-ed together.
+  // We also support explicit `having` clauses, for users who know that's a thing and want to use it.
   let where = queryNode.getChild('WhereClause')?.getChild('Expression')
   let having = queryNode.getChild('HavingClause')?.getChild('Expression')
   let filterList = [where, having].flatMap(node => {
@@ -226,7 +186,9 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
     }))
   })
 
-  // In Malloy, group by's are just query fields. If you specify a `group by` that isn't in your `select`, we'll auto-add it.
+  // GROUP BY
+  // In Malloy, non-agg fields in a reduction query are implicitly grouped by.
+  // In Graphene, we allow you say `group by BLAH` without having to `select BLAH`.
   let groupBys = queryNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
   groupBys.forEach(g => {
     let expr = analyzeExpression(g.getChild('Expression')!, scope)
@@ -252,6 +214,7 @@ function analyzeQuery (queryNode: SyntaxNode): Query | void {
 
   return {
     fields: scope.outputFields,
+    subQuerySources,
     malloyQuery: {
       type: 'query',
       structRef,
@@ -393,9 +356,11 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
     if (!next)         return diag(part, `Join ${name} does not exist on table ${curr.table.name}`, def)
     if (!isJoin(next)) return diag(part, `${name} is not a join on ${curr.table.name}`, def)
 
-    curr = {table: TABLE_MAP[next.tablePath || ''], outputFields: []}
-    if (!curr) throw new Error('Following valid join but we couldnt find the table')
+    curr = {table: lookupTable(next.tablePath || '', part)!, outputFields: []}
+    if (!curr.table) throw new Error('Following valid join but we couldnt find the table')
   }
+
+  // TODO: this code is weird. The fields are only in the output if there's no pathNodes, so can we simplify `curr`?
 
   // now that we have the right table, get the field(s) that match. First handle wildcards
   if (ref.name == 'Wildcard') {
@@ -418,6 +383,29 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
   return diag(ref, `Could not find ${fieldName} on ${curr.table.name}`, def)
 }
 
+function lookupTable (name: string, node: SyntaxNode): Table | void {
+  let currentUri = getFile(node).uri
+
+  if (currentUri.endsWith('.md')) {
+    let match = hackyTablesDefinedInTheCurrentMdFile.find(t => t.name == name)
+    if (match) return match
+  }
+
+  for (let file of Object.values(FILE_MAP)) {
+    if (file.uri.endsWith('.gsql') || file.uri == currentUri) {
+      let match = file.tables.find(t => t.name == name)
+      if (match) return match
+    }
+  }
+}
+
+export function clearWorkspace () {
+  FILE_MAP = {}
+  TABLE_NODE_MAP = new WeakMap()
+  diagnostics = []
+  hackyTablesDefinedInTheCurrentMdFile = []
+}
+
 // Pick a sensible name for a column
 // If a select is pointing to a field (ie `tableA.name`) malloy will use {type: 'fieldref', path: ['tableA', 'name']}
 // This kinda sucks, because it will always call the field `name` and throw an error if you select another column called `name` from a different join.
@@ -427,6 +415,12 @@ function nameExpression (expr: Expression, scope: Scope, aliasNode: SyntaxNode |
   if (aliasNode) return txt(aliasNode)
   if (expr.node == 'field') return expr.path.join('_')
   return `col_${scope.outputFields.length}`
+}
+
+function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
+  let file = getFile(node)
+  diagnostics.push({from: node.from, to: node.to, message, severity: 'error', file: file.uri})
+  return defaultReturn!
 }
 
 // turn `a and b and c` into `[a, b, c]`

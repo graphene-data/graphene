@@ -1,10 +1,5 @@
 import type {SyntaxNode} from '@lezer/common'
-
-function getSourceForNode (node: SyntaxNode): string {
-  let top: SyntaxNode = node
-  while (top.parent) top = top.parent
-  return top.tree?.rawText || ''
-}
+import {getFile} from './types.ts'
 
 // Extract metadata from comments that appear directly above a syntax node.
 // Rules:
@@ -15,7 +10,7 @@ function getSourceForNode (node: SyntaxNode): string {
 // - If the node is not the first token on its line, ignore leading comments (prevents one comment from applying to multiple fields on the same line).
 export function extractLeadingMetadata (node: SyntaxNode): Record<string, string> {
   // 1) Locate the raw file text and find the end of the line immediately above the node
-  let src = getSourceForNode(node)
+  let src = getFile(node).contents
   if (!src) return {}
   let pos = node.from
   let currentLineStart = src.lastIndexOf('\n', Math.max(0, pos - 1)) + 1

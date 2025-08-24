@@ -5,10 +5,10 @@ import {styleText as nodeStyleText} from 'node:util'
 import {analyze, type Diagnostic, getDiagnostics, getFile, loadWorkspace, toSql} from '@graphene/lang'
 // import {logTree} from './logTree.ts'
 
-export async function readAndCompile (inputArg?: string, debug?: boolean): Promise<string | null> {
+export async function readAndCompile (inputArg?: string, _debug?: boolean): Promise<string | null> {
   await loadWorkspace(process.cwd())
   let src = await readInput(inputArg)
-  let queries = analyze(src)
+  let queries = analyze(src, 'input')
 
   // if (debug && queries[0]?.treeNode) {
   // logTree(queries[0].treeNode, src)
@@ -68,7 +68,7 @@ function offsetToLineCol (src: string, offset: number): { line: number; col: num
 export function printDiagnostics (diags: Diagnostic[]) {
   let parts: string[] = []
   for (let d of diags) {
-    let src = getFile(d.file) || ''
+    let src = getFile(d.file)?.contents || ''
     let {line, col, lineStart, lineText} = offsetToLineCol(src, d.from)
     let endCol = Math.max(col + 1, Math.min(lineText.length, d.to - lineStart))
     let caretLen = Math.max(1, endCol - col)
