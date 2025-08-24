@@ -1,0 +1,9 @@
+.vscode
+node_modules
+out/
+src/
+esbuild.mjs
+
+# Only include this directory, not our whole monorepo
+../../**
+../**
