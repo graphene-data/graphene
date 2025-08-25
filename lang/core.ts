@@ -2,9 +2,10 @@
 import malloy from '../node_modules/@malloydata/malloy/dist/model/index.js'
 import {readFile, readdir} from 'fs/promises'
 import path from 'path'
-import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics} from './analyze.ts'
+import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity} from './analyze.ts'
 import {parser} from './parser.js'
 import {type Query} from './types.ts'
+import {getOffset} from './util.ts'
 
 export {clearWorkspace}
 export type {Query, Table, Diagnostic} from './types.ts'
@@ -77,4 +78,29 @@ export function toSql (query: Query): string {
   })
   let compiled = qm.compileQuery(query.malloyQuery)
   return compiled.sql
+}
+
+export function getHover (path: string, line: number, col: number): string {
+  let fi = FILE_MAP[path]
+  let offset = getOffset(line, col, fi)
+
+  // walk up until we find a node with an entity
+  let node = fi.tree!.resolve(offset)
+  let entity = getNodeEntity(node)
+  while (!entity && node.parent) {
+    node = node.parent
+    entity = getNodeEntity(node)
+  }
+
+  if (!entity) return ''
+  if (entity.entityType == 'field') {
+    let desc = entity.field.metadata?.description ? `\n\n${entity.field.metadata.description}` : ''
+    return `#### ${entity.table.name}.${entity.field.name}${desc}`
+  }
+
+  if (entity.entityType == 'table') {
+    let desc = entity.table.metadata?.description ? `\n\n${entity.table.metadata.description}` : ''
+    return `#### ${entity.table.name}${desc}`
+  }
+  return ''
 }
