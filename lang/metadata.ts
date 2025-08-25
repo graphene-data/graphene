@@ -1,5 +1,5 @@
 import type {SyntaxNode} from '@lezer/common'
-import {getFile} from './types.ts'
+import {getFile} from './util.ts'
 
 // Extract metadata from comments that appear directly above a syntax node.
 // Rules:

@@ -1,22 +1,10 @@
-import type {SyntaxNode, SyntaxNodeRef, Tree} from '@lezer/common'
+import type {SyntaxNode, Tree} from '@lezer/common'
 import type {Expr, JoinFieldDef, Query as MalloyQuery} from '@malloydata/malloy'
 
 declare module '@lezer/common' {
   interface Tree {
     fileInfo: FileInfo
   }
-}
-
-export function getFile (node: SyntaxNode | SyntaxNodeRef): FileInfo {
-  if (node.node) node = node.node // SyntaxNodeRef has a `tree` prop, but it's wrong, so create a SyntaxNode and walk up
-  let top: SyntaxNode = node as SyntaxNode
-  while (top.parent) top = top.parent
-  return top!.tree!.fileInfo
-}
-
-export function txt (node:SyntaxNode | null | undefined) {
-  if (!node) return ''
-  return getFile(node).contents.substring(node.from, node.to) || ''
 }
 
 export interface Scope {

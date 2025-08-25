@@ -9,12 +9,11 @@ import {
   DiagnosticSeverity,
   ProposedFeatures,
   TextDocumentSyncKind,
-  DocumentDiagnosticReportKind,
 } from 'vscode-languageserver/node'
 
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {readFile} from 'node:fs/promises'
-import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles} from '@graphene/lang'
+import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles, getHover} from '@graphene/lang'
 
 const connection = createConnection(ProposedFeatures.all)
 let initialLoad: Promise<void> | undefined
@@ -28,6 +27,7 @@ connection.onInitialize(params => {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
       completionProvider: {resolveProvider: false},
+      hoverProvider: true,
       // diagnosticProvider: {interFileDependencies: true, workspaceDiagnostics: true},
     },
   }
@@ -36,7 +36,6 @@ connection.onInitialize(params => {
 // TextDocument.onDidChangeContent listens for buffer changes (even if the user hasn't saved the file yet)
 const documents = new TextDocuments(TextDocument)
 documents.onDidChangeContent(change => {
-  console.log('change', change.document.getText())
   updateFile(change.document.getText(), toPath(change.document.uri))
   debouncedAnalyze()
 })
@@ -63,11 +62,6 @@ async function analyzeNow () {
   perFileVscodeDiagnostics().forEach(d => connection.sendDiagnostics(d))
   // connection.languages.diagnostics.refresh()
 }
-
-connection.languages.diagnostics.on(params => {
-  console.log('diagnosticsRequest', params)
-  return {kind: DocumentDiagnosticReportKind.Full, items: []}
-})
 
 // VSCode in theory has a pull api that allows it to get all diagnostics for the whole workspace at once.
 // This would be nice for us, since Graphene has cross-file dependencies, but for whatever reason I don't see red squiggles when using it.
@@ -104,6 +98,12 @@ function perFileVscodeDiagnostics () {
 function toPath (uri: string) {
   return decodeURIComponent(uri.replace('file://', ''))
 }
+
+connection.onHover(params => {
+  console.log('hover', params)
+  let hover = getHover(toPath(params.textDocument.uri), params.position.line, params.position.character)
+  return {contents: hover}
+})
 
 // // This handler provides the initial list of the completion items.
 // connection.onCompletion(

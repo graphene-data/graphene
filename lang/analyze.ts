@@ -1,14 +1,15 @@
-import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
-import {type Table, txt, type Query, type Join, type Expression, type Field, type ColumnField, type FieldType, type Scope, getFile, type FileInfo, type Diagnostic} from './types.ts'
-import {extractLeadingMetadata} from './metadata.ts'
+import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
+import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
 import {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode} from '../node_modules/@malloydata/malloy/dist/model/index.js'
-
+import {txt, compact, getFile, getPosition} from './util.ts'
+import {extractLeadingMetadata} from './metadata.ts'
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
 export let hackyTablesDefinedInTheCurrentMdFile: Table[] = [] // stopgap until we properly analyze md files
 
 // Because tables are sent to Malloy, I want to avoid putting large objects on it that Malloy isn't expecting.
 let TABLE_NODE_MAP = new WeakMap<Table, SyntaxNode>()
+let NODE_ENTITY_MAP = new NodeWeakMap<any>()
 
 // Creates tables without analyzing them.
 // We need to know all the tables before we can analyze any table, since they refer to each other.
@@ -143,6 +144,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   } else { // from a regular table
     structRef = txt(froms[0].getChild('Identifier'))
     scope.table = lookupTable(structRef, froms[0])!
+    NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: scope.table})
     if (!scope.table) return diag(froms[0], `could not find table ${structRef}`)
   }
 
@@ -358,6 +360,7 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
 
     curr = {table: lookupTable(next.tablePath || '', part)!, outputFields: []}
     if (!curr.table) throw new Error('Following valid join but we couldnt find the table')
+    NODE_ENTITY_MAP.set(part, {entityType: 'table', table: curr.table})
   }
 
   // TODO: this code is weird. The fields are only in the output if there's no pathNodes, so can we simplify `curr`?
@@ -371,6 +374,7 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
   let field = curr.table.fields.find(f => f.name == fieldName)
   if (field) {
     if (isJoin(field)) return diag(last!, `${fieldName} is a join, but is used as a colum here`, def)
+    NODE_ENTITY_MAP.set(last!, {entityType: 'field', field, table: curr.table})
     return {fields: [field], inOutput: false}
   }
 
@@ -408,6 +412,10 @@ export function clearDiagnostics () {
   diagnostics = []
 }
 
+export function getNodeEntity (node: SyntaxNode): any {
+  return NODE_ENTITY_MAP.get(node)
+}
+
 // Pick a sensible name for a column
 // If a select is pointing to a field (ie `tableA.name`) malloy will use {type: 'fieldref', path: ['tableA', 'name']}
 // This kinda sucks, because it will always call the field `name` and throw an error if you select another column called `name` from a different join.
@@ -425,21 +433,6 @@ function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultRetu
   let to = getPosition(node.to, file)
   diagnostics.push({from, to, message, severity: 'error', file: file.path})
   return defaultReturn!
-}
-
-function getPosition (offset: number, file: FileInfo) {
-  let lines = file.contents.split(/\r?\n/)
-  let acc = 0
-  for (let i = 0; i < lines.length; i++) {
-    let lineText = lines[i]
-    let nextAcc = acc + lineText.length + 1 // +1 for newline
-    if (offset < nextAcc || i === lines.length - 1) {
-      let col = Math.max(0, offset - acc)
-      return {offset, line: i, col, lineStart: acc, lineText}
-    }
-    acc = nextAcc
-  }
-  return {offset, line: 1, col: 0}
 }
 
 // turn `a and b and c` into `[a, b, c]`
@@ -461,10 +454,6 @@ function isAggregate (name: string): boolean {
 function isJoin (field: Field): field is Join {
   // I think the types here are a bit wrong. Join says it can only point
   return field.type == 'table' || (field as any).type == 'query_source'
-}
-
-function compact<T> (obj: T): T {
-  return Object.fromEntries(Object.entries(obj as any).filter(([_, v]) => v !== undefined)) as T
 }
 
 function convertDataType (dataType: string): FieldType {
