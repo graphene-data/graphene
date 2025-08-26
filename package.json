@@ -14,14 +14,16 @@
     "test": "vitest run",
     "test-one": "DEBUG=1 node --inspect ./scripts/turboTest.js",
     "watch": "npm run watch --workspace=vscode",
-    "agent-setup": "zx scripts/agentSetup.ts"
+    "agent-setup": "zx scripts/agentSetup.ts",
+    "preinstall": "npx only-allow pnpm"
   },
   "devDependencies": {
     "@malloydata/db-duckdb": "^0.0.304",
+    "@types/node": "^22.18.0",
     "eslint": "^9.32.0",
     "eslint-plugin-prefer-let": "^4.0.0",
     "typescript-eslint": "^8.38.0",
-    "vitest": "^3.2.4",
+    "vitest": "3.0.5",
     "zx": "^8.7.2"
   }
 }

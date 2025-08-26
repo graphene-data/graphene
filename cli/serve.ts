@@ -37,7 +37,7 @@ const populateTemplate = function () {
     if (!keepers.has(file)) fs.removeSync(path.join('./.evidence/template/', file))
   })
 
-  fs.copySync(path.join(__dirname, '../node_modules/@evidence-dev/evidence/template'), './.evidence/template/')
+  fs.copySync(path.join(__dirname, './node_modules/@evidence-dev/evidence/template'), './.evidence/template/')
 
   // graphene-specific overrides
   fs.copySync(path.join(__dirname, '+layout.js'), './.evidence/template/src/pages/+layout.js')

@@ -1,6 +1,6 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode} from '../node_modules/@malloydata/malloy/dist/model/index.js'
+import {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode} from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {txt, compact, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 export let FILE_MAP: Record<string, FileInfo> = {}
