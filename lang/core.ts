@@ -1,7 +1,7 @@
 
-import malloy from '../node_modules/@malloydata/malloy/dist/model/index.js'
-import {readFile, readdir} from 'fs/promises'
-import path from 'path'
+import * as malloy from './node_modules/@malloydata/malloy/dist/model/index.js'
+import {readFile, readdir} from 'node:fs/promises'
+import path from 'node:path'
 import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity} from './analyze.ts'
 import {parser} from './parser.js'
 import {type Query} from './types.ts'
@@ -51,7 +51,7 @@ export function analyze (contents?: string, path?: string): Query[] {
   Object.values(FILE_MAP).forEach(f => {
     f.tables = [] // clear out everything we've computed for now
     f.tree ||= parser.parse(f.contents)
-    f.tree.fileInfo = f
+    f.tree!.fileInfo = f
     f.tables = findTables(f)
   })
   Object.values(FILE_MAP).flatMap(f => f.tables).forEach(analyzeTable)

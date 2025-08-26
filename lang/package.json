@@ -8,11 +8,13 @@
     "generate": "lezer-generator lang.grammar -o parser.js"
   },
   "dependencies": {
+    "@lezer/common": "^1.2.3",
     "@lezer/lr": "^1.4.2",
     "@malloydata/malloy": "^0.0.302"
   },
   "devDependencies": {
     "@duckdb/node-api": "^1.3.2-alpha.26",
-    "@lezer/generator": "^1.8.0"
+    "@lezer/generator": "^1.8.0",
+    "@types/node": "^22.9.0"
   }
 }
