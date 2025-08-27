@@ -11,6 +11,9 @@ importers:
       '@malloydata/db-duckdb':
         specifier: ^0.0.304
         version: 0.0.304(encoding@0.1.13)
+      '@malloydata/malloy':
+        specifier: ^0.0.302
+        version: 0.0.302
       '@types/node':
         specifier: ^22.18.0
         version: 22.18.0
