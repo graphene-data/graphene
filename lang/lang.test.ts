@@ -271,4 +271,9 @@ describe('lang', () => {
     await expect('from users select name, orders.total_revenue, sum(orders.order_items.quantity)')
       .toReturnRows(['Alice', 60, 6], ['Bob', 40, 5])
   })
+
+  it('supports function calling', () => {
+    expect('from users select coalesce(name, \'Unknown\') as name2')
+      .toRenderSql('select coalesce(base."name",\'Unknown\') as "name2" from users as base')
+  })
 })

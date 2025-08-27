@@ -1,6 +1,7 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
 import {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode} from './node_modules/@malloydata/malloy/dist/model/index.js'
+import {GlobalNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/global-name-space.js'
 import {txt, compact, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 export let FILE_MAP: Record<string, FileInfo> = {}
@@ -10,6 +11,9 @@ export let hackyTablesDefinedInTheCurrentMdFile: Table[] = [] // stopgap until w
 // Because tables are sent to Malloy, I want to avoid putting large objects on it that Malloy isn't expecting.
 let TABLE_NODE_MAP = new WeakMap<Table, SyntaxNode>()
 let NODE_ENTITY_MAP = new NodeWeakMap<any>()
+
+// lookup table for functions
+const MALLOY_GLOBAL_NS = new GlobalNameSpace()
 
 // Creates tables without analyzing them.
 // We need to know all the tables before we can analyze any table, since they refer to each other.
@@ -286,7 +290,13 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 
         return res
       } else {
-        throw new Error(`Unknown function: ${name}`)
+        let entry = MALLOY_GLOBAL_NS.getEntry(name)
+        // TODO check out malloy's `findOverload` for picking the right one
+        let overload = ((entry?.entry as any).overloads || []).find(o => {
+          return o.params.length == args.length || !!o.params.find(p => p.isVariadic)
+        })
+        if (!overload) return diag(expr, `Unknown function: ${name}`, {} as Expression)
+        return {node: 'function_call', type: 'string', name, overload, expressionType: 'scalar', kids: {args: args as any}, isAgg: false}
       }
     }
     case 'Parenthetical': {
