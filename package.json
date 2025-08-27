@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@malloydata/db-duckdb": "^0.0.304",
+    "@malloydata/malloy": "^0.0.302",
     "@types/node": "^22.18.0",
     "eslint": "^9.32.0",
     "eslint-plugin-prefer-let": "^4.0.0",
