@@ -1,19 +1,18 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode} from './node_modules/@malloydata/malloy/dist/model/index.js'
+import {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode, type FunctionOverloadDef} from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {GlobalNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/global-name-space.js'
+import {DialectNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/dialect-name-space.js'
+import {getDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
 import {txt, compact, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
+
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
-export let hackyTablesDefinedInTheCurrentMdFile: Table[] = [] // stopgap until we properly analyze md files
 
-// Because tables are sent to Malloy, I want to avoid putting large objects on it that Malloy isn't expecting.
+// Because table objects are sent to Malloy, I want to avoid putting large objects on it that Malloy isn't expecting.
 let TABLE_NODE_MAP = new WeakMap<Table, SyntaxNode>()
 let NODE_ENTITY_MAP = new NodeWeakMap<any>()
-
-// lookup table for functions
-const MALLOY_GLOBAL_NS = new GlobalNameSpace()
 
 // Creates tables without analyzing them.
 // We need to know all the tables before we can analyze any table, since they refer to each other.
@@ -267,37 +266,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       }
     }
     case 'FunctionCall': {
-      let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
-      let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
-      if (name == 'count') {
-        if (args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
-        if (args[0].node) name = 'distinct' // anything besides `count()` or `count(*)` is a distinct count
-        return {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
-      } else if (isAggregate(name)) {
-        let res = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true} as Expression & AggregateExpr
-
-        // Aggregates need a `structPath`, which in malloy is the `users` in `users.avg(age)`. We'd rather you write `avg(users.age)`, so we
-        // need to get that path from the arguments, and pass it to malloy as the structPath.
-        // NB that malloy is unhappy if structPath is undefined or empty, so only set it if we have one.
-        // TODO this assumes args[0] is a ColumnRef, so `avg(users.age / 2)` wouldn't work. We should make that work.
-        if (isAsymmetricAggregate(name)) {
-          if (args[0]?.node !== 'field') diag(expr, 'Aggregate requires a column or expression')
-          let path = (args[0] as FieldnameNode).path
-          if (path.length > 1) {
-            res.structPath = path.slice(0, -1)
-          }
-        }
-
-        return res
-      } else {
-        let entry = MALLOY_GLOBAL_NS.getEntry(name)
-        // TODO check out malloy's `findOverload` for picking the right one
-        let overload = ((entry?.entry as any).overloads || []).find(o => {
-          return o.params.length == args.length || !!o.params.find(p => p.isVariadic)
-        })
-        if (!overload) return diag(expr, `Unknown function: ${name}`, {} as Expression)
-        return {node: 'function_call', type: 'string', name, overload, expressionType: 'scalar', kids: {args: args as any}, isAgg: false}
-      }
+      return analyzeFunctionCall(expr, scope)
     }
     case 'Parenthetical': {
       return analyzeExpression(expr.getChild('Expression')!, scope)
@@ -350,6 +319,69 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   }
 }
 
+function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
+  let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
+  let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
+  if (name == 'count') {
+    if (args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
+    if (args[0].node) name = 'distinct' // anything besides `count()` or `count(*)` is a distinct count
+    return {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
+  }
+
+  if (isAggregate(name)) {
+    let res = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true} as Expression & AggregateExpr
+
+    // Aggregates need a `structPath`, which in malloy is the `users` in `users.avg(age)`. We'd rather you write `avg(users.age)`, so we
+    // need to get that path from the arguments, and pass it to malloy as the structPath.
+    // NB that malloy is unhappy if structPath is undefined or empty, so only set it if we have one.
+    // TODO this assumes args[0] is a ColumnRef, so `avg(users.age / 2)` wouldn't work. We should make that work.
+    if (isAsymmetricAggregate(name)) {
+      if (args[0]?.node !== 'field') diag(expr, 'Aggregate requires a column or expression')
+      let path = (args[0] as FieldnameNode).path
+      if (path.length > 1) {
+        res.structPath = path.slice(0, -1)
+      }
+    }
+
+    return res
+  }
+
+  let entry = new GlobalNameSpace().getEntry(name)
+  let dialect = getDialect('duckdb')
+  let dialectEntry = new DialectNameSpace(dialect).getEntry(name)
+  let overloads = ((dialectEntry || entry)?.entry as any)?.overloads || []
+
+  // check out malloy's `findOverload` for picking the right one
+  let overload: FunctionOverloadDef = overloads.find(o => {
+    return o.params.length == args.length || !!o.params.find(p => p.isVariadic)
+  })
+  if (!overload) return diag(expr, `Unknown function: ${name}`, {} as Expression)
+
+  let type: FieldType
+  if (overload.returnType.type == 'null') type = 'string'
+  else if (overload.returnType.type == 'generic') type = args[0]?.type || 'string'
+  else if (overload.returnType.type == 'turtle') throw new Error('Turtle functions not supported')
+  else if (overload.returnType.type == 'composite') throw new Error('Composite functions not supported')
+  else if (overload.returnType.type == 'filter expression') throw new Error('Filter expressions not supported')
+  else if (overload.returnType.type == 'sql native') throw new Error('SQL native functions not supported')
+  else if (overload.returnType.type == 'regular expression') throw new Error('Regular expression functions not supported')
+  else if (overload.returnType.type == 'table') throw new Error('Table functions not supported')
+  else if (overload.returnType.type == 'sql_select') throw new Error('SQL select functions not supported')
+  else if (overload.returnType.type == 'query_source') throw new Error('Query source functions not supported')
+  else if (overload.returnType.type == 'duration') throw new Error('Duration functions not supported')
+  else type = overload.returnType.type
+
+  return {
+    node: 'function_call',
+    type,
+    name,
+    overload,
+    expressionType: overload.returnType.expressionType || 'scalar',
+    kids: {args: args as any},
+    isAgg: overload.returnType.expressionType == 'aggregate',
+  }
+}
+
 // Get the field that a ColumnRef refers to.
 // This could be a column on a table, the alias of a column in the query, or a wildcard. We'll also follow dotted paths to traverse joins.
 // The lookup is redundant with Malloy, but doing it means we get type info and metadata on all fields.
@@ -399,11 +431,6 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
 
 function lookupTable (name: string, node: SyntaxNode): Table | void {
   let currentUri = getFile(node).path
-
-  if (currentUri.endsWith('.md')) {
-    let match = hackyTablesDefinedInTheCurrentMdFile.find(t => t.name == name)
-    if (match) return match
-  }
 
   for (let file of Object.values(FILE_MAP)) {
     if (file.path.endsWith('.gsql') || file.path == currentUri) {

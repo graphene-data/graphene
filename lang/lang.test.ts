@@ -276,4 +276,9 @@ describe('lang', () => {
     expect('from users select coalesce(name, \'Unknown\') as name2')
       .toRenderSql('select coalesce(base."name",\'Unknown\') as "name2" from users as base')
   })
+
+  it('supports agg function calling', () => {
+    expect('from users select age, string_agg(name)')
+      .toRenderSql('select base."age" as "age", string_agg(base."name") as "col_1" from users as base group by 1 order by 2 desc nulls last')
+  })
 })
