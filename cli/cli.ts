@@ -4,6 +4,8 @@ import {Command} from 'commander'
 import {serve} from './serve.ts'
 import {readAndCompile} from './compile.ts'
 import {connectToDuckDB, printTable} from './run.ts'
+import {analyze, getDiagnostics, loadWorkspace} from '@graphene/lang'
+import {printDiagnostics} from './compile.ts'
 
 const program = new Command()
 
@@ -19,7 +21,10 @@ program
   .option('--debug', 'Print the parse tree for the input')
   .action(async (input: string | undefined, opts: { debug?: boolean }) => {
     let sql = await readAndCompile(input, opts.debug)
-    if (!sql) return
+    if (!sql) {
+      process.exitCode = 1
+      return
+    }
     console.log(sql)
   })
 
@@ -35,6 +40,17 @@ program
     if (!db) return
     let res = await db.query(sql)
     printTable(res.rows)
+  })
+
+program
+  .command('check')
+  .description('Load the workspace and print diagnostics')
+  .action(async () => {
+    await loadWorkspace(process.cwd())
+    analyze()
+    let diags = getDiagnostics()
+    printDiagnostics(diags)
+    if (diags.length) process.exitCode = 1
   })
 
 program
