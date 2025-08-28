@@ -10,3 +10,4 @@ onlyBuiltDependencies:
   - duckdb
   - keytar
   - svelte-preprocess
+  - esbuild
