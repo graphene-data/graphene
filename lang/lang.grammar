@@ -7,7 +7,7 @@ QueryStatement {
 }
 
 SelectClause {
-  Kw<"select"> SelectItem ("," SelectItem)*
+  Kw<"select"> SelectItem ("," SelectItem)* ","?
 }
 
 SelectItem {
@@ -44,7 +44,7 @@ WhereClause {
 }
 
 GroupByClause {
-  Kw<"group"> Kw<"by"> SelectItem ("," SelectItem)*
+  Kw<"group"> Kw<"by"> SelectItem ("," SelectItem)* ","?
 }
 
 HavingClause {
@@ -52,7 +52,7 @@ HavingClause {
 }
 
 OrderByClause {
-  Kw<"order"> Kw<"by"> OrderItem ("," OrderItem)*
+  Kw<"order"> Kw<"by"> OrderItem ("," OrderItem)* ","?
 }
 
 OrderItem {
@@ -64,11 +64,11 @@ LimitClause {
 }
 
 TableStatement {
-  Kw<"table"> Identifier "(" tableItem ("," tableItem)* ")"
+  Kw<"table"> Identifier "(" tableItem ((","? tableItem)*)? ")" ";"?
 }
 
 ViewStatement {
-  Kw<"table"> Identifier Kw<"as"> "(" QueryStatement ")"
+  Kw<"table"> Identifier Kw<"as"> "(" QueryStatement ")" ";"?
 }
 
 tableItem {
@@ -173,7 +173,7 @@ InExpression {
 }
 
 InValueList {
-  expression ("," expression)*
+  expression ("," expression)* ","?
 }
 
 @precedence {
@@ -207,7 +207,7 @@ ColumnRef {
 }
 
 FunctionCall {
-  Identifier "(" (expression ("," expression)*)? ")"
+  Identifier "(" (expression ("," expression)* ","?)? ")"
 }
 
 Literal {
