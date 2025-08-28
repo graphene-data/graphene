@@ -1,4 +1,7 @@
 ---
+globs: 
+  **/*
+  !examples/**  # Exclude examples to better simulate customer prompts
 alwaysApply: true
 ---
 
