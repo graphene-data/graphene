@@ -74,7 +74,8 @@ function analyzeDatabaseTable (table: Table) {
     if (!target) return diag(jn, 'Unknown table to join')
     if (!target.analyzed) analyzeTable(target)
     let name = txt(jn.getChild('Alias')) || target.name
-    let joinType = jn.getChild('JoinType')?.name == 'join_many' ? 'many' : 'one'
+    let joinType = {'join_many': 'many', 'join_one': 'one'}[txt(jn.getChild('JoinType'))]
+    if (!joinType) throw new Error(`Unknown join type: ${txt(jn.getChild('JoinType'))}`)
 
     // Malloy does this bonkers thing where a JoinField contains both the details of that join, and the entire target table.
     // This clone is important, otherwise two tables that join each other create an infinite loop when we give them to Malloy.

@@ -281,4 +281,13 @@ describe('lang', () => {
     expect('from users select age, string_agg(name)')
       .toRenderSql('select base."age" as "age", string_agg(base."name") as "col_1" from users as base group by 1 order by 2 desc nulls last')
   })
+
+  it('supports asymmetric agg functions across joins', () => {
+    // as opposed to built-in sum/avg/etc, which aren't considered functions in malloy
+    expect('from users select name, amount_paid, stddev(orders.amount) as test')
+      .toRenderSql('select base."name" as "name", (coalesce(( select sum(a.val) as value from ( select unnest(list(distinct {key:payments_0."id", val: payments_0."amount"})) a ) ),0)) as "amount_paid", ( select stddev(a.val0) as value from ( select unnest(list(distinct {key:base."id", val0: orders_0."amount"})) a ) ) as "test" from users as base left join payments as payments_0 on payments_0."user_id"=base."id" left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
+
+    expect('from users select name, total_orders, string_agg(payments.amount)')
+      .toReturnRows(['Alice', 2, '100'], ['Bob', 1, '50'])
+  })
 })
