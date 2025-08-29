@@ -26,5 +26,23 @@
     "typescript-eslint": "^8.38.0",
     "vitest": "3.0.5",
     "zx": "^8.7.2"
+  },
+  "pnpm": {
+    "overrides": {
+      "typescript": "5.4.2",
+      "vitest": "3.0.5"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "typescript": "5.4.x || 5.9.x",
+        "vitest": "2.x || 3.x"
+      }
+    },
+    "onlyBuiltDependencies": [
+      "@sveltejs/kit",
+      "@tailwindcss/oxide",
+      "@vscode/vsce-sign",
+      "duckdb"
+    ]
   }
 }
