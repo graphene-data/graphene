@@ -8,6 +8,7 @@ import {parser} from './parser.js'
 import {type Query} from './types.ts'
 import {getOffset} from './util.ts'
 import { config,loadConfig } from './config.ts'
+import path from 'node:path'
 
 export {clearWorkspace}
 export {config}
@@ -22,7 +23,7 @@ export async function loadWorkspace (dir:string) {
   await loadConfig(dir)
 
   for await (let file of glob('**/*.gsql', {cwd: dir})) {
-    let contents = await readFile(file, 'utf-8')
+    let contents = await readFile(path.join(dir, file), 'utf-8')
     updateFile(contents, file)
   }
 }
