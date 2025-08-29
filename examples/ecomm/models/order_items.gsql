@@ -1,0 +1,20 @@
+table order_items (
+  id INT64,
+  order_id INT64,
+  user_id INT64,
+  product_id INT64,
+  inventory_item_id INT64,
+  status STRING,
+  created_at TIMESTAMP,
+  shipped_at TIMESTAMP,
+  delivered_at TIMESTAMP,
+  returned_at TIMESTAMP,
+  sale_price FLOAT64,
+
+  join_one orders on orders.order_id = order_id,
+  join_one users on users.id = user_id,
+  join_one products on products.id = product_id,
+  join_one inventory_items on inventory_items.id = inventory_item_id
+)
+
+

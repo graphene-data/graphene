@@ -1,0 +1,16 @@
+table orders (
+  order_id INT64,
+  user_id INT64,
+  status STRING,
+  gender STRING,
+  created_at TIMESTAMP,
+  returned_at TIMESTAMP,
+  shipped_at TIMESTAMP,
+  delivered_at TIMESTAMP,
+  num_of_item INT64,
+
+  join_one users on users.id = user_id,
+  join_many order_items on order_id = order_items.order_id
+)
+
+
