@@ -1,4 +1,5 @@
 /// <reference types="vitest/globals" />
+import { setConfig } from './config.ts'
 import {clearWorkspace, getTable, analyze} from './core.ts'
 import {prepareEcommerceTables, setTestPrelude} from './testHelpers.ts'
 import {expect} from 'vitest'
@@ -60,6 +61,7 @@ describe('lang', () => {
   beforeEach(() => {
     clearWorkspace()
     setTestPrelude(testTables)
+    setConfig({dialect: 'duckdb'})
   })
 
   it('handles basic select query', async () => {

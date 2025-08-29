@@ -96,23 +96,7 @@ ComputedDef {
 }
 
 DataType {
-  Kw<"integer"> | Kw<"int"> |
-  Kw<"bigint"> |
-  Kw<"smallint"> |
-  Kw<"tinyint"> |
-  Kw<"real"> |
-  Kw<"double"> Kw<"precision">? |
-  Kw<"float"> |
-  Kw<"decimal"> ("(" Number ("," Number)? ")")? |
-  Kw<"numeric"> ("(" Number ("," Number)? ")")? |
-  Kw<"boolean"> | Kw<"bool"> |
-  Kw<"date"> |
-  Kw<"time"> |
-  Kw<"timestamp"> |
-  Kw<"varchar"> ("(" Number ")")? |
-  Kw<"char"> ("(" Number ")")? |
-  Kw<"text"> |
-  Kw<"blob">
+  Identifier
 }
 
 // Expressions
