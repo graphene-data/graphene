@@ -60,7 +60,19 @@ program
 program
   .command('serve')
   .description('Run the local server')
-  .action(() => serve(config))
+  .action(() => serve())
+
+program
+  .command('check')
+  .description('Check the project for errors')
+  .action(async () => {
+    await loadWorkspace(process.cwd())
+    if (getDiagnostics().length) {
+      printDiagnostics(getDiagnostics())
+      process.exit(1)
+    }
+    console.log('No errors found 💎')
+  })
 
 program.parse(process.argv)
 
