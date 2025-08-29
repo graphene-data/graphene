@@ -1,35 +1,29 @@
 
 import * as malloy from './node_modules/@malloydata/malloy/dist/model/index.js'
-import {readFile, readdir} from 'node:fs/promises'
-import path from 'node:path'
+import {StandardSQLDialect} from './node_modules/@malloydata/malloy/dist/dialect/standardsql/index.js'
+import {registerDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
+import {readFile, glob} from 'node:fs/promises'
 import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity} from './analyze.ts'
 import {parser} from './parser.js'
 import {type Query} from './types.ts'
 import {getOffset} from './util.ts'
+import { config,loadConfig } from './config.ts'
 
 export {clearWorkspace}
+export {config}
 export type {Query, Table, Diagnostic} from './types.ts'
 export function getTable (name: string) { return Object.values(FILE_MAP).flatMap(f => f.tables).find(t => t.name == name) }
 export function getFile (name: string) { return FILE_MAP[name] }
 export function getFiles () { return Object.values(FILE_MAP) }
 export function getDiagnostics () { return diagnostics }
 
-// we also need to support table defs in md files. Eventually handle them natively,
-// but for now, maybe we have a silly var thats "tablesDefinedInTheCurrentMdFile". When evidence executes them, store them.
-// but how do we know when to clear them?
-// if an md file changes, we don't need to re-analyze anything except that md file
-
 // Loads and parses all gsql files within a directory
-// TODO: should probably respect gitignore
 export async function loadWorkspace (dir:string) {
-  for (let entry of await readdir(dir, {withFileTypes: true})) {
-    let p = path.join(dir, entry.name)
-    if (entry.name == 'node_modules') continue
-    if (entry.isDirectory()) await loadWorkspace(p)
-    if (entry.name.endsWith('.gsql')) {
-      let contents = await readFile(p, 'utf-8')
-      updateFile(contents, p)
-    }
+  await loadConfig(dir)
+
+  for await (let file of glob('**/*.gsql', {cwd: dir})) {
+    let contents = await readFile(file, 'utf-8')
+    updateFile(contents, file)
   }
 }
 
@@ -68,7 +62,6 @@ export function toSql (query: Query): string {
   query.subQuerySources.forEach(t => contents[t.name] = t)
 
   // Send the query to malloy for generation
-  // Object.values(TABLE_MAP).forEach(t => t.dialect = 'duckdb')
   let qm = new malloy.QueryModel({
     name: 'generated_model',
     contents: contents as any,
@@ -104,3 +97,11 @@ export function getHover (path: string, line: number, col: number): string {
   }
   return ''
 }
+
+class BigQueryDialect extends StandardSQLDialect {
+  constructor() {
+    super()
+    this.name = 'bigquery'
+  }
+}
+registerDialect(new BigQueryDialect())

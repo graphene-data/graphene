@@ -6,6 +6,7 @@ import {DialectNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/
 import {getDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
 import {txt, compact, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
+import {config} from './config.ts'
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
@@ -39,9 +40,10 @@ export function findTables (file: FileInfo): Table[] {
 export function analyzeTable (table: Table) {
   if (table.analyzed) return
   table.analyzed = true
-  table.connection = 'duckdb'
-  table.dialect = 'duckdb'
-  table.tablePath = table.name
+  table.connection = config.dialect
+  table.dialect = config.dialect
+  table.tableName = table.name
+  table.tablePath = config.namespace ? `${config.namespace}.${table.name}` : table.name
   table.fields = []
 
   if (table.type == 'table') analyzeDatabaseTable(table)
@@ -348,7 +350,7 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   }
 
   let entry = new GlobalNameSpace().getEntry(name)
-  let dialect = getDialect('duckdb')
+  let dialect = getDialect(config.dialect)
   let dialectEntry = new DialectNameSpace(dialect).getEntry(name)
   let overloads = ((dialectEntry || entry)?.entry as any)?.overloads || []
 
@@ -401,7 +403,7 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
     if (!next)         return diag(part, `Join ${name} does not exist on table ${curr.table.name}`, def)
     if (!isJoin(next)) return diag(part, `${name} is not a join on ${curr.table.name}`, def)
 
-    curr = {table: lookupTable(next.tablePath || '', part)!, outputFields: []}
+    curr = {table: lookupTable(next.tableName || '', part)!, outputFields: []}
     if (!curr.table) throw new Error('Following valid join but we couldnt find the table')
     NODE_ENTITY_MAP.set(part, {entityType: 'table', table: curr.table})
   }
@@ -497,10 +499,13 @@ function isJoin (field: Field): field is Join {
 function convertDataType (dataType: string): FieldType {
   switch (dataType.toUpperCase()) {
     case 'INT': return 'number'
+    case 'INT64': return 'number'
     case 'TEXT': return 'string'
+    case 'STRING': return 'string'
     case 'VARCHAR': return 'string'
     case 'INTEGER': return 'number'
     case 'FLOAT': return 'number'
+    case 'FLOAT64': return 'number'
     case 'BOOLEAN': return 'boolean'
     case 'DATE': return 'date'
     case 'DATETIME': return 'timestamp'
@@ -513,6 +518,7 @@ function convertDataType (dataType: string): FieldType {
     case 'TINYINT': return 'number'
     case 'BYTEINT': return 'number'
     case 'BIGDECIMAL': return 'number'
+    case 'GEOGRAPHY': return 'string'
     default: throw new Error(`Unknown data type: ${dataType}`)
   }
 }

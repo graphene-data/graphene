@@ -18,8 +18,10 @@ export type Expression = Expr & {
 }
 
 export type Join = JoinFieldDef & {
+  name: string // the name the table in this join. Defaults to tableName
   expression?: SyntaxNode | null
-  tablePath?: string // we set this on tables, which get cloned in to joins.
+  tableName?: string // the table's name in the database
+  tablePath?: string // the full name, including namespace
 }
 
 export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'fieldref' | 'array' | 'record';
@@ -39,13 +41,14 @@ export type Field = ColumnField | Join
 
 export interface Table {
   type: 'table' | 'query_source'
-  name: string
+  name: string // the name the table has in this context. Could be an alias if this is a join
   fields: (Field | Join)[]
   analyzed?: boolean
   metadata: Record<string, string>
   connection?: string
   dialect?: string
-  tablePath?: string
+  tableName?: string // the table's name in the database
+  tablePath?: string // the full name, including namespace
   primaryKey?: string
   query?: MalloyQuery
 }
