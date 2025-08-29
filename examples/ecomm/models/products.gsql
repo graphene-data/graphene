@@ -1,0 +1,17 @@
+table products (
+  id INT64,
+  cost FLOAT64,
+  category STRING,
+  name STRING,
+  brand STRING,
+  retail_price FLOAT64,
+  department STRING,
+  sku STRING,
+  distribution_center_id INT64,
+
+  join_one distribution_centers on distribution_centers.id = distribution_center_id,
+  join_many inventory_items on id = inventory_items.product_id,
+  join_many order_items on id = order_items.product_id
+)
+
+
