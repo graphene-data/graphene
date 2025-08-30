@@ -6,6 +6,7 @@ export let config: Config = {dialect: 'duckdb'} as Config
 export interface Config {
   dialect: 'bigquery' | 'duckdb'
   namespace?: string
+  port?: number
 }
 
 export function setConfig (cfg: Config) {
