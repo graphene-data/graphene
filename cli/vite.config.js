@@ -64,7 +64,7 @@ const queryServer = {
       sql = sql.replace(/ AS "(.+)"/, (a, m) => ' AS ' + m.replace('-', '_'))
 
       clearWorkspace()
-      await loadWorkspace(path.join(import.meta.dirname, '../..'))
+      await loadWorkspace(path.join(__dirname, '../..'))
       let queries = analyze(sql)
       let diagnostics = getDiagnostics()
 
