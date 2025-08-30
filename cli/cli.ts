@@ -19,8 +19,7 @@ program
   .command('compile')
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
-  .option('--debug', 'Print the parse tree for the input')
-  .action(async (input: string | undefined, opts: { debug?: boolean }) => {
+  .action(async (input: string | undefined) => {
     await loadWorkspace(process.cwd())
     let sql = await readInput(input)
     let queries = analyze(sql, 'input')
@@ -61,6 +60,14 @@ program
   .command('serve')
   .description('Run the local server')
   .action(() => serve())
+
+program
+  .command('serve2')
+  .description('Run the local server')
+  .action(async () => {
+    let mod = await import('./serve2.ts')
+    await mod.serve2()
+  })
 
 program
   .command('check')
