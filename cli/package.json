@@ -13,6 +13,7 @@
     "@evidence-dev/core-components": "^5.2.2",
     "@evidence-dev/duckdb": "^1.0.13",
     "@evidence-dev/evidence": "^40.1.2",
+    "@evidence-dev/tailwind": "^3.0.10",
     "@graphene/lang": "file:../lang",
     "@graphene/ui": "file:../ui",
     "@malloydata/db-bigquery": "^0.0.307",
@@ -28,7 +29,12 @@
     "commander": "^11.0.0",
     "fs-extra": "11.2.0",
     "nanoid": "3.3.8",
+    "rehype-stringify": "^10.0.1",
+    "remark": "^15.0.1",
+    "remark-mdx": "^3.1.1",
+    "remark-rehype": "^11.1.2",
     "svelte": "4.2.19",
+    "unist-util-visit": "4.1.2",
     "vite": "5.4.14"
   },
   "peerDependencies": {

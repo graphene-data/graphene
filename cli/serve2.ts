@@ -10,6 +10,8 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { visit, SKIP } from 'unist-util-visit'
 import remarkMdx from 'remark-mdx'
 import {remark} from 'remark'
+import remarkRehype from 'remark-rehype'
+import rehypeStringify from 'rehype-stringify'
 import { getConnection } from './connection.ts'
 import { IncomingMessage, ServerResponse } from 'http'
 
@@ -26,18 +28,11 @@ export async function serve2 () {
     plugins: [
       handleRequestPlugin,
       tailwindcss(),
-      svelte({ exclude: '**/components/**'}), //  preprocess: sveltePreprocess(),
-      svelte({ include: '**/components/**', compilerOptions: { customElement: true }}), // preprocess: sveltePreprocess(),
+      svelte({ exclude: '**/components/**'}),
+      svelte({ include: '**/components/**', compilerOptions: { customElement: true }}),
       evidenceThemes(),
       dollarResolver,
     ],
-    // build: {
-    //   rollupOptions: {
-    //     input: {
-    //       app: path.join(grapheneRoot, 'app.svelte'),
-    //     }
-    //   }
-    // },
     server: {
       port: config.port || 4000,
       fs: {strict: false},
@@ -100,9 +95,23 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
 
 async function handlePage(req, res, mdPath) {
   let md = await fs.readFile(mdPath, 'utf-8')
+  // let html = await unified()
+  //   .use(remarkParse)
+  //   .use(remarkRehype, {allowDangerousHtml: true}) // we'll sanitize later
+  //   .use(rehypeRaw) // allows us to handle html nodes
+  //   .use(remarkMdxGraphene)
+  //   // .use(rehypeSanitize)
+  //   .use(rehypeStringify) // HAST → HTML string
+  //   .process(md)
+
+  // I'm using remarkMdx here because it's more convenient to walk through elements before we convert to html.
+  // The other approach would be to use a more standard remarkRehype approach, which would allow arbitrary html nodes.
   let html = await remark()
     .use(remarkMdx)
     .use(remarkMdxGraphene)
+    .use(remarkRehype, {passThrough: ['mdxJsxFlowElement', 'mdxJsxTextElement']})
+    .use(rehypeMdxJsxToHtml)
+    .use(rehypeStringify, {allowDangerousHtml: true}) // HAST → HTML string
     .process(md)
 
   res.end(`<!doctype html>
@@ -111,6 +120,8 @@ async function handlePage(req, res, mdPath) {
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Graphene</title>
+      <link href="node_modules/@graphene/ui/app.css" rel="stylesheet">
+      <!-- <link href="./index.css" rel="stylesheet"> -->
     </head>
     <body>
       <div id="app"></div>
@@ -188,6 +199,28 @@ function remarkMdxGraphene () {
       if (!allowed.has(node.name)) {
         parent.children.splice(index, 1)
         return [SKIP, index]
+      }
+    })
+  }
+}
+
+function rehypeMdxJsxToHtml() {
+  return (tree) => {
+    // add `markdown` class to all elements, which evidence's stying expects
+    visit(tree, 'element', ({properties}, index, parent) => {
+      if (!properties) return
+      if (!properties.className) properties.className = 'markdown'
+      else properties.className += ` markdown`
+    })
+    
+    visit(tree, ['mdxJsxFlowElement', 'mdxJsxTextElement'], (node, index, parent) => {
+      if (!parent) return
+      const attrs = (node.attributes || []).map(attr => `${attr.name}="${attr.value}"`).join(' ')
+      const children = (node.children || []).map(child => child.value || '').join('')
+      const tag = node.name
+      parent.children[index as number] = {
+        type: 'raw',
+        value: `<${tag}${attrs ? ' ' + attrs : ''}>${children}</${tag}>`
       }
     })
   }

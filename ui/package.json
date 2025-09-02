@@ -10,7 +10,8 @@
     "@evidence-dev/core-components": "^5.2.2",
     "@evidence-dev/evidence": "^40.1.2",
     "@evidence-dev/tailwind": "^3.0.10",
-    "@sveltejs/adapter-static": "3.0.1"
+    "@sveltejs/adapter-static": "3.0.1",
+    "tailwindcss": "4.0.6"
   },
   "devDependencies": {
   },

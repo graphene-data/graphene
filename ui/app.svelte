@@ -26,11 +26,9 @@
   })
 </script>
 <style>
-  html, body {
-    background: #18181b;
-    color: #f4f4f5;
+  main {
+    padding: 0 1.5rem 0 1.5rem;
   }
 </style>
 
-<header>Graphene</header>
 <main>{@html html}</main>

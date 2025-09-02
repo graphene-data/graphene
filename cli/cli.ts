@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import {Command} from 'commander'
-import {serve} from './serve.ts'
 import {printDiagnostics, printTable} from './printer.ts'
 import {analyze, getDiagnostics, loadWorkspace, toSql, config, type Query} from '@graphene/lang'
 import {type Connection} from '@malloydata/malloy'
@@ -46,12 +45,8 @@ program
 program
   .command('serve')
   .description('Run the local server')
-  .action(() => serve())
-
-program
-  .command('serve2')
-  .description('Run the local server')
   .action(async () => {
+    // load dynamically, so we're not pulling in a bunch of deps we might not need
     let mod = await import('./serve2.ts')
     await mod.serve2()
   })
