@@ -1,8 +1,8 @@
-# Missing Features in GSQL
+# Missing Features in Graphene
 
-This document tracks SQL functions and language features that we (or the agents) have attempted to use and are not currently supported in GSQL. If you run into a missing feature that's already listed here, increment the counter.
+This document tracks SQL functions and language features that we (or the agents) have attempted to use and are not currently supported in Graphene. If you run into a missing feature that's already listed here, increment the counter.
 
-## Missing SQL Functions
+## SQL Language
 
 ### Date/Time Functions
 - `hour(timestamp)` - Encountered **1** time - Extract hour from timestamp
@@ -14,8 +14,6 @@ This document tracks SQL functions and language features that we (or the agents)
 
 ### NULL Handling
 - `IS NULL` / `IS NOT NULL` - Encountered **1** time - TRUE if a value is null
-
-## Language Features
 
 ### ORDER BY Clause
 - `ORDER BY` - Encountered **1** time - Sorting query results by specified columns
@@ -29,3 +27,33 @@ This document tracks SQL functions and language features that we (or the agents)
 ### JOIN Syntax
 - `JOIN ... ON` in SELECT queries - Encountered **1** time - Explicit JOIN syntax in SELECT statements (though joins are defined in models)
 
+### Grouping Without Aggregates
+- `SELECT DISTINCT <columns>` - Encountered **2** times - Ability to group over a column without there being an aggration. Synonymous to `SELECT <columns> FROM ... GROUP BY <columns>`. This helps you see distinct values in a column or set of columns.
+
+## Markdown Language
+
+### Can't reference foreign fields from chart component
+
+Given the following inline SQL:
+
+```delay_per_origin
+select origin, origin_airport.full_name, avg(dep_delay) as avg_delay from flights group by 1, 2 limit 20
+```
+
+There is no way to access origin_airport.full_name from the chart below.
+
+```
+<BarChart 
+  data={delay_per_origin}
+  x=origin
+  labels=true
+  labelPosition=inside
+  y=avg_delay
+  swapXY=true
+  tooltip={origin_airport.full_name}
+  title="Most Delayed Airports"
+  subtitle="Top 20 airports by average delay (minutes)"
+/>
+```
+
+Even if you alias the column via `origin_airport.full_name as origin_full_name`, Evidence returns "origin_full_name is not defined."
