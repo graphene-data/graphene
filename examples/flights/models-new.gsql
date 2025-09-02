@@ -1,0 +1,245 @@
+/*
+GSQL models should be optional and the following should be valid GSQL:
+*/
+select * from information_schema.tables;
+
+/*
+You don't need to declare flights as a table in GSQL if you don't intend to transform it. To add semantics to a table, you can use the `extend` keyword.
+*/
+extend flights (
+
+/*
+Want to unify the column declaration syntax with derived column and measure declaration syntax. This means changing from `column_name DATATYPE` to `expr as column_name`. This will make type declarations implicit - is that okay?
+*/
+
+  -- Columns to hide. Uses annotations syntax. Can borrow ideas from Malloy: https://docs.malloydata.dev/documentation/language/tags#tag-property-language
+  # hide
+  id2,
+  # hide
+  cancelled,
+  # hide
+  diverted,
+
+  -- Primary key
+  id2 as id,
+  -- Whether the flight was cancelled.
+  cancelled = 'Y' as is_cancelled,
+  -- Whether the flight was diverted.
+  diverted = 'Y' as is_diverted,
+  -- Whether the flight was a long haul flight (over 6 hours).
+  flight_time > 360 as is_long_haul,
+
+  -- remove the underscores from join_one and join_many
+  join one aircrafts on aircrafts.tail_num = tail_num,
+  join one carriers on carriers.code = carrier,
+  join one airports as origin_airport on origin_airport.code = origin,
+  join one airports as destination_airport on destination_airport.code = destination,
+
+/*
+Note that the following column declarations are only needed here to add descriptions; since they are columns in the existing flights table, they would still be queryable without defining them here.
+*/
+
+  -- The carrier code for the airline operating the flight. Keys into the carriers table.
+  carrier,
+  -- The origin airport code. Keys into the airports table.
+  origin,
+  -- The destination airport code. Keys into the airports table.
+  destination,
+  -- The flight number.
+  flight_num,
+  -- The flight duration in minutes.
+  flight_time,
+  -- The tail number of the aircraft, which is a unique identifier for the aircraft. Keys into the aircraft table.
+  tail_num,
+  -- The departure time (UTC) of the flight.
+  dep_time,
+  -- The arrival time (UTC) of the flight.
+  arr_time,
+  -- How delayed the departure time was in minutes.
+  dep_delay,
+  -- How delayed the arrival time was in minutes.
+  arr_delay,
+  -- The time it took to taxi out of the airport in minutes.
+  taxi_out,
+  -- The time it took to taxi into the airport in minutes.
+  taxi_in,
+  -- The distance of the flight in miles.
+  distance
+
+); -- All statements need to be semicolon delimited
+
+-- It bothered me that aircraft was singular but all other table names were plural
+table aircrafts as (select * from aircraft);
+
+extend aircrafts (
+
+  -- The unique tail number identifier for the aircraft. Keys into the flights table.
+  tail_num,
+  -- The manufacturer's serial number for the aircraft.
+  aircraft_serial,
+  -- The aircraft model code. Keys into the aircraft_models table.
+  aircraft_model_code,
+  -- The engine model code for the aircraft.
+  aircraft_engine_code,
+  -- The year the aircraft was manufactured.
+  year_built,
+  -- The type identifier for the aircraft (e.g., 4=airplane, 5=helicopter).
+  aircraft_type_id,
+  -- The engine type identifier for the aircraft.
+  aircraft_engine_type_id,
+  -- The registrant type identifier (e.g., 1=individual, 3=corporation).
+  registrant_type_id,
+  -- The name of the aircraft owner/registrant.
+  name,
+  -- The first line of the owner's address.
+  address1,
+  -- The second line of the owner's address.
+  address2,
+  -- The city where the owner is located.
+  city,
+  -- The state where the owner is located.
+  state,
+  -- The ZIP code of the owner's address.
+  zip,
+  -- The FAA region code (e.g., E=Eastern, S=Southern, W=Western).
+  region,
+  -- The county code where the owner is located.
+  county,
+  -- The country code (e.g., US=United States).
+  country,
+  -- The aircraft certification type (e.g., 1N=normal, 1T=transport).
+  certification,
+  -- The current status of the aircraft (e.g., A=active, V=valid).
+  status_code,
+  -- The Mode S transponder code for the aircraft.
+  mode_s_code,
+  -- The fractional ownership indicator.
+  fract_owner,
+  -- The date of the last action taken on the aircraft registration.
+  last_action_date,
+  -- The date the aircraft certification was issued.
+  cert_issue_date,
+  -- The date the aircraft was determined to be airworthy.
+  air_worth_date,
+
+  join one aircraft_models as model on aircraft_model_code = model.aircraft_model_code,
+  join many flights on tail_num = flights.tail_num
+
+);
+
+extend aircraft_models (
+
+  -- The unique aircraft model code identifier.
+  aircraft_model_code,
+  -- The manufacturer of the aircraft (e.g., BOEING, CESSNA).
+  manufacturer,
+  -- The specific model name or designation.
+  model,
+  -- The aircraft type identifier (e.g., 2=balloon, 4=airplane, 5=helicopter).
+  aircraft_type_id,
+  -- The engine type identifier for this model.
+  aircraft_engine_type_id,
+  -- The aircraft category identifier.
+  aircraft_category_id,
+  -- Whether this is an amateur-built aircraft (0=no, 1=yes).
+  amateur,
+  -- The number of engines on this aircraft model.
+  engines,
+  -- The number of seats in this aircraft model.
+  seats,
+  -- The weight class of the aircraft model.
+  weight,
+  -- The maximum speed of the aircraft model in knots.
+  speed,
+
+  join many aircrafts on aircraft_model_code = aircrafts.aircraft_model_code
+
+);
+
+extend carriers (
+
+  -- The unique carrier code identifier (e.g., AA, DL, UA).
+  code,
+  -- The full name of the airline carrier.
+  name,
+  -- The abbreviated or nickname of the carrier.
+  nickname,
+
+  join many flights on code = flights.carrier
+
+);
+
+extend airports (
+
+  -- The unique airport identifier.
+  id,
+  -- The three-letter airport code (e.g., JFK, LAX).
+  code,
+  -- The FAA site number for the airport.
+  site_number,
+  -- The facility type (e.g., AIRPORT, HELIPORT).
+  fac_type,
+  -- The facility use classification (e.g., PU=public, PR=private).
+  fac_use,
+  -- The FAA region where the airport is located.
+  faa_region,
+  -- The FAA district code.
+  faa_dist,
+  -- The city where the airport is located.
+  city,
+  -- The county where the airport is located.
+  county,
+  -- The state where the airport is located.
+  state,
+  -- The full name of the airport.
+  full_name,
+  -- The ownership type (e.g., PU=public, PR=private, MA=military).
+  own_type,
+  -- The longitude coordinate of the airport.
+  longitude,
+  -- The latitude coordinate of the airport.
+  latitude,
+  -- The elevation of the airport above sea level in feet.
+  elevation,
+  -- The aeronautical chart identifier.
+  aero_cht,
+  -- The distance to the central business district in miles.
+  cbd_dist,
+  -- The direction to the central business district.
+  cbd_dir,
+  -- The date the airport became active.
+  act_date,
+  -- The certification status of the airport.
+  cert,
+  -- The federal agreement status.
+  fed_agree,
+
+  -- Columns to hide. Uses annotations syntax.
+  # hide
+  c_ldg_rts,
+  # hide
+  cust_intl,
+  # hide
+  joint_use,
+  # hide
+  mil_rts,
+  # hide
+  cntl_twr,
+  # hide
+  major,
+
+  -- Whether the airport has landing rights.
+  c_ldg_rts = 'Y' as has_landing_rights,
+  -- Whether the airport serves international customers.
+  cust_intl = 'Y' as serves_international_customers,
+  -- Whether the airport has joint use agreements.
+  joint_use = 'Y' as has_joint_use_agreements,
+  -- Whether the airport has military routes.
+  mil_rts = 'Y' as has_military_routes,
+  -- Whether the airport has a control tower.
+  cntl_twr = 'Y' as has_control_tower,
+  -- Whether this is a major airport.
+  major = 'Y' as is_major
+
+);
+
