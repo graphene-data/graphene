@@ -1,26 +1,24 @@
-// import {grapheneRoot} from './cwdHack.ts'
-import { loadWorkspace, config } from '@graphene/lang'
-import { sveltekit } from '@sveltejs/kit/vite'
+import { loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql } from '@graphene/lang'
 import path from 'path'
 import fs from 'fs-extra'
-import { createServer } from 'vite'
+import { createServer, type ViteDevServer } from 'vite'
 import { fileURLToPath } from 'url'
 import tailwindcss from '@tailwindcss/vite'
 import {evidenceThemes} from '@evidence-dev/tailwind/vite-plugin'
-import {configVirtual} from '@evidence-dev/sdk/build/vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
-import sveltePreprocess from 'svelte-preprocess'
-import MarkdownIt from 'markdown-it'
+// import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
+import { visit, SKIP } from 'unist-util-visit'
+import remarkMdx from 'remark-mdx'
+import {remark} from 'remark'
+import { getConnection } from './connection.ts'
+import { IncomingMessage, ServerResponse } from 'http'
 
 let cliRoot: string
 let grapheneRoot: string
 
-const mdIt = new MarkdownIt({ html: true, linkify: true, typographer: true })
-
 export async function serve2 () {
   grapheneRoot = process.cwd()
   cliRoot = path.join(fileURLToPath(import.meta.url), '..')
-  loadWorkspace(grapheneRoot)
 
   const server = await createServer({
     configFile: false, // ignore evidence's built in config file
@@ -28,8 +26,8 @@ export async function serve2 () {
     plugins: [
       handleRequestPlugin,
       tailwindcss(),
-      svelte({ exclude: 'components/**'}), //  preprocess: sveltePreprocess(),
-      svelte({ include: 'components/**', compilerOptions: { customElement: true }}), // preprocess: sveltePreprocess(),
+      svelte({ exclude: '**/components/**'}), //  preprocess: sveltePreprocess(),
+      svelte({ include: '**/components/**', compilerOptions: { customElement: true }}), // preprocess: sveltePreprocess(),
       evidenceThemes(),
       dollarResolver,
     ],
@@ -57,31 +55,55 @@ export async function serve2 () {
   console.log(`Server running at ${server.resolvedUrls?.local?.[0]}`)
 }
 
-const handleRequestPlugin = {name: 'handleRequest', configureServer: s => { s.middlewares.use(handleRequest) }}
-async function handleRequest(req, res, next) {
-  // console.log('handleRequest', req.url)
-  let [pathName, queryString] = req.url.split('?')
+const handleRequestPlugin = {
+  name: 'handleRequest',
+  configureServer: (s: ViteDevServer) => {
+    s.middlewares.use(async function handleRequest(req, res, next) {
+      let [pathName, queryString] = (req.url || '').split('?')
+      if (pathName == '/graphene/query') return handleQuery(req, res)
 
-  if (pathName == '/query') return handleQuery(req, res)
+      if (!pathName || pathName == '/') pathName = 'index'
+      let mdPath = path.join(grapheneRoot, pathName + '.md')
 
-  if (!pathName || pathName == '/') pathName = 'index'
-  let mdPath = path.join(grapheneRoot, pathName + '.md')
-
-  if (await fs.exists(mdPath)) {
-    handlePage(req, res, mdPath)
-  } else {
-    next()
+      if (await fs.exists(mdPath)) {
+        handlePage(req, res, mdPath)
+      } else {
+        next()
+      }
+    })
   }
 }
 
-async function handleQuery(req, res) {
-  let url = new URL(req.url)
-  res.end(JSON.stringify([]))
+async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
+  let chunks = [] as any[]
+  for await (let chunk of req) chunks.push(chunk)
+  let buffer = Buffer.concat(chunks)
+  let body = buffer.toString()
+  let {gsql} = JSON.parse(body)
+  res.setHeader('Content-Type', 'application/json')
+
+  clearWorkspace()
+  await loadWorkspace(grapheneRoot)
+  let queries = analyze(gsql, 'input')
+
+  if (getDiagnostics().length) {
+    res.statusCode = 400
+    res.end(JSON.stringify(getDiagnostics()))
+    return
+  }
+
+  let sql = toSql(queries[0])
+  let connection = await getConnection()
+  let queryResults = await connection.runSQL(sql)
+  res.end(JSON.stringify(queryResults.rows))
 }
 
 async function handlePage(req, res, mdPath) {
   let md = await fs.readFile(mdPath, 'utf-8')
-  let html = mdIt.render(md)
+  let html = await remark()
+    .use(remarkMdx)
+    .use(remarkMdxGraphene)
+    .process(md)
 
   res.end(`<!doctype html>
   <html lang="en">
@@ -92,11 +114,15 @@ async function handlePage(req, res, mdPath) {
     </head>
     <body>
       <div id="app"></div>
-      <script>window.__DOC_HTML = ${JSON.stringify(html)}</script>
+      <script>
+        window.__DOC_HTML = ${JSON.stringify(String(html))}
+        window.__DOC_QUERIES = ${JSON.stringify(html.data.queries)}
+      </script>
       <script type="module" src="main.ts"></script>
     </body>
   </html>`)
 }
+
 let dollarResolver = {
   name: 'dollar-resolver',
   resolveId(id) {
@@ -138,5 +164,31 @@ let dollarResolver = {
         export const navigating = false
       `;
     }
+  }
+}
+
+// Plugin to transform graphene-specific markdown. Extract sql blocks, rewrite/filter components
+function remarkMdxGraphene () {
+  return function transformer(tree, file) {
+    let allowed = new Set(['graphene-barchart'])
+    file.data.queries = {} as Record<string, string>
+
+    // Extract gsql queries, then remove them from the rendered html
+    visit(tree, 'code', (node, index, parent) => {
+      file.data.queries[node.meta] = node.value.trim()
+      parent.children.splice(index, 1)
+      return [SKIP, index]
+    })
+
+    // Rewrite <BarChart> to <graphene-barchart> (the naming is forced on us by web components)
+    // We'll also drop any components that are not in the allowed list
+    visit(tree, ['mdxJsxFlowElement', 'mdxJsxTextElement'], (node: any, index: number | null, parent: any) => {
+      if (!node || !parent || typeof index !== 'number') return
+      if (node.name === 'BarChart') node.name = 'graphene-barchart'
+      if (!allowed.has(node.name)) {
+        parent.children.splice(index, 1)
+        return [SKIP, index]
+      }
+    })
   }
 }

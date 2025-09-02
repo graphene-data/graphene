@@ -1,4 +1,4 @@
-<svelte:options customElement="g-barchart" />
+<svelte:options customElement="graphene-barchart" />
 <script>
   import { onMount, createEventDispatcher } from 'svelte'
   import {BarChart} from '@evidence-dev/core-components'
@@ -8,7 +8,7 @@
     isQuery: true,
     fetch: async () => {
       await Promise.resolve()
-      let dt = window.$GRAPHENE.query('select * from flights')
+      let dt = await window.$GRAPHENE.query($$props.data)
       dt.dataLoaded = true
       callback(dt)
     },

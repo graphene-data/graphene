@@ -4,8 +4,20 @@
   let html = ''
 
   window.$GRAPHENE = {
-    query (sql) {
-      return [{name: 'United', avg_dist: 1000}, {name: 'Delta', avg_dist: 1100}, {name: 'American', avg_dist: 1200}]
+    async query (queryName) {
+      if (!queryName) throw new Error('Query name is required')
+      let gsql = window.__DOC_QUERIES[queryName]
+      if (!gsql) throw new Error(`Query ${queryName} not found`)
+
+      let response = await fetch('/graphene/query', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({queryName, gsql}),
+      })
+      if (!response.ok) {
+        throw new Error(`Query failed: ${response.statusText}`)
+      }
+      return await response.json()
     }
   }
 
