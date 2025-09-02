@@ -36,7 +36,7 @@ Want to unify the column declaration syntax with derived column and measure decl
   join one airports as destination_airport on destination_airport.code = destination,
 
 /*
-Note that the following column declarations are only needed here to add descriptions; since they are columns in the existing flights table, they would still be queryable without defining them here.
+Note that the following column declarations are only needed here to add descriptions; since they are columns in the existing flights table, they would still be queryable without defining them here. Also, it's worth calling out that in the case where the customer has a dbt project in the same repo, there will likely already be column descriptions documented somewhere, and the user is not going to want two sources of truth here.
 */
 
   -- The carrier code for the airline operating the flight. Keys into the carriers table.
