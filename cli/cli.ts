@@ -7,6 +7,7 @@ import {analyze, getDiagnostics, loadWorkspace, toSql, config, type Query} from 
 import {type Connection} from '@malloydata/malloy'
 import * as fs from 'fs'
 import path from 'path'
+import { getConnection } from './connection.ts'
 
 const program = new Command()
 
@@ -37,22 +38,8 @@ program
     let queries = analyze(gsql, 'input')
     if (!validQuery(queries)) return
     let sql = toSql(queries[0])
-
-    let connection
-    if (config.dialect === 'bigquery') {
-      let mod = await import('@malloydata/db-bigquery')
-      connection = new mod.BigQueryConnection("bigQuery") as Connection
-    }
-
-    if (config.dialect === 'duckdb') {
-      let mod = await import('@malloydata/db-duckdb')
-      let files = await fs.promises.readdir(process.cwd())
-      let dbPath = files.find(f => f.endsWith('.duckdb'))
-      if (!dbPath) throw new Error('No .duckdb file found in current directory')
-      connection = new mod.DuckDBConnection("duckdb", dbPath) as Connection
-    }
-
-    let res = await connection?.runSQL(sql)
+    let connection = await getConnection()
+    let res = await connection.runSQL(sql)
     printTable(res.rows)
   })
 
