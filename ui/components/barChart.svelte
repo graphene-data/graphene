@@ -1,6 +1,5 @@
 <svelte:options customElement="graphene-barchart" />
 <script>
-  import { onMount, createEventDispatcher } from 'svelte'
   import {BarChart} from '@evidence-dev/core-components'
 
   let callback
@@ -23,4 +22,3 @@
 <style></style>
 
 <BarChart {...spreadProps} data={data} />
-
