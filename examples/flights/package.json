@@ -18,6 +18,7 @@
     "@evidence-dev/preprocess": "^6.0.5",
     "@evidence-dev/core-components": "^5.2.2",
     "@graphene/cli": "file:../../cli",
+    "@graphene/ui": "file:../../ui",
     "@sveltejs/adapter-static": "3.0.1",
     "@sveltejs/vite-plugin-svelte": "3.1.2",
     "vite": "5.4.14",
