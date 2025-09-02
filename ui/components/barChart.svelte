@@ -23,4 +23,4 @@
 <style></style>
 
 <BarChart {...spreadProps} data={data} />
-<!-- <div>BARCHART</div> -->
+
