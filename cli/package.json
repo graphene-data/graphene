@@ -16,6 +16,7 @@
     "@evidence-dev/sdk": "^3.0.9",
     "@evidence-dev/tailwind": "^3.0.10",
     "@graphene/lang": "file:../lang",
+    "@graphene/ui": "file:../ui",
     "@malloydata/db-bigquery": "^0.0.307",
     "@malloydata/db-duckdb": "^0.0.304",
     "@sveltejs/adapter-static": "3.0.1",
