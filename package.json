@@ -27,5 +27,16 @@
     "typescript-eslint": "^8.38.0",
     "vitest": "3.0.5",
     "zx": "^8.7.2"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "@types/hast": "*",
+        "@types/mdast": "*",
+        "vitest": "*",
+        "nanoid": "*",
+        "unist-util-visit": "*"
+      }
+    }
   }
 }
