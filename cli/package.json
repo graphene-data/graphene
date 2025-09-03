@@ -1,5 +1,5 @@
 {
-  "name": "cli",
+  "name": "@graphene/cli",
   "main": "cli.ts",
   "type": "module",
   "scripts": {
