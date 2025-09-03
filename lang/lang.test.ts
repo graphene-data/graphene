@@ -292,4 +292,39 @@ describe('lang', () => {
     expect('from users select name, total_orders, string_agg(payments.amount)')
       .toReturnRows(['Alice', 2, '100'], ['Bob', 1, '50'])
   })
+
+  it('allows queries with semicolons', () => {
+    expect('table t (id int); select id, name from users;')
+      .toRenderSql('select base."id" as "id", base."name" as "name" from users as base')
+  })
+
+  it('allows trailing commas in select/group/order/in lists and function args', () => {
+    expect('select id, name, from users')
+      .toRenderSql('select base."id" as "id", base."name" as "name" from users as base')
+
+    expect('from users select count() group by name,')
+      .toRenderSql('select base."name" as "name", count(1) as "col_0" from users as base group by 1 order by 2 desc nulls last')
+
+    expect('from users select name order by name asc,')
+      .toRenderSql('select base."name" as "name" from users as base order by 1 asc nulls last')
+
+    expect("from users select id where name in ('Alice','Bob',)")
+      .toRenderSql('select base."id" as "id" from users as base where base."name" in (\'Alice\',\'Bob\')')
+
+    expect("from users select coalesce(name, 'Unknown',) as name2")
+      .toRenderSql("select coalesce(base.\"name\",'Unknown') as \"name2\" from users as base")
+  })
+
+  it('allows optional commas between table items and semicolon terminators', () => {
+    expect(`table t (
+      id int primary_key
+      name text
+    );
+    from t select id, name`)
+      .toRenderSql('select base."id" as "id", base."name" as "name" from t as base')
+
+    expect(`table completed_ids as (from users select id,) ;
+      from completed_ids select id`)
+      .toRenderSql('WITH __stage0 AS ( SELECT base."id" as "id" FROM users as base ) SELECT base."id" as "id" FROM __stage0 as base')
+  })
 })
