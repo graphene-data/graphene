@@ -1,6 +1,6 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import {type AggregateFunctionType, type StructRef, type AggregateExpr, type FieldnameNode, type OutputFieldNode, type FunctionOverloadDef} from './node_modules/@malloydata/malloy/dist/model/index.js'
+import type {AggregateFunctionType, StructRef, AggregateExpr, FieldnameNode, OutputFieldNode, FunctionOverloadDef, ExtractUnit, TimeExpr} from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {GlobalNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/global-name-space.js'
 import {DialectNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/dialect-name-space.js'
 import {getDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
@@ -200,6 +200,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   // In Malloy, non-agg fields in a reduction query are implicitly grouped by.
   // In Graphene, we allow you say `group by BLAH` without having to `select BLAH`.
   let groupBys = queryNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
+  isAgg ||= !!groupBys.length
   groupBys.forEach(g => {
     let expr = analyzeExpression(g.getChild('Expression')!, scope)
     let name = nameExpression(expr, scope, g.getChild('Alias'))
@@ -332,13 +333,14 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
   let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
-  if (name == 'count') {
+
+  if (name == 'count') { // count is a special case in the syntax it supports
     if (args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
     if (args[0].node) name = 'distinct' // anything besides `count()` or `count(*)` is a distinct count
     return {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
   }
 
-  if (isAggregate(name)) {
+  if (isAggregate(name)) { // built-in agg functions (min, max, avg, sum)
     let res = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true} as Expression & AggregateExpr
 
     // Aggregates need a `structPath`, which in malloy is the `users` in `users.avg(age)`. We'd rather you write `avg(users.age)`, so we

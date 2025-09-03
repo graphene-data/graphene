@@ -7,7 +7,7 @@ QueryStatement {
 }
 
 SelectClause {
-  Kw<"select"> SelectItem ("," SelectItem)* ","?
+  Kw<"select"> Kw<"distinct">? SelectItem ("," SelectItem)* ","?
 }
 
 SelectItem {

@@ -97,22 +97,18 @@ describe('lang', () => {
       .toRenderSql('select users_0."id" as "users_id", order_items_0."id" as "order_items_id" from orders as base left join users as users_0 on users_0."id"=base."user_id" left join order_items as order_items_0 on order_items_0."order_id"=base."id"')
   })
 
-  it('expands measures', () => {
+  it('expands measures', async () => {
     expect('from users select name, total_orders')
       .toRenderSql('select base."name" as "name", (count(distinct orders_0."id")) as "total_orders" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
-  })
 
-  it('computes a measure result', async () => {
     await expect('from users select name, total_orders')
       .toReturnRows(['Alice', 2], ['Bob', 1])
   })
 
-  it('handles nested measure references', () => {
+  it('handles expressions with aggregates', async () => {
     expect('from orders select user_id, avg_order_value')
       .toRenderSql('select base."user_id" as "user_id", (coalesce(sum(base."amount"),0)*1.0/count(1)) as "avg_order_value" from orders as base group by 1 order by 2 desc nulls last')
-  })
 
-  it('returns rows for nested measure', async () => {
     await expect('from orders select user_id, avg_order_value')
       .toReturnRows([2, 40], [1, 30])
   })
