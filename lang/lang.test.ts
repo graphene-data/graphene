@@ -6,48 +6,48 @@ import {expect} from 'vitest'
 
 const testTables = `
   table users (
-    id int primary_key,
-    name text,
+    id int primary_key
+    name text
     -- email address of the user
     --# pii=true
-    email text,
-    created_at timestamp,
-    age int,
+    email text
+    created_at timestamp
+    age int
 
-    join_many orders on orders.user_id = id,
-    join_many payments on payments.user_id = id,
-    count(orders.id) as total_orders,
+    join_many orders on orders.user_id = id
+    join_many payments on payments.user_id = id
+    count(orders.id) as total_orders
     sum(payments.amount) as amount_paid
     -- measure active_recently created_at > current_date - 30
   )
 
   table orders (
-    id int primary_key,
-    user_id int,
-    amount int,
-    status text,
+    id int primary_key
+    user_id int
+    amount int
+    status text
 
-    join_one users on users.id = user_id,
-    join_many order_items on order_items.order_id = id,
-    sum(amount) as total_revenue,
-    sum(amount) / count() as avg_order_value,
+    join_one users on users.id = user_id
+    join_many order_items on order_items.order_id = id
+    sum(amount) as total_revenue
+    sum(amount) / count() as avg_order_value
     status = 'completed' as completed
   )
 
   table order_items (
-    id int primary_key,
-    order_id int,
-    sku text,
-    quantity int,
+    id int primary_key
+    order_id int
+    sku text
+    quantity int
 
     join_one orders on orders.id = order_id
   )
 
   table payments (
-    id int primary_key,
-    user_id int,
-    payment_date timestamp,
-    amount int,
+    id int primary_key
+    user_id int
+    payment_date timestamp
+    amount int
 
     join_one users on users.id = user_id
   )
@@ -194,7 +194,7 @@ describe('lang', () => {
   })
 
   it('reports syntax diagnostics on invalid table and still registers table name', () => {
-    expect('table t (a int, ; ) ; from t select a;').toHaveDiagnostic(/syntax error/i)
+    expect('table t (a int, !! ) ; from t select a;').toHaveDiagnostic(/syntax error/i)
   })
 
   it('parses metadata from comments on tables and fields (from testTables)', () => {

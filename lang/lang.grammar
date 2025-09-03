@@ -64,7 +64,7 @@ LimitClause {
 }
 
 TableStatement {
-  Kw<"table"> Identifier "(" tableItem ("," tableItem)* ")"
+  Kw<"table"> Identifier "(" (tableItem ","?)+ ")"
 }
 
 ViewStatement {
@@ -84,7 +84,7 @@ PrimaryKey {
 }
 
 JoinDef {
-  JoinType Identifier (Kw<"as"> Alias)? Kw<"on"> expression
+  JoinType Identifier (Kw<"as"> Alias)? Kw<"on"> JoinCondition
 }
 
 JoinType {
@@ -97,6 +97,12 @@ ComputedDef {
 
 DataType {
   Identifier
+}
+
+// Ideally we could just use `expression` as the join condition, but that introduces ambiguity when parsing, since we don't know when the expression ends and new ComputedDef begins.
+// We could require commas, or make every ComputeDef start with `computed`, but those both feel a bit clumsy.
+JoinCondition[@isGroup=Expression, @name=BinaryExpression] {
+  ColumnRef "=" ColumnRef
 }
 
 // Expressions
