@@ -64,7 +64,7 @@ LimitClause {
 }
 
 TableStatement {
-  Kw<"table"> Identifier "(" tableItem ((","? tableItem)*)? ")"
+  Kw<"table"> Identifier "(" tableItem ("," tableItem)* ")"
 }
 
 ViewStatement {
@@ -92,7 +92,7 @@ JoinType {
 }
 
 ComputedDef {
-  Kw<"measure"> Identifier expression
+  computedExpression Kw<"as"> Alias
 }
 
 DataType {
@@ -176,6 +176,23 @@ primaryExpression {
   FunctionCall |
   Parenthetical |
   SubqueryExpression
+}
+
+// Computed defs cannot start with parenthetical to avoid ambiguity
+computedExpression[@isGroup=Expression] {
+  BinaryExpression |
+  UnaryExpression |
+  CaseExpression |
+  ExistsExpression |
+  InExpression |
+  Wildcard |
+  computedPrimary
+}
+
+computedPrimary {
+  Literal |
+  ColumnRef |
+  FunctionCall
 }
 
 Parenthetical {

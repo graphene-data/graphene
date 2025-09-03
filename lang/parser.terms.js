@@ -83,5 +83,4 @@ export const
   FunctionCall = 131,
   Parenthetical = 132,
   ComputedDef = 133,
-  measure = 135,
-  ViewStatement = 136
+  ViewStatement = 134
