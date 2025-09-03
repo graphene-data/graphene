@@ -174,6 +174,14 @@ describe('lang', () => {
       .toReturnRows(['Alice'])
   })
 
+  it('supports is null/is not null', () => {
+    expect('from users select name where email is null')
+      .toRenderSql('select base."name" as "name" from users as base where base."email" is null')
+
+    expect('from users select name where email is not null')
+      .toRenderSql('select base."name" as "name" from users as base where base."email" is not null')
+  })
+
   it('parses offset but reports diagnostic', () => {
     expect('from users select name order by name asc limit 1 offset 1')
       .toHaveDiagnostic(/offset is not supported yet/i)

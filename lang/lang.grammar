@@ -112,6 +112,7 @@ expression[@isGroup=Expression] {
   CaseExpression |
   ExistsExpression |
   InExpression |
+  NullTestExpression |
   Wildcard |
   primaryExpression
 }
@@ -130,8 +131,11 @@ UnaryExpression {
 
 ComparisonOp {
   "=" | "!=" | "<>" | "<" | ">" | "<=" | ">=" |
-  Kw<"like"> | Kw<"not"> Kw<"like"> |
-  Kw<"is"> Kw<"null"> | Kw<"is"> Kw<"not"> Kw<"null">
+  Kw<"like"> | Kw<"not"> Kw<"like">
+}
+
+NullTestExpression {
+  expression Kw<"is"> Kw<"not">? Kw<"null">
 }
 
 AddOp { "+" | "-" }
