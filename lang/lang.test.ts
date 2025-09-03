@@ -144,6 +144,11 @@ describe('lang', () => {
       SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
   })
 
+  it('supports select distinct', () => {
+    expect('from users select distinct name, email')
+      .toRenderSql('select base."name" as "name", base."email" as "email" from users as base group by 1,2 order by 1 asc nulls last')
+  })
+
   it('adds groupBy to select if needed', () => {
     expect('from users select count(orders.id) as total group by name')
       .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "total" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
