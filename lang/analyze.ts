@@ -89,13 +89,13 @@ function analyzeDatabaseTable (table: Table) {
     join.onExpression = analyzeExpression(jn.getChild('Expression')!, {table, outputFields: []})
   })
 
-  // measures/dimensions, like `measure total_price AS SUM(price)`
+  // measures/dimensions, like `sum(price) as total_price`
   // malloy represents them as just a regular field, plus an expression
   // TODO: I think one measure can ref another, so we need to process these bottom up to resolve types
   node.getChildren('ComputedDef').forEach(cn => {
     let expression = analyzeExpression(cn.getChild('Expression')!, {table, outputFields: []})
     table.fields.push({
-      name: txt(cn.getChild('Identifier')),
+      name: txt(cn.getChild('Alias')),
       type: expression.type,
       metadata: extractLeadingMetadata(cn),
       e: expression,
