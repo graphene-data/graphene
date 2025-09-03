@@ -310,6 +310,11 @@ describe('lang', () => {
       .toReturnRows(['Alice', 2, '100'], ['Bob', 1, '50'])
   })
 
+  it('supports malloy date functions', () => {
+    expect('from users select name, month(created_at)')
+      .toRenderSql('select base."name" as "name", extract(month from base."created_at") as "col_1" from users as base')
+  })
+
   it('allows queries with semicolons', () => {
     expect('table t (id int); select id, name from users;')
       .toRenderSql('select base."id" as "id", base."name" as "name" from users as base')
