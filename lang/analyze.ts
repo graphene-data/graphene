@@ -356,6 +356,12 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
     return res
   }
 
+  const extracts = ['quarter', 'month', 'week', 'day', 'hour', 'minute', 'second', 'year', 'day_of_week', 'day_of_year']
+  if (extracts.includes(name)) {
+    if (args[0]?.type != 'timestamp') return diag(expr, 'Extract requires a time expression')
+    return {node: 'extract', units: name as ExtractUnit, e: args[0] as TimeExpr, type: 'number', isAgg: false}
+  }
+
   let entry = new GlobalNameSpace().getEntry(name)
   let dialect = getDialect(config.dialect)
   let dialectEntry = new DialectNameSpace(dialect).getEntry(name)
