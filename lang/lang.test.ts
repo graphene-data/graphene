@@ -1,6 +1,6 @@
 /// <reference types="vitest/globals" />
 import { setConfig } from './config.ts'
-import {clearWorkspace, getTable, analyze} from './core.ts'
+import {clearWorkspace, getTable, analyze, getDiagnostics} from './core.ts'
 import {prepareEcommerceTables, setTestPrelude} from './testHelpers.ts'
 import {expect} from 'vitest'
 
@@ -205,6 +205,7 @@ describe('lang', () => {
         -- a description
         --# format=first_last
         name text
+        another_field text -- this is another field #units=seconds
       )
       from t select name
     `)
@@ -213,6 +214,9 @@ describe('lang', () => {
     let name = table.fields.find(f => f.name === 'name') as any
     expect(name.metadata.description.toLowerCase()).toContain('a description')
     expect(name.metadata.format).toBe('first_last')
+    let another = table.fields.find(f => f.name === 'another_field') as any
+    expect(another.metadata.description.toLowerCase()).toContain('this is another field')
+    expect(another.metadata.units).toBe('seconds')
   })
 
   it('does not attach a single leading comment to multiple fields on the same line', () => {
