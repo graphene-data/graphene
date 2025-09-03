@@ -7,7 +7,7 @@ QueryStatement {
 }
 
 SelectClause {
-  Kw<"select"> SelectItem ("," SelectItem)*
+  Kw<"select"> SelectItem ("," SelectItem)* ","?
 }
 
 SelectItem {
@@ -44,7 +44,7 @@ WhereClause {
 }
 
 GroupByClause {
-  Kw<"group"> Kw<"by"> SelectItem ("," SelectItem)*
+  Kw<"group"> Kw<"by"> SelectItem ("," SelectItem)* ","?
 }
 
 HavingClause {
@@ -52,7 +52,7 @@ HavingClause {
 }
 
 OrderByClause {
-  Kw<"order"> Kw<"by"> OrderItem ("," OrderItem)*
+  Kw<"order"> Kw<"by"> OrderItem ("," OrderItem)* ","?
 }
 
 OrderItem {
@@ -64,7 +64,7 @@ LimitClause {
 }
 
 TableStatement {
-  Kw<"table"> Identifier "(" tableItem ("," tableItem)* ")"
+  Kw<"table"> Identifier "(" tableItem ((","? tableItem)*)? ")"
 }
 
 ViewStatement {
@@ -157,7 +157,7 @@ InExpression {
 }
 
 InValueList {
-  expression ("," expression)*
+  expression ("," expression)* ","?
 }
 
 @precedence {
@@ -191,7 +191,7 @@ ColumnRef {
 }
 
 FunctionCall {
-  Identifier "(" (expression ("," expression)*)? ")"
+  Identifier "(" (expression ("," expression)* ","?)? ")"
 }
 
 Literal {
@@ -205,7 +205,7 @@ Literal {
 Kw<term> { @specialize[@name={term}]<Identifier, term> }
 Alias { Identifier }
 
-@skip { whitespace | Comment }
+@skip { whitespace | Comment | Semicolon }
 
 @tokens {
   whitespace { @whitespace+ }
@@ -215,6 +215,7 @@ Alias { Identifier }
   Number { @digit+ ("." @digit+)? }
   String { "'" ![']* "'" | '"' !["]* '"' }
   "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">="
+  Semicolon { ";" }
 
   @precedence { Comment, "-" }
   @precedence { Comment, "*" }
