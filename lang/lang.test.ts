@@ -155,6 +155,16 @@ describe('lang', () => {
       .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "col_1" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
   })
 
+  it('group by can refer to an alias', () => {
+    expect('from users select name as n group by n')
+      .toRenderSql('select base."name" as "n" from users as base group by 1 order by 1 asc nulls last')
+  })
+
+  it.skip('group by positional number', () => {
+    expect('from users select name, email group by 2, 1')
+      .toRenderSql('select base."name" as "name", base."email" as "email" from users as base group by 2,1 order by 2 asc, 1 asc nulls last')
+  })
+
   it('supports having clause with aggregate', async () => {
     await expect('from users select name, sum(payments.amount) as amt group by name having amt > 50')
       .toReturnRows(['Alice', 100])
@@ -168,6 +178,11 @@ describe('lang', () => {
   it('supports order by with direction', async () => {
     await expect('from users select name, total_orders order by total_orders desc')
       .toReturnRows(['Alice', 2], ['Bob', 1])
+  })
+
+  it('order by positional number', () => {
+    expect('from users select name, email order by 2 asc, 1 desc')
+      .toRenderSql('select base."name" as "name", base."email" as "email" from users as base order by 2 asc nulls last,1 desc nulls last')
   })
 
   it('supports limit clause', async () => {
