@@ -212,7 +212,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   // ORDER BY
   let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
   let orderByList = orderBys.map(o => {
-    let field = txt(o.getChild('Identifier'))
+    let field = txt(o.getChild('Identifier')) || Number(txt(o.getChild('Number')))
     let dir = txt(o.getChild('Kw')).toLowerCase() == 'desc' ? 'desc' : 'asc' as 'asc' | 'desc'
     return {field, dir}
   })

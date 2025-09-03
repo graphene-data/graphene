@@ -16,7 +16,7 @@ table flights (
   cancelled VARCHAR -- #hide
   diverted VARCHAR -- #hide
 
-  id2 as id -- The primary key.
+  id2 as id
   cancelled = 'Y' as is_cancelled
   diverted = 'Y' as is_diverted
   flight_time > 360 as is_long_haul -- Whether the flight was a long haul flight (over 6 hours).
