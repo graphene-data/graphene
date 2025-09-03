@@ -6,7 +6,7 @@ table flights (
   -- hide because I want to rename it below
   id2 BIGINT,
   -- The primary key.
-  measure id id2,
+  id2 as id,
   -- The carrier code for the airline operating the flight. Keys into the carriers table.
   carrier VARCHAR,
   -- The origin airport code. Keys into the airports table.
@@ -35,12 +35,12 @@ table flights (
   distance BIGINT,
   -- hide because I want to rename it below and convert it to a boolean
   cancelled VARCHAR,
-  measure is_cancelled cancelled = 'Y',
+  cancelled = 'Y' as is_cancelled,
   -- hide because I want to rename it below and convert it to a boolean
   diverted VARCHAR,
-  measure is_diverted diverted = 'Y',
+  diverted = 'Y' as is_diverted,
   -- Whether the flight was a long haul flight (over 6 hours).
-  measure is_long_haul flight_time > 360,
+  flight_time > 360 as is_long_haul,
 
 /* JOIN RELATIONSHIPS */
 --------------------------------
@@ -213,20 +213,20 @@ table airports (
   fed_agree VARCHAR,
   -- hide because I want to rename it below and convert it to a boolean
   c_ldg_rts VARCHAR,
-  measure has_landing_rights c_ldg_rts = 'Y',
+  c_ldg_rts = 'Y' as has_landing_rights,
   -- hide because I want to rename it below and convert it to a boolean
   cust_intl VARCHAR,
-  measure serves_international_customers cust_intl = 'Y',
+  cust_intl = 'Y' as serves_international_customers,
   -- hide because I want to rename it below and convert it to a boolean
   joint_use VARCHAR,
-  measure has_joint_use_agreements joint_use = 'Y',
+  joint_use = 'Y' as has_joint_use_agreements,
   -- hide because I want to rename it below and convert it to a boolean
   mil_rts VARCHAR,
-  measure has_military_routes mil_rts = 'Y',
+  mil_rts = 'Y' as has_military_routes,
   -- hide because I want to rename it below and convert it to a boolean
   cntl_twr VARCHAR,
-  measure has_control_tower cntl_twr = 'Y',
+  cntl_twr = 'Y' as has_control_tower,
   -- hide because I want to rename it below and convert it to a boolean
   major VARCHAR,
-  measure is_major major = 'Y'
+  major = 'Y' as is_major
 )

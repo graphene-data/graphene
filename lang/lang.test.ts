@@ -16,8 +16,8 @@ const testTables = `
 
     join_many orders on orders.user_id = id,
     join_many payments on payments.user_id = id,
-    measure total_orders count(orders.id),
-    measure amount_paid sum(payments.amount)
+    count(orders.id) as total_orders,
+    sum(payments.amount) as amount_paid
     -- measure active_recently created_at > current_date - 30
   )
 
@@ -29,9 +29,9 @@ const testTables = `
 
     join_one users on users.id = user_id,
     join_many order_items on order_items.order_id = id,
-    measure total_revenue sum(amount),
-    measure avg_order_value sum(amount) / count(),
-    measure completed status = 'completed'
+    sum(amount) as total_revenue,
+    sum(amount) / count() as avg_order_value,
+    status = 'completed' as completed
   )
 
   table order_items (
@@ -83,7 +83,7 @@ describe('lang', () => {
 
   it('excludes aggregates from wildcard expansion', () => {
     // especially if those aggs are indirectly an agg agg expression
-    expect(`table t (amount int, measure weird_avg sum(amount) / count())
+    expect(`table t (amount int, sum(amount) / count() as weird_avg)
     from t select *`).toRenderSql('select base."amount" as "amount" from t as base')
   })
 
@@ -317,7 +317,7 @@ describe('lang', () => {
 
   it('allows optional commas between table items and semicolon terminators', () => {
     expect(`table t (
-      id int primary_key
+      id int primary_key,
       name text
     );
     from t select id, name`)
