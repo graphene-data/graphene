@@ -280,6 +280,11 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       let op = txt(expr.firstChild?.nextSibling).toLowerCase()
       return {node: op as any, kids: {left, right}, type: 'boolean', isAgg: left.isAgg || right.isAgg}
     }
+    case 'NullTestExpression': {
+      let node = expr.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not') ? 'is-not-null' : 'is-null'
+      let e = analyzeExpression(expr.firstChild!, scope)
+      return {node: node as "is-not-null" | "is-null", type: 'boolean', isAgg: e.isAgg, e}
+    }
     case 'UnaryExpression': {
       let opTxt = txt(expr.firstChild).toLowerCase()
       let child = analyzeExpression(expr.lastChild!, scope)
