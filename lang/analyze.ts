@@ -157,6 +157,8 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   // SELECT
   // Next, get the columns this query will return (including wildcard expansion)
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
+  let isSelectDistinct = queryNode.getChild('SelectClause')?.getChildren('Kw').find(n => txt(n).toLowerCase() == 'distinct')
+  isAgg ||= !!isSelectDistinct // select distinct makes the query a reduction
   selects.forEach(s => {
     if (s.getChild('Wildcard')) {
       let path = s.getChild('Wildcard')?.getChildren('Identifier').map(i => txt(i)) || []
