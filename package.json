@@ -5,7 +5,8 @@
   "workspaces": [
     "lang",
     "cli",
-    "vscode"
+    "vscode",
+    "ui"
   ],
   "engines": {
     "node": ">=24.0.0"
