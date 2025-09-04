@@ -43,7 +43,7 @@ describe('cli compile', () => {
 })
 
 describe('cli run', () => {
-  beforeAll(async () => {
+  beforeAll(() => {
     let dbPath = path.resolve(flightDir, 'flights.duckdb')
     if (!fs.existsSync(dbPath)) throw new Error('flights.duckdb not found. Run `pnpm run setup` in examples/flights')
   })

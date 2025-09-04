@@ -1,6 +1,6 @@
 /// <reference types="vitest/globals" />
-import { setConfig } from './config.ts'
-import {clearWorkspace, getTable, analyze, getDiagnostics} from './core.ts'
+import {setConfig} from './config.ts'
+import {clearWorkspace, getTable, analyze} from './core.ts'
 import {prepareEcommerceTables, setTestPrelude} from './testHelpers.ts'
 import {expect} from 'vitest'
 

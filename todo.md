@@ -1,5 +1,4 @@
 ## Soon
-* fix up `count` parsing
 * don't throw errors when analyzing
 * Make the ecomm example interesting (measures, pages)
 * remove underscore from join_one|many
