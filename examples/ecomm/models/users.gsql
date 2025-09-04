@@ -19,4 +19,10 @@ table users (
   join_many orders on id = orders.user_id,
   join_many order_items on id = order_items.user_id,
   join_many events on id = events.user_id
+
+  sum(order_items.sale_price) as ltv_simple
+  count(distinct orders.user_id) as purchasers
+  -- count(distinct if(count(distinct orders.order_id) over (partition by users.id) > 1, users.id, null)) as repeat_purchasers
+  safe_divide(count(distinct orders.user_id), count(*)) as conversion_rate
+  avg(timestamp_diff(min(orders.created_at), min(events.created_at), day)) as avg_days_to_first_purchase
 )
