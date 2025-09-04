@@ -114,7 +114,7 @@ expression[@isGroup=Expression] {
   ExistsExpression |
   InExpression |
   NullTestExpression |
-  Literal |
+  literal |
   Ref |
   Count |
   FunctionCall |
@@ -196,7 +196,7 @@ computedExpression[@isGroup=Expression] {
 }
 
 computedPrimary {
-  Literal |
+  literal |
   Ref |
   Count |
   FunctionCall
@@ -222,13 +222,15 @@ FunctionCall {
   Identifier "(" (expression ("," expression)* ","?)? ")"
 }
 
-Literal {
+literal {
   Number |
   String |
-  Kw<"true"> |
-  Kw<"false"> |
-  Kw<"null">
+  Boolean |
+  Null
 }
+
+Boolean { Kw<"true"> | Kw<"false"> }
+Null { Kw<"null"> }
 
 Kw<term> { @specialize[@name={term}]<Identifier, term> }
 Alias { Identifier }

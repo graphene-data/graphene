@@ -1,5 +1,4 @@
 ## Soon
-* bool/null literal types (prob refactor the rule for literals?)
 * structPath for non built-in aggregates
 * add `now()` function
 * make `count(col)` behave like regular sql (ie count non-null)
