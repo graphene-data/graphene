@@ -365,4 +365,9 @@ describe('lang', () => {
       from completed_ids select id`)
       .toRenderSql('WITH __stage0 AS ( SELECT base."id" as "id" FROM users as base ) SELECT base."id" as "id" FROM __stage0 as base')
   })
+
+  it('supports count_if (function we added)', () => {
+    expect('from orders select count_if(amount > 100)')
+      .toRenderSql('select count_if(base."amount">100) as "col_0" from orders as base')
+  })
 })
