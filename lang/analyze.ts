@@ -294,7 +294,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     case 'NullTestExpression': {
       let node = expr.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not') ? 'is-not-null' : 'is-null'
       let e = analyzeExpression(expr.firstChild!, scope)
-      return {node: node as "is-not-null" | "is-null", type: 'boolean', isAgg: e.isAgg, e}
+      return {node: node as 'is-not-null' | 'is-null', type: 'boolean', isAgg: e.isAgg, e}
     }
     case 'UnaryExpression': {
       let opTxt = txt(expr.firstChild).toLowerCase()
@@ -361,7 +361,7 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   }
 
   // malloy maps `month(date)` to `extract(month from date)`
-  const extracts = ['quarter', 'month', 'week', 'day', 'hour', 'minute', 'second', 'year', 'day_of_week', 'day_of_year']
+  let extracts = ['quarter', 'month', 'week', 'day', 'hour', 'minute', 'second', 'year', 'day_of_week', 'day_of_year']
   if (extracts.includes(name)) {
     if (args[0]?.type != 'timestamp') diag(expr, 'Extract requires a time expression')
     return {node: 'extract', units: name as ExtractUnit, e: args[0] as TimeExpr, type: 'number', isAgg: false}

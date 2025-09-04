@@ -1,6 +1,6 @@
-node_modules
-out/
-dist/
+**/node_modules/**
+**/out/**
+**/dist/**
 notes.md
 
 .DS_Store
@@ -10,3 +10,4 @@ notes.md
 **/.vscode/settings.json
 vscode/*.vsix
 CLAUDE.md
+.conductor

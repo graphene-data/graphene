@@ -2,16 +2,16 @@
 import * as malloy from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {StandardSQLDialect} from './node_modules/@malloydata/malloy/dist/dialect/standardsql/index.js'
 import {registerDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
-import { expandBlueprintMap } from './node_modules/@malloydata/malloy/dist/dialect/functions/index.js'
+import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect/functions/index.js'
 import {readFile, glob} from 'node:fs/promises'
 import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity} from './analyze.ts'
 import {parser} from './parser.js'
 import {type Query} from './types.ts'
 import {getOffset} from './util.ts'
-import { config,loadConfig } from './config.ts'
+import {config, loadConfig} from './config.ts'
 import path from 'node:path'
-import { type DialectFunctionOverloadDef } from '@malloydata/malloy'
-import { BIGQUERY_DIALECT_FUNCTIONS } from './functions.ts'
+import {type DialectFunctionOverloadDef} from '@malloydata/malloy'
+import {BIGQUERY_DIALECT_FUNCTIONS} from './functions.ts'
 
 export {clearWorkspace}
 export {config}
@@ -104,12 +104,12 @@ export function getHover (path: string, line: number, col: number): string {
 
 // Malloy doesn't provide a dialect for BigQuery, so create one.
 class BigQueryDialect extends StandardSQLDialect {
-  constructor() {
+  constructor () {
     super()
     this.name = 'bigquery'
   }
 
-  getDialectFunctions(): {[name: string]: DialectFunctionOverloadDef[]} {
+  getDialectFunctions (): {[name: string]: DialectFunctionOverloadDef[]} {
     return expandBlueprintMap(BIGQUERY_DIALECT_FUNCTIONS)
   }
 }

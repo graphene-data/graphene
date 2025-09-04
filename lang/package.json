@@ -5,7 +5,7 @@
   "scripts": {
     "test": "vitest run --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
     "test-one": "DEBUG=1 node --inspect ../scripts/turboTest.js",
-    "generate": "lezer-generator lang.grammar -o parser.js"
+    "generate": "lezer-generator lang.grammar -o parser.js && eslint --fix parser.js"
   },
   "dependencies": {
     "@lezer/common": "^1.2.3",

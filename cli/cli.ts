@@ -2,11 +2,10 @@
 
 import {Command} from 'commander'
 import {printDiagnostics, printTable} from './printer.ts'
-import {analyze, getDiagnostics, loadWorkspace, toSql, config, type Query} from '@graphene/lang'
-import {type Connection} from '@malloydata/malloy'
+import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '@graphene/lang'
 import * as fs from 'fs'
 import path from 'path'
-import { getConnection } from './connection.ts'
+import {getConnection} from './connection.ts'
 
 const program = new Command()
 
@@ -93,7 +92,7 @@ function validQuery (queries: Query[]): boolean {
     process.exit(1)
   }
   if (queries.length == 0) {
-    console.warn("No queries found")
+    console.warn('No queries found')
     process.exit(1)
   }
   return true

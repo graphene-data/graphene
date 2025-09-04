@@ -76,7 +76,7 @@ export function extractLeadingMetadata (node: SyntaxNode): Record<string, string
         let trailingText = after.slice(commentIdx + 2).trimStart()
 
         // Extract inline #key=value pairs and remove them from description
-        let inlineKv = /#([A-Za-z0-9_\-]+)=([^\s#]+)/g
+        let inlineKv = /#([A-Za-z0-9_-]+)=([^\s#]+)/g
         let cleaned = trailingText.replace(inlineKv, (_m, k, v) => {
           if (k) metadata[k] = String(v)
           return ''

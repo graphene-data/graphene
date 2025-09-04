@@ -1,19 +1,19 @@
-import { loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql } from '@graphene/lang'
+import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '@graphene/lang'
 import path from 'path'
 import fs from 'fs-extra'
-import { createServer, type ViteDevServer } from 'vite'
-import { fileURLToPath } from 'url'
+import {createServer, type ViteDevServer} from 'vite'
+import {fileURLToPath} from 'url'
 import tailwindcss from '@tailwindcss/vite'
 import {evidenceThemes} from '@evidence-dev/tailwind/vite-plugin'
-import { svelte } from '@sveltejs/vite-plugin-svelte'
+import {svelte} from '@sveltejs/vite-plugin-svelte'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
-import { visit, SKIP } from 'unist-util-visit'
+import {visit, SKIP} from 'unist-util-visit'
 import remarkMdx from 'remark-mdx'
 import {remark} from 'remark'
 import remarkRehype from 'remark-rehype'
 import rehypeStringify from 'rehype-stringify'
-import { getConnection } from './connection.ts'
-import { IncomingMessage, ServerResponse } from 'http'
+import {getConnection} from './connection.ts'
+import {IncomingMessage, ServerResponse} from 'http'
 
 let cliRoot: string
 let grapheneRoot: string
@@ -22,14 +22,14 @@ export async function serve2 () {
   grapheneRoot = process.cwd()
   cliRoot = path.join(fileURLToPath(import.meta.url), '..')
 
-  const server = await createServer({
+  let server = await createServer({
     configFile: false, // ignore evidence's built in config file
     root: grapheneRoot,
     plugins: [
       handleRequestPlugin,
       tailwindcss(),
-      svelte({ exclude: '**/components/**'}),
-      svelte({ include: '**/components/**', compilerOptions: { customElement: true }}),
+      svelte({exclude: '**/components/**'}),
+      svelte({include: '**/components/**', compilerOptions: {customElement: true}}),
       evidenceThemes(),
       dollarResolver,
     ],
@@ -53,8 +53,8 @@ export async function serve2 () {
 const handleRequestPlugin = {
   name: 'handleRequest',
   configureServer: (s: ViteDevServer) => {
-    s.middlewares.use(async function handleRequest(req, res, next) {
-      let [pathName, queryString] = (req.url || '').split('?')
+    s.middlewares.use(async function handleRequest (req, res, next) {
+      let [pathName] = (req.url || '').split('?')
       if (pathName == '/graphene/query') return handleQuery(req, res)
 
       if (!pathName || pathName == '/') pathName = 'index'
@@ -66,10 +66,10 @@ const handleRequestPlugin = {
         next()
       }
     })
-  }
+  },
 }
 
-async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
+async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
   let buffer = Buffer.concat(chunks)
@@ -93,7 +93,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   res.end(JSON.stringify(queryResults.rows))
 }
 
-async function handlePage(req, res, mdPath) {
+async function handlePage (req, res, mdPath) {
   let md = await fs.readFile(mdPath, 'utf-8')
   // let html = await unified()
   //   .use(remarkParse)
@@ -136,51 +136,51 @@ async function handlePage(req, res, mdPath) {
 
 let dollarResolver = {
   name: 'dollar-resolver',
-  resolveId(id) {
-    if (id === '$evidence/config') return `\0$evidence/config`;
-    if (id === '$app/environment') return '\0$app/environment';
-    if (id === '$app/navigation') return '\0$app/navigation';
-    if (id === '$app/forms') return '\0$app/forms';
-    if (id === '$app/stores') return '\0$app/stores';
-    return null;
+  resolveId (id) {
+    if (id === '$evidence/config') return '\0$evidence/config'
+    if (id === '$app/environment') return '\0$app/environment'
+    if (id === '$app/navigation') return '\0$app/navigation'
+    if (id === '$app/forms') return '\0$app/forms'
+    if (id === '$app/stores') return '\0$app/stores'
+    return null
   },
-  load: async (id) => {
-    if (id === `\0$evidence/config`) {
-      return `export const config = {}`;
+  load: (id) => {
+    if (id === '\0$evidence/config') {
+      return 'export const config = {}'
     }
-    if (id === `\0$app/environment`) {
+    if (id === '\0$app/environment') {
       return `
         export const browser = true
         export const version = 0
         export const dev = true
         export const building = false
-      `;
+      `
     }
-    if (id === `\0$app/navigation`) {
+    if (id === '\0$app/navigation') {
       return `
         export const browser = true
         export const afterNavigate = () => {}
         export function goto () {}
         export function preloadData() {}
-      `;
+      `
     }
-    if (id === `\0$app/forms`) {
+    if (id === '\0$app/forms') {
       return `
         export const enhance = () => {}
-      `;
+      `
     }
-    if (id === `\0$app/stores`) {
+    if (id === '\0$app/stores') {
       return `
         export const page = 'page'
         export const navigating = false
-      `;
+      `
     }
-  }
+  },
 }
 
 // Plugin to transform graphene-specific markdown. Extract sql blocks, rewrite/filter components
 function remarkMdxGraphene () {
-  return function transformer(tree, file) {
+  return function transformer (tree, file) {
     let allowed = new Set(['graphene-barchart'])
     file.data.queries = {} as Record<string, string>
 
@@ -204,23 +204,23 @@ function remarkMdxGraphene () {
   }
 }
 
-function rehypeMdxJsxToHtml() {
+function rehypeMdxJsxToHtml () {
   return (tree) => {
     // add `markdown` class to all elements, which evidence's stying expects
-    visit(tree, 'element', ({properties}, index, parent) => {
+    visit(tree, 'element', ({properties}) => {
       if (!properties) return
       if (!properties.className) properties.className = 'markdown'
-      else properties.className += ` markdown`
+      else properties.className += ' markdown'
     })
-    
+
     visit(tree, ['mdxJsxFlowElement', 'mdxJsxTextElement'], (node, index, parent) => {
       if (!parent) return
-      const attrs = (node.attributes || []).map(attr => `${attr.name}="${attr.value}"`).join(' ')
-      const children = (node.children || []).map(child => child.value || '').join('')
-      const tag = node.name
+      let attrs = (node.attributes || []).map(attr => `${attr.name}="${attr.value}"`).join(' ')
+      let children = (node.children || []).map(child => child.value || '').join('')
+      let tag = node.name
       parent.children[index as number] = {
         type: 'raw',
-        value: `<${tag}${attrs ? ' ' + attrs : ''}>${children}</${tag}>`
+        value: `<${tag}${attrs ? ' ' + attrs : ''}>${children}</${tag}>`,
       }
     })
   }

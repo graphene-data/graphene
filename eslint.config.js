@@ -1,16 +1,16 @@
+import {includeIgnoreFile} from '@eslint/compat'
+import {fileURLToPath} from 'node:url'
 import globals from 'globals'
 import pluginJs from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import pluginPreferLet from 'eslint-plugin-prefer-let'
 import * as zxGlobals from 'zx'
 
-
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-  {files: ['**/*.{js,mjs,cjs,ts,vue}']},
-  {languageOptions: {globals: globals.browser}},
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
+  includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url))),
   {
     files: ['scripts/**/*.js'],
     languageOptions: {
@@ -18,9 +18,8 @@ export default [
       sourceType: 'module',
       globals: {
         ...globals.node,
-        ...Object.fromEntries( // https://github.com/infrakiwi/kiwi-blog/blob/main/0014-zx-scripting-in-typescript/eslint.config.mjs
-          Object.entries(zxGlobals).map(([key]) => [key, false]),
-        ),
+        // https://github.com/infrakiwi/kiwi-blog/blob/main/0014-zx-scripting-in-typescript/eslint.config.mjs
+        ...Object.fromEntries(Object.entries(zxGlobals).map(([key]) => [key, false])),
       },
     },
     rules: {
@@ -29,6 +28,8 @@ export default [
     },
   },
   {
+    files: ['**/*.{js,mjs,cjs,ts}'],
+    languageOptions: {globals: globals.browser},
     plugins: {'prefer-let': pluginPreferLet},
     rules: {
       'indent': ['error', 2, {SwitchCase: 1}],

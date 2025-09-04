@@ -1,4 +1,4 @@
-import { type DefinitionBlueprintMap } from '@malloydata/malloy'
+import {type DefinitionBlueprintMap} from '@malloydata/malloy'
 import {DUCKDB_DIALECT_FUNCTIONS} from './node_modules/@malloydata/malloy/dist/dialect/duckdb/dialect_functions.js'
 
 // This file adds functions to existing Malloy dialects. Look for `dialect_function` files in Malloy to get more examples.
@@ -23,5 +23,5 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     takes: {'numerator': 'number', 'denominator': 'number'},
     returns: {measure: 'number'},
     impl: {function: 'SAFE_DIVIDE'},
-  }
+  },
 }
