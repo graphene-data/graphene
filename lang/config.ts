@@ -4,11 +4,12 @@ import path from 'path'
 export let config: Config = {dialect: 'duckdb'} as Config
 
 export interface Config {
-  dialect: 'bigquery' | 'duckdb'
+  dialect: string
   namespace?: string
   port?: number
 }
 
+// Used by tests
 export function setConfig (cfg: Config) {
   Object.keys(config).forEach((key) => delete config[key])
   Object.assign(config, cfg)
@@ -27,4 +28,12 @@ export async function loadConfig (dir:string): Promise<Config> {
   Object.assign(config, packageJsonObject.graphene || {dialect: 'duckdb'})
   config.dialect = config.dialect || 'duckdb'
   return config
+}
+
+const kwMap = {
+  bigquery: new Set(['DAY', 'HOUR', 'MINUTE', 'SECOND', 'YEAR', 'MONTH', 'WEEK', 'DAY_OF_WEEK', 'DAY_OF_YEAR', 'QUARTER']),
+  empty: new Set(),
+}
+export function dialectKeyword (str: string) {
+  return (kwMap[config.dialect] || kwMap.empty).has(str.toUpperCase())
 }

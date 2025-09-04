@@ -370,4 +370,10 @@ describe('lang', () => {
     expect('from orders select count_if(amount > 100)')
       .toRenderSql('select count_if(base."amount">100) as "col_0" from orders as base')
   })
+
+  it('supports functions with keyword args', () => {
+    setConfig({dialect: 'bigquery'})
+    expect('from users select timestamp_diff(created_at, created_at, day)')
+      .toRenderSql('select timestamp_diff(base.`created_at`,base.`created_at`,day) as `col_0` from `users` as base')
+  })
 })

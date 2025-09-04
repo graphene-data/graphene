@@ -18,7 +18,7 @@ export const
   Alias = 21,
   on = 23,
   JoinCondition = 24,
-  ColumnRef = 25,
+  Ref = 25,
   ComputedDef = 27,
   BinaryExpression = 28,
   UnaryExpression = 29,

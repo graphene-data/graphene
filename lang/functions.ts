@@ -24,4 +24,9 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     returns: {measure: 'number'},
     impl: {function: 'SAFE_DIVIDE'},
   },
+  'timestamp_diff': {
+    takes: {'start': 'timestamp', 'end': 'timestamp', 'unit': 'string'},
+    returns: {measure: 'number'},
+    impl: {function: 'TIMESTAMP_DIFF'},
+  },
 }
