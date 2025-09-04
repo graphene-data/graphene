@@ -1,7 +1,11 @@
 ## Soon
+* fix up `count` parsing
+* don't throw errors when analyzing
 * Make the ecomm example interesting (measures, pages)
+* remove underscore from join_one|many
 * Add in the rest of the chart components
 * Parse and analyze md files
+* Allow md queries to refer to earlier queries in the file
 * cli: `capture` command to get a screenshot of the whole page or a single chart. Can we use html2canvas and avoid puppeteer? Should also collect runtime errors
 * Inputs and dynamic queries (parameterized or interpolated?)
 * Throw an error if you try to redefine an existing table
@@ -32,3 +36,5 @@
 * ci for running tests
 * ci check that ensures you've built the parser
 * run checks before pushing `main`
+* explore draft PRs to discuss larger upcoming features. Can we sync them to slack threads?
+* automatic notify #whats-new on interesting commits

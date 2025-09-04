@@ -56,6 +56,7 @@ program
   .description('Check the project for errors')
   .action(async () => {
     await loadWorkspace(process.cwd())
+    analyze()
     if (getDiagnostics().length) {
       printDiagnostics(getDiagnostics())
       process.exit(1)
