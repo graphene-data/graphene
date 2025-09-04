@@ -254,13 +254,10 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   }
 
   switch (expr.name) {
-    case 'Literal': {
-      let raw = txt(expr)
-      if (raw.startsWith("'")) return {node: 'stringLiteral', literal: raw.slice(1, -1), type: 'string'}
-      if (/^\d+(\.\d+)?$/.test(raw)) return {node: 'numberLiteral', literal: raw, type: 'number'}
-      diag(expr, `Unknown literal type: ${raw}`)
-      return {node: 'stringLiteral', literal: raw, type: 'string'}
-    }
+    case 'Number': return {node: 'numberLiteral', literal: txt(expr), type: 'number'}
+    case 'Boolean': return {node: txt(expr).toLowerCase() == 'true' ? 'true' : 'false', type: 'boolean'}
+    case 'Null': return {node: 'null', type: 'string'}
+    case 'String': return {node: 'stringLiteral', literal: txt(expr).slice(1, -1), type: 'string'}
     case 'Ref': {
       // Refs are tokens that usually point to a column name, but can also be keywords in some dialects
       if (dialectKeyword(txt(expr))) {
@@ -335,7 +332,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     }
     case 'SubqueryExpression':
     default:
-      throw new Error(`Unsupported expression: ${txt(expr)}`)
+      throw new Error(`Unsupported expression "${expr.name}": ${txt(expr)}`)
   }
 }
 

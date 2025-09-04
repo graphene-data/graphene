@@ -24,7 +24,7 @@ export type Join = JoinFieldDef & {
   tablePath?: string // the full name, including namespace
 }
 
-export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'fieldref' | 'array' | 'record';
+export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'fieldref' | 'array' | 'record' | 'null';
 
 export interface ColumnField {
   name: string
