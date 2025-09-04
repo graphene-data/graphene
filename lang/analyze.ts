@@ -15,6 +15,8 @@ export let diagnostics: Diagnostic[] = []
 let TABLE_NODE_MAP = new WeakMap<Table, SyntaxNode>()
 let NODE_ENTITY_MAP = new NodeWeakMap<any>()
 
+const errorExpression: Expression = {node: 'error', type: 'error'}
+
 // Creates tables without analyzing them.
 // We need to know all the tables before we can analyze any table, since they refer to each other.
 export function findTables (file: FileInfo): Table[] {
@@ -242,7 +244,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   }
 }
 
-// Called for each expression in a query, recursively for complex expressions, including computed columns.
+// Called for each expression in a query (recursively for complex expressions) including computed columns.
 // This reports errors and warnings for symantic issues, as well as generating the final SQL.
 // Scope is used to track the current table we're operating within when analyzing measures. If it's null, the scope is the entire query.
 function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
@@ -259,9 +261,6 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       diag(expr, `Unknown literal type: ${raw}`)
       return {node: 'stringLiteral', literal: raw, type: 'string'}
     }
-    case 'Wildcard': {
-      return {node: ''} as Expression // what malloy expects for count(*)
-    }
     case 'ColumnRef': {
       let path = expr.getChildren('Identifier').map(i => txt(i))
       let {fields, inOutput} = lookup(expr, scope)
@@ -271,11 +270,20 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
         return {node: 'field', path, type: fields[0]?.type || 'unknown', isAgg: fields[0]?.isAgg} as Expression & FieldnameNode
       }
     }
-    case 'FunctionCall': {
-      return analyzeFunctionCall(expr, scope)
+    case 'FunctionCall': return analyzeFunctionCall(expr, scope)
+    case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
+    case 'CountAll': {
+      let e = analyzeExpression(expr.getChild('Expression')!, scope)
+      return {node: 'aggregate', function: 'count', e, type: 'number', isAgg: true}
     }
-    case 'Parenthetical': {
-      return analyzeExpression(expr.getChild('Expression')!, scope)
+    case 'Count': {
+      let countExpr = expr.getChild('Expression')
+      if (countExpr) {
+        let e = analyzeExpression(countExpr, scope)
+        return {node: 'aggregate', function: 'distinct', e, type: 'number', isAgg: true}
+      } else {
+        return {node: 'aggregate', function: 'count', e: {node: ''}, type: 'number', isAgg: true}
+      }
     }
     case 'BinaryExpression': {
       let left = analyzeExpression(expr.firstChild!, scope)
@@ -334,12 +342,6 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
   let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
 
-  if (name == 'count') { // count is a special case in the syntax it supports
-    if (args.length == 0) args.push({node: ''} as unknown as Expression) // hack for `count()`
-    if (args[0].node) name = 'distinct' // anything besides `count()` or `count(*)` is a distinct count
-    return {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
-  }
-
   if (isAggregate(name)) { // built-in agg functions (min, max, avg, sum)
     let res = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true} as Expression & AggregateExpr
 
@@ -348,7 +350,7 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
     // NB that malloy is unhappy if structPath is undefined or empty, so only set it if we have one.
     // TODO this assumes args[0] is a ColumnRef, so `avg(users.age / 2)` wouldn't work. We should make that work.
     if (isAsymmetricAggregate(name)) {
-      if (args[0]?.node !== 'field') diag(expr, 'Aggregate requires a column or expression')
+      if (args[0]?.node !== 'field') return diag(expr, 'Aggregates only supported on columns, not expressions', errorExpression)
       let path = (args[0] as FieldnameNode).path
       if (path.length > 1) {
         res.structPath = path.slice(0, -1)
@@ -358,12 +360,14 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
     return res
   }
 
+  // malloy maps `month(date)` to `extract(month from date)`
   const extracts = ['quarter', 'month', 'week', 'day', 'hour', 'minute', 'second', 'year', 'day_of_week', 'day_of_year']
   if (extracts.includes(name)) {
-    if (args[0]?.type != 'timestamp') return diag(expr, 'Extract requires a time expression')
+    if (args[0]?.type != 'timestamp') diag(expr, 'Extract requires a time expression')
     return {node: 'extract', units: name as ExtractUnit, e: args[0] as TimeExpr, type: 'number', isAgg: false}
   }
 
+  // otherwise, go look up a regular function. Check both malloy's global namespace and the dialect namespace.
   let entry = new GlobalNameSpace().getEntry(name)
   let dialect = getDialect(config.dialect)
   let dialectEntry = new DialectNameSpace(dialect).getEntry(name)
@@ -373,7 +377,7 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   let overload: FunctionOverloadDef = overloads.find(o => {
     return o.params.length == args.length || !!o.params.find(p => p.isVariadic)
   })
-  if (!overload) return diag(expr, `Unknown function: ${name}`, {} as Expression)
+  if (!overload) return diag(expr, `Unknown function: ${name}`, errorExpression)
 
   let type: FieldType
   if (overload.returnType.type == 'null') type = 'string'
@@ -482,6 +486,8 @@ function nameExpression (expr: Expression, scope: Scope, aliasNode: SyntaxNode |
   return `col_${scope.outputFields.length}`
 }
 
+// Logs that we found an issue in the parse tree. The optional return lets return IR and try to continue the analysis.
+// The alternative is we throw an error, but then we wouldn't see other errors later in the tree.
 function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
   let file = getFile(node)
   let from = getPosition(node.from, file)

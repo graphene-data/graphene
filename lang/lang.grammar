@@ -11,7 +11,8 @@ SelectClause {
 }
 
 SelectItem {
-  expression (Kw<"as">? Alias)?
+  expression (Kw<"as">? Alias)? |
+  Wildcard
 }
 
 Wildcard {
@@ -113,8 +114,12 @@ expression[@isGroup=Expression] {
   ExistsExpression |
   InExpression |
   NullTestExpression |
-  Wildcard |
-  primaryExpression
+  Literal |
+  ColumnRef |
+  Count |
+  FunctionCall |
+  Parenthetical |
+  SubqueryExpression
 }
 
 BinaryExpression {
@@ -180,14 +185,6 @@ InValueList {
   binary @cut
 }
 
-primaryExpression {
-  Literal |
-  ColumnRef |
-  FunctionCall |
-  Parenthetical |
-  SubqueryExpression
-}
-
 // Computed defs cannot start with parenthetical to avoid ambiguity
 computedExpression[@isGroup=Expression] {
   BinaryExpression |
@@ -195,13 +192,13 @@ computedExpression[@isGroup=Expression] {
   CaseExpression |
   ExistsExpression |
   InExpression |
-  Wildcard |
   computedPrimary
 }
 
 computedPrimary {
   Literal |
   ColumnRef |
+  Count |
   FunctionCall
 }
 
@@ -215,6 +212,10 @@ SubqueryExpression {
 
 ColumnRef {
   (Identifier ".")* Identifier
+}
+
+Count {
+  Kw<"count"> "(" ("*"? | Kw<"distinct">? expression) ")"
 }
 
 FunctionCall {
