@@ -1,4 +1,4 @@
-import {toSql, analyze, getDiagnostics} from './core.ts'
+import {toSql, analyze, getDiagnostics, type Diagnostic, clearWorkspace} from './core.ts'
 import {expect as vitestExpect} from 'vitest'
 import {DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 
@@ -75,10 +75,10 @@ function codeFrame (source: string, from: number, to: number): string {
   return `${lineText}\n${marker}`
 }
 
-function formatDiagnostics (source: string, diagnostics: {from:number; to:number; message:string}[]): string {
+function formatDiagnostics (source: string, diagnostics: Diagnostic[]): string {
   if (!diagnostics.length) return ''
   return diagnostics.map((d, i) => {
-    let frame = codeFrame(source, d.from, d.to)
+    let frame = codeFrame(source, d.from.offset, d.to.offset)
     return `#${i + 1}: ${d.message}\n${frame}`
   }).join('\n\n')
 }
@@ -94,13 +94,15 @@ export async function prepareEcommerceTables () {
 vitestExpect.extend({
   toRenderSql (received: string, expectedSql: string) {
     if (DEBUG) console.log('Query:', received)
-    let queries = analyze(`${TEST_PRELUDE}\n\n${received}`, 'test.gsql')
+    clearWorkspace()
+    let gsql = `${TEST_PRELUDE}\n\n${received}`
+    let queries = analyze(gsql, 'test.gsql')
     let diagnostics = getDiagnostics()
 
     if (diagnostics.length > 0) {
       return {
         pass: false,
-        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(sql, diagnostics)}`,
+        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(gsql, diagnostics)}`,
       }
     }
 
@@ -118,6 +120,7 @@ vitestExpect.extend({
 
   async toReturnRows (received: string, ...expectedRows: unknown[][]) {
     if (DEBUG) console.log('Query:', received)
+    clearWorkspace()
     let queries = analyze(`${TEST_PRELUDE}\n\n${received}`, 'test.gsql')
     let diagnostics = getDiagnostics()
 

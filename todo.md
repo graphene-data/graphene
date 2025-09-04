@@ -1,4 +1,8 @@
 ## Soon
+* bool/null literal types (prob refactor the rule for literals?)
+* structPath for non built-in aggregates
+* add `now()` function
+* make `count(col)` behave like regular sql (ie count non-null)
 * don't throw errors when analyzing
 * Make the ecomm example interesting (measures, pages)
 * remove underscore from join_one|many
@@ -14,6 +18,7 @@
 
 
 ## Eventually
+* hover over column/tables to get a rich preview in the browser
 * Queries and expressions in component attributes
 * Report hosting on graphenedata.com (auth, db cred storage, query proxying)
 * loveable-style explorer

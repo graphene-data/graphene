@@ -103,7 +103,7 @@ DataType {
 // Ideally we could just use `expression` as the join condition, but that introduces ambiguity when parsing, since we don't know when the expression ends and new ComputedDef begins.
 // We could require commas, or make every ComputeDef start with `computed`, but those both feel a bit clumsy.
 JoinCondition[@isGroup=Expression, @name=BinaryExpression] {
-  ColumnRef "=" ColumnRef
+  Ref "=" Ref
 }
 
 // Expressions
@@ -115,7 +115,7 @@ expression[@isGroup=Expression] {
   InExpression |
   NullTestExpression |
   Literal |
-  ColumnRef |
+  Ref |
   Count |
   FunctionCall |
   Parenthetical |
@@ -197,7 +197,7 @@ computedExpression[@isGroup=Expression] {
 
 computedPrimary {
   Literal |
-  ColumnRef |
+  Ref |
   Count |
   FunctionCall
 }
@@ -210,7 +210,7 @@ SubqueryExpression {
   "(" QueryStatement ")"
 }
 
-ColumnRef {
+Ref {
   (Identifier ".")* Identifier
 }
 

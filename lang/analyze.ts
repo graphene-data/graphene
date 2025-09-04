@@ -6,7 +6,7 @@ import {DialectNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/
 import {getDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
 import {txt, compact, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import {config} from './config.ts'
+import {config, dialectKeyword} from './config.ts'
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
@@ -261,7 +261,12 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       diag(expr, `Unknown literal type: ${raw}`)
       return {node: 'stringLiteral', literal: raw, type: 'string'}
     }
-    case 'ColumnRef': {
+    case 'Ref': {
+      // Refs are tokens that usually point to a column name, but can also be keywords in some dialects
+      if (dialectKeyword(txt(expr))) {
+        return {node: 'genericSQLExpr', kids: {args: []}, type: 'string', src: [txt(expr)]} as any
+      }
+
       let path = expr.getChildren('Identifier').map(i => txt(i))
       let {fields, inOutput} = lookup(expr, scope)
       if (inOutput && fields[0].isAgg) {
@@ -272,10 +277,6 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     }
     case 'FunctionCall': return analyzeFunctionCall(expr, scope)
     case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
-    case 'CountAll': {
-      let e = analyzeExpression(expr.getChild('Expression')!, scope)
-      return {node: 'aggregate', function: 'count', e, type: 'number', isAgg: true}
-    }
     case 'Count': {
       let countExpr = expr.getChild('Expression')
       if (countExpr) {
@@ -404,7 +405,7 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   }
 }
 
-// Get the field that a ColumnRef refers to.
+// Get the field that a Ref refers to.
 // This could be a column on a table, the alias of a column in the query, or a wildcard. We'll also follow dotted paths to traverse joins.
 // The lookup is redundant with Malloy, but doing it means we get type info and metadata on all fields.
 function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutput: boolean} {
