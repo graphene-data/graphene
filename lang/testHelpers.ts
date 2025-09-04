@@ -96,7 +96,6 @@ vitestExpect.extend({
     if (DEBUG) console.log('Query:', received)
     let queries = analyze(`${TEST_PRELUDE}\n\n${received}`, 'test.gsql')
     let diagnostics = getDiagnostics()
-    let sql = toSql(queries[0])
 
     if (diagnostics.length > 0) {
       return {
@@ -105,6 +104,7 @@ vitestExpect.extend({
       }
     }
 
+    let sql = toSql(queries[0])
     let pass = normalizeSql(sql) === normalizeSql(expectedSql)
     return {
       pass,
@@ -120,7 +120,6 @@ vitestExpect.extend({
     if (DEBUG) console.log('Query:', received)
     let queries = analyze(`${TEST_PRELUDE}\n\n${received}`, 'test.gsql')
     let diagnostics = getDiagnostics()
-    let sql = toSql(queries[0])
 
     if (diagnostics.length > 0) {
       return {
@@ -128,6 +127,7 @@ vitestExpect.extend({
         message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(received, diagnostics)}`,
       }
     }
+    let sql = toSql(queries[0])
 
     try {
       let reader = await conn.runAndReadAll(sql)
