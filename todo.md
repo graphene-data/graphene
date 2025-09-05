@@ -1,6 +1,5 @@
 ## Soon
 * self-ref in queries: `from users select users.id`
-* figure out why some joins are failing on ecomm
 * get the ecomm pages working
 * Add in the rest of the chart components
 * Parse and analyze md files
@@ -10,12 +9,14 @@
 * rename `table` to `extend`
 * remove underscore from join_one|many
 * Throw an error if you try to redefine an existing table
+* unskip (and fix!) new agg tests
 * Telemetry and error tracking
 * vscode commands to run the server
 * Package and publish vscode extension
 
 
 ## Eventually
+* handle cycles in measures - measures could refer to joins (or other measures) that haven't been analyzed yet. 
 * make `count(col)` behave like regular sql (ie count non-null)
 * create our own date functions: `day`, `month` for truncation, `now()`
 * allow referencing just a join `from users count(orders)` -> should just get count distinct of primary key

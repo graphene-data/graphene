@@ -335,7 +335,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
   let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
-  let base: Expression
+  let ret: Expression
 
   // get the right overload for the args. Also check out malloy's `findOverload` for picking the right one
   let overload = findOverloads(name, config.dialect).find(o => {
@@ -348,22 +348,21 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
     return diag(expr, `Unsupported function return type ${type} from function ${name}`, errorExpression)
   }
 
-
-  // Aggregates need a `structPath`, which in malloy is the `orders.users` in `orders.users.avg(age)`. We'd rather you write `avg(orders.users.age)`, so we
-  // need to extract that path from the arguments. These paths can be buried in complex expressions, so go find all of them.
-  let structPaths: string[] = []
+  // Aggregates need a `structPath`, which in malloy is the `orders.users` in `orders.users.avg(age)`.
+  // We'd rather you write `avg(orders.users.age)`, so we need to extract that path from the arguments.
+  // These paths can be buried in complex expressions, so go find all of them.
+  let structPaths = new Set<string>()
   args.forEach(a => walkExpression(a, e => {
     if (e.node != 'field') return
-    let path = e.path.slice(0, -1).join('.')
-    if (path && !structPaths.includes(path)) structPaths.push(path)
+    structPaths.add(e.path.slice(0, -1).join('.') || scope.table.name)
   }))
 
   if (['count', 'min', 'max', 'avg', 'sum'].includes(name.toLowerCase())) {
     // malloy has a special node type for built-in aggregates
-    base = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
+    ret = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
   } else if (overload && type) {
     // if we have an overload, it's a function call
-    base = {
+    ret = {
       node: 'function_call', type, name, overload,
       expressionType: overload.returnType.expressionType || 'scalar',
       kids: {args: args as any},
@@ -374,14 +373,15 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   }
 
   // Right now, we only support a single structPath in aggregate functions
-  if (structPaths.length > 1 && (base.node == 'aggregate' || base.expressionType == 'aggregate')) {
-    return diag(expr, 'Graphene only supports a single join within aggregates. This one has: ' + structPaths.join(', '), errorExpression)
+  if (structPaths.size > 1 && (ret.node == 'aggregate' || ret.expressionType == 'aggregate')) {
+    return diag(expr, 'Graphene only supports a single table within aggregates. This one has: ' + Array.from(structPaths).join(', '), errorExpression)
   }
 
+  // Malloy is unhappy if structPath is undefined or empty, so only set it if we have one. Malloy also doesn't consider the base table as a structPath.
+  let foriegnPaths = Array.from(structPaths).filter(p => p != scope.table.name)
+  if (foriegnPaths.length > 0) ret.structPath = foriegnPaths[0].split('.')
 
-  // Malloy is unhappy if structPath is undefined or empty, so only set it if we have one.
-  if (structPaths.length > 0) base.structPath = structPaths[0].split('.')
-  return base
+  return ret
 }
 
 function isSupportedType (value: string): value is FieldType {
