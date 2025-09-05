@@ -17,8 +17,8 @@ table order_items (
   join_one inventory_items on inventory_items.id = inventory_item_id
 
   sum(sale_price) as revenue
-  sum(sale_price - inventory_items.cost) as gross_profit
-  safe_divide(sum(sale_price - inventory_items.cost), sum(sale_price)) as gross_margin_pct
+  -- sum(sale_price - inventory_items.cost) as gross_profit
+  -- safe_divide(sum(sale_price - inventory_items.cost), sum(sale_price)) as gross_margin_pct
   avg(timestamp_diff(shipped_at, created_at, day)) as fulfillment_time_days
   avg(timestamp_diff(delivered_at, shipped_at, day)) as delivery_time_days
   safe_divide(count_if(returned_at is not null), count(*)) as return_rate
