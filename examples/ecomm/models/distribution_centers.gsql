@@ -8,9 +8,9 @@ table distribution_centers (
   join_many products on id = products.distribution_center_id,
   join_many inventory_items on id = inventory_items.product_distribution_center_id
 
-  sum(products.order_items.sale_price) as revenue_served
+  -- sum(products.order_items.sale_price) as revenue_served -- creates a cycle
   count_if(inventory_items.sold_at is not null) as items_sold
-  avg(timestamp_diff(products.order_items.shipped_at, products.order_items.created_at, day)) as avg_shipping_latency_days
+  -- avg(timestamp_diff(products.order_items.shipped_at, products.order_items.created_at, day)) as avg_shipping_latency_days -- creates a cycle
   -- avg(st_distance(distribution_center_geom, products.order_items.users.user_geom)) as avg_distance_to_users_m
 )
 

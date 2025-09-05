@@ -38,12 +38,12 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   'if': {...DUCKDB_DIALECT_FUNCTIONS['if']},
   'safe_divide': {
     takes: {'numerator': 'number', 'denominator': 'number'},
-    returns: {measure: 'number'},
+    returns: 'number',
     impl: {function: 'SAFE_DIVIDE'},
   },
   'timestamp_diff': {
     takes: {'start': 'timestamp', 'end': 'timestamp', 'unit': 'string'},
-    returns: {measure: 'number'},
+    returns: 'number',
     impl: {function: 'TIMESTAMP_DIFF'},
   },
 }
