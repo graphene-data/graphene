@@ -387,11 +387,28 @@ describe('lang', () => {
       .toRenderSql('select base."name" as "name", null as "col_1", true as "col_2", false as "col_3" from users as base')
   })
 
-  it('warns on multiple structPaths in aggregate functions', async () => {
-    expect('from users select name, sum(orders.amount, payments.amount)')
-      .toHaveDiagnostic(/Graphene only supports a single join within aggregates. This one has: orders, payments/i)
+  it('warns on multiple joins in aggregate functions', async () => {
+    expect('from users select name, sum(orders.amount + payments.amount)')
+      .toHaveDiagnostic(/Graphene only supports a single table within aggregates. This one has: orders, payments/i)
 
+    expect('from users select name, sum(age + payments.amount)') // this also includes fields on the base table
+      .toHaveDiagnostic(/Graphene only supports a single table within aggregates. This one has: users, payments/i)
+
+    // scalar functions can have multiple structPaths
     await expect('from users select name, greatest(sum(orders.amount), sum(payments.amount))')
       .toReturnRows(['Alice', 100], ['Bob', 50])
+  })
+
+  it.skip('errors when aggregates are nested', () => {
+    expect('from users select name, sum(total_orders)')
+      .toHaveDiagnostic(/Aggregates cannot be nested/i)
+  })
+
+  it.skip('errors if you have a non-agg measure that uses a join_many', () => {
+    expect(`table t (
+      uid int
+      join_many users on users.id = uid
+      users.age as user_age
+    )`).toHaveDiagnostic(/Fields that refer to a `join many` should aggregate/i)
   })
 })
