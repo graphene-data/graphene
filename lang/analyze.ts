@@ -61,12 +61,10 @@ function analyzeDatabaseTable (table: Table) {
       if (table.primaryKey) diag(cn, `Table ${table.name} has multiple primary keys`)
       table.primaryKey = name
     }
+    let type = convertDataType(txt(cn.getChild('DataType')))
+    if (!type) return diag(cn, `Unsupported data type: ${txt(cn.getChild('DataType'))}`)
 
-    table.fields.push({
-      name,
-      type: convertDataType(txt(cn.getChild('DataType'))),
-      metadata: extractLeadingMetadata(cn),
-    })
+    table.fields.push({name, type, metadata: extractLeadingMetadata(cn)})
   })
 
   // joins, like `join_one orders as order ON order.id = item.order_id`
@@ -77,7 +75,7 @@ function analyzeDatabaseTable (table: Table) {
     if (!target.analyzed) analyzeTable(target)
     let name = txt(jn.getChild('Alias')) || target.name
     let joinType = {'join_many': 'many', 'join_one': 'one'}[txt(jn.getChild('JoinType'))]
-    if (!joinType) throw new Error(`Unknown join type: ${txt(jn.getChild('JoinType'))}`)
+    if (!joinType) return diag(jn, 'Unknown join type')
 
     // Malloy does this bonkers thing where a JoinField contains both the details of that join, and the entire target table.
     // This clone is important, otherwise two tables that join each other create an infinite loop when we give them to Malloy.
@@ -298,7 +296,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       if (opTxt === 'not') return {node: 'not', e: child, type: 'boolean', isAgg: child.isAgg}
       if (opTxt === '-') return {node: 'unary-', e: child, type: child.type, isAgg: child.isAgg}
       if (opTxt === '+') return {node: '()', e: child, type: child.type, isAgg: child.isAgg}
-      throw new Error(`Unknown unary operator: ${opTxt}`)
+      return diag(expr, `Unknown unary operator: ${opTxt}`, {} as Expression)
     }
     case 'CaseExpression': {
       let caseValue = expr.getChild('Expression')
@@ -330,7 +328,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     }
     case 'SubqueryExpression':
     default:
-      throw new Error(`Unsupported expression "${expr.name}": ${txt(expr)}`)
+      return diag(expr, `Unsupported expression "${expr.name}": ${txt(expr)}`, {} as Expression)
   }
 }
 
@@ -410,7 +408,7 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
     if (!isJoin(next)) return diag(part, `${name} is not a join on ${curr.table.name}`, def)
 
     curr = {table: lookupTable(next.tableName || '', part)!, outputFields: []}
-    if (!curr.table) throw new Error('Following valid join but we couldnt find the table')
+    if (!curr.table) return diag(part, 'Following valid join but we couldnt find the table', def)
     NODE_ENTITY_MAP.set(part, {entityType: 'table', table: curr.table})
   }
 
@@ -507,7 +505,7 @@ function isJoin (field: Field): field is Join {
   return field.type == 'table' || (field as any).type == 'query_source'
 }
 
-function convertDataType (dataType: string): FieldType {
+function convertDataType (dataType: string): FieldType | null {
   switch (dataType.toUpperCase()) {
     case 'INT': return 'number'
     case 'INT64': return 'number'
@@ -530,7 +528,7 @@ function convertDataType (dataType: string): FieldType {
     case 'BYTEINT': return 'number'
     case 'BIGDECIMAL': return 'number'
     case 'GEOGRAPHY': return 'string'
-    default: throw new Error(`Unknown data type: ${dataType}`)
+    default: return null
   }
 }
 
