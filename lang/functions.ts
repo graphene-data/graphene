@@ -1,7 +1,24 @@
 import {type DefinitionBlueprintMap} from '@malloydata/malloy'
 import {DUCKDB_DIALECT_FUNCTIONS} from './node_modules/@malloydata/malloy/dist/dialect/duckdb/dialect_functions.js'
+import {GlobalNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/global-name-space.js'
+import {DialectNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/dialect-name-space.js'
+import type {FunctionOverloadDef} from './node_modules/@malloydata/malloy/dist/model/index.js'
+import {getDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
 
 // This file adds functions to existing Malloy dialects. Look for `dialect_function` files in Malloy to get more examples.
+
+let globalNamespace = new GlobalNameSpace()
+let dialectNamespaces = new Map<string, DialectNameSpace>()
+
+export function findOverloads (name: string, dialect: string): FunctionOverloadDef[] {
+  if (!dialectNamespaces.has(dialect)) {
+    let d = getDialect(dialect)
+    dialectNamespaces.set(dialect, new DialectNameSpace(d))
+  }
+
+  let res = dialectNamespaces.get(dialect)!.getEntry(name) || globalNamespace.getEntry(name)
+  return res?.entry ? (res.entry as any).overloads : []
+}
 
 DUCKDB_DIALECT_FUNCTIONS['count_if'] = {
   takes: {'value': 'boolean'},

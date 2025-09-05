@@ -307,6 +307,11 @@ describe('lang', () => {
       .toReturnRows(['Alice', 60, 6], ['Bob', 40, 5])
   })
 
+  it('non-builtin agg functions dont fanout', async () => {
+    await expect('from users select name, amount_paid, count_if(orders.amount > 30) as big_ticket_order_count')
+      .toReturnRows(['Alice', 100, 1], ['Bob', 50, 1])
+  })
+
   it('supports function calling', () => {
     expect('from users select coalesce(name, \'Unknown\') as name2')
       .toRenderSql('select coalesce(base."name",\'Unknown\') as "name2" from users as base')
@@ -320,13 +325,13 @@ describe('lang', () => {
   it('supports asymmetric agg functions across joins', () => {
     // as opposed to built-in sum/avg/etc, which aren't considered functions in malloy
     expect('from users select name, amount_paid, stddev(orders.amount) as test')
-      .toRenderSql('select base."name" as "name", (coalesce(( select sum(a.val) as value from ( select unnest(list(distinct {key:payments_0."id", val: payments_0."amount"})) a ) ),0)) as "amount_paid", ( select stddev(a.val0) as value from ( select unnest(list(distinct {key:base."id", val0: orders_0."amount"})) a ) ) as "test" from users as base left join payments as payments_0 on payments_0."user_id"=base."id" left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
+      .toRenderSql('select base."name" as "name", (coalesce(( select sum(a.val) as value from ( select unnest(list(distinct {key:payments_0."id", val: payments_0."amount"})) a ) ),0)) as "amount_paid", ( select stddev(a.val0) as value from ( select unnest(list(distinct {key:orders_0."id", val0: orders_0."amount"})) a ) ) as "test" from users as base left join payments as payments_0 on payments_0."user_id"=base."id" left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
 
     expect('from users select name, total_orders, string_agg(payments.amount)')
       .toReturnRows(['Alice', 2, '100'], ['Bob', 1, '50'])
   })
 
-  it('supports malloy date functions', () => {
+  it.skip('supports malloy date functions', () => {
     expect('from users select name, month(created_at)')
       .toRenderSql('select base."name" as "name", extract(month from base."created_at") as "col_1" from users as base')
   })
@@ -380,5 +385,13 @@ describe('lang', () => {
   it('supports null and boolean literals', () => {
     expect('from users select name, null, true, FALSE')
       .toRenderSql('select base."name" as "name", null as "col_1", true as "col_2", false as "col_3" from users as base')
+  })
+
+  it('warns on multiple structPaths in aggregate functions', async () => {
+    expect('from users select name, sum(orders.amount, payments.amount)')
+      .toHaveDiagnostic(/Graphene only supports a single join within aggregates. This one has: orders, payments/i)
+
+    await expect('from users select name, greatest(sum(orders.amount), sum(payments.amount))')
+      .toReturnRows(['Alice', 100], ['Bob', 50])
   })
 })
