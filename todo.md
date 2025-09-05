@@ -1,13 +1,14 @@
 ## Soon
-* don't throw errors when analyzing
-* Make the ecomm example interesting (measures, pages)
-* rename `table` to `extend`
-* remove underscore from join_one|many
+* self-ref in queries: `from users select users.id`
+* figure out why some joins are failing on ecomm
+* get the ecomm pages working
 * Add in the rest of the chart components
 * Parse and analyze md files
 * Allow md queries to refer to earlier queries in the file
 * cli: `capture` command to get a screenshot of the whole page or a single chart. Can we use html2canvas and avoid puppeteer? Should also collect runtime errors
 * Inputs and dynamic queries (parameterized or interpolated?)
+* rename `table` to `extend`
+* remove underscore from join_one|many
 * Throw an error if you try to redefine an existing table
 * Telemetry and error tracking
 * vscode commands to run the server
@@ -22,7 +23,6 @@
 * Queries and expressions in component attributes
 * Report hosting on graphenedata.com (auth, db cred storage, query proxying)
 * loveable-style explorer
-* self-ref in queries: `from users select users.id`
 * Agent evals - test the efficacy of model/prompt/tool changes
 * cache schema info - allows referencing unmodeled tables, dropping dataTypes from gsql
 * Type checking errors

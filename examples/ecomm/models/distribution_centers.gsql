@@ -11,7 +11,7 @@ table distribution_centers (
   sum(products.order_items.sale_price) as revenue_served
   count_if(inventory_items.sold_at is not null) as items_sold
   avg(timestamp_diff(products.order_items.shipped_at, products.order_items.created_at, day)) as avg_shipping_latency_days
-  avg(st_distance(distribution_center_geom, products.order_items.users.user_geom)) as avg_distance_to_users_m
+  -- avg(st_distance(distribution_center_geom, products.order_items.users.user_geom)) as avg_distance_to_users_m
 )
 
 
