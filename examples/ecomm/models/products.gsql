@@ -15,8 +15,8 @@ table products (
 
   count(order_items.id) as units_sold
   sum(order_items.sale_price) as product_revenue
-  sum(order_items.sale_price - inventory_items.cost) as gross_margin_amount
-  safe_divide(sum(order_items.sale_price - inventory_items.cost), sum(order_items.sale_price)) as gross_margin_pct
+  -- sum(order_items.sale_price - inventory_items.cost) as gross_margin_amount
+  -- safe_divide(sum(order_items.sale_price - inventory_items.cost), sum(order_items.sale_price)) as gross_margin_pct
   safe_divide(count_if(order_items.returned_at is not null), count(order_items.id)) as return_rate
 )
 
