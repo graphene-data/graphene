@@ -1,12 +1,10 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import type {AggregateFunctionType, StructRef, AggregateExpr, FieldnameNode, OutputFieldNode, FunctionOverloadDef, ExtractUnit, TimeExpr} from './node_modules/@malloydata/malloy/dist/model/index.js'
-import {GlobalNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/global-name-space.js'
-import {DialectNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/dialect-name-space.js'
-import {getDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
+import type {AggregateFunctionType, StructRef} from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {txt, compact, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config, dialectKeyword} from './config.ts'
+import {findOverloads} from './functions.ts'
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
@@ -267,9 +265,9 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       let path = expr.getChildren('Identifier').map(i => txt(i))
       let {fields, inOutput} = lookup(expr, scope)
       if (inOutput && fields[0].isAgg) {
-        return {node: 'outputField', name: path[0], type: fields[0].type, isAgg: fields[0].isAgg} as Expression & OutputFieldNode
+        return {node: 'outputField', name: path[0], type: fields[0].type, isAgg: fields[0].isAgg}
       } else {
-        return {node: 'field', path, type: fields[0]?.type || 'unknown', isAgg: fields[0]?.isAgg} as Expression & FieldnameNode
+        return {node: 'field', path, type: fields[0]?.type || 'unknown', isAgg: fields[0]?.isAgg}
       }
     }
     case 'FunctionCall': return analyzeFunctionCall(expr, scope)
@@ -339,67 +337,58 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
   let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
+  let base: Expression
 
-  if (isAggregate(name)) { // built-in agg functions (min, max, avg, sum)
-    let res = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true} as Expression & AggregateExpr
-
-    // Aggregates need a `structPath`, which in malloy is the `users` in `users.avg(age)`. We'd rather you write `avg(users.age)`, so we
-    // need to get that path from the arguments, and pass it to malloy as the structPath.
-    // NB that malloy is unhappy if structPath is undefined or empty, so only set it if we have one.
-    // TODO this assumes args[0] is a ColumnRef, so `avg(users.age / 2)` wouldn't work. We should make that work.
-    if (isAsymmetricAggregate(name)) {
-      if (args[0]?.node !== 'field') return diag(expr, 'Aggregates only supported on columns, not expressions', errorExpression)
-      let path = (args[0] as FieldnameNode).path
-      if (path.length > 1) {
-        res.structPath = path.slice(0, -1)
-      }
-    }
-
-    return res
-  }
-
-  // malloy maps `month(date)` to `extract(month from date)`
-  let extracts = ['quarter', 'month', 'week', 'day', 'hour', 'minute', 'second', 'year', 'day_of_week', 'day_of_year']
-  if (extracts.includes(name)) {
-    if (args[0]?.type != 'timestamp') diag(expr, 'Extract requires a time expression')
-    return {node: 'extract', units: name as ExtractUnit, e: args[0] as TimeExpr, type: 'number', isAgg: false}
-  }
-
-  // otherwise, go look up a regular function. Check both malloy's global namespace and the dialect namespace.
-  let entry = new GlobalNameSpace().getEntry(name)
-  let dialect = getDialect(config.dialect)
-  let dialectEntry = new DialectNameSpace(dialect).getEntry(name)
-  let overloads = ((dialectEntry || entry)?.entry as any)?.overloads || []
-
-  // check out malloy's `findOverload` for picking the right one
-  let overload: FunctionOverloadDef = overloads.find(o => {
+  // get the right overload for the args. Also check out malloy's `findOverload` for picking the right one
+  let overload = findOverloads(name, config.dialect).find(o => {
     return o.params.length == args.length || !!o.params.find(p => p.isVariadic)
   })
-  if (!overload) return diag(expr, `Unknown function: ${name}`, errorExpression)
 
-  let type: FieldType
-  if (overload.returnType.type == 'null') type = 'string'
-  else if (overload.returnType.type == 'generic') type = args[0]?.type || 'string'
-  else if (overload.returnType.type == 'turtle') throw new Error('Turtle functions not supported')
-  else if (overload.returnType.type == 'composite') throw new Error('Composite functions not supported')
-  else if (overload.returnType.type == 'filter expression') throw new Error('Filter expressions not supported')
-  else if (overload.returnType.type == 'sql native') throw new Error('SQL native functions not supported')
-  else if (overload.returnType.type == 'regular expression') throw new Error('Regular expression functions not supported')
-  else if (overload.returnType.type == 'table') throw new Error('Table functions not supported')
-  else if (overload.returnType.type == 'sql_select') throw new Error('SQL select functions not supported')
-  else if (overload.returnType.type == 'query_source') throw new Error('Query source functions not supported')
-  else if (overload.returnType.type == 'duration') throw new Error('Duration functions not supported')
-  else type = overload.returnType.type
-
-  return {
-    node: 'function_call',
-    type,
-    name,
-    overload,
-    expressionType: overload.returnType.expressionType || 'scalar',
-    kids: {args: args as any},
-    isAgg: overload.returnType.expressionType == 'aggregate',
+  let type = overload?.returnType.type
+  if (type == 'generic') type = args[0]?.type as any || 'string'
+  if (type && !isSupportedType(type)) {
+    return diag(expr, `Unsupported function return type ${type} from function ${name}`, errorExpression)
   }
+
+
+  // Aggregates need a `structPath`, which in malloy is the `orders.users` in `orders.users.avg(age)`. We'd rather you write `avg(orders.users.age)`, so we
+  // need to extract that path from the arguments. These paths can be buried in complex expressions, so go find all of them.
+  let structPaths: string[] = []
+  args.forEach(a => walkExpression(a, e => {
+    if (e.node != 'field') return
+    let path = e.path.slice(0, -1).join('.')
+    if (path && !structPaths.includes(path)) structPaths.push(path)
+  }))
+
+  if (['count', 'min', 'max', 'avg', 'sum'].includes(name.toLowerCase())) {
+    // malloy has a special node type for built-in aggregates
+    base = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
+  } else if (overload && type) {
+    // if we have an overload, it's a function call
+    base = {
+      node: 'function_call', type, name, overload,
+      expressionType: overload.returnType.expressionType || 'scalar',
+      kids: {args: args as any},
+      isAgg: overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg),
+    }
+  } else {
+    return diag(expr, `Unknown function: ${name}`, errorExpression)
+  }
+
+  // Right now, we only support a single structPath in aggregate functions
+  if (structPaths.length > 1 && (base.node == 'aggregate' || base.expressionType == 'aggregate')) {
+    return diag(expr, 'Graphene only supports a single join within aggregates. This one has: ' + structPaths.join(', '), errorExpression)
+  }
+
+
+  // Malloy is unhappy if structPath is undefined or empty, so only set it if we have one.
+  if (structPaths.length > 0) base.structPath = structPaths[0].split('.')
+  return base
+}
+
+function isSupportedType (value: string): value is FieldType {
+  let supported = ['string', 'number', 'boolean', 'date', 'timestamp', 'json', 'sql native', 'error', 'array', 'record', 'null', 'generic']
+  return supported.includes(value)
 }
 
 // Get the field that a Ref refers to.
@@ -494,20 +483,23 @@ function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultRetu
   return defaultReturn!
 }
 
+function walkExpression (root: any, fn: (expr: Expression) => void) {
+  fn(root)
+  if (root.e) walkExpression(root.e, fn)
+  if (root.kids) {
+    Object.values(root.kids).forEach(kid => {
+      if (Array.isArray(kid)) kid.forEach(k => walkExpression(k, fn))
+      else walkExpression(kid, fn)
+    })
+  }
+}
+
 // turn `a and b and c` into `[a, b, c]`
 function unpackAnds (expr: Expression): Expression[] {
   if (expr.node == 'and') {
     return [expr.kids.left as Expression, expr.kids.right as Expression].flatMap(unpackAnds)
   }
   return [expr]
-}
-
-function isAsymmetricAggregate (name: string): boolean {
-  return ['avg', 'sum'].includes(name.toLowerCase())
-}
-
-function isAggregate (name: string): boolean {
-  return ['count', 'min', 'max', 'avg', 'sum'].includes(name.toLowerCase())
 }
 
 function isJoin (field: Field): field is Join {

@@ -15,6 +15,7 @@ export interface Scope {
 export type Expression = Expr & {
   type: FieldType
   isAgg?: boolean
+  structPath?: string[]
 }
 
 export type Join = JoinFieldDef & {

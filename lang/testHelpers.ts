@@ -131,6 +131,7 @@ vitestExpect.extend({
       }
     }
     let sql = toSql(queries[0])
+    if (DEBUG) console.log('SQL:', sql)
 
     try {
       let reader = await conn.runAndReadAll(sql)
