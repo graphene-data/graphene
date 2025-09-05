@@ -3,7 +3,8 @@ import * as malloy from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {StandardSQLDialect} from './node_modules/@malloydata/malloy/dist/dialect/standardsql/index.js'
 import {registerDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
 import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect/functions/index.js'
-import {readFile, glob} from 'node:fs/promises'
+import {readFile} from 'node:fs/promises'
+import {glob} from 'glob'
 import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity} from './analyze.ts'
 import {parser} from './parser.js'
 import {type Query} from './types.ts'
@@ -25,7 +26,8 @@ export function getDiagnostics () { return diagnostics }
 export async function loadWorkspace (dir:string) {
   await loadConfig(dir)
 
-  for await (let file of glob('**/*.gsql', {cwd: dir})) {
+  let files = await glob('**/*.gsql', {cwd: dir})
+  for await (let file of files) {
     let contents = await readFile(path.join(dir, file), 'utf-8')
     updateFile(contents, file)
   }

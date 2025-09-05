@@ -4,7 +4,7 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-pnpmfileChecksum: sha256-P96Wn5LSLRxDdEbrdHhG3acmTdnSs9nVtUVWHtvFl58=
+pnpmfileChecksum: sha256-SSvgavWKtRK8HOH94Pzwar5NVvrFVky2uhx0E823kFo=
 
 importers:
 
@@ -147,6 +147,9 @@ importers:
       '@malloydata/malloy':
         specifier: ^0.0.302
         version: 0.0.302
+      glob:
+        specifier: ^11.0.3
+        version: 11.0.3
     devDependencies:
       '@duckdb/node-api':
         specifier: ^1.3.2-alpha.26
@@ -181,9 +184,6 @@ importers:
       '@graphene/lang':
         specifier: file:../lang
         version: link:../lang
-      glob:
-        specifier: ^11.0.0
-        version: 11.0.3
       vscode-languageclient:
         specifier: ^9.0.1
         version: 9.0.1
