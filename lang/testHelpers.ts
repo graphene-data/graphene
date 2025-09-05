@@ -173,6 +173,19 @@ vitestExpect.extend({
         : `Expected a diagnostic matching ${regex}, but found ${diagnostics.length}.\n\n${formatDiagnostics(testSql, diagnostics) || 'No diagnostics.'}`,
     }
   },
+
+  toHaveNoErrors (received: string) {
+    if (DEBUG) console.log('Query:', received)
+    let testSql = `${TEST_PRELUDE}\n\n${received}`
+    analyze(testSql, 'test.gsql')
+    let errors = getDiagnostics()
+    return {
+      pass: errors.length === 0,
+      message: () => errors.length === 0
+        ? 'No errors found.'
+        : `Expected no errors, but found ${errors.length}.\n\n${formatDiagnostics(testSql, errors)}`,
+    }
+  },
 })
 
 // Vitest type augmentation
@@ -181,11 +194,13 @@ declare module 'vitest' {
     toRenderSql (expectedSql: string): void
     toReturnRows (...rows: unknown[][]): Promise<void>
     toHaveDiagnostic (pattern: RegExp | string): void
+    toHaveNoErrors (): void
   }
 
   interface AsymmetricMatchersContaining {
     toRenderSql (expectedSql: string): void
     toReturnRows (...rows: unknown[][]): Promise<void>
     toHaveDiagnostic (pattern: RegExp | string): void
+    toHaveNoErrors (): void
   }
 }

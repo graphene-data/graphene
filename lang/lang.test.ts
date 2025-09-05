@@ -411,4 +411,13 @@ describe('lang', () => {
       users.age as user_age
     )`).toHaveDiagnostic(/Fields that refer to a `join many` should aggregate/i)
   })
+
+  it('allows join expressions to refer to the alias', () => {
+    expect('table t (oid int, join_one users as usr on usr.id = oid); from t select usr.name')
+      .toRenderSql('select usr_0."name" as "usr_name" from t as base left join users as usr_0 on usr_0."id"=base."oid"')
+  })
+
+  it('allows measures to refer to themselves', () => {
+    expect('table t (oid int, count(distinct t.oid) as total_oids)').toHaveNoErrors()
+  })
 })
