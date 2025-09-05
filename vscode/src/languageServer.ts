@@ -58,8 +58,14 @@ function debouncedAnalyze () {
 
 async function analyzeNow () {
   await initialLoad
-  analyze()
-  perFileVscodeDiagnostics().forEach(d => connection.sendDiagnostics(d))
+  try {
+    analyze()
+    perFileVscodeDiagnostics().forEach(d => connection.sendDiagnostics(d))
+  } catch (err) {
+    let message = (err instanceof Error ? (err.stack || err.message) : String(err))
+    connection.console.error(`Analyze failed: ${message}`)
+    connection.sendNotification('graphene/analyzeError', {message})
+  }
   // connection.languages.diagnostics.refresh()
 }
 
