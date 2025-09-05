@@ -14,6 +14,12 @@ program
   .description('Graphene CLI')
   .version('1.0.0')
 
+program.hook('preAction', async () => {
+  if (process.env.CLI_DELAY) {
+    await new Promise(r => setTimeout(r, 1000))
+  }
+})
+
 program
   .command('compile')
   .description('Translate a query to SQL and print it')
