@@ -404,6 +404,7 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
     let name = txt(part)
     let next = curr.table.fields.find(f => f.name == name)
 
+    if (name == curr.table.name) continue // expression (unnecessarily) refers to the current table
     if (!next)         return diag(part, `Join ${name} does not exist on table ${curr.table.name}`, def)
     if (!isJoin(next)) return diag(part, `${name} is not a join on ${curr.table.name}`, def)
 
