@@ -4,16 +4,32 @@
   "type": "module",
   "scripts": {
     "test": "vitest run -c ../vitest.config.ts --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
-    "test-one": "DEBUG=1 node --inspect ../scripts/turboTest.js"
+    "test-one": "DEBUG=1 node --inspect ../scripts/turboTest.js",
+    "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps"
   },
   "dependencies": {
     "@evidence-dev/core-components": "^5.2.2",
     "@evidence-dev/evidence": "^40.1.2",
     "@evidence-dev/tailwind": "^3.0.10",
     "@sveltejs/adapter-static": "3.0.1",
+    "@graphene/lang": "file:../lang",
+    "@malloydata/db-bigquery": "^0.0.307",
+    "@malloydata/db-duckdb": "^0.0.304",
     "tailwindcss": "4.0.6"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@sveltejs/vite-plugin-svelte": "3.1.2",
+    "@tailwindcss/vite": "^4.1.11",
+    "fs-extra": "11.2.0",
+    "rehype-stringify": "^10.0.1",
+    "remark": "^15.0.1",
+    "remark-mdx": "^3.1.1",
+    "remark-rehype": "^11.1.2",
+    "svelte": "4.2.19",
+    "unist-util-visit": "4.1.2",
+    "vite": "5.4.14"
   },
   "author": "",
   "license": "ISC"
