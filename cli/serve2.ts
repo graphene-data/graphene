@@ -178,10 +178,11 @@ let dollarResolver = {
   },
 }
 
+let components = ['barchart', 'areachart', 'linechart', 'table']
+
 // Plugin to transform graphene-specific markdown. Extract sql blocks, rewrite/filter components
 function remarkMdxGraphene () {
   return function transformer (tree, file) {
-    let allowed = new Set(['graphene-barchart'])
     file.data.queries = {} as Record<string, string>
 
     // Extract gsql queries, then remove them from the rendered html
@@ -195,8 +196,9 @@ function remarkMdxGraphene () {
     // We'll also drop any components that are not in the allowed list
     visit(tree, ['mdxJsxFlowElement', 'mdxJsxTextElement'], (node: any, index: number | null, parent: any) => {
       if (!node || !parent || typeof index !== 'number') return
-      if (node.name === 'BarChart') node.name = 'graphene-barchart'
-      if (!allowed.has(node.name)) {
+      if (components.includes(node.name.toLowerCase())) {
+        node.name = `graphene-${node.name}`
+      } else {
         parent.children.splice(index, 1)
         return [SKIP, index]
       }
