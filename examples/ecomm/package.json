@@ -24,7 +24,6 @@
     "@evidence-dev/core-components": "^5.2.2",
     "@graphene/cli": "file:../../cli",
     "@graphene/ui": "file:../../ui"
-
   },
   "graphene": {
     "dialect": "bigquery",
