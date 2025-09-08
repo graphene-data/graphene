@@ -96,7 +96,7 @@ vitestExpect.extend({
     if (DEBUG) console.log('Query:', received)
     clearWorkspace()
     let gsql = `${TEST_PRELUDE}\n\n${received}`
-    let queries = analyze(gsql, 'test.gsql')
+    let queries = analyze(gsql)
     let diagnostics = getDiagnostics()
 
     if (diagnostics.length > 0) {
@@ -121,7 +121,7 @@ vitestExpect.extend({
   async toReturnRows (received: string, ...expectedRows: unknown[][]) {
     if (DEBUG) console.log('Query:', received)
     clearWorkspace()
-    let queries = analyze(`${TEST_PRELUDE}\n\n${received}`, 'test.gsql')
+    let queries = analyze(`${TEST_PRELUDE}\n\n${received}`)
     let diagnostics = getDiagnostics()
 
     if (diagnostics.length > 0) {
@@ -159,7 +159,7 @@ vitestExpect.extend({
   toHaveDiagnostic (received: string, pattern: RegExp | string) {
     if (DEBUG) console.log('Query:', received)
     let testSql = `${TEST_PRELUDE}\n\n${received}`
-    analyze(testSql, 'test.gsql')
+    analyze(testSql)
     let diagnostics = getDiagnostics()
 
     let regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern
@@ -177,7 +177,7 @@ vitestExpect.extend({
   toHaveNoErrors (received: string) {
     if (DEBUG) console.log('Query:', received)
     let testSql = `${TEST_PRELUDE}\n\n${received}`
-    analyze(testSql, 'test.gsql')
+    analyze(testSql)
     let errors = getDiagnostics()
     return {
       pass: errors.length === 0,
