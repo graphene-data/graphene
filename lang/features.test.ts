@@ -13,9 +13,9 @@ describe('hover', () => {
       -- first and last
       name text
     )
-    from users select id, name`, 'hover_test.gsql')
+    from users select id, name`)
 
-    let hover = getHover('hover_test.gsql', 4, 33)
+    let hover = getHover('input', 4, 33)
     expect(hover).toBe('#### users.name\n\nfirst and last')
   })
 
@@ -23,10 +23,10 @@ describe('hover', () => {
     analyze(`
       -- all the users in our system
       table users (id int, name text)
-    from users select id, name`, 'hover_kw.gsql')
+    from users select id, name`)
 
     // Hover over 'f' in 'from' (line 4, col 0)
-    let hover = getHover('hover_kw.gsql', 3, 12)
+    let hover = getHover('input', 3, 12)
     expect(hover).toBe('#### users\n\nall the users in our system')
   })
 })

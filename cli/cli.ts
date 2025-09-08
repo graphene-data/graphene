@@ -27,7 +27,7 @@ program
   .action(async (input: string | undefined) => {
     await loadWorkspace(process.cwd())
     let sql = await readInput(input)
-    let queries = analyze(sql, 'input')
+    let queries = analyze(sql)
     if (!validQuery(queries)) return
     console.log(toSql(queries[0]))
   })
@@ -39,7 +39,7 @@ program
   .action(async (input: string | undefined) => {
     await loadWorkspace(process.cwd())
     let gsql = await readInput(input)
-    let queries = analyze(gsql, 'input')
+    let queries = analyze(gsql)
     if (!validQuery(queries)) return
     let sql = toSql(queries[0])
     let connection = await getConnection()

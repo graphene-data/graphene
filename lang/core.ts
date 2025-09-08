@@ -5,8 +5,7 @@ import {registerDialect} from './node_modules/@malloydata/malloy/dist/dialect/di
 import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect/functions/index.js'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
-import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity} from './analyze.ts'
-import {parser} from './parser.js'
+import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, parse} from './analyze.ts'
 import {type Query} from './types.ts'
 import {getOffset} from './util.ts'
 import {config, loadConfig} from './config.ts'
@@ -41,24 +40,33 @@ export function updateFile (contents: string, path: string) {
   return FILE_MAP[path]
 }
 
-// Analyzes all tables and queries in all files. You can optionally provide a file,
-// which is useful in the case where you want to know the queries in that file.
+// Analyzes all gsql files in the workspace, and optionally any gsql provided.
 // This could be more efficient, but for now we just re-analyze everything.
-export function analyze (contents?: string, path?: string): Query[] {
-  let fi = contents ? updateFile(contents, path || 'input') : null
+export function analyze (contents?: string): Query[] {
   clearDiagnostics()
+  delete FILE_MAP['input'] // clean up any previous ephemeral tables
 
   Object.values(FILE_MAP).forEach(f => {
-    f.tables = [] // clear out everything we've computed for now
-    f.tree ||= parser.parse(f.contents)
-    f.tree!.fileInfo = f
-    f.tables = findTables(f)
+    parse(f)
+    f.tables = findTables(f) // for now, blow away previously analyzed tables
   })
   Object.values(FILE_MAP).flatMap(f => f.tables).forEach(analyzeTable)
 
-  // if you provided a file, we'll give you back the queries in it
-  let queries = fi?.tree?.topNode.getChildren('QueryStatement') || []
-  return queries.map(analyzeQuery).filter(q => !!q)
+  // if you provided a file, we'll analyze it and give you the queries.
+  // Any tables defined in `contents` are ephemeral, since query interpolation means multiple browser tabs
+  // could be trying to define the same named table in the same file with different sql.
+  // This is a bit hacky, but it works since analysis is sync, and we can clear out this "file" after we're done.
+  if (contents) {
+    let fi = updateFile(contents, 'input')
+    parse(fi)
+    fi.tables = findTables(fi)
+    fi.tables.forEach(analyzeTable)
+
+    let queries = fi.tree!.topNode.getChildren('QueryStatement') || []
+    return queries.map(analyzeQuery).filter(q => !!q)
+  }
+
+  return []
 }
 
 export function toSql (query: Query): string {
