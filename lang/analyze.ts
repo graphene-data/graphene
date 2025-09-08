@@ -5,6 +5,7 @@ import {txt, compact, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config, dialectKeyword} from './config.ts'
 import {findOverloads} from './functions.ts'
+import {parser} from './parser.js'
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
@@ -15,14 +16,20 @@ let NODE_ENTITY_MAP = new NodeWeakMap<any>()
 
 const errorExpression: Expression = {node: 'error', type: 'error'}
 
-// Creates tables without analyzing them.
-// We need to know all the tables before we can analyze any table, since they refer to each other.
-export function findTables (file: FileInfo): Table[] {
-  file.tree!.topNode.cursor().iterate(n => {
+export function parse (fi: FileInfo) {
+  fi.tree ||= parser.parse(fi.contents)
+  fi.tree!.fileInfo = fi
+  fi.tree!.fileInfo = fi
+
+  fi.tree!.topNode.cursor().iterate(n => {
     if (n.type.isError) diag(n.node, 'Syntax error')
   })
+}
 
-  let tn = file.tree!.topNode
+// Creates tables without analyzing them.
+// We need to know all the tables before we can analyze any table, since they refer to each other.
+export function findTables (fi: FileInfo): Table[] {
+  let tn = fi.tree!.topNode
   let nodes = tn.getChildren('TableStatement').concat(tn.getChildren('ViewStatement'))
   return nodes.map(syntaxNode => {
     let name = txt(syntaxNode.firstChild?.nextSibling)
