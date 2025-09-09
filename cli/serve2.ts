@@ -32,6 +32,7 @@ export async function serve2 () {
       svelte({include: '**/components/**', compilerOptions: {customElement: true}}),
       evidenceThemes(),
       dollarResolver,
+      updateWorkspacePlugin,
     ],
     server: {
       port: config.port || 4000,
@@ -48,6 +49,21 @@ export async function serve2 () {
 
   await server.listen()
   console.log(`Server running at ${server.resolvedUrls?.local?.[0]}`)
+}
+
+// Watch for changes to gsql files and reload the workspace.
+// This reload blocks all requests, so we shouldn't ever analyze without a workspace.
+let workspaceLoadPromise: Promise<void> | undefined
+const updateWorkspacePlugin = {
+  name: 'updateWorkspace',
+  configureServer: (s: ViteDevServer) => {
+    s.watcher.add('**/*.gsql')
+    s.watcher.on('change', () => {
+      clearWorkspace()
+      workspaceLoadPromise = loadWorkspace(grapheneRoot)
+    })
+    workspaceLoadPromise = loadWorkspace(grapheneRoot)
+  },
 }
 
 const handleRequestPlugin = {
@@ -77,9 +93,8 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
   let {gsql} = JSON.parse(body)
   res.setHeader('Content-Type', 'application/json')
 
-  clearWorkspace()
-  await loadWorkspace(grapheneRoot)
-  let queries = analyze(gsql, 'input')
+  await workspaceLoadPromise
+  let queries = analyze(gsql)
 
   if (getDiagnostics().length) {
     res.statusCode = 400
