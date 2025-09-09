@@ -1,5 +1,5 @@
 table users (
-  id INT64,
+  id INT64 primary_key,
   first_name STRING,
   last_name STRING,
   email STRING,
