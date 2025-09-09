@@ -46,4 +46,9 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     returns: 'number',
     impl: {function: 'TIMESTAMP_DIFF'},
   },
+  'date_trunc': {
+    takes: {'date': 'timestamp', 'unit': 'string'},
+    returns: 'timestamp',
+    impl: {sql: 'DATE_TRUNC(${date}, ${unit})'},
+  },
 }
