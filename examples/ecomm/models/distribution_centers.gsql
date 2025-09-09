@@ -1,5 +1,5 @@
 table distribution_centers (
-  id INT64,
+  id INT64 primary_key,
   name STRING,
   latitude FLOAT64,
   longitude FLOAT64,
