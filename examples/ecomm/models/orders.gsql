@@ -1,5 +1,5 @@
 table orders (
-  order_id INT64,
+  order_id INT64 primary_key,
   user_id INT64,
   status STRING,
   gender STRING,
@@ -12,10 +12,10 @@ table orders (
   join_one users on users.id = user_id,
   join_many order_items on order_id = order_items.order_id
 
-  safe_divide(sum(order_items.sale_price), count(distinct orders.order_id)) as aov
-  safe_divide(count_if(shipped_at is not null), count(*)) as shipped_rate
-  safe_divide(count_if(delivered_at is not null), count(*)) as delivered_rate
-  safe_divide(count_if(returned_at is not null), count(*)) as return_rate
+  safe_divide(sum(order_items.sale_price), count(distinct order_id)) as aov
+  safe_divide(sum(case when shipped_at is not null then 1 else 0 end), count(*)) as shipped_rate
+  safe_divide(sum(case when delivered_at is not null then 1 else 0 end), count(*)) as delivered_rate
+  safe_divide(sum(case when returned_at is not null then 1 else 0 end), count(*)) as return_rate
   avg(timestamp_diff(delivered_at, created_at, day)) as order_cycle_time_days
   sum(order_items.sale_price) as order_revenue
 )

@@ -1,5 +1,5 @@
 table events (
-  id INT64,
+  id INT64 primary_key,
   user_id INT64,
   sequence_number INT64,
   session_id STRING,

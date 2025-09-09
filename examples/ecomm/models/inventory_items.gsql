@@ -1,5 +1,5 @@
 table inventory_items (
-  id INT64,
+  id INT64 primary_key,
   product_id INT64,
   created_at TIMESTAMP,
   sold_at TIMESTAMP,
