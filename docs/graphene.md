@@ -2,7 +2,7 @@
 
 Graphene projects are comprised of:
 - .gsql files, where data models are defined
-- .md files, that define data apps built on those data models
+- .md files, that define data apps (dashboards) built on those data models
 
 Graphene also has a CLI that lets you check syntax, run queries, and serve data apps.
 
@@ -25,9 +25,9 @@ table orders (
   cost FLOAT,
 
   join_one users on user_id = users.id,
-  measure revenue sum(amount),
-  measure profit sum(amount - cost),
-  measure profit_margin profit / revenue
+  sum(amount) as revenue,
+  sum(amount - cost) as profit,
+  profit / revenue as profit_margin
 )
 
 table users (
@@ -53,7 +53,7 @@ order by 2 desc
 -- average age of customers over time
 select 
   month(date),
-  average(users.age) -- in normal SQL this would be incorrect due to the join; in graphene it works
+  average(users.age) -- in normal SQL this would be incorrect due to the fan-out in the join; in Graphene it smartly de-duplicates the fan-out when computing aggregates
 from orders
 group by 1
 order by 1 asc
@@ -61,16 +61,48 @@ order by 1 asc
 ```
 
 GSQL also supports the following features:
-- `FROM` before `SELECT` (optional)
-- Ability to filter on aggregates in the `WHERE` clause (`HAVING` still works too)
-- Implied `GROUP BY` in the presence of aggregates, without needing an explicit `GROUP BY` clause
+- `from` before `select` (optional)
+- Ability to filter on aggregates in the `where` clause (`having` still works too)
+- `group by` is optional; it is implicitly applied if you have any aggregations in the query
+- Trailing commas inside `table` statements are optional if items are separated by newlines
 
 
 ## Visualizing Data with Markdown
 
-Graphene currently uses the Evidence markdown spec and component library for building data applications. However, Graphene does not use Evidence's CLI nor does it support anything other than GSQL. Graphene projects do not support .sql files.
+Graphene data apps are written in markdown, with a couple notable extensions:
+- Create visualizations, widgets, and navigational UI components with simple HTML blocks
+- Create GSQL queries that your components can reference in code fences
 
-Consult the Evidence documentation for markdown syntax guidance.
+### Components
+
+Graphene has a built in component library to create charts and other visual elements. The full documentation is [here](./data_apps/components).
+
+```markdown
+<LineChart 
+    data = {orders_by_month}    
+    y = sales_usd 
+    title = 'Sales by Month, USD' 
+/>
+```
+
+### GSQL in Markdown
+
+Code fences in Graphene markdown files run inline GSQL queries and return data.
+
+````markdown
+```sql orders_by_month
+select
+    date_trunc('month', order_datetime) as order_month,
+    count(*) as number_of_orders,
+    sum(sales) as sales_usd
+from needful_things.orders
+group by 1, order by 1 desc
+```
+````
+
+Notice that GSQL queries must be **named** (eg. `orders_by_month` above) in order to be referenceable by other components on the page.
+
+Any table in the database, as well as any table declared in a .GSQL file, is also referenceable by any component in your markdown files.
 
 ## Using the Graphene CLI
 
