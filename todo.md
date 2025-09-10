@@ -1,11 +1,10 @@
 ## Soon
-* get a layout loading. Test out it providing components
+* pass frontend/query errors back to the cli (both for graphene agents, but also feature dev)
 * fix up [object] axis labels
 * fix serve2 type errors
 * add support for piecharts
 * Make table work
 * Inputs and dynamic queries (parameterized or interpolated?)
-* Parse and analyze md files
 * Allow md queries to refer to earlier queries in the file
 * Result caching with the same sql
 * cli: `capture` command to get a screenshot of the whole page or a single chart. Can we use html2canvas and avoid puppeteer? Should also collect runtime errors
@@ -19,8 +18,10 @@
 
 ## Eventually
 * rename `table` to `extend`
+* parse and analyze md files as part of vscode/cli
 * self-ref in measures doesn't seem to work: ie in `table orders`, `sum(orders.amount) as total_amount`
 * figure out why malloy can't use `count_if` in a fanout. What's the workaround it uses for count/sum?
+* metadata propagation - fields in a view should keep the metadata from their original table (assuming it's a plain field, not an expression)
 * handle cycles in measures - measures could refer to joins (or other measures) that haven't been analyzed yet.
 * make `count(col)` behave like regular sql (ie count non-null)
 * create our own date functions: `day`, `month` for truncation, `now()`
