@@ -37,7 +37,18 @@
         "nanoid": "*",
         "unist-util-visit": "*"
       }
-    }
+    },
+    "ignoredBuiltDependencies": [
+      "@sveltejs/kit",
+      "keytar"
+    ],
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "@vscode/vsce-sign",
+      "duckdb",
+      "esbuild",
+      "svelte-preprocess"
+    ]
   },
   "dependencies": {
     "@eslint/compat": "^1.3.2",
