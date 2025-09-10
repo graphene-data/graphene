@@ -1,4 +1,3 @@
-<svelte:options customElement="graphene-areachart" />
 <script>
   import {AreaChart} from '@evidence-dev/core-components'
 

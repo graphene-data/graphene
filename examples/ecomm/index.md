@@ -1,22 +1,23 @@
 ---
 title: E-commerce Overview
+notes: This example uses [theLook eCommerce](https://console.cloud.google.com/marketplace/product/bigquery-public-data/thelook-ecommerce). To connect with Graphene, you'll need to set up [ADC local credentials](https://cloud.google.com/docs/authentication/set-up-adc-local-dev-environment)
 ---
 
-> This example uses [theLook eCommerce](https://console.cloud.google.com/marketplace/product/bigquery-public-data/thelook-ecommerce). To connect with Graphene, you'll need to set up [ADC local credentials](https://cloud.google.com/docs/authentication/set-up-adc-local-dev-environment)
-
+## KPI Summary
 [Product Explorer](product-explorer) | [Returns investigation](returns-investigation)
 
-## KPI Summary
-
 ```sql kpis_by_day
-from order_items select date_trunc(day, created_at) as day, revenue, gross_profit, gross_margin_pct, count() as units
+from order_items select date_trunc(created_at, day) as day, revenue, gross_profit, gross_margin_pct, count() as units
 ```
-
+<Row>
   <AreaChart data="kpis_by_day" title="Revenue by Day" x="day" y="revenue" />
   <LineChart data="kpis_by_day" title="Gross Profit by Day" x="day" y="gross_profit" />
+</Row>
 
+<Row>
   <LineChart data="kpis_by_day" title="Units by Day" x="day" y="units" />
   <LineChart data="kpis_by_day" title="Gross Margin %" x="day" y="gross_margin_pct" />
+</Row>
 
 ```sql revenue_by_category
 from order_items select products.category, revenue, gross_profit, gross_margin_pct, count() as units
@@ -52,12 +53,13 @@ order by 2 desc limit 25
 />
 
 ```sql orders_service
-from orders select date_trunc(week, created_at) as week, aov, shipped_rate, delivered_rate, return_rate, order_cycle_time_days
+from orders select date_trunc(created_at, week) as week, aov, shipped_rate, delivered_rate, return_rate, order_cycle_time_days
 order by 1 asc
 ```
-
+<Row>
   <LineChart data="orders_service" title="Average Order Value (Weekly)" x="week" y="aov" />
   <LineChart data="orders_service" title="Return Rate (Weekly)" x="week" y="return_rate" />
+</Row>
 
 ```sql top_products
 from products select name, units_sold, product_revenue, gross_margin_pct, return_rate,

@@ -1,35 +1,43 @@
 import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '@graphene/lang'
-import path from 'path'
-import fs from 'fs-extra'
 import {createServer, type ViteDevServer} from 'vite'
-import {fileURLToPath} from 'url'
-import tailwindcss from '@tailwindcss/vite'
 import {evidenceThemes} from '@evidence-dev/tailwind/vite-plugin'
-import {svelte} from '@sveltejs/vite-plugin-svelte'
+import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
+import {visit} from 'unist-util-visit'
+import fs from 'fs-extra'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
-import {visit, SKIP} from 'unist-util-visit'
-import remarkMdx from 'remark-mdx'
-import {remark} from 'remark'
-import remarkRehype from 'remark-rehype'
-import rehypeStringify from 'rehype-stringify'
 import {getConnection} from './connection.ts'
 import {IncomingMessage, ServerResponse} from 'http'
+import {mdsvex} from 'mdsvex'
+import path from 'path'
+import autoImport from 'sveltekit-autoimport'
+import tailwindcss from '@tailwindcss/vite'
+import {fileURLToPath} from 'url'
 
-let cliRoot: string
 let grapheneRoot: string
+let cliRoot: string
 
 export async function serve2 () {
   grapheneRoot = process.cwd()
   cliRoot = path.join(fileURLToPath(import.meta.url), '..')
 
   let server = await createServer({
-    configFile: false, // ignore evidence's built in config file
     root: grapheneRoot,
     plugins: [
-      handleRequestPlugin,
       tailwindcss(),
-      svelte({exclude: '**/components/**'}),
-      svelte({include: '**/components/**', compilerOptions: {customElement: true}}),
+      svelte({
+        extensions: ['.svelte', '.md'],
+        preprocess: [
+          vitePreprocess(),
+          mdsvex({
+            extensions: ['.md'],
+            remarkPlugins: [extractQueries],
+            rehypePlugins: [rehypeMdxJsxToHtml],
+            // layout: path.resolve(cliRoot, './node_modules/@graphene/ui/layout.svelte'),
+          }),
+          injectComponentImports(),
+        ],
+      }),
+      handleRequestPlugin,
       evidenceThemes(),
       dollarResolver,
       updateWorkspacePlugin,
@@ -77,7 +85,7 @@ const handleRequestPlugin = {
       let mdPath = path.join(grapheneRoot, pathName + '.md')
 
       if (await fs.exists(mdPath)) {
-        handlePage(req, res, mdPath)
+        handlePage(s, res, mdPath)
       } else {
         next()
       }
@@ -88,9 +96,7 @@ const handleRequestPlugin = {
 async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
-  let buffer = Buffer.concat(chunks)
-  let body = buffer.toString()
-  let {gsql} = JSON.parse(body)
+  let {gsql} = JSON.parse(Buffer.concat(chunks).toString())
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
@@ -102,123 +108,69 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
     return
   }
 
-  let sql = toSql(queries[0])
-  let connection = await getConnection()
-  let queryResults = await connection.runSQL(sql)
-  res.end(JSON.stringify(queryResults.rows))
+  try {
+    let sql = toSql(queries[0])
+    let connection = await getConnection()
+    let queryResults = await connection.runSQL(sql)
+    res.end(JSON.stringify(queryResults.rows))
+  } catch (err) {
+    res.statusCode = 500
+    res.end(JSON.stringify({error: err.message}))
+  }
 }
 
-async function handlePage (req, res, mdPath) {
-  let md = await fs.readFile(mdPath, 'utf-8')
-  // let html = await unified()
-  //   .use(remarkParse)
-  //   .use(remarkRehype, {allowDangerousHtml: true}) // we'll sanitize later
-  //   .use(rehypeRaw) // allows us to handle html nodes
-  //   .use(remarkMdxGraphene)
-  //   // .use(rehypeSanitize)
-  //   .use(rehypeStringify) // HAST → HTML string
-  //   .process(md)
-
-  // I'm using remarkMdx here because it's more convenient to walk through elements before we convert to html.
-  // The other approach would be to use a more standard remarkRehype approach, which would allow arbitrary html nodes.
-  let html = await remark()
-    .use(remarkMdx)
-    .use(remarkMdxGraphene)
-    .use(remarkRehype, {passThrough: ['mdxJsxFlowElement', 'mdxJsxTextElement']})
-    .use(rehypeMdxJsxToHtml)
-    .use(rehypeStringify, {allowDangerousHtml: true}) // HAST → HTML string
-    .process(md)
-
-  res.end(`<!doctype html>
+async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, mdPath: string) {
+  res.setHeader('Content-Type', 'text/html')
+  let html = await server.transformIndexHtml(mdPath, `<!doctype html>
   <html lang="en">
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Graphene</title>
-      <link href="node_modules/@graphene/ui/app.css" rel="stylesheet">
-      <!-- <link href="./index.css" rel="stylesheet"> -->
+      <link href="/node_modules/@graphene/ui/app.css" rel="stylesheet">
     </head>
     <body>
       <div id="app"></div>
-      <script>
-        window.__DOC_HTML = ${JSON.stringify(String(html))}
-        window.__DOC_QUERIES = ${JSON.stringify(html.data.queries)}
+      <script type="module" src="/node_modules/@graphene/ui/web.js"></script>
+      <script type="module">
+        import Page from ${JSON.stringify(mdPath)};
+        new Page({ target: document.getElementById('app'), props: {} })
       </script>
-      <script type="module" src="node_modules/@graphene/ui/web.js"></script>
     </body>
   </html>`)
+  return res.end(html)
 }
 
+// Evidence expects some of these imports, but afaict they don't do anything, so stub them.
 let dollarResolver = {
   name: 'dollar-resolver',
   resolveId (id) {
-    if (id === '$evidence/config') return '\0$evidence/config'
-    if (id === '$app/environment') return '\0$app/environment'
-    if (id === '$app/navigation') return '\0$app/navigation'
-    if (id === '$app/forms') return '\0$app/forms'
-    if (id === '$app/stores') return '\0$app/stores'
-    return null
+    return ['$evidence/config', '$app/environment', '$app/navigation', '$app/forms', '$app/stores'].includes(id) ? '\0' + id : null
   },
   load: (id) => {
-    if (id === '\0$evidence/config') {
-      return 'export const config = {}'
-    }
-    if (id === '\0$app/environment') {
-      return `
-        export const browser = true
-        export const version = 0
-        export const dev = true
-        export const building = false
-      `
-    }
-    if (id === '\0$app/navigation') {
-      return `
-        export const browser = true
-        export const afterNavigate = () => {}
-        export function goto () {}
-        export function preloadData() {}
-      `
-    }
-    if (id === '\0$app/forms') {
-      return `
-        export const enhance = () => {}
-      `
-    }
-    if (id === '\0$app/stores') {
-      return `
-        export const page = 'page'
-        export const navigating = false
-      `
-    }
+    if (id === '\0$evidence/config') return 'export const config = {}'
+    if (id === '\0$app/environment') return 'export const browser = true; export const version = 0; export const dev = true; export const building = false;'
+    if (id === '\0$app/navigation') return 'export const browser = true; export const afterNavigate = () => {}; export function goto () {}; export function preloadData() {};'
+    if (id === '\0$app/forms') return 'export const enhance = () => {};'
+    if (id === '\0$app/stores') return 'export const page = \'page\'; export const navigating = false;'
+    return null
   },
 }
 
-let components = ['barchart', 'areachart', 'linechart', 'table']
-
-// Plugin to transform graphene-specific markdown. Extract sql blocks, rewrite/filter components
-function remarkMdxGraphene () {
-  return function transformer (tree, file) {
-    file.data.queries = {} as Record<string, string>
-
-    // Extract gsql queries, then remove them from the rendered html
+// Turn gsql code fences into GrapheneQuery components
+function extractQueries () {
+  return function transformer (tree) {
     visit(tree, 'code', (node, index, parent) => {
-      file.data.queries[node.meta] = node.value.trim()
-      parent.children.splice(index, 1)
-      return [SKIP, index]
-    })
-
-    // Rewrite <BarChart> to <graphene-barchart> (the naming is forced on us by web components)
-    // We'll also drop any components that are not in the allowed list
-    visit(tree, ['mdxJsxFlowElement', 'mdxJsxTextElement'], (node: any, index: number | null, parent: any) => {
-      if (!node || !parent || typeof index !== 'number') return
-      if (components.includes(node.name.toLowerCase())) {
-        node.name = `graphene-${node.name}`
-      } else {
-        parent.children.splice(index, 1)
-        return [SKIP, index]
-      }
+      if (index === null) return
+      // let attributes = [{type: 'mdxJsxAttribute', name: 'name', value: node.meta}, {type: 'mdxJsxAttribute', name: 'code', value: node.value.trim()}]
+      // parent.children[index] = {type: 'mdxJsxFlowElement', name: 'GrapheneQuery', attributes, children: []}
+      parent.children[index] = {type: 'html', value: `<GrapheneQuery name="${escapeHtml(node.meta)}" code="${escapeHtml(node.value.trim())}" />`}
     })
   }
+}
+
+function escapeHtml (str: string) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 function rehypeMdxJsxToHtml () {
@@ -229,16 +181,26 @@ function rehypeMdxJsxToHtml () {
       if (!properties.className) properties.className = 'markdown'
       else properties.className += ' markdown'
     })
+  }
+}
 
-    visit(tree, ['mdxJsxFlowElement', 'mdxJsxTextElement'], (node, index, parent) => {
-      if (!parent) return
-      let attrs = (node.attributes || []).map(attr => `${attr.name}="${attr.value}"`).join(' ')
-      let children = (node.children || []).map(child => child.value || '').join('')
-      let tag = node.name
-      parent.children[index as number] = {
-        type: 'raw',
-        value: `<${tag}${attrs ? ' ' + attrs : ''}>${children}</${tag}>`,
-      }
-    })
+// We don't want users to have to manually import components in their md files, so we auto-import them.
+function injectComponentImports () {
+  let mapping = {}
+  for (let comp of ['GrapheneQuery', 'BarChart', 'AreaChart', 'LineChart', 'PieChart', 'Table', 'Row']) {
+    mapping[comp] = `import ${comp} from '${path.resolve(cliRoot, `../ui/components/${comp}.svelte`)}'`
+  }
+
+  // TODO: we should use `components` to load user components, and `module` to load our own from our package
+  // components: [{directory: path.resolve(cliRoot, './node_modules/@graphene/ui/components'), flat: true}],
+  let autoImporter = autoImport({include: ['**/*.(svelte|md)'], mapping})
+  return {
+    markup: async ({content, filename}) => {
+      if (!filename.endsWith('.md')) return // only autoImport md files
+      let importResults = await autoImporter // wait for autoImporter to init
+      return importResults.markup({content, filename}) // modifies the code to add needed imports
+    },
+    style: () => {},
+    script: () => {},
   }
 }
