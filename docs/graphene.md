@@ -61,9 +61,10 @@ order by 1 asc
 ```
 
 GSQL also supports the following features:
-- `FROM` before `SELECT` (optional)
-- Ability to filter on aggregates in the `WHERE` clause (`HAVING` still works too)
-- `GROUP BY` is optional; it is implicitly applied if you have any aggregations in the query
+- `from` before `select` (optional)
+- Ability to filter on aggregates in the `where` clause (`having` still works too)
+- `group by` is optional; it is implicitly applied if you have any aggregations in the query
+- Trailing commas inside `table` statements are optional if items are separated by newlines
 
 
 ## Visualizing Data with Markdown
@@ -100,6 +101,8 @@ group by 1, order by 1 desc
 ````
 
 Notice that GSQL queries must be **named** (eg. `orders_by_month` above) in order to be referenceable by other components on the page.
+
+Any table in the database, as well as any table declared in a .GSQL file, is also referenceable by any component in your markdown files.
 
 ## Using the Graphene CLI
 
