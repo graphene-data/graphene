@@ -1,5 +1,5 @@
-<svelte:options customElement="graphene-barchart" />
 <script>
+  // import {BarChart} from '@evidence-dev/core-components/dist/unsorted/viz/bar/BarChart.svelte'
   import {BarChart} from '@evidence-dev/core-components'
 
   let callback

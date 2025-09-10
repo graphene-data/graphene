@@ -104,6 +104,9 @@ importers:
       fs-extra:
         specifier: 11.2.0
         version: 11.2.0
+      mdsvex:
+        specifier: ^0.12.6
+        version: 0.12.6(svelte@4.2.19)
       nanoid:
         specifier: 3.3.8
         version: 3.3.8
@@ -122,6 +125,9 @@ importers:
       svelte:
         specifier: 4.2.19
         version: 4.2.19
+      sveltekit-autoimport:
+        specifier: ^1.8.1
+        version: 1.8.1(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))
       unist-util-visit:
         specifier: 4.1.2
         version: 4.1.2
@@ -3593,6 +3599,11 @@ packages:
 
   mdsvex@0.11.2:
     resolution: {integrity: sha512-Y4ab+vLvTJS88196Scb/RFNaHMHVSWw6CwfsgWIQP8f42D57iDII0/qABSu530V4pkv8s6T2nx3ds0MC1VwFLA==}
+    peerDependencies:
+      svelte: ^3.56.0 || ^4.0.0 || ^5.0.0-next.120
+
+  mdsvex@0.12.6:
+    resolution: {integrity: sha512-pupx2gzWh3hDtm/iDW4WuCpljmyHbHi34r7ktOqpPGvyiM4MyfNgdJ3qMizXdgCErmvYC9Nn/qyjePy+4ss9Wg==}
     peerDependencies:
       svelte: ^3.56.0 || ^4.0.0 || ^5.0.0-next.120
 
@@ -10251,6 +10262,16 @@ snapshots:
       prism-svelte: 0.4.7
       prismjs: 1.30.0
       svelte: 4.2.19
+      vfile-message: 2.0.4
+
+  mdsvex@0.12.6(svelte@4.2.19):
+    dependencies:
+      '@types/mdast': 4.0.4
+      '@types/unist': 2.0.11
+      prism-svelte: 0.4.7
+      prismjs: 1.30.0
+      svelte: 4.2.19
+      unist-util-visit: 2.0.3
       vfile-message: 2.0.4
 
   mdurl@2.0.0: {}

@@ -1,4 +1,3 @@
-<svelte:options customElement="graphene-linechart" />
 <script>
   import {LineChart} from '@evidence-dev/core-components'
 
