@@ -1,3 +1,5 @@
+import './app.css'
+
 window.$GRAPHENE = {
   queries: {},
 
