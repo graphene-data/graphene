@@ -1,11 +1,14 @@
 <script>
   import {ECharts} from '@evidence-dev/core-components'
+  import {onMount} from 'svelte'
   // import {QueryLoad} from '@evidence-dev/core-components/dist/atoms/query-load'
 
   export let category
   export let value
 
-  $: Promise.resolve().then(() => window.$GRAPHENE.query($$props.data)).then(dt => {
+  onMount(async () => {
+    await Promise.resolve() // tick for web.js to load
+    let dt = await window.$GRAPHENE.query($$props.data)
     loaded = dt.map(row => ({
       name: row[category],
       value: row[value]
