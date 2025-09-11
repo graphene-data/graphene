@@ -1,8 +1,9 @@
 **/node_modules/**
 **/out/**
 **/dist/**
-notes.md
+examples/**/package-lock.json
 
+notes.md
 .DS_Store
 .evidence
 .svelte-kit
