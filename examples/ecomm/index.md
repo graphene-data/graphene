@@ -24,21 +24,6 @@ from order_items select products.category, revenue, gross_profit, gross_margin_p
 order by 2 desc limit 20
 ```
 
-<BarChart
-  data="revenue_by_category"
-  title="Revenue by Category"
-  x="products_category"
-  y="revenue"
-  swapXY="true"
-/>
-
-<PieChart
-  data="revenue_by_category"
-  title="Category Revenue Share"
-  category="products_category"
-  value="revenue"
-/>
-
 ```sql revenue_by_state
 from order_items select users.state, revenue, count() as units
 order by 2 desc limit 25
@@ -51,6 +36,24 @@ order by 2 desc limit 25
   y="revenue"
   swapXY="true"
 />
+
+<Row>
+  <BarChart
+    data="revenue_by_category"
+    title="Revenue by Category"
+    x="products_category"
+    y="revenue"
+    swapXY="true"
+  />
+
+  <PieChart
+    data="revenue_by_category"
+    title="Category Revenue Share"
+    category="products_category"
+    value="revenue"
+  />
+</Row>
+
 
 ```sql orders_service
 from orders select date_trunc(created_at, week) as week, aov, shipped_rate, delivered_rate, return_rate, order_cycle_time_days

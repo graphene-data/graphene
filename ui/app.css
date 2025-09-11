@@ -148,7 +148,11 @@
 	h4.markdown,
 	h5.markdown,
 	h6.markdown {
-		@apply scroll-mt-14 break-inside-avoid font-sans text-base-heading;
+		@apply scroll-mt-14 break-inside-avoid text-base-heading;
+		font-family: "Funnel Display", sans-serif;
+		font-optical-sizing: auto;
+		font-weight: 100;
+		font-style: normal;
 		/* ensure that table of contents links scroll with room for the header */
 	}
 
@@ -341,4 +345,24 @@
 		orphans: 2;
 		widows: 2;
 	}
+}
+
+
+/* ---------------------------- */
+
+html {
+	padding: 2rem;
+}
+
+main {
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+.chart-footer {
+	display: none !important;
+}
+
+.chart {
+	margin: 1rem 0;
 }

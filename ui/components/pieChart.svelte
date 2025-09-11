@@ -1,23 +1,38 @@
 <script>
-  // import {PieChart} from '@evidence-dev/core-components'
+  import {ECharts} from '@evidence-dev/core-components'
+  // import {QueryLoad} from '@evidence-dev/core-components/dist/atoms/query-load'
 
-  let callback
-  let data = {
-    isQuery: true,
-    fetch: async () => {
-      await Promise.resolve()
-      let dt = await window.$GRAPHENE.query($$props.data)
-      dt.dataLoaded = true
-      callback(dt)
-    },
-    subscribe: (cb) => callback = cb
-  }
+  export let category
+  export let value
 
-  $: spreadProps = {
-		...Object.fromEntries(Object.entries($$props).filter(([, v]) => v !== undefined))
-	};
+  $: Promise.resolve().then(() => window.$GRAPHENE.query($$props.data)).then(dt => {
+    loaded = dt.map(row => ({
+      name: row[category],
+      value: row[value]
+    }))
+  })
+
+  let loaded
 </script>
 
 <style></style>
+
+{#if loaded}
+  <ECharts data={loaded} config={{
+    tooltip: {
+        formatter: '{b}: {c} ({d}%)'
+    },
+    series: [
+      {
+        type: 'pie',
+        radius: ['40%', '70%'],
+        data: [...loaded],
+      }
+    ]
+    }
+  }
+  />
+{/if}
+
 
 <!-- <PieChart {...spreadProps} data={data} /> -->
