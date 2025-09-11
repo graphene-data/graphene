@@ -1,5 +1,4 @@
 ## Soon
-* pass frontend/query errors back to the cli (both for graphene agents, but also feature dev)
 * fix up [object] axis labels
 * fix serve2 type errors
 * add support for piecharts
@@ -13,6 +12,15 @@
 * unskip (and fix!) new agg tests
 * Telemetry and error tracking
 * vscode commands to run the server
+
+
+## Usable product for tire-kickers
+* Pass frontend/query errors back to the cli (both for graphene agents, but also feature dev)
+* Quick stlying pass for apps
+* Default demos polished up
+  * Best practices on modeling
+  * Beautiful app
+* Deploy to npm package service
 * Package and publish vscode extension
 
 
