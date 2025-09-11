@@ -3,4 +3,3 @@ packages:
   - cli
   - vscode
   - ui
-  - examples/*
