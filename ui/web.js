@@ -20,7 +20,18 @@ window.$GRAPHENE = {
     if (!response.ok) {
       throw new Error(`Query failed: ${response.statusText}`)
     }
-    return await response.json()
+
+    let rows = await response.json()
+
+    // parse dates
+    rows.forEach(row => {
+      Object.keys(row).forEach(key => {
+        if (typeof row[key] === 'object' && row[key] && row[key].value) {
+          row[key] = new Date(row[key].value)
+        }
+      })
+    })
+    return rows
   },
 }
 
