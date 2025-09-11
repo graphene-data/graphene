@@ -1,6 +1,12 @@
 /* Write your global styles here, in PostCSS syntax */
 @import 'tailwindcss';
 @config "@evidence-dev/tailwind/config";
+/* Ensure Tailwind scans Graphene/Evidence sources when this CSS is used directly */
+@source "./**/*.svelte";
+@source "../**/*.md";
+@source "../node_modules/@graphene/ui/components/**/*.svelte";
+@source "../node_modules/@evidence-dev/core-components/dist/**/*.{svelte,js}";
+@source "../node_modules/@evidence-dev/component-utilities/**/*.{svelte,js}";
 
 /*
   The default border color has changed to `currentColor` in Tailwind CSS v4,

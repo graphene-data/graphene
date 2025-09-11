@@ -80,6 +80,8 @@ const handleRequestPlugin = {
     s.middlewares.use(async function handleRequest (req, res, next) {
       let [pathName] = (req.url || '').split('?')
       if (pathName == '/graphene/query') return handleQuery(req, res)
+      if (pathName == '/graphene.css') return handleTailwindCss(res)
+      if (pathName == '/graphene/tw-test') return handleTailwindTest(res)
 
       if (!pathName || pathName == '/') pathName = 'index'
       let mdPath = path.join(grapheneRoot, pathName + '.md')
@@ -130,6 +132,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
+      <link rel="stylesheet" href="/graphene.css">
     </head>
     <body>
       <div id="app"></div>
@@ -205,4 +208,83 @@ function injectComponentImports () {
     style: () => {},
     script: () => {},
   }
+}
+
+// Serve a Tailwind CSS entry that includes sources for Graphene/Evidence packages
+function handleTailwindCss (res: ServerResponse<IncomingMessage>) {
+  res.setHeader('Content-Type', 'text/css')
+  let root = grapheneRoot.replace(/\\/g, '/')
+  let css = `@import 'tailwindcss';
+@config "@evidence-dev/tailwind/config";
+/* Include user Markdown/pages */
+@source "${root}/**/*.md";
+/* Include UI library components */
+@source "${root}/node_modules/@graphene/ui/components/**/*.svelte";
+/* Include Evidence core components (Svelte and JS) */
+@source "${root}/node_modules/@evidence-dev/core-components/dist/**/*.{svelte,js}";
+/* Include Evidence utilities if present */
+@source "${root}/node_modules/@evidence-dev/component-utilities/**/*.{svelte,js}";`
+  return res.end(css)
+}
+
+// Simple runtime diagnostic page to verify Tailwind utilities are present
+function handleTailwindTest (res: ServerResponse<IncomingMessage>) {
+  res.setHeader('Content-Type', 'text/html')
+  let html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tailwind Diagnostic</title>
+    <link rel="stylesheet" href="/graphene.css" />
+    <style>
+      body { font-family: system-ui, sans-serif; padding: 16px; }
+      .pass { color: #16a34a; }
+      .fail { color: #dc2626; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; align-items: center; }
+      .swatch { height: 24px; border: 1px solid #ddd; }
+      code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <h1>Tailwind Diagnostic</h1>
+    <p>This page checks whether certain Tailwind utilities from Evidence/Graphene are available.</p>
+    <div id="results" class="grid"></div>
+    <script type="module">
+      const tests = [
+        { cls: 'bg-base-200', prop: 'backgroundColor' },
+        { cls: 'text-base-content', prop: 'color' },
+        { cls: 'border-base-300', prop: 'borderTopColor' },
+        { cls: 'font-sans', prop: 'fontFamily' },
+        { cls: 'markdown', prop: 'lineHeight' },
+      ]
+      const results = document.getElementById('results')
+      function hasStyle(cls, prop) {
+        const el = document.createElement('div')
+        el.className = cls
+        document.body.appendChild(el)
+        const value = getComputedStyle(el)[prop]
+        document.body.removeChild(el)
+        return value && value !== '' && value !== 'rgba(0, 0, 0, 0)' && value !== '0px none rgb(0, 0, 0)'
+      }
+      for (const t of tests) {
+        const ok = hasStyle(t.cls, t.prop)
+        const row = document.createElement('div')
+        row.className = 'grid'
+        const name = document.createElement('div')
+        name.innerHTML = '<code>' + t.cls + '</code>'
+        const status = document.createElement('div')
+        status.textContent = ok ? 'PASS' : 'FAIL'
+        status.className = ok ? 'pass' : 'fail'
+        const swatch = document.createElement('div')
+        swatch.className = 'swatch ' + t.cls
+        row.appendChild(name)
+        row.appendChild(status)
+        row.appendChild(swatch)
+        results.appendChild(row)
+      }
+    </script>
+  </body>
+</html>`
+  return res.end(html)
 }
