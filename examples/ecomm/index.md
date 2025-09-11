@@ -20,44 +20,23 @@ from order_items select date_trunc(created_at, day) as day, revenue, gross_profi
 </Row>
 
 ```sql revenue_by_category
-from order_items select products.category, revenue, gross_profit, gross_margin_pct, count() as units
-order by 2 desc limit 20
+from order_items select products.category, revenue, gross_profit, gross_margin_pct, count() as units order by 2 desc limit 20
 ```
 
 ```sql revenue_by_state
-from order_items select users.state, revenue, count() as units
-order by 2 desc limit 25
+from order_items select users.state, revenue, count() as units order by 2 desc limit 25
 ```
 
-<BarChart
-  data="revenue_by_state"
-  title="Top States by Revenue"
-  x="users_state"
-  y="revenue"
-  swapXY="true"
-/>
+<BarChart data="revenue_by_state" title="Top States by Revenue" x="users_state" y="revenue" swapXY="true" />
 
 <Row>
-  <BarChart
-    data="revenue_by_category"
-    title="Revenue by Category"
-    x="products_category"
-    y="revenue"
-    swapXY="true"
-  />
-
-  <PieChart
-    data="revenue_by_category"
-    title="Category Revenue Share"
-    category="products_category"
-    value="revenue"
-  />
+  <BarChart data="revenue_by_category" title="Revenue by Category" x="products_category" y="revenue" swapXY="true" />
+  <PieChart data="revenue_by_category" title="Category Revenue Share" category="products_category" value="revenue" />
 </Row>
 
 
 ```sql orders_service
-from orders select date_trunc(created_at, week) as week, aov, shipped_rate, delivered_rate, return_rate, order_cycle_time_days
-order by 1 asc
+from orders select date_trunc(created_at, week) as week, aov, shipped_rate, delivered_rate, return_rate, order_cycle_time_days order by 1 asc
 ```
 <Row>
   <LineChart data="orders_service" title="Average Order Value (Weekly)" x="week" y="aov" />
@@ -65,8 +44,7 @@ order by 1 asc
 </Row>
 
 ```sql top_products
-from products select name, units_sold, product_revenue, gross_margin_pct, return_rate,
-order by 3 desc limit 15
+from products select name, units_sold, product_revenue, gross_margin_pct, return_rate order by 3 desc limit 15
 ```
 
 <Table data="top_products" title="Top Products"/>
