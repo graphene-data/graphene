@@ -24,6 +24,7 @@ export async function serve2 () {
     root: grapheneRoot,
     plugins: [
       tailwindcss(),
+      evidenceCoreComponentsCss(),
       svelte({
         extensions: ['.svelte', '.md'],
         preprocess: [
@@ -127,6 +128,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Graphene</title>
+      <link rel="stylesheet" href="/__graphene/evidence.css">
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
@@ -204,5 +206,31 @@ function injectComponentImports () {
     },
     style: () => {},
     script: () => {},
+  }
+}
+
+// Provide a virtual CSS file that precompiles Tailwind rules used by Evidence core components.
+function evidenceCoreComponentsCss () {
+  const VIRTUAL_ID = '/__graphene/evidence.css'
+
+  return {
+    name: 'graphene-evidence-core-css',
+    resolveId (id: string) {
+      return id === VIRTUAL_ID ? id : null
+    },
+    load (id: string) {
+      if (id !== VIRTUAL_ID) return null
+
+      // Scan Evidence core components (and our UI components) for class usage
+      const coreComponentsPath = JSON.stringify(path.resolve(grapheneRoot, 'node_modules/@evidence-dev/core-components/dist'))
+      const uiComponentsPath = JSON.stringify(path.resolve(cliRoot, '../ui/components'))
+
+      // Tailwind v4: @import 'tailwindcss' + @config + @source entries
+      return `@import "tailwindcss";
+@config "@evidence-dev/tailwind/config";
+@source ${coreComponentsPath};
+@source ${uiComponentsPath};
+`
+    },
   }
 }
