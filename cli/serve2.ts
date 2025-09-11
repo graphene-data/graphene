@@ -127,7 +127,9 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Graphene</title>
-      <link href="/node_modules/@graphene/ui/app.css" rel="stylesheet">
+      <link rel="preconnect" href="https://fonts.googleapis.com">
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+      <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
     </head>
     <body>
       <div id="app"></div>
