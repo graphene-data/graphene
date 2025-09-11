@@ -3,9 +3,10 @@
 import {Command} from 'commander'
 import {printDiagnostics, printTable} from './printer.ts'
 import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '@graphene/lang'
-import * as fs from 'fs'
+import fs from 'fs-extra'
 import path from 'path'
 import {getConnection} from './connection.ts'
+import os from 'os'
 
 const program = new Command()
 
@@ -67,6 +68,39 @@ program
       process.exit(1)
     }
     console.log('No errors found 💎')
+  })
+
+program
+  .command('view')
+  .description('Capture a screenshot of a rendered markdown file')
+  .argument('<mdFile>', 'Markdown file to view (e.g., index.md)')
+  .option('-c, --chart <chartName>', 'Name of specific chart to capture')
+  .action(async (mdFile: string, options: {chart?: string}) => {
+    let response = await fetch('http://localhost:4000/graphene/view', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({mdFile, chart: options.chart}),
+    })
+    if (!response.ok) throw new Error(`View request failed: ${await response.text()}`)
+    let result = await response.json()
+
+    if (result.errors && result.errors.length > 0) {
+      console.error('Errors found:')
+      result.errors.forEach(error => console.error(JSON.stringify(error)))
+    }
+
+    if (result.stillLoading) {
+      console.error('Warning: Queries were still loading when the screenshot was taken')
+    }
+
+    // Save screenshot to temp file
+    if (result.screenshot) {
+      let filename = `graphene-screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
+      let screenshotPath = path.join(os.tmpdir(), filename)
+      let base64Data = result.screenshot.replace(/^data:image\/png;base64,/, '')
+      await fs.writeFile(screenshotPath, base64Data, 'base64')
+      console.log('Screenshot saved to', screenshotPath)
+    }
   })
 
 program.parse(process.argv)

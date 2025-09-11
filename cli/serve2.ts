@@ -12,6 +12,8 @@ import path from 'path'
 import autoImport from 'sveltekit-autoimport'
 import tailwindcss from '@tailwindcss/vite'
 import {fileURLToPath} from 'url'
+import {WebSocketServer} from 'ws'
+import {spawn} from 'child_process'
 
 let grapheneRoot: string
 let cliRoot: string
@@ -77,9 +79,32 @@ const updateWorkspacePlugin = {
 const handleRequestPlugin = {
   name: 'handleRequest',
   configureServer: (s: ViteDevServer) => {
+    let wss = new WebSocketServer({noServer: true})
+    s.httpServer!.on('upgrade', (req, socket, head) => {
+      if (!req.url?.endsWith('/graphene-ws')) return
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req)
+      })
+    })
+
+    wss.on('connection', (ws) => {
+      ws.on('message', (data) => {
+        let message = JSON.parse(data.toString())
+        if (message.type === 'register') {
+          browserConnections.push({url: message.url, socket: ws})
+        }
+        if (message.type === 'viewResponse') {
+          viewRequests[message.requestId].response.end(JSON.stringify(message))
+          delete viewRequests[message.requestId]
+        }
+      })
+      ws.on('close', () => browserConnections = browserConnections.filter(conn => conn.socket !== ws))
+    })
+
     s.middlewares.use(async function handleRequest (req, res, next) {
       let [pathName] = (req.url || '').split('?')
       if (pathName == '/graphene/query') return handleQuery(req, res)
+      if (pathName == '/graphene/view') return handleView(req, res)
 
       if (!pathName || pathName == '/') pathName = 'index'
       let mdPath = path.join(grapheneRoot, pathName + '.md')
@@ -117,6 +142,39 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
     res.statusCode = 500
     res.end(JSON.stringify({error: err.message}))
   }
+}
+
+let browserConnections: {url: string, socket: WebSocket}[] = [] // sockets for all open tabs
+let viewRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {} // outstanding requests
+
+async function handleView (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
+  let chunks = [] as any[]
+  for await (let chunk of req) chunks.push(chunk)
+  let {mdFile, chart} = JSON.parse(Buffer.concat(chunks).toString())
+  let id = Math.random().toString(36).slice(2) // random id string
+  res.setHeader('Content-Type', 'application/json')
+  viewRequests[id] = {response: res}
+
+  // Remove .md extension if provided and ensure it's just the filename
+  let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '')
+  if (pageUrl === '/index') pageUrl = '/'
+  pageUrl = `http://localhost:${config.port || 4000}${pageUrl}`
+
+  // Check for existing WebSocket connections. Open a page if we don't find one.
+  let conn = browserConnections.find(conn => conn.url === pageUrl)
+  if (!conn) {
+    spawn('open', [pageUrl])
+    let end = Date.now() + 5000
+    while (Date.now() < end && !conn) {
+      conn = browserConnections.find(conn => conn.url === pageUrl)
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    if (!conn) {
+      res.statusCode = 500
+      return res.end(JSON.stringify({error: 'No browser tab available and failed to open one'}))
+    }
+  }
+  conn.socket.send(JSON.stringify({type: 'view', chart, requestId: id}))
 }
 
 async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, mdPath: string) {
@@ -195,6 +253,7 @@ function injectComponentImports () {
 
   // TODO: we should use `components` to load user components, and `module` to load our own from our package
   // components: [{directory: path.resolve(cliRoot, './node_modules/@graphene/ui/components'), flat: true}],
+  // @ts-expect-error the types for autoImport are wrong
   let autoImporter = autoImport({include: ['**/*.(svelte|md)'], mapping})
   return {
     markup: async ({content, filename}) => {

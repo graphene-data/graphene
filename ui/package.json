@@ -11,6 +11,7 @@
     "@evidence-dev/evidence": "^40.1.2",
     "@evidence-dev/tailwind": "^3.0.10",
     "@sveltejs/adapter-static": "3.0.1",
+    "html2canvas": "^1.4.1",
     "tailwindcss": "4.0.6"
   },
   "devDependencies": {
