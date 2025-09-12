@@ -81,7 +81,7 @@ const handleRequestPlugin = {
       let [pathName] = (req.url || '').split('?')
       if (pathName == '/graphene/query') return handleQuery(req, res)
       if (pathName == '/graphene.css') return handleTailwindCss(res)
-      if (pathName == '/graphene/tw-test') return handleTailwindTest(res)
+      if (pathName == '/graphene/tw-test') return handleTailwindTestPage(s, res)
 
       if (!pathName || pathName == '/') pathName = 'index'
       let mdPath = path.join(grapheneRoot, pathName + '.md')
@@ -228,15 +228,16 @@ function handleTailwindCss (res: ServerResponse<IncomingMessage>) {
 }
 
 // Simple runtime diagnostic page to verify Tailwind utilities are present
-function handleTailwindTest (res: ServerResponse<IncomingMessage>) {
+async function handleTailwindTestPage (server: ViteDevServer, res: ServerResponse<IncomingMessage>) {
   res.setHeader('Content-Type', 'text/html')
   let html = `<!doctype html>
-<html>
+<html class="theme-light">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Tailwind Diagnostic</title>
     <link rel="stylesheet" href="/graphene.css" />
+    <script type="module" src="/node_modules/@graphene/ui/web.js"></script>
     <style>
       body { font-family: system-ui, sans-serif; padding: 16px; }
       .pass { color: #16a34a; }
@@ -246,7 +247,7 @@ function handleTailwindTest (res: ServerResponse<IncomingMessage>) {
       code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
     </style>
   </head>
-  <body>
+  <body class="theme-light">
     <h1>Tailwind Diagnostic</h1>
     <p>This page checks whether certain Tailwind utilities from Evidence/Graphene are available.</p>
     <div id="results" class="grid"></div>
@@ -267,24 +268,30 @@ function handleTailwindTest (res: ServerResponse<IncomingMessage>) {
         document.body.removeChild(el)
         return value && value !== '' && value !== 'rgba(0, 0, 0, 0)' && value !== '0px none rgb(0, 0, 0)'
       }
-      for (const t of tests) {
-        const ok = hasStyle(t.cls, t.prop)
-        const row = document.createElement('div')
-        row.className = 'grid'
-        const name = document.createElement('div')
-        name.innerHTML = '<code>' + t.cls + '</code>'
-        const status = document.createElement('div')
-        status.textContent = ok ? 'PASS' : 'FAIL'
-        status.className = ok ? 'pass' : 'fail'
-        const swatch = document.createElement('div')
-        swatch.className = 'swatch ' + t.cls
-        row.appendChild(name)
-        row.appendChild(status)
-        row.appendChild(swatch)
-        results.appendChild(row)
+      async function run() {
+        // Wait a tick to ensure all CSS and theme variables are applied
+        await new Promise(r => setTimeout(r, 300))
+        for (const t of tests) {
+          const ok = hasStyle(t.cls, t.prop)
+          const row = document.createElement('div')
+          row.className = 'grid'
+          const name = document.createElement('div')
+          name.innerHTML = '<code>' + t.cls + '</code>'
+          const status = document.createElement('div')
+          status.textContent = ok ? 'PASS' : 'FAIL'
+          status.className = ok ? 'pass' : 'fail'
+          const swatch = document.createElement('div')
+          swatch.className = 'swatch ' + t.cls
+          row.appendChild(name)
+          row.appendChild(status)
+          row.appendChild(swatch)
+          results.appendChild(row)
+        }
       }
+      run()
     </script>
   </body>
 </html>`
+  html = await server.transformIndexHtml('/graphene/tw-test', html)
   return res.end(html)
 }
