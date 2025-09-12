@@ -36,7 +36,10 @@
         "vitest": "*",
         "nanoid": "*",
         "unist-util-visit": "*"
-      }
+      },
+      "ignoreMissing": [
+        "@sveltejs/kit"
+      ]
     },
     "ignoredBuiltDependencies": [
       "@sveltejs/kit",
