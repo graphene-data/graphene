@@ -135,6 +135,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
     </head>
     <body>
       <div id="app"></div>
+      <script type="module">import '/__graphene/evidence.css'</script>
       <script type="module" src="/node_modules/@graphene/ui/web.js"></script>
       <script type="module">
         import Page from ${JSON.stringify(mdPath)};
