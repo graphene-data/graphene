@@ -7,6 +7,7 @@ export interface Config {
   dialect: string
   namespace?: string
   port?: number
+  googleProjectId?: string
 }
 
 // Used by tests
