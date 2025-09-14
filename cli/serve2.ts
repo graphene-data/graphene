@@ -189,7 +189,7 @@ function rehypeMdxJsxToHtml () {
 // We don't want users to have to manually import components in their md files, so we auto-import them.
 function injectComponentImports () {
   let mapping = {}
-  for (let comp of ['GrapheneQuery', 'BarChart', 'AreaChart', 'LineChart', 'PieChart', 'Table', 'Row']) {
+  for (let comp of ['GrapheneQuery', 'BarChart', 'AreaChart', 'LineChart', 'PieChart', 'Table', 'Row', 'BigValue']) {
     mapping[comp] = `import ${comp} from '${path.resolve(cliRoot, `../ui/components/${comp}.svelte`)}'`
   }
 
