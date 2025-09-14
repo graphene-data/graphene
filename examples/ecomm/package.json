@@ -2,18 +2,12 @@
   "name": "ecomm-example",
   "version": "0.0.1",
   "scripts": {
-    "setup": "gcloud init --project=intense-acumen-470417-u5",
+    "auth": "gcloud auth application-default login",
+    "dev": "npm run cli serve",
     "cli": "node ../../cli/cli.ts",
-    "serve": "npm run cli serve",
     "compile": "npm run cli compile",
     "run": "npm run cli run",
-    "build": "evidence build",
-    "build:strict": "evidence build:strict",
-    "dev": "evidence dev --open /",
-    "test": "evidence build",
-    "sources": "evidence sources",
-    "sources:strict": "evidence sources --strict",
-    "preview": "evidence preview"
+    "serve": "npm run dev"
   },
   "engines": {
     "node": ">=24.0.0"
@@ -28,6 +22,7 @@
   },
   "graphene": {
     "dialect": "bigquery",
-    "namespace": "bigquery-public-data.thelook_ecommerce"
+    "namespace": "bigquery-public-data.thelook_ecommerce",
+    "googleProjectId": "intense-acumen-470417-u5"
   }
 }
