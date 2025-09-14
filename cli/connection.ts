@@ -10,6 +10,7 @@ export async function getConnection () {
   if (config.dialect === 'bigquery') {
     console.log('wtfmate2', config.googleProjectId)
     let mod = await import('@malloydata/db-bigquery')
+    // not exactly sure the difference between these, but if you don't specify billingProjectId, it will fail to connect.
     let cfg = {projectId: config.googleProjectId, billingProjectId: config.googleProjectId}
     let c = new mod.BigQueryConnection('bigQuery', undefined, cfg) as Connection
     connection = Promise.resolve(c)
@@ -19,9 +20,9 @@ export async function getConnection () {
   if (config.dialect === 'duckdb') {
     let mod = await import('@malloydata/db-duckdb')
     let files = await fs.promises.readdir(process.cwd())
-    let dbPath = files.find(f => f.endsWith('.duckdb'))
-    if (!dbPath) throw new Error('No .duckdb file found in current directory')
-    let c = new mod.DuckDBConnection('duckdb', dbPath) as Connection
+    let databasePath = files.find(f => f.endsWith('.duckdb'))
+    if (!databasePath) throw new Error('No .duckdb file found in current directory')
+    let c = new mod.DuckDBConnection({databasePath, readOnly: true, name: 'duckdb'}) as Connection
     connection = Promise.resolve(c)
     return connection
   }
