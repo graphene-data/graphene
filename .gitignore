@@ -13,3 +13,4 @@ vscode/*.vsix
 CLAUDE.md
 .conductor
 .env
+.wt
