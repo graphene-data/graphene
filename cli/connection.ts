@@ -8,7 +8,6 @@ export async function getConnection () {
   if (connection) return await connection
 
   if (config.dialect === 'bigquery') {
-    console.log('wtfmate2', config.googleProjectId)
     let mod = await import('@malloydata/db-bigquery')
     // not exactly sure the difference between these, but if you don't specify billingProjectId, it will fail to connect.
     let cfg = {projectId: config.googleProjectId, billingProjectId: config.googleProjectId}
