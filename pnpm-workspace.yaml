@@ -3,4 +3,5 @@ packages:
   - cli
   - vscode
   - ui
+  - agent
   - examples/*
