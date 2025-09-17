@@ -12,3 +12,4 @@ notes.md
 vscode/*.vsix
 CLAUDE.md
 .conductor
+.env

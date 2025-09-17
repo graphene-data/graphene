@@ -7,6 +7,7 @@ import fs from 'fs-extra'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {getConnection} from './connection.ts'
 import {IncomingMessage, ServerResponse} from 'http'
+import {handleAgentRequest} from '@graphene/agent/agent.ts'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
 import autoImport from 'sveltekit-autoimport'
@@ -50,7 +51,12 @@ export async function serve2 () {
     },
     optimizeDeps: {
       // include: ['echarts-stat', 'echarts', 'blueimp-md5', 'nanoid', '@uwdata/mosaic-sql', '@evidence-dev/core-components', '@evidence-dev/component-utilities/stores', '@evidence-dev/component-utilities/formatting', '@evidence-dev/component-utilities/globalContexts', '@evidence-dev/sdk/utils/svelte', '@evidence-dev/component-utilities/profile', '@evidence-dev/sdk/usql', '@evidence-dev/component-utilities/buildQuery', 'debounce', '@duckdb/duckdb-wasm'],
-      exclude: ['svelte-icons', '@evidence-dev/universal-sql', '$evidence/config', '$evidence/themes', '$app/environment', '$app/navigation', '$app/forms', '$app/stores'],
+      exclude: ['@graphene/ui', 'svelte-icons', '@evidence-dev/universal-sql', '$evidence/config', '$evidence/themes', '$app/environment', '$app/navigation', '$app/forms', '$app/stores'],
+    },
+    resolve: {
+      alias: {
+        '@graphene/ui': path.resolve(cliRoot, './ui'), // useful for graphene dev, but should remove when packaging
+      },
     },
     ssr: {
       // external: ['@evidence-dev/telemetry', 'blueimp-md5', 'nanoid', '@uwdata/mosaic-sql', '@evidence-dev/sdk/plugins'],
@@ -105,6 +111,9 @@ const handleRequestPlugin = {
       let [pathName] = (req.url || '').split('?')
       if (pathName == '/graphene/query') return handleQuery(req, res)
       if (pathName == '/graphene/view') return handleView(req, res)
+      if (pathName == '/graphene/agent') return handleAgentRequest(req, res, grapheneRoot)
+
+      if (pathName == '/explore') return handlePage(s, res, path.join(grapheneRoot, 'node_modules/@graphene/ui/explore.svelte'))
 
       if (!pathName || pathName == '/') pathName = 'index'
       let mdPath = path.join(grapheneRoot, pathName + '.md')
@@ -177,9 +186,10 @@ async function handleView (req: IncomingMessage, res: ServerResponse<IncomingMes
   conn.socket.send(JSON.stringify({type: 'view', chart, requestId: id}))
 }
 
-async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, mdPath: string) {
+
+async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, filePath: string) {
   res.setHeader('Content-Type', 'text/html')
-  let html = await server.transformIndexHtml(mdPath, `<!doctype html>
+  let html = await server.transformIndexHtml(filePath, `<!doctype html>
   <html lang="en">
     <head>
       <meta charset="UTF-8" />
@@ -193,7 +203,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <div id="app"></div>
       <script type="module" src="/node_modules/@graphene/ui/web.js"></script>
       <script type="module">
-        import Page from ${JSON.stringify(mdPath)};
+        import Page from ${JSON.stringify(filePath)};
         new Page({ target: document.getElementById('app'), props: {} })
       </script>
     </body>
