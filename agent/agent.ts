@@ -1,5 +1,8 @@
 import {query, type PermissionResult} from '@anthropic-ai/claude-code'
 import {IncomingMessage, ServerResponse} from 'http'
+import fs from 'fs-extra'
+import path from 'path'
+import {fileURLToPath} from 'url'
 
 export async function handleAgentRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>, grapheneRoot: string) {
   let chunks = [] as any[]
@@ -15,6 +18,8 @@ export async function handleAgentRequest (req: IncomingMessage, res: ServerRespo
     }
     return res.end()
   }
+
+  let grapheneDocs = await fs.readFile(path.join(fileURLToPath(import.meta.url), '../../docs/graphene.md'))
 
   let done: any // see https://github.com/anthropics/claude-code/issues/4775
   let finishedPromise = new Promise(resolve => done = resolve)
@@ -34,9 +39,8 @@ export async function handleAgentRequest (req: IncomingMessage, res: ServerRespo
 
     If the user asks for something simple, keep the md simple. Don't go building complex things they didn't ask for.
 
-    When updating the Graphene Markdown:
-    * Use appropriate Evidence components like <BarChart>, <LineChart>, <Table>, etc.
-    * Write Graphene SQL queries that make sense for the available data
+    Here's a brief overview on how to use Graphene:
+    ${grapheneDocs}
   `
 
   // let extraArgs = {'input-format': 'stream-json'}
