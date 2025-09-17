@@ -351,10 +351,10 @@
 /* ---------------------------- */
 
 html {
-	padding: 2rem;
 }
 
 main {
+  margin: 0 2rem;
 	max-width: 1200px;
 	margin: 0 auto;
 }

@@ -6,7 +6,8 @@
     "lang",
     "cli",
     "vscode",
-    "ui"
+    "ui",
+    "agent"
   ],
   "engines": {
     "node": ">=24.0.0"
