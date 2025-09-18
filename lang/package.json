@@ -8,6 +8,7 @@
     "generate": "lezer-generator lang.grammar -o parser.js && eslint --fix parser.js"
   },
   "dependencies": {
+    "@dotenvx/dotenvx": "^1.49.1",
     "@lezer/common": "^1.2.3",
     "@lezer/lr": "^1.4.2",
     "@malloydata/malloy": "^0.0.302",
