@@ -11,6 +11,6 @@ notes.md
 **/.vscode/settings.json
 vscode/*.vsix
 CLAUDE.md
-.conductor
+.conductor/
 .env
-.wt
+.wt/
