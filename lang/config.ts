@@ -1,5 +1,13 @@
 import * as fs from 'fs'
 import path from 'path'
+import dotenv from '@dotenvx/dotenvx'
+import {fileURLToPath} from 'url'
+
+dotenv.config({
+  path: path.join(fileURLToPath(import.meta.url), '../../.env'),
+  ignore: ['MISSING_ENV_FILE'],
+  logLevel: 'error',
+})
 
 export let config: Config = {dialect: 'duckdb'} as Config
 
@@ -17,18 +25,20 @@ export function setConfig (cfg: Config) {
 }
 
 // Read graphene config out of package.json
-export async function loadConfig (dir:string): Promise<Config> {
+export function loadConfig (dir:string) {
   let packageJsonObject = {} as any
   try {
-    let packageJsonContent = await fs.promises.readFile(path.join(dir, 'package.json'), 'utf8')
+    let packageJsonContent = fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
     packageJsonObject = JSON.parse(packageJsonContent)
   } catch {
     console.warn('No package.json found in current directory')
   }
 
-  Object.assign(config, packageJsonObject.graphene || {dialect: 'duckdb'})
-  config.dialect = config.dialect || 'duckdb'
-  return config
+  setConfig({
+    ...packageJsonObject,
+    dialect: packageJsonObject.dialect || 'duckdb',
+    port: process.env.GRAPHENE_PORT || packageJsonObject.port || 4000,
+  })
 }
 
 const kwMap = {
