@@ -7,6 +7,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import {getConnection} from './connection.ts'
 import os from 'os'
+import {loadConfig} from '@graphene/lang/config.ts'
 
 const program = new Command()
 
@@ -16,9 +17,10 @@ program
   .version('1.0.0')
 
 program.hook('preAction', async () => {
-  if (process.env.CLI_DELAY) {
+  if (process.env.CLI_DELAY) { // useful if you want to attach a debugger
     await new Promise(r => setTimeout(r, 1000))
   }
+  loadConfig(process.cwd())
 })
 
 program

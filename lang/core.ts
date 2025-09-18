@@ -23,7 +23,7 @@ export function getDiagnostics () { return diagnostics }
 
 // Loads and parses all gsql files within a directory
 export async function loadWorkspace (dir:string) {
-  await loadConfig(dir)
+  loadConfig(dir)
 
   let files = await glob('**/*.gsql', {cwd: dir})
   for await (let file of files) {
