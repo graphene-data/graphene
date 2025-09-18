@@ -49,6 +49,7 @@
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide",
       "@vscode/vsce-sign",
+      "duckdb",
       "esbuild",
       "svelte-preprocess"
     ]
