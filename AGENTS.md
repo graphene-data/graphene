@@ -29,6 +29,8 @@ Most directories have test files you can run to ensure they work correctly. You 
 
 Often, it's helpful to know how Malloy would compile given to to it's IR. `node scripts/howDoesMalloy.ts` will print out the final SQL, along with the IR. There's some example code within `howDoesMalloy` that gets run, and it's easiest to just modify this to your needs before running.
 
+When testing AI features, always use a mock rather than hitting an API. On the explore page, you can use "mock" as the prompt to get simulated messages.
+
 # Code style
 In Graphene, our primary stylistic goal is "high-level readability". We want easily skim a file or function and get a sense of what it does. We care less about the tactical details of how it accomplishes that.
 
