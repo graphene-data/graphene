@@ -28,8 +28,9 @@ export function setConfig (cfg: Config) {
 export function loadConfig (dir:string) {
   let packageJsonObject = {} as any
   try {
-    let packageJsonContent = fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
-    packageJsonObject = JSON.parse(packageJsonContent)
+    let txt = fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
+    let all = JSON.parse(txt)
+    packageJsonObject = all.graphene || {}
   } catch {
     console.warn('No package.json found in current directory')
   }
