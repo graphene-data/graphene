@@ -4,19 +4,27 @@ Why code? Because AI coding agents are really good, and putting your entire data
 
 At a high level, we provide a superset of sql that allows for defining semantic models and measures, as well some query QoL improvements like `tableA.tableB.someColumn` automatically expanding into the correct join. Users can also create markdown files that turn in to beautiful web-based reports and dashboards that can include custom queries and charts.
 
+If you need to better understand Graphene sql or markdown, you can read @docs/graphene.md.
+
 # Repo structure
-* /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
+* /agent - a wrapper around claude-code
 * /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
-* /vscode - an extension that provides syntax highlighting and diagnostics on queries.
 * /examples - a series of example datasets
+* /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
+* /ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
+* /vscode - an extension that provides syntax highlighting and diagnostics on queries.
 
 
 # Tech stack
 Graphene is mostly written in typescript. We parse Graphene SQL with Lezer, then translate it to an IR used my Malloy, which we then use to render the final, dialect-specfic SQL.
 
-We use Evidence to to turn markdown files into interactive data pages. Under the hood, Evidence uses vite, svelte, and mdsevx to make this work.
+For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 4, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
 
 # Testing
+To manually run graphene, you'll want to cd to one of the examples (like `flights`). From there, `pnpm run cli` lets you run the Graphene CLI.
+`pnpm run cli serve` will start up the server, and tell you the port it's on
+`pnpm run cli run "<gsql>"` lets you execute arbitrary graphene sql.
+
 Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test -w <workspace>`, where workspace is one of 'cli', 'lang', etc.
 
 Often, it's helpful to know how Malloy would compile given to to it's IR. `node scripts/howDoesMalloy.ts` will print out the final SQL, along with the IR. There's some example code within `howDoesMalloy` that gets run, and it's easiest to just modify this to your needs before running.
