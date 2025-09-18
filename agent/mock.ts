@@ -316,7 +316,7 @@ export const MockMessages = [
           id: 'toolu_01BhZNNdUGMzUhitYbrXa1hK',
           name: 'Write',
           input: {
-            file_path: '/Users/grant/co/graphene/.wt/loveable/examples/flights/flight-delays-by-carrier.md',
+            file_path: '/Users/grant/co/graphene/.wt/loveable/examples/flights/index.md',
             content: '# Flight Delays by Carrier Analysis\n' +
             '\n' +
             'This analysis examines flight delays across different airline carriers, looking at both departure and arrival delays to identify patterns and performance differences.\n' +
@@ -435,7 +435,7 @@ export const MockMessages = [
         {
           tool_use_id: 'toolu_01BhZNNdUGMzUhitYbrXa1hK',
           type: 'tool_result',
-          content: 'File created successfully at: /Users/grant/co/graphene/.wt/loveable/examples/flights/flight-delays-by-carrier.md',
+          content: 'File created successfully at: /Users/grant/co/graphene/.wt/loveable/examples/flights/index.md',
         },
       ],
     },
