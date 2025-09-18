@@ -5,9 +5,10 @@
   let messages = []
   let prompt = ''
   let content
-
+  let promptField
 
   async function updateContent(fileName) {
+    if (!fileName) return
     try {
       let mod = await import(`${fileName}?import` /* @vite-ignore */)
       content = mod.default
@@ -16,16 +17,15 @@
     }
   }
 
-  async function startPrompt(prompt) {
-    if (!prompt.trim()) return
+  async function startPrompt(promptText) {
+    if (!promptText.trim()) return
     messages = []
 
-    let response = await fetch("/graphene/agent", {
+    let response = await fetch('/graphene/agent', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({prompt}),
+      body: JSON.stringify({prompt: promptText}),
     })
-
 
     if (!response.ok) {
       console.error('Agent request failed:', response.statusText)
@@ -41,9 +41,8 @@
       if (done) break
 
       buffer += decoder.decode(value, {stream: true})
-      console.log(buffer)
       let lines = buffer.split('\n')
-      buffer = lines.pop() // Keep incomplete line in buffer
+      buffer = lines.pop()
 
       for (let line of lines) {
         if (!line.trim()) continue
@@ -55,18 +54,34 @@
     updateContent(lastWrite?.message.content[0].input.file_path)
   }
 
-  function handleKeyPress(event) {
+  function submitPrompt() {
+    let trimmed = prompt.trim()
+    if (!trimmed) return
+    startPrompt(trimmed)
+    prompt = ''
+    autosizePrompt()
+  }
+
+  function handleKeyDown(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
-      startPrompt(prompt)
-      prompt = ''
+      submitPrompt()
     }
   }
 
+  function autosizePrompt() {
+    if (!promptField) return
+    promptField.style.height = 'auto'
+    promptField.style.height = `${promptField.scrollHeight}px`
+  }
+
+  function handlePromptInput() {
+    autosizePrompt()
+  }
+
   onMount(() => {
-    // Focus the textarea
-    document.querySelector('textarea')?.focus()
-    // updateContent('flight-delays-by-carrier.md')
+    promptField?.focus()
+    autosizePrompt()
   })
 </script>
 
@@ -74,82 +89,204 @@
   .explore {
     display: flex;
     height: 100vh;
-    font-family: system-ui, -apple-system, sans-serif;
+    background: linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #0f172a;
   }
 
-  .left-panel {
-    width: 400px;
-    padding-top: 20px;
-    border-right: 1px solid #e5e7eb;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  main {
-    flex: 1;
-    padding: 20px;
+  .sidebar {
+    --sidebar-inline-padding: 28px;
+    width: 340px;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 28px;
+    padding: 32px var(--sidebar-inline-padding) 28px var(--sidebar-inline-padding);
+    border-right: 1px solid rgba(148, 163, 184, 0.12);
+    background: transparent;
+    height: 100vh;
+    box-sizing: border-box;
     overflow: hidden;
   }
 
-  h1 {
-    margin: 0 0 20px 0;
-    color: #1f2937;
+  .prompt {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .prompt__field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    border-radius: 16px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(255, 255, 255, 0.82);
   }
 
   textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
+    flex: 1;
+    min-height: 80px;
+    padding: 18px 18px 18px;
+    border: none;
+    border-radius: 16px;
+    background: transparent;
     font-size: 14px;
     font-family: inherit;
-    resize: vertical;
-    min-height: 80px;
+    line-height: 1.55;
+    resize: none;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
+  }
+
+  textarea::placeholder {
+    color: #94a3b8;
   }
 
   textarea:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background: rgba(255, 255, 255, 0.95);
   }
 
-  .empty-content {
+  .prompt__field:focus-within {
+    border-color: rgba(37, 99, 235, 0.32);
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  .prompt__footer {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-top: 1px solid rgba(148, 163, 184, 0.16);
+  }
+
+  .prompt__hint {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .prompt__run {
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: none;
+    background: #1d4ed8;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+
+  .prompt__run:hover {
+    box-shadow: 0 8px 18px -12px rgba(37, 99, 235, 0.8);
+  }
+
+  .prompt__run:active {
+    transform: translateY(1px);
+  }
+
+  .sidebar__messages {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .messages-panel {
+    flex: 1;
+    margin-right: calc(-1 * var(--sidebar-inline-padding, 0px));
+    overflow: hidden;
+    display: flex;
+  }
+
+  .messages-panel :global(.messages-container) {
+    flex: 1;
     height: 100%;
-    color: #6b7280;
-    text-align: center;
   }
 
-  .empty-content h2 {
-    color: #1f2937;
-    margin-bottom: 12px;
+  .messages-panel :global(.message) {
+    padding-right: var(--sidebar-inline-padding, 0px);
   }
 
-  .empty-content p {
-    max-width: 400px;
-    line-height: 1.6;
+  .workspace {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    height: 100vh;
+    box-sizing: border-box;
+    background: radial-gradient(circle at top right, rgba(59, 130, 246, 0.08), transparent 45%),
+      radial-gradient(circle at bottom left, rgba(14, 116, 144, 0.08), transparent 40%);
   }
+
+  .workspace__content,
+  .workspace__empty {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 32px 80px -48px rgba(15, 23, 42, 0.35);
+    padding: 36px 40px;
+    overflow: auto;
+  }
+
+  .workspace__empty {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    justify-content: center;
+    max-width: 520px;
+    color: #475569;
+  }
+
+  .workspace__empty h2 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .workspace__empty p {
+    margin: 0;
+    line-height: 1.7;
+  }
+
 </style>
 
 <div class="explore">
-  <div class="left-panel">
-    <h1>Explore</h1>
-    <textarea bind:value={prompt} on:keypress={handleKeyPress} />
-    <AgentMessages messages={messages} />
-  </div>
+  <aside class="sidebar">
+    <section class="sidebar__messages">
+      <div class="messages-panel">
+        <AgentMessages messages={messages} />
+      </div>
+    </section>
 
-  <main>
+    <form class="prompt" on:submit|preventDefault={submitPrompt}>
+      <div class="prompt__field">
+        <textarea
+          bind:this={promptField}
+          bind:value={prompt}
+          on:input={handlePromptInput}
+          on:keydown={handleKeyDown}
+        />
+        <div class="prompt__footer">
+          <span class="prompt__hint"></span>
+          <button type="submit" class="prompt__run">Run</button>
+        </div>
+      </div>
+    </form>
+  </aside>
+
+  <main class="workspace">
     {#if content}
-      <svelte:component this={content} />
+      <div class="workspace__content">
+        <svelte:component this={content} />
+      </div>
     {:else}
-      <div class="empty-content">
-        <h2>Welcome to Graphene Explore</h2>
+      <div class="workspace__empty">
+        <h2>Graphene Explore</h2>
         <p>
-          Ask a question in the text area to get started.
-          I'll analyze your data and create visualizations for you.
+          Ask a question or type a query.
         </p>
       </div>
     {/if}

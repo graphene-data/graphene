@@ -1,111 +1,291 @@
 <script>
+  import {afterUpdate, beforeUpdate, onMount} from 'svelte'
+  import {marked} from 'marked'
+  import DOMPurify from 'dompurify'
+
   export let messages = []
 
-  function formatToolName(toolName) {
-    return toolName.charAt(0).toUpperCase() + toolName.slice(1)
+  let grapheneRoot = typeof window !== 'undefined' && window.grapheneRoot ? window.grapheneRoot : ''
+  let container
+  let stickToBottom = true
+  const BOTTOM_BUFFER = 40
+
+  // Marked produces HTML from markdown; DOMPurify keeps it safe for injection.
+  const sanitizeHtml = typeof window === 'undefined' ? (html) => html : (html) => DOMPurify.sanitize(html)
+
+  function renderMarkdown(source) {
+    if (!source) return ''
+    let html = marked.parse(source, {mangle: false, headerIds: false})
+    return sanitizeHtml(html)
   }
 
-  function formatToolInput(input) {
-    if (typeof input === 'string') return input
-    if (input.file_path) return input.file_path
-    if (input.pattern) return `"${input.pattern}"`
-    if (input.command) return input.command
-    return JSON.stringify(input, null, 2)
+  $: displayMessages = buildDisplayMessages(messages)
+
+  function buildDisplayMessages(source) {
+    grapheneRoot = findGrapheneRoot(source) || grapheneRoot
+    let combined = []
+    let toolIndex = new Map()
+
+    for (let message of source) {
+      if (message.type === 'system' && message.cwd) grapheneRoot = message.cwd
+      if (message.type === 'assistant' && message.message?.content) {
+        for (let chunk of message.message.content) {
+          if (chunk.type === 'text') {
+            combined.push({
+              kind: 'assistant-text',
+              id: chunk.id ?? `${message.uuid || message.message?.id}-text-${combined.length}`,
+              text: chunk.text,
+            })
+          } else if (chunk.type === 'tool_use') {
+            let entry = {
+              kind: 'tool',
+              id: chunk.id,
+              name: chunk.name,
+              inputSummary: formatToolInput(chunk.name, chunk.input),
+              status: 'pending',
+            }
+            toolIndex.set(chunk.id, entry)
+            combined.push(entry)
+          }
+        }
+      }
+
+      if (message.type === 'user' && message.message?.content) {
+        for (let chunk of message.message.content) {
+          if (chunk.type !== 'tool_result') continue
+          let target = toolIndex.get(chunk.tool_use_id)
+          let status = toolResultStatus(chunk)
+          if (target) {
+            target.status = status
+          } else {
+            combined.push({
+              kind: 'tool',
+              id: chunk.tool_use_id,
+              name: 'Tool',
+              inputSummary: null,
+              status,
+            })
+          }
+        }
+      }
+    }
+
+    return combined
   }
+
+  function findGrapheneRoot(list) {
+    let systemMsg = [...list].reverse().find(item => item.type === 'system' && item.cwd)
+    return systemMsg?.cwd
+  }
+
+  function toolResultStatus(result) {
+    if (result?.is_error === true || result?.isError === true) return 'failed'
+    if (typeof result?.content === 'string' && /error/i.test(result.content)) return 'failed'
+    return 'succeeded'
+  }
+
+  function stripRoot(value) {
+    if (!grapheneRoot || typeof value !== 'string') return value
+    let normalizedRoot = grapheneRoot.endsWith('/') ? grapheneRoot : grapheneRoot + '/'
+    return value.startsWith(normalizedRoot) ? value.slice(normalizedRoot.length) : value
+  }
+
+  function summarizeObject(obj) {
+    if (!obj || typeof obj !== 'object') return null
+    let parts = []
+    for (let [key, val] of Object.entries(obj)) {
+      let formatted = formatValue(val)
+      if (formatted) parts.push(`${key}: ${formatted}`)
+    }
+    return parts.join(' · ')
+  }
+
+  function formatValue(val) {
+    if (val == null) return ''
+    if (typeof val === 'string') return stripRoot(val)
+    if (typeof val === 'number' || typeof val === 'boolean') return String(val)
+    if (Array.isArray(val)) return val.map(formatValue).join(', ')
+    if (typeof val === 'object') return summarizeObject(val)
+    return ''
+  }
+
+  function formatToolInput(name, input) {
+    if (!input) return null
+    if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(name)) return null
+    if (typeof input === 'string') return stripRoot(input)
+    let summary = summarizeObject(input)
+    return summary || null
+  }
+
+  function nearBottom () {
+    if (!container) return true
+    return container.scrollHeight - container.clientHeight - container.scrollTop <= BOTTOM_BUFFER
+  }
+
+  function handleScroll () {
+    stickToBottom = nearBottom()
+  }
+
+  onMount(() => {
+    if (container) container.scrollTop = container.scrollHeight
+    handleScroll()
+  })
+
+  beforeUpdate(() => {
+    handleScroll()
+  })
+
+  afterUpdate(() => {
+    if (!container) return
+    if (stickToBottom) container.scrollTop = container.scrollHeight
+    handleScroll()
+  })
 </script>
 
 <style>
   .messages-container {
-    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    height: 100%;
+    overflow-y: auto;
+    padding: 4px 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+  }
+
+  .messages-container::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .messages-container::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.35);
+    border-radius: 999px;
   }
 
   .message {
-    margin-bottom: 12px;
-  }
-
-  .message-assistant {
-    padding: 12px;
-    background: white;
-    border-radius: 6px;
-    border-left: 3px solid #3b82f6;
-  }
-
-  .message-tool {
-    padding: 8px 12px;
-    background: #f0f9ff;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 13px;
-    color: #0369a1;
-    border-left: 3px solid #0ea5e9;
-  }
-
-  .message-tool-result {
-    padding: 8px 12px;
-    background: #f0fdf4;
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 13px;
-    color: #166534;
-    border-left: 3px solid #22c55e;
-    white-space: pre-wrap;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+    color: #334155;
+    line-height: 1.55;
   }
 
   .message-text {
-    color: #1f2937;
-    line-height: 1.5;
+    margin: 0;
+  }
+
+  .message-text :global(p) {
+    margin: 0 0 0.6rem;
+    line-height: 1.6;
+  }
+
+  .message-text :global(p:last-child) {
+    margin-bottom: 0;
+  }
+
+  .message-text :global(a) {
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  .message-text :global(a:hover) {
+    text-decoration: underline;
+  }
+
+  .message-text :global(code) {
+    font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    background: rgba(148, 163, 184, 0.16);
+    padding: 0 4px;
+    border-radius: 4px;
+  }
+
+  .message-text :global(pre) {
+    background: rgba(15, 23, 42, 0.04);
+    padding: 12px;
+    border-radius: 8px;
+    font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
+    overflow-x: auto;
+  }
+
+  .message-assistant {
+    color: #1e293b;
+  }
+
+  .message-tool {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #1e293b;
+  }
+
+  .tool-meta {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
   }
 
   .tool-name {
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #475569;
+    font-size: 12px;
+  }
+
+  .tool-status {
+    font-size: 12px;
     font-weight: 600;
-    color: #0369a1;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #2563eb;
+  }
+
+  .tool-status.failed {
+    color: #dc2626;
+  }
+
+  .tool-status.pending {
+    color: #64748b;
   }
 
   .tool-input {
-    color: #6b7280;
+    font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
     font-size: 12px;
-    margin-top: 4px;
-  }
-
-  .message-timestamp {
-    font-size: 11px;
-    color: #6b7280;
-    margin-top: 8px;
+    color: #64748b;
+    word-break: break-word;
   }
 
   .empty-state {
     text-align: center;
-    color: #6b7280;
-    padding: 40px 20px;
+    color: #94a3b8;
+    padding: 32px 16px;
     font-style: italic;
+  }
+
+  .message:last-child {
+    border-bottom: none;
   }
 </style>
 
-<div class="messages-container">
-  {#each messages as message}
-    {#if message.type === 'assistant' && message.message?.content}
-      {#each message.message.content as content}
-        {#if content.type === 'text'}
-          <div class="message message-assistant">
-            <div class="message-text">{content.text}</div>
-          </div>
-        {:else if content.type === 'tool_use'}
-          <div class="message message-tool">
-            <span class="tool-name">{formatToolName(content.name)}</span>
-            <div class="tool-input">{formatToolInput(content.input)}</div>
-          </div>
+<div class="messages-container" bind:this={container} on:scroll={handleScroll}>
+  {#each displayMessages as item (item.id)}
+    {#if item.kind === 'assistant-text'}
+      <div class="message message-assistant">
+        <div class="message-text markdown">{@html renderMarkdown(item.text)}</div>
+      </div>
+    {:else if item.kind === 'tool'}
+      <div class="message message-tool">
+        <div class="tool-meta">
+          <span class="tool-name">{item.name}</span>
+          <span class={`tool-status ${item.status}`}>
+            {item.status === 'failed' ? 'Failed' : item.status === 'pending' ? 'Running…' : 'Succeeded'}
+          </span>
+        </div>
+        {#if item.inputSummary}
+          <div class="tool-input">{item.inputSummary}</div>
         {/if}
-      {/each}
-    {:else if message.type === 'user' && message.message?.content}
-      {#each message.message.content as content}
-        {#if content.type === 'tool_result'}
-          <div class="message message-tool-result">
-            {content.content.length > 200
-              ? content.content.substring(0, 200) + '...'
-              : content.content}
-          </div>
-        {/if}
-      {/each}
+      </div>
     {/if}
   {/each}
 </div>
