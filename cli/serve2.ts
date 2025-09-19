@@ -19,12 +19,12 @@ import {spawn} from 'child_process'
 let grapheneRoot: string
 let cliRoot: string
 
-export async function serve2 () {
-  grapheneRoot = process.cwd()
+export async function serve2 (): Promise<ViteDevServer> {
+  grapheneRoot = config.root
   cliRoot = path.join(fileURLToPath(import.meta.url), '..')
 
   let server = await createServer({
-    root: grapheneRoot,
+    root: config.root,
     plugins: [
       tailwindcss(),
       svelte({
@@ -46,7 +46,7 @@ export async function serve2 () {
       updateWorkspacePlugin,
     ],
     server: {
-      port: config.port || 4000,
+      port: config.port,
       fs: {strict: false},
     },
     optimizeDeps: {
@@ -64,7 +64,7 @@ export async function serve2 () {
   })
 
   await server.listen()
-  console.log(`Server running at ${server.resolvedUrls?.local?.[0]}`)
+  console.log(`Server running at http://localhost:${config.port}`)
 }
 
 // Watch for changes to gsql files and reload the workspace.

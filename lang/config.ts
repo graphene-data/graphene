@@ -16,6 +16,7 @@ export interface Config {
   namespace?: string
   port?: number
   googleProjectId?: string
+  root: string
 }
 
 // Used by tests
@@ -26,6 +27,8 @@ export function setConfig (cfg: Config) {
 
 // Read graphene config out of package.json
 export function loadConfig (dir:string) {
+  if (config.root) return
+
   let packageJsonObject = {} as any
   try {
     let txt = fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
@@ -39,6 +42,7 @@ export function loadConfig (dir:string) {
     ...packageJsonObject,
     dialect: packageJsonObject.dialect || 'duckdb',
     port: process.env.GRAPHENE_PORT || packageJsonObject.port || 4000,
+    root: packageJsonObject.root || process.cwd(),
   })
 }
 
