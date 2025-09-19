@@ -3,7 +3,7 @@
   "main": "web.js",
   "type": "module",
   "scripts": {
-    "test": "vitest run -c ../vitest.config.ts --browser --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
+    "test": "vitest run -c ../vitest.config.ts --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
     "test-one": "DEBUG=1 node --inspect ../scripts/turboTest.js"
   },
   "dependencies": {

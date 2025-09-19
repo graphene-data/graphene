@@ -26,22 +26,27 @@ function grapheneTestStubs () {
 
 export default defineConfig({
   plugins: [svelte(), grapheneTestStubs()],
+  resolve: {
+    alias: [
+      {find: /^@evidence-dev\/core-components(.*)?$/, replacement: '/workspace/ui/test/stubs/core-components.js'},
+      {find: /^\$app\/environment$/, replacement: '/workspace/ui/test/stubs/app-environment.js'},
+      {find: /^\$app\/navigation$/, replacement: '/workspace/ui/test/stubs/app-navigation.js'},
+      {find: /^\$app\/forms$/, replacement: '/workspace/ui/test/stubs/app-forms.js'},
+      {find: /^\$app\/stores$/, replacement: '/workspace/ui/test/stubs/app-stores.js'},
+      {find: /^\$evidence\/config$/, replacement: '/workspace/ui/test/stubs/evidence-config.js'},
+      {find: /^\$evidence\/themes$/, replacement: '/workspace/ui/test/stubs/evidence-themes.js'},
+      {find: /^@duckdb\/node-bindings(.*)?$/, replacement: '/workspace/ui/test/stubs/duckdb-node.js'},
+      {find: /^@duckdb\/duckdb-wasm(.*)?$/, replacement: '/workspace/ui/test/stubs/duckdb-wasm.js'},
+    ],
+  },
   projects: [
-    // Browser project for component tests
+    // Component tests (jsdom)
     {
       test: {
-        name: 'ui-browser',
+        name: 'ui-components',
         globals: true,
         include: ['/workspace/ui/components/**/*.test.ts'],
-        setupFiles: [],
-        browser: {
-          enabled: true,
-          name: 'chromium',
-          provider: 'playwright',
-          headless: true,
-          screenshotFailures: false,
-        },
-        resolveSnapshotPath: (testPath) => testPath + '.snap',
+        environment: 'jsdom',
       },
       resolve: {
         alias: [
@@ -57,7 +62,7 @@ export default defineConfig({
         ],
       },
     },
-    // Node project for e2e tests using Playwright programmatically
+    // E2E tests (Playwright launched programmatically)
     {
       test: {
         name: 'ui-e2e',

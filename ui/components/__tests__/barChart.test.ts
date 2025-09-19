@@ -1,6 +1,14 @@
 import {test, expect} from 'vitest'
 import BarChart from '../barChart.svelte'
 
+// Ensure browser-like globals for Evidence utilities that access localStorage
+;(globalThis as any).localStorage ||= {
+  getItem: () => null,
+  setItem: () => {},
+  removeItem: () => {},
+  clear: () => {},
+}
+
 // Minimal Svelte component mount helper using DOM
 function mount(Component: any, target: HTMLElement, props: Record<string, any>) {
   // Evidence component expects window.$GRAPHENE.query to resolve rows
