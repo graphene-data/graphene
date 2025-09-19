@@ -13,8 +13,8 @@ export async function handleAgentRequest (req: IncomingMessage, res: ServerRespo
   if (inputPrompt == 'mock') {
     let mod = await import('./mock.ts')
     for (let msg of mod.MockMessages) {
-      writeMessage(msg, res, grapheneRoot)
-      await new Promise(r => setTimeout(r, 300))
+      res.write(JSON.stringify(msg) + '\n')
+      await new Promise(r => setTimeout(r, 50))
     }
     return res.end()
   }
@@ -52,50 +52,14 @@ export async function handleAgentRequest (req: IncomingMessage, res: ServerRespo
   for await (let msg of q) {
     console.dir(msg, {depth: null})
     if (msg.type === 'result') done()
-    writeMessage(msg, res, grapheneRoot)
+    res.write(JSON.stringify(msg) + '\n')
   }
 
   res.end()
-}
-
-function writeMessage (msg, res, grapheneRoot) {
-  let cl = structuredClone(msg)
-  if (cl.message?.content[0]?.name == 'Write') {
-    let inp = cl.message.content[0].input
-    inp.file_path = inp.file_path.replace(grapheneRoot, '')
-  }
-  res.write(JSON.stringify(cl) + '\n')
 }
 
 async function canUseTool (toolName: string, input: any): Promise<PermissionResult> {
   console.log('canUseTool', toolName, input)
   await Promise.resolve()
   return {behavior: 'allow', updatedInput: input}
-}
-
-// If this script is called directly from the command line
-if (import.meta.url === `file://${process.argv[1]}`) {
-  // Mock request and response objects
-  let mockReq = {
-    [Symbol.asyncIterator]: async function* () {
-      yield Buffer.from(JSON.stringify({
-        prompt: process.argv[2] || 'Show me delays by carrier',
-        sessionId: null,
-        targetFile: process.argv[3] || null,
-      }))
-    },
-  }
-
-  let mockRes = {
-    write: (data: string) => {
-      // console.log(JSON.parse(data))
-    },
-    end: () => {
-      // console.log('Request completed')
-    },
-  }
-
-  // Call the handler with mocked objects
-  handleAgentRequest(mockReq as IncomingMessage, mockRes as unknown as ServerResponse<IncomingMessage>, process.cwd())
-    .catch(err => console.error('Error handling agent request:', err))
 }
