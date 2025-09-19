@@ -1,6 +1,7 @@
 import {config} from '@graphene/lang'
 import * as fs from 'fs'
 import {type Connection} from '@malloydata/malloy'
+import path from 'path'
 
 let connection: Promise<Connection> | null = null
 
@@ -18,9 +19,10 @@ export async function getConnection () {
 
   if (config.dialect === 'duckdb') {
     let mod = await import('@malloydata/db-duckdb')
-    let files = await fs.promises.readdir(process.cwd())
+    let files = await fs.promises.readdir(config.root)
     let databasePath = files.find(f => f.endsWith('.duckdb'))
     if (!databasePath) throw new Error('No .duckdb file found in current directory')
+    databasePath = path.resolve(config.root, databasePath)
     let c = new mod.DuckDBConnection({databasePath, readOnly: true, name: 'duckdb'}) as Connection
     connection = Promise.resolve(c)
     return connection
