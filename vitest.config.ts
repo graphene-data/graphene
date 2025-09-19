@@ -26,30 +26,46 @@ function grapheneTestStubs () {
 
 export default defineConfig({
   plugins: [svelte(), grapheneTestStubs()],
-  resolve: {
-    alias: [
-      {find: /^@evidence-dev\/core-components(.*)?$/, replacement: '/workspace/ui/test/stubs/core-components.js'},
-      {find: /^\$app\/environment$/, replacement: '/workspace/ui/test/stubs/app-environment.js'},
-      {find: /^\$app\/navigation$/, replacement: '/workspace/ui/test/stubs/app-navigation.js'},
-      {find: /^\$app\/forms$/, replacement: '/workspace/ui/test/stubs/app-forms.js'},
-      {find: /^\$app\/stores$/, replacement: '/workspace/ui/test/stubs/app-stores.js'},
-      {find: /^\$evidence\/config$/, replacement: '/workspace/ui/test/stubs/evidence-config.js'},
-      {find: /^\$evidence\/themes$/, replacement: '/workspace/ui/test/stubs/evidence-themes.js'},
-      {find: /^@duckdb\/node-bindings(.*)?$/, replacement: '/workspace/ui/test/stubs/duckdb-node.js'},
-      {find: /^@duckdb\/duckdb-wasm(.*)?$/, replacement: '/workspace/ui/test/stubs/duckdb-wasm.js'},
-    ],
-  },
-  test: {
-    globals: true,
-    // Skip lang setup in browser runs to avoid Node-only Malloy exports
-    setupFiles: [],
-    globalSetup: ['/workspace/ui/test/globalSetup.ts'],
-    browser: {
-      enabled: true,
-      name: 'chromium',
-      provider: 'playwright',
-      headless: true,
-      screenshotFailures: false,
+  projects: [
+    // Browser project for component tests
+    {
+      test: {
+        name: 'ui-browser',
+        globals: true,
+        include: ['/workspace/ui/components/**/*.test.ts'],
+        setupFiles: [],
+        browser: {
+          enabled: true,
+          name: 'chromium',
+          provider: 'playwright',
+          headless: true,
+          screenshotFailures: false,
+        },
+        resolveSnapshotPath: (testPath) => testPath + '.snap',
+      },
+      resolve: {
+        alias: [
+          {find: /^@evidence-dev\/core-components(.*)?$/, replacement: '/workspace/ui/test/stubs/core-components.js'},
+          {find: /^\$app\/environment$/, replacement: '/workspace/ui/test/stubs/app-environment.js'},
+          {find: /^\$app\/navigation$/, replacement: '/workspace/ui/test/stubs/app-navigation.js'},
+          {find: /^\$app\/forms$/, replacement: '/workspace/ui/test/stubs/app-forms.js'},
+          {find: /^\$app\/stores$/, replacement: '/workspace/ui/test/stubs/app-stores.js'},
+          {find: /^\$evidence\/config$/, replacement: '/workspace/ui/test/stubs/evidence-config.js'},
+          {find: /^\$evidence\/themes$/, replacement: '/workspace/ui/test/stubs/evidence-themes.js'},
+          {find: /^@duckdb\/node-bindings(.*)?$/, replacement: '/workspace/ui/test/stubs/duckdb-node.js'},
+          {find: /^@duckdb\/duckdb-wasm(.*)?$/, replacement: '/workspace/ui/test/stubs/duckdb-wasm.js'},
+        ],
+      },
     },
-  },
+    // Node project for e2e tests using Playwright programmatically
+    {
+      test: {
+        name: 'ui-e2e',
+        globals: true,
+        environment: 'node',
+        include: ['/workspace/ui/e2e/**/*.test.ts'],
+        setupFiles: ['/workspace/ui/test/e2eSetup.ts'],
+      },
+    },
+  ],
 })

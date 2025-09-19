@@ -1,13 +1,9 @@
 import {test, expect} from 'vitest'
-import {page} from '@vitest/browser/context'
 
-let baseUrl = 'http://localhost:4100'
+let {page, baseUrl, setVirtualFile} = globalThis.__E2E__
 
 async function vitestWriteVirtual(filePath: string, contents: string) {
-  await page.evaluate(async ([filePath, contents]) => {
-    let mod = await import('/workspace/cli/serve2.ts')
-    await mod.setVirtualFile(filePath, contents)
-  }, [filePath, contents])
+  await setVirtualFile(filePath, contents)
 }
 
 async function gotoAndWait(urlPath: string) {
@@ -18,7 +14,7 @@ async function gotoAndWait(urlPath: string) {
   await page.waitForFunction(() => window.$GRAPHENE?.loadingQueries?.size === 0)
 }
 
-test.skip('it loads markdown files', async () => {
+test('it loads markdown files', async () => {
   await vitestWriteVirtual('/index.md', `# Test
 
 \`\`\`sql test
@@ -36,7 +32,7 @@ select 1 as a
   expect(errs).toBe(0)
 })
 
-test.skip('it reports query errors', async () => {
+test('it reports query errors', async () => {
   await vitestWriteVirtual('/index.md', `# Bad Query
 
 \`\`\`sql bad
@@ -55,7 +51,7 @@ select doesnt_exist as nope from nowhere
   expect(errorMessages.join('\n')).toMatch(/failed|doesnt_exist|no such/i)
 })
 
-test.skip('it can explore', async () => {
+test('it can explore', async () => {
   await gotoAndWait('/explore')
   // Fill the prompt and submit
   await page.locator('textarea').fill('mock')
