@@ -1,6 +1,15 @@
 import {test, expect} from 'vitest'
 
-let {page, baseUrl, setVirtualFile} = globalThis.__E2E__
+let page: any, baseUrl: string, setVirtualFile: any
+beforeAll(() => {
+  // populated by e2eSetup.ts
+  // @ts-ignore
+  page = globalThis.__E2E__?.page
+  // @ts-ignore
+  baseUrl = globalThis.__E2E__?.baseUrl || 'http://localhost:4100'
+  // @ts-ignore
+  setVirtualFile = globalThis.__E2E__?.setVirtualFile
+})
 
 async function vitestWriteVirtual(filePath: string, contents: string) {
   await setVirtualFile(filePath, contents)

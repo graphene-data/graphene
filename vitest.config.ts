@@ -26,6 +26,7 @@ function grapheneTestStubs () {
 
 export default defineConfig({
   plugins: [svelte(), grapheneTestStubs()],
+  test: {environment: 'jsdom'},
   resolve: {
     alias: [
       {find: /^@evidence-dev\/core-components(.*)?$/, replacement: '/workspace/ui/test/stubs/core-components.js'},
