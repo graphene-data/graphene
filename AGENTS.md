@@ -20,6 +20,8 @@ Graphene is mostly written in typescript. We parse Graphene SQL with Lezer, then
 
 For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 4, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
 
+Never install dependencies yourself. Come up with the `pnpm add` command you'd like to run, and ask the user to run it for you. Generally prefer the latest version of a package. If you need an older version, please clarify why.
+
 # Testing
 To manually run graphene, you'll want to cd to one of the examples (like `flights`). From there, `pnpm run cli` lets you run the Graphene CLI.
 `pnpm run cli serve` will start up the server, and tell you the port it's on
