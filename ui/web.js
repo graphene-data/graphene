@@ -10,6 +10,7 @@ connectWebSocket()
 window.$GRAPHENE = {
   queries: {},
   loadingQueries: new Set(),
+  get errors () { return errors },
 
   registerQuery (queryName, code) {
     this.queries[queryName] = code

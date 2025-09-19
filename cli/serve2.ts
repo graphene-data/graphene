@@ -1,4 +1,5 @@
 import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '@graphene/lang'
+import {setConfig as setLangConfig} from '@graphene/lang/config.ts'
 import {createServer, type ViteDevServer} from 'vite'
 import {evidenceThemes} from '@evidence-dev/tailwind/vite-plugin'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
@@ -18,15 +19,49 @@ import {spawn} from 'child_process'
 
 let grapheneRoot: string
 let cliRoot: string
+let startedServer: ViteDevServer | null = null
 
-export async function serve2 () {
-  grapheneRoot = process.cwd()
+// Simple in-memory virtual file system for tests
+const virtualMdFiles = new Map<string, string>()
+
+export function setVirtualFile (filePath: string, contents: string) {
+  let key = normalizeId(filePath)
+  virtualMdFiles.set(key, contents)
+}
+
+export function clearVirtualFiles () {
+  virtualMdFiles.clear()
+}
+
+function hasVirtualFile (id: string) {
+  let key = normalizeId(id)
+  return virtualMdFiles.has(key)
+}
+
+function getVirtualFile (id: string) {
+  let key = normalizeId(id)
+  return virtualMdFiles.get(key)
+}
+
+function normalizeId (id: string) {
+  // strip vite query params like ?import and ensure leading slash for consistency
+  let clean = id.split('?')[0]
+  if (grapheneRoot && clean.startsWith(grapheneRoot)) clean = clean.slice(grapheneRoot.length)
+  if (!clean.startsWith('/')) clean = '/' + clean
+  return clean
+}
+
+export async function serve2 (opts?: {port?: number, root?: string}) {
+  grapheneRoot = opts?.root || process.cwd()
   cliRoot = path.join(fileURLToPath(import.meta.url), '..')
+
+  if (opts?.port) setLangConfig({...config, port: opts.port})
 
   let server = await createServer({
     root: grapheneRoot,
     plugins: [
       tailwindcss(),
+      virtualMdPlugin(),
       svelte({
         extensions: ['.svelte', '.md'],
         preprocess: [
@@ -65,6 +100,8 @@ export async function serve2 () {
 
   await server.listen()
   console.log(`Server running at ${server.resolvedUrls?.local?.[0]}`)
+  startedServer = server
+  return server
 }
 
 // Watch for changes to gsql files and reload the workspace.
@@ -112,6 +149,8 @@ const handleRequestPlugin = {
       if (pathName == '/graphene/query') return handleQuery(req, res)
       if (pathName == '/graphene/view') return handleView(req, res)
       if (pathName == '/graphene/agent') return handleAgentRequest(req, res, grapheneRoot)
+      if (pathName == '/graphene/test/virtual') return handleVirtual(req, res)
+      if (pathName == '/graphene/test/clear') return handleVirtualClear(req, res)
 
       if (pathName == '/explore') return handlePage(s, res, path.join(grapheneRoot, 'node_modules/@graphene/ui/explore.svelte'))
 
@@ -274,4 +313,48 @@ function injectComponentImports () {
     style: () => {},
     script: () => {},
   }
+}
+
+// Vite plugin to serve virtual Markdown files for tests without disk writes
+function virtualMdPlugin () {
+  return {
+    name: 'graphene-virtual-md',
+    enforce: 'pre' as const,
+    resolveId (id: string) {
+      if (!id.endsWith('.md') && !id.includes('.md?')) return null
+      if (hasVirtualFile(id)) return id
+      return null
+    },
+    load (id: string) {
+      if (!id.endsWith('.md') && !id.includes('.md?')) return null
+      let contents = getVirtualFile(id)
+      if (contents != null) return contents
+      return null
+    },
+  }
+}
+
+export function getStartedServer (): ViteDevServer | null {
+  return startedServer
+}
+
+async function handleVirtual (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
+  let chunks = [] as any[]
+  for await (let chunk of req) chunks.push(chunk)
+  try {
+    let {path: filePath, contents} = JSON.parse(Buffer.concat(chunks).toString())
+    if (!filePath || typeof contents !== 'string') throw new Error('Invalid payload')
+    setVirtualFile(filePath, contents)
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ok: true}))
+  } catch (err: any) {
+    res.statusCode = 400
+    res.end(JSON.stringify({error: err?.message || 'Bad Request'}))
+  }
+}
+
+async function handleVirtualClear (_req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
+  clearVirtualFiles()
+  res.setHeader('Content-Type', 'application/json')
+  res.end(JSON.stringify({ok: true}))
 }
