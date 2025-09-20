@@ -15,7 +15,14 @@ window.$GRAPHENE = {
     this.queries[queryName] = code
   },
 
+  getErrors () { return errors },
+  clearErrors () { errors = [] },
+
   async query (queryName) {
+    if (Array.isArray(queryName)) {
+      return queryName
+    }
+
     if (!queryName) throw new Error('Query name is required')
     let gsql = this.queries[queryName]
     if (!gsql) throw new Error(`Query ${queryName} not found`)
