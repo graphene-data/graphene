@@ -1,12 +1,17 @@
-import {test as base} from '@playwright/test'
+import {test as base, expect, type Page} from '@playwright/test'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import net from 'net'
 import {setConfig} from '../../lang/config.ts'
 
+export {expect}
+
 process.env.NODE_ENV = 'test'
 
-export const test = base.extend<{server: any}>({
+export type MountFn = (componentPath: string, props: any) => Promise<void>
+
+export const test = base.extend<{server: any, mount: MountFn}>({
+  // This boots up our cli server on a unique port for e2e tests.
   server: async ({ }, use) => {
     let mod = await import('../../cli/serve2.ts')
     let port = await getAvailablePort()
@@ -26,6 +31,31 @@ export const test = base.extend<{server: any}>({
       Object.keys(mod.mockFileMap).forEach((key) => delete mod.mockFileMap[key])
       await server?.close()
     }
+  },
+
+  mount: async ({page, server}: {page: Page, server: any}, use) => {
+    let errors: any[] = []
+    page.on('console', msg => { if (msg.type() == 'error' || msg.type() == 'warning') errors.push(msg.text()) })
+    page.on('pageerror', e => errors.push(e))
+
+    let mountFn = async (componentPath: string, props: any) => {
+      await page.goto(server.url() + '/__ct')
+      await page.evaluate(p => window.__props = p, props)
+      await page.addScriptTag({type: 'module', content: `
+        import Component from '/node_modules/@graphene/ui/${componentPath}'
+
+        window.__inst = new Component({
+          target: document.getElementById('app'),
+          props: window.__props,
+        })
+      `})
+    }
+
+    await use(mountFn)
+    await expect(page.locator('#app > *')).toBeVisible()
+    expect(errors).toEqual([])
+    page.removeAllListeners('console')
+    page.removeAllListeners('pageerror')
   },
 })
 
@@ -56,11 +86,12 @@ function trimIndentation (str:string) {
   }).join('\n')
 }
 
-export {expect} from '@playwright/test'
+
 
 declare global {
   interface Window {
     $GRAPHENE: any
+    __props: any
   }
 }
 
