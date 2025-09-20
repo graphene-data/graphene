@@ -1,5 +1,5 @@
 import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '@graphene/lang'
-import {createServer, type ViteDevServer} from 'vite'
+import {createServer, optimizeDeps, type ViteDevServer} from 'vite'
 import {evidenceThemes} from '@evidence-dev/tailwind/vite-plugin'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import {visit} from 'unist-util-visit'
@@ -44,6 +44,7 @@ export async function serve2 (): Promise<ViteDevServer> {
       evidenceThemes(),
       dollarResolver,
       updateWorkspacePlugin,
+      mockFilesForTests(),
     ],
     server: {
       port: config.port,
@@ -52,19 +53,20 @@ export async function serve2 (): Promise<ViteDevServer> {
     optimizeDeps: {
       // include: ['echarts-stat', 'echarts', 'blueimp-md5', 'nanoid', '@uwdata/mosaic-sql', '@evidence-dev/core-components', '@evidence-dev/component-utilities/stores', '@evidence-dev/component-utilities/formatting', '@evidence-dev/component-utilities/globalContexts', '@evidence-dev/sdk/utils/svelte', '@evidence-dev/component-utilities/profile', '@evidence-dev/sdk/usql', '@evidence-dev/component-utilities/buildQuery', 'debounce', '@duckdb/duckdb-wasm'],
       exclude: ['@graphene/ui', 'svelte-icons', '@evidence-dev/universal-sql', '$evidence/config', '$evidence/themes', '$app/environment', '$app/navigation', '$app/forms', '$app/stores'],
+      // noDiscovery: process.env.NODE_ENV == 'test', // optimizing causes issues when parallel workers are running vite
     },
     resolve: {
       alias: {
-        '@graphene/ui': path.resolve(cliRoot, './ui'), // useful for graphene dev, but should remove when packaging
+        '@graphene/ui': path.resolve(cliRoot, './ui'), // useful for hmr when doing graphene dev, but should remove when packaging
       },
-    },
-    ssr: {
-      // external: ['@evidence-dev/telemetry', 'blueimp-md5', 'nanoid', '@uwdata/mosaic-sql', '@evidence-dev/sdk/plugins'],
     },
   })
 
+  await optimizeDeps(server.config)
+
   await server.listen()
   console.log(`Server running at http://localhost:${config.port}`)
+  return server
 }
 
 // Watch for changes to gsql files and reload the workspace.
@@ -112,14 +114,16 @@ const handleRequestPlugin = {
       if (pathName == '/graphene/query') return handleQuery(req, res)
       if (pathName == '/graphene/view') return handleView(req, res)
       if (pathName == '/graphene/agent') return handleAgentRequest(req, res, grapheneRoot)
+      if (pathName == '/__ct') return handlePage(s, res, '__ct', false)
 
-      if (pathName == '/explore') return handlePage(s, res, path.join(grapheneRoot, 'node_modules/@graphene/ui/explore.svelte'))
+      let explorePath = path.join(grapheneRoot, 'node_modules/@graphene/ui/explore.svelte')
+      if (pathName == '/explore') return handlePage(s, res, explorePath, true)
 
       if (!pathName || pathName == '/') pathName = 'index'
       let mdPath = path.join(grapheneRoot, pathName + '.md')
 
       if (await fs.exists(mdPath)) {
-        handlePage(s, res, mdPath)
+        handlePage(s, res, mdPath, true)
       } else {
         next()
       }
@@ -187,8 +191,16 @@ async function handleView (req: IncomingMessage, res: ServerResponse<IncomingMes
 }
 
 
-async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, filePath: string) {
+async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, filePath: string, mount: boolean) {
   res.setHeader('Content-Type', 'text/html')
+
+  let mounter = mount ? `
+    <script type="module">
+      import Page from ${JSON.stringify(filePath)};
+      new Page({ target: document.getElementById('app'), props: {} })
+    </script>
+  ` : ''
+
   let html = await server.transformIndexHtml(filePath, `<!doctype html>
   <html lang="en">
     <head>
@@ -202,10 +214,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
     <body>
       <div id="app"></div>
       <script type="module" src="/node_modules/@graphene/ui/web.js"></script>
-      <script type="module">
-        import Page from ${JSON.stringify(filePath)};
-        new Page({ target: document.getElementById('app'), props: {} })
-      </script>
+      ${mounter}
     </body>
   </html>`)
   return res.end(html)
@@ -263,8 +272,7 @@ function injectComponentImports () {
 
   // TODO: we should use `components` to load user components, and `module` to load our own from our package
   // components: [{directory: path.resolve(cliRoot, './node_modules/@graphene/ui/components'), flat: true}],
-  // @ts-expect-error the types for autoImport are wrong
-  let autoImporter = autoImport({include: ['**/*.(svelte|md)'], mapping})
+  let autoImporter = autoImport({include: ['**/*.(svelte|md)'], mapping} as any)
   return {
     markup: async ({content, filename}) => {
       if (!filename.endsWith('.md')) return // only autoImport md files
@@ -273,5 +281,25 @@ function injectComponentImports () {
     },
     style: () => {},
     script: () => {},
+  }
+}
+
+export const mockFileMap: Record<string, string> = {}
+
+function mockFilesForTests () {
+  if (process.env.NODE_ENV !== 'test') return null
+
+  return {
+    name: 'mock-files-for-tests',
+    enforce: 'pre' as const,
+    resolveId (id) {
+      if (mockFileMap[id.replace(grapheneRoot, '')]) {
+        return id + '?mock'
+      }
+    },
+    load (id) {
+      if (!id.endsWith('?mock')) return null
+      return mockFileMap[id.replace(grapheneRoot, '').replace(/\?mock$/, '')]
+    },
   }
 }
