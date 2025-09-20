@@ -10,7 +10,7 @@
   async function updateContent(fileName) {
     if (!fileName) return
     try {
-      let mod = await import(`${fileName}?import` /* @vite-ignore */)
+      let mod = await import(/* @vite-ignore */ `${fileName}?import`)
       content = mod.default
     } catch (e) {
       throw e
@@ -50,8 +50,10 @@
       }
     }
 
+    let base = messages.find(item => item.type === 'system')?.cwd || ''
+
     let lastWrite = messages.find(m => m.message?.content[0]?.name == 'Write')
-    updateContent(lastWrite?.message.content[0].input.file_path)
+    updateContent(lastWrite?.message.content[0].input.file_path.replace(base, ''))
   }
 
   function submitPrompt() {
