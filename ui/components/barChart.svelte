@@ -21,4 +21,4 @@
 
 <style></style>
 
-<BarChart {...spreadProps} data={data} />
+<BarChart showAllXAxisLabels={false} {...spreadProps} data={data} />
