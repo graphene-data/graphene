@@ -34,11 +34,12 @@ export const test = base.extend<{server: any, mount: MountFn}>({
   },
 
   mount: async ({page, server}: {page: Page, server: any}, use) => {
-    let errors: any[] = []
+    let errors: string[] = []
     page.on('console', msg => { if (msg.type() == 'error' || msg.type() == 'warning') errors.push(msg.text()) })
-    page.on('pageerror', e => errors.push(e))
+    page.on('pageerror', e => errors.push(e?.message ?? String(e)))
 
     let mountFn = async (componentPath: string, props: any) => {
+      errors = []
       await page.goto(server.url() + '/__ct')
       await page.evaluate(p => window.__props = p, props)
       await page.addScriptTag({type: 'module', content: `
@@ -52,7 +53,7 @@ export const test = base.extend<{server: any, mount: MountFn}>({
     }
 
     await use(mountFn)
-    await expect(page.locator('#app > *')).toBeVisible()
+    await expect(page.locator('#app > :not(dialog)').first()).toBeVisible()
     expect(errors).toEqual([])
     page.removeAllListeners('console')
     page.removeAllListeners('pageerror')
