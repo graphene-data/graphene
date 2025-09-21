@@ -171,7 +171,7 @@ importers:
     dependencies:
       '@evidence-dev/core-components':
         specifier: ^5.2.2
-        version: 5.2.2(@algolia/client-search@5.36.0)(@codemirror/state@6.5.2)(@evidence-dev/universal-sql@2.2.10)(encoding@0.1.13)(lightningcss@1.30.1)(search-insights@2.17.3)(storybook@8.6.14(prettier@3.6.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)
+        version: 5.2.2(@algolia/client-search@5.36.0)(@codemirror/state@6.5.2)(encoding@0.1.13)(lightningcss@1.30.1)(search-insights@2.17.3)(storybook@8.6.14(prettier@3.6.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)
       '@evidence-dev/evidence':
         specifier: ^40.1.2
         version: 40.1.2(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(@types/hast@3.0.4)(@types/mdast@4.0.4)(autoprefixer@10.4.21(postcss@8.5.6))(debounce@1.2.1)(encoding@0.1.13)(git-remote-origin-url@4.0.0)(lightningcss@1.30.1)(nanoid@5.1.5)(perfect-debounce@1.0.0)(postcss-load-config@3.1.4(postcss@8.5.6))(postcss@8.5.6)(svelte-preprocess@5.1.3(postcss-load-config@3.1.4(postcss@8.5.6))(postcss@8.5.6)(svelte@4.2.19)(typescript@5.4.2))(svelte2tsx@0.7.4(svelte@4.2.19)(typescript@5.4.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)(unist-util-visit@5.0.0)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1))
@@ -189,7 +189,7 @@ importers:
     dependencies:
       '@evidence-dev/core-components':
         specifier: ^5.2.2
-        version: 5.2.2(@algolia/client-search@5.36.0)(@codemirror/state@6.5.2)(@evidence-dev/universal-sql@2.2.10)(encoding@0.1.13)(lightningcss@1.30.1)(search-insights@2.17.3)(storybook@8.6.14(prettier@3.6.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)
+        version: 5.2.2(@algolia/client-search@5.36.0)(@codemirror/state@6.5.2)(encoding@0.1.13)(lightningcss@1.30.1)(search-insights@2.17.3)(storybook@8.6.14(prettier@3.6.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)
       '@evidence-dev/evidence':
         specifier: ^40.1.2
         version: 40.1.2(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(@types/hast@3.0.4)(@types/mdast@4.0.4)(autoprefixer@10.4.21(postcss@8.5.6))(debounce@1.2.1)(encoding@0.1.13)(git-remote-origin-url@4.0.0)(lightningcss@1.30.1)(nanoid@5.1.5)(perfect-debounce@1.0.0)(postcss-load-config@3.1.4(postcss@8.5.6))(postcss@8.5.6)(svelte-preprocess@5.1.3(postcss-load-config@3.1.4(postcss@8.5.6))(postcss@8.5.6)(svelte@4.2.19)(typescript@5.4.2))(svelte2tsx@0.7.4(svelte@4.2.19)(typescript@5.4.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)(unist-util-visit@5.0.0)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1))
@@ -236,6 +236,9 @@ importers:
 
   ui:
     dependencies:
+      '@evidence-dev/component-utilities':
+        specifier: ^4.0.9
+        version: 4.0.9(@evidence-dev/universal-sql@2.2.10)(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(encoding@0.1.13)(lightningcss@1.30.1)(nanoid@5.1.5)(perfect-debounce@1.0.0)(typescript@5.4.2)
       '@evidence-dev/core-components':
         specifier: ^5.2.2
         version: 5.2.2(@algolia/client-search@5.36.0)(@codemirror/state@6.5.2)(@evidence-dev/universal-sql@2.2.10)(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(encoding@0.1.13)(lightningcss@1.30.1)(search-insights@2.17.3)(storybook@8.6.14(prettier@3.6.2))(svelte@4.2.19)(tailwindcss@4.0.6)(typescript@5.4.2)
@@ -6618,6 +6621,44 @@ snapshots:
       - typescript
       - utf-8-validate
 
+  '@evidence-dev/component-utilities@4.0.9(@evidence-dev/universal-sql@2.2.10)(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(encoding@0.1.13)(lightningcss@1.30.1)(nanoid@5.1.5)(perfect-debounce@1.0.0)(typescript@5.4.2)':
+    dependencies:
+      '@evidence-dev/sdk': 3.0.9(@evidence-dev/universal-sql@2.2.10)(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@24.5.2)(lightningcss@1.30.1)))(encoding@0.1.13)(lightningcss@1.30.1)(nanoid@5.1.5)(perfect-debounce@1.0.0)(svelte@4.2.19)(typescript@5.4.2)
+      '@steeze-ui/simple-icons': 1.10.1
+      '@steeze-ui/svelte-icon': 1.5.0(svelte@4.2.19)
+      '@steeze-ui/tabler-icons': 2.1.1
+      '@tidyjs/tidy': 2.5.2
+      '@uwdata/mosaic-sql': 0.3.5
+      debounce: 1.2.1
+      downloadjs: 1.4.7
+      echarts: 5.6.0
+      ssf: 0.11.2
+      svelte: 4.2.19
+    transitivePeerDependencies:
+      - '@edge-runtime/vm'
+      - '@evidence-dev/universal-sql'
+      - '@sveltejs/kit'
+      - '@vitest/browser'
+      - '@vitest/ui'
+      - bufferutil
+      - canvas
+      - encoding
+      - happy-dom
+      - less
+      - lightningcss
+      - msw
+      - nanoid
+      - perfect-debounce
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - ts-node
+      - typescript
+      - utf-8-validate
+
   '@evidence-dev/core-components@5.2.2(@algolia/client-search@5.36.0)(@codemirror/state@6.5.2)(@evidence-dev/universal-sql@2.2.10)(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(encoding@0.1.13)(lightningcss@1.30.1)(search-insights@2.17.3)(storybook@8.6.14(prettier@3.6.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)':
     dependencies:
       '@astronautlabs/jsonpath': 1.1.2
@@ -6768,7 +6809,7 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@evidence-dev/core-components@5.2.2(@algolia/client-search@5.36.0)(@codemirror/state@6.5.2)(@evidence-dev/universal-sql@2.2.10)(encoding@0.1.13)(lightningcss@1.30.1)(search-insights@2.17.3)(storybook@8.6.14(prettier@3.6.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)':
+  '@evidence-dev/core-components@5.2.2(@algolia/client-search@5.36.0)(@codemirror/state@6.5.2)(encoding@0.1.13)(lightningcss@1.30.1)(search-insights@2.17.3)(storybook@8.6.14(prettier@3.6.2))(svelte@4.2.19)(tailwindcss@4.1.12)(typescript@5.4.2)':
     dependencies:
       '@astronautlabs/jsonpath': 1.1.2
       '@codemirror/autocomplete': 6.18.6
