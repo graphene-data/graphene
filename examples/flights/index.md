@@ -67,7 +67,7 @@ limit 120
 from flights select carrier, count() as total_flights group by 1 order by total_flights desc
 ```
 
-<!--<PieChart
+<PieChart
   data="flights_by_carrier"
   category="carrier"
   value="total_flights"
@@ -75,4 +75,4 @@ from flights select carrier, count() as total_flights group by 1 order by total_
   labelContent="name-percent"
   title="Flight Share by Carrier"
   subtitle="Percentage of total flights in the sample"
-/>-->
+/>
