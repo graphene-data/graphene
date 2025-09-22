@@ -1,23 +1,152 @@
 <script>
-  import {AreaChart} from '@evidence-dev/core-components'
+	import { getThemeStores } from './themeStores';
 
-  let callback
-  let data = {
-    isQuery: true,
-    fetch: async () => {
-      await Promise.resolve()
-      let dt = await window.$GRAPHENE.query($$props.data)
-      dt.dataLoaded = true
-      callback(dt)
-    },
-    subscribe: (cb) => callback = cb
-  }
+	import Chart from './Chart.svelte';
+	import Area from './Area.svelte';
 
-  $: spreadProps = {
-		...Object.fromEntries(Object.entries($$props).filter(([, v]) => v !== undefined))
-	};
+	const { resolveColor, resolveColorsObject, resolveColorPalette } = getThemeStores();
+
+	export let data = undefined;
+	export let x = undefined;
+	export let y = undefined;
+	export let series = undefined;
+	export let xType = undefined;
+	export let yLog = undefined;
+	export let yLogBase = undefined;
+
+	export let yFmt = undefined;
+	export let xFmt = undefined;
+
+	export let title = undefined;
+	export let subtitle = undefined;
+	export let legend = undefined;
+	export let xAxisTitle = undefined;
+	export let yAxisTitle = undefined;
+	export let xGridlines = undefined;
+	export let yGridlines = undefined;
+	export let xAxisLabels = undefined;
+	export let yAxisLabels = undefined;
+	export let xBaseline = undefined;
+	export let yBaseline = undefined;
+	export let xTickMarks = undefined;
+	export let yTickMarks = undefined;
+	export let yMin = undefined;
+	export let yMax = undefined;
+	export let yScale = undefined;
+	export let sort = undefined;
+
+	export let line = undefined;
+
+	export let fillColor = undefined;
+	$: fillColorStore = resolveColor(fillColor);
+
+	export let lineColor = undefined;
+	$: lineColorStore = resolveColor(lineColor);
+
+	export let fillOpacity = undefined;
+	export let chartAreaHeight = undefined;
+	export let markers = undefined;
+	export let markerShape = undefined;
+	export let markerSize = undefined;
+	export let handleMissing = undefined;
+	export let step = undefined;
+	export let stepPosition = undefined;
+
+	export let type = 'stacked';
+	let stacked100 = type === 'stacked100';
+
+	export let colorPalette = 'default';
+	$: colorPaletteStore = resolveColorPalette(colorPalette);
+
+	export let labels = undefined;
+	export let labelSize = undefined;
+	export let labelPosition = undefined;
+
+	export let labelColor = undefined;
+	$: labelColorStore = resolveColor(labelColor);
+
+	export let labelFmt = undefined;
+	export let showAllLabels = undefined;
+
+	export let echartsOptions = undefined;
+	export let seriesOptions = undefined;
+	export let emptySet = undefined;
+	export let emptyMessage = undefined;
+
+	export let seriesColors = undefined;
+	$: seriesColorsStore = resolveColorsObject(seriesColors);
+
+	export let seriesOrder = undefined;
+	export let connectGroup = undefined;
+	export let seriesLabelFmt = undefined;
+
+	export let leftPadding = undefined;
+	export let rightPadding = undefined;
+	export let xLabelWrap = undefined;
 </script>
 
-<style></style>
-
-<AreaChart {...spreadProps} data={data} />
+<Chart
+	{data}
+	{x}
+	{y}
+	{xFmt}
+	{yFmt}
+	{series}
+	{xType}
+	{yLog}
+	{yLogBase}
+	{legend}
+	{xAxisTitle}
+	{yAxisTitle}
+	{xGridlines}
+	{yGridlines}
+	{xAxisLabels}
+	{yAxisLabels}
+	{xBaseline}
+	{yBaseline}
+	{xTickMarks}
+	{yTickMarks}
+	{yMin}
+	{yMax}
+	{yScale}
+	{title}
+	{subtitle}
+	chartType="Area Chart"
+	stackType={type}
+	{stacked100}
+	{sort}
+	{chartAreaHeight}
+	colorPalette={colorPaletteStore}
+	{echartsOptions}
+	{seriesOptions}
+	{emptySet}
+	{emptyMessage}
+	{connectGroup}
+	seriesColors={seriesColorsStore}
+	{leftPadding}
+	{rightPadding}
+	{xLabelWrap}
+>
+	<Area
+		{line}
+		fillColor={fillColorStore}
+		lineColor={lineColorStore}
+		{fillOpacity}
+		{handleMissing}
+		{type}
+		{step}
+		{stepPosition}
+		{markers}
+		{markerShape}
+		{markerSize}
+		{labels}
+		{labelSize}
+		{labelPosition}
+		labelColor={labelColorStore}
+		{labelFmt}
+		{showAllLabels}
+		{seriesOrder}
+		{seriesLabelFmt}
+	/>
+	<slot />
+</Chart>
