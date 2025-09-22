@@ -1,5 +1,5 @@
 <script>
-  import {ECharts} from '@evidence-dev/core-components'
+  import ECharts from './ECharts.svelte'
   import {onMount} from 'svelte'
   // import {QueryLoad} from '@evidence-dev/core-components/dist/atoms/query-load'
 
