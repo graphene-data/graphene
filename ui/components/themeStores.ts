@@ -28,7 +28,7 @@ const DEFAULT_PALETTE = [
   '#B279A2',
   '#FF9DA6',
   '#9D755D',
-  '#BAB0AC'
+  '#BAB0AC',
 ]
 
 const DEFAULT_THEME: Theme = {
@@ -41,11 +41,11 @@ const DEFAULT_THEME: Theme = {
     primary: '#2563eb',
     positive: '#16a34a',
     negative: '#dc2626',
-    warning: '#d97706'
+    warning: '#d97706',
   },
   colorPalettes: {
-    default: DEFAULT_PALETTE
-  }
+    default: DEFAULT_PALETTE,
+  },
 }
 
 const activeAppearance = readable<Appearance>('light')

@@ -1,22 +1,22 @@
 import {test, expect, waitForGrapheneQueries} from './fixtures'
 
 test('bar chart', async ({mount, page}) => {
-  await mount('components/barChart.svelte', {data: makeData(), x: 'origin', y: 'avg_delay'})
+  await mount('components/BarChart.svelte', {data: makeData(), x: 'origin', y: 'avg_delay'})
   await expect(page.locator('canvas')).toBeVisible()
 })
 
 test('area chart', async ({mount, page}) => {
-  await mount('components/areaChart.svelte', {data: makeData(), x: 'origin', y: 'avg_delay'})
+  await mount('components/AreaChart.svelte', {data: makeData(), x: 'origin', y: 'avg_delay'})
   await expect(page.locator('canvas')).toBeVisible()
 })
 
 test('line chart', async ({mount, page}) => {
-  await mount('components/lineChart.svelte', {data: makeData(), x: 'origin', y: 'avg_delay'})
+  await mount('components/LineChart.svelte', {data: makeData(), x: 'origin', y: 'avg_delay'})
   await expect(page.locator('canvas')).toBeVisible()
 })
 
 test('pie chart', async ({mount, page}) => {
-  await mount('components/pieChart.svelte', {
+  await mount('components/PieChart.svelte', {
     data: makeData(),
     category: 'origin',
     value: 'avg_delay',
@@ -26,7 +26,7 @@ test('pie chart', async ({mount, page}) => {
 })
 
 test('big value', async ({mount, page}) => {
-  await mount('components/bigValue.svelte', {
+  await mount('components/BigValue.svelte', {
     data: makeData(),
     value: 'avg_delay',
     fmt: 'num0',
@@ -39,7 +39,7 @@ test('big value', async ({mount, page}) => {
 })
 
 test('table', async ({mount, page}) => {
-  await mount('components/table.svelte', {data: makeData(), title: 'Average Delay'})
+  await mount('components/Table.svelte', {data: makeData(), title: 'Average Delay'})
   await waitForGrapheneQueries(page)
   let table = page.locator('[data-testid="DataTable-no-id"] table')
   await expect(table).toBeVisible()
