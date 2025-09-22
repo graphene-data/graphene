@@ -83,9 +83,11 @@
   }
 
   function followQuery (query: {fetch: () => Promise<void>, subscribe: (cb: (state: any) => void) => () => void}) {
-    try {
-      query.fetch()
-    } catch {}
+	try {
+		query.fetch()
+	} catch {
+		// Ignore fetch errors; they'll surface through subscription state
+	}
 
     unsubscribe = query.subscribe((value: any) => {
       updateLoaded(value)

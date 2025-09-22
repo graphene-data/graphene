@@ -15,12 +15,14 @@
   let loadedData: unknown
   let dataset: any[] | undefined
   let hasDataset = false
+  let loadError: unknown
 
   $: spreadProps = Object.fromEntries(
     Object.entries($$props).filter(([, value]) => value !== undefined)
   )
 
   $: queryID = typeof data === 'string' ? data : (data as any)?.id
+  $: loadError = isErrorCarrier(loadedData) ? loadedData.error : undefined
 
   function normalizeDataset (value: unknown) {
     if (Array.isArray(value)) return value
@@ -34,10 +36,14 @@
     hasDataset = Array.isArray(dataset)
     if (loadedData !== undefined && isInitial) isInitial = false
   }
+
+  function isErrorCarrier (value: unknown): value is {error?: unknown} {
+    return Boolean(value && typeof value === 'object' && 'error' in value)
+  }
 </script>
 
 <!-- Pass all the props through-->
-<QueryLoad {data} {height} on:loaded={handleLoaded} let:loaded>
+<QueryLoad {data} {height} on:loaded={handleLoaded}>
 	<EmptyChart
 		slot="empty"
 		{emptyMessage}
@@ -45,7 +51,7 @@
 		chartType={spreadProps.chartType ?? 'Chart'}
 		{isInitial}
 	/>
-	<ErrorChart let:loaded slot="error" title={spreadProps.chartType ?? 'Chart'} error={loaded?.error} />
+	<ErrorChart slot="error" title={spreadProps.chartType ?? 'Chart'} error={loadError} />
 	{#if hasDataset}
 		<Chart {...spreadProps} data={dataset} {queryID}>
 			<slot />

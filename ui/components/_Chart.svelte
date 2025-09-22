@@ -6,8 +6,8 @@
 	/** @type {import("svelte/store").Writable<import("echarts").Options>} */
 	let config = writable({});
 
-	$: setContext(propKey, props);
-	$: setContext(configKey, config);
+	setContext(propKey, props);
+	setContext(configKey, config);
 
 	import ECharts from './ECharts.svelte';
 	import getColumnSummary from '@evidence-dev/component-utilities/getColumnSummary';
@@ -1063,7 +1063,6 @@
 			});
 		}
 	}
-	$: data;
 </script>
 
 {#if !error}
