@@ -1,5 +1,9 @@
 # Flight Delay Analysis
 
+<script>
+  import Column from '../../ui/components/Column.svelte'
+</script>
+
 ## Average Departure Delay by Airport
 
 This chart shows the average departure delay in minutes for each airport, based on flight data.
@@ -8,6 +12,7 @@ This chart shows the average departure delay in minutes for each airport, based 
 select origin, origin_airport.full_name as origin_full_name, avg(dep_delay) as avg_delay from flights group by 1, 2 limit 20
 ```
 
+<!--
 <BarChart
   data="delay_per_origin"
   x="origin"
@@ -18,6 +23,7 @@ select origin, origin_airport.full_name as origin_full_name, avg(dep_delay) as a
   title="Most Delayed Airports"
   subtitle="Top 20 airports by average delay (minutes)"
 />
+-->
 
 ```sql delay_by_origin_carrier
 from flights select
@@ -30,6 +36,7 @@ limit 200
 ```
 
 
+<!--
 <AreaChart
   data="delay_by_origin_carrier"
   x="origin"
@@ -40,6 +47,25 @@ limit 200
   title="Average Departure Delay by Origin and Carrier"
   subtitle="Stacked bars highlight which carriers drive delays at each airport"
 />
+-->
+
+<Table
+  data="delay_by_origin_carrier"
+  title="Average Departure Delay by Origin and Carrier"
+  subtitle="Grouped table with subtotals and sorting"
+  groupBy="origin"
+  rows="8"
+  rowNumbers="true"
+  subtotals="true"
+  sort="avg_delay desc"
+  rowShading="true"
+  headerColor="base-200"
+  headerFontColor="base-content"
+>
+  <Column id="origin" title="Origin" />
+  <Column id="carrier" title="Carrier" />
+  <Column id="avg_delay" title="Avg Delay (min)" fmt="0.0" totalAgg="mean" />
+</Table>
 
 
 ```sql sfo_delay_trend
@@ -52,6 +78,7 @@ limit 120
 ```
 
 
+<!--
 <LineChart
   data="sfo_delay_trend"
   x="flight_time"
@@ -61,12 +88,14 @@ limit 120
   title="Departure Delays for Recent SFO Flights"
   subtitle="Ordered by flight time so spikes are easy to spot"
 />
+-->
 
 
 ```sql flights_by_carrier
 from flights select carrier, count() as total_flights group by 1 order by total_flights desc
 ```
 
+<!--
 <PieChart
   data="flights_by_carrier"
   category="carrier"
@@ -76,3 +105,4 @@ from flights select carrier, count() as total_flights group by 1 order by total_
   title="Flight Share by Carrier"
   subtitle="Percentage of total flights in the sample"
 />
+-->

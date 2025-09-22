@@ -1,23 +1,32 @@
-<script>
-  import {DataTable} from '@evidence-dev/core-components'
+<script lang="ts">
+  import QueryLoad from './QueryLoad.svelte'
+  import EmptyChart from './EmptyChart.svelte'
+  import ErrorChart from './ErrorChart.svelte'
+  import TableInner from './_Table.svelte'
 
-  let callback
-  let data = {
-    isQuery: true,
-    fetch: async () => {
-      await Promise.resolve()
-      let dt = await window.$GRAPHENE.query($$props.data)
-      dt.dataLoaded = true
-      callback(dt)
-    },
-    subscribe: (cb) => callback = cb
+  export let data: unknown
+  export let emptySet: 'pass' | 'warn' | 'error' = 'error'
+  export let emptyMessage: string | undefined = undefined
+
+  const restProps: Record<string, unknown> = $$restProps
+  $: spreadProps = Object.fromEntries(Object.entries(restProps).filter(([, value]) => value !== undefined))
+
+  let isInitial = true
+  const chartType = 'Data Table'
+
+  const handleLoaded = () => {
+    isInitial = false
   }
-
-  $: spreadProps = {
-		...Object.fromEntries(Object.entries($$props).filter(([, v]) => v !== undefined))
-	};
 </script>
 
-<style></style>
-
-<DataTable {...spreadProps} class='table' data={data} />
+<QueryLoad {data} let:loaded let:error on:loaded={handleLoaded}>
+  <EmptyChart slot="empty" {emptyMessage} {emptySet} {chartType} {isInitial} />
+  <ErrorChart slot="error" title={chartType} error={error?.message ?? 'Unable to load data'} />
+  {#if $$slots.default}
+    <TableInner {...spreadProps} data={loaded}>
+      <slot />
+    </TableInner>
+  {:else}
+    <TableInner {...spreadProps} data={loaded} />
+  {/if}
+</QueryLoad>

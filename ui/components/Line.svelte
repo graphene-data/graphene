@@ -1,7 +1,3 @@
-<script context="module">
-	export const evidenceInclude = true;
-</script>
-
 <script>
 	import { beforeUpdate, getContext } from 'svelte';
 	import { propKey, configKey } from '@evidence-dev/component-utilities/chartContext';
