@@ -5,8 +5,8 @@
 <script>
 	import { getContext, beforeUpdate } from 'svelte';
 	import { propKey, configKey } from '@evidence-dev/component-utilities/chartContext';
-	$: props = getContext(propKey);
-	$: config = getContext(configKey);
+	const props = getContext(propKey);
+	const config = getContext(configKey);
 
 	import getSeriesConfig from '@evidence-dev/component-utilities/getSeriesConfig';
 	import getStackedData from '@evidence-dev/component-utilities/getStackedData';

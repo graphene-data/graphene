@@ -3,6 +3,7 @@ import {fileURLToPath} from 'node:url'
 import globals from 'globals'
 import pluginJs from '@eslint/js'
 import tseslint from 'typescript-eslint'
+import svelte from 'eslint-plugin-svelte'
 import pluginPreferLet from 'eslint-plugin-prefer-let'
 import * as zxGlobals from 'zx'
 
@@ -10,6 +11,7 @@ import * as zxGlobals from 'zx'
 export default [
   pluginJs.configs.recommended,
   ...tseslint.configs.recommended,
+  ...svelte.configs.recommended,
   includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url))),
   {
     files: ['scripts/**/*.js'],
@@ -25,6 +27,27 @@ export default [
     rules: {
       'no-console':           'off',  // allow console in scripts
       'no-unused-expressions':'off',  // permit `$\`…\`` template tags
+    },
+  },
+  {
+    files: ['**/*.svelte'],
+    languageOptions: {
+      parserOptions: {
+        extraFileExtensions: ['.svelte'],
+        parser: tseslint.parser,
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+      globals: {
+        ...globals.browser,
+      },
+    },
+    plugins: {svelte},
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      'svelte/no-immutable-reactive-statements': 'off',
+      'svelte/no-reactive-reassign': 'off',
+      'svelte/require-event-dispatcher-types': 'off',
     },
   },
   {
