@@ -31,7 +31,6 @@ export async function serve2 (): Promise<ViteDevServer> {
           mdsvex({
             extensions: ['.md'],
             remarkPlugins: [extractQueries],
-            rehypePlugins: [rehypeMdxJsxToHtml],
             layout: path.resolve(cliRoot, '../ui/layout.svelte'),
           }) as any,
           injectComponentImports(),
@@ -47,8 +46,7 @@ export async function serve2 (): Promise<ViteDevServer> {
       fs: {strict: false},
     },
     optimizeDeps: {
-      // include: ['echarts-stat', 'echarts', 'blueimp-md5', 'nanoid', '@uwdata/mosaic-sql', '@evidence-dev/core-components', '@evidence-dev/component-utilities/stores', '@evidence-dev/component-utilities/formatting', '@evidence-dev/component-utilities/globalContexts', '@evidence-dev/sdk/utils/svelte', '@evidence-dev/component-utilities/profile', '@evidence-dev/sdk/usql', '@evidence-dev/component-utilities/buildQuery', 'debounce', '@duckdb/duckdb-wasm'],
-      exclude: ['@graphene/ui', 'svelte-icons', '@evidence-dev/universal-sql', '$evidence/config', '$evidence/themes', '$app/environment', '$app/navigation', '$app/forms', '$app/stores'],
+      exclude: ['@graphene/ui', 'svelte-icons', '$evidence/config', '$evidence/themes', '$app/environment', '$app/navigation', '$app/forms', '$app/stores'],
       // noDiscovery: process.env.NODE_ENV == 'test', // optimizing causes issues when parallel workers are running vite
     },
     resolve: {
@@ -248,17 +246,6 @@ function extractQueries () {
 
 function escapeHtml (str: string) {
   return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-function rehypeMdxJsxToHtml () {
-  return (tree) => {
-    // add `markdown` class to all elements, which evidence's stying expects
-    visit(tree, 'element', ({properties}) => {
-      if (!properties) return
-      if (!properties.className) properties.className = 'markdown'
-      else properties.className += ' markdown'
-    })
-  }
 }
 
 // We don't want users to have to manually import components in their md files, so we auto-import them.
