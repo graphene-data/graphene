@@ -1,6 +1,5 @@
 import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '@graphene/lang'
 import {createServer, optimizeDeps, type ViteDevServer} from 'vite'
-import {evidenceThemes} from '@evidence-dev/tailwind/vite-plugin'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import {visit} from 'unist-util-visit'
 import fs from 'fs-extra'
@@ -11,7 +10,6 @@ import {handleAgentRequest} from '@graphene/agent/agent.ts'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
 import autoImport from 'sveltekit-autoimport'
-import tailwindcss from '@tailwindcss/vite'
 import {fileURLToPath} from 'url'
 import {WebSocketServer} from 'ws'
 import {spawn} from 'child_process'
@@ -26,7 +24,6 @@ export async function serve2 (): Promise<ViteDevServer> {
   let server = await createServer({
     root: config.root,
     plugins: [
-      tailwindcss(),
       svelte({
         extensions: ['.svelte', '.md'],
         preprocess: [
@@ -41,7 +38,6 @@ export async function serve2 (): Promise<ViteDevServer> {
         ],
       }),
       handleRequestPlugin,
-      evidenceThemes(),
       dollarResolver,
       updateWorkspacePlugin,
       mockFilesForTests(),
@@ -57,7 +53,8 @@ export async function serve2 (): Promise<ViteDevServer> {
     },
     resolve: {
       alias: {
-        '@graphene/ui': path.resolve(cliRoot, './ui'), // useful for hmr when doing graphene dev, but should remove when packaging
+        '$evidence/themes': path.resolve(cliRoot, '../ui/internal/theme.ts'),
+        '@graphene/ui': path.resolve(cliRoot, '../ui'), // useful for hmr when doing graphene dev, but should remove when packaging
       },
     },
   })
