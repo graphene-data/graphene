@@ -85,6 +85,10 @@
   --base-heading: var(--grey-900);
 }
 
+.chart-footer {
+  display: none !important;
+}
+
 /* Global */
 html {
   scroll-behavior: smooth;
@@ -92,6 +96,11 @@ html {
 
 body {
   user-select: none;
+}
+
+main {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 /* Default border color */
@@ -123,6 +132,10 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+.chart {
+  margin: 1rem 0;
+}
+
 /* Remove UA styles for select */
 select {
   appearance: none;
@@ -131,7 +144,7 @@ select {
 }
 
 /* Markdown content */
-.markdown {
+ .markdown {
   font-family: var(--ui-font-family);
   font-size: 1rem;
   line-height: 1.5;
@@ -139,7 +152,7 @@ select {
   -moz-osx-font-smoothing: grayscale;
 }
 
-img.markdown {
+img {
   display: block;
   margin-left: auto;
   margin-right: auto;
@@ -148,57 +161,57 @@ img.markdown {
   border-radius: 0.5rem;
 }
 
-article.markdown a.markdown {
+article a {
   color: var(--primary);
   text-decoration: underline;
   text-decoration-color: transparent;
   transition: color 200ms ease, text-decoration-color 200ms ease;
 }
-article.markdown a.markdown:hover {
+article a:hover {
   text-decoration-color: var(--primary);
 }
 
-p.markdown,
-ul.markdown,
-ol.markdown {
+p,
+ul,
+ol {
   margin-block-end: 1.2em;
   margin-block-start: 0;
 }
 
 /* Lists */
-ol.markdown { list-style: decimal; padding-inline-start: 1.5rem; }
-ul.markdown { list-style: disc; padding-inline-start: 1.5rem; }
+ol { list-style: decimal; padding-inline-start: 1.5rem; }
+ul { list-style: disc; padding-inline-start: 1.5rem; }
 
 /* Second-level lists */
-ul.markdown ul.markdown { list-style: circle; }
-ol.markdown ol.markdown { list-style: lower-alpha; }
+ul ul { list-style: circle; }
+ol ol { list-style: lower-alpha; }
 
 /* Any second-level list spacing */
-ul.markdown ul.markdown,
-ul.markdown ol.markdown,
-ol.markdown ul.markdown,
-ol.markdown ol.markdown {
+ul ul,
+ul ol,
+ol ul,
+ol ol {
   margin-top: 0.25rem;
   margin-block-end: 0;
 }
 
 /* Third-level lists */
-ul.markdown ul.markdown ul.markdown { list-style: square; }
-ol.markdown ol.markdown ol.markdown { list-style: lower-roman; }
+ul ul ul { list-style: square; }
+ol ol ol { list-style: lower-roman; }
 
-li.markdown {
+li {
   list-style: inherit;
   text-align: -webkit-match-parent;
 }
-li.markdown + li.markdown { margin-top: 0.25rem; }
+li + li { margin-top: 0.25rem; }
 
 /* Headings */
-h1.markdown,
-h2.markdown,
-h3.markdown,
-h4.markdown,
-h5.markdown,
-h6.markdown {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   scroll-margin-top: var(--header-height);
   break-inside: avoid;
   color: var(--base-heading);
@@ -209,10 +222,10 @@ h6.markdown {
 }
 
 h1.title:first-of-type,
-h1.markdown:first-of-type { margin-top: 0.25rem; margin-bottom: 0.5rem; }
+h1:first-of-type { margin-top: 0.25rem; margin-bottom: 0.5rem; }
 
 h1.title,
-h1.markdown {
+h1 {
   margin-top: 1.25rem;
   margin-bottom: 0.25rem;
   font-size: 1.5rem;
@@ -222,7 +235,7 @@ h1.markdown {
   break-inside: avoid;
 }
 
-h2.markdown {
+h2 {
   margin-top: 0.75rem;
   margin-bottom: 0.25rem;
   font-size: 1.25rem;
@@ -230,7 +243,7 @@ h2.markdown {
   font-weight: 600;
 }
 
-h3.markdown {
+h3 {
   margin-top: 0.5rem;
   margin-bottom: 0.25rem;
   font-size: 1rem;
@@ -238,11 +251,11 @@ h3.markdown {
   font-weight: 600;
 }
 
-h4.markdown { margin-top: 0.25rem; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
-h5.markdown { margin-top: 0.25rem; font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
-h6.markdown { margin-top: 0.25rem; font-size: 0.75rem; line-height: 1rem; }
+h4 { margin-top: 0.25rem; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
+h5 { margin-top: 0.25rem; font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
+h6 { margin-top: 0.25rem; font-size: 0.75rem; line-height: 1rem; }
 
-hr.markdown {
+hr {
   height: 1px;
   margin-top: 2rem;
   margin-bottom: 2rem;
@@ -253,7 +266,7 @@ hr.markdown {
   border: 0;
 }
 
-code.markdown {
+code {
   font-family: var(--monospace-font-family);
   font-size: 0.875em;
   background-color: var(--base-200);
@@ -268,7 +281,7 @@ code.markdown {
 
 form code { font-size: unset; }
 
-blockquote.markdown {
+blockquote {
   background-color: var(--base-200);
   border-left: 4px solid var(--base-content-muted);
   padding-left: 0.75rem;
@@ -277,15 +290,15 @@ blockquote.markdown {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
-blockquote.markdown > blockquote.markdown { margin: 0; }
-blockquote.markdown > :first-child { margin-top: 0; }
-blockquote.markdown > :last-child { margin-bottom: 0; }
-blockquote.markdown * { color: var(--base-content-muted); }
+blockquote > blockquote { margin: 0; }
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child { margin-bottom: 0; }
+blockquote * { color: var(--base-content-muted); }
 
 /* Ensure size and color are maintained for bold, italic, strikethrough, links inside markdown */
-strong.markdown, em.markdown, del.markdown, a.markdown { font-size: 1em; color: inherit; }
+strong, em, del, a { font-size: 1em; color: inherit; }
 
-table.markdown {
+/*table {
   min-width: 100%;
   border-collapse: collapse;
   text-align: center;
@@ -294,7 +307,7 @@ table.markdown {
   margin-top: 1.25rem;
   margin-bottom: 1.25rem;
 }
-th.markdown {
+th {
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 500;
@@ -306,7 +319,7 @@ th.markdown {
   text-overflow: ellipsis;
   overflow: hidden;
 }
-td.markdown {
+td {
   font-size: 0.875rem;
   line-height: 1.25rem;
   padding-top: 0.25rem;
@@ -315,45 +328,4 @@ td.markdown {
   padding-right: 0.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.theme-dark .__evidence-leaflet-tile-layer__ {
-  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-}
-
-@media print {
-  html {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4 {
-    break-after: avoid-page;
-  }
-
-  article {
-    orphans: 2;
-    widows: 2;
-  }
-}
-
-
-/* ---------------------------- */
-
-html {}
-
-main {
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.chart-footer {
-  display: none !important;
-}
-
-.chart {
-  margin: 1rem 0;
-}
+}*/
