@@ -1,6 +1,6 @@
 #!/usr/bin/env zx
 
-import {$} from 'zx'
+import {$, question} from 'zx'
 import {readFileSync, existsSync, writeFileSync, readdirSync} from 'fs'
 import {resolve} from 'path'
 
@@ -152,8 +152,28 @@ async function doneWorktree (name?: string) {
     process.exit(1)
   }
 
-  console.log('Removing worktree')
-  await $`git worktree remove ${worktreePath}`
+  // Check for outstanding changes using a single porcelain status; prompt if any
+  let statusRaw = (await $`git -C ${worktreePath} status --porcelain`).stdout
+  let hasChanges = statusRaw.trim().length > 0
+
+  let forceFlag = false
+  if (hasChanges) {
+    console.log(`Outstanding changes in '${name}':`)
+    console.log(statusRaw.trim())
+    let answer = (await question('Force remove this worktree (discard changes)? [y/N] ')).trim().toLowerCase()
+    if (answer === 'y' || answer === 'yes') forceFlag = true
+    else {
+      console.log('Aborted.')
+      process.exit(1)
+    }
+  }
+
+  console.log(`Removing worktree${forceFlag ? ' (force)' : ''}`)
+  if (forceFlag) {
+    await $`git worktree remove --force ${worktreePath}`
+  } else {
+    await $`git worktree remove ${worktreePath}`
+  }
   console.log('Archiving ')
   await $`git tag archive/${name} ${name}`
   await $`git branch -d ${name}`
