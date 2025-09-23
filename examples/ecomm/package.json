@@ -14,8 +14,6 @@
   },
   "type": "module",
   "dependencies": {
-    "@evidence-dev/core-components": "^5.2.2",
-    "@evidence-dev/evidence": "^40.1.2",
     "@graphene/cli": "workspace:*",
     "@graphene/ui": "workspace:*",
     "svelte": "4.2.19"

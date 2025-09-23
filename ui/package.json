@@ -20,14 +20,6 @@
     "playwright": "1.54.2",
     "svelte": "4.2.19"
   },
-  "pnpm": {
-    "overrides": {
-      "@evidence-dev/sdk": "npm:@empty@0.0.0",
-      "ssf": "npm:@empty@0.0.0",
-      "downloadjs": "npm:@empty@0.0.0",
-      "@uwdata/mosaic-sql": "npm:@empty@0.0.0"
-    }
-  },
   "author": "",
   "license": "ISC"
 }
