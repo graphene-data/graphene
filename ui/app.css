@@ -1,368 +1,359 @@
-/* Write your global styles here, in PostCSS syntax */
-@import 'tailwindcss';
-@config "@evidence-dev/tailwind/config";
-
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
-@layer base {
-	*,
-	::after,
-	::before,
-	::backdrop,
-	::file-selector-button {
-		border-color: var(--color-gray-200, currentColor);
-	}
-}
-
-@layer base {
-	html {
-		@apply scroll-smooth;
-	}
-
-	body {
-		@apply select-none;
-	}
-
-	/* Default border color */
-	* {
-		@apply border-base-300;
-	}
-
-	/* osx style scrollbars */
-	.pretty-scrollbar {
-		scrollbar-width: thin;
-		scrollbar-color: theme('colors.base-300') transparent;
-	}
-
-	.pretty-scrollbar::-webkit-scrollbar {
-		height: 6px;
-		width: 6px;
-	}
-
-	.pretty-scrollbar::-webkit-scrollbar-track {
-		background-color: transparent;
-	}
-
-	.pretty-scrollbar::-webkit-scrollbar-thumb {
-		background-color: transparent;
-		border-radius: 7px;
-	}
-
-	.pretty-scrollbar:hover::-webkit-scrollbar-thumb {
-		background-color: theme('colors.base-200');
-	}
-
-	/* hidden scrollbar */
-	.no-scrollbar::-webkit-scrollbar {
-		display: none;
-	}
-	.no-scrollbar {
-		-ms-overflow-style: none;
-		scrollbar-width: none;
-	}
-
-	/* remove user agent styles for select */
-	select {
-		appearance: none;
-		-moz-appearance: none;
-		-webkit-appearance: none;
-	}
-}
-
-@layer components {
-	.markdown {
-		@apply leading-normal font-sans text-base antialiased;
-	}
-
-	img.markdown {
-		@apply mx-auto h-auto max-w-full rounded-lg;
-	}
-
-	article.markdown a.markdown {
-		@apply text-primary underline decoration-transparent hover:decoration-primary  transition-all duration-200;
-	}
-
-	p.markdown,
-	ul.markdown,
-	ol.markdown {
-		margin-block-end: 1.2em;
-		margin-block-start: 0em;
-	}
-
-	/* lists */
-
-	ol.markdown {
-		@apply list-decimal ps-6;
-	}
-	ul.markdown {
-		@apply list-disc ps-6;
-	}
-
-	/* 1st level list */
-	ul.markdown,
-	ol.markdown {
-		/* 2nd level unordered list */
-		& ul.markdown {
-			@apply list-circle;
-		}
-		/* 2nd level ordered list */
-		& ol.markdown {
-			@apply list-lower-alpha;
-		}
-
-		/* any 2nd level list */
-		& ul.markdown,
-		& ol.markdown {
-			@apply mt-1;
-			margin-block-end: 0em;
-
-			/* 3rd level unordered list */
-			& ul.markdown {
-				@apply list-square;
-			}
-			/* 3rd level ordered list */
-			& ol.markdown {
-				@apply list-lower-roman;
-			}
-		}
-
-		li.markdown {
-			@apply list-item;
-			text-align: -webkit-match-parent;
-
-			& + li.markdown {
-				@apply mt-1;
-			}
-		}
-	}
-
-	h1.markdown,
-	h2.markdown,
-	h3.markdown,
-	h4.markdown,
-	h5.markdown,
-	h6.markdown {
-		@apply scroll-mt-14 break-inside-avoid text-base-heading;
-		font-family: "Funnel Display", sans-serif;
-		font-optical-sizing: auto;
-		font-weight: 100;
-		font-style: normal;
-		/* ensure that table of contents links scroll with room for the header */
-	}
-
-	h1.title:first-of-type,
-	h1.markdown:first-of-type {
-		@apply mt-1 mb-2;
-	}
-
-	h1.title {
-		@apply mt-5 mb-1 text-2xl tracking-wide font-bold break-inside-avoid;
-	}
-
-	h1.markdown {
-		@apply mt-5 mb-1 text-2xl tracking-wide font-bold break-inside-avoid;
-	}
-
-	h2.markdown {
-		@apply mt-3 mb-1 text-xl font-semibold;
-	}
-
-	h3.markdown {
-		@apply mt-2 mb-1 font-semibold text-base;
-	}
-
-	h4.markdown {
-		@apply mt-1 text-sm  font-semibold;
-	}
-
-	h5.markdown {
-		@apply mt-1 text-xs font-semibold;
-	}
-
-	h6.markdown {
-		@apply mt-1 text-xs;
-	}
-
-	hr.markdown {
-		@apply h-px my-8 max-w-xl mx-auto bg-base-300 border-0;
-	}
-
-	code.markdown {
-		@apply font-mono text-[0.875em] bg-base-200 border border-base-300 rounded-sm px-1 select-all py-0.5;
-	}
-
-	form code {
-		font-size: unset;
-	}
-
-	blockquote.markdown {
-		@apply bg-base-200 border-l-4 border-base-content-muted pl-3 my-8 py-2;
-	}
-
-	blockquote.markdown > blockquote.markdown {
-		@apply m-0;
-	}
-
-	blockquote.markdown > :first-child {
-		@apply mt-0;
-	}
-
-	blockquote.markdown > :last-child {
-		@apply mb-0;
-	}
-
-	blockquote.markdown * {
-		@apply text-base-content-muted;
-	}
-	/* Ensure size and color are maintained for bold, italic, strikethrough */
-	strong.markdown {
-		@apply text-[1em] text-inherit;
-	}
-
-	em.markdown {
-		@apply text-[1em] text-inherit;
-	}
-
-	del.markdown {
-		@apply text-[1em] text-inherit;
-	}
-
-	a.markdown {
-		@apply text-[1em] text-inherit;
-	}
-
-	table.markdown {
-		@apply min-w-full  border-collapse text-center mx-auto my-5;
-	}
-
-	th.markdown {
-		@apply text-sm font-medium border-b border-gray-800 py-0 px-2 text-ellipsis overflow-hidden;
-	}
-
-	td.markdown {
-		@apply text-sm py-1 px-2 overflow-hidden text-ellipsis;
-	}
-}
+/* Vanilla CSS version of styles (Tailwind removed) */
 
 :root {
-	/* Layout header height */
-	--header-height: 3.5rem;
-	/* Font stacks */
-	--monospace-font-family: theme(fontFamily.mono);
-	--ui-font-family: theme(fontFamily.sans);
-	--ui-font-family-compact: theme(fontFamily.sans);
+  /* Layout */
+  --header-height: 3.5rem;
 
-	/*
-		!! DEPRECATED !!
-		Kept for backwards compatibility with users projects
-	*/
-	--blue-50: #eff6ff;
-	--blue-100: #dbeafe;
-	--blue-200: #bfdbfe;
-	--blue-300: #93c5fd;
-	--blue-400: #60a5fa;
-	--blue-500: #3b82f6;
-	--blue-600: #2563eb;
-	--blue-700: #1d4ed8;
-	--blue-800: #1e40af;
-	--blue-900: #1e3a8a;
-	--blue-999: #172554;
-	--blue-link: var(--blue-700);
+  /* Font stacks */
+  --monospace-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+  "Liberation Mono", "Courier New", monospace;
+  --ui-font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+  Roboto, "Noto Sans", "Helvetica Neue", Arial, "Apple Color Emoji",
+  "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+  --ui-font-family-compact: Inter, ui-sans-serif, system-ui, -apple-system,
+  "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial,
+  "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+  "Noto Color Emoji", sans-serif;
 
-	--green-50: #f0fdf4;
-	--green-100: #dcfce7;
-	--green-200: #bbf7d0;
-	--green-300: #86efac;
-	--green-400: #4ade80;
-	--green-500: #22c55e;
-	--green-600: #16a34a;
-	--green-700: #15803d;
-	--green-800: #166534;
-	--green-900: #14532d;
-	--green-999: #052e16;
+  /* Palette (kept for compatibility with existing variables) */
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-300: #93c5fd;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+  --blue-700: #1d4ed8;
+  --blue-800: #1e40af;
+  --blue-900: #1e3a8a;
+  --blue-999: #172554;
+  --blue-link: var(--blue-700);
 
-	--grey-50: #f9fafb;
-	--grey-100: #f3f4f6;
-	--grey-200: #e5e7eb;
-	--grey-300: #d1d5db;
-	--grey-400: #9ca3af;
-	--grey-500: #6b7280;
-	--grey-600: #4b5563;
-	--grey-700: #374151;
-	--grey-800: #1f2937;
-	--grey-900: #111827;
-	--grey-999: #030712;
+  --green-50: #f0fdf4;
+  --green-100: #dcfce7;
+  --green-200: #bbf7d0;
+  --green-300: #86efac;
+  --green-400: #4ade80;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+  --green-800: #166534;
+  --green-900: #14532d;
+  --green-999: #052e16;
 
-	--red-50: #fef2f2;
-	--red-100: #fee2e2;
-	--red-200: #fecaca;
-	--red-300: #fca5a5;
-	--red-400: #f87171;
-	--red-500: #ef4444;
-	--red-600: #dc2626;
-	--red-700: #b91c1c;
-	--red-800: #991b1b;
-	--red-900: #7f1d1d;
-	--red-999: #450a0a;
+  --grey-50: #f9fafb;
+  --grey-100: #f3f4f6;
+  --grey-200: #e5e7eb;
+  --grey-300: #d1d5db;
+  --grey-400: #9ca3af;
+  --grey-500: #6b7280;
+  --grey-600: #4b5563;
+  --grey-700: #374151;
+  --grey-800: #1f2937;
+  --grey-900: #111827;
+  --grey-999: #030712;
 
-	--yellow-50: #fefce8;
-	--yellow-100: #fef9c3;
-	--yellow-200: #fef08a;
-	--yellow-300: #fde047;
-	--yellow-400: #facc15;
-	--yellow-500: #eab308;
-	--yellow-600: #ca8a04;
-	--yellow-700: #a16207;
-	--yellow-800: #854d0e;
-	--yellow-900: #713f12;
-	--yellow-999: #422006;
+  --red-50: #fef2f2;
+  --red-100: #fee2e2;
+  --red-200: #fecaca;
+  --red-300: #fca5a5;
+  --red-400: #f87171;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+  --red-700: #b91c1c;
+  --red-800: #991b1b;
+  --red-900: #7f1d1d;
+  --red-999: #450a0a;
+
+  --yellow-50: #fefce8;
+  --yellow-100: #fef9c3;
+  --yellow-200: #fef08a;
+  --yellow-300: #fde047;
+  --yellow-400: #facc15;
+  --yellow-500: #eab308;
+  --yellow-600: #ca8a04;
+  --yellow-700: #a16207;
+  --yellow-800: #854d0e;
+  --yellow-900: #713f12;
+  --yellow-999: #422006;
+
+  /* Aliases for previous Tailwind-like tokens */
+  --primary: var(--blue-700);
+  --base-200: var(--grey-200);
+  --base-300: var(--grey-300);
+  --base-content-muted: var(--grey-600);
+  --base-heading: var(--grey-900);
+}
+
+/* Global */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  user-select: none;
+}
+
+/* Default border color */
+*, *::before, *::after, ::backdrop, ::file-selector-button {
+  border-color: var(--base-300);
+}
+
+/* OSX-style scrollbars */
+.pretty-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--base-300) transparent;
+}
+.pretty-scrollbar::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.pretty-scrollbar::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+.pretty-scrollbar::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 7px;
+}
+.pretty-scrollbar:hover::-webkit-scrollbar-thumb {
+  background-color: var(--base-200);
+}
+
+/* Hidden scrollbar */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Remove UA styles for select */
+select {
+  appearance: none;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Markdown content */
+.markdown {
+  font-family: var(--ui-font-family);
+  font-size: 1rem;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img.markdown {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  height: auto;
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+
+article.markdown a.markdown {
+  color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: color 200ms ease, text-decoration-color 200ms ease;
+}
+article.markdown a.markdown:hover {
+  text-decoration-color: var(--primary);
+}
+
+p.markdown,
+ul.markdown,
+ol.markdown {
+  margin-block-end: 1.2em;
+  margin-block-start: 0;
+}
+
+/* Lists */
+ol.markdown { list-style: decimal; padding-inline-start: 1.5rem; }
+ul.markdown { list-style: disc; padding-inline-start: 1.5rem; }
+
+/* Second-level lists */
+ul.markdown ul.markdown { list-style: circle; }
+ol.markdown ol.markdown { list-style: lower-alpha; }
+
+/* Any second-level list spacing */
+ul.markdown ul.markdown,
+ul.markdown ol.markdown,
+ol.markdown ul.markdown,
+ol.markdown ol.markdown {
+  margin-top: 0.25rem;
+  margin-block-end: 0;
+}
+
+/* Third-level lists */
+ul.markdown ul.markdown ul.markdown { list-style: square; }
+ol.markdown ol.markdown ol.markdown { list-style: lower-roman; }
+
+li.markdown {
+  list-style: inherit;
+  text-align: -webkit-match-parent;
+}
+li.markdown + li.markdown { margin-top: 0.25rem; }
+
+/* Headings */
+h1.markdown,
+h2.markdown,
+h3.markdown,
+h4.markdown,
+h5.markdown,
+h6.markdown {
+  scroll-margin-top: var(--header-height);
+  break-inside: avoid;
+  color: var(--base-heading);
+  font-family: "Funnel Display", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 100;
+  font-style: normal;
+}
+
+h1.title:first-of-type,
+h1.markdown:first-of-type { margin-top: 0.25rem; margin-bottom: 0.5rem; }
+
+h1.title,
+h1.markdown {
+  margin-top: 1.25rem;
+  margin-bottom: 0.25rem;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  letter-spacing: 0.025em;
+  font-weight: 700;
+  break-inside: avoid;
+}
+
+h2.markdown {
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+h3.markdown {
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+h4.markdown { margin-top: 0.25rem; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
+h5.markdown { margin-top: 0.25rem; font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
+h6.markdown { margin-top: 0.25rem; font-size: 0.75rem; line-height: 1rem; }
+
+hr.markdown {
+  height: 1px;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: var(--base-300);
+  border: 0;
+}
+
+code.markdown {
+  font-family: var(--monospace-font-family);
+  font-size: 0.875em;
+  background-color: var(--base-200);
+  border: 1px solid var(--base-300);
+  border-radius: 0.125rem;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+  user-select: all;
+}
+
+form code { font-size: unset; }
+
+blockquote.markdown {
+  background-color: var(--base-200);
+  border-left: 4px solid var(--base-content-muted);
+  padding-left: 0.75rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+}
+blockquote.markdown > blockquote.markdown { margin: 0; }
+blockquote.markdown > :first-child { margin-top: 0; }
+blockquote.markdown > :last-child { margin-bottom: 0; }
+blockquote.markdown * { color: var(--base-content-muted); }
+
+/* Ensure size and color are maintained for bold, italic, strikethrough, links inside markdown */
+strong.markdown, em.markdown, del.markdown, a.markdown { font-size: 1em; color: inherit; }
+
+table.markdown {
+  min-width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+th.markdown {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  border-bottom: 1px solid var(--grey-800);
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+td.markdown {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .theme-dark .__evidence-leaflet-tile-layer__ {
-	filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+  filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
 
 @media print {
-	html {
-		-webkit-print-color-adjust: exact;
-		print-color-adjust: exact;
-	}
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 
-	h1,
-	h2,
-	h3,
-	h4 {
-		break-after: avoid-page;
-	}
+  h1,
+  h2,
+  h3,
+  h4 {
+    break-after: avoid-page;
+  }
 
-	article {
-		orphans: 2;
-		widows: 2;
-	}
+  article {
+    orphans: 2;
+    widows: 2;
+  }
 }
 
 
 /* ---------------------------- */
 
-html {
-}
+html {}
 
 main {
-  margin: 0 2rem;
-	max-width: 1200px;
-	margin: 0 auto;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .chart-footer {
-	display: none !important;
+  display: none !important;
 }
 
 .chart {
-	margin: 1rem 0;
+  margin: 1rem 0;
 }
