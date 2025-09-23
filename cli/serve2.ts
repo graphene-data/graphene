@@ -52,6 +52,8 @@ export async function serve2 (): Promise<ViteDevServer> {
     resolve: {
       alias: {
         '$evidence/themes': path.resolve(cliRoot, '../ui/internal/theme.ts'),
+        '@evidence-dev/sdk/utils': path.resolve(cliRoot, '../ui/internal/evidenceShims.ts'),
+        '@evidence-dev/sdk/usql': path.resolve(cliRoot, '../ui/internal/evidenceShims.ts'),
         '@graphene/ui': path.resolve(cliRoot, '../ui'), // useful for hmr when doing graphene dev, but should remove when packaging
       },
     },
