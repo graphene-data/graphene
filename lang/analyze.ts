@@ -1,11 +1,12 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
 import type {AggregateFunctionType, StructRef} from './node_modules/@malloydata/malloy/dist/model/index.js'
-import {txt, compact, getFile, getPosition} from './util.ts'
+import {txt, compact, getFile, getPosition, walkExpression} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config, dialectKeyword} from './config.ts'
 import {findOverloads} from './functions.ts'
 import {parser} from './parser.js'
+import { inferParamTypes } from './params.ts'
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
@@ -228,7 +229,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   let queryOffset = limts[1] ? Number(txt(limts[1])) : undefined
   if (queryOffset) diag(limts[1], 'OFFSET is not supported yet')
 
-  return {
+  let q = {
     fields: scope.outputFields,
     subQuerySources,
     malloyQuery: {
@@ -244,7 +245,10 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
         limit: queryLimit,
       }],
     },
-  }
+  } satisfies Query
+
+  inferParamTypes(q.malloyQuery)
+  return q
 }
 
 // Called for each expression in a query (recursively for complex expressions) including computed columns.
@@ -261,6 +265,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     case 'Boolean': return {node: txt(expr).toLowerCase() == 'true' ? 'true' : 'false', type: 'boolean'}
     case 'Null': return {node: 'null', type: 'string'}
     case 'String': return {node: 'stringLiteral', literal: txt(expr).slice(1, -1), type: 'string'}
+    case 'Param': return {node: 'parameter', path: [txt(expr).slice(1)], type: 'string'}
     case 'Ref': {
       // Refs are tokens that usually point to a column name, but can also be keywords in some dialects
       if (dialectKeyword(txt(expr))) {
@@ -489,17 +494,6 @@ function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultRetu
   return defaultReturn!
 }
 
-function walkExpression (root: any, fn: (expr: Expression) => void) {
-  fn(root)
-  if (root.e) walkExpression(root.e, fn)
-  if (root.kids) {
-    Object.values(root.kids).forEach(kid => {
-      if (Array.isArray(kid)) kid.forEach(k => walkExpression(k, fn))
-      else walkExpression(kid, fn)
-    })
-  }
-}
-
 // turn `a and b and c` into `[a, b, c]`
 function unpackAnds (expr: Expression): Expression[] {
   if (expr.node == 'and') {
@@ -539,4 +533,3 @@ function convertDataType (dataType: string): FieldType | null {
     default: return null
   }
 }
-

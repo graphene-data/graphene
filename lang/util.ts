@@ -1,4 +1,4 @@
-import type {FileInfo} from './types'
+import type {Expression, FileInfo} from './types'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 
 export function getPosition (offset: number, file: FileInfo) {
@@ -39,4 +39,16 @@ export function txt (node:SyntaxNode | null | undefined) {
 
 export function compact<T> (obj: T): T {
   return Object.fromEntries(Object.entries(obj as any).filter(([_, v]) => v !== undefined)) as T
+}
+
+export function walkExpression (root: any, fn: (expr: Expression, parent?: Expression | null) => void, parent: Expression | null = null) {
+  if (!root) return
+  fn(root, parent)
+  if (root.e) walkExpression(root.e, fn, root)
+  if (root.kids) {
+    Object.values(root.kids).forEach(kid => {
+      if (Array.isArray(kid)) kid.forEach(k => walkExpression(k, fn, root))
+      else walkExpression(kid, fn, root)
+    })
+  }
 }
