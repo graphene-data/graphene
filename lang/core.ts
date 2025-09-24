@@ -6,7 +6,8 @@ import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
 import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, parse} from './analyze.ts'
-import {type Query} from './types.ts'
+import {type Query, type Table} from './types.ts'
+import {fillInParams} from './params.ts'
 import {getOffset} from './util.ts'
 import {config, loadConfig} from './config.ts'
 import path from 'node:path'
@@ -69,11 +70,15 @@ export function analyze (contents?: string): Query[] {
   return []
 }
 
-export function toSql (query: Query): string {
+export function toSql (query: Query, params: Record<string, any> = {}): string {
   // queryModel contents should be all the tables from gsql files, and any from the same md file as the query
   let contents = {}
   Object.values(FILE_MAP).forEach(f => f.tables.forEach(t => contents[t.name] = t))
-  query.subQuerySources.forEach(t => contents[t.name] = t)
+  query.subQuerySources.forEach(t => {
+    contents[t.name] = {...t, query: fillInParams(t.query!, params)}
+  })
+
+  let malloyQuery = fillInParams(query.malloyQuery, params)
 
   // Send the query to malloy for generation
   let qm = new malloy.QueryModel({
@@ -83,7 +88,7 @@ export function toSql (query: Query): string {
     dependencies: {},
     exports: [],
   })
-  let compiled = qm.compileQuery(query.malloyQuery)
+  let compiled = qm.compileQuery(malloyQuery)
   return compiled.sql
 }
 

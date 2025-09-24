@@ -115,6 +115,7 @@ expression[@isGroup=Expression] {
   InExpression |
   NullTestExpression |
   literal |
+  Param |
   Ref |
   Count |
   FunctionCall |
@@ -242,6 +243,7 @@ Alias { Identifier }
   Comment { "--" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
 
   Identifier { @asciiLetter (@asciiLetter | @digit | "_")* }
+  Param { "$" (@asciiLetter | @digit | "_")+ }
   Number { @digit+ ("." @digit+)? }
   String { "'" ![']* "'" | '"' !["]* '"' }
   "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">="
