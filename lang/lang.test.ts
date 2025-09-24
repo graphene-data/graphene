@@ -1,6 +1,6 @@
 /// <reference types="vitest/globals" />
 import {setConfig} from './config.ts'
-import {clearWorkspace, getTable, analyze} from './core.ts'
+import {clearWorkspace, getTable, analyze, toSql, getDiagnostics} from './core.ts'
 import {prepareEcommerceTables, setTestPrelude} from './testHelpers.ts'
 import {expect} from 'vitest'
 
@@ -419,5 +419,29 @@ describe('lang', () => {
 
   it('allows measures to refer to themselves', () => {
     expect('table t (oid int, count(distinct t.oid) as total_oids)').toHaveNoErrors()
+  })
+
+  it('replaces parameters in filter conditions', () => {
+    let queries = analyze(`${testTables}
+      from users select id where name = $name
+    `)
+    expect(toSql(queries[0], {name: 'Alice'})).toMatch(/WHERE base\."name"='Alice'/)
+  })
+
+  it.skip('applies parameters inside views', () => {
+    let queries = analyze(`${testTables}
+      table active_users as (from users select id where age > $minAge)
+      from active_users select id
+    `)
+    expect(toSql(queries[0], {minAge: 20})).toMatch(/WHERE base\."age">20/)
+  })
+
+  it.skip('supports array parameters in filters', () => {
+    let queries = analyze(`${testTables}
+      from users select id where name in ($names)
+    `)
+    queries[0].params.names = ['Alice', 'Bob']
+    let sql = toSql(queries[0])
+    expect(sql).toMatch(/IN \(\(ARRAY\['Alice','Bob'\]\)\)/)
   })
 })

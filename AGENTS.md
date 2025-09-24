@@ -9,25 +9,25 @@ If you need to better understand Graphene sql or markdown, you can read @docs/gr
 # Repo structure
 * /agent - a wrapper around claude-code
 * /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
-* /examples - a series of example datasets
+* /examples - a series of example datasets and graphene code.
 * /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
 * /ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
 * /vscode - an extension that provides syntax highlighting and diagnostics on queries.
 
 
 # Tech stack
-Graphene is mostly written in typescript. We parse Graphene SQL with Lezer, then translate it to an IR used my Malloy, which we then use to render the final, dialect-specfic SQL.
+Graphene is mostly written in typescript. We parse Graphene SQL with Lezer, then translate it to Malloy's IR, and use Malloy to render dialect-specific SQL.
 
 For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 4, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
 
-Never install dependencies yourself. Come up with the `pnpm add` command you'd like to run, and ask the user to run it for you. Generally prefer the latest version of a package. If you need an older version, please clarify why.
+# Process
+* Never install dependencies. Always ask the user to install them.
+* Don't grep for files or read code in node_modules. If it seems necessary, stop with a clear explanation of what you need and why.
 
 # Testing
-To manually run graphene, you'll want to cd to one of the examples (like `flights`). From there, `pnpm run cli` lets you run the Graphene CLI.
-`pnpm run cli serve` will start up the server, and tell you the port it's on
-`pnpm run cli run "<gsql>"` lets you execute arbitrary graphene sql.
+Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test -w <workspace>`, where workspace is one of 'cli', 'lang', etc. Tests are the preferred way to ensure that new code you add works as expected.
 
-Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test -w <workspace>`, where workspace is one of 'cli', 'lang', etc.
+The exception is UI features. While we have some UI tests, it's easier to modify one of the examples to exercise your new code (usually `flights` unless you want to test something bigquery-specifc). You'll want a dev server running, but never try and start it yourself, if it needs to be started or restarted, ask the user to do it. If you're having trouble using the Playwright MCP, ask the user to fix it for you.
 
 Often, it's helpful to know how Malloy would compile given to to it's IR. `node scripts/howDoesMalloy.ts` will print out the final SQL, along with the IR. There's some example code within `howDoesMalloy` that gets run, and it's easiest to just modify this to your needs before running.
 
