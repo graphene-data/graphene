@@ -77,6 +77,7 @@ export default [
       'no-trailing-spaces': ['error'],
       'no-whitespace-before-property': ['error'],
       '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', varsIgnorePattern: '^_'}],
+      '@typescript-eslint/consistent-type-imports': ['error', {prefer: 'type-imports', fixStyle: 'inline-type-imports'}],
       'padded-blocks': ['error', 'never'],
       'space-before-function-paren': ['error', 'always'],
       'space-in-parens': ['error', 'never'],
