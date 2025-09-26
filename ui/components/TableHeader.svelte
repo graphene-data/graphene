@@ -25,14 +25,14 @@
   const getWrapTitleAlignment = (column: any) => {
     if (column.align === 'right') return 'header-title--align-end'
     if (column.align === 'center') return 'header-title--align-center'
-    const extracted = safeExtractColumn(column, columnSummary)
+    let extracted = safeExtractColumn(column, columnSummary)
     if (extracted.type === 'number') return 'header-title--align-end'
     return 'header-title--align-start'
   }
 
   const computeGroupSpans = () => {
     return orderedColumns.map((column, index, array) => {
-      const isNewGroup = index === 0 || column.colGroup !== array[index - 1].colGroup
+      let isNewGroup = index === 0 || column.colGroup !== array[index - 1].colGroup
       let span = 1
       if (column.colGroup) {
         for (let i = index + 1; i < array.length && array[i].colGroup === column.colGroup; i++) span += 1
@@ -50,7 +50,7 @@
       {#if rowNumbers}
         <th class={`header-index ${compact ? 'header-index--compact' : ''}`} style:background-color={headerColor} />
       {/if}
-      {#each columnsWithGroupSpan as column}
+      {#each columnsWithGroupSpan as column (column.id)}
         {#if column.colGroup && column.isNewGroup}
           <th class="header-group" colspan={column.span}>
             <div class="header-group__label">{column.colGroup}</div>
@@ -74,7 +74,7 @@
         style:color={headerFontColor}
       />
     {/if}
-    {#each orderedColumns as column}
+    {#each orderedColumns as column (column.id)}
       {@const summary = safeExtractColumn(column, columnSummary)}
       <th
         role="columnheader"

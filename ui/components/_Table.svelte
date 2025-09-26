@@ -67,7 +67,7 @@
 
   if (groupType === 'section') rowNumbers = false
 
-  const props = writable<{data: any[]; columns: any[]; priorityColumns: (string | undefined)[]}>({data, columns: [], priorityColumns: [groupBy]})
+  const props = writable<{data: any[]; columns: any[]; priorityColumns:(string | undefined)[]}>({data, columns: [], priorityColumns: [groupBy]})
   setContext(propKey, props)
 
   $: props.update((state) => ({...state, data, priorityColumns: [groupBy]}))
@@ -91,7 +91,7 @@
   $: props.update((state) => ({...state, priorityColumns}))
   $: finalColumnOrder = getFinalColumnOrder(($props.columns ?? []).map((column: any) => column.id), priorityColumns)
   $: orderedColumns = [...($props.columns ?? [])].sort(
-    (a, b) => finalColumnOrder.indexOf(a.id) - finalColumnOrder.indexOf(b.id)
+    (a, b) => finalColumnOrder.indexOf(a.id) - finalColumnOrder.indexOf(b.id),
   )
 
   let sortObj: {col: string | null; ascending: boolean | null} = {col: null, ascending: null}
@@ -99,7 +99,7 @@
   let sortAsc: boolean | undefined
 
   $: if (sort) {
-    const [column, direction] = sort.split(/\s+/)
+    let [column, direction] = sort.split(/\s+/)
     sortBy = column
     if (direction) {
       sortAsc = direction.toLowerCase() !== 'desc'
@@ -117,28 +117,28 @@
     columnSummary = getColumnSummary(data ?? [], 'array')
 
     if (sortBy) {
-      const columnNames = columnSummary.map((col) => col.id)
+      let columnNames = columnSummary.map((col) => col.id)
       if (!columnNames.includes(sortBy)) {
         throw new Error(`${sortBy} is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).`)
       }
     }
 
-    const dateCols = columnSummary
+    let dateCols = columnSummary
       .filter((col) => col.type === 'date' && !(data?.[0]?.[col.id] instanceof Date))
       .map((col) => col.id)
 
-    for (const columnId of dateCols) {
+    for (let columnId of dateCols) {
       data = convertColumnToDate(data, columnId)
     }
 
     if (link && !showLinkCol) {
-      const linkIndex = columnSummary.findIndex((col) => col.id === link)
+      let linkIndex = columnSummary.findIndex((col) => col.id === link)
       if (linkIndex !== -1) {
         columnSummary = [...columnSummary.slice(0, linkIndex), ...columnSummary.slice(linkIndex + 1)]
       }
     }
   } catch (thrown) {
-    const message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
+    let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
     error = message
     if (strictBuild) throw thrown
   }
@@ -150,7 +150,7 @@
 
   const goToPage = (page: number) => {
     if (!paginated) return
-    const next = Math.min(Math.max(page, 1), pageCount)
+    let next = Math.min(Math.max(page, 1), pageCount)
     if (Number.isFinite(next)) currentPage = next
   }
 
@@ -167,9 +167,9 @@
 
   $: {
     if (!Array.isArray(data)) {
-      const raw = data as any
+      let raw = data as any
       dataTestId = coerceId(raw?.id)
-      const candidate = raw?.rows
+      let candidate = raw?.rows
       data = Array.isArray(candidate) ? candidate : []
     } else {
       dataTestId = coerceId((data as any)?.id)
@@ -185,26 +185,26 @@
 
   $: if (groupBy && data) {
     groupedData = data.reduce<Record<string, any[]>>((acc, row) => {
-      const groupName = row[groupBy]
-      const key = groupName ?? '(blank)'
+      let groupName = row[groupBy]
+      let key = groupName ?? '(blank)'
       if (!acc[key]) acc[key] = []
       acc[key].push(row)
       return acc
     }, {})
 
-    for (const groupName of Object.keys(groupedData)) {
+    for (let groupName of Object.keys(groupedData)) {
       if (!(groupName in groupToggleStates)) groupToggleStates[groupName] = groupsOpen ?? true
     }
 
     groupRowData = Object.fromEntries(
       Object.entries(groupedData).map(([groupName, rows]) => {
-        const aggregates: Record<string, unknown> = {}
-        for (const column of orderedColumns) {
-          const summary = columnSummary.find((col) => col.id === column.id)
+        let aggregates: Record<string, unknown> = {}
+        for (let column of orderedColumns) {
+          let summary = columnSummary.find((col) => col.id === column.id)
           aggregates[column.id] = aggregateColumn(rows, column.id, column.totalAgg, summary?.type, column.weightCol)
         }
         return [groupName, aggregates]
-      })
+      }),
     )
   } else {
     groupedData = {}
@@ -212,15 +212,15 @@
   }
 
   const handleToggle = (event: CustomEvent<{groupName: string}>) => {
-    const {groupName} = event.detail
+    let {groupName} = event.detail
     groupToggleStates = {...groupToggleStates, [groupName]: !groupToggleStates[groupName]}
   }
 
   const activeRows = () => {
     if (groupBy) return data ?? []
     if (!paginated) return data ?? []
-    const start = rows * (currentPage - 1)
-    const end = start + rows
+    let start = rows * (currentPage - 1)
+    let end = start + rows
     return data?.slice(start, end) ?? []
   }
 
@@ -228,16 +228,16 @@
 
   const applySort = (state: {col: string | null; ascending: boolean | null}) => {
     if (!state.col) return
-    const ascending = state.ascending ?? true
+    let ascending = state.ascending ?? true
     if (groupBy) {
       groupedData = Object.fromEntries(
         Object.entries(groupedData).map(([groupName, rows]) => [
           groupName,
-          [...rows].sort((a, b) => compareValues(a[state.col as string], b[state.col as string], ascending))
-        ])
+          [...rows].sort((a, b) => compareValues(a[state.col as string], b[state.col as string], ascending)),
+        ]),
       )
     } else {
-      const sorted = [...(data ?? [])].sort((a, b) => compareValues(a[state.col as string], b[state.col as string], ascending))
+      let sorted = [...(data ?? [])].sort((a, b) => compareValues(a[state.col as string], b[state.col as string], ascending))
       data = sorted
       lastSortedReference = sorted
     }
@@ -255,15 +255,15 @@
   }
 
   const compareValues = (a: unknown, b: unknown, ascending: boolean) => {
-    const modifier = ascending ? 1 : -1
+    let modifier = ascending ? 1 : -1
     if (a === b) return 0
     if (a === undefined || a === null) return -1 * modifier
     if (b === undefined || b === null) return 1 * modifier
     if (typeof a === 'number' && typeof b === 'number') {
       return a < b ? -1 * modifier : 1 * modifier
     }
-    const valA = String(a).toLowerCase()
-    const valB = String(b).toLowerCase()
+    let valA = String(a).toLowerCase()
+    let valB = String(b).toLowerCase()
     if (valA < valB) return -1 * modifier
     if (valA > valB) return 1 * modifier
     return 0
@@ -281,7 +281,7 @@
   $: if (groupBy) {
     let running = 0
     groupOffsets = {}
-    for (const name of sortedGroupNames) {
+    for (let name of sortedGroupNames) {
       groupOffsets[name] = running
       running += groupedData[name]?.length ?? 0
     }
@@ -295,7 +295,7 @@
 
 {#if !error}
   <slot>
-    {#each columnSummary as column}
+    {#each columnSummary as column (column.id)}
       <Column id={column.id} />
     {/each}
   </slot>
@@ -329,7 +329,7 @@
         />
 
         {#if groupBy}
-          {#each sortedGroupNames as groupName}
+          {#each sortedGroupNames as groupName (groupName)}
             <TableGroupRow
               {groupName}
               currentGroupData={groupedData[groupName]}

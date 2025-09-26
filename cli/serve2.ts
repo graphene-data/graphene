@@ -131,7 +131,7 @@ const handleRequestPlugin = {
 async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
-  let {gsql} = JSON.parse(Buffer.concat(chunks).toString())
+  let {gsql, params} = JSON.parse(Buffer.concat(chunks).toString())
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
@@ -146,11 +146,11 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
   try {
     let sql = toSql(queries[0])
     let connection = await getConnection()
-    let queryResults = await connection.runSQL(sql)
+    let queryResults = await connection.runSQL(sql, params)
     res.end(JSON.stringify(queryResults.rows))
   } catch (err) {
     res.statusCode = 500
-    res.end(JSON.stringify({error: err.message}))
+    res.end(JSON.stringify([{message: err.message}]))
   }
 }
 
@@ -253,7 +253,7 @@ function escapeHtml (str: string) {
 // We don't want users to have to manually import components in their md files, so we auto-import them.
 function injectComponentImports () {
   let mapping = {}
-  for (let comp of ['GrapheneQuery', 'BarChart', 'AreaChart', 'LineChart', 'PieChart', 'Table', 'Row', 'BigValue']) {
+  for (let comp of ['GrapheneQuery', 'BarChart', 'AreaChart', 'LineChart', 'PieChart', 'Table', 'Row', 'BigValue', 'Column']) {
     mapping[comp] = `import ${comp} from '${path.resolve(cliRoot, `../ui/components/${comp}.svelte`)}'`
   }
 

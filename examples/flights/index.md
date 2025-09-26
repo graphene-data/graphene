@@ -1,17 +1,8 @@
 # Flight Delay Analysis
 
-<script>
-  import Column from '../../ui/components/Column.svelte'
-</script>
-
-## Average Departure Delay by Airport
-
-This chart shows the average departure delay in minutes for each airport, based on flight data.
-
 ```sql delay_per_origin
 select origin, origin_airport.full_name as origin_full_name, avg(dep_delay) as avg_delay from flights group by 1, 2 limit 20
 ```
-
 
 <BarChart
   data="delay_per_origin"
@@ -35,8 +26,6 @@ order by origin, carrier
 limit 200
 ```
 
-
-<!--
 <AreaChart
   data="delay_by_origin_carrier"
   x="origin"
@@ -47,7 +36,6 @@ limit 200
   title="Average Departure Delay by Origin and Carrier"
   subtitle="Stacked bars highlight which carriers drive delays at each airport"
 />
--->
 
 <Table
   data="delay_by_origin_carrier"
@@ -67,6 +55,8 @@ limit 200
   <Column id="avg_delay" title="Avg Delay (min)" fmt="0.0" totalAgg="mean" />
 </Table>
 
+<Table data="delay_by_origin_carrier" />
+
 
 ```sql sfo_delay_trend
 from flights select
@@ -77,8 +67,6 @@ order by flight_time
 limit 120
 ```
 
-
-<!--
 <LineChart
   data="sfo_delay_trend"
   x="flight_time"
@@ -88,14 +76,11 @@ limit 120
   title="Departure Delays for Recent SFO Flights"
   subtitle="Ordered by flight time so spikes are easy to spot"
 />
--->
-
 
 ```sql flights_by_carrier
 from flights select carrier, count() as total_flights group by 1 order by total_flights desc
 ```
 
-<!--
 <PieChart
   data="flights_by_carrier"
   category="carrier"
@@ -105,4 +90,3 @@ from flights select carrier, count() as total_flights group by 1 order by total_
   title="Flight Share by Carrier"
   subtitle="Percentage of total flights in the sample"
 />
--->

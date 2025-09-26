@@ -14,9 +14,9 @@ type ColumnOption = {
 type ColumnLike = ColumnOption & Partial<ColumnSummary>
 
 export const safeExtractColumn = <T extends ColumnLike>(column: T, columnSummary: ColumnSummary[]): ColumnSummary => {
-  const foundCols = columnSummary.filter(d => d.id === column.id)
+  let foundCols = columnSummary.filter(d => d.id === column.id)
   if (!foundCols.length) {
-    const error = column.id === undefined
+    let error = column.id === undefined
       ? new Error('please add an "id" property to all the <Column ... />')
       : new Error(`column with id: "${column.id}" not found`)
     if (strictBuild) throw error
@@ -61,7 +61,7 @@ export const aggregateColumn = (
   columnName: string,
   aggType: string | undefined,
   columnType?: string,
-  weightColumnName?: string | null
+  weightColumnName?: string | null,
 ): number | string | null => {
   if (!data || !data.length) return null
 
@@ -74,7 +74,7 @@ export const aggregateColumn = (
     return '-'
   }
 
-  const columnValues = data
+  let columnValues = data
     .map(row => row[columnName])
     .filter(val => val !== undefined && val !== null)
     .map(val => Number(val))
@@ -99,7 +99,7 @@ export const aggregateColumn = (
       let totalWeight = 0
       let weightedSum = 0
       for (let row of data) {
-        const weight = Number(row[weightColumnName] ?? 0)
+        let weight = Number(row[weightColumnName] ?? 0)
         totalWeight += weight
         weightedSum += Number(row[columnName] ?? 0) * weight
       }
@@ -114,7 +114,7 @@ export const aggregateColumn = (
 }
 
 export const getFinalColumnOrder = (columns: string[], priorityColumns: Array<string | undefined>): string[] => {
-  const priorities = priorityColumns.filter(Boolean) as string[]
-  const restColumns = columns.filter(key => !priorities.includes(key))
+  let priorities = priorityColumns.filter(Boolean) as string[]
+  let restColumns = columns.filter(key => !priorities.includes(key))
   return [...priorities, ...restColumns]
 }

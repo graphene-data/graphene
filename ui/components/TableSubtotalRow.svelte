@@ -16,7 +16,7 @@
 </script>
 
 <tr class="subtotal-row" style:background-color={rowColor} style:color={fontColor}>
-  {#each orderedColumns as column}
+  {#each orderedColumns as column (column.id)}
     {@const summary = safeExtractColumn(column, columnSummary)}
     {@const baseFormat = column.fmt ? getFormatObjectFromString(column.fmt, summary.format?.valueType) : summary.format}
     {@const format = column.subtotalFmt
@@ -43,7 +43,7 @@
           {formatValue(
             aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol),
             format,
-            summary.columnUnitSummary
+            summary.columnUnitSummary,
           )}
         {/if}
       {:else if groupType === 'section'}

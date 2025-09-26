@@ -80,15 +80,15 @@
 
   const coerceNumber = (value: number | string | undefined): number | undefined => {
     if (value === undefined || value === null || value === '') return undefined
-    const parsed = Number(value)
+    let parsed = Number(value)
     return Number.isNaN(parsed) ? undefined : parsed
   }
 
   const checkColumnName = () => {
     try {
-      const data = $props.data?.[0]
+      let data = $props.data?.[0]
       if (!data || !Object.keys(data).includes(id)) {
-        const error = `Error in table: ${id} does not exist in the dataset`
+        let error = `Error in table: ${id} does not exist in the dataset`
         if (strictBuild) throw new Error(error)
         console.warn(error)
       }
@@ -140,22 +140,22 @@
     barColor: $barColorStore,
     negativeBarColor: $negativeBarColorStore,
     backgroundColor: $backgroundColorStore,
-    hideLabels
+    hideLabels,
   })
 
   const updateProps = () => {
     checkColumnName()
     props.update((state: any) => {
-      const next = {...state}
-      const existing = next.columns.findIndex((column: any) => column.identifier === identifier)
-      const option = options()
+      let next = {...state}
+      let existing = next.columns.findIndex((column: any) => column.identifier === identifier)
+      let option = options()
       if (existing === -1) {
         next.columns = [...next.columns, option]
       } else {
         next.columns = [
           ...next.columns.slice(0, existing),
           option,
-          ...next.columns.slice(existing + 1)
+          ...next.columns.slice(existing + 1),
         ]
       }
       return next

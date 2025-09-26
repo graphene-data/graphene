@@ -25,6 +25,7 @@
     "@types/node": "^22.18.0",
     "eslint": "^9.32.0",
     "eslint-plugin-prefer-let": "^4.0.0",
+    "eslint-plugin-svelte": "^3.12.4",
     "typescript-eslint": "^8.38.0",
     "vitest": "3.0.5",
     "zx": "^8.7.2"
