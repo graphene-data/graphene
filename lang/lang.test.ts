@@ -444,4 +444,9 @@ describe('lang', () => {
     let sql = toSql(queries[0])
     expect(sql).toMatch(/IN \(\(ARRAY\['Alice','Bob'\]\)\)/)
   })
+
+  it('assumes * when no fields are selected', () => {
+    expect('from users')
+      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base')
+  })
 })
