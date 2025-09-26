@@ -19,14 +19,9 @@
   "contributes": {
     "languages": [
       {
-        "id": "gsql",
-        "aliases": [
-          "Graphene GSQL",
-          "GSQL"
-        ],
-        "extensions": [
-          ".gsql"
-        ],
+        "id": "graphene-sql",
+        "aliases": ["Graphene GSQL", "GSQL"],
+        "extensions": [".gsql"],
         "configuration": "./language-configuration.json"
       }
     ],
