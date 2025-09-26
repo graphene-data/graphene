@@ -7,6 +7,5 @@ packages:
   - examples/*
 overrides:
   "@evidence-dev/sdk": "-"
-  "ssf": "-"
   "downloadjs": "-"
   "@uwdata/mosaic-sql": "-"

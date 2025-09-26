@@ -6,7 +6,7 @@
     flex-direction: row;
     gap: 1rem;
   }
-  
+
   /* Ensure styles apply to slotted children (not scoped) */
   div > :global(*) {
     flex: 1 1 0;

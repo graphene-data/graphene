@@ -42,7 +42,7 @@
     </TableCell>
   {/if}
 
-  {#each orderedColumns as column, index}
+  {#each orderedColumns as column, index (index)}
     {@const summary = safeExtractColumn(column, columnSummary)}
     {@const format = column.subtotalFmt
       ? getFormatObjectFromString(column.subtotalFmt)
@@ -82,7 +82,7 @@
             {formatValue(
               aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol),
               format,
-              summary.columnUnitSummary
+              summary.columnUnitSummary,
             )}
           {/if}
         {:else}

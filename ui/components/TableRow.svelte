@@ -26,18 +26,18 @@
   const computeColorScale = (
     column: any,
     columnMin: number | undefined,
-    columnMax: number | undefined
+    columnMax: number | undefined,
   ) => {
     if (!column?.colorScale || !column?.colorScale.length) return undefined
     if (!hasFiniteNumber(columnMin) || !hasFiniteNumber(columnMax) || columnMin === columnMax) return undefined
 
-    const rawDomain = Array.isArray(column.colorBreakpoints) && column.colorBreakpoints.length
+    let rawDomain = Array.isArray(column.colorBreakpoints) && column.colorBreakpoints.length
       ? column.colorBreakpoints
       : column.colorMid !== undefined && column.colorMid !== null
         ? [columnMin, column.colorMid, columnMax]
         : [columnMin, columnMax]
 
-    const domain = rawDomain
+    let domain = rawDomain
       .map((value) => (typeof value === 'string' ? Number(value) : value))
       .filter((value) => typeof value === 'number' && Number.isFinite(value))
 
@@ -70,7 +70,7 @@
 
   const isExternalUrl = (url: string) => {
     try {
-      const target = new URL(url, window.location.origin)
+      let target = new URL(url, window.location.origin)
       return target.origin !== window.location.origin
     } catch (error) {
       return false
@@ -79,10 +79,10 @@
 
   const navigateToLink = (row: any, event: MouseEvent) => {
     if (!link) return
-    const href = row?.[link]
+    let href = row?.[link]
     if (!href) return
 
-    const anchorTarget = (event.target as HTMLElement | null)?.closest('a')
+    let anchorTarget = (event.target as HTMLElement | null)?.closest('a')
     if (anchorTarget && anchorTarget.getAttribute('target') === '_blank') return
 
     if (isExternalUrl(href)) {
@@ -94,7 +94,7 @@
   }
 </script>
 
-{#each displayedData as row, i}
+{#each displayedData as row, i (i)}
   {@const shaded = rowShading && i % 2 === 1}
   {@const clickable = link && row[link]}
   <tr
@@ -107,7 +107,7 @@
       </TableCell>
     {/if}
 
-    {#each orderedColumns as column, k}
+    {#each orderedColumns as column, k (k)}
       {@const summary = safeExtractColumn(column, columnSummary)}
       {@const scaleSummary = column.scaleColumn ? columnSummary.find((d) => d.id === column.scaleColumn) : summary}
       {@const columnMin = column.colorMin ?? scaleSummary?.columnUnitSummary?.min}
@@ -170,7 +170,7 @@
                   {formatValue(
                     row[column.linkLabel],
                     column.fmt ? getFormatObjectFromString(column.fmt, labelSummary.format?.valueType) : labelSummary.format,
-                    labelSummary.columnUnitSummary
+                    labelSummary.columnUnitSummary,
                   )}
                 {:else}
                   {column.linkLabel}
@@ -179,7 +179,7 @@
                 {formatValue(
                   row[column.id],
                   column.fmt ? getFormatObjectFromString(column.fmt, summary.format?.valueType) : summary.format,
-                  summary.columnUnitSummary
+                  summary.columnUnitSummary,
                 )}
               {/if}
             </a>

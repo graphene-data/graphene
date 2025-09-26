@@ -44,13 +44,13 @@
   $: symbolColor = pickColor(
     downIsGood ? $theme.colors.negative : $theme.colors.positive,
     downIsGood ? $theme.colors.positive : $theme.colors.negative,
-    $theme.colors['base-content-muted']
+    $theme.colors['base-content-muted'],
   )
 
   $: textColor = pickColor(
     downIsGood ? $theme.colors.negative : $theme.colors.positive,
     downIsGood ? $theme.colors.positive : $theme.colors.negative,
-    $theme.colors['base-content-muted']
+    $theme.colors['base-content-muted'],
   )
 
   $: chipClass = pickColor('delta-chip--positive', 'delta-chip--negative', 'delta-chip--neutral')
@@ -72,7 +72,7 @@
   }
 </script>
 
-<span class={`delta ${chip ? `delta-chip ${chipClass}` : ''} ${className ?? ''}`.trim()} style={`text-align:${align ?? 'right'}`}> 
+<span class={`delta ${chip ? `delta-chip ${chipClass}` : ''} ${className ?? ''}`.trim()} style={`text-align:${align ?? 'right'}`}>
   {#if symbolPosition === 'left'}
     {#if showSymbol}
       <span class="delta-symbol" style={`color:${symbolColor}`}>{symbol}</span>
