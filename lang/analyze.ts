@@ -5,8 +5,7 @@ import {txt, compact, getFile, getPosition, walkExpression} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config, dialectKeyword} from './config.ts'
 import {findOverloads} from './functions.ts'
-import {parser} from './parser.js'
-import { inferParamTypes } from './params.ts'
+import {inferParamTypes} from './params.ts'
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
@@ -16,16 +15,6 @@ let TABLE_NODE_MAP = new WeakMap<Table, SyntaxNode>()
 let NODE_ENTITY_MAP = new NodeWeakMap<any>()
 
 const errorExpression: Expression = {node: 'error', type: 'error'}
-
-export function parse (fi: FileInfo) {
-  fi.tree ||= parser.parse(fi.contents)
-  fi.tree!.fileInfo = fi
-  fi.tree!.fileInfo = fi
-
-  fi.tree!.topNode.cursor().iterate(n => {
-    if (n.type.isError) diag(n.node, 'Syntax error')
-  })
-}
 
 // Creates tables without analyzing them.
 // We need to know all the tables before we can analyze any table, since they refer to each other.
@@ -500,6 +489,12 @@ function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultRetu
   let to = getPosition(node.to, file)
   diagnostics.push({from, to, message, severity: 'error', file: file.path})
   return defaultReturn!
+}
+
+export function recordSyntaxErrors (fi: FileInfo) {
+  fi.tree!.topNode.cursor().iterate(n => {
+    if (n.type.isError) diag(n.node, 'Syntax error')
+  })
 }
 
 // turn `a and b and c` into `[a, b, c]`

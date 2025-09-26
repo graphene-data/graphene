@@ -1,19 +1,44 @@
 import type {Expression, FileInfo} from './types'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 
+function markdownOffset (offset: number, file: FileInfo) {
+  let map = file.virtualToMarkdownOffset
+  if (!map || map.length === 0) return offset
+  if (offset <= 0) return map[0] ?? 0
+  if (offset >= map.length) return map[map.length - 1]
+  return map[offset]
+}
+
+function virtualOffset (offset: number, file: FileInfo) {
+  let map = file.virtualToMarkdownOffset
+  if (!map || map.length === 0) return offset
+  if (offset <= map[0]) return 0
+  if (offset >= map[map.length - 1]) return map.length - 1
+
+  let low = 0
+  let high = map.length - 1
+  while (low < high) {
+    let mid = Math.floor((low + high) / 2)
+    if (map[mid] >= offset) high = mid
+    else low = mid + 1
+  }
+  return low
+}
+
 export function getPosition (offset: number, file: FileInfo) {
+  let mdOffset = markdownOffset(offset, file)
   let lines = file.contents.split(/\r?\n/)
   let acc = 0
   for (let i = 0; i < lines.length; i++) {
     let lineText = lines[i]
-    let nextAcc = acc + lineText.length + 1 // +1 for newline
-    if (offset < nextAcc || i === lines.length - 1) {
-      let col = Math.max(0, offset - acc)
-      return {offset, line: i, col, lineStart: acc, lineText}
+    let nextAcc = acc + lineText.length + 1
+    if (mdOffset < nextAcc || i === lines.length - 1) {
+      let col = Math.max(0, mdOffset - acc)
+      return {offset: mdOffset, line: i, col, lineStart: acc, lineText}
     }
     acc = nextAcc
   }
-  return {offset, line: 1, col: 0}
+  return {offset: mdOffset, line: 1, col: 0}
 }
 
 export function getOffset (line: number, col: number, file: FileInfo) {
@@ -22,6 +47,7 @@ export function getOffset (line: number, col: number, file: FileInfo) {
   for (let i = 0; i < line; i++) {
     acc += lines[i].length + 1
   }
+  if (file.virtualContents) return virtualOffset(acc + col, file)
   return acc + col
 }
 
@@ -34,7 +60,9 @@ export function getFile (node: SyntaxNode | SyntaxNodeRef): FileInfo {
 
 export function txt (node:SyntaxNode | null | undefined) {
   if (!node) return ''
-  return getFile(node).contents.substring(node.from, node.to) || ''
+  let file = getFile(node)
+  let source = file.virtualContents ?? file.contents
+  return source.substring(node.from, node.to) || ''
 }
 
 export function compact<T> (obj: T): T {

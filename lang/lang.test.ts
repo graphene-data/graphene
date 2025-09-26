@@ -441,13 +441,34 @@ describe('lang', () => {
     let queries = analyze(`${testTables}
       from users select id where name in ($names)
     `)
-    queries[0].params.names = ['Alice', 'Bob']
-    let sql = toSql(queries[0])
+    let sql = toSql(queries[0], {names: ['Alice', 'Bob']})
     expect(sql).toMatch(/IN \(\(ARRAY\['Alice','Bob'\]\)\)/)
   })
 
   it('assumes * when no fields are selected', () => {
     expect('from users')
       .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base')
+  })
+
+  it('can analyze markdown files', () => {
+    expect(`## My analysis
+      \`\`\`gsql test
+        from users where age > 20
+      \`\`\`
+      <BarChart data="test" x="name" y="avg(age)" />
+    `).toRenderSql('with __stage0 as ( select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base where base."age">20 ) select base."name" as "name", avg(base."age") as "col_1" from __stage0 as base group by 1 order by 2 desc nulls last')
+  })
+
+  it('reports the right line/col number for markdown errors', () => {
+    analyze(trimIndentation(`## My analysis
+      \`\`\`gsql test
+        from users where discount > 20
+      \`\`\`
+    `), 'md')
+    let errors = getDiagnostics()
+    expect(errors.length).toBe(1)
+    expect(errors[0].from.line).toBe(2)
+    expect(errors[0].from.col).toBe(19)
+    expect(errors[0].to.col).toBe(27)
   })
 })

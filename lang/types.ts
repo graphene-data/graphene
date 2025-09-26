@@ -79,4 +79,7 @@ export interface FileInfo {
   contents: string
   tree: Tree | null
   tables: Table[]
+  queries: Query[]
+  virtualContents?: string // For markdown files, this is the effective gsql
+  virtualToMarkdownOffset?: number[] // mapping so we can get positions in the original md
 }
