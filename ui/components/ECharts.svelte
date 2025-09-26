@@ -44,7 +44,7 @@
         connectGroup,
         xAxisLabelOverflow,
         seriesColors,
-        theme: $activeAppearance
+        theme: $activeAppearance,
       }}
     />
   {/if}

@@ -51,7 +51,7 @@ export default [
     },
   },
   {
-    files: ['**/*.{js,mjs,cjs,ts}'],
+    files: ['**/*.{js,mjs,cjs,ts,svelte}'],
     languageOptions: {globals: globals.browser},
     plugins: {'prefer-let': pluginPreferLet},
     rules: {

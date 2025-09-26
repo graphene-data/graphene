@@ -32,7 +32,7 @@
     <TableCell class="index" {compact} topBorder="1px solid rgba(107, 114, 128, 0.5)" />
   {/if}
 
-  {#each orderedColumns as column}
+  {#each orderedColumns as column (column.id)}
     {@const summary = safeExtractColumn(column, columnSummary)}
     {@const format = column.totalFmt
       ? getFormatObjectFromString(column.totalFmt)
@@ -67,7 +67,7 @@
           {formatValue(
             totalAgg === 'weightedMean' ? weightedMean(data, column.id, column.weightCol) : summary.columnUnitSummary?.[totalAgg],
             format,
-            summary.columnUnitSummary
+            summary.columnUnitSummary,
           )}
         {/if}
       {:else}
