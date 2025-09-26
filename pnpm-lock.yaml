@@ -21,13 +21,13 @@ importers:
       '@eslint/js':
         specifier: ^9.34.0
         version: 9.34.0
-      eslint-plugin-svelte:
-        specifier: ^3.12.4
-        version: 3.12.4(eslint@9.34.0(jiti@2.5.1))(svelte@4.2.19)
       globals:
         specifier: ^16.3.0
         version: 16.3.0
     devDependencies:
+      '@dotenvx/dotenvx':
+        specifier: ^1.49.1
+        version: 1.49.1
       '@malloydata/db-duckdb':
         specifier: ^0.0.304
         version: 0.0.304(encoding@0.1.13)
@@ -43,6 +43,9 @@ importers:
       eslint-plugin-prefer-let:
         specifier: ^4.0.0
         version: 4.0.0
+      eslint-plugin-svelte:
+        specifier: ^3.12.4
+        version: 3.12.4(eslint@9.34.0(jiti@2.5.1))(svelte@4.2.19)
       typescript-eslint:
         specifier: ^8.38.0
         version: 8.41.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.4.2)
@@ -180,9 +183,6 @@ importers:
 
   lang:
     dependencies:
-      '@dotenvx/dotenvx':
-        specifier: ^1.49.1
-        version: 1.49.1
       '@lezer/common':
         specifier: ^1.2.3
         version: 1.2.3
