@@ -13,7 +13,7 @@ import {
 
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {readFile} from 'node:fs/promises'
-import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles, getHover} from '@graphene/lang'
+import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles, getHover, loadConfig} from '@graphene/lang'
 
 const connection = createConnection(ProposedFeatures.all)
 let initialLoad: Promise<void> | undefined
@@ -21,7 +21,9 @@ let initialLoad: Promise<void> | undefined
 connection.onInitialize(params => {
   let dirs = params.workspaceFolders?.map(f => f.uri) || []
   console.log('started Graphene server', dirs)
-  initialLoad = dirs[0] ? loadWorkspace(dirs[0].replace('file://', '')) : Promise.resolve()
+  let root = dirs[0].replace('file://', '')
+  loadConfig(root)
+  initialLoad = dirs[0] ? loadWorkspace(root) : Promise.resolve()
 
   return {
     capabilities: {

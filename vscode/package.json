@@ -14,7 +14,7 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onStartupFinished",
-    "onLanguage:gsql"
+    "onLanguage:graphene-sql"
   ],
   "contributes": {
     "languages": [
@@ -27,8 +27,8 @@
     ],
     "grammars": [
       {
-        "language": "gsql",
-        "scopeName": "source.gsql",
+        "language": "graphene-sql",
+        "scopeName": "source.graphene-sql",
         "path": "./gsql.tmLanguage.json"
       }
     ]

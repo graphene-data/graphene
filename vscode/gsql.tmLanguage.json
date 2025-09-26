@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
   "name": "Graphene SQL",
-  "scopeName": "source.gsql",
+  "scopeName": "source.graphene-sql",
   "patterns": [
     { "include": "#comments" },
     { "include": "#strings" },
