@@ -229,6 +229,14 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   let queryOffset = limts[1] ? Number(txt(limts[1])) : undefined
   if (queryOffset) diag(limts[1], 'OFFSET is not supported yet')
 
+  // Queries without a SELECT are implicitly `select *`
+  if (scope.outputFields.length == 0) {
+    scope.table.fields.forEach(f => {
+      if (isJoin(f) || f.isAgg) return
+      scope.outputFields.push({...f, e: {node: 'field', path: [f.name], type: f.type}})
+    })
+  }
+
   let q = {
     fields: scope.outputFields,
     subQuerySources,
