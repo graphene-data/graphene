@@ -17,7 +17,7 @@ import {parser} from './parser.js'
 import {parseMarkdown} from './markdown.ts'
 
 export {clearWorkspace}
-export {config}
+export {config, loadConfig}
 export type {Query, Table, Diagnostic} from './types.ts'
 export function getTable (name: string) { return Object.values(FILE_MAP).flatMap(f => f.tables).find(t => t.name == name) }
 export function getFile (name: string) { return FILE_MAP[name] }
@@ -26,8 +26,6 @@ export function getDiagnostics () { return diagnostics }
 
 // Loads and parses all gsql files within a directory
 export async function loadWorkspace (dir:string) {
-  loadConfig(dir)
-
   let files = await glob('**/*.{gsql,md}', {cwd: dir})
   for await (let file of files) {
     let contents = await readFile(path.join(dir, file), 'utf-8')

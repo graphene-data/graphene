@@ -145,8 +145,9 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   } else { // from a regular table
     structRef = txt(froms[0].getChild('Identifier'))
     scope.table = lookupTable(structRef, froms[0])!
-    NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: scope.table})
     if (!scope.table) return diag(froms[0], `could not find table ${structRef}`)
+    if (!scope.table.analyzed) analyzeTable(scope.table)
+    NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: scope.table})
   }
 
   // SELECT
