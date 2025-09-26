@@ -1,9 +1,14 @@
 @top Program {
-  (TableStatement | ViewStatement)* QueryStatement?
+  (TableStatement ";"? | ViewStatement ";"? | queryWithSemi)* QueryStatement?
+}
+
+// Because QueryStatement is so flexible in what it accepts, we need semicolons between multiple queries within a single file.
+queryWithSemi {
+  QueryStatement ";"
 }
 
 QueryStatement {
-  (FromClause | SelectClause | WhereClause | GroupByClause | HavingClause | OrderByClause | LimitClause)*
+  (FromClause | SelectClause | WhereClause | GroupByClause | HavingClause | OrderByClause | LimitClause)+
 }
 
 SelectClause {
@@ -236,7 +241,7 @@ Null { Kw<"null"> }
 Kw<term> { @specialize[@name={term}]<Identifier, term> }
 Alias { Identifier }
 
-@skip { whitespace | Comment | Semicolon }
+@skip { whitespace | Comment }
 
 @tokens {
   whitespace { @whitespace+ }
@@ -247,7 +252,6 @@ Alias { Identifier }
   Number { @digit+ ("." @digit+)? }
   String { "'" ![']* "'" | '"' !["]* '"' }
   "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">="
-  Semicolon { ";" }
 
   @precedence { Comment, "-" }
   @precedence { Comment, "*" }
