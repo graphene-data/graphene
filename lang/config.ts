@@ -1,13 +1,5 @@
 import * as fs from 'fs'
 import path from 'path'
-import dotenv from '@dotenvx/dotenvx'
-import {fileURLToPath} from 'url'
-
-dotenv.config({
-  path: path.join(fileURLToPath(import.meta.url), '../../.env'),
-  ignore: ['MISSING_ENV_FILE'],
-  logLevel: 'error',
-})
 
 export let config: Config = {dialect: 'duckdb'} as Config
 
