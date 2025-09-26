@@ -5,14 +5,16 @@ import {registerDialect} from './node_modules/@malloydata/malloy/dist/dialect/di
 import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect/functions/index.js'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
-import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, parse} from './analyze.ts'
-import {type Query, type Table} from './types.ts'
+import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors} from './analyze.ts'
+import {type FileInfo, type Query} from './types.ts'
 import {fillInParams} from './params.ts'
 import {getOffset} from './util.ts'
 import {config, loadConfig} from './config.ts'
 import path from 'node:path'
 import {type DialectFunctionOverloadDef} from '@malloydata/malloy'
 import {BIGQUERY_DIALECT_FUNCTIONS} from './functions.ts'
+import {parser} from './parser.js'
+import {parseMarkdown} from './markdown.ts'
 
 export {clearWorkspace}
 export {config}
@@ -26,7 +28,7 @@ export function getDiagnostics () { return diagnostics }
 export async function loadWorkspace (dir:string) {
   loadConfig(dir)
 
-  let files = await glob('**/*.gsql', {cwd: dir})
+  let files = await glob('**/*.{gsql,md}', {cwd: dir})
   for await (let file of files) {
     let contents = await readFile(path.join(dir, file), 'utf-8')
     updateFile(contents, file)
@@ -35,7 +37,7 @@ export async function loadWorkspace (dir:string) {
 
 // when a file changes, it's parse tree becomes invalid.
 export function updateFile (contents: string, path: string) {
-  FILE_MAP[path] ||= {path, contents, tree: null, tables: []}
+  FILE_MAP[path] ||= {path, contents, tree: null, tables: [], queries: []}
   FILE_MAP[path].contents = contents
   FILE_MAP[path].tree = null
   return FILE_MAP[path]
@@ -43,31 +45,42 @@ export function updateFile (contents: string, path: string) {
 
 // Analyzes all gsql files in the workspace, and optionally any gsql provided.
 // This could be more efficient, but for now we just re-analyze everything.
-export function analyze (contents?: string): Query[] {
+export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
   clearDiagnostics()
   delete FILE_MAP['input'] // clean up any previous ephemeral tables
-
-  Object.values(FILE_MAP).forEach(f => {
-    parse(f)
-    f.tables = findTables(f) // for now, blow away previously analyzed tables
-  })
-  Object.values(FILE_MAP).flatMap(f => f.tables).forEach(analyzeTable)
+  delete FILE_MAP['input.md']
 
   // if you provided a file, we'll analyze it and give you the queries.
   // Any tables defined in `contents` are ephemeral, since query interpolation means multiple browser tabs
   // could be trying to define the same named table in the same file with different sql.
   // This is a bit hacky, but it works since analysis is sync, and we can clear out this "file" after we're done.
+  let path = '-'
   if (contents) {
-    let fi = updateFile(contents, 'input')
-    parse(fi)
-    fi.tables = findTables(fi)
-    fi.tables.forEach(analyzeTable)
-
-    let queries = fi.tree!.topNode.getChildren('QueryStatement') || []
-    return queries.map(analyzeQuery).filter(q => !!q)
+    path = type == 'md' ? 'input.md' : 'input'
+    updateFile(contents, path)
   }
 
-  return []
+  // First, parse and identify tables in the workspace
+  Object.values(FILE_MAP).forEach(fi => {
+    parse(fi, fi.path.endsWith('.md'))
+    fi.tables = findTables(fi) // for now, blow away previously analyzed tables
+  })
+  // Second, analyze all those tables
+  Object.values(FILE_MAP).flatMap(f => f.tables).forEach(analyzeTable)
+
+  // Finally, analyze any queries
+  Object.values(FILE_MAP).forEach(fi => {
+    let nodes = fi.tree!.topNode.getChildren('QueryStatement') || []
+    fi.queries = nodes.map(analyzeQuery).filter(q => !!q)
+  })
+
+  return FILE_MAP[path]?.queries || []
+}
+
+function parse (fi: FileInfo, isMd: boolean) {
+  fi.tree ||= isMd ? parseMarkdown(fi) : parser.parse(fi.contents)
+  fi.tree!.fileInfo = fi
+  recordSyntaxErrors(fi)
 }
 
 export function toSql (query: Query, params: Record<string, any> = {}): string {
