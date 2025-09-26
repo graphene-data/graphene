@@ -1,6 +1,6 @@
 import * as path from 'path'
 import * as vscode from 'vscode'
-import {LanguageClient, LanguageClientOptions, ServerOptions, State, TransportKind} from 'vscode-languageclient/node'
+import {LanguageClient, type LanguageClientOptions, type ServerOptions, State, TransportKind} from 'vscode-languageclient/node'
 
 let client: LanguageClient
 let showedErrorToast = false
@@ -14,10 +14,13 @@ export function activate (context: vscode.ExtensionContext) {
   }
 
   let clientOptions: LanguageClientOptions = {
-    documentSelector: [{scheme: 'file', language: 'gsql'}],
+    documentSelector: [
+      {scheme: 'file', language: 'gsql'},
+      {scheme: 'file', language: 'markdown'},
+    ],
     // trace: {server: Trace.Verbose},
     synchronize: {
-      fileEvents: vscode.workspace.createFileSystemWatcher('**/*.gsql'),
+      fileEvents: vscode.workspace.createFileSystemWatcher('**/*.{md,gsql}'),
     },
   }
 

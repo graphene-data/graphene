@@ -5,7 +5,7 @@
 import {
   createConnection,
   TextDocuments,
-  Diagnostic,
+  type Diagnostic,
   DiagnosticSeverity,
   ProposedFeatures,
   TextDocumentSyncKind,
