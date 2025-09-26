@@ -1,8 +1,9 @@
 /// <reference types="vitest/globals" />
 import {setConfig} from './config.ts'
-import {clearWorkspace, getTable, analyze, toSql, getDiagnostics} from './core.ts'
-import {prepareEcommerceTables, setTestPrelude} from './testHelpers.ts'
+import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile} from './core.ts'
+import {prepareEcommerceTables} from './testHelpers.ts'
 import {expect} from 'vitest'
+import {trimIndentation} from './util.ts'
 
 const testTables = `
   table users (
@@ -60,8 +61,8 @@ describe('lang', () => {
 
   beforeEach(() => {
     clearWorkspace()
-    setTestPrelude(testTables)
-    setConfig({dialect: 'duckdb'})
+    setConfig({dialect: 'duckdb', root: ''})
+    updateFile(testTables, 'models.gsql')
   })
 
   it('handles basic select query', async () => {
@@ -377,7 +378,7 @@ describe('lang', () => {
   })
 
   it('supports functions with keyword args', () => {
-    setConfig({dialect: 'bigquery'})
+    setConfig({dialect: 'bigquery', root: ''})
     expect('from users select timestamp_diff(created_at, created_at, day)')
       .toRenderSql('select timestamp_diff(base.`created_at`,base.`created_at`,day) as `col_0` from `users` as base')
   })

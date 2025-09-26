@@ -1,10 +1,9 @@
-import {toSql, analyze, getDiagnostics, type Diagnostic, clearWorkspace} from './core.ts'
+import {toSql, analyze, getDiagnostics, type Diagnostic} from './core.ts'
 import {expect as vitestExpect} from 'vitest'
 import {DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
+import {trimIndentation} from './util.ts'
 
 const DEBUG = !!process.env.DEBUG
-
-let TEST_PRELUDE = ''
 
 const ECOMM_SETUP = `
   create table users (
@@ -56,10 +55,6 @@ const ECOMM_SETUP = `
     (501, 2, '2024-01-12', 50);
 `
 
-export function setTestPrelude (sql: string) {
-  TEST_PRELUDE = sql || ''
-}
-
 function normalizeSql (s: string) {
   return s.toLowerCase().replace(/[\s\n]+/g, ' ').replace(/\s+$/, '')
 }
@@ -94,15 +89,14 @@ export async function prepareEcommerceTables () {
 vitestExpect.extend({
   toRenderSql (received: string, expectedSql: string) {
     if (DEBUG) console.log('Query:', received)
-    clearWorkspace()
-    let gsql = `${TEST_PRELUDE}\n\n${received}`
-    let queries = analyze(gsql)
+    let content = trimIndentation(received)
+    let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
     let diagnostics = getDiagnostics()
 
     if (diagnostics.length > 0) {
       return {
         pass: false,
-        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(gsql, diagnostics)}`,
+        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(content, diagnostics)}`,
       }
     }
 
@@ -120,14 +114,14 @@ vitestExpect.extend({
 
   async toReturnRows (received: string, ...expectedRows: unknown[][]) {
     if (DEBUG) console.log('Query:', received)
-    clearWorkspace()
-    let queries = analyze(`${TEST_PRELUDE}\n\n${received}`)
+    let content = trimIndentation(received)
+    let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
     let diagnostics = getDiagnostics()
 
     if (diagnostics.length > 0) {
       return {
         pass: false,
-        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(received, diagnostics)}`,
+        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(content, diagnostics)}`,
       }
     }
     let sql = toSql(queries[0])
@@ -158,8 +152,9 @@ vitestExpect.extend({
 
   toHaveDiagnostic (received: string, pattern: RegExp | string) {
     if (DEBUG) console.log('Query:', received)
-    let testSql = `${TEST_PRELUDE}\n\n${received}`
-    analyze(testSql)
+    let content = trimIndentation(received)
+    analyze(content, content.includes('```') ? 'md' : 'gsql')
+
     let diagnostics = getDiagnostics()
 
     let regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern
@@ -169,21 +164,22 @@ vitestExpect.extend({
     return {
       pass,
       message: () => pass
-        ? `Expected no diagnostic matching ${regex}, but found one:\n${formatDiagnostics(testSql, [match!])}`
-        : `Expected a diagnostic matching ${regex}, but found ${diagnostics.length}.\n\n${formatDiagnostics(testSql, diagnostics) || 'No diagnostics.'}`,
+        ? `Expected no diagnostic matching ${regex}, but found one:\n${formatDiagnostics(content, [match!])}`
+        : `Expected a diagnostic matching ${regex}, but found ${diagnostics.length}.\n\n${formatDiagnostics(content, diagnostics) || 'No diagnostics.'}`,
     }
   },
 
   toHaveNoErrors (received: string) {
     if (DEBUG) console.log('Query:', received)
-    let testSql = `${TEST_PRELUDE}\n\n${received}`
-    analyze(testSql)
+    let content = trimIndentation(received)
+    analyze(content, content.includes('```') ? 'md' : 'gsql')
+
     let errors = getDiagnostics()
     return {
       pass: errors.length === 0,
       message: () => errors.length === 0
         ? 'No errors found.'
-        : `Expected no errors, but found ${errors.length}.\n\n${formatDiagnostics(testSql, errors)}`,
+        : `Expected no errors, but found ${errors.length}.\n\n${formatDiagnostics(content, errors)}`,
     }
   },
 })
