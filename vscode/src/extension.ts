@@ -15,7 +15,7 @@ export function activate (context: vscode.ExtensionContext) {
 
   let clientOptions: LanguageClientOptions = {
     documentSelector: [
-      {scheme: 'file', language: 'gsql'},
+      {scheme: 'file', language: 'graphene-sql'},
       {scheme: 'file', language: 'markdown'},
     ],
     // trace: {server: Trace.Verbose},
