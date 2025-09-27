@@ -1,6 +1,6 @@
 import {toSql, analyze, getDiagnostics, type Diagnostic} from './core.ts'
 import {expect as vitestExpect} from 'vitest'
-import {DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
+import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {trimIndentation} from './util.ts'
 
 const DEBUG = !!process.env.DEBUG
