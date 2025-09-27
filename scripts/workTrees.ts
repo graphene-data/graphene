@@ -193,7 +193,6 @@ async function main () {
       break
     case 'merge':
       await mergeWorktree()
-      await doneWorktree()
       break
     case 'done':
       await doneWorktree(arg)

@@ -3,9 +3,10 @@ import {createServer, optimizeDeps, type ViteDevServer} from 'vite'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import {visit} from 'unist-util-visit'
 import fs from 'fs-extra'
+import crypto from 'crypto'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {getConnection} from './connection.ts'
-import {IncomingMessage, ServerResponse} from 'http'
+import {type IncomingMessage, type ServerResponse} from 'http'
 import {handleAgentRequest} from '@graphene/agent/agent.ts'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
@@ -107,22 +108,27 @@ const handleRequestPlugin = {
     })
 
     s.middlewares.use(async function handleRequest (req, res, next) {
-      let [pathName] = (req.url || '').split('?')
-      if (pathName == '/graphene/query') return handleQuery(req, res)
-      if (pathName == '/graphene/view') return handleView(req, res)
-      if (pathName == '/graphene/agent') return handleAgentRequest(req, res, grapheneRoot)
-      if (pathName == '/__ct') return handlePage(s, res, '__ct', false)
+      try {
+        let [pathName] = (req.url || '').split('?')
+        if (pathName == '/graphene/query') return handleQuery(req, res)
+        if (pathName == '/graphene/view') return handleView(req, res)
+        if (pathName == '/graphene/agent') return handleAgentRequest(req, res, grapheneRoot)
+        if (pathName == '/__ct') return handlePage(s, res, '__ct', false)
 
-      let explorePath = path.join(grapheneRoot, 'node_modules/@graphene/ui/explore.svelte')
-      if (pathName == '/explore') return handlePage(s, res, explorePath, true)
+        let explorePath = path.join(grapheneRoot, 'node_modules/@graphene/ui/explore.svelte')
+        if (pathName == '/explore') return handlePage(s, res, explorePath, true)
 
-      if (!pathName || pathName == '/') pathName = 'index'
-      let mdPath = path.join(grapheneRoot, pathName + '.md')
+        if (!pathName || pathName == '/') pathName = 'index'
+        let mdPath = path.join(grapheneRoot, pathName + '.md')
 
-      if (await fs.exists(mdPath)) {
-        handlePage(s, res, mdPath, true)
-      } else {
-        next()
+        if (await fs.exists(mdPath)) {
+          handlePage(s, res, mdPath, true)
+        } else {
+          next()
+        }
+      } catch (err) {
+        res.statusCode = 500
+        res.end(JSON.stringify([{message: err.message}]))
       }
     })
   },
@@ -131,7 +137,7 @@ const handleRequestPlugin = {
 async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
-  let {gsql, params} = JSON.parse(Buffer.concat(chunks).toString())
+  let {gsql, params, hashes} = JSON.parse(Buffer.concat(chunks).toString())
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
@@ -143,15 +149,19 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
     return
   }
 
-  try {
-    let sql = toSql(queries[0])
-    let connection = await getConnection()
-    let queryResults = await connection.runSQL(sql, params)
-    res.end(JSON.stringify(queryResults.rows))
-  } catch (err) {
-    res.statusCode = 500
-    res.end(JSON.stringify([{message: err.message}]))
+  let sql = toSql(queries[0])
+
+  // If the client already has this data, dont run the query
+  let hash = crypto.createHash('SHA1').update(sql).digest('hex')
+  res.setHeader('ETag', hash)
+  if (hashes.includes(hash)) {
+    res.statusCode = 304
+    return res.end()
   }
+
+  let connection = await getConnection()
+  let queryResults = await connection.runSQL(sql, params)
+  res.end(JSON.stringify({rows: queryResults.rows, hash}))
 }
 
 let browserConnections: {url: string, socket: WebSocket}[] = [] // sockets for all open tabs

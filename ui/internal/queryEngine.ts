@@ -1,6 +1,8 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
+import {cacheRead, cacheWrite, getHashes} from './clientCache'
+
 interface QueryResult {
   rows?: any[]
   error?: any
@@ -44,6 +46,7 @@ async function runNode (n: QueryNode) {
   n.callback({}) // notify that the query is loading
   n.loading = true
 
+  let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
   let gsql = [
     ...tables.map(q => `table ${q.name} as (${q.contents})`),
@@ -53,14 +56,20 @@ async function runNode (n: QueryNode) {
   let response = await fetch('/graphene/query', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({params, gsql}),
+    body: JSON.stringify({params, gsql, hashes}),
   })
-  let isJson = response.headers.get('Content-Type') === 'application/json'
-  let body = isJson ? await response.json() : await response.text()
+  let hash = response.headers.get('ETag') || ''
 
-  if (response.ok) {
-    n.callback({rows: translateData(body)})
+  if (response.status == 304) {
+    let body = await cacheRead(hash)
+    n.callback({rows: translateData(body.rows || [])})
+  } else if (response.ok) {
+    let body = await response.json()
+    cacheWrite(hash, body)
+    n.callback({rows: translateData(body.rows || [])})
   } else {
+    let isJson = response.headers.get('Content-Type') === 'application/json'
+    let body = isJson ? await response.json() : await response.text()
     let errors = Array.isArray(body) ? body : [body]
     n.callback({error: new Error(errors[0].message || 'Query error')})
   }
