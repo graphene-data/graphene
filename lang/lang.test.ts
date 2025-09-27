@@ -84,8 +84,8 @@ describe('lang', () => {
 
   it('excludes aggregates from wildcard expansion', () => {
     // especially if those aggs are indirectly an agg agg expression
-    expect(`table t (amount int, sum(amount) / count() as weird_avg)
-    from t select *`).toRenderSql('select base."amount" as "amount" from t as base')
+    expect('table t (amount int, sum(amount) / count() as weird_avg) from t select *')
+      .toRenderSql('select base."amount" as "amount" from t as base')
   })
 
   it('expands dot-join syntax', () => {
@@ -470,5 +470,11 @@ describe('lang', () => {
     expect(errors[0].from.line).toBe(2)
     expect(errors[0].from.col).toBe(19)
     expect(errors[0].to.col).toBe(27)
+  })
+
+  it('handles params in a md code fence', () => {
+    let queries = analyze('```gsql test\nfrom users where age > $cutoff\n```\n<BarChart data="test" x="name" y="avg(age)" />', 'md')
+    let sql = toSql(queries[0], {cutoff: 20})
+    expect(sql).toMatch(/"age">20/)
   })
 })
