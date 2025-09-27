@@ -1,6 +1,6 @@
 import type {Expression, FieldType} from './types.ts'
-import { walkExpression } from './util.ts'
-import {literal, type Query as MalloyQuery} from '@malloydata/malloy'
+import {walkExpression} from './util.ts'
+import {type Query as MalloyQuery} from '@malloydata/malloy'
 
 export function inferParamTypes (query: MalloyQuery) {
   // walk through a query looking for params. When we find one, look at the surrounding expression to figure out
@@ -140,7 +140,7 @@ export function fillInParams (query: MalloyQuery, params: Record<string, any>) {
       let value = params[e.path[0]]
       if (value === undefined) throw new Error(`Missing param $${e.path[0]}`)
       else if (e.type == 'string') Object.assign(e, {node: 'stringLiteral', literal: value})
-      else if (e.type == 'number') Object.assign(e, {node: 'numberLiteral', literal: parseFloat(value)})
+      else if (e.type == 'number') Object.assign(e, {node: 'numberLiteral', literal: value.toString()})
       else if (e.type == 'boolean') Object.assign(e, {node: value ? 'true' : 'false'})
       else throw new Error(`Unsupported param type ${e.type}`)
     })

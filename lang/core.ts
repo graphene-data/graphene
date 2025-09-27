@@ -6,7 +6,7 @@ import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
 import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors} from './analyze.ts'
-import {type FileInfo, type Query} from './types.ts'
+import {type Query} from './types.ts'
 import {fillInParams} from './params.ts'
 import {getOffset} from './util.ts'
 import {config, loadConfig} from './config.ts'
@@ -25,8 +25,10 @@ export function getFiles () { return Object.values(FILE_MAP) }
 export function getDiagnostics () { return diagnostics }
 
 // Loads and parses all gsql files within a directory
-export async function loadWorkspace (dir:string) {
-  let files = await glob('**/*.{gsql,md}', {cwd: dir})
+export async function loadWorkspace (dir:string, includeMd: boolean) {
+  // It'd be inefficient for `graphene serve` to watch all md files, since we always treat the running page as `input`.
+  // But we do want to watch md files for the vscode extension and `graphene check`
+  let files = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir})
   for await (let file of files) {
     let contents = await readFile(path.join(dir, file), 'utf-8')
     updateFile(contents, file)
@@ -45,24 +47,20 @@ export function updateFile (contents: string, path: string) {
 // This could be more efficient, but for now we just re-analyze everything.
 export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
   clearDiagnostics()
-  delete FILE_MAP['input'] // clean up any previous ephemeral tables
-  delete FILE_MAP['input.md']
 
-  // if you provided a file, we'll analyze it and give you the queries.
-  // Any tables defined in `contents` are ephemeral, since query interpolation means multiple browser tabs
-  // could be trying to define the same named table in the same file with different sql.
-  // This is a bit hacky, but it works since analysis is sync, and we can clear out this "file" after we're done.
-  let path = '-'
-  if (contents) {
-    path = type == 'md' ? 'input.md' : 'input'
-    updateFile(contents, path)
-  }
+  // if you provided contents, we'll analyze it and give you the queries without saving to the workspace
+  delete FILE_MAP['input'] // clean up any previous input
+  if (contents) updateFile(contents, 'input')
 
   // First, parse and identify tables in the workspace
   Object.values(FILE_MAP).forEach(fi => {
-    parse(fi, fi.path.endsWith('.md'))
+    let isMd = fi.path.endsWith('.md') || (fi.path == 'input' && type == 'md')
+    fi.tree ||= isMd ? parseMarkdown(fi) : parser.parse(fi.contents)
+    fi.tree!.fileInfo = fi
+    recordSyntaxErrors(fi)
     fi.tables = findTables(fi) // for now, blow away previously analyzed tables
   })
+
   // Second, analyze all those tables
   Object.values(FILE_MAP).flatMap(f => f.tables).forEach(analyzeTable)
 
@@ -72,26 +70,21 @@ export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
     fi.queries = nodes.map(analyzeQuery).filter(q => !!q)
   })
 
-  return FILE_MAP[path]?.queries || []
-}
-
-function parse (fi: FileInfo, isMd: boolean) {
-  fi.tree ||= isMd ? parseMarkdown(fi) : parser.parse(fi.contents)
-  fi.tree!.fileInfo = fi
-  recordSyntaxErrors(fi)
+  return contents ? FILE_MAP['input'].queries : []
 }
 
 export function toSql (query: Query, params: Record<string, any> = {}): string {
-  // queryModel contents should be all the tables from gsql files, and any from the same md file as the query
-  let contents = {}
-  Object.values(FILE_MAP).forEach(f => f.tables.forEach(t => contents[t.name] = t))
-  query.subQuerySources.forEach(t => {
-    contents[t.name] = {...t, query: fillInParams(t.query!, params)}
-  })
+  let contents = {} // contents is all the tables we need to provide to malloy so it can render the query
+
+  // tables defined in gsql can't have params, so we can copy them right into the contents
+  let gsqlTables = Object.values(FILE_MAP).filter(f => f.path !== 'input').flatMap(f => f.tables)
+  gsqlTables.forEach(t => contents[t.name] = t)
+
+  // tables in the same md file or a a subquery can all contain params, so we need to give malloy a copy with those params filled in.
+  let inputTables = [...FILE_MAP['input']?.tables || [], ...query.subQuerySources]
+  inputTables.forEach(t => contents[t.name] = {...t, query: t.query && fillInParams(t.query, params)})
 
   let malloyQuery = fillInParams(query.malloyQuery, params)
-
-  // Send the query to malloy for generation
   let qm = new malloy.QueryModel({
     name: 'generated_model',
     contents: contents as any,
@@ -99,8 +92,7 @@ export function toSql (query: Query, params: Record<string, any> = {}): string {
     dependencies: {},
     exports: [],
   })
-  let compiled = qm.compileQuery(malloyQuery)
-  return compiled.sql
+  return qm.compileQuery(malloyQuery).sql
 }
 
 export function getHover (path: string, line: number, col: number): string {
