@@ -139,6 +139,7 @@ export function fillInParams (query: MalloyQuery, params: Record<string, any>) {
       if (e.node !== 'parameter') return
       let value = params[e.path[0]]
       if (value === undefined) throw new Error(`Missing param $${e.path[0]}`)
+      else if (value == null) Object.assign(e, {node: 'null', type: 'string'})
       else if (e.type == 'string') Object.assign(e, {node: 'stringLiteral', literal: value})
       else if (e.type == 'number') Object.assign(e, {node: 'numberLiteral', literal: value.toString()})
       else if (e.type == 'boolean') Object.assign(e, {node: value ? 'true' : 'false'})

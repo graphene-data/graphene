@@ -127,6 +127,7 @@ const handleRequestPlugin = {
           next()
         }
       } catch (err) {
+        console.error(err)
         res.statusCode = 500
         res.end(JSON.stringify([{message: err.message}]))
       }
@@ -263,7 +264,7 @@ function escapeHtml (str: string) {
 // We don't want users to have to manually import components in their md files, so we auto-import them.
 function injectComponentImports () {
   let mapping = {}
-  for (let comp of ['GrapheneQuery', 'BarChart', 'AreaChart', 'LineChart', 'PieChart', 'Table', 'Row', 'BigValue', 'Column']) {
+  for (let comp of ['GrapheneQuery', 'BarChart', 'AreaChart', 'LineChart', 'PieChart', 'Table', 'Row', 'BigValue', 'Column', 'Dropdown', 'DropdownOption', 'TextInput', 'DateRange']) {
     mapping[comp] = `import ${comp} from '${path.resolve(cliRoot, `../ui/components/${comp}.svelte`)}'`
   }
 
