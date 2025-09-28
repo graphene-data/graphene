@@ -76,9 +76,9 @@ const updateWorkspacePlugin = {
     s.watcher.add('**/*.gsql')
     s.watcher.on('change', () => {
       clearWorkspace()
-      workspaceLoadPromise = loadWorkspace(grapheneRoot)
+      workspaceLoadPromise = loadWorkspace(grapheneRoot, false)
     })
-    workspaceLoadPromise = loadWorkspace(grapheneRoot)
+    workspaceLoadPromise = loadWorkspace(grapheneRoot, false)
   },
 }
 
@@ -110,19 +110,19 @@ const handleRequestPlugin = {
     s.middlewares.use(async function handleRequest (req, res, next) {
       try {
         let [pathName] = (req.url || '').split('?')
-        if (pathName == '/graphene/query') return handleQuery(req, res)
-        if (pathName == '/graphene/view') return handleView(req, res)
-        if (pathName == '/graphene/agent') return handleAgentRequest(req, res, grapheneRoot)
-        if (pathName == '/__ct') return handlePage(s, res, '__ct', false)
+        if (pathName == '/graphene/query') return await handleQuery(req, res)
+        if (pathName == '/graphene/view') return await handleView(req, res)
+        if (pathName == '/graphene/agent') return await handleAgentRequest(req, res, grapheneRoot)
+        if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
 
         let explorePath = path.join(grapheneRoot, 'node_modules/@graphene/ui/explore.svelte')
-        if (pathName == '/explore') return handlePage(s, res, explorePath, true)
+        if (pathName == '/explore') return await handlePage(s, res, explorePath, true)
 
         if (!pathName || pathName == '/') pathName = 'index'
         let mdPath = path.join(grapheneRoot, pathName + '.md')
 
         if (await fs.exists(mdPath)) {
-          handlePage(s, res, mdPath, true)
+          await handlePage(s, res, mdPath, true)
         } else {
           next()
         }
@@ -149,7 +149,7 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
     return
   }
 
-  let sql = toSql(queries[0])
+  let sql = toSql(queries[0], params)
 
   // If the client already has this data, dont run the query
   let hash = crypto.createHash('SHA1').update(sql).digest('hex')
@@ -160,7 +160,7 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
   }
 
   let connection = await getConnection()
-  let queryResults = await connection.runSQL(sql, params)
+  let queryResults = await connection.runSQL(sql)
   res.end(JSON.stringify({rows: queryResults.rows, hash}))
 }
 

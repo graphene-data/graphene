@@ -28,7 +28,7 @@ program
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
-    await loadWorkspace(process.cwd())
+    await loadWorkspace(process.cwd(), false)
     let sql = await readInput(input)
     let queries = analyze(sql)
     if (!validQuery(queries)) return
@@ -40,7 +40,7 @@ program
   .description('Run a query against your database')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
-    await loadWorkspace(process.cwd())
+    await loadWorkspace(process.cwd(), false)
     let gsql = await readInput(input)
     let queries = analyze(gsql)
     if (!validQuery(queries)) return
@@ -63,7 +63,7 @@ program
   .command('check')
   .description('Check the project for errors')
   .action(async () => {
-    await loadWorkspace(process.cwd())
+    await loadWorkspace(process.cwd(), true)
     analyze()
     if (getDiagnostics().length) {
       printDiagnostics(getDiagnostics())
