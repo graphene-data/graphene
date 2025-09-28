@@ -15,6 +15,7 @@ interface QueryNode {
   contents: string
   callback?: ResultHandler
   loading: boolean
+  fields: string[]
 }
 
 let runPending: Promise<void> | null = null
@@ -23,7 +24,7 @@ let queries = [] as QueryNode[]
 
 function registerQuery (name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
-  queries.push({name, contents, loading: false})
+  queries.push({name, contents, loading: false, fields: []})
 }
 
 function updateParam (name: string, value: any) {
@@ -31,9 +32,9 @@ function updateParam (name: string, value: any) {
   runAll() // for now, do the easy thing and reload it all
 }
 
-function query (source: string, columns: string[], callback: ResultHandler) {
-  let contents = `from ${source} select ${columns.join(', ')}`
-  queries.push({contents, callback, loading: false})
+function query (source: string, fields: string[], callback: ResultHandler) {
+  let contents = `from ${source} select ${fields.join(', ')}`
+  queries.push({contents, callback, loading: false, fields})
   runAll()
 }
 
@@ -62,11 +63,11 @@ async function runNode (n: QueryNode) {
 
   if (response.status == 304) {
     let body = await cacheRead(hash)
-    n.callback({rows: translateData(body.rows || [])})
+    n.callback(translateData(body, n))
   } else if (response.ok) {
     let body = await response.json()
     cacheWrite(hash, body)
-    n.callback({rows: translateData(body.rows || [])})
+    n.callback(translateData(body, n))
   } else {
     let isJson = response.headers.get('Content-Type') === 'application/json'
     let body = isJson ? await response.json() : await response.text()
@@ -88,16 +89,22 @@ async function _runAll () {
   }))
 }
 
-function translateData (data: any[]) {
-  (data as any).dataLoaded = true // evidence components need this to be set
-  data.forEach(row => {
-    Object.keys(row).forEach(key => {
-      if (typeof row[key] === 'object' && row[key] && row[key].value) {
-        row[key] = new Date(row[key].value)
-      }
-    })
+function translateData (data: any, node: QueryNode) {
+  let rows = data.rows || []
+  rows.dataLoaded = true // evidence components need this to be set
+
+  Object.keys(rows[0] || {}).forEach(k => {
+    let match = k.match(/^col_(\d+)$/)
+    if (match) {
+      let actual = node.fields[parseInt(match[1])]
+      rows.forEach(r => {
+        r[actual] = r[k]
+        delete r[k]
+      })
+    }
   })
-  return data
+
+  return {rows}
 }
 
 export function isLoading () {

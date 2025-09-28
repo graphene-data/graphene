@@ -23,7 +23,7 @@ connection.onInitialize(params => {
   console.log('started Graphene server', dirs)
   let root = dirs[0].replace('file://', '')
   loadConfig(root)
-  initialLoad = dirs[0] ? loadWorkspace(root) : Promise.resolve()
+  initialLoad = dirs[0] ? loadWorkspace(root, true) : Promise.resolve()
 
   return {
     capabilities: {
