@@ -1,12 +1,13 @@
 ## Soon
-* loveable-style explorer
-* Default demos polished up - best practices on modeling, beautiful
-* Deploy to npm package service
+* figure out why vite loads stale stuff on startup
+* read port from worktree env
+* server pid tracking
+* Make sure all field attributes are captured when parsing (both analyze and queryEngine)
+* add flight/ecomm examples using inputs
+* add ecomm example of more investigative report
+* make the server track pids, so agents dont get tripped up
+* Deploy to npm package service: remove evidence/sdk as dep
 * Package and publish vscode extension
-* Inputs and dynamic queries (parameterized or interpolated?)
-* parse and analyze md files as part of vscode/cli
-* Allow md queries to refer to earlier queries in the file
-* Result caching with the same sql
 * remove underscore from join_one|many
 * Throw an error if you try to redefine an existing table
 * unskip (and fix!) new agg tests
@@ -15,6 +16,7 @@
 
 ## Eventually
 * rename `table` to `extend`
+* monorepo support for vscode - right now it assumes the editor root is the same as the graphene workspace root
 * self-ref in measures doesn't seem to work: ie in `table orders`, `sum(orders.amount) as total_amount`
 * figure out why malloy can't use `count_if` in a fanout. What's the workaround it uses for count/sum?
 * metadata propagation - fields in a view should keep the metadata from their original table (assuming it's a plain field, not an expression)
