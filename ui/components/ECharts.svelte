@@ -1,7 +1,7 @@
 <script lang="ts">
   import echarts from '../component-utilities/echarts.js'
   import {createEventDispatcher} from 'svelte'
-  import {getThemeStores} from './themeStores'
+  import {getThemeStores} from '../component-utilities/themeStores'
 
   const {activeAppearance} = getThemeStores()
 

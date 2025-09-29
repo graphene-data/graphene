@@ -5,8 +5,8 @@
 <script lang="ts">
   import {getContext, onDestroy} from 'svelte'
   import {propKey, strictBuild} from '../component-utilities/chartContext.js'
-  import {getThemeStores} from './themeStores'
-  import {toBoolean} from './utils'
+  import {getThemeStores} from '../component-utilities/themeStores'
+  import {toBoolean} from '../component-utilities/convert'
 
   export let id: string
   export let description: string | undefined = undefined

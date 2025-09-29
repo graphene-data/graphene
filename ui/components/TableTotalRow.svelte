@@ -1,7 +1,7 @@
 <script lang="ts">
   import InlineDelta from './InlineDelta.svelte'
   import TableCell from './TableCell.svelte'
-  import {safeExtractColumn, weightedMean} from './tableUtils'
+  import {safeExtractColumn, weightedMean} from '../component-utilities/tableUtils'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
 
   export let data: any[] = []
