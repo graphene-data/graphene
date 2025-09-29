@@ -6,8 +6,8 @@
   import getCompletedData from '../component-utilities/getCompletedData.js'
   import getYAxisIndex from '../component-utilities/getYAxisIndex.js'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
-  import {getThemeStores} from './themeStores'
-  import {toBoolean} from './utils'
+  import {getThemeStores} from '../component-utilities/themeStores'
+  import {toBoolean} from '../component-utilities/convert'
 
   const {resolveColor} = getThemeStores()
   const props = getContext(propKey)

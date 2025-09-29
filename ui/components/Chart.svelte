@@ -21,8 +21,8 @@
   import formatTitle from '../component-utilities/formatTitle.js'
   import ErrorChart from './ErrorChart.svelte'
   import checkInputs from '../component-utilities/checkInputs.js'
-  import {getThemeStores} from './themeStores'
-  import {toBoolean} from './utils'
+  import {getThemeStores} from '../component-utilities/themeStores'
+  import {toBoolean} from '../component-utilities/convert'
 
   const {theme, resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
 

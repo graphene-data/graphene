@@ -1,7 +1,7 @@
 <script lang="ts">
   import SortIcon from './SortIcon.svelte'
-  import {safeExtractColumn} from './tableUtils'
-  import {toBoolean} from './utils'
+  import {safeExtractColumn} from '../component-utilities/tableUtils'
+  import {toBoolean} from '../component-utilities/convert'
 
   export let rowNumbers: boolean | string | undefined = false
   export let headerColor: string | undefined = undefined

@@ -2,7 +2,7 @@
   import Chart from './Chart.svelte'
   import Bar from './Bar.svelte'
   import QueryLoad from './QueryLoad.svelte'
-  import {getThemeStores} from './themeStores'
+  import {getThemeStores} from '../component-utilities/themeStores'
 
   const {resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
 

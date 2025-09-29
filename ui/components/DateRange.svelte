@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount} from 'svelte'
-  import {toBoolean} from './inputUtils'
+  import {toBoolean} from '../component-utilities/inputUtils'
 
   export let name: string
   export let label: string | undefined = undefined

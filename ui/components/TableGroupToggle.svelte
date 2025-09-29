@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {getThemeStores} from './themeStores'
+  import {getThemeStores} from '../component-utilities/themeStores'
 
   export let toggled = false
   export let color: string | undefined = undefined
