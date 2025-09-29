@@ -1,4 +1,4 @@
-import {strictBuild} from '../component-utilities/chartContext.js'
+import {strictBuild} from './chartContext.js'
 
 type ColumnSummary = {
   id: string

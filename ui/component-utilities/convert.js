@@ -1,4 +1,4 @@
-export const toBoolean = (value: unknown): boolean | undefined => {
+export const toBoolean = (value) => {
   if (typeof value === 'undefined' || value === null) return undefined
   if (typeof value === 'string') {
     let normalized = value.trim().toLowerCase()
@@ -8,7 +8,7 @@ export const toBoolean = (value: unknown): boolean | undefined => {
   return Boolean(value)
 }
 
-export const toNumber = (value: unknown): number | undefined => {
+export const toNumber = (value) => {
   if (typeof value === 'undefined' || value === null) return undefined
   let num = Number(value)
   return Number.isNaN(num) ? undefined : num

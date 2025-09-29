@@ -3,9 +3,9 @@
   import TableCell from './TableCell.svelte'
   import TableGroupToggle from './TableGroupToggle.svelte'
   import InlineDelta from './InlineDelta.svelte'
-  import {aggregateColumn, safeExtractColumn} from './tableUtils'
+  import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
-  import {toBoolean} from './utils'
+  import {toBoolean} from '../component-utilities/convert'
 
   export let groupName: string
   export let currentGroupData: any[] = []

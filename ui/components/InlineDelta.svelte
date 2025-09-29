@@ -1,7 +1,7 @@
 <script lang="ts">
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
-  import {getThemeStores} from './themeStores'
-  import {toBoolean} from './utils'
+  import {getThemeStores} from '../component-utilities/themeStores'
+  import {toBoolean} from '../component-utilities/convert'
 
   export let value: number | string | null | undefined = undefined
   export let fmt: string | undefined = undefined

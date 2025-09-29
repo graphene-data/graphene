@@ -15,7 +15,7 @@
     formatValue,
     getFormatObjectFromString,
   } from '../component-utilities/formatting.js'
-  import {getThemeStores} from './themeStores'
+  import {getThemeStores} from '../component-utilities/themeStores'
 
   const {resolveColor} = getThemeStores()
 

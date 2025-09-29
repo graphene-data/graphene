@@ -1,6 +1,6 @@
 <script lang="ts">
   import InlineDelta from './InlineDelta.svelte'
-  import {aggregateColumn, safeExtractColumn} from './tableUtils'
+  import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import TableCell from './TableCell.svelte'
 

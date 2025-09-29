@@ -2,9 +2,9 @@
   import chroma from 'chroma-js'
   import InlineDelta from './InlineDelta.svelte'
   import TableCell from './TableCell.svelte'
-  import {safeExtractColumn} from './tableUtils'
+  import {safeExtractColumn} from '../component-utilities/tableUtils'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
-  import {getThemeStores} from './themeStores'
+  import {getThemeStores} from '../component-utilities/themeStores'
 
   export let displayedData: any[] = []
   export let rowShading: boolean | string | undefined = undefined

@@ -1,6 +1,6 @@
 <script lang="ts">
   import {getContext, onDestroy, onMount} from 'svelte'
-  import {DROPDOWN_CONTEXT} from './dropdownContext'
+  import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
 
   export let value: any
   export let valueLabel: string | undefined = undefined

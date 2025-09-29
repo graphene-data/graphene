@@ -12,9 +12,9 @@
   import TableSubtotalRow from './TableSubtotalRow.svelte'
   import TableTotalRow from './TableTotalRow.svelte'
   import Column from './Column.svelte'
-  import {getFinalColumnOrder} from './tableUtils'
-  import {getThemeStores} from './themeStores'
-  import {toBoolean} from './utils'
+  import {getFinalColumnOrder} from '../component-utilities/tableUtils'
+  import {getThemeStores} from '../component-utilities/themeStores'
+  import {toBoolean} from '../component-utilities/convert'
 
   const {resolveColor} = getThemeStores()
 

@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount, setContext, tick} from 'svelte'
-  import {DROPDOWN_CONTEXT} from './dropdownContext'
-  import {ensureArray, toBoolean} from './inputUtils'
+  import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
+  import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
 
   interface Option {
     value: any
