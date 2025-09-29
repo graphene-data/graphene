@@ -51,6 +51,11 @@ export function printTable (rows: any[]) {
 
   let headers = Object.keys(rows[0])
   let table = new Table({head: headers.map((h) => chalk.blue(h))})
-  rows.forEach((row) => table.push(headers.map((h) => row[h]?.toString() || '')))
+  let MAX_DISPLAY_ROWS = 200
+  let displayRows = rows.slice(0, MAX_DISPLAY_ROWS)
+  displayRows.forEach((row) => table.push(headers.map((h) => row[h]?.toString() || '')))
   console.log(table.toString())
+  if (rows.length > MAX_DISPLAY_ROWS) {
+    console.log(chalk.yellow(`Displayed first ${MAX_DISPLAY_ROWS} rows (of ${rows.length} total).`))
+  }
 }
