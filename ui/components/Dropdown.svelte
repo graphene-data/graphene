@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount, setContext, tick} from 'svelte'
   import {DROPDOWN_CONTEXT} from './dropdownContext'
-  import {ensureArray, serializeValue, toBoolean} from './inputUtils'
+  import {ensureArray, toBoolean} from './inputUtils'
 
   interface Option {
     value: any
@@ -57,7 +57,7 @@
     if (typeof val === 'object') {
       try {
         return JSON.stringify(val)
-      } catch (err) {
+      } catch {
         return String(val)
       }
     }
@@ -336,15 +336,7 @@
   }
 
   function updateInputPayload (values: any[]) {
-    let opts = values.map(v => valueMap.get(optionKey(v)) || {value: v, label: String(v ?? '')})
-    let labels = opts.map(o => o.label)
-    let sqlValue: string
-    if (multi) {
-      sqlValue = values.length ? `(${values.map(serializeValue).join(', ')})` : '(select NULL where 0)'
-    } else {
-      sqlValue = values.length ? serializeValue(values[0]) : 'NULL'
-    }
-    let paramValue = multi ? (values.length ? values[0] : null) : (values.length ? values[0] : null)
+    let paramValue = values.length ? values[0] : null
     window.$GRAPHENE.updateParam(name, paramValue)
   }
 
@@ -359,16 +351,33 @@
 
   const elementId = `dropdown-${name}`
   const menuId = `${elementId}-menu`
+
+  function getContainerClass () {
+    if (!hidePrint) return 'input-block'
+    return 'input-block hide-print'
+  }
+
+  function getDropdownClass () {
+    if (!isDisabled) return 'dropdown'
+    return 'dropdown is-disabled'
+  }
+
+  function getOptionClass (opt: Option, idx: number) {
+    let classes = 'dropdown-option'
+    if (isOptionSelected(opt)) classes += ' is-selected'
+    if (activeIndex === idx) classes += ' is-active'
+    return classes
+  }
 </script>
 
-<div class={`input-block${hidePrint ? ' hide-print' : ''}`}>
+<div class={getContainerClass()}>
   {#if resolvedTitle}
     <label class="input-label" for={elementId}>{resolvedTitle}</label>
   {/if}
   {#if description}
     <div class="input-description">{description}</div>
   {/if}
-  <div class={`dropdown${isDisabled ? ' is-disabled' : ''}`}>
+  <div class={getDropdownClass()}>
     <button
       bind:this={triggerEl}
       id={elementId}
@@ -391,7 +400,7 @@
           {:else if selectedDisplayOptions.length > 3}
             <span class="dropdown-badge">{selectedDisplayOptions.length} selected</span>
           {:else}
-            {#each selectedDisplayOptions as opt}
+            {#each selectedDisplayOptions as opt (optionKey(opt.value))}
               <span class="dropdown-badge">{opt.label}</span>
             {/each}
           {/if}
@@ -432,7 +441,7 @@
           {:else}
             {#each filteredOptions as opt, index (optionKey(opt.value))}
               <div
-                class={`dropdown-option${isOptionSelected(opt) ? ' is-selected' : ''}${activeIndex === index ? ' is-active' : ''}`}
+                class={getOptionClass(opt, index)}
                 role="option"
                 aria-selected={isOptionSelected(opt)}
                 data-index={index}

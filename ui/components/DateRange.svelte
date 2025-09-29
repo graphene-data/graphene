@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount} from 'svelte'
-  import {serializeValue, toBoolean} from './inputUtils'
+  import {toBoolean} from './inputUtils'
 
   export let name: string
   export let label: string | undefined = undefined
@@ -29,7 +29,11 @@
   let touched = false
 
   $: hidePrint = toBoolean(hideDuringPrint)
-  $: presetList = Array.isArray(presetRanges) ? presetRanges : presetRanges ? [presetRanges] : DEFAULT_PRESETS
+  $: presetList = (() => {
+    if (Array.isArray(presetRanges)) return presetRanges
+    if (presetRanges) return [presetRanges]
+    return DEFAULT_PRESETS
+  })()
   $: displayLabel = title || label
 
   onMount(() => {
@@ -144,8 +148,6 @@
   }
 
   function updateParams () {
-    let startSql = currentStart ? serializeValue(currentStart) : 'NULL'
-    let endSql = currentEnd ? serializeValue(currentEnd) : 'NULL'
     window.$GRAPHENE.updateParam(`${name}_start`, currentStart)
     window.$GRAPHENE.updateParam(`${name}_end`, currentEnd)
   }
@@ -161,7 +163,11 @@
   }
 
   function applyPreset (preset: string, markTouched = true) {
-    let baseEnd = currentEnd ? new Date(currentEnd) : domainEnd ? new Date(domainEnd) : new Date()
+    let baseEnd = (() => {
+      if (currentEnd) return new Date(currentEnd)
+      if (domainEnd) return new Date(domainEnd)
+      return new Date()
+    })()
     if (Number.isNaN(baseEnd.getTime())) baseEnd = new Date()
     let range = computePresetRange(preset, baseEnd)
     if (!range) return
@@ -264,7 +270,7 @@
   {#if presetList.length}
     <select class="preset-select" on:change={onPresetChange}>
       <option value="">Custom range</option>
-      {#each presetList as preset}
+      {#each presetList as preset (preset)}
         <option value={preset} selected={preset === currentPreset}>{preset}</option>
       {/each}
     </select>

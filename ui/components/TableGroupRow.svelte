@@ -4,7 +4,7 @@
   import TableGroupToggle from './TableGroupToggle.svelte'
   import InlineDelta from './InlineDelta.svelte'
   import {aggregateColumn, safeExtractColumn} from './tableUtils'
-  import {formatValue, getFormatObjectFromString} from '@evidence-dev/component-utilities/formatting'
+  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import {toBoolean} from './utils'
 
   export let groupName: string
@@ -23,6 +23,13 @@
 
   const dispatch = createEventDispatcher<{toggle: {groupName: string}}>()
   const toggleGroup = () => dispatch('toggle', {groupName})
+
+  const resolveFormat = (column, summary) => {
+    if (column.subtotalFmt) return getFormatObjectFromString(column.subtotalFmt)
+    if (column.totalFmt) return getFormatObjectFromString(column.totalFmt)
+    if (column.fmt) return getFormatObjectFromString(column.fmt, summary.format?.valueType)
+    return summary.format
+  }
 </script>
 
 <tr
@@ -44,13 +51,7 @@
 
   {#each orderedColumns as column, index (index)}
     {@const summary = safeExtractColumn(column, columnSummary)}
-    {@const format = column.subtotalFmt
-      ? getFormatObjectFromString(column.subtotalFmt)
-      : column.totalFmt
-        ? getFormatObjectFromString(column.totalFmt)
-        : column.fmt
-          ? getFormatObjectFromString(column.fmt, summary.format?.valueType)
-          : summary.format}
+    {@const format = resolveFormat(column, summary)}
     {#if index === 0}
       {#if rowNumbers}
         <!-- Covered by the row-number label cell -->

@@ -3,7 +3,7 @@
   import InlineDelta from './InlineDelta.svelte'
   import TableCell from './TableCell.svelte'
   import {safeExtractColumn} from './tableUtils'
-  import {formatValue, getFormatObjectFromString} from '@evidence-dev/component-utilities/formatting'
+  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import {getThemeStores} from './themeStores'
 
   export let displayedData: any[] = []
@@ -31,11 +31,14 @@
     if (!column?.colorScale || !column?.colorScale.length) return undefined
     if (!hasFiniteNumber(columnMin) || !hasFiniteNumber(columnMax) || columnMin === columnMax) return undefined
 
-    let rawDomain = Array.isArray(column.colorBreakpoints) && column.colorBreakpoints.length
-      ? column.colorBreakpoints
-      : column.colorMid !== undefined && column.colorMid !== null
-        ? [columnMin, column.colorMid, columnMax]
-        : [columnMin, columnMax]
+    let rawDomain
+    if (Array.isArray(column.colorBreakpoints) && column.colorBreakpoints.length) {
+      rawDomain = column.colorBreakpoints
+    } else if (column.colorMid !== undefined && column.colorMid !== null) {
+      rawDomain = [columnMin, column.colorMid, columnMax]
+    } else {
+      rawDomain = [columnMin, columnMax]
+    }
 
     let domain = rawDomain
       .map((value) => (typeof value === 'string' ? Number(value) : value))
@@ -72,7 +75,7 @@
     try {
       let target = new URL(url, window.location.origin)
       return target.origin !== window.location.origin
-    } catch (error) {
+    } catch {
       return false
     }
   }
@@ -115,24 +118,27 @@
       {@const colorScale = column.contentType === 'colorscale'
         ? computeColorScale(column, columnMin, columnMax)
         : undefined}
-      {@const rawCellColor = colorScale
-        ? column.scaleColumn
-          ? colorScale(row[column.scaleColumn])
-          : colorScale(row[column.id])
-        : undefined}
+      {@const rawCellColor = (() => {
+        if (!colorScale) return undefined
+        if (column.scaleColumn) return colorScale(row[column.scaleColumn])
+        return colorScale(row[column.id])
+      })()}
       {@const formattedColor = rawCellColor ? chroma(rawCellColor).hex() : undefined}
-      {@const fontColor = column.redNegatives && row[column.id] < 0
-        ? $theme.colors.negative
-        : formattedColor
-          ? chroma.contrast(formattedColor, $theme.colors['base-content']) < chroma.contrast(formattedColor, $theme.colors['base-100']) + 0.5
-            ? $theme.colors['base-100']
-            : $theme.colors['base-content']
-          : undefined}
-      {@const columnFormat = column.fmt
-        ? getFormatObjectFromString(column.fmt, summary.format?.valueType)
-        : column.fmtColumn && row[column.fmtColumn]
-          ? getFormatObjectFromString(row[column.fmtColumn], summary.format?.valueType)
-          : summary.format}
+      {@const fontColor = (() => {
+        if (column.redNegatives && row[column.id] < 0) return $theme.colors.negative
+        if (!formattedColor) return undefined
+        let contentContrast = chroma.contrast(formattedColor, $theme.colors['base-content'])
+        let backgroundContrast = chroma.contrast(formattedColor, $theme.colors['base-100']) + 0.5
+        if (contentContrast < backgroundContrast) return $theme.colors['base-100']
+        return $theme.colors['base-content']
+      })()}
+      {@const columnFormat = (() => {
+        if (column.fmt) return getFormatObjectFromString(column.fmt, summary.format?.valueType)
+        if (column.fmtColumn && row[column.fmtColumn]) {
+          return getFormatObjectFromString(row[column.fmtColumn], summary.format?.valueType)
+        }
+        return summary.format
+      })()}
       {@const paddingLeft = k === 0 && grouped && groupType === 'accordion' && !rowNumbers ? '28px' : undefined}
       {@const shouldShow = !(groupType === 'section' && groupColumn === summary.id && i !== 0)}
       <TableCell

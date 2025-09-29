@@ -1,4 +1,5 @@
 ## Soon
+* Dynamically import components from ui folder
 * figure out why vite loads stale stuff on startup
 * read port from worktree env
 * server pid tracking
@@ -6,13 +7,18 @@
 * add flight/ecomm examples using inputs
 * add ecomm example of more investigative report
 * make the server track pids, so agents dont get tripped up
-* Deploy to npm package service: remove evidence/sdk as dep
-* Package and publish vscode extension
 * remove underscore from join_one|many
 * Throw an error if you try to redefine an existing table
 * unskip (and fix!) new agg tests
 * Telemetry and error tracking
 
+## To package
+* remove component-utilities dep: it pulls in the massive evidence sdk
+* refactor duckdb to use new new node api: otherwise we have that failing binary that needs to build
+* esbuild to compile
+* locally test packing
+* ensure the graphene binary is linked
+* Package and publish vscode extension
 
 ## Eventually
 * rename `table` to `extend`

@@ -4,7 +4,7 @@
 
 <script lang="ts">
   import {getContext, onDestroy} from 'svelte'
-  import {propKey, strictBuild} from '@evidence-dev/component-utilities/chartContext'
+  import {propKey, strictBuild} from '../component-utilities/chartContext.js'
   import {getThemeStores} from './themeStores'
   import {toBoolean} from './utils'
 
