@@ -1,11 +1,11 @@
 <script>
   import {beforeUpdate, getContext} from 'svelte'
-  import {propKey, configKey} from '@evidence-dev/component-utilities/chartContext'
-  import getSeriesConfig from '@evidence-dev/component-utilities/getSeriesConfig'
-  import formatTitle from '@evidence-dev/component-utilities/formatTitle'
-  import getCompletedData from '@evidence-dev/component-utilities/getCompletedData'
-  import getYAxisIndex from '@evidence-dev/component-utilities/getYAxisIndex'
-  import {formatValue, getFormatObjectFromString} from '@evidence-dev/component-utilities/formatting'
+  import {propKey, configKey} from '../component-utilities/chartContext.js'
+  import getSeriesConfig from '../component-utilities/getSeriesConfig.js'
+  import formatTitle from '../component-utilities/formatTitle.js'
+  import getCompletedData from '../component-utilities/getCompletedData.js'
+  import getYAxisIndex from '../component-utilities/getYAxisIndex.js'
+  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import {getThemeStores} from './themeStores'
   import {toBoolean} from './utils'
 

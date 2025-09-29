@@ -10,12 +10,12 @@
       dt.dataLoaded = true
       callback(dt)
     },
-    subscribe: (cb) => callback = cb
+    subscribe: (cb) => callback = cb,
   }
 
   $: spreadProps = {
-		...Object.fromEntries(Object.entries($$props).filter(([, v]) => v !== undefined))
-	};
+    ...Object.fromEntries(Object.entries($$props).filter(([, v]) => v !== undefined)),
+  }
 </script>
 
 <style></style>

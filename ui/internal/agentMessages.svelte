@@ -13,7 +13,7 @@
   // Marked produces HTML from markdown; DOMPurify keeps it safe for injection.
   const sanitizeHtml = typeof window === 'undefined' ? (html) => html : (html) => DOMPurify.sanitize(html)
 
-  function renderMarkdown(source) {
+  function renderMarkdown (source) {
     if (!source) return ''
     let html = marked.parse(source, {mangle: false, headerIds: false})
     return sanitizeHtml(html)
@@ -21,7 +21,7 @@
 
   $: displayMessages = buildDisplayMessages(messages)
 
-  function buildDisplayMessages(source) {
+  function buildDisplayMessages (source) {
     grapheneRoot = findGrapheneRoot(source) || grapheneRoot
     let combined = []
     let toolIndex = new Map()
@@ -73,24 +73,24 @@
     return combined
   }
 
-  function findGrapheneRoot(list) {
+  function findGrapheneRoot (list) {
     let systemMsg = [...list].reverse().find(item => item.type === 'system' && item.cwd)
     return systemMsg?.cwd
   }
 
-  function toolResultStatus(result) {
+  function toolResultStatus (result) {
     if (result?.is_error === true || result?.isError === true) return 'failed'
     if (typeof result?.content === 'string' && /error/i.test(result.content)) return 'failed'
     return 'succeeded'
   }
 
-  function stripRoot(value) {
+  function stripRoot (value) {
     if (!grapheneRoot || typeof value !== 'string') return value
     let normalizedRoot = grapheneRoot.endsWith('/') ? grapheneRoot : grapheneRoot + '/'
     return value.startsWith(normalizedRoot) ? value.slice(normalizedRoot.length) : value
   }
 
-  function summarizeObject(obj) {
+  function summarizeObject (obj) {
     if (!obj || typeof obj !== 'object') return null
     let parts = []
     for (let [key, val] of Object.entries(obj)) {
@@ -100,7 +100,7 @@
     return parts.join(' · ')
   }
 
-  function formatValue(val) {
+  function formatValue (val) {
     if (val == null) return ''
     if (typeof val === 'string') return stripRoot(val)
     if (typeof val === 'number' || typeof val === 'boolean') return String(val)
@@ -109,7 +109,7 @@
     return ''
   }
 
-  function formatToolInput(name, input) {
+  function formatToolInput (name, input) {
     if (!input) return null
     if (['Write', 'Edit', 'MultiEdit', 'NotebookEdit'].includes(name)) return null
     if (typeof input === 'string') return stripRoot(input)
@@ -141,6 +141,8 @@
     handleScroll()
   })
 </script>
+
+<!-- eslint-disable svelte/no-at-html-tags -->
 
 <style>
   .messages-container {
@@ -272,14 +274,22 @@
   {#each displayMessages as item (item.id)}
     {#if item.kind === 'assistant-text'}
       <div class="message message-assistant">
-        <div class="message-text markdown">{@html renderMarkdown(item.text)}</div>
+        <div class="message-text markdown">
+          {@html renderMarkdown(item.text)}
+        </div>
       </div>
     {:else if item.kind === 'tool'}
       <div class="message message-tool">
         <div class="tool-meta">
           <span class="tool-name">{item.name}</span>
           <span class={`tool-status ${item.status}`}>
-            {item.status === 'failed' ? 'Failed' : item.status === 'pending' ? 'Running…' : 'Succeeded'}
+            {#if item.status === 'failed'}
+              Failed
+            {:else if item.status === 'pending'}
+              Running…
+            {:else}
+              Succeeded
+            {/if}
           </span>
         </div>
         {#if item.inputSummary}

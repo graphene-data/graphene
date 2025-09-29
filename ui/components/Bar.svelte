@@ -1,20 +1,20 @@
 <script>
   import {getContext, beforeUpdate} from 'svelte'
-  import {propKey, configKey} from '@evidence-dev/component-utilities/chartContext'
+  import {propKey, configKey} from '../component-utilities/chartContext.js'
   const props = getContext(propKey)
   const config = getContext(configKey)
 
-  import getSeriesConfig from '@evidence-dev/component-utilities/getSeriesConfig'
-  import getStackedData from '@evidence-dev/component-utilities/getStackedData'
-  import getSortedData from '@evidence-dev/component-utilities/getSortedData'
-  import formatTitle from '@evidence-dev/component-utilities/formatTitle'
-  import getCompletedData from '@evidence-dev/component-utilities/getCompletedData'
-  import getYAxisIndex from '@evidence-dev/component-utilities/getYAxisIndex'
+  import getSeriesConfig from '../component-utilities/getSeriesConfig.js'
+  import getStackedData from '../component-utilities/getStackedData.js'
+  import getSortedData from '../component-utilities/getSortedData.js'
+  import formatTitle from '../component-utilities/formatTitle.js'
+  import getCompletedData from '../component-utilities/getCompletedData.js'
+  import getYAxisIndex from '../component-utilities/getYAxisIndex.js'
 
   import {
     formatValue,
     getFormatObjectFromString,
-  } from '@evidence-dev/component-utilities/formatting'
+  } from '../component-utilities/formatting.js'
   import {getThemeStores} from './themeStores'
 
   const {resolveColor} = getThemeStores()
@@ -243,10 +243,11 @@
         stack: stackName,
         name: 'stackTotal',
         color: 'none',
-        data: stackTotalSeries.map((d) => [
-          swapXY ? 0 : xMismatch ? d[x].toString() : d[x],
-          swapXY ? (xMismatch ? d[x].toString() : d[x]) : 0,
-        ]),
+        data: stackTotalSeries.map((row) => {
+          let axisValue = xMismatch ? row[x].toString() : row[x]
+          if (swapXY) return [0, axisValue]
+          return [axisValue, 0]
+        }),
         label: {
           show: true,
           position: swapXY ? 'right' : 'top',

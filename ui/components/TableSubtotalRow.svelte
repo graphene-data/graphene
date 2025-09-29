@@ -1,7 +1,7 @@
 <script lang="ts">
   import InlineDelta from './InlineDelta.svelte'
   import {aggregateColumn, safeExtractColumn} from './tableUtils'
-  import {formatValue, getFormatObjectFromString} from '@evidence-dev/component-utilities/formatting'
+  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import TableCell from './TableCell.svelte'
 
   export let groupName: string | undefined = undefined
@@ -19,11 +19,11 @@
   {#each orderedColumns as column (column.id)}
     {@const summary = safeExtractColumn(column, columnSummary)}
     {@const baseFormat = column.fmt ? getFormatObjectFromString(column.fmt, summary.format?.valueType) : summary.format}
-    {@const format = column.subtotalFmt
-      ? getFormatObjectFromString(column.subtotalFmt)
-      : column.totalFmt
-        ? getFormatObjectFromString(column.totalFmt)
-        : baseFormat}
+    {@const format = (() => {
+      if (column.subtotalFmt) return getFormatObjectFromString(column.subtotalFmt)
+      if (column.totalFmt) return getFormatObjectFromString(column.totalFmt)
+      return baseFormat
+    })()}
     <TableCell class={summary.type} {compact} align={column.align}>
       {#if column.id !== groupBy}
         {#if column.contentType === 'delta'}

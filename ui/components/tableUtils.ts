@@ -1,4 +1,4 @@
-import {strictBuild} from '@evidence-dev/component-utilities/chartContext'
+import {strictBuild} from '../component-utilities/chartContext.js'
 
 type ColumnSummary = {
   id: string

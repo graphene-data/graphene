@@ -204,24 +204,33 @@ importers:
 
   ui:
     dependencies:
-      '@evidence-dev/component-utilities':
-        specifier: ^4.0.9
-        version: 4.0.9
       '@sveltejs/adapter-static':
         specifier: 3.0.1
         version: 3.0.1(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)))
+      '@tidyjs/tidy':
+        specifier: ^2.5.2
+        version: 2.5.2
       chroma-js:
         specifier: 2.4.2
         version: 2.4.2
+      debounce:
+        specifier: ^1.2.1
+        version: 1.2.1
       dompurify:
         specifier: ^3.2.7
         version: 3.2.7
+      echarts:
+        specifier: ^5.5.0
+        version: 5.6.0
       html2canvas:
         specifier: ^1.4.1
         version: 1.4.1
       marked:
         specifier: ^16.3.0
         version: 16.3.0
+      ssf:
+        specifier: ^0.11.2
+        version: 0.11.2
     devDependencies:
       '@playwright/experimental-ct-svelte':
         specifier: 1.54.2
@@ -749,9 +758,6 @@ packages:
     resolution: {integrity: sha512-Z5kJ+wU3oA7MMIqVR9tyZRtjYPr4OC004Q4Rw7pgOKUOKkJfZ3O24nz3WYfGRpMDNmcOi3TwQOmgm7B7Tpii0w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@evidence-dev/component-utilities@4.0.9':
-    resolution: {integrity: sha512-OL9941fe16pcIS+BlZA5qbvjQ+I57WCrJbX6Enxu7Sm9eyOXv3bPM0xItja0OF7AjsO8srVWIM1UXeSd5I154g==}
-
   '@gar/promisify@1.1.3':
     resolution: {integrity: sha512-k2Ty1JcVojjJFwrg/ThKi2ujJ7XNLYaFGNB/bWT9wGR+oSMJHMa5w+CUq6p/pVrKeNNgA7pCqEcjSnHVoqJQFw==}
 
@@ -1166,17 +1172,6 @@ packages:
   '@sindresorhus/merge-streams@2.3.0':
     resolution: {integrity: sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg==}
     engines: {node: '>=18'}
-
-  '@steeze-ui/simple-icons@1.10.1':
-    resolution: {integrity: sha512-pRdEIBR3qUG+wAjijePjFuqwB2Ikf0kHBTNTULEUiEsSSgEUKOM3/ArEgt8rgVu035rnsmwbNC/vHdciPGMdKw==}
-
-  '@steeze-ui/svelte-icon@1.5.0':
-    resolution: {integrity: sha512-Y0S7Qk2kO6byzOlD5SQGbOF2ZaKXJgfTkH78QUPcq579wiWMQJ5H14zL4XwtsPJ0DfkoL5qa3WaIdYkWb9A6AA==}
-    peerDependencies:
-      svelte: ^4.0.0
-
-  '@steeze-ui/tabler-icons@2.1.1':
-    resolution: {integrity: sha512-cWnORbuPwXhsrH3hebxZ0gSF/zMZEuLz014XoGcxXhU+GPYixqXjyBbTfJiGjbexRjkj7A2/1ocx6AcWEwN1Pw==}
 
   '@sveltejs/adapter-static@3.0.1':
     resolution: {integrity: sha512-6lMvf7xYEJ+oGeR5L8DFJJrowkefTK6ZgA4JiMqoClMkKq0s6yvsd3FZfCFvX1fQ0tpCD7fkuRVHsnUVgsHyNg==}
@@ -4617,17 +4612,6 @@ snapshots:
       '@eslint/core': 0.15.2
       levn: 0.4.1
 
-  '@evidence-dev/component-utilities@4.0.9':
-    dependencies:
-      '@steeze-ui/simple-icons': 1.10.1
-      '@steeze-ui/svelte-icon': 1.5.0(svelte@4.2.19)
-      '@steeze-ui/tabler-icons': 2.1.1
-      '@tidyjs/tidy': 2.5.2
-      debounce: 1.2.1
-      echarts: 5.6.0
-      ssf: 0.11.2
-      svelte: 4.2.19
-
   '@gar/promisify@1.1.3': {}
 
   '@google-cloud/bigquery@7.9.4(encoding@0.1.13)':
@@ -5118,14 +5102,6 @@ snapshots:
   '@sinclair/typebox@0.27.8': {}
 
   '@sindresorhus/merge-streams@2.3.0': {}
-
-  '@steeze-ui/simple-icons@1.10.1': {}
-
-  '@steeze-ui/svelte-icon@1.5.0(svelte@4.2.19)':
-    dependencies:
-      svelte: 4.2.19
-
-  '@steeze-ui/tabler-icons@2.1.1': {}
 
   '@sveltejs/adapter-static@3.0.1(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))':
     dependencies:

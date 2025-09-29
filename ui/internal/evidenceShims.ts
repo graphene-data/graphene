@@ -1,5 +1,5 @@
 export const Query = {
-  isQuery: (data) => true
+  isQuery: (_data) => true,
 }
 
 export const isStrictMode = () => false
