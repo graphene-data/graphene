@@ -10,9 +10,10 @@
     "graphene": "./cli.ts"
   },
   "dependencies": {
+    "@duckdb/node-api": "1.3.2-alpha.26",
+    "@graphene/agent": "workspace:*",
     "@graphene/lang": "file:../lang",
     "@graphene/ui": "workspace:*",
-    "@graphene/agent": "workspace:*",
     "@malloydata/db-bigquery": "^0.0.307",
     "@malloydata/db-duckdb": "^0.0.304",
     "@sveltejs/adapter-static": "3.0.1",
@@ -33,14 +34,6 @@
     "unist-util-visit": "4.1.2",
     "vite": "5.4.14",
     "ws": "^8.18.0"
-  },
-  "peerDependencies": {
-    "@duckdb/node-api": "^1.3.2-alpha.24"
-  },
-  "peerDependenciesMeta": {
-    "@duckdb/node-api": {
-      "optional": true
-    }
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
