@@ -2,7 +2,7 @@
   import InlineDelta from './InlineDelta.svelte'
   import TableCell from './TableCell.svelte'
   import {safeExtractColumn, weightedMean} from './tableUtils'
-  import {formatValue, getFormatObjectFromString} from '@evidence-dev/component-utilities/formatting'
+  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
 
   export let data: any[] = []
   export let rowNumbers: boolean | string | undefined = undefined
@@ -34,11 +34,11 @@
 
   {#each orderedColumns as column (column.id)}
     {@const summary = safeExtractColumn(column, columnSummary)}
-    {@const format = column.totalFmt
-      ? getFormatObjectFromString(column.totalFmt)
-      : column.fmt
-        ? getFormatObjectFromString(column.fmt, summary.format?.valueType)
-        : summary.format}
+    {@const format = (() => {
+      if (column.totalFmt) return getFormatObjectFromString(column.totalFmt)
+      if (column.fmt) return getFormatObjectFromString(column.fmt, summary.format?.valueType)
+      return summary.format
+    })()}
     {@const totalAgg = column.totalAgg ?? 'sum'}
     <TableCell
       {compact}
@@ -71,9 +71,11 @@
           )}
         {/if}
       {:else}
-        {column.totalFmt
-          ? formatValue(totalAgg, format, summary.columnUnitSummary)
-          : totalAgg}
+        {#if column.totalFmt}
+          {formatValue(totalAgg, format, summary.columnUnitSummary)}
+        {:else}
+          {totalAgg}
+        {/if}
       {/if}
     </TableCell>
   {/each}

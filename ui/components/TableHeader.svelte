@@ -41,6 +41,17 @@
     })
   }
 
+  const getAriaSortValue = (columnId: string) => {
+    if (sortObj.col !== columnId) return 'none'
+    return sortObj.ascending ? 'ascending' : 'descending'
+  }
+
+  const resolveHeaderTitle = (column: any, summary: any) => {
+    if (column.title) return column.title
+    if (formatColumnTitles) return summary.title
+    return summary.id
+  }
+
   $: columnsWithGroupSpan = computeGroupSpans()
 </script>
 
@@ -84,15 +95,11 @@
         style:text-align={column.align ?? (['sparkline', 'sparkbar', 'sparkarea', 'bar'].includes(column.contentType) ? 'center' : undefined)}
         style:cursor={sortable ? 'pointer' : 'auto'}
         on:click={sortable ? sortClick(column.id) : undefined}
-        aria-sort={sortObj.col === column.id ? (sortObj.ascending ? 'ascending' : 'descending') : 'none'}
+        aria-sort={getAriaSortValue(column.id)}
       >
         <div class={`header-title ${wrapTitles || column.wrapTitle ? 'header-title--wrap' : ''} ${wrapTitles || column.wrapTitle ? getWrapTitleAlignment(column) : ''}`.trim()}>
           <span class={`header-title__text ${wrapTitles || column.wrapTitle ? 'header-title__text--wrap' : ''}`}>
-            {column.title
-              ? column.title
-              : formatColumnTitles
-                ? summary.title
-                : summary.id}
+            {resolveHeaderTitle(column, summary)}
             {#if column.description}
               <span class="header-title__info" title={column.description}>ⓘ</span>
             {/if}

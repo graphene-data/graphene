@@ -1,7 +1,7 @@
 <script>
   import {writable} from 'svelte/store'
   import {setContext} from 'svelte'
-  import {propKey, configKey} from '@evidence-dev/component-utilities/chartContext'
+  import {propKey, configKey} from '../component-utilities/chartContext.js'
   let props = writable({})
   /** @type {import("svelte/store").Writable<import("echarts").Options>} */
   let config = writable({})
@@ -10,17 +10,17 @@
   setContext(configKey, config)
 
   import ECharts from './ECharts.svelte'
-  import getColumnSummary from '@evidence-dev/component-utilities/getColumnSummary'
-  import getDistinctValues from '@evidence-dev/component-utilities/getDistinctValues'
-  import getDistinctCount from '@evidence-dev/component-utilities/getDistinctCount'
-  import getStackPercentages from '@evidence-dev/component-utilities/getStackPercentages'
-  import getSortedData from '@evidence-dev/component-utilities/getSortedData'
-  import getYAxisIndex from '@evidence-dev/component-utilities/getYAxisIndex'
-  import {standardizeDateColumn} from '@evidence-dev/component-utilities/dateParsing'
-  import {formatAxisValue, formatValue, getFormatObjectFromString} from '@evidence-dev/component-utilities/formatting'
-  import formatTitle from '@evidence-dev/component-utilities/formatTitle'
+  import getColumnSummary from '../component-utilities/getColumnSummary.js'
+  import getDistinctValues from '../component-utilities/getDistinctValues.js'
+  import getDistinctCount from '../component-utilities/getDistinctCount.js'
+  import getStackPercentages from '../component-utilities/getStackPercentages.js'
+  import getSortedData from '../component-utilities/getSortedData.js'
+  import getYAxisIndex from '../component-utilities/getYAxisIndex.js'
+  import {standardizeDateColumn} from '../component-utilities/dateParsing.js'
+  import {formatAxisValue, formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
+  import formatTitle from '../component-utilities/formatTitle.js'
   import ErrorChart from './ErrorChart.svelte'
-  import checkInputs from '@evidence-dev/component-utilities/checkInputs'
+  import checkInputs from '../component-utilities/checkInputs.js'
   import {getThemeStores} from './themeStores'
   import {toBoolean} from './utils'
 
@@ -443,11 +443,11 @@
       // ---------------------------------------------------------------------------------------
       // Sort data based on xType
       // ---------------------------------------------------------------------------------------
-      data = sort
-        ? xDataType === 'category'
-          ? getSortedData(data, y, false)
-          : getSortedData(data, x, true)
-        : data
+      if (sort) {
+        let sortColumn = xDataType === 'category' ? y : x
+        let sortAscending = xDataType !== 'category'
+        data = getSortedData(data, sortColumn, sortAscending)
+      }
 
       // Always sort time axes by x - this prevents the lines from being drawn out of order
       if (xDataType === 'time') {
@@ -537,24 +537,23 @@
         }
       }
 
-      xAxisTitle =
-        xAxisTitle === 'true' ? formatTitle(x, xFormat) : xAxisTitle === 'false' ? '' : xAxisTitle
-      yAxisTitle =
-        yAxisTitle === 'true'
-          ? typeof y === 'object'
-            ? ''
-            : formatTitle(y, yFormat)
-          : yAxisTitle === 'false'
-            ? ''
-            : yAxisTitle
-      y2AxisTitle =
-        y2AxisTitle === 'true'
-          ? typeof y2 === 'object'
-            ? ''
-            : formatTitle(y2, y2Format)
-          : y2AxisTitle === 'false'
-            ? ''
-            : y2AxisTitle
+      if (xAxisTitle === 'true') {
+        xAxisTitle = formatTitle(x, xFormat)
+      } else if (xAxisTitle === 'false') {
+        xAxisTitle = ''
+      }
+
+      if (yAxisTitle === 'true') {
+        yAxisTitle = typeof y === 'object' ? '' : formatTitle(y, yFormat)
+      } else if (yAxisTitle === 'false') {
+        yAxisTitle = ''
+      }
+
+      if (y2AxisTitle === 'true') {
+        y2AxisTitle = typeof y2 === 'object' ? '' : formatTitle(y2, y2Format)
+      } else if (y2AxisTitle === 'false') {
+        y2AxisTitle = ''
+      }
 
       // ---------------------------------------------------------------------------------------
       // Get total series count
@@ -565,7 +564,12 @@
 
       // y2Count may need to be adjusted to also factor in the series column. For now, we really
       // only need to know that it's multi-series, so > 1 is sufficient
-      let y2Count = typeof y2 === 'object' ? y2.length : y2 ? 1 : 0
+      let y2Count = 0
+      if (typeof y2 === 'object') {
+        y2Count = y2.length
+      } else if (y2) {
+        y2Count = 1
+      }
       let totalSeriesCount = ySeriesCount + y2Count
 
       // ---------------------------------------------------------------------------------------
@@ -740,6 +744,18 @@
           z: 2,
         }
       } else {
+        let primaryAxisColor = (() => {
+          if (!y2) return undefined
+          if ($yAxisColorStore === 'true') return $colorPaletteStore[0]
+          if ($yAxisColorStore === 'false') return undefined
+          return $yAxisColorStore
+        })()
+        let secondaryAxisColor = (() => {
+          if ($y2AxisColorStore === 'true') return $colorPaletteStore[ySeriesCount]
+          if ($y2AxisColorStore === 'false') return undefined
+          return $y2AxisColorStore
+        })()
+
         verticalAxisConfig = {
           type: yType,
           logBase: yLogBase,
@@ -760,13 +776,7 @@
             formatter: function (value) {
               return formatAxisValue(value, yFormat, yUnitSummary)
             },
-            color: y2
-              ? $yAxisColorStore === 'true'
-                ? $colorPaletteStore[0]
-                : $yAxisColorStore !== 'false'
-                  ? $yAxisColorStore
-                  : undefined
-              : undefined,
+            color: primaryAxisColor,
           },
           name: yAxisTitle,
           nameLocation: 'end',
@@ -774,13 +784,7 @@
             align: 'left',
             verticalAlign: 'top',
             padding: [0, 5, 0, 0],
-            color: y2
-              ? $yAxisColorStore === 'true'
-                ? $colorPaletteStore[0]
-                : $yAxisColorStore !== 'false'
-                  ? $yAxisColorStore
-                  : undefined
-              : undefined,
+            color: primaryAxisColor,
           },
           nameGap: 6,
           min: yMin,
@@ -811,12 +815,7 @@
             formatter: function (value) {
               return formatAxisValue(value, y2Format, y2UnitSummary)
             },
-            color:
-              $y2AxisColorStore === 'true'
-                ? $colorPaletteStore[ySeriesCount]
-                : $y2AxisColorStore !== 'false'
-                  ? $y2AxisColorStore
-                  : undefined,
+            color: secondaryAxisColor,
           },
           name: y2AxisTitle,
           nameLocation: 'end',
@@ -824,12 +823,7 @@
             align: 'right',
             verticalAlign: 'top',
             padding: [0, 0, 0, 5],
-            color:
-              $y2AxisColorStore === 'true'
-                ? $colorPaletteStore[ySeriesCount]
-                : $y2AxisColorStore !== 'false'
-                  ? $y2AxisColorStore
-                  : undefined,
+            color: secondaryAxisColor,
           },
           nameGap: 6,
           min: y2Min,

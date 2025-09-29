@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {formatValue, getFormatObjectFromString} from '@evidence-dev/component-utilities/formatting'
+  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import {getThemeStores} from './themeStores'
   import {toBoolean} from './utils'
 
@@ -26,13 +26,12 @@
   const {theme} = getThemeStores()
 
   $: numericValue = value === null || value === undefined ? null : Number(value)
-  $: status = numericValue === null
-    ? 'neutral'
-    : numericValue > neutralMax
-      ? 'positive'
-      : numericValue < neutralMin
-        ? 'negative'
-        : 'neutral'
+  $: status = (() => {
+    if (numericValue === null) return 'neutral'
+    if (numericValue > neutralMax) return 'positive'
+    if (numericValue < neutralMin) return 'negative'
+    return 'neutral'
+  })()
 
   const pickColor = (positive: string, negative: string, neutral: string) => {
     if (status === 'positive') return positive
@@ -40,7 +39,11 @@
     return neutral
   }
 
-  $: symbol = status === 'positive' ? '▲' : status === 'negative' ? '▼' : '–'
+  $: symbol = (() => {
+    if (status === 'positive') return '▲'
+    if (status === 'negative') return '▼'
+    return '–'
+  })()
   $: symbolColor = pickColor(
     downIsGood ? $theme.colors.negative : $theme.colors.positive,
     downIsGood ? $theme.colors.positive : $theme.colors.negative,
@@ -55,11 +58,20 @@
 
   $: chipClass = pickColor('delta-chip--positive', 'delta-chip--negative', 'delta-chip--neutral')
 
-  $: resolvedFormat = formatObject
-    ? formatObject
-    : fmt
-      ? getFormatObjectFromString(fmt, 'number')
-      : undefined
+  $: resolvedFormat = (() => {
+    if (formatObject) return formatObject
+    if (fmt) return getFormatObjectFromString(fmt, 'number')
+    return undefined
+  })()
+
+  $: deltaClass = (() => {
+    let classes = ['delta']
+    if (chip) classes = [...classes, 'delta-chip', chipClass]
+    if (className) classes.push(className)
+    return classes.join(' ')
+  })()
+
+  $: resolvedAlign = align ?? 'right'
 
   const renderValue = () => {
     if (numericValue === null) return '–'
@@ -72,7 +84,7 @@
   }
 </script>
 
-<span class={`delta ${chip ? `delta-chip ${chipClass}` : ''} ${className ?? ''}`.trim()} style={`text-align:${align ?? 'right'}`}>
+<span class={deltaClass} style={`text-align:${resolvedAlign}`}>
   {#if symbolPosition === 'left'}
     {#if showSymbol}
       <span class="delta-symbol" style={`color:${symbolColor}`}>{symbol}</span>

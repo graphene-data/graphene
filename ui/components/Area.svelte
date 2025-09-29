@@ -1,14 +1,14 @@
 <script>
   import {beforeUpdate, getContext} from 'svelte'
-  import {propKey, configKey} from '@evidence-dev/component-utilities/chartContext'
-  import getSeriesConfig from '@evidence-dev/component-utilities/getSeriesConfig'
-  import formatTitle from '@evidence-dev/component-utilities/formatTitle'
-  import replaceNulls from '@evidence-dev/component-utilities/replaceNulls'
-  import getCompletedData from '@evidence-dev/component-utilities/getCompletedData'
+  import {propKey, configKey} from '../component-utilities/chartContext.js'
+  import getSeriesConfig from '../component-utilities/getSeriesConfig.js'
+  import formatTitle from '../component-utilities/formatTitle.js'
+  import replaceNulls from '../component-utilities/replaceNulls.js'
+  import getCompletedData from '../component-utilities/getCompletedData.js'
   import {
     formatValue,
     getFormatObjectFromString,
-  } from '@evidence-dev/component-utilities/formatting'
+  } from '../component-utilities/formatting.js'
   import {getThemeStores} from './themeStores'
 
   const {resolveColor} = getThemeStores()

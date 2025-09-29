@@ -1,10 +1,10 @@
 <script lang="ts">
   import {writable} from 'svelte/store'
   import {setContext} from 'svelte'
-  import {propKey, strictBuild} from '@evidence-dev/component-utilities/chartContext'
-  import getColumnSummary from '@evidence-dev/component-utilities/getColumnSummary'
-  import {convertColumnToDate} from '@evidence-dev/component-utilities/dateParsing'
-  import checkInputs from '@evidence-dev/component-utilities/checkInputs'
+  import {propKey, strictBuild} from '../component-utilities/chartContext.js'
+  import getColumnSummary from '../component-utilities/getColumnSummary.js'
+  import {convertColumnToDate} from '../component-utilities/dateParsing.js'
+  import checkInputs from '../component-utilities/checkInputs.js'
   import ErrorChart from './ErrorChart.svelte'
   import TableHeader from './TableHeader.svelte'
   import TableRow from './TableRow.svelte'
@@ -12,7 +12,7 @@
   import TableSubtotalRow from './TableSubtotalRow.svelte'
   import TableTotalRow from './TableTotalRow.svelte'
   import Column from './Column.svelte'
-  import {aggregateColumn, getFinalColumnOrder} from './tableUtils'
+  import {getFinalColumnOrder} from './tableUtils'
   import {getThemeStores} from './themeStores'
   import {toBoolean} from './utils'
 
@@ -155,7 +155,6 @@
   }
 
   let groupedData: Record<string, any[]> = {}
-  let groupRowData: Record<string, Record<string, unknown>> = {}
   let groupToggleStates: Record<string, boolean> = {}
 
   const coerceId = (value: any) => {
@@ -195,20 +194,8 @@
     for (let groupName of Object.keys(groupedData)) {
       if (!(groupName in groupToggleStates)) groupToggleStates[groupName] = groupsOpen ?? true
     }
-
-    groupRowData = Object.fromEntries(
-      Object.entries(groupedData).map(([groupName, rows]) => {
-        let aggregates: Record<string, unknown> = {}
-        for (let column of orderedColumns) {
-          let summary = columnSummary.find((col) => col.id === column.id)
-          aggregates[column.id] = aggregateColumn(rows, column.id, column.totalAgg, summary?.type, column.weightCol)
-        }
-        return [groupName, aggregates]
-      }),
-    )
   } else {
     groupedData = {}
-    groupRowData = {}
   }
 
   const handleToggle = (event: CustomEvent<{groupName: string}>) => {

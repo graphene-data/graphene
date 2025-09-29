@@ -1,5 +1,5 @@
 <script lang="ts">
-  import echarts from '@evidence-dev/component-utilities/echarts'
+  import echarts from '../component-utilities/echarts.js'
   import {createEventDispatcher} from 'svelte'
   import {getThemeStores} from './themeStores'
 

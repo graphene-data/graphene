@@ -33,8 +33,7 @@
 
   function pushValue (input: string) {
     let trimmed = input ?? ''
-    let safe = sanitize(trimmed)
-    let sqlLiteral = safe ? `'${safe}'` : 'NULL'
+    let _safe = sanitize(trimmed)
     let paramValue = trimmed === '' ? null : trimmed
     window.$GRAPHENE.updateParam(name, paramValue)
   }

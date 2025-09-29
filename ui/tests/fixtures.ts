@@ -12,7 +12,7 @@ export type MountFn = (componentPath: string, props: any) => Promise<void>
 
 export const test = base.extend<{server: any, mount: MountFn}>({
   // This boots up our cli server on a unique port for e2e tests.
-  server: async ({ }, use) => {
+  server: async (_context, use) => {
     let mod = await import('../../cli/serve2.ts')
     let port = await getAvailablePort()
     let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
