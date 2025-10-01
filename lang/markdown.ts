@@ -13,7 +13,11 @@ import type {FileInfo} from './types.ts'
 // table test_table as (from users where age > 20)
 // from test_table select name, avg(age)
 //
-// Only components with a `data` attribute get turned into queries, and only attributes in a static list are fields to select [x, y, series] to start, but make it a const we can easily add to.
+// Only components with a `data` attribute get turned into queries, and only attributes in a static list are fields to select.
+
+const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'series'] as const
+type ComponentAttributeKey = typeof COMPONENT_ATTRIBUTE_KEYS[number]
+const REQUIRED_COMPONENT_ATTRIBUTE_KEYS = ['x', 'y'] as const satisfies readonly ComponentAttributeKey[]
 
 const GSQL_FENCE = /^([ \t]*)(`{3,})g?sql[^\n]*\n([\s\S]*?)^\1\2[ \t]*$/gim
 const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+[^>]*\/>/g
@@ -32,8 +36,7 @@ interface ComponentMatch {
   start: number
   end: number
   data: AttrMatch | null
-  x: AttrMatch | null
-  y: AttrMatch | null
+  attributes: Partial<Record<ComponentAttributeKey, AttrMatch>>
 }
 
 interface AttrMatch {
@@ -95,18 +98,22 @@ export function parseMarkdown (fi: FileInfo) {
     }
 
     let component = event as ComponentMatch
-    let {data, x, y} = component
-    if (data && x && y) {
-      let queryParts = [
-        {text: 'from ', map: () => component.start},
-        {text: data.value, map: (i: number) => data.start + i},
-        {text: ' select ', map: () => component.start},
-        {text: x.value, map: (i: number) => x.start + i},
-        {text: ', ', map: () => component.start},
-        {text: y.value, map: (i: number) => y.start + i},
-        {text: ';\n', map: () => component.end},
-      ]
-      for (let part of queryParts) appendMapped(part.text, part.map)
+    let {data, attributes} = component
+    if (data && REQUIRED_COMPONENT_ATTRIBUTE_KEYS.every(key => attributes[key])) {
+      appendMapped('from ', () => component.start)
+      appendMapped(data.value, (i: number) => data.start + i)
+      appendMapped(' select ', () => component.start)
+
+      let appended = 0
+      for (let key of COMPONENT_ATTRIBUTE_KEYS) {
+        let attribute = attributes[key]
+        if (!attribute) continue
+        if (appended > 0) appendMapped(', ', () => component.start)
+        appendMapped(attribute.value, (i: number) => attribute.start + i)
+        appended += 1
+      }
+
+      appendMapped(';\n', () => component.end)
     }
     cursor = component.end
   }
@@ -146,7 +153,11 @@ function collectComponents (source: string, fences: FenceMatch[]): ComponentMatc
     let end = start + match[0].length
     if (isInsideFence(start, fences)) continue
     let attrs = extractAttributes(match[0], start)
-    matches.push({start, end, data: attrs.data || null, x: attrs.x || null, y: attrs.y || null})
+    let attributeMatches: Partial<Record<ComponentAttributeKey, AttrMatch>> = {}
+    for (let key of COMPONENT_ATTRIBUTE_KEYS) {
+      if (attrs[key]) attributeMatches[key] = attrs[key]
+    }
+    matches.push({start, end, data: attrs.data || null, attributes: attributeMatches})
   }
   return matches
 }
