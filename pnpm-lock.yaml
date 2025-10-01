@@ -79,9 +79,6 @@ importers:
       '@duckdb/node-api':
         specifier: 1.3.2-alpha.26
         version: 1.3.2-alpha.26
-      '@graphenedata/malloy':
-        specifier: ^0.0.302
-        version: 0.0.302
       '@lezer/common':
         specifier: ^1.2.3
         version: 1.2.3
@@ -91,6 +88,9 @@ importers:
       '@malloydata/db-bigquery':
         specifier: ^0.0.307
         version: 0.0.307(encoding@0.1.13)
+      '@malloydata/malloy':
+        specifier: ^0.0.302
+        version: 0.0.302
       '@sveltejs/vite-plugin-svelte':
         specifier: 3.1.2
         version: 3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1))
@@ -206,15 +206,15 @@ importers:
 
   lang:
     dependencies:
-      '@graphenedata/malloy':
-        specifier: ^0.0.302
-        version: 0.0.302
       '@lezer/common':
         specifier: ^1.2.3
         version: 1.2.3
       '@lezer/lr':
         specifier: ^1.4.2
         version: 1.4.2
+      '@malloydata/malloy':
+        specifier: ^0.0.302
+        version: 0.0.302
       glob:
         specifier: ^11.0.3
         version: 11.0.3
@@ -812,10 +812,6 @@ packages:
   '@google-cloud/promisify@4.1.0':
     resolution: {integrity: sha512-G/FQx5cE/+DqBbOpA5jKsegGwdPniU6PuIEMt+qxWgFxvxuFOzVmp6zYchtYuwAWV5/8Dgs0yAmjvNZv3uXLQg==}
     engines: {node: '>=18'}
-
-  '@graphenedata/malloy@0.0.302':
-    resolution: {integrity: sha512-YVKvKoY+0z1SksW2vOnYSC3SUS1O9YwlqqndyJUasanVC25+tkKhxZRZpN8VMydMmsw4qHkN/SwKGtzaOJGyhQ==}
-    engines: {node: '>=20'}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -4679,19 +4675,6 @@ snapshots:
   '@google-cloud/promisify@4.0.0': {}
 
   '@google-cloud/promisify@4.1.0': {}
-
-  '@graphenedata/malloy@0.0.302':
-    dependencies:
-      '@malloydata/malloy-filter': 0.0.302
-      '@malloydata/malloy-interfaces': 0.0.302
-      '@malloydata/malloy-tag': 0.0.302
-      antlr4ts: 0.5.0-alpha.4
-      assert: 2.1.0
-      jaro-winkler: 0.2.8
-      jest-diff: 29.7.0
-      lodash: 4.17.21
-      luxon: 2.5.2
-      uuid: 8.3.2
 
   '@humanfs/core@0.19.1': {}
 

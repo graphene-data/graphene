@@ -1,6 +1,6 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import type {AggregateFunctionType, StructRef} from '@graphenedata/malloy'
+import type {AggregateFunctionType, StructRef} from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {txt, compact, getFile, getPosition, walkExpression} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config, dialectKeyword} from './config.ts'
