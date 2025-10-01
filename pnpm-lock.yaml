@@ -21,6 +21,9 @@ importers:
       '@eslint/js':
         specifier: ^9.34.0
         version: 9.34.0
+      '@malloydata/db-duckdb':
+        specifier: ^0.0.313
+        version: 0.0.313(encoding@0.1.13)
       '@malloydata/malloy':
         specifier: ^0.0.302
         version: 0.0.302
@@ -70,45 +73,66 @@ importers:
 
   cli:
     dependencies:
+      '@anthropic-ai/claude-code':
+        specifier: ^1.0.113
+        version: 1.0.113
       '@duckdb/node-api':
         specifier: 1.3.2-alpha.26
         version: 1.3.2-alpha.26
-      '@graphene/agent':
-        specifier: workspace:*
-        version: link:../agent
-      '@graphene/lang':
-        specifier: file:../lang
-        version: link:../lang
-      '@graphene/ui':
-        specifier: workspace:*
-        version: link:../ui
+      '@graphenedata/malloy':
+        specifier: ^0.0.302
+        version: 0.0.302
+      '@lezer/common':
+        specifier: ^1.2.3
+        version: 1.2.3
+      '@lezer/lr':
+        specifier: ^1.4.2
+        version: 1.4.2
       '@malloydata/db-bigquery':
         specifier: ^0.0.307
         version: 0.0.307(encoding@0.1.13)
-      '@malloydata/db-duckdb':
-        specifier: ^0.0.304
-        version: 0.0.304(encoding@0.1.13)
-      '@sveltejs/adapter-static':
-        specifier: 3.0.1
-        version: 3.0.1(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))
       '@sveltejs/vite-plugin-svelte':
         specifier: 3.1.2
         version: 3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1))
+      '@tidyjs/tidy':
+        specifier: ^2.5.2
+        version: 2.5.2
       chalk:
         specifier: ^5.3.0
         version: 5.6.0
       chokidar:
         specifier: 3.6.0
         version: 3.6.0
+      chroma-js:
+        specifier: 2.4.2
+        version: 2.4.2
       cli-table3:
         specifier: ^0.6.3
         version: 0.6.5
       commander:
         specifier: ^11.0.0
         version: 11.1.0
+      debounce:
+        specifier: ^1.2.1
+        version: 1.2.1
+      dompurify:
+        specifier: ^3.2.7
+        version: 3.2.7
+      echarts:
+        specifier: ^5.5.0
+        version: 5.6.0
       fs-extra:
         specifier: 11.2.0
         version: 11.2.0
+      glob:
+        specifier: ^11.0.3
+        version: 11.0.3
+      html2canvas:
+        specifier: ^1.4.1
+        version: 1.4.1
+      marked:
+        specifier: ^16.3.0
+        version: 16.3.0
       mdsvex:
         specifier: ^0.12.6
         version: 0.12.6(svelte@4.2.19)
@@ -127,6 +151,9 @@ importers:
       remark-rehype:
         specifier: ^11.1.2
         version: 11.1.2
+      ssf:
+        specifier: ^0.11.2
+        version: 0.11.2
       svelte:
         specifier: 4.2.19
         version: 4.2.19
@@ -143,51 +170,51 @@ importers:
         specifier: ^8.18.0
         version: 8.18.3
     devDependencies:
+      '@types/fs-extra':
+        specifier: ^11.0.4
+        version: 11.0.4
       '@types/node':
         specifier: ^20.0.0
         version: 20.19.11
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
+      esbuild:
+        specifier: ^0.21.5
+        version: 0.21.5
       vscode-languageserver-types:
         specifier: ^3.17.0
         version: 3.17.5
 
   examples/ecomm:
     dependencies:
-      '@graphene/cli':
+      '@graphenedata/cli':
         specifier: workspace:*
         version: link:../../cli
-      '@graphene/ui':
-        specifier: workspace:*
-        version: link:../../ui
       svelte:
         specifier: 4.2.19
         version: 4.2.19
 
   examples/flights:
     dependencies:
-      '@graphene/cli':
+      '@graphenedata/cli':
         specifier: workspace:*
         version: link:../../cli
-      '@graphene/ui':
-        specifier: workspace:*
-        version: link:../../ui
-      duckdb:
-        specifier: 1.3.1
-        version: 1.3.1(encoding@0.1.13)
       svelte:
         specifier: 4.2.19
         version: 4.2.19
 
   lang:
     dependencies:
+      '@graphenedata/malloy':
+        specifier: ^0.0.302
+        version: 0.0.302
       '@lezer/common':
         specifier: ^1.2.3
         version: 1.2.3
       '@lezer/lr':
         specifier: ^1.4.2
         version: 1.4.2
-      '@malloydata/malloy':
-        specifier: ^0.0.302
-        version: 0.0.302
       glob:
         specifier: ^11.0.3
         version: 11.0.3
@@ -204,9 +231,6 @@ importers:
 
   ui:
     dependencies:
-      '@sveltejs/adapter-static':
-        specifier: 3.0.1
-        version: 3.0.1(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)))
       '@tidyjs/tidy':
         specifier: ^2.5.2
         version: 2.5.2
@@ -250,7 +274,7 @@ importers:
 
   vscode:
     dependencies:
-      '@graphene/lang':
+      '@graphenedata/lang':
         specifier: file:../lang
         version: link:../lang
       vscode-languageclient:
@@ -789,6 +813,10 @@ packages:
     resolution: {integrity: sha512-G/FQx5cE/+DqBbOpA5jKsegGwdPniU6PuIEMt+qxWgFxvxuFOzVmp6zYchtYuwAWV5/8Dgs0yAmjvNZv3uXLQg==}
     engines: {node: '>=18'}
 
+  '@graphenedata/malloy@0.0.302':
+    resolution: {integrity: sha512-YVKvKoY+0z1SksW2vOnYSC3SUS1O9YwlqqndyJUasanVC25+tkKhxZRZpN8VMydMmsw4qHkN/SwKGtzaOJGyhQ==}
+    engines: {node: '>=20'}
+
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
     engines: {node: '>=18.18.0'}
@@ -917,56 +945,56 @@ packages:
     resolution: {integrity: sha512-Q+ljfDdVUgc7xxAkibLbzZs1LUVp/v+FqSvA8UFDNpJyJ30jN/WQafahkvuW0WUJ1NyJhNRlQn9N7h2pRHn99w==}
     engines: {node: '>=20'}
 
-  '@malloydata/db-duckdb@0.0.304':
-    resolution: {integrity: sha512-iclq/O/cbFwawjD6NtU3sIGy76rJ5c1JunG/ozQGNvQx5qdHkb7kG8c8ldGKSpmOWbn0gsIpjhprUCyFC20Zbw==}
+  '@malloydata/db-duckdb@0.0.313':
+    resolution: {integrity: sha512-KT9uVI9eVT3FYOAV/eyo3EihHzzFNbJ5GViZ67da3idgk1RCnZr8eFD8JBC+VLpf83kh2CiO5ZYA3Evo/G5kJQ==}
     engines: {node: '>=20'}
 
   '@malloydata/malloy-filter@0.0.302':
     resolution: {integrity: sha512-tG2mahtIEodGWZrATIaXrw76XFfV+mKM6/alcRjHmpc6j/na0K62Qw4q8kOuV0MkBXE/VvpemxHfOx57nitP5Q==}
     engines: {node: '>=20'}
 
-  '@malloydata/malloy-filter@0.0.304':
-    resolution: {integrity: sha512-PP0lwb+BZKNw4pMvRjNCOcl6AButHSzZ9QyqwX9P/Hrw1iqOEqJjj1TLPB9ore3cDk3hah/BYfWFFHoyPa3NWQ==}
-    engines: {node: '>=20'}
-
   '@malloydata/malloy-filter@0.0.307':
     resolution: {integrity: sha512-tzrK51Rg/1fjgRpXD9u1sr3G50O6MB98ekwy4TduLT1wLlzZgnwIPioO5zWsTsA/XiJRPV1A7hGWOnetjdhxgw==}
+    engines: {node: '>=20'}
+
+  '@malloydata/malloy-filter@0.0.313':
+    resolution: {integrity: sha512-7m159kmk8pvVOPAHfSRlTnnTo7Mu9LBtpvBmMFjF+JPn7b5LO0Ocqxyi5bLKRrmK7AtA1jwI1nZEZZq5fO57Gw==}
     engines: {node: '>=20'}
 
   '@malloydata/malloy-interfaces@0.0.302':
     resolution: {integrity: sha512-hyjhBATsYSHOYnXGcpH1qFUicyH0Et/7570NNbOUIIGGsb+i1D1c0BTomG+d15IFHhkGR5tAcJ3LQyx+gmBT7A==}
     engines: {node: '>=20'}
 
-  '@malloydata/malloy-interfaces@0.0.304':
-    resolution: {integrity: sha512-xDSZUhqX1S5q/ODDcKn0aDbL9XwrRjkGfZx+SrSif0g4WzWzSLzUdEvW3KwK7C2zlpIb3e5j5s5rJN6ykdti4Q==}
-    engines: {node: '>=20'}
-
   '@malloydata/malloy-interfaces@0.0.307':
     resolution: {integrity: sha512-rzSB30x2Nm0JV958O+E6l08Bfj5eLvjbiPmDbgd99GLXFmL8CZSv5jvfLhEl2xby3NseDEbYaRMNE2f+e3D60A==}
+    engines: {node: '>=20'}
+
+  '@malloydata/malloy-interfaces@0.0.313':
+    resolution: {integrity: sha512-JTnKYiYFUibbd1cC0ru8KzAuf8xm7631A6EO36K6xuoVGu2nwLckVZk2qwmDdYjLlMT8gZzrOoJNY5xGkbU/wg==}
     engines: {node: '>=20'}
 
   '@malloydata/malloy-tag@0.0.302':
     resolution: {integrity: sha512-PIcxtm4cHiBtKqi/aEB2utCp+PwPXzmeH6qTtI8Pq4fCSxZw/zQiuqqzdh6XiJzlQ7jRempkNkK7uRZAVXqHLg==}
     engines: {node: '>=20'}
 
-  '@malloydata/malloy-tag@0.0.304':
-    resolution: {integrity: sha512-eyvc0M3fq+Bc8pu1mpBfUdR0xwJKFlJj7vTf0ngQZn7MtNA13EFy8doal331ONKlUzB6BGoWayiEqW1VrXBV7A==}
-    engines: {node: '>=20'}
-
   '@malloydata/malloy-tag@0.0.307':
     resolution: {integrity: sha512-EnExkYD4W7r0S6XustWyQxFon0Xb2smayUXx6L+w2Xci1pIjy50qsCAzeXLWRd1ffUR34uIbrsceMUaoGauQkA==}
+    engines: {node: '>=20'}
+
+  '@malloydata/malloy-tag@0.0.313':
+    resolution: {integrity: sha512-yu0fx5lHnHxf+HyMaUQaDfbHA0PmAOgs1wyxAefbpnDB8ldkX6GgD8GYRWi5P5R77rzMtcW2nB589Eu0KredWQ==}
     engines: {node: '>=20'}
 
   '@malloydata/malloy@0.0.302':
     resolution: {integrity: sha512-tGWXy3aOkAGYTyasi8V6nKLMa/ixjYYcZM0y8SJ+scGPpjq1GKxxa+rjR6zuW/1IovSwQgKUxoebQpkqliMN/w==}
     engines: {node: '>=20'}
 
-  '@malloydata/malloy@0.0.304':
-    resolution: {integrity: sha512-3YEqJ6SRw/NDzV5YC2qQPSf9w29YN3gMA+6k5mAO77LUSG+hvSRWRr3MKXnw3AlX3HPESbZ4yfZfVMc3tv3+jQ==}
-    engines: {node: '>=20'}
-
   '@malloydata/malloy@0.0.307':
     resolution: {integrity: sha512-KmOZgTQGo0gf2/ViluRKK28Om1TmslX9gwuTtI+gTUN8Gx7EdEFo/RjsuEVbN41jg7bomVHZlWCAhXNpzh4RTQ==}
+    engines: {node: '>=20'}
+
+  '@malloydata/malloy@0.0.313':
+    resolution: {integrity: sha512-tpZc4d8g1DINeOt2DCmw4HRL1yuxLhLpaQPoeM/fYIFOE8qTnnwOE7HLTxfz9RE9KtbAOcMfAtkWJSKgK/o3bA==}
     engines: {node: '>=20'}
 
   '@mapbox/node-pre-gyp@2.0.0':
@@ -1173,11 +1201,6 @@ packages:
     resolution: {integrity: sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg==}
     engines: {node: '>=18'}
 
-  '@sveltejs/adapter-static@3.0.1':
-    resolution: {integrity: sha512-6lMvf7xYEJ+oGeR5L8DFJJrowkefTK6ZgA4JiMqoClMkKq0s6yvsd3FZfCFvX1fQ0tpCD7fkuRVHsnUVgsHyNg==}
-    peerDependencies:
-      '@sveltejs/kit': ^2.0.0
-
   '@sveltejs/kit@2.8.4':
     resolution: {integrity: sha512-oDSBHPokbP2iaQlHiEWAkVLsIugsXve8YtABtlyHBUljA63Wgx0UtV8MSOQOGpRft1M+Cd5rzer+0SFlppQwOg==}
     engines: {node: '>=18.13'}
@@ -1298,6 +1321,9 @@ packages:
 
   '@types/vscode@1.103.0':
     resolution: {integrity: sha512-o4hanZAQdNfsKecexq9L3eHICd0AAvdbLk6hA60UzGXbGH/q8b/9xv2RgR7vV3ZcHuyKVq7b37IGd/+gM4Tu+Q==}
+
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
   '@typescript-eslint/eslint-plugin@8.41.0':
     resolution: {integrity: sha512-8fz6oa6wEKZrhXWro/S3n2eRJqlRcIa6SlDh59FXJ5Wp5XRZ8B9ixpJDcjadHq47hMx0u+HW6SNa6LjJQ6NLtw==}
@@ -1945,8 +1971,8 @@ packages:
     resolution: {integrity: sha512-Sf2LSQP+bOlhKWWyhFsn0UsfdK/kCWRv1iuA2gXAwt3dyNabr6QSj00I2V10pidqz69soatm9ZwZvpQMTIOd5Q==}
     engines: {node: '>=12'}
 
-  duckdb@1.3.1:
-    resolution: {integrity: sha512-wSCxu6zSkHkGHtLrI5MmHYUOpbi08s2eIY/QCg2f1YsSyohjA3MRnUMdDb88oqgLa7/h+/wHuIe1RXRu4k04Sw==}
+  duckdb@1.3.4:
+    resolution: {integrity: sha512-dt9KOxYm+RIOyPWVPVo1A/o4Gs5+8S1EpkU4bkQ81wBFTXbZUnSXdmM9MpO1SXPliuUxw4yBBoRlRrMkpzerKQ==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -3021,8 +3047,8 @@ packages:
     resolution: {integrity: sha512-bAxsR8BVfj60DWXHE3u30oHzfl4G7khkSuPW+qvpd7jFRHm7dLxOjUk1EHACJ/hxLY8phGJ0YhYHZo7jil7Qdg==}
     engines: {node: '>= 8'}
 
-  minizlib@3.0.2:
-    resolution: {integrity: sha512-oG62iEk+CYt5Xj2YqI5Xi9xWUeZhDI8jjQmC5oThVH5JGCTgIjr7ciJDzC7MBzYd//WvR1OTmP5Q38Q8ShQtVA==}
+  minizlib@3.1.0:
+    resolution: {integrity: sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw==}
     engines: {node: '>= 18'}
 
   mkdirp-classic@0.5.3:
@@ -3030,11 +3056,6 @@ packages:
 
   mkdirp@1.0.4:
     resolution: {integrity: sha512-vVqVZQyf3WLx2Shd0qJ9xuvqgAyKPLAiqITEtqW0oIUjzo3PePDd6fW9iFz30ef7Ysp/oiWqbhszeGWW2T6Gzw==}
-    engines: {node: '>=10'}
-    hasBin: true
-
-  mkdirp@3.0.1:
-    resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -3708,8 +3729,8 @@ packages:
     resolution: {integrity: sha512-DZ4yORTwrbTj/7MZYq2w+/ZFdI6OZ/f9SFHR+71gIVUZhOQPHzVCLpvRnPgyaMpfWxxk/4ONva3GQSyNIKRv6A==}
     engines: {node: '>=10'}
 
-  tar@7.4.3:
-    resolution: {integrity: sha512-5S7Va8hKfV7W5U6g3aYxXmlPoZVAwUMy9AOKyF2fVuZa2UD3qZjg578OrLRt8PcNN1PleVaL/5/yYATNL0ICUw==}
+  tar@7.5.1:
+    resolution: {integrity: sha512-nlGpxf+hv0v7GkWBK2V9spgactGOp0qvfWRxUMjqHyzrt3SgwE48DIv/FhqPHJYLHpgW1opq3nERbz5Anq7n1g==}
     engines: {node: '>=18'}
 
   teeny-request@9.0.0:
@@ -4659,6 +4680,19 @@ snapshots:
 
   '@google-cloud/promisify@4.1.0': {}
 
+  '@graphenedata/malloy@0.0.302':
+    dependencies:
+      '@malloydata/malloy-filter': 0.0.302
+      '@malloydata/malloy-interfaces': 0.0.302
+      '@malloydata/malloy-tag': 0.0.302
+      antlr4ts: 0.5.0-alpha.4
+      assert: 2.1.0
+      jaro-winkler: 0.2.8
+      jest-diff: 29.7.0
+      lodash: 4.17.21
+      luxon: 2.5.2
+      uuid: 8.3.2
+
   '@humanfs/core@0.19.1': {}
 
   '@humanfs/node@0.16.6':
@@ -4774,13 +4808,13 @@ snapshots:
       - encoding
       - supports-color
 
-  '@malloydata/db-duckdb@0.0.304(encoding@0.1.13)':
+  '@malloydata/db-duckdb@0.0.313(encoding@0.1.13)':
     dependencies:
       '@duckdb/duckdb-wasm': 1.29.1-dev132.0
-      '@malloydata/malloy': 0.0.304
+      '@malloydata/malloy': 0.0.313
       '@motherduck/wasm-client': 0.6.6(apache-arrow@17.0.0)
       apache-arrow: 17.0.0
-      duckdb: 1.3.1(encoding@0.1.13)
+      duckdb: 1.3.4(encoding@0.1.13)
       web-worker: 1.5.0
     transitivePeerDependencies:
       - bluebird
@@ -4794,14 +4828,14 @@ snapshots:
       moo: 0.5.2
       nearley: 2.20.1
 
-  '@malloydata/malloy-filter@0.0.304':
+  '@malloydata/malloy-filter@0.0.307':
     dependencies:
       jest-diff: 29.7.0
       luxon: 3.7.1
       moo: 0.5.2
       nearley: 2.20.1
 
-  '@malloydata/malloy-filter@0.0.307':
+  '@malloydata/malloy-filter@0.0.313':
     dependencies:
       jest-diff: 29.7.0
       luxon: 3.7.1
@@ -4812,21 +4846,15 @@ snapshots:
     dependencies:
       '@creditkarma/thrift-server-core': 1.0.4
 
-  '@malloydata/malloy-interfaces@0.0.304':
-    dependencies:
-      '@creditkarma/thrift-server-core': 1.0.4
-
   '@malloydata/malloy-interfaces@0.0.307':
     dependencies:
       '@creditkarma/thrift-server-core': 1.0.4
 
-  '@malloydata/malloy-tag@0.0.302':
+  '@malloydata/malloy-interfaces@0.0.313':
     dependencies:
-      antlr4ts: 0.5.0-alpha.4
-      assert: 2.1.0
-      uuid: 8.3.2
+      '@creditkarma/thrift-server-core': 1.0.4
 
-  '@malloydata/malloy-tag@0.0.304':
+  '@malloydata/malloy-tag@0.0.302':
     dependencies:
       antlr4ts: 0.5.0-alpha.4
       assert: 2.1.0
@@ -4838,24 +4866,17 @@ snapshots:
       assert: 2.1.0
       uuid: 8.3.2
 
+  '@malloydata/malloy-tag@0.0.313':
+    dependencies:
+      antlr4ts: 0.5.0-alpha.4
+      assert: 2.1.0
+      uuid: 8.3.2
+
   '@malloydata/malloy@0.0.302':
     dependencies:
       '@malloydata/malloy-filter': 0.0.302
       '@malloydata/malloy-interfaces': 0.0.302
       '@malloydata/malloy-tag': 0.0.302
-      antlr4ts: 0.5.0-alpha.4
-      assert: 2.1.0
-      jaro-winkler: 0.2.8
-      jest-diff: 29.7.0
-      lodash: 4.17.21
-      luxon: 2.5.2
-      uuid: 8.3.2
-
-  '@malloydata/malloy@0.0.304':
-    dependencies:
-      '@malloydata/malloy-filter': 0.0.304
-      '@malloydata/malloy-interfaces': 0.0.304
-      '@malloydata/malloy-tag': 0.0.304
       antlr4ts: 0.5.0-alpha.4
       assert: 2.1.0
       jaro-winkler: 0.2.8
@@ -4877,6 +4898,19 @@ snapshots:
       luxon: 2.5.2
       uuid: 8.3.2
 
+  '@malloydata/malloy@0.0.313':
+    dependencies:
+      '@malloydata/malloy-filter': 0.0.313
+      '@malloydata/malloy-interfaces': 0.0.313
+      '@malloydata/malloy-tag': 0.0.313
+      antlr4ts: 0.5.0-alpha.4
+      assert: 2.1.0
+      jaro-winkler: 0.2.8
+      jest-diff: 29.7.0
+      lodash: 4.17.21
+      luxon: 2.5.2
+      uuid: 8.3.2
+
   '@mapbox/node-pre-gyp@2.0.0(encoding@0.1.13)':
     dependencies:
       consola: 3.4.2
@@ -4885,7 +4919,7 @@ snapshots:
       node-fetch: 2.7.0(encoding@0.1.13)
       nopt: 8.1.0
       semver: 7.7.2
-      tar: 7.4.3
+      tar: 7.5.1
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -5103,14 +5137,6 @@ snapshots:
 
   '@sindresorhus/merge-streams@2.3.0': {}
 
-  '@sveltejs/adapter-static@3.0.1(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))':
-    dependencies:
-      '@sveltejs/kit': 2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1))
-
-  '@sveltejs/adapter-static@3.0.1(@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)))':
-    dependencies:
-      '@sveltejs/kit': 2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1))
-
   '@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1))':
     dependencies:
       '@sveltejs/vite-plugin-svelte': 3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1))
@@ -5128,24 +5154,6 @@ snapshots:
       svelte: 4.2.19
       tiny-glob: 0.2.9
       vite: 5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)
-
-  '@sveltejs/kit@2.8.4(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1))':
-    dependencies:
-      '@sveltejs/vite-plugin-svelte': 3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@22.18.0)(lightningcss@1.30.1))
-      '@types/cookie': 0.6.0
-      cookie: 0.6.0
-      devalue: 5.3.2
-      esm-env: 1.2.2
-      import-meta-resolve: 4.1.0
-      kleur: 4.1.5
-      magic-string: 0.30.18
-      mrmime: 2.0.1
-      sade: 1.8.1
-      set-cookie-parser: 2.7.1
-      sirv: 3.0.1
-      svelte: 4.2.19
-      tiny-glob: 0.2.9
-      vite: 5.4.14(@types/node@22.18.0)(lightningcss@1.30.1)
 
   '@sveltejs/vite-plugin-svelte-inspector@2.1.0(@sveltejs/vite-plugin-svelte@3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1)))(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1))':
     dependencies:
@@ -5303,6 +5311,10 @@ snapshots:
   '@types/unist@3.0.3': {}
 
   '@types/vscode@1.103.0': {}
+
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 22.18.0
 
   '@typescript-eslint/eslint-plugin@8.41.0(@typescript-eslint/parser@8.41.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.4.2))(eslint@9.34.0(jiti@2.5.1))(typescript@5.4.2)':
     dependencies:
@@ -6038,7 +6050,7 @@ snapshots:
 
   dotenv@17.2.2: {}
 
-  duckdb@1.3.1(encoding@0.1.13):
+  duckdb@1.3.4(encoding@0.1.13):
     dependencies:
       '@mapbox/node-pre-gyp': 2.0.0(encoding@0.1.13)
       node-addon-api: 7.1.1
@@ -7443,7 +7455,7 @@ snapshots:
       minipass: 3.3.6
       yallist: 4.0.0
 
-  minizlib@3.0.2:
+  minizlib@3.1.0:
     dependencies:
       minipass: 7.1.2
 
@@ -7451,8 +7463,6 @@ snapshots:
     optional: true
 
   mkdirp@1.0.4: {}
-
-  mkdirp@3.0.1: {}
 
   moo@0.5.2: {}
 
@@ -8228,13 +8238,12 @@ snapshots:
       mkdirp: 1.0.4
       yallist: 4.0.0
 
-  tar@7.4.3:
+  tar@7.5.1:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0
       minipass: 7.1.2
-      minizlib: 3.0.2
-      mkdirp: 3.0.1
+      minizlib: 3.1.0
       yallist: 5.0.0
 
   teeny-request@9.0.0(encoding@0.1.13):

@@ -2,12 +2,12 @@
 
 import {Command} from 'commander'
 import {printDiagnostics, printTable} from './printer.ts'
-import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '@graphene/lang'
+import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import fs from 'fs-extra'
 import path from 'path'
 import {getConnection} from './connection.ts'
 import os from 'os'
-import {loadConfig} from '@graphene/lang/config.ts'
+import {loadConfig} from '../lang/config.ts'
 
 const program = new Command()
 

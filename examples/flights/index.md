@@ -15,7 +15,6 @@ select origin, origin_airport.full_name as origin_full_name, avg(dep_delay) as a
   subtitle="Top 20 airports by average delay (minutes)"
 />
 
-
 ```sql delay_by_origin_carrier
 from flights select
   origin,

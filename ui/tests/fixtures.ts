@@ -43,7 +43,7 @@ export const test = base.extend<{server: any, mount: MountFn}>({
       await page.goto(server.url() + '/__ct')
       await page.evaluate(p => window.__props = p, props)
       await page.addScriptTag({type: 'module', content: `
-        import Component from '/node_modules/@graphene/ui/${componentPath}'
+        import Component from '@graphenedata/ui/${componentPath}'
 
         window.__inst = new Component({
           target: document.getElementById('app'),

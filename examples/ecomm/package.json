@@ -14,8 +14,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@graphene/cli": "workspace:*",
-    "@graphene/ui": "workspace:*",
+    "@graphenedata/cli": "workspace:*",
     "svelte": "4.2.19"
   },
   "graphene": {

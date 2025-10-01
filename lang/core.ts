@@ -1,8 +1,5 @@
 
-import * as malloy from './node_modules/@malloydata/malloy/dist/model/index.js'
-import {StandardSQLDialect} from './node_modules/@malloydata/malloy/dist/dialect/standardsql/index.js'
-import {registerDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
-import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect/functions/index.js'
+import {QueryModel, type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, expandBlueprintMap} from '@graphenedata/malloy'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
 import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors} from './analyze.ts'
@@ -11,7 +8,7 @@ import {fillInParams} from './params.ts'
 import {getOffset} from './util.ts'
 import {config, loadConfig} from './config.ts'
 import path from 'node:path'
-import {type DialectFunctionOverloadDef} from '@malloydata/malloy'
+
 import {BIGQUERY_DIALECT_FUNCTIONS} from './functions.ts'
 import {parser} from './parser.js'
 import {parseMarkdown} from './markdown.ts'
@@ -85,7 +82,7 @@ export function toSql (query: Query, params: Record<string, any> = {}): string {
   inputTables.forEach(t => contents[t.name] = {...t, query: t.query && fillInParams(t.query, params)})
 
   let malloyQuery = fillInParams(query.malloyQuery, params)
-  let qm = new malloy.QueryModel({
+  let qm = new QueryModel({
     name: 'generated_model',
     contents: contents as any,
     queryList: [],

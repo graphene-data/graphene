@@ -1,4 +1,4 @@
-import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '@graphene/lang'
+import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '../lang/core.ts'
 import {createServer, optimizeDeps, type ViteDevServer} from 'vite'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import {visit} from 'unist-util-visit'
@@ -7,20 +7,20 @@ import crypto from 'crypto'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {getConnection} from './connection.ts'
 import {type IncomingMessage, type ServerResponse} from 'http'
-import {handleAgentRequest} from '@graphene/agent/agent.ts'
+import {handleAgentRequest} from '../agent/agent.ts'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
 import autoImport from 'sveltekit-autoimport'
 import {fileURLToPath} from 'url'
-import {WebSocketServer} from 'ws'
+import {WebSocketServer, type WebSocket} from 'ws'
 import {spawn} from 'child_process'
 
 let grapheneRoot: string
-let cliRoot: string
+let uiRoot: string
 
 export async function serve2 (): Promise<ViteDevServer> {
   grapheneRoot = config.root
-  cliRoot = path.join(fileURLToPath(import.meta.url), '..')
+  uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
 
   let server = await createServer({
     root: config.root,
@@ -32,13 +32,12 @@ export async function serve2 (): Promise<ViteDevServer> {
           mdsvex({
             extensions: ['.md'],
             remarkPlugins: [extractQueries],
-            layout: path.resolve(cliRoot, '../ui/layout.svelte'),
+            layout: path.resolve(uiRoot, 'layout.svelte'),
           }) as any,
           injectComponentImports(),
         ],
       }),
       handleRequestPlugin,
-      dollarResolver,
       updateWorkspacePlugin,
       mockFilesForTests(),
     ],
@@ -47,15 +46,13 @@ export async function serve2 (): Promise<ViteDevServer> {
       fs: {strict: false},
     },
     optimizeDeps: {
-      exclude: ['@graphene/ui', 'svelte-icons', '$evidence/config', '$evidence/themes', '$app/environment', '$app/navigation', '$app/forms', '$app/stores'],
+      // include: ['@graphenedata/cli > svelte/internal'],
+      // exclude: ['@graphenedata/cli', '@duckdb/node-api', 'chokidar'],
       // noDiscovery: process.env.NODE_ENV == 'test', // optimizing causes issues when parallel workers are running vite
     },
     resolve: {
       alias: {
-        '$evidence/themes': path.resolve(cliRoot, '../ui/internal/theme.ts'),
-        '@evidence-dev/sdk/utils': path.resolve(cliRoot, '../ui/internal/evidenceShims.ts'),
-        '@evidence-dev/sdk/usql': path.resolve(cliRoot, '../ui/internal/evidenceShims.ts'),
-        '@graphene/ui': path.resolve(cliRoot, '../ui'), // useful for hmr when doing graphene dev, but should remove when packaging
+        '@graphenedata/ui': path.resolve(uiRoot, 'web.js'),
       },
     },
   })
@@ -93,18 +90,18 @@ const handleRequestPlugin = {
       })
     })
 
-    wss.on('connection', (ws) => {
-      ws.on('message', (data) => {
+    wss.on('connection', (socket) => {
+      socket.on('message', (data) => {
         let message = JSON.parse(data.toString())
         if (message.type === 'register') {
-          browserConnections.push({url: message.url, socket: ws})
+          browserConnections.push({url: message.url, socket})
         }
         if (message.type === 'viewResponse') {
           viewRequests[message.requestId].response.end(JSON.stringify(message))
           delete viewRequests[message.requestId]
         }
       })
-      ws.on('close', () => browserConnections = browserConnections.filter(conn => conn.socket !== ws))
+      socket.on('close', () => browserConnections = browserConnections.filter(conn => conn.socket !== socket))
     })
 
     s.middlewares.use(async function handleRequest (req, res, next) {
@@ -114,9 +111,7 @@ const handleRequestPlugin = {
         if (pathName == '/graphene/view') return await handleView(req, res)
         if (pathName == '/graphene/agent') return await handleAgentRequest(req, res, grapheneRoot)
         if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
-
-        let explorePath = path.join(grapheneRoot, 'node_modules/@graphene/ui/explore.svelte')
-        if (pathName == '/explore') return await handlePage(s, res, explorePath, true)
+        if (pathName == '/explore') return await handlePage(s, res, path.join(uiRoot, 'explore.svelte'), true)
 
         if (!pathName || pathName == '/') pathName = 'index'
         let mdPath = path.join(grapheneRoot, pathName + '.md')
@@ -202,11 +197,9 @@ async function handleView (req: IncomingMessage, res: ServerResponse<IncomingMes
 async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, filePath: string, mount: boolean) {
   res.setHeader('Content-Type', 'text/html')
 
-  let mounter = mount ? `
-    <script type="module">
-      import Page from ${JSON.stringify(filePath)};
-      new Page({ target: document.getElementById('app'), props: {} })
-    </script>
+  let mdMount = mount ? `
+    import Page from ${JSON.stringify(filePath)};
+    new Page({ target: document.getElementById('app'), props: {} })
   ` : ''
 
   let html = await server.transformIndexHtml(filePath, `<!doctype html>
@@ -215,38 +208,28 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Graphene</title>
-      <link rel="icon" href="/node_modules/@graphene/ui/assets/favicon.ico" />
+      <link rel="icon" href="@graphenedata/ui/assets/favicon.ico" />
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
     </head>
     <body>
       <div id="app"></div>
-      <script type="module" src="/node_modules/@graphene/ui/web.js"></script>
-      ${mounter}
+      <script type="module">
+        import '@graphenedata/ui'
+        ${mdMount}
+      </script>
     </body>
   </html>`)
   return res.end(html)
 }
 
-// Evidence expects some of these imports, but afaict they don't do anything, so stub them.
-let dollarResolver = {
-  name: 'dollar-resolver',
-  resolveId (id) {
-    return ['$evidence/config', '$app/environment', '$app/navigation', '$app/forms', '$app/stores'].includes(id) ? '\0' + id : null
-  },
-  load: (id) => {
-    if (id === '\0$evidence/config') return 'export const config = {}'
-    if (id === '\0$app/environment') return 'export const browser = true; export const version = 0; export const dev = true; export const building = false;'
-    if (id === '\0$app/navigation') return 'export const browser = true; export const afterNavigate = () => {}; export function goto () {}; export function preloadData() {};'
-    if (id === '\0$app/forms') return 'export const enhance = () => {};'
-    if (id === '\0$app/stores') return 'export const page = \'page\'; export const navigating = false;'
-    return null
-  },
-}
-
 // Turn gsql code fences into GrapheneQuery components
 function extractQueries () {
+  function escapeHtml (str: string) {
+    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
+
   return function transformer (tree) {
     visit(tree, 'code', (node, index, parent) => {
       if (index === null) return
@@ -257,15 +240,12 @@ function extractQueries () {
   }
 }
 
-function escapeHtml (str: string) {
-  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
 // We don't want users to have to manually import components in their md files, so we auto-import them.
 function injectComponentImports () {
   let mapping = {}
-  for (let comp of ['GrapheneQuery', 'BarChart', 'AreaChart', 'LineChart', 'PieChart', 'Table', 'Row', 'BigValue', 'Column', 'Dropdown', 'DropdownOption', 'TextInput', 'DateRange']) {
-    mapping[comp] = `import ${comp} from '${path.resolve(cliRoot, `../ui/components/${comp}.svelte`)}'`
+  for (let f of fs.readdirSync(path.resolve(uiRoot, 'components'))) {
+    let name = path.basename(f, '.svelte')
+    mapping[name] = `import {${name}} from '@graphenedata/ui'`
   }
 
   // TODO: we should use `components` to load user components, and `module` to load our own from our package
@@ -275,7 +255,8 @@ function injectComponentImports () {
     markup: async ({content, filename}) => {
       if (!filename.endsWith('.md')) return // only autoImport md files
       let importResults = await autoImporter // wait for autoImporter to init
-      return importResults.markup({content, filename}) // modifies the code to add needed imports
+      let res = importResults.markup({content, filename}) // modifies the code to add needed imports
+      return res
     },
     style: () => {},
     script: () => {},
@@ -283,7 +264,6 @@ function injectComponentImports () {
 }
 
 export const mockFileMap: Record<string, string> = {}
-
 function mockFilesForTests () {
   if (process.env.NODE_ENV !== 'test') return null
 

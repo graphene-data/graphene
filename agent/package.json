@@ -1,5 +1,5 @@
 {
-  "name": "@graphene/agent",
+  "name": "@graphenedata/agent",
   "main": "agent.ts",
   "type": "module",
   "scripts": {
