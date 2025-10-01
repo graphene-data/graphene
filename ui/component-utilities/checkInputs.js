@@ -1,5 +1,3 @@
-import {Query} from '../internal/evidenceShims'
-
 export default function checkInputs (data, reqCols, optCols) {
   // reqCols is an array of columns to check in the dataset
   let columns = []
@@ -56,23 +54,17 @@ export default function checkInputs (data, reqCols, optCols) {
     // const dataIsQueryStore = data instanceof QueryStore;
 
     // Get list of all columns in dataset
-    if (Query.isQuery(data)) {
-      // we want to handle cases where the columns have not yet been fetched, but the data is avialable
-      // this is most likely to happen during pre-rendering, because column metadata is not yet included
-      // in the prerendering process
-      if (!data.columnsLoaded && data.dataLoaded) {
-        let cols = Object.keys(data[0])
-        for (let col of cols) {
-          columns.push(col)
-        }
-      } else {
-        for (let col of data.columns) {
-          columns.push(col.column_name)
-        }
+    // we want to handle cases where the columns have not yet been fetched, but the data is avialable
+    // this is most likely to happen during pre-rendering, because column metadata is not yet included
+    // in the prerendering process
+    if (!data.columnsLoaded && data.dataLoaded) {
+      let cols = Object.keys(data[0])
+      for (let col of cols) {
+        columns.push(col)
       }
     } else {
-      for (let key of Object.keys(data[0])) {
-        columns.push(key)
+      for (let col of data.columns) {
+        columns.push(col.column_name)
       }
     }
 

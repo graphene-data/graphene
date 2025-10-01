@@ -1,9 +1,8 @@
 import {getContext, setContext} from 'svelte'
-import {isStrictMode} from '../internal/evidenceShims'
 const configKey = Symbol()
 const propKey = Symbol()
 
-export const strictBuild = isStrictMode()
+export const strictBuild = false
 export {configKey, propKey}
 
 export const getConfigContext = () => getContext(configKey)
