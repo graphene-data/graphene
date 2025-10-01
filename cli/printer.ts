@@ -1,7 +1,7 @@
 import {styleText as nodeStyleText} from 'node:util'
 import Table from 'cli-table3'
 import chalk from 'chalk'
-import {type Diagnostic, getFile} from '@graphene/lang'
+import {type Diagnostic, getFile} from '../lang/core.ts'
 // import {logTree} from './logTree.ts'
 
 const styleText = (style: string, text: string) => {

@@ -93,6 +93,7 @@ function translateData (data: any, node: QueryNode) {
   let rows = data.rows || []
   rows.dataLoaded = true // evidence components need this to be set
 
+  // translates the executed col names (like `col_3`) back into the expression (like `avg(price)`)
   Object.keys(rows[0] || {}).forEach(k => {
     let match = k.match(/^col_(\d+)$/)
     if (match) {
@@ -102,6 +103,15 @@ function translateData (data: any, node: QueryNode) {
         delete r[k]
       })
     }
+  })
+
+  // translates dates back into js Date
+  rows.forEach(row => {
+    Object.keys(row).forEach(key => {
+      if (typeof row[key] === 'object' && row[key] && row[key].value) {
+        row[key] = new Date(row[key].value)
+      }
+    })
   })
 
   return {rows}
