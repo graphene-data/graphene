@@ -1,5 +1,7 @@
 
-import {QueryModel, type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, expandBlueprintMap} from '@graphenedata/malloy'
+import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect} from '@malloydata/malloy'
+import {QueryModel} from './node_modules/@malloydata/malloy/dist/model/index.js'
+import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect/functions/index.js'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
 import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors} from './analyze.ts'

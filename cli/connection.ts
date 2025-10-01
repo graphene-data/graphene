@@ -1,6 +1,6 @@
 import {config} from '../lang/config.ts'
 import * as fs from 'fs'
-import {type QueryDataRow, type Connection} from '@graphenedata/malloy'
+import {type QueryDataRow, type Connection} from '@malloydata/malloy'
 import path from 'path'
 
 let connection: Promise<Connection> | null = null
