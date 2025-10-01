@@ -1,4 +1,8 @@
-import {type DefinitionBlueprintMap, type FunctionOverloadDef, DUCKDB_DIALECT_FUNCTIONS, GlobalNameSpace, DialectNameSpace, getDialect} from '@graphenedata/malloy'
+import {type DefinitionBlueprintMap, type FunctionOverloadDef} from '@malloydata/malloy'
+import {DUCKDB_DIALECT_FUNCTIONS} from './node_modules/@malloydata/malloy/dist/dialect/duckdb/dialect_functions.js'
+import {GlobalNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/global-name-space.js'
+import {DialectNameSpace} from './node_modules/@malloydata/malloy/dist/lang/ast/types/dialect-name-space.js'
+import {getDialect} from './node_modules/@malloydata/malloy/dist/dialect/dialect_map.js'
 
 // This file adds functions to existing Malloy dialects. Look for `dialect_function` files in Malloy to get more examples.
 

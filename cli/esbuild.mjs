@@ -24,9 +24,11 @@ await build({ // cli build
   target: 'node20',
   sourcemap: true,
   minify: true,
-  external: Object.keys(pkg.dependencies),
+  // we use some internal stuff from malloy. Adding this prevents esbuild from inlining malloy source into our build
+  external: Object.keys(pkg.dependencies).concat(['./node_modules/@malloydata/malloy/dist/*']),
   plugins: [makeAllPackagesExternalPlugin],
 })
 
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))
+await rm(path.resolve(__dirname, 'dist/cli/cli.js.map'))
