@@ -1,6 +1,6 @@
-import {config} from '@graphene/lang'
+import {config} from '../lang/config.ts'
 import * as fs from 'fs'
-import {type Connection} from '@malloydata/malloy'
+import {type QueryDataRow, type Connection} from '@graphenedata/malloy'
 import path from 'path'
 
 let connection: Promise<Connection> | null = null
@@ -18,12 +18,13 @@ export async function getConnection () {
   }
 
   if (config.dialect === 'duckdb') {
-    let mod = await import('@duckdb/node-api')
+    let {DuckDBTimestampValue, DuckDBInstance} = await import('@duckdb/node-api')
+
     let files = await fs.promises.readdir(config.root)
     let databasePath = files.find(f => f.endsWith('.duckdb'))
     if (!databasePath) throw new Error('No .duckdb file found in current directory')
     databasePath = path.resolve(config.root, databasePath)
-    let db = await mod.DuckDBInstance.create(':memory:')
+    let db = await DuckDBInstance.create(':memory:')
     let duckdbConnection = await db.connect()
     let escapedPath = databasePath.replace(/'/g, "''")
     // Attach the project DuckDB file in read-only mode and make it the active schema
@@ -33,10 +34,13 @@ export async function getConnection () {
       async runSQL (sql: string) {
         let reader = await duckdbConnection.runAndReadAll(sql)
         let rows = reader.getRowObjects().map(record => {
-          let out: Record<string, unknown> = {}
-          for (let key of Object.keys(record)) {
-            let value = (record as Record<string, unknown>)[key]
-            out[key] = typeof value === 'bigint' ? Number(value) : value
+          let out: QueryDataRow = {}
+          for (let [k, v] of Object.entries(record)) {
+            if (typeof v === 'bigint') out[k] = Number(v)
+            else if (v === null) out[k] = null
+            else if (v instanceof DuckDBTimestampValue) out[k] = new Date(Number(v.micros / 1000n))
+            else if (typeof v === 'object') throw new Error(`Unsupported datatype ${v.constructor?.name}`)
+            else out[k] = v
           }
           return out
         })

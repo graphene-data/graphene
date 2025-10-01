@@ -1,5 +1,5 @@
 {
-  "name": "@graphene/lang",
+  "name": "@graphenedata/lang",
   "type": "module",
   "main": "core.ts",
   "scripts": {
@@ -10,7 +10,7 @@
   "dependencies": {
     "@lezer/common": "^1.2.3",
     "@lezer/lr": "^1.4.2",
-    "@malloydata/malloy": "^0.0.302",
+    "@graphenedata/malloy": "^0.0.302",
     "glob": "^11.0.3"
   },
   "devDependencies": {

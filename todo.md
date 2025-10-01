@@ -1,6 +1,8 @@
 ## Soon
-* Dynamically import components from ui folder
-* figure out why vite loads stale stuff on startup
+* figure out the license (if any) we want to put on the npm package
+* get vscode extension ready to publish
+* get vite to hot-reload ui changes in dev
+* get the ui tests working again, and maybe a subagent for viewing results?
 * read port from worktree env
 * server pid tracking
 * Make sure all field attributes are captured when parsing (both analyze and queryEngine)
@@ -12,17 +14,10 @@
 * unskip (and fix!) new agg tests
 * Telemetry and error tracking
 
-## To package
-* remove component-utilities dep: it pulls in the massive evidence sdk
-* refactor duckdb to use new new node api: otherwise we have that failing binary that needs to build
-* esbuild to compile
-* locally test packing
-* ensure the graphene binary is linked
-* Package and publish vscode extension
-
 ## Eventually
 * rename `table` to `extend`
 * monorepo support for vscode - right now it assumes the editor root is the same as the graphene workspace root
+* allow `graphene` from subdirs - right now we assume that cwd is the root of the graphene project
 * self-ref in measures doesn't seem to work: ie in `table orders`, `sum(orders.amount) as total_amount`
 * figure out why malloy can't use `count_if` in a fanout. What's the workaround it uses for count/sum?
 * metadata propagation - fields in a view should keep the metadata from their original table (assuming it's a plain field, not an expression)

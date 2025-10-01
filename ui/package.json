@@ -1,12 +1,12 @@
 {
-  "name": "@graphene/ui",
+  "name": "@graphenedata/ui",
   "main": "web.js",
   "type": "module",
+  "private": true,
   "scripts": {
     "test": "playwright test --config=playwright.config.ts"
   },
   "dependencies": {
-    "@sveltejs/adapter-static": "3.0.1",
     "@tidyjs/tidy": "^2.5.2",
     "chroma-js": "2.4.2",
     "debounce": "^1.2.1",

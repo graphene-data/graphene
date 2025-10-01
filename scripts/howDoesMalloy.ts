@@ -18,7 +18,7 @@ import {inspect} from 'util'
 import {
   SingleConnectionRuntime,
   type URLReader,
-  Model,
+  type Model,
   type ModelURL,
   type ModelString,
   type InvalidationKey,
@@ -46,9 +46,14 @@ const EXAMPLE = `
       amount_paid is payments.sum(payments.amount)
   }
 
-  run: users -> {
+  source: filtered_users is users -> {
     group_by: name
     aggregate: total_orders, amount_paid
+    where: age > 20
+  }
+
+  run: filtered_users -> {
+    select: name, total_orders
   }`
 
 // Same ecommerce tables/data as in lang/testHelpers.ts
