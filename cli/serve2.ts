@@ -22,6 +22,9 @@ export async function serve2 (): Promise<ViteDevServer> {
   grapheneRoot = config.root
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
 
+  await fs.ensureDir(path.resolve(grapheneRoot, 'node_modules/.graphene'))
+  await fs.writeFile(path.resolve(grapheneRoot, `node_modules/.graphene/${process.env.NODE_ENV == 'test' ? 'test' : 'serve'}.pid`), String(process.pid))
+
   let server = await createServer({
     root: config.root,
     plugins: [
@@ -44,6 +47,7 @@ export async function serve2 (): Promise<ViteDevServer> {
     server: {
       port: config.port,
       fs: {strict: false},
+      strictPort: true,
     },
     optimizeDeps: {
       // include: ['@graphenedata/cli > svelte/internal'],
@@ -60,6 +64,7 @@ export async function serve2 (): Promise<ViteDevServer> {
   await optimizeDeps(server.config)
 
   await server.listen()
+
   console.log(`Server running at http://localhost:${config.port}`)
   return server
 }
