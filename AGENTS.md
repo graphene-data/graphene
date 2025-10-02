@@ -7,7 +7,7 @@ At a high level, we provide a superset of sql that allows for defining semantic 
 If you need to better understand Graphene sql or markdown, you can read @docs/graphene.md.
 
 # Repo structure
-* /agent - a wrapper around claude-code
+* /agent - a wrapper around claude-code used for Graphene's "explore" ux
 * /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
 * /examples - a series of example datasets and graphene code.
 * /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
@@ -23,6 +23,7 @@ For local development, the cli starts a vite server to host your md files and ex
 # Process
 * Never install dependencies. Always ask the user to install them.
 * Don't grep for files or read code in node_modules. If it seems necessary, stop with a clear explanation of what you need and why.
+* To review images or screenshots, use `node scripts/reviewImage.ts "<prompt>" --<label>=<image-path>`. The prompt tells it what you'd like it to look for in the images. You can provide multiple labeled images (for example, to compare a baseline screenshot to a version with changes).
 
 # Testing
 Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test -w <workspace>`, where workspace is one of 'cli', 'lang', etc. Tests are the preferred way to ensure that new code you add works as expected.
@@ -110,4 +111,4 @@ DO NOT add silly little comments that say something the code obviously says. Thi
 > processEleme(e)
 
 ### Use guards and try/catch sparingly
-It's easier to read the happy-path. Avoid input checking or error handling unless there's a good way to recover. It's mostly fine to just let errors bubble up.
+It's easier to read the happy-path. Avoid input checking or error handling unless there's a good way to recover. It's mostly fine to just let errors bubble up. In node, throwing an error already exits the process, so no need to catch just to process.exit.
