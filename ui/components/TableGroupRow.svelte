@@ -24,6 +24,13 @@
   const dispatch = createEventDispatcher<{toggle: {groupName: string}}>()
   const toggleGroup = () => dispatch('toggle', {groupName})
 
+  const handleKeydown = (event: KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      toggleGroup()
+    }
+  }
+
   const resolveFormat = (column, summary) => {
     if (column.subtotalFmt) return getFormatObjectFromString(column.subtotalFmt)
     if (column.totalFmt) return getFormatObjectFromString(column.totalFmt)
@@ -34,10 +41,9 @@
 
 <tr
   class="group-row"
-  role="row"
   tabindex="0"
   on:click={toggleGroup}
-  on:keypress={(event) => (event.key === 'Enter' || event.key === ' ') && toggleGroup()}
+  on:keydown={handleKeydown}
   style:background-color={rowColor}
 >
   {#if rowNumbers}
@@ -108,7 +114,7 @@
     outline-offset: 1px;
   }
 
-  .group-row__label {
+  :global(.group-row__label) {
     padding: 3px 6px;
   }
 

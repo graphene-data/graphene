@@ -33,6 +33,7 @@
   {:else}
     <div
       class="echarts-chart"
+      data-query-id={queryID}
       style={`height:${toDimension(height, '240px')};width:${toDimension(width, '100%')}`}
       use:echarts={{
         config,

@@ -247,6 +247,13 @@
     }
   }
 
+  function handleOptionKeydown (event: KeyboardEvent, opt: Option) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleOptionSelect(opt, true)
+    }
+  }
+
   function handleOptionSelect (opt: Option, fromKeyboard: boolean) {
     let key = optionKey(opt.value)
     if (multi) {
@@ -422,6 +429,7 @@
         id={menuId}
         class="dropdown-menu"
         role="listbox"
+        tabindex="0"
         aria-multiselectable={multi}
         style={`min-width: ${Math.max(triggerWidth, 220)}px`}
         on:keydown={handleMenuKeydown}
@@ -443,12 +451,14 @@
               <div
                 class={getOptionClass(opt, index)}
                 role="option"
+                tabindex="-1"
                 aria-selected={isOptionSelected(opt)}
                 data-index={index}
                 id={`${menuId}-option-${index}`}
                 on:mousedown|preventDefault
                 on:mouseenter={() => activeIndex = index}
                 on:click={() => handleOptionSelect(opt, false)}
+                on:keydown={(event) => handleOptionKeydown(event, opt)}
               >
                 <span class="dropdown-check" aria-hidden="true">
                   {#if multi}
