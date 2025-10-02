@@ -26,18 +26,18 @@ For local development, the cli starts a vite server to host your md files and ex
 * To review images or screenshots, use `node scripts/reviewImage.ts "<prompt>" --<label>=<image-path>`. The prompt tells it what you'd like it to look for in the images. You can provide multiple labeled images (for example, to compare a baseline screenshot to a version with changes).
 
 # Testing
-Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test -w <workspace>`, where workspace is one of 'cli', 'lang', etc. Tests are the preferred way to ensure that new code you add works as expected.
+Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test` in that directory.
 
-The exception is UI features. While we have some UI tests, it's easier to modify one of the examples to exercise your new code (usually `flights` unless you want to test something bigquery-specifc). You'll want a dev server running, but never try and start it yourself, if it needs to be started or restarted, ask the user to do it. If you're having trouble using the Playwright MCP, ask the user to fix it for you.
+For UI development, use tests and screenshots to ensure things work as expected. When you run a single test (like `pnpm test -g "bar char"`) we automatically capture a screenshot and print out the path. Use `reviewImage` and tell it what you're expecting to see and what it should check for.
+
+While tests are preferred, you can also always test UI by starting up the graphene server and loading a page via the Playwright MCP. Both the `flights` and `ecomm` examples are useful for testing things.
 
 Often, it's helpful to know how Malloy would compile given to to it's IR. `node scripts/howDoesMalloy.ts` will print out the final SQL, along with the IR. There's some example code within `howDoesMalloy` that gets run, and it's easiest to just modify this to your needs before running.
 
 When testing AI features, always use a mock rather than hitting an API. On the explore page, you can use "mock" as the prompt to get simulated messages.
 
 # Code style
-In Graphene, our primary stylistic goal is "high-level readability". We want easily skim a file or function and get a sense of what it does. We care less about the tactical details of how it accomplishes that.
-
-There are a few concrete guidlines we usually follow in service of this:
+In Graphene, our primary stylistic goal is "high-level readability". We want to easily skim a file or function and get a sense of what it does. We care less about the tactical details of how it accomplishes that. There are a few concrete guidlines we usually follow in service of this:
 
 ### Start simple
 Your first pass at an implementation should usually be the easiest thing that solves the problem in front of you. We can always add complexity later as needed.
