@@ -10,9 +10,12 @@ process.env.NODE_ENV = 'test'
 
 export type MountFn = (componentPath: string, props: any) => Promise<void>
 
+let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
 export const test = base.extend<{server: any, mount: MountFn}>({
   // This boots up our cli server on a unique port for e2e tests.
-  server: async (_context, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  server: async ({}, use:any) => {
     let mod = await import('../../cli/serve2.ts')
     let port = await getAvailablePort()
     let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
@@ -35,15 +38,26 @@ export const test = base.extend<{server: any, mount: MountFn}>({
 
   mount: async ({page, server}: {page: Page, server: any}, use) => {
     let errors: string[] = []
-    page.on('console', msg => { if (msg.type() == 'error' || msg.type() == 'warning') errors.push(msg.text()) })
-    page.on('pageerror', e => errors.push(e?.message ?? String(e)))
+    page.on('console', msg => {
+      if (msg.type() != 'error' && msg.type() != 'warning') return
+      errors.push(`${msg.text()} at ${JSON.stringify(msg.location())}`)
+    })
+    page.on('pageerror', e => {
+      console.log('page-error', e)
+      errors.push(e?.message ?? String(e))
+    })
 
     let mountFn = async (componentPath: string, props: any) => {
       errors = []
       await page.goto(server.url() + '/__ct')
-      await page.evaluate(p => window.__props = p, props)
+      await page.evaluate(p => {
+        window.__props = p
+        if (p.data) p.data.rows.dataLoaded = true // hack since evidence expects this on an array
+      }, props)
+      let resolvedComponentPath = path.resolve(uiRoot, componentPath)
+      let browserPath = '/@fs/' + resolvedComponentPath.replace(/\\/g, '/')
       await page.addScriptTag({type: 'module', content: `
-        import Component from '@graphenedata/ui/${componentPath}'
+        import Component from ${JSON.stringify(browserPath)}
 
         window.__inst = new Component({
           target: document.getElementById('app'),
@@ -53,7 +67,13 @@ export const test = base.extend<{server: any, mount: MountFn}>({
     }
 
     await use(mountFn)
-    await expect(page.locator('#app > :not(dialog)').first()).toBeVisible()
+    try {
+      await expect(page.locator('#app > :not(dialog)').first()).toBeVisible()
+    } catch (err) {
+      console.error('mount errors:', errors)
+      throw err
+    }
+    if (errors.length) console.error('component errors:', errors)
     expect(errors).toEqual([])
     page.removeAllListeners('console')
     page.removeAllListeners('pageerror')
@@ -87,8 +107,6 @@ function trimIndentation (str:string) {
   }).join('\n')
 }
 
-
-
 declare global {
   interface Window {
     $GRAPHENE: any
@@ -98,6 +116,5 @@ declare global {
 
 export async function waitForGrapheneQueries (page: Page, timeout = 20_000) {
   await page.waitForFunction(() => Boolean(window.$GRAPHENE), null, {timeout})
-  await page.waitForFunction(() => window.$GRAPHENE.loadingQueries?.size === 0, null, {timeout})
   await page.evaluate((ms) => window.$GRAPHENE.waitForQueries?.(ms), timeout)
 }

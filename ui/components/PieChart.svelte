@@ -5,12 +5,17 @@
   export let data
   export let category
   export let value
+  export let printEchartsConfig = undefined
+  export let echartsOptions = undefined
+  export let seriesOptions = undefined
+  export let seriesColors = undefined
+  $: void printEchartsConfig
 </script>
 
 <style></style>
 
 <QueryLoad data={data} fields={[category, value]} let:loaded>
-  <ECharts data={loaded} config={{
+  <ECharts data={loaded} {echartsOptions} {seriesOptions} {seriesColors} config={{
     tooltip: {
       formatter: '{b}: {c} ({d}%)',
     },

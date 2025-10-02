@@ -16,6 +16,7 @@ interface QueryNode {
   callback?: ResultHandler
   loading: boolean
   fields: string[]
+  error?: Error
 }
 
 let runPending: Promise<void> | null = null
@@ -46,6 +47,7 @@ async function runNode (n: QueryNode) {
   if (!n.callback) throw new Error('running node nobody is listening to')
   n.callback({}) // notify that the query is loading
   n.loading = true
+  n.error = undefined
 
   let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
@@ -54,27 +56,32 @@ async function runNode (n: QueryNode) {
     n.contents,
   ].join('\n')
 
-  let response = await fetch('/graphene/query', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({params, gsql, hashes}),
-  })
-  let hash = response.headers.get('ETag') || ''
+  try {
+    let response = await fetch('/graphene/query', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({params, gsql, hashes}),
+    })
+    let hash = response.headers.get('ETag') || ''
 
-  if (response.status == 304) {
-    let body = await cacheRead(hash)
-    n.callback(translateData(body, n))
-  } else if (response.ok) {
-    let body = await response.json()
-    cacheWrite(hash, body)
-    n.callback(translateData(body, n))
-  } else {
-    let isJson = response.headers.get('Content-Type') === 'application/json'
-    let body = isJson ? await response.json() : await response.text()
-    let errors = Array.isArray(body) ? body : [body]
-    n.callback({error: new Error(errors[0].message || 'Query error')})
+    if (response.status == 304) {
+      let body = await cacheRead(hash)
+      n.callback(translateData(body, n))
+    } else if (response.ok) {
+      let body = await response.json()
+      cacheWrite(hash, body)
+      n.callback(translateData(body, n))
+    } else {
+      let isJson = response.headers.get('Content-Type') === 'application/json'
+      let body = isJson ? await response.json() : await response.text()
+      let errors = Array.isArray(body) ? body : [body]
+      let err = new Error(errors[0].message || 'Query error')
+      n.error = err
+      n.callback({error: err})
+    }
+  } finally {
+    n.loading = false
   }
-  n.loading = false
 }
 
 function runAll () {
@@ -117,8 +124,22 @@ function translateData (data: any, node: QueryNode) {
   return {rows}
 }
 
-export function isLoading () {
-  return !!queries.find(q => q.loading)
+export const isLoading = () => !!queries.find(q => q.loading)
+export const getErrors = () => queries.map(q => q.error).filter(q => !!q)
+
+async function waitForQueries (timeout = 20_000) {
+  let end = performance.now() + timeout
+  while (isLoading() && performance.now() < end) {
+    await new Promise(resolve => setTimeout(resolve, 25))
+  }
+  return !isLoading()
 }
 
-window.$GRAPHENE = {registerQuery, updateParam, query, unsubscribe}
+window.$GRAPHENE = {
+  registerQuery,
+  updateParam,
+  query,
+  unsubscribe,
+  waitForQueries,
+  getErrors,
+}

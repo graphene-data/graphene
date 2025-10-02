@@ -4,7 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "playwright test --config=playwright.config.ts"
+    "test": "playwright test --config=playwright.config.ts",
+    "test-one": "DEBUG=1 playwright test --debug"
   },
   "dependencies": {
     "@tidyjs/tidy": "^2.5.2",
