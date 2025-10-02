@@ -1,4 +1,5 @@
 import {test as base, expect, type Page} from '@playwright/test'
+import fs from 'fs/promises'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import net from 'net'
@@ -11,6 +12,7 @@ process.env.NODE_ENV = 'test'
 export type MountFn = (componentPath: string, props: any) => Promise<void>
 
 let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+let screenshotRoot = path.join(uiRoot, 'tests', 'snapshots')
 
 export const test = base.extend<{server: any, mount: MountFn}>({
   // This boots up our cli server on a unique port for e2e tests.
@@ -79,6 +81,51 @@ export const test = base.extend<{server: any, mount: MountFn}>({
     page.removeAllListeners('pageerror')
   },
 })
+
+test.afterEach(async ({page}, testInfo) => {
+  if (!page) return
+  if (testInfo.status === 'skipped' || testInfo.status === 'interrupted') return
+  if (process.env.DEBUG) await page.pause() // DEBUG should pause so we can check out the page
+
+  // Take a screenshot of each test in its final form
+  let filename = [
+    path.basename(testInfo.file ?? '').replace(/\.[^/.]+/g, ''),
+    testInfo.title,
+  ].map(toSlug).join('-') + '.png'
+  let screenshotPath = path.join(screenshotRoot, filename)
+
+  await fs.mkdir(screenshotRoot, {recursive: true})
+  await waitForChartsToRender(page)
+  await page.locator('#app').screenshot({path: screenshotPath})
+
+  if (process.env.DEBUG || testInfo.config.grep.toString() != '/.*/') {
+    console.log(`screenshot saved to ${testInfo.config.grep.toString()} ${path.relative(uiRoot, screenshotPath)}`)
+  }
+})
+
+function toSlug (value: string) {
+  let slug = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-+/g, '-')
+  return slug || null
+}
+
+async function waitForChartsToRender (page: Page) {
+  await page.evaluate(() => new Promise<void>(resolve => {
+    let pendingKey = Symbol.for('graphene.pendingCharts')
+    let waitForIdle = () => {
+      let pending = window[pendingKey]
+      if (!pending || pending.size === 0) {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        return
+      }
+      requestAnimationFrame(waitForIdle)
+    }
+    waitForIdle()
+  }))
+}
 
 async function getAvailablePort (): Promise<number> {
   return await new Promise((resolve, reject) => {

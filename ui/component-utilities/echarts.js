@@ -13,6 +13,28 @@ import * as chartWindowDebug from './chartWindowDebug'
  */
 
 const ANIMATION_DURATION = 500
+const pendingChartsKey = Symbol.for('graphene.pendingCharts')
+
+/** @returns {Set<number> | null} */
+const getPendingCharts = () => {
+  if (typeof window === 'undefined') return null
+  window[pendingChartsKey] ??= new Set()
+  return window[pendingChartsKey]
+}
+
+/** @param {number} chartId */
+const markChartPending = (chartId) => {
+  let pending = getPendingCharts()
+  if (!pending) return
+  pending.add(chartId)
+}
+
+/** @param {number} chartId */
+const markChartFinished = (chartId) => {
+  let pending = getPendingCharts()
+  if (!pending) return
+  pending.delete(chartId)
+}
 
 /** @param {HTMLElement} node */
 /** @param {EChartsActionOptions} options */
@@ -33,6 +55,8 @@ const echartsAction = (node, options) => {
     chart = init(node, options.theme, {
       renderer: useSvg ? 'svg' : (options.renderer ?? 'canvas'),
     })
+    markChartPending(chart.id)
+    chart.on('finished', () => markChartFinished(chart.id))
   }
 
   initChart()
@@ -191,6 +215,7 @@ const echartsAction = (node, options) => {
     }
 
     options = newOptions
+    markChartPending(chart.id)
     chart.setOption(
       {
         ...options.config,
@@ -202,6 +227,7 @@ const echartsAction = (node, options) => {
     applySeriesColors()
     applyEchartsOptions()
     applySeriesOptions()
+    markChartPending(chart.id)
     chart.resize({
       animation: {
         duration: ANIMATION_DURATION,
@@ -225,6 +251,7 @@ const echartsAction = (node, options) => {
       } else {
         window.removeEventListener('resize', onWindowResize)
       }
+      markChartFinished(chart.id)
       chart.dispose()
 
       chartWindowDebug.unset(chart.id)
