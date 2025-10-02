@@ -4,12 +4,15 @@
   "type": "module",
   "author": "Graphene Systems Inc",
   "version": "0.0.1",
-  "license": "ISC",
+  "license": "Elastic-2.0",
   "engines": {
     "node": ">=16"
   },
   "files": [
-    "dist"
+    "dist",
+    "package.json",
+    "LICENSE.md",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "bin": {
     "graphene": "./dist/cli/cli.js"
