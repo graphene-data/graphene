@@ -10,6 +10,23 @@ test('area chart', async ({mount, page}) => {
   await expect(page.locator('canvas')).toBeVisible()
 })
 
+test('stacked area chart', async ({mount, page}) => {
+  await mount('components/AreaChart.svelte', {
+    data: {
+      rows: [
+        {origin: 'A', carrier: 'AA', avg_delay: 1},
+        {origin: 'A', carrier: 'UA', avg_delay: 2},
+        {origin: 'B', carrier: 'AA', avg_delay: 3},
+        {origin: 'B', carrier: 'UA', avg_delay: 4},
+      ],
+    },
+    x: 'origin',
+    y: 'avg_delay',
+    series: 'carrier',
+    type: 'stacked',
+  })
+})
+
 test('line chart', async ({mount, page}) => {
   await mount('components/LineChart.svelte', {data: makeData(), x: 'origin', y: 'avg_delay'})
   await expect(page.locator('canvas')).toBeVisible()
