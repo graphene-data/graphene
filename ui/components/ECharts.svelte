@@ -11,9 +11,9 @@
   export let data: any
   export let queryID: any = undefined
   export let renderer: 'canvas' | 'svg' | undefined = undefined
-  export let echartsOptions: any
-  export let seriesOptions: any
-  export let seriesColors: any
+  export let echartsOptions: any = undefined
+  export let seriesOptions: any = undefined
+  export let seriesColors: any = undefined
   export let connectGroup: string | undefined = undefined
   export let xAxisLabelOverflow: 'truncate' | 'break' | undefined = undefined
 

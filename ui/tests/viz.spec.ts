@@ -35,7 +35,6 @@ test('big value', async ({mount, page}) => {
   await waitForGrapheneQueries(page)
   await expect(page.getByText('Average Delay')).toBeVisible()
   await expect(page.getByText('8')).toBeVisible()
-  await page.pause()
 })
 
 test('table', async ({mount, page}) => {
@@ -47,8 +46,10 @@ test('table', async ({mount, page}) => {
 })
 
 function makeData () {
-  return [
-    {origin: 'SFO', avg_delay: 8},
-    {origin: 'LAX', avg_delay: 12},
-  ]
+  return {
+    rows: [
+      {origin: 'SFO', avg_delay: 8},
+      {origin: 'LAX', avg_delay: 12},
+    ],
+  }
 }

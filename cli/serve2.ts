@@ -55,9 +55,10 @@ export async function serve2 (): Promise<ViteDevServer> {
       // noDiscovery: process.env.NODE_ENV == 'test', // optimizing causes issues when parallel workers are running vite
     },
     resolve: {
-      alias: {
-        '@graphenedata/ui': path.resolve(uiRoot, 'web.js'),
-      },
+      alias: [
+        {find: /^@graphenedata\/ui$/, replacement: path.resolve(uiRoot, 'web.js')},
+        {find: /^@graphenedata\/ui\//, replacement: path.resolve(uiRoot) + '/'},
+      ],
     },
   })
 

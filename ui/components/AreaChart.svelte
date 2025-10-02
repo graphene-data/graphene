@@ -70,8 +70,6 @@
 
   export let echartsOptions = undefined
   export let seriesOptions = undefined
-  export let emptySet = undefined
-  export let emptyMessage = undefined
 
   export let seriesColors = undefined
   $: seriesColorsStore = resolveColorsObject(seriesColors)
@@ -120,8 +118,6 @@
     colorPalette={colorPaletteStore}
     {echartsOptions}
     {seriesOptions}
-    {emptySet}
-    {emptyMessage}
     {connectGroup}
     seriesColors={seriesColorsStore}
     {leftPadding}
