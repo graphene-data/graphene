@@ -101,7 +101,10 @@
   {@const shaded = rowShading && i % 2 === 1}
   {@const clickable = link && row[link]}
   <tr
-    class={`table-row ${shaded ? 'table-row--shaded' : ''} ${rowLines ? 'table-row--lined' : ''} ${clickable ? 'table-row--clickable' : ''}`.trim()}
+    class="table-row"
+    class:table-row--shaded={shaded}
+    class:table-row--lined={rowLines}
+    class:table-row--clickable={clickable}
     on:click={(event) => clickable && navigateToLink(row, event)}
   >
     {#if rowNumbers && groupType !== 'section'}
@@ -248,7 +251,7 @@
     background: rgba(229, 231, 235, 0.6);
   }
 
-  .table-row--lined td {
+  :global(.table-row--lined) td {
     border-bottom: 1px solid rgba(107, 114, 128, 0.2);
   }
 
@@ -268,7 +271,7 @@
     filter: brightness(1.1);
   }
 
-  .table-row__chevron {
+  :global(.table-row__chevron) {
     width: 24px;
     padding-right: 6px;
   }
