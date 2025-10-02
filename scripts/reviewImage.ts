@@ -2,7 +2,7 @@ import {readFile} from 'fs/promises'
 import {extname} from 'path'
 import dotenv from 'dotenv'
 
-dotenv.config()
+dotenv.config({quiet: true})
 
 const args = process.argv.slice(2)
 const [prompt, ...flagArgs] = args
