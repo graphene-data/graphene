@@ -2,8 +2,8 @@ import {defineConfig, devices} from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
-  timeout: 20_000,
-  expect: {timeout: 15_000},
+  timeout: 10_000,
+  expect: {timeout: process.env.DEBUG ? 0 : 2_000},
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0, // process.env.CI ? 1 : 0,
@@ -13,6 +13,7 @@ export default defineConfig({
     actionTimeout: 0,
     trace: 'retain-on-failure',
     video: 'off',
+    launchOptions: {devtools: !!process.env.DEBUG},
   },
   projects: [
     {

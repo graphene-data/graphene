@@ -2,7 +2,7 @@
   import ErrorChart from './ErrorChart.svelte'
   import {onDestroy, onMount} from 'svelte'
 
-  export let data: string
+  export let data: string | {rows?: any[]}
   export let height = 200
   export let fields: string[] = []
 
@@ -15,18 +15,18 @@
   }
 
   onMount(() => {
-    let usedFields = fields.filter(f => !!f)
-    if (usedFields.length == 0) usedFields = ['*']
-    window.$GRAPHENE.query(data, usedFields, handleResults)
+    if (typeof data !== 'string') {
+      loaded = data.rows
+    } else {
+      let usedFields = fields.filter(f => !!f)
+      if (usedFields.length == 0) usedFields = ['*']
+      window.$GRAPHENE.query(data, usedFields, handleResults)
+    }
   })
 
   onDestroy(() => {
     window.$GRAPHENE.unsubscribe(handleResults)
   })
-
-  // $: spreadProps = Object.fromEntries(
-  //   Object.entries($$props).filter(([, value]) => value !== undefined)
-  // )
 </script>
 
 {#if error}

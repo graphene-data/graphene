@@ -12,5 +12,5 @@ test('it can explore with a mocked agent response', async ({server, page}) => {
   await waitForGrapheneQueries(page)
   // await page.pause()
   await expect(page.locator('main h1')).toHaveText('Flight Delay Analysis')
-  await expect(page.locator('main .chart canvas').first()).toBeVisible()
+  await expect(page.locator('main table').first()).toBeVisible()
 })

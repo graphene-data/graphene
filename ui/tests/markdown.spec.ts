@@ -2,10 +2,10 @@ import {test, expect, waitForGrapheneQueries} from './fixtures'
 
 test('loads markdown files without errors', async ({server, page}) => {
   await page.goto(server.url() + '/')
-  await page.waitForSelector('h2:has-text("Average Departure Delay by Airport")')
+  await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
   await waitForGrapheneQueries(page)
 
-  await expect(page.locator('.chart canvas').first()).toBeVisible()
+  await expect(page.locator('main table').first()).toBeVisible()
 
   let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
   expect(errors).toEqual([])
