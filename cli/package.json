@@ -58,11 +58,12 @@
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.21.5",
+    "vitest": "3.0.5",
     "vscode-languageserver-types": "^3.17.0"
   },
   "scripts": {
     "build": "rm -rf dist && node ./esbuild.mjs",
-    "test": "vitest run -c ../vitest.config.ts --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
+    "test": "vitest run --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
     "test-one": "DEBUG=1 node --inspect ../scripts/turboTest.js",
     "prepublishOnly": "pnpm run build"
   }
