@@ -1,14 +1,12 @@
 ## Soon
-* figure out the license (if any) we want to put on the npm package
-* get vscode extension ready to publish
-* get vite to hot-reload ui changes in dev
+* table formatting doesn't look quite like evidence
 * get the ui tests working again, and maybe a subagent for viewing results?
-* read port from worktree env
-* server pid tracking
-* Make sure all field attributes are captured when parsing (both analyze and queryEngine)
+* figure out the license (if any) we want to put on the npm package
+* area chart stacking looks weird in flights
+* date axis formatting doesn't look great
+* get vscode extension ready to publish
 * add flight/ecomm examples using inputs
 * add ecomm example of more investigative report
-* make the server track pids, so agents dont get tripped up
 * remove underscore from join_one|many
 * Throw an error if you try to redefine an existing table
 * unskip (and fix!) new agg tests

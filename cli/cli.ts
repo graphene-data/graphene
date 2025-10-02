@@ -8,6 +8,7 @@ import path from 'path'
 import {getConnection} from './connection.ts'
 import os from 'os'
 import {loadConfig} from '../lang/config.ts'
+import {runServeInBackground} from './background.ts'
 
 const program = new Command()
 
@@ -53,10 +54,15 @@ program
 program
   .command('serve')
   .description('Run the local server')
-  .action(async () => {
-    // load dynamically, so we're not pulling in a bunch of deps we might not need
-    let mod = await import('./serve2.ts')
-    await mod.serve2()
+  .option('--fg', 'Run the server in the foreground')
+  .action(async (options: {fg?: boolean}) => {
+    if (options.fg) {
+      let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
+      await mod.serve2()
+    } else {
+      await runServeInBackground()
+      process.exit(0)
+    }
   })
 
 program
