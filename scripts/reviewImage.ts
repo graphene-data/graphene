@@ -1,8 +1,9 @@
 import {readFile} from 'fs/promises'
-import {extname} from 'path'
+import path, {extname} from 'path'
 import dotenv from 'dotenv'
+import {fileURLToPath} from 'url'
 
-dotenv.config({quiet: true})
+dotenv.config({path: path.join(fileURLToPath(import.meta.url), '../../.env'), quiet: true})
 
 const args = process.argv.slice(2)
 const [prompt, ...flagArgs] = args

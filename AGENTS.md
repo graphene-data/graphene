@@ -30,7 +30,7 @@ Most directories have test files you can run to ensure they work correctly. You 
 
 For UI development, use tests and screenshots to ensure things work as expected. When you run a single test (like `pnpm test -g "bar char"`) we automatically capture a screenshot and print out the path. Use `reviewImage` and tell it what you're expecting to see and what it should check for.
 
-While tests are preferred, you can also always test UI by starting up the graphene server and loading a page via the Playwright MCP. Both the `flights` and `ecomm` examples are useful for testing things.
+While tests are preferred, you can also always test UI by starting up the graphene server and loading a page via the Playwright MCP. Both the `flights` and `ecomm` examples are useful for testing things. Always use the Playwright mcp for viewing webpages.
 
 Often, it's helpful to know how Malloy would compile given to to it's IR. `node scripts/howDoesMalloy.ts` will print out the final SQL, along with the IR. There's some example code within `howDoesMalloy` that gets run, and it's easiest to just modify this to your needs before running.
 

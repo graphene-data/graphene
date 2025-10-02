@@ -32,6 +32,17 @@ test('line chart', async ({mount, page}) => {
   await expect(page.locator('canvas')).toBeVisible()
 })
 
+test('timeseries chart formats x axis', async ({mount, chartConfig}) => {
+  await mount('components/LineChart.svelte', {data: makeTimeseriesData(), x: 'flight_time', y: 'dep_delay', xType: 'time'})
+
+  let sampleLabel = await chartConfig((cfg) => {
+    let xAxis = Array.isArray(cfg?.xAxis) ? cfg?.xAxis[0] : cfg?.xAxis
+    return xAxis?.axisLabel?.formatter?.('2023-01-01T00:00:00')
+  })
+
+  expect(sampleLabel).toBe('2023-01-01')
+})
+
 test('pie chart', async ({mount, page}) => {
   await mount('components/PieChart.svelte', {
     data: makeData(),
@@ -69,4 +80,16 @@ function makeData () {
       {origin: 'LAX', avg_delay: 12},
     ],
   }
+}
+
+function makeTimeseriesData () {
+  let rows = [
+    {flight_time: new Date('2023-01-01T00:00:00'), dep_delay: 4},
+    {flight_time: new Date('2023-01-01T01:00:00'), dep_delay: 8},
+  ]
+  rows._evidenceColumnTypes = [
+    {name: 'flight_time', evidenceType: 'date', typeFidelity: 'precise'},
+    {name: 'dep_delay', evidenceType: 'number', typeFidelity: 'precise'},
+  ]
+  return {rows}
 }

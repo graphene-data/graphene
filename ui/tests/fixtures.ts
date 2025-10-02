@@ -10,11 +10,12 @@ export {expect}
 process.env.NODE_ENV = 'test'
 
 export type MountFn = (componentPath: string, props: any) => Promise<void>
+export type ChartConfigFn = <T>(selector: (config: any) => T) => Promise<T | null>
 
 let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 let screenshotRoot = path.join(uiRoot, 'tests', 'snapshots')
 
-export const test = base.extend<{server: any, mount: MountFn}>({
+export const test = base.extend<{server: any, mount: MountFn, chartConfig: ChartConfigFn}>({
   // This boots up our cli server on a unique port for e2e tests.
   // eslint-disable-next-line no-empty-pattern
   server: async ({}, use:any) => {
@@ -80,6 +81,30 @@ export const test = base.extend<{server: any, mount: MountFn}>({
     page.removeAllListeners('console')
     page.removeAllListeners('pageerror')
   },
+
+  chartConfig: async ({page}, use) => {
+    let readConfig: ChartConfigFn = async (selector) => {
+      if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
+      let selectorSource = selector.toString()
+      return await page.evaluate((source) => {
+        let charts = window[Symbol.for('__evidence-chart-window-debug__')]
+        if (!charts) return null
+        let chart = Object.values(charts)[0]
+        let option = chart?.getModel?.()?.getOption?.()
+        if (!option) return null
+        try {
+          // eslint-disable-next-line no-new-func
+          let fn = new Function('config', `return (${source})(config)`)
+          return fn(option)
+        } catch (error) {
+          console.error('chartConfig selector error', error)
+          return null
+        }
+      }, selectorSource)
+    }
+
+    await use(readConfig)
+  },
 })
 
 test.afterEach(async ({page}, testInfo) => {
@@ -98,9 +123,9 @@ test.afterEach(async ({page}, testInfo) => {
   await waitForChartsToRender(page)
   await page.locator('#app').screenshot({path: screenshotPath})
 
-  if (process.env.DEBUG || testInfo.config.grep.toString() != '/.*/') {
-    console.log(`screenshot saved to ${testInfo.config.grep.toString()} ${path.relative(uiRoot, screenshotPath)}`)
-  }
+  // if (process.env.DEBUG || testInfo.config.grep.toString() != '/.*/') {
+  console.log(`screenshot saved to ${testInfo.config.grep.toString()} ${path.relative(uiRoot, screenshotPath)}`)
+  // }
 })
 
 function toSlug (value: string) {
