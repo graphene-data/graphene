@@ -222,7 +222,10 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
     <body>
       <div id="app"></div>
       <script type="module">
-        import '@graphenedata/ui'
+        // do this first so we can track errors caused by importing the md file
+        import '${uiRoot}/web.js'
+      </script>
+      <script type="module">
         ${mdMount}
       </script>
     </body>

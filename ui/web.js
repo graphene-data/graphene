@@ -1,3 +1,4 @@
+import {getErrors} from './internal/telemetry.ts'
 import './app.css'
 import {isLoading} from './internal/queryEngine.ts'
 
@@ -32,10 +33,7 @@ export {default as TableTotalRow} from './components/TableTotalRow.svelte'
 export {default as TextInput} from './components/TextInput.svelte'
 
 let socket = null
-let errors = []
 
-window.addEventListener('error', (event) => errors.push(event.error))
-window.addEventListener('unhandledrejection', (event) => errors.push(event.reason))
 connectWebSocket()
 
 async function takeScreenshot (chartName = null) {
@@ -69,8 +67,7 @@ function connectWebSocket () {
 
     if (type === 'view') {
       let {screenshot, stillLoading} = await takeScreenshot(chart)
-      let serialErrs = errors.map(e => ({message: e.message, cause: e.cause}))
-      socket.send(JSON.stringify({type: 'viewResponse', requestId, screenshot, stillLoading, errors: serialErrs}))
+      socket.send(JSON.stringify({type: 'viewResponse', requestId, screenshot, stillLoading, errors: getErrors()}))
     }
   }
 }
