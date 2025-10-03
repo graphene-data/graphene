@@ -6,11 +6,11 @@
   export let height = 200
   export let fields: string[] = []
 
-  let error: Error | null = null
+  let errors: Error[] | null = null
   let loaded: any[] | null = null
 
   let handleResults = (data) => {
-    error = data.error
+    errors = data.errors
     loaded = data.rows
   }
 
@@ -29,8 +29,8 @@
   })
 </script>
 
-{#if error}
-  <ErrorChart title="Error" {error} />
+{#if errors}
+  <ErrorChart title="Error" error={errors[0]} />
 {:else if !loaded}
   <div class='ql-skeleton' style={`height:${height}px`} role="status" aria-live="polite">
     <span class="ql-skeleton__pulse" />
