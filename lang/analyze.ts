@@ -1,6 +1,6 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import type {AggregateFunctionType, StructRef} from './node_modules/@malloydata/malloy/dist/model/index.js'
+import {isExtractUnit, isTemporalType, type TemporalTypeDef, type AggregateFunctionType, type StructRef, type AtomicTypeDef} from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {txt, compact, getFile, getPosition, walkExpression} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config, dialectKeyword} from './config.ts'
@@ -251,7 +251,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
 
 // Called for each expression in a query (recursively for complex expressions) including computed columns.
 // This reports errors and warnings for symantic issues, as well as generating the final SQL.
-// Scope is used to track the current table we're operating within when analyzing measures. If it's null, the scope is the entire query.
+// Scope is used to track the current table we're operating within when analyzing measures.
 function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   if (expr.type.isError) {
     diag(expr, 'Invalid expression')
@@ -272,11 +272,14 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 
       let path = expr.getChildren('Identifier').map(i => txt(i))
       let {fields, inOutput} = lookup(expr, scope)
-      if (inOutput && fields[0].isAgg) {
-        return {node: 'outputField', name: path[0], type: fields[0].type, isAgg: fields[0].isAgg}
-      } else {
-        return {node: 'field', path, type: fields[0]?.type || 'unknown', isAgg: fields[0]?.isAgg}
-      }
+      let type = fields[0]?.type || 'unknown'
+      let base = inOutput && fields[0].isAgg ? {node: 'outputField' as const, name: path[0]} : {node: 'field' as const, path}
+
+      // malloy stores additional typeDef info on query fields for certain types (dates, array, records)
+      let typeDef: AtomicTypeDef | null = null
+      if (type === 'date' || type === 'timestamp') typeDef = {type} as TemporalTypeDef
+
+      return {...base, type, ...(typeDef ? {typeDef} : {}), isAgg: fields[0]?.isAgg}
     }
     case 'FunctionCall': return analyzeFunctionCall(expr, scope)
     case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
