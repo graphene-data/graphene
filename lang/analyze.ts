@@ -281,6 +281,15 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 
       return {...base, type, ...(typeDef ? {typeDef} : {}), isAgg: fields[0]?.isAgg}
     }
+    case 'ExtractExpression': {
+      let e = analyzeExpression(expr.getChild('Expression')!, scope)
+      if (!isTemporalType(e.type) || !e.typeDef) return diag(expr, 'Expression must be a date or timestamp', errorExpression)
+
+      let units = txt(expr.getChild('ExtractUnit')!).replace(/^['"]|['"]$/g, '').toLowerCase()
+      if (!isExtractUnit(units)) return diag(expr, 'Not a valid unit to extract', errorExpression)
+
+      return {node: 'extract', type: 'number', units, e: e as any, isAgg: false}
+    }
     case 'FunctionCall': return analyzeFunctionCall(expr, scope)
     case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
     case 'Count': {

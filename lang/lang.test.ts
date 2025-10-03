@@ -383,6 +383,11 @@ describe('lang', () => {
       .toRenderSql('select timestamp_diff(base.`created_at`,base.`created_at`,day) as `col_0` from `users` as base')
   })
 
+  it('supports extract expressions', () => {
+    expect('from users select extract(hour from created_at)')
+      .toRenderSql('select extract(hour from base."created_at") as "col_0" from users as base')
+  })
+
   it('supports null and boolean literals', () => {
     expect('from users select name, null, true, FALSE')
       .toRenderSql('select base."name" as "name", null as "col_1", true as "col_2", false as "col_3" from users as base')

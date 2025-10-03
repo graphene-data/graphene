@@ -52,9 +52,9 @@ const EXAMPLE = `
     where: age > 20
   }
 
-  run: filtered_users -> {
-    select: name, total_orders
-  }`
+  // run: filtered_users -> { select: name, total_orders}
+  run: users -> { select: ch is hour(created_at) }
+`
 
 // Same ecommerce tables/data as in lang/testHelpers.ts
 const ECOMM_SETUP = `
