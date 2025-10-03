@@ -296,7 +296,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       let left = analyzeExpression(expr.firstChild!, scope)
       let right = analyzeExpression(expr.lastChild!, scope)
       let op = txt(expr.firstChild?.nextSibling).toLowerCase()
-      return {node: op as any, kids: {left, right}, type: 'boolean', isAgg: left.isAgg || right.isAgg}
+      return {node: op as any, kids: {left, right}, type: left.type, isAgg: left.isAgg || right.isAgg}
     }
     case 'NullTestExpression': {
       let node = expr.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not') ? 'is-not-null' : 'is-null'
