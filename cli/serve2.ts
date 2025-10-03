@@ -130,7 +130,7 @@ const handleRequestPlugin = {
       } catch (err) {
         console.error(err)
         res.statusCode = 500
-        res.end(JSON.stringify([{message: err.message}]))
+        res.end(JSON.stringify([{message: err.message, stack: err.stack}]))
       }
     })
   },
