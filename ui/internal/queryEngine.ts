@@ -2,10 +2,17 @@
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
 import {cacheRead, cacheWrite, getHashes} from './clientCache'
+import {errorProvider} from './telemetry.ts'
+
+interface QueryError {
+  file: string
+  message: string
+  from: {lineText: string}
+}
 
 interface QueryResult {
   rows?: any[]
-  error?: any
+  errors?: Error[]
 }
 
 type ResultHandler = (res: QueryResult) => void
@@ -16,7 +23,7 @@ interface QueryNode {
   callback?: ResultHandler
   loading: boolean
   fields: string[]
-  error?: Error
+  errors: Error[]
 }
 
 let runPending: Promise<void> | null = null
@@ -25,7 +32,7 @@ let queries = [] as QueryNode[]
 
 function registerQuery (name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
-  queries.push({name, contents, loading: false, fields: []})
+  queries.push({name, contents, loading: false, fields: [], errors: []})
 }
 
 function updateParam (name: string, value: any) {
@@ -35,7 +42,7 @@ function updateParam (name: string, value: any) {
 
 function query (source: string, fields: string[], callback: ResultHandler) {
   let contents = `from ${source} select ${fields.join(', ')}`
-  queries.push({contents, callback, loading: false, fields})
+  queries.push({contents, callback, loading: false, fields, errors: []})
   runAll()
 }
 
@@ -47,7 +54,7 @@ async function runNode (n: QueryNode) {
   if (!n.callback) throw new Error('running node nobody is listening to')
   n.callback({}) // notify that the query is loading
   n.loading = true
-  n.error = undefined
+  n.errors = []
 
   let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
@@ -74,11 +81,11 @@ async function runNode (n: QueryNode) {
     } else {
       let isJson = response.headers.get('Content-Type') === 'application/json'
       let body = isJson ? await response.json() : await response.text()
-      let errors = Array.isArray(body) ? body : [body]
-      let err = new Error(errors[0].message || 'Query error')
-      n.error = err
-      n.callback({error: err})
+      n.errors = Array.isArray(body) ? body : [body]
+      n.callback({errors: n.errors})
     }
+  } catch (e) {
+    n.errors = [e]
   } finally {
     n.loading = false
   }
@@ -125,7 +132,14 @@ function translateData (data: any, node: QueryNode) {
 }
 
 export const isLoading = () => !!queries.find(q => q.loading)
-export const getErrors = () => queries.map(q => q.error).filter(q => !!q)
+
+errorProvider('queryEngine', () => {
+  let unique = {}
+  queries.flatMap(q => q.errors).filter(q => !!q).forEach(e => {
+    unique[e.message + String((e as any).from?.lineText)] = e
+  })
+  return Object.values(unique)
+})
 
 async function waitForQueries (timeout = 20_000) {
   let end = performance.now() + timeout
@@ -135,11 +149,10 @@ async function waitForQueries (timeout = 20_000) {
   return !isLoading()
 }
 
-window.$GRAPHENE = {
+Object.assign(window.$GRAPHENE, {
   registerQuery,
   updateParam,
   query,
   unsubscribe,
   waitForQueries,
-  getErrors,
-}
+})
