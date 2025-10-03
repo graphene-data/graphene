@@ -123,6 +123,7 @@ expression[@isGroup=Expression] {
   Param |
   Ref |
   Count |
+  ExtractExpression |
   FunctionCall |
   Parenthetical |
   SubqueryExpression
@@ -222,6 +223,14 @@ Ref {
 
 Count {
   Kw<"count"> "(" ("*"? | Kw<"distinct">? expression) ")"
+}
+
+ExtractExpression {
+  Kw<"extract"> "(" ExtractUnit Kw<"from"> expression ")"
+}
+
+ExtractUnit {
+  Identifier | String
 }
 
 FunctionCall {
