@@ -81,8 +81,8 @@ async function runNode (n: QueryNode) {
       let body = await cacheRead(hash)
       n.callback(translateData(body, n))
     } else if (response.ok) { // cache miss. write it to the cache, and return the data
+      cacheWrite(hash, response.clone()) // clone allows us to write the raw response into the cache
       let body = await response.json()
-      cacheWrite(hash, body)
       n.callback(translateData(body, n)) // nb that translateData modifies in place for performance
     } else { // request failed. Record it
       let isJson = response.headers.get('Content-Type') === 'application/json'

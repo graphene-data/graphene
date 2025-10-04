@@ -30,10 +30,9 @@ export async function cacheRead (hash: string): Promise<any | null> {
   return await resp?.clone().json()
 }
 
-export async function cacheWrite (hash: string, data:any) {
+export async function cacheWrite (hash: string, response:Response) {
   if (!hash) return
   let store = await getCache()
   let expiresAt = Date.now() + TTL_MS
-  let response = new Response(JSON.stringify(data), {headers: {'Content-Type': 'application/json'}})
   await store.put(`https://graphene-cache/${hash}?expires=${expiresAt}`, response)
 }
