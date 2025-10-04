@@ -1,7 +1,13 @@
 import {getColumnUnitSummary} from './getColumnExtents.js'
 import {lookupColumnFormat} from './formatting.js'
 import formatTitle from './formatTitle.js'
-import inferColumnTypes, {EvidenceType, TypeFidelity} from './inferColumnTypes.js'
+
+const EvidenceType = {
+  BOOLEAN: 'boolean',
+  NUMBER: 'number',
+  STRING: 'string',
+  DATE: 'date',
+}
 
 /**
  * @typedef {Object} ColumnSummary
@@ -23,23 +29,22 @@ export default function getColumnSummary (data, returnType = 'object') {
   /** @type {Record<string, ColumnSummary>} */
   let columnSummary = {}
 
-  let types = inferColumnTypes(data)
+  let types = Array.isArray(data?._evidenceColumnTypes) ? data._evidenceColumnTypes : []
 
   for (let colName of Object.keys(data[0])) {
     let evidenceColumnType = types.find(
       (item) => item.name?.toLowerCase() === colName?.toLowerCase(),
     ) ?? {
       name: colName,
-      evidenceType: EvidenceType.NUMBER,
-      typeFidelity: TypeFidelity.INFERRED,
+      evidenceType: EvidenceType.STRING,
     }
     let type = evidenceColumnType.evidenceType
     let columnUnitSummary =
-      evidenceColumnType.evidenceType === 'number'
+      evidenceColumnType.evidenceType === EvidenceType.NUMBER
         ? getColumnUnitSummary(data, colName, true)
         : getColumnUnitSummary(data, colName, false)
 
-    if (evidenceColumnType.evidenceType !== 'number') {
+    if (evidenceColumnType.evidenceType !== EvidenceType.NUMBER) {
       columnUnitSummary.maxDecimals = 0
       columnUnitSummary.unitType = evidenceColumnType.evidenceType
     }
