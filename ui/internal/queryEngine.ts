@@ -13,6 +13,12 @@ interface QueryError {
 interface QueryResult {
   rows?: any[]
   errors?: Error[]
+  fields?: Field[]
+}
+
+interface Field {
+  name: string
+  type?: string
 }
 
 type ResultHandler = (res: QueryResult) => void
@@ -71,14 +77,14 @@ async function runNode (n: QueryNode) {
     })
     let hash = response.headers.get('ETag') || ''
 
-    if (response.status == 304) {
+    if (response.status == 304) { // cache hit. Read it out and use that
       let body = await cacheRead(hash)
       n.callback(translateData(body, n))
-    } else if (response.ok) {
+    } else if (response.ok) { // cache miss. write it to the cache, and return the data
       let body = await response.json()
       cacheWrite(hash, body)
-      n.callback(translateData(body, n))
-    } else {
+      n.callback(translateData(body, n)) // nb that translateData modifies in place for performance
+    } else { // request failed. Record it
       let isJson = response.headers.get('Content-Type') === 'application/json'
       let body = isJson ? await response.json() : await response.text()
       n.errors = Array.isArray(body) ? body : [body]
@@ -106,20 +112,25 @@ async function _runAll () {
 function translateData (data: any, node: QueryNode) {
   let rows = data.rows || []
   rows.dataLoaded = true // evidence components need this to be set
+  rows._evidenceColumnTypes = []
 
-  // translates the executed col names (like `col_3`) back into the expression (like `avg(price)`)
-  Object.keys(rows[0] || {}).forEach(k => {
-    let match = k.match(/^col_(\d+)$/)
-    if (match) {
-      let actual = node.fields[parseInt(match[1])]
+  data.fields.forEach((field, index) => {
+    let name = field.name
+
+    // server gives names like `col_1` to unnamed expressions but we translate it back into the original expression like `avg(price)`
+    if (field.name.match(/col_\d+/)) {
+      name = node.fields[index]
       rows.forEach(r => {
-        r[actual] = r[k]
-        delete r[k]
+        r[name] = r[field.name]
+        delete r[field.name]
       })
     }
+
+    // map graphene types down to the ones evidence expects
+    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type)})
   })
 
-  // translates dates back into js Date
+  // translates dates back into js Date. Do we need this? Or does evidence prefer to get dates as strings?
   rows.forEach(row => {
     Object.keys(row).forEach(key => {
       if (typeof row[key] === 'object' && row[key] && row[key].value) {
@@ -147,6 +158,15 @@ async function waitForQueries (timeout = 20_000) {
     await new Promise(resolve => setTimeout(resolve, 25))
   }
   return !isLoading()
+}
+
+function evidenceType (type: string | undefined) {
+  if (type === 'string') return 'string'
+  if (type === 'number') return 'number'
+  if (type === 'boolean') return 'boolean'
+  if (type ===  'date' || type === 'timestamp') return 'date'
+  console.warn('Unsupported evidence type ' + type)
+  return 'string'
 }
 
 Object.assign(window.$GRAPHENE, {

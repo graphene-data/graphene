@@ -4,7 +4,6 @@ import {CUSTOM_FORMATTING_SETTINGS_CONTEXT_KEY} from './globalContexts'
 import {findImplicitAutoFormat, autoFormat, fallbackFormat, isAutoFormat} from './autoFormatting'
 import {BUILT_IN_FORMATS} from './builtInFormats'
 import {standardizeDateString} from './dateParsing'
-import {inferValueType} from './inferColumnTypes'
 
 const AXIS_FORMATTING_CONTEXT = 'axis'
 const VALUE_FORMATTING_CONTEXT = 'value'
@@ -246,7 +245,14 @@ function maybeExtractFormatTag (columnName) {
  */
 export function fmt (value, format) {
   let formatObj = getFormatObjectFromString(format)
-  let valueType = inferValueType(value)
+  let valueType = valueTypeFromSample(value)
   formatObj.valueType = valueType
   return formatValue(value, formatObj)
+}
+
+function valueTypeFromSample (value) {
+  if (typeof value === 'number') return 'number'
+  if (typeof value === 'boolean') return 'boolean'
+  if (value instanceof Date) return 'date'
+  return 'string'
 }

@@ -151,6 +151,7 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
     return
   }
 
+  if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
   let sql = toSql(queries[0], params)
 
   // If the client already has this data, dont run the query
@@ -163,7 +164,8 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
 
   let connection = await getConnection()
   let queryResults = await connection.runSQL(sql)
-  res.end(JSON.stringify({rows: queryResults.rows, hash}))
+  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
+  res.end(JSON.stringify({rows: queryResults.rows, hash, fields}))
 }
 
 let browserConnections: {url: string, socket: WebSocket}[] = [] // sockets for all open tabs
