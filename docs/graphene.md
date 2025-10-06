@@ -77,4 +77,5 @@ These are the available commands:
 - `npm run cli check` - Checks the syntax for the entire Graphene project.
 - `npm run cli compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
 - `npm run cli run "GSQL"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
-- `npm run cli serve` - Starts the dev server, which allows the user to view their Graphene app on localhost.
+- `npm run cli serve` - Starts (or restarts) the dev server, which allows the user to view their Graphene app on localhost.
+- `npm run cli check <mdPath>` - Captures a screenshot of a given md file, along with any errors encountered.

@@ -1,19 +1,15 @@
 Graphene is new data stack that allows you to define everything in code, from modeling to dashboards.
 
-Why code? Because AI coding agents are really good, and putting your entire data stack in a single repo makes it easy to analyze and change. This repo provides all the pieces that make Graphene work.
-
-At a high level, we provide a superset of sql that allows for defining semantic models and measures, as well some query QoL improvements like `tableA.tableB.someColumn` automatically expanding into the correct join. Users can also create markdown files that turn in to beautiful web-based reports and dashboards that can include custom queries and charts.
-
-If you need to better understand Graphene sql or markdown, you can read @docs/graphene.md.
+Graphene allows you define dashboards, analyses, and interactive data apps in Markdown, and define semantic models and queries in a superset of sql we call Graphene SQL (gsql).
+If you need to know more about Graphene's features, read @docs/graphene.md.
 
 # Repo structure
 * /agent - a wrapper around claude-code used for Graphene's "explore" ux
 * /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
-* /examples - a series of example datasets and graphene code.
+* /examples - a series of example datasets and graphene code. `flights` is the go-to as it's local, fast, and doesn't require auth.
 * /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
 * /ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
 * /vscode - an extension that provides syntax highlighting and diagnostics on queries.
-
 
 # Tech stack
 Graphene is mostly written in typescript. We parse Graphene SQL with Lezer, then translate it to Malloy's IR, and use Malloy to render dialect-specific SQL.
