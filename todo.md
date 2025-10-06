@@ -1,9 +1,6 @@
 ## Soon
-* table formatting doesn't look quite like evidence
-* get the ui tests working again, and maybe a subagent for viewing results?
-* figure out the license (if any) we want to put on the npm package
-* area chart stacking looks weird in flights
-* date axis formatting doesn't look great
+* `view` isn't returning errors anymore
+* `view` doesn't work when the tab isn't active (but maybe could with OffscreenCanvas?)
 * get vscode extension ready to publish
 * add flight/ecomm examples using inputs
 * add ecomm example of more investigative report
@@ -11,20 +8,19 @@
 * Throw an error if you try to redefine an existing table
 * unskip (and fix!) new agg tests
 * Telemetry and error tracking
+* kill server if running when starting `--fg`
 
 ## Eventually
 * rename `table` to `extend`
-* monorepo support for vscode - right now it assumes the editor root is the same as the graphene workspace root
-* allow `graphene` from subdirs - right now we assume that cwd is the root of the graphene project
-* self-ref in measures doesn't seem to work: ie in `table orders`, `sum(orders.amount) as total_amount`
 * figure out why malloy can't use `count_if` in a fanout. What's the workaround it uses for count/sum?
+* monorepo support for vscode - right now it assumes the editor root is the same as the graphene workspace root. What if you have one (or more) graphene projects in subdirs
+* self-ref in measures doesn't seem to work: ie in `table orders`, `sum(orders.amount) as total_amount`
 * metadata propagation - fields in a view should keep the metadata from their original table (assuming it's a plain field, not an expression)
 * handle cycles in measures - measures could refer to joins (or other measures) that haven't been analyzed yet.
 * make `count(col)` behave like regular sql (ie count non-null)
 * create our own date functions: `day`, `month` for truncation, `now()`
 * allow referencing just a join `from users count(orders)` -> should just get count distinct of primary key
 * hover over column/tables to get a rich preview in the browser
-* Queries and expressions in component attributes
 * Report hosting on graphenedata.com (auth, db cred storage, query proxying)
 * Agent evals - test the efficacy of model/prompt/tool changes
 * cache schema info - allows referencing unmodeled tables, dropping dataTypes from gsql
@@ -36,7 +32,6 @@
 * cli: schema search (ft+vec) to find relevant tables/columns
 * custom components
 * materialization
-* vscode commands to run the server
 
 
 ## Workflow improvements
