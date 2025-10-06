@@ -19,18 +19,24 @@ export function findOverloads (name: string, dialect: string): FunctionOverloadD
   return res?.entry ? (res.entry as any).overloads : []
 }
 
-DUCKDB_DIALECT_FUNCTIONS['count_if'] = {
-  takes: {'value': 'boolean'},
-  returns: {measure: 'number'},
-  impl: {function: 'COUNT_IF'},
-}
-
-DUCKDB_DIALECT_FUNCTIONS['if'] = {
-  takes: {'condition': 'boolean', 'trueValue': {generic: 'T'}, 'falseValue': {generic: 'T'}},
-  generic: {'T': ['any']},
-  returns: {generic: 'T'},
-  impl: {function: 'IF'},
-}
+Object.assign(DUCKDB_DIALECT_FUNCTIONS, {
+  'count_if': {
+    takes: {'value': 'boolean'},
+    returns: {measure: 'number'},
+    impl: {function: 'COUNT_IF'},
+  },
+  'if': {
+    takes: {'condition': 'boolean', 'trueValue': {generic: 'T'}, 'falseValue': {generic: 'T'}},
+    generic: {'T': ['any']},
+    returns: {generic: 'T'},
+    impl: {function: 'IF'},
+  },
+  'date_trunc': {
+    takes: {'unit': 'string', 'date': 'timestamp'},
+    returns: 'timestamp',
+    impl: {sql: 'DATE_TRUNC(${unit}, ${date})'},
+  },
+})
 
 export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
   'count_if': {...DUCKDB_DIALECT_FUNCTIONS['count_if']},
