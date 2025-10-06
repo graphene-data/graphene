@@ -1,7 +1,7 @@
 <script lang="ts">
   import QueryLoad from './QueryLoad.svelte'
 
-  export let data: string | any[] | {rows?: any[]}
+  export let data: string | {rows?: any[]}
   export let value: string | undefined = undefined
   export let fmt: string | undefined = undefined
   export let title: string | undefined = undefined
@@ -20,11 +20,21 @@
       return formatter.format(Number(input))
     }
 
+    if (fmt.startsWith('pct')) {
+      let fraction = parseInt(fmt.replace(/[^0-9]/g, '') || '0', 10)
+      let formatter = new Intl.NumberFormat('en-US', {
+        style: 'percent',
+        maximumFractionDigits: fraction,
+        minimumFractionDigits: fraction,
+      })
+      return formatter.format(Number(input))
+    }
+
     return String(input)
   }
 </script>
 
-<QueryLoad {data} fields={value ? [value] : []} let:loaded>
+<QueryLoad {data} fields={[value]} let:loaded>
   <div class="big-value">
     {#if title}<div class="big-value__title">{title}</div>{/if}
     {#if subtitle}<div class="big-value__subtitle">{subtitle}</div>{/if}
