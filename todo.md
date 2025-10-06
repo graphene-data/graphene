@@ -1,6 +1,10 @@
 ## Soon
-* `view` isn't returning errors anymore
 * `view` doesn't work when the tab isn't active (but maybe could with OffscreenCanvas?)
+* table formatting doesn't look quite like evidence
+* get the ui tests working again, and maybe a subagent for viewing results?
+* figure out the license (if any) we want to put on the npm package
+* date axis formatting doesn't look great
+* set up a `common` folder so I can share types/utils between the frontend and backend
 * get vscode extension ready to publish
 * add flight/ecomm examples using inputs
 * add ecomm example of more investigative report
