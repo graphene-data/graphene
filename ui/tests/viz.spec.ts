@@ -6,35 +6,39 @@ import path from 'path'
 let f = path.resolve(fileURLToPath(import.meta.url), '../ordersByCategory.json')
 let ordersByCategory = JSON.parse(fs.readFileSync(f))
 
-test('bar chart', async ({mount, page}) => {
+test('bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: singleDim(), x: 'category', y: 'value'})
+  await expect(chart.el).toHaveScreenshot('bar-chart.png')
 })
 
-test('area chart', async ({mount, page}) => {
+test('area chart', async ({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
-  await expect(page.locator('canvas')).toBeVisible()
+  await expect(chart.el).toHaveScreenshot('area-chart.png')
 })
 
-test('stacked area chart', async ({mount}) => {
+test('stacked area chart', async ({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', series: 'category', type: 'stacked'})
+  await expect(chart.el).toHaveScreenshot('stacked-area-chart.png')
 })
 
-test('line chart timeseries', async ({mount, page, chartConfig}) => {
+test('line chart timeseries', async ({mount, page, chart}) => {
   await mount('components/LineChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(page.locator('canvas')).toBeVisible()
-  let axisType = await chartConfig(c => c.xAxis[0].type)
+  let axisType = await chart.config(c => c.xAxis[0].type)
   expect(axisType).toBe('time')
+  await expect(chart.el).toHaveScreenshot('line-chart-timeseries.png')
 })
 
-test('pie chart', async ({mount, page}) => {
+test('pie chart', async ({mount, chart}) => {
   await mount('components/PieChart.svelte', {data: singleDim(), category: 'category', value: 'value'})
-  await expect(page.locator('canvas')).toBeVisible()
+  await expect(chart.el).toHaveScreenshot('pie-chart.png')
 })
 
-test('big value', async ({mount, page}) => {
+test('big value', async ({mount, page, chart}) => {
   await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', fmt: 'num0', title: 'Sales'})
   await expect(page.getByText('Average Delay')).toBeVisible()
   await expect(page.getByText('8')).toBeVisible()
+  await expect(chart.el).toHaveScreenshot('big-value.png')
 })
 
 test('table', async ({mount, page}) => {
