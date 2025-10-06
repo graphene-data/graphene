@@ -1,5 +1,4 @@
 import {test as base, expect, type Page} from '@playwright/test'
-import fs from 'fs/promises'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import net from 'net'
@@ -12,10 +11,14 @@ process.env.NODE_ENV = 'test'
 export type MountFn = (componentPath: string, props: any) => Promise<void>
 export type ChartConfigFn = <T>(selector: (config: any) => T) => Promise<T | null>
 
-let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-let screenshotRoot = path.join(uiRoot, 'tests', 'snapshots')
+export interface ChartHandle {
+  config: ChartConfigFn
+  el: any
+}
 
-export const test = base.extend<{server: any, mount: MountFn, chartConfig: ChartConfigFn}>({
+let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+
+export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle}>({
   // This boots up our cli server on a unique port for e2e tests.
   // eslint-disable-next-line no-empty-pattern
   server: async ({}, use:any) => {
@@ -75,7 +78,7 @@ export const test = base.extend<{server: any, mount: MountFn, chartConfig: Chart
     // expect(errors).toEqual([])
   },
 
-  chartConfig: async ({page}, use) => {
+  chart: async ({page}, use) => {
     let readConfig: ChartConfigFn = async (selector) => {
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
@@ -92,54 +95,12 @@ export const test = base.extend<{server: any, mount: MountFn, chartConfig: Chart
       }, selectorSource)
     }
 
-    await use(readConfig)
+    await use({
+      config: readConfig,
+      el: page.locator('#app'),
+    })
   },
 })
-
-test.afterEach(async ({page}, testInfo) => {
-  if (!page) return
-  if (testInfo.status === 'skipped' || testInfo.status === 'interrupted') return
-  if (process.env.DEBUG) await page.pause() // DEBUG should pause so we can check out the page
-
-  // Take a screenshot of each test in its final form
-  let filename = [
-    path.basename(testInfo.file ?? '').replace(/\.[^/.]+/g, ''),
-    testInfo.title,
-  ].map(toSlug).join('-') + '.png'
-  let screenshotPath = path.join(screenshotRoot, filename)
-
-  await fs.mkdir(screenshotRoot, {recursive: true})
-  await waitForChartsToRender(page)
-  await page.locator('#app').screenshot({path: screenshotPath})
-
-  // if (process.env.DEBUG || testInfo.config.grep.toString() != '/.*/') {
-  console.log(`screenshot saved to ${testInfo.config.grep.toString()} ${path.relative(uiRoot, screenshotPath)}`)
-  // }
-})
-
-function toSlug (value: string) {
-  let slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-+/g, '-')
-  return slug || null
-}
-
-async function waitForChartsToRender (page: Page) {
-  await page.evaluate(() => new Promise<void>(resolve => {
-    let pendingKey = Symbol.for('graphene.pendingCharts')
-    let waitForIdle = () => {
-      let pending = window[pendingKey]
-      if (!pending || pending.size === 0) {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-        return
-      }
-      requestAnimationFrame(waitForIdle)
-    }
-    waitForIdle()
-  }))
-}
 
 async function getAvailablePort (): Promise<number> {
   return await new Promise((resolve, reject) => {
