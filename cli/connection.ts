@@ -2,6 +2,7 @@ import {config} from '../lang/config.ts'
 import * as fs from 'fs'
 import {type QueryDataRow, type Connection} from '@malloydata/malloy'
 import path from 'path'
+import {DuckDBDateValue} from '@duckdb/node-api'
 
 let connection: Promise<Connection> | null = null
 
@@ -39,6 +40,7 @@ export async function getConnection () {
             if (typeof v === 'bigint') out[k] = Number(v)
             else if (v === null) out[k] = null
             else if (v instanceof DuckDBTimestampValue) out[k] = new Date(Number(v.micros / 1000n))
+            else if (v instanceof DuckDBDateValue) out[k] = new Date(v.toString())
             else if (typeof v === 'object') throw new Error(`Unsupported datatype ${v.constructor?.name}`)
             else out[k] = v
           }
