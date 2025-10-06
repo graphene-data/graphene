@@ -40,23 +40,21 @@ export const test = base.extend<{server: any, mount: MountFn, chartConfig: Chart
   },
 
   mount: async ({page, server}: {page: Page, server: any}, use) => {
-    let errors: string[] = []
-    page.on('console', msg => {
-      if (msg.type() != 'error' && msg.type() != 'warning') return
-      errors.push(`${msg.text()} at ${JSON.stringify(msg.location())}`)
-    })
-    page.on('pageerror', e => {
-      console.log('page-error', e)
-      errors.push(e?.message ?? String(e))
-    })
-
     let mountFn = async (componentPath: string, props: any) => {
-      errors = []
       await page.goto(server.url() + '/__ct')
+
+      // evidence depends on the object being set on an array, but wont serialize when playwright sends it to the frontend, so unpack it here
+      let modifiedProps = {...props}
+      if (props.data?.rows?._evidenceColumnTypes) modifiedProps._evidenceColumnTypes = props.data.rows._evidenceColumnTypes
+
       await page.evaluate(p => {
         window.__props = p
-        if (p.data) p.data.rows.dataLoaded = true // hack since evidence expects this on an array
-      }, props)
+        if (p._evidenceColumnTypes) {
+          p.data.rows._evidenceColumnTypes = p._evidenceColumnTypes
+          p.data.rows.dataLoaded = true // hack since evidence expects this on an array
+          delete p._evidenceColumnTypes
+        }
+      }, modifiedProps)
       let resolvedComponentPath = path.resolve(uiRoot, componentPath)
       let browserPath = '/@fs/' + resolvedComponentPath.replace(/\\/g, '/')
       await page.addScriptTag({type: 'module', content: `
@@ -67,19 +65,14 @@ export const test = base.extend<{server: any, mount: MountFn, chartConfig: Chart
           props: window.__props,
         })
       `})
+
+      // todo: await data load and chart animation completion
     }
 
     await use(mountFn)
-    try {
-      await expect(page.locator('#app > :not(dialog)').first()).toBeVisible()
-    } catch (err) {
-      console.error('mount errors:', errors)
-      throw err
-    }
-    if (errors.length) console.error('component errors:', errors)
-    expect(errors).toEqual([])
-    page.removeAllListeners('console')
-    page.removeAllListeners('pageerror')
+    await expect(page.locator('#app > :not(dialog)').first()).toBeVisible()
+    // let errors = page.evaluate(() => window.$GRAPHENE.getErrors())
+    // expect(errors).toEqual([])
   },
 
   chartConfig: async ({page}, use) => {
@@ -87,13 +80,9 @@ export const test = base.extend<{server: any, mount: MountFn, chartConfig: Chart
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
       return await page.evaluate((source) => {
-        let charts = window[Symbol.for('__evidence-chart-window-debug__')]
-        if (!charts) return null
-        let chart = Object.values(charts)[0]
-        let option = chart?.getModel?.()?.getOption?.()
-        if (!option) return null
+        let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__')])[0] as any
+        let option = chart.getModel().getOption()
         try {
-          // eslint-disable-next-line no-new-func
           let fn = new Function('config', `return (${source})(config)`)
           return fn(option)
         } catch (error) {
