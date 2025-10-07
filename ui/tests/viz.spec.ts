@@ -45,8 +45,8 @@ test('pie chart', async ({mount, chart}) => {
 
 test('big value', async ({mount, page, chart}) => {
   await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', fmt: 'num0', title: 'Sales'})
-  await expect(page.getByText('Average Delay')).toBeVisible()
-  await expect(page.getByText('8')).toBeVisible()
+  await expect(page.getByText('Sales')).toBeVisible()
+  await expect(page.getByText('611,113')).toBeVisible()
   await expect(chart.el).toHaveScreenshot('big-value.png')
 })
 
@@ -55,7 +55,7 @@ test('table', async ({mount, page}) => {
   await waitForGrapheneQueries(page)
   let table = page.locator('[data-testid="DataTable-no-id"] table')
   await expect(table).toBeVisible()
-  await expect(table.getByRole('cell', {name: 'SFO'}).first()).toBeVisible()
+  await expect(table.getByRole('cell').first()).toHaveText('2021-01-01')
 })
 
 function singleDim () {
