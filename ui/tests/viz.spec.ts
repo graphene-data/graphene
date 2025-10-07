@@ -17,6 +17,7 @@ test('bar chart', async ({mount, chart}) => {
 
 test('horizontal bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: singleDim(), x: 'category', y: 'value', swapXY: true})
+  await expect(chart.el).toHaveScreenshot('horizontal-bar-chart.png')
 })
 
 test('area chart', async ({mount, chart}) => {
