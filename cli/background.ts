@@ -5,7 +5,6 @@ import path from 'path'
 
 export async function runServeInBackground (): Promise<void> {
   let grapheneCache = path.join(process.cwd(), 'node_modules', '.graphene')
-  fs.writeFile(path.join(grapheneCache, 'wtf'), String(process.env.NODE_ENV))
   let pidFile = path.join(grapheneCache, process.env.NODE_ENV == 'test' ? 'test.pid' : 'serve.pid')
   let logFile = path.join(grapheneCache, 'serve.log')
   await fs.ensureDir(grapheneCache)
