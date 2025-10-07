@@ -1,7 +1,7 @@
 import {test, expect, waitForGrapheneQueries} from './fixtures'
 
 test('it can explore with a mocked agent response', async ({server, page}) => {
-  await page.goto(server.url() + '/explore')
+  await page.goto(await server.url() + '/explore')
   let promptBox = page.locator('textarea')
   await promptBox.fill('mock')
   await promptBox.press('Enter')

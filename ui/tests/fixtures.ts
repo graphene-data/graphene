@@ -3,6 +3,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import net from 'net'
 import {setConfig} from '../../lang/config.ts'
+import {serve2, mockFileMap} from '../../cli/serve2.ts'
 
 export {expect}
 
@@ -17,34 +18,35 @@ export interface ChartHandle {
 }
 
 let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+let sharedPort, sharedServer
 
 export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle}>({
   // This boots up our cli server on a unique port for e2e tests.
   // eslint-disable-next-line no-empty-pattern
   server: async ({}, use:any) => {
-    let mod = await import('../../cli/serve2.ts')
-    let port = await getAvailablePort()
-    let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
     let server: any
-
-    setConfig({dialect: 'duckdb', port, root})
-    Object.keys(mod.mockFileMap).forEach((key) => delete mod.mockFileMap[key])
+    let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
+    Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
 
     try {
-      server = await mod.serve2()
       await use({
-        url: () => `http://localhost:${port}`,
-        mockFile: (path:string, content:string) => mod.mockFileMap[path] = trimIndentation(content),
+        url: async () => {
+          let port = await getAvailablePort()
+          setConfig({dialect: 'duckdb', port, root})
+          server = await serve2()
+          return `http://localhost:${port}`
+        },
+        mockFile: (path:string, content:string) => mockFileMap[path] = trimIndentation(content),
       })
     } finally {
-      Object.keys(mod.mockFileMap).forEach((key) => delete mod.mockFileMap[key])
+      Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
       await server?.close()
     }
   },
 
-  mount: async ({page, server}: {page: Page, server: any}, use) => {
+  mount: async ({page}: {page: Page}, use) => {
     let mountFn = async (componentPath: string, props: any) => {
-      await page.goto(server.url() + '/__ct')
+      await page.goto(`http://localhost:${sharedPort}/__ct`)
 
       // evidence depends on the object being set on an array, but wont serialize when playwright sends it to the frontend, so unpack it here
       let modifiedProps = {...props}
@@ -100,6 +102,17 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
       el: page.locator('#app'),
     })
   },
+})
+
+test.beforeAll(async () => {
+  sharedPort = await getAvailablePort()
+  let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
+  setConfig({dialect: 'duckdb', port: sharedPort, root})
+  sharedServer = await serve2()
+})
+
+test.afterAll(async () => {
+  await sharedServer?.close()
 })
 
 async function getAvailablePort (): Promise<number> {

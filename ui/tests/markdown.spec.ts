@@ -1,11 +1,18 @@
 import {test, expect, waitForGrapheneQueries} from './fixtures'
 
 test('loads markdown files without errors', async ({server, page}) => {
-  await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
-  await waitForGrapheneQueries(page)
+  await server.mockFile('/index.md', `
+    # Flight Delay Analysis
 
-  await expect(page.locator('main table').first()).toBeVisible()
+    \`\`\`gsql delays
+    select carrier, avg(dep_delay) as delay from flights
+    \`\`\`
+
+    <BarChart data="delays" x="carrier" y="delay" />
+  `)
+  await page.goto(await server.url() + '/')
+  await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
+  await expect(page.locator('main canvas').first()).toBeVisible()
 
   let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
   expect(errors).toEqual([])
@@ -23,7 +30,7 @@ test('reports query errors to the runtime error buffer', async ({server, page}) 
 
     <BarChart data="broken_query" x="origin" y="boom" />
   `)
-  await page.goto(server.url() + '/')
+  await page.goto(await server.url() + '/')
   await waitForGrapheneQueries(page)
 
   let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
