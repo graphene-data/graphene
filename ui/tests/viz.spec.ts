@@ -6,9 +6,17 @@ import path from 'path'
 let f = path.resolve(fileURLToPath(import.meta.url), '../ordersByCategory.json')
 let ordersByCategory = JSON.parse(fs.readFileSync(f))
 
+test.use({
+  viewport: {width: 680, height: 400},
+})
+
 test('bar chart', async ({mount, chart}) => {
-  await mount('components/BarChart.svelte', {data: singleDim(), x: 'category', y: 'value'})
+  await mount('components/BarChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(chart.el).toHaveScreenshot('bar-chart.png')
+})
+
+test('horizontal bar chart', async ({mount, chart}) => {
+  await mount('components/BarChart.svelte', {data: singleDim(), x: 'category', y: 'value', swapXY: true})
 })
 
 test('area chart', async ({mount, chart}) => {

@@ -850,7 +850,7 @@
           throw Error('chartAreaHeight must be a positive number')
         }
       } else {
-        chartAreaHeight = 180
+        chartAreaHeight = 220
       }
 
       hasTitle = title ? true : false
