@@ -2,6 +2,7 @@
 **/out/**
 **/dist/**
 examples/**/package-lock.json
+ui/test-results
 cli/*.tgz
 
 notes.md
