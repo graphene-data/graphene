@@ -1,6 +1,6 @@
 import {test, expect, waitForGrapheneQueries} from './fixtures'
 
-test('loads markdown files without errors', async ({server, page}) => {
+test('loads markdown files', async ({server, page}) => {
   await server.mockFile('/index.md', `
     # Flight Delay Analysis
 
@@ -16,9 +16,10 @@ test('loads markdown files without errors', async ({server, page}) => {
 
   let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
   expect(errors).toEqual([])
+  await expect(page).toHaveScreenshot('loads-markdown-files.png')
 })
 
-test('reports query errors to the runtime error buffer', async ({server, page}) => {
+test('reports query errors', async ({server, page}) => {
   server.mockFile('/index.md', `
     # Broken Dashboard
 
@@ -35,4 +36,5 @@ test('reports query errors to the runtime error buffer', async ({server, page}) 
 
   let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
   expect(errors.length).toBeGreaterThan(0)
+  await expect(page).toHaveScreenshot('reports-query-errors.png')
 })
