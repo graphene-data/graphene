@@ -24,9 +24,7 @@ For local development, the cli starts a vite server to host your md files and ex
 # Testing
 Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test` in that directory.
 
-For UI development, use tests and screenshots to ensure things work as expected. When you run a single test (like `pnpm test -g "bar char"`) we automatically capture a screenshot and print out the path. Use `reviewImage` and tell it what you're expecting to see and what it should check for.
-
-While tests are preferred, you can also always test UI by starting up the graphene server and loading a page via the Playwright MCP. Both the `flights` and `ecomm` examples are useful for testing things. Always use the Playwright mcp for viewing webpages.
+UI tests use playwright. All component or e2e tests should capture a screenshot, and you can look in both `ui/tests/snapshots` and `ui/test-results` to get an image of the component you've changed. Use a subagent or `reviewImage` to inspect components and see if they're rendering as expected.
 
 Often, it's helpful to know how Malloy would compile given to to it's IR. `node scripts/howDoesMalloy.ts` will print out the final SQL, along with the IR. There's some example code within `howDoesMalloy` that gets run, and it's easiest to just modify this to your needs before running.
 

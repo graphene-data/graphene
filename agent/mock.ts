@@ -1,8 +1,10 @@
-export const MockMessages = [
+import {config} from '../lang/config.ts'
+
+const templateMessages = [
   {
     type: 'system',
     subtype: 'init',
-    cwd: '/Users/grant/co/graphene/.wt/loveable/examples/flights',
+    cwd: '/graphene/examples/flights',
     session_id: 'c4f18f53-e918-4e9b-bcb3-177a1f39f5f7',
     tools: [
       'Task',         'Bash',
@@ -96,7 +98,7 @@ export const MockMessages = [
         {
           tool_use_id: 'toolu_01Hj5FqS3knaD52XywPBNVoT',
           type: 'tool_result',
-          content: '/Users/grant/co/graphene/.wt/loveable/examples/flights/models.gsql',
+          content: '/graphene/examples/flights/models.gsql',
         },
       ],
     },
@@ -117,7 +119,7 @@ export const MockMessages = [
           id: 'toolu_01L5WKGWihHhCu5a1JHv4n9z',
           name: 'Read',
           input: {
-            file_path: '/Users/grant/co/graphene/.wt/loveable/examples/flights/models.gsql',
+            file_path: '/graphene/examples/flights/models.gsql',
           },
         },
       ],
@@ -316,7 +318,7 @@ export const MockMessages = [
           id: 'toolu_01BhZNNdUGMzUhitYbrXa1hK',
           name: 'Write',
           input: {
-            file_path: '/Users/grant/co/graphene/.wt/loveable/examples/flights/index.md',
+            file_path: '/graphene/examples/flights/index.md',
             content: '# Flight Delays by Carrier Analysis\n' +
             '\n' +
             'This analysis examines flight delays across different airline carriers, looking at both departure and arrival delays to identify patterns and performance differences.\n' +
@@ -435,7 +437,7 @@ export const MockMessages = [
         {
           tool_use_id: 'toolu_01BhZNNdUGMzUhitYbrXa1hK',
           type: 'tool_result',
-          content: 'File created successfully at: /Users/grant/co/graphene/.wt/loveable/examples/flights/index.md',
+          content: 'File created successfully at: /graphene/examples/flights/index.md',
         },
       ],
     },
@@ -520,3 +522,14 @@ export const MockMessages = [
     uuid: '57271be1-defe-4f76-b821-c307b774674b',
   },
 ]
+
+export function getMockMessages () {
+  let output = structuredClone(templateMessages)
+  output.forEach((m:any) => {
+    if (m.message?.content?.[0].input?.file_path == '/graphene/examples/flights/index.md') {
+      let testMock = process.env.NODE_ENV == 'test' ? '?mock' : '' // without this param, vite won't hit our test mocking resolver
+      m.message.content[0].input.file_path = `${config.root}/index.md${testMock}`
+    }
+  })
+  return output
+}
