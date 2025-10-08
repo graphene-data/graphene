@@ -157,7 +157,7 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
   // If the client already has this data, dont run the query
   let hash = crypto.createHash('SHA1').update(sql).digest('hex')
   res.setHeader('ETag', hash)
-  if (hashes.includes(hash)) {
+  if (hashes.includes(hash) && req.headers['cache-control'] != 'no-cache') {
     res.statusCode = 304
     return res.end()
   }
