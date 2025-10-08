@@ -12,7 +12,7 @@ export async function handleAgentRequest (req: IncomingMessage, res: ServerRespo
 
   if (inputPrompt == 'mock') {
     let mod = await import('./mock.ts')
-    for (let msg of mod.MockMessages) {
+    for (let msg of mod.getMockMessages()) {
       res.write(JSON.stringify(msg) + '\n')
       await new Promise(r => setTimeout(r, 50))
     }

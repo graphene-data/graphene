@@ -16,9 +16,9 @@ test('explore with a mocked agent response', async ({server, page}) => {
   await promptBox.press('Enter')
 
   await expect(page.locator('.message-assistant')).toContainText("I'll analyze flight delays by carrier for you.")
-  await expect(page.locator('.message-tool')).toContainText('Glob')
+  await expect(page.locator('.message-tool').first()).toContainText('Glob')
 
   await waitForGrapheneQueries(page)
   await expect(page.locator('main h1')).toHaveText('Flight Delay Analysis')
-  await expect(page.locator('main table').first()).toBeVisible()
+  await expect(page.locator('.echarts-container').first()).toBeVisible({timeout: 10_000})
 })
