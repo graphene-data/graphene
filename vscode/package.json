@@ -36,7 +36,7 @@
   "scripts": {
     "build": "node ./esbuild.mjs",
     "vscode:prepublish": "npm run build",
-    "package": "rm -f -- *.vsix(N) && vsce package",
+    "package": "rm -f -- *.vsix && vsce package",
     "install-cursor": "npm run package && cursor --install-extension *.vsix",
     "install-vscode": "npm run package && code --install-extension *.vsix"
   },
