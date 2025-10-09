@@ -17,7 +17,6 @@ import type {FileInfo} from './types.ts'
 
 const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'series', 'value', 'category'] as const
 type ComponentAttributeKey = typeof COMPONENT_ATTRIBUTE_KEYS[number]
-const REQUIRED_COMPONENT_ATTRIBUTE_KEYS = ['x', 'y'] as const satisfies readonly ComponentAttributeKey[]
 
 const GSQL_FENCE = /^([ \t]*)(`{3,})g?sql[^\n]*\n([\s\S]*?)^\1\2[ \t]*$/gim
 const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+[^>]*\/>/g
@@ -117,7 +116,8 @@ export function parseMarkdown (fi: FileInfo) {
 
     let component = event as ComponentMatch
     let {data, attributes} = component
-    if (data && REQUIRED_COMPONENT_ATTRIBUTE_KEYS.every(key => attributes[key])) {
+    let hasComponentAttribute = COMPONENT_ATTRIBUTE_KEYS.some(key => attributes[key] !== undefined)
+    if (data && hasComponentAttribute) {
       appendMapped('from ', () => component.start, {reset: component.start - 1})
       appendMapped(data.value, (i: number) => data.start + i, {reset: data.start - 1})
       appendMapped(' select ', () => component.start)
@@ -134,7 +134,13 @@ export function parseMarkdown (fi: FileInfo) {
         previousAttr = attribute
       }
 
-      appendMapped(';\n', () => component.end, {reset: component.end - 1})
+      let lastAttr = previousAttr
+      let selectEnd = lastAttr ? lastAttr.start + lastAttr.value.length : (data.start + data.value.length)
+      let resetPoint = (lastAttr ? lastAttr.start + lastAttr.value.length - 1 : data.start + data.value.length - 1)
+      appendMapped(';\n', (i: number) => {
+        if (i === 0) return selectEnd
+        return component.end
+      }, {reset: resetPoint})
     }
     cursor = component.end
   }
