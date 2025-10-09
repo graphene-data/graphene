@@ -15,7 +15,7 @@ import type {FileInfo} from './types.ts'
 //
 // Only components with a `data` attribute get turned into queries, and only attributes in a static list are fields to select.
 
-const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'series'] as const
+const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'series', 'value', 'category'] as const
 type ComponentAttributeKey = typeof COMPONENT_ATTRIBUTE_KEYS[number]
 const REQUIRED_COMPONENT_ATTRIBUTE_KEYS = ['x', 'y'] as const satisfies readonly ComponentAttributeKey[]
 
@@ -53,26 +53,44 @@ export function parseMarkdown (fi: FileInfo) {
   let virtual: string[] = []
   let mapping: number[] = []
   let cursor = 0
+  let lastMapped = -1
+  let maxOffset = source.length
+
+  let push = (ch: string, target: number) => {
+    let mapped = target
+    if (mapped <= lastMapped) mapped = lastMapped + 1
+    if (mapped > maxOffset) mapped = maxOffset
+    virtual.push(ch)
+    mapping.push(mapped)
+    lastMapped = mapped
+  }
+
+  let resetLast = (value: number) => {
+    lastMapped = value
+  }
 
   let appendWhitespace = (start: number, end: number) => {
+    resetLast(start - 1)
     for (let i = start; i < end; i++) {
       let ch = source[i]
-      virtual.push(ch === '\n' || ch === '\r' ? ch : ' ')
-      mapping.push(i)
+      push(ch === '\n' || ch === '\r' ? ch : ' ', i)
     }
   }
 
-  let appendMapped = (text: string, mapFn: (i: number) => number) => {
+  let appendMapped = (text: string, mapFn: (i: number) => number, options?: {reset?: number}) => {
+    if (options?.reset !== undefined) resetLast(options.reset)
     for (let i = 0; i < text.length; i++) {
-      virtual.push(text[i])
-      mapping.push(mapFn(i))
+      push(text[i], mapFn(i))
     }
   }
 
   let appendContent = (text: string, contentStart: number) => {
+    resetLast(contentStart - 1)
     for (let i = 0; i < text.length; i++) {
+      let target = contentStart + i
       virtual.push(text[i])
-      mapping.push(contentStart + i)
+      mapping.push(target)
+      lastMapped = target
     }
   }
 
@@ -86,10 +104,10 @@ export function parseMarkdown (fi: FileInfo) {
       let contentStart = fence.contentStart
       let content = fence.content
       if (fence.name) {
-        appendMapped(`table ${fence.name} as (\n`, () => contentStart)
+        appendMapped(`table ${fence.name} as (\n`, () => contentStart, {reset: contentStart - 1})
         appendContent(content, contentStart)
-        if (!content.endsWith('\n')) appendMapped('\n', () => contentStart + content.length)
-        appendMapped(')\n', () => fence.end - 1)
+        if (!content.endsWith('\n')) appendMapped('\n', () => contentStart + content.length, {reset: contentStart + content.length - 1})
+        appendMapped(')\n', () => fence.end - 1, {reset: fence.end - 2})
       } else {
         appendContent(content, contentStart)
       }
@@ -100,20 +118,23 @@ export function parseMarkdown (fi: FileInfo) {
     let component = event as ComponentMatch
     let {data, attributes} = component
     if (data && REQUIRED_COMPONENT_ATTRIBUTE_KEYS.every(key => attributes[key])) {
-      appendMapped('from ', () => component.start)
-      appendMapped(data.value, (i: number) => data.start + i)
+      appendMapped('from ', () => component.start, {reset: component.start - 1})
+      appendMapped(data.value, (i: number) => data.start + i, {reset: data.start - 1})
       appendMapped(' select ', () => component.start)
 
-      let appended = 0
+      let previousAttr: AttrMatch | null = null
       for (let key of COMPONENT_ATTRIBUTE_KEYS) {
         let attribute = attributes[key]
         if (!attribute) continue
-        if (appended > 0) appendMapped(', ', () => component.start)
-        appendMapped(attribute.value, (i: number) => attribute.start + i)
-        appended += 1
+        if (previousAttr) {
+          let prevEnd = previousAttr.start + previousAttr.value.length
+          appendMapped(', ', () => prevEnd)
+        }
+        appendMapped(attribute.value, (i: number) => attribute.start + i, {reset: attribute.start - 1})
+        previousAttr = attribute
       }
 
-      appendMapped(';\n', () => component.end)
+      appendMapped(';\n', () => component.end, {reset: component.end - 1})
     }
     cursor = component.end
   }
