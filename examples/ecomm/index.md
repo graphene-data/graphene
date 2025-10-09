@@ -44,7 +44,7 @@ from orders select date_trunc(created_at, week) as week, aov, shipped_rate, deli
 </Row>
 
 ```sql top_products
-from products select name, units_sold, product_revenue, gross_margin_pct, return_rate order by 3 desc limit 15
+from products select name, units_sold, product_revenue, gross_margin_pct, return_rate order by 3 desc limit 30
 ```
 
 <Table data="top_products" title="Top Products"/>
