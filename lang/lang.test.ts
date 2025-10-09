@@ -477,6 +477,16 @@ describe('lang', () => {
     expect(errors[0].to.col).toBe(27)
   })
 
+  it('marks markdown component attribute errors across the attribute value', () => {
+    analyze('<BarChart data="users" x="code" y="age" />', 'md')
+    let errors = getDiagnostics()
+    expect(errors.length).toBe(1)
+    expect(errors[0].message).toContain('Could not find "code"')
+    expect(errors[0].from.line).toBe(0)
+    expect(errors[0].from.col).toBe(26)
+    expect(errors[0].to.col).toBe(errors[0].from.col + 4)
+  })
+
   it('handles params in a md code fence', () => {
     let queries = analyze('```gsql test\nfrom users where age > $cutoff\n```\n<BarChart data="test" x="name" y="avg(age)" />', 'md')
     let sql = toSql(queries[0], {cutoff: 20})
