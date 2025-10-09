@@ -68,9 +68,15 @@ Those queries can use any models defined in .gsql files. When possible, it's pre
 
 ## Components
 Currently Graphene has the following components available for use.
-- BarChart, LineChart, AreaChart
+- [BarChart](./data_apps/components/charts/bar-chart.md)
+- [LineChart](./data_apps/components/charts/line-chart.md)
+- [AreaChart](./data_apps/components/charts/area-chart.md)
 - PieChart - takes a `category` and `value` attribute
 - Row - evenly distributes its children in a row
+- [DateRange](./data_apps/components/inputs/date-range.md)
+- [BigValue](./data_apps/components/data/big-value.md)
+- [DataTable](./data_apps/components/data/data-table.md)
+- [TextInput](./data_apps/components/inputs/text-input.md)
 
 # Using the Graphene CLI
 These are the available commands:
