@@ -27,7 +27,7 @@ export function getDiagnostics () { return diagnostics }
 export async function loadWorkspace (dir:string, includeMd: boolean) {
   // It'd be inefficient for `graphene serve` to watch all md files, since we always treat the running page as `input`.
   // But we do want to watch md files for the vscode extension and `graphene check`
-  let files = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir})
+  let files = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore: ['node_modules/**']})
   for await (let file of files) {
     let contents = await readFile(path.join(dir, file), 'utf-8')
     updateFile(contents, file)
