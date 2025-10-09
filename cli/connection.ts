@@ -13,7 +13,7 @@ export async function getConnection () {
     let mod = await import('@malloydata/db-bigquery')
     // not exactly sure the difference between these, but if you don't specify billingProjectId, it will fail to connect.
     let cfg = {projectId: config.googleProjectId, billingProjectId: config.googleProjectId}
-    let c = new mod.BigQueryConnection('bigQuery', undefined, cfg) as Connection
+    let c = new mod.BigQueryConnection('bigQuery', {rowLimit: 1000}, cfg) as Connection
     connection = Promise.resolve(c)
     return c
   }
