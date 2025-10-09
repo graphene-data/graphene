@@ -456,7 +456,7 @@ function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutpu
     return {fields: [outField], inOutput: true}
   }
 
-  return diag(ref, `Could not find ${fieldName} on ${curr.table.name}`, def)
+  return diag(ref, `Could not find "${fieldName}" on ${curr.table.name}`, def)
 }
 
 function lookupTable (name: string, node: SyntaxNode): Table | void {
