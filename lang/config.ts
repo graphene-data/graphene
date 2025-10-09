@@ -37,11 +37,3 @@ export function loadConfig (dir:string) {
     root: packageJsonObject.root || process.cwd(),
   })
 }
-
-const kwMap = {
-  bigquery: new Set(['DAY', 'HOUR', 'MINUTE', 'SECOND', 'YEAR', 'MONTH', 'WEEK', 'DAY_OF_WEEK', 'DAY_OF_YEAR', 'QUARTER']),
-  empty: new Set(),
-}
-export function dialectKeyword (str: string) {
-  return (kwMap[config.dialect] || kwMap.empty).has(str.toUpperCase())
-}
