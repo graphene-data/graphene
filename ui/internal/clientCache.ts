@@ -33,6 +33,11 @@ export async function cacheRead (hash: string): Promise<any | null> {
 export async function cacheWrite (hash: string, response:Response) {
   if (!hash) return
   let store = await getCache()
+
+  // remove any older versions of this query from the cache. This can happen if you force the query to ignore cache.
+  let existing = await store.keys(`https://graphene-cache/${hash}`, {ignoreSearch: true})
+  existing.forEach(key => store.delete(key))
+
   let expiresAt = Date.now() + TTL_MS
   await store.put(`https://graphene-cache/${hash}?expires=${expiresAt}`, response)
 }
