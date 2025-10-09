@@ -20,6 +20,10 @@ For local development, the cli starts a vite server to host your md files and ex
 * Never install dependencies. Always ask the user to install them.
 * Don't grep for files or read code in node_modules. If it seems necessary, stop with a clear explanation of what you need and why.
 * To review images or screenshots, use `node scripts/reviewImage.ts "<prompt>" --<label>=<image-path>`. The prompt tells it what you'd like it to look for in the images. You can provide multiple labeled images (for example, to compare a baseline screenshot to a version with changes).
+* Write a draft `.gitcommit` for changes you make. As we iterate on a change, keep this draft up to date.
+
+# Bugfixes
+Explain clearly what the underlying issue is, and how your fix addresses it. Ensure there's a test covering the issue, and that the tests pass. Write a draft to `.gitcommit` that explains the observed behaviour and the underlying fix. Your summary should include any other solutions you considered, and why you picked the one you did. This draft should be clear but succinct.
 
 # Testing
 Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test` in that directory.
@@ -37,7 +41,7 @@ In Graphene, our primary stylistic goal is "high-level readability". We want to 
 Your first pass at an implementation should usually be the easiest thing that solves the problem in front of you. We can always add complexity later as needed.
 
 ### Avoid indirection
-When it's easy to inline a bit of code, prefer that over making tons of small functions.
+When it's easy to inline a bit of code, prefer that over making tons of small functions. This is also true for files, avoid creating tons of files/folders that will have very little in them.
 
 ### Vertically compact
 It's easier to read 2-3 wide lines than 10 narrow ones.
