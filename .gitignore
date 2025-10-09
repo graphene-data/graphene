@@ -4,6 +4,7 @@
 examples/**/package-lock.json
 ui/test-results
 cli/*.tgz
+.gitcommit
 
 notes.md
 .DS_Store
