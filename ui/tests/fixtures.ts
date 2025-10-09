@@ -115,6 +115,10 @@ test.afterAll(async () => {
   await sharedServer?.close()
 })
 
+test.afterEach(async ({page}) => {
+  if (process.env.DEBUG) await page.pause()
+})
+
 async function getAvailablePort (): Promise<number> {
   return await new Promise((resolve, reject) => {
     let srv = net.createServer()
