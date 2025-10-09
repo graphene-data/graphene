@@ -164,8 +164,9 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
 
   let connection = await getConnection()
   let queryResults = await connection.runSQL(sql)
+  if (queryResults.totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
   let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
-  res.end(JSON.stringify({rows: queryResults.rows, hash, fields}))
+  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
 
 let browserConnections: {url: string, socket: WebSocket}[] = [] // sockets for all open tabs
