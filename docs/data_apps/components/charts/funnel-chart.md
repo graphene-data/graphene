@@ -10,7 +10,7 @@ Use funnel charts to display a single metric across a series of stages. Funnel c
 
 ```markdown
 <FunnelChart 
-    data={funnel_data} 
+    data="funnel_data" 
     nameCol=stage
     valueCol=customers
 />
@@ -24,7 +24,7 @@ Use funnel charts to display a single metric across a series of stages. Funnel c
 
 ```markdown
 <FunnelChart 
-    data={funnel_data} 
+    data="funnel_data" 
     nameCol=stage
     valueCol=customers
     funnelSort=ascending
@@ -37,7 +37,7 @@ Use funnel charts to display a single metric across a series of stages. Funnel c
 
 ```markdown
 <FunnelChart 
-    data={funnel_data} 
+    data="funnel_data" 
     nameCol=stage
     valueCol=customers
     funnelAlign=left
@@ -50,7 +50,7 @@ Use funnel charts to display a single metric across a series of stages. Funnel c
 
 ```markdown
 <FunnelChart 
-    data={funnel_data} 
+    data="funnel_data" 
     nameCol=stage
     valueCol=customers
     showPercent=true

@@ -10,10 +10,10 @@ Use the grid component to arrange components in a grid with a specified number o
 
 ```svelte
 <Grid cols=2>
-    <LineChart data={orders_by_category} x=order_month y=orders/>
-    <BarChart data={orders_by_category} x=order_month y=orders fillColor=#00b4e0/>
-    <ScatterPlot data={orders_by_category} x=order_month y=orders fillColor=#015c08/>
-    <AreaChart data={orders_by_category} x=order_month y=orders fillColor=#b8645e lineColor=#b8645e/>
+    <LineChart data="orders_by_category" x=order_month y=orders/>
+    <BarChart data="orders_by_category" x=order_month y=orders fillColor=#00b4e0/>
+    <ScatterPlot data="orders_by_category" x=order_month y=orders fillColor=#015c08/>
+    <AreaChart data="orders_by_category" x=order_month y=orders fillColor=#b8645e lineColor=#b8645e/>
 </Grid>
 ```
 
@@ -27,10 +27,10 @@ For example:
 
 ```html
 <Grid cols=2>
-    <LineChart data={orders_by_category} x=order_month y=orders/>
+    <LineChart data="orders_by_category" x=order_month y=orders/>
    <Group>
       Some text
-    <BarChart data={orders_by_category} x=order_month y=orders fillColor=#00b4e0/>
+    <BarChart data="orders_by_category" x=order_month y=orders fillColor=#00b4e0/>
    </Group>
 </Grid>
 ```

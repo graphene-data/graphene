@@ -27,7 +27,7 @@ On print, inserts a page break - pushing the next content onto the start of a ne
 The purple line chart in this section will print on a new page.
 
 <LineChart 
-    data={orders_by_month} 
+    data="orders_by_month" 
     x=month
     y=sales_usd0k 
 />
@@ -35,7 +35,7 @@ The purple line chart in this section will print on a new page.
 <PageBreak/>
 
 <LineChart 
-    data={orders_by_month} 
+    data="orders_by_month" 
     x=month
     y=sales_usd0k 
     lineColor=purple
@@ -52,8 +52,8 @@ The purple line chart in this section will print on a new page.
 
     The 2 heatmaps below will be printed on the same page if possible
 
-    <Heatmap data={item_channel} x=channel y=item value=orders/>
-    <Heatmap data={item_channel} x=channel y=item value=orders/>
+    <Heatmap data="item_channel" x=channel y=item value=orders/>
+    <Heatmap data="item_channel" x=channel y=item value=orders/>
 </PrintGroup>
 ```
 
@@ -63,14 +63,14 @@ The purple line chart in this section will print on a new page.
 The purple line chart will be hidden on print
 
 <LineChart 
-    data={orders_by_month} 
+    data="orders_by_month" 
     x=month
     y=sales_usd0k 
 />
 
 <PrintGroup hidden=true>
     <LineChart 
-        data={orders_by_month} 
+        data="orders_by_month" 
         x=month
         y=sales_usd0k 
         lineColor=purple

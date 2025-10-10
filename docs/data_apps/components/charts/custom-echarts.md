@@ -30,12 +30,12 @@ ECharts requires the data object to have a specific format. For example in the t
 
 
 ````markdown
-<ECharts config={
+<ECharts config="
     {
       title: {
         text: 'Treemap Example',
         left: 'center'
-      },
+      ",
         tooltip: {
             formatter: '{b}: {c}'
         },
@@ -74,10 +74,10 @@ ECharts requires the data object to have a specific format. For example in the f
 
 
 ````markdown
-<ECharts config={
+<ECharts config="
         {
             tooltip: {
-                formatter: '{b}: {c}'
+                formatter: '{b": {c}'
             },
             series: [
                 {
@@ -101,10 +101,10 @@ ECharts requires the data object to have a specific format. For example in the p
 
 
 ````markdown
-<ECharts config={
+<ECharts config="
     {
         tooltip: {
-            formatter: '{b}: {c} ({d}%)'
+            formatter: '{b": {c} ({d}%)'
         },
         series: [
         {
@@ -128,10 +128,10 @@ ECharts requires the data object to have a specific format. For example in the d
 
 
 ````markdown
-<ECharts config={
+<ECharts config="
     {
         tooltip: {
-            formatter: '{b}: {c} ({d}%)'
+            formatter: '{b": {c} ({d}%)'
         },
       series: [
         {
@@ -304,5 +304,5 @@ let options = {
 };
 </script>
 
-<ECharts config={options}/>
+<ECharts config="options"/>
 ```

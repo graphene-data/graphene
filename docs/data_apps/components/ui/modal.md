@@ -41,7 +41,7 @@ You can include components inside a Modal, like charts or tables:
 ```svelte
 <Modal title='Chart Example' buttonText='Click to See Chart'>
     <LineChart
-        data={orders_by_month}
+        data="orders_by_month"
         x=order_month
         y=sales_usd0k
     />

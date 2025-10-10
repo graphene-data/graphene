@@ -20,7 +20,7 @@ You can combine multiple chart types inside a single `<Chart>` tag to create mix
 This example uses multiple y columns and multiple series types (bar and line)
 
 ```markdown
-<Chart data={fda_recalls}>
+<Chart data="fda_recalls">
     <Bar y=voluntary_recalls/>
     <Line y=fda_recalls/>
 </Chart>
@@ -31,7 +31,7 @@ Because x is the first column in the dataset, an explicit `x` prop is not requir
 This structure also gives you control over the individual series on your chart. For example, if you have a single series running through a component, you can override props specifically for that series. Since the FDA acronym was not fully capitalized above, you can rename that specific series inside the `<Line>` primitive:
 
 ```markdown
-<Chart data={fda_recalls}>
+<Chart data="fda_recalls">
     <Bar y=voluntary_recalls/>
     <Line y=fda_recalls name="FDA Recalls"/>
 </Chart>
@@ -40,7 +40,7 @@ This structure also gives you control over the individual series on your chart. 
 # Chart `<Chart>`
 
 ```markdown
-<Chart data={query_name}>
+<Chart data="query_name">
     Insert primitives here
 </Chart>
 ```
@@ -93,7 +93,7 @@ This structure also gives you control over the individual series on your chart. 
 # Line `<Line/>`
 
 ```markdown
-<Chart data={query_name}>
+<Chart data="query_name">
     <Line/>
 </Chart>
 ```
@@ -118,7 +118,7 @@ This structure also gives you control over the individual series on your chart. 
 # Area `<Area/>`
 
 ```markdown
-<Chart data={query_name}>
+<Chart data="query_name">
     <Area/>
 </Chart>
 ```
@@ -139,7 +139,7 @@ This structure also gives you control over the individual series on your chart. 
 # Bar `<Bar/>`
 
 ```markdown
-<Chart data={query_name}>
+<Chart data="query_name">
     <Bar/>
 </Chart>
 ```
@@ -161,7 +161,7 @@ This structure also gives you control over the individual series on your chart. 
 # Scatter `<Scatter/>`
 
 ```markdown
-<Chart data={query_name}>
+<Chart data="query_name">
     <Scatter/>
 </Chart>
 ```
@@ -183,7 +183,7 @@ This structure also gives you control over the individual series on your chart. 
 # Bubble `<Bubble/>`
 
 ```markdown
-<Chart data={query_name}>
+<Chart data="query_name">
     <Bubble/>
 </Chart>
 ```
@@ -207,7 +207,7 @@ This structure also gives you control over the individual series on your chart. 
 # Hist `<Hist/>`
 
 ```markdown
-<Chart data={query_name}>
+<Chart data="query_name">
     <Hist/>
 </Chart>
 ```
@@ -232,9 +232,9 @@ This structure also gives you control over the individual series on your chart. 
 Mixed type charts can include [annotations](/components/charts/annotations) using the `ReferenceLine` and `ReferenceArea` components. These components are used within a chart component like so:
 
 ```html
-<Chart data={sales_data} x=date y=sales>
+<Chart data="sales_data" x=date y=sales>
   <Line y=sales/>
-  <ReferenceLine data={target_data} y=target label=name/>
+  <ReferenceLine data="target_data" y=target label=name/>
   <ReferenceArea xMin='2020-03-14' xMax='2020-05-01'/>
 </Chart>
 ```

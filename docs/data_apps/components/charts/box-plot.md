@@ -9,7 +9,7 @@ Use box plots to summarize the distribution and range of a metric around the med
 
 ```markdown
 <BoxPlot 
-    data={sales_distribution_by_channel}
+    data="sales_distribution_by_channel"
     name=channel
     intervalBottom=first_quartile
     midpoint=median
@@ -45,7 +45,7 @@ This example table excludes whiskers which would be defined with `min` and `max`
 
 ```markdown
 <BoxPlot 
-    data={sales_distribution_by_channel}
+    data="sales_distribution_by_channel"
     name=channel
     intervalBottom=first_quartile
     midpoint=median
@@ -60,7 +60,7 @@ This example table excludes whiskers which would be defined with `min` and `max`
 
 ```markdown
 <BoxPlot 
-    data={sales_distribution_by_channel}
+    data="sales_distribution_by_channel"
     name=channel
     intervalBottom=first_quartile
     midpoint=median
@@ -76,7 +76,7 @@ This example table excludes whiskers which would be defined with `min` and `max`
 
 ```markdown
 <BoxPlot 
-    data={sales_distribution_by_channel}
+    data="sales_distribution_by_channel"
     name=channel
     min=min
     intervalBottom=first_quartile
@@ -93,7 +93,7 @@ This example table excludes whiskers which would be defined with `min` and `max`
 
 ```markdown
 <BoxPlot 
-    data={sales_distribution_by_channel}
+    data="sales_distribution_by_channel"
     name=channel
     intervalBottom=first_quartile
     midpoint=median
@@ -180,7 +180,7 @@ Box plots can include [annotations](/components/charts/annotations) using the `R
 
 ```html
 <BoxPlot 
-    data={box}
+    data="box"
     name=experiment
     midpoint=value
     confidenceInterval=confidence

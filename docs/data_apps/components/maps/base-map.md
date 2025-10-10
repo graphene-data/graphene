@@ -9,8 +9,8 @@ Combine multiple map layers including areas, points, and bubbles.
 
 ```html
 <BaseMap>
-  <Areas data={la_zip_sales} geoId=ZCTA5CE10 areaCol=zip_code value=sales valueFmt=usd/>
-  <Points data={la_locations} lat=lat long=long color=#179917/>
+  <Areas data="la_zip_sales" geoId=ZCTA5CE10 areaCol=zip_code value=sales valueFmt=usd/>
+  <Points data="la_locations" lat=lat long=long color=#179917/>
 </BaseMap>
 ```
 
@@ -34,7 +34,7 @@ See the pages for [Area Map](/components/maps/area-map), [Point Map](/components
 ```svelte
 <BaseMap>
   <Areas 
-    data={la_zip_sales}
+    data="la_zip_sales"
     areaCol=zip_code
     geoJsonUrl="path/to/your/geoJSON"
     geoId=ZCTA5CE10
@@ -42,7 +42,7 @@ See the pages for [Area Map](/components/maps/area-map), [Point Map](/components
     valueFmt=usd
   />
   <Bubbles 
-    data={la_locations}
+    data="la_locations"
     lat=lat
     long=long
     size=sales
@@ -62,9 +62,9 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 **Example:**
 
 ```svelte
-<BaseMap basemap={`https://tile.openstreetmap.org/{z}/{x}/{y}.png`} attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'>
+<BaseMap basemap="`https://tile.openstreetmap.org/{z"/{x}/{y}.png`} attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'>
     <Points 
-        data={la_locations}
+        data="la_locations"
         lat=lat
         long=long
         value=sales
@@ -86,15 +86,15 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 ```svelte
 <BaseMap>
     <Areas 
-        data={la_zip_sales} 
+        data="la_zip_sales" 
         areaCol=zip_code
         geoJsonUrl='/geo-json/ca_california_zip_codes_geo_1.min.json'
         geoId=ZCTA5CE10
         value=sales
         valueFmt=usd
         height=250
-        tooltip={[
-            {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'},
+        tooltip="[
+            {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'",
             {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'},
             {id: 'zip_code', showColumnName: false, contentType: 'link', linkLabel: 'Click here', valueClass: 'font-bold mt-1'}
         ]}
@@ -109,7 +109,7 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 ```svelte
 <BaseMap>
     <Areas 
-        data={la_zip_sales} 
+        data="la_zip_sales" 
         areaCol=zip_code
         geoJsonUrl='/geo-json/ca_california_zip_codes_geo_1.min.json'
         geoId=ZCTA5CE10
@@ -117,8 +117,8 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
         valueFmt=usd
         height=250
         tooltipType=click
-        tooltip={[
-            {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'},
+        tooltip="[
+            {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'",
             {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'},
             {id: 'link_col', showColumnName: false, contentType: 'link', linkLabel: 'Click here', valueClass: 'font-bold mt-1'}
         ]}
@@ -250,8 +250,8 @@ Use the `<Bubbles/>` component to add an area layer
 #### `tooltip` example:
 
 ```javascript
-tooltip={[
-    {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'},
+tooltip="[
+    {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'",
     {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'},
     {id: 'zip_code', showColumnName: false, contentType: 'link', linkLabel: 'Click here', valueClass: 'font-bold mt-1'}
 ]}

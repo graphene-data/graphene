@@ -8,7 +8,7 @@ Use a Value component to display a formatted value from a query inline in text.
 By default, `Value` will display the value from the first row of the first column of the referenced data.
 
 ```markdown
-<Value data={query_name} /> <!-- First row from the first column -->
+<Value data="query_name" /> <!-- First row from the first column -->
 ```
 
 ## Specifying Rows and Columns
@@ -25,7 +25,7 @@ Optionally supply a `column` and/or a `row` argument to display other values fro
 <!-- Show the **7th row** from column_name -->
 
 <Value 
-    data={query_name}
+    data="query_name"
     column=column_name 
     row=6
 />
@@ -36,8 +36,8 @@ Optionally supply a `column` and/or a `row` argument to display other values fro
 **Markdown:**
 
 ```markdown
-The most recent month of data began <Value data={monthly_orders} />,
-when there were <Value data={monthly_orders} column=orders/> orders.
+The most recent month of data began <Value data="monthly_orders" />,
+when there were <Value data="monthly_orders" column=orders/> orders.
 ```
 
 **Results:**
@@ -62,13 +62,13 @@ Values support basic aggregations such as, `min`, `max`, `median`, `sum`, `avg`
 
 
 ```markdown
-<Value data={orders} column="sales" agg="avg" fmt="usd0" />
+<Value data="orders" column="sales" agg="avg" fmt="usd0" />
 ```
 
 ## Customize Color Values
 
 ```markdown
-<Value data={orders} column="sales" agg="avg" fmt="usd0" color="#85BB65" />
+<Value data="orders" column="sales" agg="avg" fmt="usd0" color="#85BB65" />
 ```
 
 ## Red Negative Values
@@ -77,7 +77,7 @@ Values support basic aggregations such as, `min`, `max`, `median`, `sum`, `avg`
 If the value is negative, the font color will automatically change to red, overriding any color specified by the color prop.
 
 ```markdown
-<Value data={NegativeSales} column="max_sales" agg="avg" fmt="usd0" redNegatives="true" />
+<Value data="NegativeSales" column="max_sales" agg="avg" fmt="usd0" redNegatives="true" />
 ```
 
 ## Options

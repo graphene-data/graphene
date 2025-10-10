@@ -14,7 +14,7 @@ order by sales desc
 **Example:**
 
 ```svelte
-<DownloadData data={categories}/>
+<DownloadData data="categories"/>
 ```
 
 ## Examples
@@ -22,13 +22,13 @@ order by sales desc
 ### Custom Text
 
 ```svelte
-<DownloadData data={categories} text="Click Here"/>
+<DownloadData data="categories" text="Click Here"/>
 ```
 
 ### Custom Query ID
 
 ```svelte
-<DownloadData data={categories} queryID=my_file/>
+<DownloadData data="categories" queryID=my_file/>
 ```
 
 ## Options

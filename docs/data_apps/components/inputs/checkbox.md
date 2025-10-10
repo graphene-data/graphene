@@ -37,7 +37,7 @@ Selected Value: {inputs.name_of_checkbox}
     name=exclude_low_value
 />
 
-<BigValue fmt=num0 value=records_count data={orders}/>
+<BigValue fmt=num0 value=records_count data="orders"/>
 ````
 
 # Checkbox

@@ -9,7 +9,7 @@ Use calendar heatmaps to display how a single metric varies over weeks and month
 
 ```markdown
 <CalendarHeatmap 
-    data={orders_by_day_2021}
+    data="orders_by_day_2021"
     date=day
     value=sales
     title="Calendar Heatmap"
@@ -25,7 +25,7 @@ Use calendar heatmaps to display how a single metric varies over weeks and month
 
 ```markdown
 <CalendarHeatmap 
-    data={orders_by_day}
+    data="orders_by_day"
     date=day
     value=sales
 />
@@ -37,13 +37,13 @@ Use calendar heatmaps to display how a single metric varies over weeks and month
 
 ```markdown
 <CalendarHeatmap
-    data={orders_by_day_2021}
+    data="orders_by_day_2021"
     date=day
     value=sales
-    colorScale={[
+    colorScale="[
         ['rgb(254,234,159)', 'rgb(254,234,159)'],
         ['rgb(218,66,41)', 'rgb(218,66,41)']
-    ]}
+    ]"
 />
 ```
 
@@ -53,7 +53,7 @@ Use calendar heatmaps to display how a single metric varies over weeks and month
 
 ```markdown
 <CalendarHeatmap 
-    data={orders_by_day_2021}
+    data="orders_by_day_2021"
     date=day
     value=sales
     yearLabel=false
