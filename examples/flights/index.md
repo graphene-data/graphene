@@ -2,29 +2,17 @@
 
 Domestic schedules from 2000–2005 give us a broad look at how carriers perform across the network. These views highlight volume, delay trends, and where operations tend to struggle.
 
-```sql flight_summary
-from flights select
-  count(distinct carriers.code) as carrier_count,
-  count() as total_flights,
-  avg(case when dep_delay <= 0 then 1 else 0 end) as on_time_departure_rate,
-  avg(case when arr_delay <= 0 then 1 else 0 end) as on_time_arrival_rate,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(arr_delay) as avg_arrival_delay_minutes,
-  avg(case when is_cancelled then 1 else 0 end) as cancellation_rate,
-  avg(case when is_diverted then 1 else 0 end) as diversion_rate
-```
-
 <Row>
-  <BigValue data="flight_summary" value="total_flights" fmt="num0" title="Flights analyzed" />
-  <BigValue data="flight_summary" value="carrier_count" fmt="num0" title="Number of carriers" />
-  <BigValue data="flight_summary" value="cancellation_rate" fmt="pct1" title="Cancellation rate" downIsGood="true" />
-  <BigValue data="flight_summary" value="diversion_rate" fmt="pct1" title="Diversion rate" downIsGood="true" />
+  <BigValue data="flights" value="count()" fmt="num0" title="Flights analyzed" />
+  <BigValue data="carriers" value="count()" fmt="num0" title="Number of carriers" />
+  <BigValue data="flights" value="cancellation_rate" fmt="pct1" title="Cancellation rate" downIsGood="true" />
+  <BigValue data="flights" value="diversion_rate" fmt="pct1" title="Diversion rate" downIsGood="true" />
 </Row>
 <Row>
-  <BigValue data="flight_summary" value="on_time_departure_rate" fmt="pct1" title="Departures on time" />
-  <BigValue data="flight_summary" value="on_time_arrival_rate" fmt="pct1" title="Arrivals on time" />
-  <BigValue data="flight_summary" value="avg_departure_delay_minutes" fmt="num1" title="Avg departure delay (min)" />
-  <BigValue data="flight_summary" value="avg_arrival_delay_minutes" fmt="num1" title="Avg arrival delay (min)" />
+  <BigValue data="flights" value="on_time_departure_rate" fmt="pct1" title="Departures on time" />
+  <BigValue data="flights" value="on_time_arrival_rate" fmt="pct1" title="Arrivals on time" />
+  <BigValue data="flights" value="avg(dep_delay)" fmt="num1" title="Avg departure delay (min)" />
+  <BigValue data="flights" value="avg(arr_delay)" fmt="num1" title="Avg arrival delay (min)" />
 </Row>
 
 ## Delay Patterns Over Time
