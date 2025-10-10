@@ -10,7 +10,7 @@ To see how to filter a query using a dropdown, see [Filters](/core-concepts/filt
 
 ````markdown
 <Dropdown 
-    data={categories} 
+    data="categories" 
     name=category1 
     value=category_name 
     title="Select a Category" 
@@ -26,7 +26,7 @@ Selected: {inputs.category1.value}
 
 ````markdown
 <Dropdown 
-    data={categories} 
+    data="categories" 
     name=category2 
     value=category_name 
 />
@@ -38,7 +38,7 @@ Selected: {inputs.category2.value}
 
 ````markdown
 <Dropdown 
-    data={categories} 
+    data="categories" 
     name=category3 
     value=category_name 
     title="Select a Category" 
@@ -52,7 +52,7 @@ Selected: {inputs.category3.value}
 
 ````markdown
 <Dropdown
-    data={categories} 
+    data="categories" 
     name=category4
     value=category_name
     title="Select a Category"
@@ -80,7 +80,7 @@ This example uses a column called `abbrev`, which contains an alternate label fo
 
 ````markdown
 <Dropdown
-    data={categories} 
+    data="categories" 
     name=category_abbrev
     value=category_name
     label=abbrev
@@ -101,7 +101,7 @@ Note:
 
 ````markdown
 <Dropdown
-    data={categories} 
+    data="categories" 
     name=category_multi
     value=category_name
     multiple=true
@@ -116,7 +116,7 @@ Selected: {inputs.category_multi.value}
 Starting with this table of orders:
 
 ````markdown
-<DataTable data={order_history}/>
+<DataTable data="order_history"/>
 ````
 
 Use this input to filter the results:
@@ -124,7 +124,7 @@ Use this input to filter the results:
 
 ````markdown
 <Dropdown
-    data={query_name} 
+    data="query_name" 
     name=name_of_dropdown
     value=column_name
 />
@@ -132,14 +132,14 @@ Use this input to filter the results:
 
 Filtered Row Count: {orders_filtered.length}
 
-<DataTable data={orders_filtered}/>
+<DataTable data="orders_filtered"/>
 ````
 
 ### Multiple defaultValues
 
 ````svelte
 <Dropdown
-    data={query_name} 
+    data="query_name" 
     name=name_of_dropdown
     value=column_name
     multiple=true
@@ -155,7 +155,7 @@ Select and return all values in the dropdown list, requires "multiple" prop.
 
 ````markdown
 <Dropdown
-    data={categories} 
+    data="categories" 
     name=category_multi_selectAllByDefault
     value=category_name
     title="Select a Category"

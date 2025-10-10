@@ -1,9 +1,9 @@
 ---
-title: Data Table
+title: Table
 description: Display a richly formatted table of data, in a dense, readable format.
 ---
 
-Use a DataTable component to display a richly formatted table of data from a query. Tables are powerful default choice for data display that allow high information density, and are easy to read.
+Use a Table component to display a richly formatted table of data from a query. Tables are powerful default choice for data display that allow high information density, and are easy to read.
 
 ## Examples
 
@@ -11,19 +11,19 @@ Use a DataTable component to display a richly formatted table of data from a que
 
 
 ```svelte
-<DataTable data={orders_summary}/>
+<Table data="orders_summary"/>
 ```
 
 ### Selecting Specific Columns
 
 ```svelte
-<DataTable data={orders_summary}> 
+<Table data="orders_summary"> 
     <Column id=state title="Sales State"/> 
     <Column id=item/> 
     <Column id=category/> 
     <Column id=sales fmt=usd/> 
     <Column id=channel/> 
-</DataTable>
+</Table>
 ```
 
 ### Custom Column Formatting
@@ -31,39 +31,39 @@ Use a DataTable component to display a richly formatted table of data from a que
 You can use the `fmt` prop to format your columns using [built-in format names or Excel format codes](/core-concepts/formatting)
 
 ```svelte
-<DataTable data={country_summary}>
+<Table data="country_summary">
 	<Column id=country />
 	<Column id=category />
 	<Column id=value_usd fmt=eur/>
     <Column id=yoy title="Y/Y Growth" fmt=pct3/>
-</DataTable>
+</Table>
 ```
 
 ### Search
 
 ```svelte
-<DataTable data={orders_summary} search=true/>
+<Table data="orders_summary" search=true/>
 ```
 
 ### Sort
 
 ```svelte
-<DataTable data={orders_summary} sort="sales desc">
+<Table data="orders_summary" sort="sales desc">
     <Column id=category/> 
     <Column id=item/> 
     <Column id=sales fmt=usd/> 
-</DataTable>
+</Table>
 ```
 
 ### Deltas
 
 ```svelte
-<DataTable data={country_summary}>
+<Table data="country_summary">
 	<Column id=country />
 	<Column id=category />
 	<Column id=value_usd />
     <Column id=yoy contentType=delta fmt=pct title="Y/Y Chg"/>
-</DataTable>
+</Table>
 ```
 
 ### Sparklines
@@ -72,24 +72,24 @@ Sparklines require an array inside a cell of your table. You can create an array
 
 
 ```svelte
-<DataTable data={categories}>
+<Table data="categories">
     <Column id=category/>
     <Column id=sales title="Orders" contentType=sparkline sparkX=date sparkY=sales />
     <Column id=sales title="Sales" contentType=sparkarea sparkX=date sparkY=sales sparkColor=#53768a/>
     <Column id=sales title="AOV" contentType=sparkbar sparkX=date sparkY=sales sparkColor=#97ba99/>
-</DataTable>
+</Table>
 ```
 
 ### Bar Chart Column
 
 ```svelte
-<DataTable data={country_summary}>
+<Table data="country_summary">
 	<Column id=country />
 	<Column id=category align=center/>
 	<Column id=value_usd title="Sales" contentType=bar/>
   	<Column id=value_usd title="Sales" contentType=bar barColor=#aecfaf/>
   	<Column id=value_usd title="Sales" contentType=bar barColor=#ffe08a backgroundColor=#ebebeb/>
-</DataTable>
+</Table>
 ```
 
 ### Total Row
@@ -97,12 +97,12 @@ Sparklines require an array inside a cell of your table. You can create an array
 Default total aggregation is `sum`
 
 ```svelte
-<DataTable data={country_example} totalRow=true rows=5>
+<Table data="country_example" totalRow=true rows=5>
   <Column id=country/>
   <Column id=gdp_usd/>
   <Column id=gdp_growth fmt='pct2'/>
   <Column id=population fmt='#,##0"M"'/>
-</DataTable>
+</Table>
 ```
 
 ### Conditional Formatting
@@ -110,24 +110,24 @@ Default total aggregation is `sum`
 #### Default (`colorScale=default`)
 
 ```svelte
-<DataTable data={countries}>
+<Table data="countries">
     <Column id=country />
     <Column id=country_id align=center/>
     <Column id=category align=center/>
     <Column id=value_usd contentType=colorscale/>
-</DataTable>
+</Table>
 ```
 
 #### Custom Colors
 
 ```svelte
-<DataTable data={orders_by_category} rowNumbers=true>
+<Table data="orders_by_category" rowNumbers=true>
   <Column id=month/>
   <Column id=category/>
   <Column id=sales_usd0k contentType=colorscale colorScale=#a85ab8 align=center/>
   <Column id=num_orders_num0 contentType=colorscale colorScale=#e3af05 align=center/>
   <Column id=aov_usd2 contentType=colorscale colorScale=#c43957 align=center/>
-</DataTable>
+</Table>
 ```
 
 ### Including Images
@@ -135,13 +135,13 @@ Default total aggregation is `sum`
 You can include images by indicating either an absolute path e.g. `https://www.example.com/images/image.png` or a relative path e.g. `/images/image.png`.
 
 ```svelte
-<DataTable data={countries}>
+<Table data="countries">
 	<Column id=flag contentType=image height=30px align=center />
 	<Column id=country />
 	<Column id=country_id align=center />
 	<Column id=category />
 	<Column id=value_usd />
-</DataTable>
+</Table>
 ```
 
 ### Link Columns
@@ -149,33 +149,33 @@ You can include images by indicating either an absolute path e.g. `https://www.e
 #### Link Column with Unique Labels
 
 ```svelte
-<DataTable data={countries}>
+<Table data="countries">
 	<Column id=country_url contentType=link linkLabel=country />
 	<Column id=country_id align=center />
 	<Column id=category />
 	<Column id=value_usd />
-</DataTable>
+</Table>
 ```
 
 #### Link Column with Consistent String Label
 
 ```svelte
-<DataTable data={countries}>
+<Table data="countries">
 	<Column id=country />
 	<Column id=country_id align=center />
 	<Column id=category />
 	<Column id=value_usd />
 	<Column id=country_url contentType=link linkLabel="Details &rarr;" />
-</DataTable>
+</Table>
 ```
 
 ### HTML Content
 
 
 ```svelte
-<DataTable data={html_in_table}>
+<Table data="html_in_table">
     <Column id="HTML in Table" contentType=html/>
-</DataTable>
+</Table>
 ```
 
 To apply styling to most HTML tags, you should add the `class=markdown` attribute to the tag in your column. This will apply the same styling as the markdown renderer.
@@ -185,19 +185,19 @@ To apply styling to most HTML tags, you should add the `class=markdown` attribut
 #### External Links
 
 ```svelte
-<DataTable data={countries} search=true link=country_url>
+<Table data="countries" search=true link=country_url>
 	<Column id=country />
 	<Column id=country_id align=center />
 	<Column id=category />
 	<Column id=value_usd />
-</DataTable>
+</Table>
 ```
 
 #### Link to Pages in Your App
 
 
 ```svelte
-<DataTable data={orders} link=category_link />
+<Table data="orders" link=category_link />
 ```
 
 By default, the link column of your table is hidden. If you would like it to be displayed in the table, you can use `showLinkCol=true`.
@@ -207,47 +207,47 @@ By default, the link column of your table is hidden. If you would like it to be 
 #### Row Shading + Row Lines
 
 ```svelte
-<DataTable data={countries} rowShading=true />
+<Table data="countries" rowShading=true />
 ```
 
 #### Row Shading + No Row Lines
 
 ```svelte
-<DataTable data={countries} rowShading=true rowLines=false />
+<Table data="countries" rowShading=true rowLines=false />
 ```
 
 #### No Lines or Shading
 
 ```svelte
-<DataTable data={countries} rowLines=false />
+<Table data="countries" rowLines=false />
 ```
 
 ### Column Alignment
 
 ```svelte
-<DataTable data={country_summary}>
+<Table data="country_summary">
 	<Column id=country align=right />
 	<Column id=country_id align=center />
 	<Column id=category align=left />
 	<Column id=value_usd align=left />
-</DataTable>
+</Table>
 ```
 
 ### Custom Column Titles
 
 ```svelte
-<DataTable data={country_summary}>
+<Table data="country_summary">
 	<Column id=country title="Country Name" />
 	<Column id=country_id align=center title="ID" />
 	<Column id=category align=center title="Product Category" />
 	<Column id=value_usd title="Sales in 2022" />
-</DataTable>
+</Table>
 ```
 
 ### Raw Column Names
 
 ```svelte
-<DataTable data={country_summary} formatColumnTitles=false />
+<Table data="country_summary" formatColumnTitles=false />
 ```
 
 ### Groups - Accordion
@@ -255,27 +255,27 @@ By default, the link column of your table is hidden. If you would like it to be 
 #### Without subtotals
 
 ```svelte
-<DataTable data={orders} groupBy=state>
+<Table data="orders" groupBy=state>
  	<Column id=state/> 
 	<Column id=category totalAgg=""/> 
 	<Column id=item totalAgg=""/> 
 	<Column id=orders/> 
 	<Column id=sales fmt=usd/> 
 	<Column id=growth fmt=pct1/> 
-</DataTable>
+</Table>
 ```
 
 #### With Subtotals
 
 ```svelte
-<DataTable data={orders} groupBy=state subtotals=true> 
+<Table data="orders" groupBy=state subtotals=true> 
  	<Column id=state/> 
 	<Column id=category totalAgg=""/> 
 	<Column id=item totalAgg=""/> 
 	<Column id=orders/> 
 	<Column id=sales fmt=usd/> 
 	<Column id=growth fmt=pct1/> 
-</DataTable>
+</Table>
 ```
 
 ### Groups - Section
@@ -283,26 +283,26 @@ By default, the link column of your table is hidden. If you would like it to be 
 #### Without subtotals
 
 ```svelte
-<DataTable data={orders} groupBy=state groupType=section/>
+<Table data="orders" groupBy=state groupType=section/>
 ```
 
 #### With Subtotals
 
 ```svelte
-<DataTable data={orders} groupBy=state subtotals=true groupType=section>
+<Table data="orders" groupBy=state subtotals=true groupType=section>
  	<Column id=state totalAgg=countDistinct totalFmt='[=1]0 "state";0 "states"'/> 
 	<Column id=category totalAgg=Total/> 
 	<Column id=item  totalAgg=countDistinct totalFmt='0 "items"'/> 
 	<Column id=orders/> 
 	<Column id=sales fmt=usd1k/> 
 	<Column id=growth contentType=delta neutralMin=-0.02 neutralMax=0.02 fmt=pct1 totalAgg=weightedMean weightCol=sales /> 
-</DataTable>
+</Table>
 ```
 
 ### Column Groups
 
 ```svelte
-<DataTable data={countries} totalRow=true rows=5 groupBy=continent groupType=section totalRowColor=#f2f2f2>
+<Table data="countries" totalRow=true rows=5 groupBy=continent groupType=section totalRowColor=#f2f2f2>
   <Column id=continent totalAgg="Total" totalFmt='# "Unique continents"'/>
   <Column id=country totalAgg=countDistinct totalFmt='0 "countries"'/>
   <Column id=gdp_usd totalAgg=sum fmt='$#,##0"B"' totalFmt='$#,##0.0,"T"' colGroup="GDP"/>
@@ -313,16 +313,16 @@ By default, the link column of your table is hidden. If you would like it to be 
   <Column id=inflation_rate totalAgg=weightedMean weightCol=gdp_usd fmt='pct2' colGroup="Other"/>
   <Column id=gov_budget totalAgg=weightedMean weightCol=gdp_usd fmt='0.0"%"' contentType=delta colGroup="Other"/>
   <Column id=current_account totalAgg=weightedMean weightCol=gdp_usd fmt='0.0"%"' colGroup="Other"/>
-</DataTable>
+</Table>
 ```
 
 ### Wrap Titles
 
 ```svelte
-<DataTable data={countries} wrapTitles=true /> 
+<Table data="countries" wrapTitles=true /> 
 ```
 
-# DataTable
+# Table
 
 ## Options
 
@@ -350,7 +350,7 @@ By default, the link column of your table is hidden. If you would like it to be 
 | compact | Enable a more compact table view that allows more content vertically and horizontally | false | ['true', 'false'] | false |
 | link | Makes each row of your table a clickable link. Accepts the name of a column containing the link to use for each row in your table | false | column name | "-" |
 | showLinkCol | Whether to show the column supplied to the `link` prop | false | ['true', 'false'] | false |
-| generateMarkdown | Helper for writing DataTable syntax with many columns. When set to true, markdown for the DataTable including each `Column` contained within the query will be generated and displayed below the table. | false | ['true', 'false'] | false |
+| generateMarkdown | Helper for writing Table syntax with many columns. When set to true, markdown for the Table including each `Column` contained within the query will be generated and displayed below the table. | false | ['true', 'false'] | false |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | ["error", "warn", "pass"] | "error" |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
 

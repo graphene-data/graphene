@@ -17,10 +17,10 @@ The options object is passed as follows. **Note the double curly braces.**
 
 ```markdown
 <BarChart
-    data={query_name}
+    data="query_name"
     x=column_x
     y=column_y
-    echartsOptions={{exampleOption: 'exampleValue'}}
+    echartsOptions="{exampleOption: 'exampleValue'"}
 />
 ```
 
@@ -48,16 +48,16 @@ If you wanted to add a custom border to the bars with `echartsOptions`, you woul
 
 ```html
 <BarChart
-    data={country_sales}
+    data="country_sales"
     x=date
     y=sales
     series=country
-    echartsOptions={{
+    echartsOptions="{
         series: [
             {itemStyle: {
                 borderWidth: 1,
                 borderColor: 'red'
-            }},
+            "},
             {itemStyle: {
                 borderWidth: 1,
                 borderColor: 'red'
@@ -99,7 +99,7 @@ select 'US' as country, 2023 as year, 450 as sales
 
 ```svelte
 <BarChart
-    data={country_sales}
+    data="country_sales"
     x=date
     y=sales
     series=country
@@ -120,10 +120,10 @@ This includes both any default Graphene config and any `echartsOptions` you have
 
 ```svelte
 <BarChart
-    data={query_name}
+    data="query_name"
     x=column_x
     y=column_y
-    echartsOptions={{exampleOption: 'exampleValue'}}
+    echartsOptions="{exampleOption: 'exampleValue'"}
     printEchartsConfig=true
 />
 ```
@@ -135,7 +135,7 @@ This includes both any default Graphene config and any `echartsOptions` you have
 **Example:**
 
 ```svelte
-echartsOptions={{
+echartsOptions="{
     legend: {
         right: 'right',
         top: 'middle',
@@ -144,7 +144,7 @@ echartsOptions={{
         padding: 7,
         borderColor: '#ccc',
         borderWidth: 1,
-    },
+    ",
     grid: {
         right: '120px'
     }
@@ -156,12 +156,12 @@ echartsOptions={{
 **Example:**
 
 ```svelte
-echartsOptions={{
+echartsOptions="{
     dataZoom: [
         {
             start: 0,
             end: 100,
-        },
+        ",
     ],
     grid: {
         bottom: '50px',

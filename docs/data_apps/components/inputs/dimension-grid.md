@@ -8,9 +8,9 @@ Dimension grid produces an interactive grid of one dimension tables, one for eac
 
 
 ````markdown
-<DimensionGrid data={orders} metric='sum(sales)' name=selected_dimensions /> 
+<DimensionGrid data="orders" metric='sum(sales)' name=selected_dimensions /> 
 
-<LineChart data={monthly_sales} handleMissing=zero/>
+<LineChart data="monthly_sales" handleMissing=zero/>
 ````
 
 ## Examples
@@ -18,7 +18,7 @@ Dimension grid produces an interactive grid of one dimension tables, one for eac
 ### Basic Usage 
 
 ```html
-<DimensionGrid data={my_query} />
+<DimensionGrid data="my_query" />
 ```
 
 ### As an Input 
@@ -27,7 +27,7 @@ Dimension grid produces a condition for all of the selected dimensions which is 
 
 ````html
 <DimensionGrid 
-    data={my_query} 
+    data="my_query" 
     name="selected_dimensions"
 />
 
@@ -41,13 +41,13 @@ Using the multiple prop, Dimension grid can filter by multiple rows in the same 
 
 ````html
 <DimensionGrid 
-    data={orders} 
+    data="orders" 
     metric='sum(sales)' 
     name=multi_dimensions 
     multiple
 />
 
-<LineChart data={monthly_sales_multi} y=sales_usd0/> 
+<LineChart data="monthly_sales_multi" y=sales_usd0/> 
 
 
 ````

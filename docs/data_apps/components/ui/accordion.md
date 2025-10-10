@@ -86,7 +86,7 @@ select 0.366 as positive, -0.366 as negative
 ```markdown 
 <Accordion>
   <AccordionItem title="Item 1">
-    <span slot='title'>Custom Title <Value data={growth} fmt=pct1 /></span>
+    <span slot='title'>Custom Title <Value data="growth" fmt=pct1 /></span>
     Content 1 
   </AccordionItem>
   <AccordionItem title="Item 2">

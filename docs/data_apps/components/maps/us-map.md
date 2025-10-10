@@ -9,7 +9,7 @@ Compare a metric across US states using a flat choropleth map. For other regions
 
 ```html
 <USMap
-    data={state_population}
+    data="state_population"
     state=state_name
     value=population
 />
@@ -25,7 +25,7 @@ Compare a metric across US states using a flat choropleth map. For other regions
 
 ````html
 <USMap
-    data={state_population}
+    data="state_population"
     state=state_name
     value=population
     colorScale=info
@@ -38,7 +38,7 @@ Compare a metric across US states using a flat choropleth map. For other regions
 
 ````html
 <USMap
-    data={state_population}
+    data="state_population"
     state=state_name
     value=population
     colorScale=positive
@@ -51,7 +51,7 @@ Compare a metric across US states using a flat choropleth map. For other regions
 
 ````html
 <USMap
-    data={state_population}
+    data="state_population"
     state=state_name
     value=population
     colorScale=negative
@@ -64,7 +64,7 @@ Compare a metric across US states using a flat choropleth map. For other regions
 
 ```svelte
 <USMap
-    data={state_population}
+    data="state_population"
     state=state_name
     value=population
     colorScale={['maroon','white','#1c0d80']}
@@ -80,7 +80,7 @@ Compare a metric across US states using a flat choropleth map. For other regions
 
 ```html
 <USMap
-    data={state_population}
+    data="state_population"
     state=state_name
     value=population
     legend=true
@@ -93,7 +93,7 @@ Compare a metric across US states using a flat choropleth map. For other regions
 
 ````svelte
 <USMap
-    data={state_population}
+    data="state_population"
     state=state_name
     value=population
     colorScale={['maroon','white','#1c0d80']}
@@ -108,13 +108,13 @@ Compare a metric across US states using a flat choropleth map. For other regions
 
 ```html
 <USMap
-	data={state_current}
+	data="state_current"
 	state=state
 	value=value
 	abbreviations=true
 	link=state_link
 	title="Sales by State"
-	subtitle="{most_recent_month[0].month}"
+	subtitle={{most_recent_month[0].month}}
 />
 ```
 
@@ -123,7 +123,7 @@ Compare a metric across US states using a flat choropleth map. For other regions
 **Example:**
 
 ```html
-<USMap data={map_data} state=state_abbrev value=sales_usd abbreviations=true />
+<USMap data="map_data" state=state_abbrev value=sales_usd abbreviations=true />
 ```
 
 ## Options

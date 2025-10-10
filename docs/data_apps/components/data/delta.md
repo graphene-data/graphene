@@ -7,7 +7,7 @@ Use a Delta component to display an inline indicator that shows how a value has 
 
 
 ```markdown
-This value is <Delta data={growth} column=positive fmt="+0.0%;-0.0%;0.0%" /> since last month.
+This value is <Delta data="growth" column=positive fmt="+0.0%;-0.0%;0.0%" /> since last month.
 ```
 
 ## Examples
@@ -17,20 +17,20 @@ This value is <Delta data={growth} column=positive fmt="+0.0%;-0.0%;0.0%" /> sin
 #### Positive
 
 ```markdown
-<Delta data={growth} column=positive fmt=pct1 />
+<Delta data="growth" column=positive fmt=pct1 />
 ```
 
 #### Negative 
 
 ```markdown
-<Delta data={growth} column=negative fmt=pct1 />
+<Delta data="growth" column=negative fmt=pct1 />
 ```
 
 #### Neutral*
 *Values are not defined as neutral until you define a range using the `neutralMin` and `neutralMax` props
 
 ```markdown
-<Delta data={growth} column=neutral fmt=pct1 neutralMin=-0.02 neutralMax=0.02 />
+<Delta data="growth" column=neutral fmt=pct1 neutralMin=-0.02 neutralMax=0.02 />
 ```
 
 ### Chips
@@ -38,20 +38,20 @@ This value is <Delta data={growth} column=positive fmt="+0.0%;-0.0%;0.0%" /> sin
 #### Positive
 
 ```markdown
-<Delta data={growth} column=growth fmt=pct1 chip=true />
+<Delta data="growth" column=growth fmt=pct1 chip=true />
 ```
 
 #### Negative 
 
 ```markdown
-<Delta data={growth} column=negative fmt=pct1 chip=true/>
+<Delta data="growth" column=negative fmt=pct1 chip=true/>
 ```
 
 #### Neutral*
 *Values are not defined as neutral until you define a range using the `neutralMin` and `neutralMax` props
 
 ```markdown
-<Delta data={growth} column=neutral fmt=pct1 chip=true neutralMin=-0.02 neutralMax=0.02 />
+<Delta data="growth" column=neutral fmt=pct1 chip=true neutralMin=-0.02 neutralMax=0.02 />
 ```
 
 ### Symbol Position
@@ -59,13 +59,13 @@ This value is <Delta data={growth} column=positive fmt="+0.0%;-0.0%;0.0%" /> sin
 #### Symbol on Left
 
 ```html
-<Delta data={growth} column=positive fmt=pct1 symbolPosition=left/>
+<Delta data="growth" column=positive fmt=pct1 symbolPosition=left/>
 ```
 
 #### Symbol on Left in Chip
 
 ```html
-<Delta data={growth} column=positive fmt=pct1 chip=true symbolPosition=left/>
+<Delta data="growth" column=positive fmt=pct1 chip=true symbolPosition=left/>
 ```
 
 ## Options

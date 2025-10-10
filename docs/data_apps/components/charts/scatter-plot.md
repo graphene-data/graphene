@@ -9,7 +9,7 @@ Use scatter plots to show the correlation between two metrics for categorical va
 
 ```markdown
 <ScatterPlot 
-    data={price_vs_volume}
+    data="price_vs_volume"
     x=price
     y=number_of_units
     xFmt=usd0
@@ -23,7 +23,7 @@ Use scatter plots to show the correlation between two metrics for categorical va
 
 ```markdown
 <ScatterPlot 
-    data={price_vs_volume}
+    data="price_vs_volume"
     x=price
     y=number_of_units
 />
@@ -33,7 +33,7 @@ Use scatter plots to show the correlation between two metrics for categorical va
 
 ```markdown
 <ScatterPlot 
-    data={price_vs_volume}
+    data="price_vs_volume"
     x=price
     y=number_of_units
     series=category
@@ -70,7 +70,7 @@ Use scatter plots to show the correlation between two metrics for categorical va
 | outlineColor | Color to use for outline if outlineWidth > 0 | false | CSS name \| hexademical \| RGB \| HSL | - |
 | colorPalette | Array of custom colours to use for the chart. E.g., `{['#cf0d06','#eb5752','#e88a87']}` | false | array of color strings (CSS name \| hexademical \| RGB \| HSL) | built-in color palette |
 | seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. Note the double curly braces required in the syntax `seriesColors={{"Canada": "red", "US": "blue"}}` | false | object with series names and assigned colors | colors applied by order of series in data |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart seriesOrder={`{['series one', 'series two']}`} | default order implied by the data |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart seriesOrder="`{['series one', 'series two']"`} | default order implied by the data |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | ["true", "false"] | "false" |
@@ -127,8 +127,8 @@ Use scatter plots to show the correlation between two metrics for categorical va
 Scatter plots can include [annotations](/components/charts/annotations) using the `ReferenceLine` and `ReferenceArea` components. These components are used within a chart component like so:
 
 ```html
-<ScatterPlot data={sales_data} x=date y=sales>
-  <ReferenceLine data={target_data} y=target label=name/>
+<ScatterPlot data="sales_data" x=date y=sales>
+  <ReferenceLine data="target_data" y=target label=name/>
   <ReferenceArea xMin='2020-03-14' xMax='2020-05-01'/>
 </ScatterPlot>
 ```

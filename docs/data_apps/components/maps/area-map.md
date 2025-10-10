@@ -9,7 +9,7 @@ Compare a metric across different regions on a map using a choropleth map
 
 ```svelte
 <AreaMap 
-    data={la_zip_sales} 
+    data="la_zip_sales" 
     areaCol=zip_code
     geoJsonUrl='path/to/your/geoJson'
     geoId=ZCTA5CE10
@@ -31,14 +31,14 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <AreaMap 
-    data={la_zip_sales} 
+    data="la_zip_sales" 
     areaCol=zip_code
     geoJsonUrl='path/to/your/geoJson'
     geoId=ZCTA5CE10
     value=sales
     valueFmt=usd
     height=250
-    basemap={`https://tile.openstreetmap.org/{z}/{x}/{y}.png`}
+    basemap="`https://tile.openstreetmap.org/{z"/{x}/{y}.png`}
 />
 ```
 
@@ -49,7 +49,7 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <AreaMap 
-    data={orders_by_state} 
+    data="orders_by_state" 
     areaCol=state
     geoJsonUrl=https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_110m_admin_1_states_provinces.geojson
     geoId=name
@@ -65,15 +65,15 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <AreaMap 
-    data={la_zip_sales} 
+    data="la_zip_sales" 
     areaCol=zip_code
     geoJsonUrl='path/to/your/geoJson'
     geoId=ZCTA5CE10
     value=sales
     valueFmt=usd
     height=250
-    tooltip={[
-        {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'},
+    tooltip="[
+        {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'",
         {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'}
     ]}
 />
@@ -85,7 +85,7 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <AreaMap 
-    data={la_zip_sales} 
+    data="la_zip_sales" 
     areaCol=zip_code
     geoJsonUrl='path/to/your/geoJson'
     geoId=ZCTA5CE10
@@ -93,8 +93,8 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
     valueFmt=usd
     height=250
     tooltipType=click
-    tooltip={[
-        {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'},
+    tooltip="[
+        {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'",
         {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'},
         {id: 'link_col', showColumnName: false, contentType: 'link', linkLabel: 'Click here', valueClass: 'font-bold mt-1'}
     ]}
@@ -107,7 +107,7 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <AreaMap 
-    data={la_zip_sales} 
+    data="la_zip_sales" 
     areaCol=zip_code
     geoJsonUrl='path/to/your/geoJson'
     geoId=ZCTA5CE10
@@ -126,19 +126,19 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <AreaMap 
-    data={la_zip_sales} 
+    data="la_zip_sales" 
     areaCol=zip_code
     geoJsonUrl='path/to/your/geoJson'
     geoId=ZCTA5CE10
     value=sales
     valueFmt=usd
     height=250
-    colorPalette={[
+    colorPalette="[
         ['yellow', 'yellow'],
         ['orange', 'orange'],
         ['red', 'red'],
         ['darkred', 'darkred'],
-    ]}
+    ]"
 />
 ```
 
@@ -149,7 +149,7 @@ Pass in a `link` column to enable navigation on click of the point. These can be
 
 ```svelte
 <AreaMap 
-    data={la_zip_sales} 
+    data="la_zip_sales" 
     areaCol=zip_code
     geoJsonUrl='path/to/your/geoJson'
     geoId=ZCTA5CE10
@@ -167,7 +167,7 @@ Use the `name` prop to set an input name for the map - when a point is clicked, 
 
 ```svelte
 <AreaMap 
-    data={la_zip_sales} 
+    data="la_zip_sales" 
     areaCol=zip_code
     geoJsonUrl='path/to/your/geoJson'
     geoId=ZCTA5CE10
@@ -190,7 +190,7 @@ Use the `name` prop to set an input name for the map - when a point is clicked, 
 
 
 #### Filtered Data
-<DataTable data={filtered_areas}>  	
+<DataTable data="filtered_areas">  	
     <Column id=id/> 	
     <Column id=zip_code fmt=id/> 	
     <Column id=sales fmt=usd/> 	
@@ -205,7 +205,7 @@ Use the `name` prop to set an input name for the map - when a point is clicked, 
 
 ```svelte
 <AreaMap
-    data={grouped_locations}
+    data="grouped_locations"
     lat=lat
     long=long
     value=Category
@@ -221,7 +221,7 @@ Set custom legend colors using the `colorPalette` prop to match the number of ca
 
 ```svelte
 <AreaMap
-    data={grouped_locations}
+    data="grouped_locations"
     lat=lat
     long=long
     value=Category
@@ -237,7 +237,7 @@ Set custom legend colors using the `colorPalette` prop to match the number of ca
 
 ```svelte
 <AreaMap
-    data={grouped_locations}
+    data="grouped_locations"
     lat=lat
     long=long
     value=sales
@@ -254,7 +254,7 @@ Define scalar legend colors using the `colorPalette` prop, allowing specified co
 
 ```svelte
 <AreaMap
-    data={grouped_locations}
+    data="grouped_locations"
     lat=lat
     long=long
     value=sales
@@ -275,7 +275,7 @@ Below are a selection of publically available GeoJSON files that may be useful f
 
 ### Country, State, and City Locations
 
-<DataTable data={useful_geojson_urls} rows=100>
+<DataTable data="useful_geojson_urls" rows=100>
     <Column id=file/>
     <Column id=category/>
     <Column id=scale/>
@@ -286,7 +286,7 @@ Below are a selection of publically available GeoJSON files that may be useful f
 
 <Details title="All GeoJSON Files">
 
-<DataTable data={all_geojson_urls} rows=all compact>
+<DataTable data="all_geojson_urls" rows=all compact>
     <Column id=file/>
     <Column id=category/>
     <Column id=scale/>
@@ -366,8 +366,8 @@ Below are a selection of publically available GeoJSON files that may be useful f
 #### `tooltip` example:
 
 ```javascript
-tooltip={[
-    {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'},
+tooltip="[
+    {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'",
     {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'},
     {id: 'zip_code', showColumnName: false, contentType: 'link', linkLabel: 'Click here', valueClass: 'font-bold mt-1'}
 ]}
