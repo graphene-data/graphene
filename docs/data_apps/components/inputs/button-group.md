@@ -13,7 +13,7 @@ To see how to filter a query using a Button Group, see [Filters](/core-concepts/
 
 ```markdown
 <ButtonGroup 
-    data={categories} 
+    data="categories" 
     name=category_picker 
     value=category
 />
@@ -25,7 +25,7 @@ Selected: {inputs.category_picker}
 
 ```markdown
 <ButtonGroup 
-    data={categories} 
+    data="categories" 
     name=category_selector 
     value=category
     title="Select a Category"
@@ -38,7 +38,7 @@ Selected: {inputs.category_selector}
 
 ````markdown
 <ButtonGroup
-    data={categories}
+    data="categories"
     name=selected_button1
     value=category
     defaultValue="Cursed Sporting Goods"
@@ -75,7 +75,7 @@ Selected: {inputs.hardcoded_options_default}
 
 ````markdown
 <ButtonGroup
-    data={categories} 
+    data="categories" 
     name=alternative_labels_selector
     value=category
     label=short_category
@@ -89,19 +89,19 @@ Selected: {inputs.alternative_labels_selector}
 
 ````markdown
 <ButtonGroup
-    data={categories} 
+    data="categories" 
     name=category_button_group
     value=category
 />
 
-<DataTable data={filtered_query} emptySet=pass emptyMessage="No category selected"/>
+<DataTable data="filtered_query" emptySet=pass emptyMessage="No category selected"/>
 ````
 
 ### Style Buttons as Tabs
 
 ```markdown
 <ButtonGroup 
-    data={categories} 
+    data="categories" 
     name=buttons_as_tabs 
     value=category
     display=tabs

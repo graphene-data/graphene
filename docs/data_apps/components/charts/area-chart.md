@@ -9,7 +9,7 @@ Use area charts to track how a metric with multiple series changes over time, or
 
 ```markdown
 <AreaChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales
 />
@@ -23,7 +23,7 @@ Use area charts to track how a metric with multiple series changes over time, or
 
 ```markdown
 <AreaChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales
 />
@@ -35,7 +35,7 @@ Use area charts to track how a metric with multiple series changes over time, or
 
 ```markdown
 <AreaChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month
     y=sales
     series=category
@@ -48,7 +48,7 @@ Use area charts to track how a metric with multiple series changes over time, or
 
 ```markdown
 <AreaChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month
     y=sales
     series=category
@@ -62,7 +62,7 @@ Use area charts to track how a metric with multiple series changes over time, or
 
 ```markdown
 <AreaChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month
     y=sales
     series=category
@@ -76,7 +76,7 @@ Use area charts to track how a metric with multiple series changes over time, or
 
 ```markdown
 <AreaChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales
     yFmt=usd0
@@ -89,7 +89,7 @@ Use area charts to track how a metric with multiple series changes over time, or
 
 ```markdown
 <AreaChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales
     labels=true
@@ -195,8 +195,8 @@ Use area charts to track how a metric with multiple series changes over time, or
 Area charts can include [annotations](/components/charts/annotations) using the `ReferenceLine` and `ReferenceArea` components. These components are used within a chart component like so:
 
 ```html
-<AreaChart data={sales_data} x=date y=sales>
-	<ReferenceLine data={target_data} y=target label=name />
+<AreaChart data="sales_data" x=date y=sales>
+	<ReferenceLine data="target_data" y=target label=name />
 	<ReferenceArea xMin='2020-03-14' xMax='2020-05-01' />
 </AreaChart>
 ```

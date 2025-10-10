@@ -10,7 +10,7 @@ Use histograms to display the distribution of a metric along a continuous range,
 
 ```markdown
 <Histogram
-    data={orders}
+    data="orders"
     x=sales
 />
 ```
@@ -23,7 +23,7 @@ Use histograms to display the distribution of a metric along a continuous range,
 
 ```markdown
 <Histogram
-    data={orders_week}
+    data="orders_week"
     x=sales
     xAxisTitle="Weekly Sales"
 />
@@ -100,7 +100,7 @@ Use histograms to display the distribution of a metric along a continuous range,
 Histograms can include [annotations](/components/charts/annotations) using the `ReferenceLine` and `ReferenceArea` components. These components are used within a chart component like so:
 
 ```html
-<Histogram data={sales_data} x=category>
+<Histogram data="sales_data" x=category>
   <ReferenceLine y=20/>
   <ReferenceArea xMin=3 xMax=8/>
 </Histogram>

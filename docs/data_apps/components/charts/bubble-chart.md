@@ -9,7 +9,7 @@ Use bubble charts to display categorical data across three metrics. The X and Y 
 
 ```markdown
 <BubbleChart 
-    data={price_vs_volume}
+    data="price_vs_volume"
     x=price
     y=number_of_units
     xFmt=usd0
@@ -26,7 +26,7 @@ Use bubble charts to display categorical data across three metrics. The X and Y 
 
 ```markdown
 <BubbleChart 
-    data={price_vs_volume}
+    data="price_vs_volume"
     x=price
     y=number_of_units
     size=total_sales
@@ -39,7 +39,7 @@ Use bubble charts to display categorical data across three metrics. The X and Y 
 
 ```markdown
 <BubbleChart 
-    data={price_vs_volume}
+    data="price_vs_volume"
     x=price
     y=number_of_units
     series=category
@@ -137,7 +137,7 @@ Bubble charts can include [annotations](/components/charts/annotations) using th
 
 ```markdown
 <BubbleChart 
-    data={price_vs_volume}
+    data="price_vs_volume"
     x=price
     xFmt=usd0
     y=number_of_units

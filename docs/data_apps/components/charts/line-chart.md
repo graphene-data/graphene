@@ -10,7 +10,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```svelte
 <LineChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales_usd0k 
     yAxisTitle="Sales per Month"
@@ -23,7 +23,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```svelte
 <LineChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales_usd0k 
     yAxisTitle="Sales per Month"
@@ -36,7 +36,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```markdown
 <LineChart 
-    data={orders_by_category}
+    data="orders_by_category"
     x=month
     y=sales_usd0k 
     yAxisTitle="Sales per Month"
@@ -48,7 +48,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```svelte
 <LineChart 
-    data={orders_by_category}
+    data="orders_by_category"
     x=month
     y=sales_usd0k 
     yAxisTitle="Sales per Month"
@@ -61,7 +61,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```svelte
 <LineChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y={['sales_usd0k','orders']} 
     yAxisTitle="Sales per Month"
@@ -72,7 +72,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```markdown
 <LineChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales_usd0k
     y2=orders
@@ -84,7 +84,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```markdown
 <LineChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales_usd0k
     y2=orders
@@ -97,7 +97,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```markdown
 <LineChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales_usd0k 
     yAxisTitle="Sales per Month"
@@ -109,19 +109,19 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```markdown
 <LineChart 
-    data={orders_by_category}
+    data="orders_by_category"
     x=month
     y=sales_usd0k 
     yAxisTitle="Sales per Month"
     series=category
-    colorPalette={
+    colorPalette="
         [
         '#cf0d06',
         '#eb5752',
         '#e88a87',
         '#fcdad9',
         ]
-    }
+    "
 />
 ```
 
@@ -131,7 +131,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```svelte
 <LineChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales_usd0k
     markers=true 
@@ -142,7 +142,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 
 ```svelte
 <LineChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales_usd0k 
     markers=true
@@ -186,7 +186,7 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 | markerSize | Size of each shape (in pixels) | false | number | 8 |
 | colorPalette | Array of custom colours to use for the chart. E.g., `{['#cf0d06','#eb5752','#e88a87']}` | false | array of color strings (CSS name \| hexademical \| RGB \| HSL) | - |
 | seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. Note the double curly braces required in the syntax `seriesColors={{"Canada": "red", "US": "blue"}}` | false | object with series names and assigned colors | - |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart seriesOrder={`{['series one', 'series two']}`} | default order implied by the data |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart seriesOrder="`{['series one', 'series two']"`} | default order implied by the data |
 | labels | Show value labels | false | ["true", "false"] | "false" |
 | labelSize | Font size of value labels | false | number | 11 |
 | labelPosition | Where label will appear on your series | false | ["above", "middle", "below"] | "above" |
@@ -258,8 +258,8 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 Line charts can include [annotations](/components/charts/annotations) using the `ReferenceLine` and `ReferenceArea` components. These components are used within a chart component like so:
 
 ```html
-<LineChart data="{sales_data}" x="date" y="sales">
-	<ReferenceLine data="{target_data}" y="target" label="name" />
+<LineChart data="sales_data" x="date" y="sales">
+	<ReferenceLine data="target_data" y="target" label="name" />
 	<ReferenceArea xMin="2020-03-14" xMax="2020-05-01" />
 </LineChart>
 ```

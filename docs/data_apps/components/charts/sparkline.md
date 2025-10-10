@@ -10,7 +10,7 @@ Use sparklines to display a compact visual representation of a single metric ove
 
 ```markdown
 <Sparkline 
-    data={sales_by_date} 
+    data="sales_by_date" 
     dateCol=date 
     valueCol=sales 
 />
@@ -21,9 +21,9 @@ Use sparklines to display a compact visual representation of a single metric ove
 ### Connected Sparkline
 
 ```html
-<Sparkline data={sales_by_date} dateCol=date valueCol=sales type=bar  valueFmt=eur dateFmt=mmm connectGroup=mysparkline/>
-<Sparkline data={sales_by_date} dateCol=date valueCol=sales type=area color=maroon valueFmt=eur dateFmt=mmm connectGroup=mysparkline/>
-<Sparkline data={sales_by_date} dateCol=date valueCol=sales type=line color=purple valueFmt=eur dateFmt=mmm connectGroup=mysparkline/>
+<Sparkline data="sales_by_date" dateCol=date valueCol=sales type=bar  valueFmt=eur dateFmt=mmm connectGroup=mysparkline/>
+<Sparkline data="sales_by_date" dateCol=date valueCol=sales type=area color=maroon valueFmt=eur dateFmt=mmm connectGroup=mysparkline/>
+<Sparkline data="sales_by_date" dateCol=date valueCol=sales type=line color=purple valueFmt=eur dateFmt=mmm connectGroup=mysparkline/>
 ```
 
 ## Options

@@ -16,7 +16,7 @@ Graphene currently offers 4 types of annotations, which can be defined inline or
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <ReferenceLine y=7500 label="Reference Line" hideValue labelPosition="aboveStart" color=positive/>
     <ReferenceArea xMin='2020-03-14' xMax='2020-08-15' label="Reference Area" color=warning/>
     <ReferencePoint x="2019-07-01" y=6590 label="Reference Point" labelPosition=bottom color=negative/>
@@ -42,7 +42,7 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yAxisTitle="Sales per Month" yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yAxisTitle="Sales per Month" yFmt=usd0>
     <ReferenceLine y=9000 label="Target"/>
 </LineChart>
 ```
@@ -52,7 +52,7 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yAxisTitle="Sales per Month" yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yAxisTitle="Sales per Month" yFmt=usd0>
     <ReferenceLine x='2019-09-18' label="Launch" hideValue=true/>
 </LineChart>
 ```
@@ -62,7 +62,7 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
     <ReferenceLine y=9000 label="Target" labelPosition=belowEnd/>
     <ReferenceLine y=10500 label="Forecast"/>
 </LineChart>
@@ -74,8 +74,8 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
-    <ReferenceLine data={multiple_dates} x=start_date label=campaign_name hideValue/>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
+    <ReferenceLine data="multiple_dates" x=start_date label=campaign_name hideValue/>
 </LineChart>
 ```
 
@@ -84,7 +84,7 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
     <ReferenceLine x='2019-01-01' y=6500 x2='2021-12-01' y2=12000 label="Growth Trend" labelPosition=belowEnd/>
 </LineChart>
 ```
@@ -95,8 +95,8 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<ScatterPlot data={orders_by_state} x=sales y=num_orders xMin=0 yMin=0>
-    <ReferenceLine data={regression} x=x y=y x2=x2 y2=y2 label=label color=base-content-muted lineType=solid/>
+<ScatterPlot data="orders_by_state" x=sales y=num_orders xMin=0 yMin=0>
+    <ReferenceLine data="regression" x=x y=y x2=x2 y2=y2 label=label color=base-content-muted lineType=solid/>
 </ScatterPlot>
 ```
 
@@ -105,7 +105,7 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales_usd0k yAxisTitle="Sales per Month">
+<LineChart data="orders_by_month" x=month y=sales_usd0k yAxisTitle="Sales per Month">
     <ReferenceLine y=110000 color=negative hideValue=true lineWidth=3 lineType=solid/>
 </LineChart>
 ```
@@ -115,7 +115,7 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0k yAxisTitle="Sales per Month">
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0k yAxisTitle="Sales per Month">
     <ReferenceLine y=4000 label=aboveStart labelPosition=aboveStart hideValue/>
     <ReferenceLine y=4000 label=aboveCenter labelPosition=aboveCenter hideValue/>
     <ReferenceLine y=4000 label=aboveEnd labelPosition=aboveEnd hideValue/>
@@ -130,7 +130,7 @@ When a dataset is provided, `ReferenceLine` can generate multiple lines - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0k yAxisTitle="Sales per Month">
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0k yAxisTitle="Sales per Month">
     <ReferenceLine y=1500 color=negative label=negative/>
     <ReferenceLine y=3500 color=warning label=warning/>
     <ReferenceLine y=5500 color=positive label=positive/>
@@ -230,7 +230,7 @@ When a dataset is provided, `ReferenceArea` can generate multiple areas - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
     <ReferenceArea xMin='2020-03-14' xMax='2020-08-15' label=First color=warning/>
     <ReferenceArea xMin='2021-03-14' xMax='2021-08-15' label=Second/>
 </LineChart>
@@ -241,7 +241,7 @@ When a dataset is provided, `ReferenceArea` can generate multiple areas - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=num_orders yAxisTitle="Orders per Month">
+<LineChart data="orders_by_month" x=month y=num_orders yAxisTitle="Orders per Month">
     <ReferenceArea yMin=250 color=positive label="Good"/>
     <ReferenceArea yMin=100 yMax=250 color=warning label="Okay"/>
     <ReferenceArea yMin=0 yMax=100 color=negative label="Bad"/>
@@ -253,8 +253,8 @@ When a dataset is provided, `ReferenceArea` can generate multiple areas - one fo
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
-    <ReferenceArea data={multiple_dates} xMin=start_date xMax=end_date label=campaign_name/>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0 yAxisTitle="Sales per Month">
+    <ReferenceArea data="multiple_dates" xMin=start_date xMax=end_date label=campaign_name/>
 </LineChart>
 ```
 
@@ -263,9 +263,9 @@ When a dataset is provided, `ReferenceArea` can generate multiple areas - one fo
 **Example:**
 
 ```html
-<BarChart data={orders_by_category_2021} x=month y=sales yFmt=usd0 series=category>
+<BarChart data="orders_by_category_2021" x=month y=sales yFmt=usd0 series=category>
     <ReferenceArea xMin='2021-01-01' xMax='2021-04-01'/>
-</BarChart> 
+</BarChart>
 ```
 
 #### Continuous Axis Bar Charts
@@ -278,7 +278,7 @@ On a continous x-axis (dates or numbers), the reference area will start and stop
 **Example:**
 
 ```html
-<ScatterPlot data={countries} x=gdp_usd y=gdp_growth_pct1 tooltipTitle=country series=continent>
+<ScatterPlot data="countries" x=gdp_usd y=gdp_growth_pct1 tooltipTitle=country series=continent>
     <ReferenceArea xMin=16000 xMax=24000 yMin=-0.03 yMax=0.055 label="Large and stagnant" color=base-content-muted border=true/>
 </ScatterPlot>
 ```
@@ -288,7 +288,7 @@ On a continous x-axis (dates or numbers), the reference area will start and stop
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <ReferenceArea xMin='2019-07-01' xMax='2021-07-31' label=topLeft labelPosition=topLeft areaColor="hsla(206.25, 80%, 80%, 0.01)"/>
     <ReferenceArea xMin='2019-07-01' xMax='2021-07-31' label=top labelPosition=top areaColor="hsla(206.25, 80%, 80%, 0.01)"/>
     <ReferenceArea xMin='2019-07-01' xMax='2021-07-31' label=topRight labelPosition=topRight areaColor="hsla(206.25, 80%, 80%, 0.01)"/>
@@ -309,7 +309,7 @@ Reference areas appear behind chart gridlines, including reference area labels. 
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0 >
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0 >
     <ReferenceArea xMax='2019-04-01' label=info color=info/>
     <ReferenceArea xMin='2019-04-01' xMax='2019-11-01' label=negative color=negative/>
     <ReferenceArea xMin='2019-11-01' xMax='2020-07-01' label=warning color=warning/>
@@ -384,7 +384,7 @@ When a dataset is provided, `ReferencePoint` will generate multiple points - one
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <ReferencePoint x="2019-07-01" y=6590 label="2019-07-01 : Big drop" labelPosition=bottom/>
 </LineChart>
 ```
@@ -409,8 +409,8 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
-    <ReferencePoint data={sales_drops} x=month y=sales label=label labelPosition=bottom align=right />
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
+    <ReferencePoint data="sales_drops" x=month y=sales label=label labelPosition=bottom align=right />
 </LineChart>
 ```
 
@@ -419,7 +419,7 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <ReferencePoint
         x="2019-07-01"
         y=6590
@@ -439,7 +439,7 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <ReferencePoint x="2019-07-01" y=6590 label=top labelPosition=top/>
     <ReferencePoint x="2019-07-01" y=6590 label=right labelPosition=right/>
     <ReferencePoint x="2019-07-01" y=6590 label=bottom labelPosition=bottom/>
@@ -452,7 +452,7 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <ReferencePoint x="2019-07-01" y=6590 labelPosition=bottom align=left>
         A label with
         line breaks in it
@@ -466,7 +466,7 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <ReferencePoint x="2019-03-01" y=3000 color=info label=info />
     <ReferencePoint x="2019-09-01" y=3000 color=negative label=negative />
     <ReferencePoint x="2020-03-01" y=3000 color=warning label=warning />
@@ -534,7 +534,7 @@ When a dataset is provided, `Callout` will generate multiple points - one for ea
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <Callout x="2019-07-01" y=6590 label="Sales really dropped here" labelPosition=bottom/>
 </LineChart>
 ```
@@ -559,8 +559,8 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
-    <Callout data={sales_drops} x=month y=sales label=label labelPosition=bottom align=right />
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
+    <Callout data="sales_drops" x=month y=sales label=label labelPosition=bottom align=right />
 </LineChart>
 ```
 
@@ -569,7 +569,7 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <Callout
         x="2019-07-01"
         y=6590
@@ -589,7 +589,7 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <Callout x="2019-07-01" y=6590 label=top labelPosition=top/>
     <Callout x="2019-07-01" y=6590 label=right labelPosition=right/>
     <Callout x="2019-07-01" y=6590 label=bottom labelPosition=bottom/>
@@ -602,7 +602,7 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <Callout x="2019-07-01" y=6590 labelPosition=bottom align=left>
         Callout
         with
@@ -617,7 +617,7 @@ where sales_diff < -2000
 **Example:**
 
 ```html
-<LineChart data={orders_by_month} x=month y=sales yFmt=usd0>
+<LineChart data="orders_by_month" x=month y=sales yFmt=usd0>
     <Callout x="2019-03-01" y=3000 color=info label=info />
     <Callout x="2019-09-01" y=3000 color=negative label=negative />
     <Callout x="2020-03-01" y=3000 color=warning label=warning />

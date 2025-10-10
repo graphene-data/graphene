@@ -9,7 +9,7 @@ Use big values to display a large value standalone, and optionally include a com
 
 ```markdown
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=num_orders
   sparkline=month
   comparison=order_growth
@@ -24,7 +24,7 @@ Use big values to display a large value standalone, and optionally include a com
 
 ```markdown
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=num_orders
 />
 ```
@@ -33,7 +33,7 @@ Use big values to display a large value standalone, and optionally include a com
 
 ```markdown
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=num_orders
   comparison=order_growth
   comparisonFmt=pct1
@@ -47,7 +47,7 @@ Multiple cards will align themselves into a row.
 
 ```markdown
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=sales
   fmt=usd0
   comparison=sales_growth
@@ -55,7 +55,7 @@ Multiple cards will align themselves into a row.
   comparisonTitle="MoM"
 />
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=num_orders
   title="Orders"
   comparison=order_growth
@@ -63,7 +63,7 @@ Multiple cards will align themselves into a row.
   comparisonTitle="MoM"
 />
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=aov
   title="Average Order Value"
   fmt=usd2
@@ -79,7 +79,7 @@ The link property makes the Value component clickable, allowing navigation to ot
 
 ```html
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=num_orders
   sparkline=month
   comparison=order_growth
@@ -93,7 +93,7 @@ The link property makes the Value component clickable, allowing navigation to ot
 
 ```html
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=num_orders
   comparison=prev_month_orders
   comparisonTitle="Last Month"
@@ -105,7 +105,7 @@ The link property makes the Value component clickable, allowing navigation to ot
 
 ```html
 <BigValue 
-  data={orders_with_comparisons} 
+  data="orders_with_comparisons" 
   value=sales
   sparkline=month
 />
