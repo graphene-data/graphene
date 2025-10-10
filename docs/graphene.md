@@ -84,9 +84,11 @@ Graphene data apps are written in Markdown with components. Markdown files can c
 
   <Row>
     <LineChart data="orders_by_month" x="month" y="num" title="Orders by Month" />
-    <LineChart data="orders_by_month" x="month" y="profit" title="Profit by Month, USD" />
+    <LineChart data="orders" x="date_trunc(created_at, 'month')" y="profit" title="Profit by Month, USD" />
   </Row>
 ````
+
+Note that components can also directly refer to semantic models in their `data` property; it is not always necessary to prepare data in a code-fenced query. Properties that take column references can also take whole expressions, as shown in the second line chart from the example above.
 
 ### Components
 The following components are available:
