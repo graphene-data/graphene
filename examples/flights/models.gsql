@@ -21,6 +21,11 @@ table flights (
   diverted = 'Y' as is_diverted
   flight_time > 360 as is_long_haul -- Whether the flight was a long haul flight (over 6 hours).
 
+  avg(case when dep_delay <= 0 then 1 else 0 end) as on_time_departure_rate
+  avg(case when arr_delay <= 0 then 1 else 0 end) as on_time_arrival_rate
+  avg(case when is_cancelled then 1 else 0 end) as cancellation_rate
+  avg(case when is_diverted then 1 else 0 end) as diversion_rate
+
   join_one aircraft on aircraft.tail_num = tail_num
   join_one carriers on carriers.code = carrier
   join_one airports as origin_airport on origin_airport.code = origin
