@@ -47,12 +47,12 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     impl: {function: 'SAFE_DIVIDE'},
   },
   'timestamp_diff': {
-    takes: {'start': 'timestamp', 'end': 'timestamp', 'unit': 'string'},
+    takes: {'start': 'timestamp', 'end': 'timestamp', 'unit': {sql_native: 'kw'}},
     returns: 'number',
     impl: {function: 'TIMESTAMP_DIFF'},
   },
   'date_trunc': {
-    takes: {'date': 'timestamp', 'unit': 'string'},
+    takes: {'date': 'timestamp', 'unit': {sql_native: 'kw'}},
     returns: 'timestamp',
     impl: {sql: 'DATE_TRUNC(${date}, ${unit})'},
   },

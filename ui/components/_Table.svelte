@@ -86,6 +86,8 @@
   let priorityColumns: (string | undefined)[] = [groupBy]
   let finalColumnOrder: string[] = []
   let orderedColumns: any[] = []
+  let dataForDisplay: any[] = []
+  let displayedRows: any[] = []
 
   $: priorityColumns = [groupBy]
   $: props.update((state) => ({...state, priorityColumns}))
@@ -175,12 +177,12 @@
     }
   }
 
-  $: paginated = !groupBy && rows > 0 && (data?.length ?? 0) > rows
-  $: pageCount = paginated ? Math.ceil((data?.length ?? 0) / rows) : 1
+  $: paginated = !groupBy && rows > 0 && (dataForDisplay?.length ?? 0) > rows
+  $: pageCount = paginated ? Math.ceil((dataForDisplay?.length ?? 0) / rows) : 1
   $: currentPage = Math.min(Math.max(currentPage, 1), pageCount)
   $: displayedPageLength = paginated
-    ? Math.min(rows, (data?.length ?? 0) - rows * (currentPage - 1))
-    : data?.length ?? 0
+    ? Math.min(rows, (dataForDisplay?.length ?? 0) - rows * (currentPage - 1))
+    : dataForDisplay?.length ?? 0
 
   $: if (groupBy && data) {
     groupedData = data.reduce<Record<string, any[]>>((acc, row) => {
@@ -203,15 +205,17 @@
     groupToggleStates = {...groupToggleStates, [groupName]: !groupToggleStates[groupName]}
   }
 
-  const activeRows = () => {
-    if (groupBy) return data ?? []
-    if (!paginated) return data ?? []
-    let start = rows * (currentPage - 1)
-    let end = start + rows
-    return data?.slice(start, end) ?? []
+  $: {
+    if (groupBy) {
+      displayedRows = data ?? []
+    } else if (paginated) {
+      let start = rows * (currentPage - 1)
+      let end = start + rows
+      displayedRows = dataForDisplay?.slice(start, end) ?? []
+    } else {
+      displayedRows = dataForDisplay ?? []
+    }
   }
-
-  let lastSortedReference: any[] | undefined = undefined
 
   const applySort = (state: {col: string | null; ascending: boolean | null}) => {
     if (!state.col) return
@@ -224,9 +228,8 @@
         ]),
       )
     } else {
-      let sorted = [...(data ?? [])].sort((a, b) => compareValues(a[state.col as string], b[state.col as string], ascending))
-      data = sorted
-      lastSortedReference = sorted
+      let source = Array.isArray(data) ? data : []
+      dataForDisplay = [...source].sort((a, b) => compareValues(a[state.col as string], b[state.col as string], ascending))
     }
   }
 
@@ -241,24 +244,46 @@
     applySort(sortObj)
   }
 
+  const normalizeForSort = (value: unknown) => {
+    if (value instanceof Date) return value.getTime()
+    if (typeof value === 'number') return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY
+    if (typeof value === 'bigint') return Number(value)
+    if (typeof value === 'boolean') return value ? 1 : 0
+    if (typeof value === 'string') {
+      let trimmed = value.trim()
+      if (!trimmed) return ''
+      let numeric = Number(trimmed)
+      if (!Number.isNaN(numeric) && /^[-+]?\d*\.?\d+(e[-+]?\d+)?$/i.test(trimmed)) return numeric
+      return trimmed.toLowerCase()
+    }
+    return String(value).toLowerCase()
+  }
+
   const compareValues = (a: unknown, b: unknown, ascending: boolean) => {
     let modifier = ascending ? 1 : -1
     if (a === b) return 0
     if (a === undefined || a === null) return -1 * modifier
     if (b === undefined || b === null) return 1 * modifier
-    if (typeof a === 'number' && typeof b === 'number') {
-      return a < b ? -1 * modifier : 1 * modifier
-    }
-    let valA = String(a).toLowerCase()
-    let valB = String(b).toLowerCase()
+    let valA = normalizeForSort(a)
+    let valB = normalizeForSort(b)
     if (valA < valB) return -1 * modifier
     if (valA > valB) return 1 * modifier
     return 0
   }
 
-  $: if (data && sortObj.col && data !== lastSortedReference) {
-    applySort(sortObj)
+  $: {
+    let source = Array.isArray(data) ? data : []
+    if (groupBy) {
+      dataForDisplay = source
+    } else if (sortObj.col) {
+      let ascending = sortObj.ascending ?? true
+      dataForDisplay = [...source].sort((a, b) => compareValues(a[sortObj.col as string], b[sortObj.col as string], ascending))
+    } else {
+      dataForDisplay = source
+    }
   }
+
+  $: if (data && sortObj.col) applySort(sortObj)
 
   $: sortedGroupNames = groupBy
     ? Object.keys(groupedData).sort((a, b) => a.localeCompare(b))
@@ -276,8 +301,9 @@
     groupOffsets = {}
   }
 
-  const totalRows = data?.length ?? 0
-  $: tableData = data ?? []
+  let totalRows = 0
+  $: totalRows = dataForDisplay?.length ?? 0
+  $: tableData = dataForDisplay ?? []
 </script>
 
 {#if !error}
@@ -298,7 +324,7 @@
       </div>
     {/if}
 
-    <div class="scrollbox" style:background-color={$backgroundColorStore}>
+    <div class="scrollbox pretty-scrollbar" style:background-color={$backgroundColorStore}>
       <table>
         <TableHeader
           {rowNumbers}
@@ -362,7 +388,7 @@
           {/each}
         {:else}
           <TableRow
-            displayedData={activeRows()}
+            displayedData={displayedRows}
             {rowShading}
             {link}
             {rowNumbers}
@@ -415,6 +441,9 @@
     font-size: 9.5pt;
     margin: 16px 0;
     position: relative;
+    color: var(--color-base-content, #1f2937);
+    font-family: var(--ui-font-family, system-ui);
+    line-height: 1.45;
   }
 
   .table-container--has-pagination {

@@ -3,7 +3,7 @@ import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scop
 import {isExtractUnit, isTemporalType, type TemporalTypeDef, type AggregateFunctionType, type StructRef, type AtomicTypeDef} from './node_modules/@malloydata/malloy/dist/model/index.js'
 import {txt, compact, getFile, getPosition, walkExpression} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import {config, dialectKeyword} from './config.ts'
+import {config} from './config.ts'
 import {findOverloads} from './functions.ts'
 import {inferParamTypes} from './params.ts'
 
@@ -265,11 +265,6 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     case 'String': return {node: 'stringLiteral', literal: txt(expr).slice(1, -1), type: 'string'}
     case 'Param': return {node: 'parameter', path: [txt(expr).slice(1)], type: 'string'}
     case 'Ref': {
-      // Refs are tokens that usually point to a column name, but can also be keywords in some dialects
-      if (dialectKeyword(txt(expr))) {
-        return {node: 'genericSQLExpr', kids: {args: []}, type: 'string', src: [txt(expr)]} as any
-      }
-
       let path = expr.getChildren('Identifier').map(i => txt(i))
       let {fields, inOutput} = lookup(expr, scope)
       let type = fields[0]?.type || 'unknown'
@@ -356,12 +351,22 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 
 function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
-  let args = expr.getChildren('Expression').map(e => analyzeExpression(e, scope))
-  let ret: Expression
+  let argNodes = expr.getChildren('Expression')
 
   // get the right overload for the args. Also check out malloy's `findOverload` for picking the right one
   let overload = findOverloads(name, config.dialect).find(o => {
-    return o.params.length == args.length || !!o.params.find(p => p.isVariadic)
+    return o.params.length == argNodes.length || !!o.params.find(p => p.isVariadic)
+  })
+
+  // analyze each of the function arguments
+  let args = argNodes.map((node, idx) => {
+    let type = overload?.params[idx]?.allowedTypes[0]
+    if (type?.type === 'sql native' && type?.rawType === 'kw') {
+      // some dialects allow special keywords as args in certain functions, like bigquery's `date_trunc(some_col, week)`
+      return {node: 'genericSQLExpr' as const, kids: {args: []}, type: 'sql native', src: [txt(node)], isAgg: false}
+    } else {
+      return analyzeExpression(node, scope)
+    }
   })
 
   let type = overload?.returnType.type
@@ -379,6 +384,7 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
     structPaths.add(e.path.slice(0, -1).join('.') || scope.table.name)
   }))
 
+  let ret: Expression
   if (['count', 'min', 'max', 'avg', 'sum'].includes(name.toLowerCase())) {
     // malloy has a special node type for built-in aggregates
     ret = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}

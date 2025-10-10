@@ -1,10 +1,5 @@
-import {test, expect, waitForGrapheneQueries} from './fixtures'
-import fs from 'fs-extra'
-import {fileURLToPath} from 'url'
-import path from 'path'
-
-let f = path.resolve(fileURLToPath(import.meta.url), '../ordersByCategory.json')
-let ordersByCategory = JSON.parse(fs.readFileSync(f))
+import {test, expect} from './fixtures'
+import {singleDim, timeseries, timeseriesGrouped} from './testData'
 
 test.use({
   viewport: {width: 680, height: 400},
@@ -49,37 +44,3 @@ test('big value', async ({mount, page, chart}) => {
   await expect(page.getByText('611,113')).toBeVisible()
   await expect(chart.el).toHaveScreenshot('big-value.png')
 })
-
-test('table', async ({mount, page}) => {
-  await mount('components/Table.svelte', {data: timeseriesGrouped(), title: 'Sales'})
-  await waitForGrapheneQueries(page)
-  let table = page.locator('[data-testid="DataTable-no-id"] table')
-  await expect(table).toBeVisible()
-  await expect(table.getByRole('cell').first()).toHaveText('2021-01-01')
-})
-
-function singleDim () {
-  let res = {}
-  ordersByCategory.forEach(r => res[r.category] = (res[r.category] || 0) + r['sales_usd0k'])
-  let rows = Object.keys(res).map(k => ({category: k, value: res[k]})) as any
-  rows._evidenceColumnTypes = [{name: 'category', evidenceType: 'string'}, {name: 'sales_usd0k', evidenceType: 'number'}]
-  return {rows}
-}
-
-function timeseries () {
-  let res = {}
-  ordersByCategory.forEach(r => res[r.month] = (res[r.month] || 0) + r['sales_usd0k'])
-  let rows = Object.keys(res).map(k => ({month: new Date(k), sales_usd0k: res[k]})) as any
-  rows._evidenceColumnTypes = [{name: 'month', evidenceType: 'date'}, {name: 'sales_usd0k', evidenceType: 'number'}]
-  return {rows}
-}
-
-function timeseriesGrouped () {
-  let rows = ordersByCategory.map(r => ({...r, month: new Date(r.month)}))
-  rows._evidenceColumnTypes = [
-    {name: 'month', evidenceType: 'date'},
-    {name: 'category', evidenceType: 'string'},
-    {name: 'sales_usd0k', evidenceType: 'number'},
-  ]
-  return {rows}
-}
