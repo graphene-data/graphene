@@ -84,7 +84,7 @@ Supply data with a specified column name to define the slider's min and max valu
     name='RangeSlider'
     size=large
     step=100
-    data={flight_data}
+    data="flight_data"
     range=fare
 />
 ````
@@ -97,7 +97,7 @@ Supply data with specified column names for minColumn, maxColumn, and/or default
     name='MaxColSlider'
     size=large
     step=100
-    data={flight_data}
+    data="flight_data"
     maxColumn=max_fare
     min=0
     defaultValue=max_fare

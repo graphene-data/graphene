@@ -9,7 +9,7 @@ Show points of interest on a map, optionally color-coded by a metric.
 
 ```html
 <PointMap 
-    data={la_locations} 
+    data="la_locations" 
     lat=lat 
     long=long  
     pointName=point_name 
@@ -29,14 +29,14 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <PointMap 
-    data={la_locations} 
+    data="la_locations" 
     lat=lat 
     long=long 
     value=sales 
     valueFmt=usd 
     pointName=point_name 
     height=200 
-    basemap={`https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.{ext}`}
+    basemap="`https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z"/{x}/{y}{r}.{ext}`}
     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 />
 ```
@@ -49,7 +49,7 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <PointMap 
-    data={la_locations} 
+    data="la_locations" 
     lat=lat 
     long=long 
     value=sales 
@@ -57,8 +57,8 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
     pointName=point_name 
     height=200
     tooltipType=hover
-    tooltip={[
-        {id: 'point_name', showColumnName: false, valueClass: 'text-xl font-semibold'},
+    tooltip="[
+        {id: 'point_name', showColumnName: false, valueClass: 'text-xl font-semibold'",
         {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'}    
     ]}
 />
@@ -70,7 +70,7 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <PointMap 
-    data={la_locations} 
+    data="la_locations" 
     lat=lat 
     long=long 
     value=sales 
@@ -78,8 +78,8 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
     pointName=point_name 
     height=200
     tooltipType=click
-    tooltip={[
-        {id: 'point_name', showColumnName: false, valueClass: 'text-xl font-semibold'},
+    tooltip="[
+        {id: 'point_name', showColumnName: false, valueClass: 'text-xl font-semibold'",
         {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'},
         {id: 'link_col', showColumnName: false, contentType: 'link', linkLabel: 'Click here', valueClass: 'font-bold mt-1'}
     ]}
@@ -92,7 +92,7 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <PointMap 
-    data={la_locations} 
+    data="la_locations" 
     lat=lat 
     long=long 
     value=sales 
@@ -109,7 +109,7 @@ You can add a different basemap by passing in a basemap URL. You can find exampl
 
 ```svelte
 <PointMap 
-    data={la_locations} 
+    data="la_locations" 
     lat=lat 
     long=long 
     pointName=point_name 
@@ -128,7 +128,7 @@ Pass in a `link` column to enable navigation on click of the point. These can be
 
 ```svelte
 <PointMap 
-    data={la_locations} 
+    data="la_locations" 
     lat=lat 
     long=long 
     link=link_col 
@@ -143,7 +143,7 @@ Use the `name` prop to set an input name for the map - when a point is clicked, 
 
 ```svelte
 <PointMap 
-    data={la_locations} 
+    data="la_locations" 
     lat=lat 
     long=long 
     name=my_point_map 
@@ -177,7 +177,7 @@ Use the `name` prop to set an input name for the map - when a point is clicked, 
 
 ```svelte
 <PointMap
-    data={grouped_locations}
+    data="grouped_locations"
     lat=lat
     long=long
     value=Category
@@ -191,7 +191,7 @@ Set custom legend colors using the `colorPalette` prop to match the number of ca
 
 ```svelte
 <PointMap
-    data={grouped_locations}
+    data="grouped_locations"
     lat=lat
     long=long
     value=Category
@@ -205,7 +205,7 @@ Set custom legend colors using the `colorPalette` prop to match the number of ca
 
 ```svelte
 <PointMap
-    data={grouped_locations}
+    data="grouped_locations"
     lat=lat
     long=long
     value=sales
@@ -220,7 +220,7 @@ Define scalar legend colors using the `colorPalette` prop, allowing specified co
 
 ```svelte
 <PointMap
-    data={grouped_locations}
+    data="grouped_locations"
     lat=lat
     long=long
     value=sales
@@ -295,8 +295,8 @@ Define scalar legend colors using the `colorPalette` prop, allowing specified co
 #### `tooltip` example:
 
 ```javascript
-tooltip={[
-    {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'},
+tooltip="[
+    {id: 'zip_code', fmt: 'id', showColumnName: false, valueClass: 'text-xl font-semibold'",
     {id: 'sales', fmt: 'eur', fieldClass: 'text-[grey]', valueClass: 'text-[green]'},
     {id: 'zip_code', showColumnName: false, contentType: 'link', linkLabel: 'Click here', valueClass: 'font-bold mt-1'}
 ]}

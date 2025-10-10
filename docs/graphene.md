@@ -99,7 +99,7 @@ The following components are available:
 - Row - evenly distributes its children in a row
 - [DateRange](./data_apps/components/inputs/date-range.md)
 - [BigValue](./data_apps/components/data/big-value.md)
-- [DataTable](./data_apps/components/data/data-table.md)
+- [Table](./data_apps/components/data/table.md)
 - [TextInput](./data_apps/components/inputs/text-input.md)
 
 ## Using the Graphene CLI
@@ -108,9 +108,10 @@ These are the available commands:
 - `npm run cli compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
 - `npm run cli run "GSQL"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
 - `npm run cli serve` - Starts (or restarts) the dev server, which allows the user to view their Graphene app on localhost.
-- `npm run cli check <mdPath>` - Captures a screenshot of a given md file, along with any errors encountered.
+- `npm run cli view <mdPath>` - Captures a screenshot of a given md file, along with any errors encountered.
 
-## Best practices
+## AGENT INSTRUCTIONS
 Follow these guidelines when working in a Graphene project.
 - Before writing any GSQL queries, run them in the CLI first to make sure that the results make sense.
 - Do not redefine joins or expressions in a GSQL query that already exist in a semantic model. For example, if profit has already been defined as the stored expression `sum(revenue - cost) as profit` on the table `orders`, you can simply use it in a downstream query as `select profit from orders`.
+- After writing an .md file, run a syntax check with `npm run cli check`. 

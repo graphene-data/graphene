@@ -11,7 +11,7 @@ To see how to filter a query using an input component, see [Filters](/core-conce
 ````markdown
 <DateRange
     name=date_range_name
-    data={orders_by_day}
+    data="orders_by_day"
     dates=day
 />
 
@@ -25,7 +25,7 @@ From {inputs.date_range_name.start} to {inputs.date_range_name.end}
 ````markdown
 <DateRange
     name=date_range_from_query
-    data={orders_by_day}
+    data="orders_by_day"
     dates=day
 />
 
@@ -47,7 +47,7 @@ From {inputs.date_range_from_query.start} to {inputs.date_range_from_query.end}
 ```markdown
 <DateRange
     name=date_range_with_title
-    data={orders_by_day}
+    data="orders_by_day"
     dates=day
     title="Select a Date Range"
 />
@@ -58,9 +58,9 @@ From {inputs.date_range_from_query.start} to {inputs.date_range_from_query.end}
 ````markdown
 <DateRange
     name=date_range_visible_during_print
-    data={orders_by_day}
+    data="orders_by_day"
     dates=day
-    hideDuringPrint={false}
+    hideDuringPrint="false"
 />
 ````
 
@@ -70,12 +70,12 @@ From {inputs.date_range_from_query.start} to {inputs.date_range_from_query.end}
 ````markdown
 <DateRange
     name=range_filtering_a_query
-    data={orders_by_day}
+    data="orders_by_day"
     dates=day
 />
 
 <LineChart
-    data={filtered_query}
+    data="filtered_query"
     x=day
     y=sales
 />
@@ -86,7 +86,7 @@ From {inputs.date_range_from_query.start} to {inputs.date_range_from_query.end}
 ```svelte
 <DateRange
     name="date_range_preset"
-    presetRanges={'Last 7 Days'}
+    presetRanges="'Last 7 Days'"
 />
 ```
 
@@ -104,7 +104,7 @@ From {inputs.date_range_from_query.start} to {inputs.date_range_from_query.end}
 ````svelte
 <DateRange
     name="date_range_preset_3"
-    defaultValue={'Last 7 Days'}
+    defaultValue="'Last 7 Days'"
 />
 ````
 

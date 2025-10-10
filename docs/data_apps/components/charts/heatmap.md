@@ -10,7 +10,7 @@ Use heatmaps to show patterns in a single metric across two categorical dimensio
 
 ```markdown
 <Heatmap 
-    data={orders} 
+    data="orders" 
     x=day 
     y=category 
     value=order_count 
@@ -62,7 +62,7 @@ Which will return this table, which can be passed into the Heatmap:
 
 ```markdown
 <Heatmap 
-    data={orders} 
+    data="orders" 
     x=day 
     y=category 
     value=order_count 
@@ -76,15 +76,15 @@ Which will return this table, which can be passed into the Heatmap:
 
 ```svelte
 <Heatmap 
-    data={orders} 
+    data="orders" 
     x=day 
     y=category 
     value=order_count 
     valueFmt=usd 
-    colorScale={[
+    colorScale="[
         ['rgb(254,234,159)', 'rgb(254,234,159)'],
         ['rgb(218,66,41)', 'rgb(218,66,41)']
-    ]}
+    ]"
 />
 ```
 
@@ -95,7 +95,7 @@ Which will return this table, which can be passed into the Heatmap:
 
 ```svelte
 <Heatmap 
-    data={item_state} 
+    data="item_state" 
     x=item 
     y=state 
     value=orders 

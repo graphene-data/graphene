@@ -9,7 +9,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month
     y=sales
     series=category
@@ -25,7 +25,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_month}
+    data="orders_by_month"
     x=month
     y=sales
 />
@@ -37,7 +37,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month
     y=sales
     series=category
@@ -50,7 +50,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month
     y=sales
     yFmt=pct0
@@ -65,7 +65,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month
     y=sales
     series=category
@@ -79,7 +79,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_item_all_time}
+    data="orders_by_item_all_time"
     x=item
     y=sales 
     swapXY=true
@@ -93,7 +93,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={categories_by_channel}
+    data="categories_by_channel"
     x=category
     y=sales
     series=channel
@@ -107,7 +107,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={categories_by_channel}
+    data="categories_by_channel"
     x=category
     y=sales
     series=channel
@@ -122,7 +122,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart
-    data={categories_by_channel}
+    data="categories_by_channel"
     x=category
     y=sales
     series=channel
@@ -137,7 +137,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month
     y=sales
     yFmt=usd1k
@@ -152,7 +152,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_category_2021}
+    data="orders_by_category_2021"
     x=month 
     y=sales 
     series=category 
@@ -171,7 +171,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_month} 
+    data="orders_by_month" 
     x=month 
     y=sales
     yFmt=usd0k
@@ -185,7 +185,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 
 ```markdown
 <BarChart 
-    data={orders_by_month} 
+    data="orders_by_month" 
     x=month 
     y=sales
     yFmt=usd0k
@@ -310,8 +310,8 @@ Bar charts can include [annotations](/components/charts/annotations) using the `
 **Example:**
 
 ```html
-<BarChart data={orders_by_month} x=month y=sales>
+<BarChart data="orders_by_month" x=month y=sales>
   <ReferenceArea xMin='2020-03-14' xMax='2021-05-01' label='COVID-19 Lockdown'/>
-  <ReferenceLine data={target_data} y=target label=name/>
+  <ReferenceLine data="target_data" y=target label=name/>
 </BarChart>
 ```

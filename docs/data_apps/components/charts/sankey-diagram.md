@@ -13,7 +13,7 @@ To display a flow with multiple levels, like these examples, see [Mutli-level](#
 
 ```svelte
 <SankeyDiagram 
-    data={query_name} 
+    data="query_name" 
     sourceCol= sourceCol
     targetCol = targetCol
     valueCol= valueCol
@@ -24,7 +24,7 @@ To display a flow with multiple levels, like these examples, see [Mutli-level](#
 
 ```svelte
 <SankeyDiagram 
-    data={query_name} 
+    data="query_name" 
     sourceCol=sourceCol
     targetCol=targetCol
     valueCol=valueCol
@@ -36,18 +36,18 @@ To display a flow with multiple levels, like these examples, see [Mutli-level](#
 
 ```svelte
 <SankeyDiagram 
-    data={traffic_data} 
+    data="traffic_data" 
     title="Sankey" 
     subtitle="A simple sankey chart" 
     sourceCol=source 
     targetCol=target 
     valueCol=count 
-    echartsOptions={{
+    echartsOptions="{
         title: {
             text: "Custom Echarts Option",
             textStyle: {
               color: '#476fff'
-            }
+            "
         }
     }}
 />
@@ -58,13 +58,13 @@ To display a flow with multiple levels, like these examples, see [Mutli-level](#
 
 ```svelte
 <SankeyDiagram 
-    data={apple_income_statement} 
+    data="apple_income_statement" 
     title="Apple Income Statement" 
     subtitle="USD Billions" 
     sourceCol=source 
     targetCol=target 
     valueCol=amount_usd 
-    depthOverride={{'services revenue': 1}}
+    depthOverride="{'services revenue': 1"}
     nodeAlign=left
 />
 ```
@@ -77,7 +77,7 @@ To display a flow with multiple levels, like these examples, see [Mutli-level](#
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -90,7 +90,7 @@ To display a flow with multiple levels, like these examples, see [Mutli-level](#
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -105,7 +105,7 @@ The value labels can be formatted using the `valueFmt` option.
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -122,7 +122,7 @@ Requires `percentCol` to show percentage beside value
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -136,7 +136,7 @@ Requires `percentCol` to show percentage beside value
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -150,7 +150,7 @@ Requires `percentCol` to show percentage beside value
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -164,7 +164,7 @@ Requires `percentCol` to show percentage beside value
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -180,7 +180,7 @@ Requires `percentCol` to show percentage beside value
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -194,7 +194,7 @@ Requires `percentCol` to show percentage beside value
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -208,7 +208,7 @@ Requires `percentCol` to show percentage beside value
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -222,7 +222,7 @@ Requires `percentCol` to show percentage beside value
 
 ```svelte
 <SankeyDiagram 
-  data={simple_sankey} 
+  data="simple_sankey" 
   sourceCol=source 
   targetCol=target 
   valueCol=amount 
@@ -243,7 +243,7 @@ For example, here is the source for the visuals above.
 
 ```svelte
 <SankeyDiagram
-    data={traffic_data}
+    data="traffic_data"
     title="Sankey"
     subtitle="A simple sankey chart"
     sourceCol=source
