@@ -47,6 +47,12 @@ let beforeAllFns = []
 let beforeEachFns = []
 let testToRun = null
 
+process.prependListener('uncaughtExceptionMonitor', (error) => {
+  console.error(error.message)
+  if (error.expected) console.log('expected', error.expected)
+  if (error.actual) console.log('actual  ', error.actual)
+})
+
 global.describe = (name, fn) => fn()
 global.it = (name, fn) => {
   if (name !== firstTest.name) return

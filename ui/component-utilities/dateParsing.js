@@ -33,12 +33,18 @@ export function standardizeDateString (date) {
 export function convertColumnToDate (data, column) {
   // Replaces a date column's string values with JS date objects, using the standardizeDateString function
 
-  data = tidy(
+  let converted = tidy(
     data,
     mutate({[column]: (d) => (d[column] ? new Date(standardizeDateString(d[column])) : null)}),
   )
 
-  return data
+  if (data && typeof data === 'object') {
+    for (let key of Object.keys(data)) {
+      if (!/^\d+$/.test(key)) converted[key] = data[key]
+    }
+  }
+
+  return converted
 }
 
 export function standardizeDateColumn (data, column) {

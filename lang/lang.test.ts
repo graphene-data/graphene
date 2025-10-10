@@ -383,6 +383,20 @@ describe('lang', () => {
       .toRenderSql('select timestamp_diff(base.`created_at`,base.`created_at`,day) as `col_0` from `users` as base')
   })
 
+  it('treats date part keywords as literals only when allowed', () => {
+    setConfig({dialect: 'bigquery', root: ''})
+    updateFile('table calendar (created_at timestamp, day text, week text)', 'calendar.gsql')
+
+    expect('from calendar select week')
+      .toRenderSql('select base.`week` as `week` from `calendar` as base')
+
+    expect('from calendar select timestamp_diff(created_at, created_at, week)')
+      .toRenderSql('select timestamp_diff(base.`created_at`,base.`created_at`,week) as `col_0` from `calendar` as base')
+
+    expect('from calendar select date_trunc(created_at, week)')
+      .toRenderSql('select date_trunc(base.`created_at`, week) as `col_0` from `calendar` as base')
+  })
+
   it('supports extract expressions', () => {
     expect('from users select extract(hour from created_at)')
       .toRenderSql('select extract(hour from base."created_at") as "col_0" from users as base')

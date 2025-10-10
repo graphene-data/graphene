@@ -191,6 +191,12 @@ async function main () {
     case 'start':
       await startWorktree(arg)
       break
+    case 'pull':
+      await $`git stash`
+      await $`git fetch`
+      await $`git rebase origin/main`
+      await $`git stash pop`
+      break
     case 'merge':
       await mergeWorktree()
       break
@@ -204,6 +210,7 @@ Usage: wt <command>
 Commands:
   ls              List all active worktrees
   start <name>    Create a new worktree
+  pull            Pull down latest changes from main
   merge           Rebase, squash merge, and push current branch
   done <name>     Archive a worktree
 `)
