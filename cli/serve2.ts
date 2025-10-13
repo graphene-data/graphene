@@ -220,7 +220,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <link rel="icon" href="@graphenedata/ui/assets/favicon.ico" />
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-      <link href="https://fonts.googleapis.com/css2?family=Funnel+Display:wght@300..800&display=swap" rel="stylesheet">
+      <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     </head>
     <body>
       <div id="app"></div>
