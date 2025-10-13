@@ -96,6 +96,7 @@ html {
 
 body {
   user-select: none;
+  font-family: "Inter", var(--ui-font-family);
 }
 
 main {
@@ -145,7 +146,7 @@ select {
 
 /* Markdown content */
  .markdown {
-  font-family: var(--ui-font-family);
+  font-family: "Inter", var(--ui-font-family);
   font-size: 1rem;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -215,7 +216,7 @@ h6 {
   scroll-margin-top: var(--header-height);
   break-inside: avoid;
   color: var(--base-heading);
-  font-family: "Funnel Display", sans-serif;
+  font-family: "Inter", var(--ui-font-family);
   font-optical-sizing: auto;
   font-weight: 100;
   font-style: normal;
