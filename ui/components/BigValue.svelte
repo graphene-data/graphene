@@ -47,12 +47,11 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    padding: 12px;
-    border-radius: 8px;
-    background: var(--graphene-big-value-bg, rgba(243, 244, 246, 0.5));
+    margin: 8px 0;
   }
 
   .big-value__title {
+    font-size: 14px;
     font-weight: 600;
     color: var(--graphene-big-value-title, #111827);
   }
