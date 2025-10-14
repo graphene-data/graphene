@@ -35,6 +35,7 @@ const createTheme = (mode) => {
       itemGap: 7,
       textStyle: {
         fontSize: 14,
+        fontWeight: 600,
         color: titleColor,
       },
       subtextStyle: {
