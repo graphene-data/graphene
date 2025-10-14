@@ -439,7 +439,7 @@
 <style>
   .table-container {
     font-size: 9.5pt;
-    margin: 16px 0;
+    margin: 8px 0;
     position: relative;
     color: var(--color-base-content, #1f2937);
     font-family: var(--ui-font-family, system-ui);
@@ -456,7 +456,7 @@
 
   .table-title__headline {
     font-weight: 600;
-    font-size: 16px;
+    font-size: 14px;
     line-height: 1.3;
   }
 

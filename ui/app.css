@@ -97,6 +97,7 @@ html {
 body {
   user-select: none;
   font-family: "Inter", var(--ui-font-family);
+  line-height: 1.7;
 }
 
 main {
@@ -148,7 +149,7 @@ select {
  .markdown {
   font-family: "Inter", var(--ui-font-family);
   font-size: 1rem;
-  line-height: 1.5;
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -177,6 +178,7 @@ ul,
 ol {
   margin-block-end: 1.2em;
   margin-block-start: 0;
+  line-height: 1.7;
 }
 
 /* Lists */
@@ -222,12 +224,12 @@ h6 {
   font-style: normal;
 }
 
-h1.title:first-of-type,
-h1:first-of-type { margin-top: 0.25rem; margin-bottom: 0.5rem; }
+/* h1.title:first-of-type,
+h1:first-of-type { margin-top: 0.25rem; margin-bottom: 0.5rem; } */
 
 h1.title,
 h1 {
-  margin-top: 1.25rem;
+  margin-top: 2rem;
   margin-bottom: 0.25rem;
   font-size: 1.5rem;
   line-height: 2rem;
@@ -237,7 +239,7 @@ h1 {
 }
 
 h2 {
-  margin-top: 0.75rem;
+  margin-top: 1.5rem;
   margin-bottom: 0.25rem;
   font-size: 1.25rem;
   line-height: 1.75rem;
@@ -245,16 +247,16 @@ h2 {
 }
 
 h3 {
-  margin-top: 0.5rem;
+  margin-top: 1.25rem;
   margin-bottom: 0.25rem;
   font-size: 1rem;
   line-height: 1.5rem;
   font-weight: 600;
 }
 
-h4 { margin-top: 0.25rem; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
-h5 { margin-top: 0.25rem; font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
-h6 { margin-top: 0.25rem; font-size: 0.75rem; line-height: 1rem; }
+h4 { margin-top: 1rem; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
+h5 { margin-top: 1rem; font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
+h6 { margin-top: 1rem; font-size: 0.75rem; line-height: 1rem; }
 
 hr {
   height: 1px;
