@@ -5,6 +5,8 @@
   export let data
   export let category
   export let value
+  export let title = undefined
+  export let subtitle = undefined
   export let printEchartsConfig = undefined
   export let echartsOptions = undefined
   export let seriesOptions = undefined
@@ -16,6 +18,10 @@
 
 <QueryLoad data={data} fields={[category, value]} let:loaded>
   <ECharts data={loaded} {echartsOptions} {seriesOptions} {seriesColors} config={{
+    title: {
+      text: title,
+      subtext: subtitle,
+    },
     tooltip: {
       formatter: '{b}: {c} ({d}%)',
     },
