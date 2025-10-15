@@ -106,12 +106,14 @@ The following components are available:
 These are the available commands:
 - `npm run cli check` - Checks the syntax for the entire Graphene project.
 - `npm run cli compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
-- `npm run cli run "GSQL"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
+- `npm run cli run "<GSQL>"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
 - `npm run cli serve` - Starts (or restarts) the dev server, which allows the user to view their Graphene app on localhost.
-- `npm run cli view <mdPath>` - Captures a screenshot of a given md file, along with any errors encountered.
+- `npm run cli view <mdPath>` - Captures a screenshot of a given .md file, along with any errors encountered.
 
 ## AGENT INSTRUCTIONS
 Follow these guidelines when working in a Graphene project.
 - Before writing any GSQL queries, run them in the CLI first to make sure that the results make sense.
 - Do not redefine joins or expressions in a GSQL query that already exist in a semantic model. For example, if profit has already been defined as the stored expression `sum(revenue - cost) as profit` on the table `orders`, you can simply use it in a downstream query as `select profit from orders`.
+- When configuring a component in a .md file, read the associated documentation page first in /docs/data_apps/components so you understand all the available configurations.
+- Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is in /docs.
 - After writing an .md file, run a syntax check with `npm run cli check`. 
