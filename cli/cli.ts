@@ -8,7 +8,7 @@ import path from 'path'
 import {getConnection} from './connection.ts'
 import os from 'os'
 import {loadConfig} from '../lang/config.ts'
-import {runServeInBackground} from './background.ts'
+import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 
 const program = new Command()
 
@@ -56,13 +56,20 @@ program
   .description('Run the local server')
   .option('--fg', 'Run the server in the foreground')
   .action(async (options: {fg?: boolean}) => {
-    if (options.fg) {
+    if (options.fg || process.env.DEBUG) {
       let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
       await mod.serve2()
     } else {
       await runServeInBackground()
       process.exit(0)
     }
+  })
+
+program
+  .command('stop')
+  .description('Stop the local server')
+  .action(async () => {
+    await stopGrapheneIfRunning(process.cwd())
   })
 
 program

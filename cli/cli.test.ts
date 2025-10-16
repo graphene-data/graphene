@@ -5,7 +5,7 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import {isProcessRunning, readPid, stopProcess} from './background.ts'
+import {getPidFilePath, isProcessRunning, readPid, stopGrapheneIfRunning} from './background.ts'
 
 interface RunResult {
   code: number
@@ -28,13 +28,9 @@ function runCli (args: string[], cwd?: string): Promise<RunResult> {
   })
 }
 
-async function ensureServerStopped (pidFile: string): Promise<void> {
-  let pid = await readPid(pidFile)
-  if (pid && isProcessRunning(pid)) {
-    let stopped = await stopProcess(pid)
-    if (!stopped) throw new Error('Failed to stop test server')
-  }
-  await removePidFile(pidFile)
+async function ensureServerStopped (root: string): Promise<void> {
+  await stopGrapheneIfRunning(root)
+  await removePidFile(getPidFilePath(root))
 }
 
 async function removePidFile (pidFile: string): Promise<void> {
@@ -57,10 +53,10 @@ describe('cli compile', () => {
 })
 
 describe('cli serve (background)', () => {
-  let pidFile = path.join(flightDir, 'node_modules', '.graphene', 'test.pid')
+  let pidFile = getPidFilePath(flightDir)
 
-  beforeEach(async () => { await ensureServerStopped(pidFile) })
-  afterEach(async () => { await ensureServerStopped(pidFile) })
+  beforeEach(async () => { await ensureServerStopped(flightDir) })
+  afterEach(async () => { await ensureServerStopped(flightDir) })
 
   it('starts the server in the background and restarts cleanly', {timeout: 10000}, async () => {
     let first = await runCli(['serve'], flightDir)
@@ -76,7 +72,7 @@ describe('cli serve (background)', () => {
 
     let second = await runCli(['serve'], flightDir)
     expect(second.code).toBe(0)
-    expect(second.stdout).toContain('Stopping existing server')
+    expect(second.stdout).toContain('Stopping server')
 
     let secondPid = await readPid(pidFile)
     if (!secondPid) throw new Error('Expected a pid after restarting the server')
@@ -87,6 +83,22 @@ describe('cli serve (background)', () => {
 
     let restartResponse = await fetch('http://localhost:4163/')
     expect(restartResponse.status).toBe(200)
+  })
+
+  it('stops the server when running', {timeout: 10000}, async () => {
+    let start = await runCli(['serve'], flightDir)
+    expect(start.code).toBe(0)
+
+    let pid = await readPid(pidFile)
+    if (!pid) throw new Error('Expected pid file after starting server')
+    expect(isProcessRunning(pid)).toBe(true)
+
+    let stop = await runCli(['stop'], flightDir)
+    expect(stop.code).toBe(0)
+    expect(stop.stdout).toContain('Stopping server')
+
+    expect(await readPid(pidFile)).toBeUndefined()
+    expect(isProcessRunning(pid)).toBe(false)
   })
 })
 
