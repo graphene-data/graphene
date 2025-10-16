@@ -3,9 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node server/dev.ts",
+    "dev": "node --env-file=.env  server/dev.ts",
     "build": "vite build --config frontend/vite.config.ts",
-    "preview": "vite preview --config frontend/vite.config.ts",
     "migrate": "drizzle-kit migrate --config=db/drizzle.config.ts",
     "generate": "drizzle-kit generate --config=db/drizzle.config.ts",
     "test": "playwright test --config=playwright.config.ts"

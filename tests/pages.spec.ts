@@ -14,7 +14,6 @@ test.describe('pages', () => {
   test('renders the index markdown page', async ({page, cloud}) => {
     await cloud.waitForPage(page, '/')
 
-    console.log('PAGE HTML', await page.content())
     await expect(page.locator('h1', {hasText: 'KPI Summary'})).toBeVisible()
   })
 })

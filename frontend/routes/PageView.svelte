@@ -15,9 +15,7 @@
     error = ''
     try {
       let modulePath = toModulePath(target)
-      console.log('Loading page module', modulePath)
       let mod = await import(/* @vite-ignore */ `/_api/pages${modulePath}`)
-      console.log('Loaded page module', modulePath, mod)
       content = mod.default
     } catch (cause) {
       console.error(cause)

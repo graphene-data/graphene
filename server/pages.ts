@@ -32,17 +32,14 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
   })
   if (!svelteSource) return reply.code(500).send({error: 'Failed to compile page'})
 
-  if (!componentNames) {
-    let files = await fs.readdir(path.join(import.meta.dirname, '../../core/ui/components'))
-    componentNames = files.map(f => path.basename(f, '.svelte')).filter(f => !f.startsWith('_'))
-  }
-
-  let compiled = svelteCompile(svelteSource.code)
-  let runtime = rewriteSvelteRuntime(compiled.js.code)
-  let componentImport = `const {${componentNames.join(', ')}} = window.$GRAPHENE.components`
+  let compiled = svelteCompile(svelteSource.code, {
+    generate: 'dom',
+    dev: process.env.NODE_ENV !== 'production',
+  })
+  let code = await rewriteSvelteImports(compiled.js.code)
 
   reply.type('text/javascript')
-  reply.send(`${componentImport}\n\n${runtime}`)
+  reply.send(code)
 }
 
 function extractQueries () {
@@ -60,22 +57,33 @@ function extractQueries () {
   }
 }
 
-function rewriteSvelteRuntime (code: string) {
+// The generated Svelte component is going to import a bunch of Svelte internals and visualization components.
+// Because we're doing this at runtime and we don't have a bundler, we need to figure out a way to make these imports work.
+// For now just do the simple thing and rewrite them to import from a global that we set in main.ts
+async function rewriteSvelteImports (code: string) {
   let runtimeImportPattern = /import\s*\{\s*([^}]*)\}\s*from\s*["']svelte\/internal["'];?\s*/m
   let runtimeMatch = code.match(runtimeImportPattern)
 
-  if (!runtimeMatch) return code
+  if (!runtimeMatch) throw new Error('Couldnt find expected imports in generated svelte')
 
-  let identifiers = runtimeMatch[1].split(',').map(s => s.trim()).filter(Boolean)
+  if (!componentNames) {
+    let files = await fs.readdir(path.join(import.meta.dirname, '../../core/ui/components'))
+    componentNames = files.map(f => path.basename(f, '.svelte')).filter(f => !f.startsWith('_'))
+  }
+
+  let svelteInternalImports = runtimeMatch[1].split(',').map(s => s.trim()).filter(Boolean)
   let prelude = [
     'const __svelte = window.$GRAPHENE?.svelte;',
     "if (!__svelte) throw new Error('Graphene runtime is missing Svelte internals');",
-    `const {${identifiers.join(', ')}} = __svelte;`,
+    `const {${svelteInternalImports.join(', ')}} = __svelte;`,
+    `const {${componentNames.join(', ')}} = window.$GRAPHENE.components`,
     '',
   ].join('\n')
 
-  let rewritten = code.replace(runtimeImportPattern, `${prelude}`)
-  rewritten = rewritten.replace(/import\s+["']svelte\/internal\/disclose-version["'];?\s*/m, '')
+  code = code.replace(runtimeImportPattern, `${prelude}`)
 
-  return rewritten
+  // not sure what this is, or if we need it, so just removing for now
+  code = code.replace(/import\s+["']svelte\/internal\/disclose-version["'];?\s*/m, '')
+
+  return code
 }
