@@ -1,4 +1,8 @@
 ## Soon
+* cloud v1
+* check out railbird data
+* check in to why the primary key doesn't seem to be used in ecomm
+* add tests for more viz settings
 * `view` doesn't work when the tab isn't active (but maybe could with OffscreenCanvas?)
 * table formatting doesn't look quite like evidence
 * get the ui tests working again, and maybe a subagent for viewing results?
