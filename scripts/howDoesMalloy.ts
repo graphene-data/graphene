@@ -23,7 +23,6 @@ import {
   type ModelString,
   type InvalidationKey,
 } from '@malloydata/malloy'
-import {DuckDBConnection} from '@malloydata/db-duckdb'
 
 // Default example that matches the in-memory ecommerce schema created below
 const EXAMPLE = `
@@ -190,7 +189,7 @@ async function main () {
   }
 
   // Always use an in-memory DuckDB
-  let connection = new DuckDBConnection({name: 'duckdb', databasePath: ':memory:'})
+  // let connection = new DuckDBConnection({name: 'duckdb', databasePath: ':memory:'})
   // Initialize tables/data
   await (connection as any).connecting
   // Run each statement individually to avoid issues with streaming
