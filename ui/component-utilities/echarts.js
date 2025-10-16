@@ -1,4 +1,4 @@
-import {registerTheme, init, connect} from 'echarts'
+import {registerTheme, init, connect} from 'echarts/dist/echarts.esm.js'
 import {evidenceThemeDark, evidenceThemeLight} from './echartsThemes'
 import debounce from 'debounce'
 import * as chartWindowDebug from './chartWindowDebug'
