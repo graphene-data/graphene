@@ -3,24 +3,20 @@ import {fileURLToPath} from 'url'
 import fs from 'fs-extra'
 import path from 'path'
 
+export type StopStatus = 'none' | 'stale' | 'stopped'
+
 export async function runServeInBackground (): Promise<void> {
-  let grapheneCache = path.join(process.cwd(), 'node_modules', '.graphene')
-  let pidFile = path.join(grapheneCache, process.env.NODE_ENV == 'test' ? 'test.pid' : 'serve.pid')
+  let root = process.cwd()
+  let grapheneCache = getGrapheneCache(root)
   let logFile = path.join(grapheneCache, 'serve.log')
   await fs.ensureDir(grapheneCache)
-
-  let existingPid = await readPid(pidFile)
-  if (existingPid && isProcessRunning(existingPid)) {
-    console.log(`Stopping existing server (pid ${existingPid})`)
-    let stopped = await stopProcess(existingPid)
-    if (!stopped) throw new Error(`Failed to stop existing server (pid ${existingPid}). Please kill it manually.`)
-  }
+  await stopGrapheneIfRunning(root)
 
   let log = fs.openSync(logFile, 'w')
   let entryPoint = process.argv[1] || fileURLToPath(import.meta.url)
   let childArgs = [...process.execArgv, entryPoint, 'serve', '--fg', ...process.argv.slice(3)]
   let child = spawn(process.execPath, childArgs, {
-    cwd: process.cwd(),
+    cwd: root,
     detached: true,
     env: {...process.env},
     stdio: ['ignore', log, log],
@@ -49,17 +45,26 @@ export async function runServeInBackground (): Promise<void> {
   })
 }
 
-export async function readPid (pidFile: string): Promise<number | undefined> {
-  if (!(await fs.pathExists(pidFile))) return undefined
-  let contents = (await fs.readFile(pidFile, 'utf8')).trim()
-  if (!contents) return undefined
-  let pid = Number.parseInt(contents, 10)
-  if (Number.isNaN(pid)) return undefined
-  return pid
+export function getGrapheneCache (root: string): string {
+  return path.join(root, 'node_modules', '.graphene')
 }
 
-export async function stopProcess (pid: number): Promise<boolean> {
+export function getPidFilePath (root: string): string {
+  return path.join(getGrapheneCache(root), process.env.NODE_ENV == 'test' ? 'test.pid' : 'serve.pid')
+}
+
+export async function stopGrapheneIfRunning (root: string): Promise<boolean> {
+  let pidFile = getPidFilePath(root)
+  let pid = await readPid(pidFile)
+  if (!pid) return true
+
+  if (!isProcessRunning(pid)) {
+    await fs.remove(pidFile)
+    return true
+  }
+
   try {
+    console.log(`Stopping server (${pid})`)
     process.kill(pid, 'SIGTERM')
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === 'ESRCH') return true
@@ -67,27 +72,21 @@ export async function stopProcess (pid: number): Promise<boolean> {
   }
 
   let end = Date.now() + 5000
-  while (Date.now() < end) {
-    if (!isProcessRunning(pid)) return true
+  while (Date.now() < end && isProcessRunning(pid)) {
     await new Promise(resolve => setTimeout(resolve, 100))
   }
 
-  if (!isProcessRunning(pid)) return true
-
-  try {
-    process.kill(pid, 'SIGKILL')
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ESRCH') return true
-    return false
-  }
-
-  let killEnd = Date.now() + 2000
-  while (Date.now() < killEnd) {
-    if (!isProcessRunning(pid)) return true
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-
+  await fs.remove(pidFile)
   return !isProcessRunning(pid)
+}
+
+export async function readPid (pidFile: string): Promise<number | undefined> {
+  if (!(await fs.pathExists(pidFile))) return undefined
+  let contents = (await fs.readFile(pidFile, 'utf8')).trim()
+  if (!contents) return undefined
+  let pid = Number.parseInt(contents, 10)
+  if (Number.isNaN(pid)) return undefined
+  return pid
 }
 
 export function isProcessRunning (pid: number): boolean {
