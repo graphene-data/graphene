@@ -2,7 +2,6 @@ import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 
 import {checkAuth} from './auth.ts'
-// import {getDb} from './db.ts'
 import {renderPage} from './pages.ts'
 // import {registerPages} from './pages.ts'
 // import {registerQuery} from './query.ts'
@@ -22,10 +21,7 @@ export function createServer () {
 
   app.get('/_api/pages/:slug', renderPage)
 
-  console.log('query reg')
-  app.post('/_api/query', async () => {
-
-  })
+  app.post('/_api/query', async () => {})
 
   // app.register(registerPages)
   // app.register(registerQuery)

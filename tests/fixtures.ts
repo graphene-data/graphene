@@ -1,101 +1,52 @@
-import {test as base, expect, type Page, type ConsoleMessage} from '@playwright/test'
-
+import {test as base, expect} from '@playwright/test'
 import {startCloudServer} from '../server/runtime.ts'
 import {setAuthOverride} from '../server/auth.ts'
+import dotenv from 'dotenv'
+import path from 'path'
+
+dotenv.config({path: path.resolve(import.meta.dirname, '../.env'), quiet: true})
+console.log('path', path.resolve(import.meta.dirname, '../.env'))
+console.log(process.env.STYTCH_PROJECT_ID)
 
 process.env.NODE_ENV = 'test'
 
-interface AuthOverride {
-  userId: string | null
-  orgId: string | null
-}
-
-export interface CloudContext {
-  url: string
-  seed: {orgId: string, userId: string}
-  setAuth: (auth: AuthOverride | null) => void
-  waitForPage: (page: Page, path?: string) => Promise<void>
-}
-
-const CONSOLE_LEVELS = new Set(['log', 'warning', 'error'])
-
-declare global {
-  interface Window {
-    __AUTH_CLIENT__?: {
-      setSession?: (session: any) => void
-    }
-  }
-}
-
-export const test = base.extend<{cloud: CloudContext, stytchMock: boolean}>({
-  stytchMock: [false, {option: true}],
+export const test = base.extend<{cloud: {url: string}, realAuth: boolean}>({
+  realAuth: [false, {option: true}],
 
   page: async ({page}, use) => {
-    let handler = (msg: ConsoleMessage) => {
-      let type = msg.type()
-      if (!CONSOLE_LEVELS.has(type)) return
-
-      let location = msg.location()
-      let output = `[browser ${type}] ${msg.text()}`
-      if (location?.url) output += ` (${location.url.replace(/^.*frontend\//, 'frontend/')}:${location.lineNumber ?? 0})`
-
-      if (type === 'error') console.error(output)
-      else if (type === 'warning') console.warn(output)
+    page.on('pageerror', e => console.error('[browser-error]', e))
+    // page.on('requestfailed', e => console.log('requestfailed', e))
+    page.on('console', msg => {
+      let output = `[browser ${msg.type()}] ${msg.text()} ${msg.location()?.url || ''}`
+      if (msg.type() === 'error') console.error(output)
+      else if (msg.type() === 'warning') console.warn(output)
       else console.log(output)
-    }
+    })
 
-    page.on('console', handler)
-    try {
-      await use(page)
-    } finally {
-      page.off('console', handler)
-    }
+    await use(page)
   },
 
-  cloud: async ({stytchMock}, use) => {
+  cloud: async ({realAuth}, use) => {
     let handle = await startCloudServer({
       host: '127.0.0.1',
       viteEnv: {
-        VITE_STYTCH_USE_MOCK: stytchMock ? 'true' : 'false',
-        VITE_NODE_ENV: 'test',
+        NODE_ENV: 'test',
+        VITE_STYTCH_PUBLIC_TOKEN: process.env.VITE_STYTCH_PUBLIC_TOKEN ?? '',
+        VITE_STYTCH_USE_MOCK: realAuth ? 'false' : 'true',
       },
-      authOverride: null,
     })
-
-    let currentAuth: AuthOverride | null = null
-
-    let context: CloudContext = {
-      url: handle.url,
-      seed: handle.seed ?? {orgId: '', userId: ''},
-      setAuth: (auth) => {
-        currentAuth = auth
-        setAuthOverride(auth)
-      },
-      waitForPage: async (page, pathname = '/') => {
-        await page.goto(handle.url + pathname)
-        if (currentAuth?.userId && currentAuth?.orgId) {
-          let session = {
-            member_session: {
-              member_id: currentAuth.userId,
-              organization_id: currentAuth.orgId,
-            },
-          }
-          await page.evaluate((sess) => window.__AUTH_CLIENT__?.setSession?.(sess), session)
-        } else {
-          await page.evaluate(() => window.__AUTH_CLIENT__?.setSession?.(null))
-        }
-        await page.waitForLoadState('networkidle')
-      },
-    }
+    // setAuthOverride(realAuth ? null : {})
 
     try {
-      setAuthOverride(null)
-      await use(context)
+      await use({url: handle.url})
     } finally {
-      setAuthOverride(null)
       await handle.close()
     }
   },
+})
+
+test.afterEach(async ({page}) => {
+  if (process.env.DEBUG) await page.pause()
 })
 
 export {expect}

@@ -1,37 +1,50 @@
 import {test, expect} from './fixtures'
 
-declare global {
-  interface Window {
-    __AUTH_CLIENT__?: {
-      completeLogin?: (session?: {member_id: string, organization_id: string}) => void
-      getMountConfig?: () => any
-      setSession?: (session: any) => void
-    }
-  }
-}
+const TEST_EMAIL = 'grant@graphenedata.com'
+const TEST_PASSWORD = 'graphenedata'
 
 test.describe('auth', () => {
-  test.use({stytchMock: true})
+  test.use({realAuth: true})
 
-  test('mounts the auth client on the login page', async ({page, cloud}) => {
-    await cloud.waitForPage(page, '/login')
-    let mount = await page.evaluate(() => window.__AUTH_CLIENT__?.getMountConfig() ?? null)
-    expect(mount).not.toBeNull()
-    expect(mount.elementId).toBe('#stytch-login')
+  test('login flow', async ({page, cloud}) => {
+    await page.goto(cloud.url)
+    // should redirect to /login, since we're not authed
+    await expect(page.locator('#stytch-login')).toContainText('Sign up or log in')
+    await expect(page).toHaveScreenshot('auth-login-form.png')
+
+    await page.locator('input[name=email]').fill('grant@graphenedata.com')
+    await page.locator('input[name=password]').fill('graphenedata')
+    await page.getByRole('button', {name: 'Continue'}).click()
+
+    // todo: this should redirect to the org picker, we need to pick "Graphene Dev"
+
+    await expect(page).toHaveURL('/')
+    await expect(page.locator('h1', {hasText: 'KPI Summary'})).toBeVisible()
   })
 
-  test('redirects to home after authentication', async ({page, cloud}) => {
-    await cloud.waitForPage(page, '/login')
-    await page.evaluate(() => window.__AUTH_CLIENT__?.completeLogin({member_id: 'test-member', organization_id: 'test-org'}))
-    await expect(page).toHaveURL(cloud.url + '/')
-  })
+  // test('prevents unauthorized requests', async ({page, cloud}) => {
+  //   await cloud.waitForPage(page, '/login')
+  //   let response = await page.request.get(`${cloud.url}/_api/pages/index`)
+  //   expect(response.status()).toBe(401)
+  //   await expect(page).toHaveScreenshot('auth-unauthorized.png')
+  // })
 
-  test('configures password-based login flow', async ({page, cloud}) => {
-    await cloud.waitForPage(page, '/login')
-    let config = await page.evaluate(() => window.__AUTH_CLIENT__?.getMountConfig()?.config ?? null)
-    expect(config).not.toBeNull()
-    expect(config.authFlowType).toBe('Discovery')
-    expect(config.products).toContain('passwords')
-    expect(config.sessionOptions.sessionDurationMinutes).toBe(60 * 24 * 30)
-  })
+  // test('shows an error for invalid credentials', async ({page, cloud}) => {
+  //   await cloud.waitForPage(page, '/login')
+  //   let frame = stytchFrame(page)
+  //   let emailInput = frame.locator('input[type="email"]')
+  //   await emailInput.waitFor({state: 'visible', timeout: 15_000})
+  //   await emailInput.fill(TEST_EMAIL)
+
+  //   let passwordInput = frame.locator('input[type="password"]')
+  //   await passwordInput.fill('wrong-password')
+
+  //   await frame.locator('button[type="submit"], button:has-text("Sign in"), button:has-text("Continue")').first().click()
+  //   await expect(frame.locator('text=/incorrect|invalid/i')).toBeVisible({timeout: 15_000})
+  //   await expect(page).toHaveScreenshot('auth-invalid-credentials.png')
+  // })
+
+  // test.skip('can create a new account', async () => {
+  //   // Sign-up flow not implemented yet.
+  // })
 })

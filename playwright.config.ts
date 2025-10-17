@@ -2,11 +2,15 @@ import {defineConfig, devices} from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
+  snapshotDir: './tests/snapshots',
   timeout: 20_000,
   fullyParallel: false,
   workers: 1,
   expect: {
     timeout: process.env.DEBUG ? 0 : 2_000,
+    toHaveScreenshot: {
+      pathTemplate: '{testDir}/snapshots/{testFilePath}/{arg}{ext}',
+    },
   },
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

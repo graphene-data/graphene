@@ -10,6 +10,7 @@ import {getDb, resetDb} from './db.ts'
 export interface SeedResult {
   orgId: string
   userId: string
+  userEmail: string
 }
 
 const DEFAULT_ORG = {
@@ -77,5 +78,5 @@ export async function seedDb (options: SeedOptions = {}): Promise<SeedResult> {
     await db.insert(files).values({orgId: org.id, path: p2, extension, content}).run()
   }
 
-  return {orgId: org.id, userId: user.id}
+  return {orgId: org.id, userId: user.id, userEmail: user.email}
 }

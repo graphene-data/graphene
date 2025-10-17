@@ -23,9 +23,6 @@ importers:
       better-sqlite3:
         specifier: ^12.4.1
         version: 12.4.1
-      dotenv:
-        specifier: ^17.2.3
-        version: 17.2.3
       drizzle-orm:
         specifier: ^0.44.6
         version: 0.44.6(better-sqlite3@12.4.1)
@@ -57,6 +54,9 @@ importers:
       '@types/node':
         specifier: ^22.18.0
         version: 22.18.10
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       drizzle-kit:
         specifier: ^0.31.5
         version: 0.31.5

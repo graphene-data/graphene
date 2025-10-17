@@ -4,16 +4,19 @@
   import AdminConnections from './routes/admin/Connections.svelte'
   import AdminHome from './routes/admin/Home.svelte'
   import PageView from './routes/PageView.svelte'
-  import {route} from './router'
+  import {route, go} from './router'
 
   let stytch = createAuthClient()
   let session = stytch.session.getSync()
+
+  $: {
+    if (!session) go('/login')
+  }
 </script>
 
 <main class="app-shell">
   {#if session}
-    <header class="top-bar">
-    </header>
+    <header class="top-bar"></header>
   {/if}
 
   {#if $route === '/login'}
@@ -26,7 +29,7 @@
 <style>
   :global(body) {
     margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     background: #0d1117;
     color: #f6f8fa;
   }
