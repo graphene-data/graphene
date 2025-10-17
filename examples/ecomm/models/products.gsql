@@ -1,4 +1,6 @@
 table products (
+  /* Base columns */
+
   id INT64 primary_key,
   cost FLOAT64,
   category STRING,
@@ -9,14 +11,9 @@ table products (
   sku STRING,
   distribution_center_id INT64,
 
+  /* Join relationships */
+
   join_one distribution_centers on distribution_centers.id = distribution_center_id,
   join_many inventory_items on id = inventory_items.product_id,
   join_many order_items on id = order_items.product_id
-
-  count(order_items.id) as units_sold
-  sum(order_items.sale_price) as product_revenue
-  sum(order_items.sale_price) - sum(inventory_items.cost) as gross_margin_amount
-  safe_divide(gross_margin_amount, sum(order_items.sale_price)) as gross_margin_pct
-  -- safe_divide(count_if(order_items.returned_at is not null), count(order_items.id)) as return_rate
-  safe_divide((sum(case when order_items.returned_at is not null then 1 else 0 end)), count(order_items.id)) as return_rate
 )

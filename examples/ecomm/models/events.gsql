@@ -1,4 +1,6 @@
 table events (
+  /* Base columns */
+
   id INT64 primary_key,
   user_id INT64,
   sequence_number INT64,
@@ -11,15 +13,16 @@ table events (
   browser STRING,
   traffic_source STRING,
   uri STRING,
-  event_type STRING,
+  event_type STRING, -- One of 'product', 'cart', 'department', 'purchase', 'cancel', 'home'
+
+  /* Join relationships */
 
   join_one users on users.id = user_id
 
+  /* Aggregate expressions */
+
   count(distinct session_id) as sessions_count
   count(distinct user_id) as active_users
-  count_if(event_type = 'page_view') as pageviews
-  count_if(event_type in ('purchase','checkout')) as conversions
-  safe_divide(count_if(event_type = 'purchase'), count_if(event_type = 'add_to_cart')) as funnel_conversion_rate
   safe_divide(count(*), count(distinct session_id)) as avg_events_per_session
 )
 
