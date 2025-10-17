@@ -2,35 +2,12 @@ import {getErrors} from './internal/telemetry.ts'
 import './app.css'
 import {isLoading} from './internal/queryEngine.ts'
 
-export {default as Area} from './components/Area.svelte'
-export {default as AreaChart} from './components/AreaChart.svelte'
-export {default as Bar} from './components/Bar.svelte'
-export {default as BarChart} from './components/BarChart.svelte'
-export {default as BigValue} from './components/BigValue.svelte'
-export {default as Chart} from './components/Chart.svelte'
-export {default as Column} from './components/Column.svelte'
-export {default as DateRange} from './components/DateRange.svelte'
-export {default as Dropdown} from './components/Dropdown.svelte'
-export {default as DropdownOption} from './components/DropdownOption.svelte'
-export {default as ECharts} from './components/ECharts.svelte'
-export {default as ErrorChart} from './components/ErrorChart.svelte'
-export {default as GrapheneQuery} from './components/GrapheneQuery.svelte'
-export {default as InlineDelta} from './components/InlineDelta.svelte'
-export {default as Line} from './components/Line.svelte'
-export {default as LineChart} from './components/LineChart.svelte'
-export {default as PieChart} from './components/PieChart.svelte'
-export {default as QueryLoad} from './components/QueryLoad.svelte'
-export {default as Row} from './components/Row.svelte'
-export {default as SortIcon} from './components/SortIcon.svelte'
-export {default as Table} from './components/Table.svelte'
-export {default as TableCell} from './components/TableCell.svelte'
-export {default as TableGroupRow} from './components/TableGroupRow.svelte'
-export {default as TableGroupToggle} from './components/TableGroupToggle.svelte'
-export {default as TableHeader} from './components/TableHeader.svelte'
-export {default as TableRow} from './components/TableRow.svelte'
-export {default as TableSubtotalRow} from './components/TableSubtotalRow.svelte'
-export {default as TableTotalRow} from './components/TableTotalRow.svelte'
-export {default as TextInput} from './components/TextInput.svelte'
+const componentModules = import.meta.glob('./components/*.svelte', {eager: true})
+window.$GRAPHENE.components = {}
+Object.entries(componentModules).forEach(([file, module]) => {
+  let name = file.split('/').pop()?.replace('.svelte', '')
+  window.$GRAPHENE.components[name] = module.default
+})
 
 let socket = null
 

@@ -10,7 +10,6 @@ import {type IncomingMessage, type ServerResponse} from 'http'
 import {handleAgentRequest} from '../agent/agent.ts'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
-import autoImport from 'sveltekit-autoimport'
 import {fileURLToPath} from 'url'
 import {WebSocketServer, type WebSocket} from 'ws'
 import {spawn} from 'child_process'
@@ -254,21 +253,15 @@ function extractQueries () {
 
 // We don't want users to have to manually import components in their md files, so we auto-import them.
 function injectComponentImports () {
-  let mapping = {}
-  for (let f of fs.readdirSync(path.resolve(uiRoot, 'components'))) {
-    let name = path.basename(f, '.svelte')
-    mapping[name] = `import {${name}} from '@graphenedata/ui'`
-  }
+  let files = fs.readdirSync(path.join(uiRoot, 'components'))
+  let componentNames = files.map(f => path.basename(f, '.svelte')).filter(f => !f.startsWith('_'))
+  let imp = `const {${componentNames.join(', ')}} = window.$GRAPHENE.components`
 
-  // TODO: we should use `components` to load user components, and `module` to load our own from our package
-  // components: [{directory: path.resolve(cliRoot, './node_modules/@graphene/ui/components'), flat: true}],
-  let autoImporter = autoImport({include: ['**/*.(svelte|md)'], mapping} as any)
   return {
-    markup: async ({content, filename}) => {
-      if (!filename.endsWith('.md')) return // only autoImport md files
-      let importResults = await autoImporter // wait for autoImporter to init
-      let res = importResults.markup({content, filename}) // modifies the code to add needed imports
-      return res
+    markup: ({content, filename}) => {
+      if (!filename.endsWith('.md')) return // only auto-import components for md files
+      content = content.replace('<script>', `<script>\n${imp}`)
+      return {code: content}
     },
     style: () => {},
     script: () => {},
