@@ -12,13 +12,23 @@ test.describe('auth', () => {
     await expect(page.locator('#stytch-login')).toContainText('Sign up or log in')
     await expect(page).toHaveScreenshot('auth-login-form.png')
 
-    await page.locator('input[name=email]').fill('grant@graphenedata.com')
-    await page.locator('input[name=password]').fill('graphenedata')
-    await page.getByRole('button', {name: 'Continue'}).click()
+    let loginShell = page.locator('#stytch-login')
+    let emailInput = loginShell.locator('input[name="email"], input[type="email"]').first()
+    await emailInput.waitFor({state: 'visible', timeout: 15_000})
+    await emailInput.fill(TEST_EMAIL)
+
+    let passwordInput = loginShell.locator('input[name="password"], input[type="password"]').first()
+    await passwordInput.fill(TEST_PASSWORD)
+
+    await loginShell.getByRole('button', {name: /continue/i}).click()
 
     // todo: this should redirect to the org picker, we need to pick "Graphene Dev"
 
-    await expect(page).toHaveURL('/')
+    let orgOption = page.getByText(/Graphene Dev/i)
+    await orgOption.waitFor({timeout: 15_000})
+    await orgOption.click()
+
+    await expect(page).toHaveURL(`${cloud.url}/`)
     await expect(page.locator('h1', {hasText: 'KPI Summary'})).toBeVisible()
   })
 

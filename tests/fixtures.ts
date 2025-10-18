@@ -27,8 +27,10 @@ export const test = base.extend<{cloud: {url: string}, realAuth: boolean}>({
   },
 
   cloud: async ({realAuth}, use) => {
+    let host = realAuth ? 'localhost' : '127.0.0.1'
     let handle = await startCloudServer({
-      host: '127.0.0.1',
+      host,
+      ...(realAuth ? {port: 3121} : {}),
       viteEnv: {
         NODE_ENV: 'test',
         VITE_STYTCH_PUBLIC_TOKEN: process.env.VITE_STYTCH_PUBLIC_TOKEN ?? '',
