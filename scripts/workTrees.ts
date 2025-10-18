@@ -1,128 +1,171 @@
 #!/usr/bin/env zx
 
 import {$, question} from 'zx'
-import {readFileSync, existsSync, writeFileSync, readdirSync} from 'fs'
-import {resolve} from 'path'
+import {existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync} from 'fs'
+import {basename, resolve} from 'path'
 
-// Helper to find the main repository root
-async function getMainRepoRoot (): Promise<string> {
+const BASE_PORT = 4003
+const PORT_INCREMENT = 3
+
+// Root that contains all worktrees, along with `main`
+async function getGrapheneRoot (): Promise<string> {
+  let toplevel = await $`git rev-parse --show-toplevel`
+  return resolve(toplevel.stdout.trim(), '../..')
+}
+
+function getTreePath (root: string, name: string): string {
+  return resolve(root, name)
+}
+
+function getCloudMainPath (root: string): string {
+  return resolve(root, 'main', 'cloud')
+}
+
+function getCoreMainPath (root: string): string {
+  return resolve(root, 'main', 'core')
+}
+
+function getCloudWorktreePath (root: string, name: string): string {
+  return resolve(root, name, 'cloud')
+}
+
+function getCoreWorktreePath (root: string, name: string): string {
+  return resolve(root, name, 'core')
+}
+
+async function currentTreeName (): Promise<string | null> {
   try {
-    let toplevel = await $`git rev-parse --git-common-dir`
-    return resolve(toplevel.stdout.trim(), '..')
+    let toplevel = await $`git rev-parse --show-toplevel`
+    return basename(resolve(toplevel.stdout.trim(), '..'))
   } catch {
-    console.error('Error: Not in a git repository')
-    process.exit(1)
+    return null
   }
 }
 
-// Helper to get all active worktrees and their metadata
-async function getActiveWorktrees (): Promise<Array<{name: string, port: number, path: string}>> {
-  let mainRoot = await getMainRepoRoot()
-  let wtDir = resolve(mainRoot, '.wt')
+function getTreeNames (root: string): string[] {
+  return readdirSync(root, {withFileTypes: true})
+    .filter(entry => entry.isDirectory() && entry.name !== 'main' && !entry.name.startsWith('.'))
+    .map(entry => entry.name)
+    .sort()
+}
 
-  if (!existsSync(wtDir)) {
-    return []
-  }
+function readGraphenePort (envPath: string): number | null {
+  if (!existsSync(envPath)) return null
+  let match = readFileSync(envPath, 'utf8').match(/^GRAPHENE_PORT=(\d+)$/m)
+  return match ? parseInt(match[1], 10) : null
+}
 
-  let worktrees: any[] = []
-  let entries = readdirSync(wtDir, {withFileTypes: true})
-
-  for (let entry of entries) {
-    if (entry.isDirectory()) {
-      let envPath = resolve(wtDir, entry.name, '.env')
-      if (existsSync(envPath)) {
-        let envContent = readFileSync(envPath, 'utf8')
-        let port = envContent.match(/^GRAPHENE_PORT=(\d+)$/m)
-
-        worktrees.push({
-          name: entry.name,
-          port: port ? parseInt(port[1]) : null,
-          path: resolve(wtDir, entry.name),
-        })
-      }
+function getUsedPorts (root: string): Set<number> {
+  let used = new Set<number>()
+  for (let name of getTreeNames(root)) {
+    let corePort = readGraphenePort(resolve(getCoreWorktreePath(root, name), '.env'))
+    if (corePort != null) {
+      used.add(corePort)
+      continue
     }
+    let cloudPort = readGraphenePort(resolve(getCloudWorktreePath(root, name), '.env'))
+    if (cloudPort != null) used.add(cloudPort - 1)
   }
-
-  return worktrees.sort((a, b) => a.port - b.port)
+  return used
 }
 
-// Helper to find the next available port
-async function getNextAvailablePort (): Promise<number> {
-  let worktrees = await getActiveWorktrees()
-  let usedPorts = worktrees.map(wt => wt.port)
-
-  let port = 4003
-  while (usedPorts.includes(port)) {
-    port += 3
+function getNextPort (root: string): number {
+  let used = getUsedPorts(root)
+  let port = BASE_PORT
+  while (used.has(port) || used.has(port + 1)) {
+    port += PORT_INCREMENT
   }
-
   return port
 }
 
-// Command: wt ls
-async function listWorktrees () {
-  let worktrees = await getActiveWorktrees()
+function writeEnvWithPort (sourcePath: string, targetPath: string, name: string, port: number) {
+  let content = existsSync(sourcePath) ? readFileSync(sourcePath, 'utf8') : ''
+  if (content.length && !content.endsWith('\n')) content += '\n'
+  content += `WT_NAME=${name}\nGRAPHENE_PORT=${port}\n`
+  writeFileSync(targetPath, content)
+}
 
-  if (worktrees.length === 0) {
+async function listWorktrees () {
+  let root = await getGrapheneRoot()
+  let trees = getTreeNames(root)
+
+  if (trees.length === 0) {
     console.log('No active worktrees found')
     return
   }
 
-  for (let wt of worktrees) {
-    console.log(`  ${wt.name} (port ${wt.port}) - ${wt.path}`)
+  for (let name of trees) {
+    let corePort = readGraphenePort(resolve(getCoreWorktreePath(root, name), '.env'))
+    let cloudPort = readGraphenePort(resolve(getCloudWorktreePath(root, name), '.env'))
+    let portInfo: string[] = []
+    if (corePort != null) portInfo.push(`core:${corePort}`)
+    if (cloudPort != null) portInfo.push(`cloud:${cloudPort}`)
+    let suffix = portInfo.length ? ` (${portInfo.join(', ')})` : ''
+    console.log(`  ${name}${suffix}`)
   }
 }
 
-// Command: wt start <name>
 async function startWorktree (name: string) {
-  if (!name) {
-    console.error('Error: Please provide a name for the worktree')
-    process.exit(1)
-  }
+  if (!name) throw new Error('Please provide a name for the worktree')
+  if (name === 'main') throw new Error('Cannot create a worktree named "main"')
 
-  let mainRoot = await getMainRepoRoot()
-  let wtDir = resolve(mainRoot, '.wt')
-  let worktreePath = resolve(wtDir, name)
+  let root = await getGrapheneRoot()
+  let treePath = getTreePath(root, name)
 
-  // Check if worktree already exists
-  if (existsSync(worktreePath)) {
-    console.error(`Error: Worktree '${name}' already exists`)
-    process.exit(1)
-  }
+  if (existsSync(treePath)) throw new Error(`${treePath} already exists`)
+  mkdirSync(treePath, {recursive: true})
 
-  try {
-    // Create worktree
-    await $`git worktree add ${worktreePath} -b ${name}`
-    console.log(`Created worktree: ${worktreePath}`)
+  let basePort = getNextPort(root)
+  let corePort = basePort
+  let cloudPort = basePort + 1
 
-    // Get next available port
-    let port = await getNextAvailablePort()
+  await $`git -C ${root}/main/cloud worktree add ${getCloudWorktreePath(root, name)} -b ${name}`
+  await $`git -C ${root}/main/core worktree add ${getCoreWorktreePath(root, name)} -b ${name}`
 
-    // Create .env file
-    let envContent = `WT_NAME=${name}\nGRAPHENE_PORT=${port}\n`
-    writeFileSync(resolve(worktreePath, '.env'), envContent)
-    console.log(`Assigned port: ${port}`)
+  writeEnvWithPort(
+    resolve(root, 'main', 'cloud', '.env'),
+    resolve(getCloudWorktreePath(root, name), '.env'),
+    name,
+    cloudPort,
+  )
+  writeEnvWithPort(
+    resolve(root, 'main', 'core', '.env'),
+    resolve(getCoreWorktreePath(root, name), '.env'),
+    name,
+    corePort,
+  )
+  console.log(`Assigned ports → core:${corePort}, cloud:${cloudPort}`)
 
-    // Run pnpm install
-    console.log('Installing dependencies...')
-    await $`cd ${worktreePath} && pnpm install`
+  await $`(cd ${treePath}/core && pnpm install)`
+  await $`(cd ${treePath}/cloud && pnpm install)`
+  await $`ln -sf ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 
-    await $`ln -s ${mainRoot}/examples/flights/flights.duckdb ${worktreePath}/examples/flights/flights.duckdb`
+  writeFileSync(`${root}/AGENTS.md`, `
+    This folder contains the source for Graphene, a project that lets you define a data stack as code.
 
-    // Open Zed
-    console.log('Opening Zed...')
-    await $`zed ${worktreePath}`
+    There are two main folders, 'core' which contains our open-source package that allows for local development, and 'cloud' which contains a closed-source Graphene hosting platform we're developing.
 
-    console.log(`Worktree '${name}' is ready!`)
-  } catch (error) {
-    console.error(`Error creating worktree: ${error}`)
-    process.exit(1)
-  }
+    It's important that you always go read core/AGENTS.md before you do anything, as it provides a lot of the context and coding convetions that are relevant to all Graphene development, not just that of core.
+  `.trim())
+
+  console.log('Opening Zed...')
+  await $`zed ${treePath}`
+
+  console.log(`Worktree '${name}' is ready at ${treePath}`)
 }
 
-// Command: wt merge
+async function repoDirty (repo: string): boolean {
+
+}
+
+async function commitWorktree () {
+  if (repoDirty('core')) await $`gitx -c ${worktreeCorePath}`
+  if (repoDirty('cloud')) await $`gitx -c ${worktreeCloudPath}`
+}
+
 async function mergeWorktree () {
-  // Get current branch name
+  if (repoDirty('core') || repoDirty('cloud')) return commitWorktree()
+
   let currentBranch = await $`git branch --show-current`
   let branchName = currentBranch.stdout.trim()
 
@@ -139,47 +182,70 @@ async function mergeWorktree () {
   await $`git push origin HEAD:main`
 }
 
-// Command: wt done <name>
 async function doneWorktree (name?: string) {
-  name = name || (await $`git branch --show-current`).stdout.trim()
-  if (name == 'main') throw new Error('Cant mark main as done')
+  name ||= await currentTreeName() || undefined
+  if (!name) throw new Error('Please provide the worktree name to remove')
+  if (name === 'main') throw new Error('Cannot mark main as done')
 
-  let mainRoot = await getMainRepoRoot()
-  let worktreePath = resolve(mainRoot, '.wt', name)
+  let root = await getGrapheneRoot()
+  let treePath = getTreePath(root, name)
+  let cloudPath = getCloudWorktreePath(root, name)
+  let corePath = getCoreWorktreePath(root, name)
 
-  if (!existsSync(worktreePath)) {
-    console.error(`Error: Worktree '${name}' not found`)
-    process.exit(1)
+  if (!existsSync(treePath)) throw new Error(`Worktree '${name}' not found`)
+
+  let dirtyReports: Array<{repo: string, status: string}> = []
+
+  if (existsSync(cloudPath)) {
+    let status = (await $`git -C ${cloudPath} status --porcelain`).stdout.trim()
+    if (status) dirtyReports.push({repo: 'cloud', status})
   }
 
-  // Check for outstanding changes using a single porcelain status; prompt if any
-  let statusRaw = (await $`git -C ${worktreePath} status --porcelain`).stdout
-  let hasChanges = statusRaw.trim().length > 0
+  if (existsSync(corePath)) {
+    let status = (await $`git -C ${corePath} status --porcelain`).stdout.trim()
+    if (status) dirtyReports.push({repo: 'core', status})
+  }
 
-  let forceFlag = false
-  if (hasChanges) {
+  let force = false
+  if (dirtyReports.length > 0) {
     console.log(`Outstanding changes in '${name}':`)
-    console.log(statusRaw.trim())
-    let answer = (await question('Force remove this worktree (discard changes)? [y/N] ')).trim().toLowerCase()
-    if (answer === 'y' || answer === 'yes') forceFlag = true
+    for (let report of dirtyReports) {
+      console.log(`--- ${report.repo} ---`)
+      console.log(report.status)
+    }
+    let answer = (await question('Force remove these worktrees (discard changes)? [y/N] ')).trim().toLowerCase()
+    if (answer === 'y' || answer === 'yes') force = true
     else {
       console.log('Aborted.')
-      process.exit(1)
+      return
     }
   }
 
-  console.log(`Removing worktree${forceFlag ? ' (force)' : ''}`)
-  if (forceFlag) {
-    await $`git worktree remove --force ${worktreePath}`
-  } else {
-    await $`git worktree remove ${worktreePath}`
+  if (existsSync(cloudPath)) {
+    console.log(`Removing cloud worktree${force ? ' (force)' : ''}`)
+    if (force) {
+      await $`git -C ${getCloudMainPath(root)} worktree remove --force ${cloudPath}`
+    } else {
+      await $`git -C ${getCloudMainPath(root)} worktree remove ${cloudPath}`
+    }
+    await $`git -C ${getCloudMainPath(root)} tag archive/${name} ${name}`
+    await $`git -C ${getCloudMainPath(root)} branch -d ${name}`
   }
-  console.log('Archiving ')
-  await $`git tag archive/${name} ${name}`
-  await $`git branch -d ${name}`
+
+  if (existsSync(corePath)) {
+    console.log(`Removing core worktree${force ? ' (force)' : ''}`)
+    if (force) {
+      await $`git -C ${getCoreMainPath(root)} worktree remove --force ${corePath}`
+    } else {
+      await $`git -C ${getCoreMainPath(root)} worktree remove ${corePath}`
+    }
+    await $`git -C ${getCoreMainPath(root)} tag archive/${name} ${name}`
+    await $`git -C ${getCoreMainPath(root)} branch -d ${name}`
+  }
+
+  rmSync(treePath, {recursive: true, force: true})
 }
 
-// Main CLI handler
 async function main () {
   let command = process.argv[2]
   let arg = process.argv[3]
@@ -197,6 +263,8 @@ async function main () {
       await $`git rebase origin/main`
       await $`git stash pop`
       break
+    case 'push':
+    case 'commit':
     case 'merge':
       await mergeWorktree()
       break
@@ -208,11 +276,11 @@ async function main () {
 Usage: wt <command>
 
 Commands:
-  ls              List all active worktrees
-  start <name>    Create a new worktree
-  pull            Pull down latest changes from main
-  merge           Rebase, squash merge, and push current branch
-  done <name>     Archive a worktree
+  ls              List all paired worktrees
+  start <name>    Create a new paired worktree beside main
+  pull            Pull down latest changes from main for both repos
+  push            Rebase and push both repos
+  done            Archive both worktrees
 `)
   }
 }
