@@ -97,17 +97,31 @@ async function commitWorktree () {
 }
 
 async function pullWorktree () {
-  if (await repoDirty('core') || await repoDirty('cloud')) return commitWorktree()
+  let stashCore = false, stashCloud = false
+  if (await repoDirty('core')) {
+    stashCore = true
+    console.log('Stashing core')
+    await $`git -C ${currentWorktree}/core stash -m 'pulling onto ${currentName}'`
+  }
+  if (await repoDirty('cloud')) {
+    stashCloud = true
+    console.log('Stashing cloud')
+    await $`git -C ${currentWorktree}/cloud stash -m 'pulling onto ${currentName}'`
+  }
 
   await $`git -C ${currentWorktree}/core fetch origin`
   await $`git -C ${currentWorktree}/cloud fetch origin`
 
-  console.log('Rebasi')
   await $`git -C ${currentWorktree}/core rebase origin/main`
   await $`git -C ${currentWorktree}/cloud rebase origin/main`
+
+  if (stashCore) await $`git -C ${currentWorktree}/core stash pop`
+  if (stashCloud) await $`git -C ${currentWorktree}/cloud stash pop`
 }
 
 async function pushWorktree () {
+  if (await repoDirty('core') || await repoDirty('cloud')) return commitWorktree()
+
   await pullWorktree()
   await $`git -C ${currentWorktree}/core push origin HEAD:main`
   await $`git -C ${currentWorktree}/cloud push origin HEAD:main`
