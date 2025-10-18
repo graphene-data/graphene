@@ -27,12 +27,10 @@ Explain clearly what the underlying issue is, and how your fix addresses it. Ens
 
 # Testing
 Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test` in that directory.
-
-UI tests use playwright. All component or e2e tests should capture a screenshot, and you can look in both `ui/tests/snapshots` and `ui/test-results` to get an image of the component you've changed. Use a subagent or `reviewImage` to inspect components and see if they're rendering as expected.
-
-Often, it's helpful to know how Malloy would compile given to to it's IR. `node scripts/howDoesMalloy.ts` will print out the final SQL, along with the IR. There's some example code within `howDoesMalloy` that gets run, and it's easiest to just modify this to your needs before running.
-
-When testing AI features, always use a mock rather than hitting an API. On the explore page, you can use "mock" as the prompt to get simulated messages.
+UI tests take screenshots of various states, so you can review `tests/snapshots` and `tests/results` to look at UI states. This is useful even if the test passes to just see what a give state looks like.
+Use `howDoesMalloy` to view the Malloy IR used for a given Malloy query.
+When testing AI features, always use a mock rather than hitting an API.
+Never ask for permission to run tests or update screenshots. Just do it.
 
 # Code style
 In Graphene, our primary stylistic goal is "high-level readability". We want to easily skim a file or function and get a sense of what it does. We care less about the tactical details of how it accomplishes that. There are a few concrete guidlines we usually follow in service of this:

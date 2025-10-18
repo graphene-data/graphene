@@ -2,6 +2,7 @@ import {defineConfig, devices} from '@playwright/test'
 
 export default defineConfig({
   testDir: './tests',
+  outputDir: './tests/results',
   timeout: 10_000,
   expect: {
     timeout: process.env.DEBUG ? 0 : 2_000,
