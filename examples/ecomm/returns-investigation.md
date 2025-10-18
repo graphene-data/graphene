@@ -7,7 +7,7 @@ We suspect an increase in returns. This page documents a quick exploration to fi
 ## Are returns increasing?
 
 ```sql returns_over_time
-from orders select date_trunc(week, created_at) as week, return_rate, count() as orders
+from orders select date_trunc(created_at, week) as week, order_items.return_rate, rev_rec_order_count as orders
 order by 1 asc
 ```
 
@@ -21,7 +21,7 @@ Observation: Spikes in return rate coincide with dips in orders. Next, check pro
 ## Which categories drive returns?
 
 ```sql cat_return_rate
-from order_items select products.category, return_rate, count() as units, revenue
+from order_items select products.category, return_rate, units_sold as units, revenue
 order by 2 desc limit 25
 ```
 
@@ -33,7 +33,7 @@ order by 2 desc limit 25
 ## Are certain brands problematic within top categories?
 
 ```sql brand_returns
-from order_items select products.category, products.brand, count_if(returned_at is not null) as returns, count() as units, return_rate
+from order_items select products.category, products.brand, count(case when returned_at is not null then 1 else null end) as returns, units_sold as units, return_rate
 order by 5 desc limit 50
 ```
 
@@ -42,18 +42,18 @@ order by 5 desc limit 50
 Insight: Filter to the top offending category to dive deeper.
 
 <Row>
-  <Select name="focus_category" label="Focus Category" allowDeselect="true"/>
+  <Dropdown name="focus_category" label="Focus Category" allowDeselect="true"/>
 </Row>
 
 ```sql focus_category_options
 from products select distinct category order by 1 asc
 ```
 
-<BindSelect name="focus_category" data="focus_category_options" optionLabel="category" optionValue="category"/>
+<Dropdown name="focus_category" data="focus_category_options" optionLabel="category" optionValue="category"/>
 
 ```sql brand_in_focus
-from order_items select products.brand, count_if(returned_at is not null) as returns, count() as units, return_rate
-where (${inputs.focus_category} is null or products.category = ${inputs.focus_category})
+from order_items select products.brand, count(case when returned_at is not null then 1 else null end) as returns, units_sold as units, return_rate
+where ($focus_category is null or products.category = $focus_category)
 order by 4 desc limit 25
 ```
 
@@ -65,7 +65,7 @@ order by 4 desc limit 25
 ## Operational factors: shipping and delivery times
 
 ```sql ops_factors
-from order_items select date_trunc(week, created_at) as week, fulfillment_time_days, delivery_time_days, return_rate
+from order_items select date_trunc(created_at, week) as week, fulfillment_time_days, delivery_time_days, return_rate
 order by 1 asc
 ```
 
@@ -79,7 +79,7 @@ Narrative: Elevated fulfillment/delivery times may correlate with higher return 
 ## Where are returns concentrated geographically?
 
 ```sql returns_by_state
-from order_items select users.state, count_if(returned_at is not null) as returns, return_rate
+from order_items select users.state, count(case when returned_at is not null then 1 else null end) as returns, return_rate
 order by 3 desc limit 30
 ```
 
