@@ -28,46 +28,26 @@
   })
 </script>
 
-<section class="login">
+<section class="login-screen">
   <div id="stytch-login" class="login-shell"></div>
 </section>
 
 <style>
-  .login {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 32px;
-    border-radius: 20px;
-    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.3);
+  .login-screen {
+    width: 100%;
     display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  h1 {
-    margin: 0;
-    font-size: 28px;
-    font-weight: 600;
-  }
-
-  p {
-    margin: 0;
-    color: rgba(255, 255, 255, 0.75);
-  }
-
-  .alert {
-    padding: 12px 16px;
-    border-radius: 8px;
-    background: rgba(255, 83, 83, 0.12);
-    border: 1px solid rgba(255, 83, 83, 0.35);
+    justify-content: center;
   }
 
   .login-shell {
     min-height: 340px;
+    width: 100%;
+    max-width: 420px;
   }
 
   @media (max-width: 720px) {
-    .login {
-      padding: 24px;
+    .login-shell {
+      max-width: 100%;
     }
   }
 </style>

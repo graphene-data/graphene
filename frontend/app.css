@@ -1,0 +1,30 @@
+@import "../../core/ui/app.css";
+
+:root {
+  --cloud-background-start: #f5f7ff;
+  --cloud-background-end: #ffffff;
+  --cloud-card-border: rgba(15, 23, 42, 0.08);
+  --cloud-card-shadow: 0 24px 48px -24px rgba(15, 23, 42, 0.3);
+  --cloud-card-radius: 24px;
+  --cloud-text-muted: var(--grey-600);
+  --cloud-text-strong: var(--grey-900);
+  --cloud-surface: #ffffff;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--ui-font-family);
+  background: linear-gradient(180deg, var(--cloud-background-start) 0%, var(--cloud-background-end) 100%);
+  color: var(--cloud-text-strong);
+  -webkit-font-smoothing: antialiased;
+  user-select: auto;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  color: var(--primary);
+}

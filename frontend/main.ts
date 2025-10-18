@@ -1,5 +1,6 @@
 import '../../core/ui/internal/telemetry.ts'
 import '../../core/ui/internal/queryEngine.ts'
+import './app.css'
 
 import App from './App.svelte'
 import * as svelteInternal from 'svelte/internal'

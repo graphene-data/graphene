@@ -14,8 +14,8 @@
   }
 </script>
 
-<main class="app-shell">
-  {#if session}
+<main class="app-shell" class:app-shell--login={$route === '/login'}>
+  {#if session && $route !== '/login'}
     <header class="top-bar"></header>
   {/if}
 
@@ -27,31 +27,32 @@
 </main>
 
 <style>
-  :global(body) {
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #0d1117;
-    color: #f6f8fa;
-  }
-
   .app-shell {
     min-height: 100vh;
-    padding: 32px 16px 64px;
-    max-width: 880px;
+    padding: 64px 24px 80px;
+    max-width: 960px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 24px;
   }
 
+  .app-shell--login {
+    max-width: 480px;
+    justify-content: center;
+    padding: 96px 24px;
+  }
+
   .top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    padding: 18px 24px;
+    border-radius: 20px;
+    border: 1px solid var(--cloud-card-border);
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: var(--cloud-card-shadow);
+    backdrop-filter: blur(10px);
   }
 
   nav {
@@ -60,29 +61,36 @@
   }
 
   nav a {
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--cloud-text-muted);
     text-decoration: none;
-    font-size: 14px;
-    padding: 6px 10px;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 8px 14px;
     border-radius: 999px;
+    transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
   }
 
   nav a.active {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--primary);
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
   }
 
   .link {
     border: none;
     background: transparent;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--cloud-text-muted);
     cursor: pointer;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   @media (max-width: 720px) {
     .app-shell {
-      padding: 24px 12px 48px;
+      padding: 40px 16px 56px;
+    }
+
+    .app-shell--login {
+      padding: 56px 20px;
     }
 
     .top-bar {
