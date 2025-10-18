@@ -30,6 +30,7 @@ table order_items (
 
   /* Aggregate expressions */
 
+  count(case when is_rev_recognized then 1 else null end) as units_sold,
   sum(case when is_rev_recognized then sale_price else 0 end) as revenue, -- Aka net revenue/sales
   sum(case when is_rev_recognized then cost else 0 end) as cogs, -- Cost of goods sold
   revenue - cogs as gross_profit,
