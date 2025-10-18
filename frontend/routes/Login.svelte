@@ -45,6 +45,12 @@
     max-width: 420px;
   }
 
+  :global(#stytch-login [data-testid='stytch-footer']),
+  :global(#stytch-login [class*='powered-by']),
+  :global(#stytch-login a[href*='stytch.com']) {
+    display: none !important;
+  }
+
   @media (max-width: 720px) {
     .login-shell {
       max-width: 100%;
