@@ -1,8 +1,0 @@
----
-globs: 
-  **/*
-  !examples/**  # Exclude examples to better simulate customer prompts
-alwaysApply: true
----
-
-You must read @agents.md first, before doing anything else.
