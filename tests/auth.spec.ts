@@ -13,20 +13,14 @@ test.describe('auth', () => {
     await expect(page).toHaveScreenshot('auth-login-form.png')
 
     let loginShell = page.locator('#stytch-login')
-    let emailInput = loginShell.locator('input[name="email"], input[type="email"]').first()
-    await emailInput.waitFor({state: 'visible', timeout: 15_000})
-    await emailInput.fill(TEST_EMAIL)
-
-    let passwordInput = loginShell.locator('input[name="password"], input[type="password"]').first()
-    await passwordInput.fill(TEST_PASSWORD)
-
+    await loginShell.locator('input[name="email"], input[type="email"]').first().fill(TEST_EMAIL)
+    await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
     await loginShell.getByRole('button', {name: /continue/i}).click()
 
-    // todo: this should redirect to the org picker, we need to pick "Graphene Dev"
-
-    let orgOption = page.getByText(/Graphene Dev/i)
-    await orgOption.waitFor({timeout: 15_000})
-    await orgOption.click()
+    let btn = await page.getByText(/Graphene Dev/i)
+    await btn.waitFor()
+    await expect(page).toHaveScreenshot('auth-login-flow-org-picker.png')
+    await btn.click()
 
     await expect(page).toHaveURL(`${cloud.url}/`)
     await expect(page.locator('h1', {hasText: 'KPI Summary'})).toBeVisible()
@@ -39,20 +33,20 @@ test.describe('auth', () => {
   //   await expect(page).toHaveScreenshot('auth-unauthorized.png')
   // })
 
-  // test('shows an error for invalid credentials', async ({page, cloud}) => {
-  //   await cloud.waitForPage(page, '/login')
-  //   let frame = stytchFrame(page)
-  //   let emailInput = frame.locator('input[type="email"]')
-  //   await emailInput.waitFor({state: 'visible', timeout: 15_000})
-  //   await emailInput.fill(TEST_EMAIL)
+  test('shows an error for invalid credentials', async ({page, cloud}) => {
+    await page.goto(cloud.url + '/login')
+    let loginShell = page.locator('#stytch-login')
+    await expect(loginShell).toContainText('Sign up or log in')
 
-  //   let passwordInput = frame.locator('input[type="password"]')
-  //   await passwordInput.fill('wrong-password')
+    await loginShell.locator('input[name="email"], input[type="email"]').first().fill(TEST_EMAIL)
+    await loginShell.locator('input[name="password"], input[type="password"]').first().fill('wrong-password')
+    await loginShell.getByRole('button', {name: /continue/i}).click()
 
-  //   await frame.locator('button[type="submit"], button:has-text("Sign in"), button:has-text("Continue")').first().click()
-  //   await expect(frame.locator('text=/incorrect|invalid/i')).toBeVisible({timeout: 15_000})
-  //   await expect(page).toHaveScreenshot('auth-invalid-credentials.png')
-  // })
+    let errorMessage = loginShell.locator('text=/unauthorized credentials|incorrect|invalid|wrong|mismatch|try again/i').first()
+    await expect(errorMessage).toBeVisible({timeout: 15_000})
+    await expect(page).toHaveURL(`${cloud.url}/login`)
+    await expect(page).toHaveScreenshot('auth-invalid-credentials.png')
+  })
 
   // test.skip('can create a new account', async () => {
   //   // Sign-up flow not implemented yet.
