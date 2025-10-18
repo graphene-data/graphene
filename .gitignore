@@ -1,12 +1,11 @@
 **/node_modules/**
 **/out/**
 **/dist/**
-examples/**/package-lock.json
-ui/test-results
-cli/*.tgz
-.gitcommit
+ui/tests/results
 
+cli/*.tgz
 notes.md
+.gitcommit
 .DS_Store
 .evidence
 .svelte-kit
@@ -14,6 +13,4 @@ notes.md
 **/.vscode/settings.json
 vscode/*.vsix
 CLAUDE.md
-.conductor/
 .env
-.wt/
