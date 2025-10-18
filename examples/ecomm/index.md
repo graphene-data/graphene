@@ -7,10 +7,10 @@ notes: This example uses [theLook eCommerce](https://console.cloud.google.com/ma
 [Product Explorer](product-explorer) | [Returns investigation](returns-investigation)
 
 ```sql kpis_by_day
-from order_items select date_trunc(created_at, day) as day, revenue, gross_profit, gross_margin_pct, count() as units
+from order_items select date_trunc(created_at, day) as day, revenue, gross_profit, gross_margin_pct, units_sold as units
 ```
 <Row>
-  <AreaChart data="kpis_by_day" title="Revenue by Day" x="day" y="revenue" />
+  <LineChart data="kpis_by_day" title="Revenue by Day" x="day" y="revenue" />
   <LineChart data="kpis_by_day" title="Gross Profit by Day" x="day" y="gross_profit" />
 </Row>
 
@@ -20,11 +20,11 @@ from order_items select date_trunc(created_at, day) as day, revenue, gross_profi
 </Row>
 
 ```sql revenue_by_category
-from order_items select products.category, revenue, gross_profit, gross_margin_pct, count() as units order by 2 desc limit 20
+from order_items select products.category, revenue, gross_profit, gross_margin_pct, units_sold as units order by 2 desc limit 20
 ```
 
 ```sql revenue_by_state
-from order_items select users.state, revenue, count() as units order by 2 desc limit 25
+from order_items select users.state, revenue, units_sold as units order by 2 desc limit 25
 ```
 
 <BarChart data="revenue_by_state" title="Top States by Revenue" x="users_state" y="revenue" swapXY="true" />
@@ -34,17 +34,8 @@ from order_items select users.state, revenue, count() as units order by 2 desc l
   <PieChart data="revenue_by_category" title="Category Revenue Share" category="products_category" value="revenue" />
 </Row>
 
-
-```sql orders_service
-from orders select date_trunc(created_at, week) as week, aov, shipped_rate, delivered_rate, return_rate, order_cycle_time_days order by 1 asc
-```
-<Row>
-  <LineChart data="orders_service" title="Average Order Value (Weekly)" x="week" y="aov" />
-  <LineChart data="orders_service" title="Return Rate (Weekly)" x="week" y="return_rate" />
-</Row>
-
 ```sql top_products
-from products select name, units_sold, product_revenue, gross_margin_pct, return_rate order by 3 desc limit 30
+from order_items select products.name, units_sold, revenue as product_revenue, gross_margin_pct, return_rate order by 3 desc limit 30
 ```
 
 <Table data="top_products" title="Top Products"/>
