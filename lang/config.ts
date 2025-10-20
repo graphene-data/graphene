@@ -8,6 +8,7 @@ export interface Config {
   namespace?: string
   port?: number
   googleProjectId?: string
+  googleServiceAccountKeyPath?: string
   root: string
 }
 

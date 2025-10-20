@@ -5,7 +5,6 @@ import {visit} from 'unist-util-visit'
 import fs from 'fs-extra'
 import crypto from 'crypto'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
-import {getConnection} from './connection.ts'
 import {type IncomingMessage, type ServerResponse} from 'http'
 import {handleAgentRequest} from '../agent/agent.ts'
 import {mdsvex} from 'mdsvex'
@@ -13,6 +12,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {WebSocketServer, type WebSocket} from 'ws'
 import {spawn} from 'child_process'
+import {getConnection} from './connections/index.ts'
 
 let grapheneRoot: string
 let uiRoot: string
@@ -112,7 +112,7 @@ const handleRequestPlugin = {
     s.middlewares.use(async function handleRequest (req, res, next) {
       try {
         let [pathName] = (req.url || '').split('?')
-        if (pathName == '/graphene/query') return await handleQuery(req, res)
+        if (pathName == '/_api/query') return await handleQuery(req, res)
         if (pathName == '/graphene/view') return await handleView(req, res)
         if (pathName == '/graphene/agent') return await handleAgentRequest(req, res, grapheneRoot)
         if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
@@ -162,8 +162,9 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
   }
 
   let connection = await getConnection()
-  let queryResults = await connection.runSQL(sql)
-  if (queryResults.totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
+  let queryResults = await connection.runQuery(sql)
+  let totalRows = queryResults.totalRows ?? queryResults.rows.length
+  if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
   let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
@@ -276,9 +277,7 @@ function mockFilesForTests () {
     name: 'mock-files-for-tests',
     enforce: 'pre' as const,
     resolveId (id) {
-      if (mockFileMap[id.replace(grapheneRoot, '')]) {
-        return id + '?mock'
-      }
+      if (mockFileMap[id.replace(grapheneRoot, '')]) return id + '?mock'
     },
     load (id) {
       if (!id.endsWith('?mock')) return null
