@@ -70,7 +70,7 @@ async function runNode (n: QueryNode) {
   ].join('\n')
 
   try {
-    let response = await fetch('/graphene/query', {
+    let response = await fetch('/_api/query', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({params, gsql, hashes}),

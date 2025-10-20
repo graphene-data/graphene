@@ -5,10 +5,10 @@ import {printDiagnostics, printTable} from './printer.ts'
 import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import fs from 'fs-extra'
 import path from 'path'
-import {getConnection} from './connection.ts'
 import os from 'os'
 import {loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
+import {getConnection} from './connections/index.ts'
 
 const program = new Command()
 
@@ -47,7 +47,7 @@ program
     if (!validQuery(queries)) return
     let sql = toSql(queries[0])
     let connection = await getConnection()
-    let res = await connection.runSQL(sql)
+    let res = await connection.runQuery(sql)
     printTable(res.rows)
   })
 
@@ -120,7 +120,6 @@ program
 
 program.parse(process.argv)
 
-
 async function readInput (arg): Promise<string> {
   if (!arg || arg === '-') {
     return await new Promise<string>((resolve) => {
@@ -133,8 +132,7 @@ async function readInput (arg): Promise<string> {
   }
 
   let absolutePath = path.resolve(arg)
-  let exists = await fs.existsSync(absolutePath)
-  if (exists) {
+  if (fs.existsSync(absolutePath)) {
     return await fs.promises.readFile(absolutePath, 'utf-8')
   }
 
