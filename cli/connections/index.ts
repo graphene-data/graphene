@@ -1,13 +1,5 @@
 import {config} from '../../lang/config.ts'
-
-export interface QueryResult {
-  rows: Array<Record<string, unknown>>
-  totalRows?: number
-}
-
-export interface QueryConnection {
-  runQuery(sql: string): Promise<QueryResult>
-}
+import {type QueryConnection} from './types.ts'
 
 export async function getConnection (): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
