@@ -1,8 +1,12 @@
 import type {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify'
 import {B2BClient} from 'stytch'
 
-let authOverride: AuthContext | null = null
+export interface AuthContext {
+  userId: string
+  orgId: string
+}
 
+let authOverride: AuthContext | null = null
 export function setAuthOverride (auth: AuthContext | null) {
   if (process.env.NODE_ENV !== 'test') return
   authOverride = auth
@@ -27,24 +31,6 @@ export async function checkAuth (req: FastifyRequest) {
   if (!session) req.auth = null
   else req.auth = {userId: session.member_id, orgId: session.organization_id}
 }
-
-// export function authPlugin (server: FastifyInstance) {
-//   console.log('auth hook')
-//   server.addHook('onRequest', async (req, reply) => {
-
-//   })
-
-//   server.post('/_api/authenticate', (req, reply) => {
-//   })
-
-//   server.post('/_api/login', (req, reply) => {
-
-//   })
-
-//   server.post('/_api/signup', (req, reply) => {
-
-//   })
-// }
 
 export function ensureUser (req: FastifyRequest, reply: FastifyReply) {
   if (!req.auth) {

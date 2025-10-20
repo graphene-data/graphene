@@ -3,6 +3,7 @@ import cookie from '@fastify/cookie'
 
 import {checkAuth} from './auth.ts'
 import {renderPage} from './pages.ts'
+import { proxyQuery } from './query.ts'
 // import {registerPages} from './pages.ts'
 // import {registerQuery} from './query.ts'
 
@@ -20,11 +21,7 @@ export function createServer () {
   // app.get('/healthz', () => ({status: 'ok'}))
 
   app.get('/_api/pages/:slug', renderPage)
-
-  app.post('/_api/query', async () => {})
-
-  // app.register(registerPages)
-  // app.register(registerQuery)
+  app.post('/_api/query', proxyQuery)
 
   return app
 }

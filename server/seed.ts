@@ -3,7 +3,7 @@ import {fileURLToPath} from 'node:url'
 import fs, {globSync} from 'node:fs'
 import {createRequire} from 'node:module'
 
-import {orgs, files, users} from '../schema.ts'
+import {orgs, files, users, connections} from '../schema.ts'
 import * as schema from '../schema.ts'
 import {getDb, resetDb} from './db.ts'
 
@@ -42,7 +42,6 @@ export async function seedDb (options: SeedOptions = {}): Promise<SeedResult> {
 
   if (!useMemory) fs.rmSync(dbPath, {force: true})
   resetDb()
-
   let db = getDb()
 
   let require = createRequire(import.meta.url)
@@ -60,6 +59,13 @@ export async function seedDb (options: SeedOptions = {}): Promise<SeedResult> {
     orgId: user.orgId!,
     role: user.role,
   }).run()
+
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    let configJson = fs.readFileSync(path.resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS), {encoding: 'utf-8'})
+    await db.insert(connections).values({orgId: org.id, label: 'ecomm', kind: 'bigquery', configJson, namespace: 'bigquery-public-data.thelook_ecommerce'}).run()
+  } else {
+    console.warn('No GOOGLE_APPLICATION_CREDENTIALS set. Not seeding db connection')
+  }
 
   let defaultDatasetRoot = path.join(rootDir, '../examples/ecomm')
   if (!fs.existsSync(defaultDatasetRoot)) {

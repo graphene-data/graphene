@@ -22,6 +22,7 @@ export const connections = sqliteTable('connections', {
   orgId: text('org_id').notNull().references(() => orgs.id, {onDelete: 'cascade'}),
   label: text('label').notNull(),
   kind: text('kind').notNull(),
+  namespace: text('namespace'),
   configJson: text('config_json').notNull(),
   updatedAt: integer('updated_at', {mode: 'timestamp_ms'}).defaultNow(),
 }, (table) => ({
