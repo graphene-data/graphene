@@ -329,7 +329,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       return {node: 'case', kids: compact(kids), type: thenType as FieldType, isAgg: false}
     }
     case 'InExpression': {
-      let not = !!expr.getChild('Kw<"not">')
+      let not = txt(expr.getChild('Kw')).toLowerCase() == 'not'
       let eNode = analyzeExpression(expr.firstChild!, scope)
       // Values list or subquery
       let oneOf: Expression[] = []
