@@ -7,9 +7,17 @@ import {dirname, resolve} from 'path'
 const BASE_PORT = 4003
 const PORT_INCREMENT = 3
 
-let currentWorktree = (await $`git rev-parse --show-toplevel`).stdout.trim()
-currentWorktree = resolve(currentWorktree, '..')
-let root = resolve(currentWorktree, '..')
+// root is the path that contains all of the graphene worktrees
+let root = resolve(import.meta.dirname, '../../..')
+
+let currentWorktree = ''
+if (resolve(process.cwd(), '..') == root) { // if cwd it at the top of the worktree (ie one below the root)
+  currentWorktree = process.cwd()
+} else { // otherwise, we're somewhere in one of the git repos, so use git to anchor our path
+  currentWorktree = (await $`git rev-parse --show-toplevel`).stdout.trim()
+  currentWorktree = resolve(currentWorktree, '..')
+}
+
 let currentName = dirname(currentWorktree)
 
 function getTreeNames (): string[] {
@@ -72,10 +80,10 @@ async function startWorktree (name: string) {
   await $`(cd ${treePath}/cloud && pnpm install)`
   await $`ln -sf ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 
-  writeFileSync(`${root}/AGENTS.md`, `
+  writeFileSync(`${treePath}/AGENTS.md`, `
     This folder contains the source for Graphene, a project that lets you define a data stack as code.
 
-    There are two main folders, 'core' which contains our open-source package that allows for local development, and 'cloud' which contains a closed-source Graphene hosting platform we're developing.
+    There are two main repos, 'core' which contains our open-source package that allows for local development, and 'cloud' which contains a closed-source Graphene hosting platform we're developing.
 
     It's important that you always go read core/AGENTS.md before you do anything, as it provides a lot of the context and coding convetions that are relevant to all Graphene development, not just that of core.
   `.trim())
