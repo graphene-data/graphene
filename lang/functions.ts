@@ -36,6 +36,45 @@ Object.assign(DUCKDB_DIALECT_FUNCTIONS, {
     returns: 'timestamp',
     impl: {sql: 'DATE_TRUNC(${unit}, ${date})'},
   },
+  'current_date': {
+    takes: {},
+    returns: 'date',
+    impl: {function: 'CURRENT_DATE'},
+  },
+  'current_time': {
+    takes: {},
+    returns: 'timestamp',
+    impl: {function: 'CURRENT_TIME'},
+  },
+  'current_timestamp': {
+    default_precision: {
+      takes: {},
+      returns: 'timestamp',
+      impl: {function: 'CURRENT_TIMESTAMP'},
+    },
+    precision: {
+      takes: {'precision': 'number'},
+      returns: 'timestamp',
+      impl: {function: 'CURRENT_TIMESTAMP'},
+    },
+  },
+  'local_timestamp': {
+    default_precision: {
+      takes: {},
+      returns: 'timestamp',
+      impl: {function: 'LOCALTIMESTAMP'},
+    },
+    precision: {
+      takes: {'precision': 'number'},
+      returns: 'timestamp',
+      impl: {function: 'LOCALTIMESTAMP'},
+    },
+  },
+  'current_date_time': {
+    takes: {},
+    returns: 'timestamp',
+    impl: {function: 'CURRENT_TIMESTAMP'},
+  },
 })
 
 export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
@@ -55,5 +94,58 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     takes: {'date': 'timestamp', 'unit': {sql_native: 'kw'}},
     returns: 'timestamp',
     impl: {sql: 'DATE_TRUNC(${date}, ${unit})'},
+  },
+  'current_date': {
+    default_timezone: {
+      takes: {},
+      returns: 'date',
+      impl: {function: 'CURRENT_DATE'},
+    },
+    timezone: {
+      takes: {'timezone': 'string'},
+      returns: 'date',
+      impl: {function: 'CURRENT_DATE'},
+    },
+  },
+  'current_time': {
+    default_timezone: {
+      takes: {},
+      returns: 'timestamp',
+      impl: {function: 'CURRENT_TIME'},
+    },
+    timezone: {
+      takes: {'timezone': 'string'},
+      returns: 'timestamp',
+      impl: {function: 'CURRENT_TIME'},
+    },
+  },
+  'current_timestamp': {
+    default_timezone: {
+      takes: {},
+      returns: 'timestamp',
+      impl: {function: 'CURRENT_TIMESTAMP'},
+    },
+    timezone: {
+      takes: {'timezone': 'string'},
+      returns: 'timestamp',
+      impl: {function: 'CURRENT_TIMESTAMP'},
+    },
+  },
+  'local_timestamp': {
+    takes: {},
+    returns: 'timestamp',
+    impl: {function: 'CURRENT_DATETIME'},
+  },
+  'current_date_time': {
+    default_timezone: {
+      takes: {},
+      returns: 'timestamp',
+      impl: {function: 'CURRENT_DATETIME'},
+    },
+    timezone: {
+      takes: {'timezone': 'string'},
+      returns: 'timestamp',
+      impl: {function: 'CURRENT_DATETIME'},
+    },
   },
 }
