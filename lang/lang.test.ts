@@ -212,6 +212,8 @@ describe('lang', () => {
   it('supports in expressions', () => {
     expect("from users select id where name in ('Alice','Bob')")
       .toRenderSql('select base."id" as "id" from users as base where base."name" in (\'Alice\',\'Bob\')')
+    expect("from users select id where name not in ('Alice','Bob')")
+      .toRenderSql('select base."id" as "id" from users as base where base."name" not in (\'Alice\',\'Bob\')')
   })
 
   it('supports case expressions', () => {
