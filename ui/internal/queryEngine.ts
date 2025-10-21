@@ -130,15 +130,6 @@ function translateData (data: any, node: QueryNode) {
     rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type)})
   })
 
-  // translates dates back into js Date. Do we need this? Or does evidence prefer to get dates as strings?
-  rows.forEach(row => {
-    Object.keys(row).forEach(key => {
-      if (typeof row[key] === 'object' && row[key] && row[key].value) {
-        row[key] = new Date(row[key].value)
-      }
-    })
-  })
-
   return {rows}
 }
 

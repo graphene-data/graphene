@@ -1,4 +1,4 @@
-import {BigQuery, type BigQueryOptions} from '@google-cloud/bigquery'
+import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
 import {config} from '../../lang/config.ts'
 import {type QueryConnection} from './types.ts'
 
@@ -19,6 +19,14 @@ export class BigQueryConnection implements QueryConnection {
     let [rows] = await job.getQueryResults({maxResults: 10000})
     let metadata = job.metadata || (await job.getMetadata())[0]
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
+
+    rows.forEach(r => {
+      Object.entries(r).forEach(([k, v]) => {
+        if (v instanceof BigQueryTimestamp) r[k] = v.value
+        if (v instanceof BigQueryDate) r[k] = v.value
+      })
+    })
+
     return {rows, totalRows}
   }
 }
