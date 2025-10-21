@@ -1,5 +1,7 @@
 export default function getSortedData (data, col, isAsc) {
-  return [...data].sort((a, b) => {
+  let res = [...data].sort((a, b) => {
     return (a[col] < b[col] ? -1 : 1) * (isAsc ? 1 : -1)
   })
+  res._evidenceColumnTypes = data._evidenceColumnTypes
+  return res
 }
