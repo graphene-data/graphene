@@ -1,0 +1,21 @@
+-- Each row contains homography transformation data for a specific frame in a video (used to map table coordinates to screen coordinates).
+table homography_info (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the homography record
+  video_processing_id INT64, -- ID of the processing job
+  homography_info_json STRING, -- JSON containing the homography transformation matrix
+  frame_index INT64, -- Frame number for this homography data
+
+  /* Join relationships */
+
+  join_one video_processing on video_processing_id = video_processing.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

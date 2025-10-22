@@ -1,0 +1,23 @@
+-- Each row contains HLS (HTTP Live Streaming) playlist information for a video.
+table hls_playlist (
+  /* Base columns */
+
+  video_id INT64 primary_key, -- ID of the video
+  m3u8_text STRING, -- HLS playlist file content (M3U8 format)
+  segment_durations STRING, -- Array of segment durations in seconds
+  created_at TIMESTAMP, -- When the playlist was created
+  updated_at TIMESTAMP, -- When the playlist was last updated
+  total_duration FLOAT64, -- Total duration of the video in seconds
+
+  /* Join relationships */
+
+  join_one video on video_id = video.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

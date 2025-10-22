@@ -1,0 +1,20 @@
+-- Each row contains errors and warnings detected during shot analysis.
+table error_features (
+  /* Base columns */
+
+  shot_id INT64 primary_key, -- ID of the shot
+  errors STRING, -- JSON or comma-separated list of errors
+  warnings STRING, -- JSON or comma-separated list of warnings
+
+  /* Join relationships */
+
+  join_one shot on shot_id = shot.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

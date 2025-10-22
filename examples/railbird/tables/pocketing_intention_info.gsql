@@ -1,0 +1,21 @@
+-- Each row contains detailed information about a specific ball/pocket intention.
+table pocketing_intention_info (
+  /* Base columns */
+
+  shot_id INT64, -- ID of the shot
+  ball_id INT64, -- ID of the ball being targeted
+  pocket_id STRING, -- ID of the target pocket (TOP_LEFT, TOP_SIDE, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_SIDE, BOTTOM_RIGHT)
+  path_metadata_index INT64, -- Index for different path calculations
+
+  /* Join relationships */
+
+  join_one shot on shot_id = shot.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

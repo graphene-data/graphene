@@ -1,0 +1,20 @@
+-- Each row represents an error that occurred during video processing.
+table video_processing_error (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the error
+  message STRING, -- Error message
+  video_processing_id INT64, -- ID of the processing job that encountered the error
+
+  /* Join relationships */
+
+  join_one video_processing on video_processing_id = video_processing.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

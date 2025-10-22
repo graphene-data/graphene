@@ -1,0 +1,21 @@
+-- Each row contains features for a bank shot (shot where the object ball hits a rail before pocketing).
+table bank_features (
+  /* Base columns */
+
+  shot_id INT64 primary_key, -- ID of the shot
+  walls_hit STRING, -- Array of walls hit (long rail or short rail)
+  bank_angle FLOAT64, -- Angle of the bank shot in degrees
+  distance FLOAT64, -- Distance traveled by the object ball
+
+  /* Join relationships */
+
+  join_one shot on shot_id = shot.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

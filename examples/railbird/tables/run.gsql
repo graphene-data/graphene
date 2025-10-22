@@ -1,0 +1,27 @@
+-- Each row represents a consecutive sequence of successful shots (a "run") in pool.
+table run (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the run
+  run_ending_shot_id INT64, -- ID of the shot that ended this run
+  video_id INT64, -- ID of the video containing this run
+  user_id INT64, -- ID of the user who made this run
+  processing_id INT64, -- ID of the processing job that detected this run
+  run_length INT64, -- Number of consecutive successful shots in the run
+
+  /* Join relationships */
+
+  join_one shot on run_ending_shot_id = shot.id,
+  join_one video on video_id = video.id,
+  join_one user on user_id = user.id,
+  join_one video_processing on processing_id = video_processing.id,
+  join_many run_features on id = run_features.run_id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

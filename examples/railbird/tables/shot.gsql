@@ -1,0 +1,40 @@
+-- Each row represents a single shot detected in a pool game video.
+table shot (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the shot
+  video_id INT64, -- ID of the video containing this shot
+  start_frame INT64, -- Frame number where the shot starts
+  end_frame INT64, -- Frame number where the shot ends
+  created_at TIMESTAMP, -- When the shot record was created
+  updated_at TIMESTAMP, -- When the shot record was last updated
+  user_id INT64, -- ID of the user who took the shot
+  processing_model_id INT64, -- ID of the processing job that detected this shot
+  is_direct BOOLEAN, -- Whether this is a direct shot (no bank/kick)
+  false_positive_score FLOAT64, -- Confidence score that this is a false positive detection
+  screenshot_exists BOOLEAN, -- Whether a screenshot exists for this shot
+
+  /* Join relationships */
+
+  join_one video on video_id = video.id,
+  join_one user on user_id = user.id,
+  join_one video_processing on processing_model_id = video_processing.id,
+  join_one bank_features on id = bank_features.shot_id,
+  join_one kick_features on id = kick_features.shot_id,
+  join_one miss_features on id = miss_features.shot_id,
+  join_one cue_object_features on id = cue_object_features.shot_id,
+  join_one pocketing_intention_features on id = pocketing_intention_features.shot_id,
+  join_many pocketing_intention_info on id = pocketing_intention_info.shot_id,
+  join_one error_features on id = error_features.shot_id,
+  join_many run_features on id = run_features.shot_id,
+  join_many shot_annotation on id = shot_annotation.shot_id,
+  join_many shot_edit on id = shot_edit.shot_id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

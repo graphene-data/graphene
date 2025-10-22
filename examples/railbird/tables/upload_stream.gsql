@@ -1,0 +1,34 @@
+-- Each row represents a streaming upload session for a video.
+table upload_stream (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the upload stream
+  is_completed BOOLEAN, -- Whether the upload is complete
+  created_at TIMESTAMP, -- When the upload stream was created
+  updated_at TIMESTAMP, -- When the upload stream was last updated
+  video_id INT64, -- ID of the video being uploaded
+  segment_processing_cursor INT64, -- Current position in processing segments
+  hls_segment_cursor INT64, -- Current position in HLS segment generation
+  hls_playlist_text STRING, -- HLS playlist content
+  last_intended_segment_bound INT64, -- Last intended segment boundary
+  stream_segment_type STRING, -- Type of video segmentation (FRAGMENTED_MP4, RB_CHUNKED_MP4)
+  init_playlist_upload_status STRING, -- Status of initial playlist upload (NOT_APPLICABLE, NOT_UPLOADED, UPLOADED)
+  width INT64, -- Video width in pixels
+  height INT64, -- Video height in pixels
+  init_playlist_links_requested INT64, -- Number of times init playlist links were requested
+
+  /* Join relationships */
+
+  join_one video on video_id = video.id,
+  join_many upload_segment on id = upload_segment.stream_id,
+  join_one client_metadata on id = client_metadata.stream_id,
+  join_many client_upload_status on id = client_upload_status.stream_id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

@@ -1,0 +1,25 @@
+-- Each row represents a single segment in a streaming upload.
+table upload_segment (
+  /* Base columns */
+
+  segment_index INT64, -- Index of this segment in the stream
+  stream_id INT64, -- ID of the upload stream
+  uploaded BOOLEAN, -- Whether this segment has been uploaded
+  valid BOOLEAN, -- Whether this segment is valid
+  links_requested INT64, -- Number of times upload links were requested for this segment
+  end_frame_index INT64, -- Last frame in this segment
+  frames_per_second FLOAT64, -- Frame rate of this segment
+  duration_in_seconds FLOAT64, -- Duration of this segment in seconds
+
+  /* Join relationships */
+
+  join_one upload_stream on stream_id = upload_stream.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)
