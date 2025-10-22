@@ -58,6 +58,9 @@ global.it = (name, fn) => {
   if (name !== firstTest.name) return
   testToRun = fn
 }
+global.it.only = (name, fn) => {
+  testToRun = fn
+}
 
 global.beforeAll = (fn) => beforeAllFns.push(fn)
 global.beforeEach = (fn) => beforeEachFns.push(fn)
