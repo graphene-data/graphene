@@ -540,4 +540,26 @@ describe('lang', () => {
     let sql = toSql(queries[0], {cutoff: 20})
     expect(sql).toMatch(/"age">20/)
   })
+
+  it('trimmed sanitization breaks a simple join cycle', () => {
+    clearWorkspace()
+    setConfig({dialect: 'duckdb', root: ''})
+    updateFile(`
+      table alpha (
+        id int primary_key
+        join_many beta on beta.alpha_id = id
+        avg(beta.num) as avg_num
+      )
+
+      table beta (
+        id int primary_key
+        alpha_id int
+        num int
+        join_one alpha on alpha.id = alpha_id
+      )
+    `, 'cycle.gsql')
+    expect('from alpha select count(*)').toRenderSql('select count(1) as "col_0" from alpha as base')
+    expect('from alpha select avg_num').toRenderSql('select (avg(beta_0."num")) as "avg_num" from alpha as base left join beta as beta_0 on beta_0."alpha_id"=base."id"')
+    // expect('from beta select alpha.avg_num').toRenderSql('')
+  })
 })
