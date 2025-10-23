@@ -114,7 +114,7 @@ export function analyzeQueryTable (table: Table) {
   let query = analyzeQuery(node.getChild('QueryStatement')!)
   if (!query) throw new Error('Couldnt find query in QueryStatement')
 
-  table.fields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: (f as any).metadata}))
+  table.fields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: f.metadata, isAgg: f.isAgg}))
   table.query = query.malloyQuery
 
   // another crazy malloyism. Seems like this should always be a string, but if it is, malloy will hit an error
