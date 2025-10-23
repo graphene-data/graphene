@@ -17,7 +17,7 @@ Graphene is mostly written in typescript. We parse Graphene SQL with Lezer, then
 For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 4, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
 
 # Process
-* Never install dependencies. Always ask the user to install them.
+NEVER run `pnpm install` or `pnpm add`. If the env seems broken, summarize what seems wrong and let the user fix it. If you need to add dependencies, explain what you'd like to add and why.
 * Don't grep for files or read code in node_modules. If it seems necessary, stop with a clear explanation of what you need and why.
 * To review images or screenshots, use `node scripts/reviewImage.ts "<prompt>" --<label>=<image-path>`. The prompt tells it what you'd like it to look for in the images. You can provide multiple labeled images (for example, to compare a baseline screenshot to a version with changes).
 * Write a draft `.gitcommit` for changes you make. As we iterate on a change, keep this draft up to date.
