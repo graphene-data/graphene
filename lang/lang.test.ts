@@ -302,6 +302,14 @@ describe('lang', () => {
       .toHaveDiagnostic(/could not find "does_not_exist" on users/i)
   })
 
+  it('suggests join aliases when referencing table names', () => {
+    // expect(1).toBe(2)
+    expect(`
+      table t (oid int, join_one users as usr on usr.id = oid);
+      from t select users.name
+    `).toHaveDiagnostic(/did you mean "usr"\?/i)
+  })
+
   it('can create new tables from queries', () => {
     expect(`table completed_orders as (from orders where status = 'completed' select id)
       from completed_orders select id`)
