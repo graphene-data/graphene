@@ -1,10 +1,7 @@
-
-import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect} from '@malloydata/malloy'
-import {QueryModel} from './node_modules/@malloydata/malloy/dist/model/index.js'
-import {expandBlueprintMap} from './node_modules/@malloydata/malloy/dist/dialect/functions/index.js'
+import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, QueryModel, expandBlueprintMap} from '@graphenedata/malloy'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
-import {FILE_MAP, analyzeTable, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors} from './analyze.ts'
+import {FILE_MAP, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors, analyzeTable} from './analyze.ts'
 import {type Query} from './types.ts'
 import {fillInParams} from './params.ts'
 import {getOffset} from './util.ts'
@@ -60,16 +57,18 @@ export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
     fi.tables = findTables(fi) // for now, blow away previously analyzed tables
   })
 
-  // Second, analyze all those tables
+  // analyze all fields on all tables
+  // TODO: we don't _need_ to do this if you provided contents. We could omit this and get lazy analysis
   Object.values(FILE_MAP).flatMap(f => f.tables).forEach(analyzeTable)
 
-  // Finally, analyze any queries
-  Object.values(FILE_MAP).forEach(fi => {
+  if (contents) {
+    let fi =  FILE_MAP['input']
     let nodes = fi.tree!.topNode.getChildren('QueryStatement') || []
     fi.queries = nodes.map(analyzeQuery).filter(q => !!q)
-  })
-
-  return contents ? FILE_MAP['input'].queries : []
+    return fi.queries
+  } else {
+    return []
+  }
 }
 
 export function toSql (query: Query, params: Record<string, any> = {}): string {
