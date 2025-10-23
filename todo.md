@@ -1,30 +1,31 @@
 ## Soon
 * cloud v1
-* check out railbird data
-* check in to why the primary key doesn't seem to be used in ecomm
-* add tests for more viz settings
+* check out railbird OOM
+* consolidate `check` command to do check+view.
 * `view` doesn't work when the tab isn't active (but maybe could with OffscreenCanvas?)
-* table formatting doesn't look quite like evidence
-* get the ui tests working again, and maybe a subagent for viewing results?
-* figure out the license (if any) we want to put on the npm package
-* date axis formatting doesn't look great
-* set up a `common` folder so I can share types/utils between the frontend and backend
-* get vscode extension ready to publish
+* move agent code to cloud repo
+* publish vscode extension and npm package
+* check in to why the primary key doesn't seem to be used in ecomm
+* unskip or remove skipped lang tests
+* make the dateRange input actually work
 * add flight/ecomm examples using inputs
 * add ecomm example of more investigative report
-* remove underscore from join_one|many
+* button that allows you to see raw query and table of results backing a chart
+
 * Throw an error if you try to redefine an existing table
-* unskip (and fix!) new agg tests
 * Telemetry and error tracking
-* kill server if running when starting `--fg`
+* kill server if running when starting `--fg`. Also, env var for ALWAYS_FG
+* table explorer: view that shows details about any table, breakdown of column values, etc
 
 ## Eventually
-* rename `table` to `extend`
+* upgrade to svelte 5 (or maybe some other framework? vue? preact?)
+* add `extend` blocks on top of `table as` tables
+* remove underscore from join_one|many
+* change computed syntax to `col_name: expression`
 * figure out why malloy can't use `count_if` in a fanout. What's the workaround it uses for count/sum?
 * monorepo support for vscode - right now it assumes the editor root is the same as the graphene workspace root. What if you have one (or more) graphene projects in subdirs
 * self-ref in measures doesn't seem to work: ie in `table orders`, `sum(orders.amount) as total_amount`
 * metadata propagation - fields in a view should keep the metadata from their original table (assuming it's a plain field, not an expression)
-* handle cycles in measures - measures could refer to joins (or other measures) that haven't been analyzed yet.
 * make `count(col)` behave like regular sql (ie count non-null)
 * create our own date functions: `day`, `month` for truncation, `now()`
 * allow referencing just a join `from users count(orders)` -> should just get count distinct of primary key
