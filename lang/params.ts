@@ -1,6 +1,6 @@
 import type {Expression, FieldType} from './types.ts'
 import {walkExpression} from './util.ts'
-import {type Query as MalloyQuery} from '@malloydata/malloy'
+import {type Query as MalloyQuery} from '@graphenedata/malloy'
 
 export function inferParamTypes (query: MalloyQuery) {
   // walk through a query looking for params. When we find one, look at the surrounding expression to figure out

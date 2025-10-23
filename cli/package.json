@@ -28,7 +28,7 @@
     "@google-cloud/bigquery": "^8.1.1",
     "@lezer/common": "^1.2.3",
     "@lezer/lr": "^1.4.2",
-    "@malloydata/malloy": "^0.0.302",
+    "@graphenedata/malloy": "0.0.304",
     "@sveltejs/vite-plugin-svelte": "3.1.2",
     "@tidyjs/tidy": "^2.5.2",
     "chalk": "^5.3.0",

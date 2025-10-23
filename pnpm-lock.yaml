@@ -73,15 +73,15 @@ importers:
       '@google-cloud/bigquery':
         specifier: ^8.1.1
         version: 8.1.1
+      '@graphenedata/malloy':
+        specifier: 0.0.304
+        version: 0.0.304
       '@lezer/common':
         specifier: ^1.2.3
         version: 1.2.3
       '@lezer/lr':
         specifier: ^1.4.2
         version: 1.4.2
-      '@malloydata/malloy':
-        specifier: ^0.0.302
-        version: 0.0.302
       '@sveltejs/vite-plugin-svelte':
         specifier: 3.1.2
         version: 3.1.2(svelte@4.2.19)(vite@5.4.14(@types/node@20.19.11)(lightningcss@1.30.1))
@@ -197,15 +197,15 @@ importers:
 
   lang:
     dependencies:
+      '@graphenedata/malloy':
+        specifier: 0.0.304
+        version: 0.0.304
       '@lezer/common':
         specifier: ^1.2.3
         version: 1.2.3
       '@lezer/lr':
         specifier: ^1.4.2
         version: 1.4.2
-      '@malloydata/malloy':
-        specifier: ^0.0.302
-        version: 0.0.302
       glob:
         specifier: ^11.0.3
         version: 11.0.3
@@ -801,6 +801,10 @@ packages:
     resolution: {integrity: sha512-N8qS6dlORGHwk7WjGXKOSsLjIjNINCPicsOX6gyyLiYk7mq3MtII96NZ9N2ahwA2vnkLmZODOIH9rlNniYWvCQ==}
     engines: {node: '>=18'}
 
+  '@graphenedata/malloy@0.0.304':
+    resolution: {integrity: sha512-dseKG8dmKDfFbvYof2NbEOlGkbHG+dxdkOrn2buIJkpzEHyN/oxOrS7+5stTzZ3S3rIvUyCfchE+hqxy/glC4A==}
+    engines: {node: '>=20'}
+
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
     engines: {node: '>=18.18.0'}
@@ -931,10 +935,6 @@ packages:
 
   '@malloydata/malloy-tag@0.0.302':
     resolution: {integrity: sha512-PIcxtm4cHiBtKqi/aEB2utCp+PwPXzmeH6qTtI8Pq4fCSxZw/zQiuqqzdh6XiJzlQ7jRempkNkK7uRZAVXqHLg==}
-    engines: {node: '>=20'}
-
-  '@malloydata/malloy@0.0.302':
-    resolution: {integrity: sha512-tGWXy3aOkAGYTyasi8V6nKLMa/ixjYYcZM0y8SJ+scGPpjq1GKxxa+rjR6zuW/1IovSwQgKUxoebQpkqliMN/w==}
     engines: {node: '>=20'}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -4137,6 +4137,19 @@ snapshots:
 
   '@google-cloud/promisify@5.0.0': {}
 
+  '@graphenedata/malloy@0.0.304':
+    dependencies:
+      '@malloydata/malloy-filter': 0.0.302
+      '@malloydata/malloy-interfaces': 0.0.302
+      '@malloydata/malloy-tag': 0.0.302
+      antlr4ts: 0.5.0-alpha.4
+      assert: 2.1.0
+      jaro-winkler: 0.2.8
+      jest-diff: 29.7.0
+      lodash: 4.17.21
+      luxon: 2.5.2
+      uuid: 8.3.2
+
   '@humanfs/core@0.19.1': {}
 
   '@humanfs/node@0.16.6':
@@ -4252,19 +4265,6 @@ snapshots:
     dependencies:
       antlr4ts: 0.5.0-alpha.4
       assert: 2.1.0
-      uuid: 8.3.2
-
-  '@malloydata/malloy@0.0.302':
-    dependencies:
-      '@malloydata/malloy-filter': 0.0.302
-      '@malloydata/malloy-interfaces': 0.0.302
-      '@malloydata/malloy-tag': 0.0.302
-      antlr4ts: 0.5.0-alpha.4
-      assert: 2.1.0
-      jaro-winkler: 0.2.8
-      jest-diff: 29.7.0
-      lodash: 4.17.21
-      luxon: 2.5.2
       uuid: 8.3.2
 
   '@nodelib/fs.scandir@2.1.5':

@@ -22,7 +22,7 @@ import {
   type ModelURL,
   type ModelString,
   type InvalidationKey,
-} from '@malloydata/malloy'
+} from '@graphenedata/malloy'
 
 // Default example that matches the in-memory ecommerce schema created below
 const EXAMPLE = `
@@ -43,6 +43,7 @@ const EXAMPLE = `
     measure:
       total_orders is orders.count()
       amount_paid is payments.sum(payments.amount)
+      avg_paid is payments.avg(payments.amount)
   }
 
   source: filtered_users is users -> {
@@ -52,7 +53,10 @@ const EXAMPLE = `
   }
 
   // run: filtered_users -> { select: name, total_orders}
-  run: users -> { select: ch is hour(created_at) }
+  run: users -> {
+    aggregate: avg_paid
+    group_by: id
+  }
 `
 
 // Same ecommerce tables/data as in lang/testHelpers.ts
