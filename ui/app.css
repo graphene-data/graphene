@@ -95,7 +95,6 @@ html {
 }
 
 body {
-  user-select: none;
   font-family: "Inter", var(--ui-font-family);
   line-height: 1.7;
 }
@@ -279,7 +278,6 @@ code {
   padding-right: 0.25rem;
   padding-top: 0.125rem;
   padding-bottom: 0.125rem;
-  user-select: all;
 }
 
 form code { font-size: unset; }
