@@ -17,15 +17,9 @@ const testTables = `
 
     join_many orders on orders.user_id = id
     join_many payments on payments.user_id = id
-    join_one user_facts on user_facts.id = id
-    user_facts.ltv as ltv
     count(orders.id) as total_orders
     sum(payments.amount) as amount_paid
     -- measure active_recently created_at > current_date - 30
-  )
-
-  table user_facts as (
-    from users select id, orders.total_revenue as ltv
   )
 
   table orders (
@@ -147,9 +141,27 @@ describe('lang', () => {
       SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
   })
 
-  it('supports "table a" (aka view) queries', () => {
-    expect('from users select name, ltv')
-      .toRenderSql('with __stage0 as ( select base."id" as "id", (coalesce(sum(orders_0."amount"),0)) as "ltv" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 ) select base."name" as "name", (user_facts_0."ltv") as "ltv" from users as base left join __stage0 as user_facts_0 on user_facts_0."id"=base."id" group by 1 order by 2 desc nulls last')
+  it('supports "table as" (aka view) queries', async () => {
+    updateFile(`
+      table users (
+        id int primary_key
+        name string
+        join_many orders on orders.user_id = id
+        join_one user_facts on user_facts.id = id
+        user_facts.ltv as ltv -- test out joining the view back in to its original source
+      )
+      table orders (id int primary_key, user_id int, amount int, sum(amount) as total_revenue)
+      table user_facts as (from users select id, orders.total_revenue as ltv)
+    `, 'models.gsql')
+
+    await expect('from user_facts select id, ltv') // query the view directly
+      .toReturnRows([1, 60], [2, 40])
+
+    expect('from users select name, ltv') // query the view indirectly, through a join
+      .toRenderSql('with __stage0 as ( select base."id" as "id", (coalesce(sum(orders_0."amount"),0)) as "ltv" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 ) select base."name" as "name", (user_facts_0."ltv") as "ltv" from users as base left join __stage0 as user_facts_0 on user_facts_0."id"=base."id"')
+
+    await expect('select * from users') // wildcards should include ltv
+      .toReturnRows([1, 'Alice', 60], [2, 'Bob', 40])
   })
 
   it('supports select distinct', () => {
