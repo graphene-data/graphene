@@ -1,0 +1,25 @@
+-- Each row represents an edit/correction made to a shot's properties.
+table shot_edit (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the edit
+  shot_id INT64, -- ID of the edited shot
+  user_id INT64, -- ID of the user who made the edit
+  changes STRING, -- JSON describing the changes made
+  notes STRING, -- Notes about the edit
+  created_at TIMESTAMP, -- When the edit was created
+  updated_at TIMESTAMP, -- When the edit was last updated
+
+  /* Join relationships */
+
+  join_one shot on shot_id = shot.id,
+  join_one user on user_id = user.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

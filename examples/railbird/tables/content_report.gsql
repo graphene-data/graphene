@@ -1,0 +1,24 @@
+-- Each row represents a report of inappropriate content for a video.
+table content_report (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the report
+  video_id INT64, -- ID of the reported video
+  reporter_user_id INT64, -- ID of the user who reported the video
+  reason STRING, -- Reason for the report (SPAM, NUDITY, VIOLENCE, HATE, COPYRIGHT, OTHER)
+  custom_reason STRING, -- Custom explanation if reason is 'OTHER'
+  created_at TIMESTAMP, -- When the report was created
+
+  /* Join relationships */
+
+  join_one video on video_id = video.id,
+  join_one user on reporter_user_id = user.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

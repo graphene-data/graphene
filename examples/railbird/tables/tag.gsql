@@ -1,0 +1,23 @@
+-- Each row represents a tag that can be applied to videos.
+table tag (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the tag
+  name STRING, -- Tag name
+  user_id INT64, -- ID of the user who created the tag
+  retired BOOLEAN, -- Whether this tag is no longer in use
+
+  /* Join relationships */
+
+  join_one user on user_id = user.id,
+  join_many tag_class_association on id = tag_class_association.tag_id,
+  join_many video_tag on id = video_tag.tag_id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

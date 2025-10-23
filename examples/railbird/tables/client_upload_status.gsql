@@ -1,0 +1,22 @@
+-- Each row tracks the upload status for a client's stream.
+table client_upload_status (
+  /* Base columns */
+
+  sequence_id INT64, -- Sequence number for status updates
+  stream_id INT64, -- ID of the upload stream
+  status STRING, -- Whether uploads are enabled for this stream (UPLOAD_ENABLED, UPLOAD_DISABLED)
+  created_at TIMESTAMP, -- When this status was created
+  updated_at TIMESTAMP, -- When this status was last updated
+
+  /* Join relationships */
+
+  join_one upload_stream on stream_id = upload_stream.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

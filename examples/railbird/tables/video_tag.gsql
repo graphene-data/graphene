@@ -1,0 +1,20 @@
+-- Each row associates a tag with a video.
+table video_tag (
+  /* Base columns */
+
+  tag_id INT64, -- ID of the tag
+  video_id INT64, -- ID of the video
+
+  /* Join relationships */
+
+  join_one tag on tag_id = tag.id,
+  join_one video on video_id = video.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

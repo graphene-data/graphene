@@ -1,0 +1,25 @@
+-- Each row represents an annotation (comment or correction) on a shot.
+table shot_annotation (
+  /* Base columns */
+
+  shot_id INT64, -- ID of the annotated shot
+  type_id INT64, -- ID of the annotation type
+  notes STRING, -- Annotation notes
+  user_id INT64, -- ID of the user who created the annotation
+  created_at TIMESTAMP, -- When the annotation was created
+  updated_at TIMESTAMP, -- When the annotation was last updated
+
+  /* Join relationships */
+
+  join_one shot on shot_id = shot.id,
+  join_one shot_annotation_type on type_id = shot_annotation_type.id,
+  join_one user on user_id = user.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

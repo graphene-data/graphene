@@ -1,0 +1,38 @@
+-- Each row represents a video uploaded to the platform, typically a pool game recording.
+table video (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the video
+  created_at TIMESTAMP, -- When the video was created
+  updated_at TIMESTAMP, -- When the video was last updated
+  frames_per_second FLOAT64, -- Video frame rate
+  start_time TIMESTAMP, -- Real-world time when the video started recording
+  end_time TIMESTAMP, -- Real-world time when the video ended recording
+  name STRING, -- User-provided name for the video
+  current_processing_id INT64, -- ID of the current or most recent processing job
+  screenshot_uri STRING, -- URI to the video thumbnail
+  table_size FLOAT64, -- Size of the pool table in the video
+  private BOOLEAN, -- Whether the video is private or public
+
+  /* Join relationships */
+
+  join_one video_processing on current_processing_id = video_processing.id,
+  join_many shot on id = shot.video_id,
+  join_many run on id = run.video_id,
+  join_one upload_stream on id = upload_stream.video_id,
+  join_one hls_playlist on id = hls_playlist.video_id,
+  join_many video_comment on id = video_comment.video_id,
+  join_many video_reaction on id = video_reaction.video_id,
+  join_many video_tag on id = video_tag.video_id,
+  join_many content_blocks on id = content_blocks.video_id,
+  join_many content_report on id = content_report.video_id,
+  join_many user_upload on id = user_upload.video_id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

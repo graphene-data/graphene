@@ -1,0 +1,21 @@
+-- Each row represents a video upload by a user (links users to their uploaded videos).
+table user_upload (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the upload record
+  user_id INT64, -- ID of the user who uploaded the video
+  video_id INT64, -- ID of the uploaded video
+
+  /* Join relationships */
+
+  join_one user on user_id = user.id,
+  join_one video on video_id = video.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

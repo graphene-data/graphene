@@ -1,0 +1,28 @@
+-- Each row represents a Stripe subscription for a user.
+table stripe_subscription_metadata (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the subscription record
+  stripe_subscription_id STRING, -- Stripe subscription ID
+  stripe_price_id STRING, -- Stripe price/plan ID
+  status STRING, -- Subscription status (active, canceled, etc.)
+  valid_until TIMESTAMP, -- When the subscription expires
+  current_period_start TIMESTAMP, -- Start of the current billing period
+  current_period_end TIMESTAMP, -- End of the current billing period
+  user_id INT64, -- ID of the subscribed user
+  created_at TIMESTAMP, -- When the subscription record was created
+  updated_at TIMESTAMP, -- When the subscription record was last updated
+  canceled_at TIMESTAMP, -- When the subscription was canceled (if applicable)
+
+  /* Join relationships */
+
+  join_one user on user_id = user.id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)

@@ -1,0 +1,20 @@
+-- Each row represents a category or classification for tags.
+table tag_class (
+  /* Base columns */
+
+  id INT64 primary_key, -- Unique identifier for the tag class
+  name STRING, -- Name of the tag class
+  railbird_defined BOOLEAN, -- Whether this is a platform-defined class (vs user-defined)
+
+  /* Join relationships */
+
+  join_many tag_class_association on id = tag_class_association.tag_class_id
+
+  /* Scalar expressions */
+
+  -- Add scalar expressions here as needed
+
+  /* Aggregate expressions */
+
+  -- Add aggregate expressions here as needed
+)
