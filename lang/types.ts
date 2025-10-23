@@ -21,6 +21,7 @@ export type Expression = Expr & {
 export type Join = JoinFieldDef & {
   name: string // the name the table in this join. Defaults to tableName
   expression?: SyntaxNode | null
+  metadata?: Record<string, string>
   tableName?: string // the table's name in the database
   tablePath?: string // the full name, including namespace
 }
@@ -55,7 +56,7 @@ export interface Table {
 }
 
 export interface Query {
-  fields: Field[]
+  fields: ColumnField[]
   subQuerySources: Table[]
   malloyQuery: MalloyQuery
 }

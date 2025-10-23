@@ -17,9 +17,15 @@ const testTables = `
 
     join_many orders on orders.user_id = id
     join_many payments on payments.user_id = id
+    join_one user_facts on user_facts.id = id
+    user_facts.ltv as ltv
     count(orders.id) as total_orders
     sum(payments.amount) as amount_paid
     -- measure active_recently created_at > current_date - 30
+  )
+
+  table user_facts as (
+    from users select id, orders.total_revenue as ltv
   )
 
   table orders (
@@ -139,6 +145,11 @@ describe('lang', () => {
     expect('from (select id, name from users) as u select id, name')
       .toRenderSql(`WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
       SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
+  })
+
+  it('supports "table a" (aka view) queries', () => {
+    expect('from users select name, ltv')
+      .toRenderSql('with __stage0 as ( select base."id" as "id", (coalesce(sum(orders_0."amount"),0)) as "ltv" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 ) select base."name" as "name", (user_facts_0."ltv") as "ltv" from users as base left join __stage0 as user_facts_0 on user_facts_0."id"=base."id" group by 1 order by 2 desc nulls last')
   })
 
   it('supports select distinct', () => {
