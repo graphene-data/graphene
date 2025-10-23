@@ -1,6 +1,7 @@
 import {test as base, expect} from '@playwright/test'
-import {startCloudServer} from '../server/runtime.ts'
+import {startDevServer} from '../server/dev.ts'
 import {setAuthOverride} from '../server/auth.ts'
+import net from 'net'
 import dotenv from 'dotenv'
 import path from 'path'
 
@@ -27,16 +28,8 @@ export const test = base.extend<{cloud: {url: string}, realAuth: boolean}>({
   },
 
   cloud: async ({realAuth}, use) => {
-    let host = realAuth ? 'localhost' : '127.0.0.1'
-    let handle = await startCloudServer({
-      host,
-      ...(realAuth ? {port: 3121} : {}),
-      viteEnv: {
-        NODE_ENV: 'test',
-        VITE_STYTCH_PUBLIC_TOKEN: process.env.VITE_STYTCH_PUBLIC_TOKEN ?? '',
-        VITE_STYTCH_USE_MOCK: realAuth ? 'false' : 'true',
-      },
-    })
+    let handle = await startDevServer({realAuth, port: realAuth ? 3121 : getAvailablePort() })
+        // VITE_STYTCH_USE_MOCK: realAuth ? 'false' : 'true',
     // setAuthOverride(realAuth ? null : {})
 
     try {
@@ -52,3 +45,15 @@ test.afterEach(async ({page}) => {
 })
 
 export {expect}
+
+async function getAvailablePort (): Promise<number> {
+  return await new Promise((resolve, reject) => {
+    let srv = net.createServer()
+    srv.unref()
+    srv.on('error', reject)
+    srv.listen(0, '127.0.0.1', () => {
+      let {port} = srv.address() as net.AddressInfo
+      srv.close(() => resolve(port))
+    })
+  })
+}
