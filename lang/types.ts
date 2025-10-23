@@ -1,5 +1,5 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
-import type {Expr, JoinFieldDef, Query as MalloyQuery} from '@malloydata/malloy'
+import type {Expr, JoinFieldDef, Query as MalloyQuery} from '@graphenedata/malloy'
 
 declare module '@lezer/common' {
   interface Tree {
@@ -29,8 +29,8 @@ export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' |
 
 export interface ColumnField {
   name: string
-  type: FieldType
-  metadata: Record<string, string>
+  type?: FieldType
+  metadata?: Record<string, string>
   e?: Expression
   path?: string[]
   isAgg?: boolean
@@ -43,7 +43,7 @@ export type Field = ColumnField | Join
 export interface Table {
   type: 'table' | 'query_source'
   name: string // the name the table has in this context. Could be an alias if this is a join
-  fields: (Field | Join)[]
+  fields: Field[]
   analyzed?: boolean
   metadata: Record<string, string>
   connection?: string

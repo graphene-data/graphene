@@ -25,3 +25,8 @@ From `vscode`, use `npm run install-cursor` (or `-vscode`) to package up the cur
 From `examples/flights/.evidence/template` run `cp ~/co/graphene/cli/vite.config.js . && node --inspect ../../node_modules/vite/bin/vite.js dev --port 3000` to debug the server that turns graphene queries in evidence into actual sql and executes them.
 
 To test out packaged graphene, `cd cli && pnpm build && pnpm pack`. In a new folder, you can `npm install <path-to-pack.tgz>`.
+
+# Malloy fork
+We maintain a fork of Malloy (specifically the `malloy` package) to better integrate it into Graphene.
+To deploy it, from `malloy/packages/malloy`, bump the version in package.json, then `npm publish --access public --tag stable`
+After deploying, you'll want to bump the version that Graphene points to.

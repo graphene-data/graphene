@@ -1,6 +1,6 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import {isExtractUnit, isTemporalType, type TemporalTypeDef, type AggregateFunctionType, type StructRef, type AtomicTypeDef} from './node_modules/@malloydata/malloy/dist/model/index.js'
+import {isExtractUnit, isTemporalType, type AggregateFunctionType, type StructRef, type AtomicTypeDef} from '@graphenedata/malloy'
 import {txt, compact, getFile, getPosition, walkExpression} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config} from './config.ts'
@@ -12,9 +12,8 @@ export let diagnostics: Diagnostic[] = []
 
 // Because table objects are sent to Malloy, I want to avoid putting large objects on it that Malloy isn't expecting.
 let TABLE_NODE_MAP = new WeakMap<Table, SyntaxNode>()
+let FIELD_NODE_MAP = new WeakMap<Field, SyntaxNode>()
 let NODE_ENTITY_MAP = new NodeWeakMap<any>()
-
-const errorExpression: Expression = {node: 'error', type: 'error'}
 
 // Creates tables without analyzing them.
 // We need to know all the tables before we can analyze any table, since they refer to each other.
@@ -22,87 +21,98 @@ export function findTables (fi: FileInfo): Table[] {
   let tn = fi.tree!.topNode
   let nodes = tn.getChildren('TableStatement').concat(tn.getChildren('ViewStatement'))
   return nodes.map(syntaxNode => {
-    let name = txt(syntaxNode.firstChild?.nextSibling)
-    let type = syntaxNode.getChild('QueryStatement') ? 'query_source' : 'table' as 'query_source' | 'table'
-    let metadata = extractLeadingMetadata(syntaxNode)
-    let table: Table = {type, name, metadata, fields: []}
+    let name = txt(syntaxNode.getChild('Identifier'))
+    let table = makeTable(name, syntaxNode.getChild('QueryStatement') ? 'query_source' : 'table')
+    table.metadata = extractLeadingMetadata(syntaxNode)
+
+    for (let cn of syntaxNode.getChildren('ColumnDef')) {
+      let name = txt(cn.getChild('Identifier'))
+
+      if (cn.getChild('PrimaryKey')) {
+        if (table.primaryKey) diag(cn, `Table ${table.name} has multiple primary keys`)
+        table.primaryKey = name
+      }
+      let type = convertDataType(txt(cn.getChild('DataType')))
+      if (!type) return diag(cn, `Unsupported data type: ${txt(cn.getChild('DataType'))}`)
+
+      table.fields.push({name, type, metadata: extractLeadingMetadata(cn)})
+    }
+
+    for (let jn of syntaxNode.getChildren('JoinDef')) {
+      let field = {name: txt(jn.getChild('Alias')) || txt(jn.getChild('Identifier'))}
+      table.fields.push(field)
+      FIELD_NODE_MAP.set(field, jn)
+    }
+
+    for (let cn of syntaxNode.getChildren('ComputedDef')) {
+      let field = {name: txt(cn.getChild('Alias'))}
+      table.fields.push(field)
+      FIELD_NODE_MAP.set(field, cn)
+    }
+
     TABLE_NODE_MAP.set(table, syntaxNode)
     return table
   })
 }
 
-// Parses a table (model) declaration. Most analysis is done lazily, so this just gets the tables name and fields.
-// TODO: detect cycles. It's possible for two tables to refer to each other. For joins that's ok, for measures it's problematic.
-// if tableA.measureA depends on tableB.measureB, but measureB depends on tableA.measureC, we can't compute the type right now.
+function makeTable (name: string, type: 'query_source' | 'table'): Table {
+  let tablePath = config.namespace ? `${config.namespace}.${name}` : name
+  return {name, type, fields: [], connection: config.dialect, dialect: config.dialect, tableName: name, tablePath, metadata: {}}
+}
+
 export function analyzeTable (table: Table) {
-  if (table.analyzed) return
-  table.analyzed = true
-  table.connection = config.dialect
-  table.dialect = config.dialect
-  table.tableName = table.name
-  table.tablePath = config.namespace ? `${config.namespace}.${table.name}` : table.name
-  table.fields = []
-
-  if (table.type == 'table') analyzeDatabaseTable(table)
-  else analyzeQueryTable(table)
+  if (table.type == 'query_source') return analyzeQueryTable(table)
+  for (let f of table.fields) {
+    if (f.type) continue
+    analyzeField(f, table)
+  }
 }
 
-// Actual table with columns that lives in the database
-function analyzeDatabaseTable (table: Table) {
-  let node = TABLE_NODE_MAP.get(table)!
-  // regular columns in the db, like `full_name VARCHAR`
-  node.getChildren('ColumnDef').forEach(cn => {
-    let name = txt(cn.getChild('Identifier'))
+let analysisQueue = new Set<Field>()
+export function analyzeField (field: Field, table: Table) {
+  if (field.type) return // already analyzed
 
-    if (cn.getChild('PrimaryKey')) {
-      if (table.primaryKey) diag(cn, `Table ${table.name} has multiple primary keys`)
-      table.primaryKey = name
-    }
-    let type = convertDataType(txt(cn.getChild('DataType')))
-    if (!type) return diag(cn, `Unsupported data type: ${txt(cn.getChild('DataType'))}`)
+  let node = FIELD_NODE_MAP.get(field)!
+  if (analysisQueue.has(field)) {
+    diag(node, 'Cycles are not allowed between computed columns')
+  }
+  analysisQueue.add(field)
 
-    table.fields.push({name, type, metadata: extractLeadingMetadata(cn)})
-  })
+  if (node.name == 'JoinDef') {
+    field = field as Join
+    let target = lookupTable(txt(node.getChild('Identifier')), node)
+    if (!target) return diag(node, 'Unknown table to join')
 
-  // joins, like `join_one orders as order ON order.id = item.order_id`
-  // NB that in Malloy, a join contains the entire target table in the join object.
-  node.getChildren('JoinDef').forEach(jn => {
-    let target = lookupTable(txt(jn.getChild('Identifier')), jn)
-    if (!target) return diag(jn, 'Unknown table to join')
-    if (!target.analyzed) analyzeTable(target)
-    let name = txt(jn.getChild('Alias')) || target.name
-    let joinType = {'join_many': 'many', 'join_one': 'one'}[txt(jn.getChild('JoinType'))]
-    if (!joinType) return diag(jn, 'Unknown join type')
+    // query_source tables are all-or-nothing, so when we encounter them as a join we need to analyze them
+    if (target.type == 'query_source') analyzeQueryTable(target)
 
-    // Malloy does this bonkers thing where a JoinField contains both the details of that join, and the entire target table.
-    // This clone is important, otherwise two tables that join each other create an infinite loop when we give them to Malloy.
-    let clone = structuredClone(target)
-    let join = {...clone, name, join: joinType} as Join
+    let jt = {'join_many': 'many', 'join_one': 'one'}[txt(node.getChild('JoinType'))]
+    if (!jt) return diag(node, 'Unknown join type')
 
-    // It's important we add the join before processing its expression, since the expression will refer to it
-    table.fields.push(join)
-    join.onExpression = analyzeExpression(jn.getChild('Expression')!, {table, outputFields: []})
-  })
+    // Malloy expects join fields to have not just join info, but the entire contents of the thing they're joining (the `target` table)
+    // This is wild, and maybe it'd be better to do this closer to when we create the Malloy QueryModel.
+    Object.assign(field, target, {name: field.name, join: jt})
 
-  // measures/dimensions, like `sum(price) as total_price`
-  // malloy represents them as just a regular field, plus an expression
-  // TODO: I think one measure can ref another, so we need to process these bottom up to resolve types
-  node.getChildren('ComputedDef').forEach(cn => {
-    let expression = analyzeExpression(cn.getChild('Expression')!, {table, outputFields: []})
-    table.fields.push({
-      name: txt(cn.getChild('Alias')),
-      type: expression.type,
-      metadata: extractLeadingMetadata(cn),
-      e: expression,
-      isAgg: expression.isAgg,
-    })
-  })
+    // It's important we analyze this expression _after_ setting the join, since the expression might refer to it (ie join_one user on user.id = user_id)
+    field.onExpression = analyzeExpression(node.getChild('Expression')!, {table, outputFields: []})
+  }
+
+  if (node.name == 'ComputedDef') {
+    let e = analyzeExpression(node.getChild('Expression')!, {table, outputFields: []})
+    let metadata = extractLeadingMetadata(node)
+    Object.assign(field, {e, metadata, type: e.type, isAgg: e.isAgg})
+  }
+
+  if (!field.type) throw new Error('Expected analysis to set fields type')
+  analysisQueue.delete(field)
 }
 
-function analyzeQueryTable (table: Table) {
+// a query table `table foo as (select ...)`
+export function analyzeQueryTable (table: Table) {
+  if (table.query) return
   let node = TABLE_NODE_MAP.get(table)!
   let query = analyzeQuery(node.getChild('QueryStatement')!)
-  if (!query) return
+  if (!query) throw new Error('Couldnt find query in QueryStatement')
 
   table.fields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: (f as any).metadata}))
   table.query = query.malloyQuery
@@ -138,15 +148,14 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
     // Malloy doesn't support subqueries in FROM. We could either add the subquery to the pipeline, or create a "query_source" table for it.
     // I'm opting for query_source, because it's easier to reason about how multiple subqueries might work.
     structRef = txt(froms[0].getChild('Alias')) || 'subquery'
-    scope.table = {type: 'query_source', name: structRef} as Table
+    scope.table = makeTable(structRef, 'query_source')
     TABLE_NODE_MAP.set(scope.table, froms[0].getChild('SubqueryExpression')!)
-    analyzeTable(scope.table)
+    analyzeQueryTable(scope.table)
     subQuerySources.push(scope.table)
   } else { // from a regular table
     structRef = txt(froms[0].getChild('Identifier'))
     scope.table = lookupTable(structRef, froms[0])!
     if (!scope.table) return diag(froms[0], `could not find table "${structRef}"`)
-    if (!scope.table.analyzed) analyzeTable(scope.table)
     NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: scope.table})
   }
 
@@ -157,10 +166,13 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   isAgg ||= !!isSelectDistinct // select distinct makes the query a reduction
   selects.forEach(s => {
     if (s.getChild('Wildcard')) {
-      let path = s.getChild('Wildcard')?.getChildren('Identifier').map(i => txt(i)) || []
-      let {fields} = lookup(s.getChild('Wildcard')!, scope)
-      fields.forEach(f => {
-        scope.outputFields.push({...f,  e: {node: 'field', path: [...path, f.name], type: f.type}})
+      let path = s.getChild('Wildcard')!.getChildren('Identifier')
+      let pathStrings = path.map(p => txt(p))
+      let target = followJoins(path, scope.table)
+      if (!target) return // followJoins handles diags
+      target.fields.forEach(f => {
+        if (isJoin(f) || f.isAgg) return
+        scope.outputFields.push({...f, e: {node: 'field', path: [...pathStrings, f.name], type: f.type!}})
       })
     } else {
       let expr = analyzeExpression(s.getChild('Expression')!, scope)
@@ -223,7 +235,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   if (scope.outputFields.length == 0) {
     scope.table.fields.forEach(f => {
       if (isJoin(f) || f.isAgg) return
-      scope.outputFields.push({...f, e: {node: 'field', path: [f.name], type: f.type}})
+      scope.outputFields.push({...f, e: {node: 'field', path: [f.name], type: f.type!}})
     })
   }
 
@@ -265,23 +277,28 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     case 'String': return {node: 'stringLiteral', literal: txt(expr).slice(1, -1), type: 'string'}
     case 'Param': return {node: 'parameter', path: [txt(expr).slice(1)], type: 'string'}
     case 'Ref': {
+      let field = lookupField(expr, scope)
+      if (!field) return {node: 'error', type: 'error'} // diag handled by lookupField
+
+      // fields have types, but Malloy also expects additional `typeDef` for some times (dates, array, records)
+      let type = field.type || 'unknown'
+      let typeInfo = {type} as {type: FieldType, typeDef?: AtomicTypeDef}
+      if (type === 'date' || type === 'timestamp') typeInfo.typeDef = {type}
+
+      // Malloy uses the special 'outputField' when referring to an aggregated column in the output. Non-agg output fields just use `field`.
+      if (scope.outputFields.includes(field) && field.isAgg) {
+        return {node: 'outputField' as const, name: field.name, ...typeInfo, isAgg: field.isAgg}
+      }
+
       let path = expr.getChildren('Identifier').map(i => txt(i))
-      let {fields, inOutput} = lookup(expr, scope)
-      let type = fields[0]?.type || 'unknown'
-      let base = inOutput && fields[0].isAgg ? {node: 'outputField' as const, name: path[0]} : {node: 'field' as const, path}
-
-      // malloy stores additional typeDef info on query fields for certain types (dates, array, records)
-      let typeDef: AtomicTypeDef | null = null
-      if (type === 'date' || type === 'timestamp') typeDef = {type} as TemporalTypeDef
-
-      return {...base, type, ...(typeDef ? {typeDef} : {}), isAgg: fields[0]?.isAgg}
+      return {node: 'field' as const, path, ...typeInfo, isAgg: field.isAgg}
     }
     case 'ExtractExpression': {
       let e = analyzeExpression(expr.getChild('Expression')!, scope)
-      if (!isTemporalType(e.type) || !e.typeDef) return diag(expr, 'Expression must be a date or timestamp', errorExpression)
+      if (!isTemporalType(e.type) || !e.typeDef) return diag(expr, 'Expression must be a date or timestamp')
 
       let units = txt(expr.getChild('ExtractUnit')!).replace(/^['"]|['"]$/g, '').toLowerCase()
-      if (!isExtractUnit(units)) return diag(expr, 'Not a valid unit to extract', errorExpression)
+      if (!isExtractUnit(units)) return diag(expr, 'Not a valid unit to extract')
 
       return {node: 'extract', type: 'number', units, e: e as any, isAgg: false}
     }
@@ -372,7 +389,7 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   let type = overload?.returnType.type
   if (type == 'generic') type = args[0]?.type as any || 'string'
   if (type && !isSupportedType(type)) {
-    return diag(expr, `Unsupported function return type ${type} from function ${name}`, errorExpression)
+    return diag(expr, `Unsupported function return type ${type} from function ${name}`)
   }
 
   // Aggregates need a `structPath`, which in malloy is the `orders.users` in `orders.users.avg(age)`.
@@ -397,12 +414,12 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
       isAgg: overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg),
     }
   } else {
-    return diag(expr, `Unknown function: ${name}`, errorExpression)
+    return diag(expr, `Unknown function: ${name}`)
   }
 
   // Right now, we only support a single structPath in aggregate functions
   if (structPaths.size > 1 && (ret.node == 'aggregate' || ret.expressionType == 'aggregate')) {
-    return diag(expr, 'Graphene only supports a single table within aggregates. This one has: ' + Array.from(structPaths).join(', '), errorExpression)
+    return diag(expr, 'Graphene only supports a single table within aggregates. This one has: ' + Array.from(structPaths).join(', '))
   }
 
   // Malloy is unhappy if structPath is undefined or empty, so only set it if we have one. Malloy also doesn't consider the base table as a structPath.
@@ -418,51 +435,45 @@ function isSupportedType (value: string): value is FieldType {
 }
 
 // Get the field that a Ref refers to.
-// This could be a column on a table, the alias of a column in the query, or a wildcard. We'll also follow dotted paths to traverse joins.
+// This could be a column on a table, or the alias of a column in the query. We'll also follow dotted paths to traverse joins.
 // The lookup is redundant with Malloy, but doing it means we get type info and metadata on all fields.
-function lookup (ref: SyntaxNode, scope: Scope): {fields: ColumnField[], inOutput: boolean} {
-  let curr = scope
-  let pathNodes = ref.getChildren('Identifier')
-  let last = ref.name == 'Wildcard' ? null : pathNodes.pop()
-  let fieldName = txt(last)
-  let def = {fields: [] as ColumnField[], inOutput: false}
+function lookupField (expr: SyntaxNode, scope: Scope): ColumnField | null {
+  let pathNodes = expr.getChildren('Identifier')
+  let fieldNode = pathNodes.pop()
+  if (!fieldNode) return diag(expr, 'Missing identifiers in ref', null)
+  let fieldName = txt(fieldNode)
 
-  // first step through all the parts of the dotted path (except the last one) to get the right table
+  // referring to something already in the output takes precedence
+  let outField = scope.outputFields.find(of => of.name == fieldName)
+  if (pathNodes.length == 0 && outField) return outField
+
+  let table = followJoins(pathNodes, scope.table)
+  if (!table) return null // diagnostics already handled
+  let field = table.fields.find(f => f.name == fieldName)
+  if (!field) return diag(fieldNode, `Could not find "${fieldName}" on ${table.name}`, null)
+  if (isJoin(field)) return diag(fieldNode, `${fieldName} is a join, but is used as a column here`, null)
+  analyzeField(field, table)
+  NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field, table})
+  return field
+}
+
+
+// Step through all the parts of the dotted path to get the right table
+function followJoins (pathNodes: SyntaxNode[], curr: Table): Table | null {
   for (let part of pathNodes) {
     let name = txt(part)
-    let next = curr.table.fields.find(f => f.name == name)
+    let next = curr.fields.find(f => f.name == name)
 
-    if (name == curr.table.name) continue // expression (unnecessarily) refers to the current table
-    if (!next)         return diag(part, `Join ${name} does not exist on table ${curr.table.name}`, def)
-    if (!isJoin(next)) return diag(part, `${name} is not a join on ${curr.table.name}`, def)
+    if (name == curr.name) continue // expression (unnecessarily) refers to the current table
+    if (!next)         return diag(part, `Join ${name} does not exist on table ${curr.name}`, null)
+    analyzeField(next, curr)
+    if (!isJoin(next)) return diag(part, `${name} is not a join on ${curr.name}`, null)
 
-    curr = {table: lookupTable(next.tableName || '', part)!, outputFields: []}
-    if (!curr.table) return diag(part, 'Following valid join but we couldnt find the table', def)
-    NODE_ENTITY_MAP.set(part, {entityType: 'table', table: curr.table})
+    curr = lookupTable(next.tableName || '', part)!
+    if (!curr) return diag(part, 'Following valid join but we couldnt find the table', null)
+    NODE_ENTITY_MAP.set(part, {entityType: 'table', table: curr})
   }
-
-  // TODO: this code is weird. The fields are only in the output if there's no pathNodes, so can we simplify `curr`?
-
-  // now that we have the right table, get the field(s) that match. First handle wildcards
-  if (ref.name == 'Wildcard') {
-    return {fields: curr.table.fields.filter(f => !isJoin(f) && !f.isAgg) as ColumnField[], inOutput: false}
-  }
-
-  // otherwise, look for a field in the current table
-  let field = curr.table.fields.find(f => f.name == fieldName)
-  if (field) {
-    if (isJoin(field)) return diag(last!, `${fieldName} is a join, but is used as a colum here`, def)
-    NODE_ENTITY_MAP.set(last!, {entityType: 'field', field, table: curr.table})
-    return {fields: [field], inOutput: false}
-  }
-
-  // finally, look at the output fields in the query. This is lower precedence than fields on the table.
-  let outField = curr.outputFields.find(f => f.name == fieldName)
-  if (outField) {
-    return {fields: [outField], inOutput: true}
-  }
-
-  return diag(ref, `Could not find "${fieldName}" on ${curr.table.name}`, def)
+  return curr
 }
 
 function lookupTable (name: string, node: SyntaxNode): Table | void {
@@ -507,7 +518,7 @@ function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultRetu
   let from = getPosition(node.from, file)
   let to = getPosition(node.to, file)
   diagnostics.push({from, to, message, severity: 'error', file: file.path})
-  return defaultReturn!
+  return defaultReturn || {node: 'error', type: 'error'} as T
 }
 
 export function recordSyntaxErrors (fi: FileInfo) {
