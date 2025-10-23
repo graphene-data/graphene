@@ -1,27 +1,15 @@
 -- Each row contains features about the intended pocketing of a ball.
 table pocketing_intention_features (
-  /* Base columns */
-
-  shot_id INT64 primary_key, -- ID of the shot
-  target_pocket_distance FLOAT64, -- Distance from object ball to target pocket
-  make BOOLEAN, -- Whether the shot was successfully made
-  intended_pocket_type STRING, -- Type of pocket targeted (CORNER, SIDE)
-  difficulty FLOAT64, -- Calculated difficulty score for the shot
-  difficulty_git_commit STRING, -- Git commit hash of the difficulty calculation algorithm
-  target_pocket_angle FLOAT64, -- Angle to the target pocket in degrees
-  target_pocket_angle_direction STRING, -- Direction of the angle to the pocket (LEFT, RIGHT, STRAIGHT)
-  backcut BOOLEAN, -- Whether this is a backcut shot
-  margin_of_error_in_degrees FLOAT64, -- Margin of error for making the shot in degrees
-
-  /* Join relationships */
+  shot_id INT64 primary_key -- ID of the shot
+  target_pocket_distance FLOAT64 -- Distance from object ball to target pocket
+  make BOOLEAN -- Whether the shot was successfully made
+  intended_pocket_type STRING -- Type of pocket targeted (CORNER, SIDE)
+  difficulty FLOAT64 -- Calculated difficulty score for the shot
+  difficulty_git_commit STRING -- Git commit hash of the difficulty calculation algorithm
+  target_pocket_angle FLOAT64 -- Angle to the target pocket in degrees
+  target_pocket_angle_direction STRING -- Direction of the angle to the pocket (LEFT, RIGHT, STRAIGHT)
+  backcut BOOLEAN -- Whether this is a backcut shot
+  margin_of_error_in_degrees FLOAT64 -- Margin of error for making the shot in degrees
 
   join_one shot on shot_id = shot.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

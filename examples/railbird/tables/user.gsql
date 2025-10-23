@@ -1,41 +1,29 @@
 -- Each row represents a registered user of the Railbird platform.
 table user (
-  /* Base columns */
+  id INT64 primary_key -- Unique identifier for the user
+  username STRING -- User's display name
+  created_at TIMESTAMP -- When the user account was created
+  updated_at TIMESTAMP -- When the user account was last updated
+  firebase_uid STRING -- Firebase authentication user ID
+  profile_image_uri STRING -- URI to the user's profile image
+  profile_image_links_requested INT64 -- Number of times profile image links have been requested
+  is_admin BOOLEAN -- Whether the user has admin privileges
+  stripe_customer_id STRING -- Stripe customer ID for billing
+  active_video_id INT64 -- ID of the user's currently active/pinned video
+  fargo_rating INT64 -- User's Fargo pool rating (skill level)
+  videos_private_by_default BOOLEAN -- Whether new videos are private by default
 
-  id INT64 primary_key, -- Unique identifier for the user
-  username STRING, -- User's display name
-  created_at TIMESTAMP, -- When the user account was created
-  updated_at TIMESTAMP, -- When the user account was last updated
-  firebase_uid STRING, -- Firebase authentication user ID
-  profile_image_uri STRING, -- URI to the user's profile image
-  profile_image_links_requested INT64, -- Number of times profile image links have been requested
-  is_admin BOOLEAN, -- Whether the user has admin privileges
-  stripe_customer_id STRING, -- Stripe customer ID for billing
-  active_video_id INT64, -- ID of the user's currently active/pinned video
-  fargo_rating INT64, -- User's Fargo pool rating (skill level)
-  videos_private_by_default BOOLEAN, -- Whether new videos are private by default
-
-  /* Join relationships */
-
-  join_one video on active_video_id = video.id,
-  join_many shot on id = shot.user_id,
-  join_many run on id = run.user_id,
-  join_many user_upload on id = user_upload.user_id,
-  join_many video_comment on id = video_comment.user_id,
-  join_many video_reaction on id = video_reaction.user_id,
-  join_many content_blocks on id = content_blocks.user_id,
-  join_many content_report on id = content_report.reporter_user_id,
-  join_many tag on id = tag.user_id,
-  join_many shot_annotation on id = shot_annotation.user_id,
-  join_many shot_annotation_type on id = shot_annotation_type.user_id,
-  join_many shot_edit on id = shot_edit.user_id,
+  join_one video on active_video_id = video.id
+  join_many shot on id = shot.user_id
+  join_many run on id = run.user_id
+  join_many user_upload on id = user_upload.user_id
+  join_many video_comment on id = video_comment.user_id
+  join_many video_reaction on id = video_reaction.user_id
+  join_many content_blocks on id = content_blocks.user_id
+  join_many content_report on id = content_report.reporter_user_id
+  join_many tag on id = tag.user_id
+  join_many shot_annotation on id = shot_annotation.user_id
+  join_many shot_annotation_type on id = shot_annotation_type.user_id
+  join_many shot_edit on id = shot_edit.user_id
   join_many stripe_subscription_metadata on id = stripe_subscription_metadata.user_id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

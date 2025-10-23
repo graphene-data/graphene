@@ -1,22 +1,10 @@
 -- Each row represents a block preventing a user from seeing a specific video.
 table content_blocks (
-  /* Base columns */
+  user_id INT64 -- ID of the user who blocked the content
+  video_id INT64 -- ID of the blocked video
+  created_at TIMESTAMP -- When the block was created
+  updated_at TIMESTAMP -- When the block was last updated
 
-  user_id INT64, -- ID of the user who blocked the content
-  video_id INT64, -- ID of the blocked video
-  created_at TIMESTAMP, -- When the block was created
-  updated_at TIMESTAMP, -- When the block was last updated
-
-  /* Join relationships */
-
-  join_one user on user_id = user.id,
+  join_one user on user_id = user.id
   join_one video on video_id = video.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

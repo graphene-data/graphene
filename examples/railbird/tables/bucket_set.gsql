@@ -1,21 +1,8 @@
 -- Each row defines a set of buckets (ranges) for categorizing feature values.
 table bucket_set (
-  /* Base columns */
-
-  id INT64 primary_key, -- Unique identifier for the bucket set
-  key_name STRING, -- Unique name for this bucket set
-  feature STRING, -- Name of the feature being bucketed
-  buckets STRING, -- JSON defining the bucket ranges
-
-  /* Join relationships */
-
+  id INT64 primary_key -- Unique identifier for the bucket set
+  key_name STRING -- Unique name for this bucket set
+  feature STRING -- Name of the feature being bucketed
+  buckets STRING -- JSON defining the bucket ranges
   -- No join relationships for this configuration table
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

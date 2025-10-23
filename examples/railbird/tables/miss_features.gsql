@@ -1,19 +1,7 @@
 -- Each row contains features for a missed shot.
 table miss_features (
-  /* Base columns */
-
-  shot_id INT64 primary_key, -- ID of the shot
-  miss_angle FLOAT64, -- Angle by which the shot missed the target in degrees
-
-  /* Join relationships */
+  shot_id INT64 primary_key -- ID of the shot
+  miss_angle FLOAT64 -- Angle by which the shot missed the target in degrees
 
   join_one shot on shot_id = shot.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

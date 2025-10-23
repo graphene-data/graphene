@@ -1,21 +1,9 @@
 -- Each row contains features for a kick shot (shot where the cue ball hits a rail before hitting the object ball).
 table kick_features (
-  /* Base columns */
-
-  shot_id INT64 primary_key, -- ID of the shot
-  walls_hit STRING, -- Array of walls hit by the cue ball (long rail or short rail)
-  angle FLOAT64, -- Angle of the kick shot in degrees
-  distance FLOAT64, -- Distance traveled by the cue ball before hitting the object ball
-
-  /* Join relationships */
+  shot_id INT64 primary_key -- ID of the shot
+  walls_hit STRING -- Array of walls hit by the cue ball (long rail or short rail)
+  angle FLOAT64 -- Angle of the kick shot in degrees
+  distance FLOAT64 -- Distance traveled by the cue ball before hitting the object ball
 
   join_one shot on shot_id = shot.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

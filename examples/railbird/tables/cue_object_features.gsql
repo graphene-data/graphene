@@ -1,26 +1,14 @@
 -- Each row contains features about the cue ball and object ball interaction.
 table cue_object_features (
-  /* Base columns */
-
-  shot_id INT64 primary_key, -- ID of the shot
-  cue_object_distance FLOAT64, -- Distance between cue ball and object ball
-  cue_object_angle FLOAT64, -- Angle of the shot in degrees
-  cue_ball_speed FLOAT64, -- Speed of the cue ball
-  shot_direction STRING, -- Direction of the shot (LEFT, RIGHT, STRAIGHT)
-  cue_angle_after_object FLOAT64, -- Cue ball angle after hitting the object ball
-  cue_speed_after_object FLOAT64, -- Cue ball speed after hitting the object ball
-  spin_type STRING, -- Type of spin applied to the cue ball (DRAW, FOLLOW, CENTER, UNKNOWN)
-  is_break_heuristic BOOLEAN, -- Whether this appears to be a break shot
-
-  /* Join relationships */
+  shot_id INT64 primary_key -- ID of the shot
+  cue_object_distance FLOAT64 -- Distance between cue ball and object ball
+  cue_object_angle FLOAT64 -- Angle of the shot in degrees
+  cue_ball_speed FLOAT64 -- Speed of the cue ball
+  shot_direction STRING -- Direction of the shot (LEFT, RIGHT, STRAIGHT)
+  cue_angle_after_object FLOAT64 -- Cue ball angle after hitting the object ball
+  cue_speed_after_object FLOAT64 -- Cue ball speed after hitting the object ball
+  spin_type STRING -- Type of spin applied to the cue ball (DRAW, FOLLOW, CENTER, UNKNOWN)
+  is_break_heuristic BOOLEAN -- Whether this appears to be a break shot
 
   join_one shot on shot_id = shot.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

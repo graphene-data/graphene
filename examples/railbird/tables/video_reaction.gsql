@@ -1,23 +1,11 @@
 -- Each row represents a reaction (like, heart, etc.) to a video.
 table video_reaction (
-  /* Base columns */
+  video_id INT64 -- ID of the video
+  reaction STRING -- Type of reaction (LIKE, HEART, BULLSEYE, HUNDRED)
+  user_id INT64 -- ID of the user who reacted
+  created_at TIMESTAMP -- When the reaction was created
+  updated_at TIMESTAMP -- When the reaction was last updated
 
-  video_id INT64, -- ID of the video
-  reaction STRING, -- Type of reaction (LIKE, HEART, BULLSEYE, HUNDRED)
-  user_id INT64, -- ID of the user who reacted
-  created_at TIMESTAMP, -- When the reaction was created
-  updated_at TIMESTAMP, -- When the reaction was last updated
-
-  /* Join relationships */
-
-  join_one video on video_id = video.id,
+  join_one video on video_id = video.id
   join_one user on user_id = user.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

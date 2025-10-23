@@ -1,23 +1,11 @@
 -- Each row represents a type of annotation that can be applied to shots.
 table shot_annotation_type (
-  /* Base columns */
+  id INT64 primary_key -- Unique identifier for the annotation type
+  name STRING -- Name of the annotation type
+  notes STRING -- Description of what this annotation type represents
+  user_id INT64 -- ID of the user who created this annotation type
+  error_default BOOLEAN -- Whether this annotation type indicates an error by default
 
-  id INT64 primary_key, -- Unique identifier for the annotation type
-  name STRING, -- Name of the annotation type
-  notes STRING, -- Description of what this annotation type represents
-  user_id INT64, -- ID of the user who created this annotation type
-  error_default BOOLEAN, -- Whether this annotation type indicates an error by default
-
-  /* Join relationships */
-
-  join_one user on user_id = user.id,
+  join_one user on user_id = user.id
   join_many shot_annotation on id = shot_annotation.type_id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

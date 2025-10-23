@@ -1,26 +1,14 @@
 -- Each row represents a comment on a video.
 table video_comment (
-  /* Base columns */
+  id INT64 primary_key -- Unique identifier for the comment
+  video_id INT64 -- ID of the video being commented on
+  user_id INT64 -- ID of the user who made the comment
+  parent_id INT64 -- ID of the parent comment (for replies)
+  message STRING -- Comment text
+  created_at TIMESTAMP -- When the comment was created
+  updated_at TIMESTAMP -- When the comment was last updated
 
-  id INT64 primary_key, -- Unique identifier for the comment
-  video_id INT64, -- ID of the video being commented on
-  user_id INT64, -- ID of the user who made the comment
-  parent_id INT64, -- ID of the parent comment (for replies)
-  message STRING, -- Comment text
-  created_at TIMESTAMP, -- When the comment was created
-  updated_at TIMESTAMP, -- When the comment was last updated
-
-  /* Join relationships */
-
-  join_one video on video_id = video.id,
-  join_one user on user_id = user.id,
+  join_one video on video_id = video.id
+  join_one user on user_id = user.id
   join_one video_comment on parent_id = video_comment.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

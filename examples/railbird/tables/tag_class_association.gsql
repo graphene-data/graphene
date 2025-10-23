@@ -1,20 +1,8 @@
 -- Each row associates a tag with a tag class.
 table tag_class_association (
-  /* Base columns */
+  tag_id INT64 -- ID of the tag
+  tag_class_id INT64 -- ID of the tag class
 
-  tag_id INT64, -- ID of the tag
-  tag_class_id INT64, -- ID of the tag class
-
-  /* Join relationships */
-
-  join_one tag on tag_id = tag.id,
+  join_one tag on tag_id = tag.id
   join_one tag_class on tag_class_id = tag_class.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

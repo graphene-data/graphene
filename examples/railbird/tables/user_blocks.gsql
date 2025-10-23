@@ -1,22 +1,10 @@
 -- Each row represents a block relationship between two users.
 table user_blocks (
-  /* Base columns */
+  blocker_user_id INT64 -- ID of the user who blocked
+  blocked_user_id INT64 -- ID of the user being blocked
+  created_at TIMESTAMP -- When the block was created
+  updated_at TIMESTAMP -- When the block was last updated
 
-  blocker_user_id INT64, -- ID of the user who blocked
-  blocked_user_id INT64, -- ID of the user being blocked
-  created_at TIMESTAMP, -- When the block was created
-  updated_at TIMESTAMP, -- When the block was last updated
-
-  /* Join relationships */
-
-  join_one user on blocker_user_id = user.id,
-  join_one user on blocked_user_id = user.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
+  join_one user as blocker on blocker_user_id = blocker.id
+  join_one user as blocked on blocked_user_id = blocked.id
 )

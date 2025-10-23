@@ -1,21 +1,9 @@
 -- Each row links a shot to its run and indicates its position in the run.
 table run_features (
-  /* Base columns */
+  shot_id INT64 -- ID of the shot
+  run_id INT64 -- ID of the run this shot belongs to
+  index_in_run INT64 -- Position of this shot in the run (0-indexed)
 
-  shot_id INT64, -- ID of the shot
-  run_id INT64, -- ID of the run this shot belongs to
-  index_in_run INT64, -- Position of this shot in the run (0-indexed)
-
-  /* Join relationships */
-
-  join_one shot on shot_id = shot.id,
+  join_one shot on shot_id = shot.id
   join_one run on run_id = run.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

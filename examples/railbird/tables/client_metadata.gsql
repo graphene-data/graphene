@@ -1,32 +1,20 @@
 -- Each row contains metadata about a client that uploaded a video stream.
 table client_metadata (
-  /* Base columns */
-
-  id INT64 primary_key, -- Unique identifier for the client metadata
-  device_type STRING, -- Type of device (e.g., iPhone, Android)
-  os_version STRING, -- Operating system version
-  client_app_version STRING, -- Version of the client application
-  backend_app_version STRING, -- Version of the backend API
-  client_semantic_version STRING, -- Semantic version of the client
-  browser_name STRING, -- Browser name (if web client)
-  browser_version STRING, -- Browser version (if web client)
-  locale STRING, -- Client locale/language
-  timezone STRING, -- Client timezone
-  network_type STRING, -- Type of network connection
-  ip_address STRING, -- IP address of the client
-  created_at TIMESTAMP, -- When the metadata was created
-  updated_at TIMESTAMP, -- When the metadata was last updated
-  stream_id INT64, -- ID of the associated upload stream
-
-  /* Join relationships */
+  id INT64 primary_key -- Unique identifier for the client metadata
+  device_type STRING -- Type of device (e.g., iPhone, Android)
+  os_version STRING -- Operating system version
+  client_app_version STRING -- Version of the client application
+  backend_app_version STRING -- Version of the backend API
+  client_semantic_version STRING -- Semantic version of the client
+  browser_name STRING -- Browser name (if web client)
+  browser_version STRING -- Browser version (if web client)
+  locale STRING -- Client locale/language
+  timezone STRING -- Client timezone
+  network_type STRING -- Type of network connection
+  ip_address STRING -- IP address of the client
+  created_at TIMESTAMP -- When the metadata was created
+  updated_at TIMESTAMP -- When the metadata was last updated
+  stream_id INT64 -- ID of the associated upload stream
 
   join_one upload_stream on stream_id = upload_stream.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

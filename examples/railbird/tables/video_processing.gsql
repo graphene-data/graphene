@@ -1,31 +1,19 @@
 -- Each row represents a video processing job that analyzes a video to detect shots and extract features.
 table video_processing (
-  /* Base columns */
+  id INT64 primary_key -- Unique identifier for the processing job
+  video_id INT64 -- ID of the video being processed
+  app_version STRING -- Version of the processing application
+  started_at TIMESTAMP -- When processing started
+  finished_at TIMESTAMP -- When processing finished
+  last_updated TIMESTAMP -- Last status update time
+  parent_processing_id INT64 -- ID of parent processing job (for reprocessing)
+  frames_processed INT64 -- Number of frames processed so far
+  current_segment INT64 -- Current segment being processed
 
-  id INT64 primary_key, -- Unique identifier for the processing job
-  video_id INT64, -- ID of the video being processed
-  app_version STRING, -- Version of the processing application
-  started_at TIMESTAMP, -- When processing started
-  finished_at TIMESTAMP, -- When processing finished
-  last_updated TIMESTAMP, -- Last status update time
-  parent_processing_id INT64, -- ID of parent processing job (for reprocessing)
-  frames_processed INT64, -- Number of frames processed so far
-  current_segment INT64, -- Current segment being processed
-
-  /* Join relationships */
-
-  join_one video on video_id = video.id,
-  join_many video_processing_status on id = video_processing_status.video_processing_id,
-  join_many video_processing_error on id = video_processing_error.video_processing_id,
-  join_many homography_info on id = homography_info.video_processing_id,
-  join_many shot on id = shot.processing_model_id,
+  join_one video on video_id = video.id
+  join_many video_processing_status on id = video_processing_status.video_processing_id
+  join_many video_processing_error on id = video_processing_error.video_processing_id
+  join_many homography_info on id = homography_info.video_processing_id
+  join_many shot on id = shot.processing_model_id
   join_many run on id = run.processing_id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )

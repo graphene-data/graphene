@@ -1,20 +1,8 @@
 -- Each row represents a following relationship between two users.
 table user_following (
-  /* Base columns */
+  follower_user_id INT64 -- ID of the user who is following
+  followed_user_id INT64 -- ID of the user being followed
 
-  follower_user_id INT64, -- ID of the user who is following
-  followed_user_id INT64, -- ID of the user being followed
-
-  /* Join relationships */
-
-  join_one user on follower_user_id = user.id,
-  join_one user on followed_user_id = user.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
+  join_one user as follower on follower_user_id = follower.id
+  join_one user as followed on followed_user_id = followed.id
 )

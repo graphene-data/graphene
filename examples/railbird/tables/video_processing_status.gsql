@@ -1,25 +1,13 @@
 -- Each row represents a status update for a video processing job.
 table video_processing_status (
-  /* Base columns */
-
-  video_processing_id INT64, -- ID of the processing job
-  sequence_id INT64, -- Sequence number for ordering status updates
-  status STRING, -- Current status of the processing job (STARTED, FAILED, SUCCEEDED, SUSPENDED, CREATED, QUEUED, RUNNING, REEXTRACTING_FEATURES)
-  app_version STRING, -- Version of the processing application
-  created_at TIMESTAMP, -- When this status was recorded
-  updated_at TIMESTAMP, -- When this status was last updated
-  error_traceback STRING, -- Error traceback if status is FAILED
-  hostname STRING, -- Server hostname where processing occurred
-
-  /* Join relationships */
+  video_processing_id INT64 -- ID of the processing job
+  sequence_id INT64 -- Sequence number for ordering status updates
+  status STRING -- Current status of the processing job (STARTED, FAILED, SUCCEEDED, SUSPENDED, CREATED, QUEUED, RUNNING, REEXTRACTING_FEATURES)
+  app_version STRING -- Version of the processing application
+  created_at TIMESTAMP -- When this status was recorded
+  updated_at TIMESTAMP -- When this status was last updated
+  error_traceback STRING -- Error traceback if status is FAILED
+  hostname STRING -- Server hostname where processing occurred
 
   join_one video_processing on video_processing_id = video_processing.id
-
-  /* Scalar expressions */
-
-  -- Add scalar expressions here as needed
-
-  /* Aggregate expressions */
-
-  -- Add aggregate expressions here as needed
 )
