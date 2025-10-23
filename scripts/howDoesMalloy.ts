@@ -17,12 +17,24 @@ import path from 'path'
 import {inspect} from 'util'
 import {
   SingleConnectionRuntime,
+  mkFieldDef,
   type URLReader,
   type Model,
   type ModelURL,
   type ModelString,
   type InvalidationKey,
+  type MalloyQueryData,
+  type TableSourceDef,
+  type SQLSourceDef,
+  type QueryDataRow,
 } from '@graphenedata/malloy'
+import {BaseConnection} from '@graphenedata/malloy/connection'
+import {
+  DuckDBInstance,
+  DuckDBTimestampValue,
+  DuckDBDateValue,
+} from '../node_modules/.pnpm/node_modules/@duckdb/node-api/lib/index.js'
+import type {DuckDBConnection as InnerConnection} from '../node_modules/.pnpm/node_modules/@duckdb/node-api/lib/DuckDBConnection.js'
 
 // Default example that matches the in-memory ecommerce schema created below
 const EXAMPLE = `
@@ -61,6 +73,11 @@ const EXAMPLE = `
 
 // Same ecommerce tables/data as in lang/testHelpers.ts
 const ECOMM_SETUP = `
+  drop table if exists payments;
+  drop table if exists order_items;
+  drop table if exists orders;
+  drop table if exists users;
+
   create table users (
     id integer primary key,
     name varchar,
@@ -109,6 +126,171 @@ const ECOMM_SETUP = `
     (500, 1, '2024-01-05', 100),
     (501, 2, '2024-01-12', 50);
 `
+
+// Infer the AtomicTypeDef parameter type without importing it explicitly
+type AtomicTypeInput = Parameters<typeof mkFieldDef>[0]
+
+function stripTrailingSemicolons (sql: string): string {
+  return sql.replace(/;+\s*$/, '')
+}
+
+function applyRowLimit (sql: string, rowLimit?: number): string {
+  if (rowLimit === undefined) return sql
+  let trimmed = stripTrailingSemicolons(sql)
+  return `select * from (${trimmed}) as malloy_sub limit ${rowLimit}`
+}
+
+function mapDuckDBType (raw: string): AtomicTypeInput {
+  let upper = raw.trim().toUpperCase()
+  if (!upper) return {type: 'sql native', rawType: raw}
+
+  if (upper.includes('TIMESTAMP')) return {type: 'timestamp'}
+  if (upper === 'DATE') return {type: 'date'}
+  if (upper.startsWith('TIME')) return {type: 'string'}
+  if (
+    upper.includes('DOUBLE') ||
+    upper.includes('FLOAT') ||
+    upper.startsWith('DECIMAL') ||
+    upper === 'REAL' ||
+    upper === 'NUMERIC'
+  ) {
+    return {type: 'number', numberType: 'float'}
+  }
+  if (
+    upper.includes('HUGEINT') ||
+    upper.includes('INT') ||
+    upper.includes('UBIGINT') ||
+    upper.includes('UINTEGER') ||
+    upper.includes('USMALLINT') ||
+    upper.includes('UTINYINT')
+  ) {
+    return {type: 'number', numberType: 'integer'}
+  }
+  if (upper === 'BOOLEAN') return {type: 'boolean'}
+  if (upper === 'JSON') return {type: 'json'}
+  if (
+    upper.includes('CHAR') ||
+    upper === 'TEXT' ||
+    upper === 'STRING' ||
+    upper === 'UUID'
+  ) {
+    return {type: 'string'}
+  }
+  return {type: 'sql native', rawType: raw}
+}
+
+class MalloyDuckDBConnection extends BaseConnection {
+  private dbInstance: DuckDBInstance | null = null
+  private connection: InnerConnection | null = null
+  private readyPromise: Promise<void>
+
+  constructor () {
+    super()
+    this.readyPromise = this.initialize()
+  }
+
+  private async initialize (): Promise<void> {
+    this.dbInstance = await DuckDBInstance.create(':memory:')
+    this.connection = await this.dbInstance.connect()
+  }
+
+  async ready (): Promise<void> {
+    await this.readyPromise
+  }
+
+  get name (): string {
+    return 'duckdb'
+  }
+
+  get dialectName (): string {
+    return 'duckdb'
+  }
+
+  async runSQL (sql: string, options?: any): Promise<MalloyQueryData> {
+    let conn = await this.getConnection()
+    let finalSQL = applyRowLimit(sql, options?.rowLimit)
+    let reader = await conn.runAndReadAll(finalSQL)
+    let rows = this.convertRows(reader.getRowObjects())
+    return {rows, totalRows: rows.length}
+  }
+
+  async fetchTableSchema (tableName: string, tablePath: string): Promise<TableSourceDef | string> {
+    let conn = await this.getConnection()
+    let escaped = tablePath.replace(/'/g, "''")
+    let reader = await conn.runAndReadAll(`pragma table_info('${escaped}')`)
+    let rawRows = reader.getRowObjects()
+    if (!rawRows.length) return `Table not found: ${tablePath}`
+
+    let rows = rawRows.map(rec => this.convertRecord(rec))
+    let fields = rows.map(rec => {
+      let columnName = String(rec.name)
+      let columnType = String(rec.type ?? '')
+      return mkFieldDef(mapDuckDBType(columnType), columnName)
+    })
+    let pkRow = rows.find(rec => Number(rec.pk ?? 0) > 0)
+    let tableDef: TableSourceDef = {
+      type: 'table',
+      name: tableName,
+      tablePath,
+      connection: this.name,
+      dialect: this.dialectName,
+      fields,
+    }
+    if (pkRow && pkRow.name) {
+      tableDef.primaryKey = String(pkRow.name)
+    }
+    return tableDef
+  }
+
+  fetchSelectSchema (_: any): Promise<SQLSourceDef | string> {
+    return Promise.resolve('')
+  }
+
+  async close (): Promise<void> {
+    await this.ready()
+    if (this.connection && typeof this.connection.closeSync === 'function') {
+      this.connection.closeSync()
+    }
+    this.connection = null
+    if (this.dbInstance) {
+      this.dbInstance.closeSync()
+      this.dbInstance = null
+    }
+  }
+
+  private async getConnection (): Promise<InnerConnection> {
+    await this.ready()
+    if (!this.connection) throw new Error('DuckDB connection not initialized')
+    return this.connection
+  }
+
+  private convertRows (records: Record<string, unknown>[]): QueryDataRow[] {
+    return records.map(rec => this.convertRecord(rec) as QueryDataRow)
+  }
+
+  private convertRecord (record: Record<string, unknown>): Record<string, unknown> {
+    let out: Record<string, unknown> = {}
+    for (let [k, v] of Object.entries(record)) {
+      out[k] = this.convertValue(v)
+    }
+    return out
+  }
+
+  private convertValue (value: unknown): unknown {
+    if (typeof value === 'bigint') return Number(value)
+    if (value === null || value === undefined) return null
+    if (value instanceof DuckDBTimestampValue) {
+      return new Date(Number(value.micros / 1000n)).toUTCString()
+    }
+    if (value instanceof DuckDBDateValue) {
+      return value.toString()
+    }
+    if (typeof value === 'object') {
+      throw new Error(`Unsupported datatype ${value.constructor?.name}`)
+    }
+    return value
+  }
+}
 
 class FileURLReader implements URLReader {
   async readURL (url: URL): Promise<{contents: string; invalidationKey?: InvalidationKey}> {
@@ -192,16 +374,15 @@ async function main () {
     modelInput = stdin
   }
 
-  // Always use an in-memory DuckDB
-  // let connection = new DuckDBConnection({name: 'duckdb', databasePath: ':memory:'})
-  // Initialize tables/data
-  await (connection as any).connecting
-  // Run each statement individually to avoid issues with streaming
+  let connection = new MalloyDuckDBConnection()
+  await connection.ready()
+
   for (let stmt of ECOMM_SETUP.split(';')) {
     let s = stmt.trim()
     if (!s) continue
-    await (connection as any).runDuckDBQuery(s)
+    await connection.runSQL(s)
   }
+
   let runtime = new SingleConnectionRuntime({connection, urlReader})
 
   let materializer = runtime.loadModel(modelInput, importBase ? {importBaseURL: importBase} : undefined)
@@ -246,9 +427,7 @@ async function main () {
     console.log(inspect(collapsed, {depth: Infinity, colors: false, breakLength: 80}))
   }
 
-  if ('close' in connection && typeof (connection as any).close === 'function') {
-    await (connection as any).close()
-  }
+  await connection.close()
 }
 
 main().catch(err => {
