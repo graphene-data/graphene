@@ -33,7 +33,10 @@ export function findTables (fi: FileInfo): Table[] {
         table.primaryKey = name
       }
       let type = convertDataType(txt(cn.getChild('DataType')))
-      if (!type) return diag(cn, `Unsupported data type: ${txt(cn.getChild('DataType'))}`)
+      if (!type) {
+        diag(cn, `Unsupported data type: ${txt(cn.getChild('DataType'))}`)
+        continue
+      }
 
       table.fields.push({name, type, metadata: extractLeadingMetadata(cn)})
     }
@@ -266,8 +269,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
 // Scope is used to track the current table we're operating within when analyzing measures.
 function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   if (expr.type.isError) {
-    diag(expr, 'Invalid expression')
-    return {} as Expression
+    return diag(expr, 'Invalid expression', errExpr)
   }
 
   switch (expr.name) {
@@ -278,7 +280,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     case 'Param': return {node: 'parameter', path: [txt(expr).slice(1)], type: 'string'}
     case 'Ref': {
       let field = lookupField(expr, scope)
-      if (!field) return {node: 'error', type: 'error'} // diag handled by lookupField
+      if (!field) return errExpr // diag handled by lookupField
 
       // fields have types, but Malloy also expects additional `typeDef` for some times (dates, array, records)
       let type = field.type || 'unknown'
@@ -295,10 +297,10 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     }
     case 'ExtractExpression': {
       let e = analyzeExpression(expr.getChild('Expression')!, scope)
-      if (!isTemporalType(e.type) || !e.typeDef) return diag(expr, 'Expression must be a date or timestamp')
+      if (!isTemporalType(e.type) || !e.typeDef) return diag(expr, 'Expression must be a date or timestamp', errExpr)
 
       let units = txt(expr.getChild('ExtractUnit')!).replace(/^['"]|['"]$/g, '').toLowerCase()
-      if (!isExtractUnit(units)) return diag(expr, 'Not a valid unit to extract')
+      if (!isExtractUnit(units)) return diag(expr, 'Not a valid unit to extract', errExpr)
 
       return {node: 'extract', type: 'number', units, e: e as any, isAgg: false}
     }
@@ -330,7 +332,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       if (opTxt === 'not') return {node: 'not', e: child, type: 'boolean', isAgg: child.isAgg}
       if (opTxt === '-') return {node: 'unary-', e: child, type: child.type, isAgg: child.isAgg}
       if (opTxt === '+') return {node: '()', e: child, type: child.type, isAgg: child.isAgg}
-      return diag(expr, `Unknown unary operator: ${opTxt}`, {} as Expression)
+      return diag(expr, `Unknown unary operator: ${opTxt}`, errExpr)
     }
     case 'CaseExpression': {
       let caseValue = expr.getChild('Expression')
@@ -362,7 +364,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     }
     case 'SubqueryExpression':
     default:
-      return diag(expr, `Unsupported expression "${expr.name}": ${txt(expr)}`, {} as Expression)
+      return diag(expr, `Unsupported expression "${expr.name}": ${txt(expr)}`, errExpr)
   }
 }
 
@@ -389,7 +391,7 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   let type = overload?.returnType.type
   if (type == 'generic') type = args[0]?.type as any || 'string'
   if (type && !isSupportedType(type)) {
-    return diag(expr, `Unsupported function return type ${type} from function ${name}`)
+    return diag(expr, `Unsupported function return type ${type} from function ${name}`, errExpr)
   }
 
   // Aggregates need a `structPath`, which in malloy is the `orders.users` in `orders.users.avg(age)`.
@@ -414,12 +416,12 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
       isAgg: overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg),
     }
   } else {
-    return diag(expr, `Unknown function: ${name}`)
+    return diag(expr, `Unknown function: ${name}`, errExpr)
   }
 
   // Right now, we only support a single structPath in aggregate functions
   if (structPaths.size > 1 && (ret.node == 'aggregate' || ret.expressionType == 'aggregate')) {
-    return diag(expr, 'Graphene only supports a single table within aggregates. This one has: ' + Array.from(structPaths).join(', '))
+    return diag(expr, 'Graphene only supports a single table within aggregates. This one has: ' + Array.from(structPaths).join(', '), errExpr)
   }
 
   // Malloy is unhappy if structPath is undefined or empty, so only set it if we have one. Malloy also doesn't consider the base table as a structPath.
@@ -515,6 +517,8 @@ function nameExpression (expr: Expression, scope: Scope, aliasNode: SyntaxNode |
   return `col_${scope.outputFields.length}`
 }
 
+let errExpr = {node: 'error', type: 'error'} as Expression
+
 // Logs that we found an issue in the parse tree. The optional return lets return IR and try to continue the analysis.
 // The alternative is we throw an error, but then we wouldn't see other errors later in the tree.
 function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
@@ -522,7 +526,7 @@ function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultRetu
   let from = getPosition(node.from, file)
   let to = getPosition(node.to, file)
   diagnostics.push({from, to, message, severity: 'error', file: file.path})
-  return defaultReturn || {node: 'error', type: 'error'} as T
+  return defaultReturn as T
 }
 
 export function recordSyntaxErrors (fi: FileInfo) {
