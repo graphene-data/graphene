@@ -21,6 +21,9 @@ importers:
       '@eslint/js':
         specifier: ^9.34.0
         version: 9.34.0
+      '@graphenedata/malloy':
+        specifier: 0.0.304
+        version: 0.0.304
       '@types/node':
         specifier: ^22.18.0
         version: 22.18.0
