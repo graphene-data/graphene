@@ -1,8 +1,8 @@
 #!/usr/bin/env zx
 
-import {$} from 'zx'
+import {$, cd} from 'zx'
 import {existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync} from 'fs'
-import {dirname, resolve} from 'path'
+import {resolve} from 'path'
 
 const BASE_PORT = 4003
 const PORT_INCREMENT = 3
@@ -18,7 +18,7 @@ if (resolve(process.cwd(), '..') == root) { // if cwd it at the top of the workt
   currentWorktree = resolve(currentWorktree, '..')
 }
 
-let currentName = dirname(currentWorktree)
+let currentName = currentWorktree.split('/').pop()
 
 function getTreeNames (): string[] {
   return readdirSync(root, {withFileTypes: true})
@@ -143,6 +143,7 @@ async function doneWorktree () {
     return console.log('Repos have uncommited changes. Consider committing first')
   }
 
+  cd(root) // cd to root, since we might be about to delete the cwd
   await $`git -C ${root}/main/core worktree remove ${currentWorktree}/core`
   await $`git -C ${root}/main/cloud worktree remove ${currentWorktree}/cloud`
   rmSync(currentWorktree, {recursive: true, force: true})
@@ -154,29 +155,25 @@ async function doneWorktree () {
   await $`git -C ${root}/main/cloud branch -d ${currentName}`
 }
 
-async function main () {
-  let command = process.argv[2]
-  let arg = process.argv[3]
+let command = process.argv[2]
+let arg = process.argv[3]
 
-  switch (command) {
-    case 'ls': listWorktrees(); break
-    case 'start': await startWorktree(arg); break
-    case 'pull': await pullWorktree(); break
-    case 'commit': await commitWorktree(); break
-    case 'push': await pushWorktree(); break
-    case 'done': await doneWorktree(); break
-    default:
-      console.log(`
+switch (command) {
+  case 'ls': listWorktrees(); break
+  case 'start': await startWorktree(arg); break
+  case 'pull': await pullWorktree(); break
+  case 'commit': await commitWorktree(); break
+  case 'push': await pushWorktree(); break
+  case 'done': await doneWorktree(); break
+  default:
+    console.log(`
 Usage: wt <command>
 
 Commands:
-  ls              List all paired worktrees
-  start <name>    Create a new paired worktree beside main
-  pull            Pull down latest changes from main for both repos
-  push            Rebase and push both repos
-  done            Archive both worktrees
+ls              List all paired worktrees
+start <name>    Create a new paired worktree beside main
+pull            Pull down latest changes from main for both repos
+push            Rebase and push both repos
+done            Archive both worktrees
 `)
-  }
 }
-
-main().catch(console.error)
