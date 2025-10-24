@@ -6,7 +6,6 @@ import fs from 'fs-extra'
 import crypto from 'crypto'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {type IncomingMessage, type ServerResponse} from 'http'
-import {handleAgentRequest} from '../agent/agent.ts'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
 import {fileURLToPath} from 'url'
@@ -114,9 +113,7 @@ const handleRequestPlugin = {
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
         if (pathName == '/graphene/view') return await handleView(req, res)
-        if (pathName == '/graphene/agent') return await handleAgentRequest(req, res, grapheneRoot)
         if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
-        if (pathName == '/explore') return await handlePage(s, res, path.join(uiRoot, 'explore.svelte'), true)
 
         if (!pathName || pathName == '/') pathName = 'index'
         let mdPath = path.join(grapheneRoot, pathName + '.md')
