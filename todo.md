@@ -1,9 +1,8 @@
 ## Soon
 * cloud v1
-* check out railbird OOM
 * consolidate `check` command to do check+view.
 * `view` doesn't work when the tab isn't active (but maybe could with OffscreenCanvas?)
-* move agent code to cloud repo
+* include docs in published node module
 * publish vscode extension and npm package
 * check in to why the primary key doesn't seem to be used in ecomm
 * unskip or remove skipped lang tests
@@ -11,8 +10,7 @@
 * add flight/ecomm examples using inputs
 * add ecomm example of more investigative report
 * button that allows you to see raw query and table of results backing a chart
-
-* Throw an error if you try to redefine an existing table
+* Throw an error if you try to redefine an existing table or column
 * Telemetry and error tracking
 * kill server if running when starting `--fg`. Also, env var for ALWAYS_FG
 * table explorer: view that shows details about any table, breakdown of column values, etc
