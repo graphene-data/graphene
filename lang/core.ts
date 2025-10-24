@@ -54,7 +54,7 @@ export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
     fi.tree ||= isMd ? parseMarkdown(fi) : parser.parse(fi.contents)
     fi.tree!.fileInfo = fi
     recordSyntaxErrors(fi)
-    fi.tables = findTables(fi) // for now, blow away previously analyzed tables
+    findTables(fi) // for now, blow away previously analyzed tables
   })
 
   // analyze all fields on all tables

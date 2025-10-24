@@ -17,11 +17,17 @@ let NODE_ENTITY_MAP = new NodeWeakMap<any>()
 
 // Creates tables without analyzing them.
 // We need to know all the tables before we can analyze any table, since they refer to each other.
-export function findTables (fi: FileInfo): Table[] {
+export function findTables (fi: FileInfo) {
   let tn = fi.tree!.topNode
+  fi.tables = []
   let nodes = tn.getChildren('TableStatement').concat(tn.getChildren('ViewStatement'))
-  return nodes.map(syntaxNode => {
+  for (let syntaxNode of nodes) {
     let name = txt(syntaxNode.getChild('Identifier'))
+
+    if (Object.values(FILE_MAP).find(f => f.tables.find(t => t.name == name))) {
+      diag(syntaxNode.getChild('Identifier')!, `Table "${name}" is already defined`)
+    }
+
     let table = makeTable(name, syntaxNode.getChild('QueryStatement') ? 'query_source' : 'table')
     table.metadata = extractLeadingMetadata(syntaxNode)
 
@@ -32,30 +38,37 @@ export function findTables (fi: FileInfo): Table[] {
         if (table.primaryKey) diag(cn, `Table ${table.name} has multiple primary keys`)
         table.primaryKey = name
       }
-      let type = convertDataType(txt(cn.getChild('DataType')))
-      if (!type) {
-        diag(cn, `Unsupported data type: ${txt(cn.getChild('DataType'))}`)
-        continue
-      }
+      let type = convertDataType(txt(cn.getChild('DataType')))!
+      if (!type) diag(cn, `Unsupported data type: ${txt(cn.getChild('DataType'))}`)
 
-      table.fields.push({name, type, metadata: extractLeadingMetadata(cn)})
+      let field = {name, type, metadata: extractLeadingMetadata(cn)}
+      table.fields.push(field)
+      FIELD_NODE_MAP.set(field, cn)
     }
 
     for (let jn of syntaxNode.getChildren('JoinDef')) {
-      let field = {name: txt(jn.getChild('Alias')) || txt(jn.getChild('Identifier'))}
+      let nameNode = jn.getChild('Alias') || jn.getChild('Identifier')
+      let field = {name: txt(nameNode)}
       table.fields.push(field)
       FIELD_NODE_MAP.set(field, jn)
     }
 
     for (let cn of syntaxNode.getChildren('ComputedDef')) {
-      let field = {name: txt(cn.getChild('Alias'))}
+      let field = {name: txt(cn.getChild('Alias')), metadata: extractLeadingMetadata(cn)}
       table.fields.push(field)
       FIELD_NODE_MAP.set(field, cn)
     }
 
+    // error if two fields have the same name
+    table.fields.reduce((set, f) => {
+      if (!set[f.name]) set[f.name] = true
+      else diag(FIELD_NODE_MAP.get(f)!, `Table already has a field called "${f.name}"`)
+      return set
+    }, {})
+
     TABLE_NODE_MAP.set(table, syntaxNode)
-    return table
-  })
+    fi.tables.push(table)
+  }
 }
 
 function makeTable (name: string, type: 'query_source' | 'table'): Table {
