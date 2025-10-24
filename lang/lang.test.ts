@@ -502,9 +502,8 @@ describe('lang', () => {
         current_time(),
         current_timestamp(),
         current_timestamp(3),
-        local_timestamp(),
-        current_date_time()
-    `).toRenderSql('select current_date() as "col_0", current_time() as "col_1", current_timestamp() as "col_2", current_timestamp(3) as "col_3", localtimestamp() as "col_4", current_timestamp() as "col_5" from users as base')
+        local_timestamp()
+    `).toRenderSql('select current_date() as "col_0", current_time() as "col_1", current_timestamp() as "col_2", current_timestamp(3) as "col_3", localtimestamp() as "col_4" from users as base')
   })
 
   it('supports bigquery current datetime functions with optional args', () => {
@@ -519,8 +518,8 @@ describe('lang', () => {
           current_timestamp(),
           current_timestamp('America/Los_Angeles'),
           local_timestamp(),
-          current_date_time(),
-          current_date_time('UTC')
+          current_datetime(),
+          current_datetime('UTC')
       `).toRenderSql("select current_date() as `col_0`, current_date('America/Los_Angeles') as `col_1`, current_time() as `col_2`, current_time('UTC') as `col_3`, current_timestamp() as `col_4`, current_timestamp('America/Los_Angeles') as `col_5`, current_datetime() as `col_6`, current_datetime() as `col_7`, current_datetime('UTC') as `col_8` from `users` as base")
     } finally {
       setConfig({dialect: 'duckdb', root: ''})
