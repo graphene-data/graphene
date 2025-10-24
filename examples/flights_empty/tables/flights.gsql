@@ -1,0 +1,18 @@
+table flights (
+  carrier VARCHAR,
+  origin VARCHAR,
+  destination VARCHAR,
+  flight_num VARCHAR,
+  flight_time BIGINT,
+  tail_num VARCHAR,
+  dep_time TIMESTAMP,
+  arr_time TIMESTAMP,
+  dep_delay BIGINT,
+  arr_delay BIGINT,
+  taxi_out BIGINT,
+  taxi_in BIGINT,
+  distance BIGINT,
+  cancelled VARCHAR,
+  diverted VARCHAR,
+  id2 BIGINT
+);
