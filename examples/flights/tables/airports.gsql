@@ -1,0 +1,32 @@
+table airports (
+  id BIGINT primary_key, -- Unique airport identifier
+  code VARCHAR, -- 3-letter IATA airport code (e.g., PHL, ABE, ATL)
+  site_number VARCHAR, -- FAA site number
+  fac_type VARCHAR, -- Facility type (AIRPORT, BALLOONPORT, GLIDERPORT)
+  fac_use VARCHAR, -- Facility use (PU=Public, PR=Private)
+  faa_region VARCHAR, -- FAA administrative region
+  faa_dist VARCHAR, -- FAA district office
+  city VARCHAR, -- City where airport is located
+  county VARCHAR, -- County where airport is located
+  state VARCHAR, -- State/Province where airport is located
+  full_name VARCHAR, -- Complete airport name (e.g., PHILADELPHIA INTL)
+  own_type VARCHAR, -- Ownership type (PU=Public, PR=Private, MR=Military, MA=Municipal, MN=State)
+  longitude DOUBLE, -- Geographic longitude coordinate
+  latitude DOUBLE, -- Geographic latitude coordinate
+  elevation BIGINT, -- Airport elevation above sea level in feet
+  aero_cht VARCHAR, -- Aeronautical chart reference
+  cbd_dist BIGINT, -- Distance to central business district in miles
+  cbd_dir VARCHAR, -- Direction to central business district (N, S, E, W, etc.)
+  act_date VARCHAR, -- Date facility became active (MM/YYYY format)
+  cert VARCHAR, -- Certification status
+  fed_agree VARCHAR, -- Federal agreement status
+  cust_intl VARCHAR, -- Customs/International status
+  c_ldg_rts VARCHAR, -- Commercial landing rights
+  joint_use VARCHAR, -- Joint use agreement indicator
+  mil_rts VARCHAR, -- Military rights
+  cntl_twr VARCHAR, -- Control tower indicator (Y=Yes, N=No)
+  major VARCHAR, -- Major airport designation (Y=Yes, N=No)
+
+  join_many flights as departure_flights on code = departure_flights.origin,
+  join_many flights as arrival_flights on code = arrival_flights.destination
+);

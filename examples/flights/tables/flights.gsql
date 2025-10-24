@@ -1,0 +1,38 @@
+table flights (
+  id2 BIGINT primary_key, -- Unique flight record identifier
+  carrier VARCHAR, -- 2-letter airline code (e.g., US, AA, WN)
+  origin VARCHAR, -- 3-letter IATA code for departure airport
+  destination VARCHAR, -- 3-letter IATA code for arrival airport
+  flight_num VARCHAR, -- Flight number (e.g., 1692, 1650)
+  flight_time BIGINT, -- Scheduled flight duration in minutes
+  tail_num VARCHAR, -- Aircraft tail number (e.g., N806MD, N816MA)
+  dep_time TIMESTAMP, -- Actual departure time (2000-2005 data)
+  arr_time TIMESTAMP, -- Actual arrival time (2000-2005 data)
+  dep_delay BIGINT, -- Departure delay in minutes (negative = early)
+  arr_delay BIGINT, -- Arrival delay in minutes (negative = early)
+  taxi_out BIGINT, -- Taxi-out time in minutes
+  taxi_in BIGINT, -- Taxi-in time in minutes
+  distance BIGINT, -- Flight distance in miles (21-4243 miles)
+  cancelled VARCHAR, -- Cancellation status (N=No, Y=Yes)
+  diverted VARCHAR, -- Diversion status (N=No, Y=Yes)
+
+  -- Delay metrics
+  sum(dep_delay) as total_dep_delay,
+  avg(dep_delay) as avg_dep_delay,
+  sum(arr_delay) as total_arr_delay,
+  avg(arr_delay) as avg_arr_delay,
+  
+  -- Taxi time metrics
+  sum(taxi_out) as total_taxi_out,
+  avg(taxi_out) as avg_taxi_out,
+  sum(taxi_in) as total_taxi_in,
+  avg(taxi_in) as avg_taxi_in,
+  
+  -- Distance metrics
+  sum(case when cancelled = 'N' and diverted = 'N' then distance else 0 end) as miles_flown,
+
+  join_one carriers on carrier = carriers.code,
+  join_one airports as origin_airport on origin = origin_airport.code,
+  join_one airports as destination_airport on destination = destination_airport.code,
+  join_one aircraft on tail_num = aircraft.tail_num
+);

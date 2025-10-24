@@ -1,0 +1,30 @@
+table aircraft (
+  id BIGINT primary_key, -- Unique aircraft registration ID
+  tail_num VARCHAR, -- Aircraft tail number (e.g., N806MD, N10036)
+  aircraft_serial VARCHAR, -- Manufacturer's serial number
+  aircraft_model_code VARCHAR, -- Reference to aircraft model specifications
+  aircraft_engine_code VARCHAR, -- Engine model code
+  year_built BIGINT, -- Year aircraft was manufactured (1944-2006)
+  aircraft_type_id BIGINT, -- Type classification (1=Fixed wing, 2=Balloon, 3=Glider, 4=Helicopter, 5=Other)
+  aircraft_engine_type_id BIGINT, -- Engine type (0=None, 1=Piston, 2=Turboprop, 4=Jet, 9=Other)
+  registrant_type_id BIGINT, -- Owner type (0=Individual, 1=Corporation, 3=Partnership, 4=Government)
+  name VARCHAR, -- Aircraft owner/registrant name
+  address1 VARCHAR, -- Primary address line
+  address2 VARCHAR, -- Secondary address line
+  city VARCHAR, -- City of registrant
+  state VARCHAR, -- State/Province of registrant
+  zip VARCHAR, -- Postal code
+  region VARCHAR, -- FAA region code (E=East, S=South, 2=Central, 3=Southwest)
+  county VARCHAR, -- County code
+  country VARCHAR, -- Country code (US, etc.)
+  certification VARCHAR, -- FAA certification type (1N=Normal, 1T=Transport, 1U=Utility, etc.)
+  status_code VARCHAR, -- Registration status (A=Active, V=Valid, M=Manufacturer, 2-8=Various states)
+  mode_s_code VARCHAR, -- Mode S transponder code
+  fract_owner VARCHAR, -- Fractional ownership indicator
+  last_action_date DATE, -- Date of last registration action
+  cert_issue_date DATE, -- Date certification was issued
+  air_worth_date DATE, -- Date airworthiness certificate issued
+
+  join_one aircraft_models on aircraft_model_code = aircraft_models.aircraft_model_code,
+  join_many flights on tail_num = flights.tail_num
+);

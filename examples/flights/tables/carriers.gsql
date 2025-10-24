@@ -1,0 +1,7 @@
+table carriers (
+  code VARCHAR primary_key, -- 2-letter airline code (e.g., US, AA, WN)
+  name VARCHAR, -- Full airline name (e.g., US Airways, American Airlines)
+  nickname VARCHAR, -- Common nickname or abbreviation (e.g., US Airways, American)
+
+  join_many flights on code = flights.carrier
+);

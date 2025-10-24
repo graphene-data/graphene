@@ -1,0 +1,15 @@
+table aircraft_models (
+  aircraft_model_code VARCHAR primary_key, -- Unique identifier for aircraft model
+  manufacturer VARCHAR, -- Aircraft manufacturer name (e.g., BOEING, AIRBUS, CESSNA)
+  model VARCHAR, -- Specific model designation (e.g., 737-3H4, A320, 172M)
+  aircraft_type_id BIGINT, -- Type classification (1=Fixed wing, 2=Balloon, 3=Glider, 4=Helicopter, 5=Other)
+  aircraft_engine_type_id BIGINT, -- Engine type (0=None, 1=Piston, 2=Turboprop, 4=Jet, 9=Other)
+  aircraft_category_id BIGINT, -- Category classification (1=Standard, 2=Utility, 3=Acrobatic)
+  amateur BIGINT, -- Amateur-built indicator (0=No, 1=Yes, 2=Unknown)
+  engines BIGINT, -- Number of engines (0-4)
+  seats BIGINT, -- Maximum passenger seating capacity
+  weight BIGINT, -- Maximum takeoff weight in pounds
+  speed BIGINT, -- Maximum speed in knots
+
+  join_many aircraft on aircraft_model_code = aircraft.aircraft_model_code
+);
