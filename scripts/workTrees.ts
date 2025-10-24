@@ -7,6 +7,8 @@ import {resolve} from 'path'
 const BASE_PORT = 4003
 const PORT_INCREMENT = 3
 
+$.verbose = true
+
 // root is the path that contains all of the graphene worktrees
 let root = resolve(import.meta.dirname, '../../..')
 
@@ -99,6 +101,24 @@ async function repoDirty (repo: string): Promise<boolean> {
   return !!status
 }
 
+async function branchMergeIssue (repo: string): Promise<string | null> {
+  let repoPath = `${root}/main/${repo}`
+
+  try {
+    await $`git -C ${repoPath} show-ref --verify --quiet refs/heads/${currentName}`
+  } catch {
+    return `${repo} branch '${currentName}' not found in ${repoPath}. Fetch or recreate the branch before archiving this worktree.`
+  }
+
+  try {
+    await $`git -C ${repoPath} merge-base --is-ancestor ${currentName} main`
+  } catch {
+    return `${repo} branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`
+  }
+
+  return null
+}
+
 async function commitWorktree () {
   if (await repoDirty('core')) await $`osascript -e 'do shell script "cd ${currentWorktree}/core && gitx -c"'`
   if (await repoDirty('cloud')) await $`osascript -e 'do shell script "cd ${currentWorktree}/cloud && gitx -c"'`
@@ -141,6 +161,19 @@ async function doneWorktree () {
 
   if (await repoDirty('core') || await repoDirty('cloud')) {
     return console.log('Repos have uncommited changes. Consider committing first')
+  }
+
+  let issues: string[] = []
+  let coreIssue = await branchMergeIssue('core')
+  if (coreIssue) issues.push(coreIssue)
+  let cloudIssue = await branchMergeIssue('cloud')
+  if (cloudIssue) issues.push(cloudIssue)
+
+  if (issues.length) {
+    console.log('Cannot archive worktree:')
+    for (let issue of issues) console.log('  - ' + issue)
+    console.log('Resolve the above and re-run `wt done`.')
+    return
   }
 
   cd(root) // cd to root, since we might be about to delete the cwd
