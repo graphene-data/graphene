@@ -292,6 +292,21 @@ describe('lang', () => {
       .toHaveDiagnostic(/Table t has multiple primary keys/i)
   })
 
+  it('reports diagnostics for duplicate table definitions', () => {
+    expect(`
+      table foo (id int)
+      table foo (id int)
+    `).toHaveDiagnostic(/table "foo" is already defined/i)
+  })
+
+  it('reports diagnostics for duplicate column definitions', () => {
+    expect('table dup (id int, id text)').toHaveDiagnostic(/Table already has a field called "id"/i)
+  })
+
+  it('reports diagnostics when redefining an existing workspace table', () => {
+    expect('table users (id int)').toHaveDiagnostic(/table "users" is already defined/i)
+  })
+
   it('reports diagnostics for unknown table in FROM', () => {
     expect('from not_a_table select id')
       .toHaveDiagnostic(/could not find table "not_a_table"/i)
