@@ -1,0 +1,23 @@
+{
+  "name": "example-flights",
+  "version": "0.0.1",
+  "scripts": {
+    "setup": "curl -L 'https://drive.google.com/uc?export=download&id=1qlio3d1W8k6bs9Z6-7U7vwnbuAYGZzZK' -o flights.duckdb",
+    "cli": "node ../../cli/cli.ts",
+    "serve": "npm run cli serve",
+    "compile": "npm run cli compile",
+    "run": "npm run cli run"
+  },
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=24.0.0"
+  },
+  "type": "module",
+  "dependencies": {
+    "@graphenedata/cli": "workspace:*",
+    "svelte": "4.2.19"
+  },
+  "graphene": {
+    "dialect": "duckdb"
+  }
+}
