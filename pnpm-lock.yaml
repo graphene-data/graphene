@@ -179,6 +179,15 @@ importers:
         specifier: 4.2.19
         version: 4.2.19
 
+  examples/flights_empty:
+    dependencies:
+      '@graphenedata/cli':
+        specifier: workspace:*
+        version: link:../../cli
+      svelte:
+        specifier: 4.2.19
+        version: 4.2.19
+
   examples/railbird:
     dependencies:
       '@graphenedata/cli':
