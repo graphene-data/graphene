@@ -119,7 +119,6 @@ export function analyzeField (field: Field, table: Table) {
     Object.assign(field, {e, metadata, type: e.type, isAgg: e.isAgg})
   }
 
-  if (!field.type) throw new Error('Expected analysis to set fields type')
   analysisQueue.delete(field)
 }
 

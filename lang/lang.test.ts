@@ -303,6 +303,10 @@ describe('lang', () => {
     expect('table dup (id int, id text)').toHaveDiagnostic(/Table already has a field called "id"/i)
   })
 
+  it('reports diagnostics for unsupported data types', () => {
+    expect('table invalid (id int, value hyperthing)').toHaveDiagnostic(/Unsupported data type: hyperthing/i)
+  })
+
   it('reports diagnostics when redefining an existing workspace table', () => {
     expect('table users (id int)').toHaveDiagnostic(/table "users" is already defined/i)
   })
