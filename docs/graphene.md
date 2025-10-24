@@ -43,7 +43,7 @@ Syntax notes
 - The allowed join types are `join_one` and `join_many`. All joins are left outer joins. There is no inner, right, or cross join.
 - `join_one` is used if there are many rows in the **left** table for each row in the **right** table.
 - `join_many` is used if there are many rows in the **right** table for each row in the **left** table.
-- Join names within a table must be unique. Polymorphic relationships (eg., where there are multiple relationships between the same two tables on different keys) are allowed but must be aliased eg. `join_one users as owner on user_id = owner.id` and `join_one users as viewer on user_id = viewer.id`.
+- As with normal SQL, joins can be optionally aliased with `as`. This is necessary when the same table can join to another in multiple ways, eg. `join_one users as owner on user_id = owner.id` and `join_one users as viewer on user_id = viewer.id`.
 - Comments in tables can provide descriptions as well as metadata (denoted by `#` inside the comment).
 
 Best practices
@@ -98,6 +98,10 @@ Graphene data apps are written in Markdown with components. Markdown files can c
 
 Note that components can also directly refer to Graphene tables in their `data` property; it is not always necessary to prepare data in a code-fenced query. Properties that take column references can also take whole expressions, as shown in the second line chart from the example above.
 
+Best practices
+- If you have multiple time series charts, align their x-axes to have the same range and granularity.
+- Use the same color for a given metric if it is used in multiple charts.
+
 ### Components
 The following components are available:
 - [BarChart](./data_apps/components/charts/bar-chart.md)
@@ -121,9 +125,11 @@ These are the available commands:
 ## AGENT INSTRUCTIONS
 Follow these guidelines when working in a Graphene project.
 - Before writing any GSQL queries, run them in the CLI first to make sure that the results make sense.
-- Do not redefine joins or expressions in a GSQL query that already exist in a semantic model. For example, if profit has already been defined as the stored expression `sum(revenue - cost) as profit` on the table `orders`, you can simply use it in a downstream query as `select profit from orders`.
+- Do not redefine joins or expressions in a GSQL query that already exist as semantics in a table. For example, if profit has already been defined as the stored expression `sum(revenue - cost) as profit` on the table `orders`, you can simply refer to it in a downstream query as `select profit from orders`.
 - Because all joins in Graphene are left outer joins, be mindful about your `from` table selection.
-- When adding a component to a .md file, read the associated documentation page first in /docs/data_apps/components so you understand all the available configurations.
 - Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is in /docs.
 - If you write to a .gsql file, run a syntax check with `npm run cli check`.
-- If you write to a .md file, run a syntax check with `npm run cli check`. Once there are no syntax errors, do a visual check by running `npm run cli view <mdPath>` and looking at the .png it generates. 
+- If you write to a .md file:
+  - First read ALL the linked component docs listed in [Components](#components) above.
+  - After writing code, run a syntax check with `npm run cli check`.
+  - Once there are no syntax errors, do a visual check by running `npm run cli view <mdPath>` and looking at the .png it generates. 
