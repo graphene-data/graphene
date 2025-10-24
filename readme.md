@@ -16,8 +16,6 @@ If you want to use background agents, make sure your snapshot uses node 24 (curs
 `npm run cli run "<some graphene>"` to execute that query against the db
 `npm run cli serve` to start up the evidence server for that project
 
-# Env setup
-Create a .env file with `ANTHROPIC_API_KEY` if you'd like to use explore.
 
 # Debugging tips
 From `vscode`, use `npm run install-cursor` (or `-vscode`) to package up the current vscode extension and install it in your editor. This requires you've installed the cli command for your editor.
