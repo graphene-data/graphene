@@ -66,11 +66,6 @@ Object.assign(DUCKDB_DIALECT_FUNCTIONS, {
       impl: {function: 'LOCALTIMESTAMP'},
     },
   },
-  'current_date_time': {
-    takes: {},
-    returns: 'timestamp',
-    impl: {function: 'CURRENT_TIMESTAMP'},
-  },
 })
 
 export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
@@ -132,7 +127,7 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     returns: 'timestamp',
     impl: {function: 'CURRENT_DATETIME'},
   },
-  'current_date_time': {
+  'current_datetime': {
     default_timezone: {
       takes: {},
       returns: 'timestamp',
