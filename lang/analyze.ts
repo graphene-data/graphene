@@ -470,10 +470,10 @@ function followJoins (pathNodes: SyntaxNode[], curr: Table): Table | null {
     if (!next) {
       let other = curr.fields.find(f => isJoin(f) && f.tableName == name)
       let dym = other ? `. Did you mean "${other.name}"?` : ''
-      return diag(part, `Join ${name} does not exist on table ${curr.name}${dym}`, null)
+      return diag(part, `Join "${name}" does not exist on table "${curr.name}"${dym}`, null)
     }
     analyzeField(next, curr)
-    if (!isJoin(next)) return diag(part, `${name} is not a join on ${curr.name}`, null)
+    if (!isJoin(next)) return diag(part, `"${name}" is not a join on "${curr.name}"`, null)
 
     curr = lookupTable(next.tableName || '', part)!
     if (!curr) return diag(part, 'Following valid join but we couldnt find the table', null)
