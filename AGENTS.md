@@ -4,7 +4,6 @@ Graphene allows you define dashboards, analyses, and interactive data apps in Ma
 If you need to know more about Graphene's features, read @docs/graphene.md.
 
 # Repo structure
-* /agent - a wrapper around claude-code used for Graphene's "explore" ux
 * /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
 * /examples - a series of example datasets and graphene code. `flights` is the go-to as it's local, fast, and doesn't require auth.
 * /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
