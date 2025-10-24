@@ -1,15 +1,15 @@
 # How to develop in Graphene
 
-Graphene is a framework for building semantic models and data visualizations in code. Graphene projects are comprised of:
-- .gsql files that define semantic models
+Graphene is a framework for building semantic layers and data visualizations in code. Graphene projects are comprised of:
+- .gsql files that define semantics-enriched tables (aka semantic models)
 - .md files that define data apps (dashboards)
 
 Graphene also has a CLI that lets you check syntax, run queries, serve data apps, and more.
 
 ## Graphene SQL (GSQL)
 
-### Semantic models
-Graphene SQL (GSQL) is like regular SQL except it has the added concept of _semantic models_. A semantic model is a collection of stored expressions and join relationships associated with a table that `select` queries can leverage. This allows query logic to be centralized, reusable, and more easily governed.
+### Tables
+Tables have to be declared first before they can be queried. A table in Graphene has the added concept of _semantics_. Semantics are stored expressions and join relationships associated with a table that `select` queries can leverage. This allows query logic to be centralized, reusable, and more easily governed.
 
 Here's an example:
 
@@ -32,25 +32,32 @@ table users (
   id BIGINT primary_key,
   name VARCHAR,
   email VARCHAR,
-  age INTEGER
+  age INTEGER,
+
+  join_many orders on id = orders.user_id
 );
 ```
 
-Syntax notes:
-- `table foo (...)` defines a semantic model on the database table `foo`. 
+Syntax notes
+- `table foo (...)` defines a Graphene table based on the database table `foo`. 
 - The allowed join types are `join_one` and `join_many`. All joins are left outer joins. There is no inner, right, or cross join.
 - `join_one` is used if there are many rows in the **left** table for each row in the **right** table.
 - `join_many` is used if there are many rows in the **right** table for each row in the **left** table.
-- Comments in semantic models can provide descriptions as well as metadata.
+- Join names within a table must be unique. Polymorphic relationships (eg., where there are multiple relationships between the same two tables on different keys) are allowed but must be aliased eg. `join_one users as owner on user_id = owner.id` and `join_one users as viewer on user_id = viewer.id`.
+- Comments in tables can provide descriptions as well as metadata (denoted by `#` inside the comment).
+
+Best practices
+- For a given table, only model joins that are directly on that table. Graphene will automatically traverse multi-hop joins when it compiles the collective table space.
+- A join between two tables should be modeled in both the respective `table` statements. This may seem redundant but it offers more flexibility for queries to choose which table to set in the `from` (remember that direction matters since all joins are left joins).
 
 ### Queries
-Semantic models can be queried using `select` statements. Here are some example queries on the models above:
+Graphene tables can be queried using `select` statements. Here are some example queries on the tables above:
 
 ```
 -- top 10 customers by profit
 from orders select
   users.name, -- notice how we can access the joined table without a join here
-  profit -- this expands into the aggregate expression defined in the model
+  profit -- this expands into the stored expression defined in the table
 order by 2 desc
 limit 10
 ```
@@ -63,32 +70,33 @@ select
 from orders 
 ```
 
-Syntax notes:
-- Columns and stored expressions from joined semantic models can be accessed with the dot operator, eg. `users.age` in the example above. Multiple join hops can be traversed with multiple dots, eg. `users.countries.country_code`.
+Syntax notes
+- Columns and stored expressions from joined tables can be accessed with the dot operator, eg. `users.age` in the example above. Multiple join hops can be traversed with multiple dots, eg. `users.countries.country_code`.
 - `join_one` and `join_many` work here, too. This is useful if the join you need has not been modeled already.
 - The `from`, `select`, `group by`, and `where` clauses can be written in any order.
 - Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` is valid.
 - `group by all` is implied if aggregate and scalar expressions are both present in the `select`. It can be omitted and the query will still effectively execute the `group by all`.
+- `count` is a reserved word. Do not alias your columns as `count`.
 
 
 ## Graphene viz (.md)
-Graphene data apps are written in Markdown with components. Markdown files can contain named GSQL queries in code fences that components can then refer to. Those queries can use any models defined in .gsql files. When possible, it's preferred to reuse stored expressions already defined in existing models.
+Graphene data apps are written in Markdown with components. Markdown files can contain named GSQL queries in code fences that components can then refer to. Those queries can use any tables defined in .gsql files.
 
 ````markdown
   # Order analysis
   Looking at our order breakdowns.
 
-  ```gsql orders_by_month
-    from orders select date_trunc(created_at, 'month') as month, count(*) as num, profit
+  ```sql orders_by_month
+    from orders select date_trunc(created_at, month) as month, count(*) as num_orders, profit
   ```
 
   <Row>
-    <LineChart data="orders_by_month" x="month" y="num" title="Orders by Month" />
-    <LineChart data="orders" x="date_trunc(created_at, 'month')" y="profit" title="Profit by Month, USD" />
+    <LineChart data="orders_by_month" x="month" y="num_orders" title="Orders by Month" />
+    <LineChart data="orders" x="date_trunc(created_at, month)" y="profit" title="Profit by Month, USD" />
   </Row>
 ````
 
-Note that components can also directly refer to semantic models in their `data` property; it is not always necessary to prepare data in a code-fenced query. Properties that take column references can also take whole expressions, as shown in the second line chart from the example above.
+Note that components can also directly refer to Graphene tables in their `data` property; it is not always necessary to prepare data in a code-fenced query. Properties that take column references can also take whole expressions, as shown in the second line chart from the example above.
 
 ### Components
 The following components are available:
@@ -114,6 +122,8 @@ These are the available commands:
 Follow these guidelines when working in a Graphene project.
 - Before writing any GSQL queries, run them in the CLI first to make sure that the results make sense.
 - Do not redefine joins or expressions in a GSQL query that already exist in a semantic model. For example, if profit has already been defined as the stored expression `sum(revenue - cost) as profit` on the table `orders`, you can simply use it in a downstream query as `select profit from orders`.
-- When configuring a component in a .md file, read the associated documentation page first in /docs/data_apps/components so you understand all the available configurations.
+- Because all joins in Graphene are left outer joins, be mindful about your `from` table selection.
+- When adding a component to a .md file, read the associated documentation page first in /docs/data_apps/components so you understand all the available configurations.
 - Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is in /docs.
-- After writing an .md file, run a syntax check with `npm run cli check`. 
+- If you write to a .gsql file, run a syntax check with `npm run cli check`.
+- If you write to a .md file, run a syntax check with `npm run cli check`. Once there are no syntax errors, do a visual check by running `npm run cli view <mdPath>` and looking at the .png it generates. 
