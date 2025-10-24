@@ -1,0 +1,13 @@
+table aircraft_models (
+  aircraft_model_code VARCHAR,
+  manufacturer VARCHAR,
+  model VARCHAR,
+  aircraft_type_id BIGINT,
+  aircraft_engine_type_id BIGINT,
+  aircraft_category_id BIGINT,
+  amateur BIGINT,
+  engines BIGINT,
+  seats BIGINT,
+  weight BIGINT,
+  speed BIGINT
+);
