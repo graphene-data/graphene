@@ -23,12 +23,15 @@ await build({ // cli build
   format: 'esm',
   target: 'node20',
   sourcemap: true,
-  minify: true,
+  minify: false,
   // we use some internal stuff from malloy. Adding this prevents esbuild from inlining malloy source into our build
   external: Object.keys(pkg.dependencies).concat(['./node_modules/@malloydata/malloy/dist/*']),
   plugins: [makeAllPackagesExternalPlugin],
 })
 
+await cp(path.resolve(__dirname, '../docs'), path.resolve(__dirname, 'dist/docs'), {recursive: true})
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
+await rm(path.resolve(__dirname, 'dist/ui/node_modules'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))
+await rm(path.resolve(__dirname, 'dist/ui/tests'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/cli/cli.js.map'))

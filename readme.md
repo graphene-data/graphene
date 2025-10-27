@@ -18,7 +18,7 @@ If you want to use background agents, make sure your snapshot uses node 24 (curs
 
 
 # Debugging tips
-From `vscode`, use `npm run install-cursor` (or `-vscode`) to package up the current vscode extension and install it in your editor. This requires you've installed the cli command for your editor.
+From `vscode`, use `pnpm run install-cursor` (or `-vscode`) to package up the current vscode extension and install it in your editor. This requires you've installed the cli command for your editor.
 
 From `examples/flights/.evidence/template` run `cp ~/co/graphene/cli/vite.config.js . && node --inspect ../../node_modules/vite/bin/vite.js dev --port 3000` to debug the server that turns graphene queries in evidence into actual sql and executes them.
 
