@@ -39,7 +39,7 @@ table users (
 ```
 
 Syntax notes
-- `table foo (...)` defines a Graphene table based on the database table `foo`. 
+- `table foo (...)` defines a Graphene table based on the database table `foo`.
 - The allowed join types are `join_one` and `join_many`. All joins are left outer joins. There is no inner, right, or cross join.
 - `join_one` is used if there are many rows in the **left** table for each row in the **right** table.
 - `join_many` is used if there are many rows in the **right** table for each row in the **left** table.
@@ -67,7 +67,7 @@ limit 10
 select
   month(date),
   average(users.age), -- in normal SQL this would fan-out in the join; in Graphene it smartly de-duplicates the fan-out when computing aggregates
-from orders 
+from orders
 ```
 
 Syntax notes
@@ -116,11 +116,11 @@ The following components are available:
 
 ## Using the Graphene CLI
 These are the available commands:
-- `npm run cli check` - Checks the syntax for the entire Graphene project.
-- `npm run cli compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
-- `npm run cli run "<GSQL>"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
-- `npm run cli serve` - Starts (or restarts) the dev server, which allows the user to view their Graphene app on localhost.
-- `npm run cli view <mdPath>` - Captures a screenshot of a given .md file, along with any errors encountered.
+- `npm run graphene check` - Checks the syntax for the entire Graphene project.
+- `npm run graphene compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
+- `npm run graphene run "<GSQL>"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
+- `npm run graphene serve` - Starts (or restarts) the dev server, which allows the user to view their Graphene app on localhost.
+- `npm run graphene view <mdPath>` - Captures a screenshot of a given .md file, along with any errors encountered.
 
 ## AGENT INSTRUCTIONS
 Follow these guidelines when working in a Graphene project.
@@ -128,8 +128,8 @@ Follow these guidelines when working in a Graphene project.
 - Do not redefine joins or expressions in a GSQL query that already exist as semantics in a table. For example, if profit has already been defined as the stored expression `sum(revenue - cost) as profit` on the table `orders`, you can simply refer to it in a downstream query as `select profit from orders`.
 - Because all joins in Graphene are left outer joins, be mindful about your `from` table selection.
 - Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is in /docs.
-- If you write to a .gsql file, run a syntax check with `npm run cli check`.
+- If you write to a .gsql file, run a syntax check with `npm run graphene check`.
 - If you write to a .md file:
   - First read ALL the linked component docs listed in [Components](#components) above.
-  - After writing code, run a syntax check with `npm run cli check`.
-  - Once there are no syntax errors, do a visual check by running `npm run cli view <mdPath>` and looking at the .png it generates. 
+  - After writing code, run a syntax check with `npm run graphene check`.
+  - Once there are no syntax errors, do a visual check by running `npm run graphene view <mdPath>` and looking at the .png it generates.
