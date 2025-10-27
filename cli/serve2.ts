@@ -47,16 +47,10 @@ export async function serve2 (): Promise<ViteDevServer> {
       fs: {strict: false},
       strictPort: true,
     },
-    optimizeDeps: {
-      // include: ['@graphenedata/cli > svelte/internal'],
-      // exclude: ['@graphenedata/cli', '@duckdb/node-api', 'chokidar'],
-      // noDiscovery: process.env.NODE_ENV == 'test', // optimizing causes issues when parallel workers are running vite
-    },
     resolve: {
-      alias: [
-        {find: /^@graphenedata\/ui$/, replacement: path.resolve(uiRoot, 'web.js')},
-        {find: /^@graphenedata\/ui\//, replacement: path.resolve(uiRoot) + '/'},
-      ],
+      alias: {
+        graphene: path.resolve(uiRoot, 'web.js'),
+      },
     },
   })
 
@@ -223,7 +217,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <div id="app"></div>
       <script type="module">
         // do this first so we can track errors caused by importing the md file
-        import '${uiRoot}/web.js'
+        import 'graphene'
       </script>
       <script type="module">
         ${mdMount}
