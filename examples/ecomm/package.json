@@ -3,10 +3,10 @@
   "version": "0.0.1",
   "scripts": {
     "auth": "gcloud auth application-default login",
-    "dev": "npm run cli serve",
-    "cli": "node ../../cli/cli.ts",
-    "compile": "npm run cli compile",
-    "run": "npm run cli run",
+    "dev": "npm run graphene serve",
+    "graphene": "node ../../cli/cli.ts",
+    "compile": "npm run graphene compile",
+    "run": "npm run graphene run",
     "serve": "npm run dev"
   },
   "engines": {
@@ -14,8 +14,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@graphenedata/cli": "workspace:*",
-    "svelte": "4.2.19"
+    "@graphenedata/cli": "workspace:*"
   },
   "graphene": {
     "dialect": "bigquery",
