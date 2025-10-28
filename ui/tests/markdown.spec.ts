@@ -38,3 +38,39 @@ test('reports query errors', async ({server, page}) => {
   expect(errors.length).toBeGreaterThan(0)
   await expect(page).toHaveScreenshot('reports-query-errors.png')
 })
+
+test('renders literal less-than characters', async ({server, page}) => {
+  server.mockFile('/index.md', `
+    # Comparison
+
+    Profit is 1 < 2 and losses are 0 < 1.
+  `)
+
+  await page.goto(await server.url() + '/')
+  await expect(page.getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
+  await expect(page.locator('main')).toHaveText(/1 < 2/)
+
+  let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
+  expect(errors).toEqual([])
+})
+
+test('sanitizes unsafe html', async ({server, page}) => {
+  server.mockFile('/index.md', `
+    # Sanitized
+
+    <script>window.__MD_SCRIPT__ = true</script>
+    <button id="danger" onclick="window.__MD_CLICK__ = true">Danger</button>
+    <iframe id="embed" src="javascript:alert('boom')"></iframe>
+  `)
+
+  await page.goto(await server.url() + '/')
+  await expect(page.getByRole('heading', {level: 1, name: 'Sanitized'})).toBeVisible()
+  await expect(page.locator('button')).toHaveCount(0)
+  await expect(page.locator('iframe')).toHaveCount(0)
+
+  let scriptRan = await page.evaluate(() => (window as any).__MD_SCRIPT__)
+  expect(scriptRan).toBeUndefined()
+
+  let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
+  expect(errors).toEqual([])
+})
