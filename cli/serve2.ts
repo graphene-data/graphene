@@ -1,7 +1,6 @@
 import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '../lang/core.ts'
 import {createServer, optimizeDeps, type ViteDevServer} from 'vite'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
-import {visit} from 'unist-util-visit'
 import fs from 'fs-extra'
 import crypto from 'crypto'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
@@ -12,6 +11,7 @@ import {fileURLToPath} from 'url'
 import {WebSocketServer, type WebSocket} from 'ws'
 import {spawn} from 'child_process'
 import {getConnection} from './connections/index.ts'
+import {escapeAngles, extractQueries, injectComponentImports, sanitizeMarkdown} from './mdCompile.ts'
 
 let grapheneRoot: string
 let uiRoot: string
@@ -32,8 +32,8 @@ export async function serve2 (): Promise<ViteDevServer> {
           vitePreprocess(),
           mdsvex({
             extensions: ['.md'],
-            remarkPlugins: [extractQueries],
-            layout: path.resolve(uiRoot, 'layout.svelte'),
+            remarkPlugins: [extractQueries, escapeAngles],
+            rehypePlugins: [sanitizeMarkdown],
           }) as any,
           injectComponentImports(),
         ],
@@ -199,7 +199,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
 
   let mdMount = mount ? `
     import Page from ${JSON.stringify(filePath)};
-    new Page({ target: document.getElementById('app'), props: {} })
+    new Page({ target: document.getElementById('content'), props: {} })
   ` : ''
 
   let html = await server.transformIndexHtml(filePath, `<!doctype html>
@@ -214,7 +214,9 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
     </head>
     <body>
-      <div id="app"></div>
+      <main>
+        <div id="content"></div>
+      </main>
       <script type="module">
         // do this first so we can track errors caused by importing the md file
         import 'graphene'
@@ -225,39 +227,6 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
     </body>
   </html>`)
   return res.end(html)
-}
-
-// Turn gsql code fences into GrapheneQuery components
-function extractQueries () {
-  function escapeHtml (str: string) {
-    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  }
-
-  return function transformer (tree) {
-    visit(tree, 'code', (node, index, parent) => {
-      if (index === null) return
-      // let attributes = [{type: 'mdxJsxAttribute', name: 'name', value: node.meta}, {type: 'mdxJsxAttribute', name: 'code', value: node.value.trim()}]
-      // parent.children[index] = {type: 'mdxJsxFlowElement', name: 'GrapheneQuery', attributes, children: []}
-      parent.children[index] = {type: 'html', value: `<GrapheneQuery name="${escapeHtml(node.meta)}" code="${escapeHtml(node.value.trim())}" />`}
-    })
-  }
-}
-
-// We don't want users to have to manually import components in their md files, so we auto-import them.
-function injectComponentImports () {
-  let files = fs.readdirSync(path.join(uiRoot, 'components'))
-  let componentNames = files.map(f => path.basename(f, '.svelte')).filter(f => !f.startsWith('_'))
-  let imp = `const {${componentNames.join(', ')}} = window.$GRAPHENE.components`
-
-  return {
-    markup: ({content, filename}) => {
-      if (!filename.endsWith('.md')) return // only auto-import components for md files
-      content = content.replace('<script>', `<script>\n${imp}`)
-      return {code: content}
-    },
-    style: () => {},
-    script: () => {},
-  }
 }
 
 export const mockFileMap: Record<string, string> = {}

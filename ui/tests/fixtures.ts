@@ -66,7 +66,7 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
         import Component from ${JSON.stringify(browserPath)}
 
         window.__inst = new Component({
-          target: document.getElementById('app'),
+          target: document.getElementById('content'),
           props: window.__props,
         })
       `})
@@ -75,7 +75,7 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
     }
 
     await use(mountFn)
-    await expect(page.locator('#app > :not(dialog)').first()).toBeVisible()
+    await expect(page.locator('#content > :not(dialog)').first()).toBeVisible()
     // let errors = page.evaluate(() => window.$GRAPHENE.getErrors())
     // expect(errors).toEqual([])
   },
@@ -97,10 +97,7 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
       }, selectorSource)
     }
 
-    await use({
-      config: readConfig,
-      el: page.locator('#app'),
-    })
+    await use({config: readConfig, el: page.locator('#content')})
   },
 })
 
