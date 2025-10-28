@@ -4,6 +4,8 @@ const TEST_EMAIL = 'grant@graphenedata.com'
 const TEST_PASSWORD = 'graphenedata'
 
 test.describe('auth', () => {
+  test.describe.configure({mode: 'serial'})
+
   test.use({realAuth: true})
 
   test('login flow', async ({page, cloud}) => {
@@ -17,7 +19,7 @@ test.describe('auth', () => {
     await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
     await loginShell.getByRole('button', {name: /continue/i}).click()
 
-    let btn = await page.getByText(/Graphene Dev/i)
+    let btn = page.getByText(/Graphene Dev/i)
     await btn.waitFor()
     await expect(page).toHaveScreenshot('auth-login-flow-org-picker.png')
     await btn.click()
@@ -26,12 +28,11 @@ test.describe('auth', () => {
     await expect(page.locator('h1', {hasText: 'KPI Summary'})).toBeVisible()
   })
 
-  // test('prevents unauthorized requests', async ({page, cloud}) => {
-  //   await cloud.waitForPage(page, '/login')
-  //   let response = await page.request.get(`${cloud.url}/_api/pages/index`)
-  //   expect(response.status()).toBe(401)
-  //   await expect(page).toHaveScreenshot('auth-unauthorized.png')
-  // })
+  test('prevents unauthorized requests', async ({page, cloud}) => {
+    await page.goto(cloud.url + '/login')
+    let response = await page.request.get(`${cloud.url}/_api/pages/index`)
+    expect(response.status()).toBe(401)
+  })
 
   test('shows an error for invalid credentials', async ({page, cloud}) => {
     await page.goto(cloud.url + '/login')

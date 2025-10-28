@@ -3,10 +3,11 @@ import path from 'node:path'
 import {createRequire} from 'node:module'
 import {fileURLToPath} from 'node:url'
 import middie from '@fastify/middie'
-import {createServer as createViteServer, type ViteDevServer} from 'vite'
+import {createServer as createViteServer} from 'vite'
 import {createServer} from './server.ts'
 import {getDb, resetDb} from './db.ts'
 import * as schema from '../schema.ts'
+import {setAuthOverride} from './auth.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 const orgId = 'organization-test-5ecd5c3e-3173-494c-945f-8427215d4d9b'
@@ -18,17 +19,25 @@ interface DevArgs {
   seedType: string
 }
 
-export async function startDevServer ({realAuth, port, seedType}: DevArgs) {
+interface DevServerHandle {
+  url: string
+  close: () => Promise<void>
+}
+
+export async function startDevServer ({realAuth, port, seedType}: DevArgs): Promise<DevServerHandle> {
   port = Number(port || process.env.GRAPHENE_PORT || 4000)
 
   let fastify = createServer()
   await fastify.register(middie, {hook: 'onRequest'})
 
+  setAuthOverride(realAuth ? null : {userId, orgId})
+  process.env.VITE_STYTCH_USE_MOCK = realAuth ? '' : 'true'
+
   let vite = await createViteServer({
     root: path.join(rootDir, 'frontend'),
     configFile: path.join(rootDir, 'frontend/vite.config.ts'),
-    server: {middlewareMode: true},
-    env: {VITE_STYTCH_USE_MOCK: realAuth ? true : false},
+    server: {middlewareMode: true, hmr: process.env.NODE_ENV != 'test'},
+    mode: process.env.NODE_ENV == 'test' ? 'test' : 'dev',
   })
 
   fastify.use((req, res, next) => {
@@ -44,12 +53,15 @@ export async function startDevServer ({realAuth, port, seedType}: DevArgs) {
     console.log(`Cloud dev server running at ${url}`)
   }
 
-  let close = async () => {
-    await fastify.close()
-    await vite.close()
+  return {
+    url,
+    async close () {
+      vite.ws.close()
+      fastify.server.closeAllConnections()
+      await fastify.close()
+      await vite.close()
+    },
   }
-
-  return {url, close}
 }
 
 async function seedDatabase (connectionType: string) {

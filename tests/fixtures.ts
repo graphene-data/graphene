@@ -28,9 +28,8 @@ export const test = base.extend<{cloud: {url: string}, realAuth: boolean}>({
   },
 
   cloud: async ({realAuth}, use) => {
-    let handle = await startDevServer({realAuth, port: realAuth ? 3121 : getAvailablePort() })
-        // VITE_STYTCH_USE_MOCK: realAuth ? 'false' : 'true',
-    // setAuthOverride(realAuth ? null : {})
+    let port = realAuth ? 3121 : await getAvailablePort()
+    let handle = await startDevServer({realAuth, port, seedType: 'bigquery'})
 
     try {
       await use({url: handle.url})
