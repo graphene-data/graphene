@@ -6,11 +6,9 @@ let staticErrors: Error[] = []
 let errorProviders: Record<string, ErrorProvider> = {}
 
 window.addEventListener('error', (event) => {
-  console.log('recordedError')
   staticErrors.push(event.error)
 })
 window.addEventListener('unhandledrejection', (event) => {
-  console.log('record unhandled')
   staticErrors.push(event.reason)
 })
 
