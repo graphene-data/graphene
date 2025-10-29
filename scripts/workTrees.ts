@@ -104,6 +104,8 @@ async function repoDirty (repo: string): Promise<boolean> {
 async function branchMergeIssue (repo: string): Promise<string | null> {
   let repoPath = `${root}/main/${repo}`
 
+  await $`git -C ${repoPath} fetch origin main`
+
   try {
     await $`git -C ${repoPath} show-ref --verify --quiet refs/heads/${currentName}`
   } catch {
@@ -111,7 +113,7 @@ async function branchMergeIssue (repo: string): Promise<string | null> {
   }
 
   try {
-    await $`git -C ${repoPath} merge-base --is-ancestor ${currentName} main`
+    await $`git -C ${repoPath} merge-base --is-ancestor ${currentName} origin/main`
   } catch {
     return `${repo} branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`
   }
