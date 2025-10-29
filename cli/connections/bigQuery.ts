@@ -1,3 +1,5 @@
+import fs from 'fs'
+import path from 'path'
 import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
 import {config} from '../../lang/config.ts'
 import {type QueryConnection} from './types.ts'
@@ -6,6 +8,15 @@ export class BigQueryConnection implements QueryConnection {
   private readonly client: BigQuery
 
   constructor (options: BigQueryOptions = {}) {
+    if (process.env.GOOGLE_CREDENTIALS_CONTENT) {
+      let parsed = JSON.parse(process.env.GOOGLE_CREDENTIALS_CONTENT)
+      let credPath = path.resolve('./bq.json')
+      fs.writeFileSync('./bq.json', process.env.GOOGLE_CREDENTIALS_CONTENT.replace('  ', '\n  '))
+      process.env.GOOGLE_APPLICATION_CREDENTIALS = credPath
+      options.projectId = parsed.project_id
+      // options.credentials = parsed
+    }
+
     options.projectId ||= config.googleProjectId
     options.maxRetries ||= 3
     options.userAgent ||= 'Graphene'
