@@ -22,8 +22,7 @@ let sharedPort, sharedServer
 
 export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle}>({
   // This boots up our cli server on a unique port for e2e tests.
-  // eslint-disable-next-line no-empty-pattern
-  server: async ({}, use:any) => {
+  server: async ({page}, use:any) => {
     let server: any
     let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
     Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
@@ -40,6 +39,7 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
       })
     } finally {
       Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
+      if (!page.isClosed()) await page.close()
       await server?.close()
     }
   },
@@ -109,7 +109,7 @@ test.beforeAll(async () => {
 })
 
 test.afterAll(async () => {
-  await sharedServer?.close()
+  if (!process.env.DEBUG) await sharedServer?.close()
 })
 
 test.afterEach(async ({page}) => {
