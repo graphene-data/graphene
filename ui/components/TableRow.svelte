@@ -251,7 +251,7 @@
     background: rgba(229, 231, 235, 0.6);
   }
 
-  :global(.table-row--lined) td {
+  .table-row--lined :global(td) {
     border-bottom: 1px solid rgba(107, 114, 128, 0.2);
   }
 
