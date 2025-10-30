@@ -25,7 +25,7 @@ test.describe('auth', () => {
     await btn.click()
 
     await expect(page).toHaveURL(`${cloud.url}/`)
-    await expect(page.locator('h1', {hasText: 'KPI Summary'})).toBeVisible()
+    await expect(page.locator('h1', {hasText: 'Flight Operations Overview'})).toBeVisible()
   })
 
   test('prevents unauthorized requests', async ({page, cloud}) => {

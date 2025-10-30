@@ -1,42 +1,21 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import {and, eq} from 'drizzle-orm'
 import {ensureUser} from './auth.ts'
-import { getDb } from './db.ts'
+import {getDb} from './db.ts'
 import {connections, files, type Connection} from '../schema.ts'
-import { updateFile, clearWorkspace, analyze, getDiagnostics, toSql } from '../../core/lang/core.ts'
-import { setConfig } from '../../core/lang/config.ts'
-
-type DuckConnectionConfig = {
-  datasetRoot: string
-  databaseFile?: string
-}
+import {updateFile, clearWorkspace, analyze, getDiagnostics, toSql} from '../../core/lang/core.ts'
+import {setConfig} from '../../core/lang/config.ts'
 
 export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
   if (!ensureUser(req, reply)) return
 
-  let cfg = await getDb().query.connections.findFirst({where: eq(connections.orgId, req.auth.orgId)})
-  if (!cfg) return reply.code(400).send({error: 'No connection configured'})
+  let connInfo = await getDb().query.connections.findFirst({where: eq(connections.orgId, req.auth.orgId)})
+  if (!connInfo) return reply.code(400).send({error: 'No connection configured'})
 
-  let decryptedConfig = decryptSecret(cfg.configJson)
-  let connectionConfig: DuckConnectionConfig | undefined
-  if (cfg.kind === 'duckdb') {
-    try {
-      connectionConfig = JSON.parse(decryptedConfig)
-      if (typeof connectionConfig.datasetRoot !== 'string') {
-        throw new Error('datasetRoot is missing')
-      }
-    } catch (error) {
-      throw new Error('Invalid duckdb connection configuration: ' + (error as Error).message)
-    }
-  }
-
+  // Load up all gsql files into a graphene workspace
   let gsqlFiles = await getDb().query.files.findMany({where: and(eq(files.orgId, req.auth.orgId), eq(files.extension, 'gsql'))})
   clearWorkspace()
-  setConfig({
-    dialect: cfg.kind,
-    namespace: cfg.namespace ?? undefined,
-    root: connectionConfig?.datasetRoot ?? '',
-  })
+  setConfig({dialect: connInfo.kind, namespace: connInfo.namespace ?? undefined, root: '/dev/null'})
   gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))
   let queries = analyze(req.body.gsql, 'gsql')
 
@@ -45,9 +24,9 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
     return reply.code(400).send(JSON.stringify(getDiagnostics()))
   }
 
+  // Then, turn the requested query into sql, and execute against the db
   let sql = toSql(queries[0], req.body.params)
-
-  let conn = await getConnection(cfg, decryptedConfig, connectionConfig)
+  let conn = await getConnection(connInfo)
   let queryResults = await conn.runQuery(sql)
 
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
@@ -56,19 +35,17 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
   reply.send({rows: queryResults.rows, fields, sql})
 }
 
-async function getConnection (cfg: Connection, configJson: string, connectionConfig?: DuckConnectionConfig) {
-  if (cfg.kind == 'bigquery') {
-    let parsed = JSON.parse(configJson)
+async function getConnection (connInfo: Connection) {
+  let cfg = JSON.parse(decryptSecret(connInfo.configJson))
+
+  if (connInfo.kind == 'bigquery') {
     let mod = await import('../../core/cli/connections/bigQuery.ts')
-    return new mod.BigQueryConnection({keyFile: configJson, projectId: parsed.project_id})
-  } else if (cfg.kind === 'duckdb') {
-    if (!connectionConfig || typeof connectionConfig.datasetRoot !== 'string') {
-      throw new Error('DuckDB connection missing datasetRoot')
-    }
+    return new mod.BigQueryConnection({credentials: cfg, projectId: cfg.project_id})
+  } else if (connInfo.kind === 'duckdb') {
     let mod = await import('../../core/cli/connections/duckdb.ts')
-    return new mod.DuckDBConnection()
+    return new mod.DuckDBConnection({path: cfg.dbPath})
   } else {
-    throw new Error('Unsupported cloud database ' + cfg.kind)
+    throw new Error('Unsupported cloud database ' + connInfo.kind)
   }
 }
 
