@@ -4,23 +4,32 @@ import {config} from '../../lang/config.ts'
 import {type QueryConnection} from './types.ts'
 import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 
-export class DuckDBConnection implements QueryConnection {
-  private ready: Promise<void>
-  private connection: InnerConnection | null = null
+interface DuckDbOptions {
+  path: string
+}
 
-  constructor () {
+export class DuckDBConnection implements QueryConnection {
+  options: DuckDbOptions
+  ready: Promise<void>
+  connection: InnerConnection | null = null
+
+  constructor (options: DuckDbOptions) {
+    this.options = options
     this.ready = this.initialize()
   }
 
   private async initialize () {
-    let files = await fs.readdir(config.root)
-    let databasePath = files.find(f => f.endsWith('.duckdb'))
-    if (!databasePath) throw new Error('No .duckdb file found in current directory')
-    databasePath = path.resolve(config.root, databasePath)
+    let dbPath: string | undefined = this.options.path
+    if (!dbPath) {
+      let files = await fs.readdir(config.root)
+      dbPath = files.find(f => f.endsWith('.duckdb'))
+      if (!dbPath) throw new Error('No .duckdb file found in current directory')
+      dbPath = path.resolve(config.root, dbPath)
+    }
 
     let db = await DuckDBInstance.create(':memory:')
     this.connection = await db.connect()
-    let escapedPath = databasePath.replace(/'/g, "''")
+    let escapedPath = dbPath.replace(/'/g, "''")
     // Attach the project DuckDB file in read-only mode and make it the active schema
     await this.connection.run(`attach '${escapedPath}' as graphene_cli (READ_ONLY);`)
     await this.connection.run('use graphene_cli;')
