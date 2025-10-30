@@ -14,7 +14,8 @@
   },
   "type": "module",
   "dependencies": {
-    "@graphenedata/cli": "workspace:*"
+    "@graphenedata/cli": "workspace:*",
+    "svelte": "4.2.19"
   },
   "graphene": {
     "dialect": "duckdb"
