@@ -157,12 +157,18 @@ importers:
       '@graphenedata/cli':
         specifier: workspace:*
         version: link:../../cli
+      svelte:
+        specifier: 4.2.19
+        version: 4.2.19
 
   examples/flights:
     dependencies:
       '@graphenedata/cli':
         specifier: workspace:*
         version: link:../../cli
+      svelte:
+        specifier: 4.2.19
+        version: 4.2.19
 
   examples/flights_empty:
     dependencies:
