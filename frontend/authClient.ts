@@ -1,17 +1,22 @@
 import {StytchB2BUIClient, AuthFlowType, StytchEventType} from '@stytch/vanilla-js/b2b'
 
-export function createAuthClient () {
+let _client: StytchB2BUIClient | null = null
+export function authClient () {
+  if (_client) return _client
   if (import.meta.env.MODE == 'test' && import.meta.env.VITE_STYTCH_USE_MOCK) {
-    return {
-      session: {
-        getSync () {
-          return {}
-        },
-      },
-    }
+    _client = new MockClient() as StytchB2BUIClient
+  } else {
+    _client = new StytchB2BUIClient(import.meta.env.VITE_STYTCH_PUBLIC_TOKEN)
   }
+  return _client
+}
 
-  return new StytchB2BUIClient(import.meta.env.VITE_STYTCH_PUBLIC_TOKEN)
+class MockClient {
+  session = {
+    getSync () {
+      return {}
+    },
+  }
 }
 
 export {AuthFlowType, StytchEventType}

@@ -1,10 +1,10 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {go} from '../router'
-  import {createAuthClient, AuthFlowType, StytchEventType} from '../authClient'
+  import {authClient, AuthFlowType, StytchEventType} from '../authClient'
 
   onMount(() => {
-    let stytch = createAuthClient()
+    let stytch = authClient()
 
     stytch.mount({
       elementId: '#stytch-login',
