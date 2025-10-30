@@ -63,18 +63,18 @@
     border: 1px solid rgba(255, 83, 83, 0.35);
   }
 
-  h1 {
+  .page :global(h1) {
     margin: 0 0 12px;
     font-size: 26px;
   }
 
-  .meta {
+  .page :global(.meta) {
     margin: 0 0 16px;
     font-size: 13px;
     color: rgba(255, 255, 255, 0.55);
   }
 
-  pre {
+  .page :global(pre) {
     margin: 0;
     white-space: pre-wrap;
     word-break: break-word;

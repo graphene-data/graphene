@@ -1,12 +1,10 @@
 <script lang="ts">
-  import {createAuthClient} from './authClient'
+  import {authClient} from './authClient'
   import Login from './routes/Login.svelte'
-  import AdminConnections from './routes/admin/Connections.svelte'
-  import AdminHome from './routes/admin/Home.svelte'
   import PageView from './routes/PageView.svelte'
   import {route, go} from './router'
 
-  let stytch = createAuthClient()
+  let stytch = authClient()
   let session = stytch.session.getSync()
 
   $: {
@@ -53,35 +51,6 @@
     background: rgba(255, 255, 255, 0.9);
     box-shadow: var(--cloud-card-shadow);
     backdrop-filter: blur(10px);
-  }
-
-  nav {
-    display: flex;
-    gap: 16px;
-  }
-
-  nav a {
-    color: var(--cloud-text-muted);
-    text-decoration: none;
-    font-size: 15px;
-    font-weight: 500;
-    padding: 8px 14px;
-    border-radius: 999px;
-    transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
-  }
-
-  nav a.active {
-    background: rgba(59, 130, 246, 0.12);
-    color: var(--primary);
-    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.2);
-  }
-
-  .link {
-    border: none;
-    background: transparent;
-    color: var(--cloud-text-muted);
-    cursor: pointer;
-    font-size: 15px;
   }
 
   @media (max-width: 720px) {
