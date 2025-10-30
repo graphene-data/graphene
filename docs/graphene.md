@@ -109,7 +109,7 @@ A stored expression must be given a name via `as`. It can then be referenced by 
 
 Like expressions in regular SQL, expressions in GSQL are either scalar or aggregative. In BI parlance, these would be called dimensions and measures, respectively.
 
-Expressions can refer to other expressions, as shown below.
+Expressions can refer to other expressions, as from the example before:
 
 ```sql
 table orders (
@@ -145,31 +145,15 @@ If you recall the model from before:
 
 ```sql
 table orders (
-  id BIGINT primary_key,
+  ...
   user_id BIGINT,
-  created_at DATETIME,
-  status STRING, -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT, -- Amount paid by customer
-  cost FLOAT, -- Cost of materials
-
-  join_one users on user_id = users.id,
-
-  status in ('Processing', 'Shipped', 'Complete') as revenue_recognized,
-
-  sum(case when revenue_recognized then amount else 0 end) as revenue,
-  sum(case when revenue_recognized then cost else 0 end) as cogs,
-  revenue - cogs as profit,
-  profit / revenue as profit_margin
+  join_one users on user_id = users.id
 )
 
 table users (
   id BIGINT primary_key,
   name VARCHAR,
-  email VARCHAR,
-  age INTEGER,
-  country_code VARCHAR,
-
-  join_many orders on id = orders.user_id
+  ...
 )
 ```
 
@@ -232,7 +216,7 @@ limit 10
 
 A stored expression can be invoked in a query by simply referencing it by name.
 
-Again, using the model from before:
+Again, using the orders table from before:
 
 ```sql
 table orders (
@@ -251,16 +235,6 @@ table orders (
   sum(case when revenue_recognized then cost else 0 end) as cogs,
   revenue - cogs as profit,
   profit / revenue as profit_margin
-)
-
-table users (
-  id BIGINT primary_key,
-  name VARCHAR,
-  email VARCHAR,
-  age INTEGER,
-  country_code VARCHAR,
-
-  join_many orders on id = orders.user_id
 )
 ```
 
