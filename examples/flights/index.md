@@ -5,8 +5,8 @@ Domestic schedules from 2000–2005 give us a broad look at how carriers perform
 <Row>
   <BigValue data="flights" value="count()" fmt="num0" title="Flights analyzed" />
   <BigValue data="carriers" value="count()" fmt="num0" title="Number of carriers" />
-  <BigValue data="flights" value="cancellation_rate" fmt="pct1" title="Cancellation rate" downIsGood="true" />
-  <BigValue data="flights" value="diversion_rate" fmt="pct1" title="Diversion rate" downIsGood="true" />
+  <BigValue data="flights" value="cancellation_rate" fmt="pct1" title="Cancellation rate" />
+  <BigValue data="flights" value="diversion_rate" fmt="pct1" title="Diversion rate" />
 </Row>
 <Row>
   <BigValue data="flights" value="on_time_departure_rate" fmt="pct1" title="Departures on time" />
@@ -49,7 +49,6 @@ order by 1
     y2SeriesType="line"
     legend="true"
     xFmt="yyyy-mm"
-    showAllXAxisLabels="false"
     yAxisTitle="Minutes"
     y2AxisTitle="Minutes"
     title="Average delay by month"
@@ -66,7 +65,6 @@ order by 1
     y2SeriesType="line"
     legend="true"
     xFmt="yyyy-mm"
-    showAllXAxisLabels="false"
     y2Max=0.35
     yMax=0.35
     yAxisTitle="Percent"

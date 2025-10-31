@@ -1,4 +1,5 @@
 import {test, expect, waitForGrapheneQueries} from './fixtures'
+import {assertNoConsoleErrors, expectConsoleError} from './browserConsole'
 
 test('loads markdown files', async ({server, page}) => {
   await server.mockFile('/index.md', `
@@ -13,9 +14,7 @@ test('loads markdown files', async ({server, page}) => {
   await page.goto(await server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
   await expect(page.locator('main canvas').first()).toBeVisible()
-
-  let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
-  expect(errors).toEqual([])
+  assertNoConsoleErrors(page)
   await expect(page).toHaveScreenshot('loads-markdown-files.png')
 })
 
@@ -33,9 +32,7 @@ test('reports query errors', async ({server, page}) => {
   `)
   await page.goto(await server.url() + '/')
   await waitForGrapheneQueries(page)
-
-  let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
-  expect(errors.length).toBeGreaterThan(0)
+  expectConsoleError(page, 'Failed to load resource')
   await expect(page).toHaveScreenshot('reports-query-errors.png')
 })
 
@@ -49,9 +46,7 @@ test('renders literal less-than characters', async ({server, page}) => {
   await page.goto(await server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
   await expect(page.locator('main')).toHaveText(/1 < 2/)
-
-  let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
-  expect(errors).toEqual([])
+  assertNoConsoleErrors(page)
 })
 
 test('sanitizes unsafe html', async ({server, page}) => {
@@ -70,7 +65,5 @@ test('sanitizes unsafe html', async ({server, page}) => {
 
   let scriptRan = await page.evaluate(() => (window as any).__MD_SCRIPT__)
   expect(scriptRan).toBeUndefined()
-
-  let errors = await page.evaluate(() => window.$GRAPHENE.getErrors())
-  expect(errors).toEqual([])
+  assertNoConsoleErrors(page)
 })

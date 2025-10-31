@@ -4,6 +4,7 @@ import {fileURLToPath} from 'url'
 import net from 'net'
 import {setConfig} from '../../lang/config.ts'
 import {serve2, mockFileMap} from '../../cli/serve2.ts'
+import {withBrowserConsole, assertNoConsoleErrors} from './browserConsole.ts'
 
 export {expect}
 
@@ -21,8 +22,13 @@ let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 let sharedPort, sharedServer
 
 export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle}>({
+  page: async ({page}, use) => {
+    await withBrowserConsole(page, use)
+  },
+
   // This boots up our cli server on a unique port for e2e tests.
   server: async ({page}, use:any) => {
+    await ensureSharedServer()
     let server: any
     let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
     Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
@@ -30,14 +36,16 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
     try {
       await use({
         url: async () => {
-          let port = await getAvailablePort()
+          let port = await pickPort()
           setConfig({dialect: 'duckdb', port, root})
+          process.env.GRAPHENE_PORT = String(port)
           server = await serve2()
           return `http://localhost:${port}`
         },
         mockFile: (path:string, content:string) => mockFileMap[path] = trimIndentation(content),
       })
     } finally {
+      if (sharedPort != null) process.env.GRAPHENE_PORT = String(sharedPort)
       Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
       if (!page.isClosed()) await page.close()
       await server?.close()
@@ -45,6 +53,7 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
   },
 
   mount: async ({page}: {page: Page}, use) => {
+    await ensureSharedServer()
     let mountFn = async (componentPath: string, props: any) => {
       await page.goto(`http://localhost:${sharedPort}/__ct`)
 
@@ -70,14 +79,11 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
           props: window.__props,
         })
       `})
-
-      // todo: await data load and chart animation completion
     }
 
     await use(mountFn)
     await expect(page.locator('#content > :not(dialog)').first()).toBeVisible()
-    // let errors = page.evaluate(() => window.$GRAPHENE.getErrors())
-    // expect(errors).toEqual([])
+    assertNoConsoleErrors(page)
   },
 
   chart: async ({page}, use) => {
@@ -102,14 +108,12 @@ export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle
 })
 
 test.beforeAll(async () => {
-  sharedPort = await getAvailablePort()
-  let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
-  setConfig({dialect: 'duckdb', port: sharedPort, root})
-  sharedServer = await serve2()
+  await ensureSharedServer()
 })
 
 test.afterAll(async () => {
   if (!process.env.DEBUG) await sharedServer?.close()
+  sharedServer = undefined
 })
 
 test.afterEach(async ({page}) => {
@@ -126,6 +130,22 @@ async function getAvailablePort (): Promise<number> {
       srv.close(() => resolve(port))
     })
   })
+}
+
+async function pickPort () {
+  let port = await getAvailablePort()
+  while (port === sharedPort || port === 4000) port = await getAvailablePort()
+  return port
+}
+
+async function ensureSharedServer () {
+  if (sharedServer) return
+  sharedPort = await getAvailablePort()
+  while (sharedPort === 4000) sharedPort = await getAvailablePort()
+  let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
+  setConfig({dialect: 'duckdb', port: sharedPort, root})
+  process.env.GRAPHENE_PORT = String(sharedPort)
+  sharedServer = await serve2()
 }
 
 function trimIndentation (str:string) {
