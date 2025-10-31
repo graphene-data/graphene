@@ -1,3 +1,0 @@
-table contacts (
-  unique_id VARCHAR primary_key
-)
