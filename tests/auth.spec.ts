@@ -1,4 +1,5 @@
-import {test, expect} from './fixtures'
+import {assertNoConsoleErrors} from '../../core/ui/tests/browserConsole'
+import {test, expect, expectConsoleError} from './fixtures'
 
 const TEST_EMAIL = 'grant@graphenedata.com'
 const TEST_PASSWORD = 'graphenedata'
@@ -26,6 +27,7 @@ test.describe('auth', () => {
 
     await expect(page).toHaveURL(`${cloud.url}/`)
     await expect(page.locator('h1', {hasText: 'Flight Operations Overview'})).toBeVisible()
+    assertNoConsoleErrors(page)
   })
 
   test('prevents unauthorized requests', async ({page, cloud}) => {
@@ -45,6 +47,7 @@ test.describe('auth', () => {
 
     let errorMessage = loginShell.locator('text=/unauthorized credentials|incorrect|invalid|wrong|mismatch|try again/i').first()
     await expect(errorMessage).toBeVisible({timeout: 15_000})
+    expectConsoleError(page, 'Failed to load resource')
     await expect(page).toHaveURL(`${cloud.url}/login`)
     await expect(page).toHaveScreenshot('auth-invalid-credentials.png')
   })
