@@ -2,9 +2,8 @@
   "name": "snowflake-example",
   "version": "0.0.1",
   "scripts": {
-    "auth": "gcloud auth application-default login",
+    "graphene": "node --env-file=../../.env ../../cli/cli.ts",
     "dev": "npm run graphene serve",
-    "graphene": "node ../../cli/cli.ts",
     "compile": "npm run graphene compile",
     "run": "npm run graphene run",
     "serve": "npm run dev"
