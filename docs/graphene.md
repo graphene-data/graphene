@@ -6,6 +6,76 @@ Graphene is a framework for data analysis, semantic modeling, and data visualiza
 
 Graphene also has a CLI that lets you check syntax, run queries, serve data apps, and more.
 
+**Table of Contents**
+
+- [Graphene SQL (GSQL)](#graphene-sql-gsql)
+  - [`table` statements](#table-statements)
+    - [Base columns (required)](#base-columns-required)
+    - [Join relationships](#join-relationships)
+      - [Multiple join relationships between the same two tables](#multiple-join-relationships-between-the-same-two-tables)
+      - [Best practices for modeling join relationships](#best-practices-for-modeling-join-relationships)
+    - [Stored expressions](#stored-expressions)
+  - [`select` statements](#select-statements)
+    - [Using join relationships in queries](#using-join-relationships-in-queries)
+      - [Multi-hop joins](#multi-hop-joins)
+    - [Using stored expressions in queries](#using-stored-expressions-in-queries)
+    - [Safe aggregation in fan-outs](#safe-aggregation-in-fan-outs)
+  - [`table as` statements](#table-as-statements)
+  - [Other miscellaneous details about GSQL](#other-miscellaneous-details-about-gsql)
+- [Graphene data apps (dashboards)](#graphene-data-apps-dashboards)
+  - [Visualization components](#visualization-components)
+    - [Bar chart](#bar-chart)
+      - [All bar chart properties](#all-bar-chart-properties)
+        - [General](#general)
+        - [Data](#data)
+        - [Formatting & Styling](#formatting--styling)
+        - [Value Labels](#value-labels)
+        - [Axes](#axes)
+        - [Custom Echarts properties](#custom-echarts-properties)
+        - [Interactivity](#interactivity)
+    - [Pie chart](#pie-chart)
+      - [All pie chart properties](#all-pie-chart-properties)
+        - [General](#general-1)
+        - [Data](#data-1)
+    - [Line chart](#line-chart)
+      - [All line chart properties](#all-line-chart-properties)
+        - [General](#general-2)
+        - [Data](#data-2)
+        - [Formatting & Styling](#formatting--styling-1)
+        - [Axes](#axes-1)
+        - [Custom Echarts properties](#custom-echarts-properties-1)
+        - [Interactivity](#interactivity-1)
+    - [Area chart](#area-chart)
+      - [All area chart properties](#all-area-chart-properties)
+        - [General](#general-3)
+        - [Data](#data-3)
+        - [Formatting & Styling](#formatting--styling-2)
+        - [Value Labels](#value-labels-1)
+        - [Axes](#axes-2)
+        - [Custom Echarts properties](#custom-echarts-properties-2)
+        - [Interactivity](#interactivity-2)
+    - [Big value](#big-value)
+      - [All big value properties](#all-big-value-properties)
+        - [Data](#data-4)
+        - [Comparison](#comparison)
+        - [Sparkline](#sparkline)
+    - [Table](#table)
+      - [All table properties](#all-table-properties)
+        - [Table](#table-1)
+        - [Groups](#groups)
+        - [Column](#column)
+  - [Input components](#input-components)
+    - [Text input](#text-input)
+      - [All text input properties](#all-text-input-properties)
+    - [Date range](#date-range)
+      - [All date range properties](#all-date-range-properties)
+    - [Dropdown](#dropdown)
+      - [All dropdown properties](#all-dropdown-properties)
+        - [DropdownOption](#dropdownoption)
+  - [Other components](#other-components)
+- [Graphene CLI](#graphene-cli)
+- [AGENT INSTRUCTIONS](#agent-instructions)
+
 ## Graphene SQL (GSQL)
 
 GSQL is comprised of `table` statements that declare tables and `select` statements that query them.
@@ -417,11 +487,11 @@ Here's an example:
 
 ```markdown
 <BarChart 
-    title="Sales by Category"
-    data="orders_by_category_2021"
-    x="month"
-    y="sales"
-    series="category"
+  title="Sales by Category"
+  data="orders_by_category_2021"
+  x="month"
+  y="sales"
+  series="category"
 />
 ```
 
@@ -433,8 +503,8 @@ Here's an example:
 |----------|-------------|---------|---------|
 | title | Chart title. Appears at top left of chart. | string | - |
 | subtitle | Chart subtitle. Appears just under title. | string | - |
-| legend | Turns legend on or off. Legend appears at top center of chart. | `true`, `false` | true for multiple series |
-| chartAreaHeight | Minimum height of the chart area (excl. header and footer) in pixels. Adjusting the height affects all viewport sizes and may impact the mobile UX. | number | 180 |
+| legend | Turns legend on or off. Legend appears at top center of chart. | `true`, `false` | `true` for multiple series |
+| chartAreaHeight | Minimum height of the chart area (excl. header and footer) in pixels. Adjusting the height affects all viewport sizes and may impact the mobile UX. | number | `180` |
 | renderer | Which chart renderer type (canvas or SVG) to use. See ECharts' documentation on renderers. | `canvas`, `svg` | `canvas` |
 | downloadableData | Whether to show the download button to allow users to download the data | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | `true`, `false` | `true` |
@@ -464,8 +534,8 @@ Here's an example:
 | y2Fmt | Format to use for y2 column(s) (see available formats) | Excel-style format, built-in format name, custom format name | - |
 | seriesLabelFmt | Format to use for series label (see available formats) | Excel-style format, built-in format name, custom format name | - |
 | fillColor | Color to override default series color. Only accepts a single color. | CSS name, hexademical, RGB, HSL | - |
-| fillOpacity | % of the full color that should be rendered, with remainder being transparent | number (0 to 1) | 1 |
-| outlineWidth | Width of line surrounding each bar | number | 0 |
+| fillOpacity | % of the full color that should be rendered, with remainder being transparent | number (0 to 1) | `1` |
+| outlineWidth | Width of line surrounding each bar | number | `0` |
 | outlineColor | Color to use for outline if outlineWidth > 0 | CSS name, hexademical, RGB, HSL | - |
 | colorPalette | Array of custom colours to use for the chart. E.g., `{['#cf0d06','#eb5752','#e88a87']}` | array of color strings (CSS name, hexademical, RGB, HSL) | built-in color palette |
 | seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. Note the double curly braces required in the syntax | object with series names and assigned colors seriesColors=`{{'Canada': 'red', 'US': 'blue'}}` | colors applied by order of series in data |
@@ -481,8 +551,8 @@ Here's an example:
 | labels | Show value labels | `true`, `false` | `false` |
 | stackTotalLabel | If using labels, whether to show a total at the top of stacked bar chart | `true`, `false` | `true` |
 | seriesLabels | If using labels, whether to show series labels | `true`, `false` | `true` |
-| labelSize | Font size of value labels | number | 11 |
-| labelPosition | Where label will appear on your series | `outside`, `inside` | Single Series: outside, Stacked: inside, Grouped: outside |
+| labelSize | Font size of value labels | number | `11` |
+| labelPosition | Where label will appear on your series | `outside`, `inside` | Single Series: `outside`, Stacked: `inside`, Grouped: `outside` |
 | labelColor | Font color of value labels | CSS name, hexademical, RGB, HSL | Automatic based on color contrast of background |
 | labelFmt | Format to use for value labels (see available formats) | Excel-style format, built-in format name, custom format name | same as y column |
 | yLabelFmt | Format to use for value labels for series on the y axis. Overrides any other formats (see available formats) | Excel-style format, built-in format name, custom format name | - |
@@ -495,7 +565,7 @@ Here's an example:
 |----------|-------------|---------|---------|
 | swapXY | Swap the x and y axes to create a horizontal chart | `true`, `false` | `false` |
 | yLog | Whether to use a log scale for the y-axis | `true`, `false` | `false` |
-| yLogBase | Base to use when log scale is enabled | number | 10 |
+| yLogBase | Base to use when log scale is enabled | number | `10` |
 | xAxisTitle | Name to show under x-axis. If 'true', formatted column name is used. Only works with swapXY=false | string, `true`, `false` | `false` |
 | yAxisTitle | Name to show beside y-axis. If 'true', formatted column name is used. | string, `true`, `false` | `false` |
 | y2AxisTitle | Name to show beside y2 axis. If 'true', formatted column name is used. | string, `true`, `false` | `false` |
@@ -517,7 +587,7 @@ Here's an example:
 | y2Min | Starting value for the y2-axis | number | - |
 | y2Max | Maximum value for the y2-axis | number | - |
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | `true`, `false` | `false` |
-| yAxisColor | Turns on/off color on the y-axis (turned on by default when secondary y-axis is used). Can also be used to set a specific color | `true`, `false`, color string (CSS name, hexademical, RGB, HSL) | true when y2 used; false otherwise |
+| yAxisColor | Turns on/off color on the y-axis (turned on by default when secondary y-axis is used). Can also be used to set a specific color | `true`, `false`, color string (CSS name, hexademical, RGB, HSL) | `true` when y2 used; `false` otherwise |
 
 ###### Custom Echarts properties
 
@@ -533,6 +603,37 @@ Here's an example:
 |----------|-------------|---------|
 | connectGroup | Group name to connect this chart to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | string |
 
+#### Pie chart
+
+Use a pie chart to show part-to-whole relationships across categories. Best for a small number of categories where proportions are easy to compare.
+
+Here's an example:
+
+```markdown
+<PieChart 
+  title="Sales share by category"
+  data="orders_by_category_2021"
+  category="category"
+  value="sales"
+/>
+```
+
+##### All pie chart properties
+
+###### General
+
+| Property | Description | Options | Default |
+|----------|-------------|---------|---------|
+| title | Chart title. Appears at top left of chart. | string | - |
+| subtitle | Chart subtitle. Appears just under title. | string | - |
+
+###### Data
+
+| Property | Description | Required | Options | Default |
+|------|-------------|----------|---------|---------|
+| data | Query name, wrapped in curly braces | true | query name | - |
+| category | Column to use for slice names | true | column name | - |
+| value | Column to use for slice values | true | column name | - |
 
 #### Line chart
 
@@ -542,12 +643,12 @@ Here's an example:
 
 ```markdown
 <LineChart 
-    title="Monthly Sales"
-    subtitle="Includes all categories"
-    data="orders_by_month"
-    x="month"
-    y="sales_usd0k" 
-    yAxisTitle="Sales per Month"
+  title="Monthly Sales"
+  subtitle="Includes all categories"
+  data="orders_by_month"
+  x="month"
+  y="sales_usd0k" 
+  yAxisTitle="Sales per Month"
 />
 ```
 
@@ -559,8 +660,8 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | title | Chart title. Appears at top left of chart. | false | string | - |
 | subtitle | Chart subtitle. Appears just under title. | false | string | - |
-| legend | Turn legend on or off. Legend appears at top center of chart. | false | `true`, `false` | true for multiple series |
-| chartAreaHeight | Minimum height of the chart area (excl. header and footer) in pixels. Adjusting the height affects all viewport sizes and may impact the mobile UX. | false | number | 180 |
+| legend | Turn legend on or off. Legend appears at top center of chart. | false | `true`, `false` | `true` for multiple series |
+| chartAreaHeight | Minimum height of the chart area (excl. header and footer) in pixels. Adjusting the height affects all viewport sizes and may impact the mobile UX. | false | number | `180` |
 | renderer | Which chart renderer type (canvas or SVG) to use. See ECharts' [documentation on renderers](https://echarts.apache.org/handbook/en/best-practices/canvas-vs-svg/). | false | `canvas`, `svg` | `canvas` |
 | downloadableData | Whether to show the download button to allow users to download the data | false | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | false | `true`, `false` | `true` |
@@ -587,21 +688,21 @@ Here's an example:
 | xFmt | Format to use for x column | false | Excel-style format, built-in format name, custom format name | - |
 | yFmt | Format to use for y column(s) | false | Excel-style format, built-in format name, custom format name | - |
 | y2Fmt | Format to use for y2 column(s) | false | Excel-style format, built-in format name, custom format name | - |
-| seriesLabelFmt | Format to use for series label ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | "-" |
+| seriesLabelFmt | Format to use for series label ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | - |
 | step | Specifies whether the chart is displayed as a step line | false | `true`, `false` | `false` |
 | stepPosition | Configures the position of turn points for a step line chart | false | `start`, `middle`, `end` | `end` |
 | lineColor | Color to override default series color. Only accepts a single color | false | CSS name, hexademical, RGB, HSL | - |
-| lineOpacity | % of the full color that should be rendered, with remainder being transparent | false | number (0 to 1) | 1 |
+| lineOpacity | % of the full color that should be rendered, with remainder being transparent | false | number (0 to 1) | `1` |
 | lineType | Options to show breaks in a line (dashed or dotted) | false | `solid`, `dashed`, `dotted` | `solid` |
-| lineWidth | Thickness of line (in pixels) | false | number | 2 |
+| lineWidth | Thickness of line (in pixels) | false | number | `2` |
 | markers | Turn on/off markers (shapes rendered onto the points of a line) | false | `true`, `false` | `false` |
 | markerShape | Shape to use if markers=true | false | `circle`, `emptyCircle`, `rect`, `triangle`, `diamond` | `circle` |
-| markerSize | Size of each shape (in pixels) | false | number | 8 |
+| markerSize | Size of each shape (in pixels) | false | number | `8` |
 | colorPalette | Array of custom colours to use for the chart. E.g., `{['#cf0d06','#eb5752','#e88a87']}` | false | array of color strings (CSS name, hexademical, RGB, HSL) | - |
 | seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. Note the double curly braces required in the syntax `seriesColors={{"Canada": "red", "US": "blue"}}` | false | object with series names and assigned colors | - |
 | seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart seriesOrder="`{['series one', 'series two']"}` | default order implied by the data |
 | labels | Show value labels | false | `true`, `false` | `false` |
-| labelSize | Font size of value labels | false | number | 11 |
+| labelSize | Font size of value labels | false | number | `11` |
 | labelPosition | Where label will appear on your series | false | `above`, `middle`, `below` | `above` |
 | labelColor | Font color of value labels | false | CSS name, hexademical, RGB, HSL | - |
 | labelFmt | Format to use for value labels | false | Excel-style format, built-in format name, custom format name | - |
@@ -617,7 +718,7 @@ Here's an example:
 | Property | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | yLog | Whether to use a log scale for the y-axis | false | `true`, `false` | `false` |
-| yLogBase | Base to use when log scale is enabled | false | number | 10 |
+| yLogBase | Base to use when log scale is enabled | false | number | `10` |
 | xAxisTitle | Name to show under x-axis. If 'true', formatted column name is used. Only works with swapXY=false | false | `true`, `string`, `false` | `false` |
 | yAxisTitle | Name to show beside y-axis. If 'true', formatted column name is used. | false | `true`, `string`, `false` | `false` |
 | y2AxisTitle | Name to show beside y2 axis. If 'true', formatted column name is used. | false | `true`, `string`, `false` | `false` |
@@ -663,9 +764,9 @@ Here's an example:
 
 ```markdown
 <AreaChart 
-    data="orders_by_month"
-    x="month"
-    y="sales"
+  data="orders_by_month"
+  x="month"
+  y="sales"
 />
 ```
 
@@ -677,8 +778,8 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | title | Chart title. Appears at top left of chart. | false | string | - |
 | subtitle | Chart subtitle. Appears just under title. | false | string | - |
-| legend | Turn legend on or off. Legend appears at top center of chart. | false | `true`, `false` | true for multiple series |
-| chartAreaHeight | Minimum height of the chart area (excl. header and footer) in pixels. Adjusting the height affects all viewport sizes and may impact the mobile UX. | false | number | 180 |
+| legend | Turn legend on or off. Legend appears at top center of chart. | false | `true`, `false` | `true` for multiple series |
+| chartAreaHeight | Minimum height of the chart area (excl. header and footer) in pixels. Adjusting the height affects all viewport sizes and may impact the mobile UX. | false | number | `180` |
 | renderer | Which chart renderer type (canvas or SVG) to use. See ECharts' [documentation on renderers](https://echarts.apache.org/handbook/en/best-practices/canvas-vs-svg/). | false | `canvas`, `svg` | `canvas` |
 | downloadableData | Whether to show the download button to allow users to download the data | false | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | false | `true`, `false` | `true` |
@@ -693,7 +794,7 @@ Here's an example:
 | series | Column to use as the series (groups) in a multi-series chart | false | column name | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | type | Grouping method to use for multi-series charts | false | `stacked`, `stacked100` | `stacked` |
-| handleMissing | Treatment of missing values in the dataset | false | `gap`, `connect`, `zero` | "gap (single series) | zero (multi-series)" |
+| handleMissing | Treatment of missing values in the dataset | false | `gap`, `connect`, `zero` | `gap` for single series, `zero` for multi-series |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
 
@@ -708,7 +809,7 @@ Here's an example:
 | stepPosition | Configures the position of turn points for a step line chart | false | `start`, `middle`, `end` | `end` |
 | fillColor | Color to override default series color. Only accepts a single color. | false | CSS name, hexademical, RGB, HSL | - |
 | lineColor | Color to override default line color. Only accepts a single color. | false | CSS name, hexademical, RGB, HSL | - |
-| fillOpacity | % of the full color that should be rendered, with remainder being transparent | false | number (0 to 1) | 0.7 |
+| fillOpacity | % of the full color that should be rendered, with remainder being transparent | false | number (0 to 1) | `0.7` |
 | line | Show line on top of the area | false | `true`, `false` | `true` |
 | colorPalette | Array of custom colours to use for the chart. E.g., `{['#cf0d06','#eb5752','#e88a87']}` | false | array of color strings (CSS name, hexademical, RGB, HSL) | built-in color palette |
 | seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. Note the double curly braces required in the syntax | false | object with series names and assigned colors | colors applied by order of series in data |
@@ -722,7 +823,7 @@ Here's an example:
 | Property | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | labels | Show value labels | false | `true`, `false` | `false` |
-| labelSize | Font size of value labels | false | number | 11 |
+| labelSize | Font size of value labels | false | number | `11` |
 | labelPosition | Where label will appear on your series | false | `above`, `middle`, `below` | `above` |
 | labelColor | Font color of value labels | false | CSS name, hexademical, RGB, HSL | Automatic based on color contrast of background |
 | labelFmt | Format to use for value labels ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | same as y column |
@@ -733,7 +834,7 @@ Here's an example:
 | Property | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | yLog | Whether to use a log scale for the y-axis | false | `true`, `false` | `false` |
-| yLogBase | Base to use when log scale is enabled | false | number | 10 |
+| yLogBase | Base to use when log scale is enabled | false | number | `10` |
 | xAxisTitle | Name to show under x-axis. If 'true', formatted column name is used. Only works with swapXY=false | false | `true`, `string`, `false` | `false` |
 | yAxisTitle | Name to show beside y-axis. If 'true', formatted column name is used. | false | `true`, `string`, `false` | `false` |
 | xGridlines | Turns on/off gridlines extending from x-axis tick marks (vertical lines when swapXY=false) | false | `true`, `false` | `false` |
@@ -789,11 +890,11 @@ Here's an example:
 | data | Query name, wrapped in curly braces | true | query name | - |
 | value | Column to pull the main value from. | true | column name | - |
 | title | Title of the card. | false | string | Title of the value column. |
-| minWidth | Overrides min-width of component | false | % or px value | "18%" |
+| minWidth | Overrides min-width of component | false | % or px value | `18%` |
 | maxWidth | Adds a max-width to the component | false | % or px value | - |
 | fmt | Sets format for the value ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format, custom format | - |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
-| emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
+| emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | `No records` |
 | link | Used to navigate to other pages. Can be a full external link like `https://google.com` or an internal link like `/sales/performance` | false | - | - |
 
 ###### Comparison
@@ -804,8 +905,8 @@ Here's an example:
 | comparisonTitle | Text to the right of the comparison. | false | string | Title of the comparison column. |
 | comparisonDelta | Whether to display delta symbol and color | false | `true`, `false` | `true` |
 | downIsGood | If present, negative comparison values appear in green, and positive values appear in red. | false | `true`, `false` | `false` |
-| neutralMin | Sets the bottom of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | 0 |
-| neutralMax | Sets the top of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | 0 |
+| neutralMin | Sets the bottom of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | `0` |
+| neutralMax | Sets the top of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | `0` |
 | comparisonFmt | Sets format for the comparison ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format, custom format | - |
 
 ###### Sparkline
@@ -815,7 +916,7 @@ Here's an example:
 | sparkline | Column to pull the date from to create the sparkline. | false | column name | - |
 | sparklineType | Chart type for sparkline | false | `line`, `area`, `bar` | `line` |
 | sparklineValueFmt | Formatting for tooltip values | false | format code | same as fmt if supplied |
-| sparklineDateFmt | Formatting for tooltip dates | false | format code | "YYYY-MM-DD" |
+| sparklineDateFmt | Formatting for tooltip dates | false | format code | `YYYY-MM-DD` |
 | sparklineColor | Color of visualization | false | CSS name, hexademical, RGB, HSL | - |
 | sparklineYScale | Whether to truncate the y-axis of the chart to enhance visibility | false | `true`, `false` | `false` |
 | connectGroup | Group name to connect this sparkline to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | false | string | - |
@@ -828,7 +929,7 @@ Use a Table component to display a richly formatted table of data from a query. 
 Here's an example:
 
 ```markdown
-<Table data="orders_summary"/>
+<Table data="orders_summary" />
 ```
 
 ##### All table properties
@@ -838,26 +939,26 @@ Here's an example:
 | Property | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
-| rows | Number of rows to show in the table before paginating results. Use `rows=all` to show all rows in the table. | false | number, `all` | 10 |
+| rows | Number of rows to show in the table before paginating results. Use `rows=all` to show all rows in the table. | false | number, `all` | `10` |
 | title | Title for the table | false | string | - |
 | subtitle | Subtitle - appears under the title | false | string | - |
-| headerColor | Background color of the header row | false | Hex color code \| css color name | - |
-| headerFontColor | Font color of the header row | false | Hex color code \| css color name | - |
+| headerColor | Background color of the header row | false | Hex color code, css color name | - |
+| headerFontColor | Font color of the header row | false | Hex color code, css color name | - |
 | totalRow | Show a total row at the bottom of the table, defaults to sum of all numeric columns | false | `true`, `false` | `false` |
-| totalRowColor | Background color of the total row | false | Hex color code \| css color name | - |
-| totalFontColor | Font color of the total row | false | Hex color code \| css color name | - |
+| totalRowColor | Background color of the total row | false | Hex color code, css color name | - |
+| totalFontColor | Font color of the total row | false | Hex color code, css color name | - |
 | rowNumbers | Turns on or off row index numbers | false | `true`, `false` | `false` |
 | rowLines | Turns on or off borders at the bottom of each row | false | `true`, `false` | `true` |
 | rowShading | Shades every second row in light grey | false | `true`, `false` | `false` |
-| backgroundColor | Background color of the table | false | Hex color code \| css color name | "-" |
+| backgroundColor | Background color of the table | false | Hex color code, css color name | - |
 | sortable | Enable sort for each column - click the column title to sort | false | `true`, `false` | `true` |
-| sort | Column to sort by on initial page load. Sort direction is asc if unspecified. Can only sort by one column using this prop. If you need multi-column sort, use the order by clause in your sql in combination with this prop. | false | 'column name + asc/desc' | "-" |
+| sort | Column to sort by on initial page load. Sort direction is asc if unspecified. Can only sort by one column using this prop. If you need multi-column sort, use the order by clause in your sql in combination with this prop. | false | 'column name + asc/desc' | - |
 | search | Add a search bar to the top of your table | false | `true`, `false` | `false` |
 | downloadable | Enable download data button below the table on hover | false | `true`, `false` | `true` |
 | formatColumnTitles | Enable auto-formatting of column titles. Turn off to show raw SQL column names | false | `true`, `false` | `true` |
 | wrapTitles | Wrap column titles | false | `true`, `false` | `false` |
 | compact | Enable a more compact table view that allows more content vertically and horizontally | false | `true`, `false` | `false` |
-| link | Makes each row of your table a clickable link. Accepts the name of a column containing the link to use for each row in your table | false | column name | "-" |
+| link | Makes each row of your table a clickable link. Accepts the name of a column containing the link to use for each row in your table | false | column name | - |
 | showLinkCol | Whether to show the column supplied to the `link` prop | false | `true`, `false` | `false` |
 | generateMarkdown | Helper for writing Table syntax with many columns. When set to true, markdown for the Table including each `Column` contained within the query will be generated and displayed below the table. | false | `true`, `false` | `false` |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
@@ -872,9 +973,9 @@ Here's an example:
 | subtotals | Whether to show aggregated totals for the groups | false | `true`, `false` | `false` |
 | subtotalFmt | Specify an override format to use in the subtotal row ([see available formats](/core-concepts/formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format, custom format | - |
 | groupsOpen | [groupType=accordion] Whether to show the accordions as open on page load | false | `true`, `false` | `true` |
-| accordionRowColor | [groupType=accordion] Background color for the accordion row | false | Hex color code \| css color name | - |
-| subtotalRowColor | [groupType=section] Background color for the subtotal row | false | Hex color code \| css color name | - |
-| subtotalFontColor | [groupType=section] Font color for the subtotal row | false | Hex color code \| css color name | - |
+| accordionRowColor | [groupType=accordion] Background color for the accordion row | false | Hex color code, css color name | - |
+| subtotalRowColor | [groupType=section] Background color for the subtotal row | false | Hex color code, css color name | - |
+| subtotalFontColor | [groupType=section] Font color for the subtotal row | false | Hex color code, css color name | - |
 | groupNamePosition | [groupType=section] Where the group label will appear in its cell | false | `top`, `middle`, `bottom` | `middle` |
 
 ###### Column
@@ -885,10 +986,10 @@ Here's an example:
 
 ```markdown
 <Table data="country_summary">
-	<Column id="country" />
-	<Column id="category" />
-	<Column id="value_usd" fmt="eur" />
-  <Column id="yoy" title="Y/Y Growth" fmt="pct3"/>
+  <Column id="country" />
+  <Column id="category" />
+  <Column id="value_usd" fmt="eur" />
+  <Column id="yoy" title="Y/Y Growth" fmt="pct3" />
 </Table>
 ```
 
@@ -944,18 +1045,18 @@ Sparklines (`contentType=sparkline` | `contentType=sparkarea` | `contentType=spa
 | sparkX | Column within an array cell to use as the x-axis for the spark viz. Arrays can be created inside a query using the `array_agg()` function from DuckDB | false | column from array cell | - |
 | sparkY | Column within an array cell to use as the y-axis for the spark viz. Arrays can be created inside a query using the `array_agg()` function from DuckDB | false | column from array cell | - |
 | sparkYScale | Whether to truncate the y-axis | false | `true`, `false` | `false` |
-| sparkHeight | Height of the spark viz. Making the viz taller will increase the height of the full table row | false | number | 18 |
-| sparkWidth | Width of the spark viz | false | number | 90 |
-| sparkColor | Color of the spark viz | false | [ 'Hex color code', 'css color name'] | - |
+| sparkHeight | Height of the spark viz. Making the viz taller will increase the height of the full table row | false | number | `18` |
+| sparkWidth | Width of the spark viz | false | number | `90` |
+| sparkColor | Color of the spark viz | false | Hex color code, css color name | - |
 
 Bar chart column (`contentType=bar`)
 
 | Property | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| barColor | Color of the bars. Affects positive bars only. See `negativeBarColor` to change color of negative bars | false | [ 'Hex color code', 'css color name'] | - |
-| negativeBarColor | Color of negative bars | false | [ 'Hex color code', 'css color name'] | - |
+| barColor | Color of the bars. Affects positive bars only. See `negativeBarColor` to change color of negative bars | false | Hex color code, css color name | - |
+| negativeBarColor | Color of negative bars | false | Hex color code, css color name | - |
 | hideLabels | Whether to hide the data labels on the bars | false | `true`, `false` | `false` |
-| backgroundColor | Background color for bar chart | false | [ 'Hex color code', 'css color name'] | `transparent` |
+| backgroundColor | Background color for bar chart | false | Hex color code, css color name | `transparent` |
 
 Conditional formatting (`contentType=colorscale`)
 
@@ -997,7 +1098,7 @@ where email ilike concat('%', $name_of_input, '%')
 |------|-------------|----------|---------|---------|
 | name | Name of the text input, used to reference the selected value elsewhere as `$name` | true | string | - |
 | title | Title displayed above the text input | false | string | - |
-| placeholder | Alternative placeholder text displayed in the text input | false | string | "Type to search" |
+| placeholder | Alternative placeholder text displayed in the text input | false | string | `Type to search` |
 | hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
@@ -1010,9 +1111,9 @@ Here's an example:
 
 ```markdown
 <DateRange
-    name="date_range_name"
-    data="orders_by_day"
-    dates="day"
+  name="date_range_name"
+  data="orders_by_day"
+  dates="day"
 />
 ```
 
@@ -1034,8 +1135,8 @@ where created_at > $date_range_name_start and < $date_range_name_end
 | start | A manually specified start date to use for the range | false | string formatted YYYY-MM-DD | - |
 | end | A manually specified end date to use for the range | false | string formatted YYYY-MM-DD | - |
 | title | Title to display in the Date Range component | false | string | - |
-| presetRanges | Customize "Select a Range" drop down, by including present range options. Range options: 'Last 7 Days' 'Last 30 Days' 'Last 90 Days' 'Last 365 Days' 'Last 3 Months' 'Last 6 Months' 'Last 12 Months' 'Last Month' 'Last Year' 'Month to Date' 'Month to Today' 'Year to Date' 'Year to Today' 'All Time' | false | string | array of values e.g. `{['Last 7 Days', 'Last 30 Days']}` | undefined |
-| defaultValue | Accepts preset in string format to apply default value in Date Range picker. Range options: 'Last 7 Days' 'Last 30 Days' 'Last 90 Days' 'Last 365 Days' 'Last 3 Months' 'Last 6 Months' 'Last 12 Months' 'Last Month' 'Last Year' 'Month to Date' 'Month to Today' 'Year to Date' 'Year to Today' 'All Time' | false | string e.g. {'Last 7 Days'} or {'Last 6 Months'} | undefined |
+| presetRanges | Customize "Select a Range" drop down, by including preset range options. Range options: 'Last 7 Days' 'Last 30 Days' 'Last 90 Days' 'Last 365 Days' 'Last 3 Months' 'Last 6 Months' 'Last 12 Months' 'Last Month' 'Last Year' 'Month to Date' 'Month to Today' 'Year to Date' 'Year to Today' 'All Time' | false | string, array of values e.g. `{['Last 7 Days', 'Last 30 Days']}` | - |
+| defaultValue | Accepts preset in string format to apply default value in Date Range picker. Range options: 'Last 7 Days' 'Last 30 Days' 'Last 90 Days' 'Last 365 Days' 'Last 3 Months' 'Last 6 Months' 'Last 12 Months' 'Last Month' 'Last Year' 'Month to Date' 'Month to Today' 'Year to Date' 'Year to Today' 'All Time' | false | string e.g. `{'Last 7 Days'}` or `{'Last 6 Months'}` | - |
 | hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
@@ -1076,13 +1177,13 @@ where status = $status_dropdown
 | data | Query name, wrapped in curly braces | false | query name | - |
 | value | Column name from the query containing values to pick from | false | column name | - |
 | multiple | Enables multi-select which returns a list | false | `true`, `false` | `false` |
-| defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Arrays supported for multi-select. | false | value from dropdown \| array of values e.g. `{['Value 1', 'Value 2']}` | - |
+| defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Arrays supported for multi-select. | false | value from dropdown, array of values e.g. `{['Value 1', 'Value 2']}` | - |
 | selectAllByDefault | Selects and returns all values, multiple property required | false | `true`, `false` | `false` |
 | noDefault | Stops any default from being selected. Overrides any set `defaultValue`. | false | boolean | `false` |
 | disableSelectAll | Removes the `Select all` button. Recommended for large datasets. | false | boolean | `false` |
 | label | Column name from the query containing labels to display instead of the values (e.g., you may want to have the drop-down use `customer_id` as the value, but show `customer_name` to your users) | false | column name | Uses the column in value |
 | title | Title to display above the dropdown | false | string | - |
-| order | Column to sort options by, with optional ordering keyword | false | column name [ asc \| desc ] | Ascending based on dropdown value (or label, if specified) |
+| order | Column to sort options by, with optional ordering keyword | false | column name [ `asc`, `desc` ] | Ascending based on dropdown value (or label, if specified) |
 | where | SQL where fragment to filter options by (e.g., where sales > 40000) | false | SQL where clause | - |
 | hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
@@ -1106,6 +1207,9 @@ Here's an example:
 | value | Value to use when the option is selected | true | - | - |
 | valueLabel | Label to display for the option in the dropdown | false | - | Uses the value |
 
+### Other components
+
+`<Row></Row>` - Evenly distributes components inside along the same row.
 
 ## Graphene CLI
 
