@@ -19,6 +19,7 @@ let uiRoot: string
 export async function serve2 (): Promise<ViteDevServer> {
   grapheneRoot = config.root
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
+  let port = Number(process.env.GRAPHENE_PORT) || 4000
 
   await fs.ensureDir(path.resolve(grapheneRoot, 'node_modules/.graphene'))
   await fs.writeFile(path.resolve(grapheneRoot, `node_modules/.graphene/${process.env.NODE_ENV == 'test' ? 'test' : 'serve'}.pid`), String(process.pid))
@@ -43,7 +44,7 @@ export async function serve2 (): Promise<ViteDevServer> {
       mockFilesForTests(),
     ],
     server: {
-      port: config.port,
+      port,
       fs: {strict: false},
       strictPort: true,
     },
@@ -58,7 +59,7 @@ export async function serve2 (): Promise<ViteDevServer> {
 
   await server.listen()
 
-  console.log(`Server running at http://localhost:${config.port}`)
+  console.log(`Server running at http://localhost:${port}`)
   return server
 }
 

@@ -18,8 +18,9 @@
     "svelte": "4.2.19"
   },
   "graphene": {
-    "dialect": "bigquery",
     "namespace": "bigquery-public-data.thelook_ecommerce",
-    "googleProjectId": "intense-acumen-470417-u5"
+    "bigquery": {
+      "projectId": "intense-acumen-470417-u5"
+    }
   }
 }
