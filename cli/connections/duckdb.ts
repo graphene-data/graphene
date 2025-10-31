@@ -19,7 +19,7 @@ export class DuckDBConnection implements QueryConnection {
   }
 
   private async initialize () {
-    let dbPath: string | undefined = this.options.path
+    let dbPath = this.options.path
     if (!dbPath) {
       let files = await fs.readdir(config.root)
       dbPath = files.find(f => f.endsWith('.duckdb'))

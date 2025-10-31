@@ -44,6 +44,7 @@
     "mdsvex": "^0.12.6",
     "nanoid": "3.3.8",
     "sanitize-html": "^2.17.0",
+    "snowflake-sdk": "^2.3.1",
     "ssf": "^0.11.2",
     "svelte": "4.2.19",
     "unist-util-visit": "4.1.2",
