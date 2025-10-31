@@ -38,7 +38,7 @@ export class SnowflakeConnection implements QueryConnection {
     }
 
     // default is info, which is kinda chatty on success. TRACE is super useful for debugging though
-    snowflake.configure({logLevel: process.env.SNOWFLAKE_LOG_LEVEL as any || 'WARN'})
+    snowflake.configure({logLevel: process.env.SNOWFLAKE_LOG_LEVEL as any || 'WARN', logFilePath: '/dev/null'})
 
     this.connection = snowflake.createConnection({
       ...opts,
