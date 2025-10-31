@@ -5,7 +5,7 @@ import {type QueryConnection} from './types.ts'
 import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 
 interface DuckDbOptions {
-  path: string
+  path?: string
 }
 
 export class DuckDBConnection implements QueryConnection {
@@ -13,8 +13,8 @@ export class DuckDBConnection implements QueryConnection {
   ready: Promise<void>
   connection: InnerConnection | null = null
 
-  constructor (options: DuckDbOptions) {
-    this.options = options
+  constructor (options?: DuckDbOptions) {
+    this.options = options || {}
     this.ready = this.initialize()
   }
 
