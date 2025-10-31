@@ -1,0 +1,28 @@
+{
+  "name": "snowflake-example",
+  "version": "0.0.1",
+  "scripts": {
+    "auth": "gcloud auth application-default login",
+    "dev": "npm run graphene serve",
+    "graphene": "node ../../cli/cli.ts",
+    "compile": "npm run graphene compile",
+    "run": "npm run graphene run",
+    "serve": "npm run dev"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "type": "module",
+  "dependencies": {
+    "@graphenedata/cli": "workspace:*",
+    "svelte": "4.2.19"
+  },
+  "graphene": {
+    "dialect": "snowflake",
+    "namespace": "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02",
+    "snowflake": {
+      "account": "cl37855.us-east-2.aws",
+      "username": "demouser"
+    }
+  }
+}
