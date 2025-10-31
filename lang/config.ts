@@ -1,15 +1,26 @@
 import * as fs from 'fs'
 import path from 'path'
 
-export let config: Config = {dialect: 'duckdb'} as Config
+export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
 export interface Config {
+  root: string
   dialect: string
   namespace?: string
   port?: number
-  googleProjectId?: string
-  googleServiceAccountKeyPath?: string
-  root: string
+
+  bigquery?: {
+    projectId?: string
+    keyPath?: string
+  }
+
+  snowflake?: {
+    account: string
+    username: string
+    privateKeyPath: string
+    schema?: string
+    database?: string
+  }
 }
 
 // Used by tests
@@ -31,10 +42,9 @@ export function loadConfig (dir:string) {
     console.warn('No package.json found in current directory')
   }
 
-  setConfig({
-    ...packageJsonObject,
-    dialect: packageJsonObject.dialect || 'duckdb',
-    port: process.env.GRAPHENE_PORT || packageJsonObject.port || 4000,
-    root: packageJsonObject.root || process.cwd(),
-  })
+  let dialect = 'duckdb'
+  if (packageJsonObject.bigquery) dialect = 'bigquery'
+  else if (packageJsonObject.snowflake) dialect = 'snowflake'
+
+  setConfig({...packageJsonObject, dialect, root: packageJsonObject.root || process.cwd()})
 }

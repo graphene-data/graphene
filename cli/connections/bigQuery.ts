@@ -1,23 +1,22 @@
 import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
-import {config} from '../../lang/config.ts'
 import {type QueryConnection} from './types.ts'
+import {config} from '../../lang/config.ts'
+
+// You can also set GOOGLE_APPLICATION_CREDENTIALS to point at a service account key file
 
 export class BigQueryConnection implements QueryConnection {
   private readonly client: BigQuery
 
   constructor (options: BigQueryOptions = {}) {
+    options.projectId ||= config.bigquery?.projectId
     if (process.env.GOOGLE_CREDENTIALS_CONTENT) {
       let parsed = JSON.parse(process.env.GOOGLE_CREDENTIALS_CONTENT)
       options.projectId = parsed.project_id
       options.credentials = parsed
     }
 
-    options.projectId ||= config.googleProjectId
-    options.maxRetries ||= 3
-    options.userAgent ||= 'Graphene'
-
-    if (!options.projectId) throw new Error('googleProjectId must be set in config or provided in service account credentials')
-    this.client = new BigQuery(options)
+    if (!options.projectId) throw new Error('projectId must be set in config or provided in service account credentials')
+    this.client = new BigQuery({...options, userAgent: 'Graphene'})
   }
 
   async runQuery (sql: string) {
