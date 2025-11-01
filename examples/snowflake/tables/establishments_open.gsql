@@ -1,0 +1,84 @@
+-- Establishments (restaurants) that are open
+table establishments_open (
+  establishment_id TEXT primary_key, -- Unique identification number generated for each individual establishment
+  first_seen DATE, -- Date establishment was first seen by Brizo
+  last_reviewed DATE, -- Date of most recent review seen by Brizo
+  location_latitude FLOAT, -- Establishment latitude
+  location_longitude FLOAT, -- Establishment longitude
+  score FLOAT, -- Weighted average score accross all review sites
+  score_change FLOAT, -- Recent change in score
+  chain_nationwide_locations NUMBER, -- Number of locations at the national level for the chain
+  established NUMBER, -- Establishment's year established
+  location_density_0m NUMBER, -- Number of establishments at the same address
+  location_density_100m NUMBER, -- Number of establishments within 100m of this establishment
+  location_density_5mi NUMBER, -- Number of establishments within 5 miles of this establishment
+  price_median NUMBER, -- Median Menu Meal Price
+  price_pctl_20 NUMBER, -- 20th percentile menu item price point
+  price_pctl_80 NUMBER, -- 80th percentile menu item price point
+  reviews_per_month NUMBER, -- Recent average number of new reviews accross all review sites
+  review_count NUMBER, -- Total number of reviews accross all review sites
+  score_rounded NUMBER, -- Weighted average score accross all review sites rounded to the nearest half point
+  website_traffic NUMBER, -- Estimated monthly visitors
+  alternate_name TEXT, -- Alternate name or parent corporation
+  ambiances TEXT, -- Ambiance of the establishment
+  amenities TEXT, -- Amenities offered by the establishment
+  awards TEXT, -- Awards of the establishment
+  beverages TEXT, -- Beverages being offered from the menu
+  business_types TEXT, -- Listed business types from covered sources
+  chain_country_code TEXT, -- Country code of the location of the chain establishment (Identical to Establishment Country Code)
+  chain_id TEXT, -- Unique identifier generated for each individual chain
+  chain_name TEXT, -- Name of the restaurant chain
+  chain_url TEXT, -- URL of the restaurant chain
+  cuisines_continental TEXT, -- Cuisines offered by the establishment
+  cuisines_regional TEXT, -- Cuisines offered by the establishment
+  diets TEXT, -- Dietary styles of the establishment
+  direct_emails TEXT, -- Validated direct email addresses
+  dishes TEXT, -- Some of their typical dishes
+  franchisee_name TEXT, -- Entity which owns specific franchise outlet(s) within a franchise network
+  franchisor_name TEXT, -- Entity which owns the franchise network
+  generic_emails TEXT, -- Validated generic role-based email addresses
+  hours_open TEXT, -- Opening hours of that establishment
+  link TEXT, -- Direct link to Brizo FoodMetrics
+  location_city TEXT, -- Establishment city location
+  location_country_code TEXT, -- Establishment country location
+  location_county TEXT, -- Establishment county
+  location_located_in_business_type TEXT, -- Type of the parent establishment or business within which this establishment is located, if applicable
+  location_located_in_name TEXT, -- Name of the parent establishment or business within which this establishment is located, if applicable
+  location_metro_area TEXT, -- Establishment metro area
+  location_state_code TEXT, -- Establishment state location
+  location_street TEXT, -- Establishment street address
+  location_unit TEXT, -- Establishment unit/suite/apartment number
+  location_zip TEXT, -- Establishment zip code
+  md5 TEXT, -- MD5 of JSON file
+  meals TEXT, -- Day parts of meals offered by establishment (breakfast, brunch, lunch etc.)
+  name TEXT, -- Name of the establishment
+  parent_name TEXT, -- Name of the parent company
+  parent_url TEXT, -- Url of the parent company
+  phone TEXT, -- Establishment phone number
+  price_symbolic TEXT, -- Symbolic menu price range ($,$$,$$$)
+  primary_email TEXT, -- Most commonly found validated direct or generic email address
+  referrals_google_delivery TEXT, -- Third-Party Delivery Services found on Google's page about that Establishment
+  referrals_google_ordering TEXT, -- Third-Party Ordering Services found on Google's page about that Establishment
+  status TEXT, -- Indicates if establishment is open or closed
+  timezone_dst TEXT, -- Whether or not the location observes daylight savings time
+  timezone_name TEXT, -- Timezone name at the location
+  timezone_utc TEXT, -- Timezone at the location in UTC format
+  vendors TEXT, -- Names of all current tech vendors detected on the restaurant website or other sources
+  website TEXT, -- Establishment URL
+  website_status TEXT, -- Whether Brizo verified the website or not
+  updated TIMESTAMP_NTZ, -- Most recent date the establishment was updated in BFM database
+  chain_location VARIANT, -- Street, unit, city, state, zip of Chain's HQ in JSON structure
+  foot_traffic_history_by_month VARIANT, -- Estimate of people who spend a non-nominal amount of time (i.e. more than 5 minutes) at an establishment recorded by month. An establishment may share foot traffic with other establishments within a mall, plaza, or multiple floors in a building if they are within 25m of each other
+  foot_traffic_latest_month VARIANT, -- Last entry registered in the food traffic history by month; latest estimation of people who spend a non-nominal amount of time at this specific geographic location in a month.
+  franchisee_location VARIANT, -- Street, unit, city, state, zip of Franchisee Name in JSON structure
+  franchisor_location VARIANT, -- Street, unit, city, state, zip of Franchisor Name in JSON structure
+  location_located_in_location_address VARIANT, -- Street, unit, city, state, zip of Location's Located In address in JSON structure
+  website_traffic_history VARIANT, -- Historical estimated monthly visitors
+
+  join_many contacts on establishment_id = contacts.establishment_id,
+  join_many menus on establishment_id = menus.establishment_id,
+  join_many menu_items on establishment_id = menu_items.establishment_id,
+  join_many ratings on establishment_id = ratings.establishment_id,
+  join_many technologies on establishment_id = technologies.establishment_id
+)
+

@@ -1,0 +1,16 @@
+table menus (
+  menu_id TEXT primary_key, -- Unique identifier
+  is_current BOOLEAN, -- Indicates currently active menu sources per establishment. Note: The is_current status will always be FALSE for closed establishments
+  last_observed_at DATE, -- The date on which this menu was last observed at this source
+  menu_item_price_20th_percentile NUMBER, -- The rounded 20th percentile price of current items on this menu. If a menu is not current, the last set of observed menu items are used for the calculation
+  menu_item_price_80th_percentile NUMBER, -- The rounded 80th percentile price of current items on this menu. If a menu is not current, the last set of observed menu items are used for the calculation
+  menu_item_price_median NUMBER, -- The rounded median price of current items on this menu. If a menu is not current, the last set of observed menu items are used for the calculation
+  establishment_id TEXT, -- Unique ID of individual establishment
+  source TEXT, -- Source of menu
+  url TEXT, -- URL of menu source
+  observations VARIANT, -- Date(s) menu was captured from source
+
+  join_one establishments_open on establishment_id = establishments_open.establishment_id,
+  join_many menu_items on menu_id = menu_items.menu_id
+)
+
