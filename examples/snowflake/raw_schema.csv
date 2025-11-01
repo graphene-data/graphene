@@ -1,0 +1,170 @@
+TABLE_NAME,COLUMN_NAME,DATA_TYPE,COMMENT
+CONTACTS,IS_CURRENT,BOOLEAN,Indicates the most recent currently active contacts for a given establishment. Note: The is_current status will always be FALSE for closed establishments
+CONTACTS,EMAIL_TEST_DATE,DATE,When the email was last tested
+CONTACTS,COMPANY_NAME,TEXT,"Establishment owner name, if different than Establishment name"
+CONTACTS,CONTACT_ID,TEXT,Unique ID of the contact
+CONTACTS,EMAIL,TEXT,Contact email address
+CONTACTS,EMAIL_TEST_RESULT,TEXT,Result of the last email test
+CONTACTS,EMAIL_TYPE,TEXT,Indicates a direct or role-based email address
+CONTACTS,ESTABLISHMENT_ID,TEXT,Unique ID of the related establishment
+CONTACTS,FIRST_NAME,TEXT,Contact first name
+CONTACTS,FIRST_SEEN,TEXT,Date contact was added to Brizo FoodMetrics
+CONTACTS,LAST_NAME,TEXT,Contact last name
+CONTACTS,LAST_SEEN,TEXT,Last date contact was seen on source
+CONTACTS,LEVEL,TEXT,Contact level of experience
+CONTACTS,LINKEDIN,TEXT,LinkedIn profile URL
+CONTACTS,LOCATION,TEXT,parent-level or establishement-level
+CONTACTS,NAME,TEXT,Contact first and last name
+CONTACTS,PHONE,TEXT,Contact phone number
+CONTACTS,ROLE,TEXT,Contact role ex: Finance or Marketing etc.
+CONTACTS,TITLE,TEXT,Contact title
+CONTACTS,UNIQUE_ID,TEXT,Unique ID of the record
+CONTACTS,COMPANY_LOCATION,VARIANT,"Street, unit, city, state code, zip of Company Name"
+CONTACTS,RECORDS,VARIANT,Concatenation of multiple contact fields
+ENTITIES,SCORE,NUMBER,Percentage score of matched ingredient (score can be 100 for extracted items and maximum of 99 for predicted)
+ENTITIES,CATEGORY,TEXT,Category of entity
+ENTITIES,ENTITY_ID,TEXT,Brizo entity ID
+ENTITIES,MENU_ITEM_ID,TEXT,Unique item id
+ENTITIES,NAME,TEXT,Name of matched entity
+ENTITIES,SUBCATEGORY,TEXT,Subcategory of entity
+ENTITIES,TYPE,TEXT,Entity type
+ENTITIES,MATCHES,VARIANT,Matched entity tag
+ENTITIES,VARIANT,VARIANT,Attributes of entity
+ESTABLISHMENTS_CLOSED,CLOSED_DATE,DATE,Date Brizo identified the establishment as closed
+ESTABLISHMENTS_CLOSED,FIRST_SEEN,DATE,Date establishment was first seen by Brizo
+ESTABLISHMENTS_CLOSED,ALTERNATE_NAME,TEXT,Alternate name or parent corporation
+ESTABLISHMENTS_CLOSED,CHAIN_ID,TEXT,Unique identifier generated for each individual chain
+ESTABLISHMENTS_CLOSED,CHAIN_NAME,TEXT,Name of the restaurant chain
+ESTABLISHMENTS_CLOSED,CHAIN_URL,TEXT,URL of the restaurant chain
+ESTABLISHMENTS_CLOSED,ESTABLISHMENT_ID,TEXT,Unique identification number generated for each individual establishment
+ESTABLISHMENTS_CLOSED,LOCATION_CITY,TEXT,Establishment city location
+ESTABLISHMENTS_CLOSED,LOCATION_COUNTRY_CODE,TEXT,Establishment country location
+ESTABLISHMENTS_CLOSED,LOCATION_STATE_CODE,TEXT,Establishment state location
+ESTABLISHMENTS_CLOSED,LOCATION_STREET,TEXT,Establishment street address
+ESTABLISHMENTS_CLOSED,LOCATION_UNIT,TEXT,Establishment unit/suite/apartment number
+ESTABLISHMENTS_CLOSED,LOCATION_ZIP,TEXT,Establishment zip code
+ESTABLISHMENTS_CLOSED,MD5,TEXT,MD5 of JSON file
+ESTABLISHMENTS_CLOSED,NAME,TEXT,Name of the establishment
+ESTABLISHMENTS_CLOSED,PARENT_NAME,TEXT,Name of the parent company
+ESTABLISHMENTS_CLOSED,STATUS,TEXT,Indicates if establishment is open or closed
+ESTABLISHMENTS_CLOSED,WEBSITE,TEXT,Establishment URL
+ESTABLISHMENTS_CLOSED,UPDATED,TIMESTAMP_NTZ,Most recent date the establishment was updated in BFM database
+ESTABLISHMENTS_OPEN,FIRST_SEEN,DATE,Date establishment was first seen by Brizo
+ESTABLISHMENTS_OPEN,LAST_REVIEWED,DATE,Date of most recent review seen by Brizo
+ESTABLISHMENTS_OPEN,LOCATION_LATITUDE,FLOAT,Establishment latitude
+ESTABLISHMENTS_OPEN,LOCATION_LONGITUDE,FLOAT,Establishment longitude
+ESTABLISHMENTS_OPEN,SCORE,FLOAT,Weighted average score accross all review sites
+ESTABLISHMENTS_OPEN,SCORE_CHANGE,FLOAT,Recent change in score
+ESTABLISHMENTS_OPEN,CHAIN_NATIONWIDE_LOCATIONS,NUMBER,Number of locations at the national level for the chain
+ESTABLISHMENTS_OPEN,ESTABLISHED,NUMBER,Establishment's year established
+ESTABLISHMENTS_OPEN,LOCATION_DENSITY_0M,NUMBER,Number of establishments at the same address
+ESTABLISHMENTS_OPEN,LOCATION_DENSITY_100M,NUMBER,Number of establishments within 100m of this establishment
+ESTABLISHMENTS_OPEN,LOCATION_DENSITY_5MI,NUMBER,Number of establishments within 5 miles of this establishment
+ESTABLISHMENTS_OPEN,PRICE_MEDIAN,NUMBER,Median Menu Meal Price
+ESTABLISHMENTS_OPEN,PRICE_PCTL_20,NUMBER,20th percentile menu item price point
+ESTABLISHMENTS_OPEN,PRICE_PCTL_80,NUMBER,80th percentile menu item price point
+ESTABLISHMENTS_OPEN,REVIEWS_PER_MONTH,NUMBER,Recent average number of new reviews accross all review sites
+ESTABLISHMENTS_OPEN,REVIEW_COUNT,NUMBER,Total number of reviews accross all review sites
+ESTABLISHMENTS_OPEN,SCORE_ROUNDED,NUMBER,Weighted average score accross all review sites rounded to the nearest half point
+ESTABLISHMENTS_OPEN,WEBSITE_TRAFFIC,NUMBER,Estimated monthly visitors
+ESTABLISHMENTS_OPEN,ALTERNATE_NAME,TEXT,Alternate name or parent corporation
+ESTABLISHMENTS_OPEN,AMBIANCES,TEXT,Ambiance of the establishment
+ESTABLISHMENTS_OPEN,AMENITIES,TEXT,Amenities offered by the establishment
+ESTABLISHMENTS_OPEN,AWARDS,TEXT,Awards of the establishment
+ESTABLISHMENTS_OPEN,BEVERAGES,TEXT,Beverages being offered from the menu
+ESTABLISHMENTS_OPEN,BUSINESS_TYPES,TEXT,Listed business types from covered sources
+ESTABLISHMENTS_OPEN,CHAIN_COUNTRY_CODE,TEXT,Country code of the location of the chain establishment (Identical to Establishment Country Code)
+ESTABLISHMENTS_OPEN,CHAIN_ID,TEXT,Unique identifier generated for each individual chain
+ESTABLISHMENTS_OPEN,CHAIN_NAME,TEXT,Name of the restaurant chain
+ESTABLISHMENTS_OPEN,CHAIN_URL,TEXT,URL of the restaurant chain
+ESTABLISHMENTS_OPEN,CUISINES_CONTINENTAL,TEXT,Cuisines offered by the establishment
+ESTABLISHMENTS_OPEN,CUISINES_REGIONAL,TEXT,Cuisines offered by the establishment
+ESTABLISHMENTS_OPEN,DIETS,TEXT,Dietary styles of the establishment
+ESTABLISHMENTS_OPEN,DIRECT_EMAILS,TEXT,Validated direct email addresses
+ESTABLISHMENTS_OPEN,DISHES,TEXT,Some of their typical dishes
+ESTABLISHMENTS_OPEN,ESTABLISHMENT_ID,TEXT,Unique identification number generated for each individual establishment
+ESTABLISHMENTS_OPEN,FRANCHISEE_NAME,TEXT,Entity which owns specific franchise outlet(s) within a franchise network
+ESTABLISHMENTS_OPEN,FRANCHISOR_NAME,TEXT,Entity which owns the franchise network
+ESTABLISHMENTS_OPEN,GENERIC_EMAILS,TEXT,Validated generic role-based email addresses
+ESTABLISHMENTS_OPEN,HOURS_OPEN,TEXT,Opening hours of that establishment
+ESTABLISHMENTS_OPEN,LINK,TEXT,Direct link to Brizo FoodMetrics
+ESTABLISHMENTS_OPEN,LOCATION_CITY,TEXT,Establishment city location
+ESTABLISHMENTS_OPEN,LOCATION_COUNTRY_CODE,TEXT,Establishment country location
+ESTABLISHMENTS_OPEN,LOCATION_COUNTY,TEXT,Establishment county
+ESTABLISHMENTS_OPEN,LOCATION_LOCATED_IN_BUSINESS_TYPE,TEXT,"Type of the parent establishment or business within which this establishment is located, if applicable"
+ESTABLISHMENTS_OPEN,LOCATION_LOCATED_IN_NAME,TEXT,"Name of the parent establishment or business within which this establishment is located, if applicable"
+ESTABLISHMENTS_OPEN,LOCATION_METRO_AREA,TEXT,Establishment metro area
+ESTABLISHMENTS_OPEN,LOCATION_STATE_CODE,TEXT,Establishment state location
+ESTABLISHMENTS_OPEN,LOCATION_STREET,TEXT,Establishment street address
+ESTABLISHMENTS_OPEN,LOCATION_UNIT,TEXT,Establishment unit/suite/apartment number
+ESTABLISHMENTS_OPEN,LOCATION_ZIP,TEXT,Establishment zip code
+ESTABLISHMENTS_OPEN,MD5,TEXT,MD5 of JSON file
+ESTABLISHMENTS_OPEN,MEALS,TEXT,"Day parts of meals offered by establishment (breakfast, brunch, lunch etc.)"
+ESTABLISHMENTS_OPEN,NAME,TEXT,Name of the establishment
+ESTABLISHMENTS_OPEN,PARENT_NAME,TEXT,Name of the parent company
+ESTABLISHMENTS_OPEN,PARENT_URL,TEXT,Url of the parent company
+ESTABLISHMENTS_OPEN,PHONE,TEXT,Establishment phone number
+ESTABLISHMENTS_OPEN,PRICE_SYMBOLIC,TEXT,"Symbolic menu price range ($,$$,$$$)"
+ESTABLISHMENTS_OPEN,PRIMARY_EMAIL,TEXT,Most commonly found validated direct or generic email address
+ESTABLISHMENTS_OPEN,REFERRALS_GOOGLE_DELIVERY,TEXT,Third-Party Delivery Services found on Google's page about that Establishment
+ESTABLISHMENTS_OPEN,REFERRALS_GOOGLE_ORDERING,TEXT,Third-Party Ordering Services found on Google's page about that Establishment
+ESTABLISHMENTS_OPEN,STATUS,TEXT,Indicates if establishment is open or closed
+ESTABLISHMENTS_OPEN,TIMEZONE_DST,TEXT,Whether or not the location observes daylight savings time
+ESTABLISHMENTS_OPEN,TIMEZONE_NAME,TEXT,Timezone name at the location
+ESTABLISHMENTS_OPEN,TIMEZONE_UTC,TEXT,Timezone at the location in UTC format
+ESTABLISHMENTS_OPEN,VENDORS,TEXT,Names of all current tech vendors detected on the restaurant website or other sources
+ESTABLISHMENTS_OPEN,WEBSITE,TEXT,Establishment URL
+ESTABLISHMENTS_OPEN,WEBSITE_STATUS,TEXT,Whether Brizo verified the website or not
+ESTABLISHMENTS_OPEN,UPDATED,TIMESTAMP_NTZ,Most recent date the establishment was updated in BFM database
+ESTABLISHMENTS_OPEN,CHAIN_LOCATION,VARIANT,"Street, unit, city, state, zip of Chain's HQ in JSON structure"
+ESTABLISHMENTS_OPEN,FOOT_TRAFFIC_HISTORY_BY_MONTH,VARIANT,"Estimate of people who spend a non-nominal amount of time (i.e. more than 5 minutes) at an establishment recorded by month. An establishment may share foot traffic with other establishments within a mall, plaza, or multiple floors in a building if they are within 25m of each other"
+ESTABLISHMENTS_OPEN,FOOT_TRAFFIC_LATEST_MONTH,VARIANT,Last entry registered in the food traffic history by month; latest estimation of people who spend a non-nominal amount of time at this specific geographic location in a month.
+ESTABLISHMENTS_OPEN,FRANCHISEE_LOCATION,VARIANT,"Street, unit, city, state, zip of Franchisee Name in JSON structure"
+ESTABLISHMENTS_OPEN,FRANCHISOR_LOCATION,VARIANT,"Street, unit, city, state, zip of Franchisor Name in JSON structure"
+ESTABLISHMENTS_OPEN,LOCATION_LOCATED_IN_LOCATION_ADDRESS,VARIANT,"Street, unit, city, state, zip of Location’s Located In address in JSON structure"
+ESTABLISHMENTS_OPEN,WEBSITE_TRAFFIC_HISTORY,VARIANT,Historical estimated monthly visitors
+MENUS,IS_CURRENT,BOOLEAN,Indicates currently active menu sources per establishment. Note: The is_current status will always be FALSE for closed establishments
+MENUS,LAST_OBSERVED_AT,DATE,The date on which this menu was last observed at this source
+MENUS,MENU_ITEM_PRICE_20TH_PERCENTILE,NUMBER,"The rounded 20th percentile price of current items on this menu. If a menu is not current, the last set of observed menu items are used for the calculation"
+MENUS,MENU_ITEM_PRICE_80TH_PERCENTILE,NUMBER,"The rounded 80th percentile price of current items on this menu. If a menu is not current, the last set of observed menu items are used for the calculation"
+MENUS,MENU_ITEM_PRICE_MEDIAN,NUMBER,"The rounded median price of current items on this menu. If a menu is not current, the last set of observed menu items are used for the calculation"
+MENUS,ESTABLISHMENT_ID,TEXT,Unique ID of individual establishment
+MENUS,MENU_ID,TEXT,Unique identifier
+MENUS,SOURCE,TEXT,Source of menu
+MENUS,URL,TEXT,URL of menu source
+MENUS,OBSERVATIONS,VARIANT,Date(s) menu was captured from source
+MENU_ITEMS,IS_CURRENT,BOOLEAN,Indicates the most recent entry for active menu items per menu source currently used by a given establishment. Note: The is_current status will always be FALSE for closed establishments
+MENU_ITEMS,OBSERVED_AT,DATE,Date(s) menu item was captured
+MENU_ITEMS,PRICE,NUMBER,Current price
+MENU_ITEMS,CATEGORY,TEXT,Menu item categorization
+MENU_ITEMS,DESCRIPTION,TEXT,Menu item description as appearing on menu
+MENU_ITEMS,ESTABLISHMENT_ID,TEXT,Unique ID of individual establishment
+MENU_ITEMS,FLAGS,TEXT,Additional data point(s) from marketplace
+MENU_ITEMS,MENU_ID,TEXT,ID from Menu table
+MENU_ITEMS,MENU_ITEM_ID,TEXT,Unique item id
+MENU_ITEMS,NAME,TEXT,Item name
+MENU_ITEMS,SOURCE,TEXT,Source of menu item
+RATINGS,IS_CURRENT,BOOLEAN,Indicates the most recent entry per ratings source currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
+RATINGS,SEEN,DATE,Date
+RATINGS,SCORE,FLOAT,Rating score 1-5
+RATINGS,CHECKINS,NUMBER,Facebook total checkins
+RATINGS,FOLLOWERS,NUMBER,Total social media Followers
+RATINGS,FOLLOWINGS,NUMBER,Number of pages/people followed by the establishment on social media
+RATINGS,LIKES,NUMBER,Total social media Likes
+RATINGS,POST_COUNT,NUMBER,Number of posts from the establishment
+RATINGS,REVIEW_COUNT,NUMBER,Total reviews of the establishment
+RATINGS,AWARDS,TEXT,Awards of the establishment
+RATINGS,ESTABLISHMENT_ID,TEXT,Unique ID of the related establishment
+RATINGS,LINK,TEXT,Link to the source of the rating
+RATINGS,SOURCE,TEXT,Source of the rating
+RATINGS,UNIQUE_ID,TEXT,Unique ID of the record
+TECHNOLOGIES,IS_CURRENT,BOOLEAN,Indicates technologies that are currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
+TECHNOLOGIES,FIRST_OBSERVED_AT,DATE,When the tech was first seen by Brizo
+TECHNOLOGIES,LAST_OBSERVED_AT,DATE,When the tech was last seen by Brizo
+TECHNOLOGIES,CATEGORY,TEXT,Category of the technology 
+TECHNOLOGIES,ESTABLISHMENT_ID,TEXT,Unique ID of the related establishment
+TECHNOLOGIES,LINK,TEXT,Link to where the tech was found
+TECHNOLOGIES,NAME,TEXT,The tech vendor
+TECHNOLOGIES,SUBCATEGORY,TEXT,Technology Subcategory
+TECHNOLOGIES,UNIQUE_ID,TEXT,Unique ID of the record
+TECHNOLOGIES,OBSERVATIONS,VARIANT,Dates of when establishment was detected on technology

@@ -1,0 +1,18 @@
+-- Items found on a menu
+table menu_items (
+  menu_item_id TEXT primary_key, -- Unique item id
+  is_current BOOLEAN, -- Indicates the most recent entry for active menu items per menu source currently used by a given establishment. Note: The is_current status will always be FALSE for closed establishments
+  observed_at DATE, -- Date(s) menu item was captured
+  price NUMBER, -- Current price
+  category TEXT, -- Menu item categorization
+  description TEXT, -- Menu item description as appearing on menu
+  -- establishment_id TEXT, -- Unique ID of individual establishment
+  flags TEXT, -- Additional data point(s) from marketplace
+  menu_id TEXT, -- ID from Menu table
+  name TEXT, -- Item name
+  source TEXT, -- Source of menu item
+
+  join_one menus on menu_id = menus.menu_id,
+  join_many entities on menu_item_id = entities.menu_item_id
+)
+
