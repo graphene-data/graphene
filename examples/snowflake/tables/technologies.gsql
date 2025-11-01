@@ -1,0 +1,16 @@
+table technologies (
+  unique_id TEXT primary_key, -- Unique ID of the record
+  is_current BOOLEAN, -- Indicates technologies that are currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
+  first_observed_at DATE, -- When the tech was first seen by Brizo
+  last_observed_at DATE, -- When the tech was last seen by Brizo
+  category TEXT, -- Category of the technology
+  establishment_id TEXT, -- Unique ID of the related establishment
+  link TEXT, -- Link to where the tech was found
+  name TEXT, -- The tech vendor
+  subcategory TEXT, -- Technology Subcategory
+  observations VARIANT, -- Dates of when establishment was detected on technology
+
+  join_one establishments_open on establishment_id = establishments_open.establishment_id,
+  join_one establishments_closed on establishment_id = establishments_closed.establishment_id
+)
+

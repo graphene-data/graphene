@@ -1,0 +1,15 @@
+-- Items found inside each menu item (usually ingredients)
+table entities (
+  entity_id TEXT primary_key, -- Brizo entity ID
+  score NUMBER, -- Percentage score of matched ingredient (score can be 100 for extracted items and maximum of 99 for predicted)
+  category TEXT, -- Category of entity
+  menu_item_id TEXT, -- Unique item id
+  name TEXT, -- Name of matched entity
+  subcategory TEXT, -- Subcategory of entity
+  type TEXT, -- Entity type
+  matches VARIANT, -- Matched entity tag
+  variant VARIANT, -- Attributes of entity
+
+  join_one menu_items on menu_item_id = menu_items.menu_item_id
+)
+

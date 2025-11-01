@@ -1,0 +1,29 @@
+-- Establishments (restaurants) that are closed
+table establishments_closed (
+  establishment_id TEXT primary_key, -- Unique identification number generated for each individual establishment
+  closed_date DATE, -- Date Brizo identified the establishment as closed
+  first_seen DATE, -- Date establishment was first seen by Brizo
+  alternate_name TEXT, -- Alternate name or parent corporation
+  chain_id TEXT, -- Unique identifier generated for each individual chain
+  chain_name TEXT, -- Name of the restaurant chain
+  chain_url TEXT, -- URL of the restaurant chain
+  location_city TEXT, -- Establishment city location
+  location_country_code TEXT, -- Establishment country location
+  location_state_code TEXT, -- Establishment state location
+  location_street TEXT, -- Establishment street address
+  location_unit TEXT, -- Establishment unit/suite/apartment number
+  location_zip TEXT, -- Establishment zip code
+  md5 TEXT, -- MD5 of JSON file
+  name TEXT, -- Name of the establishment
+  parent_name TEXT, -- Name of the parent company
+  status TEXT, -- Indicates if establishment is open or closed
+  website TEXT, -- Establishment URL
+  updated TIMESTAMP_NTZ -- Most recent date the establishment was updated in BFM database,
+
+  join_many contacts on establishment_id = contacts.establishment_id,
+  join_many menus on establishment_id = menus.establishment_id,
+  join_many menu_items on establishment_id = menu_items.establishment_id,
+  join_many ratings on establishment_id = ratings.establishment_id,
+  join_many technologies on establishment_id = technologies.establishment_id
+)
+
