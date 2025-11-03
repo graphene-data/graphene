@@ -83,7 +83,7 @@
   export let xLabelWrap = undefined
 </script>
 
-<QueryLoad data={data} fields={[x, y, series]} let:loaded>
+<QueryLoad data={data} fields={{x, y, series}} let:loaded>
   <Chart
     data={loaded}
     {x}

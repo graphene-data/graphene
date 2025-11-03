@@ -34,7 +34,7 @@
   }
 </script>
 
-<QueryLoad {data} fields={[value]} let:loaded>
+<QueryLoad {data} fields={{value}} let:loaded>
   <div class="big-value">
     {#if title}<div class="big-value__title">{title}</div>{/if}
     {#if subtitle}<div class="big-value__subtitle">{subtitle}</div>{/if}

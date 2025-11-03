@@ -4,12 +4,6 @@
 import {cacheRead, cacheWrite, getHashes} from './clientCache'
 import {errorProvider} from './telemetry.ts'
 
-interface QueryError {
-  file: string
-  message: string
-  from: {lineText: string}
-}
-
 interface QueryResult {
   rows?: any[]
   errors?: Error[]
@@ -25,10 +19,11 @@ type ResultHandler = (res: QueryResult) => void
 
 interface QueryNode {
   name?: string
+  source?: string
   contents: string
   callback?: ResultHandler
   loading: boolean
-  fields: string[]
+  fields: Map<string, string>
   errors: Error[]
 }
 
@@ -38,7 +33,7 @@ let queries = [] as QueryNode[]
 
 function registerQuery (name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
-  queries.push({name, contents, loading: false, fields: [], errors: []})
+  queries.push({name, contents, loading: false, fields: new Map(), errors: []})
 }
 
 function updateParam (name: string, value: any) {
@@ -46,9 +41,12 @@ function updateParam (name: string, value: any) {
   runAll() // for now, do the easy thing and reload it all
 }
 
-function query (source: string, fields: string[], callback: ResultHandler) {
-  let contents = `from ${source} select ${fields.join(', ')}`
-  queries.push({contents, callback, loading: false, fields, errors: []})
+function query (source: string, fields: Record<string, string>, callback: ResultHandler) {
+  // using Map here because it preserves the order in which we add fields to the select, which we use when we get the result.
+  let map = new Map(Object.entries(fields))
+  let exprs = map.size > 0 ? Array.from(map.values()) : ['*']
+  let contents = `from ${source} select ${exprs.join(', ')}`
+  queries.push({contents, callback, loading: false, fields: map, errors: [], source})
   runAll()
 }
 
@@ -87,7 +85,15 @@ async function runNode (n: QueryNode) {
     } else { // request failed. Record it
       let isJson = response.headers.get('Content-Type') === 'application/json'
       let body = isJson ? await response.json() : await response.text()
-      n.errors = Array.isArray(body) ? body : [body]
+      let fieldContext = Object.fromEntries(Array.from(n.fields.entries()))
+      let sourceName = n.name || n.source
+      n.errors = (Array.isArray(body) ? body : [body]).map(err => {
+        if (!err || typeof err !== 'object') return err
+        let enriched = err as Record<string, any>
+        if (sourceName && !enriched.source) enriched = {...enriched, source: sourceName}
+        if (Object.keys(fieldContext).length === 0) return enriched
+        return {...enriched, fields: fieldContext}
+      })
       n.callback({errors: n.errors})
     }
   } catch (e) {
@@ -113,13 +119,14 @@ function translateData (data: any, node: QueryNode) {
   let rows = data.rows || []
   rows.dataLoaded = true // evidence components need this to be set
   rows._evidenceColumnTypes = []
+  let requestFields = Array.from(node.fields.values())
 
   data.fields.forEach((field, index) => {
     let name = field.name
 
     // server gives names like `col_1` to unnamed expressions but we translate it back into the original expression like `avg(price)`
     if (field.name.match(/col_\d+/)) {
-      name = node.fields[index]
+      name = requestFields[index]
       rows.forEach(r => {
         r[name] = r[field.name]
         delete r[field.name]

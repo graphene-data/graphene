@@ -53,6 +53,24 @@ export function getPidFilePath (root: string): string {
   return path.join(getGrapheneCache(root), process.env.NODE_ENV == 'test' ? 'test.pid' : 'serve.pid')
 }
 
+function targetPids (pid: number): number[] {
+  if (process.platform === 'win32') return [pid]
+  return [pid, -pid]
+}
+
+function sendSignal (pid: number, signal: NodeJS.Signals): boolean {
+  for (let target of targetPids(pid)) {
+    try {
+      process.kill(target, signal)
+    } catch (err) {
+      let code = (err as NodeJS.ErrnoException).code
+      if (code === 'ESRCH' || code === 'EINVAL') continue
+      return false
+    }
+  }
+  return true
+}
+
 export async function stopGrapheneIfRunning (root: string): Promise<boolean> {
   let pidFile = getPidFilePath(root)
   let pid = await readPid(pidFile)
@@ -63,17 +81,16 @@ export async function stopGrapheneIfRunning (root: string): Promise<boolean> {
     return true
   }
 
-  try {
-    console.log(`Stopping server (${pid})`)
-    process.kill(pid, 'SIGTERM')
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === 'ESRCH') return true
-    return false
-  }
+  console.log(`Stopping server (${pid})`)
+  if (!sendSignal(pid, 'SIGTERM')) return false
 
   let end = Date.now() + 5000
   while (Date.now() < end && isProcessRunning(pid)) {
     await new Promise(resolve => setTimeout(resolve, 100))
+  }
+
+  if (isProcessRunning(pid)) {
+    if (!sendSignal(pid, 'SIGKILL')) return false
   }
 
   await fs.remove(pidFile)
