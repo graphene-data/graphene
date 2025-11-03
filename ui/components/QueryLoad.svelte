@@ -4,22 +4,21 @@
 
   export let data: string | {rows?: any[]}
   export let height = 200
-  export let fields: string[] = []
+  export let fields: Record<string, string> = {}
 
   let errors: Error[] | null = null
   let loaded: any[] | null = null
 
-  let handleResults = (data) => {
-    errors = data.errors
-    loaded = data.rows
+  let handleResults = (result) => {
+    errors = result.errors || null
+    loaded = result.rows
   }
 
   onMount(() => {
     if (typeof data !== 'string') {
       loaded = data.rows
     } else {
-      let usedFields = fields.filter(f => !!f)
-      if (usedFields.length == 0) usedFields = ['*']
+      let usedFields = Object.fromEntries(Object.entries(fields).filter(e => !!e[1]))
       window.$GRAPHENE.query(data, usedFields, handleResults)
     }
   })

@@ -87,7 +87,8 @@ async function takeScreenshot (chartName = null) {
 }
 
 function connectWebSocket () {
-  socket = new WebSocket(`ws://${window.location.host}/graphene-ws`)
+  let wsUrl = `ws://${window.location.host}/_api/ws`
+  socket = new WebSocket(wsUrl)
   socket.onclose = () => setTimeout(connectWebSocket, 2000)
 
   socket.onopen = () => {
