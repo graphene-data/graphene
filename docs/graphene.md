@@ -466,15 +466,16 @@ group by month
 ```
 
 <Row>
-  <LineChart title="Orders by Month" data="orders_by_month" x="month" y="num_orders" />
-  <LineChart title="Profit by Month, USD" data="orders" x="date_trunc(created_at, month)" y="profit" />
+  <LineChart title="Orders by Month" data=orders_by_month x=month y=num_orders />
+  <LineChart title="Profit by Month, USD" data=orders x="date_trunc(created_at, month)" y=profit />
 </Row>
 ````
 
 Syntax notes
 - The `data` attribute can also refer directly to modeled GSQL tables instead of code-fenced queries.
 - Attributes that take column references can also take whole GSQL expressions, as shown in the second line chart from the example above.
-- The string value assigned to an attribute ALWAYS needs to be wrapped in double quotes eg. `some_attr="some_str"`.
+- Like in HTML, the string value assigned to an attribute does not need to be wrapped in double quotes if it only contains alphanumeric characters, `-`, `_`, `:`, or `.`.
+- For attributes that take arrays or objects, the value string should be formatted as a JSON array or JSON object wrapped in double quotes.
 
 Best practices
 - If you have multiple time series charts, align their x-axes to have the same range and granularity.
@@ -491,10 +492,10 @@ Here's an example:
 ```markdown
 <BarChart 
   title="Sales by Category"
-  data="orders_by_category_2021"
-  x="month"
-  y="sales"
-  series="category"
+  data=orders_by_category_2021
+  x=month
+  y=sales
+  series=category
 />
 ```
 
@@ -517,11 +518,11 @@ Here's an example:
 | Attribute | Description | Required | Options | Default |
 |----------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
-| x | Column to use for the x-axis of the chart | false | column name | First column |
-| y | Column(s) to use for the y-axis of the chart | false | column name, array of column names | Any non-assigned numeric columns |
-| y2 | Column(s) to include on a secondary y-axis | false | column name, array of column names | - |
+| x | Column or expression to use for the x-axis of the chart | false | column name, stored expression name, GSQL expression | First column |
+| y | Column(s) or expression(s) to use for the y-axis of the chart | false | column name, stored expression name, GSQL expression, array of any combination of these | Any non-assigned numeric columns |
+| y2 | Column(s) or expression(s) to include on a secondary y-axis | false | column name, stored expression name, GSQL expression, array of any combination of these | - |
 | y2SeriesType | Chart type to apply to the series on the y2 axis | false | `bar`, `line`, `scatter` | `bar` |
-| series | Column to use as the series (groups) in a multi-series chart | false | column name | - |
+| series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | type | Grouping method to use for multi-series charts | false | `stacked`, `grouped`, `stacked100` | `stacked` |
 | stackName | Name for an individual stack. If separate Bar components are used with different stackNames, the chart will show multiple stacks | false | string | - |
@@ -540,9 +541,9 @@ Here's an example:
 | fillOpacity | % of the full color that should be rendered, with remainder being transparent | number (0 to 1) | `1` |
 | outlineWidth | Width of line surrounding each bar | number | `0` |
 | outlineColor | Color to use for outline if outlineWidth > 0 | CSS name, hexademical, RGB, HSL | - |
-| colorPalette | Array of custom colours to use for the chart. E.g., `{['#cf0d06','#eb5752','#e88a87']}` | array of color strings (CSS name, hexademical, RGB, HSL) | built-in color palette |
-| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. Note the double curly braces required in the syntax | object with series names and assigned colors seriesColors=`{{'Canada': 'red', 'US': 'blue'}}` | colors applied by order of series in data |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | Array of series names in the order they should be used in the chart seriesOrder=`{['series one', 'series two']}` | default order implied by the data |
+| colorPalette | Array of custom colors to use for the chart | array of color strings (CSS name, hexademical, RGB, HSL) e.g. `"["#cf0d06", "#eb5752", "#e88a87"]"` | built-in color palette |
+| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. | object with series names and assigned color strings (CSS name, hexadecimal, RGB, HSL) e.g. `"{"Canada": "red", "US": "blue"}"` | colors applied by order of series in data |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | Array of series names in the order they should be used in the chart `"["Canada", "US"]"` | default order implied by the data |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | number | - |
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | `true`, `false` | `false` |
@@ -596,8 +597,8 @@ Here's an example:
 
 | Attribute | Description | Options |
 |----------|-------------|---------|
-| echartsOptions | Custom Echarts options to override the default options. See reference page for available options. | `{{exampleOption:'exampleValue'}}` |
-| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See reference page for available options. | `{{exampleSeriesOption:'exampleValue'}}` |
+| echartsOptions | Custom Echarts options to override the default options. See reference page for available options. | E.g. `"{"exampleOption": "exampleValue"}"` |
+| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See reference page for available options. | E.g. `"{"exampleSeriesOption": "exampleValue"}"` |
 | printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | `true`, `false` | `false` |
 
 ###### Interactivity
@@ -615,9 +616,9 @@ Here's an example:
 ```markdown
 <PieChart 
   title="Sales share by category"
-  data="orders_by_category_2021"
-  category="category"
-  value="sales"
+  data=orders_by_category_2021
+  category=category
+  value=sales
 />
 ```
 
@@ -635,8 +636,8 @@ Here's an example:
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
-| category | Column to use for slice names | true | column name | - |
-| value | Column to use for slice values | true | column name | - |
+| category | Column or expression to use for slice names | true | column name, stored expression name, GSQL expression | - |
+| value | Column or expression to use for slice values | true | column name, stored expression name, GSQL expression | - |
 
 #### Line chart
 
@@ -648,9 +649,9 @@ Here's an example:
 <LineChart 
   title="Monthly Sales"
   subtitle="Includes all categories"
-  data="orders_by_month"
-  x="month"
-  y="sales_usd0k" 
+  data=orders_by_month
+  x=month
+  y=sales_usd0k 
   yAxisTitle="Sales per Month"
 />
 ```
@@ -674,11 +675,11 @@ Here's an example:
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
-| x | Column to use for the x-axis of the chart | true | column name | - |
-| y | Column(s) to use for the y-axis of the chart | true | column name, array of column names | - |
-| y2 | Column(s) to include on a secondary y-axis | false | column name, array of column names | - |
+| x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | - |
+| y | Column(s) or expression(s) to use for the y-axis of the chart | true | column name, stored expression name, GSQL expression, array of any combination of these | - |
+| y2 | Column(s) or expression(s) to include on a secondary y-axis | false | column name, stored expression name, GSQL expression, array of any combination of these | - |
 | y2SeriesType | Chart type to apply to the series on the y2 axis | false | `line`, `bar`, `scatter` | `line` |
-| series | Column to use as the series (groups) in a multi-series chart | false | column name | - |
+| series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | handleMissing | Treatment of missing values in the dataset | false | `gap`, `connect`, `zero` | `gap` |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
@@ -701,9 +702,9 @@ Here's an example:
 | markers | Turn on/off markers (shapes rendered onto the points of a line) | false | `true`, `false` | `false` |
 | markerShape | Shape to use if markers=true | false | `circle`, `emptyCircle`, `rect`, `triangle`, `diamond` | `circle` |
 | markerSize | Size of each shape (in pixels) | false | number | `8` |
-| colorPalette | Array of custom colours to use for the chart. E.g., `{['#cf0d06','#eb5752','#e88a87']}` | false | array of color strings (CSS name, hexademical, RGB, HSL) | - |
-| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. Note the double curly braces required in the syntax `seriesColors={{"Canada": "red", "US": "blue"}}` | false | object with series names and assigned colors | - |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart seriesOrder="`{['series one', 'series two']"}` | default order implied by the data |
+| colorPalette | Array of custom colors to use for the chart | false | array of color strings (CSS name, hexademical, RGB, HSL) e.g. `"["#cf0d06", "#eb5752", "#e88a87"]"` | - |
+| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. | false | object with series names and assigned color strings (CSS name, hexadecimal, RGB, HSL) e.g. `"{"Canada": "red", "US": "blue"}"` | - |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart `"["Canada", "US"]"` | default order implied by the data |
 | labels | Show value labels | false | `true`, `false` | `false` |
 | labelSize | Font size of value labels | false | number | `11` |
 | labelPosition | Where label will appear on your series | false | `above`, `middle`, `below` | `above` |
@@ -748,8 +749,8 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| echartsOptions | Custom Echarts options to override the default options. See [reference page](/components/charts/echarts-options) for available options. | false | `{{exampleOption:'exampleValue'}}` | - |
-| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See [reference page](/components/charts/echarts-options) for available options. | false | `{{exampleSeriesOption:'exampleValue'}}` | - |
+| echartsOptions | Custom Echarts options to override the default options. See [reference page](/components/charts/echarts-options) for available options. | false | E.g. `"{"exampleOption": "exampleValue"}"` | - |
+| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See [reference page](/components/charts/echarts-options) for available options. | false | E.g. `"{"exampleSeriesOption": "exampleValue"}"` | - |
 | printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | false | `true`, `false` | `false` |
 
 ###### Interactivity
@@ -767,9 +768,9 @@ Here's an example:
 
 ```markdown
 <AreaChart 
-  data="orders_by_month"
-  x="month"
-  y="sales"
+  data=orders_by_month
+  x=month
+  y=sales
 />
 ```
 
@@ -792,9 +793,9 @@ Here's an example:
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
-| x | Column to use for the x-axis of the chart | true | column name | First column |
-| y | Column(s) to use for the y-axis of the chart | true | column name, array of column names | Any non-assigned numeric columns |
-| series | Column to use as the series (groups) in a multi-series chart | false | column name | - |
+| x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | First column |
+| y | Column(s) or expression(s) to use for the y-axis of the chart | true | column name, stored expression name, GSQL expression, array of any combination of these | Any non-assigned numeric columns |
+| series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | type | Grouping method to use for multi-series charts | false | `stacked`, `stacked100` | `stacked` |
 | handleMissing | Treatment of missing values in the dataset | false | `gap`, `connect`, `zero` | `gap` for single series, `zero` for multi-series |
@@ -814,9 +815,9 @@ Here's an example:
 | lineColor | Color to override default line color. Only accepts a single color. | false | CSS name, hexademical, RGB, HSL | - |
 | fillOpacity | % of the full color that should be rendered, with remainder being transparent | false | number (0 to 1) | `0.7` |
 | line | Show line on top of the area | false | `true`, `false` | `true` |
-| colorPalette | Array of custom colours to use for the chart. E.g., `{['#cf0d06','#eb5752','#e88a87']}` | false | array of color strings (CSS name, hexademical, RGB, HSL) | built-in color palette |
-| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. Note the double curly braces required in the syntax | false | object with series names and assigned colors | colors applied by order of series in data |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart | default order implied by the data |
+| colorPalette | Array of custom colors to use for the chart | false | array of color strings (CSS name, hexademical, RGB, HSL) e.g. `"["#cf0d06", "#eb5752", "#e88a87"]"` | built-in color palette |
+| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. | false | object with series names and assigned color strings (CSS name, hexadecimal, RGB, HSL) e.g. `"{"Canada": "red", "US": "blue"}"` | colors applied by order of series in data |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart `"["Canada", "US"]"` | default order implied by the data |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
@@ -856,8 +857,8 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| echartsOptions | Custom Echarts options to override the default options. See [reference page](/components/charts/echarts-options) for available options. | false | `{{exampleOption:'exampleValue'}}` | - |
-| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See [reference page](/components/charts/echarts-options) for available options. | false | `{{exampleSeriesOption:'exampleValue'}}` | - |
+| echartsOptions | Custom Echarts options to override the default options. See [reference page](/components/charts/echarts-options) for available options. | false | E.g. `"{"exampleOption": "exampleValue"}"` | - |
+| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See [reference page](/components/charts/echarts-options) for available options. | false | E.g. `"{"exampleSeriesOption": "exampleValue"}"` | - |
 | printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | false | `true`, `false` | `false` |
 
 ###### Interactivity
@@ -875,11 +876,11 @@ Here's an example:
 
 ```markdown
 <BigValue 
-  data="orders_with_comparisons" 
-  value="num_orders"
-  sparkline="month"
-  comparison="order_growth"
-  comparisonFmt="pct1"
+  data=orders_with_comparisons 
+  value=num_orders
+  sparkline=month
+  comparison=order_growth
+  comparisonFmt=pct1
   comparisonTitle="vs. Last Month"
 />
 ```
@@ -891,20 +892,20 @@ Here's an example:
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
-| value | Column to pull the main value from. | true | column name | - |
+| value | Column or expression to pull the main value from. | true | column name, stored expression name, GSQL expression | - |
 | title | Title of the card. | false | string | Title of the value column. |
-| minWidth | Overrides min-width of component | false | % or px value | `18%` |
+| minWidth | Overrides min-width of component | false | % or px value | `"18%"` |
 | maxWidth | Adds a max-width to the component | false | % or px value | - |
 | fmt | Sets format for the value ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format, custom format | - |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
-| emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | `No records` |
-| link | Used to navigate to other pages. Can be a full external link like `https://google.com` or an internal link like `/sales/performance` | false | - | - |
+| emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | `"No records"` |
+| link | Used to navigate to other pages. Can be a full external link like `"https://google.com"` or an internal link like `"/sales/performance"` | false | - | - |
 
 ###### Comparison
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| comparison | Column to pull the comparison value from. | false | column name | - |
+| comparison | Column or expression to pull the comparison value from. | false | column name, stored expression name, GSQL expression | - |
 | comparisonTitle | Text to the right of the comparison. | false | string | Title of the comparison column. |
 | comparisonDelta | Whether to display delta symbol and color | false | `true`, `false` | `true` |
 | downIsGood | If present, negative comparison values appear in green, and positive values appear in red. | false | `true`, `false` | `false` |
@@ -916,7 +917,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| sparkline | Column to pull the date from to create the sparkline. | false | column name | - |
+| sparkline | Column or expression to pull the date from to create the sparkline. | false | column name, stored expression name, GSQL expression | - |
 | sparklineType | Chart type for sparkline | false | `line`, `area`, `bar` | `line` |
 | sparklineValueFmt | Formatting for tooltip values | false | format code | same as fmt if supplied |
 | sparklineDateFmt | Formatting for tooltip dates | false | format code | `YYYY-MM-DD` |
@@ -932,7 +933,7 @@ Use a Table component to display a richly formatted table of data from a query. 
 Here's an example:
 
 ```markdown
-<Table data="orders_summary" />
+<Table data=orders_summary />
 ```
 
 ##### All table attributes
@@ -942,7 +943,7 @@ Here's an example:
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
-| rows | Number of rows to show in the table before paginating results. Use `rows=all` to show all rows in the table. | false | number, `all` | `10` |
+| rows | Number of rows to show in the table before paginating results. Use `"rows=all"` to show all rows in the table. | false | number, `all` | `10` |
 | title | Title for the table | false | string | - |
 | subtitle | Subtitle - appears under the title | false | string | - |
 | headerColor | Background color of the header row | false | Hex color code, css color name | - |
@@ -961,7 +962,7 @@ Here's an example:
 | formatColumnTitles | Enable auto-formatting of column titles. Turn off to show raw SQL column names | false | `true`, `false` | `true` |
 | wrapTitles | Wrap column titles | false | `true`, `false` | `false` |
 | compact | Enable a more compact table view that allows more content vertically and horizontally | false | `true`, `false` | `false` |
-| link | Makes each row of your table a clickable link. Accepts the name of a column containing the link to use for each row in your table | false | column name | - |
+| link | Makes each row of your table a clickable link. Accepts a column or expression containing the link to use for each row in your table | false | column name, stored expression name, GSQL expression | - |
 | showLinkCol | Whether to show the column supplied to the `link` attribute | false | `true`, `false` | `false` |
 | generateMarkdown | Helper for writing Table syntax with many columns. When set to true, markdown for the Table including each `Column` contained within the query will be generated and displayed below the table. | false | `true`, `false` | `false` |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
@@ -971,7 +972,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| groupBy | Column to use to create groups. Note that groups are currently limited to a single group column. | false | column name | - |
+| groupBy | Column or expression to use to create groups. Note that groups are currently limited to a single group column. | false | column name, stored expression name, GSQL expression | - |
 | groupType | How the groups are shown in the table. Can be accordion (expand/collapse) or section (group column values are merged across rows) | false | `accordion`, `section` | `accordion` |
 | subtotals | Whether to show aggregated totals for the groups | false | `true`, `false` | `false` |
 | subtotalFmt | Specify an override format to use in the subtotal row ([see available formats](/core-concepts/formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format, custom format | - |
@@ -988,11 +989,11 @@ Use the Column sub-component to choose specific columns to display in your table
 Here's an example:
 
 ```markdown
-<Table data="country_summary">
-  <Column id="country" />
-  <Column id="category" />
-  <Column id="value_usd" fmt="eur" />
-  <Column id="yoy" title="Y/Y Growth" fmt="pct3" />
+<Table data=country_summary>
+  <Column id=country />
+  <Column id=category />
+  <Column id=value_usd fmt=eur />
+  <Column id=yoy title="Y/Y Growth" fmt=pct3 />
 </Table>
 ```
 
@@ -1006,7 +1007,7 @@ Here's an example:
 | fmtColumn | Column to use to format values in this column. This is used to achieve different value formats by row. The fmtColumn should contain strings of format codes - either Graphene built-in formats or Excel codes. | false | column name | - |
 | totalAgg | Specify an aggregation function to use for the total row. Accepts predefined functions, custom strings or values | false | `sum`, `mean`, `weightedMean`, `median`, `min`, `max`, `count`, `countDistinct`, custom string or value | `sum` |
 | totalFmt | Specify an override format to use in the total row ([see available formats](/core-concepts/formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format, custom format | - |
-| weightCol | Column to use as the weight values for weighted mean aggregation. If not specified, a weight of 1 for each value will be used and the result will be the same as the `mean` aggregation. | false | column name | - |
+| weightCol | Column or expression to use as the weight values for weighted mean aggregation. If not specified, a weight of 1 for each value will be used and the result will be the same as the `mean` aggregation. | false | column name, stored expression name, GSQL expression | - |
 | wrap | Wrap column text | false | `true`, `false` | `false` |
 | wrapTitle | Wrap column title | false | `true`, `false` | `false` |
 | contentType | Lets you specify how to treat the content within a column. See below for contentType-specific options. | false | `link`, `image`, `delta`, `colorscale`, `html` | - |
@@ -1045,8 +1046,8 @@ Sparklines (`contentType=sparkline` | `contentType=sparkarea` | `contentType=spa
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| sparkX | Column within an array cell to use as the x-axis for the spark viz. Arrays can be created inside a query using the `array_agg()` function from DuckDB | false | column from array cell | - |
-| sparkY | Column within an array cell to use as the y-axis for the spark viz. Arrays can be created inside a query using the `array_agg()` function from DuckDB | false | column from array cell | - |
+| sparkX | Column within an array cell to use as the x-axis for the spark viz. Arrays can be created inside a query using the `"array_agg()"` function from DuckDB | false | column from array cell | - |
+| sparkY | Column within an array cell to use as the y-axis for the spark viz. Arrays can be created inside a query using the `"array_agg()"` function from DuckDB | false | column from array cell | - |
 | sparkYScale | Whether to truncate the y-axis | false | `true`, `false` | `false` |
 | sparkHeight | Height of the spark viz. Making the viz taller will increase the height of the full table row | false | number | `18` |
 | sparkWidth | Width of the spark viz | false | number | `90` |
@@ -1070,7 +1071,7 @@ Conditional formatting (`contentType=colorscale`)
 | colorMid | Set a midpoint for the scale | false | number | mid of column |
 | colorMax | Set a maximum for the scale. Any values above that maximum will appear in the highest color on the scale | false | number | max of column |
 | colorBreakpoints | Array of numbers to use as breakpoints for each color in your color scale. Should line up with the colors you provide in `colorScale` | false | array of numbers | - |
-| scaleColumn | Column to use to define the color scale range. Values in this column will have their cell color determined by the value in the scaleColumn | false | column name | - |
+| scaleColumn | Column or expression to use to define the color scale range. Values in this column will have their cell color determined by the value in the scaleColumn | false | column name, stored expression name, GSQL expression | - |
 
 ### Input components
 
@@ -1082,8 +1083,8 @@ Here's an example:
 
 ```markdown
 <TextInput
-  name="name_of_input"
-  title="Search"
+  name=name_of_input
+  title=Search
 />
 ```
 
@@ -1099,9 +1100,9 @@ where email ilike concat('%', $name_of_input, '%')
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| name | Name of the text input, used to reference the selected value elsewhere as `$name` | true | string | - |
+| name | Name of the text input, used to reference the selected value elsewhere as `"$name"` | true | string | - |
 | title | Title displayed above the text input | false | string | - |
-| placeholder | Alternative placeholder text displayed in the text input | false | string | `Type to search` |
+| placeholder | Alternative placeholder text displayed in the text input | false | string | `"Type to search"` |
 | hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
@@ -1114,9 +1115,9 @@ Here's an example:
 
 ```markdown
 <DateRange
-  name="date_range_name"
-  data="orders_by_day"
-  dates="day"
+  name=date_range_name
+  data=orders_by_day
+  dates=day
 />
 ```
 
@@ -1132,14 +1133,14 @@ where created_at > $date_range_name_start and < $date_range_name_end
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| name | Name of the DateRange, used to reference the selected values elsewhere as `$name_start` or `$name_end` | true | string | - |
+| name | Name of the DateRange, used to reference the selected values elsewhere as `"$name_start"` or `"$name_end"` | true | string | - |
 | data | Query name, wrapped in curly braces | false | query name | - |
-| dates | Column name from the query containing date range to span | false | column name | - |
+| dates | Column or expression from the query containing date range to span | false | column name, stored expression name, GSQL expression | - |
 | start | A manually specified start date to use for the range | false | string formatted YYYY-MM-DD | - |
 | end | A manually specified end date to use for the range | false | string formatted YYYY-MM-DD | - |
 | title | Title to display in the Date Range component | false | string | - |
-| presetRanges | Customize "Select a Range" drop down, by including preset range options. Range options: 'Last 7 Days' 'Last 30 Days' 'Last 90 Days' 'Last 365 Days' 'Last 3 Months' 'Last 6 Months' 'Last 12 Months' 'Last Month' 'Last Year' 'Month to Date' 'Month to Today' 'Year to Date' 'Year to Today' 'All Time' | false | string, array of values e.g. `{['Last 7 Days', 'Last 30 Days']}` | - |
-| defaultValue | Accepts preset in string format to apply default value in Date Range picker. Range options: 'Last 7 Days' 'Last 30 Days' 'Last 90 Days' 'Last 365 Days' 'Last 3 Months' 'Last 6 Months' 'Last 12 Months' 'Last Month' 'Last Year' 'Month to Date' 'Month to Today' 'Year to Date' 'Year to Today' 'All Time' | false | string e.g. `{'Last 7 Days'}` or `{'Last 6 Months'}` | - |
+| presetRanges | Customize "Select a Range" drop down, by including preset range options | false | array of values e.g. `"["Last 7 Days", "Last 30 Days"]"`. Allowed values: `"Last 7 Days"`, `"Last 30 Days"`, `"Last 90 Days"`, `"Last 365 Days"`, `"Last 3 Months"`, `"Last 6 Months"`, `"Last 12 Months"`, `"Last Month"`, `"Last Year"`, `"Month to Date"`, `"Month to Today"`, `"Year to Date"`, `"Year to Today"`, `"All Time"` | - |
+| defaultValue | Accepts preset in string format to apply default value in Date Range picker | false | `"Last 7 Days"`, `"Last 30 Days"`, `"Last 90 Days"`, `"Last 365 Days"`, `"Last 3 Months"`, `"Last 6 Months"`, `"Last 12 Months"`, `"Last Month"`, `"Last Year"`, `"Month to Date"`, `"Month to Today"`, `"Year to Date"`, `"Year to Today"`, `"All Time"` | - |
 | hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
@@ -1176,14 +1177,14 @@ where status = $status_dropdown
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| name | Name of the dropdown, used to reference the selected value elsewhere as `$name` | true | - | - |
+| name | Name of the dropdown, used to reference the selected value elsewhere as `"$name"` | true | - | - |
 | data | Query name, wrapped in curly braces | false | query name | - |
 | value | Column name from the query containing values to pick from | false | column name | - |
 | multiple | Enables multi-select which returns a list | false | `true`, `false` | `false` |
-| defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Arrays supported for multi-select. | false | value from dropdown, array of values e.g. `{['Value 1', 'Value 2']}` | - |
+| defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Arrays supported for multi-select. | false | value from dropdown, array of values e.g. `"["Value 1", "Value 2"]"` | - |
 | selectAllByDefault | Selects and returns all values, multiple attribute required | false | `true`, `false` | `false` |
 | noDefault | Stops any default from being selected. Overrides any set `defaultValue`. | false | boolean | `false` |
-| disableSelectAll | Removes the `Select all` button. Recommended for large datasets. | false | boolean | `false` |
+| disableSelectAll | Removes the `"Select all"` button. Recommended for large datasets. | false | boolean | `false` |
 | label | Column name from the query containing labels to display instead of the values (e.g., you may want to have the drop-down use `customer_id` as the value, but show `customer_name` to your users) | false | column name | Uses the column in value |
 | title | Title to display above the dropdown | false | string | - |
 | order | Column to sort options by, with optional ordering keyword | false | column name [ `asc`, `desc` ] | Ascending based on dropdown value (or label, if specified) |
@@ -1198,10 +1199,10 @@ The `DropdownOption` sub-component can be used to manually add options to a drop
 Here's an example:
 
 ```markdown
-<Dropdown name="hardcoded">
-  <DropdownOption valueLabel="Option One" value="1" />
-  <DropdownOption valueLabel="Option Two" value="2" />
-  <DropdownOption valueLabel="Option Three" value="3" />
+<Dropdown name=hardcoded>
+  <DropdownOption valueLabel="Option One" value=1 />
+  <DropdownOption valueLabel="Option Two" value=2 />
+  <DropdownOption valueLabel="Option Three" value=3 />
 </Dropdown>
 ```
 
