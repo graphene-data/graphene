@@ -1061,6 +1061,7 @@
     {width}
     {data}
     {queryID}
+    chartTitle={title}
     {echartsOptions}
     {seriesOptions}
     {connectGroup}

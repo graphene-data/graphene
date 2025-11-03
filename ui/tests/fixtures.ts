@@ -3,6 +3,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import net from 'net'
 import {setConfig} from '../../lang/config.ts'
+import {clearWorkspace} from '../../lang/core.ts'
 import {serve2, mockFileMap} from '../../cli/serve2.ts'
 import {withBrowserConsole, assertNoConsoleErrors} from './browserConsole.ts'
 
@@ -21,23 +22,41 @@ export interface ChartHandle {
 let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 let sharedPort, sharedServer
 
-export const test = base.extend<{server: any, mount: MountFn, chart: ChartHandle}>({
+export interface ServerOptions {
+  root?: string
+  port?: number
+  dialect?: string
+}
+
+export interface ServerFixture {
+  url: (options?: ServerOptions) => Promise<string>
+  mockFile: (path: string, content: string) => void
+}
+
+export const test = base.extend<{server: ServerFixture, mount: MountFn, chart: ChartHandle}>({
   page: async ({page}, use) => {
     await withBrowserConsole(page, use)
   },
 
   // This boots up our cli server on a unique port for e2e tests.
-  server: async ({page}, use:any) => {
+  server: async ({page}, use: (fixture: ServerFixture) => Promise<void>) => {
     await ensureSharedServer()
     let server: any
-    let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
+    let defaultRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
     Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
 
     try {
       await use({
-        url: async () => {
-          let port = await pickPort()
-          setConfig({dialect: 'duckdb', port, root})
+        url: async (options?: ServerOptions) => {
+          if (server) {
+            await server.close()
+            server = undefined
+          }
+          let port = options?.port ?? await pickPort()
+          let root = options?.root ?? defaultRoot
+          let dialect = options?.dialect ?? 'duckdb'
+          setConfig({dialect, port, root})
+          clearWorkspace()
           process.env.GRAPHENE_PORT = String(port)
           server = await serve2()
           return `http://localhost:${port}`

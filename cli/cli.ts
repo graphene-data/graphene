@@ -76,7 +76,7 @@ program
   .command('check')
   .description('Check the project for errors, optionally capturing a page screenshot')
   .argument('[mdFile]', 'Markdown file to check (e.g., index.md)')
-  .option('-c, --chart <chartName>', 'Name of specific chart to capture')
+  .option('-c, --chart <chartTitle>', 'Title of a specific chart to capture')
   .action(async (mdArg: string | undefined, options: {chart?: string}) => {
     let res = await check({mdArg, chart: options.chart})
     process.exitCode = res ? 0 : 1

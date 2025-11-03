@@ -49,56 +49,48 @@ export async function check (options: CheckOptions): Promise<boolean> {
     return true
   }
 
-  // await ensureServerRunning(config.root) // but not in tests
+  // Remove .md extension if provided and ensure it's just the filename
+  let host = `http://localhost:${config.port || Number(process.env.GRAPHENE_PORT) || 4000}`
+  let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
+  if (pageUrl === '/index') pageUrl = '/'
 
-  let runtimeResult: any
-  let abort = new AbortController()
-  let timeout = setTimeout(() => abort.abort(), 30_000)
-  try {
-    let port = config.port || Number(process.env.GRAPHENE_PORT) || 4000
-    let response = await fetch(`http://localhost:${port}/_api/check`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({mdFile, chart: options.chart}),
-      signal: abort.signal,
-    })
-    clearTimeout(timeout)
-
-    if (!response.ok) {
-      console.error(`Check failed: ${await response.text()}`)
-      return false
-    }
-
-    runtimeResult = await response.json()
-  } catch (err) {
-    clearTimeout(timeout)
-    if ((err as Error).name === 'AbortError') {
-      console.error('Check request timed out waiting for the page to respond')
-    } else {
-      console.error('Check failed:', err)
-    }
+  let resp = await sendCheckRequest({host, pageUrl, chart: options.chart})
+  if (resp.checkError == 'no_server') {
+    console.error("Graphene server isn't running. Start it with `graphene serve`")
     return false
   }
 
-  Array.from(runtimeResult?.errors || []).forEach(err => {
+  if (resp.checkError == 'no_tab') {
+    console.log(`Opening page ${host}${pageUrl}`)
+    spawn('open', [host + pageUrl])
+    await new Promise(resolve => setTimeout(resolve, 500))
+    resp = await sendCheckRequest({host, pageUrl, chart: options.chart})
+  }
+
+  if (resp.checkError == 'no_tab') {
+    console.error('Failed to open a new tab')
+    return false
+  }
+
+  Array.from(resp?.errors || []).forEach(err => {
     for (let line of formatRuntimeError(err!, mdFile)) {
       console.error(line)
     }
   })
 
-  if (runtimeResult?.stillLoading) {
+  if (resp?.stillLoading) {
     console.warn('Warning: Queries were still loading when the screenshot was taken')
   }
 
-  if (runtimeResult?.screenshot) {
+  if (resp?.screenshot) {
     let filename = `graphene-screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
     let screenshotPath = path.join(os.tmpdir(), filename)
-    let base64Data = runtimeResult.screenshot.replace(/^data:image\/png;base64,/, '')
+    let base64Data = resp.screenshot.replace(/^data:image\/png;base64,/, '')
     await fs.writeFile(screenshotPath, base64Data, 'base64')
     console.log('Screenshot saved to', screenshotPath)
   }
 
-  let runtimeErrors = Array.from(runtimeResult?.errors || [])
+  let runtimeErrors = Array.from(resp?.errors || [])
   if (runtimeErrors.length > 0) {
     let target = mdFile ? path.basename(mdFile) : 'project'
     console.error(`Runtime errors found in ${target}`)
@@ -107,6 +99,34 @@ export async function check (options: CheckOptions): Promise<boolean> {
 
   console.log('No errors found 💎')
   return true
+}
+
+async function sendCheckRequest ({host, pageUrl, chart}) {
+  let abort = new AbortController()
+  let timeout = setTimeout(() => abort.abort(), 30_000)
+  try {
+    let response = await fetch(`${host}/_api/check`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pageUrl: host + pageUrl, chart}),
+      signal: abort.signal,
+    })
+    clearTimeout(timeout)
+
+    let body = response.headers.get('content-type') == 'application/json' ? await response.json() : {error: await response.text()}
+
+    if (!response.ok) {
+      if (body.error) return {checkError: body.error}
+      console.error(`Unexpected response: ${JSON.stringify(body)}`)
+      return {checkError: 'Unexpected response from Graphene server'}
+    }
+
+    return body
+  } catch (err) {
+    clearTimeout(timeout)
+    if (err.name === 'AbortError') return {checkError: 'timeout'}
+    return {checkError: 'no_server'}
+  }
 }
 
 function normalizeMdFile (mdFile: string): string | null {
@@ -172,39 +192,24 @@ function formatRuntimeError (error: RuntimeErrorPayload, fallbackMd: string): st
 }
 
 // A request has come in to the server to check a specific url. We'll load it up, forward along the request, and proxy the response.
-export async function handleCheckRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
+export async function proxyCheckRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
-  let {mdFile, chart} = JSON.parse(Buffer.concat(chunks).toString())
-  let relativeMd = typeof mdFile === 'string' ? mdFile : ''
-  if (relativeMd && path.isAbsolute(relativeMd)) relativeMd = path.relative(config.root, relativeMd)
-  relativeMd = relativeMd.replace(/^\.{1,2}[\\/]*/, '')
+  let {pageUrl, chart} = JSON.parse(Buffer.concat(chunks).toString())
   let id = Math.random().toString(36).slice(2) // random id string
   res.setHeader('Content-Type', 'application/json')
-  pendingRequests[id] = {response: res}
 
-  // Remove .md extension if provided and ensure it's just the filename
-  let pageUrl = '/' + relativeMd.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
-  if (pageUrl === '/index') pageUrl = '/'
-  pageUrl = `http://localhost:${config.port || 4000}${pageUrl}`
-
-  // Check for existing WebSocket connections. Open a page if we don't find one.
+  // Check for existing WebSocket connections for the given url
   let normalizedPageUrl = pageUrl.endsWith('/') ? pageUrl.slice(0, -1) : pageUrl
   let conn = browserConnections.find(conn => conn.url === pageUrl || conn.url === normalizedPageUrl)
   if (!conn) {
-    spawn('open', [pageUrl])
-    let end = Date.now() + 5000
-    while (Date.now() < end && !conn) {
-      conn = browserConnections.find(conn => conn.url === pageUrl || conn.url === normalizedPageUrl)
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-    if (!conn) {
-      res.statusCode = 500
-      res.end(JSON.stringify({error: 'No browser tab available and failed to open one'}))
-      return
-    }
+    res.statusCode = 400
+    res.end(JSON.stringify({error: 'no_tab'}))
+    return
+  } else {
+    conn.socket.send(JSON.stringify({type: 'check', chart, requestId: id}))
+    pendingRequests[id] = {response: res}
   }
-  conn.socket.send(JSON.stringify({type: 'view', chart, requestId: id}))
 }
 
 // Vite plugin that allows running Graphene pages to connect, and can proxy `check` requests to those pages.
@@ -225,7 +230,7 @@ export function checkVitePlugin (): PluginOption {
         socket.on('message', (data) => {
           let message = JSON.parse(data.toString())
           if (message.type === 'register') browserConnections.push({url: message.url, socket})
-          if (message.type === 'viewResponse') {
+          if (message.type === 'checkResponse') {
             pendingRequests[message.requestId].response.end(JSON.stringify(message))
             delete pendingRequests[message.requestId]
           }
@@ -239,7 +244,7 @@ export function checkVitePlugin (): PluginOption {
 
       server.middlewares.use(async (req, res, next) => {
         let [pathName] = (req.url || '').split('?')
-        if (pathName === '/_api/check') await handleCheckRequest(req, res)
+        if (pathName === '/_api/check') await proxyCheckRequest(req, res)
         else next()
       })
     },

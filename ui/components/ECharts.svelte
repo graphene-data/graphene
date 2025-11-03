@@ -16,6 +16,7 @@
   export let seriesColors: any = undefined
   export let connectGroup: string | undefined = undefined
   export let xAxisLabelOverflow: 'truncate' | 'break' | undefined = undefined
+  export let chartTitle: string | undefined = undefined
 
   const dispatch = createEventDispatcher()
   const isBrowser = typeof window !== 'undefined'
@@ -33,6 +34,7 @@
   {:else}
     <div
       class="echarts-chart"
+      data-chart-title={chartTitle ?? undefined}
       data-query-id={queryID}
       style={`height:${toDimension(height, '240px')};width:${toDimension(width, '100%')}`}
       use:echarts={{
