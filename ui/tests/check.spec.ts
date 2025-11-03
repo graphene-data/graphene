@@ -1,15 +1,12 @@
-import {test, expect, waitForGrapheneQueries} from './fixtures'
+import {test, expect, waitForGrapheneQueries, type ServerFixture, type ServerOptions} from './fixtures'
 import type {Page} from '@playwright/test'
 import path from 'path'
 import fs from 'fs-extra'
 import {fileURLToPath} from 'url'
 import os from 'node:os'
-import net from 'node:net'
-import type {ViteDevServer} from 'vite'
 import {check} from '../../cli/check.ts'
 import {clearWorkspace} from '../../lang/core.ts'
 import {setConfig} from '../../lang/config.ts'
-import {serve2, mockFileMap} from '../../cli/serve2.ts'
 
 const flightsRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
 const flightsModelsPath = path.join(flightsRoot, 'models.gsql')
@@ -53,7 +50,7 @@ test('check without md argument reports static analysis errors', async () => {
   expect(combined).toContain('not_a_function')
 })
 
-test('check with md file reports runtime query errors and captures fields', async ({page}) => {
+test('check with md file reports analysis query errors', async ({page, server}) => {
   test.setTimeout(30_000)
   let heading = 'Runtime Error Page'
   let content = [
@@ -66,43 +63,42 @@ test('check with md file reports runtime query errors and captures fields', asyn
     '<BarChart data="runtime_error_query" x="origin" y="explode" />',
   ].join('\n')
 
-  await runCliCheckScenario(page, {
+  await runCliCheckScenario(page, server, {
     mdFile: 'index.md',
     content,
-    diskContent: '# Placeholder\n',
-    heading,
+    skipServer: true,
     assertions: ({capture}) => {
       let combinedErrors = capture.errors.join('\n')
-      expect(combinedErrors).toContain('Runtime errors found in index.md')
-      expect(combinedErrors).toContain('Unknown function')
-      expect(combinedErrors).toContain('runtime_error_query')
-      expect(combinedErrors).toContain('fields: x=origin, y=explode')
-      expect(capture.logs.some(line => line.includes('Screenshot saved to'))).toBe(true)
+      expect(combinedErrors).toContain('index.md')
+      expect(combinedErrors).toContain('Unknown function: not_a_function')
+      expect(combinedErrors).toContain('from flights select not_a_function() as explode')
+      expect(combinedErrors).not.toContain('Runtime errors found in index.md')
+      expect(capture.logs.some(line => line.includes('Screenshot saved to'))).toBe(false)
     },
   })
 })
 
-test('cli check command reports runtime query errors with field metadata', async ({page}) => {
+test('cli check command reports runtime cast errors with field metadata', async ({page, server}) => {
   test.setTimeout(30_000)
-  let heading = 'CLI Runtime Error Page'
+  let heading = 'Runtime Cast Error Page'
   let content = [
     `# ${heading}`,
     '',
     '```sql runtime_error_query',
-    'from flights select not_a_function() as explode',
+    'from flights select origin, sqrt(dep_delay) as explode',
     '```',
     '',
-    '<BarChart data="runtime_error_query" x="origin" y="explode" />',
+    '<BarChart data="runtime_error_query" x="origin" y="explode" title="Runtime Cast Error" />',
   ].join('\n')
 
-  await runCliCheckScenario(page, {
+  await runCliCheckScenario(page, server, {
     mdFile: 'index.md',
     content,
     diskContent: '# Placeholder\n',
     assertions: ({capture}) => {
       let summaryLine = capture.errors.find(line => line.includes('Runtime errors found in index.md'))
       expect(summaryLine).toBeTruthy()
-      let detailLine = capture.errors.find(line => line.includes('Unknown function'))
+      let detailLine = capture.errors.find(line => line.includes('Out of Range Error') || line.includes('square root of a negative number'))
       expect(detailLine).toBeTruthy()
       expect(detailLine).toContain('index.md')
       expect(detailLine).toContain('runtime_error_query')
@@ -114,35 +110,61 @@ test('cli check command reports runtime query errors with field metadata', async
   })
 })
 
-test('cli check reports chart configuration errors', async ({page}) => {
+test('cli check command reports runtime chart configuration errors', async ({page, server}) => {
   test.setTimeout(30_000)
-  let heading = 'Chart Config Error'
+  let heading = 'Runtime Chart Config Error'
   let content = [
     `# ${heading}`,
     '',
     '```sql chart_data',
-    'from flights select carrier, count() as total',
+    'from flights select carrier, min(dep_delay) as worst_delay',
     '```',
     '',
-    '<BarChart data="chart_data" x="carrier" y="missing" />',
+    '<BarChart data="chart_data" x="carrier" y="worst_delay" yLog="true" title="Runtime Chart Config Error" />',
   ].join('\n')
 
-  await runCliCheckScenario(page, {
+  await runCliCheckScenario(page, server, {
     mdFile: 'index.md',
     content,
     diskContent: '# Placeholder\n',
     assertions: ({capture}) => {
-      let detailLine = capture.errors.find(line => line.includes('Could not find "missing" on chart_data'))
+      let summaryLine = capture.errors.find(line => line.includes('Runtime errors found in index.md'))
+      expect(summaryLine).toBeTruthy()
+      let detailLine = capture.errors.find(line => line.includes('Error in Bar Chart') && line.includes('Log axis cannot display values less than or equal to zero'))
       expect(detailLine).toBeTruthy()
-      let fieldsLine = capture.errors.find(line => line.includes('fields:'))
-      expect(fieldsLine).toBeTruthy()
-      expect(fieldsLine).toContain('x=carrier')
-      expect(fieldsLine).toContain('y=missing')
     },
   })
 })
 
-test('cli check reports page load errors', async ({page}) => {
+test('cli check with --chart captures a single chart screenshot', async ({page, server}) => {
+  test.setTimeout(30_000)
+  let heading = 'Chart Screenshot'
+  let chartTitle = 'Carrier Distance'
+  let content = [
+    `# ${heading}`,
+    '',
+    '```sql chart_data',
+    'from flights select carrier, sum(distance) as total_distance',
+    '```',
+    '',
+    `<BarChart data="chart_data" x="carrier" y="total_distance" title="${chartTitle}" />`,
+  ].join('\n')
+
+  await runCliCheckScenario(page, server, {
+    mdFile: 'index.md',
+    content,
+    chart: chartTitle,
+    expectExitCode: 0,
+    assertions: async ({capture, page}) => {
+      expect(capture.errors).toEqual([])
+      expect(capture.logs.some(line => line.includes('Screenshot saved to'))).toBe(true)
+      let usedHtml2canvas = await page.evaluate(() => Boolean(window.html2canvas))
+      expect(usedHtml2canvas).toBe(false)
+    },
+  })
+})
+
+test('cli check reports page load errors', async ({page, server}) => {
   test.setTimeout(30_000)
   let heading = 'Broken Page'
   let content = [
@@ -151,7 +173,7 @@ test('cli check reports page load errors', async ({page}) => {
     '{(() => { throw new Error("Cannot read properties of undefined") })()}',
   ].join('\n')
 
-  await runCliCheckScenario(page, {
+  await runCliCheckScenario(page, server, {
     mdFile: 'page-error.md',
     content,
     diskContent: '# Page Error\n',
@@ -209,10 +231,13 @@ interface ScenarioOptions {
   heading?: string
   expectExitCode?: number
   diskContent?: string
+  skipServer?: boolean
+  serverOptions?: ServerOptions
+  chart?: string
   assertions: (ctx: {capture: ReturnType<typeof captureConsole>, workspace: Awaited<ReturnType<typeof createWorkspace>>, page: Page}) => Promise<void> | void
 }
 
-async function runCliCheckScenario (page: Page, options: ScenarioOptions): Promise<void> {
+async function runCliCheckScenario (page: Page, server: ServerFixture, options: ScenarioOptions): Promise<void> {
   let initialIndexContent = options.mdFile === 'index.md' && options.diskContent !== undefined
     ? options.diskContent
     : options.mdFile === 'index.md'
@@ -229,57 +254,38 @@ async function runCliCheckScenario (page: Page, options: ScenarioOptions): Promi
   }
 
   let capture = captureConsole()
-  let server: ViteDevServer | undefined
-  let port = 0
   try {
-    ({server, port} = await startServer(workspace.root))
-    mockFileMap[`/${options.mdFile}`] = options.content
-
-    let route = options.mdFile === 'index.md' ? '/' : `/${options.mdFile.replace(/\.md$/, '')}`
-    let url = `http://localhost:${port}${route}`
-    let navResponse = await page.goto(url)
-    if (navResponse?.status() === 404) {
-      await page.waitForTimeout(500)
-      navResponse = await page.goto(url)
+    if (!options.skipServer) {
+      let serverRoot = options.serverOptions?.root ?? workspace.root
+      let baseUrl = await server.url({...options.serverOptions, root: serverRoot})
+      server.mockFile(`/${options.mdFile}`, options.content)
+      let route = options.mdFile === 'index.md' ? '/' : `/${options.mdFile.replace(/\.md$/, '')}`
+      let url = new URL(route, baseUrl).toString()
+      let navResponse = await page.goto(url)
+      if (navResponse?.status() === 404) {
+        await page.waitForTimeout(500)
+        navResponse = await page.goto(url)
+      }
+      expect(navResponse?.status()).toBe(200)
+      await waitForGrapheneQueries(page)
+      if (options.heading) await expect(page.getByRole('heading', {level: 1, name: options.heading})).toBeVisible({timeout: 10_000})
+    } else {
+      setConfig({dialect: 'duckdb', port: 4000, root: workspace.root})
+      clearWorkspace()
     }
-    expect(navResponse?.status()).toBe(200)
-    await waitForGrapheneQueries(page)
-    if (options.heading) await expect(page.getByRole('heading', {level: 1, name: options.heading})).toBeVisible({timeout: 10_000})
 
-    let exitCode = await runCheckCommand({mdFile: options.mdFile, root: workspace.root})
+    let exitCode = await runCheckCommand({mdFile: options.mdFile, chart: options.chart, root: workspace.root})
     expect(exitCode).toBe(options.expectExitCode ?? 1)
     await options.assertions({capture, workspace, page})
   } finally {
     capture.restore()
-    delete mockFileMap[`/${options.mdFile}`]
-    await server?.close()
     await workspace.cleanup()
     clearWorkspace()
   }
-}
-
-async function startServer (root: string): Promise<{server: ViteDevServer, port: number}> {
-  let port = await getAvailablePort()
-  setConfig({dialect: 'duckdb', port, root})
-  clearWorkspace()
-  let server = await serve2()
-  return {server, port}
 }
 
 async function runCheckCommand ({mdFile, chart, root}: {mdFile?: string, chart?: string, root: string}): Promise<number> {
   clearWorkspace()
   let ok = await check({mdArg: mdFile, chart, workspaceRoot: root})
   return ok ? 0 : 1
-}
-
-async function getAvailablePort (): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    let srv = net.createServer()
-    srv.unref()
-    srv.on('error', reject)
-    srv.listen(0, '127.0.0.1', () => {
-      let {port} = srv.address() as net.AddressInfo
-      srv.close(() => resolve(port))
-    })
-  })
 }

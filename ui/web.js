@@ -69,21 +69,35 @@ let socket = null
 
 connectWebSocket()
 
-async function takeScreenshot (chartName = null) {
+async function captureChart (chartTitle) {
+  await waitForQueriesToFinish()
+  let errors = getErrors()
+  let escaped = window.CSS.escape(chartTitle)
+  let canvas = document.querySelector(`[data-chart-title="${escaped}"] canvas`)
+
+  if (!canvas) {
+    errors.push({message: `Could not find chart titled "${chartTitle}"`})
+    return {stillLoading: isLoading(), screenshot: null, errors}
+  }
+
+  return {stillLoading: isLoading(), screenshot: canvas.toDataURL('image/png'), errors}
+}
+
+async function takeScreenshot () {
+  await waitForQueriesToFinish()
   if (!window.html2canvas) {
     let html2canvas = await import('html2canvas')
     window.html2canvas = html2canvas.default
   }
+  let canvas = await window.html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1})
+  return {stillLoading: isLoading(), screenshot: canvas?.toDataURL('image/png'), errors: getErrors()}
+}
 
-  // wait some time for queries to finish loading
+async function waitForQueriesToFinish () {
   let startTime = Date.now()
   while (isLoading() && Date.now() - startTime < 20_000) {
     await new Promise(resolve => setTimeout(resolve, 100))
   }
-
-  let targetElement = chartName ? document.querySelector(`[name="${chartName}"]`) : document.body
-  let canvas = targetElement && await window.html2canvas(targetElement, {useCORS: true, allowTaint: true, scale: 1})
-  return {stillLoading: isLoading(), screenshot: canvas?.toDataURL('image/png')}
 }
 
 function connectWebSocket () {
@@ -99,9 +113,9 @@ function connectWebSocket () {
     console.log('Got message', event.data)
     let {type, requestId, chart} = JSON.parse(event.data)
 
-    if (type === 'view') {
-      let {screenshot, stillLoading} = await takeScreenshot(chart)
-      socket.send(JSON.stringify({type: 'viewResponse', requestId, screenshot, stillLoading, errors: getErrors()}))
+    if (type === 'check') {
+      let result = chart ? await captureChart(chart) : await takeScreenshot()
+      socket.send(JSON.stringify({type: 'checkResponse', requestId, ...result}))
     }
   }
 }
