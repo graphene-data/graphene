@@ -31,7 +31,6 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
         - [Formatting & Styling](#formatting--styling)
         - [Value Labels](#value-labels)
         - [Axes](#axes)
-        - [Custom Echarts attributes](#custom-echarts-attributes)
         - [Interactivity](#interactivity)
     - [Pie chart](#pie-chart)
       - [All pie chart attributes](#all-pie-chart-attributes)
@@ -43,7 +42,6 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
         - [Data](#data-2)
         - [Formatting & Styling](#formatting--styling-1)
         - [Axes](#axes-1)
-        - [Custom Echarts attributes](#custom-echarts-attributes-1)
         - [Interactivity](#interactivity-1)
     - [Area chart](#area-chart)
       - [All area chart attributes](#all-area-chart-attributes)
@@ -52,7 +50,6 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
         - [Formatting & Styling](#formatting--styling-2)
         - [Value Labels](#value-labels-1)
         - [Axes](#axes-2)
-        - [Custom Echarts attributes](#custom-echarts-attributes-2)
         - [Interactivity](#interactivity-2)
     - [Big value](#big-value)
       - [All big value attributes](#all-big-value-attributes)
@@ -73,6 +70,13 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
       - [All dropdown attributes](#all-dropdown-attributes)
         - [DropdownOption](#dropdownoption)
   - [Other components](#other-components)
+  - [Value formatting](#value-formatting)
+    - [Built-in Formats](#built-in-formats)
+      - [Auto-Formatting](#auto-formatting)
+      - [Dates](#dates)
+      - [Currencies](#currencies)
+      - [Numbers](#numbers)
+      - [Percentages](#percentages)
 - [Graphene CLI](#graphene-cli)
 - [AGENT INSTRUCTIONS](#agent-instructions)
 
@@ -475,7 +479,6 @@ Syntax notes
 - The `data` attribute can also refer directly to modeled GSQL tables instead of code-fenced queries.
 - Attributes that take column references can also take whole GSQL expressions, as shown in the second line chart from the example above.
 - Like in HTML, the string value assigned to an attribute does not need to be wrapped in double quotes if it only contains alphanumeric characters, `-`, `_`, `:`, or `.`.
-- For attributes that take arrays or objects, the value string should be formatted as a JSON array or JSON object wrapped in double quotes.
 
 Best practices
 - If you have multiple time series charts, align their x-axes to have the same range and granularity.
@@ -519,8 +522,8 @@ Here's an example:
 |----------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | false | column name, stored expression name, GSQL expression | First column |
-| y | Column(s) or expression(s) to use for the y-axis of the chart | false | column name, stored expression name, GSQL expression, array of any combination of these | Any non-assigned numeric columns |
-| y2 | Column(s) or expression(s) to include on a secondary y-axis | false | column name, stored expression name, GSQL expression, array of any combination of these | - |
+| y | Column(s) or expression(s) to use for the y-axis of the chart | false | column name, stored expression name, GSQL expression, list of any combination of these | Any non-assigned numeric columns |
+| y2 | Column(s) or expression(s) to include on a secondary y-axis | false | column name, stored expression name, GSQL expression, list of any combination of these | - |
 | y2SeriesType | Chart type to apply to the series on the y2 axis | false | `bar`, `line`, `scatter` | `bar` |
 | series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
@@ -533,17 +536,16 @@ Here's an example:
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
-| xFmt | Format to use for x column (see available formats) | Excel-style format, built-in format name, custom format name | - |
-| yFmt | Format to use for y column (see available formats) | Excel-style format, built-in format name, custom format name | - |
-| y2Fmt | Format to use for y2 column(s) (see available formats) | Excel-style format, built-in format name, custom format name | - |
-| seriesLabelFmt | Format to use for series label (see available formats) | Excel-style format, built-in format name, custom format name | - |
+| xFmt | Format to use for x column ([see available formats](#value-formatting)) | Excel-style format, built-in format name | - |
+| yFmt | Format to use for y column ([see available formats](#value-formatting)) | Excel-style format, built-in format name | - |
+| y2Fmt | Format to use for y2 column(s) ([see available formats](#value-formatting)) | Excel-style format, built-in format name | - |
+| seriesLabelFmt | Format to use for series label ([see available formats](#value-formatting)) | Excel-style format, built-in format name | - |
 | fillColor | Color to override default series color. Only accepts a single color. | CSS name, hexademical, RGB, HSL | - |
 | fillOpacity | % of the full color that should be rendered, with remainder being transparent | number (0 to 1) | `1` |
 | outlineWidth | Width of line surrounding each bar | number | `0` |
 | outlineColor | Color to use for outline if outlineWidth > 0 | CSS name, hexademical, RGB, HSL | - |
-| colorPalette | Array of custom colors to use for the chart | array of color strings (CSS name, hexademical, RGB, HSL) e.g. `"["#cf0d06", "#eb5752", "#e88a87"]"` | built-in color palette |
-| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. | object with series names and assigned color strings (CSS name, hexadecimal, RGB, HSL) e.g. `"{"Canada": "red", "US": "blue"}"` | colors applied by order of series in data |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | Array of series names in the order they should be used in the chart `"["Canada", "US"]"` | default order implied by the data |
+| colorPalette | List of custom colors to use for the chart | list of color strings (CSS name, hexademical, RGB, HSL) e.g. `"#cf0d06, #eb5752, #e88a87"` | built-in color palette |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | list of series names in the order they should be used in the chart `"Canada, US"` | default order implied by the data |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | number | - |
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | `true`, `false` | `false` |
@@ -558,9 +560,9 @@ Here's an example:
 | labelSize | Font size of value labels | number | `11` |
 | labelPosition | Where label will appear on your series | `outside`, `inside` | Single Series: `outside`, Stacked: `inside`, Grouped: `outside` |
 | labelColor | Font color of value labels | CSS name, hexademical, RGB, HSL | Automatic based on color contrast of background |
-| labelFmt | Format to use for value labels (see available formats) | Excel-style format, built-in format name, custom format name | same as y column |
-| yLabelFmt | Format to use for value labels for series on the y axis. Overrides any other formats (see available formats) | Excel-style format, built-in format name, custom format name | - |
-| y2LabelFmt | Format to use for value labels for series on the y2 axis. Overrides any other formats (see available formats) | Excel-style format, built-in format name, custom format name | - |
+| labelFmt | Format to use for value labels ([see available formats](#value-formatting)) | Excel-style format, built-in format name | same as y column |
+| yLabelFmt | Format to use for value labels for series on the y axis. Overrides any other formats ([see available formats](#value-formatting)) | Excel-style format, built-in format name | - |
+| y2LabelFmt | Format to use for value labels for series on the y2 axis. Overrides any other formats ([see available formats](#value-formatting)) | Excel-style format, built-in format name | - |
 | showAllLabels | Allow all labels to appear on chart, including overlapping labels | `true`, `false` | `false` |
 
 ###### Axes
@@ -592,14 +594,6 @@ Here's an example:
 | y2Max | Maximum value for the y2-axis | number | - |
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | `true`, `false` | `false` |
 | yAxisColor | Turns on/off color on the y-axis (turned on by default when secondary y-axis is used). Can also be used to set a specific color | `true`, `false`, color string (CSS name, hexademical, RGB, HSL) | `true` when y2 used; `false` otherwise |
-
-###### Custom Echarts attributes
-
-| Attribute | Description | Options |
-|----------|-------------|---------|
-| echartsOptions | Custom Echarts options to override the default options. See reference page for available options. | E.g. `"{"exampleOption": "exampleValue"}"` |
-| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See reference page for available options. | E.g. `"{"exampleSeriesOption": "exampleValue"}"` |
-| printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | `true`, `false` | `false` |
 
 ###### Interactivity
 
@@ -676,8 +670,8 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | - |
-| y | Column(s) or expression(s) to use for the y-axis of the chart | true | column name, stored expression name, GSQL expression, array of any combination of these | - |
-| y2 | Column(s) or expression(s) to include on a secondary y-axis | false | column name, stored expression name, GSQL expression, array of any combination of these | - |
+| y | Column(s) or expression(s) to use for the y-axis of the chart | true | column name, stored expression name, GSQL expression, list of any combination of these | - |
+| y2 | Column(s) or expression(s) to include on a secondary y-axis | false | column name, stored expression name, GSQL expression, list of any combination of these | - |
 | y2SeriesType | Chart type to apply to the series on the y2 axis | false | `line`, `bar`, `scatter` | `line` |
 | series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
@@ -689,10 +683,10 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| xFmt | Format to use for x column | false | Excel-style format, built-in format name, custom format name | - |
-| yFmt | Format to use for y column(s) | false | Excel-style format, built-in format name, custom format name | - |
-| y2Fmt | Format to use for y2 column(s) | false | Excel-style format, built-in format name, custom format name | - |
-| seriesLabelFmt | Format to use for series label ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | - |
+| xFmt | Format to use for x column ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
+| yFmt | Format to use for y column(s) ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
+| y2Fmt | Format to use for y2 column(s) ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
+| seriesLabelFmt | Format to use for series label ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
 | step | Specifies whether the chart is displayed as a step line | false | `true`, `false` | `false` |
 | stepPosition | Configures the position of turn points for a step line chart | false | `start`, `middle`, `end` | `end` |
 | lineColor | Color to override default series color. Only accepts a single color | false | CSS name, hexademical, RGB, HSL | - |
@@ -702,16 +696,15 @@ Here's an example:
 | markers | Turn on/off markers (shapes rendered onto the points of a line) | false | `true`, `false` | `false` |
 | markerShape | Shape to use if markers=true | false | `circle`, `emptyCircle`, `rect`, `triangle`, `diamond` | `circle` |
 | markerSize | Size of each shape (in pixels) | false | number | `8` |
-| colorPalette | Array of custom colors to use for the chart | false | array of color strings (CSS name, hexademical, RGB, HSL) e.g. `"["#cf0d06", "#eb5752", "#e88a87"]"` | - |
-| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. | false | object with series names and assigned color strings (CSS name, hexadecimal, RGB, HSL) e.g. `"{"Canada": "red", "US": "blue"}"` | - |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart `"["Canada", "US"]"` | default order implied by the data |
+| colorPalette | List of custom colors to use for the chart | false | list of color strings (CSS name, hexademical, RGB, HSL) e.g. `"#cf0d06, #eb5752, #e88a87"` | - |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | list of series names in the order they should be used in the chart `"Canada, US"` | default order implied by the data |
 | labels | Show value labels | false | `true`, `false` | `false` |
 | labelSize | Font size of value labels | false | number | `11` |
 | labelPosition | Where label will appear on your series | false | `above`, `middle`, `below` | `above` |
 | labelColor | Font color of value labels | false | CSS name, hexademical, RGB, HSL | - |
-| labelFmt | Format to use for value labels | false | Excel-style format, built-in format name, custom format name | - |
-| yLabelFmt | Format to use for value labels for series on the y axis. Overrides any other formats | false | Excel-style format, built-in format name, custom format name | - |
-| y2LabelFmt | Format to use for value labels for series on the y2 axis. Overrides any other formats | false | Excel-style format, built-in format name, custom format name | - |
+| labelFmt | Format to use for value labels ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
+| yLabelFmt | Format to use for value labels for series on the y axis. Overrides any other formats ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
+| y2LabelFmt | Format to use for value labels for series on the y2 axis. Overrides any other formats ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
 | showAllLabels | Allow all labels to appear on chart, including overlapping labels | false | `true`, `false` | `false` |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
@@ -744,14 +737,6 @@ Here's an example:
 | y2Min | Starting value for the y2-axis | false | number | - |
 | y2Max | Maximum value for the y2-axis | false | number | - |
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | false | `true`, `false` | `false` |
-
-###### Custom Echarts attributes
-
-| Attribute | Description | Required | Options | Default |
-|------|-------------|----------|---------|---------|
-| echartsOptions | Custom Echarts options to override the default options. See [reference page](/components/charts/echarts-options) for available options. | false | E.g. `"{"exampleOption": "exampleValue"}"` | - |
-| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See [reference page](/components/charts/echarts-options) for available options. | false | E.g. `"{"exampleSeriesOption": "exampleValue"}"` | - |
-| printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | false | `true`, `false` | `false` |
 
 ###### Interactivity
 
@@ -794,7 +779,7 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | First column |
-| y | Column(s) or expression(s) to use for the y-axis of the chart | true | column name, stored expression name, GSQL expression, array of any combination of these | Any non-assigned numeric columns |
+| y | Column(s) or expression(s) to use for the y-axis of the chart | true | column name, stored expression name, GSQL expression, list of any combination of these | Any non-assigned numeric columns |
 | series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | type | Grouping method to use for multi-series charts | false | `stacked`, `stacked100` | `stacked` |
@@ -806,18 +791,17 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| xFmt | Format to use for x column ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | - |
-| yFmt | Format to use for y column ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | - |
-| seriesLabelFmt | Format to use for series label ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | - |
+| xFmt | Format to use for x column ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
+| yFmt | Format to use for y column ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
+| seriesLabelFmt | Format to use for series label ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
 | step | Specifies whether the chart is displayed as a step line | false | `true`, `false` | `false` |
 | stepPosition | Configures the position of turn points for a step line chart | false | `start`, `middle`, `end` | `end` |
 | fillColor | Color to override default series color. Only accepts a single color. | false | CSS name, hexademical, RGB, HSL | - |
 | lineColor | Color to override default line color. Only accepts a single color. | false | CSS name, hexademical, RGB, HSL | - |
 | fillOpacity | % of the full color that should be rendered, with remainder being transparent | false | number (0 to 1) | `0.7` |
 | line | Show line on top of the area | false | `true`, `false` | `true` |
-| colorPalette | Array of custom colors to use for the chart | false | array of color strings (CSS name, hexademical, RGB, HSL) e.g. `"["#cf0d06", "#eb5752", "#e88a87"]"` | built-in color palette |
-| seriesColors | Apply a specific color to each series in your chart. Unspecified series will receive colors from the built-in palette as normal. | false | object with series names and assigned color strings (CSS name, hexadecimal, RGB, HSL) e.g. `"{"Canada": "red", "US": "blue"}"` | colors applied by order of series in data |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | Array of series names in the order they should be used in the chart `"["Canada", "US"]"` | default order implied by the data |
+| colorPalette | List of custom colors to use for the chart | false | list of color strings (CSS name, hexademical, RGB, HSL) e.g. `"#cf0d06, #eb5752, #e88a87"` | built-in color palette |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | list of series names in the order they should be used in the chart `"Canada, US"` | default order implied by the data |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
@@ -830,7 +814,7 @@ Here's an example:
 | labelSize | Font size of value labels | false | number | `11` |
 | labelPosition | Where label will appear on your series | false | `above`, `middle`, `below` | `above` |
 | labelColor | Font color of value labels | false | CSS name, hexademical, RGB, HSL | Automatic based on color contrast of background |
-| labelFmt | Format to use for value labels ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | same as y column |
+| labelFmt | Format to use for value labels ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | same as y column |
 | showAllLabels | Allow all labels to appear on chart, including overlapping labels | false | `true`, `false` | `false` |
 
 ###### Axes
@@ -852,14 +836,6 @@ Here's an example:
 | yMin | Starting value for the y-axis | false | number | - |
 | yMax | Maximum value for the y-axis | false | number | - |
 | yScale | Whether to scale the y-axis to fit your data. `yMin` and `yMax` take precedence over `yScale` | false | `true`, `false` | `false` |
-
-###### Custom Echarts attributes
-
-| Attribute | Description | Required | Options | Default |
-|------|-------------|----------|---------|---------|
-| echartsOptions | Custom Echarts options to override the default options. See [reference page](/components/charts/echarts-options) for available options. | false | E.g. `"{"exampleOption": "exampleValue"}"` | - |
-| seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See [reference page](/components/charts/echarts-options) for available options. | false | E.g. `"{"exampleSeriesOption": "exampleValue"}"` | - |
-| printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | false | `true`, `false` | `false` |
 
 ###### Interactivity
 
@@ -896,7 +872,7 @@ Here's an example:
 | title | Title of the card. | false | string | Title of the value column. |
 | minWidth | Overrides min-width of component | false | % or px value | `"18%"` |
 | maxWidth | Adds a max-width to the component | false | % or px value | - |
-| fmt | Sets format for the value ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format, custom format | - |
+| fmt | Sets format for the value ([see available formats](#value-formatting)) | false | Excel-style format, built-in format | - |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | `"No records"` |
 | link | Used to navigate to other pages. Can be a full external link like `"https://google.com"` or an internal link like `"/sales/performance"` | false | - | - |
@@ -911,7 +887,7 @@ Here's an example:
 | downIsGood | If present, negative comparison values appear in green, and positive values appear in red. | false | `true`, `false` | `false` |
 | neutralMin | Sets the bottom of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | `0` |
 | neutralMax | Sets the top of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | `0` |
-| comparisonFmt | Sets format for the comparison ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format, custom format | - |
+| comparisonFmt | Sets format for the comparison ([see available formats](#value-formatting)) | false | Excel-style format, built-in format | - |
 
 ###### Sparkline
 
@@ -975,7 +951,7 @@ Here's an example:
 | groupBy | Column or expression to use to create groups. Note that groups are currently limited to a single group column. | false | column name, stored expression name, GSQL expression | - |
 | groupType | How the groups are shown in the table. Can be accordion (expand/collapse) or section (group column values are merged across rows) | false | `accordion`, `section` | `accordion` |
 | subtotals | Whether to show aggregated totals for the groups | false | `true`, `false` | `false` |
-| subtotalFmt | Specify an override format to use in the subtotal row ([see available formats](/core-concepts/formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format, custom format | - |
+| subtotalFmt | Specify an override format to use in the subtotal row ([see available formats](#value-formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format | - |
 | groupsOpen | [groupType=accordion] Whether to show the accordions as open on page load | false | `true`, `false` | `true` |
 | accordionRowColor | [groupType=accordion] Background color for the accordion row | false | Hex color code, css color name | - |
 | subtotalRowColor | [groupType=section] Background color for the subtotal row | false | Hex color code, css color name | - |
@@ -1003,10 +979,10 @@ Here's an example:
 | title | Override title of column | false | string | column name (formatted) |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 | align | Align column text | false | `left`, `center`, `right` | `left` |
-| fmt | Format the values in the column ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format, custom format | - |
+| fmt | Format the values in the column ([see available formats](#value-formatting)) | false | Excel-style format, built-in format | - |
 | fmtColumn | Column to use to format values in this column. This is used to achieve different value formats by row. The fmtColumn should contain strings of format codes - either Graphene built-in formats or Excel codes. | false | column name | - |
 | totalAgg | Specify an aggregation function to use for the total row. Accepts predefined functions, custom strings or values | false | `sum`, `mean`, `weightedMean`, `median`, `min`, `max`, `count`, `countDistinct`, custom string or value | `sum` |
-| totalFmt | Specify an override format to use in the total row ([see available formats](/core-concepts/formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format, custom format | - |
+| totalFmt | Specify an override format to use in the total row ([see available formats](#value-formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format | - |
 | weightCol | Column or expression to use as the weight values for weighted mean aggregation. If not specified, a weight of 1 for each value will be used and the result will be the same as the `mean` aggregation. | false | column name, stored expression name, GSQL expression | - |
 | wrap | Wrap column text | false | `true`, `false` | `false` |
 | wrapTitle | Wrap column title | false | `true`, `false` | `false` |
@@ -1070,7 +1046,7 @@ Conditional formatting (`contentType=colorscale`)
 | colorMin | Set a minimum for the scale. Any values below that minimum will appear in the lowest color on the scale | false | number | min of column |
 | colorMid | Set a midpoint for the scale | false | number | mid of column |
 | colorMax | Set a maximum for the scale. Any values above that maximum will appear in the highest color on the scale | false | number | max of column |
-| colorBreakpoints | Array of numbers to use as breakpoints for each color in your color scale. Should line up with the colors you provide in `colorScale` | false | array of numbers | - |
+| colorBreakpoints | List of numbers to use as breakpoints for each color in your color scale. Should line up with the colors you provide in `colorScale` | false | list of numbers | - |
 | scaleColumn | Column or expression to use to define the color scale range. Values in this column will have their cell color determined by the value in the scaleColumn | false | column name, stored expression name, GSQL expression | - |
 
 ### Input components
@@ -1139,7 +1115,7 @@ where created_at > $date_range_name_start and < $date_range_name_end
 | start | A manually specified start date to use for the range | false | string formatted YYYY-MM-DD | - |
 | end | A manually specified end date to use for the range | false | string formatted YYYY-MM-DD | - |
 | title | Title to display in the Date Range component | false | string | - |
-| presetRanges | Customize "Select a Range" drop down, by including preset range options | false | array of values e.g. `"["Last 7 Days", "Last 30 Days"]"`. Allowed values: `"Last 7 Days"`, `"Last 30 Days"`, `"Last 90 Days"`, `"Last 365 Days"`, `"Last 3 Months"`, `"Last 6 Months"`, `"Last 12 Months"`, `"Last Month"`, `"Last Year"`, `"Month to Date"`, `"Month to Today"`, `"Year to Date"`, `"Year to Today"`, `"All Time"` | - |
+| presetRanges | Customize "Select a Range" drop down, by including preset range options | false | list of values e.g. `"Last 7 Days, Last 30 Days"`. Allowed values: `Last 7 Days`, `Last 30 Days`, `Last 90 Days`, `Last 365 Days`, `Last 3 Months`, `Last 6 Months`, `Last 12 Months`, `Last Month`, `Last Year`, `Month to Date`, `Month to Today`, `Year to Date`, `Year to Today`, `All Time` | - |
 | defaultValue | Accepts preset in string format to apply default value in Date Range picker | false | `"Last 7 Days"`, `"Last 30 Days"`, `"Last 90 Days"`, `"Last 365 Days"`, `"Last 3 Months"`, `"Last 6 Months"`, `"Last 12 Months"`, `"Last Month"`, `"Last Year"`, `"Month to Date"`, `"Month to Today"`, `"Year to Date"`, `"Year to Today"`, `"All Time"` | - |
 | hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
@@ -1181,7 +1157,7 @@ where status = $status_dropdown
 | data | Query name, wrapped in curly braces | false | query name | - |
 | value | Column name from the query containing values to pick from | false | column name | - |
 | multiple | Enables multi-select which returns a list | false | `true`, `false` | `false` |
-| defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Arrays supported for multi-select. | false | value from dropdown, array of values e.g. `"["Value 1", "Value 2"]"` | - |
+| defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Lists supported for multi-select. | false | value from dropdown, list of values e.g. `"Value 1, Value 2"` | - |
 | selectAllByDefault | Selects and returns all values, multiple attribute required | false | `true`, `false` | `false` |
 | noDefault | Stops any default from being selected. Overrides any set `defaultValue`. | false | boolean | `false` |
 | disableSelectAll | Removes the `"Select all"` button. Recommended for large datasets. | false | boolean | `false` |
@@ -1214,6 +1190,113 @@ Here's an example:
 ### Other components
 
 `<Row></Row>` - Evenly distributes components inside along the same row.
+
+### Value formatting
+
+The easiest way to format numbers and dates in Graphene is through component attributes. You can pass in either of the following:
+
+* [Excel-style format codes](https://support.microsoft.com/en-us/office/number-format-codes-in-excel-for-mac-5026bbd6-04bc-48cd-bf33-80f18b4eae68) (e.g., `fmt="$#,##0.0"`)
+* [Graphene's built-in formats](#built-in-formats) (e.g., `fmt=usd2k`)
+
+For example, you can use the `fmt` attribute to format values inside a BigValue component:
+
+```markdown
+<BigValue 
+  data=sales_data 
+  value=sales 
+  fmt="$#,##0" 
+/>
+```
+
+Within charts, you can format individual columns using `xFmt` and `yFmt`:
+
+```markdown
+<LineChart 
+  data=sales_data 
+  x=date 
+  y=sales 
+  xFmt="m/d"
+  yFmt=eur
+/>
+```
+
+In the example above, `xFmt` is passing in an Excel-style code to format the dates and `yFmt` is referencing a built-in format (see the full list of supported formats below).
+
+**Date formatting**
+
+Formatting does not apply to the date axis of a chart. For example, if you set `xFmt` to `"m/d/yy"`, you will only see that formatting reflected in your chart tooltips and annotations. This is to ensure that the chart axis labels have the correct spacing.
+
+#### Built-in Formats
+
+Graphene supports a variety of date/time, number, percentage, and currency formats.
+
+##### Auto-Formatting
+
+Wherever you see `auto` listed beside a format, that means Graphene will automatically format your value based on the context it is in.
+
+For example, Graphene automatically formats large numbers into shortened versions based on the size of the median number in a column (e.g., 4,000,000 → 4M).
+
+You can choose to handle these numbers differently by choosing a specific format code. For example, if Graphene is formatting a column as millions, but you want to see all numbers in thousands, you could use the `num0k` format, which will show all numbers in the column in thousands with 0 decimal places.
+
+##### Dates
+
+Graphene supports the following date formats:
+
+* `ddd` - Short day name (e.g., Mon, Tue)
+* `dddd` - Full day name (e.g., Monday, Tuesday)
+* `mmm` - Short month name (e.g., Jan, Feb)
+* `mmmm` - Full month name (e.g., January, February)
+* `yyyy` - Four-digit year
+* `shortdate` - Short date format (e.g., Jan 9/22)
+* `longdate` - Long date format (e.g., January 9, 2022)
+* `fulldate` - Full date format (e.g., Monday January 9, 2022)
+* `mdy` - Month/day/year (e.g., 1/9/22)
+* `dmy` - Day/month/year (e.g., 9/1/22)
+* `hms` - Time format (e.g., 11:45:03 AM)
+
+##### Currencies
+
+Supported currencies include USD, AUD, BRL, CAD, CNY, EUR, GBP, JPY, INR, KRW, NGN, RUB, and SEK.
+
+In order to use currency tags, use the currency code, optionally appended with:
+
+* a number indicating the number of decimal places to show (0-2)
+* a letter indicating the order of magnitude to show ("","k", "m", "b")
+
+For example, the available tags for USD are:
+
+* `usd` (auto) - Automatically formats based on value size
+* `usd0`, `usd1`, `usd2` - USD with 0, 1, or 2 decimal places
+* `usd0k`, `usd1k`, `usd2k` - USD in thousands (e.g., $64k)
+* `usd0m`, `usd1m`, `usd2m` - USD in millions (e.g., $42M)
+* `usd0b`, `usd1b`, `usd2b` - USD in billions (e.g., $1B)
+
+Similar patterns apply to other supported currencies.
+
+##### Numbers
+
+The default number format (when no `fmt` is specified) automatically handles decimal places and summary units (in the same way that `usd` does for currency).
+
+Available number formats:
+
+* `num0`, `num1`, `num2`, `num3`, `num4` - Numbers with 0-4 decimal places
+* `num0k`, `num1k`, `num2k` - Numbers in thousands (e.g., 64k)
+* `num0m`, `num1m`, `num2m` - Numbers in millions (e.g., 42M)
+* `num0b`, `num1b`, `num2b` - Numbers in billions (e.g., 1B)
+* `id` - Integer format for IDs
+* `fract` - Fraction format
+* `mult`, `mult0`, `mult1`, `mult2` - Multiplier format (e.g., 5.32x)
+* `sci` - Scientific notation
+
+##### Percentages
+
+Available percentage formats:
+
+* `pct` (auto) - Automatically formats percentages based on value
+* `pct0` - Percentage with 0 decimal places (e.g., 73%)
+* `pct1` - Percentage with 1 decimal place (e.g., 73.1%)
+* `pct2` - Percentage with 2 decimal places (e.g., 73.10%)
+* `pct3` - Percentage with 3 decimal places (e.g., 73.100%)
 
 ## Graphene CLI
 
