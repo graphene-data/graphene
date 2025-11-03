@@ -25,52 +25,52 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
 - [Graphene data apps (dashboards)](#graphene-data-apps-dashboards)
   - [Visualization components](#visualization-components)
     - [Bar chart](#bar-chart)
-      - [All bar chart properties](#all-bar-chart-properties)
+      - [All bar chart attributes](#all-bar-chart-attributes)
         - [General](#general)
         - [Data](#data)
         - [Formatting & Styling](#formatting--styling)
         - [Value Labels](#value-labels)
         - [Axes](#axes)
-        - [Custom Echarts properties](#custom-echarts-properties)
+        - [Custom Echarts attributes](#custom-echarts-attributes)
         - [Interactivity](#interactivity)
     - [Pie chart](#pie-chart)
-      - [All pie chart properties](#all-pie-chart-properties)
+      - [All pie chart attributes](#all-pie-chart-attributes)
         - [General](#general-1)
         - [Data](#data-1)
     - [Line chart](#line-chart)
-      - [All line chart properties](#all-line-chart-properties)
+      - [All line chart attributes](#all-line-chart-attributes)
         - [General](#general-2)
         - [Data](#data-2)
         - [Formatting & Styling](#formatting--styling-1)
         - [Axes](#axes-1)
-        - [Custom Echarts properties](#custom-echarts-properties-1)
+        - [Custom Echarts attributes](#custom-echarts-attributes-1)
         - [Interactivity](#interactivity-1)
     - [Area chart](#area-chart)
-      - [All area chart properties](#all-area-chart-properties)
+      - [All area chart attributes](#all-area-chart-attributes)
         - [General](#general-3)
         - [Data](#data-3)
         - [Formatting & Styling](#formatting--styling-2)
         - [Value Labels](#value-labels-1)
         - [Axes](#axes-2)
-        - [Custom Echarts properties](#custom-echarts-properties-2)
+        - [Custom Echarts attributes](#custom-echarts-attributes-2)
         - [Interactivity](#interactivity-2)
     - [Big value](#big-value)
-      - [All big value properties](#all-big-value-properties)
+      - [All big value attributes](#all-big-value-attributes)
         - [Data](#data-4)
         - [Comparison](#comparison)
         - [Sparkline](#sparkline)
     - [Table](#table)
-      - [All table properties](#all-table-properties)
+      - [All table attributes](#all-table-attributes)
         - [Table](#table-1)
         - [Groups](#groups)
         - [Column](#column)
   - [Input components](#input-components)
     - [Text input](#text-input)
-      - [All text input properties](#all-text-input-properties)
+      - [All text input attributes](#all-text-input-attributes)
     - [Date range](#date-range)
-      - [All date range properties](#all-date-range-properties)
+      - [All date range attributes](#all-date-range-attributes)
     - [Dropdown](#dropdown)
-      - [All dropdown properties](#all-dropdown-properties)
+      - [All dropdown attributes](#all-dropdown-attributes)
         - [DropdownOption](#dropdownoption)
   - [Other components](#other-components)
 - [Graphene CLI](#graphene-cli)
@@ -471,7 +471,10 @@ group by month
 </Row>
 ````
 
-Note that components can also directly refer to Graphene tables in their `data` property; it is not always necessary to prepare data in a code-fenced query. Properties that take column references can also take whole GSQL expressions, as shown in the second line chart from the example above.
+Syntax notes
+- The `data` attribute can also refer directly to modeled GSQL tables instead of code-fenced queries.
+- Attributes that take column references can also take whole GSQL expressions, as shown in the second line chart from the example above.
+- The string value assigned to an attribute ALWAYS needs to be wrapped in double quotes eg. `some_attr="some_str"`.
 
 Best practices
 - If you have multiple time series charts, align their x-axes to have the same range and granularity.
@@ -495,11 +498,11 @@ Here's an example:
 />
 ```
 
-##### All bar chart properties
+##### All bar chart attributes
 
 ###### General
 
-| Property | Description | Options | Default |
+| Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
 | title | Chart title. Appears at top left of chart. | string | - |
 | subtitle | Chart subtitle. Appears just under title. | string | - |
@@ -511,7 +514,7 @@ Here's an example:
 
 ###### Data
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |----------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column to use for the x-axis of the chart | false | column name | First column |
@@ -527,7 +530,7 @@ Here's an example:
 
 ###### Formatting & Styling
 
-| Property | Description | Options | Default |
+| Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
 | xFmt | Format to use for x column (see available formats) | Excel-style format, built-in format name, custom format name | - |
 | yFmt | Format to use for y column (see available formats) | Excel-style format, built-in format name, custom format name | - |
@@ -546,7 +549,7 @@ Here's an example:
 
 ###### Value Labels
 
-| Property | Description | Options | Default |
+| Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
 | labels | Show value labels | `true`, `false` | `false` |
 | stackTotalLabel | If using labels, whether to show a total at the top of stacked bar chart | `true`, `false` | `true` |
@@ -561,7 +564,7 @@ Here's an example:
 
 ###### Axes
 
-| Property | Description | Options | Default |
+| Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
 | swapXY | Swap the x and y axes to create a horizontal chart | `true`, `false` | `false` |
 | yLog | Whether to use a log scale for the y-axis | `true`, `false` | `false` |
@@ -589,17 +592,17 @@ Here's an example:
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | `true`, `false` | `false` |
 | yAxisColor | Turns on/off color on the y-axis (turned on by default when secondary y-axis is used). Can also be used to set a specific color | `true`, `false`, color string (CSS name, hexademical, RGB, HSL) | `true` when y2 used; `false` otherwise |
 
-###### Custom Echarts properties
+###### Custom Echarts attributes
 
-| Property | Description | Options |
+| Attribute | Description | Options |
 |----------|-------------|---------|
 | echartsOptions | Custom Echarts options to override the default options. See reference page for available options. | `{{exampleOption:'exampleValue'}}` |
 | seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See reference page for available options. | `{{exampleSeriesOption:'exampleValue'}}` |
-| printEchartsConfig | Helper prop for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | `true`, `false` | `false` |
+| printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | `true`, `false` | `false` |
 
 ###### Interactivity
 
-| Property | Description | Options |
+| Attribute | Description | Options |
 |----------|-------------|---------|
 | connectGroup | Group name to connect this chart to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | string |
 
@@ -618,18 +621,18 @@ Here's an example:
 />
 ```
 
-##### All pie chart properties
+##### All pie chart attributes
 
 ###### General
 
-| Property | Description | Options | Default |
+| Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
 | title | Chart title. Appears at top left of chart. | string | - |
 | subtitle | Chart subtitle. Appears just under title. | string | - |
 
 ###### Data
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | category | Column to use for slice names | true | column name | - |
@@ -652,11 +655,11 @@ Here's an example:
 />
 ```
 
-##### All line chart properties
+##### All line chart attributes
 
 ###### General
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | title | Chart title. Appears at top left of chart. | false | string | - |
 | subtitle | Chart subtitle. Appears just under title. | false | string | - |
@@ -668,7 +671,7 @@ Here's an example:
 
 ###### Data
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column to use for the x-axis of the chart | true | column name | - |
@@ -683,7 +686,7 @@ Here's an example:
 
 ###### Formatting & Styling
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | xFmt | Format to use for x column | false | Excel-style format, built-in format name, custom format name | - |
 | yFmt | Format to use for y column(s) | false | Excel-style format, built-in format name, custom format name | - |
@@ -715,7 +718,7 @@ Here's an example:
 
 ###### Axes
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | yLog | Whether to use a log scale for the y-axis | false | `true`, `false` | `false` |
 | yLogBase | Base to use when log scale is enabled | false | number | `10` |
@@ -741,17 +744,17 @@ Here's an example:
 | y2Max | Maximum value for the y2-axis | false | number | - |
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | false | `true`, `false` | `false` |
 
-###### Custom Echarts properties
+###### Custom Echarts attributes
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | echartsOptions | Custom Echarts options to override the default options. See [reference page](/components/charts/echarts-options) for available options. | false | `{{exampleOption:'exampleValue'}}` | - |
 | seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See [reference page](/components/charts/echarts-options) for available options. | false | `{{exampleSeriesOption:'exampleValue'}}` | - |
-| printEchartsConfig | Helper prop for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | false | `true`, `false` | `false` |
+| printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | false | `true`, `false` | `false` |
 
 ###### Interactivity
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | connectGroup | Group name to connect this chart to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | false | - | - |
 
@@ -770,11 +773,11 @@ Here's an example:
 />
 ```
 
-##### All area chart properties
+##### All area chart attributes
 
 ###### General
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | title | Chart title. Appears at top left of chart. | false | string | - |
 | subtitle | Chart subtitle. Appears just under title. | false | string | - |
@@ -786,7 +789,7 @@ Here's an example:
 
 ###### Data
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column to use for the x-axis of the chart | true | column name | First column |
@@ -800,7 +803,7 @@ Here's an example:
 
 ###### Formatting & Styling
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | xFmt | Format to use for x column ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | - |
 | yFmt | Format to use for y column ([see available formats](/core-concepts/formatting)) | false | Excel-style format, built-in format name, custom format name | - |
@@ -820,7 +823,7 @@ Here's an example:
 
 ###### Value Labels
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | labels | Show value labels | false | `true`, `false` | `false` |
 | labelSize | Font size of value labels | false | number | `11` |
@@ -831,7 +834,7 @@ Here's an example:
 
 ###### Axes
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | yLog | Whether to use a log scale for the y-axis | false | `true`, `false` | `false` |
 | yLogBase | Base to use when log scale is enabled | false | number | `10` |
@@ -849,17 +852,17 @@ Here's an example:
 | yMax | Maximum value for the y-axis | false | number | - |
 | yScale | Whether to scale the y-axis to fit your data. `yMin` and `yMax` take precedence over `yScale` | false | `true`, `false` | `false` |
 
-###### Custom Echarts properties
+###### Custom Echarts attributes
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | echartsOptions | Custom Echarts options to override the default options. See [reference page](/components/charts/echarts-options) for available options. | false | `{{exampleOption:'exampleValue'}}` | - |
 | seriesOptions | Custom Echarts options to override the default options for all series in the chart. This loops through the series to apply the settings rather than having to specify every series manually using `echartsOptions` See [reference page](/components/charts/echarts-options) for available options. | false | `{{exampleSeriesOption:'exampleValue'}}` | - |
-| printEchartsConfig | Helper prop for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | false | `true`, `false` | `false` |
+| printEchartsConfig | Helper attribute for custom chart development - inserts a code block with the current echarts config onto the page so you can see the options used and debug your custom options | false | `true`, `false` | `false` |
 
 ###### Interactivity
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | connectGroup | Group name to connect this chart to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | false | - | - |
 
@@ -881,11 +884,11 @@ Here's an example:
 />
 ```
 
-##### All big value properties
+##### All big value attributes
 
 ###### Data
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | value | Column to pull the main value from. | true | column name | - |
@@ -899,7 +902,7 @@ Here's an example:
 
 ###### Comparison
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | comparison | Column to pull the comparison value from. | false | column name | - |
 | comparisonTitle | Text to the right of the comparison. | false | string | Title of the comparison column. |
@@ -911,7 +914,7 @@ Here's an example:
 
 ###### Sparkline
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | sparkline | Column to pull the date from to create the sparkline. | false | column name | - |
 | sparklineType | Chart type for sparkline | false | `line`, `area`, `bar` | `line` |
@@ -932,11 +935,11 @@ Here's an example:
 <Table data="orders_summary" />
 ```
 
-##### All table properties
+##### All table attributes
 
 ###### Table
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | rows | Number of rows to show in the table before paginating results. Use `rows=all` to show all rows in the table. | false | number, `all` | `10` |
@@ -959,14 +962,14 @@ Here's an example:
 | wrapTitles | Wrap column titles | false | `true`, `false` | `false` |
 | compact | Enable a more compact table view that allows more content vertically and horizontally | false | `true`, `false` | `false` |
 | link | Makes each row of your table a clickable link. Accepts the name of a column containing the link to use for each row in your table | false | column name | - |
-| showLinkCol | Whether to show the column supplied to the `link` prop | false | `true`, `false` | `false` |
+| showLinkCol | Whether to show the column supplied to the `link` attribute | false | `true`, `false` | `false` |
 | generateMarkdown | Helper for writing Table syntax with many columns. When set to true, markdown for the Table including each `Column` contained within the query will be generated and displayed below the table. | false | `true`, `false` | `false` |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
 
 ###### Groups
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | groupBy | Column to use to create groups. Note that groups are currently limited to a single group column. | false | column name | - |
 | groupType | How the groups are shown in the table. Can be accordion (expand/collapse) or section (group column values are merged across rows) | false | `accordion`, `section` | `accordion` |
@@ -993,7 +996,7 @@ Here's an example:
 </Table>
 ```
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | id | Column id (from SQL query) | true | column name | - |
 | title | Override title of column | false | string | column name (formatted) |
@@ -1010,11 +1013,11 @@ Here's an example:
 | colGroup | Group name to display above a group of columns. Columns with the same group name will get a shared header above them | false | string | - |
 | redNegatives | Conditionally sets the font color to red based on whether the selected value is less than 0 | false | `true`, `false` | `false` |
 
-Column properties for specific contentTypes:
+Column attributes for specific contentTypes:
 
 Images (`contentType=image`)
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | height | Height of image in pixels | false | number | original height of image |
 | width | Width of image in pixels | false | number | original width of image |
@@ -1022,14 +1025,14 @@ Images (`contentType=image`)
 
 Links (`contentType=link`)
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | linkLabel | Text to display for link | false | column name, string | raw url |
 | openInNewTab | Whether to open link in new tab | false | `true`, `false` | `false` |
 
 Deltas (`contentType=delta`)
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | deltaSymbol | Whether to show the up/down delta arrow symbol | false | `true`, `false` | `true` |
 | downIsGood | If present, negative comparison values appear in green, and positive values appear in red. | false | `true`, `false` | `false` |
@@ -1040,7 +1043,7 @@ Deltas (`contentType=delta`)
 
 Sparklines (`contentType=sparkline` | `contentType=sparkarea` | `contentType=sparkbar`)
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | sparkX | Column within an array cell to use as the x-axis for the spark viz. Arrays can be created inside a query using the `array_agg()` function from DuckDB | false | column from array cell | - |
 | sparkY | Column within an array cell to use as the y-axis for the spark viz. Arrays can be created inside a query using the `array_agg()` function from DuckDB | false | column from array cell | - |
@@ -1051,7 +1054,7 @@ Sparklines (`contentType=sparkline` | `contentType=sparkarea` | `contentType=spa
 
 Bar chart column (`contentType=bar`)
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | barColor | Color of the bars. Affects positive bars only. See `negativeBarColor` to change color of negative bars | false | Hex color code, css color name | - |
 | negativeBarColor | Color of negative bars | false | Hex color code, css color name | - |
@@ -1060,7 +1063,7 @@ Bar chart column (`contentType=bar`)
 
 Conditional formatting (`contentType=colorscale`)
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | colorScale | Color to use for the scale | false | - | `green` |
 | colorMin | Set a minimum for the scale. Any values below that minimum will appear in the lowest color on the scale | false | number | min of column |
@@ -1092,9 +1095,9 @@ from users
 where email ilike concat('%', $name_of_input, '%') 
 ```
 
-##### All text input properties
+##### All text input attributes
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | name | Name of the text input, used to reference the selected value elsewhere as `$name` | true | string | - |
 | title | Title displayed above the text input | false | string | - |
@@ -1125,9 +1128,9 @@ from orders
 where created_at > $date_range_name_start and < $date_range_name_end
 ```
 
-##### All date range properties
+##### All date range attributes
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | name | Name of the DateRange, used to reference the selected values elsewhere as `$name_start` or `$name_end` | true | string | - |
 | data | Query name, wrapped in curly braces | false | query name | - |
@@ -1169,16 +1172,16 @@ from orders
 where status = $status_dropdown
 ```
 
-##### All dropdown properties
+##### All dropdown attributes
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | name | Name of the dropdown, used to reference the selected value elsewhere as `$name` | true | - | - |
 | data | Query name, wrapped in curly braces | false | query name | - |
 | value | Column name from the query containing values to pick from | false | column name | - |
 | multiple | Enables multi-select which returns a list | false | `true`, `false` | `false` |
 | defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Arrays supported for multi-select. | false | value from dropdown, array of values e.g. `{['Value 1', 'Value 2']}` | - |
-| selectAllByDefault | Selects and returns all values, multiple property required | false | `true`, `false` | `false` |
+| selectAllByDefault | Selects and returns all values, multiple attribute required | false | `true`, `false` | `false` |
 | noDefault | Stops any default from being selected. Overrides any set `defaultValue`. | false | boolean | `false` |
 | disableSelectAll | Removes the `Select all` button. Recommended for large datasets. | false | boolean | `false` |
 | label | Column name from the query containing labels to display instead of the values (e.g., you may want to have the drop-down use `customer_id` as the value, but show `customer_name` to your users) | false | column name | Uses the column in value |
@@ -1202,7 +1205,7 @@ Here's an example:
 </Dropdown>
 ```
 
-| Property | Description | Required | Options | Default |
+| Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | value | Value to use when the option is selected | true | - | - |
 | valueLabel | Label to display for the option in the dropdown | false | - | Uses the value |
