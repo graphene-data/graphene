@@ -23,6 +23,7 @@
   import checkInputs from '../component-utilities/checkInputs.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
+  import {error as recordError} from '../internal/telemetry.ts'
 
   const {theme, resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
 
@@ -1044,6 +1045,7 @@
       error = e.message
       let setTextRed = '\x1b[31m%s\x1b[0m'
       console.error(setTextRed, `Error in ${chartType}: ${e.message}`)
+      recordError(e)
       props.update((d) => {
         return {...d, error}
       })

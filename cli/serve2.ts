@@ -8,10 +8,9 @@ import {type IncomingMessage, type ServerResponse} from 'http'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
 import {fileURLToPath} from 'url'
-import {WebSocketServer, type WebSocket} from 'ws'
-import {spawn} from 'child_process'
 import {getConnection} from './connections/index.ts'
 import {escapeAngles, extractQueries, injectComponentImports, sanitizeMarkdown} from './mdCompile.ts'
+import {checkVitePlugin} from './check.ts'
 
 let grapheneRoot: string
 let uiRoot: string
@@ -39,6 +38,7 @@ export async function serve2 (): Promise<ViteDevServer> {
           injectComponentImports(),
         ],
       }),
+      checkVitePlugin(),
       handleRequestPlugin,
       updateWorkspacePlugin,
       mockFilesForTests(),
@@ -81,33 +81,10 @@ const updateWorkspacePlugin = {
 const handleRequestPlugin = {
   name: 'handleRequest',
   configureServer: (s: ViteDevServer) => {
-    let wss = new WebSocketServer({noServer: true})
-    s.httpServer!.on('upgrade', (req, socket, head) => {
-      if (!req.url?.endsWith('/graphene-ws')) return
-      wss.handleUpgrade(req, socket, head, (ws) => {
-        wss.emit('connection', ws, req)
-      })
-    })
-
-    wss.on('connection', (socket) => {
-      socket.on('message', (data) => {
-        let message = JSON.parse(data.toString())
-        if (message.type === 'register') {
-          browserConnections.push({url: message.url, socket})
-        }
-        if (message.type === 'viewResponse') {
-          viewRequests[message.requestId].response.end(JSON.stringify(message))
-          delete viewRequests[message.requestId]
-        }
-      })
-      socket.on('close', () => browserConnections = browserConnections.filter(conn => conn.socket !== socket))
-    })
-
     s.middlewares.use(async function handleRequest (req, res, next) {
       try {
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
-        if (pathName == '/graphene/view') return await handleView(req, res)
         if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
 
         if (!pathName || pathName == '/') pathName = 'index'
@@ -160,40 +137,6 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
   let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
-
-let browserConnections: {url: string, socket: WebSocket}[] = [] // sockets for all open tabs
-let viewRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {} // outstanding requests
-
-async function handleView (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
-  let chunks = [] as any[]
-  for await (let chunk of req) chunks.push(chunk)
-  let {mdFile, chart} = JSON.parse(Buffer.concat(chunks).toString())
-  let id = Math.random().toString(36).slice(2) // random id string
-  res.setHeader('Content-Type', 'application/json')
-  viewRequests[id] = {response: res}
-
-  // Remove .md extension if provided and ensure it's just the filename
-  let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '')
-  if (pageUrl === '/index') pageUrl = '/'
-  pageUrl = `http://localhost:${config.port || 4000}${pageUrl}`
-
-  // Check for existing WebSocket connections. Open a page if we don't find one.
-  let conn = browserConnections.find(conn => conn.url === pageUrl)
-  if (!conn) {
-    spawn('open', [pageUrl])
-    let end = Date.now() + 5000
-    while (Date.now() < end && !conn) {
-      conn = browserConnections.find(conn => conn.url === pageUrl)
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-    if (!conn) {
-      res.statusCode = 500
-      return res.end(JSON.stringify({error: 'No browser tab available and failed to open one'}))
-    }
-  }
-  conn.socket.send(JSON.stringify({type: 'view', chart, requestId: id}))
-}
-
 
 async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, filePath: string, mount: boolean) {
   res.setHeader('Content-Type', 'text/html')

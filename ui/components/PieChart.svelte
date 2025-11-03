@@ -16,7 +16,7 @@
 
 <style></style>
 
-<QueryLoad data={data} fields={[category, value]} let:loaded>
+<QueryLoad data={data} fields={{category, value}} let:loaded>
   <ECharts data={loaded} {echartsOptions} {seriesOptions} {seriesColors} config={{
     title: {
       text: title,
