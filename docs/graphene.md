@@ -1301,11 +1301,13 @@ Available percentage formats:
 ## Graphene CLI
 
 These are the available commands:
-- `npm run graphene check` - Checks the syntax for the entire Graphene project.
+- `npm run graphene check` - Checks the syntax (GSQL and Markdown) for the entire Graphene project.
+- `npm run graphene check <mdPath>` - Checks the syntax for a specified Graphene markdown file. Will also do a runtime check if the dev server is running, and if successful, take a full page screenshot to a temp directory for the agent to view.
+- `npm run graphene check <mdPath> --chart "<chartTitle>"` - Same as above, except if the runtime check is successful, only takes a screenshot of the specified chart. <chartTitle> must match (case sensitive) the `title` attribute on the chart component. `-c` can be used as shorthand for `--chart`.
 - `npm run graphene compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
 - `npm run graphene run "<GSQL>"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
 - `npm run graphene serve` - Starts (or restarts) the dev server, which allows the user to view their Graphene app on localhost.
-- `npm run graphene view <mdPath>` - Captures a screenshot of a given .md file, along with any errors encountered.
+- `npm run graphene stop` - Stops the dev server.
 
 # AGENT INSTRUCTIONS
 
@@ -1313,9 +1315,8 @@ Follow these guidelines when working in a Graphene project.
 - When formulating GSQL queries:
    - First check all available stored expressions to see if there are any you can use. DO NOT redefine important business definitions like `profit` if they've already been modeled!
    - Run your GSQL queries in the CLI first, _before_ you write them to a file. This way you can reason about the results to make sure they make sense.
-- Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is in /docs.
+- Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is here in graphene.md.
 - When writing to a .gsql file, check your code with `npm run graphene check`.
-- When writing to a Graphene .md file:
-  - First read ALL the linked component docs listed in [Components](#components) above.
-  - Check your code with `npm run graphene check`.
-  - Once there are no syntax errors, do a visual check by running `npm run graphene view <mdPath>` and looking at the .png it generates. 
+- When writing to a Graphene .md file, check your code with `npm run graphene check <mdPath>`. 
+   - If a screenshot is generated, look at it.
+   - If there are no syntax errors but a screenshot is not generated, the dev server must not be running. Start it with `npm run graphene serve`, then try `npm run graphene check <mdPath>` again.
