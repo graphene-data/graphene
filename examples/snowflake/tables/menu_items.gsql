@@ -6,7 +6,7 @@ table menu_items (
   price NUMBER, -- Current price
   category TEXT, -- Menu item categorization
   description TEXT, -- Menu item description as appearing on menu
-  -- establishment_id TEXT, -- Unique ID of individual establishment
+  establishment_id TEXT, -- Unique ID of individual establishment
   flags TEXT, -- Additional data point(s) from marketplace
   menu_id TEXT, -- ID from Menu table
   name TEXT, -- Item name
@@ -15,4 +15,3 @@ table menu_items (
   join_one menus on menu_id = menus.menu_id,
   join_many entities on menu_item_id = entities.menu_item_id
 )
-

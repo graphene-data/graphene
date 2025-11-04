@@ -564,6 +564,8 @@ function convertDataType (dataType: string): FieldType | null {
   switch (dataType.toUpperCase()) {
     case 'INT': return 'number'
     case 'INT64': return 'number'
+    case 'NUMBER': return 'number'
+    case 'VARIANT': return 'string'
     case 'TEXT': return 'string'
     case 'STRING': return 'string'
     case 'VARCHAR': return 'string'
@@ -575,6 +577,7 @@ function convertDataType (dataType: string): FieldType | null {
     case 'DATETIME': return 'timestamp'
     case 'TIME': return 'timestamp'
     case 'TIMESTAMP': return 'timestamp'
+    case 'TIMESTAMP_NTZ': return 'timestamp'
     case 'DECIMAL': return 'number'
     case 'DOUBLE': return 'number'
     case 'BIGINT': return 'number'
