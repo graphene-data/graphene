@@ -69,8 +69,10 @@ async function startWorktree (name: string) {
   if (existsSync(treePath)) throw new Error(`${treePath} already exists`)
   mkdirSync(treePath, {recursive: true})
 
-  await $`git -C ${root}/main/cloud worktree add ${root}/${name}/cloud -b ${name}`
-  await $`git -C ${root}/main/core worktree add ${root}/${name}/core -b ${name}`
+  await $`git -C ${root}/main/cloud fetch origin main`
+  await $`git -C ${root}/main/core fetch origin main`
+  await $`git -C ${root}/main/cloud worktree add ${root}/${name}/cloud -b ${name} origin/main`
+  await $`git -C ${root}/main/core worktree add ${root}/${name}/core -b ${name} origin/main`
 
   let basePort = getNextPort()
   writeEnvWithPort(`${root}/main/core/.env`, `${treePath}/core/.env`, name, basePort)
