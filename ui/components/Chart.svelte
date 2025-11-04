@@ -1066,7 +1066,7 @@
     {seriesOptions}
     {connectGroup}
     {xAxisLabelOverflow}
-    seriesColors={seriesColorsStore}
+    seriesColors={$seriesColorsStore}
   />
 {:else}
   <ErrorChart {error} title={chartType} />
