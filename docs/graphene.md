@@ -1303,7 +1303,7 @@ Available percentage formats:
 These are the available commands:
 - `npm run graphene check` - Checks the syntax (GSQL and Markdown) for the entire Graphene project.
 - `npm run graphene check <mdPath>` - Checks the syntax for a specified Graphene markdown file. Will also do a runtime check if the dev server is running, and if successful, take a full page screenshot to a temp directory for the agent to view.
-- `npm run graphene check <mdPath> --chart "<chartTitle>"` - Same as above, except if the runtime check is successful, only takes a screenshot of the specified chart. <chartTitle> must match (case sensitive) the `title` attribute on the chart component. `-c` can be used as shorthand for `--chart`.
+- `npm run graphene check <mdPath> --chart "<chartTitle>"` - Same as above, except if the runtime check is successful, only takes a screenshot of the specified chart. `<chartTitle>` must match (case sensitive) the `title` attribute on the chart component. `-c` can be used as shorthand for `--chart`.
 - `npm run graphene compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
 - `npm run graphene run "<GSQL>"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
 - `npm run graphene serve` - Starts (or restarts) the dev server, which allows the user to view their Graphene app on localhost.
@@ -1317,6 +1317,7 @@ Follow these guidelines when working in a Graphene project.
    - Run your GSQL queries in the CLI first, _before_ you write them to a file. This way you can reason about the results to make sure they make sense.
 - Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is here in graphene.md.
 - When writing to a .gsql file, check your code with `npm run graphene check`.
-- When writing to a Graphene .md file, check your code with `npm run graphene check <mdPath>`. 
-   - If a screenshot is generated, look at it.
-   - If there are no syntax errors but a screenshot is not generated, the dev server must not be running. Start it with `npm run graphene serve`, then try `npm run graphene check <mdPath>` again.
+- When writing to a Graphene .md file:
+   - Always check your code with `npm run graphene check <mdPath>`. 
+   - Then do a visual check by either a) looking at the screenshot that `npm run graphene check <mdPath>` creates, or b) using your browser tool to open the .md file at `localhost:<port>/mdPath` (without the .md extension; default port 4000).
+      - Critique what you see: Are all the data values formatted in a way that is easy to read? Does the shape of the visualized data require an adjustment to scale, axis min/max, etc.? Are any visualizations missing data altogether? Is that visualization type really the best way to paint the picture? Etc.
