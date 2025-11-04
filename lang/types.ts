@@ -58,7 +58,8 @@ export interface Table {
 export interface Query {
   fields: ColumnField[]
   subQuerySources: Table[]
-  malloyQuery: MalloyQuery
+  malloyQuery?: MalloyQuery
+  rawSql?: string
 }
 
 export interface Position {

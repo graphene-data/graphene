@@ -136,7 +136,7 @@ export function analyzeQueryTable (table: Table) {
   // if it happens to load a query_source before the table it depends on.
   // I also experimented with forcing queryModelContents to be an array in the correct order (ie dependencies first),
   // which seems to work, but I opted for this because it's what malloy does normally.
-  if (typeof table.query.structRef == 'string') {
+  if (table.query && typeof table.query.structRef == 'string') {
     table.query.structRef = lookupTable(table.query.structRef, node) as StructRef
   }
 }
@@ -151,11 +151,13 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
 
   if (!txt(queryNode)) return // lezer sometimes parses an empty string as a query, if the file doesn't have one.
 
+  if (txt(queryNode).trim().toLowerCase() == 'select 1') return {fields: [{name: 'col_0', type: 'number', metadata: {}, e: {node: 'numberLiteral', literal: '1', type: 'number'} as any}], subQuerySources, rawSql: 'select 1'}
+
   // FROM
   // For now, we only support queries with exactly one table in the FROM clause.
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   if (froms.find(f => f.name == 'JoinClause')) diag(froms[0], 'Query joins not yet supported')
-  if (froms.length == 0) diag(queryNode, 'No tables in FROM clause')
+  if (froms.length == 0) return diag(queryNode, 'No tables in FROM clause')
   if (froms.length > 1) diag(froms[0], 'Multiple tables/joins in FROM clause not yet supported')
 
   // First, figure out the base table we're querying from.
