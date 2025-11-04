@@ -127,7 +127,7 @@ export function analyzeQueryTable (table: Table) {
   if (table.query) return
   let node = TABLE_NODE_MAP.get(table)!
   let query = analyzeQuery(node.getChild('QueryStatement')!)
-  if (!query) throw new Error('Couldnt find query in QueryStatement')
+  if (!query) return
 
   table.fields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: f.metadata}))
   table.query = query.malloyQuery
