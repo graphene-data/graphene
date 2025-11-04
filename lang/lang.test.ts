@@ -72,6 +72,13 @@ describe('lang', () => {
       .toReturnRows([1, 'Alice'])
   })
 
+  it('handles select 1 without from', async () => {
+    expect('select 1')
+      .toRenderSql('select 1')
+    await expect('select 1')
+      .toReturnRows([1])
+  })
+
   it('expands plain wildcard', () => {
     expect('from users select *')
       .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base')
