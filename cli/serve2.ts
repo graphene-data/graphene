@@ -12,16 +12,14 @@ import {getConnection} from './connections/index.ts'
 import {escapeAngles, extractQueries, injectComponentImports, sanitizeMarkdown} from './mdCompile.ts'
 import {checkVitePlugin} from './check.ts'
 
-let grapheneRoot: string
 let uiRoot: string
 
 export async function serve2 (): Promise<ViteDevServer> {
-  grapheneRoot = config.root
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = Number(process.env.GRAPHENE_PORT) || 4000
 
-  await fs.ensureDir(path.resolve(grapheneRoot, 'node_modules/.graphene'))
-  await fs.writeFile(path.resolve(grapheneRoot, `node_modules/.graphene/${process.env.NODE_ENV == 'test' ? 'test' : 'serve'}.pid`), String(process.pid))
+  await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
+  await fs.writeFile(path.resolve(config.root, `node_modules/.graphene/${process.env.NODE_ENV == 'test' ? 'test' : 'serve'}.pid`), String(process.pid))
 
   let server = await createServer({
     root: config.root,
@@ -43,6 +41,7 @@ export async function serve2 (): Promise<ViteDevServer> {
       updateWorkspacePlugin,
       mockFilesForTests(),
     ],
+    publicDir: path.resolve(uiRoot),
     server: {
       port,
       fs: {strict: false},
@@ -53,12 +52,14 @@ export async function serve2 (): Promise<ViteDevServer> {
         graphene: path.resolve(uiRoot, 'web.js'),
       },
     },
+    // optimizeDeps: { // this seems prudent in tests, but currently breaks because ssf needs to be optimized, even in tests
+    //   noDiscovery: process.env.NODE_ENV == 'test',
+    //   include: process.env.NODE_ENV == 'test' ? [] : undefined,
+    // },
   })
 
-  await optimizeDeps(server.config)
-
+  await optimizeDeps(server.config) // optimize before starting, so we don't have a reload immediately after loading the first page
   await server.listen()
-
   console.log(`Server running at http://localhost:${port}`)
   return server
 }
@@ -72,9 +73,9 @@ const updateWorkspacePlugin = {
     s.watcher.add('**/*.gsql')
     s.watcher.on('change', () => {
       clearWorkspace()
-      workspaceLoadPromise = loadWorkspace(grapheneRoot, false)
+      workspaceLoadPromise = loadWorkspace(config.root, false)
     })
-    workspaceLoadPromise = loadWorkspace(grapheneRoot, false)
+    workspaceLoadPromise = loadWorkspace(config.root, false)
   },
 }
 
@@ -88,7 +89,7 @@ const handleRequestPlugin = {
         if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
 
         if (!pathName || pathName == '/') pathName = 'index'
-        let mdPath = path.join(grapheneRoot, pathName + '.md')
+        let mdPath = path.join(config.root, pathName + '.md')
 
         if (await fs.exists(mdPath)) {
           await handlePage(s, res, mdPath, true)
@@ -152,7 +153,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Graphene</title>
-      <link rel="icon" href="@graphenedata/ui/assets/favicon.ico" />
+      <link rel="icon" href="/assets/favicon.ico" />
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
@@ -162,10 +163,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
         <div id="content"></div>
       </main>
       <script type="module">
-        // do this first so we can track errors caused by importing the md file
-        import 'graphene'
-      </script>
-      <script type="module">
+        import 'graphene' // do this first so we can track errors caused by importing the md file
         ${mdMount}
       </script>
     </body>
@@ -181,11 +179,11 @@ function mockFilesForTests () {
     name: 'mock-files-for-tests',
     enforce: 'pre' as const,
     resolveId (id) {
-      if (mockFileMap[id.replace(grapheneRoot, '')]) return id + '?mock'
+      if (mockFileMap[id.replace(config.root, '')]) return id + '?mock'
     },
     load (id) {
       if (!id.endsWith('?mock')) return null
-      return mockFileMap[id.replace(grapheneRoot, '').replace(/\?mock$/, '')]
+      return mockFileMap[id.replace(config.root, '').replace(/\?mock$/, '')]
     },
   }
 }
