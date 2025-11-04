@@ -60,7 +60,7 @@ export async function check (options: CheckOptions): Promise<boolean> {
     return false
   }
 
-  if (resp.checkError == 'no_tab') {
+  if (resp.checkError == 'no_tab' && process.env.NODE_ENV !== 'test') {
     console.log(`Opening page ${host}${pageUrl}`)
     spawn('open', [host + pageUrl])
     await new Promise(resolve => setTimeout(resolve, 500))
