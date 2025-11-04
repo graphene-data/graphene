@@ -257,7 +257,7 @@ async function runCliCheckScenario (page: Page, server: ServerFixture, options: 
   try {
     if (!options.skipServer) {
       let serverRoot = options.serverOptions?.root ?? workspace.root
-      let baseUrl = await server.url({...options.serverOptions, root: serverRoot})
+      let baseUrl = server.url({...options.serverOptions, root: serverRoot})
       server.mockFile(`/${options.mdFile}`, options.content)
       let route = options.mdFile === 'index.md' ? '/' : `/${options.mdFile.replace(/\.md$/, '')}`
       let url = new URL(route, baseUrl).toString()

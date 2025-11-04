@@ -2,7 +2,7 @@ import {test, expect, waitForGrapheneQueries} from './fixtures'
 import {assertNoConsoleErrors, expectConsoleError} from './browserConsole'
 
 test('loads markdown files', async ({server, page}) => {
-  await server.mockFile('/index.md', `
+  server.mockFile('/index.md', `
     # Flight Delay Analysis
 
     \`\`\`gsql delays
@@ -11,7 +11,7 @@ test('loads markdown files', async ({server, page}) => {
 
     <BarChart data="delays" x="carrier" y="delay" />
   `)
-  await page.goto(await server.url() + '/')
+  await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
   await expect(page.locator('main canvas').first()).toBeVisible()
   assertNoConsoleErrors(page)
@@ -30,8 +30,9 @@ test('reports query errors', async ({server, page}) => {
 
     <BarChart data="broken_query" x="origin" y="boom" />
   `)
-  await page.goto(await server.url() + '/')
+  await page.goto(server.url() + '/')
   await waitForGrapheneQueries(page)
+  await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
   expectConsoleError(page, 'Failed to load resource')
   await expect(page).toHaveScreenshot('reports-query-errors.png')
 })
@@ -43,7 +44,7 @@ test('renders literal less-than characters', async ({server, page}) => {
     Profit is 1 < 2 and losses are 0 < 1.
   `)
 
-  await page.goto(await server.url() + '/')
+  await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
   await expect(page.locator('main')).toHaveText(/1 < 2/)
   assertNoConsoleErrors(page)
@@ -58,7 +59,7 @@ test('sanitizes unsafe html', async ({server, page}) => {
     <iframe id="embed" src="javascript:alert('boom')"></iframe>
   `)
 
-  await page.goto(await server.url() + '/')
+  await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Sanitized'})).toBeVisible()
   await expect(page.locator('button')).toHaveCount(0)
   await expect(page.locator('iframe')).toHaveCount(0)
