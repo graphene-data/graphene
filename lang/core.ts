@@ -72,6 +72,8 @@ export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
 }
 
 export function toSql (query: Query, params: Record<string, any> = {}): string {
+  if (query.rawSql) return query.rawSql
+
   let contents = {} // contents is all the tables we need to provide to malloy so it can render the query
 
   // tables defined in gsql can't have params, so we can copy them right into the contents
@@ -82,6 +84,7 @@ export function toSql (query: Query, params: Record<string, any> = {}): string {
   let inputTables = [...FILE_MAP['input']?.tables || [], ...query.subQuerySources]
   inputTables.forEach(t => contents[t.name] = {...t, query: t.query && fillInParams(t.query, params)})
 
+  if (!query.malloyQuery) throw new Error('Cannot compile query without Malloy query')
   let malloyQuery = fillInParams(query.malloyQuery, params)
   let qm = new QueryModel({
     name: 'generated_model',
