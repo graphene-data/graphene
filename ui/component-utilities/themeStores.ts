@@ -12,7 +12,7 @@ type ThemeStores = {
   activeAppearance: Readable<Appearance>
   theme: Readable<Theme>
   resolveColor: <T>(input: T) => Readable<T | string | undefined>
-  resolveColorsObject: (input: Record<string, unknown> | undefined) => Readable<Record<string, string | undefined> | undefined>
+  resolveColorsObject: (input: Record<string, unknown> | string | undefined) => Readable<Record<string, string | undefined> | undefined>
   resolveColorPalette: (input: unknown) => Readable<string[] | undefined>
 }
 
@@ -55,6 +55,14 @@ const isReadable = <T>(value: unknown): value is Readable<T> => {
   return Boolean(value && typeof value === 'object' && 'subscribe' in (value as any))
 }
 
+const parseJson = (value: string): unknown => {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return undefined
+  }
+}
+
 const normalizeColor = (value: unknown): string | undefined => {
   if (value == null) return undefined
   if (Array.isArray(value)) return normalizeColor(value[0])
@@ -64,25 +72,38 @@ const normalizeColor = (value: unknown): string | undefined => {
   if (!trimmed) return undefined
   if (trimmed === 'true' || trimmed === 'false') return trimmed
   if (DEFAULT_THEME.colors[trimmed]) return DEFAULT_THEME.colors[trimmed]
-  if (trimmed.startsWith('#') || trimmed.startsWith('rgb') || trimmed.startsWith('hsl') || trimmed.startsWith('var(')) return trimmed
-  if (/^[a-zA-Z0-9_-]+$/.test(trimmed)) return `var(--color-${trimmed})`
+  let lower = trimmed.toLowerCase()
+  if (trimmed.startsWith('#')) return trimmed
+  if (lower.startsWith('rgb') || lower.startsWith('hsl')) return trimmed
   return trimmed
 }
 
-const resolveColor = <T>(input: T): Readable<T | string | undefined> => {
+export const resolveColor = <T>(input: T): Readable<T | string | undefined> => {
   if (isReadable<T | string | undefined>(input)) return input
   return readable(normalizeColor(input) as T | string | undefined)
 }
 
-const resolveColorsObject = (input: Record<string, unknown> | undefined): Readable<Record<string, string | undefined> | undefined> => {
+export const resolveColorsObject = (input: Record<string, unknown> | string | undefined): Readable<Record<string, string | undefined> | undefined> => {
   if (isReadable<Record<string, string | undefined> | undefined>(input)) return input
   if (!input) return readable(undefined)
 
-  let entries = Object.entries(input).map(([key, value]) => [key, normalizeColor(value)] as const)
+  let record: Record<string, unknown> | undefined = input as Record<string, unknown>
+  if (typeof input === 'string') {
+    let parsed = parseJson(input.trim())
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      record = parsed as Record<string, unknown>
+    } else {
+      return readable(undefined)
+    }
+  }
+
+  if (!record) return readable(undefined)
+
+  let entries = Object.entries(record).map(([key, value]) => [key, normalizeColor(value)] as const)
   return readable(Object.fromEntries(entries))
 }
 
-const resolveColorPalette = (input: unknown): Readable<string[] | undefined> => {
+export const resolveColorPalette = (input: unknown): Readable<string[] | undefined> => {
   if (isReadable<string[] | undefined>(input)) return input
   if (input == null) return readable(DEFAULT_PALETTE)
 
@@ -90,6 +111,13 @@ const resolveColorPalette = (input: unknown): Readable<string[] | undefined> => 
     let key = input.trim()
     if (!key || key === 'default') return readable(DEFAULT_PALETTE)
     if (DEFAULT_THEME.colorPalettes[key]) return readable(DEFAULT_THEME.colorPalettes[key])
+    if (key.startsWith('[')) {
+      let parsed = parseJson(key)
+      if (Array.isArray(parsed)) {
+        let values = parsed.map(item => normalizeColor(item)).filter(Boolean) as string[]
+        return readable(values.length ? values : DEFAULT_PALETTE)
+      }
+    }
     if (key.includes(',')) {
       let values = key.split(',').map(part => normalizeColor(part)).filter(Boolean) as string[]
       return readable(values.length ? values : DEFAULT_PALETTE)
