@@ -12,7 +12,7 @@ import * as chartWindowDebug from './chartWindowDebug'
  * } EChartsActionOptions
  */
 
-const ANIMATION_DURATION = 500
+const ANIMATION_DURATION = 0
 const pendingChartsKey = Symbol.for('graphene.pendingCharts')
 
 /** @returns {Set<number> | null} */
@@ -139,6 +139,7 @@ const echartsAction = (node, options) => {
   // Initial options set:
   chart.setOption({
     ...options.config,
+    animation: false,
     animationDuration: ANIMATION_DURATION,
     animationDurationUpdate: ANIMATION_DURATION,
   })
@@ -219,6 +220,7 @@ const echartsAction = (node, options) => {
     chart.setOption(
       {
         ...options.config,
+        animation: false,
         animationDuration: ANIMATION_DURATION,
         animationDurationUpdate: ANIMATION_DURATION,
       },
