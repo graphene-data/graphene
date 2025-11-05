@@ -60,6 +60,8 @@ table aircraft (
 
   join_one aircraft_models as model on aircraft_model_code = model.aircraft_model_code
   join_many flights on tail_num = flights.tail_num
+
+  2005 - year_built as age -- Note that the data only goes up to 2005, so using 2005 as "this year" instead of current_date()
 )
 
 table aircraft_models (
