@@ -61,7 +61,9 @@ export async function serve2 (): Promise<ViteDevServer> {
 
   await optimizeDeps(server.config) // optimize before starting, so we don't have a reload immediately after loading the first page
   await server.listen()
-  console.log(`Server running at http://localhost:${port}`)
+  if (process.env.NODE_ENV !== 'test') {
+    console.log(`Server running at http://localhost:${port}`)
+  }
   return server
 }
 
