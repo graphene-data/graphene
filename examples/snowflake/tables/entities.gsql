@@ -1,15 +1,21 @@
 -- Items found inside each menu item (usually ingredients)
 table entities (
-  entity_id TEXT primary_key, -- Brizo entity ID
-  score NUMBER, -- Percentage score of matched ingredient (score can be 100 for extracted items and maximum of 99 for predicted)
-  category TEXT, -- Category of entity
-  menu_item_id TEXT, -- Unique item id
-  name TEXT, -- Name of matched entity
-  subcategory TEXT, -- Subcategory of entity
-  type TEXT, -- Entity type
-  matches VARIANT, -- Matched entity tag
-  variant VARIANT, -- Attributes of entity
+  
+  /* Original columns moved to one line to make them less visible */
+
+  ENTITY_ID TEXT primary_key, SCORE NUMBER, CATEGORY TEXT, MENU_ITEM_ID TEXT, NAME TEXT, SUBCATEGORY TEXT, TYPE TEXT, MATCHES VARIANT, VARIANT VARIANT,
+
+  /* Aliasing all the columns to lowercase to make query writing easier */
+
+  ENTITY_ID as entity_id, -- Brizo entity ID
+  SCORE as score, -- Percentage score of matched ingredient (score can be 100 for extracted items and maximum of 99 for predicted)
+  CATEGORY as category, -- Category of entity
+  MENU_ITEM_ID as menu_item_id, -- Unique item id
+  NAME as name, -- Name of matched entity
+  SUBCATEGORY as subcategory, -- Subcategory of entity
+  TYPE as type, -- Entity type
+  MATCHES as matches, -- Matched entity tag
+  VARIANT as variant, -- Attributes of entity
 
   join_one menu_items on menu_item_id = menu_items.menu_item_id
 )
-
