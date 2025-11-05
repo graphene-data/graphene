@@ -15,6 +15,7 @@
   import {getFinalColumnOrder} from '../component-utilities/tableUtils'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
+    import {logError} from '../internal/telemetry.js'
 
   const {resolveColor} = getThemeStores()
 
@@ -141,6 +142,7 @@
     }
   } catch (thrown) {
     let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
+    logError(thrown, {id: 'DataTable'})
     error = message
     if (strictBuild) throw thrown
   }

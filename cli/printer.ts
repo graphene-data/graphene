@@ -27,7 +27,8 @@ function offsetToLineCol (src: string, offset: number): { line: number; col: num
   return {line: 1, col: 0, lineStart: 0, lineText: lines[0] || ''}
 }
 
-export function printDiagnostics (diags: Diagnostic[]) {
+export function printDiagnostics (diags: Diagnostic[], log?: any) {
+  log ||= console.log
   let parts: string[] = []
   for (let d of diags) {
     let src = getFile(d.file)?.contents || ''
@@ -40,7 +41,7 @@ export function printDiagnostics (diags: Diagnostic[]) {
     let caretLine = `${' '.repeat(col)}${styleText(sev, '^'.repeat(caretLen))}`
     parts.push([header, `${gutter}${lineText}`, `${gutter}${caretLine}`].join('\n'))
   }
-  if (parts.length) console.error(parts.join('\n'))
+  if (parts.length) log(parts.join('\n'))
 }
 
 export function printTable (rows: any[]) {

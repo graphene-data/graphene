@@ -12,7 +12,9 @@ window.addEventListener('unhandledrejection', (event) => {
   staticErrors.push(event.reason)
 })
 
-export function error (e: Error, ctx?: any) {
+export function logError (e: Error | string, ctx?: any) {
+  if (typeof e === 'string') e = new Error(e)
+  if (ctx) Object.assign(e, ctx)
   staticErrors.push(e)
 }
 
@@ -21,6 +23,6 @@ export function errorProvider (key:string, fn: ErrorProvider) {
 }
 
 export function getErrors (): Error[] {
-  return staticErrors.concat(Object.values(errorProviders)
-    .flatMap(p => p()))
+  let provided = Object.values(errorProviders).flatMap(p => p())
+  return staticErrors.concat(provided)
 }
