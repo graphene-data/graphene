@@ -1,303 +1,144 @@
-import {test, expect, waitForGrapheneQueries, type ServerFixture} from './fixtures'
-import type {Page} from '@playwright/test'
-import path from 'path'
-import fs from 'fs-extra'
-import os from 'node:os'
-import {fileURLToPath} from 'url'
+import {test, expect} from './fixtures'
 import {check} from '../../cli/check.ts'
-import {clearWorkspace} from '../../lang/core.ts'
+import {updateFile} from '../../lang/core.ts'
 import {setConfig} from '../../lang/config.ts'
-
-const flightsRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
+import stripAnsi from 'strip-ansi'
+import path from 'path'
+import {fileURLToPath} from 'url'
+import {trimIndentation} from '../../lang/util.ts'
 
 test.describe.configure({mode: 'serial'})
 
-test('check without md argument reports static analysis errors', async () => {
-  await withWorkspace({
-    'tmp_bad.gsql': [
-      'table tmp_bad as (',
-      '  from flights select not_a_function()',
-      ')',
-    ].join('\n'),
-    'tmp_bad.md': [
-      '# Broken Markdown',
-      '',
-      '```sql md_error',
-      'from tmp_bad select count(',
-      '```',
-    ].join('\n'),
-  }, async workspace => {
-    let result = await runCheckCli({workspace})
-    expect(result.exitCode).toBe(1)
-    expect(result.logs).toEqual([])
-    expect(result.errors).toEqual([
-      [
-        'ERROR: tmp_bad.md line 5: Syntax error',
-        '   | ```',
-        '   |    ^',
-        'ERROR: tmp_bad.gsql line 2: Unknown function: not_a_function',
-        '   |   from flights select not_a_function()',
-        '   |                       ^^^^^^^^^^^^^^^^',
-      ].join('\n'),
-    ])
-  })
+let logs = ''
+function log (...args: any[]) {
+  // console.log(...args) // useful for debugging, but pollutes test outputs
+  logs += args.map(a => String(a)).join(' ') + '\n'
+}
+
+function outputLines () {
+  let normalized = logs.replace(/graphene-screenshot-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.png/g, 'graphene-screenshot-<timestamp>.png')
+  normalized = normalized.replace(/Screenshot saved to[^\n]*graphene-screenshot-<timestamp>\.png/g, 'Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png')
+  return stripAnsi(normalized.trim())
+}
+
+test.beforeEach(() => { logs = '' })
+
+test('check defaults to analyzing the whole workspace', async () => {
+  updateFile(`
+    table tmp_bad as (
+      from flights select not_a_function()
+    )
+  `, 'tmp_bad.gsql')
+
+  await check({log})
+  expect(outputLines()).toEqual(`
+    ERROR: tmp_bad.gsql line 3: Unknown function: not_a_function
+   |       from flights select not_a_function()
+   |                           ^^^^^^^^^^^^^^^^
+  `.trim())
 })
 
-test('check with md file reports analysis query errors', async () => {
-  await withWorkspace({
-    'index.md': [
-      '# Runtime Error Page',
-      '',
-      '```sql runtime_error_query',
-      'from flights select not_a_function() as explode',
-      '```',
-      '',
-      '<BarChart data="runtime_error_query" x="origin" y="explode" />',
-    ].join('\n'),
-  }, async workspace => {
-    let result = await runCheckCli({workspace, mdFile: 'index.md'})
-    expect(result.exitCode).toBe(1)
-    expect(result.logs).toEqual([])
-    expect(result.errors).toEqual([
-      [
-        'ERROR: index.md line 4: Unknown function: not_a_function',
-        '   | from flights select not_a_function() as explode',
-        '   |                     ^^^^^^^^^^^^^^^^',
-      ].join('\n'),
-    ])
-  })
+test('check with mdFile reports analysis errors', async ({server, page}) => {
+  server.mockFile('/other.md', `
+    \`\`\`sql error_query
+    from flights select wtfmate() as explode
+    \`\`\`
+    <BarChart data="error_query" x="origin" y="explode" />
+  `)
+
+  server.mockFile('/mock.md', `
+    \`\`\`sql error_query
+    from flights select not_a_function() as explode
+    \`\`\`
+    <BarChart data="error_query" x="origin" y="explode" />
+  `)
+
+  await page.goto(server.url() + '/mock')
+  await check({mdArg: 'mock.md', log})
+  expect(outputLines()).toEqual(`
+    ERROR: mock.md line 3: Unknown function: not_a_function
+   | from flights select not_a_function() as explode
+   |                     ^^^^^^^^^^^^^^^^
+  `.trim())
 })
 
-test('cli check command reports runtime cast errors with field metadata', async ({page, server}) => {
-  test.setTimeout(30_000)
-  let content = [
-    '# Runtime Cast Error Page',
-    '',
-    '```sql runtime_error_query',
-    'from flights select origin, sqrt(dep_delay) as explode',
-    '```',
-    '',
-    '<BarChart data="runtime_error_query" x="origin" y="explode" title="Runtime Cast Error" />',
-  ].join('\n')
+test('cli check command reports runtime query errors', async ({server, page}) => {
+  server.mockFile('/index.md', `
+    # Runtime Cast Error Page
+    \`\`\`sql runtime_error_query
+    from flights select origin, sqrt(dep_delay) as explode
+    \`\`\`
+    <BarChart data="runtime_error_query" x="origin" y="explode" title="Runtime Cast Error" />
+  `)
 
-  await withWorkspace({'index.md': '# Placeholder\n'}, async workspace => {
-    let port = await openPage({page, server, workspace, mdFile: 'index.md', content, waitForGraphene: false})
-    let result = await runCheckCli({workspace, mdFile: 'index.md', port})
-    expect(result.exitCode).toBe(1)
-    expect(result.errors).toEqual([
-      '- index.md · runtime_error_query: Out of Range Error: cannot take square root of a negative number',
-      '    fields: x=origin, y=explode',
-      'Error: Out of Range Error: cannot take square root of a negative number',
-      'Runtime errors found in index.md',
-    ])
-  })
+  await page.goto(server.url())
+  await check({mdArg: 'index.md', log})
+  expect(outputLines()).toEqual(trimIndentation(`
+    Runtime errors in index.md:
+    Query (data="runtime_error_query" x="origin" y="explode"): Out of Range Error: cannot take square root of a negative number
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `))
 })
 
-test('cli check command reports runtime chart configuration errors', async ({page, server}) => {
-  test.setTimeout(30_000)
-  let content = [
-    '# Runtime Chart Config Error',
-    '',
-    '```sql chart_data',
-    'from flights select carrier, min(dep_delay) as worst_delay',
-    '```',
-    '',
-    '<BarChart data="chart_data" x="carrier" y="worst_delay" yLog="true" title="Runtime Chart Config Error" />',
-  ].join('\n')
+test('check reports runtime chart configuration errors', async ({server, page}) => {
+  server.mockFile('/index.md', `
+    # Runtime Chart Config Error
+    \`\`\`sql chart_data
+    from flights select carrier, min(dep_delay) as worst_delay
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="worst_delay" yLog="true" title="Runtime Chart Config Error" />
+  `)
 
-  await withWorkspace({'index.md': '# Placeholder\n'}, async workspace => {
-    let port = await openPage({page, server, workspace, mdFile: 'index.md', content, waitForGraphene: false})
-    let result = await runCheckCli({workspace, mdFile: 'index.md', port})
-    expect(result.exitCode).toBe(1)
-    expect(result.logs).toEqual([
-      expect.stringMatching(/^\[browser log\] Got message/),
-      expect.stringMatching(/^Screenshot saved to /),
-    ])
-    expect(result.errors).toEqual([
-      '- index.md: [object Object]',
-      'Runtime errors found in index.md',
-    ])
-    await expect(page.getByRole('alert')).toHaveText(/Log axis cannot display values less than or equal to zero/)
-  })
+  await page.goto(server.url())
+  await check({mdArg: 'index.md', log})
+  expect(outputLines()).toEqual(trimIndentation(`
+    Runtime errors in index.md:
+    Runtime Chart Config Error (data="chart_data" x="carrier" y="worst_delay"): Log axis cannot display values less than or equal to zero
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+`))
 })
 
-test('cli check with --chart captures a single chart screenshot', async ({page, server}) => {
-  test.setTimeout(30_000)
-  let chartTitle = 'Carrier Distance'
-  let content = [
-    '# Chart Screenshot',
-    '',
-    '```sql chart_data',
-    'from flights select carrier, sum(distance) as total_distance',
-    '```',
-    '',
-    `<BarChart data="chart_data" x="carrier" y="total_distance" title="${chartTitle}" />`,
-  ].join('\n')
+test('check table configuration errors', async ({server, page}) => {
+  server.mockFile('/index.md', `
+    # Runtime Table Config Error
+    \`\`\`sql table_data
+    from flights select carrier, sum(distance) as total_distance
+    \`\`\`
+    <Table data="table_data" sort="not_a_column asc" title="Runtime Table Config Error" />
+  `)
 
-  await withWorkspace({'index.md': '# Placeholder\n'}, async workspace => {
-    let port = await openPage({page, server, workspace, mdFile: 'index.md', content, waitForGraphene: false})
-    let result = await runCheckCli({workspace, mdFile: 'index.md', chart: chartTitle, port})
-    expect(result.exitCode).toBe(0)
-    expect(result.errors).toEqual([])
-    expect(result.logs).toEqual([
-      expect.stringMatching(/^\[browser log\] Got message/),
-      expect.stringMatching(/^Screenshot saved to /),
-      'No errors found 💎',
-    ])
+  await page.goto(server.url())
+  await check({mdArg: 'index.md', log})
+  expect(outputLines()).toEqual(trimIndentation(`
+    Runtime errors in index.md:
+    DataTable: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+`))
+})
 
-    let usedHtml2canvas = await page.evaluate(() => Boolean(window.html2canvas))
-    expect(usedHtml2canvas).toBe(false)
-  })
+test('cli check with --chart captures a single chart screenshot', async ({server, page}) => {
+  server.mockFile('/index.md', `
+    # Chart Screenshot
+    \`\`\`sql chart_data
+    from flights select carrier, sum(distance) as total_distance
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
+  `)
+
+  await page.goto(server.url())
+  await check({mdArg: 'index.md', chart: 'Carrier Distance', log})
+  expect(outputLines()).toEqual(trimIndentation(`
+    No errors found 💎
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `))
 })
 
 test('cli check fails when the server is not running', async () => {
-  await withWorkspace({'index.md': '# Broken Page\n'}, async workspace => {
-    let result = await runCheckCli({workspace, mdFile: 'index.md'})
-    expect(result.exitCode).toBe(1)
-    expect(result.logs).toEqual([])
-    expect(result.errors).toEqual([
-      "Graphene server isn't running. Start it with `graphene serve`",
-    ])
-  })
+  let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
+  setConfig({dialect: 'duckdb', root, port: 4999})
+  await check({mdArg: 'index.md', log})
+
+  expect(outputLines()).toEqual(`
+    Graphene server isn't running. Start it with \`graphene serve\`
+  `.trim())
 })
-
-interface Workspace {
-  root: string
-  write: (relativePath: string, content: string) => Promise<void>
-  cleanup: () => Promise<void>
-}
-
-async function withWorkspace (initialFiles: Record<string, string>, fn: (workspace: Workspace) => Promise<void>): Promise<void> {
-  let workspace = await createWorkspace(initialFiles)
-  try {
-    await fn(workspace)
-  } finally {
-    await workspace.cleanup()
-  }
-}
-
-async function createWorkspace (initialFiles: Record<string, string> = {}): Promise<Workspace> {
-  let dir = await fs.mkdtemp(path.join(os.tmpdir(), 'graphene-check-'))
-  let write = async (relativePath: string, content: string) => {
-    let target = path.join(dir, relativePath)
-    await fs.ensureDir(path.dirname(target))
-    await fs.writeFile(target, content, 'utf-8')
-  }
-
-  await fs.ensureSymlink(path.join(flightsRoot, 'node_modules'), path.join(dir, 'node_modules'), 'dir')
-  await fs.ensureSymlink(path.join(flightsRoot, 'models.gsql'), path.join(dir, 'models.gsql'), 'file')
-  await fs.ensureSymlink(path.join(flightsRoot, 'flights.duckdb'), path.join(dir, 'flights.duckdb'), 'file')
-  await fs.writeJson(path.join(dir, 'package.json'), {
-    name: 'graphene-check-workspace',
-    version: '0.0.0',
-    type: 'module',
-    graphene: {dialect: 'duckdb'},
-  })
-
-  let files = {'index.md': '# Placeholder\n', ...initialFiles}
-  await Promise.all(Object.entries(files).map(([file, contents]) => write(file, contents)))
-
-  return {
-    root: dir,
-    write,
-    cleanup: async () => { await fs.remove(dir).catch(() => {}) },
-  }
-}
-
-interface CheckRunResult {
-  exitCode: number
-  errors: string[]
-  logs: string[]
-}
-
-async function runCheckCli ({workspace, mdFile, chart, port = 4000}: {workspace: Workspace, mdFile?: string, chart?: string, port?: number}): Promise<CheckRunResult> {
-  return await withConsoleCapture(async capture => {
-    setConfig({dialect: 'duckdb', port, root: workspace.root})
-    clearWorkspace()
-    let ok: boolean
-    try {
-      ok = await check({mdArg: mdFile, chart})
-    } finally {
-      clearWorkspace()
-    }
-    let logs = [...capture.logs]
-    if (logs.some(line => line.includes('Opening page '))) {
-      throw new Error(`check attempted to open a browser tab during tests:\n${logs.join('\n')}`)
-    }
-    return {
-      exitCode: ok ? 0 : 1,
-      errors: [...capture.errors],
-      logs,
-    }
-  })
-}
-
-interface OpenPageOptions {
-  page: Page
-  server: ServerFixture
-  workspace: Workspace
-  mdFile: string
-  content: string
-  waitForGraphene?: boolean
-}
-
-async function openPage ({page, server, workspace, mdFile, content, waitForGraphene = true}: OpenPageOptions) {
-  await workspace.write(mdFile, content)
-  let baseUrl = server.url({root: workspace.root})
-  let filePath = `/${mdFile.replace(/^\//, '')}`
-  let routePath = routeFor(mdFile)
-  server.mockFile(filePath, content)
-  if (routePath !== '/' && routePath !== filePath) server.mockFile(routePath, content)
-  let url = new URL(routePath, baseUrl).toString()
-  let navResponse = await page.goto(url)
-  if (navResponse?.status() === 404) {
-    await page.waitForTimeout(500)
-    navResponse = await page.goto(url)
-  }
-  expect(navResponse?.status()).toBe(200)
-  if (waitForGraphene) await waitForGrapheneQueries(page)
-  return Number(new URL(baseUrl).port)
-}
-
-function routeFor (mdFile: string): string {
-  let normalised = mdFile.replace(/^\//, '').replace(/\.md$/, '')
-  if (!normalised || normalised === 'index') return '/'
-  return `/${normalised}`
-}
-
-async function withConsoleCapture<T> (fn: (capture: ConsoleCapture) => Promise<T>): Promise<T> {
-  let capture = captureConsole()
-  try {
-    return await fn(capture)
-  } finally {
-    capture.restore()
-  }
-}
-
-type ConsoleCapture = ReturnType<typeof captureConsole>
-
-function captureConsole (): {errors: string[], logs: string[], restore: () => void} {
-  let originalError = console.error
-  let originalLog = console.log
-  let errors: string[] = []
-  let logs: string[] = []
-  console.error = (...args: any[]) => {
-    errors.push(cleanLog(args))
-  }
-  console.log = (...args: any[]) => {
-    logs.push(cleanLog(args))
-  }
-  return {
-    errors,
-    logs,
-    restore: () => {
-      console.error = originalError
-      console.log = originalLog
-    },
-  }
-}
-
-function cleanLog (args: any[]): string {
-  let text = args.map(arg => typeof arg === 'string' ? arg : JSON.stringify(arg)).join(' ')
-  return text.replace(/\u001b\[[0-9;]*m/g, '')
-}

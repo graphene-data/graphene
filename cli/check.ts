@@ -6,46 +6,49 @@ import {type IncomingMessage, type ServerResponse} from 'http'
 import {WebSocketServer, type WebSocket} from 'ws'
 import {type PluginOption, type ViteDevServer} from 'vite'
 
-import {analyze, config, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
+import {analyze, config, type Diagnostic, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
 import {printDiagnostics} from './printer.ts'
 import {readFileSync} from 'node:fs'
+import {mockFileMap} from './mockFiles.ts'
+import {styleText} from 'node:util'
 
 interface CheckOptions {
   mdArg?: string
   chart?: string
-}
-
-interface RuntimeErrorPayload {
-  message?: string
-  stack?: string
+  log?: (...args: any[]) => void
 }
 
 let browserConnections: {url: string, socket: WebSocket}[] = []
 let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {}
 
 export async function check (options: CheckOptions): Promise<boolean> {
+  let log = options.log || console.log
   let mdFile = options.mdArg && normalizeMdFile(options.mdArg)
 
   if (options.mdArg && !mdFile) {
-    console.error(`Couldn't find ${options.mdArg}`)
+    log(`Couldn't find ${options.mdArg}`)
     return false
   }
 
   // if there's no file arg, check all md files. If there is a file arg, just load that file.
   await loadWorkspace(config.root, !mdFile)
   if (mdFile) {
-    let content = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
-    updateFile(content, mdFile)
+    if (process.env.NODE_ENV == 'test' && mockFileMap[mdFile]) {
+      updateFile(mockFileMap[mdFile], mdFile)
+    } else {
+      let content = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
+      updateFile(content, mdFile)
+    }
   }
 
   analyze()
   if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
+    printDiagnostics(getDiagnostics(), log)
     return false
   }
 
   if (!mdFile) {
-    console.log('No errors found 💎')
+    log('No errors found 💎')
     return true
   }
 
@@ -56,30 +59,41 @@ export async function check (options: CheckOptions): Promise<boolean> {
 
   let resp = await sendCheckRequest({host, pageUrl, chart: options.chart})
   if (resp.checkError == 'no_server') {
-    console.error("Graphene server isn't running. Start it with `graphene serve`")
+    log("Graphene server isn't running. Start it with `graphene serve`")
     return false
   }
 
   if (resp.checkError == 'no_tab' && process.env.NODE_ENV !== 'test') {
-    console.log(`Opening page ${host}${pageUrl}`)
+    log(`Opening page ${host}${pageUrl}`)
     spawn('open', [host + pageUrl])
     await new Promise(resolve => setTimeout(resolve, 500))
     resp = await sendCheckRequest({host, pageUrl, chart: options.chart})
   }
 
   if (resp.checkError == 'no_tab') {
-    console.error('Failed to open a new tab')
+    log('Failed to open a new tab')
     return false
   }
 
-  Array.from(resp?.errors || []).forEach(err => {
-    for (let line of formatRuntimeError(err!, mdFile)) {
-      console.error(line)
-    }
+  if (resp.checkError) {
+    log('Failed to run check: ' + resp.checkError)
+    return false
+  }
+
+  let errors = Array.from(resp.errors || [])
+  if (errors.length) {
+    log(styleText('red', 'Runtime errors') + ` in ${mdFile}:`)
+  } else {
+    log('No errors found 💎')
+  }
+  errors.forEach((e:any) => {
+    if (e.file && e.line) printDiagnostics([e as Diagnostic], log)
+    else if (e.id) log(`${e.id}: ${e.message}`)
+    else log(e.message)
   })
 
   if (resp?.stillLoading) {
-    console.warn('Warning: Queries were still loading when the screenshot was taken')
+    log('Warning: Queries were still loading when the screenshot was taken')
   }
 
   if (resp?.screenshot) {
@@ -87,18 +101,10 @@ export async function check (options: CheckOptions): Promise<boolean> {
     let screenshotPath = path.join(os.tmpdir(), filename)
     let base64Data = resp.screenshot.replace(/^data:image\/png;base64,/, '')
     await fs.writeFile(screenshotPath, base64Data, 'base64')
-    console.log('Screenshot saved to', screenshotPath)
+    log('Screenshot saved to', screenshotPath)
   }
 
-  let runtimeErrors = Array.from(resp?.errors || [])
-  if (runtimeErrors.length > 0) {
-    let target = mdFile ? path.basename(mdFile) : 'project'
-    console.error(`Runtime errors found in ${target}`)
-    return false
-  }
-
-  console.log('No errors found 💎')
-  return true
+  return !!errors.length
 }
 
 async function sendCheckRequest ({host, pageUrl, chart}) {
@@ -134,6 +140,10 @@ function normalizeMdFile (mdFile: string): string | null {
   if (!clean) return null
   if (!clean.endsWith('.md')) clean = clean + '.md'
 
+  if (process.env.NODE_ENV == 'test' && mockFileMap[clean]) {
+    return clean
+  }
+
   let absolute = [
     path.resolve(process.cwd(), clean),
     path.resolve(config.root, clean),
@@ -142,53 +152,6 @@ function normalizeMdFile (mdFile: string): string | null {
   if (!absolute) return null
   let relative = path.relative(config.root, absolute)
   return relative
-}
-
-function formatRuntimeError (error: RuntimeErrorPayload, fallbackMd: string): string[] {
-  let lines: string[] = []
-  let anyError = error as RuntimeErrorPayload & Record<string, any>
-  let mdFile = typeof anyError.mdFile === 'string' && anyError.mdFile.length ? anyError.mdFile : fallbackMd
-  let displayLine = typeof anyError.displayLine === 'number' ? anyError.displayLine : (
-    typeof anyError.line === 'number' ? anyError.line + 1 : undefined
-  )
-  let location = mdFile
-  if (displayLine) location = `${location}:${displayLine}`
-
-  let chartType = anyError.chartType
-  let chartTitle = anyError.chartTitle || anyError.title
-  let chartLabel = ''
-  if (chartType && chartTitle && chartTitle !== chartType) chartLabel = `${chartType} – ${chartTitle}`
-  else if (chartTitle) chartLabel = chartTitle
-  else if (chartType) chartLabel = chartType
-
-  let source = anyError.source || anyError.chartName
-
-  let headerParts = []
-  if (location) headerParts.push(location)
-  if (chartLabel) headerParts.push(chartLabel)
-  if (source && source !== chartLabel) headerParts.push(source)
-
-  let message = error.message || String(error)
-  if (headerParts.length) lines.push(`- ${headerParts.join(' · ')}: ${message}`)
-  else lines.push(`- ${message}`)
-
-  let fields = anyError.fields
-  if (fields && typeof fields === 'object') {
-    let entries = Object.entries(fields).filter(([key, value]) => key && value)
-    if (entries.length) {
-      let summary = entries.map(([attr, expr]) => {
-        if (Array.isArray(expr)) return `${attr}=${expr.join(', ')}`
-        return `${attr}=${expr}`
-      }).join(', ')
-      lines.push(`    fields: ${summary}`)
-    }
-  }
-
-  let summary = anyError.summary || anyError.lineText
-  if (summary && summary !== message) lines.push(`    ${summary.trim()}`)
-
-  if (error.stack) lines.push(error.stack)
-  return lines
 }
 
 // A request has come in to the server to check a specific url. We'll load it up, forward along the request, and proxy the response.

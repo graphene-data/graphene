@@ -23,7 +23,7 @@
   import checkInputs from '../component-utilities/checkInputs.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
-  import {error as recordError} from '../internal/telemetry.ts'
+  import {logError} from '../internal/telemetry.ts'
 
   const {theme, resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
 
@@ -32,6 +32,7 @@
   // ---------------------------------------------------------------------------------------
   // Data and columns:
   export let data = undefined
+  export let chartContext = undefined
   export let queryID = undefined
   export let x = undefined
   export let y = undefined
@@ -1045,7 +1046,12 @@
       error = e.message
       let setTextRed = '\x1b[31m%s\x1b[0m'
       console.error(setTextRed, `Error in ${chartType}: ${e.message}`)
-      recordError(e)
+
+      // Make an "id" for the chart so its clear to users/agents exactly which caused an error.
+      let fieldStr = Object.entries(chartContext || {}).filter(([_, val]) => !!val).map(([name, val]) => `${name}="${val}"`)
+      let id = `${title || chartType} (${fieldStr.join(' ')})`
+      logError(e, {id})
+
       props.update((d) => {
         return {...d, error}
       })

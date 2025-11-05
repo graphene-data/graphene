@@ -82,7 +82,7 @@ export function walkExpression (root: any, fn: (expr: Expression, parent?: Expre
 }
 
 export function trimIndentation (str:string) {
-  let lines = str.split('\n')
+  let lines = str.trim().split('\n')
   let indent = lines.slice(1)
     .filter(l => l.trim() !== '') // empty lines don't count
     .map(l => l.match(/^\s*/)![0].length)
