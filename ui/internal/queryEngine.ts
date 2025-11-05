@@ -85,15 +85,11 @@ async function runNode (n: QueryNode) {
     } else { // request failed. Record it
       let isJson = response.headers.get('Content-Type') === 'application/json'
       let body = isJson ? await response.json() : await response.text()
-      let fieldContext = Object.fromEntries(Array.from(n.fields.entries()))
-      let sourceName = n.name || n.source
-      n.errors = (Array.isArray(body) ? body : [body]).map(err => {
-        if (!err || typeof err !== 'object') return err
-        let enriched = err as Record<string, any>
-        if (sourceName && !enriched.source) enriched = {...enriched, source: sourceName}
-        if (Object.keys(fieldContext).length === 0) return enriched
-        return {...enriched, fields: fieldContext}
-      })
+      n.errors = Array.isArray(body) ? body : [{message: body}]
+
+      let fieldIds = Array.from(n.fields.entries()).map(([name, val]) => `${name}="${val}"`)
+      let idStr = `Query (data="${n.source}" ` + fieldIds.join(' ') + ')'
+      n.errors.forEach(e => e.id = idStr)
       n.callback({errors: n.errors})
     }
   } catch (e) {

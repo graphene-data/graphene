@@ -11,6 +11,7 @@ import {fileURLToPath} from 'url'
 import {getConnection} from './connections/index.ts'
 import {escapeAngles, extractQueries, injectComponentImports, sanitizeMarkdown} from './mdCompile.ts'
 import {checkVitePlugin} from './check.ts'
+import {mockFileMap} from './mockFiles.ts'
 
 let uiRoot: string
 
@@ -171,7 +172,6 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
   return res.end(html)
 }
 
-export const mockFileMap: Record<string, string> = {}
 function mockFilesForTests () {
   if (process.env.NODE_ENV !== 'test') return null
 
@@ -179,11 +179,11 @@ function mockFilesForTests () {
     name: 'mock-files-for-tests',
     enforce: 'pre' as const,
     resolveId (id) {
-      if (mockFileMap[id.replace(config.root, '')]) return id + '?mock'
+      if (mockFileMap[id.replace(config.root + '/', '')]) return id + '?mock'
     },
     load (id) {
       if (!id.endsWith('?mock')) return null
-      return mockFileMap[id.replace(config.root, '').replace(/\?mock$/, '')]
+      return mockFileMap[id.replace(config.root + '/', '').replace(/\?mock$/, '')]
     },
   }
 }

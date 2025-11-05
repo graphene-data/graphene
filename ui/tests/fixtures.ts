@@ -4,8 +4,9 @@ import {fileURLToPath} from 'url'
 import net from 'net'
 import {config, setConfig} from '../../lang/config.ts'
 import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
-import {serve2, mockFileMap} from '../../cli/serve2.ts'
+import {serve2} from '../../cli/serve2.ts'
 import {withBrowserConsole, assertNoConsoleErrors} from './browserConsole.ts'
+import {mockFileMap} from '../../cli/mockFiles.ts'
 
 export {expect}
 
@@ -50,12 +51,13 @@ export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: 
 
       await use({
         url: (options: ServerOptions = {}) => {
-          setConfig({dialect: options.dialect || 'duckdb', root: options.root || viteRoot, port})
-          clearWorkspace()
+          setConfig({dialect: options.dialect || config.dialect, root: options.root || config.root, port})
           loadWorkspace(config.root, false)
           return `http://localhost:${port}`
         },
-        mockFile: (path: string, content: string) => mockFileMap[path] = trimIndentation(content),
+        mockFile: (path: string, content: string) => {
+          mockFileMap[path.replace(/^\//, '')] = trimIndentation(content)
+        },
       })
     },
     {scope: 'worker'},
@@ -116,6 +118,9 @@ export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: 
 })
 
 test.beforeEach(() => {
+  let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
+  setConfig({dialect: 'duckdb', root})
+  clearWorkspace()
   Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
 
   // Vite caches our mocked files, so we need to clear them out before each test.

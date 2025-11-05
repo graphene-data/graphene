@@ -24,6 +24,7 @@
     "@sveltejs/vite-plugin-svelte": "3.1.2",
     "fs-extra": "11.2.0",
     "playwright": "1.54.2",
+    "strip-ansi": "^7.1.2",
     "svelte": "4.2.19"
   },
   "author": "",

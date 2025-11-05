@@ -90,7 +90,8 @@ async function takeScreenshot () {
     window.html2canvas = html2canvas.default
   }
   let canvas = await window.html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1})
-  return {stillLoading: isLoading(), screenshot: canvas?.toDataURL('image/png'), errors: getErrors()}
+  let errors = getErrors().map(e => ({message: e.message, id: e.id}))
+  return {stillLoading: isLoading(), screenshot: canvas?.toDataURL('image/png'), errors}
 }
 
 async function waitForQueriesToFinish () {
@@ -110,7 +111,6 @@ function connectWebSocket () {
   }
 
   socket.onmessage = async (event) => {
-    console.log('Got message', event.data)
     let {type, requestId, chart} = JSON.parse(event.data)
 
     if (type === 'check') {

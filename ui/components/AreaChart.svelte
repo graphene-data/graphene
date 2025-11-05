@@ -86,6 +86,7 @@
 <QueryLoad data={data} fields={{x, y, series}} let:loaded>
   <Chart
     data={loaded}
+    chartContext={{data, x, y, series}}
     {x}
     {y}
     {xFmt}
