@@ -273,9 +273,6 @@ importers:
 
   vscode:
     dependencies:
-      '@graphenedata/lang':
-        specifier: file:../lang
-        version: link:../lang
       vscode-languageclient:
         specifier: ^9.0.1
         version: 9.0.1
@@ -286,6 +283,9 @@ importers:
         specifier: ^1.0.11
         version: 1.0.12
     devDependencies:
+      '@graphenedata/lang':
+        specifier: file:../lang
+        version: link:../lang
       '@types/vscode':
         specifier: ^1.84.0
         version: 1.103.0
