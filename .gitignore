@@ -10,7 +10,10 @@ notes.md
 .evidence
 .svelte-kit
 *.duckdb
+
 **/.vscode/settings.json
 vscode/*.vsix
+vscode/LICENSE.md
+
 CLAUDE.md
 .env

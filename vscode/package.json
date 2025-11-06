@@ -5,6 +5,7 @@
   "description": "",
   "version": "0.0.1",
   "type": "commonjs",
+  "repository": {},
   "engines": {
     "vscode": "^1.84.0"
   },
@@ -20,8 +21,13 @@
     "languages": [
       {
         "id": "graphene-sql",
-        "aliases": ["Graphene GSQL", "GSQL"],
-        "extensions": [".gsql"],
+        "aliases": [
+          "Graphene GSQL",
+          "GSQL"
+        ],
+        "extensions": [
+          ".gsql"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -37,6 +43,7 @@
     "build": "node ./esbuild.mjs",
     "vscode:prepublish": "pnpm run build",
     "package": "rm -f -- *.vsix && vsce package --no-dependencies",
+    "publish": "vsce publish",
     "install-cursor": "pnpm run package && cursor --install-extension *.vsix",
     "install-vscode": "pnpm run package && code --install-extension *.vsix"
   },
