@@ -1,7 +1,8 @@
 {
-  "name": "vscode-graphene",
+  "name": "graphene-data-vscode",
+  "private": true,
   "displayName": "Graphene VSCode Language Support",
-  "publisher": "graphene",
+  "publisher": "graphene-data",
   "description": "",
   "version": "0.0.1",
   "type": "commonjs",
@@ -43,17 +44,17 @@
     "build": "node ./esbuild.mjs",
     "vscode:prepublish": "pnpm run build",
     "package": "rm -f -- *.vsix && vsce package --no-dependencies",
-    "publish": "vsce publish",
+    "vsce:publish": "vsce publish",
     "install-cursor": "pnpm run package && cursor --install-extension *.vsix",
     "install-vscode": "pnpm run package && code --install-extension *.vsix"
   },
   "dependencies": {
-    "@graphenedata/lang": "file:../lang",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.11"
   },
   "devDependencies": {
+    "@graphenedata/lang": "file:../lang",
     "@types/vscode": "^1.84.0",
     "@vscode/vsce": "^3.6.0",
     "esbuild": "^0.21.5"
