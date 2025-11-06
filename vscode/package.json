@@ -44,7 +44,7 @@
     "build": "node ./esbuild.mjs",
     "vscode:prepublish": "pnpm run build",
     "package": "rm -f -- *.vsix && vsce package --no-dependencies",
-    "vsce:publish": "vsce publish",
+    "publish-extension": "npx vsce publish && npx ovsx publish",
     "install-cursor": "pnpm run package && cursor --install-extension *.vsix",
     "install-vscode": "pnpm run package && code --install-extension *.vsix"
   },
@@ -56,7 +56,6 @@
   "devDependencies": {
     "@graphenedata/lang": "file:../lang",
     "@types/vscode": "^1.84.0",
-    "@vscode/vsce": "^3.6.0",
     "esbuild": "^0.21.5"
   }
 }
