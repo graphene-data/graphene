@@ -1,7 +1,6 @@
 packages:
   - lang
   - cli
-  - vscode
   - ui
   - agent
   - examples/*
