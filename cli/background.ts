@@ -2,6 +2,7 @@ import {spawn} from 'child_process'
 import {fileURLToPath} from 'url'
 import fs from 'fs-extra'
 import path from 'path'
+import {config} from '../lang/config.ts'
 
 export type StopStatus = 'none' | 'stale' | 'stopped'
 
@@ -71,30 +72,24 @@ function sendSignal (pid: number, signal: NodeJS.Signals): boolean {
   return true
 }
 
-export async function stopGrapheneIfRunning (root: string): Promise<boolean> {
+export async function stopGrapheneIfRunning (root: string): Promise<void> {
+  if (!(await isServerRunning())) return
+
   let pidFile = getPidFilePath(root)
   let pid = await readPid(pidFile)
-  if (!pid) return true
-
-  if (!isProcessRunning(pid)) {
-    await fs.remove(pidFile)
-    return true
-  }
+  if (!pid) return
 
   console.log(`Stopping server (${pid})`)
-  if (!sendSignal(pid, 'SIGTERM')) return false
+  sendSignal(pid, 'SIGTERM')
 
   let end = Date.now() + 5000
-  while (Date.now() < end && isProcessRunning(pid)) {
+  while (Date.now() < end && isServerRunning()) {
     await new Promise(resolve => setTimeout(resolve, 100))
   }
+  if (!isServerRunning()) return
 
-  if (isProcessRunning(pid)) {
-    if (!sendSignal(pid, 'SIGKILL')) return false
-  }
-
+  sendSignal(pid, 'SIGKILL')
   await fs.remove(pidFile)
-  return !isProcessRunning(pid)
 }
 
 export async function readPid (pidFile: string): Promise<number | undefined> {
@@ -106,9 +101,15 @@ export async function readPid (pidFile: string): Promise<number | undefined> {
   return pid
 }
 
-export function isProcessRunning (pid: number): boolean {
+export async function isServerRunning (): Promise<boolean> {
+  let pidFile = getPidFilePath(config.root)
+  let pid = await readPid(pidFile)
+  if (!pid) return false
   try {
-    process.kill(pid, 0)
+    process.kill(pid, 0) // sending `0` won't actually kill it, but will fail if that pid isnt running
     return true
-  } catch { return false }
+  } catch {
+    fs.removeSync(pidFile) // clean up pidfile since process wasn't running
+    return false
+  }
 }
