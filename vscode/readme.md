@@ -1,3 +1,5 @@
-This is the VSCode extension and language server for Graphene.
+Graphene is a framework that enables coding agents to do data work.
 
-It provides diagnostics, syntax highlighting, autocomplete and hover handling. It's designed to be a thin wrapper, most of the interesting logic is reusable and lives in /lang.
+Graphene provides tools that allow any coding agent and LLM to run queries, build semantic models, and create interactive apps, reports, and dashboards.
+
+This VSCode extension provides syntax highlighing and type checking for Graphene's query language (gsql) and markdown files.

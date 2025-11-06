@@ -1,6 +1,7 @@
 import {build} from 'esbuild'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {cp} from 'node:fs/promises'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -37,3 +38,5 @@ await build({
   external: ['vscode'],
   plugins: [aliasPlugin],
 })
+
+cp(path.resolve(__dirname, '../cli/LICENSE.md'), path.resolve(__dirname, 'LICENSE.md'))
