@@ -79,7 +79,7 @@ program
   .option('-c, --chart <chartTitle>', 'Title of a specific chart to capture')
   .action(async (mdArg: string | undefined, options: {chart?: string}) => {
     let res = await check({mdArg, chart: options.chart})
-    process.exitCode = res ? 0 : 1
+    process.exit(res ? 0 : 1) // import to call `exit`, bc if we started the server in the background, just returning won't actually exit the process.
   })
 
 program.parse(process.argv)

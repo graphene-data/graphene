@@ -10,7 +10,9 @@ import {analyze, config, type Diagnostic, getDiagnostics, loadWorkspace, updateF
 import {printDiagnostics} from './printer.ts'
 import {readFileSync} from 'node:fs'
 import {mockFileMap} from './mockFiles.ts'
+import {isServerRunning, runServeInBackground} from './background.ts'
 import {styleText} from 'node:util'
+import {pollFor} from '../lang/util.ts'
 
 interface CheckOptions {
   mdArg?: string
@@ -57,9 +59,15 @@ export async function check (options: CheckOptions): Promise<boolean> {
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
   if (pageUrl === '/index') pageUrl = '/'
 
+  if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
+    log('Starting Graphene server...')
+    await runServeInBackground()
+  }
+
   let resp = await sendCheckRequest({host, pageUrl, chart: options.chart})
+
   if (resp.checkError == 'no_server') {
-    log("Graphene server isn't running. Start it with `graphene serve`")
+    log('Failed to start Graphene server')
     return false
   }
 
@@ -163,8 +171,8 @@ export async function proxyCheckRequest (req: IncomingMessage, res: ServerRespon
   res.setHeader('Content-Type', 'application/json')
 
   // Check for existing WebSocket connections for the given url
-  let normalizedPageUrl = pageUrl.endsWith('/') ? pageUrl.slice(0, -1) : pageUrl
-  let conn = browserConnections.find(conn => conn.url === pageUrl || conn.url === normalizedPageUrl)
+  let normalizedPageUrl = pageUrl.replace(/\/$/, '')
+  let conn = await pollFor(() => browserConnections.find(conn => conn.url === normalizedPageUrl), 5000, 100)
   if (!conn) {
     res.statusCode = 400
     res.end(JSON.stringify({error: 'no_tab'}))
@@ -192,7 +200,10 @@ export function checkVitePlugin (): PluginOption {
       wss.on('connection', (socket) => {
         socket.on('message', (data) => {
           let message = JSON.parse(data.toString())
-          if (message.type === 'register') browserConnections.push({url: message.url, socket})
+          if (message.type === 'register') {
+            let normalizedUrl = message.url.replace(/\/$/, '')
+            browserConnections.push({url: normalizedUrl, socket})
+          }
           if (message.type === 'checkResponse') {
             pendingRequests[message.requestId].response.end(JSON.stringify(message))
             delete pendingRequests[message.requestId]

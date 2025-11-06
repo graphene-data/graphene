@@ -94,3 +94,13 @@ export function trimIndentation (str:string) {
     return line.slice(toRemove)
   }).join('\n')
 }
+
+export async function pollFor<T> (fn: () => T, timeoutMs:number, interval?: number): Promise<T | null> {
+  let end = Date.now() + timeoutMs
+  while (Date.now() < end) {
+    let res = fn()
+    if (res) return res
+    await new Promise(r => setTimeout(r, interval))
+  }
+  return null
+}
