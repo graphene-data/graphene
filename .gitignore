@@ -1,5 +1,6 @@
 node_modules
 tests/results
+migrations/meta
 
 cloud.db
 .env
