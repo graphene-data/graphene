@@ -522,10 +522,10 @@ Here's an example:
 |----------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | false | column name, stored expression name, GSQL expression | First column |
-| y | Column(s) or expression(s) to use for the y-axis of the chart | false | column name, stored expression name, GSQL expression, list of any combination of these | Any non-assigned numeric columns |
-| y2 | Column(s) or expression(s) to include on a secondary y-axis | false | column name, stored expression name, GSQL expression, list of any combination of these | - |
+| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | false | column name, stored expression name, GSQL expression, list of any combination of these | Any non-assigned numeric columns |
+| y2 | Column(s) or expression(s) to include on a secondary y-axis. | false | column name, stored expression name, GSQL expression, list of any combination of these | - |
 | y2SeriesType | Chart type to apply to the series on the y2 axis | false | `bar`, `line`, `scatter` | `bar` |
-| series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
+| series | Column or expression to use to define the series (groups) in a multi-series chart. Use when values of a particular column dictate the multiple series to plot, eg. `country` would create a series for every distinct country in the column. | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | type | Grouping method to use for multi-series charts | false | `stacked`, `grouped`, `stacked100` | `stacked` |
 | stackName | Name for an individual stack. If separate Bar components are used with different stackNames, the chart will show multiple stacks | false | string | - |
@@ -670,10 +670,10 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | - |
-| y | Column(s) or expression(s) to use for the y-axis of the chart | true | column name, stored expression name, GSQL expression, list of any combination of these | - |
-| y2 | Column(s) or expression(s) to include on a secondary y-axis | false | column name, stored expression name, GSQL expression, list of any combination of these | - |
+| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | true | column name, stored expression name, GSQL expression, list of any combination of these | - |
+| y2 | Column(s) or expression(s) to include on a secondary y-axis. | false | column name, stored expression name, GSQL expression, list of any combination of these | - |
 | y2SeriesType | Chart type to apply to the series on the y2 axis | false | `line`, `bar`, `scatter` | `line` |
-| series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
+| series | Column or expression to use to define the series (groups) in a multi-series chart. Use when values of a particular column dictate the multiple series to plot, eg. `country` would create a series for every distinct country in the column. | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | handleMissing | Treatment of missing values in the dataset | false | `gap`, `connect`, `zero` | `gap` |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
@@ -779,8 +779,8 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | First column |
-| y | Column(s) or expression(s) to use for the y-axis of the chart | true | column name, stored expression name, GSQL expression, list of any combination of these | Any non-assigned numeric columns |
-| series | Column or expression to use as the series (groups) in a multi-series chart | false | column name, stored expression name, GSQL expression | - |
+| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | true | column name, stored expression name, GSQL expression, list of any combination of these | Any non-assigned numeric columns |
+| series | Column or expression to use to define the series (groups) in a multi-series chart. Use when values of a particular column dictate the multiple series to plot, eg. `country` would create a series for every distinct country in the column. | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | type | Grouping method to use for multi-series charts | false | `stacked`, `stacked100` | `stacked` |
 | handleMissing | Treatment of missing values in the dataset | false | `gap`, `connect`, `zero` | `gap` for single series, `zero` for multi-series |
