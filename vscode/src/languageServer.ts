@@ -13,7 +13,8 @@ import {
 
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {readFile} from 'node:fs/promises'
-import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles, getHover, loadConfig} from '@graphenedata/lang'
+import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles, getHover, loadConfig, config} from '@graphenedata/lang'
+import path from 'node:path'
 
 const connection = createConnection(ProposedFeatures.all)
 let initialLoad: Promise<void> | undefined
@@ -99,16 +100,18 @@ function perFileVscodeDiagnostics () {
         source: 'graphene',
       }
     })
-    return {uri: `file://${f.path}`, diagnostics}
+
+    return {uri: `file://${path.resolve(config.root, f.path)}`, diagnostics}
   })
 }
 
 function toPath (uri: string) {
-  return decodeURIComponent(uri.replace('file://', ''))
+  let abs = decodeURIComponent(uri.replace('file://', ''))
+  // In graphene, paths should be relative to the root
+  return path.relative(config.root, abs)
 }
 
 connection.onHover(params => {
-  console.log('hover', params)
   let hover = getHover(toPath(params.textDocument.uri), params.position.line, params.position.character)
   return {contents: hover}
 })
