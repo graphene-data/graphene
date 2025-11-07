@@ -100,6 +100,10 @@ export function getHover (path: string, line: number, col: number): string {
   let fi = FILE_MAP[path]
   let offset = getOffset(line, col, fi)
 
+  // TODO: if you hover while we're analyzing, should wait for analysis to finish, then return the entity.
+  // I think LSP has a way to make returning the hover async, but it's not obvious, and this seems rare.
+  if (!fi.tree) return ''
+
   // walk up until we find a node with an entity
   let node = fi.tree!.resolve(offset)
   let entity = getNodeEntity(node)
