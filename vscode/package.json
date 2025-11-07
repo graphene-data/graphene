@@ -43,7 +43,7 @@
   "scripts": {
     "build": "node ./esbuild.mjs",
     "vscode:prepublish": "pnpm run build",
-    "package": "rm -f -- *.vsix && vsce package --no-dependencies",
+    "package": "rm -f -- *.vsix && npx vsce package --no-dependencies",
     "publish-extension": "npx vsce publish && npx ovsx publish",
     "install-cursor": "pnpm run package && cursor --install-extension *.vsix",
     "install-vscode": "pnpm run package && code --install-extension *.vsix"
