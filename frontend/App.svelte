@@ -1,11 +1,9 @@
 <script lang="ts">
-  import {authClient} from './authClient'
+  import {session} from './authClient'
   import Login from './routes/Login.svelte'
+  import Authenticate from './routes/Authenticate.svelte'
   import PageView from './routes/PageView.svelte'
   import {route, go} from './router'
-
-  let stytch = authClient()
-  let session = stytch.session.getSync()
 
   $: {
     if (!$session) {
