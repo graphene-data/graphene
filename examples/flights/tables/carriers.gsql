@@ -1,0 +1,13 @@
+table carriers (
+  
+  /* Base columns */
+
+  code VARCHAR primary_key, -- Two-letter airline carrier code (e.g., 'AA' for American Airlines, 'UA' for United Airlines)
+  name VARCHAR, -- Full official name of the airline carrier
+  nickname VARCHAR, -- Common nickname or shortened name for the carrier
+
+  /* Join relationships */
+
+  join_many flights on code = flights.carrier
+);
+

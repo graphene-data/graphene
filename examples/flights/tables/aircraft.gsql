@@ -1,0 +1,44 @@
+table aircraft (
+  
+  /* Base columns */
+
+  id BIGINT primary_key, -- Unique identifier for the aircraft record
+  tail_num VARCHAR, -- Aircraft tail number (registration identifier, e.g., 'N806MD')
+  aircraft_serial VARCHAR, -- Aircraft serial number
+  aircraft_model_code VARCHAR, -- Code identifying the aircraft model
+  aircraft_engine_code VARCHAR, -- Code identifying the engine type
+  year_built BIGINT, -- Year the aircraft was manufactured
+  aircraft_type_id BIGINT, -- Identifier for the aircraft type category
+  aircraft_engine_type_id BIGINT, -- Identifier for the engine type category
+  registrant_type_id BIGINT, -- Identifier for the registrant type (individual, corporation, etc.)
+  name VARCHAR, -- Name of the aircraft owner/registrant
+  address1 VARCHAR, -- First line of owner's address
+  address2 VARCHAR, -- Second line of owner's address (if applicable)
+  city VARCHAR, -- City of the owner's address
+  state VARCHAR, -- State or province of the owner's address
+  zip VARCHAR, -- ZIP or postal code of the owner's address
+  region VARCHAR, -- Regional identifier
+  county VARCHAR, -- County of the owner's address
+  country VARCHAR, -- Country of registration (typically 'US' for United States)
+  certification VARCHAR, -- Certification information
+  status_code VARCHAR, -- Aircraft status code (e.g., 'A' = Active, 'V' = Valid, 'M' = Missing, 'E' = Expired, 'R' = Revoked, 'S' = Suspended, numeric codes for other statuses)
+  mode_s_code VARCHAR, -- Mode S transponder code
+  fract_owner VARCHAR, -- Fractional ownership indicator
+  last_action_date DATE, -- Date of the last action taken on the registration
+  cert_issue_date DATE, -- Date the aircraft certificate was issued
+  air_worth_date DATE, -- Airworthiness certificate date
+
+  /* Join relationships */
+
+  join_one aircraft_models on aircraft_model_code = aircraft_models.aircraft_model_code,
+  join_many flights on tail_num = flights.tail_num
+
+  /* Scalar expressions ("dimensions") */
+
+  2005 - year_built as age, -- Age of the aircraft in years. Note that the data only goes up to 2005, so using 2005 as "this year" instead of current_date()
+
+  /* Aggregative expressions ("measures") */
+
+  avg(age) as avg_age -- Average age of aircraft in years
+);
+
