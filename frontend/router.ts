@@ -1,7 +1,6 @@
 import {readable} from 'svelte/store'
 
 const getPathname = () => {
-  if (typeof window === 'undefined') return '/'
   return window.location.pathname || '/'
 }
 
@@ -21,9 +20,7 @@ export const route = readable<string>(getPathname(), (set) => {
 })
 
 export function go (url: string) {
-  if (typeof window === 'undefined') return
   if (!url) return
-
   let next = url.startsWith('/') ? url : `/${url}`
   if (window.location.pathname === next) return
 

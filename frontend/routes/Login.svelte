@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {go} from '../router'
-  import {authClient, AuthFlowType, StytchEventType} from '../authClient'
+  import {authClient, session, AuthFlowType, StytchEventType} from '../authClient'
 
   onMount(() => {
     let stytch = authClient()
@@ -11,7 +11,9 @@
       callbacks: {
         onEvent: e => {
           if (e.type == StytchEventType.AuthenticateFlowComplete) {
-            go('/')
+            let url = new URL(window.location.href)
+            session.set(stytch.session.getSync())
+            go(url.searchParams.get('next') || '/')
           }
         },
       },
