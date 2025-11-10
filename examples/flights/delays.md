@@ -26,8 +26,8 @@ from flights select
   avg(arr_delay) as avg_arrival_delay_minutes,
   avg(case when dep_delay > 15 then 1 else 0 end) as departing_over_15_rate,
   avg(case when arr_delay > 15 then 1 else 0 end) as arriving_over_15_rate,
-  avg(case when is_cancelled then 1 else 0 end) as cancellation_rate,
-  avg(case when is_diverted then 1 else 0 end) as diversion_rate,
+  cancellation_rate,
+  diversion_rate,
   avg(distance) as avg_distance_miles,
   avg(flight_time) as avg_flight_time_minutes
 where carrier = $carrier

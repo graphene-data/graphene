@@ -1,0 +1,38 @@
+table airports (
+  
+  /* Base columns */
+
+  id BIGINT primary_key, -- Unique identifier for the airport
+  code VARCHAR, -- IATA airport code (e.g., 'JFK', 'LAX', 'ORD')
+  site_number VARCHAR, -- FAA site number identifier
+  fac_type VARCHAR, -- Facility type (e.g., 'AIRPORT', 'HELIPORT', 'SEAPLANE BASE', 'BALLOONPORT', 'GLIDERPORT', 'STOLPORT', 'ULTRALIGHT')
+  fac_use VARCHAR, -- Facility use classification ('PU' = Public, 'PR' = Private)
+  faa_region VARCHAR, -- FAA region code
+  faa_dist VARCHAR, -- FAA district code
+  city VARCHAR, -- City where the airport is located
+  county VARCHAR, -- County where the airport is located
+  state VARCHAR, -- State or province code where the airport is located
+  full_name VARCHAR, -- Full official name of the airport
+  own_type VARCHAR, -- Ownership type ('PU' = Public, 'PR' = Private)
+  longitude DOUBLE, -- Longitude coordinate of the airport
+  latitude DOUBLE, -- Latitude coordinate of the airport
+  elevation BIGINT, -- Airport elevation above sea level in feet
+  aero_cht VARCHAR, -- Aeronautical chart identifier
+  cbd_dist BIGINT, -- Distance to central business district in miles
+  cbd_dir VARCHAR, -- Compass direction to central business district (e.g., 'N', 'SW', 'SE')
+  act_date VARCHAR, -- Activation date of the airport
+  cert VARCHAR, -- Certification information (e.g., 'ES 05/1973')
+  fed_agree VARCHAR, -- Federal agreement status
+  cust_intl VARCHAR, -- Customs international status
+  c_ldg_rts VARCHAR, -- Commercial landing rights indicator
+  joint_use VARCHAR, -- Joint use indicator ('Y' = yes, 'N' = no, empty = not applicable)
+  mil_rts VARCHAR, -- Military routes indicator ('Y' = yes, 'N' = no, empty = not applicable)
+  cntl_twr VARCHAR, -- Control tower presence ('Y' = yes, 'N' = no)
+  major VARCHAR, -- Major airport indicator ('Y' = yes, 'N' = no) - indicates if this is a major hub airport
+
+  /* Join relationships */
+
+  join_many flights as departures on code = departures.origin,
+  join_many flights as arrivals on code = arrivals.destination
+);
+

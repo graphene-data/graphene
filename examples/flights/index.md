@@ -1,211 +1,100 @@
-# Flight Operations Overview
+# Flight Analytics Dashboard
 
-Domestic schedules from 2000–2005 give us a broad look at how carriers perform across the network. These views highlight volume, delay trends, and where operations tend to struggle.
+A comprehensive dashboard showcasing flight data metrics from 2000-2005.
+
+## Key Metrics
 
 <Row>
-  <BigValue data="flights" value="count()" fmt="num0" title="Flights analyzed" />
-  <BigValue data="carriers" value="count()" fmt="num0" title="Number of carriers" />
-  <BigValue data="flights" value="cancellation_rate" fmt="pct1" title="Cancellation rate" />
-  <BigValue data="flights" value="diversion_rate" fmt="pct1" title="Diversion rate" />
-</Row>
-<Row>
-  <BigValue data="flights" value="on_time_departure_rate" fmt="pct1" title="Departures on time" />
-  <BigValue data="flights" value="on_time_arrival_rate" fmt="pct1" title="Arrivals on time" />
-  <BigValue data="flights" value="avg(dep_delay)" fmt="num1" title="Avg departure delay (min)" />
-  <BigValue data="flights" value="avg(arr_delay)" fmt="num1" title="Avg arrival delay (min)" />
+  <BigValue data="flights" value="count(*)" title="Total Flights" fmt="num0" />
+  <BigValue data="flights" value="sum(miles_flown)" title="Total Miles Flown" fmt="num0m" />
+  <BigValue data="flights" value="on_time_departure_rate" title="On-Time Departure Rate" fmt="pct1" />
+  <BigValue data="flights" value="on_time_arrival_rate" title="On-Time Arrival Rate" fmt="pct1" />
 </Row>
 
-## Delay Patterns Over Time
+<Row>
+  <BigValue data="flights" value="cancellation_rate" title="Cancellation Rate" fmt="pct2" />
+  <BigValue data="flights" value="diversion_rate" title="Diversion Rate" fmt="pct2" />
+  <BigValue data="flights" value="avg(dep_delay)" title="Avg Departure Delay (min)" fmt="num1" />
+  <BigValue data="flights" value="avg(arr_delay)" title="Avg Arrival Delay (min)" fmt="num1" />
+</Row>
 
-Departure and arrival delays move together, with noticeable spikes around mid-summer and winter holidays. The second chart tracks the share of flights that miss the 15-minute DOT on-time window.
-
-```sql monthly_delay_trend
-from flights select
-  date_trunc('month', dep_time) as month,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(arr_delay) as avg_arrival_delay_minutes
+```sql weekly_trends
+select 
+  date_trunc('week', dep_time) as week,
+  cancellation_rate,
+  diversion_rate,
+  avg(dep_delay) as avg_dep_delay,
+  avg(arr_delay) as avg_arr_delay,
+  on_time_departure_rate,
+  on_time_arrival_rate,
+  count(*) as flight_count,
+  avg(distance) as avg_distance
+from flights
 group by 1
-order by 1
+order by 1 asc
 ```
 
-```sql severe_delay_trend
-from flights select
-  date_trunc('month', dep_time) as month,
-  avg(case when dep_delay > 15 then 1 else 0 end) as departing_over_15_rate,
-  avg(case when arr_delay > 15 then 1 else 0 end) as arriving_over_15_rate
-group by 1
-order by 1
-```
+## Trends over time
 
 <Row>
-  <LineChart
-    data="monthly_delay_trend"
-    x="month"
-    xType="time"
-    y="avg_departure_delay_minutes"
-    y2="avg_arrival_delay_minutes"
-    yFmt="num1"
-    y2Fmt="num1"
-    y2SeriesType="line"
-    legend="true"
-    xFmt="yyyy-mm"
-    yAxisTitle="Minutes"
-    y2AxisTitle="Minutes"
-    title="Average delay by month"
-    subtitle="Both departure and arrival delays spike during peak travel periods"
+  <LineChart title="Flight volume vs. average distance" 
+    subtitle="Trending to more, shorter distance flights" 
+    data="weekly_trends" 
+    x="week" 
+    y="flight_count" 
+    y2="avg_distance" 
   />
-  <LineChart
-    data="severe_delay_trend"
-    x="month"
-    xType="time"
-    y="departing_over_15_rate"
-    y2="arriving_over_15_rate"
-    yFmt="pct0"
-    y2Fmt="pct0"
-    y2SeriesType="line"
-    legend="true"
-    xFmt="yyyy-mm"
-    y2Max=0.35
-    yMax=0.35
-    yAxisTitle="Percent"
-    y2AxisTitle="Percent"
-    title="Share of flights delayed 15+ minutes"
-    subtitle="Arrival delays breach the 15-minute mark slightly more often than departures"
+  <LineChart title="Cancellation rate" 
+    subtitle="9/11 is clearly shown with a spike in cancellations" 
+    data="weekly_trends" 
+    x="week" 
+    y="cancellation_rate" 
+    yFmt="pct1" 
   />
 </Row>
 
-## Airports Driving Delays
-
-Congested hubs dominate the long tail of late departures. Filtering to airports with at least 3k flights surfaces the busiest and most delay-prone origins.
-
-```sql origin_delay
-from flights select
-  origin,
-  origin_airport.full_name as origin_airport_name,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(case when dep_delay > 30 then 1 else 0 end) as share_over_30_minutes,
-  count() as flights
-group by 1, 2
-having flights >= 3000
-order by avg_departure_delay_minutes desc
-limit 15
-```
-
-<Row>
-  <BarChart
-    data="origin_delay"
-    x="origin"
-    y="avg_departure_delay_minutes"
-    swapXY="true"
-    labels="true"
-    labelFmt="num1"
-    title="Average departure delay by origin"
-    subtitle="Top 15 busy airports ranked by minutes of delay"
-  />
-  <Table
-    data="origin_delay"
-    title="Delay profile by origin"
-    subtitle="Busy airports only (>=3k flights in sample)"
-    sort="avg_departure_delay_minutes desc"
-    rows="15"
-    rowNumbers="true"
-    headerColor="base-200"
-  >
-    <Column id="origin" title="Origin" />
-    <Column id="origin_airport_name" title="Airport" />
-    <Column id="flights" title="Flights" fmt="num0" />
-    <Column id="avg_departure_delay_minutes" title="Avg dep delay" fmt="num1" />
-    <Column id="share_over_30_minutes" title=">=30 min share" fmt="pct1" />
-  </Table>
-</Row>
-
-## When Delays Happen
-
-Evening pushes introduce the heaviest departure delays. Severe delays (15+ minutes) nearly double between the morning lull and late night departures.
-
-```sql delay_by_hour
-from flights select
-  extract(hour from dep_time) as hour_of_day,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(case when dep_delay > 15 then 1 else 0 end) as severe_delay_rate,
-  count() as flights
-group by 1
-order by 1
-```
-
-<LineChart
-  data="delay_by_hour"
-  x="hour_of_day"
-  y="avg_departure_delay_minutes"
-  y2="severe_delay_rate"
-  yFmt="num1"
-  y2Fmt="pct0"
-  y2SeriesType="area"
-  legend="true"
-  yAxisTitle="Minutes"
-  y2AxisTitle="Percent"
-  title="Departure delays by hour of day"
-  subtitle="Average minutes delayed (line) and share 15+ minutes late (area)"
-  xAxisTitle="Hour"
-/>
-
-## Carrier Performance Snapshot
-
-Southwest, US Airways, and American operate the largest share of flights in the sample. ExpressJet (EV) and Alaska (AS) manage fewer flights but see notably higher delay rates.
+## Carrier Comparison
 
 ```sql carrier_performance
-from flights select
-  carrier,
+select 
   carriers.name as carrier_name,
-  count() as flights,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(arr_delay) as avg_arrival_delay_minutes,
-  avg(case when dep_delay > 15 then 1 else 0 end) as departing_over_15_rate,
-  avg(case when arr_delay > 15 then 1 else 0 end) as arriving_over_15_rate
-group by 1, 2
-having flights >= 2000
-order by flights desc
+  count(*) as flight_count,
+  on_time_departure_rate,
+  1 - on_time_departure_rate as delayed_departure_rate,
+  on_time_arrival_rate,
+  1 - on_time_arrival_rate as delayed_arrival_rate,
+  cancellation_rate,
+  avg(dep_delay) as avg_departure_delay,
+  avg(arr_delay) as avg_arrival_delay
+from flights 
+group by 1
+order by 2 desc
 ```
 
 <Row>
-  <BarChart
-    data="carrier_performance"
-    x="carrier_name"
-    y="flights"
-    swapXY="true"
-    labels="true"
-    labelFmt="num0"
-    title="Flights by carrier"
-    subtitle="Carriers with 2k+ flights in the sample"
+  <BarChart title="Average Departure Delay by Carrier (minutes)" 
+    data="carrier_performance" 
+    x="carrier_name" 
+    y="avg_departure_delay" 
+    yAxisTitle="Minutes"
+    y2="delayed_departure_rate"
+    y2Fmt=pct1
+    y2SeriesType=line
+    y2AxisTitle="% Flights Delayed"
   />
-  <BarChart
-    data="carrier_performance"
-    x="carrier_name"
-    y="departing_over_15_rate"
-    swapXY="true"
-    labels="true"
-    labelFmt="pct1"
-    yFmt="pct0"
-    title="Share of departures 15+ min late"
-    subtitle="ExpressJet and Alaska stand out for long delays"
+  <PieChart title="Flight Distribution by Carrier" 
+    data="carrier_performance" 
+    category="carrier_name" 
+    value="flight_count" 
   />
 </Row>
 
-<Table
-  data="carrier_performance"
-  title="Carrier delay profile"
-  subtitle="Ordered by volume"
-  sort="flights desc"
-  rows="12"
-  rowNumbers="true"
-  rowShading="true"
-  headerColor="base-200"
->
-  <Column id="carrier" title="Code" />
-  <Column id="carrier_name" title="Carrier" />
-  <Column id="flights" title="Flights" fmt="num0" />
-  <Column id="avg_departure_delay_minutes" title="Avg dep delay" fmt="num1" />
-  <Column id="avg_arrival_delay_minutes" title="Avg arr delay" fmt="num1" />
-  <Column id="departing_over_15_rate" title="Dep 15+ min" fmt="pct1" />
-  <Column id="arriving_over_15_rate" title="Arr 15+ min" fmt="pct1" />
+<Table title="Carrier details" data="carrier_performance" sort="flight_count desc" rows=25>
+  <Column id="carrier_name" />
+  <Column id="flight_count" />
+  <Column id="on_time_departure_rate" fmt="pct1" />
+  <Column id="on_time_arrival_rate" fmt="pct1" />
+  <Column id="cancellation_rate" fmt="pct2" />
+  <Column id="avg_departure_delay" fmt="num1" />
+  <Column id="avg_arrival_delay" fmt="num1" />
 </Table>
