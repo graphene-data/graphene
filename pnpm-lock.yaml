@@ -25,6 +25,9 @@ importers:
       '@sveltejs/vite-plugin-svelte':
         specifier: 3.1.2
         version: 3.1.2(svelte@4.2.19)(vite@7.1.10(@types/node@22.18.10))
+      drizzle-orm:
+        specifier: ^0.44.7
+        version: 0.44.7(@libsql/client@0.15.15)
       fastify:
         specifier: ^5.6.1
         version: 5.6.1
@@ -40,6 +43,9 @@ importers:
       svelte:
         specifier: 4.2.19
         version: 4.2.19
+      ulid:
+        specifier: ^2.3.0
+        version: 2.4.0
       unist-util-visit:
         specifier: 4.1.2
         version: 4.1.2
@@ -1851,6 +1857,10 @@ packages:
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
+    hasBin: true
+
+  ulid@2.4.0:
+    resolution: {integrity: sha512-fIRiVTJNcSRmXKPZtGzFQv9WRrZ3M9eoptl/teFJvjOzmpU+/K/JH6HZ8deBfb5vMEpicJcLn7JmvdknlMq7Zg==}
     hasBin: true
 
   undici-types@6.21.0:
@@ -3690,6 +3700,8 @@ snapshots:
       - supports-color
 
   typescript@5.9.3: {}
+
+  ulid@2.4.0: {}
 
   undici-types@6.21.0: {}
 

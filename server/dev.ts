@@ -75,7 +75,6 @@ export async function loadDbSetup () {
   let {pushSQLiteSchema} = require('drizzle-kit/api')
   let {statementsToExecute} = await pushSQLiteSchema(schema, db)
   dbSetup = statementsToExecute
-  for (let statement of statementsToExecute) await (db as any).$client.exec(statement)
 }
 
 async function seedDatabase (connectionType: SeedType) {
@@ -84,8 +83,9 @@ async function seedDatabase (connectionType: SeedType) {
   let db = getDb()
 
   // run schema migrations against this fresh db
-  if (!dbSetup) loadDbSetup()
-  for (let statement of dbSetup) await (db as any).$client.exec(statement)
+  if (!dbSetup) await loadDbSetup()
+
+  for (let statement of dbSetup) await (db as any).$client.execute(statement)
 
   await db.insert(schema.orgs).values({id: orgId, slug: 'dev', name: 'Graphene Dev'}).run()
   await db.insert(schema.users).values({orgId, id: userId, email: 'dev@graphenedata.com', role: 'admin' as const}).run()
