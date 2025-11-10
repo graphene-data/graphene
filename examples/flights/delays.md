@@ -10,12 +10,12 @@ order by name
 ```
 
 <Dropdown
-  data="carrier_options"
-  name="carrier"
-  value="code"
-  label="name"
+  data=carrier_options
+  name=carrier
+  value=code
+  label=name
   title="Carrier"
-  defaultValue="EV"
+  defaultValue=EV
 />
 
 ```sql carrier_summary
@@ -34,15 +34,15 @@ where carrier = $carrier
 group by 1
 ```
 <Row>
-  <BigValue data="carrier_summary" value="flights" fmt="num0" title="Flights analyzed" emptySet="pass" />
-  <BigValue data="carrier_summary" value="avg_departure_delay_minutes" fmt="num1" title="Avg departure delay (min)" emptySet="pass" />
-  <BigValue data="carrier_summary" value="avg_arrival_delay_minutes" fmt="num1" title="Avg arrival delay (min)" emptySet="pass" />
+  <BigValue data=carrier_summary value=flights fmt=num0 title="Flights analyzed" emptySet=pass />
+  <BigValue data=carrier_summary value=avg_departure_delay_minutes fmt=num1 title="Avg departure delay (min)" emptySet=pass />
+  <BigValue data=carrier_summary value=avg_arrival_delay_minutes fmt=num1 title="Avg arrival delay (min)" emptySet=pass />
 </Row>
 <Row>
-  <BigValue data="carrier_summary" value="departing_over_15_rate" fmt="pct1" title="Departures 15+ min late" emptySet="pass" />
-  <BigValue data="carrier_summary" value="arriving_over_15_rate" fmt="pct1" title="Arrivals 15+ min late" emptySet="pass" />
-  <BigValue data="carrier_summary" value="cancellation_rate" fmt="pct1" title="Cancellation rate" downIsGood="true" emptySet="pass" />
-  <BigValue data="carrier_summary" value="diversion_rate" fmt="pct1" title="Diversion rate" downIsGood="true" emptySet="pass" />
+  <BigValue data=carrier_summary value=departing_over_15_rate fmt=pct1 title="Departures 15+ min late" emptySet=pass />
+  <BigValue data=carrier_summary value=arriving_over_15_rate fmt=pct1 title="Arrivals 15+ min late" emptySet=pass />
+  <BigValue data=carrier_summary value=cancellation_rate fmt=pct1 title="Cancellation rate" downIsGood=true emptySet=pass />
+  <BigValue data=carrier_summary value=diversion_rate fmt=pct1 title="Diversion rate" downIsGood=true emptySet=pass />
 </Row>
 
 ## Delay Trend
@@ -71,34 +71,34 @@ order by 1
 
 <Row>
   <LineChart
-    data="carrier_monthly_delay"
-    x="month"
-    xType="time"
-    y="avg_departure_delay_minutes"
-    y2="avg_arrival_delay_minutes"
-    yFmt="num1"
-    y2Fmt="num1"
-    y2SeriesType="line"
-    legend="true"
-    xFmt="yyyy-mm"
-    showAllXAxisLabels="false"
+    data=carrier_monthly_delay
+    x=month
+    xType=time
+    y=avg_departure_delay_minutes
+    y2=avg_arrival_delay_minutes
+    yFmt=num1
+    y2Fmt=num1
+    y2SeriesType=line
+    legend=true
+    xFmt=yyyy-mm
+    showAllXAxisLabels=false
     yAxisTitle="Minutes"
     y2AxisTitle="Minutes"
     title="Average delay by month"
     subtitle="Departures and arrivals usually shift together"
   />
   <LineChart
-    data="carrier_severe_delay_trend"
-    x="month"
-    xType="time"
-    y="departing_over_15_rate"
-    y2="arriving_over_15_rate"
-    yFmt="pct0"
-    y2Fmt="pct0"
-    y2SeriesType="line"
-    legend="true"
-    xFmt="yyyy-mm"
-    showAllXAxisLabels="false"
+    data=carrier_severe_delay_trend
+    x=month
+    xType=time
+    y=departing_over_15_rate
+    y2=arriving_over_15_rate
+    yFmt=pct0
+    y2Fmt=pct0
+    y2SeriesType=line
+    legend=true
+    xFmt=yyyy-mm
+    showAllXAxisLabels=false
     y2Max=0.5
     yMax=0.5
     yAxisTitle="Percent"
@@ -128,17 +128,17 @@ order by flights desc
 
 <Row>
   <PieChart
-    data="carrier_delay_buckets"
-    category="delay_bucket"
-    value="flights"
-    labels="true"
-    labelContent="name-percent"
+    data=carrier_delay_buckets
+    category=delay_bucket
+    value=flights
+    labels=true
+    labelContent=name-percent
     title="Departure delay mix"
     subtitle="Share of flights by delay bucket"
   />
-  <Table data="carrier_delay_buckets" title="Delay bucket detail" rows="4">
-    <Column id="delay_bucket" title="Bucket" />
-    <Column id="flights" title="Flights" fmt="num0" />
+  <Table data=carrier_delay_buckets title="Delay bucket detail" rows=4>
+    <Column id=delay_bucket title="Bucket" />
+    <Column id=flights title="Flights" fmt=num0 />
   </Table>
 </Row>
 
@@ -178,46 +178,46 @@ limit 15
 
 <Row>
   <BarChart
-    data="carrier_origin_delay"
-    x="origin"
-    y="avg_departure_delay_minutes"
-    swapXY="true"
-    labels="true"
-    labelFmt="num1"
+    data=carrier_origin_delay
+    x=origin
+    y=avg_departure_delay_minutes
+    swapXY=true
+    labels=true
+    labelFmt=num1
     title="Most delayed origin airports"
     subtitle="Filtered to airports with 150+ flights for the carrier"
   />
   <Table
-    data="carrier_origin_delay"
+    data=carrier_origin_delay
     title="Origin performance"
     subtitle="Departure and arrival delay comparison"
-    rows="15"
-    rowNumbers="true"
-    rowShading="true"
+    rows=15
+    rowNumbers=true
+    rowShading=true
   >
-    <Column id="origin" title="Origin" />
-    <Column id="origin_airport_name" title="Airport" />
-    <Column id="flights" title="Flights" fmt="num0" />
-    <Column id="avg_departure_delay_minutes" title="Avg dep delay" fmt="num1" />
-    <Column id="avg_arrival_delay_minutes" title="Avg arr delay" fmt="num1" />
-    <Column id="share_over_30_minutes" title="\u226530 min share" fmt="pct1" />
+    <Column id=origin title="Origin" />
+    <Column id=origin_airport_name title="Airport" />
+    <Column id=flights title="Flights" fmt=num0 />
+    <Column id=avg_departure_delay_minutes title="Avg dep delay" fmt=num1 />
+    <Column id=avg_arrival_delay_minutes title="Avg arr delay" fmt=num1 />
+    <Column id=share_over_30_minutes title="\u226530 min share" fmt=pct1 />
   </Table>
 </Row>
 
 <Table
-  data="carrier_route_delay"
+  data=carrier_route_delay
   title="Routes with the heaviest arrival delays"
   subtitle="Filtered to routes with at least 100 flights"
-  rows="15"
-  rowNumbers="true"
-  rowShading="true"
+  rows=15
+  rowNumbers=true
+  rowShading=true
 >
-  <Column id="origin" title="Origin" />
-  <Column id="destination" title="Destination" />
-  <Column id="destination_airport_name" title="Destination airport" />
-  <Column id="flights" title="Flights" fmt="num0" />
-  <Column id="avg_departure_delay_minutes" title="Avg dep delay" fmt="num1" />
-  <Column id="avg_arrival_delay_minutes" title="Avg arr delay" fmt="num1" />
+  <Column id=origin title="Origin" />
+  <Column id=destination title="Destination" />
+  <Column id=destination_airport_name title="Destination airport" />
+  <Column id=flights title="Flights" fmt=num0 />
+  <Column id=avg_departure_delay_minutes title="Avg dep delay" fmt=num1 />
+  <Column id=avg_arrival_delay_minutes title="Avg arr delay" fmt=num1 />
 </Table>
 
 ## When to Expect Trouble
@@ -236,15 +236,15 @@ order by 1
 ```
 
   <LineChart
-    data="carrier_delay_by_hour"
-    x="hour_of_day"
-    y="avg_departure_delay_minutes"
-    y2="severe_delay_rate"
-  yFmt="num1"
-  y2Fmt="pct0"
+    data=carrier_delay_by_hour
+    x=hour_of_day
+    y=avg_departure_delay_minutes
+    y2=severe_delay_rate
+  yFmt=num1
+  y2Fmt=pct0
   y2Max=0.5
-  y2SeriesType="area"
-  legend="true"
+  y2SeriesType=area
+  legend=true
   yAxisTitle="Minutes"
   y2AxisTitle="Percent"
   title="Hourly departure delays"
