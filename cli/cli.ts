@@ -56,6 +56,7 @@ program
   .description('Run the local server')
   .option('--fg', 'Run the server in the foreground')
   .action(async (options: {fg?: boolean}) => {
+    await stopGrapheneIfRunning()
     if (options.fg || process.env.DEBUG) {
       let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
       await mod.serve2()
@@ -65,12 +66,9 @@ program
     }
   })
 
-program
-  .command('stop')
+program.command('stop')
   .description('Stop the local server')
-  .action(async () => {
-    await stopGrapheneIfRunning(process.cwd())
-  })
+  .action(async () => { await stopGrapheneIfRunning() })
 
 program
   .command('check')
