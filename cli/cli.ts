@@ -9,6 +9,7 @@ import {loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {runQuery} from './connections/index.ts'
+import {loginPkce} from './auth.ts'
 
 const program = new Command()
 
@@ -79,6 +80,14 @@ program
   .action(async (mdArg: string | undefined, options: {chart?: string}) => {
     let res = await check({mdArg, chart: options.chart})
     process.exit(res ? 0 : 1) // import to call `exit`, bc if we started the server in the background, just returning won't actually exit the process.
+  })
+
+program.command('login')
+  .description('Log in to Graphene Cloud')
+  .action(async () => {
+    await loginPkce()
+    console.log('Successfully logged in')
+    process.exit(0)
   })
 
 program.parse(process.argv)
