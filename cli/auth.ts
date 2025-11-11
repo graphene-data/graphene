@@ -5,7 +5,6 @@ import {spawn} from 'child_process'
 import http from 'http'
 import {config} from '../lang/config.ts'
 
-export const AUTH_DOMAIN = 'http://localhost:4004'
 export const AUTH_CLIENT_ID = 'connected-app-test-4685a2a0-1cb9-4a81-a6bf-01a3efe7b981'
 export const AUTH_SCOPES = 'offline_access'
 
@@ -94,38 +93,34 @@ async function startLoopback () {
   return {url: redirectBase, waitForCode, close: () => server.close()}
 }
 
-export async function loginPkce (authUrl?: string, opener?: (url: string) => Promise<void>) {
+export async function loginPkce (opener?: (url: string) => Promise<void>) {
   let verifier = base64url(randomBytes(48))
   let data = new TextEncoder().encode(verifier)
   let digest = await crypto.subtle.digest('SHA-256', data)
-  let challenge = base64url(digest) // pkce challenge
+  let code_challenge = base64url(digest) // pkce challenge
 
   let state = base64url(randomBytes(16))
   let loop = await startLoopback()
   let redirect_uri = `${loop.url}/callback`
 
   // Build authorize URL (merge with provided URL if present)
-  let authorizeUrl = new URL(authUrl || `${AUTH_DOMAIN}/authenticate`)
-  let sp = authorizeUrl.searchParams
-  sp.set('client_id', AUTH_CLIENT_ID)
-  sp.set('redirect_uri', redirect_uri)
-  sp.set('response_type', 'code')
-  sp.set('code_challenge', challenge)
-  sp.set('code_challenge_method', 'S256')
-  sp.set('scope', AUTH_SCOPES)
-  sp.set('state', state)
-  let finalAuthorizeUrl = authorizeUrl.toString()
+  let authorizeUrl = new URL(`${config.host}/authenticate`)
+  authorizeUrl.search = new URLSearchParams({
+    redirect_uri, code_challenge, state,
+    client_id: AUTH_CLIENT_ID,
+    response_type: 'code',
+    code_challenge_method: 'S256',
+    scope: AUTH_SCOPES,
+  }).toString()
 
-  if (opener) await opener(finalAuthorizeUrl)
-  else openInBrowser(finalAuthorizeUrl)
+  if (opener) await opener(authorizeUrl.toString())
+  else openInBrowser(authorizeUrl.toString())
 
   let result = await loop.waitForCode
   if (!result.code) throw new Error('No authorization code received')
   if (result.state !== state) throw new Error('State mismatch')
 
-  // Use the same origin as the authorize URL for the token exchange
-  let tokenBase = new URL(finalAuthorizeUrl).origin
-  let res = await fetch(`${tokenBase}/_api/oauth2/token`, {
+  let res = await fetch(`${config.host}/_api/oauth2/token`, {
     method: 'POST',
     headers: {'content-type': 'application/json'},
     body: JSON.stringify({
@@ -155,13 +150,11 @@ async function refreshAccessToken () {
 
 // Makes a request to your Graphene cloud server with credentials stored from `graphene login`
 export async function authenticatedFetch (pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
-  let host = config.host || AUTH_DOMAIN
   let entry = await readEntry()
   if (!entry) throw new Error('Not logged in; run `graphene login`')
 
   // if we know the access token is no good, refresh it now
   if (!entry.access_token || entry.expires_at < Date.now()) {
-    console.log('Refreshing access token', !!entry.access_token, entry.expires_at)
     await refreshAccessToken()
     entry = await readEntry()
   }
@@ -169,7 +162,7 @@ export async function authenticatedFetch (pathOrUrl: string, init: RequestInit =
   if (!token) throw new Error('Failed to obtain access token')
 
   // make a request with the authorization header set
-  let url = new URL(pathOrUrl, host)
+  let url = new URL(pathOrUrl, config.host)
   let headers = new Headers(init.headers || {})
   headers.set('authorization', `Bearer ${token}`)
 
