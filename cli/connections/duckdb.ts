@@ -1,7 +1,7 @@
 import {promises as fs} from 'fs'
 import path from 'path'
 import {config} from '../../lang/config.ts'
-import {type QueryConnection} from './types.ts'
+import {type QueryResult, type QueryConnection} from './types.ts'
 import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 
 interface DuckDbOptions {
@@ -35,7 +35,7 @@ export class DuckDBConnection implements QueryConnection {
     await this.connection.run('use graphene_cli;')
   }
 
-  async runQuery (sql: string) {
+  async runQuery (sql: string): Promise<QueryResult> {
     await this.ready
     let reader = await this.connection!.runAndReadAll(sql)
     let rows = reader.getRowObjects().map(record => {
