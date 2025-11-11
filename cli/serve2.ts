@@ -18,9 +18,7 @@ let uiRoot: string
 export async function serve2 (): Promise<ViteDevServer> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = Number(process.env.GRAPHENE_PORT) || 4000
-
   await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
-  await fs.writeFile(path.resolve(config.root, `node_modules/.graphene/${process.env.NODE_ENV == 'test' ? 'test' : 'serve'}.pid`), String(process.pid))
 
   let server = await createServer({
     root: config.root,
@@ -61,7 +59,9 @@ export async function serve2 (): Promise<ViteDevServer> {
 
   await optimizeDeps(server.config) // optimize before starting, so we don't have a reload immediately after loading the first page
   await server.listen()
+
   if (process.env.NODE_ENV !== 'test') {
+    await fs.writeFile(path.resolve(config.root, 'node_modules/.graphene/serve.pid'), String(process.pid))
     console.log(`Server running at http://localhost:${port}`)
   }
   return server
