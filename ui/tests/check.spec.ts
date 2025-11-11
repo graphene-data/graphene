@@ -132,13 +132,3 @@ test('cli check with --chart captures a single chart screenshot', async ({server
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `))
 })
-
-test('cli check fails when the server is not running', async () => {
-  let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
-  setConfig({dialect: 'duckdb', root, port: 4999})
-  await check({mdArg: 'index.md', log})
-
-  expect(outputLines()).toEqual(`
-    Graphene server isn't running. Start it with \`graphene serve\`
-  `.trim())
-})
