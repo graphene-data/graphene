@@ -7,17 +7,15 @@ import {config} from '../lang/config.ts'
 export type StopStatus = 'none' | 'stale' | 'stopped'
 
 export async function runServeInBackground (): Promise<void> {
-  let root = process.cwd()
-  let grapheneCache = getGrapheneCache(root)
+  let grapheneCache = getGrapheneCache(config.root)
   let logFile = path.join(grapheneCache, 'serve.log')
   await fs.ensureDir(grapheneCache)
-  await stopGrapheneIfRunning(root)
 
   let log = fs.openSync(logFile, 'w')
   let entryPoint = process.argv[1] || fileURLToPath(import.meta.url)
   let childArgs = [...process.execArgv, entryPoint, 'serve', '--fg', ...process.argv.slice(3)]
   let child = spawn(process.execPath, childArgs, {
-    cwd: root,
+    cwd: config.root,
     detached: true,
     env: {...process.env},
     stdio: ['ignore', log, log],
@@ -72,10 +70,11 @@ function sendSignal (pid: number, signal: NodeJS.Signals): boolean {
   return true
 }
 
-export async function stopGrapheneIfRunning (root: string): Promise<void> {
-  if (!(await isServerRunning())) return
+export async function stopGrapheneIfRunning (): Promise<void> {
+  let running = await isServerRunning()
+  if (!running) return
 
-  let pidFile = getPidFilePath(root)
+  let pidFile = getPidFilePath(config.root)
   let pid = await readPid(pidFile)
   if (!pid) return
 
