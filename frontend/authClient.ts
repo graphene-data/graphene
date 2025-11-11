@@ -3,7 +3,9 @@ import {StytchB2BUIClient, AuthFlowType, StytchEventType, type MemberSession} fr
 
 let _client: StytchB2BUIClient | null = null
 
-export const session = writable<MemberSession>()
+export const session = writable<MemberSession>(
+  authClient().session.getSync() || undefined,
+)
 
 if (import.meta.env.MODE == 'test' && import.meta.env.VITE_STYTCH_USE_MOCK) {
   session.set({} as MemberSession)

@@ -14,10 +14,6 @@
 </script>
 
 <main class="app-shell" class:app-shell--login={$route === '/login'}>
-  {#if session && $route !== '/login'}
-    <header class="top-bar"></header>
-  {/if}
-
   {#if $route === '/login'}
     <Login />
   {:else if $route === '/authenticate'}
