@@ -6,9 +6,6 @@ import path from 'path'
 import {withBrowserConsole, expectConsoleError} from '../../core/ui/tests/browserConsole.ts'
 
 dotenv.config({path: path.resolve(import.meta.dirname, '../.env'), quiet: true})
-console.log('path', path.resolve(import.meta.dirname, '../.env'))
-console.log(process.env.STYTCH_PROJECT_ID)
-
 process.env.NODE_ENV = 'test'
 
 export const test = base.extend<{cloud: {url: string}, realAuth: boolean, seedType: SeedType}>({

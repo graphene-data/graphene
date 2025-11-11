@@ -1,5 +1,8 @@
 import {assertNoConsoleErrors} from '../../core/ui/tests/browserConsole'
 import {test, expect, expectConsoleError} from './fixtures'
+import {loginPkce} from '../../core/cli/auth.ts'
+import {setConfig} from '../../core/lang/config.ts'
+import {runQuery} from '../../core/cli/connections/index.ts'
 
 const TEST_EMAIL = 'grant@graphenedata.com'
 const TEST_PASSWORD = 'graphenedata'
@@ -50,6 +53,25 @@ test.describe('auth', () => {
     expectConsoleError(page, 'Failed to load resource')
     await expect(page).toHaveURL(`${cloud.url}/login`)
     await expect(page).toHaveScreenshot('auth-invalid-credentials.png')
+  })
+
+  test('cli pkce login works', async ({page, cloud}) => {
+    setConfig({root: 'test', dialect: 'duckdb', host: cloud.url})
+    await loginPkce(`${cloud.url}/authenticate`, async url => {
+      await page.goto(url)
+      let loginShell = page.locator('#stytch-login')
+      await loginShell.locator('input[name="email"], input[type="email"]').first().fill(TEST_EMAIL)
+      await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
+      await loginShell.getByRole('button', {name: /continue/i}).click()
+      await page.getByText(/Graphene Dev/i).click()
+
+      // await expect(page).toHaveScreenshot('auth-allow-cli.png')
+      await page.getByText('Allow').click()
+      await expect(page.getByText('Login complete')).toBeVisible()
+    })
+
+    let res = await runQuery('select count(*) from flights')
+    expect(res.rows[0]['count_star()']).toBe(344827)
   })
 
   // test.skip('can create a new account', async () => {

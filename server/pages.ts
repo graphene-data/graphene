@@ -4,7 +4,6 @@ import {ensureUser} from './auth.ts'
 import {getDb} from './db.ts'
 import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
-import {visit} from 'unist-util-visit'
 import {files} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 
@@ -12,13 +11,14 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
   if (!ensureUser(req, reply)) return
 
   let slug = (req.params as any).slug || 'index'
-  let page = getDb().select().from(files).where(
+
+  let page = await getDb().select().from(files).where(
     and(
       eq(files.orgId, req.auth.orgId),
       eq(files.path, slug),
       eq(files.extension, 'md'),
     ),
-  ).limit(1).all()[0]
+  ).get()
 
   if (!page) return reply.code(404).send({error: 'Page not found'})
 

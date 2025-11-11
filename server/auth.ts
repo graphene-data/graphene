@@ -1,4 +1,4 @@
-import type {FastifyInstance, FastifyReply, FastifyRequest} from 'fastify'
+import type {FastifyReply, FastifyRequest} from 'fastify'
 import {B2BClient} from 'stytch'
 
 export interface AuthContext {
@@ -28,7 +28,7 @@ export async function checkAuth (req: FastifyRequest) {
 
   let session_jwt = req.cookies['stytch_session_jwt']
   if (session_jwt) {
-    let auth = await getStytch().sessions.authenticateJwt({session_jwt: jwt})
+    let auth = await getStytch().sessions.authenticateJwt({session_jwt})
     let session = auth.member_session
     if (!session) return
     req.auth = {userId: session.member_id, orgId: session.organization_id}
@@ -54,4 +54,14 @@ function getStytch (): B2BClient {
     custom_base_url: process.env.STYTCH_DOMAIN ?? '',
   })
   return stytchClient
+}
+
+export async function authTokenExchange (req: FastifyRequest, reply: FastifyReply) {
+  let res = await fetch(`${process.env.STYTCH_DOMAIN}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: {'content-type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams(req.body as any),
+  })
+  let json = await res.json()
+  reply.code(res.status).send(json)
 }

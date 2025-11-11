@@ -1,14 +1,9 @@
 import Fastify from 'fastify'
 import cookie from '@fastify/cookie'
 
-import {checkAuth} from './auth.ts'
+import {authTokenExchange, checkAuth} from './auth.ts'
 import {renderPage} from './pages.ts'
-import { proxyQuery } from './query.ts'
-// import {registerPages} from './pages.ts'
-// import {registerQuery} from './query.ts'
-
-// let logger = process.env.NODE_ENV === 'production' ? {level: 'info'} : true
-// let db = getDb()
+import {proxyQuery} from './query.ts'
 
 export function createServer () {
   let app = Fastify({logger: {level: 'warn'}})
@@ -16,12 +11,10 @@ export function createServer () {
 
   app.decorateRequest('auth', null)
   app.addHook('onRequest', checkAuth)
-  // app.register(authPlugin)
-
-  // app.get('/healthz', () => ({status: 'ok'}))
 
   app.get('/_api/pages/:slug', renderPage)
   app.post('/_api/query', proxyQuery)
+  app.post('/_api/oauth2/token', authTokenExchange)
 
   return app
 }

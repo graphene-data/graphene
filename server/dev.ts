@@ -98,7 +98,9 @@ async function seedDatabase (connectionType: SeedType) {
     let configJson = fs.readFileSync(absoluteCredentialsPath, 'utf-8')
     let namespace = 'bigquery-public-data.thelook_ecommerce'
     await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson, namespace})
-  } else {
+  }
+
+  if (connectionType == 'duckdb') {
     let dbPath = path.resolve(rootDir, '../core/examples/flights/flights.duckdb')
     if (!fs.existsSync(dbPath)) throw new Error(`Expected DuckDB database at ${dbPath}`)
     await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: JSON.stringify({dbPath})})

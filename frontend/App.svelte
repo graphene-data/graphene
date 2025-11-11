@@ -20,6 +20,8 @@
 
   {#if $route === '/login'}
     <Login />
+  {:else if $route === '/authenticate'}
+    <Authenticate />
   {:else}
     <PageView slug={$route} />
   {/if}
