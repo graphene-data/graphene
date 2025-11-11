@@ -8,6 +8,7 @@ export interface Config {
   dialect: string
   namespace?: string
   port?: number
+  host?: string
 
   bigquery?: {
     projectId?: string

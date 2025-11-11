@@ -7,8 +7,8 @@ import fs from 'fs-extra'
 import path from 'path'
 import {loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
-import {getConnection} from './connections/index.ts'
 import {check} from './check.ts'
+import {runQuery} from './connections/index.ts'
 
 const program = new Command()
 
@@ -46,8 +46,7 @@ program
     let queries = analyze(gsql)
     if (!validQuery(queries)) return
     let sql = toSql(queries[0])
-    let connection = await getConnection()
-    let res = await connection.runQuery(sql)
+    let res = await runQuery(sql)
     printTable(res.rows)
   })
 
