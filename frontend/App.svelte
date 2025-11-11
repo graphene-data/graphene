@@ -40,18 +40,6 @@
     padding: 96px 24px;
   }
 
-  .top-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 18px 24px;
-    border-radius: 20px;
-    border: 1px solid var(--cloud-card-border);
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: var(--cloud-card-shadow);
-    backdrop-filter: blur(10px);
-  }
-
   @media (max-width: 720px) {
     .app-shell {
       padding: 40px 16px 56px;
@@ -59,12 +47,6 @@
 
     .app-shell--login {
       padding: 56px 20px;
-    }
-
-    .top-bar {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 12px;
     }
   }
 </style>

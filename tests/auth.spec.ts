@@ -29,7 +29,7 @@ test.describe('auth', () => {
     await btn.click()
 
     await expect(page).toHaveURL(`${cloud.url}/`)
-    await expect(page.locator('h1', {hasText: 'Flight Operations Overview'})).toBeVisible()
+    await expect(page.locator('h1', {hasText: 'Flight Analytics Dashboard'})).toBeVisible()
     assertNoConsoleErrors(page)
   })
 

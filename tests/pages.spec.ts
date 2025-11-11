@@ -3,7 +3,7 @@ import {test, expect} from './fixtures'
 test.describe('duckdb', () => {
   test('renders the flights overview page', async ({page, cloud}) => {
     await page.goto(cloud.url)
-    await expect(page.locator('h1', {hasText: 'Flight Operations Overview'})).toBeVisible()
+    await expect(page.locator('h1', {hasText: 'Flight Analytics Dashboard'})).toBeVisible()
   })
 })
 
