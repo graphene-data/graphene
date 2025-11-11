@@ -86,10 +86,11 @@ async function captureChart (chartTitle) {
 async function takeScreenshot () {
   await waitForQueriesToFinish()
   if (!window.html2canvas) {
-    let html2canvas = await import('html2canvas')
+    let html2canvas = await import('@graphenedata/html2canvas')
     window.html2canvas = html2canvas.default
   }
-  let canvas = await window.html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1})
+
+  let canvas = await window.html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
   let errors = getErrors().map(e => ({message: e.message, id: e.id}))
   return {stillLoading: isLoading(), screenshot: canvas?.toDataURL('image/png'), errors}
 }
