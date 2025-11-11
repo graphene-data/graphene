@@ -11,27 +11,33 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
 
   let connInfo = await getDb().query.connections.findFirst({where: eq(connections.orgId, req.auth.orgId)})
   if (!connInfo) return reply.code(400).send({error: 'No connection configured'})
+  let sql = req.body.sql
+  let fields = [] as any[]
 
-  // Load up all gsql files into a graphene workspace
-  let gsqlFiles = await getDb().query.files.findMany({where: and(eq(files.orgId, req.auth.orgId), eq(files.extension, 'gsql'))})
-  clearWorkspace()
-  setConfig({dialect: connInfo.kind, namespace: connInfo.namespace ?? undefined, root: '/dev/null'})
-  gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))
-  let queries = analyze(req.body.gsql, 'gsql')
+  // We can proxy either sql or gsql. If it's gsql, we need to load up the workspace to render out the sql
+  if (req.body.gsql) {
+    // Load up all gsql files into a graphene workspace
+    let gsqlFiles = await getDb().query.files.findMany({where: and(eq(files.orgId, req.auth.orgId), eq(files.extension, 'gsql'))})
+    clearWorkspace()
+    setConfig({dialect: connInfo.kind, namespace: connInfo.namespace ?? undefined, root: '/dev/null'})
+    gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))
+    let queries = analyze(req.body.gsql, 'gsql')
 
-  if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
-  if (getDiagnostics().length) {
-    return reply.code(400).send(JSON.stringify(getDiagnostics()))
+    if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
+    if (getDiagnostics().length) {
+      return reply.code(400).send(JSON.stringify(getDiagnostics()))
+    }
+
+    // Then, turn the requested query into sql, and execute against the db
+    sql = toSql(queries[0], req.body.params)
+    fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
   }
 
-  // Then, turn the requested query into sql, and execute against the db
-  let sql = toSql(queries[0], req.body.params)
   let conn = await getConnection(connInfo)
   let queryResults = await conn.runQuery(sql)
 
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
   reply.send({rows: queryResults.rows, fields, sql})
 }
 
