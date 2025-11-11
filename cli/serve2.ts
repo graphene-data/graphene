@@ -8,7 +8,7 @@ import {type IncomingMessage, type ServerResponse} from 'http'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
 import {fileURLToPath} from 'url'
-import {getConnection} from './connections/index.ts'
+import {runQuery} from './connections/index.ts'
 import {escapeAngles, extractQueries, injectComponentImports, sanitizeMarkdown} from './mdCompile.ts'
 import {checkVitePlugin} from './check.ts'
 import {mockFileMap} from './mockFiles.ts'
@@ -134,8 +134,7 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
     return res.end()
   }
 
-  let connection = await getConnection()
-  let queryResults = await connection.runQuery(sql)
+  let queryResults = await runQuery(sql)
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
   let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
