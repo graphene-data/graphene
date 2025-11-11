@@ -57,6 +57,9 @@ importers:
       '@google-cloud/bigquery':
         specifier: ^8.1.1
         version: 8.1.1
+      '@graphenedata/html2canvas':
+        specifier: ^1.4.1
+        version: 1.4.1
       '@graphenedata/malloy':
         specifier: 0.0.304
         version: 0.0.304
@@ -99,9 +102,6 @@ importers:
       glob:
         specifier: ^11.0.3
         version: 11.0.3
-      html2canvas:
-        specifier: ^1.4.1
-        version: 1.4.1
       marked:
         specifier: ^16.3.0
         version: 16.3.0
@@ -963,6 +963,10 @@ packages:
   '@google-cloud/storage@7.17.2':
     resolution: {integrity: sha512-6xN0KNO8L/LIA5zu3CJwHkJiB6n65eykBLOb0E+RooiHYgX8CSao6lvQiKT9TBk2gL5g33LL3fmhDodZnt56rw==}
     engines: {node: '>=14'}
+
+  '@graphenedata/html2canvas@1.4.1':
+    resolution: {integrity: sha512-ChMOUckuvoY/K1hCtIi2V7GI+fKSfXwcTTW9HBY3zI5KMAWsznJHtW4IFzkg/Y1Zcse3E4KxTGAYWlgWDbFtwA==}
+    engines: {node: '>=8.0.0'}
 
   '@graphenedata/malloy@0.0.304':
     resolution: {integrity: sha512-dseKG8dmKDfFbvYof2NbEOlGkbHG+dxdkOrn2buIJkpzEHyN/oxOrS7+5stTzZ3S3rIvUyCfchE+hqxy/glC4A==}
@@ -4514,6 +4518,11 @@ snapshots:
     transitivePeerDependencies:
       - encoding
       - supports-color
+
+  '@graphenedata/html2canvas@1.4.1':
+    dependencies:
+      css-line-break: 2.1.0
+      text-segmentation: 1.0.3
 
   '@graphenedata/malloy@0.0.304':
     dependencies:
