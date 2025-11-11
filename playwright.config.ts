@@ -5,7 +5,7 @@ export default defineConfig({
   outputDir: './tests/results',
   timeout: 20_000,
   fullyParallel: false,
-  workers: 1,
+  workers: 4,
   expect: {
     timeout: process.env.DEBUG ? 0 : 2_000,
     toHaveScreenshot: {

@@ -5,6 +5,10 @@ let _client: StytchB2BUIClient | null = null
 
 export const session = writable<MemberSession>()
 
+if (import.meta.env.MODE == 'test' && import.meta.env.VITE_STYTCH_USE_MOCK) {
+  session.set({} as MemberSession)
+}
+
 export function authClient () {
   if (_client) return _client
   if (import.meta.env.MODE == 'test' && import.meta.env.VITE_STYTCH_USE_MOCK) {
