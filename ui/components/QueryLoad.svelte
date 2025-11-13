@@ -4,7 +4,7 @@
 
   export let data: string | {rows?: any[]}
   export let height = 200
-  export let fields: Record<string, string> = {}
+  export let fields: Record<string, string | string[]> = {}
 
   let errors: Error[] | null = null
   let loaded: any[] | null = null

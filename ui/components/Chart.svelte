@@ -23,6 +23,7 @@
   import checkInputs from '../component-utilities/checkInputs.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
+  import {parseCommaList} from '../component-utilities/inputUtils.ts'
   import {logError} from '../internal/telemetry.ts'
 
   const {theme, resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
@@ -250,7 +251,10 @@
       inputCols = []
       optCols = []
       uColName = []
-      ySet = y ? true : false
+      // Normalize list-like inputs first
+      y = parseCommaList(y)
+      y2 = parseCommaList(y2)
+      ySet = y.length > 0
       xSet = x ? true : false
 
       checkInputs(data) // check that dataset exists
@@ -286,7 +290,7 @@
           }
         }
 
-        y = unusedColumns.length > 1 ? unusedColumns : unusedColumns[0]
+        y = unusedColumns // always array; empty handled by required prop checks
       }
       // Establish required columns based on chart type:
       if (bubble) {
@@ -322,40 +326,17 @@
       }
 
       // Fix for stacked100 overwriting y variable. Bandaid fix - not a long-term solution:
-      if (stacked100 === true && y.includes('_pct') && originalRun === false) {
-        if (typeof y === 'object') {
-          for (let i = 0; i < y.length; i++) {
-            y[i] = y[i].replace('_pct', '')
-          }
-          originalRun = false
-        } else {
-          y = y.replace('_pct', '')
-          originalRun = false
-        }
+      if (stacked100 === true && Array.isArray(y) && y.some(col => col.includes('_pct')) && originalRun === false) {
+        for (let i = 0; i < y.length; i++) y[i] = y[i].replace('_pct', '')
+        originalRun = false
       }
 
       // Check the inputs supplied to the chart:
       if (x) {
         inputCols.push(x)
       }
-      if (y) {
-        if (typeof y === 'object') {
-          for (i = 0; i < y.length; i++) {
-            inputCols.push(y[i])
-          }
-        } else {
-          inputCols.push(y)
-        }
-      }
-      if (y2) {
-        if (typeof y2 === 'object') {
-          for (i = 0; i < y2.length; i++) {
-            inputCols.push(y2[i])
-          }
-        } else {
-          inputCols.push(y2)
-        }
-      }
+      if (Array.isArray(y)) for (i = 0; i < y.length; i++) inputCols.push(y[i])
+      if (Array.isArray(y2)) for (i = 0; i < y2.length; i++) inputCols.push(y2[i])
       if (size) {
         inputCols.push(size)
       }
@@ -374,18 +355,8 @@
 
       if (stacked100 === true) {
         data = getStackPercentages(data, x, y)
-
-        if (typeof y === 'object') {
-          for (let i = 0; i < y.length; i++) {
-            y[i] = y[i] + '_pct'
-          }
-          originalRun = false
-        } else {
-          y = y + '_pct'
-          originalRun = false
-        }
-
-        // Re-run column summary for new columns (not ideal):
+        for (let i = 0; i < y.length; i++) y[i] = y[i] + '_pct'
+        originalRun = false
         columnSummary = getColumnSummary(data)
       }
 
@@ -428,7 +399,7 @@
       }
 
       // Throw error if attempting to plot secondary y-axis on horizontal chart:
-      if (swapXY && y2) {
+      if (swapXY && y2.length) {
         throw Error(
           'Horizontal charts do not support a secondary y-axis. You can either set swapXY=false or remove the y2 prop from your chart.',
         )
@@ -446,7 +417,7 @@
       // Sort data based on xType
       // ---------------------------------------------------------------------------------------
       if (sort) {
-        let sortColumn = xDataType === 'category' ? y : x
+        let sortColumn = xDataType === 'category' ? (Array.isArray(y) ? (y[0] ?? x) : x) : x
         let sortAscending = xDataType !== 'category'
         data = getSortedData(data, sortColumn, sortAscending)
       }
@@ -479,38 +450,16 @@
         xFormat = columnSummary[x].format
       }
 
-      if (!y) {
+      if (y.length === 0) {
         yFormat = 'str'
       } else {
-        if (yFmt) {
-          if (typeof y === 'object') {
-            yFormat = getFormatObjectFromString(yFmt, columnSummary[y[0]].format?.valueType)
-          } else {
-            yFormat = getFormatObjectFromString(yFmt, columnSummary[y].format?.valueType)
-          }
-        } else {
-          if (typeof y === 'object') {
-            yFormat = columnSummary[y[0]].format
-          } else {
-            yFormat = columnSummary[y].format
-          }
-        }
+        if (yFmt) yFormat = getFormatObjectFromString(yFmt, columnSummary[y[0]].format?.valueType)
+        else yFormat = columnSummary[y[0]].format
       }
 
-      if (y2) {
-        if (y2Fmt) {
-          if (typeof y2 === 'object') {
-            y2Format = getFormatObjectFromString(y2Fmt, columnSummary[y2[0]].format?.valueType)
-          } else {
-            y2Format = getFormatObjectFromString(y2Fmt, columnSummary[y2].format?.valueType)
-          }
-        } else {
-          if (typeof y2 === 'object') {
-            y2Format = columnSummary[y2[0]].format
-          } else {
-            y2Format = columnSummary[y2].format
-          }
-        }
+      if (y2.length) {
+        if (y2Fmt) y2Format = getFormatObjectFromString(y2Fmt, columnSummary[y2[0]].format?.valueType)
+        else y2Format = columnSummary[y2[0]].format
       }
 
       if (size) {
@@ -523,21 +472,9 @@
 
       xUnitSummary = columnSummary[x].columnUnitSummary
 
-      if (y) {
-        if (typeof y === 'object') {
-          yUnitSummary = columnSummary[y[0]].columnUnitSummary
-        } else {
-          yUnitSummary = columnSummary[y].columnUnitSummary
-        }
-      }
+      if (y.length) yUnitSummary = columnSummary[y[0]].columnUnitSummary
 
-      if (y2) {
-        if (typeof y2 === 'object') {
-          y2UnitSummary = columnSummary[y2[0]].columnUnitSummary
-        } else {
-          y2UnitSummary = columnSummary[y2].columnUnitSummary
-        }
-      }
+      if (y2.length) y2UnitSummary = columnSummary[y2[0]].columnUnitSummary
 
       if (xAxisTitle === 'true') {
         xAxisTitle = formatTitle(x, xFormat)
@@ -546,13 +483,13 @@
       }
 
       if (yAxisTitle === 'true') {
-        yAxisTitle = typeof y === 'object' ? '' : formatTitle(y, yFormat)
+        yAxisTitle = y.length > 1 ? '' : (y.length ? formatTitle(y[0], yFormat) : '')
       } else if (yAxisTitle === 'false') {
         yAxisTitle = ''
       }
 
       if (y2AxisTitle === 'true') {
-        y2AxisTitle = typeof y2 === 'object' ? '' : formatTitle(y2, y2Format)
+        y2AxisTitle = y2.length > 1 ? '' : (y2.length ? formatTitle(y2[0], y2Format) : '')
       } else if (y2AxisTitle === 'false') {
         y2AxisTitle = ''
       }
@@ -560,18 +497,13 @@
       // ---------------------------------------------------------------------------------------
       // Get total series count
       // ---------------------------------------------------------------------------------------
-      let yCount = typeof y === 'object' ? y.length : 1
+      let yCount = y.length
       let seriesCount = series ? getDistinctCount(data, series) : 1
       let ySeriesCount = yCount * seriesCount
 
       // y2Count may need to be adjusted to also factor in the series column. For now, we really
       // only need to know that it's multi-series, so > 1 is sufficient
-      let y2Count = 0
-      if (typeof y2 === 'object') {
-        y2Count = y2.length
-      } else if (y2) {
-        y2Count = 1
-      }
+      let y2Count = y2.length
       let totalSeriesCount = ySeriesCount + y2Count
 
       // ---------------------------------------------------------------------------------------
@@ -594,15 +526,13 @@
       }
 
       let minYValue
-      if (typeof y === 'object') {
+      if (y.length) {
         minYValue = columnSummary[y[0]].columnUnitSummary.min
         for (let i = 0; i < y.length; i++) {
           if (columnSummary[y[i]].columnUnitSummary.min < minYValue) {
             minYValue = columnSummary[y[i]].columnUnitSummary.min
           }
         }
-      } else if (y) {
-        minYValue = columnSummary[y].columnUnitSummary.min
       }
 
       if (yLog === true && minYValue <= 0 && minYValue !== null) {
@@ -747,7 +677,7 @@
         }
       } else {
         let primaryAxisColor = (() => {
-          if (!y2) return undefined
+          if (!(Array.isArray(y2) && y2.length)) return undefined
           if ($yAxisColorStore === 'true') return $colorPaletteStore[0]
           if ($yAxisColorStore === 'false') return undefined
           return $yAxisColorStore
@@ -857,7 +787,7 @@
 
       hasTitle = title ? true : false
       hasSubtitle = subtitle ? true : false
-      hasLegend = legend * (series !== null || (typeof y === 'object' && y.length > 1))
+      hasLegend = legend * (series !== null || (y.length > 1))
       hasTopAxisTitle = yAxisTitle !== '' && swapXY
       hasBottomAxisTitle = xAxisTitle !== '' && !swapXY
 
@@ -1048,7 +978,13 @@
       console.error(setTextRed, `Error in ${chartType}: ${e.message}`)
 
       // Make an "id" for the chart so its clear to users/agents exactly which caused an error.
-      let fieldStr = Object.entries(chartContext || {}).filter(([_, val]) => !!val).map(([name, val]) => `${name}="${val}"`)
+      let fieldStr = Object.entries(chartContext || {})
+        .filter(([_, val]) => {
+          if (Array.isArray(val)) return val.length > 0
+          if (typeof val === 'string') return val.trim().length > 0
+          return Boolean(val)
+        })
+        .map(([name, val]) => `${name}="${Array.isArray(val) ? val.join(', ') : val}"`)
       let id = `${title || chartType} (${fieldStr.join(' ')})`
       logError(e, {id})
 

@@ -3,6 +3,7 @@
   import Bar from './Bar.svelte'
   import QueryLoad from './QueryLoad.svelte'
   import {getThemeStores} from '../component-utilities/themeStores'
+  import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   const {resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
 
@@ -114,10 +115,10 @@
   export let xLabelWrap = undefined
 </script>
 
-<QueryLoad data={data} fields={{x, y, y2, series}} let:loaded>
+<QueryLoad data={data} fields={{x, y: parseCommaList(y), y2: parseCommaList(y2), series}} let:loaded>
   <Chart
     data={loaded}
-    chartContext={{data, x, y, y2, series}}
+    chartContext={{data, x, y, series}}
     {x}
     {y}
     {y2}
