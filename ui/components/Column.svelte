@@ -7,6 +7,7 @@
   import {propKey, strictBuild} from '../component-utilities/chartContext.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
+  import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   export let id: string
   export let description: string | undefined = undefined
@@ -64,6 +65,7 @@
   $: colorScaleStore = resolveColorPalette(colorScale)
 
   const props = getContext(propKey)
+  $: colorBreakpoints = parseCommaList(colorBreakpoints)
 
   const identifier = Symbol('GrapheneColumn')
 

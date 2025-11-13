@@ -16,6 +16,7 @@
     getFormatObjectFromString,
   } from '../component-utilities/formatting.js'
   import {getThemeStores} from '../component-utilities/themeStores'
+  import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   const {resolveColor} = getThemeStores()
 
@@ -77,8 +78,8 @@
   // Prop check. If local props supplied, use those. Otherwise fall back to global props.
   $: data = $props.data
   $: x = $props.x
-  $: y = ySet ? y : $props.y
-  $: y2 = y2Set ? y2 : $props.y2
+  $: y = ySet ? parseCommaList(y) : $props.y
+  $: y2 = y2Set ? parseCommaList(y2) : $props.y2
   $: yFormat = $props.yFormat
   $: y2Format = $props.y2Format
   $: yCount = $props.yCount
@@ -89,14 +90,18 @@
   $: columnSummary = $props.columnSummary
   $: sort = $props.sort
   $: series = seriesSet ? series : $props.series
+  $: seriesOrder = parseCommaList(seriesOrder)
 
   let stackedData
   let sortOrder
   let defaultLabelPosition
 
-  $: if (!series && typeof y !== 'object') {
+  $: if (!series && (!Array.isArray(y) || y.length === 1)) {
     // Single Series
-    name = name ?? formatTitle(y, columnSummary[y].title)
+    {
+      let col = Array.isArray(y) ? y[0] : y
+      name = name ?? formatTitle(col, columnSummary[col].title)
+    }
 
     if (swapXY && xType !== 'category') {
       data = getCompletedData(data, x, y, series, true, xType !== 'time')
@@ -112,10 +117,11 @@
     if (sort === true && xType === 'category') {
       stackedData = getStackedData(data, x, y)
 
-      if (typeof y === 'object') {
+      if (Array.isArray(y) && y.length > 1) {
         stackedData = getSortedData(stackedData, 'stackTotal', false)
       } else {
-        stackedData = getSortedData(stackedData, y, false)
+        let col = Array.isArray(y) ? y[0] : y
+        stackedData = getSortedData(stackedData, col, false)
       }
 
       sortOrder = stackedData.map((d) => d[x])
@@ -233,7 +239,7 @@
     if (
       labels === true &&
       type === 'stacked' &&
-      (typeof y === 'object') | (series !== undefined) &&
+      ((Array.isArray(y) && y.length > 1) || (series !== undefined)) &&
       stackTotalLabel === true &&
       series !== x
     ) {
@@ -309,7 +315,7 @@
         } else {
           d.yAxis[0] = {...d.yAxis[0], ...chartOverrides.yAxis}
           d.xAxis = {...d.xAxis, ...chartOverrides.xAxis}
-          if (y2) {
+          if (y2Count > 0) {
             d.yAxis[1] = {...d.yAxis[1], show: true}
             if (['line', 'bar', 'scatter'].includes(y2SeriesType)) {
               for (let i = 0; i < y2Count; i++) {
