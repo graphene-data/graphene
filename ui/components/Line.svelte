@@ -8,6 +8,7 @@
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
+  import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   const {resolveColor} = getThemeStores()
   const props = getContext(propKey)
@@ -90,12 +91,14 @@
   $: xMismatch = $props.xMismatch
   $: columnSummary = $props.columnSummary
   $: series = seriesSet ? series : $props.series
-  $: resolvedY = ySet ? y : $props.y
-  $: resolvedY2 = y2Set ? y2 : $props.y2
+  $: resolvedY = ySet ? parseCommaList(y) : $props.y
+  $: resolvedY2 = y2Set ? parseCommaList(y2) : $props.y2
+  $: seriesOrder = parseCommaList(seriesOrder)
 
   $: {
-    if (!series && typeof resolvedY !== 'object') {
-      if (columnSummary?.[resolvedY]) name = name ?? formatTitle(resolvedY, columnSummary[resolvedY].title)
+    if (!series && (!Array.isArray(resolvedY) || resolvedY.length === 1)) {
+      let col = Array.isArray(resolvedY) ? resolvedY[0] : resolvedY
+      if (columnSummary?.[col]) name = name ?? formatTitle(col, columnSummary[col].title)
     } else {
       try {
         data = getCompletedData(data, x, resolvedY, series)
@@ -194,7 +197,7 @@
       } else {
         value.yAxis[0] = {...value.yAxis[0], ...chartOverrides.yAxis}
         value.xAxis = {...value.xAxis, ...chartOverrides.xAxis}
-        if (resolvedY2) {
+        if (y2Count > 0) {
           value.yAxis[1] = {...value.yAxis[1], show: true}
           if (['line', 'bar', 'scatter'].includes(y2SeriesType)) {
             for (let index = 0; index < y2Count; index++) {

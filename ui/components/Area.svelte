@@ -10,6 +10,7 @@
     getFormatObjectFromString,
   } from '../component-utilities/formatting.js'
   import {getThemeStores} from '../component-utilities/themeStores'
+  import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   const {resolveColor} = getThemeStores()
   const props = getContext(propKey)
@@ -72,12 +73,14 @@
   $: xMismatch = $props.xMismatch
   $: columnSummary = $props.columnSummary
   $: series = seriesSet ? series : $props.series
-  $: resolvedY = ySet ? y : $props.y
+  $: resolvedY = ySet ? parseCommaList(y) : $props.y
+  $: seriesOrder = parseCommaList(seriesOrder)
 
   $: {
-    if (!series && typeof resolvedY !== 'object') {
+    if (!series && (!Array.isArray(resolvedY) || resolvedY.length === 1)) {
       stackName = undefined
-      if (columnSummary?.[resolvedY]) name = name ?? formatTitle(resolvedY, columnSummary[resolvedY].title)
+      let col = Array.isArray(resolvedY) ? resolvedY[0] : resolvedY
+      if (columnSummary?.[col]) name = name ?? formatTitle(col, columnSummary[col].title)
     } else {
       stackName = 'area'
       data = getCompletedData(data, x, resolvedY, series, false, xType === 'value')

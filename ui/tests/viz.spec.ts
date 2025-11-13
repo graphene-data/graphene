@@ -90,3 +90,20 @@ test('series colors accepts json string input', async ({mount, chart}) => {
   expect(colors).toContain('steelblue')
   expect(colors).toContain('#123456')
 })
+
+test('bar chart accepts comma-separated multi y', async ({mount, chart}) => {
+  let data = timeseries() as any
+  // augment dataset with a second numeric column while preserving metadata
+  let rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k * 0.5}))
+  rows._evidenceColumnTypes = [
+    ...data.rows._evidenceColumnTypes,
+    {name: 'profit_usd0k', evidenceType: 'number'},
+  ]
+  data.rows = rows
+
+  await mount('components/BarChart.svelte', {data, x: 'month', y: 'sales_usd0k, profit_usd0k'})
+
+  let seriesLen = await chart.config((c) => (c.series ?? []).length)
+  expect(seriesLen).toBe(2)
+  await expect(chart.el).toHaveScreenshot('bar-chart-multi-y.png')
+})

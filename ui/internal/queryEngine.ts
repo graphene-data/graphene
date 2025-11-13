@@ -23,7 +23,7 @@ interface QueryNode {
   contents: string
   callback?: ResultHandler
   loading: boolean
-  fields: Map<string, string>
+  fields: Map<string, string | string[]>
   errors: Error[]
 }
 
@@ -41,10 +41,18 @@ function updateParam (name: string, value: any) {
   runAll() // for now, do the easy thing and reload it all
 }
 
-function query (source: string, fields: Record<string, string>, callback: ResultHandler) {
+function query (source: string, fields: Record<string, string | string[]>, callback: ResultHandler) {
   // using Map here because it preserves the order in which we add fields to the select, which we use when we get the result.
   let map = new Map(Object.entries(fields))
-  let exprs = map.size > 0 ? Array.from(map.values()) : ['*']
+  let exprs: string[] = []
+  if (map.size > 0) {
+    map.forEach((value) => {
+      if (Array.isArray(value)) exprs.push(...value)
+      else exprs.push(value)
+    })
+  } else {
+    exprs = ['*']
+  }
   let contents = `from ${source} select ${exprs.join(', ')}`
   queries.push({contents, callback, loading: false, fields: map, errors: [], source})
   runAll()
@@ -87,7 +95,16 @@ async function runNode (n: QueryNode) {
       let body = isJson ? await response.json() : await response.text()
       n.errors = Array.isArray(body) ? body : [{message: body}]
 
-      let fieldIds = Array.from(n.fields.entries()).map(([name, val]) => `${name}="${val}"`)
+      let fieldIds = Array.from(n.fields.entries()).flatMap(([name, val]) => {
+        if (Array.isArray(val)) {
+          if (val.length === 0) return [] as string[]
+          if (val.length === 1) return [`${name}="${val[0]}"`]
+          return [`${name}="${val.join(', ')}"`]
+        }
+        if (typeof val === 'string' && val.trim().length === 0) return [] as string[]
+        if (val == null) return [] as string[]
+        return [`${name}="${val}"`]
+      })
       let idStr = `Query (data="${n.source}" ` + fieldIds.join(' ') + ')'
       n.errors.forEach(e => e.id = idStr)
       n.callback({errors: n.errors})
@@ -115,7 +132,11 @@ function translateData (data: any, node: QueryNode) {
   let rows = data.rows || []
   rows.dataLoaded = true // evidence components need this to be set
   rows._evidenceColumnTypes = []
-  let requestFields = Array.from(node.fields.values())
+  let requestFields: string[] = []
+  node.fields.forEach((value) => {
+    if (Array.isArray(value)) requestFields.push(...value)
+    else requestFields.push(value)
+  })
 
   data.fields.forEach((field, index) => {
     let name = field.name
