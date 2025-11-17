@@ -3,7 +3,7 @@
   "main": "cli.ts",
   "type": "module",
   "author": "Graphene Systems Inc",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "license": "Elastic-2.0",
   "engines": {
     "node": ">=16"
