@@ -26,8 +26,12 @@ export async function loadWorkspace (dir:string, includeMd: boolean) {
   // But we do want to watch md files for the vscode extension and `graphene check`
   let files = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore: ['node_modules/**']})
   for await (let file of files) {
-    let contents = await readFile(path.join(dir, file), 'utf-8')
-    updateFile(contents, file)
+    try {
+      let contents = await readFile(path.join(dir, file), 'utf-8')
+      updateFile(contents, file)
+    } catch (e) { // can fail if a file is a broken symlink
+      console.error('Failed to read file', file, e.message)
+    }
   }
 }
 
