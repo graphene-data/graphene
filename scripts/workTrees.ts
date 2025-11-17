@@ -103,26 +103,6 @@ async function repoDirty (repo: string): Promise<boolean> {
   return !!status
 }
 
-async function branchMergeIssue (repo: string): Promise<string | null> {
-  let repoPath = `${root}/main/${repo}`
-
-  await $`git -C ${repoPath} fetch origin main`
-
-  try {
-    await $`git -C ${repoPath} show-ref --verify --quiet refs/heads/${currentName}`
-  } catch {
-    return `${repo} branch '${currentName}' not found in ${repoPath}. Fetch or recreate the branch before archiving this worktree.`
-  }
-
-  try {
-    await $`git -C ${repoPath} merge-base --is-ancestor ${currentName} origin/main`
-  } catch {
-    return `${repo} branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`
-  }
-
-  return null
-}
-
 async function commitWorktree () {
   if (await repoDirty('core')) await $`osascript -e 'do shell script "cd ${currentWorktree}/core && gitx -c"'`
   if (await repoDirty('cloud')) await $`osascript -e 'do shell script "cd ${currentWorktree}/cloud && gitx -c"'`
@@ -167,17 +147,16 @@ async function doneWorktree () {
     return console.log('Repos have uncommited changes. Consider committing first')
   }
 
-  let issues: string[] = []
-  let coreIssue = await branchMergeIssue('core')
-  if (coreIssue) issues.push(coreIssue)
-  let cloudIssue = await branchMergeIssue('cloud')
-  if (cloudIssue) issues.push(cloudIssue)
+  try {
+    await $`git -C ${currentWorktree}/core merge-base --is-ancestor ${currentName} origin/main`
+  } catch {
+    return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
+  }
 
-  if (issues.length) {
-    console.log('Cannot archive worktree:')
-    for (let issue of issues) console.log('  - ' + issue)
-    console.log('Resolve the above and re-run `wt done`.')
-    return
+  try {
+    await $`git -C ${currentWorktree}/cloud merge-base --is-ancestor ${currentName} origin/main`
+  } catch {
+    return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
   }
 
   cd(root) // cd to root, since we might be about to delete the cwd
@@ -187,9 +166,9 @@ async function doneWorktree () {
 
   // archive the branches for both worktrees
   await $`git -C ${root}/main/core tag archive/${currentName} ${currentName}`
-  await $`git -C ${root}/main/core branch -d ${currentName}`
+  await $`git -C ${root}/main/core branch -D ${currentName}`
   await $`git -C ${root}/main/cloud tag archive/${currentName} ${currentName}`
-  await $`git -C ${root}/main/cloud branch -d ${currentName}`
+  await $`git -C ${root}/main/cloud branch -D ${currentName}`
 }
 
 let command = process.argv[2]
