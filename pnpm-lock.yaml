@@ -224,6 +224,9 @@ importers:
 
   ui:
     dependencies:
+      '@graphenedata/html2canvas':
+        specifier: ^1.4.1
+        version: 1.4.1
       '@tidyjs/tidy':
         specifier: ^2.5.2
         version: 2.5.2
@@ -239,9 +242,6 @@ importers:
       echarts:
         specifier: ^5.5.0
         version: 5.6.0
-      html2canvas:
-        specifier: ^1.4.1
-        version: 1.4.1
       marked:
         specifier: ^16.3.0
         version: 16.3.0
@@ -2312,10 +2312,6 @@ packages:
 
   html-entities@2.6.0:
     resolution: {integrity: sha512-kig+rMn/QOVRvr7c86gQ8lWXq+Hkv6CbAH1hLu+RG338StTpE8Z0b44SDVaqVu7HGKf27frdmUYEs9hTUX/cLQ==}
-
-  html2canvas@1.4.1:
-    resolution: {integrity: sha512-fPU6BHNpsyIhr8yyMpTLLxAbkaK8ArIBcmZIRiBLiDhjeqvXolaEmDGmELFuX9I4xDcaKKcJl+TKZLqruBbmWA==}
-    engines: {node: '>=8.0.0'}
 
   htmlparser2@8.0.2:
     resolution: {integrity: sha512-GYdjWKDkbRLkZ5geuHs5NY1puJ+PXwP7+fHPRz06Eirsb9ugf6d8kkXav6ADhcODhFFPMIXyxkxSuMf3D6NCFA==}
@@ -6189,11 +6185,6 @@ snapshots:
     optional: true
 
   html-entities@2.6.0: {}
-
-  html2canvas@1.4.1:
-    dependencies:
-      css-line-break: 2.1.0
-      text-segmentation: 1.0.3
 
   htmlparser2@8.0.2:
     dependencies:
