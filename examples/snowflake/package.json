@@ -20,7 +20,7 @@
     "dialect": "snowflake",
     "namespace": "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02",
     "snowflake": {
-      "account": "cl37855.us-east-2.aws",
+      "account": "adarjvr-ve40413",
       "username": "demouser"
     }
   }
