@@ -1,1 +1,1 @@
-This is a Graphene project. Read the [Graphene documentation](./docs/graphene.md) before doing anything.
+This is a Graphene project covering FAA flight data from 2000 to 2005. Read the [Graphene documentation](./docs/graphene.md) before doing anything. You can find the Graphene tables in the /tables directory.
