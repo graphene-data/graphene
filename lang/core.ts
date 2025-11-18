@@ -1,7 +1,7 @@
 import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, QueryModel, expandBlueprintMap} from '@graphenedata/malloy'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
-import {FILE_MAP, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors, analyzeTable} from './analyze.ts'
+import {FILE_MAP, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors, analyzeTable, applyExtends} from './analyze.ts'
 import {type Query} from './types.ts'
 import {fillInParams} from './params.ts'
 import {getOffset} from './util.ts'
@@ -56,6 +56,8 @@ export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
     recordSyntaxErrors(fi)
     findTables(fi) // for now, blow away previously analyzed tables
   })
+
+  Object.values(FILE_MAP).forEach(applyExtends) // Then extend those tables
 
   // analyze all fields on all tables
   // TODO: we don't _need_ to do this if you provided contents. We could omit this and get lazy analysis
