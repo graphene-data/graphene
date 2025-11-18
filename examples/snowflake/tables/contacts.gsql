@@ -30,6 +30,6 @@ table contacts (
   COMPANY_LOCATION as company_location, -- Street, unit, city, state code, zip of Company Name
   RECORDS as records, -- Concatenation of multiple contact fields
 
-  join_one establishments_open on establishment_id = establishments_open.establishment_id
+  join one establishments_open on establishment_id = establishments_open.establishment_id
 )
 

@@ -9,8 +9,8 @@ table distribution_centers (
 
   /* Join relationships */
 
-  join_many products on id = products.distribution_center_id,
-  join_many inventory_items on id = inventory_items.product_distribution_center_id
+  join many products on id = products.distribution_center_id,
+  join many inventory_items on id = inventory_items.product_distribution_center_id
 )
 
 

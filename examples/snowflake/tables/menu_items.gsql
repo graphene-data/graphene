@@ -19,6 +19,6 @@ table menu_items (
   NAME as name, -- Item name
   SOURCE as source, -- Source of menu item
 
-  join_one menus on menu_id = menus.menu_id,
-  join_many entities on menu_item_id = entities.menu_item_id
+  join one menus on menu_id = menus.menu_id,
+  join many entities on menu_item_id = entities.menu_item_id
 )

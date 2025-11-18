@@ -13,7 +13,7 @@ table products (
 
   /* Join relationships */
 
-  join_one distribution_centers on distribution_centers.id = distribution_center_id,
-  join_many inventory_items on id = inventory_items.product_id,
-  join_many order_items on id = order_items.product_id
+  join one distribution_centers on distribution_centers.id = distribution_center_id,
+  join many inventory_items on id = inventory_items.product_id,
+  join many order_items on id = order_items.product_id
 )

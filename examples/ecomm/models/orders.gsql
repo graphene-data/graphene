@@ -13,8 +13,8 @@ table orders (
 
   /* Join relationships */
 
-  join_one users on users.id = user_id,
-  join_many order_items on order_id = order_items.order_id,
+  join one users on users.id = user_id,
+  join many order_items on order_id = order_items.order_id,
 
   /* Scalar expressions */
 

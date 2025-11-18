@@ -102,7 +102,7 @@ table orders (
 
   /* Join relationships */
 
-  join_one users on user_id = users.id,
+  join one users on user_id = users.id,
 
   /* Scalar expressions */
 
@@ -123,7 +123,7 @@ table users (
   age INTEGER,
   country_code VARCHAR,
 
-  join_many orders on id = orders.user_id
+  join many orders on id = orders.user_id
 )
 ```
 
@@ -139,9 +139,9 @@ Join relationships in a `table` statement declare joins that can be used when qu
 
 The other main difference about joins in GSQL vs. regular SQL is that you have to explain if there are many rows in the left table for each row in the right table, or vice versa. This additional bit of information allows Graphene to prevent incorrect aggregation as a result of row duplication (aka fan-out) through joins. See [Safe aggregation in fan-outs](#safe-aggregation-in-fan-outs) for more details.
 
-This information is provided with the two supported join types, `join_one` and `join_many`:
-- `join_one` is used if there are many rows in the **left** table for each row in the **right** table.
-- `join_many` is used if there are many rows in the **right** table for each row in the **left** table.
+This information is provided with the two supported join types, `join one` and `join many`:
+- `join one` is used if there are many rows in the **left** table for each row in the **right** table.
+- `join many` is used if there are many rows in the **right** table for each row in the **left** table.
 
 In the example above with `orders` and `users`, the joins confirm that there are many orders per user, and only one user per order.
 
@@ -157,16 +157,16 @@ table projects (
   owner_id BIGINT,
   viewer_id BIGINT,
 
-  join_one users as project_owner on owner_id = project_owner.id,
-  join_one users as project_viewer on viewer_id = project_viewer.id
+  join one users as project_owner on owner_id = project_owner.id,
+  join one users as project_viewer on viewer_id = project_viewer.id
 )
 
 table users (
   ...
   id BIGINT,
 
-  join_many projects as projects_as_owner on id = projects_as_owner.owner_id,
-  join_many projects as projects_as_viewer on id = projects_as_viewer.viewer_id
+  join many projects as projects_as_owner on id = projects_as_owner.owner_id,
+  join many projects as projects_as_viewer on id = projects_as_viewer.viewer_id
 )
 ```
 
@@ -221,7 +221,7 @@ If you recall the model from before:
 table orders (
   ...
   user_id BIGINT,
-  join_one users on user_id = users.id
+  join one users on user_id = users.id
 )
 
 table users (
@@ -253,14 +253,14 @@ Sometimes you need to access columns or stored expressions in a table that is tw
 table orders (
   ...
 
-  join_one users on user_id = users.id
+  join one users on user_id = users.id
 )
 
 table users (
   ...
 
-  join_many orders on id = orders.user_id,
-  join_one country on country_code = countries.code
+  join many orders on id = orders.user_id,
+  join one country on country_code = countries.code
 )
 
 table countries (
@@ -269,7 +269,7 @@ table countries (
   currency VARCHAR,
   free_shipping BOOLEAN,
 
-  join_many users on code = users.country_code
+  join many users on code = users.country_code
 )
 ```
 
@@ -301,7 +301,7 @@ table orders (
   amount FLOAT, -- Amount paid by customer
   cost FLOAT, -- Cost of materials
 
-  join_one users on user_id = users.id,
+  join one users on user_id = users.id,
 
   status in ('Processing', 'Shipped', 'Complete') as revenue_recognized,
 
@@ -366,7 +366,7 @@ A common and dangerous user error in regular SQL is aggregating data incorrectly
 
 For example, after joining `users` to `orders`, your joined result will have some users repeated multiple times if they've made multiple purchases. If you wanted to find the average age of customers over this joined result, simply using an `avg(users.age)` would be _incorrect_, because you would be weighting the average towards users with multiple purchases, rather than taking the true average.
 
-GSQL aims to solve this problem. With the additional information provided via `join_one` and `join_many`, Graphene knows under which scenarios when row dupliation occurs, and will rewrite aggregative expressions in a way that ignores the duplicate rows.
+GSQL aims to solve this problem. With the additional information provided via `join one` and `join many`, Graphene knows under which scenarios when row dupliation occurs, and will rewrite aggregative expressions in a way that ignores the duplicate rows.
 
 The query `select avg(users.age) from orders` will be rewritten to the following SQL when Graphene queries the underlying database (this is for BigQuery, specifically):
 
@@ -401,7 +401,7 @@ table orders (
   amount FLOAT, -- Amount paid by customer
   cost FLOAT, -- Cost of materials
 
-  join_one users on user_id = users.id,
+  join one users on user_id = users.id,
 
   status in ('Processing', 'Shipped', 'Complete') as revenue_recognized,
 
@@ -417,8 +417,8 @@ table users (
   email VARCHAR,
   age INTEGER,
 
-  join_many orders on id = orders.user_id,
-  join_one user_facts on id = user_facts.id,
+  join many orders on id = orders.user_id,
+  join one user_facts on id = user_facts.id,
 
   /* Scalar expressions */
 

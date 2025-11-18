@@ -10,8 +10,8 @@ In addition to columns, you define joins and measures on a table.
     carrier string,
     fuel_load number,
 
-    join_one aircraft on aircraft.tail_num = flights.tail_num,
-    join_one carriers on carriers.code = flights.carrier,
+    join one aircraft on aircraft.tail_num = flights.tail_num,
+    join one carriers on carriers.code = flights.carrier,
     measure long_haul distance > 2000,
     measure seats_per_flight sum(aircraft.model.seats) / count(*),
   )

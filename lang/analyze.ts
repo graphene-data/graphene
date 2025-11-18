@@ -136,14 +136,15 @@ export function analyzeField (field: Field, table: Table) {
     // query_source tables are all-or-nothing, so when we encounter them as a join we need to analyze them
     if (target.type == 'query_source') analyzeTable(target)
 
-    let jt = {'join_many': 'many', 'join_one': 'one'}[txt(node.getChild('JoinType'))]
+    let joinTypeStr = txt(node.getChild('JoinType')).replace(/\s+/g, ' ')
+    let jt = {'join many': 'many', 'join one': 'one'}[joinTypeStr]
     if (!jt) return diag(node, 'Unknown join type')
 
     // Malloy expects join fields to have not just join info, but the entire contents of the thing they're joining (the `target` table)
     // This is wild, and maybe it'd be better to do this closer to when we create the Malloy QueryModel.
     Object.assign(field, target, {name: field.name, join: jt})
 
-    // It's important we analyze this expression _after_ setting the join, since the expression might refer to it (ie join_one user on user.id = user_id)
+    // It's important we analyze this expression _after_ setting the join, since the expression might refer to it (ie join one user on user.id = user_id)
     field.onExpression = analyzeExpression(node.getChild('Expression')!, {table, outputFields: []})
   }
 

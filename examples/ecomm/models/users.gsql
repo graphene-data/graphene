@@ -20,10 +20,10 @@ table users (
 
   /* Join relationships */
 
-  join_many orders on id = orders.user_id,
-  join_many order_items on id = order_items.user_id,
-  join_many events on id = events.user_id,
-  join_one user_facts on id = user_facts.id,
+  join many orders on id = orders.user_id,
+  join many order_items on id = order_items.user_id,
+  join many events on id = events.user_id,
+  join one user_facts on id = user_facts.id,
 
   /* Scalar expressions */
 

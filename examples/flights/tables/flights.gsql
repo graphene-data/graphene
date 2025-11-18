@@ -21,10 +21,10 @@ table flights (
 
   /* Join relationships */
 
-  join_one carriers on carrier = carriers.code,
-  join_one airports as origin_airport on origin = origin_airport.code,
-  join_one airports as destination_airport on destination = destination_airport.code,
-  join_one aircraft on tail_num = aircraft.tail_num
+  join one carriers on carrier = carriers.code,
+  join one airports as origin_airport on origin = origin_airport.code,
+  join one airports as destination_airport on destination = destination_airport.code,
+  join one aircraft on tail_num = aircraft.tail_num
 
   /* Scalar expressions ("dimensions") */
 
