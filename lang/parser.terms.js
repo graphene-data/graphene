@@ -92,4 +92,6 @@ export const
   like = 141,
   AddOp = 142,
   MulOp = 143,
-  ViewStatement = 146
+  ViewStatement = 146,
+  ExtendStatement = 147,
+  extend = 149

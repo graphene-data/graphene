@@ -1,5 +1,5 @@
 @top Program {
-  (TableStatement ";"? | ViewStatement ";"? | queryWithSemi)* QueryStatement?
+  (TableStatement ";"? | ViewStatement ";"? | ExtendStatement ";"? | queryWithSemi)* QueryStatement?
 }
 
 // Because QueryStatement is so flexible in what it accepts, we need semicolons between multiple queries within a single file.
@@ -77,8 +77,16 @@ ViewStatement {
   Kw<"table"> Identifier Kw<"as"> "(" QueryStatement ")"
 }
 
+ExtendStatement {
+  Kw<"extend"> Identifier "(" (extendItem ","?)+ ")"
+}
+
 tableItem {
   (ColumnDef | JoinDef | ComputedDef)
+}
+
+extendItem {
+  (JoinDef | ComputedDef)
 }
 
 ColumnDef {
