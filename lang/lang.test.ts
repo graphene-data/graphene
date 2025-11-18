@@ -171,6 +171,19 @@ describe('lang', () => {
       .toReturnRows([1, 'Alice', 60], [2, 'Bob', 40])
   })
 
+  it('extends derived tables with additional measures', async () => {
+    updateFile(`${testTables}
+      table user_facts as (from users select id, total_orders)
+
+      extend user_facts (
+        total_orders > 1 as repeat_buyer
+      )
+    `, 'models.gsql')
+
+    await expect('from user_facts select id, total_orders, repeat_buyer order by id')
+      .toReturnRows([1, 2, true], [2, 1, false])
+  })
+
   it('supports select distinct', () => {
     expect('from users select distinct name, email')
       .toRenderSql('select base."name" as "name", base."email" as "email" from users as base group by 1,2 order by 1 asc nulls last')

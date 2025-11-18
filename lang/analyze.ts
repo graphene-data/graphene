@@ -32,40 +32,9 @@ export function findTables (fi: FileInfo) {
     let table = makeTable(name, syntaxNode.getChild('QueryStatement') ? 'query_source' : 'table')
     table.metadata = extractLeadingMetadata(syntaxNode)
 
-    for (let cn of syntaxNode.getChildren('ColumnDef')) {
-      let name = txt(cn.getChild('Identifier'))
-
-      if (cn.getChild('PrimaryKey')) {
-        if (table.primaryKey) diag(cn, `Table ${table.name} has multiple primary keys`)
-        table.primaryKey = name
-      }
-      let type = convertDataType(txt(cn.getChild('DataType')))!
-      if (!type) diag(cn, `Unsupported data type: ${txt(cn.getChild('DataType'))}`)
-
-      let field = {name, type, metadata: extractLeadingMetadata(cn)}
-      table.fields.push(field)
-      FIELD_NODE_MAP.set(field, cn)
-    }
-
-    for (let jn of syntaxNode.getChildren('JoinDef')) {
-      let nameNode = jn.getChild('Alias') || jn.getChild('Identifier')
-      let field = {name: txt(nameNode)}
-      table.fields.push(field)
-      FIELD_NODE_MAP.set(field, jn)
-    }
-
-    for (let cn of syntaxNode.getChildren('ComputedDef')) {
-      let field = {name: txt(cn.getChild('Alias')), metadata: extractLeadingMetadata(cn)}
-      table.fields.push(field)
-      FIELD_NODE_MAP.set(field, cn)
-    }
-
-    // error if two fields have the same name
-    table.fields.reduce((set, f) => {
-      if (!set[f.name]) set[f.name] = true
-      else diag(FIELD_NODE_MAP.get(f)!, `Table already has a field called "${f.name}"`)
-      return set
-    }, {})
+    syntaxNode.getChildren('ColumnDef').forEach(cn => addColumnField(table, cn))
+    syntaxNode.getChildren('JoinDef').forEach(jn => addJoinField(table, jn))
+    syntaxNode.getChildren('ComputedDef').forEach(cn => addComputedField(table, cn))
 
     TABLE_NODE_MAP.set(table, syntaxNode)
     fi.tables.push(table)
@@ -77,12 +46,76 @@ function makeTable (name: string, type: 'query_source' | 'table'): Table {
   return {name, type, fields: [], connection: config.dialect, dialect: config.dialect, tableName: name, tablePath, metadata: {}}
 }
 
-export function analyzeTable (table: Table) {
-  if (table.type == 'query_source') return analyzeQueryTable(table)
-  for (let f of table.fields) {
-    if (f.type) continue
-    analyzeField(f, table)
+function addColumnField (table: Table, node: SyntaxNode): Field | null {
+  let name = txt(node.getChild('Identifier'))
+
+  if (node.getChild('PrimaryKey')) {
+    if (table.primaryKey) diag(node, `Table ${table.name} has multiple primary keys`)
+    table.primaryKey = name
   }
+  let type = convertDataType(txt(node.getChild('DataType')))!
+  if (!type) diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
+
+  let field = {name, type, metadata: extractLeadingMetadata(node)}
+  return addFieldToTable(table, field, node)
+}
+
+function addJoinField (table: Table, node: SyntaxNode) {
+  let nameNode = node.getChild('Alias') || node.getChild('Identifier')
+  return addFieldToTable(table, {name: txt(nameNode)}, node)
+}
+
+function addComputedField (table: Table, node: SyntaxNode) {
+  let name = txt(node.getChild('Alias'))
+  addFieldToTable(table, {name, metadata: extractLeadingMetadata(node)}, node)
+}
+
+function addFieldToTable (table: Table, field: Field, node: SyntaxNode): Field | null {
+  if (table.fields.find(f => f.name == field.name)) {
+    diag(node, `Table already has a field called "${field.name}"`)
+    return null
+  }
+
+  table.fields.push(field)
+  FIELD_NODE_MAP.set(field, node)
+  return field
+}
+
+// `extend` blocks can add columns and joins to existing tables (usually views)
+export function applyExtends (fi: FileInfo) {
+  fi.tree!.topNode.getChildren('ExtendStatement').forEach(node => {
+    let tableName = txt(node.getChild('Identifier'))
+    let target = lookupTable(tableName, node)
+    if (!target) {
+      return diag(node.getChild('Identifier') || node, `Cannot extend unknown table "${tableName}"`)
+    }
+
+    node.getChildren('JoinDef').forEach(jn => addJoinField(target, jn))
+    node.getChildren('ComputedDef').forEach(cn => addComputedField(target, cn))
+  })
+}
+
+export function analyzeTable (table: Table) {
+  if (table.type == 'query_source') {
+    if (table.query) return // already analyzed
+    let node = TABLE_NODE_MAP.get(table)!
+    let query = analyzeQuery(node.getChild('QueryStatement')!)
+    if (!query) return
+
+    let queryFields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: f.metadata}))
+    table.fields.push(...queryFields)
+    table.query = query.malloyQuery
+
+    // another crazy malloyism. Seems like this should always be a string, but if it is, malloy will hit an error
+    // if it happens to load a query_source before the table it depends on.
+    // I also experimented with forcing queryModelContents to be an array in the correct order (ie dependencies first),
+    // which seems to work, but I opted for this because it's what malloy does normally.
+    if (table.query && typeof table.query.structRef == 'string') {
+      table.query.structRef = lookupTable(table.query.structRef, node) as StructRef
+    }
+  }
+
+  table.fields.map(f => analyzeField(f, table))
 }
 
 let analysisQueue = new Set<Field>()
@@ -101,7 +134,7 @@ export function analyzeField (field: Field, table: Table) {
     if (!target) return diag(node, 'Unknown table to join')
 
     // query_source tables are all-or-nothing, so when we encounter them as a join we need to analyze them
-    if (target.type == 'query_source') analyzeQueryTable(target)
+    if (target.type == 'query_source') analyzeTable(target)
 
     let jt = {'join_many': 'many', 'join_one': 'one'}[txt(node.getChild('JoinType'))]
     if (!jt) return diag(node, 'Unknown join type')
@@ -121,25 +154,6 @@ export function analyzeField (field: Field, table: Table) {
   }
 
   analysisQueue.delete(field)
-}
-
-// a query table `table foo as (select ...)`
-export function analyzeQueryTable (table: Table) {
-  if (table.query) return
-  let node = TABLE_NODE_MAP.get(table)!
-  let query = analyzeQuery(node.getChild('QueryStatement')!)
-  if (!query) return
-
-  table.fields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: f.metadata}))
-  table.query = query.malloyQuery
-
-  // another crazy malloyism. Seems like this should always be a string, but if it is, malloy will hit an error
-  // if it happens to load a query_source before the table it depends on.
-  // I also experimented with forcing queryModelContents to be an array in the correct order (ie dependencies first),
-  // which seems to work, but I opted for this because it's what malloy does normally.
-  if (table.query && typeof table.query.structRef == 'string') {
-    table.query.structRef = lookupTable(table.query.structRef, node) as StructRef
-  }
 }
 
 // Walks each part of the query checking types, rendering sql
@@ -168,7 +182,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
     structRef = txt(froms[0].getChild('Alias')) || 'subquery'
     scope.table = makeTable(structRef, 'query_source')
     TABLE_NODE_MAP.set(scope.table, froms[0].getChild('SubqueryExpression')!)
-    analyzeQueryTable(scope.table)
+    analyzeTable(scope.table)
     subQuerySources.push(scope.table)
   } else { // from a regular table
     structRef = txt(froms[0].getChild('Identifier'))
