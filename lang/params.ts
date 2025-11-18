@@ -1,6 +1,7 @@
 import type {Expression, FieldType} from './types.ts'
 import {walkExpression} from './util.ts'
 import {type Query as MalloyQuery} from '@graphenedata/malloy'
+import {parseIntervalLiteral, parseTemporalLiteral} from './temporalLiterals.ts'
 
 export function inferParamTypes (query: MalloyQuery) {
   // walk through a query looking for params. When we find one, look at the surrounding expression to figure out
@@ -121,7 +122,7 @@ function getBinarySibling (parent: Expression, target: Expression): Expression |
   return undefined
 }
 
-const FIELD_TYPES = new Set<FieldType>(['string', 'number', 'boolean', 'date', 'timestamp', 'json', 'sql native', 'error', 'fieldref', 'array', 'record', 'null'])
+const FIELD_TYPES = new Set<FieldType>(['string', 'number', 'boolean', 'date', 'timestamp', 'json', 'sql native', 'error', 'fieldref', 'array', 'record', 'null', 'interval'])
 
 function sanitizeType (value: unknown): FieldType | undefined {
   if (typeof value !== 'string') return undefined
@@ -142,6 +143,18 @@ export function fillInParams (query: MalloyQuery, params: Record<string, any>) {
       else if (value == null) Object.assign(e, {node: 'null', type: 'string'})
       else if (e.type == 'string') Object.assign(e, {node: 'stringLiteral', literal: value})
       else if (e.type == 'number') Object.assign(e, {node: 'numberLiteral', literal: value.toString()})
+      else if (e.type == 'date' || e.type == 'timestamp') {
+        if (typeof value !== 'string') throw new Error(`Parameters of type ${e.type} must be provided as strings`)
+        let parsed = parseTemporalLiteral(value, e.type)
+        if (!parsed) throw new Error(`Could not parse ${e.type} literal for param $${e.path[0]}`)
+        Object.assign(e, {node: 'timeLiteral', literal: parsed.literal, type: parsed.type, typeDef: {type: parsed.type, timeframe: parsed.timeframe}})
+      }
+      else if (e.type == 'interval') {
+        if (typeof value !== 'string') throw new Error('Parameters of type interval must be provided as strings')
+        let parsed = parseIntervalLiteral(value)
+        if (!parsed) throw new Error(`Could not parse interval literal for param $${e.path[0]}`)
+        Object.assign(e, {node: 'numberLiteral', literal: parsed.quantity.toString(), type: 'interval', intervalUnit: parsed.unit})
+      }
       else if (e.type == 'boolean') Object.assign(e, {node: value ? 'true' : 'false'})
       else throw new Error(`Unsupported param type ${e.type}`)
     })
