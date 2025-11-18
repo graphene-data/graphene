@@ -381,13 +381,13 @@ describe('lang', () => {
       .toRenderSql('select base."age" as "age", string_agg(base."name") as "col_1" from users as base group by 1 order by 2 desc nulls last')
   })
 
-  it('supports asymmetric agg functions across joins', () => {
+  it('supports asymmetric agg functions across joins', async () => {
     // as opposed to built-in sum/avg/etc, which aren't considered functions in malloy
     expect('from users select name, amount_paid, stddev(orders.amount) as test')
       .toRenderSql('select base."name" as "name", (coalesce(( select sum(a.val) as value from ( select unnest(list(distinct {key:payments_0."id", val: payments_0."amount"})) a ) ),0)) as "amount_paid", ( select stddev(a.val0) as value from ( select unnest(list(distinct {key:orders_0."id", val0: orders_0."amount"})) a ) ) as "test" from users as base left join payments as payments_0 on payments_0."user_id"=base."id" left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
 
-    expect('from users select name, total_orders, string_agg(payments.amount)')
-      .toReturnRows(['Alice', 2, '100'], ['Bob', 1, '50'])
+    await expect("from users select name, amount_paid, count_if(orders.status = 'pending') order by 1")
+      .toReturnRows(['Alice', 100, 1], ['Bob', 50, 0])
   })
 
   it.skip('supports malloy date functions', () => {
@@ -463,6 +463,38 @@ describe('lang', () => {
   it('supports null and boolean literals', () => {
     expect('from users select name, null, true, FALSE')
       .toRenderSql('select base."name" as "name", null as "col_1", true as "col_2", false as "col_3" from users as base')
+  })
+
+  it('coerces string literals to timestamps', () => {
+    expect("from users select id where created_at >= '2024-01-01'")
+      .toRenderSql("select base.\"id\" as \"id\" from users as base where base.\"created_at\">=TIMESTAMP '2024-01-01 00:00:00'")
+  })
+
+  it('coerces string literals to timestamps inside in lists', () => {
+    expect("from users select id where created_at in ('2024-01-01','2024-01-02')")
+      .toRenderSql("select base.\"id\" as \"id\" from users as base where base.\"created_at\" in (TIMESTAMP '2024-01-01 00:00:00',TIMESTAMP '2024-01-02 00:00:00')")
+  })
+
+  it('coerces string literals to intervals when needed', () => {
+    expect("from users select created_at + '5 minutes' as shifted")
+      .toRenderSql('select base."created_at" + interval (5) minute as "shifted" from users as base')
+  })
+
+  it('diagnoses invalid interval literals', () => {
+    expect("from users select created_at + 'many moons'")
+      .toHaveDiagnostic(/Could not parse interval/i)
+  })
+
+  it('coerces temporal parameters', () => {
+    let queries = analyze(`${testTables}
+      from users select id where created_at >= $start_date
+    `)
+    expect(toSql(queries[0], {start_date: '2024-01-01'})).toMatch(/>=TIMESTAMP '2024-01-01 00:00:00'/)
+  })
+
+  it('diagnoses invalid timestamp literals', () => {
+    expect("from users select id where created_at >= 'soonish'")
+      .toHaveDiagnostic(/Could not parse timestamp literal/i)
   })
 
   it('warns on multiple joins in aggregate functions', async () => {

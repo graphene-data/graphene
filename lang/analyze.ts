@@ -1,11 +1,12 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import {isExtractUnit, isTemporalType, type AggregateFunctionType, type StructRef, type AtomicTypeDef} from '@graphenedata/malloy'
+import {isExtractUnit, isTemporalType, type AggregateFunctionType, type StructRef, type AtomicTypeDef, type TimestampUnit} from '@graphenedata/malloy'
 import {txt, compact, getFile, getPosition, walkExpression} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config} from './config.ts'
 import {findOverloads} from './functions.ts'
 import {inferParamTypes} from './params.ts'
+import {parseTemporalLiteral, parseIntervalLiteral, parseTemporal} from './temporalLiterals.ts'
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
@@ -296,7 +297,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       let field = lookupField(expr, scope)
       if (!field) return errExpr // diag handled by lookupField
 
-      // fields have types, but Malloy also expects additional `typeDef` for some times (dates, array, records)
+      // fields have types, but Malloy also expects additional `typeDef` for some types (dates, array, records)
       let type = field.type || 'unknown'
       let typeInfo = {type} as {type: FieldType, typeDef?: AtomicTypeDef}
       if (type === 'date' || type === 'timestamp') typeInfo.typeDef = {type}
@@ -310,7 +311,9 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       return {node: 'field' as const, path, ...typeInfo, isAgg: field.isAgg}
     }
     case 'ExtractExpression': {
-      let e = analyzeExpression(expr.getChild('Expression')!, scope)
+      let extractExprNode = expr.getChild('Expression')!
+      let e = analyzeExpression(extractExprNode, scope)
+      checkTypes(e, ['date', 'timestamp'], extractExprNode)
       if (!isTemporalType(e.type) || !e.typeDef) return diag(expr, 'Expression must be a date or timestamp', errExpr)
 
       let units = txt(expr.getChild('ExtractUnit')!).replace(/^['"]|['"]$/g, '').toLowerCase()
@@ -333,7 +336,34 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       let left = analyzeExpression(expr.firstChild!, scope)
       let right = analyzeExpression(expr.lastChild!, scope)
       let op = txt(expr.firstChild?.nextSibling).toLowerCase()
-      return {node: op as any, kids: {left, right}, type: left.type, isAgg: left.isAgg || right.isAgg}
+      let type = left.type as FieldType
+
+      if (op == 'or' || op == 'and') type = 'boolean'
+
+      if (op == '+' || op == '-') {
+        if (['date', 'timestamp', 'interval'].find(t => left.type == t || right.type == t)) {
+          return analyzeTimeExpression(op, left, right, expr)
+        }
+        ensureSameType(left, expr.firstChild!, right, expr.lastChild!)
+      }
+
+      if (op == '*' || op == '/' || op == '%') {
+        checkTypes(left, ['number'], expr.firstChild!)
+        checkTypes(right, ['number'], expr.lastChild!)
+      }
+
+      if (op == '<' || op == '<=' || op == '>' || op == '>=' || op == '=' || op == '!=' || op == '<>') {
+        ensureSameType(left, expr.firstChild!, right, expr.lastChild!)
+        type = 'boolean'
+      }
+
+      if (op == 'like' || op == 'ilike') {
+        checkTypes(left, ['string'], expr.firstChild!)
+        checkTypes(right, ['string'], expr.lastChild!)
+        type = 'boolean'
+      }
+
+      return {node: op as any, kids: {left, right}, type, isAgg: left.isAgg || right.isAgg}
     }
     case 'NullTestExpression': {
       let node = expr.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not') ? 'is-not-null' : 'is-null'
@@ -364,13 +394,16 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
     case 'InExpression': {
       let not = txt(expr.getChild('Kw')).toLowerCase() == 'not'
       let eNode = analyzeExpression(expr.firstChild!, scope)
-      // Values list or subquery
       let oneOf: Expression[] = []
       let valueList = expr.getChild('InValueList')
       if (valueList) {
-        oneOf = valueList.getChildren('Expression').map(v => analyzeExpression(v, scope))
+        oneOf = valueList.getChildren('Expression').map(v => {
+          let e = analyzeExpression(v, scope)
+          checkTypes(e, [eNode.type], v)
+          return e
+        })
       } else {
-        // Subquery variant: use genericSQLExpr as a placeholder
+        diag(expr, 'IN (<subquery>) is not yet supported')
         oneOf = [{node: 'genericSQLExpr', kids: {args: []}, type: 'array'} as any]
       }
       let isAgg = eNode.isAgg || oneOf.some(v => (v as any).isAgg)
@@ -391,14 +424,17 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
     return o.params.length == argNodes.length || !!o.params.find(p => p.isVariadic)
   })
 
-  // analyze each of the function arguments
+  // analyze each of the function arguments, ensuring its the right type
   let args = argNodes.map((node, idx) => {
-    let type = overload?.params[idx]?.allowedTypes[0]
-    if (type?.type === 'sql native' && type?.rawType === 'kw') {
+    let firstType = overload?.params[idx]?.allowedTypes[0]
+    if (firstType?.type === 'sql native' && firstType?.rawType === 'kw') {
       // some dialects allow special keywords as args in certain functions, like bigquery's `date_trunc(some_col, week)`
       return {node: 'genericSQLExpr' as const, kids: {args: []}, type: 'sql native', src: [txt(node)], isAgg: false}
     } else {
-      return analyzeExpression(node, scope)
+      let argExpr = analyzeExpression(node, scope)
+      let allowed = overload?.params[idx]?.allowedTypes.map(at => at.type) as any
+      if (allowed) checkTypes(argExpr, allowed, node)
+      return argExpr
     }
   })
 
@@ -445,8 +481,68 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
   return ret
 }
 
+// Malloy uses special nodes to represent timediff and time deltas (ie adding interval to a date)
+function analyzeTimeExpression (op: '-' | '+', left: Expression, right: Expression, node: SyntaxNode): Expression {
+  // only allow dates on the left side, so simplify the logic. Can revisit if people do this a lot.
+  if (left.type !== 'date' && left.type !== 'timestamp') return diag(node, 'Expected left side to be a date or timestamp', errExpr)
+
+  let units: TimestampUnit = left.type === 'timestamp' ? 'second' : 'day'
+  if (right.node == 'stringLiteral') {
+    units = parseTemporal(right) as TimestampUnit
+    if (right.node == 'stringLiteral') {
+      return diag(node, 'Could not parse interval', errExpr)
+    }
+  }
+
+  if (right.type == 'date' || right.type == 'timestamp') {
+    if (op !== '-') return diag(node, 'Only subtraction between dates is supported', errExpr)
+    if (right.type !== left.type) return diag(node, `Expected right side to be a ${left.type}`, errExpr)
+    return {node: 'timeDiff', kids: {left: left as any, right: right as any}, units, type: 'interval', isAgg: false}
+  }
+
+  if (right.type == 'interval') {
+    let typeDef = {type: left.type}
+    return {node: 'delta', kids: {base: left as any, delta: right}, op: op as any, units, type: left.type, typeDef, isAgg: false}
+  }
+
+  return diag(node, 'Expected right side to be a date or interval', errExpr)
+}
+
+function ensureSameType (left: Expression, leftNode: SyntaxNode, right: Expression, rightNode: SyntaxNode): FieldType | undefined {
+  if (left.type === 'error' || right.type === 'error') return
+
+  // if one side is a date/interval, allow the other to be coerced
+  if (isTemporalType(left.type)) checkTypes(right, [left.type as FieldType], rightNode)
+  if (isTemporalType(right.type)) checkTypes(left, [right.type as FieldType], leftNode)
+
+  if (left.type !== right.type) diag(rightNode, `Expected ${left.type}, got ${right.type}`)
+}
+
+function checkTypes (expr: Expression, expected: FieldType[], node: SyntaxNode) {
+  if (expr.type === 'error') return
+  if (expected.includes(expr.type)) return // types match
+  if (expected.includes('generic' as FieldType)) return
+
+  // string literals can be coerced to date/timestamp if needed
+  let dt = expected.find(t => t == 'date') || expected.find(t => t == 'timestamp')
+  if (expr.node == 'stringLiteral' && dt) {
+    let parsed = parseTemporalLiteral(expr.literal, dt)
+    if (!parsed) return diag(node, `Could not parse ${dt} literal: "${expr.literal}"`, undefined)
+    let typeDef = {type: parsed.type, timeframe: parsed.timeframe}
+    Object.assign(expr, {node: 'timeLiteral', literal: parsed?.literal, type: parsed?.type, typeDef})
+  }
+
+  else if (expr.node == 'stringLiteral' && expected.includes('interval')) {
+    let parsed = parseIntervalLiteral(expr.literal)
+    if (!parsed) return diag(node, `Could not parse interval literal: "${expr.literal}"`, undefined)
+    return Object.assign(expr, {node: 'numberLiteral', literal: parsed.quantity.toString(), type: 'interval', intervalUnit: parsed.unit})
+  }
+
+  else diag(node, `Expected types: ${expected.join(', ')}`)
+}
+
 function isSupportedType (value: string): value is FieldType {
-  let supported = ['string', 'number', 'boolean', 'date', 'timestamp', 'json', 'sql native', 'error', 'array', 'record', 'null', 'generic']
+  let supported = ['string', 'number', 'boolean', 'date', 'timestamp', 'json', 'sql native', 'error', 'array', 'record', 'null', 'generic', 'interval']
   return supported.includes(value)
 }
 
