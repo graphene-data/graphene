@@ -330,7 +330,7 @@ select
   status in ('Processing', 'Shipped', 'Complete') as revenue_recognized,
   count(*)
 from orders
-group by 1 
+group by 1
 ```
 
 You can see that invoking a stored expression is like using a macro: the definition for the stored expression is effectively expanded in-line by Graphene when it runs the query.
@@ -371,7 +371,7 @@ GSQL aims to solve this problem. With the additional information provided via `j
 The query `select avg(users.age) from orders` will be rewritten to the following SQL when Graphene queries the underlying database (this is for BigQuery, specifically):
 
 ```sql
-SELECT 
+SELECT
    (CAST((
     (
       SUM(DISTINCT
@@ -450,6 +450,32 @@ table user_facts as (
 - `count` is a reserved word. Do not alias your columns as `count`.
 - Window functions and set operations are not supported.
 
+### Working with dates, timestamps, and intervals
+
+Graphene understands a handful of common literal formats so you rarely need explicit casts when filtering or doing time math.
+
+**Date and timestamp literals**
+
+- `YYYY`, `YYYY-MM`, and `YYYY-MM-DD` strings are treated as dates. Leading/trailing spaces are ignored.
+- `YYYY-MM-DD HH[:MM[:SS]]` (with either a space or `T` between the date and time) is treated as a timestamp. Missing minutes or seconds default to `00`.
+
+```gsql
+from users select id
+where created_at >= '2024-01-01' and created_at <= '2024-02-01'
+```
+
+**Interval literals**
+
+To add or subtract time, provide a quantity followed by a unit inside a string literal. Supported units include `second`, `minute`, `hour`, `day`, `week`, `month`, `quarter`, and `year` (plural forms or shorthands like `secs`, `mins`, `hrs` also work).
+
+```gsql
+from users select
+  created_at + '5 minutes' as first_seen_plus_5,
+  created_at - '2 days' as first_seen_minus_2
+```
+
+Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days'`). Invalid strings produce a diagnostic such as “Could not parse interval literal: "many moons"”.
+
 ## Graphene data apps (dashboards)
 
 Graphene data apps are written in Markdown with the addition of special Graphene HTML components. Markdown files can contain named GSQL queries in code fences that components can then refer to. Those queries can use any tables defined in .gsql files.
@@ -493,7 +519,7 @@ Use bar or column charts to compare a metric across categories. Bar charts are b
 Here's an example:
 
 ```markdown
-<BarChart 
+<BarChart
   title="Sales by Category"
   data=orders_by_category_2021
   x=month
@@ -608,7 +634,7 @@ Use a pie chart to show part-to-whole relationships across categories. Best for 
 Here's an example:
 
 ```markdown
-<PieChart 
+<PieChart
   title="Sales share by category"
   data=orders_by_category_2021
   category=category
@@ -640,12 +666,12 @@ Use line charts to display how one or more metrics vary over time. Line charts a
 Here's an example:
 
 ```markdown
-<LineChart 
+<LineChart
   title="Monthly Sales"
   subtitle="Includes all categories"
   data=orders_by_month
   x=month
-  y=sales_usd0k 
+  y=sales_usd0k
   yAxisTitle="Sales per Month"
 />
 ```
@@ -752,7 +778,7 @@ Use area charts to track how a metric with multiple series changes over time, or
 Here's an example:
 
 ```markdown
-<AreaChart 
+<AreaChart
   data=orders_by_month
   x=month
   y=sales
@@ -851,8 +877,8 @@ Use big values to display a large value standalone, and optionally include a com
 Here's an example:
 
 ```markdown
-<BigValue 
-  data=orders_with_comparisons 
+<BigValue
+  data=orders_with_comparisons
   value=num_orders
   sparkline=month
   comparison=order_growth
@@ -1069,7 +1095,7 @@ The user-inputted text would then be referenced in GSQL via `$name_of_input`. Fo
 ```sql
 select *
 from users
-where email ilike concat('%', $name_of_input, '%') 
+where email ilike concat('%', $name_of_input, '%')
 ```
 
 ##### All text input attributes
@@ -1132,10 +1158,10 @@ Here's an example:
 select distinct status from orders
 ```
 
-<Dropdown 
-  title="Select Order Status" 
+<Dropdown
+  title="Select Order Status"
   name="status_dropdown"
-  data="statuses" 
+  data="statuses"
   value="status"
   defaultValue="Complete"
 />
@@ -1201,20 +1227,20 @@ The easiest way to format numbers and dates in Graphene is through component att
 For example, you can use the `fmt` attribute to format values inside a BigValue component:
 
 ```markdown
-<BigValue 
-  data=sales_data 
-  value=sales 
-  fmt="$#,##0" 
+<BigValue
+  data=sales_data
+  value=sales
+  fmt="$#,##0"
 />
 ```
 
 Within charts, you can format individual columns using `xFmt` and `yFmt`:
 
 ```markdown
-<LineChart 
-  data=sales_data 
-  x=date 
-  y=sales 
+<LineChart
+  data=sales_data
+  x=date
+  y=sales
   xFmt="m/d"
   yFmt=eur
 />
@@ -1318,6 +1344,6 @@ Follow these guidelines when working in a Graphene project.
 - Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is here in graphene.md.
 - When writing to a .gsql file, check your code with `npm run graphene check`.
 - When writing to a Graphene .md file:
-   - Always check your code with `npm run graphene check <mdPath>`. 
+   - Always check your code with `npm run graphene check <mdPath>`.
    - Then do a visual check by either a) looking at the screenshot that `npm run graphene check <mdPath>` creates, or b) using your browser tool to open the .md file at `localhost:<port>/mdPath` (without the .md extension; default port 4000).
       - Critique what you see: Are all the data values formatted in a way that is easy to read? Does the shape of the visualized data require an adjustment to scale, axis min/max, etc.? Are any visualizations missing data altogether? Is that visualization type really the best way to paint the picture? Etc.
