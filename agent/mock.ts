@@ -169,10 +169,10 @@ const templateMessages = [
           "    21→  diverted = 'Y' as is_diverted\n" +
           '    22→  flight_time > 360 as is_long_haul -- Whether the flight was a long haul flight (over 6 hours).\n' +
           '    23→\n' +
-          '    24→  join_one aircraft on aircraft.tail_num = tail_num\n' +
-          '    25→  join_one carriers on carriers.code = carrier\n' +
-          '    26→  join_one airports as origin_airport on origin_airport.code = origin\n' +
-          '    27→  join_one airports as destination_airport on destination_airport.code = destination\n' +
+          '    24→  join one aircraft on aircraft.tail_num = tail_num\n' +
+          '    25→  join one carriers on carriers.code = carrier\n' +
+          '    26→  join one airports as origin_airport on origin_airport.code = origin\n' +
+          '    27→  join one airports as destination_airport on destination_airport.code = destination\n' +
           '    28→)\n' +
           '    29→\n' +
           '    30→table aircraft (\n' +
@@ -201,8 +201,8 @@ const templateMessages = [
           '    53→  cert_issue_date DATE -- The date the aircraft certification was issued.\n' +
           '    54→  air_worth_date DATE -- The date the aircraft was determined to be airworthy.\n' +
           '    55→\n' +
-          '    56→  join_one aircraft_models as model on aircraft_model_code = model.aircraft_model_code\n' +
-          '    57→  join_many flights on tail_num = flights.tail_num\n' +
+          '    56→  join one aircraft_models as model on aircraft_model_code = model.aircraft_model_code\n' +
+          '    57→  join many flights on tail_num = flights.tail_num\n' +
           '    58→)\n' +
           '    59→\n' +
           '    60→table aircraft_models (\n' +
@@ -218,7 +218,7 @@ const templateMessages = [
           '    70→  weight BIGINT -- The weight class of the aircraft model.\n' +
           '    71→  speed BIGINT -- The maximum speed of the aircraft model in knots.\n' +
           '    72→\n' +
-          '    73→  join_many aircraft on aircraft_model_code = aircraft.aircraft_model_code\n' +
+          '    73→  join many aircraft on aircraft_model_code = aircraft.aircraft_model_code\n' +
           '    74→)\n' +
           '    75→\n' +
           '    76→table carriers (\n' +
@@ -226,7 +226,7 @@ const templateMessages = [
           '    78→  name VARCHAR -- The full name of the airline carrier.\n' +
           '    79→  nickname VARCHAR -- The abbreviated or nickname of the carrier.\n' +
           '    80→\n' +
-          '    81→  join_many flights on code = flights.carrier\n' +
+          '    81→  join many flights on code = flights.carrier\n' +
           '    82→)\n' +
           '    83→\n' +
           '    84→table airports (\n' +
