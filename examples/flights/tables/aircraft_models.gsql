@@ -16,6 +16,6 @@ table aircraft_models (
 
   /* Join relationships */
 
-  join_many aircraft on aircraft_model_code = aircraft.aircraft_model_code
+  join many aircraft on aircraft_model_code = aircraft.aircraft_model_code
 );
 

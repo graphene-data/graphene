@@ -40,18 +40,18 @@ import type {DuckDBConnection as InnerConnection} from '../node_modules/.pnpm/no
 const EXAMPLE = `
   source: orders is duckdb.table('orders') extend {
     primary_key: id
-    // join_one: users with user_id
+    // join one: users with user_id
   }
 
   source: payments is duckdb.table('payments') extend {
     primary_key: id
-    // join_one: users with user_id
+    // join one: users with user_id
   }
 
   source: users is duckdb.table('users') extend {
     primary_key: id
-    join_many: orders on orders.user_id = id
-    join_many: payments on payments.user_id = id
+    join many: orders on orders.user_id = id
+    join many: payments on payments.user_id = id
     measure:
       total_orders is orders.count()
       amount_paid is payments.sum(payments.amount)

@@ -17,5 +17,5 @@ table entities (
   MATCHES as matches, -- Matched entity tag
   VARIANT as variant, -- Attributes of entity
 
-  join_one menu_items on menu_item_id = menu_items.menu_item_id
+  join one menu_items on menu_item_id = menu_items.menu_item_id
 )

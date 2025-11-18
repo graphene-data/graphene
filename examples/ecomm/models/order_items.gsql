@@ -15,11 +15,11 @@ table order_items (
 
   /* Join relationships */
 
-  join_one orders on orders.order_id = order_id,
-  join_one users on users.id = user_id,
-  join_one products on products.id = product_id,
-  join_one inventory_items on inventory_items.id = inventory_item_id,
-  join_one order_items_facts on order_items_facts.id = id,
+  join one orders on orders.order_id = order_id,
+  join one users on users.id = user_id,
+  join one products on products.id = product_id,
+  join one inventory_items on inventory_items.id = inventory_item_id,
+  join one order_items_facts on order_items_facts.id = id,
 
   /* Scalar expressions */
 

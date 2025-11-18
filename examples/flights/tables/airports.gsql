@@ -32,7 +32,7 @@ table airports (
 
   /* Join relationships */
 
-  join_many flights as departures on code = departures.origin,
-  join_many flights as arrivals on code = arrivals.destination
+  join many flights as departures on code = departures.origin,
+  join many flights as arrivals on code = arrivals.destination
 );
 

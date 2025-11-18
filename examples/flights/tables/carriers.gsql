@@ -8,6 +8,6 @@ table carriers (
 
   /* Join relationships */
 
-  join_many flights on code = flights.carrier
+  join many flights on code = flights.carrier
 );
 

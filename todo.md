@@ -18,7 +18,6 @@
 ## Eventually
 * upgrade to svelte 5 (or maybe some other framework? vue? preact?)
 * add `extend` blocks on top of `table as` tables
-* remove underscore from join_one|many
 * change computed syntax to `col_name: expression`
 * figure out why malloy can't use `count_if` in a fanout. What's the workaround it uses for count/sum?
 * monorepo support for vscode - right now it assumes the editor root is the same as the graphene workspace root. What if you have one (or more) graphene projects in subdirs
