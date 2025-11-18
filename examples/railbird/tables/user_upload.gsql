@@ -4,6 +4,6 @@ table user_upload (
   user_id INT64 -- ID of the user who uploaded the video
   video_id INT64 -- ID of the uploaded video
 
-  join_one user on user_id = user.id
-  join_one video on video_id = video.id
+  join one user on user_id = user.id
+  join one video on video_id = video.id
 )

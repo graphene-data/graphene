@@ -16,8 +16,8 @@ table inventory_items (
 
   /* Join relationships */
 
-  join_one products on products.id = product_id,
-  join_one distribution_centers on distribution_centers.id = product_distribution_center_id,
+  join one products on products.id = product_id,
+  join one distribution_centers on distribution_centers.id = product_distribution_center_id,
 
   /* Aggregate expressions */
 

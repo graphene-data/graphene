@@ -5,5 +5,5 @@ table kick_features (
   angle FLOAT64 -- Angle of the kick shot in degrees
   distance FLOAT64 -- Distance traveled by the cue ball before hitting the object ball
 
-  join_one shot on shot_id = shot.id
+  join one shot on shot_id = shot.id
 )

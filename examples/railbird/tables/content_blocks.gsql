@@ -5,6 +5,6 @@ table content_blocks (
   created_at TIMESTAMP -- When the block was created
   updated_at TIMESTAMP -- When the block was last updated
 
-  join_one user on user_id = user.id
-  join_one video on video_id = video.id
+  join one user on user_id = user.id
+  join one video on video_id = video.id
 )

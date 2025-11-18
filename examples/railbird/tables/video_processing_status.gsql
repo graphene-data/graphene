@@ -9,5 +9,5 @@ table video_processing_status (
   error_traceback STRING -- Error traceback if status is FAILED
   hostname STRING -- Server hostname where processing occurred
 
-  join_one video_processing on video_processing_id = video_processing.id
+  join one video_processing on video_processing_id = video_processing.id
 )

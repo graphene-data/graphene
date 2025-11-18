@@ -15,8 +15,8 @@ table upload_stream (
   height INT64 -- Video height in pixels
   init_playlist_links_requested INT64 -- Number of times init playlist links were requested
 
-  join_one video on video_id = video.id
-  join_many upload_segment on id = upload_segment.stream_id
-  join_one client_metadata on id = client_metadata.stream_id
-  join_many client_upload_status on id = client_upload_status.stream_id
+  join one video on video_id = video.id
+  join many upload_segment on id = upload_segment.stream_id
+  join one client_metadata on id = client_metadata.stream_id
+  join many client_upload_status on id = client_upload_status.stream_id
 )

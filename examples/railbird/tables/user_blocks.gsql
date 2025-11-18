@@ -5,6 +5,6 @@ table user_blocks (
   created_at TIMESTAMP -- When the block was created
   updated_at TIMESTAMP -- When the block was last updated
 
-  join_one user as blocker on blocker_user_id = blocker.id
-  join_one user as blocked on blocked_user_id = blocked.id
+  join one user as blocker on blocker_user_id = blocker.id
+  join one user as blocked on blocked_user_id = blocked.id
 )

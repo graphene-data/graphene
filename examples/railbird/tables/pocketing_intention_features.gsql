@@ -11,5 +11,5 @@ table pocketing_intention_features (
   backcut BOOLEAN -- Whether this is a backcut shot
   margin_of_error_in_degrees FLOAT64 -- Margin of error for making the shot in degrees
 
-  join_one shot on shot_id = shot.id
+  join one shot on shot_id = shot.id
 )

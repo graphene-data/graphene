@@ -9,5 +9,5 @@ table upload_segment (
   frames_per_second FLOAT64 -- Frame rate of this segment
   duration_in_seconds FLOAT64 -- Duration of this segment in seconds
 
-  join_one upload_stream on stream_id = upload_stream.id
+  join one upload_stream on stream_id = upload_stream.id
 )

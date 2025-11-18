@@ -17,7 +17,7 @@ table events (
 
   /* Join relationships */
 
-  join_one users on users.id = user_id
+  join one users on users.id = user_id
 
   /* Aggregate expressions */
 

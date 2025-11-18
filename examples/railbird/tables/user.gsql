@@ -13,17 +13,17 @@ table user (
   fargo_rating INT64 -- User's Fargo pool rating (skill level)
   videos_private_by_default BOOLEAN -- Whether new videos are private by default
 
-  join_one video on active_video_id = video.id
-  join_many shot on id = shot.user_id
-  join_many run on id = run.user_id
-  join_many user_upload on id = user_upload.user_id
-  join_many video_comment on id = video_comment.user_id
-  join_many video_reaction on id = video_reaction.user_id
-  join_many content_blocks on id = content_blocks.user_id
-  join_many content_report on id = content_report.reporter_user_id
-  join_many tag on id = tag.user_id
-  join_many shot_annotation on id = shot_annotation.user_id
-  join_many shot_annotation_type on id = shot_annotation_type.user_id
-  join_many shot_edit on id = shot_edit.user_id
-  join_many stripe_subscription_metadata on id = stripe_subscription_metadata.user_id
+  join one video on active_video_id = video.id
+  join many shot on id = shot.user_id
+  join many run on id = run.user_id
+  join many user_upload on id = user_upload.user_id
+  join many video_comment on id = video_comment.user_id
+  join many video_reaction on id = video_reaction.user_id
+  join many content_blocks on id = content_blocks.user_id
+  join many content_report on id = content_report.reporter_user_id
+  join many tag on id = tag.user_id
+  join many shot_annotation on id = shot_annotation.user_id
+  join many shot_annotation_type on id = shot_annotation_type.user_id
+  join many shot_edit on id = shot_edit.user_id
+  join many stripe_subscription_metadata on id = stripe_subscription_metadata.user_id
 )

@@ -12,17 +12,17 @@ table shot (
   false_positive_score FLOAT64 -- Confidence score that this is a false positive detection
   screenshot_exists BOOLEAN -- Whether a screenshot exists for this shot
 
-  join_one video on video_id = video.id
-  join_one user on user_id = user.id
-  join_one video_processing on processing_model_id = video_processing.id
-  join_one bank_features on id = bank_features.shot_id
-  join_one kick_features on id = kick_features.shot_id
-  join_one miss_features on id = miss_features.shot_id
-  join_one cue_object_features on id = cue_object_features.shot_id
-  join_one pocketing_intention_features on id = pocketing_intention_features.shot_id
-  join_many pocketing_intention_info on id = pocketing_intention_info.shot_id
-  join_one error_features on id = error_features.shot_id
-  join_many run_features on id = run_features.shot_id
-  join_many shot_annotation on id = shot_annotation.shot_id
-  join_many shot_edit on id = shot_edit.shot_id
+  join one video on video_id = video.id
+  join one user on user_id = user.id
+  join one video_processing on processing_model_id = video_processing.id
+  join one bank_features on id = bank_features.shot_id
+  join one kick_features on id = kick_features.shot_id
+  join one miss_features on id = miss_features.shot_id
+  join one cue_object_features on id = cue_object_features.shot_id
+  join one pocketing_intention_features on id = pocketing_intention_features.shot_id
+  join many pocketing_intention_info on id = pocketing_intention_info.shot_id
+  join one error_features on id = error_features.shot_id
+  join many run_features on id = run_features.shot_id
+  join many shot_annotation on id = shot_annotation.shot_id
+  join many shot_edit on id = shot_edit.shot_id
 )

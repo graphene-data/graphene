@@ -5,7 +5,7 @@ table tag (
   user_id INT64 -- ID of the user who created the tag
   retired BOOLEAN -- Whether this tag is no longer in use
 
-  join_one user on user_id = user.id
-  join_many tag_class_association on id = tag_class_association.tag_id
-  join_many video_tag on id = video_tag.tag_id
+  join one user on user_id = user.id
+  join many tag_class_association on id = tag_class_association.tag_id
+  join many video_tag on id = video_tag.tag_id
 )

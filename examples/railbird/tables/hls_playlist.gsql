@@ -7,5 +7,5 @@ table hls_playlist (
   updated_at TIMESTAMP -- When the playlist was last updated
   total_duration FLOAT64 -- Total duration of the video in seconds
 
-  join_one video on video_id = video.id
+  join one video on video_id = video.id
 )

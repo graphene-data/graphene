@@ -17,6 +17,6 @@ table technologies (
   SUBCATEGORY as subcategory, -- Technology Subcategory
   OBSERVATIONS as observations, -- Dates of when establishment was detected on technology
 
-  join_one establishments_open on establishment_id = establishments_open.establishment_id,
-  join_one establishments_closed on establishment_id = establishments_closed.establishment_id
+  join one establishments_open on establishment_id = establishments_open.establishment_id,
+  join one establishments_closed on establishment_id = establishments_closed.establishment_id
 )

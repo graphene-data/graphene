@@ -3,6 +3,6 @@ table user_following (
   follower_user_id INT64 -- ID of the user who is following
   followed_user_id INT64 -- ID of the user being followed
 
-  join_one user as follower on follower_user_id = follower.id
-  join_one user as followed on followed_user_id = followed.id
+  join one user as follower on follower_user_id = follower.id
+  join one user as followed on followed_user_id = followed.id
 )

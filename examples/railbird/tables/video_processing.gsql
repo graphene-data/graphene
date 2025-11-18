@@ -10,10 +10,10 @@ table video_processing (
   frames_processed INT64 -- Number of frames processed so far
   current_segment INT64 -- Current segment being processed
 
-  join_one video on video_id = video.id
-  join_many video_processing_status on id = video_processing_status.video_processing_id
-  join_many video_processing_error on id = video_processing_error.video_processing_id
-  join_many homography_info on id = homography_info.video_processing_id
-  join_many shot on id = shot.processing_model_id
-  join_many run on id = run.processing_id
+  join one video on video_id = video.id
+  join many video_processing_status on id = video_processing_status.video_processing_id
+  join many video_processing_error on id = video_processing_error.video_processing_id
+  join many homography_info on id = homography_info.video_processing_id
+  join many shot on id = shot.processing_model_id
+  join many run on id = run.processing_id
 )

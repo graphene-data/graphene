@@ -12,15 +12,15 @@ table video (
   table_size FLOAT64 -- Size of the pool table in the video
   private BOOLEAN -- Whether the video is private or public
 
-  join_one video_processing on current_processing_id = video_processing.id
-  join_many shot on id = shot.video_id
-  join_many run on id = run.video_id
-  join_one upload_stream on id = upload_stream.video_id
-  join_one hls_playlist on id = hls_playlist.video_id
-  join_many video_comment on id = video_comment.video_id
-  join_many video_reaction on id = video_reaction.video_id
-  join_many video_tag on id = video_tag.video_id
-  join_many content_blocks on id = content_blocks.video_id
-  join_many content_report on id = content_report.video_id
-  join_many user_upload on id = user_upload.video_id
+  join one video_processing on current_processing_id = video_processing.id
+  join many shot on id = shot.video_id
+  join many run on id = run.video_id
+  join one upload_stream on id = upload_stream.video_id
+  join one hls_playlist on id = hls_playlist.video_id
+  join many video_comment on id = video_comment.video_id
+  join many video_reaction on id = video_reaction.video_id
+  join many video_tag on id = video_tag.video_id
+  join many content_blocks on id = content_blocks.video_id
+  join many content_report on id = content_report.video_id
+  join many user_upload on id = user_upload.video_id
 )

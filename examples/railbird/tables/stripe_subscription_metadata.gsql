@@ -12,5 +12,5 @@ table stripe_subscription_metadata (
   updated_at TIMESTAMP -- When the subscription record was last updated
   canceled_at TIMESTAMP -- When the subscription was canceled (if applicable)
 
-  join_one user on user_id = user.id
+  join one user on user_id = user.id
 )

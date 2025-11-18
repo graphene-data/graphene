@@ -3,6 +3,6 @@ table tag_class_association (
   tag_id INT64 -- ID of the tag
   tag_class_id INT64 -- ID of the tag class
 
-  join_one tag on tag_id = tag.id
-  join_one tag_class on tag_class_id = tag_class.id
+  join one tag on tag_id = tag.id
+  join one tag_class on tag_class_id = tag_class.id
 )

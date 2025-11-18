@@ -30,8 +30,8 @@ table aircraft (
 
   /* Join relationships */
 
-  join_one aircraft_models on aircraft_model_code = aircraft_models.aircraft_model_code,
-  join_many flights on tail_num = flights.tail_num
+  join one aircraft_models on aircraft_model_code = aircraft_models.aircraft_model_code,
+  join many flights on tail_num = flights.tail_num
 
   /* Scalar expressions ("dimensions") */
 

@@ -7,7 +7,7 @@ table shot_annotation (
   created_at TIMESTAMP -- When the annotation was created
   updated_at TIMESTAMP -- When the annotation was last updated
 
-  join_one shot on shot_id = shot.id
-  join_one shot_annotation_type on type_id = shot_annotation_type.id
-  join_one user on user_id = user.id
+  join one shot on shot_id = shot.id
+  join one shot_annotation_type on type_id = shot_annotation_type.id
+  join one user on user_id = user.id
 )

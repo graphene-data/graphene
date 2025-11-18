@@ -3,6 +3,6 @@ table video_tag (
   tag_id INT64 -- ID of the tag
   video_id INT64 -- ID of the video
 
-  join_one tag on tag_id = tag.id
-  join_one video on video_id = video.id
+  join one tag on tag_id = tag.id
+  join one video on video_id = video.id
 )

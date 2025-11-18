@@ -8,7 +8,7 @@ table video_comment (
   created_at TIMESTAMP -- When the comment was created
   updated_at TIMESTAMP -- When the comment was last updated
 
-  join_one video on video_id = video.id
-  join_one user on user_id = user.id
-  join_one video_comment on parent_id = video_comment.id
+  join one video on video_id = video.id
+  join one user on user_id = user.id
+  join one video_comment on parent_id = video_comment.id
 )

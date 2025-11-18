@@ -8,6 +8,6 @@ table shot_edit (
   created_at TIMESTAMP -- When the edit was created
   updated_at TIMESTAMP -- When the edit was last updated
 
-  join_one shot on shot_id = shot.id
-  join_one user on user_id = user.id
+  join one shot on shot_id = shot.id
+  join one user on user_id = user.id
 )

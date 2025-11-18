@@ -6,5 +6,5 @@ table client_upload_status (
   created_at TIMESTAMP -- When this status was created
   updated_at TIMESTAMP -- When this status was last updated
 
-  join_one upload_stream on stream_id = upload_stream.id
+  join one upload_stream on stream_id = upload_stream.id
 )

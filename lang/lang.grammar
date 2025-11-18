@@ -102,7 +102,7 @@ JoinDef {
 }
 
 JoinType {
-  Kw<"join_one"> | Kw<"join_many">
+  Kw<"join"> (Kw<"one"> | Kw<"many">)
 }
 
 ComputedDef {

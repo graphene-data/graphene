@@ -10,5 +10,5 @@ table cue_object_features (
   spin_type STRING -- Type of spin applied to the cue ball (DRAW, FOLLOW, CENTER, UNKNOWN)
   is_break_heuristic BOOLEAN -- Whether this appears to be a break shot
 
-  join_one shot on shot_id = shot.id
+  join one shot on shot_id = shot.id
 )

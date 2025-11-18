@@ -5,5 +5,5 @@ table pocketing_intention_info (
   pocket_id STRING -- ID of the target pocket (TOP_LEFT, TOP_SIDE, TOP_RIGHT, BOTTOM_LEFT, BOTTOM_SIDE, BOTTOM_RIGHT)
   path_metadata_index INT64 -- Index for different path calculations
 
-  join_one shot on shot_id = shot.id
+  join one shot on shot_id = shot.id
 )

@@ -4,6 +4,6 @@ table run_features (
   run_id INT64 -- ID of the run this shot belongs to
   index_in_run INT64 -- Position of this shot in the run (0-indexed)
 
-  join_one shot on shot_id = shot.id
-  join_one run on run_id = run.id
+  join one shot on shot_id = shot.id
+  join one run on run_id = run.id
 )

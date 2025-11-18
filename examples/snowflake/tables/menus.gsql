@@ -17,6 +17,6 @@ table menus (
   URL as url, -- URL of menu source
   OBSERVATIONS as observations, -- Date(s) menu was captured from source
 
-  join_one establishments_open on establishment_id = establishments_open.establishment_id,
-  join_many menu_items on menu_id = menu_items.menu_id
+  join one establishments_open on establishment_id = establishments_open.establishment_id,
+  join many menu_items on menu_id = menu_items.menu_id
 )

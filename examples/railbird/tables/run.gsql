@@ -7,9 +7,9 @@ table run (
   processing_id INT64 -- ID of the processing job that detected this run
   run_length INT64 -- Number of consecutive successful shots in the run
 
-  join_one shot on run_ending_shot_id = shot.id
-  join_one video on video_id = video.id
-  join_one user on user_id = user.id
-  join_one video_processing on processing_id = video_processing.id
-  join_many run_features on id = run_features.run_id
+  join one shot on run_ending_shot_id = shot.id
+  join one video on video_id = video.id
+  join one user on user_id = user.id
+  join one video_processing on processing_id = video_processing.id
+  join many run_features on id = run_features.run_id
 )

@@ -4,5 +4,5 @@ table tag_class (
   name STRING -- Name of the tag class
   railbird_defined BOOLEAN -- Whether this is a platform-defined class (vs user-defined)
 
-  join_many tag_class_association on id = tag_class_association.tag_class_id
+  join many tag_class_association on id = tag_class_association.tag_class_id
 )

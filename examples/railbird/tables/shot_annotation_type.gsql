@@ -6,6 +6,6 @@ table shot_annotation_type (
   user_id INT64 -- ID of the user who created this annotation type
   error_default BOOLEAN -- Whether this annotation type indicates an error by default
 
-  join_one user on user_id = user.id
-  join_many shot_annotation on id = shot_annotation.type_id
+  join one user on user_id = user.id
+  join many shot_annotation on id = shot_annotation.type_id
 )

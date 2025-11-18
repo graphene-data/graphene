@@ -16,5 +16,5 @@ table client_metadata (
   updated_at TIMESTAMP -- When the metadata was last updated
   stream_id INT64 -- ID of the associated upload stream
 
-  join_one upload_stream on stream_id = upload_stream.id
+  join one upload_stream on stream_id = upload_stream.id
 )

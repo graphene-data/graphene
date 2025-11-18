@@ -27,9 +27,9 @@ table establishments_closed (
   WEBSITE as website, -- Establishment URL
   UPDATED as updated, -- Most recent date the establishment was updated in BFM database
 
-  join_many contacts on establishment_id = contacts.establishment_id,
-  join_many menus on establishment_id = menus.establishment_id,
-  join_many menu_items on establishment_id = menu_items.establishment_id,
-  join_many ratings on establishment_id = ratings.establishment_id,
-  join_many technologies on establishment_id = technologies.establishment_id
+  join many contacts on establishment_id = contacts.establishment_id,
+  join many menus on establishment_id = menus.establishment_id,
+  join many menu_items on establishment_id = menu_items.establishment_id,
+  join many ratings on establishment_id = ratings.establishment_id,
+  join many technologies on establishment_id = technologies.establishment_id
 )

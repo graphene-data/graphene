@@ -5,5 +5,5 @@ table homography_info (
   homography_info_json STRING -- JSON containing the homography transformation matrix
   frame_index INT64 -- Frame number for this homography data
 
-  join_one video_processing on video_processing_id = video_processing.id
+  join one video_processing on video_processing_id = video_processing.id
 )

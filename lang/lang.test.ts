@@ -15,8 +15,8 @@ const testTables = `
     created_at timestamp
     age int
 
-    join_many orders on orders.user_id = id
-    join_many payments on payments.user_id = id
+    join many orders on orders.user_id = id
+    join many payments on payments.user_id = id
     count(orders.id) as total_orders
     sum(payments.amount) as amount_paid
     -- measure active_recently created_at > current_date - 30
@@ -28,8 +28,8 @@ const testTables = `
     amount int
     status text
 
-    join_one users on users.id = user_id
-    join_many order_items on order_items.order_id = id
+    join one users on users.id = user_id
+    join many order_items on order_items.order_id = id
     sum(amount) as total_revenue
     sum(amount) / count() as avg_order_value
     status = 'completed' as completed
@@ -41,7 +41,7 @@ const testTables = `
     sku text
     quantity int
 
-    join_one orders on orders.id = order_id
+    join one orders on orders.id = order_id
   )
 
   table payments (
@@ -50,7 +50,7 @@ const testTables = `
     payment_date timestamp
     amount int
 
-    join_one users on users.id = user_id
+    join one users on users.id = user_id
   )
 `
 
@@ -153,8 +153,8 @@ describe('lang', () => {
       table users (
         id int primary_key
         name string
-        join_many orders on orders.user_id = id
-        join_one user_facts on user_facts.id = id
+        join many orders on orders.user_id = id
+        join one user_facts on user_facts.id = id
         user_facts.ltv as ltv -- test out joining the view back in to its original source
       )
       table orders (id int primary_key, user_id int, amount int, sum(amount) as total_revenue)
@@ -343,7 +343,7 @@ describe('lang', () => {
 
   it('suggests join aliases when referencing table names', () => {
     expect(`
-      table t (oid int, join_one users as usr on usr.id = oid);
+      table t (oid int, join one users as usr on usr.id = oid);
       from t select users.name
     `).toHaveDiagnostic(/did you mean "usr"\?/i)
   })
@@ -369,7 +369,7 @@ describe('lang', () => {
       .toRenderSql('select min(users_0."age") as "col_0" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 
-  it('can handle measures on unconnected join_manys', async () => {
+  it('can handle measures on unconnected join manys', async () => {
     await expect('from users select name, total_orders, amount_paid, sum(orders.amount) as owed')
       .toReturnRows(['Alice', 2, 100, 60], ['Bob', 1, 50, 40])
   })
@@ -527,16 +527,16 @@ describe('lang', () => {
       .toHaveDiagnostic(/Aggregates cannot be nested/i)
   })
 
-  it.skip('errors if you have a non-agg measure that uses a join_many', () => {
+  it.skip('errors if you have a non-agg measure that uses a join many', () => {
     expect(`table t (
       uid int
-      join_many users on users.id = uid
+      join many users on users.id = uid
       users.age as user_age
     )`).toHaveDiagnostic(/Fields that refer to a `join many` should aggregate/i)
   })
 
   it('allows join expressions to refer to the alias', () => {
-    expect('table t (oid int, join_one users as usr on usr.id = oid); from t select usr.name')
+    expect('table t (oid int, join one users as usr on usr.id = oid); from t select usr.name')
       .toRenderSql('select usr_0."name" as "usr_name" from t as base left join users as usr_0 on usr_0."id"=base."oid"')
   })
 
@@ -647,7 +647,7 @@ describe('lang', () => {
     updateFile(`
       table alpha (
         id int primary_key
-        join_many beta on beta.alpha_id = id
+        join many beta on beta.alpha_id = id
         avg(beta.num) as avg_num
       )
 
@@ -655,7 +655,7 @@ describe('lang', () => {
         id int primary_key
         alpha_id int
         num int
-        join_one alpha on alpha.id = alpha_id
+        join one alpha on alpha.id = alpha_id
       )
     `, 'cycle.gsql')
     expect('from alpha select count(*)').toRenderSql('select count(1) as "col_0" from alpha as base')

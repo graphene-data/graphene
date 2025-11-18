@@ -4,5 +4,5 @@ table video_processing_error (
   message STRING -- Error message
   video_processing_id INT64 -- ID of the processing job that encountered the error
 
-  join_one video_processing on video_processing_id = video_processing.id
+  join one video_processing on video_processing_id = video_processing.id
 )
