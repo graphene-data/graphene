@@ -1,32 +1,32 @@
 table flights (
-  id2 BIGINT primary_key, -- Unique identifier for the flight record
-  carrier VARCHAR, -- Airline carrier code (e.g., 'AA', 'UA', 'DL')
-  origin VARCHAR, -- IATA airport code for the origin airport
-  destination VARCHAR, -- IATA airport code for the destination airport
-  flight_num VARCHAR, -- Flight number assigned by the carrier
-  flight_time BIGINT, -- Scheduled flight time in minutes (time in the air, excluding taxi)
-  tail_num VARCHAR, -- Aircraft tail number (registration identifier)
-  dep_time TIMESTAMP, -- Actual departure time
-  arr_time TIMESTAMP, -- Actual arrival time
-  dep_delay BIGINT, -- Departure delay in minutes (negative = early, positive = late)
-  arr_delay BIGINT, -- Arrival delay in minutes (negative = early, positive = late)
-  taxi_out BIGINT, -- Time spent taxiing out to runway before takeoff, in minutes
-  taxi_in BIGINT, -- Time spent taxiing in from runway after landing, in minutes
-  distance BIGINT, -- The distance between the origin and destination airports, in miles. Not to be confused with miles_flown
-  cancelled VARCHAR, -- Whether the flight was cancelled ('Y' = yes, 'N' = no)
-  diverted VARCHAR, -- Whether the flight was diverted to a different airport ('Y' = yes, 'N' = no)
+  id2 BIGINT primary_key -- Unique identifier for the flight record
+  carrier VARCHAR -- Airline carrier code (e.g., 'AA', 'UA', 'DL')
+  origin VARCHAR -- IATA airport code for the origin airport
+  destination VARCHAR -- IATA airport code for the destination airport
+  flight_num VARCHAR -- Flight number assigned by the carrier
+  flight_time BIGINT -- Scheduled flight time in minutes (time in the air, excluding taxi)
+  tail_num VARCHAR -- Aircraft tail number (registration identifier)
+  dep_time TIMESTAMP -- Actual departure time
+  arr_time TIMESTAMP -- Actual arrival time
+  dep_delay BIGINT -- Departure delay in minutes (negative = early, positive = late)
+  arr_delay BIGINT -- Arrival delay in minutes (negative = early, positive = late)
+  taxi_out BIGINT -- Time spent taxiing out to runway before takeoff, in minutes
+  taxi_in BIGINT -- Time spent taxiing in from runway after landing, in minutes
+  distance BIGINT -- The distance between the origin and destination airports, in miles. Not to be confused with miles_flown
+  cancelled VARCHAR -- Whether the flight was cancelled ('Y' = yes, 'N' = no)
+  diverted VARCHAR -- Whether the flight was diverted to a different airport ('Y' = yes, 'N' = no)
 
-  join one carriers on carrier = carriers.code,
-  join one airports as origin_airport on origin = origin_airport.code,
-  join one airports as destination_airport on destination = destination_airport.code,
+  join one carriers on carrier = carriers.code
+  join one airports as origin_airport on origin = origin_airport.code
+  join one airports as destination_airport on destination = destination_airport.code
   join one aircraft on tail_num = aircraft.tail_num
 
-  is_long_haul: flight_time > 360, -- Whether the flight was a long haul flight (over 6 hours)
-  is_cancelled_or_diverted: cancelled = 'Y' or diverted = 'Y', -- Whether the flight was cancelled or diverted
-  miles_flown: case when is_cancelled_or_diverted then 0 else distance end, -- Actual miles flown, approximated by the distance between the origin and destination airports not including cancelled or diverted flights
+  is_long_haul: flight_time > 360 -- Whether the flight was a long haul flight (over 6 hours)
+  is_cancelled_or_diverted: cancelled = 'Y' or diverted = 'Y' -- Whether the flight was cancelled or diverted
+  miles_flown: case when is_cancelled_or_diverted then 0 else distance end -- Actual miles flown, approximated by the distance between the origin and destination airports not including cancelled or diverted flights
 
-  on_time_departure_rate: avg(case when dep_delay <= 0 then 1 else 0 end), -- Percentage of flights that departed on time or early (0-1 scale)
-  on_time_arrival_rate: avg(case when arr_delay <= 0 then 1 else 0 end), -- Percentage of flights that arrived on time or early (0-1 scale)
-  cancellation_rate: avg(case when cancelled = 'Y' then 1 else 0 end), -- Percentage of flights that were cancelled (0-1 scale)
+  on_time_departure_rate: avg(case when dep_delay <= 0 then 1 else 0 end) -- Percentage of flights that departed on time or early (0-1 scale)
+  on_time_arrival_rate: avg(case when arr_delay <= 0 then 1 else 0 end) -- Percentage of flights that arrived on time or early (0-1 scale)
+  cancellation_rate: avg(case when cancelled = 'Y' then 1 else 0 end) -- Percentage of flights that were cancelled (0-1 scale)
   diversion_rate: avg(case when diverted = 'Y' then 1 else 0 end) -- Percentage of flights that were diverted (0-1 scale)
 );

@@ -1,21 +1,21 @@
 -- It is extremely important that you consider the order status when doing analysis.
 table orders (
-  order_id INT64 primary_key,
-  user_id INT64,
-  status STRING, -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  created_at TIMESTAMP,
-  returned_at TIMESTAMP,
-  shipped_at TIMESTAMP,
-  delivered_at TIMESTAMP,
-  num_of_item INT64,
+  order_id INT64 primary_key
+  user_id INT64
+  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
+  created_at TIMESTAMP
+  returned_at TIMESTAMP
+  shipped_at TIMESTAMP
+  delivered_at TIMESTAMP
+  num_of_item INT64
 
-  join one users on users.id = user_id,
-  join many order_items on order_id = order_items.order_id,
+  join one users on users.id = user_id
+  join many order_items on order_id = order_items.order_id
 
-  is_rev_recognized: status in ('Processing', 'Shipped', 'Complete'),
+  is_rev_recognized: status in ('Processing', 'Shipped', 'Complete')
 
-  rev_rec_order_count: count(case when is_rev_recognized then 1 else null end),
-  aov: safe_divide(order_items.revenue, rev_rec_order_count), -- average order value
-  avg_order_cycle_time_days: avg(timestamp_diff(delivered_at, created_at, minute)) / 1440.0, -- time from order creation to delivery
+  rev_rec_order_count: count(case when is_rev_recognized then 1 else null end)
+  aov: safe_divide(order_items.revenue, rev_rec_order_count) -- average order value
+  avg_order_cycle_time_days: avg(timestamp_diff(delivered_at, created_at, minute)) / 1440.0 -- time from order creation to delivery
   customer_count: count(distinct case when is_rev_recognized then user_id else null end)
 )
