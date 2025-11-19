@@ -1,15 +1,15 @@
 table products (
-  id INT64 primary_key,
-  cost FLOAT64,
-  category STRING,
-  name STRING,
-  brand STRING,
-  retail_price FLOAT64,
-  department STRING,
-  sku STRING,
-  distribution_center_id INT64,
+  id INT64 primary_key
+  cost FLOAT64
+  category STRING
+  name STRING
+  brand STRING
+  retail_price FLOAT64
+  department STRING
+  sku STRING
+  distribution_center_id INT64
 
-  join one distribution_centers on distribution_centers.id = distribution_center_id,
-  join many inventory_items on id = inventory_items.product_id,
+  join one distribution_centers on distribution_centers.id = distribution_center_id
+  join many inventory_items on id = inventory_items.product_id
   join many order_items on id = order_items.product_id
 )
