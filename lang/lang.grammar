@@ -205,20 +205,20 @@ InValueList {
 }
 
 BinaryExpression<T> {
-  T !or Kw<"or"> expression |
-  T !and Kw<"and"> expression |
-  T !compare ComparisonOp expression |
-  T !add AddOp expression |
-  T !multiply MulOp expression
+  compositeExpression<T> !or Kw<"or"> expression |
+  compositeExpression<T> !and Kw<"and"> expression |
+  compositeExpression<T> !compare ComparisonOp expression |
+  compositeExpression<T> !add AddOp expression |
+  compositeExpression<T> !multiply MulOp expression
 }
 
 InExpression<T> {
-  T !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
-  T !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
+  compositeExpression<T> !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
+  compositeExpression<T> !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
 }
 
 NullTestExpression<T> {
-  T !compare Kw<"is"> Kw<"not">? Kw<"null">
+  compositeExpression<T> !compare Kw<"is"> Kw<"not">? Kw<"null">
 }
 
 computedPrimary {
