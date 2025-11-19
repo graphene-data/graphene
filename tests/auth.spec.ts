@@ -56,7 +56,7 @@ test.describe('auth', () => {
   })
 
   test('cli pkce login works', async ({page, cloud}) => {
-    setConfig({root: 'test', dialect: 'duckdb', host: cloud.url})
+    setConfig({root: 'test', host: cloud.url})
     await loginPkce(async url => {
       await page.goto(url)
       let loginShell = page.locator('#stytch-login')
