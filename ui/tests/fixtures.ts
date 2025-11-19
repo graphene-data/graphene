@@ -25,8 +25,8 @@ let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
 export interface ServerOptions {
   root?: string
-  port?: number
-  dialect?: string
+  bigquery?: NonNullable<typeof config.bigquery>
+  snowflake?: NonNullable<typeof config.snowflake>
 }
 
 export interface ServerFixture {
@@ -46,12 +46,19 @@ export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: 
       let port = await getAvailablePort()
       let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
       process.env.GRAPHENE_PORT = String(port)
-      setConfig({port, root: viteRoot, dialect: 'duckdb'})
+      setConfig({port, root: viteRoot})
       server = await serve2()
 
       await use({
         url: (options: ServerOptions = {}) => {
-          setConfig({dialect: options.dialect || config.dialect, root: options.root || config.root, port})
+          setConfig({
+            root: options.root || config.root,
+            port,
+            host: config.host,
+            namespace: config.namespace,
+            bigquery: options.bigquery ?? config.bigquery,
+            snowflake: options.snowflake ?? config.snowflake,
+          })
           loadWorkspace(config.root, false)
           return `http://localhost:${port}`
         },
@@ -119,7 +126,7 @@ export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: 
 
 test.beforeEach(() => {
   let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
-  setConfig({dialect: 'duckdb', root})
+  setConfig({root})
   clearWorkspace()
   Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
 

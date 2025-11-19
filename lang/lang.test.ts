@@ -64,7 +64,7 @@ describe('lang', () => {
 
   beforeEach(() => {
     clearWorkspace()
-    setConfig({dialect: 'duckdb', root: ''})
+    setConfig({root: ''})
     updateFile(testTables, 'models.gsql')
   })
 
@@ -493,13 +493,13 @@ describe('lang', () => {
   })
 
   it('supports functions with keyword args', () => {
-    setConfig({dialect: 'bigquery', root: ''})
+    setConfig({root: '', bigquery: {}})
     expect('from users select timestamp_diff(created_at, created_at, day)')
       .toRenderSql('select timestamp_diff(base.`created_at`,base.`created_at`,day) as `col_0` from `users` as base')
   })
 
   it('treats date part keywords as literals only when allowed', () => {
-    setConfig({dialect: 'bigquery', root: ''})
+    setConfig({root: '', bigquery: {}})
     updateFile('table calendar (created_at timestamp, day text, week text)', 'calendar.gsql')
 
     expect('from calendar select week')
@@ -607,7 +607,7 @@ describe('lang', () => {
   })
 
   it('supports bigquery current datetime functions with optional args', () => {
-    setConfig({dialect: 'bigquery', root: ''})
+    setConfig({root: '', bigquery: {}})
     try {
       expect(`
         from users select
@@ -622,7 +622,7 @@ describe('lang', () => {
           current_datetime('UTC')
       `).toRenderSql("select current_date() as `col_0`, current_date('America/Los_Angeles') as `col_1`, current_time() as `col_2`, current_time('UTC') as `col_3`, current_timestamp() as `col_4`, current_timestamp('America/Los_Angeles') as `col_5`, current_datetime() as `col_6`, current_datetime() as `col_7`, current_datetime('UTC') as `col_8` from `users` as base")
     } finally {
-      setConfig({dialect: 'duckdb', root: ''})
+      setConfig({root: ''})
     }
   })
 
@@ -687,7 +687,7 @@ describe('lang', () => {
 
   it('trimmed sanitization breaks a simple join cycle', () => {
     clearWorkspace()
-    setConfig({dialect: 'duckdb', root: ''})
+    setConfig({root: ''})
     updateFile(`
       table alpha (
         id int primary_key
