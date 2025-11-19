@@ -688,4 +688,15 @@ describe('lang', () => {
 
     expect('from flights select is_cancelled_or_diverted').toHaveNoErrors()
   })
+
+  it('supports parens on RHS of comparison', () => {
+    updateFile(`
+      table t (
+        a int,
+        b int,
+        c: a = (b)
+      )
+    `, 'parens.gsql')
+    expect('from t select c').toHaveNoErrors()
+  })
 })
