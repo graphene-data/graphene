@@ -1,6 +1,4 @@
 table users (
-  /* Base columns */
-
   id INT64 primary_key,
   first_name STRING,
   last_name STRING,
@@ -18,26 +16,20 @@ table users (
   created_at TIMESTAMP,
   user_geom GEOGRAPHY,
 
-  /* Join relationships */
-
   join many orders on id = orders.user_id,
   join many order_items on id = order_items.user_id,
   join many events on id = events.user_id,
   join one user_facts on id = user_facts.id,
 
-  /* Scalar expressions */
-
-  user_facts.ltv as lifetime_value, -- aka ltv
-  user_facts.order_count as lifetime_orders,
-  user_facts.order_count > 0 as is_customer,
-  user_facts.first_purchase_at as first_purchase_at,
-  user_facts.last_purchase_at as last_purchase_at,
-  timestamp_diff(first_purchase_at, created_at, minute) / 1440.0 as days_to_first_purchase,
+  lifetime_value: user_facts.ltv, -- aka ltv
+  lifetime_orders: user_facts.order_count,
+  is_customer: user_facts.order_count > 0,
+  first_purchase_at: user_facts.first_purchase_at,
+  last_purchase_at: user_facts.last_purchase_at,
+  days_to_first_purchase: timestamp_diff(user_facts.first_purchase_at, created_at, minute) / 1440.0,
   -- timestamp_diff(current_timestamp(), last_purchase_at, minute) as time_since_last_purchase_minutes -- current_timestamp() not supported yet
 
-  /* Aggregate expressions */
-
-  safe_divide(orders.customer_count, count(id)) as conversion_rate -- percentage of users who made at least one purchase
+  conversion_rate: safe_divide(orders.customer_count, count(id)) -- percentage of users who made at least one purchase
 )
 
 -- Do not query this directly

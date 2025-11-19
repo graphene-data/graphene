@@ -1,6 +1,4 @@
 table order_items (
-  /* Base columns */
-
   id INT64 primary_key,
   order_id INT64,
   user_id INT64,
@@ -13,32 +11,26 @@ table order_items (
   returned_at TIMESTAMP,
   sale_price FLOAT64,
 
-  /* Join relationships */
-
   join one orders on orders.order_id = order_id,
   join one users on users.id = user_id,
   join one products on products.id = product_id,
   join one inventory_items on inventory_items.id = inventory_item_id,
   join one order_items_facts on order_items_facts.id = id,
 
-  /* Scalar expressions */
+  is_rev_recognized: status in ('Processing', 'Shipped', 'Complete'),
+  cost: order_items_facts.cost,
+  fulfillment_time_days: timestamp_diff(shipped_at, created_at, minute) / 1440.0,
+  delivery_time_days: timestamp_diff(delivered_at, shipped_at, minute) / 1440.0,
 
-  status in ('Processing', 'Shipped', 'Complete') as is_rev_recognized,
-  order_items_facts.cost as cost,
-  timestamp_diff(shipped_at, created_at, minute) / 1440.0 as fulfillment_time_days,
-  timestamp_diff(delivered_at, shipped_at, minute) / 1440.0 as delivery_time_days,
+  units_sold: count(case when is_rev_recognized then 1 else null end),
+  revenue: sum(case when is_rev_recognized then sale_price else 0 end), -- Aka net revenue/sales
+  cogs: sum(case when is_rev_recognized then cost else 0 end), -- Cost of goods sold
+  gross_profit: revenue - cogs,
+  gross_margin_pct: safe_divide(gross_profit, revenue),
 
-  /* Aggregate expressions */
-
-  count(case when is_rev_recognized then 1 else null end) as units_sold,
-  sum(case when is_rev_recognized then sale_price else 0 end) as revenue, -- Aka net revenue/sales
-  sum(case when is_rev_recognized then cost else 0 end) as cogs, -- Cost of goods sold
-  revenue - cogs as gross_profit,
-  safe_divide(gross_profit, revenue) as gross_margin_pct,
-
-  safe_divide(sum(case when shipped_at is not null then 1 else 0 end), count(*)) as shipped_rate,
-  safe_divide(sum(case when delivered_at is not null then 1 else 0 end), count(*)) as delivered_rate,
-  safe_divide(sum(case when returned_at is not null then 1 else 0 end), count(*)) as return_rate
+  shipped_rate: safe_divide(sum(case when shipped_at is not null then 1 else 0 end), count(*)),
+  delivered_rate: safe_divide(sum(case when delivered_at is not null then 1 else 0 end), count(*)),
+  return_rate: safe_divide(sum(case when returned_at is not null then 1 else 0 end), count(*))
 )
 
 -- Workaround due to aggregate locality ambiguity problem. See https://graphenedata.slack.com/archives/C095V84GQPR/p1760648883764849

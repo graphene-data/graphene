@@ -17,8 +17,8 @@ const testTables = `
 
     join many orders on orders.user_id = id
     join many payments on payments.user_id = id
-    count(orders.id) as total_orders
-    sum(payments.amount) as amount_paid
+    total_orders: count(orders.id)
+    amount_paid: sum(payments.amount)
     -- measure active_recently created_at > current_date - 30
   )
 
@@ -30,9 +30,9 @@ const testTables = `
 
     join one users on users.id = user_id
     join many order_items on order_items.order_id = id
-    sum(amount) as total_revenue
-    sum(amount) / count() as avg_order_value
-    status = 'completed' as completed
+    total_revenue: sum(amount)
+    avg_order_value: sum(amount) / count()
+    completed: status = 'completed'
   )
 
   table order_items (
@@ -369,7 +369,7 @@ describe('lang', () => {
       .toRenderSql('select min(users_0."age") as "col_0" from orders as base left join users as users_0 on users_0."id"=base."user_id"')
   })
 
-  it('can handle measures on unconnected join manys', async () => {
+  it('can handle measures on unconnected join_manys', async () => {
     await expect('from users select name, total_orders, amount_paid, sum(orders.amount) as owed')
       .toReturnRows(['Alice', 2, 100, 60], ['Bob', 1, 50, 40])
   })
@@ -527,7 +527,7 @@ describe('lang', () => {
       .toHaveDiagnostic(/Aggregates cannot be nested/i)
   })
 
-  it.skip('errors if you have a non-agg measure that uses a join many', () => {
+  it.skip('errors if you have a non-agg measure that uses a join_many', () => {
     expect(`table t (
       uid int
       join many users on users.id = uid
@@ -661,5 +661,19 @@ describe('lang', () => {
     expect('from alpha select count(*)').toRenderSql('select count(1) as "col_0" from alpha as base')
     expect('from alpha select avg_num').toRenderSql('select (avg(beta_0."num")) as "avg_num" from alpha as base left join beta as beta_0 on beta_0."alpha_id"=base."id"')
     // expect('from beta select alpha.avg_num').toRenderSql('')
+  })
+
+  it('supports legacy computed column syntax (expr as alias)', () => {
+    updateFile(`
+      table users (
+        id int primary_key,
+        name text,
+        age int,
+        age >= 18 as is_adult
+      )
+    `, 'models.gsql')
+
+    expect('from users select name where is_adult')
+      .toRenderSql('select base."name" as "name" from users as base where (base."age">=18)')
   })
 })
