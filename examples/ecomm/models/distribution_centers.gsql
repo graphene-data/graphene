@@ -1,13 +1,9 @@
 table distribution_centers (
-  /* Base columns */
-
   id INT64 primary_key,
   name STRING,
   latitude FLOAT64,
   longitude FLOAT64,
   distribution_center_geom GEOGRAPHY,
-
-  /* Join relationships */
 
   join many products on id = products.distribution_center_id,
   join many inventory_items on id = inventory_items.product_distribution_center_id

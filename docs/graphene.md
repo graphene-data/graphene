@@ -90,9 +90,6 @@ GSQL is comprised of `table` statements that declare tables and `select` stateme
 
 ```sql
 table orders (
-
-  /* Base columns */
-
   id BIGINT primary_key,
   user_id BIGINT,
   created_at DATETIME,
@@ -100,20 +97,13 @@ table orders (
   amount FLOAT, -- Amount paid by customer
   cost FLOAT, -- Cost of materials
 
-  /* Join relationships */
-
   join one users on user_id = users.id,
 
-  /* Scalar expressions */
-
-  status in ('Processing', 'Shipped', 'Complete') as revenue_recognized,
-
-  /* Agg expressions */
-
-  sum(case when revenue_recognized then amount else 0 end) as revenue,
-  sum(case when revenue_recognized then cost else 0 end) as cogs,
-  revenue - cogs as profit,
-  profit / revenue as profit_margin
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete'),
+  revenue: sum(case when revenue_recognized then amount else 0 end),
+  cogs: sum(case when revenue_recognized then cost else 0 end),
+  profit: revenue - cogs,
+  profit_margin: profit / revenue
 )
 
 table users (
@@ -139,9 +129,9 @@ Join relationships in a `table` statement declare joins that can be used when qu
 
 The other main difference about joins in GSQL vs. regular SQL is that you have to explain if there are many rows in the left table for each row in the right table, or vice versa. This additional bit of information allows Graphene to prevent incorrect aggregation as a result of row duplication (aka fan-out) through joins. See [Safe aggregation in fan-outs](#safe-aggregation-in-fan-outs) for more details.
 
-This information is provided with the two supported join types, `join one` and `join many`:
-- `join one` is used if there are many rows in the **left** table for each row in the **right** table.
-- `join many` is used if there are many rows in the **right** table for each row in the **left** table.
+This information is provided with the two supported join types, `join_one` and `join_many`:
+- `join_one` is used if there are many rows in the **left** table for each row in the **right** table.
+- `join_many` is used if there are many rows in the **right** table for each row in the **left** table.
 
 In the example above with `orders` and `users`, the joins confirm that there are many orders per user, and only one user per order.
 
@@ -179,7 +169,7 @@ table users (
 
 **Stored expressions** are GSQL expressions (ie. any arbitrary combination of functions, operators, and column references) that you want to make reusable to queries. Stored expressions are great for canonizing metrics, segments, and other important business definitions.
 
-A stored expression must be given a name via `as`. It can then be referenced by name in queries that use the parent table. See [Using stored expressions in queries](#using-stored-expressions-in-queries) below for how to use stored expressions in queries.
+A stored expression must be given a name via `name: expression`. It can then be referenced by name in queries that use the parent table. See [Using stored expressions in queries](#using-stored-expressions-in-queries) below for how to use stored expressions in queries.
 
 Like expressions in regular SQL, expressions in GSQL are either scalar or aggregative. In BI parlance, these would be called dimensions and measures, respectively.
 
@@ -190,15 +180,13 @@ table orders (
   ...
 
   /* Scalar expressions */
-
-  status in ('Processing', 'Shipped', 'Complete') as revenue_recognized,
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete'),
 
   /* Agg expressions */
-
-  sum(case when revenue_recognized then amount else 0 end) as revenue,
-  sum(case when revenue_recognized then cost else 0 end) as cogs,
-  revenue - cogs as profit, -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
-  profit / revenue as profit_margin
+  revenue: sum(case when revenue_recognized then amount else 0 end),
+  cogs: sum(case when revenue_recognized then cost else 0 end),
+  profit: revenue - cogs, -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
+  profit_margin: profit / revenue
 )
 ```
 
@@ -303,12 +291,11 @@ table orders (
 
   join one users on user_id = users.id,
 
-  status in ('Processing', 'Shipped', 'Complete') as revenue_recognized,
-
-  sum(case when revenue_recognized then amount else 0 end) as revenue,
-  sum(case when revenue_recognized then cost else 0 end) as cogs,
-  revenue - cogs as profit,
-  profit / revenue as profit_margin
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete'),
+  revenue: sum(case when revenue_recognized then amount else 0 end),
+  cogs: sum(case when revenue_recognized then cost else 0 end),
+  profit: revenue - cogs,
+  profit_margin: profit / revenue
 )
 ```
 
@@ -366,7 +353,7 @@ A common and dangerous user error in regular SQL is aggregating data incorrectly
 
 For example, after joining `users` to `orders`, your joined result will have some users repeated multiple times if they've made multiple purchases. If you wanted to find the average age of customers over this joined result, simply using an `avg(users.age)` would be _incorrect_, because you would be weighting the average towards users with multiple purchases, rather than taking the true average.
 
-GSQL aims to solve this problem. With the additional information provided via `join one` and `join many`, Graphene knows under which scenarios when row dupliation occurs, and will rewrite aggregative expressions in a way that ignores the duplicate rows.
+GSQL aims to solve this problem. With the additional information provided via `join_one` and `join_many`, Graphene knows under which scenarios when row dupliation occurs, and will rewrite aggregative expressions in a way that ignores the duplicate rows.
 
 The query `select avg(users.age) from orders` will be rewritten to the following SQL when Graphene queries the underlying database (this is for BigQuery, specifically):
 
@@ -403,12 +390,11 @@ table orders (
 
   join one users on user_id = users.id,
 
-  status in ('Processing', 'Shipped', 'Complete') as revenue_recognized,
-
-  sum(case when revenue_recognized then amount else 0 end) as revenue,
-  sum(case when revenue_recognized then cost else 0 end) as cogs,
-  revenue - cogs as profit,
-  profit / revenue as profit_margin
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete'),
+  revenue: sum(case when revenue_recognized then amount else 0 end),
+  cogs: sum(case when revenue_recognized then cost else 0 end),
+  profit: revenue - cogs,
+  profit_margin: profit / revenue
 )
 
 table users (
@@ -420,19 +406,13 @@ table users (
   join many orders on id = orders.user_id,
   join one user_facts on id = user_facts.id,
 
-  /* Scalar expressions */
-
-  user_facts.ltv as ltv,
-  user_facts.lifetime_orders as lifetime_orders
+  ltv: user_facts.ltv,
+  lifetime_orders: user_facts.lifetime_orders
 )
 
 table user_facts as (
-  select
-    id,
-    orders.revenue as ltv,
-    count(orders.id) as lifetime_orders,
-  from users
-  group by id
+  select id, orders.revenue as ltv, count(orders.id) as lifetime_orders,
+  from users group by id
 )
 ```
 

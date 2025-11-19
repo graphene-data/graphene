@@ -1,6 +1,4 @@
 table events (
-  /* Base columns */
-
   id INT64 primary_key,
   user_id INT64,
   sequence_number INT64,
@@ -15,15 +13,11 @@ table events (
   uri STRING,
   event_type STRING, -- One of 'product', 'cart', 'department', 'purchase', 'cancel', 'home'
 
-  /* Join relationships */
+  join one users on users.id = user_id,
 
-  join one users on users.id = user_id
-
-  /* Aggregate expressions */
-
-  count(distinct session_id) as sessions_count
-  count(distinct user_id) as active_users
-  safe_divide(count(*), count(distinct session_id)) as avg_events_per_session
+  sessions_count: count(distinct session_id),
+  active_users: count(distinct user_id),
+  avg_events_per_session: safe_divide(count(*), count(distinct session_id))
 )
 
 

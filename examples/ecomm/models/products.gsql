@@ -1,6 +1,4 @@
 table products (
-  /* Base columns */
-
   id INT64 primary_key,
   cost FLOAT64,
   category STRING,
@@ -10,8 +8,6 @@ table products (
   department STRING,
   sku STRING,
   distribution_center_id INT64,
-
-  /* Join relationships */
 
   join one distribution_centers on distribution_centers.id = distribution_center_id,
   join many inventory_items on id = inventory_items.product_id,
