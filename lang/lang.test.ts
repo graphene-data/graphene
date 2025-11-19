@@ -676,4 +676,16 @@ describe('lang', () => {
     expect('from users select name where is_adult')
       .toRenderSql('select base."name" as "name" from users as base where (base."age">=18)')
   })
+
+  it('has correct precedence between binary and logic expressions', () => {
+    updateFile(`
+      table flights (
+        cancelled text,
+        diverted text,
+        is_cancelled_or_diverted: cancelled = 'Y' or diverted = 'Y'
+      )
+    `, 'flights.gsql')
+
+    expect('from flights select is_cancelled_or_diverted').toHaveNoErrors()
+  })
 })

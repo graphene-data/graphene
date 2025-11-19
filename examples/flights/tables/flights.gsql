@@ -1,5 +1,4 @@
 table flights (
-  
   id2 BIGINT primary_key, -- Unique identifier for the flight record
   carrier VARCHAR, -- Airline carrier code (e.g., 'AA', 'UA', 'DL')
   origin VARCHAR, -- IATA airport code for the origin airport
@@ -31,4 +30,3 @@ table flights (
   cancellation_rate: avg(case when cancelled = 'Y' then 1 else 0 end), -- Percentage of flights that were cancelled (0-1 scale)
   diversion_rate: avg(case when diverted = 'Y' then 1 else 0 end) -- Percentage of flights that were diverted (0-1 scale)
 );
-
