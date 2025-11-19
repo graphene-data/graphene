@@ -120,21 +120,22 @@ JoinCondition[@isGroup=Expression, @name=BinaryExpression] {
   Ref "=" Ref
 }
 
-// Expressions
 // We use a parameterized compositeExpression to avoid duplication between 'expression' (which can start with anything)
 // and 'computedExpression' (which cannot start with a parenthesis, to avoid ambiguity with the 'name: expr' syntax).
 expression[@isGroup=Expression] {
   compositeExpression<baseExpression | parenExpression>
 }
 
-// computedExpression is the restricted version for the old `expr as alias` syntax.
-// It explicitly excludes expressions starting with '(', because that would clash with `alias: (expr)`
-// since `alias` is just an Identifier, and `expr` could be `Identifier (...)`.
+// computedExpression is the restricted expression rule we use for `expr as alias` syntax.
+// Because we dont require commas, lezer can't tell if `count(x)` a function call, or `count` in one def, while `(x)` is the start of a new one.
+// The fix here is to disallow expressions that start with parentheses, which seems to fix the ambiguity.
 computedExpression[@isGroup=Expression] {
   compositeExpression<baseExpression>
 }
 
-// compositeExpression builds the recursive expression structure (binary ops, etc) on top of a base T.
+// This is a workaround to get precedence working properly. Without it, BinaryExpression (for example) would interpret `A = B or C` as `A = (B or C)`
+// It seems like having an explicit rule works better than just using the generic T in such cases.
+// NB that we only need this as part of our support for the legacy `expr as alias` in `table` statements.
 compositeExpression<T> {
   BinaryExpression<T> |
   InExpression<T> |
