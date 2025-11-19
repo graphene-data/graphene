@@ -80,11 +80,11 @@ table establishments_open (
   FRANCHISEE_LOCATION as franchisee_location, -- Street, unit, city, state, zip of Franchisee Name in JSON structure
   FRANCHISOR_LOCATION as franchisor_location, -- Street, unit, city, state, zip of Franchisor Name in JSON structure
   LOCATION_LOCATED_IN_LOCATION_ADDRESS as location_located_in_location_address, -- Street, unit, city, state, zip of Location's Located In address in JSON structure
-  WEBSITE_TRAFFIC_HISTORY as website_traffic_history, -- Historical estimated monthly visitors
+  WEBSITE_TRAFFIC_HISTORY as website_traffic_history -- Historical estimated monthly visitors
 
-  join many contacts on establishment_id = contacts.establishment_id,
-  join many menus on establishment_id = menus.establishment_id,
-  join many menu_items on establishment_id = menu_items.establishment_id,
-  join many ratings on establishment_id = ratings.establishment_id,
+  join many contacts on establishment_id = contacts.establishment_id
+  join many menus on establishment_id = menus.establishment_id
+  join many menu_items on establishment_id = menu_items.establishment_id
+  join many ratings on establishment_id = ratings.establishment_id
   join many technologies on establishment_id = technologies.establishment_id
 )

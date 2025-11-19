@@ -6,17 +6,17 @@ table technologies (
 
   /* Aliasing all the columns to lowercase to make query writing easier */
 
-  UNIQUE_ID as unique_id, -- Unique ID of the record
-  IS_CURRENT as is_current, -- Indicates technologies that are currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
-  FIRST_OBSERVED_AT as first_observed_at, -- When the tech was first seen by Brizo
-  LAST_OBSERVED_AT as last_observed_at, -- When the tech was last seen by Brizo
-  CATEGORY as category, -- Category of the technology
-  ESTABLISHMENT_ID as establishment_id, -- Unique ID of the related establishment
-  LINK as link, -- Link to where the tech was found
-  NAME as name, -- The tech vendor
-  SUBCATEGORY as subcategory, -- Technology Subcategory
-  OBSERVATIONS as observations, -- Dates of when establishment was detected on technology
+  UNIQUE_ID as unique_id -- Unique ID of the record
+  IS_CURRENT as is_current -- Indicates technologies that are currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
+  FIRST_OBSERVED_AT as first_observed_at -- When the tech was first seen by Brizo
+  LAST_OBSERVED_AT as last_observed_at -- When the tech was last seen by Brizo
+  CATEGORY as category -- Category of the technology
+  ESTABLISHMENT_ID as establishment_id -- Unique ID of the related establishment
+  LINK as link -- Link to where the tech was found
+  NAME as name -- The tech vendor
+  SUBCATEGORY as subcategory -- Technology Subcategory
+  OBSERVATIONS as observations -- Dates of when establishment was detected on technology
 
-  join one establishments_open on establishment_id = establishments_open.establishment_id,
+  join one establishments_open on establishment_id = establishments_open.establishment_id
   join one establishments_closed on establishment_id = establishments_closed.establishment_id
 )

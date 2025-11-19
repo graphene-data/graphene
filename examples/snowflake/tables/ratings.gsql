@@ -6,21 +6,21 @@ table ratings (
 
   /* Aliasing all the columns to lowercase to make query writing easier */
 
-  UNIQUE_ID as unique_id, -- Unique ID of the record
-  IS_CURRENT as is_current, -- Indicates the most recent entry per ratings source currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
-  SEEN as seen, -- Date
-  SCORE as score, -- Rating score 1-5
-  CHECKINS as checkins, -- Facebook total checkins
-  FOLLOWERS as followers, -- Total social media Followers
-  FOLLOWINGS as followings, -- Number of pages/people followed by the establishment on social media
-  LIKES as likes, -- Total social media Likes
-  POST_COUNT as post_count, -- Number of posts from the establishment
-  REVIEW_COUNT as review_count, -- Total reviews of the establishment
-  AWARDS as awards, -- Awards of the establishment
-  ESTABLISHMENT_ID as establishment_id, -- Unique ID of the related establishment
-  LINK as link, -- Link to the source of the rating
-  SOURCE as source, -- Source of the rating
+  UNIQUE_ID as unique_id -- Unique ID of the record
+  IS_CURRENT as is_current -- Indicates the most recent entry per ratings source currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
+  SEEN as seen -- Date
+  SCORE as score -- Rating score 1-5
+  CHECKINS as checkins -- Facebook total checkins
+  FOLLOWERS as followers -- Total social media Followers
+  FOLLOWINGS as followings -- Number of pages/people followed by the establishment on social media
+  LIKES as likes -- Total social media Likes
+  POST_COUNT as post_count -- Number of posts from the establishment
+  REVIEW_COUNT as review_count -- Total reviews of the establishment
+  AWARDS as awards -- Awards of the establishment
+  ESTABLISHMENT_ID as establishment_id -- Unique ID of the related establishment
+  LINK as link -- Link to the source of the rating
+  SOURCE as source -- Source of the rating
 
-  join one establishments_open on establishment_id = establishments_open.establishment_id,
+  join one establishments_open on establishment_id = establishments_open.establishment_id
   join one establishments_closed on establishment_id = establishments_closed.establishment_id
 )

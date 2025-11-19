@@ -1,32 +1,32 @@
 table users (
-  id INT64 primary_key,
-  first_name STRING,
-  last_name STRING,
-  email STRING,
-  age INT64,
-  gender STRING,
-  state STRING,
-  street_address STRING,
-  postal_code STRING,
-  city STRING,
-  country STRING,
-  latitude FLOAT64,
-  longitude FLOAT64,
-  traffic_source STRING,
-  created_at TIMESTAMP,
-  user_geom GEOGRAPHY,
+  id INT64 primary_key
+  first_name STRING
+  last_name STRING
+  email STRING
+  age INT64
+  gender STRING
+  state STRING
+  street_address STRING
+  postal_code STRING
+  city STRING
+  country STRING
+  latitude FLOAT64
+  longitude FLOAT64
+  traffic_source STRING
+  created_at TIMESTAMP
+  user_geom GEOGRAPHY
 
-  join many orders on id = orders.user_id,
-  join many order_items on id = order_items.user_id,
-  join many events on id = events.user_id,
-  join one user_facts on id = user_facts.id,
+  join many orders on id = orders.user_id
+  join many order_items on id = order_items.user_id
+  join many events on id = events.user_id
+  join one user_facts on id = user_facts.id
 
-  lifetime_value: user_facts.ltv, -- aka ltv
-  lifetime_orders: user_facts.order_count,
-  is_customer: user_facts.order_count > 0,
-  first_purchase_at: user_facts.first_purchase_at,
-  last_purchase_at: user_facts.last_purchase_at,
-  days_to_first_purchase: timestamp_diff(user_facts.first_purchase_at, created_at, minute) / 1440.0,
+  lifetime_value: user_facts.ltv -- aka ltv
+  lifetime_orders: user_facts.order_count
+  is_customer: user_facts.order_count > 0
+  first_purchase_at: user_facts.first_purchase_at
+  last_purchase_at: user_facts.last_purchase_at
+  days_to_first_purchase: timestamp_diff(user_facts.first_purchase_at, created_at, minute) / 1440.0
   -- timestamp_diff(current_timestamp(), last_purchase_at, minute) as time_since_last_purchase_minutes -- current_timestamp() not supported yet
 
   conversion_rate: safe_divide(orders.customer_count, count(id)) -- percentage of users who made at least one purchase

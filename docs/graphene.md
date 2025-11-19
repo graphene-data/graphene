@@ -90,28 +90,28 @@ GSQL is comprised of `table` statements that declare tables and `select` stateme
 
 ```sql
 table orders (
-  id BIGINT primary_key,
-  user_id BIGINT,
-  created_at DATETIME,
-  status STRING, -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT, -- Amount paid by customer
-  cost FLOAT, -- Cost of materials
+  id BIGINT primary_key
+  user_id BIGINT
+  created_at DATETIME
+  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
+  amount FLOAT -- Amount paid by customer
+  cost FLOAT -- Cost of materials
 
-  join one users on user_id = users.id,
+  join one users on user_id = users.id
 
-  revenue_recognized: status in ('Processing', 'Shipped', 'Complete'),
-  revenue: sum(case when revenue_recognized then amount else 0 end),
-  cogs: sum(case when revenue_recognized then cost else 0 end),
-  profit: revenue - cogs,
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
+  revenue: sum(case when revenue_recognized then amount else 0 end)
+  cogs: sum(case when revenue_recognized then cost else 0 end)
+  profit: revenue - cogs
   profit_margin: profit / revenue
 )
 
 table users (
-  id BIGINT primary_key,
-  name VARCHAR,
-  email VARCHAR,
-  age INTEGER,
-  country_code VARCHAR,
+  id BIGINT primary_key
+  name VARCHAR
+  email VARCHAR
+  age INTEGER
+  country_code VARCHAR
 
   join many orders on id = orders.user_id
 )
@@ -144,18 +144,18 @@ Sometimes there are multiple valid ways to join two tables together. You can mod
 ```sql
 table projects (
   ...
-  owner_id BIGINT,
-  viewer_id BIGINT,
+  owner_id BIGINT
+  viewer_id BIGINT
 
-  join one users as project_owner on owner_id = project_owner.id,
+  join one users as project_owner on owner_id = project_owner.id
   join one users as project_viewer on viewer_id = project_viewer.id
 )
 
 table users (
   ...
-  id BIGINT,
+  id BIGINT
 
-  join many projects as projects_as_owner on id = projects_as_owner.owner_id,
+  join many projects as projects_as_owner on id = projects_as_owner.owner_id
   join many projects as projects_as_viewer on id = projects_as_viewer.viewer_id
 )
 ```
@@ -180,12 +180,12 @@ table orders (
   ...
 
   /* Scalar expressions */
-  revenue_recognized: status in ('Processing', 'Shipped', 'Complete'),
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
 
   /* Agg expressions */
-  revenue: sum(case when revenue_recognized then amount else 0 end),
-  cogs: sum(case when revenue_recognized then cost else 0 end),
-  profit: revenue - cogs, -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
+  revenue: sum(case when revenue_recognized then amount else 0 end)
+  cogs: sum(case when revenue_recognized then cost else 0 end)
+  profit: revenue - cogs -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
   profit_margin: profit / revenue
 )
 ```
@@ -247,15 +247,15 @@ table orders (
 table users (
   ...
 
-  join many orders on id = orders.user_id,
+  join many orders on id = orders.user_id
   join one country on country_code = countries.code
 )
 
 table countries (
-  code VARCHAR primary_key,
-  name VARCHAR,
-  currency VARCHAR,
-  free_shipping BOOLEAN,
+  code VARCHAR primary_key
+  name VARCHAR
+  currency VARCHAR
+  free_shipping BOOLEAN
 
   join many users on code = users.country_code
 )
@@ -282,19 +282,19 @@ Again, using the orders table from before:
 
 ```sql
 table orders (
-  id BIGINT primary_key,
-  user_id BIGINT,
-  created_at DATETIME,
-  status STRING, -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT, -- Amount paid by customer
-  cost FLOAT, -- Cost of materials
+  id BIGINT primary_key
+  user_id BIGINT
+  created_at DATETIME
+  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
+  amount FLOAT -- Amount paid by customer
+  cost FLOAT -- Cost of materials
 
-  join one users on user_id = users.id,
+  join one users on user_id = users.id
 
-  revenue_recognized: status in ('Processing', 'Shipped', 'Complete'),
-  revenue: sum(case when revenue_recognized then amount else 0 end),
-  cogs: sum(case when revenue_recognized then cost else 0 end),
-  profit: revenue - cogs,
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
+  revenue: sum(case when revenue_recognized then amount else 0 end)
+  cogs: sum(case when revenue_recognized then cost else 0 end)
+  profit: revenue - cogs
   profit_margin: profit / revenue
 )
 ```
@@ -381,32 +381,32 @@ You can turn the output of any `select` statement into a table with `table foo a
 
 ```sql
 table orders (
-  id BIGINT primary_key,
-  user_id BIGINT,
-  created_at DATETIME,
-  status STRING, -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT, -- Amount paid by customer
-  cost FLOAT, -- Cost of materials
+  id BIGINT primary_key
+  user_id BIGINT
+  created_at DATETIME
+  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
+  amount FLOAT -- Amount paid by customer
+  cost FLOAT -- Cost of materials
 
-  join one users on user_id = users.id,
+  join one users on user_id = users.id
 
-  revenue_recognized: status in ('Processing', 'Shipped', 'Complete'),
-  revenue: sum(case when revenue_recognized then amount else 0 end),
-  cogs: sum(case when revenue_recognized then cost else 0 end),
-  profit: revenue - cogs,
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
+  revenue: sum(case when revenue_recognized then amount else 0 end)
+  cogs: sum(case when revenue_recognized then cost else 0 end)
+  profit: revenue - cogs
   profit_margin: profit / revenue
 )
 
 table users (
-  id BIGINT primary_key,
-  name VARCHAR,
-  email VARCHAR,
-  age INTEGER,
+  id BIGINT primary_key
+  name VARCHAR
+  email VARCHAR
+  age INTEGER
 
-  join many orders on id = orders.user_id,
-  join one user_facts on id = user_facts.id,
+  join many orders on id = orders.user_id
+  join one user_facts on id = user_facts.id
 
-  ltv: user_facts.ltv,
+  ltv: user_facts.ltv
   lifetime_orders: user_facts.lifetime_orders
 )
 
