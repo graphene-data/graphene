@@ -88,6 +88,12 @@
             { "include": "#comments" },
             { "include": "#strings" },
             { "include": "#quoted-identifiers" },
+            {
+              "match": "([A-Za-z_][A-Za-z0-9_$]*)\\s*:(?!:)",
+              "captures": {
+                "1": { "name": "entity.name.tag.graphene.gsql" }
+              }
+            },
             { "include": "#types" },
             { "include": "#keywords" },
             { "include": "#functions" },

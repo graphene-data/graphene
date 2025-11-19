@@ -1,7 +1,4 @@
 table aircraft_models (
-  
-  /* Base columns */
-
   aircraft_model_code VARCHAR primary_key, -- Unique code identifying the aircraft model
   manufacturer VARCHAR, -- Name of the aircraft manufacturer (e.g., 'BOEING', 'AIRBUS', 'CESSNA')
   model VARCHAR, -- Model name or designation (e.g., '737', 'A320', '172')
@@ -13,8 +10,6 @@ table aircraft_models (
   seats BIGINT, -- Number of passenger seats (0 for cargo-only or single-seat aircraft)
   weight BIGINT, -- Maximum takeoff weight in pounds
   speed BIGINT, -- Maximum speed in knots
-
-  /* Join relationships */
 
   join many aircraft on aircraft_model_code = aircraft.aircraft_model_code
 );

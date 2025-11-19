@@ -1,7 +1,5 @@
 table airports (
   
-  /* Base columns */
-
   id BIGINT primary_key, -- Unique identifier for the airport
   code VARCHAR, -- IATA airport code (e.g., 'JFK', 'LAX', 'ORD')
   site_number VARCHAR, -- FAA site number identifier
@@ -29,8 +27,6 @@ table airports (
   mil_rts VARCHAR, -- Military routes indicator ('Y' = yes, 'N' = no, empty = not applicable)
   cntl_twr VARCHAR, -- Control tower presence ('Y' = yes, 'N' = no)
   major VARCHAR, -- Major airport indicator ('Y' = yes, 'N' = no) - indicates if this is a major hub airport
-
-  /* Join relationships */
 
   join many flights as departures on code = departures.origin,
   join many flights as arrivals on code = arrivals.destination

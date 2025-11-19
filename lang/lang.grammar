@@ -106,7 +106,8 @@ JoinType {
 }
 
 ComputedDef {
-  computedExpression Kw<"as"> Alias
+  computedExpression Kw<"as"> Alias |
+  Alias ":" expression
 }
 
 DataType {
@@ -120,29 +121,41 @@ JoinCondition[@isGroup=Expression, @name=BinaryExpression] {
 }
 
 // Expressions
+// We use a parameterized compositeExpression to avoid duplication between 'expression' (which can start with anything)
+// and 'computedExpression' (which cannot start with a parenthesis, to avoid ambiguity with the 'name: expr' syntax).
 expression[@isGroup=Expression] {
-  BinaryExpression |
+  compositeExpression<baseExpression | parenExpression>
+}
+
+// computedExpression is the restricted version for the old `expr as alias` syntax.
+// It explicitly excludes expressions starting with '(', because that would clash with `alias: (expr)`
+// since `alias` is just an Identifier, and `expr` could be `Identifier (...)`.
+computedExpression[@isGroup=Expression] {
+  compositeExpression<baseExpression>
+}
+
+// compositeExpression builds the recursive expression structure (binary ops, etc) on top of a base T.
+compositeExpression<T> {
+  BinaryExpression<T> |
+  InExpression<T> |
+  NullTestExpression<T> |
+  T
+}
+
+// baseExpression includes all expression starts that are NOT parentheses.
+baseExpression {
   UnaryExpression |
   CaseExpression |
   ExistsExpression |
-  InExpression |
-  NullTestExpression |
-  literal |
-  Param |
-  Ref |
-  Count |
+  computedPrimary |
   ExtractExpression |
-  FunctionCall |
-  Parenthetical |
-  SubqueryExpression
+  Param
 }
 
-BinaryExpression {
-  expression !or Kw<"or"> expression |
-  expression !and Kw<"and"> expression |
-  expression !compare ComparisonOp expression |
-  expression !add AddOp expression |
-  expression !multiply MulOp expression
+// parenExpression includes all expression starts that ARE parentheses.
+parenExpression {
+  Parenthetical |
+  SubqueryExpression
 }
 
 UnaryExpression {
@@ -152,10 +165,6 @@ UnaryExpression {
 ComparisonOp {
   "=" | "!=" | "<>" | "<" | ">" | "<=" | ">=" |
   Kw<"like"> | Kw<"not"> Kw<"like">
-}
-
-NullTestExpression {
-  expression Kw<"is"> Kw<"not">? Kw<"null">
 }
 
 AddOp { "+" | "-" }
@@ -181,11 +190,6 @@ ExistsExpression {
   Kw<"exists"> "(" QueryStatement ")"
 }
 
-InExpression {
-  expression !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
-  expression !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
-}
-
 InValueList {
   expression ("," expression)* ","?
 }
@@ -200,21 +204,28 @@ InValueList {
   binary @cut
 }
 
-// Computed defs cannot start with parenthetical to avoid ambiguity
-computedExpression[@isGroup=Expression] {
-  BinaryExpression |
-  UnaryExpression |
-  CaseExpression |
-  ExistsExpression |
-  InExpression |
-  computedPrimary
+BinaryExpression<T> {
+  T !or Kw<"or"> expression |
+  T !and Kw<"and"> expression |
+  T !compare ComparisonOp expression |
+  T !add AddOp expression |
+  T !multiply MulOp expression
+}
+
+InExpression<T> {
+  T !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
+  T !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
+}
+
+NullTestExpression<T> {
+  T !compare Kw<"is"> Kw<"not">? Kw<"null">
 }
 
 computedPrimary {
   literal |
+  FunctionCall |
   Ref |
-  Count |
-  FunctionCall
+  Count
 }
 
 Parenthetical {
@@ -273,6 +284,7 @@ Alias { Identifier }
   @precedence { Comment, "-" }
   @precedence { Comment, "*" }
   @precedence { Comment, "/" }
+  ":"
 }
 
 @external specialize {Identifier} specializeIdentifier from "./tokens.js" {
