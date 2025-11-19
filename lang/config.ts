@@ -1,8 +1,6 @@
 import * as fs from 'fs'
 import path from 'path'
 
-export let config: Config = {dialect: 'duckdb', root: ''} as Config
-
 export interface Config {
   root: string
   dialect: string
@@ -22,12 +20,22 @@ export interface Config {
     schema?: string
     database?: string
   }
+
+  duckdb?: Record<string, unknown>
 }
 
+export type ConfigInput = Omit<Config, 'dialect'> & {dialect?: Config['dialect']}
+
+export let config: Config = {dialect: 'duckdb', root: ''} as Config
+
 // Used by tests
-export function setConfig (cfg: Config) {
+export function setConfig (cfg: ConfigInput) {
+  let dialect = cfg.dialect || 'duckdb'
+  if (cfg.bigquery) dialect = 'bigquery'
+  else if (cfg.snowflake) dialect = 'snowflake'
+  else if (cfg.duckdb) dialect = 'duckdb'
   Object.keys(config).forEach((key) => delete config[key])
-  Object.assign(config, cfg)
+  Object.assign(config, cfg, {dialect})
 }
 
 // Read graphene config out of package.json
@@ -43,9 +51,5 @@ export function loadConfig (dir:string) {
     console.warn('No package.json found in current directory')
   }
 
-  let dialect = 'duckdb'
-  if (packageJsonObject.bigquery) dialect = 'bigquery'
-  else if (packageJsonObject.snowflake) dialect = 'snowflake'
-
-  setConfig({...packageJsonObject, dialect, root: packageJsonObject.root || process.cwd()})
+  setConfig({...packageJsonObject, root: packageJsonObject.root || process.cwd()})
 }
