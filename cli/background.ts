@@ -1,8 +1,11 @@
-import {spawn} from 'child_process'
+import {spawn, exec} from 'child_process'
+import {promisify} from 'util'
 import {fileURLToPath} from 'url'
 import fs from 'fs-extra'
 import path from 'path'
 import {config} from '../lang/config.ts'
+
+const execAsync = promisify(exec)
 
 export type StopStatus = 'none' | 'stale' | 'stopped'
 
@@ -48,17 +51,10 @@ export function getGrapheneCache (root: string): string {
   return path.join(root, 'node_modules', '.graphene')
 }
 
-export function getPidFilePath (root: string): string {
-  return path.join(getGrapheneCache(root), process.env.NODE_ENV == 'test' ? 'test.pid' : 'serve.pid')
-}
-
-function targetPids (pid: number): number[] {
-  if (process.platform === 'win32') return [pid]
-  return [pid, -pid]
-}
-
 function sendSignal (pid: number, signal: NodeJS.Signals): boolean {
-  for (let target of targetPids(pid)) {
+  let pids = process.platform === 'win32' ? [pid] : [pid, -pid]
+
+  for (let target of pids) {
     try {
       process.kill(target, signal)
     } catch (err) {
@@ -71,44 +67,62 @@ function sendSignal (pid: number, signal: NodeJS.Signals): boolean {
 }
 
 export async function stopGrapheneIfRunning (): Promise<void> {
-  let running = await isServerRunning()
-  if (!running) return
-
-  let pidFile = getPidFilePath(config.root)
-  let pid = await readPid(pidFile)
+  let port = Number(process.env.GRAPHENE_PORT) || 4000
+  let pid = await getPidOnPort(port)
   if (!pid) return
 
   console.log(`Stopping server (${pid})`)
   sendSignal(pid, 'SIGTERM')
 
   let end = Date.now() + 5000
-  while (Date.now() < end && isServerRunning()) {
+  while (Date.now() < end) {
+    if (!(await getPidOnPort(port))) break
     await new Promise(resolve => setTimeout(resolve, 100))
   }
-  if (!isServerRunning()) return
-
-  sendSignal(pid, 'SIGKILL')
-  await fs.remove(pidFile)
-}
-
-export async function readPid (pidFile: string): Promise<number | undefined> {
-  if (!(await fs.pathExists(pidFile))) return undefined
-  let contents = (await fs.readFile(pidFile, 'utf8')).trim()
-  if (!contents) return undefined
-  let pid = Number.parseInt(contents, 10)
-  if (Number.isNaN(pid)) return undefined
-  return pid
-}
-
-export async function isServerRunning (): Promise<boolean> {
-  let pidFile = getPidFilePath(config.root)
-  let pid = await readPid(pidFile)
-  if (!pid) return false
-  try {
-    process.kill(pid, 0) // sending `0` won't actually kill it, but will fail if that pid isnt running
-    return true
-  } catch {
-    fs.removeSync(pidFile) // clean up pidfile since process wasn't running
-    return false
+  if (await getPidOnPort(port)) {
+    sendSignal(pid, 'SIGKILL')
   }
+
+  if (await getPidOnPort(port)) {
+    console.error('Failed to stop previous Graphene server')
+  }
+}
+
+export async function isServerRunning (portOverride?: number): Promise<boolean> {
+  let port = portOverride || Number(process.env.GRAPHENE_PORT) || 4000
+  return !!(await getPidOnPort(port))
+}
+
+async function getPidOnPort (port: number): Promise<number | undefined> {
+  try {
+    if (process.platform === 'win32') {
+      let {stdout} = await execAsync(`netstat -ano | findstr :${port}`)
+      let lines = stdout.trim().split('\n')
+      for (let line of lines) {
+        let parts = line.trim().split(/\s+/)
+        if (parts.length < 5) continue
+        let localAddress = parts[1]
+        let pid = parseInt(parts[parts.length - 1], 10)
+        if (localAddress.endsWith(`:${port}`)) {
+          return pid
+        }
+      }
+    } else {
+      return new Promise((resolve) => {
+        let child = spawn('lsof', ['-i', `:${port}`, '-t'])
+        let stdout = ''
+        child.stdout.on('data', d => stdout += d.toString())
+        child.on('close', (code) => {
+          if (code !== 0) return resolve(undefined)
+          let pid = parseInt(stdout.trim(), 10)
+          resolve(isNaN(pid) ? undefined : pid)
+        })
+        child.on('error', () => resolve(undefined))
+      })
+    }
+  } catch (e) {
+    console.warn('Failed to check for server:', e.message)
+    return undefined
+  }
+  return undefined
 }

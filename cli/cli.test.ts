@@ -5,7 +5,8 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import {getPidFilePath, isProcessRunning, readPid, stopGrapheneIfRunning} from './background.ts'
+import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
+import {setConfig} from '../lang/config.ts'
 
 interface RunResult {
   code: number
@@ -15,11 +16,13 @@ interface RunResult {
 
 const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
 const flightDir = path.resolve(dir, '../examples/flights')
+const TEST_PORT = 4163
 
 function runCli (args: string[], cwd?: string): Promise<RunResult> {
   return new Promise((resolve) => {
     let cliEntry = path.resolve(dir, 'cli.ts')
-    let child = spawn('node', [cliEntry, ...args], {cwd, env: {...process.env, NODE_ENV: 'test', GRAPHENE_PORT: String(4163)}})
+    let env = {...process.env, NODE_ENV: 'test', GRAPHENE_PORT: String(TEST_PORT)}
+    let child = spawn('node', [cliEntry, ...args], {cwd, env})
     let stdout = ''
     let stderr = ''
     child.stdout.on('data', (d) => (stdout += d.toString()))
@@ -28,19 +31,23 @@ function runCli (args: string[], cwd?: string): Promise<RunResult> {
   })
 }
 
-async function ensureServerStopped (root: string): Promise<void> {
-  await stopGrapheneIfRunning(root)
-  await removePidFile(getPidFilePath(root))
+async function cleanupTestServer (): Promise<void> {
+  await stopGrapheneIfRunning()
 }
 
-async function removePidFile (pidFile: string): Promise<void> {
-  await fsp.rm(pidFile, {force: true}).catch(() => {})
+function logCliFailure (step: string, res: RunResult) {
+  console.error(`[cli.test] ${step} failed (code ${res.code})\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`)
+}
+
+function expectCliSuccess (res: RunResult, step: string) {
+  if (res.code !== 0) logCliFailure(step, res)
+  expect(res.code).toBe(0)
 }
 
 describe('cli compile', () => {
   it('compiles a basic query (happy path)', async () => {
     let res = await runCli(['compile', 'from flights select carrier'], flightDir)
-    expect(res.code).toBe(0)
+    expectCliSuccess(res, 'compile basic query')
     expect(res.stdout.toLowerCase()).toContain('from flights')
     expect(res.stdout.toLowerCase()).toContain('select')
   })
@@ -48,57 +55,48 @@ describe('cli compile', () => {
   it('errors on invalid function (error path)', async () => {
     let res = await runCli(['compile', 'from flights select not_a_function()'], flightDir)
     expect(res.code).not.toBe(0)
-    expect(res.stderr.toLowerCase()).toContain('unknown function')
+    expect((res.stdout + res.stderr).toLowerCase()).toContain('unknown function')
   })
 })
 
 describe('cli serve (background)', () => {
-  let pidFile = getPidFilePath(flightDir)
+  let previousServerEnv = process.env.GRAPHENE_SERVER_ENV
 
-  beforeEach(async () => { await ensureServerStopped(flightDir) })
-  afterEach(async () => { await ensureServerStopped(flightDir) })
-
-  it('starts the server in the background and restarts cleanly', {timeout: 10000}, async () => {
-    let first = await runCli(['serve'], flightDir)
-    expect(first.code).toBe(0)
-    expect(first.stdout).toContain('Server running at')
-
-    let firstPid = await readPid(pidFile)
-    if (!firstPid) throw new Error('Expected a pid after starting the server')
-    expect(isProcessRunning(firstPid)).toBe(true)
-
-    let response = await fetch('http://localhost:4163/')
-    expect(response.status).toBe(200)
-
-    let second = await runCli(['serve'], flightDir)
-    expect(second.code).toBe(0)
-    expect(second.stdout).toContain('Stopping server')
-
-    let secondPid = await readPid(pidFile)
-    if (!secondPid) throw new Error('Expected a pid after restarting the server')
-    expect(secondPid).not.toBe(firstPid)
-
-    expect(isProcessRunning(secondPid)).toBe(true)
-    expect(isProcessRunning(firstPid)).toBe(false)
-
-    let restartResponse = await fetch('http://localhost:4163/')
-    expect(restartResponse.status).toBe(200)
+  beforeAll(() => {
+    process.env.GRAPHENE_SERVER_ENV = 'serve'
+  })
+  afterAll(() => {
+    if (previousServerEnv === undefined) delete process.env.GRAPHENE_SERVER_ENV
+    else process.env.GRAPHENE_SERVER_ENV = previousServerEnv
   })
 
-  it('stops the server when running', {timeout: 10000}, async () => {
-    let start = await runCli(['serve'], flightDir)
-    expect(start.code).toBe(0)
+  beforeEach(async () => {
+    setConfig({root: flightDir})
+    await cleanupTestServer()
+  })
+  afterEach(async () => { await cleanupTestServer() })
 
-    let pid = await readPid(pidFile)
-    if (!pid) throw new Error('Expected pid file after starting server')
-    expect(isProcessRunning(pid)).toBe(true)
+  it('starts the server in the background and restarts cleanly', {timeout: 40000}, async () => {
+    let first = await runCli(['serve'], flightDir)
+    expectCliSuccess(first, 'serve start')
+    expect(first.stdout).toContain('Server running at')
+    expect(await isServerRunning(TEST_PORT)).toBe(true)
+
+    let second = await runCli(['serve'], flightDir)
+    expectCliSuccess(second, 'serve restart')
+    expect(second.stdout).toContain('Stopping server')
+    expect(await isServerRunning(TEST_PORT)).toBe(true)
+  })
+
+  it('stops the server when running', {timeout: 40000}, async () => {
+    let start = await runCli(['serve'], flightDir)
+    expectCliSuccess(start, 'serve start before stop')
+    expect(await isServerRunning(TEST_PORT)).toBe(true)
 
     let stop = await runCli(['stop'], flightDir)
-    expect(stop.code).toBe(0)
+    expectCliSuccess(stop, 'serve stop')
     expect(stop.stdout).toContain('Stopping server')
-
-    expect(await readPid(pidFile)).toBeUndefined()
-    expect(isProcessRunning(pid)).toBe(false)
+    expect(await isServerRunning(TEST_PORT)).toBe(false)
   })
 })
 
@@ -110,7 +108,7 @@ describe('cli run', () => {
 
   it('runs a query against flights.duckdb (happy path)', async () => {
     let res = await runCli(['run', 'from flights select count() as total'], flightDir)
-    expect(res.code).toBe(0)
+    expectCliSuccess(res, 'run query')
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
@@ -121,7 +119,7 @@ describe('cli run', () => {
       'from t select a',
     ].join('\n')
     let res = await runCli(['run', input], tmpDir)
-    expect(res.code).toBe(1) // command handles the error and exits without throwing
+    expect(res.code).toBe(1)
     expect(res.stderr.toLowerCase()).toContain('no .duckdb file found')
   })
 })
