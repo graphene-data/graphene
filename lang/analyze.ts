@@ -201,6 +201,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
       let target = followJoins(path, scope.table)
       if (!target) return // followJoins handles diags
       target.fields.forEach(f => {
+        analyzeField(f, target)
         if (isJoin(f) || f.isAgg) return
         scope.outputFields.push({...f, e: {node: 'field', path: [...pathStrings, f.name], type: f.type!}})
       })
