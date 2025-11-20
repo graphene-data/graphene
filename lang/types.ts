@@ -52,13 +52,12 @@ export interface Table {
   tableName?: string // the table's name in the database
   tablePath?: string // the full name, including namespace
   primaryKey?: string
-  query?: MalloyQuery
+  query?: Query
 }
 
-export interface Query {
+export type Query = MalloyQuery & {
   fields: ColumnField[]
-  subQuerySources: Table[]
-  malloyQuery?: MalloyQuery
+  baseTableName: string
   rawSql?: string
 }
 

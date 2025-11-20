@@ -131,10 +131,11 @@ function sanitizeType (value: unknown): FieldType | undefined {
   return value as FieldType
 }
 
+// Params are like `select foo from users where created_at > $dateParam`.
+// Malloy doesn't support params, so right before we give the query to Malloy, we walk tables and queries replacing param nodes with literal nodes.
+// Because this modifies the query, usually a clone of the query is passed in here.
 export function fillInParams (query: MalloyQuery, params: Record<string, any>) {
-  let q = structuredClone(query)
-
-  let filters = q.pipeline[0].filterList || []
+  let filters = query.pipeline[0].filterList || []
   for (let filter of filters) {
     walkExpression(filter.e, e => {
       if (e.node !== 'parameter') return
@@ -159,6 +160,4 @@ export function fillInParams (query: MalloyQuery, params: Record<string, any>) {
       else throw new Error(`Unsupported param type ${e.type}`)
     })
   }
-
-  return q
 }

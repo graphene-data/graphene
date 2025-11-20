@@ -104,15 +104,7 @@ export function analyzeTable (table: Table) {
 
     let queryFields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: f.metadata}))
     table.fields.push(...queryFields)
-    table.query = query.malloyQuery
-
-    // another crazy malloyism. Seems like this should always be a string, but if it is, malloy will hit an error
-    // if it happens to load a query_source before the table it depends on.
-    // I also experimented with forcing queryModelContents to be an array in the correct order (ie dependencies first),
-    // which seems to work, but I opted for this because it's what malloy does normally.
-    if (table.query && typeof table.query.structRef == 'string') {
-      table.query.structRef = lookupTable(table.query.structRef, node) as StructRef
-    }
+    table.query = query
   }
 
   table.fields.map(f => analyzeField(f, table))
@@ -160,14 +152,17 @@ export function analyzeField (field: Field, table: Table) {
 // Walks each part of the query checking types, rendering sql
 // NB that this creates a scope for the query, and function like analyzeExpression and lookup operate within that scope, which is crucial for subquery support.
 export function analyzeQuery (queryNode: SyntaxNode): Query | void {
-  let structRef: string
+  let baseTableName: string
   let scope: Scope = {table: null as any, outputFields: []}
   let isAgg = false
-  let subQuerySources: Table[] = []
 
   if (!txt(queryNode)) return // lezer sometimes parses an empty string as a query, if the file doesn't have one.
 
-  if (txt(queryNode).trim().toLowerCase() == 'select 1') return {fields: [{name: 'col_0', type: 'number', metadata: {}, e: {node: 'numberLiteral', literal: '1', type: 'number'} as any}], subQuerySources, rawSql: 'select 1'}
+  // agents sometimes use this query to test that a connection works. Hack it to work for now.
+  if (txt(queryNode).trim().toLowerCase() == 'select 1') {
+    let fields: ColumnField[] = [{name: 'col_0', type: 'number', metadata: {}, e: {node: 'numberLiteral', literal: '1', type: 'number'} as any}]
+    return {fields, baseTableName: '', rawSql: 'select 1', structRef: {} as StructRef, pipeline: []}
+  }
 
   // FROM
   // For now, we only support queries with exactly one table in the FROM clause.
@@ -180,15 +175,17 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   if (froms[0].name == 'Subquery') {
     // Malloy doesn't support subqueries in FROM. We could either add the subquery to the pipeline, or create a "query_source" table for it.
     // I'm opting for query_source, because it's easier to reason about how multiple subqueries might work.
-    structRef = txt(froms[0].getChild('Alias')) || 'subquery'
-    scope.table = makeTable(structRef, 'query_source')
+    // For now I've disabled this until I have time to think about how this should properly work.
+    // It's possible to have a subquery with a `table foo as (...)`, and that wouldn't have worked with what I wrote here.
+    diag(froms[0], "Graphene doesn't yet support subqueries")
+    baseTableName = txt(froms[0].getChild('Alias')) || 'subquery'
+    scope.table = makeTable(baseTableName, 'query_source')
     TABLE_NODE_MAP.set(scope.table, froms[0].getChild('SubqueryExpression')!)
     analyzeTable(scope.table)
-    subQuerySources.push(scope.table)
   } else { // from a regular table
-    structRef = txt(froms[0].getChild('Identifier'))
-    scope.table = lookupTable(structRef, froms[0])!
-    if (!scope.table) return diag(froms[0], `could not find table "${structRef}"`)
+    baseTableName = txt(froms[0].getChild('Identifier'))
+    scope.table = lookupTable(baseTableName, froms[0])!
+    if (!scope.table) return diag(froms[0], `could not find table "${baseTableName}"`)
     NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: scope.table})
   }
 
@@ -274,23 +271,21 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
 
   let q = {
     fields: scope.outputFields,
-    subQuerySources,
-    malloyQuery: {
-      type: 'query',
-      structRef,
-      pipeline: [{
-        type: isAgg ? 'reduce' : 'project',
-        queryFields: scope.outputFields as any,
-        filterList: filterList as any,
-        outputStruct: null as any,
-        isRepeated: false,
-        orderBy: orderByList.length ? orderByList : undefined,
-        limit: queryLimit,
-      }],
-    },
+    baseTableName,
+    type: 'query',
+    structRef: (null as unknown) as StructRef, // We fill this in as part of `toSql`
+    pipeline: [{
+      type: isAgg ? 'reduce' : 'project',
+      queryFields: scope.outputFields as any,
+      filterList: filterList as any,
+      outputStruct: null as any,
+      isRepeated: false,
+      orderBy: orderByList.length ? orderByList : undefined,
+      limit: queryLimit,
+    }],
   } satisfies Query
 
-  inferParamTypes(q.malloyQuery)
+  inferParamTypes(q)
   return q
 }
 

@@ -1,23 +1,16 @@
 -- Items found on a menu
 table menu_items (
-  
-  /* Original columns moved to one line to make them less visible */
-
-  MENU_ITEM_ID TEXT primary_key, IS_CURRENT BOOLEAN, OBSERVED_AT DATE, PRICE NUMBER, CATEGORY TEXT, DESCRIPTION TEXT, ESTABLISHMENT_ID TEXT, FLAGS TEXT, MENU_ID TEXT, NAME TEXT, SOURCE TEXT,
-
-  /* Aliasing all the columns to lowercase to make query writing easier */
-
-  MENU_ITEM_ID as menu_item_id -- Unique item id
-  IS_CURRENT as is_current -- Indicates the most recent entry for active menu items per menu source currently used by a given establishment. Note: The is_current status will always be FALSE for closed establishments
-  OBSERVED_AT as observed_at -- Date(s) menu item was captured
-  PRICE as price -- Current price
-  CATEGORY as category -- Menu item categorization
-  DESCRIPTION as description -- Menu item description as appearing on menu
-  ESTABLISHMENT_ID as establishment_id -- Unique ID of individual establishment
-  FLAGS as flags -- Additional data point(s) from marketplace
-  MENU_ID as menu_id -- ID from Menu table
-  NAME as name -- Item name
-  SOURCE as source -- Source of menu item
+  menu_item_id TEXT primary_key
+  is_current BOOLEAN -- Indicates the most recent entry for active menu items per menu source currently used by a given establishment. Note: The is_current status will always be FALSE for closed establishments
+  observed_at DATE
+  price NUMBER
+  category TEXT
+  description TEXT
+  establishment_id TEXT
+  flags TEXT -- Additional data point(s) from marketplace
+  menu_id TEXT -- ID from Menu table
+  name TEXT
+  source TEXT
 
   join one menus on menu_id = menus.menu_id
   join many entities on menu_item_id = entities.menu_item_id
