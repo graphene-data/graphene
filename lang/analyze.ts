@@ -470,8 +470,13 @@ function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
 
   let ret: Expression
   if (['count', 'min', 'max', 'avg', 'sum'].includes(name.toLowerCase())) {
+    let type: FieldType = 'number', typeDef: AtomicTypeDef | undefined
+    if (['min', 'max', 'avg'].includes(name.toLowerCase())) {
+      type = args[0].type as FieldType
+      typeDef = (args[0] as any).typeDef
+    }
     // malloy has a special node type for built-in aggregates
-    ret = {node: 'aggregate', function: name, e: args[0], type: 'number', isAgg: true}
+    ret = {node: 'aggregate', function: name, e: args[0], type, typeDef, isAgg: true}
   } else if (overload && type) {
     // if we have an overload, it's a function call
     ret = {
@@ -525,6 +530,7 @@ function analyzeTimeExpression (op: '-' | '+', left: Expression, right: Expressi
 
 function ensureSameType (left: Expression, leftNode: SyntaxNode, right: Expression, rightNode: SyntaxNode): FieldType | undefined {
   if (left.type === 'error' || right.type === 'error') return
+  if (left.node === 'parameter' || right.node === 'parameter') return
 
   // if one side is a date/interval, allow the other to be coerced
   if (isTemporalType(left.type)) checkTypes(right, [left.type as FieldType], rightNode)
@@ -535,6 +541,7 @@ function ensureSameType (left: Expression, leftNode: SyntaxNode, right: Expressi
 
 function checkTypes (expr: Expression, expected: FieldType[], node: SyntaxNode) {
   if (expr.type === 'error') return
+  if (expr.node === 'parameter') return
   if (expected.includes(expr.type)) return // types match
   if (expected.includes('generic' as FieldType)) return
 

@@ -20,7 +20,7 @@ from products select distinct brand order by 1 asc
 
 ```sql filtered_kpis
 from order_items select date_trunc(created_at, week) as week, revenue, gross_profit, gross_margin_pct, units_sold as units
-where ($category is null or products.category = $category) and ($brand is null or products.brand = $brand) and ($daterange.start is null or created_at >= $daterange.start) and ($daterange.end is null or created_at < $daterange.end)
+where ($category is null or products.category = $category) and ($brand is null or products.brand = $brand) and ($daterange_start is null or created_at >= $daterange_start) and ($daterange_end is null or created_at < $daterange_end)
 order by 1 asc
 ```
 
