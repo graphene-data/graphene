@@ -55,10 +55,6 @@ const ECOMM_SETUP = `
     (501, 2, '2024-01-12', 50);
 `
 
-function normalizeSql (s: string) {
-  return s.toLowerCase().replace(/[\s\n]+/g, ' ').replace(/\s+$/, '')
-}
-
 function codeFrame (source: string, from: number, to: number): string {
   let lineStart = source.lastIndexOf('\n', Math.max(0, from - 1)) + 1
   let lineEnd = source.indexOf('\n', to)
@@ -87,7 +83,7 @@ export async function prepareEcommerceTables () {
 }
 
 vitestExpect.extend({
-  toRenderSql (received: string, expectedSql: string) {
+  toRenderSql (received: string, expectedSql: string, opts: { preserveCase?: boolean } = {}) {
     if (DEBUG) console.log('Query:', received)
     let content = trimIndentation(received)
     let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
@@ -98,6 +94,11 @@ vitestExpect.extend({
         pass: false,
         message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(content, diagnostics)}`,
       }
+    }
+
+    function normalizeSql (s: string) {
+      if (!opts.preserveCase) s = s.toLowerCase()
+      return s.replace(/[\s\n]+/g, ' ').replace(/\s+$/, '')
     }
 
     let sql = toSql(queries[0])
@@ -187,14 +188,14 @@ vitestExpect.extend({
 // Vitest type augmentation
 declare module 'vitest' {
   interface Assertion {
-    toRenderSql (expectedSql: string): void
+    toRenderSql (expectedSql: string, opts?: {preserveCase: boolean}): void
     toReturnRows (...rows: unknown[][]): Promise<void>
     toHaveDiagnostic (pattern: RegExp | string): void
     toHaveNoErrors (): void
   }
 
   interface AsymmetricMatchersContaining {
-    toRenderSql (expectedSql: string): void
+    toRenderSql (expectedSql: string, opts?: {preserveCase: boolean}): void
     toReturnRows (...rows: unknown[][]): Promise<void>
     toHaveDiagnostic (pattern: RegExp | string): void
     toHaveNoErrors (): void

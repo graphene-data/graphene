@@ -1,4 +1,4 @@
-import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, QueryModel, expandBlueprintMap} from '@graphenedata/malloy'
+import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, QueryModel, expandBlueprintMap, type StructRef} from '@graphenedata/malloy'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
 import {FILE_MAP, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors, analyzeTable, applyExtends} from './analyze.ts'
@@ -7,10 +7,10 @@ import {fillInParams} from './params.ts'
 import {getOffset} from './util.ts'
 import {config, loadConfig} from './config.ts'
 import path from 'node:path'
-
 import {BIGQUERY_DIALECT_FUNCTIONS} from './functions.ts'
 import {parser} from './parser.js'
 import {parseMarkdown} from './markdown.ts'
+import {uppercaseMalloyQuery, uppercaseTable} from './snowflake.ts'
 
 export {clearWorkspace}
 export {config, loadConfig}
@@ -76,18 +76,30 @@ export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
 export function toSql (query: Query, params: Record<string, any> = {}): string {
   if (query.rawSql) return query.rawSql
 
-  let contents = {} // contents is all the tables we need to provide to malloy so it can render the query
+  // contents is what Malloy calls all the sources (tables and views) used when compiling.
+  // These are mostly ready from analysis, but we make a few modifications the structure here, so we operate on a clone
+  let contents = Object.fromEntries(Object.values(FILE_MAP).flatMap(fi => {
+    return fi.tables.map(t => {
+      t = structuredClone(t)
+      if (fi.path == 'input' && t.query) fillInParams(t.query, params)
+      if (config.dialect == 'snowflake') uppercaseTable(t)
+      return [t.name, t]
+    })
+  }))
 
-  // tables defined in gsql can't have params, so we can copy them right into the contents
-  let gsqlTables = Object.values(FILE_MAP).filter(f => f.path !== 'input').flatMap(f => f.tables)
-  gsqlTables.forEach(t => contents[t.name] = t)
+  // Same deal for the query: make a clone, prepare it for passing to Malloy.
+  query = structuredClone(query)
+  fillInParams(query, params)
+  if (config.dialect == 'snowflake') uppercaseMalloyQuery(query)
 
-  // tables in the same md file or a a subquery can all contain params, so we need to give malloy a copy with those params filled in.
-  let inputTables = [...FILE_MAP['input']?.tables || [], ...query.subQuerySources]
-  inputTables.forEach(t => contents[t.name] = {...t, query: t.query && fillInParams(t.query, params)})
+  // structRef is Malloy parlance for the table on which a query is based. Malloy expects this to be a Table (more or less),
+  // but for convenience we store just that table's name in `baseTableName`. Here, we look up that name and set the actual structRef.
+  // We do it as late as possible so we can be sure we give it the right object (ie after filling params, converting to uppercase, etc)
+  let tableQueries = Object.values(contents).map(t => t.query)
+  let joinQueries = Object.values(contents).flatMap(t => t.fields.map(f => (f as any).query))
+  let allQueries: Query[] = [...tableQueries, ...joinQueries, query].filter(q => !!q)
+  allQueries.forEach(q => q.structRef = contents[q.baseTableName] as StructRef)
 
-  if (!query.malloyQuery) throw new Error('Cannot compile query without Malloy query')
-  let malloyQuery = fillInParams(query.malloyQuery, params)
   let qm = new QueryModel({
     name: 'generated_model',
     contents: contents as any,
@@ -95,7 +107,7 @@ export function toSql (query: Query, params: Record<string, any> = {}): string {
     dependencies: {},
     exports: [],
   })
-  return qm.compileQuery(malloyQuery).sql
+  return qm.compileQuery(query).sql
 }
 
 export function getHover (path: string, line: number, col: number): string {
