@@ -21,6 +21,7 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
     - [Using stored expressions in queries](#using-stored-expressions-in-queries)
     - [Safe aggregation in fan-outs](#safe-aggregation-in-fan-outs)
   - [`table as` statements](#table-as-statements)
+  - [`extend` statements](#extend-statements)
   - [Other miscellaneous details about GSQL](#other-miscellaneous-details-about-gsql)
 - [Graphene data apps (dashboards)](#graphene-data-apps-dashboards)
   - [Visualization components](#visualization-components)
@@ -419,6 +420,35 @@ table user_facts as (
 `table as` statements are conceptually the same as view tables in regular SQL. A few things to note:
 - You cannot yet declare join relationships or stored expressions directly in a `table as` statement. Other tables can declare join relationships to it, though, as shown above.
 - In the example above, the `ltv` and `lifetime_orders` columns from `user_facts` are "hoisted" back into `users` so that they appear as if they are columns from `users`. This is simply a design choice which allows query writers to never need to know about `user_facts`.
+
+### `extend` statements
+
+`extend` statements allow you to add join relationships or stored expressions to an existing table. This is especially useful for tables created via `table as` statements, which do not support defining these properties directly.
+
+For example, if we have a `table as` statement that creates a daily summary of orders:
+
+```sql
+table daily_orders as (
+  select
+    date_trunc(created_at, day) as day,
+    count(*) as num_orders,
+    sum(amount) as total_revenue
+  from orders
+  group by 1
+)
+```
+
+We can extend this table to add measures or joins:
+
+```sql
+extend daily_orders (
+  join one calendar on day = calendar.date
+
+  avg_order_value: total_revenue / num_orders
+)
+```
+
+Note that you cannot add new base columns with `extend`; you can only add joins and stored expressions.
 
 ### Other miscellaneous details about GSQL
 
