@@ -5,6 +5,7 @@ ui/tests/results
 
 cli/*.tgz
 notes.md
+todo.md
 .gitcommit
 .DS_Store
 *.duckdb
