@@ -177,7 +177,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
     // I'm opting for query_source, because it's easier to reason about how multiple subqueries might work.
     // For now I've disabled this until I have time to think about how this should properly work.
     // It's possible to have a subquery with a `table foo as (...)`, and that wouldn't have worked with what I wrote here.
-    diag(froms[0], "Graphene doesn't yet support subqueries")
+    diag(froms[0], "Graphene doesn't yet support subqueries. Try chaining queries instead.")
     baseTableName = txt(froms[0].getChild('Alias')) || 'subquery'
     scope.table = makeTable(baseTableName, 'query_source')
     TABLE_NODE_MAP.set(scope.table, froms[0].getChild('SubqueryExpression')!)
