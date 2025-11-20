@@ -1,31 +1,23 @@
--- Establishments (restaurants) that are closed
 table establishments_closed (
-  
-  /* Original columns moved to one line to make them less visible */
-
-  ESTABLISHMENT_ID TEXT primary_key, CLOSED_DATE DATE, FIRST_SEEN DATE, ALTERNATE_NAME TEXT, CHAIN_ID TEXT, CHAIN_NAME TEXT, CHAIN_URL TEXT, LOCATION_CITY TEXT, LOCATION_COUNTRY_CODE TEXT, LOCATION_STATE_CODE TEXT, LOCATION_STREET TEXT, LOCATION_UNIT TEXT, LOCATION_ZIP TEXT, MD5 TEXT, NAME TEXT, PARENT_NAME TEXT, STATUS TEXT, WEBSITE TEXT, UPDATED TIMESTAMP_NTZ,
-
-  /* Aliasing all the columns to lowercase to make query writing easier */
-
-  ESTABLISHMENT_ID as establishment_id -- Unique identification number generated for each individual establishment
-  CLOSED_DATE as closed_date -- Date Brizo identified the establishment as closed
-  FIRST_SEEN as first_seen -- Date establishment was first seen by Brizo
-  ALTERNATE_NAME as alternate_name -- Alternate name or parent corporation
-  CHAIN_ID as chain_id -- Unique identifier generated for each individual chain
-  CHAIN_NAME as chain_name -- Name of the restaurant chain
-  CHAIN_URL as chain_url -- URL of the restaurant chain
-  LOCATION_CITY as location_city -- Establishment city location
-  LOCATION_COUNTRY_CODE as location_country_code -- Establishment country location
-  LOCATION_STATE_CODE as location_state_code -- Establishment state location
-  LOCATION_STREET as location_street -- Establishment street address
-  LOCATION_UNIT as location_unit -- Establishment unit/suite/apartment number
-  LOCATION_ZIP as location_zip -- Establishment zip code
-  MD5 as md5 -- MD5 of JSON file
-  NAME as name -- Name of the establishment
-  PARENT_NAME as parent_name -- Name of the parent company
-  STATUS as status -- Indicates if establishment is open or closed
-  WEBSITE as website -- Establishment URL
-  UPDATED as updated -- Most recent date the establishment was updated in BFM database
+  establishment_id TEXT primary_key
+  closed_date DATE -- Date Brizo identified the establishment as closed
+  first_seen DATE -- Date establishment was first seen by Brizo
+  alternate_name TEXT -- Alternate name or parent corporation
+  chain_id TEXT
+  chain_name TEXT
+  chain_url TEXT
+  location_city TEXT
+  location_country_code TEXT
+  location_state_code TEXT
+  location_street TEXT
+  location_unit TEXT
+  location_zip TEXT
+  md5 TEXT -- MD5 of JSON file
+  name TEXT
+  parent_name TEXT
+  status TEXT -- Indicates if establishment is open or closed
+  website TEXT
+  updated TIMESTAMP_NTZ -- Most recent date the establishment was updated in BFM database
 
   join many contacts on establishment_id = contacts.establishment_id
   join many menus on establishment_id = menus.establishment_id

@@ -1,35 +1,26 @@
--- People associated with an establishment
 table contacts (
-  
-  /* Original columns moved to one line to make them less visible */
-
-  UNIQUE_ID TEXT primary_key, IS_CURRENT BOOLEAN, EMAIL_TEST_DATE DATE, COMPANY_NAME TEXT, CONTACT_ID TEXT, EMAIL TEXT, EMAIL_TEST_RESULT TEXT, EMAIL_TYPE TEXT, ESTABLISHMENT_ID TEXT, FIRST_NAME TEXT, FIRST_SEEN TEXT, LAST_NAME TEXT, LAST_SEEN TEXT, LEVEL TEXT, LINKEDIN TEXT, LOCATION TEXT, NAME TEXT, PHONE TEXT, ROLE TEXT, TITLE TEXT, COMPANY_LOCATION VARIANT, RECORDS VARIANT,
-
-  /* Aliasing all the columns to lowercase to make query writing easier */
-
-  UNIQUE_ID as unique_id -- Unique ID of the record
-  IS_CURRENT as is_current -- Indicates the most recent currently active contacts for a given establishment. Note: The is_current status will always be FALSE for closed establishments
-  EMAIL_TEST_DATE as email_test_date -- When the email was last tested
-  COMPANY_NAME as company_name -- Establishment owner name, if different than Establishment name
-  CONTACT_ID as contact_id -- Unique ID of the contact
-  EMAIL as email -- Contact email address
-  EMAIL_TEST_RESULT as email_test_result -- Result of the last email test
-  EMAIL_TYPE as email_type -- Indicates a direct or role-based email address
-  ESTABLISHMENT_ID as establishment_id -- Unique ID of the related establishment
-  FIRST_NAME as first_name -- Contact first name
-  FIRST_SEEN as first_seen -- Date contact was added to Brizo FoodMetrics
-  LAST_NAME as last_name -- Contact last name
-  LAST_SEEN as last_seen -- Last date contact was seen on source
-  LEVEL as level -- Contact level of experience
-  LINKEDIN as linkedin -- LinkedIn profile URL
-  LOCATION as location -- parent-level or establishement-level
-  NAME as name -- Contact first and last name
-  PHONE as phone -- Contact phone number
-  ROLE as role -- Contact role ex: Finance or Marketing etc.
-  TITLE as title -- Contact title
-  COMPANY_LOCATION as company_location -- Street, unit, city, state code, zip of Company Name
-  RECORDS as records -- Concatenation of multiple contact fields
+  unique_id TEXT primary_key
+  is_current BOOLEAN -- Indicates the most recent currently active contacts for a given establishment. Note: The is_current status will always be FALSE for closed establishments
+  email_test_date DATE
+  company_name TEXT -- Establishment owner name, if different than Establishment name
+  contact_id TEXT
+  email TEXT
+  email_test_result TEXT
+  email_type TEXT -- Indicates a direct or role-based email address
+  establishment_id TEXT
+  first_name TEXT
+  first_seen TEXT -- Date contact was added to Brizo FoodMetrics
+  last_name TEXT
+  last_seen TEXT -- Last date contact was seen on source
+  level TEXT -- Contact level of experience
+  linkedin TEXT
+  location TEXT -- parent-level or establishement-level
+  name TEXT -- Contact first and last name
+  phone TEXT
+  role TEXT -- Contact role ex: Finance or Marketing etc.
+  title TEXT
+  company_location VARIANT -- Street, unit, city, state code, zip of Company Name
+  records VARIANT -- Concatenation of multiple contact fields
 
   join one establishments_open on establishment_id = establishments_open.establishment_id
 )
-

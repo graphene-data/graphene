@@ -1,86 +1,78 @@
--- Establishments (restaurants) that are open
 table establishments_open (
-  
-  /* Original columns moved to one line to make them less visible */
-
-  ESTABLISHMENT_ID TEXT primary_key, FIRST_SEEN DATE, LAST_REVIEWED DATE, LOCATION_LATITUDE FLOAT, LOCATION_LONGITUDE FLOAT, SCORE FLOAT, SCORE_CHANGE FLOAT, CHAIN_NATIONWIDE_LOCATIONS NUMBER, ESTABLISHED NUMBER, LOCATION_DENSITY_0M NUMBER, LOCATION_DENSITY_100M NUMBER, LOCATION_DENSITY_5MI NUMBER, PRICE_MEDIAN NUMBER, PRICE_PCTL_20 NUMBER, PRICE_PCTL_80 NUMBER, REVIEWS_PER_MONTH NUMBER, REVIEW_COUNT NUMBER, SCORE_ROUNDED NUMBER, WEBSITE_TRAFFIC NUMBER, ALTERNATE_NAME TEXT, AMBIANCES TEXT, AMENITIES TEXT, AWARDS TEXT, BEVERAGES TEXT, BUSINESS_TYPES TEXT, CHAIN_COUNTRY_CODE TEXT, CHAIN_ID TEXT, CHAIN_NAME TEXT, CHAIN_URL TEXT, CUISINES_CONTINENTAL TEXT, CUISINES_REGIONAL TEXT, DIETS TEXT, DIRECT_EMAILS TEXT, DISHES TEXT, FRANCHISEE_NAME TEXT, FRANCHISOR_NAME TEXT, GENERIC_EMAILS TEXT, HOURS_OPEN TEXT, LINK TEXT, LOCATION_CITY TEXT, LOCATION_COUNTRY_CODE TEXT, LOCATION_COUNTY TEXT, LOCATION_LOCATED_IN_BUSINESS_TYPE TEXT, LOCATION_LOCATED_IN_NAME TEXT, LOCATION_METRO_AREA TEXT, LOCATION_STATE_CODE TEXT, LOCATION_STREET TEXT, LOCATION_UNIT TEXT, LOCATION_ZIP TEXT, MD5 TEXT, MEALS TEXT, NAME TEXT, PARENT_NAME TEXT, PARENT_URL TEXT, PHONE TEXT, PRICE_SYMBOLIC TEXT, PRIMARY_EMAIL TEXT, REFERRALS_GOOGLE_DELIVERY TEXT, REFERRALS_GOOGLE_ORDERING TEXT, STATUS TEXT, TIMEZONE_DST TEXT, TIMEZONE_NAME TEXT, TIMEZONE_UTC TEXT, VENDORS TEXT, WEBSITE TEXT, WEBSITE_STATUS TEXT, UPDATED TIMESTAMP_NTZ, CHAIN_LOCATION VARIANT, FOOT_TRAFFIC_HISTORY_BY_MONTH VARIANT, FOOT_TRAFFIC_LATEST_MONTH VARIANT, FRANCHISEE_LOCATION VARIANT, FRANCHISOR_LOCATION VARIANT, LOCATION_LOCATED_IN_LOCATION_ADDRESS VARIANT, WEBSITE_TRAFFIC_HISTORY VARIANT,
-
-  /* Aliasing all the columns to lowercase to make query writing easier */
-
-  ESTABLISHMENT_ID as establishment_id, -- Unique identification number generated for each individual establishment
-  FIRST_SEEN as first_seen, -- Date establishment was first seen by Brizo
-  LAST_REVIEWED as last_reviewed, -- Date of most recent review seen by Brizo
-  LOCATION_LATITUDE as location_latitude, -- Establishment latitude
-  LOCATION_LONGITUDE as location_longitude, -- Establishment longitude
-  SCORE as score, -- Weighted average score accross all review sites
-  SCORE_CHANGE as score_change, -- Recent change in score
-  CHAIN_NATIONWIDE_LOCATIONS as chain_nationwide_locations, -- Number of locations at the national level for the chain
-  ESTABLISHED as established, -- Establishment's year established
-  LOCATION_DENSITY_0M as location_density_0m, -- Number of establishments at the same address
-  LOCATION_DENSITY_100M as location_density_100m, -- Number of establishments within 100m of this establishment
-  LOCATION_DENSITY_5MI as location_density_5mi, -- Number of establishments within 5 miles of this establishment
-  PRICE_MEDIAN as price_median, -- Median Menu Meal Price
-  PRICE_PCTL_20 as price_pctl_20, -- 20th percentile menu item price point
-  PRICE_PCTL_80 as price_pctl_80, -- 80th percentile menu item price point
-  REVIEWS_PER_MONTH as reviews_per_month, -- Recent average number of new reviews accross all review sites
-  REVIEW_COUNT as review_count, -- Total number of reviews accross all review sites
-  SCORE_ROUNDED as score_rounded, -- Weighted average score accross all review sites rounded to the nearest half point
-  WEBSITE_TRAFFIC as website_traffic, -- Estimated monthly visitors
-  ALTERNATE_NAME as alternate_name, -- Alternate name or parent corporation
-  AMBIANCES as ambiances, -- Ambiance of the establishment
-  AMENITIES as amenities, -- Amenities offered by the establishment
-  AWARDS as awards, -- Awards of the establishment
-  BEVERAGES as beverages, -- Beverages being offered from the menu
-  BUSINESS_TYPES as business_types, -- Listed business types from covered sources
-  CHAIN_COUNTRY_CODE as chain_country_code, -- Country code of the location of the chain establishment (Identical to Establishment Country Code)
-  CHAIN_ID as chain_id, -- Unique identifier generated for each individual chain
-  CHAIN_NAME as chain_name, -- Name of the restaurant chain
-  CHAIN_URL as chain_url, -- URL of the restaurant chain
-  CUISINES_CONTINENTAL as cuisines_continental, -- Cuisines offered by the establishment
-  CUISINES_REGIONAL as cuisines_regional, -- Cuisines offered by the establishment
-  DIETS as diets, -- Dietary styles of the establishment
-  DIRECT_EMAILS as direct_emails, -- Validated direct email addresses
-  DISHES as dishes, -- Some of their typical dishes
-  FRANCHISEE_NAME as franchisee_name, -- Entity which owns specific franchise outlet(s) within a franchise network
-  FRANCHISOR_NAME as franchisor_name, -- Entity which owns the franchise network
-  GENERIC_EMAILS as generic_emails, -- Validated generic role-based email addresses
-  HOURS_OPEN as hours_open, -- Opening hours of that establishment
-  LINK as link, -- Direct link to Brizo FoodMetrics
-  LOCATION_CITY as location_city, -- Establishment city location
-  LOCATION_COUNTRY_CODE as location_country_code, -- Establishment country location
-  LOCATION_COUNTY as location_county, -- Establishment county
-  LOCATION_LOCATED_IN_BUSINESS_TYPE as location_located_in_business_type, -- Type of the parent establishment or business within which this establishment is located, if applicable
-  LOCATION_LOCATED_IN_NAME as location_located_in_name, -- Name of the parent establishment or business within which this establishment is located, if applicable
-  LOCATION_METRO_AREA as location_metro_area, -- Establishment metro area
-  LOCATION_STATE_CODE as location_state_code, -- Establishment state location
-  LOCATION_STREET as location_street, -- Establishment street address
-  LOCATION_UNIT as location_unit, -- Establishment unit/suite/apartment number
-  LOCATION_ZIP as location_zip, -- Establishment zip code
-  MD5 as md5, -- MD5 of JSON file
-  MEALS as meals, -- Day parts of meals offered by establishment (breakfast, brunch, lunch etc.)
-  NAME as name, -- Name of the establishment
-  PARENT_NAME as parent_name, -- Name of the parent company
-  PARENT_URL as parent_url, -- Url of the parent company
-  PHONE as phone, -- Establishment phone number
-  PRICE_SYMBOLIC as price_symbolic, -- Symbolic menu price range ($,$$,$$$)
-  PRIMARY_EMAIL as primary_email, -- Most commonly found validated direct or generic email address
-  REFERRALS_GOOGLE_DELIVERY as referrals_google_delivery, -- Third-Party Delivery Services found on Google's page about that Establishment
-  REFERRALS_GOOGLE_ORDERING as referrals_google_ordering, -- Third-Party Ordering Services found on Google's page about that Establishment
-  STATUS as status, -- Indicates if establishment is open or closed
-  TIMEZONE_DST as timezone_dst, -- Whether or not the location observes daylight savings time
-  TIMEZONE_NAME as timezone_name, -- Timezone name at the location
-  TIMEZONE_UTC as timezone_utc, -- Timezone at the location in UTC format
-  VENDORS as vendors, -- Names of all current tech vendors detected on the restaurant website or other sources
-  WEBSITE as website, -- Establishment URL
-  WEBSITE_STATUS as website_status, -- Whether Brizo verified the website or not
-  UPDATED as updated, -- Most recent date the establishment was updated in BFM database
-  CHAIN_LOCATION as chain_location, -- Street, unit, city, state, zip of Chain's HQ in JSON structure
-  FOOT_TRAFFIC_HISTORY_BY_MONTH as foot_traffic_history_by_month, -- Estimate of people who spend a non-nominal amount of time (i.e. more than 5 minutes) at an establishment recorded by month. An establishment may share foot traffic with other establishments within a mall, plaza, or multiple floors in a building if they are within 25m of each other
-  FOOT_TRAFFIC_LATEST_MONTH as foot_traffic_latest_month, -- Last entry registered in the food traffic history by month; latest estimation of people who spend a non-nominal amount of time at this specific geographic location in a month.
-  FRANCHISEE_LOCATION as franchisee_location, -- Street, unit, city, state, zip of Franchisee Name in JSON structure
-  FRANCHISOR_LOCATION as franchisor_location, -- Street, unit, city, state, zip of Franchisor Name in JSON structure
-  LOCATION_LOCATED_IN_LOCATION_ADDRESS as location_located_in_location_address, -- Street, unit, city, state, zip of Location's Located In address in JSON structure
-  WEBSITE_TRAFFIC_HISTORY as website_traffic_history -- Historical estimated monthly visitors
+  establishment_id TEXT primary_key
+  first_seen DATE -- Date establishment was first seen by Brizo
+  last_reviewed DATE -- Date of most recent review seen by Brizo
+  location_latitude FLOAT
+  location_longitude FLOAT
+  score FLOAT -- Weighted average score accross all review sites
+  score_change FLOAT -- Recent change in score
+  chain_nationwide_locations NUMBER -- Number of locations at the national level for the chain
+  established NUMBER
+  location_density_0m NUMBER -- Number of establishments at the same address
+  location_density_100m NUMBER -- Number of establishments within 100m of this establishment
+  location_density_5mi NUMBER -- Number of establishments within 5 miles of this establishment
+  price_median NUMBER
+  price_pctl_20 NUMBER
+  price_pctl_80 NUMBER
+  reviews_per_month NUMBER -- Recent average number of new reviews accross all review sites
+  review_count NUMBER -- Total number of reviews accross all review sites
+  score_rounded NUMBER -- Weighted average score accross all review sites rounded to the nearest half point
+  website_traffic NUMBER -- Estimated monthly visitors
+  alternate_name TEXT -- Alternate name or parent corporation
+  ambiances TEXT
+  amenities TEXT
+  awards TEXT
+  beverages TEXT
+  business_types TEXT -- Listed business types from covered sources
+  chain_country_code TEXT -- Country code of the location of the chain establishment (Identical to Establishment Country Code)
+  chain_id TEXT
+  chain_name TEXT
+  chain_url TEXT
+  cuisines_continental TEXT
+  cuisines_regional TEXT
+  diets TEXT
+  direct_emails TEXT -- Validated direct email addresses
+  dishes TEXT
+  franchisee_name TEXT -- Entity which owns specific franchise outlet(s) within a franchise network
+  franchisor_name TEXT -- Entity which owns the franchise network
+  generic_emails TEXT -- Validated generic role-based email addresses
+  hours_open TEXT
+  link TEXT -- Direct link to Brizo FoodMetrics
+  location_city TEXT
+  location_country_code TEXT
+  location_county TEXT
+  location_located_in_business_type TEXT -- Type of the parent establishment or business within which this establishment is located, if applicable
+  location_located_in_name TEXT -- Name of the parent establishment or business within which this establishment is located, if applicable
+  location_metro_area TEXT
+  location_state_code TEXT
+  location_street TEXT
+  location_unit TEXT
+  location_zip TEXT
+  md5 TEXT -- MD5 of JSON file
+  meals TEXT -- Day parts of meals offered by establishment (breakfast, brunch, lunch etc.)
+  name TEXT
+  parent_name TEXT
+  parent_url TEXT
+  phone TEXT
+  price_symbolic TEXT -- Symbolic menu price range ($,$$,$$$)
+  primary_email TEXT -- Most commonly found validated direct or generic email address
+  referrals_google_delivery TEXT -- Third-Party Delivery Services found on Google's page about that Establishment
+  referrals_google_ordering TEXT -- Third-Party Ordering Services found on Google's page about that Establishment
+  status TEXT -- Indicates if establishment is open or closed
+  timezone_dst TEXT
+  timezone_name TEXT
+  timezone_utc TEXT
+  vendors TEXT -- Names of all current tech vendors detected on the restaurant website or other sources
+  website TEXT
+  website_status TEXT -- Whether Brizo verified the website or not
+  updated TIMESTAMP_NTZ -- Most recent date the establishment was updated in BFM database
+  chain_location VARIANT -- Street, unit, city, state, zip of Chain's HQ in JSON structure
+  foot_traffic_history_by_month VARIANT -- Estimate of people who spend a non-nominal amount of time (i.e. more than 5 minutes) at an establishment recorded by month. An establishment may share foot traffic with other establishments within a mall, plaza, or multiple floors in a building if they are within 25m of each other
+  foot_traffic_latest_month VARIANT -- Last entry registered in the food traffic history by month; latest estimation of people who spend a non-nominal amount of time at this specific geographic location in a month.
+  franchisee_location VARIANT -- Street, unit, city, state, zip of Franchisee Name in JSON structure
+  franchisor_location VARIANT -- Street, unit, city, state, zip of Franchisor Name in JSON structure
+  location_located_in_location_address VARIANT -- Street, unit, city, state, zip of Location's Located In address in JSON structure
+  website_traffic_history VARIANT -- Historical estimated monthly visitors
 
   join many contacts on establishment_id = contacts.establishment_id
   join many menus on establishment_id = menus.establishment_id
