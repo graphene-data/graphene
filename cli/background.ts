@@ -7,8 +7,6 @@ import {config} from '../lang/config.ts'
 
 const execAsync = promisify(exec)
 
-export type StopStatus = 'none' | 'stale' | 'stopped'
-
 export async function runServeInBackground (): Promise<void> {
   let grapheneCache = getGrapheneCache(config.root)
   let logFile = path.join(grapheneCache, 'serve.log')
@@ -16,7 +14,7 @@ export async function runServeInBackground (): Promise<void> {
 
   let log = fs.openSync(logFile, 'w')
   let entryPoint = process.argv[1] || fileURLToPath(import.meta.url)
-  let childArgs = [...process.execArgv, entryPoint, 'serve', '--fg', ...process.argv.slice(3)]
+  let childArgs = [...process.execArgv, entryPoint, 'serve', ...process.argv.slice(3)]
   let child = spawn(process.execPath, childArgs, {
     cwd: config.root,
     detached: true,
