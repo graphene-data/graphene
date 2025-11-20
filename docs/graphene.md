@@ -459,6 +459,16 @@ Note that you cannot add new base columns with `extend`; you can only add joins 
 - Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
 - `count` is a reserved word. Do not alias your columns as `count`.
 - Window functions and set operations are not supported.
+- Subqueries are not supported. However, you can accomplish the same functionality by chaining queries:
+  ````md
+   ```sql my_subquery
+   select ...
+   ```
+   
+   ```sql my_query
+   select ... from my_subquery
+   ```
+  ```` 
 
 ### Working with dates, timestamps, and intervals
 
@@ -469,7 +479,7 @@ Graphene understands a handful of common literal formats so you rarely need expl
 - `YYYY`, `YYYY-MM`, and `YYYY-MM-DD` strings are treated as dates. Leading/trailing spaces are ignored.
 - `YYYY-MM-DD HH[:MM[:SS]]` (with either a space or `T` between the date and time) is treated as a timestamp. Missing minutes or seconds default to `00`.
 
-```gsql
+```sql
 from users select id
 where created_at >= '2024-01-01' and created_at <= '2024-02-01'
 ```
@@ -478,7 +488,7 @@ where created_at >= '2024-01-01' and created_at <= '2024-02-01'
 
 To add or subtract time, provide a quantity followed by a unit inside a string literal. Supported units include `second`, `minute`, `hour`, `day`, `week`, `month`, `quarter`, and `year` (plural forms or shorthands like `secs`, `mins`, `hrs` also work).
 
-```gsql
+```sql
 from users select
   created_at + '5 minutes' as first_seen_plus_5,
   created_at - '2 days' as first_seen_minus_2
