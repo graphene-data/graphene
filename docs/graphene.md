@@ -1342,8 +1342,6 @@ These are the available commands:
 - `npm run graphene check <mdPath> --chart "<chartTitle>"` - Same as above, except if the runtime check is successful, only takes a screenshot of the specified chart. `<chartTitle>` must match (case sensitive) the `title` attribute on the chart component. `-c` can be used as shorthand for `--chart`.
 - `npm run graphene compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
 - `npm run graphene run "<GSQL>"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
-- `npm run graphene serve` - Starts (or restarts) the dev server, which allows the user to view their Graphene app on localhost.
-- `npm run graphene stop` - Stops the dev server.
 
 # AGENT INSTRUCTIONS
 

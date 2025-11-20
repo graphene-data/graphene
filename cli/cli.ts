@@ -54,15 +54,15 @@ program
 program
   .command('serve')
   .description('Run the local server')
-  .option('--fg', 'Run the server in the foreground')
-  .action(async (options: {fg?: boolean}) => {
+  .option('--bg', 'Run the server in the foreground')
+  .action(async (options: {bg?: boolean}) => {
     await stopGrapheneIfRunning()
-    if (options.fg || process.env.DEBUG) {
-      let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
-      await mod.serve2()
-    } else {
+    if (options.bg || process.env.DEBUG) {
       await runServeInBackground()
       process.exit(0)
+    } else {
+      let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
+      await mod.serve2()
     }
   })
 
