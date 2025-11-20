@@ -699,4 +699,9 @@ describe('lang', () => {
     `, 'parens.gsql')
     expect('from t select c').toHaveNoErrors()
   })
+
+  it('infers correct type for min/max', () => {
+    expect('from users select min(created_at)').toHaveNoErrors()
+    expect('from users select extract(year from min(created_at))').toHaveNoErrors()
+  })
 })
