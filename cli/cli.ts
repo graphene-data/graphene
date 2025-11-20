@@ -54,7 +54,7 @@ program
 program
   .command('serve')
   .description('Run the local server')
-  .option('--bg', 'Run the server in the foreground')
+  .option('--bg', 'Run the server in the background')
   .action(async (options: {bg?: boolean}) => {
     await stopGrapheneIfRunning()
     if (options.bg || process.env.DEBUG) {
