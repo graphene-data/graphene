@@ -204,6 +204,17 @@ describe('lang', () => {
       .toReturnRows([1, 'Alice', 60], [2, 'Bob', 40])
   })
 
+  it('handles when the view is defined before the table', () => {
+    // Covers a particular bug where if a view was analyzed before the table it queried, it'd break.
+    // specifically the wildcard would include partially constructed joins
+    clearWorkspace()
+    updateFile('table user_facts as (from users select *)', 'facts.gsql')
+    updateFile(testTables, 'models.gsql')
+
+    expect('from user_facts select id, email order by id')
+      .toRenderSql('with __stage0 as ( select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base ) select base."id" as "id", base."email" as "email" from __stage0 as base order by 1 asc nulls last')
+  })
+
   it('extends derived tables with additional measures', async () => {
     updateFile(`${testTables}
       table user_facts as (from users select id, total_orders)
