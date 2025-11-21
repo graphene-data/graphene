@@ -57,7 +57,7 @@ program
   .option('--bg', 'Run the server in the background')
   .action(async (options: {bg?: boolean}) => {
     await stopGrapheneIfRunning()
-    if (options.bg || process.env.DEBUG) {
+    if (options.bg) {
       await runServeInBackground()
       process.exit(0)
     } else {
