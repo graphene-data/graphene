@@ -14,7 +14,7 @@ export async function runServeInBackground (): Promise<void> {
 
   let log = fs.openSync(logFile, 'w')
   let entryPoint = process.argv[1] || fileURLToPath(import.meta.url)
-  let childArgs = [...process.execArgv, entryPoint, 'serve', ...process.argv.slice(3)]
+  let childArgs = [...process.execArgv, entryPoint, 'serve']
   let child = spawn(process.execPath, childArgs, {
     cwd: config.root,
     detached: true,
@@ -38,7 +38,6 @@ export async function runServeInBackground (): Promise<void> {
     })
 
     child.once('exit', () => {
-      process.stdout.write(fs.readFileSync(logFile))
       reject(new Error('Exited before server started'))
     })
     child.once('error', e => reject(e))
@@ -118,8 +117,8 @@ async function getPidOnPort (port: number): Promise<number | undefined> {
         child.on('error', () => resolve(undefined))
       })
     }
-  } catch (e) {
-    console.warn('Failed to check for server:', (e as any).message)
+  } catch (e:any) {
+    console.warn('Failed to check for server:', e.message)
     return undefined
   }
   return undefined

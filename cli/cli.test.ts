@@ -6,7 +6,6 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
-import {setConfig} from '../lang/config.ts'
 
 interface RunResult {
   code: number
@@ -17,22 +16,18 @@ interface RunResult {
 const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
 const flightDir = path.resolve(dir, '../examples/flights')
 const TEST_PORT = 4163
+process.env.GRAPHENE_PORT = '4163'
+process.env.NODE_ENV = 'test'
 
 function runCli (args: string[], cwd?: string): Promise<RunResult> {
   return new Promise((resolve) => {
     let cliEntry = path.resolve(dir, 'cli.ts')
-    let env = {...process.env, NODE_ENV: 'test', GRAPHENE_PORT: String(TEST_PORT)}
-    let child = spawn('node', [cliEntry, ...args], {cwd, env})
-    let stdout = ''
-    let stderr = ''
-    child.stdout.on('data', (d) => (stdout += d.toString()))
-    child.stderr.on('data', (d) => (stderr += d.toString()))
+    let child = spawn('node', [cliEntry, ...args], {cwd, env: process.env})
+    let stdout = '', stderr = ''
+    child.stdout.on('data', (d) => { stdout += d.toString() })
+    child.stderr.on('data', (d) => { stderr += d.toString() })
     child.on('close', (code) => resolve({code: code ?? 0, stdout, stderr}))
   })
-}
-
-async function cleanupTestServer (): Promise<void> {
-  await stopGrapheneIfRunning()
 }
 
 function logCliFailure (step: string, res: RunResult) {
@@ -60,37 +55,19 @@ describe('cli compile', () => {
 })
 
 describe('cli serve (background)', () => {
-  let previousServerEnv = process.env.GRAPHENE_SERVER_ENV
+  beforeEach(async () => { await stopGrapheneIfRunning() })
+  afterEach(async () => { await stopGrapheneIfRunning() })
 
-  beforeAll(() => {
-    process.env.GRAPHENE_SERVER_ENV = 'serve'
-  })
-  afterAll(() => {
-    if (previousServerEnv === undefined) delete process.env.GRAPHENE_SERVER_ENV
-    else process.env.GRAPHENE_SERVER_ENV = previousServerEnv
-  })
-
-  beforeEach(async () => {
-    setConfig({root: flightDir})
-    await cleanupTestServer()
-  })
-  afterEach(async () => { await cleanupTestServer() })
-
-  it('starts the server in the background and restarts cleanly', {timeout: 40000}, async () => {
-    let first = await runCli(['serve'], flightDir)
+  it('starts the server in the background and restarts cleanly', async () => {
+    let first = await runCli(['serve', '--bg'], flightDir)
     expectCliSuccess(first, 'serve start')
     expect(first.stdout).toContain('Server running at')
     expect(await isServerRunning(TEST_PORT)).toBe(true)
 
-    let second = await runCli(['serve'], flightDir)
+    // running `serve` again should restart it
+    let second = await runCli(['serve', '--bg'], flightDir)
     expectCliSuccess(second, 'serve restart')
     expect(second.stdout).toContain('Stopping server')
-    expect(await isServerRunning(TEST_PORT)).toBe(true)
-  })
-
-  it('stops the server when running', {timeout: 40000}, async () => {
-    let start = await runCli(['serve'], flightDir)
-    expectCliSuccess(start, 'serve start before stop')
     expect(await isServerRunning(TEST_PORT)).toBe(true)
 
     let stop = await runCli(['stop'], flightDir)
