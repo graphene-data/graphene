@@ -1,6 +1,7 @@
 // This script prints out the tree Lezer parses from a given gsql file.
 // Use it to identify the issue when you think something has been parsed incorrectly.
 
+// @ts-expect-error - imports from lang workspace
 import type {TreeCursor} from '@lezer/common'
 import {readFile} from 'node:fs/promises'
 import path from 'node:path'

@@ -136,7 +136,7 @@ async function sendCheckRequest ({host, pageUrl, chart}) {
     }
 
     return body
-  } catch (err) {
+  } catch (err: any) {
     clearTimeout(timeout)
     if (err.name === 'AbortError') return {checkError: 'timeout'}
     return {checkError: 'no_server'}

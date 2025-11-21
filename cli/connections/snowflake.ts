@@ -19,7 +19,7 @@ interface SnowflakeOptions {
 
 export class SnowflakeConnection implements QueryConnection {
   private ready: Promise<void>
-  private connection: snowflake.Connection
+  private connection!: snowflake.Connection
 
   constructor (opts: SnowflakeOptions) {
     this.ready = this.initialize(opts || {})
@@ -68,7 +68,7 @@ export class SnowflakeConnection implements QueryConnection {
 
           let stream = statement.streamRows()
           stream.on('error', err => reject(err))
-          stream.on('readable', function (row) {
+          stream.on('readable', function (this: any, row) {
             while ((row = this.read()) !== null) {
               rows.push(row)
             }
