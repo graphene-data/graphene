@@ -67,7 +67,7 @@ export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: 
         },
       })
     },
-    {scope: 'worker'},
+    {scope: 'worker'} as any,
   ],
 
   mount: async ({page, server}: {page: Page, server: ServerFixture}, use) => {
@@ -108,7 +108,7 @@ export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: 
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
       return await page.evaluate((source) => {
-        let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__')])[0] as any
+        let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__') as any])[0] as any
         let option = chart.getModel().getOption()
         try {
           let fn = new Function('config', `return (${source})(config)`)
@@ -132,7 +132,7 @@ test.beforeEach(() => {
 
   // Vite caches our mocked files, so we need to clear them out before each test.
   let keys = server?.moduleGraph?.idToModuleMap?.keys() || []
-  keys.forEach(k => {
+  keys.forEach((k: any) => {
     if (!k.endsWith('?mock')) return
     server.moduleGraph.invalidateModule(server.moduleGraph.getModuleById(k))
   })

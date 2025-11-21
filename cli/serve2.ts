@@ -99,7 +99,7 @@ const handleRequestPlugin = {
         } else {
           next()
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error(err)
         res.statusCode = 500
         res.end(JSON.stringify([{message: err.message, stack: err.stack}]))
@@ -179,10 +179,10 @@ function mockFilesForTests () {
   return {
     name: 'mock-files-for-tests',
     enforce: 'pre' as const,
-    resolveId (id) {
+    resolveId (id: any) {
       if (mockFileMap[id.replace(config.root + '/', '')]) return id + '?mock'
     },
-    load (id) {
+    load (id: any) {
       if (!id.endsWith('?mock')) return null
       return mockFileMap[id.replace(config.root + '/', '').replace(/\?mock$/, '')]
     },

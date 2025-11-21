@@ -417,7 +417,10 @@
       // Sort data based on xType
       // ---------------------------------------------------------------------------------------
       if (sort) {
-        let sortColumn = xDataType === 'category' ? (Array.isArray(y) ? (y[0] ?? x) : x) : x
+        let sortColumn = x
+        if (xDataType === 'category') {
+          sortColumn = Array.isArray(y) ? (y[0] ?? x) : x
+        }
         let sortAscending = xDataType !== 'category'
         data = getSortedData(data, sortColumn, sortAscending)
       }
@@ -483,13 +486,21 @@
       }
 
       if (yAxisTitle === 'true') {
-        yAxisTitle = y.length > 1 ? '' : (y.length ? formatTitle(y[0], yFormat) : '')
+        if (y.length === 1) {
+          yAxisTitle = formatTitle(y[0], yFormat)
+        } else {
+          yAxisTitle = ''
+        }
       } else if (yAxisTitle === 'false') {
         yAxisTitle = ''
       }
 
       if (y2AxisTitle === 'true') {
-        y2AxisTitle = y2.length > 1 ? '' : (y2.length ? formatTitle(y2[0], y2Format) : '')
+        if (y2.length === 1) {
+          y2AxisTitle = formatTitle(y2[0], y2Format)
+        } else {
+          y2AxisTitle = ''
+        }
       } else if (y2AxisTitle === 'false') {
         y2AxisTitle = ''
       }

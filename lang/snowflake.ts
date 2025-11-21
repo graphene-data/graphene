@@ -37,8 +37,8 @@ function uppercaseField (field: Field) {
     field.name = uppercaseIdentifier(field.name)
     if (field.tableName) field.tableName = uppercaseQualified(field.tableName)
     if (field.tablePath) field.tablePath = uppercaseQualified(field.tablePath)
-    if ((field as any).structPath) field.structPath = field.structPath!.map(uppercaseIdentifier)
-    if ((field as any).path) (field as any).path = field.path!.map(uppercaseIdentifier)
+    if ((field as any).structPath) (field as any).structPath = (field as any).structPath!.map(uppercaseIdentifier)
+    if ((field as any).path) (field as any).path = (field as any).path!.map(uppercaseIdentifier)
     if (field.onExpression) uppercaseExpression(field.onExpression as Expression)
     uppercaseTable(field as unknown as Table)
   } else {
@@ -50,7 +50,7 @@ function uppercaseColumnField (field: ColumnField) {
   if (!field) return
   field.name = uppercaseIdentifier(field.name)
   if (field.path) field.path = field.path.map(uppercaseIdentifier)
-  if (field.structPath) field.structPath = field.structPath.map(uppercaseIdentifier)
+  if ((field as any).structPath) (field as any).structPath = (field as any).structPath.map(uppercaseIdentifier)
   if ((field as any).tableName) (field as any).tableName = uppercaseQualified((field as any).tableName)
   if ((field as any).tablePath) (field as any).tablePath = uppercaseQualified((field as any).tablePath)
   if (field.e) uppercaseExpression(field.e)
@@ -58,7 +58,7 @@ function uppercaseColumnField (field: ColumnField) {
 
 function uppercaseExpression (expr?: Expression) {
   if (!expr) return
-  walkExpression(expr, (node) => {
+  walkExpression(expr, (node: any) => {
     if (Array.isArray(node.path)) node.path = node.path.map(uppercaseIdentifier)
     if (Array.isArray(node.structPath)) node.structPath = node.structPath.map(uppercaseIdentifier)
   })

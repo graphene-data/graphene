@@ -119,7 +119,7 @@ async function getPidOnPort (port: number): Promise<number | undefined> {
       })
     }
   } catch (e) {
-    console.warn('Failed to check for server:', e.message)
+    console.warn('Failed to check for server:', (e as any).message)
     return undefined
   }
   return undefined

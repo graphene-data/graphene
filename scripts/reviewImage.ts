@@ -1,5 +1,6 @@
 import {readFile} from 'fs/promises'
 import path, {extname} from 'path'
+// @ts-expect-error - imports from cli workspace
 import dotenv from 'dotenv'
 import {fileURLToPath} from 'url'
 

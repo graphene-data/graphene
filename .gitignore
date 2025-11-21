@@ -7,8 +7,6 @@ cli/*.tgz
 notes.md
 .gitcommit
 .DS_Store
-.evidence
-.svelte-kit
 *.duckdb
 
 **/.vscode/settings.json
