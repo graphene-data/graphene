@@ -59,11 +59,8 @@ export async function serve2 (): Promise<ViteDevServer> {
 
   await optimizeDeps(server.config) // optimize before starting, so we don't have a reload immediately after loading the first page
   await server.listen()
+  console.log(`Server running at http://localhost:${port}`)
 
-  if (process.env.NODE_ENV !== 'test') {
-    await fs.writeFile(path.resolve(config.root, 'node_modules/.graphene/serve.pid'), String(process.pid))
-    console.log(`Server running at http://localhost:${port}`)
-  }
   return server
 }
 
