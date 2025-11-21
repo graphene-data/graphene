@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+    "noImplicitAny": false,
+    "types": ["node"]
+  },
+  "include": ["**/*.ts", "**/*.js", "**/*.svelte"],
+  "exclude": ["node_modules", "dist", "vscode"]
+}

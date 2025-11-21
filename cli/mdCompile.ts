@@ -9,7 +9,7 @@ export function extractQueries () {
     return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   }
 
-  return function transformer (tree) {
+  return function transformer (tree: any) {
     visit(tree, 'code', (node, index, parent) => {
       if (index === null) return
       let name = typeof node.meta === 'string' ? node.meta : ''
@@ -21,7 +21,7 @@ export function extractQueries () {
 
 // remark will leave less-than and greater-than unescaped, which breaks svelte and prevents the page from loading.
 export function escapeAngles () {
-  return function transformer (tree) {
+  return function transformer (tree: any) {
     visit(tree, 'text', (node: any) => {
       if (!node.value || typeof node.value !== 'string') return
       if (!node.value.includes('<')) return
@@ -39,7 +39,7 @@ export function sanitizeMarkdown () {
       if (typeof node.value !== 'string') return
 
       // sanitize-html doesn't like non-standard self-closing tags, so we need to rewrite them into open+close tags
-      let expanded = node.value.replace(/<(\w+)((?:\s[^<>]*?)?)\s*\/>/gi, (_, name, attrs = '') => {
+      let expanded = node.value.replace(/<(\w+)((?:\s[^<>]*?)?)\s*\/>/gi, (_: string, name: string, attrs = '') => {
         let spacing = attrs
         return `<${name}${spacing}></${name}>`
       })
@@ -55,7 +55,7 @@ export function sanitizeMarkdown () {
           ...Object.fromEntries(componentNames().map(n => [n, ['*']])),
         },
         parser: {
-          ...(sanitizeHtml.defaults.parser || {}),
+          ...((sanitizeHtml.defaults as any).parser || {}),
           lowerCaseAttributeNames: false,
           lowerCaseTags: false,
         },
@@ -70,7 +70,7 @@ export function injectComponentImports () {
   let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`
 
   return {
-    markup: ({content, filename}) => {
+    markup: ({content, filename}: {content: string, filename: string}) => {
       if (!filename.endsWith('.md')) return // only auto-import components for md files
       if (content.includes('<script>')) {
         content = content.replace('<script>', `<script>\n${imp}`)

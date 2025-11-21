@@ -61,8 +61,8 @@ export function openInBrowser (url: string) {
 }
 
 // PKCE login flow (Authorization Code with loopback)
-function base64url (buf: ArrayBuffer): string {
-  let b64 = Buffer.from(buf).toString('base64')
+function base64url (buf: ArrayBuffer | Uint8Array): string {
+  let b64 = Buffer.from(buf as any).toString('base64')
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 

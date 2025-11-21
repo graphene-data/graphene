@@ -106,11 +106,11 @@ async function runNode (n: QueryNode) {
         return [`${name}="${val}"`]
       })
       let idStr = `Query (data="${n.source}" ` + fieldIds.join(' ') + ')'
-      n.errors.forEach(e => e.id = idStr)
+      n.errors.forEach(e => (e as any).id = idStr)
       n.callback({errors: n.errors})
     }
   } catch (e) {
-    n.errors = [e]
+    n.errors = [e as Error]
   } finally {
     n.loading = false
   }
@@ -164,7 +164,7 @@ errorProvider('queryEngine', () => {
   queries.flatMap(q => q.errors).filter(q => !!q).forEach(e => {
     unique[e.message + String((e as any).from?.lineText)] = e
   })
-  return Object.values(unique)
+  return Object.values(unique) as Error[]
 })
 
 async function waitForQueries (timeout = 20_000) {

@@ -1,10 +1,7 @@
 import {test, expect} from './fixtures'
 import {check} from '../../cli/check.ts'
 import {updateFile} from '../../lang/core.ts'
-import {setConfig} from '../../lang/config.ts'
 import stripAnsi from 'strip-ansi'
-import path from 'path'
-import {fileURLToPath} from 'url'
 import {trimIndentation} from '../../lang/util.ts'
 
 test.describe.configure({mode: 'serial'})

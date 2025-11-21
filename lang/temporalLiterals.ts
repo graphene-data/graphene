@@ -47,11 +47,12 @@ export function parseTemporalLiteral (value: string, expected: Extract<FieldType
     let second = dateTimeMatch[6] ? Number(dateTimeMatch[6]) : 0
     if (!inRange(hour, 0, 23) || !inRange(minute, 0, 59) || !inRange(second, 0, 59)) return null
 
-    let timeframe: TemporalLiteral['timeframe'] = dateTimeMatch[6]
-      ? 'second'
-      : dateTimeMatch[5]
-        ? 'minute'
-        : 'hour'
+    let timeframe: TemporalLiteral['timeframe'] = 'hour'
+    if (dateTimeMatch[6]) {
+      timeframe = 'second'
+    } else if (dateTimeMatch[5]) {
+      timeframe = 'minute'
+    }
 
     return buildResult(year, month, day, hour, minute, second, timeframe, expected)
   }
