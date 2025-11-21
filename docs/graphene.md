@@ -22,6 +22,9 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
     - [Safe aggregation in fan-outs](#safe-aggregation-in-fan-outs)
   - [`table as` statements](#table-as-statements)
   - [`extend` statements](#extend-statements)
+  - [Working with dates, timestamps, and intervals](#working-with-dates-timestamps-and-intervals)
+    - [Date and timestamp literals](#date-and-timestamp-literals)
+    - [Interval literals](#interval-literals)
   - [Other miscellaneous details about GSQL](#other-miscellaneous-details-about-gsql)
 - [Graphene data apps (dashboards)](#graphene-data-apps-dashboards)
   - [Visualization components](#visualization-components)
@@ -450,26 +453,6 @@ extend daily_orders (
 
 Note that you cannot add new base columns with `extend`; you can only add joins and stored expressions.
 
-### Other miscellaneous details about GSQL
-
-- Trailing commas in `table` statements are optional.
-- Trailing semicolons after `table` and `table as` statements are optional.
-- The clauses in a `select` statement (`select`, `from`, `join`, `group by`, etc.) can be written in any order. They cannot be repeated, however.
-- `group by all` is implied if aggregative and scalar expressions are both present in the `select` clause. This means that `group by` can be omitted and the query will still effectively execute the `group by all`.
-- Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
-- `count` is a reserved word. Do not alias your columns as `count`.
-- Window functions and set operations are not supported.
-- Subqueries are not supported. However, you can accomplish the same functionality by chaining queries:
-  ````md
-   ```sql my_subquery
-   select ...
-   ```
-   
-   ```sql my_query
-   select ... from my_subquery
-   ```
-  ```` 
-
 ### Working with dates, timestamps, and intervals
 
 Graphene understands a handful of common literal formats so you rarely need explicit casts when filtering or doing time math.
@@ -495,6 +478,26 @@ from users select
 ```
 
 Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days'`). Invalid strings produce a diagnostic such as “Could not parse interval literal: "many moons"”.
+
+### Other miscellaneous details about GSQL
+
+- Trailing commas in `table` statements are optional.
+- Trailing semicolons after `table` and `table as` statements are optional.
+- The clauses in a `select` statement (`select`, `from`, `join`, `group by`, etc.) can be written in any order. They cannot be repeated, however.
+- `group by all` is implied if aggregative and scalar expressions are both present in the `select` clause. This means that `group by` can be omitted and the query will still effectively execute the `group by all`.
+- Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
+- `count` is a reserved word. Do not alias your columns as `count`.
+- Window functions and set operations are not supported.
+- Subqueries are not supported. However, you can accomplish the same functionality by chaining queries:
+  ````md
+   ```sql my_subquery
+   select ...
+   ```
+   
+   ```sql my_query
+   select ... from my_subquery
+   ```
+  ```` 
 
 ## Graphene data apps (dashboards)
 
@@ -1362,6 +1365,6 @@ Follow these guidelines when working in a Graphene project.
 - Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is here in graphene.md.
 - When writing to a .gsql file, check your code with `npm run graphene check`.
 - When writing to a Graphene .md file:
-   - Always check your code with `npm run graphene check <mdPath>`.
+   - Always check your code with `npm run graphene check <mdPath>`. Run the command with full permissions because the screenshot may not work in a sandbox.
    - Then do a visual check by either a) looking at the screenshot that `npm run graphene check <mdPath>` creates, or b) using your browser tool to open the .md file at `localhost:<port>/mdPath` (without the .md extension; default port 4000).
       - Critique what you see: Are all the data values formatted in a way that is easy to read? Does the shape of the visualized data require an adjustment to scale, axis min/max, etc.? Are any visualizations missing data altogether? Is that visualization type really the best way to paint the picture? Etc.
