@@ -7,7 +7,8 @@
   },
   "scripts": {
     "lint": "eslint . && tsc",
-    "test": "pnpm -C lang test && pnpm -C cli test && pnpm -C ui test"
+    "test": "pnpm -C lang test && pnpm -C cli test && pnpm -C ui test",
+    "check-examples": "pnpm -C examples/flights graphene check && pnpm -C examples/ecomm graphene check && pnpm -C examples/snowflake graphene check"
   },
   "devDependencies": {
     "@eslint/compat": "^1.3.2",
