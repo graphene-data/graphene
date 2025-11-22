@@ -27,23 +27,28 @@ if (tracking.includes('behind')) {
   if (!(await confirm('Repo is behind origin/main. Continue anyway? (y/N) '))) process.exit(1)
 }
 
+// tests
 await $`pnpm lint`
 await $`pnpm test`
 await $`pnpm check-examples`
 
-
+// bump versions
 await $`(cd cli && npm version ${bumpLevel} --no-git-tag-version)`
 await $`(cd vscode && npm version ${bumpLevel} --no-git-tag-version)`
 
+// dry-run packaging
 await $`(cd cli && npm publish --access public --dry-run)`
 if (!(await confirm('Does the npm publish dry run look right? (y/N) '))) process.exit(1)
 
-await $`(cs vscode && npx vsce package --no-dependencies)`
+await $`(cd vscode && npx vsce package --no-dependencies)`
 if (!(await confirm('Does the vsce package look right? (y/N) '))) process.exit(1)
 
+// actually publish
+await $`(cd cli && npm publish --access public)`
 await $`(cd vscode && npx vsce publish)`
 await $`(cd vscode && npx ovsx publish)`
 
+// create git commit/tag
 const version = JSON.parse(await fs.readFile('cli/package.json', 'utf8')).version
 await $`git add -a .`
 await $`git commit -m ${`Release v${version}`}`
