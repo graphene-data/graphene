@@ -112,7 +112,7 @@ export async function check (options: CheckOptions): Promise<boolean> {
     log('Screenshot saved to', screenshotPath)
   }
 
-  return !!errors.length
+  return errors.length == 0
 }
 
 async function sendCheckRequest ({host, pageUrl, chart}) {
