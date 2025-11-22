@@ -29,7 +29,7 @@ export async function loadWorkspace (dir:string, includeMd: boolean) {
     try {
       let contents = await readFile(path.join(dir, file), 'utf-8')
       updateFile(contents, file)
-    } catch (e) { // can fail if a file is a broken symlink
+    } catch (e:any) { // can fail if a file is a broken symlink
       console.error('Failed to read file', file, e.message)
     }
   }
@@ -70,7 +70,7 @@ export function analyze (contents?: string, type?: 'gsql' | 'md'): Query[] {
   if (contents) {
     let fi =  FILE_MAP['input']
     let nodes = fi.tree!.topNode.getChildren('QueryStatement') || []
-    fi.queries = nodes.map(analyzeQuery).filter(q => !!q)
+    fi.queries = nodes.map(analyzeQuery).filter((q): q is Query => !!q)
     return fi.queries
   } else {
     return []
