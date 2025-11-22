@@ -106,7 +106,7 @@ async function getPidOnPort (port: number): Promise<number | undefined> {
       }
     } else {
       return new Promise((resolve) => {
-        let child = spawn('lsof', ['-i', `:${port}`, '-t'])
+        let child = spawn('lsof', ['-i', `:${port}`, '-t', '-sTCP:LISTEN'])
         let stdout = ''
         child.stdout.on('data', d => stdout += d.toString())
         child.on('close', (code) => {
