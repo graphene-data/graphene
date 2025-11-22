@@ -14,5 +14,5 @@
     "types": ["node"]
   },
   "include": ["**/*.ts", "**/*.js", "**/*.svelte"],
-  "exclude": ["node_modules", "dist", "vscode"]
+  "exclude": ["node_modules", "cli/dist", "vscode/dist"]
 }
