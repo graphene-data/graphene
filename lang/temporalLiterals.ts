@@ -7,7 +7,7 @@ export type TemporalLiteral = {
   type: Extract<FieldType, 'date' | 'timestamp'>
 }
 
-export function parseTemporalLiteral (value: string, expected: Extract<FieldType, 'date' | 'timestamp'>): TemporalLiteral | null {
+export function parseTemporalLiteral (value: string, expected: string): TemporalLiteral | null {
   let raw = (value ?? '').trim()
   if (!raw) return null
 
@@ -138,7 +138,7 @@ function buildResult (
   minute: number,
   second: number,
   timeframe: TemporalLiteral['timeframe'],
-  expected: Extract<FieldType, 'date' | 'timestamp'>,
+  expected: string,
 ): TemporalLiteral {
   if (expected === 'date') {
     return {literal: `${pad(year)}-${pad(month)}-${pad(day)}`, timeframe, type: 'date'}
