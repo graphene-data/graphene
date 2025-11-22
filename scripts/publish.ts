@@ -18,7 +18,7 @@ if (!process.env.OVSX_PAT) throw new Error('OVSX_PAT required')
 const branch = (await $`git rev-parse --abbrev-ref HEAD`).stdout.trim()
 if (branch !== 'main') throw new Error('Publishing must run on main')
 
-const status = (await $`git status --porcelain`).stdout.trim().split('\n').map(l => l.trim())
+const status = (await $`git status --porcelain`).stdout.trim()
 if (status.length > 0) throw new Error('Working tree must be clean before publishing')
 
 await $`git fetch origin main --quiet`
