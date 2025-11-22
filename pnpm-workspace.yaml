@@ -3,6 +3,7 @@ packages:
   - cli
   - ui
   - agent
+  - vscode
   - examples/*
 overrides:
   "@evidence-dev/sdk": "-"
