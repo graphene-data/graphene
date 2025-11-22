@@ -40,7 +40,6 @@ export async function serve2 (): Promise<ViteDevServer> {
       updateWorkspacePlugin,
       mockFilesForTests(),
     ],
-    publicDir: path.resolve(uiRoot),
     server: {
       port,
       fs: {strict: false},
@@ -87,6 +86,11 @@ const handleRequestPlugin = {
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
         if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
+
+        if (pathName == '/favicon.ico') {
+          res.setHeader('Content-Type', 'image/x-icon')
+          return res.end(await fs.readFile(path.resolve(uiRoot, 'assets/favicon.ico')))
+        }
 
         if (!pathName || pathName == '/') pathName = 'index'
         let mdPath = path.join(config.root, pathName + '.md')
@@ -152,7 +156,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <title>Graphene</title>
-      <link rel="icon" href="/assets/favicon.ico" />
+      <link rel="icon" href="/favicon.ico" />
       <link rel="preconnect" href="https://fonts.googleapis.com">
       <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
       <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet">
