@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  '@evidence-dev/sdk': '-'
-  downloadjs: '-'
-  '@uwdata/mosaic-sql': '-'
-
 importers:
 
   .:
