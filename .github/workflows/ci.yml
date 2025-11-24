@@ -43,5 +43,8 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./ui
+      - name: Download flights.duckdb
+        run: pnpm run setup
+        working-directory: ./examples/flights
       - name: Test
         run: pnpm test
