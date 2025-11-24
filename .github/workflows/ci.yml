@@ -48,5 +48,16 @@ jobs:
       - name: Download flights.duckdb
         run: pnpm run setup
         working-directory: ./examples/flights
-      - name: Test
-        run: pnpm test
+      - name: Lang tests
+        run: pnpm -C lang test
+      - name: CLI tests
+        run: pnpm -C cli test
+      - name: UI tests
+        run: pnpm -C ui test
+        continue-on-error: true
+      - name: Upload failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UI test diffs
+          path: ui/tests/results/**
