@@ -5,7 +5,3 @@ packages:
   - agent
   - vscode
   - examples/*
-overrides:
-  "@evidence-dev/sdk": "-"
-  "downloadjs": "-"
-  "@uwdata/mosaic-sql": "-"
