@@ -22,6 +22,7 @@ table flights (
   join one aircraft on tail_num = aircraft.tail_num
 
   is_long_haul: flight_time > 360 -- Whether the flight was a long haul flight (over 6 hours)
+  is_cancelled: cancelled = 'Y'
   is_cancelled_or_diverted: cancelled = 'Y' or diverted = 'Y' -- Whether the flight was cancelled or diverted
   miles_flown: case when is_cancelled_or_diverted then 0 else distance end -- Actual miles flown, approximated by the distance between the origin and destination airports not including cancelled or diverted flights
 
