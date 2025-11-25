@@ -364,6 +364,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       }
 
       if (op == '<' || op == '<=' || op == '>' || op == '>=' || op == '=' || op == '!=' || op == '<>') {
+        if (op == '<>') op = '!='
         ensureSameType(left, expr.firstChild!, right, expr.lastChild!)
         type = 'boolean'
       }
