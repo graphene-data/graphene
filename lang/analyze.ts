@@ -1,10 +1,10 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import {isExtractUnit, isTemporalType, type AggregateFunctionType, type StructRef, type AtomicTypeDef, type TimestampUnit} from '@graphenedata/malloy'
-import {txt, compact, getFile, getPosition, walkExpression} from './util.ts'
+import {isExtractUnit, isTemporalType, type StructRef, type AtomicTypeDef, type TimestampUnit} from '@graphenedata/malloy'
+import {txt, compact, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config} from './config.ts'
-import {findOverloads} from './functions.ts'
+import {analyzeFunctionCall} from './functions.ts'
 import {inferParamTypes} from './params.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseTemporal} from './temporalLiterals.ts'
 
@@ -293,7 +293,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
 // Called for each expression in a query (recursively for complex expressions) including computed columns.
 // This reports errors and warnings for symantic issues, as well as generating the final SQL.
 // Scope is used to track the current table we're operating within when analyzing measures.
-function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
+export function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   if (expr.type.isError) {
     return diag(expr, 'Invalid expression', errExpr)
   }
@@ -332,7 +332,7 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 
       return {node: 'extract', type: 'number', units, e: e as any, isAgg: false}
     }
-    case 'FunctionCall': return analyzeFunctionCall(expr, scope)
+    case 'FunctionCall': return analyzeFunctionCall(expr, scope, {analyzeExpression, checkTypes, diag, errExpr})
     case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
     case 'Count': {
       let countExpr = expr.getChild('Expression')
@@ -427,76 +427,6 @@ function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
   }
 }
 
-function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression {
-  let name = txt(expr.getChild('Identifier')).toLowerCase() as AggregateFunctionType
-  let argNodes = expr.getChildren('Expression')
-
-  // get the right overload for the args. Also check out malloy's `findOverload` for picking the right one
-  let overload = findOverloads(name, config.dialect).find(o => {
-    return o.params.length == argNodes.length || !!o.params.find(p => p.isVariadic)
-  })
-
-  // analyze each of the function arguments, ensuring its the right type
-  let args = argNodes.map((node, idx) => {
-    let firstType = overload?.params[idx]?.allowedTypes[0]
-    if (firstType?.type === 'sql native' && firstType?.rawType === 'kw') {
-      // some dialects allow special keywords as args in certain functions, like bigquery's `date_trunc(some_col, week)`
-      return {node: 'genericSQLExpr' as const, kids: {args: []}, type: 'sql native', src: [txt(node)], isAgg: false}
-    } else {
-      let argExpr = analyzeExpression(node, scope)
-      let allowed = overload?.params[idx]?.allowedTypes.map(at => at.type) as any
-      if (allowed) checkTypes(argExpr, allowed, node)
-      return argExpr
-    }
-  })
-
-  let type = overload?.returnType.type
-  if (type == 'generic') type = args[0]?.type as any || 'string'
-  if (type && !isSupportedType(type)) {
-    return diag(expr, `Unsupported function return type ${type} from function ${name}`, errExpr)
-  }
-
-  // Aggregates need a `structPath`, which in malloy is the `orders.users` in `orders.users.avg(age)`.
-  // We'd rather you write `avg(orders.users.age)`, so we need to extract that path from the arguments.
-  // These paths can be buried in complex expressions, so go find all of them.
-  let structPaths = new Set<string>()
-  args.forEach(a => walkExpression(a, e => {
-    if (e.node != 'field') return
-    structPaths.add(e.path.slice(0, -1).join('.') || scope.table.name)
-  }))
-
-  let ret: Expression
-  if (['count', 'min', 'max', 'avg', 'sum'].includes(name.toLowerCase())) {
-    let type: FieldType = 'number', typeDef: AtomicTypeDef | undefined
-    if (['min', 'max', 'avg'].includes(name.toLowerCase())) {
-      type = args[0].type as FieldType
-      typeDef = (args[0] as any).typeDef
-    }
-    // malloy has a special node type for built-in aggregates
-    ret = {node: 'aggregate', function: name, e: args[0], type, typeDef, isAgg: true}
-  } else if (overload && type) {
-    // if we have an overload, it's a function call
-    ret = {
-      node: 'function_call', type, name, overload,
-      expressionType: overload.returnType.expressionType || 'scalar',
-      kids: {args: args as any},
-      isAgg: overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg),
-    }
-  } else {
-    return diag(expr, `Unknown function: ${name}`, errExpr)
-  }
-
-  // Right now, we only support a single structPath in aggregate functions
-  if (structPaths.size > 1 && (ret.node == 'aggregate' || ret.expressionType == 'aggregate')) {
-    return diag(expr, 'Graphene only supports a single table within aggregates. This one has: ' + Array.from(structPaths).join(', '), errExpr)
-  }
-
-  // Malloy is unhappy if structPath is undefined or empty, so only set it if we have one. Malloy also doesn't consider the base table as a structPath.
-  let foriegnPaths = Array.from(structPaths).filter(p => p != scope.table.name)
-  if (foriegnPaths.length > 0) ret.structPath = foriegnPaths[0].split('.')
-
-  return ret
-}
 
 // Malloy uses special nodes to represent timediff and time deltas (ie adding interval to a date)
 function analyzeTimeExpression (op: '-' | '+', left: Expression, right: Expression, node: SyntaxNode): Expression {
@@ -536,7 +466,7 @@ function ensureSameType (left: Expression, leftNode: SyntaxNode, right: Expressi
   if (left.type !== right.type) diag(rightNode, `Expected ${left.type}, got ${right.type}`)
 }
 
-function checkTypes (expr: Expression, expected: FieldType[], node: SyntaxNode) {
+export function checkTypes (expr: Expression, expected: FieldType[], node: SyntaxNode) {
   if (expr.type === 'error') return
   if (expr.node === 'parameter') return
   if (expected.includes(expr.type)) return // types match
@@ -558,11 +488,6 @@ function checkTypes (expr: Expression, expected: FieldType[], node: SyntaxNode) 
   }
 
   else diag(node, `Expected types: ${expected.join(', ')}`)
-}
-
-function isSupportedType (value: string): value is FieldType {
-  let supported = ['string', 'number', 'boolean', 'date', 'timestamp', 'json', 'sql native', 'error', 'array', 'record', 'null', 'generic', 'interval']
-  return supported.includes(value)
 }
 
 // Get the field that a Ref refers to.
@@ -650,7 +575,7 @@ let errExpr = {node: 'error', type: 'error'} as Expression
 
 // Logs that we found an issue in the parse tree. The optional return lets return IR and try to continue the analysis.
 // The alternative is we throw an error, but then we wouldn't see other errors later in the tree.
-function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
+export function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
   let file = getFile(node)
   let from = getPosition(node.from, file)
   let to = getPosition(node.to, file)
