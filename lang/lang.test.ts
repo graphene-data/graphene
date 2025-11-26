@@ -154,6 +154,11 @@ describe('lang', () => {
       .toReturnRows([2, 40], [1, 30])
   })
 
+  it('supports percentile aggregates via pXX shorthand', async () => {
+    await expect('from orders select p10(amount) as min_amt, p50(amount) as median_amt, p999(amount) as max_amt')
+      .toReturnRows([24, 40, 40])
+  })
+
   it('executes asymmetric chasm avg through join', async () => {
     await expect('from orders select avg(users.age)')
       .toReturnRows([35])

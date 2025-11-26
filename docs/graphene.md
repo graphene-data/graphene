@@ -379,6 +379,10 @@ FROM `bigquery-public-data.thelook_ecommerce.orders` as base
 
 You don't have to understand this; the point is that GSQL is minimizing the chances that naive users aggregate data incorrectly.
 
+#### Percentile shorthand
+
+Graphene provides percentile helpers so you rarely have to remember the SQL form for each warehouse. Anywhere you can call an aggregate, you can also write `pXX(column)` where `XX` is a whole number between 0 and 100. If you need precision finer than a whole percentile, append extra digits—everything after the first two digits is treated as decimals. Examples: `p975` → 97.5th percentile, `p9999` → 99.99th percentile. Graphene rewrites these shorthands to the dialect’s native function (`quantile_cont` on DuckDB, `approx_quantiles` on BigQuery, `PERCENTILE_CONT` on Snowflake) and ensures they behave like other aggregates (automatic grouping, structPath handling, etc.).
+
 ### `table as` statements
 
 You can turn the output of any `select` statement into a table with `table foo as (select ...)`. Here's an example of an additional table `user_facts` added to the two tables from earlier:
