@@ -1,7 +1,7 @@
 import {promises as fs} from 'fs'
 import path from 'path'
 import {config} from '../../lang/config.ts'
-import {type QueryResult, type QueryConnection} from './types.ts'
+import {type QueryResult, type QueryConnection, type SchemaColumn} from './types.ts'
 import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 
 interface DuckDbOptions {
@@ -52,4 +52,42 @@ export class DuckDBConnection implements QueryConnection {
     })
     return {rows}
   }
+
+  async listDatasets (): Promise<string[]> {
+    return await Promise.resolve([])
+  }
+
+  async listTables (): Promise<string[]> {
+    let sql = `
+      select table_schema as table_schema, table_name as table_name
+      from information_schema.tables
+      where table_type in ('BASE TABLE', 'VIEW') and table_schema not in ('information_schema', 'pg_catalog')
+      order by table_schema, table_name
+    `.trim()
+    let res = await this.runQuery(sql)
+    return res.rows.map(row => String(row['table_name']))
+  }
+
+  async describeTable (target: string): Promise<SchemaColumn[]> {
+    let parts = target.split('.')
+    let table = parts.pop() || ''
+    let schema = parts[0]
+    let schemaFilter = schema
+      ? `lower(table_schema) = lower(${sqlStringLiteral(schema)})`
+      : "table_schema not in ('information_schema', 'pg_catalog')"
+    let sql = `
+      select column_name as column_name, data_type as data_type, ordinal_position as ordinal_position
+      from information_schema.columns
+      where lower(table_name) = lower(${sqlStringLiteral(table)}) and ${schemaFilter}
+      order by ordinal_position
+    `.trim()
+    let res = await this.runQuery(sql)
+    return res.rows.map(row => {
+      return {name: String(row['column_name']), dataType: String(row['data_type'])}
+    })
+  }
+}
+
+function sqlStringLiteral (value: string) {
+  return `'${value.replace(/'/g, "''")}'`
 }
