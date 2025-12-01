@@ -1,7 +1,8 @@
 import {config} from '../../lang/config.ts'
 import {authenticatedFetch} from '../auth.ts'
+import {type QueryResult} from './types.ts'
 
-export async function runQuery (sql:string) {
+export async function runQuery (sql:string): Promise<QueryResult> {
   if (config.host) {
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',

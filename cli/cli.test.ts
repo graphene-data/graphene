@@ -6,6 +6,7 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
+import {formatIdentifier} from './cli.ts'
 
 interface RunResult {
   code: number
@@ -18,6 +19,11 @@ const flightDir = path.resolve(dir, '../examples/flights')
 const TEST_PORT = 4163
 process.env.GRAPHENE_PORT = '4163'
 process.env.NODE_ENV = 'test'
+
+function ensureFlightsDatabaseExists () {
+  let dbPath = path.resolve(flightDir, 'flights.duckdb')
+  if (!fs.existsSync(dbPath)) throw new Error('flights.duckdb not found. Run `pnpm run setup` in examples/flights')
+}
 
 function runCli (args: string[], cwd?: string): Promise<RunResult> {
   return new Promise((resolve) => {
@@ -78,10 +84,7 @@ describe('cli serve (background)', () => {
 })
 
 describe('cli run', () => {
-  beforeAll(() => {
-    let dbPath = path.resolve(flightDir, 'flights.duckdb')
-    if (!fs.existsSync(dbPath)) throw new Error('flights.duckdb not found. Run `pnpm run setup` in examples/flights')
-  })
+  beforeAll(ensureFlightsDatabaseExists)
 
   it('runs a query against flights.duckdb (happy path)', async () => {
     let res = await runCli(['run', 'from flights select count() as total'], flightDir)
@@ -98,5 +101,26 @@ describe('cli run', () => {
     let res = await runCli(['run', input], tmpDir)
     expect(res.code).toBe(1)
     expect(res.stderr.toLowerCase()).toContain('no .duckdb file found')
+  })
+})
+
+describe('cli schema', () => {
+  beforeAll(ensureFlightsDatabaseExists)
+
+  it('lists available tables when no argument is provided', async () => {
+    let res = await runCli(['schema'], flightDir)
+    expectCliSuccess(res, 'schema list tables')
+    let lines = res.stdout.trim().split(/\r?\n/).filter(Boolean)
+    expect(lines.length).toBeGreaterThan(0)
+    expect(lines.some(line => line.includes('main.flights'))).toBe(true)
+  })
+
+  it('describes the requested table columns', async () => {
+    let res = await runCli(['schema', 'flights'], flightDir)
+    expectCliSuccess(res, 'schema describe table')
+    let output = res.stdout.toLowerCase()
+    expect(output).toContain('table flights (')
+    expect(output).toContain('carrier varchar')
+    expect(output.trim().endsWith(')')).toBe(true)
   })
 })

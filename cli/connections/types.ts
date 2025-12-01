@@ -1,4 +1,3 @@
-
 export interface QueryResult {
   rows: Array<Record<string, unknown>>
   totalRows?: number
