@@ -1,9 +1,9 @@
 import {type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
-import {type AggregateFunctionType, type AtomicTypeDef, type FieldType} from '@graphenedata/malloy'
+import {type AggregateFunctionType, type AtomicTypeDef} from '@graphenedata/malloy'
 import {config} from './config.ts'
 import {findOverloads} from './functionDefs.ts'
 import {txt, walkExpression} from './util.ts'
-import type {Expression, Scope} from './types.ts'
+import type {Expression, Scope, FieldType} from './types.ts'
 import {analyzeExpression, checkTypes, diag} from './analyze.ts'
 
 export type AnalyzeExpressionFn = (expr: SyntaxNode, scope: Scope) => Expression
@@ -78,7 +78,7 @@ export function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression
   }
 
   // Right now, we only support a single structPath in aggregate functions
-  if (structPaths.size > 1 && (ret.node == 'aggregate' || ret.expressionType == 'aggregate')) {
+  if (structPaths.size > 1 && (ret.node == 'aggregate' || (ret as any).expressionType == 'aggregate')) {
     return diag(expr, 'Graphene only supports a single table within aggregates. This one has: ' + Array.from(structPaths).join(', '), errExpr)
   }
 
@@ -125,6 +125,5 @@ function analyzePercentile (callNode: SyntaxNode, scope: Scope, digits: string, 
     src,
     type: 'number',
     isAgg: true,
-    expressionType: 'aggregate',
   }
 }
