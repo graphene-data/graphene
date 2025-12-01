@@ -136,6 +136,8 @@ async function pushWorktree () {
   if (await repoDirty('core') || await repoDirty('cloud')) return commitWorktree()
 
   await pullWorktree()
+  await $`(cd ${currentWorktree}/core && pnpm lint && pnpm test)`
+  await $`(cd ${currentWorktree}/cloud && pnpm test)`
   await $`git -C ${currentWorktree}/core push origin HEAD:main`
   await $`git -C ${currentWorktree}/cloud push origin HEAD:main`
 }
