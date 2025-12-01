@@ -91,6 +91,7 @@ async function startWorktree (name: string) {
 
     It's important that you always go read core/AGENTS.md before you do anything, as it provides a lot of the context and coding convetions that are relevant to all Graphene development, not just that of core.
   `.trim())
+  await $`ln -s ${treePath}/AGENTS.md ${treePath}/CLAUDE.md`
 
   console.log('Opening Zed...')
   await $`zed ${treePath}`
