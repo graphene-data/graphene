@@ -6,7 +6,6 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
-import {formatIdentifier} from './cli.ts'
 
 interface RunResult {
   code: number
@@ -112,7 +111,8 @@ describe('cli schema', () => {
     expectCliSuccess(res, 'schema list tables')
     let lines = res.stdout.trim().split(/\r?\n/).filter(Boolean)
     expect(lines.length).toBeGreaterThan(0)
-    expect(lines.some(line => line.includes('main.flights'))).toBe(true)
+    let normalized = lines.map(line => line.trim())
+    expect(normalized.some(line => line === 'flights')).toBe(true)
   })
 
   it('describes the requested table columns', async () => {

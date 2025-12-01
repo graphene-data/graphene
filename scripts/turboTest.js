@@ -58,6 +58,7 @@ global['__vitest_worker__'] = {environment: {name: 'TEST'}}
 
 let beforeAllFns = []
 let beforeEachFns = []
+let afterEachFns = []
 let testToRun = null
 
 process.prependListener('uncaughtExceptionMonitor', (error) => {
@@ -77,6 +78,7 @@ global.it.only = (name, fn) => {
 
 global.beforeAll = (fn) => beforeAllFns.push(fn)
 global.beforeEach = (fn) => beforeEachFns.push(fn)
+global.afterEach = (fn) => afterEachFns.push(fn)
 global.it.skip = () => {}
 
 await import(selectedTest.file)
