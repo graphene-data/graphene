@@ -5,11 +5,10 @@ import {printDiagnostics, printTable} from './printer.ts'
 import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import fs from 'fs-extra'
 import path from 'path'
-import {loadConfig} from '../lang/config.ts'
+import {config, loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
-import {runQuery} from './connections/index.ts'
-import {listSchemaTables, describeSchemaTable} from './infoSchema.ts'
+import {getConnection, runQuery} from './connections/index.ts'
 import {loginPkce} from './auth.ts'
 
 const program = new Command()
@@ -52,25 +51,35 @@ program
     printTable(res.rows)
   })
 
-program
-  .command('schema')
+program.command('schema')
   .description('Inspect database tables or describe a table')
-  .argument('[table]', 'Optional table name to describe')
-  .action(async (tableArg: string | undefined) => {
-    if (!tableArg) {
-      let tables = await listSchemaTables()
-      if (!tables.length) console.log('No tables found')
-      tables.forEach(({schema, name}) => console.log(`${schema}${schema ? '.' : ''}${name}`))
-      return
+  .argument('[schema | table]', 'Optional schema or table name to describe')
+  .action(async (tableArg: string) => {
+    let connection = await getConnection()
+    let datasets = await connection.listDatasets()
+
+    // if there's no arg and more than one dataset, just list the datasets
+    if (!tableArg && datasets.length > 1) {
+      return console.log(`Datasets available:\n${datasets.join('\n')}`)
     }
 
-    let columns = await describeSchemaTable(tableArg)
-    if (!columns.length) {
-      return console.log(`Table ${tableArg} not found`)
+    // figure out if you're wanting to list tables in a schema/dataset
+    let dsToList: string | null = null
+    if (datasets.includes(tableArg)) dsToList = tableArg // you gave the name of a dataset
+    else if (!tableArg && datasets.length == 1) dsToList = datasets[0] // only one dataset, and no args
+    else if (!tableArg && config.namespace) dsToList = config.namespace // default namespace configured
+    else if (!tableArg && config.dialect == 'duckdb') dsToList = '<default>'
+
+    if (dsToList) {
+      let tables = await connection.listTables(dsToList)
+      return console.log(`Tables${dsToList ? ` in ${dsToList}` : ''}:\n${tables.join('\n')}`)
     }
 
+    // otherwise, assume you're wanting to see tables
+    let cols = await connection.describeTable(tableArg)
+    if (!cols.length) return console.log(`Table ${tableArg} not found`)
     console.log(`table ${tableArg.split('.').pop()} (`)
-    columns.forEach(col => console.log(`  ${col.name} ${col.dataType}`))
+    cols.forEach(col => console.log(`  ${col.name} ${col.dataType}`))
     console.log(')')
   })
 

@@ -1,5 +1,5 @@
 import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
-import {type QueryConnection} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn} from './types.ts'
 import {config} from '../../lang/config.ts'
 import {readFileSync} from 'fs'
 
@@ -7,6 +7,8 @@ import {readFileSync} from 'fs'
 
 export class BigQueryConnection implements QueryConnection {
   private readonly client: BigQuery
+  private readonly projectId: string
+  private readonly defaultNamespace?: string
 
   constructor (options: BigQueryOptions = {}) {
     options.projectId ||= config.bigquery?.projectId
@@ -42,4 +44,39 @@ export class BigQueryConnection implements QueryConnection {
 
     return {rows, totalRows}
   }
+
+  async listDatasets (): Promise<string[]> {
+    let [datasets] = await this.client.getDatasets()
+    return datasets.map(d => d.id || d.metadata.datasetReference?.datasetId)
+  }
+
+  async listTables (dataset?: string): Promise<string[]> {
+    if (!dataset) throw new Error('BigQuery requires a dataset')
+
+    let res = await this.runQuery(`select table_schema as table_schema, table_name as table_name
+      from \`${dataset}.INFORMATION_SCHEMA.TABLES\`
+      where table_type in ('BASE TABLE', 'VIEW') order by table_name`)
+
+    return res.rows.map(r => `${r['table_schema']}.${r['table_name']}`)
+  }
+
+  async describeTable (target: string): Promise<SchemaColumn[]> {
+    let parts = target.split('.')
+    let table = parts.pop() || ''
+    let dataset = parts.join('.')
+    let sql = `
+      select column_name as column_name, data_type as data_type, ordinal_position as ordinal_position
+      from \`${dataset}.INFORMATION_SCHEMA.COLUMNS\`
+      where lower(table_name) = lower(${sqlStringLiteral(table)})
+      order by ordinal_position
+    `.trim()
+    let res = await this.runQuery(sql)
+    return res.rows.map(row => {
+      return {name: String(row['column_name']), dataType: String(row['data_type'])}
+    })
+  }
+}
+
+function sqlStringLiteral (value: string) {
+  return `'${value.replace(/'/g, "''")}'`
 }

@@ -1,7 +1,7 @@
 import {createPrivateKey} from 'node:crypto'
 import snowflake from 'snowflake-sdk'
 import {config} from '../../lang/config.ts'
-import {type QueryConnection, type QueryResult} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn} from './types.ts'
 
 interface SnowflakeOptions {
   username?: string
@@ -81,4 +81,53 @@ export class SnowflakeConnection implements QueryConnection {
       })
     })
   }
+
+  async listDatasets (): Promise<string[]> {
+    await Promise.resolve()
+    throw new Error('Not yet implemented')
+  }
+
+  async listTables (): Promise<string[]> {
+    let {database} = getSnowflakeNamespace()
+    let tablesRef = `${snowflakeIdent(database)}.${snowflakeIdent('INFORMATION_SCHEMA')}.${snowflakeIdent('TABLES')}`
+    let sql = `
+      select table_schema as "table_schema", table_name as "table_name"
+      from ${tablesRef}
+      where table_type in ('BASE TABLE', 'VIEW')
+      order by table_schema, table_name
+    `.trim()
+    let res = await this.runQuery(sql)
+    return res.rows.map(row => String(row['table_name'] || ''))
+  }
+
+  async describeTable (target: string): Promise<SchemaColumn[]> {
+    let parts = target.split('.')
+    let table = parts.pop() || ''
+    let database = parts.shift() || ''
+    let schema = parts.join('.')
+    let columnsRef = `${snowflakeIdent(database)}.${snowflakeIdent('INFORMATION_SCHEMA')}.${snowflakeIdent('COLUMNS')}`
+    let sql = `
+      select column_name as "column_name", data_type as "data_type", ordinal_position as ordinal_position
+      from ${columnsRef}
+      where upper(table_schema) = upper(${sqlStringLiteral(schema)}) and upper(table_name) = upper(${sqlStringLiteral(table)})
+      order by ordinal_position
+    `.trim()
+    let res = await this.runQuery(sql)
+    return res.rows.map(row => {
+      return {name: String(row['column_name']), dataType: String(row['data_type'])}
+    })
+  }
+}
+
+function getSnowflakeNamespace (): {database: string, schema: string} {
+  throw new Error('Not yet implemented')
+}
+
+function snowflakeIdent (value: string) {
+  if (!value) throw new Error('Snowflake identifiers cannot be empty')
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+function sqlStringLiteral (value: string) {
+  return `'${value.replace(/'/g, "''")}'`
 }
