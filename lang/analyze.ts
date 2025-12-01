@@ -23,10 +23,10 @@ export function findTables (fi: FileInfo) {
   fi.tables = []
   let nodes = tn.getChildren('TableStatement').concat(tn.getChildren('ViewStatement'))
   for (let syntaxNode of nodes) {
-    let name = txt(syntaxNode.getChild('Identifier'))
+    let name = txt(syntaxNode.getChild('Ref'))
 
     if (Object.values(FILE_MAP).find(f => f.tables.find(t => t.name == name))) {
-      diag(syntaxNode.getChild('Identifier')!, `Table "${name}" is already defined`)
+      diag(syntaxNode.getChild('Ref')!, `Table "${name}" is already defined`)
     }
 
     let table = makeTable(name, syntaxNode.getChild('QueryStatement') ? 'query_source' : 'table')
@@ -46,7 +46,7 @@ function makeTable (name: string, type: 'query_source' | 'table'): Table {
   return {name, type, fields: [], connection: config.dialect, dialect: config.dialect, tableName: name, tablePath, metadata: {}}
 }
 
-function addColumnField (table: Table, node: SyntaxNode): Field | null {
+function addColumnField (table: Table, node: SyntaxNode) {
   let name = txt(node.getChild('Identifier'))
 
   if (node.getChild('PrimaryKey')) {
@@ -55,13 +55,12 @@ function addColumnField (table: Table, node: SyntaxNode): Field | null {
   }
   let type = convertDataType(txt(node.getChild('DataType')))!
   if (!type) diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
-
-  let field = {name, type, metadata: extractLeadingMetadata(node)}
-  return addFieldToTable(table, field, node)
+  addFieldToTable(table, {name, type, metadata: extractLeadingMetadata(node)}, node)
 }
 
 function addJoinField (table: Table, node: SyntaxNode) {
-  let nameNode = node.getChild('Alias') || node.getChild('Identifier')
+  // If no explicit alias, default to the last part of the Ref (table name without namespace)
+  let nameNode = node.getChild('Alias') || node.getChild('Ref')!.getChildren('Identifier').pop()
   return addFieldToTable(table, {name: txt(nameNode)}, node)
 }
 
@@ -70,24 +69,21 @@ function addComputedField (table: Table, node: SyntaxNode) {
   addFieldToTable(table, {name, metadata: extractLeadingMetadata(node)}, node)
 }
 
-function addFieldToTable (table: Table, field: Field, node: SyntaxNode): Field | null {
+function addFieldToTable (table: Table, field: Field, node: SyntaxNode) {
   if (table.fields.find(f => f.name == field.name)) {
-    diag(node, `Table already has a field called "${field.name}"`)
-    return null
+    return diag(node, `Table already has a field called "${field.name}"`)
   }
-
   table.fields.push(field)
   FIELD_NODE_MAP.set(field, node)
-  return field
 }
 
 // `extend` blocks can add columns and joins to existing tables (usually views)
 export function applyExtends (fi: FileInfo) {
   fi.tree!.topNode.getChildren('ExtendStatement').forEach(node => {
-    let tableName = txt(node.getChild('Identifier'))
+    let tableName = txt(node.getChild('Ref'))
     let target = lookupTable(tableName, node)
     if (!target) {
-      return diag(node.getChild('Identifier') || node, `Cannot extend unknown table "${tableName}"`)
+      return diag(node.getChild('Ref') || node, `Cannot extend unknown table "${tableName}"`)
     }
 
     node.getChildren('JoinDef').forEach(jn => addJoinField(target, jn))
@@ -122,7 +118,7 @@ export function analyzeField (field: Field, table: Table) {
 
   if (node.name == 'JoinDef') {
     field = field as Join
-    let target = lookupTable(txt(node.getChild('Identifier')), node)
+    let target = lookupTable(txt(node.getChild('Ref')), node)
     if (!target) return diag(node, 'Unknown table to join')
 
     // query_source tables are all-or-nothing, so when we encounter them as a join we need to analyze them
@@ -137,7 +133,7 @@ export function analyzeField (field: Field, table: Table) {
     Object.assign(field, target, {name: field.name, join: jt})
 
     // It's important we analyze this expression _after_ setting the join, since the expression might refer to it (ie join one user on user.id = user_id)
-    field.onExpression = analyzeExpression(node.getChild('Expression')!, {table, outputFields: []})
+    field.onExpression = analyzeExpression(node.getChild('BinaryExpression')!, {table, outputFields: []})
   }
 
   if (node.name == 'ComputedDef') {
@@ -183,7 +179,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
     TABLE_NODE_MAP.set(scope.table, froms[0].getChild('SubqueryExpression')!)
     analyzeTable(scope.table)
   } else { // from a regular table
-    baseTableName = txt(froms[0].getChild('Identifier'))
+    baseTableName = txt(froms[0].getChild('Ref'))
     scope.table = lookupTable(baseTableName, froms[0])!
     if (!scope.table) return diag(froms[0], `could not find table "${baseTableName}"`)
     NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: scope.table})
@@ -332,7 +328,7 @@ export function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 
       return {node: 'extract', type: 'number', units, e: e as any, isAgg: false}
     }
-    case 'FunctionCall': return analyzeFunctionCall(expr, scope, {analyzeExpression, checkTypes, diag, errExpr})
+    case 'FunctionCall': return analyzeFunctionCall(expr, scope)
     case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
     case 'Count': {
       let countExpr = expr.getChild('Expression')

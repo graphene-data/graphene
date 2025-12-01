@@ -33,8 +33,7 @@ tablePrimary[@isGroup=TablePrimary] {
 }
 
 TableName {
-  // TODO handle namespaces
-  Identifier (Kw<"as">? Alias)?
+  Ref (Kw<"as">? Alias)?
 }
 
 Subquery {
@@ -70,15 +69,15 @@ LimitClause {
 }
 
 TableStatement {
-  Kw<"table"> Identifier "(" (tableItem ","?)+ ")"
+  Kw<"table"> Ref "(" (tableItem ","?)+ ")"
 }
 
 ViewStatement {
-  Kw<"table"> Identifier Kw<"as"> "(" QueryStatement ")"
+  Kw<"table"> Ref Kw<"as"> "(" QueryStatement ")"
 }
 
 ExtendStatement {
-  Kw<"extend"> Identifier "(" (extendItem ","?)+ ")"
+  Kw<"extend"> Ref "(" (extendItem ","?)+ ")"
 }
 
 tableItem {
@@ -98,7 +97,7 @@ PrimaryKey {
 }
 
 JoinDef {
-  JoinType Identifier (Kw<"as"> Alias)? Kw<"on"> JoinCondition
+  JoinType Ref (Kw<"as"> Alias)? Kw<"on"> JoinCondition
 }
 
 JoinType {

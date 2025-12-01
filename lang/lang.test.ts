@@ -220,13 +220,20 @@ describe('lang', () => {
       .toRenderSql('with __stage0 as ( select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base ) select base."id" as "id", base."email" as "email" from __stage0 as base order by 1 asc nulls last')
   })
 
+  it('qualified joins default to table name alias', () => {
+    updateFile(`
+      table dataset.users (id int primary_key, join many dataset.orders on id = orders.user_id)
+      table dataset.orders (id int primary_key, user_id int)
+    `, 'models.gsql')
+
+    expect('from dataset.users select id, orders.id')
+      .toRenderSql('select base."id" as "id", orders_0."id" as "orders_id" from dataset.users as base left join dataset.orders as orders_0 on base."id"=orders_0."user_id"')
+  })
+
   it('extends derived tables with additional measures', async () => {
     updateFile(`${testTables}
       table user_facts as (from users select id, total_orders)
-
-      extend user_facts (
-        total_orders > 1 as repeat_buyer
-      )
+      extend user_facts (total_orders > 1 as repeat_buyer)
     `, 'models.gsql')
 
     await expect('from user_facts select id, total_orders, repeat_buyer order by id')

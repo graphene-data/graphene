@@ -78,7 +78,7 @@ program.command('schema')
     // otherwise, assume you're wanting to see tables
     let cols = await connection.describeTable(tableArg)
     if (!cols.length) return console.log(`Table ${tableArg} not found`)
-    console.log(`table ${tableArg.split('.').pop()} (`)
+    console.log(`table ${tableArg} (`)
     cols.forEach(col => console.log(`  ${col.name} ${col.dataType}`))
     console.log(')')
   })
