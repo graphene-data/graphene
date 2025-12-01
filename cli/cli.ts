@@ -9,6 +9,7 @@ import {loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {runQuery} from './connections/index.ts'
+import {listSchemaTables, describeSchemaTable} from './infoSchema.ts'
 import {loginPkce} from './auth.ts'
 
 const program = new Command()
@@ -49,6 +50,28 @@ program
     let sql = toSql(queries[0])
     let res = await runQuery(sql)
     printTable(res.rows)
+  })
+
+program
+  .command('schema')
+  .description('Inspect database tables or describe a table')
+  .argument('[table]', 'Optional table name to describe')
+  .action(async (tableArg: string | undefined) => {
+    if (!tableArg) {
+      let tables = await listSchemaTables()
+      if (!tables.length) console.log('No tables found')
+      tables.forEach(({schema, name}) => console.log(`${schema}${schema ? '.' : ''}${name}`))
+      return
+    }
+
+    let columns = await describeSchemaTable(tableArg)
+    if (!columns.length) {
+      return console.log(`Table ${tableArg} not found`)
+    }
+
+    console.log(`table ${tableArg.split('.').pop()} (`)
+    columns.forEach(col => console.log(`  ${col.name} ${col.dataType}`))
+    console.log(')')
   })
 
 program
