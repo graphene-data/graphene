@@ -1136,44 +1136,6 @@ where email ilike concat('%', $name_of_input, '%')
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
 
-#### Date range
-
-Creates a date picker that can be used to filter a query. Includes a set of preset ranges for quick selection of common date ranges (relative to the supplied end date). To see how to filter a query using an input component, see Filters.
-
-Here's an example:
-
-```markdown
-<DateRange
-  name=date_range_name
-  data=orders_by_day
-  dates=day
-/>
-```
-
-The start and end dates for the user-selected range would then be referenced in GSQL as `$date_range_name_start` and `$date_range_name_end` at the end. For example:
-
-```sql
-select *
-from orders
-where created_at > $date_range_name_start and < $date_range_name_end
-```
-
-##### All date range attributes
-
-| Attribute | Description | Required | Options | Default |
-|------|-------------|----------|---------|---------|
-| name | Name of the DateRange, used to reference the selected values elsewhere as `"$name_start"` or `"$name_end"` | true | string | - |
-| data | Query name, wrapped in curly braces | false | query name | - |
-| dates | Column or expression from the query containing date range to span | false | column name, stored expression name, GSQL expression | - |
-| start | A manually specified start date to use for the range | false | string formatted YYYY-MM-DD | - |
-| end | A manually specified end date to use for the range | false | string formatted YYYY-MM-DD | - |
-| title | Title to display in the Date Range component | false | string | - |
-| presetRanges | Customize "Select a Range" drop down, by including preset range options | false | list of values e.g. `"Last 7 Days, Last 30 Days"`. Allowed values: `Last 7 Days`, `Last 30 Days`, `Last 90 Days`, `Last 365 Days`, `Last 3 Months`, `Last 6 Months`, `Last 12 Months`, `Last Month`, `Last Year`, `Month to Date`, `Month to Today`, `Year to Date`, `Year to Today`, `All Time` | - |
-| defaultValue | Accepts preset in string format to apply default value in Date Range picker | false | `"Last 7 Days"`, `"Last 30 Days"`, `"Last 90 Days"`, `"Last 365 Days"`, `"Last 3 Months"`, `"Last 6 Months"`, `"Last 12 Months"`, `"Last Month"`, `"Last Year"`, `"Month to Date"`, `"Month to Today"`, `"Year to Date"`, `"Year to Today"`, `"All Time"` | - |
-| hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
-| description | Adds an info icon with description tooltip on hover | false | string | - |
-
-
 #### Dropdown
 
 Creates a dropdown menu with a list of options that can be selected. The selected option can be used to filter queries or in markdown. To see how to filter a query using a dropdown, see Filters.
