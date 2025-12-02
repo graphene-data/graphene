@@ -80,8 +80,9 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     impl: {function: 'TIMESTAMP_DIFF'},
   },
   'date_trunc': {
-    takes: {'date': 'timestamp', 'unit': {sql_native: 'kw'}},
-    returns: 'timestamp',
+    generic: {'T': ['date', 'timestamp']},
+    takes: {'date': {generic: 'T'}, 'unit': {sql_native: 'kw'}},
+    returns: {generic: 'T'},
     impl: {sql: 'DATE_TRUNC(${date}, ${unit})'},
   },
   'current_date': {
@@ -138,4 +139,3 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
     },
   },
 }
-
