@@ -5,18 +5,17 @@ import {printDiagnostics, printTable} from './printer.ts'
 import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import fs from 'fs-extra'
 import path from 'path'
+import dotenv from 'dotenv'
 import {config, loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {loginPkce} from './auth.ts'
 
+dotenv.config({quiet: true})
 const program = new Command()
 
-program
-  .name('graphene')
-  .description('Graphene CLI')
-  .version('1.0.0')
+program.name('graphene').description('Graphene CLI').version('1.0.0')
 
 program.hook('preAction', async () => {
   if (process.env.CLI_DELAY) { // useful if you want to attach a debugger
