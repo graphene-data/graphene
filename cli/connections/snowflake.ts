@@ -83,44 +83,40 @@ export class SnowflakeConnection implements QueryConnection {
   }
 
   async listDatasets (): Promise<string[]> {
-    await Promise.resolve()
-    throw new Error('Not yet implemented')
+    let res = await this.runQuery('show databases')
+    return res.rows.map(row => String(row['name'] || ''))
   }
 
-  async listTables (): Promise<string[]> {
-    let {database} = getSnowflakeNamespace()
-    let tablesRef = `${snowflakeIdent(database)}.${snowflakeIdent('INFORMATION_SCHEMA')}.${snowflakeIdent('TABLES')}`
-    let sql = `
+  async listTables (dataset: string): Promise<string[]> {
+    let parts = dataset.split('.')
+    let database = parts.shift() || ''
+    let schema = parts.join('.')
+
+    let res = await this.runQuery(`
       select table_schema as "table_schema", table_name as "table_name"
-      from ${tablesRef}
-      where table_type in ('BASE TABLE', 'VIEW')
-      order by table_schema, table_name
-    `.trim()
-    let res = await this.runQuery(sql)
-    return res.rows.map(row => String(row['table_name'] || ''))
+      from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.TABLES
+      where table_type in ('BASE TABLE', 'VIEW') and table_schema = ${sqlStringLiteral(schema)}
+      order by table_name
+    `)
+    return res.rows.map(row => `${row['table_schema']}.${row['table_name']}`)
   }
 
   async describeTable (target: string): Promise<SchemaColumn[]> {
     let parts = target.split('.')
-    let table = parts.pop() || ''
     let database = parts.shift() || ''
+    let table = parts.pop() || ''
     let schema = parts.join('.')
-    let columnsRef = `${snowflakeIdent(database)}.${snowflakeIdent('INFORMATION_SCHEMA')}.${snowflakeIdent('COLUMNS')}`
-    let sql = `
+
+    let res = await this.runQuery(`
       select column_name as "column_name", data_type as "data_type", ordinal_position as ordinal_position
-      from ${columnsRef}
+      from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.COLUMNS
       where upper(table_schema) = upper(${sqlStringLiteral(schema)}) and upper(table_name) = upper(${sqlStringLiteral(table)})
       order by ordinal_position
-    `.trim()
-    let res = await this.runQuery(sql)
+    `)
     return res.rows.map(row => {
       return {name: String(row['column_name']), dataType: String(row['data_type'])}
     })
   }
-}
-
-function getSnowflakeNamespace (): {database: string, schema: string} {
-  throw new Error('Not yet implemented')
 }
 
 function snowflakeIdent (value: string) {
