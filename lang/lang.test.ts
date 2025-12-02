@@ -524,6 +524,13 @@ describe('lang', () => {
       .toRenderSql('select date_trunc(base.`created_at`, week) as `col_0` from `calendar` as base')
   })
 
+  it('supports date_trunc on date columns (as opposed to timestamp)', () => {
+    setConfig({root: '', bigquery: {}})
+    updateFile('table events (event_date date)', 'events.gsql')
+    expect('from events select date_trunc(event_date, month)')
+      .toRenderSql('select date_trunc(base.`event_date`, month) as `col_0` from `events` as base')
+  })
+
   it('supports extract expressions', () => {
     expect('from users select extract(hour from created_at)')
       .toRenderSql('select extract(hour from base."created_at") as "col_0" from users as base')
