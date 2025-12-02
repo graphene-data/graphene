@@ -610,6 +610,7 @@ function convertDataType (dataType: string): FieldType | null {
     case 'INTEGER': return 'number'
     case 'FLOAT': return 'number'
     case 'FLOAT64': return 'number'
+    case 'BOOL': return 'boolean'
     case 'BOOLEAN': return 'boolean'
     case 'DATE': return 'date'
     case 'DATETIME': return 'timestamp'
