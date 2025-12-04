@@ -7,7 +7,7 @@ import net from 'net'
 import {type Config, config, setConfig} from '../../lang/config.ts'
 import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
 import {serve2} from '../../cli/serve2.ts'
-import {assertNoConsoleErrors, getTrackerForPage} from './browserConsole.ts'
+import {assertConsoleErrors, trackerBrowserConsole} from './browserConsole.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 
 export {expect}
@@ -41,9 +41,9 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
   page: async ({browser}, use) => {
     let context = await browser.newContext()
     let page = await context.newPage()
-    let tracker = getTrackerForPage(page)
+    trackerBrowserConsole(page)
     await use(page)
-    tracker.stop()
+    assertConsoleErrors(page)
     if (process.env.GRAPHENE_DEBUG) await page.pause()
     await context.close()
   },
@@ -115,7 +115,6 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
 
     await use(mountFn)
     await expect(page.locator('#content > :not(dialog)').first()).toBeVisible()
-    assertNoConsoleErrors(page)
   },
 
   chart: async ({page}, use) => {
