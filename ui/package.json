@@ -11,7 +11,6 @@
   "dependencies": {
     "@tidyjs/tidy": "^2.5.2",
     "chroma-js": "2.4.2",
-    "debounce": "^1.2.1",
     "dompurify": "^3.2.7",
     "echarts": "^5.5.0",
     "@graphenedata/html2canvas": "^1.4.1",

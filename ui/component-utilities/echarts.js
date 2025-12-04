@@ -1,6 +1,5 @@
 import {registerTheme, init, connect} from 'echarts/dist/echarts.esm.js'
 import {evidenceThemeDark, evidenceThemeLight} from './echartsThemes'
-import debounce from 'debounce'
 import * as chartWindowDebug from './chartWindowDebug'
 
 /**
@@ -258,6 +257,16 @@ const echartsAction = (node, options) => {
 
       chartWindowDebug.unset(chart.id)
     },
+  }
+}
+
+const debounce = (callback, wait) => {
+  let timeoutId = null
+  return (...args) => {
+    window.clearTimeout(timeoutId)
+    timeoutId = window.setTimeout(() => {
+      callback(...args)
+    }, wait)
   }
 }
 
