@@ -5,15 +5,6 @@ type Tracker = {errors: string[], stop: () => void}
 
 const trackerKey = Symbol.for('graphene.console.errors')
 
-export async function withBrowserConsole<T> (page: Page, use: (page: Page) => Promise<T>) {
-  let tracker = ensureTracker(page)
-  try {
-    return await use(page)
-  } finally {
-    tracker.stop()
-  }
-}
-
 export function expectConsoleError (page: Page, matcher: Matcher) {
   let tracker = getTracker(page)
   let index = tracker.errors.findIndex(text => matches(text, matcher))
@@ -29,7 +20,7 @@ export function assertNoConsoleErrors (page: Page) {
   expect(tracker.errors).toMatchObject([])
 }
 
-function ensureTracker (page: Page): Tracker {
+export function getTrackerForPage (page: Page): Tracker {
   let existing: Tracker | undefined = (page as any)[trackerKey]
   if (existing) return existing
 

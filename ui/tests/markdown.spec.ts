@@ -1,5 +1,5 @@
 import {test, expect, waitForGrapheneQueries} from './fixtures'
-import {assertNoConsoleErrors, expectConsoleError} from './browserConsole'
+import {expectConsoleError} from './browserConsole'
 
 test('loads markdown files', async ({server, page}) => {
   server.mockFile('/index.md', `
@@ -14,8 +14,7 @@ test('loads markdown files', async ({server, page}) => {
   await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
   await expect(page.locator('main canvas').first()).toBeVisible()
-  assertNoConsoleErrors(page)
-  await expect(page).toHaveScreenshot('loads-markdown-files.png')
+  await expect(page).screenshot('loads-markdown-files')
 })
 
 test('reports query errors', async ({server, page}) => {
@@ -34,26 +33,24 @@ test('reports query errors', async ({server, page}) => {
   await waitForGrapheneQueries(page)
   await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
   expectConsoleError(page, 'Failed to load resource')
-  await expect(page).toHaveScreenshot('reports-query-errors.png')
+  await expect(page).screenshot('reports-query-errors')
 })
 
 test('renders literal less-than characters', async ({server, page}) => {
   server.mockFile('/index.md', `
     # Comparison
-
     Profit is 1 < 2 and losses are 0 < 1.
   `)
 
   await page.goto(server.url() + '/')
+  await page.pause()
   await expect(page.getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
   await expect(page.locator('main')).toHaveText(/1 < 2/)
-  assertNoConsoleErrors(page)
 })
 
 test('sanitizes unsafe html', async ({server, page}) => {
   server.mockFile('/index.md', `
     # Sanitized
-
     <script>window.__MD_SCRIPT__ = true</script>
     <button id="danger" onclick="window.__MD_CLICK__ = true">Danger</button>
     <iframe id="embed" src="javascript:alert('boom')"></iframe>
@@ -66,5 +63,4 @@ test('sanitizes unsafe html', async ({server, page}) => {
 
   let scriptRan = await page.evaluate(() => (window as any).__MD_SCRIPT__)
   expect(scriptRan).toBeUndefined()
-  assertNoConsoleErrors(page)
 })

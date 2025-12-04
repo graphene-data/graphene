@@ -1,28 +1,28 @@
-import {test, expect} from './fixtures'
+import {expect, test} from './fixtures'
 import {singleDim, timeseries, timeseriesGrouped} from './testData'
 
-test.use({
-  viewport: {width: 680, height: 400},
+test.beforeEach(async ({page}) => {
+  await page.setViewportSize({width: 680, height: 400})
 })
 
 test('bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
-  await expect(chart.el).toHaveScreenshot('bar-chart.png')
+  await expect(chart.el).screenshot('bar-chart')
 })
 
 test('horizontal bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: singleDim(), x: 'category', y: 'value', swapXY: true})
-  await expect(chart.el).toHaveScreenshot('horizontal-bar-chart.png')
+  await expect(chart.el).screenshot('horizontal-bar-chart')
 })
 
 test('area chart', async ({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
-  await expect(chart.el).toHaveScreenshot('area-chart.png')
+  await expect(chart.el).screenshot('area-chart')
 })
 
 test('stacked area chart', async ({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', series: 'category', type: 'stacked'})
-  await expect(chart.el).toHaveScreenshot('stacked-area-chart.png')
+  await expect(chart.el).screenshot('stacked-area-chart')
 })
 
 test('line chart timeseries', async ({mount, page, chart}) => {
@@ -30,19 +30,19 @@ test('line chart timeseries', async ({mount, page, chart}) => {
   await expect(page.locator('canvas')).toBeVisible()
   let axisType = await chart.config(c => c.xAxis[0].type)
   expect(axisType).toBe('time')
-  await expect(chart.el).toHaveScreenshot('line-chart-timeseries.png')
+  await expect(chart.el).screenshot('line-chart-timeseries')
 })
 
 test('pie chart', async ({mount, chart}) => {
   await mount('components/PieChart.svelte', {data: singleDim(), category: 'category', value: 'value'})
-  await expect(chart.el).toHaveScreenshot('pie-chart.png')
+  await expect(chart.el).screenshot('pie-chart')
 })
 
 test('big value', async ({mount, page, chart}) => {
   await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', fmt: 'num0', title: 'Sales'})
   await expect(page.getByText('Sales')).toBeVisible()
   await expect(page.getByText('611,113')).toBeVisible()
-  await expect(chart.el).toHaveScreenshot('big-value.png')
+  await expect(chart.el).screenshot('big-value')
 })
 
 test('chart uses css named colors from comma-separated palette', async ({mount, chart}) => {
@@ -105,5 +105,5 @@ test('bar chart accepts comma-separated multi y', async ({mount, chart}) => {
 
   let seriesLen = await chart.config((c) => (c.series ?? []).length)
   expect(seriesLen).toBe(2)
-  await expect(chart.el).toHaveScreenshot('bar-chart-multi-y.png')
+  await expect(chart.el).screenshot('bar-chart-multi-y')
 })
