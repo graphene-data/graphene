@@ -4,8 +4,6 @@ import {updateFile} from '../../lang/core.ts'
 import stripAnsi from 'strip-ansi'
 import {trimIndentation} from '../../lang/util.ts'
 
-test.describe.configure({mode: 'serial'})
-
 let logs = ''
 function log (...args: any[]) {
   // console.log(...args) // useful for debugging, but pollutes test outputs

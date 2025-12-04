@@ -1,42 +1,51 @@
-import {test as base, expect, type Page} from '@playwright/test'
+import {test as base} from 'vitest'
+import {type Page, chromium, type Browser} from '@playwright/test'
+import {playwrightExpect as expect} from './matchers.ts'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import net from 'net'
-import {config, setConfig} from '../../lang/config.ts'
+import {type Config, config, setConfig} from '../../lang/config.ts'
 import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
 import {serve2} from '../../cli/serve2.ts'
-import {withBrowserConsole, assertNoConsoleErrors} from './browserConsole.ts'
+import {assertNoConsoleErrors, getTrackerForPage} from './browserConsole.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 
 export {expect}
 
 process.env.NODE_ENV = 'test'
 
-let server: any
 export type MountFn = (componentPath: string, props: any) => Promise<void>
 export type ChartConfigFn = <T>(selector: (config: any) => T) => Promise<T | null>
 
-export interface ChartHandle {
+export interface ChartFixture {
   config: ChartConfigFn
   el: any
 }
 
-let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-
-export interface ServerOptions {
-  root?: string
-  bigquery?: NonNullable<typeof config.bigquery>
-  snowflake?: NonNullable<typeof config.snowflake>
-}
-
 export interface ServerFixture {
-  url: (options?: ServerOptions) => string
+  url: (options?: Config) => string
   mockFile: (path: string, content: string) => void
 }
 
-export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: ChartHandle }>({
-  page: async ({page}, use) => {
-    await withBrowserConsole(page, use)
+export const test = base.extend<{ browser: Browser, page: Page, server: ServerFixture, mount: MountFn, chart: ChartFixture }>({
+  browser: [
+    // eslint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      let b = await chromium.launch({headless: !process.env.INSPECT, devtools: !!process.env.INSPECT})
+      await use(b)
+      await b.close()
+    },
+    {scope: 'worker'},
+  ],
+
+  page: async ({browser}, use) => {
+    let context = await browser.newContext()
+    let page = await context.newPage()
+    let tracker = getTrackerForPage(page)
+    await use(page)
+    tracker.stop()
+    if (process.env.INSPECT) await page.pause()
+    await context.close()
   },
 
   // This boots up our cli server on a unique port for e2e tests.
@@ -47,19 +56,24 @@ export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: 
       let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
       process.env.GRAPHENE_PORT = String(port)
       setConfig({port, root: viteRoot})
-      server = await serve2()
+      let server = await serve2()
+
+      function cleanup () {
+        clearWorkspace()
+        Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
+
+        // Vite caches our mocked files, so we need to clear them out after each test.
+        let keys = Array.from(server?.moduleGraph?.idToModuleMap?.keys()) || []
+        keys = Array.from(keys.filter(k => k.endsWith('?mock') || k == '\0virtual:nav'))
+        let mods = keys.map(k => server.moduleGraph.getModuleById(k)).filter(m => !!m)
+        mods.forEach(m => server.moduleGraph.invalidateModule(m))
+      }
 
       await use({
-        url: (options: ServerOptions = {}) => {
-          setConfig({
-            root: options.root || config.root,
-            port,
-            host: config.host,
-            namespace: config.namespace,
-            bigquery: options.bigquery ?? config.bigquery,
-            snowflake: options.snowflake ?? config.snowflake,
-          })
+        url: (options: Config = {} as Config) => {
+          setConfig({...options, root: options.root || viteRoot, port})
           loadWorkspace(config.root, false)
+          onTestFinished(cleanup)
           return `http://localhost:${port}`
         },
         mockFile: (path: string, content: string) => {
@@ -86,6 +100,7 @@ export const test = base.extend<{ server: ServerFixture, mount: MountFn, chart: 
           delete p._evidenceColumnTypes
         }
       }, modifiedProps)
+      let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
       let resolvedComponentPath = path.resolve(uiRoot, componentPath)
       let browserPath = '/@fs/' + resolvedComponentPath.replace(/\\/g, '/')
       await page.addScriptTag({type: 'module', content: `
@@ -128,18 +143,6 @@ test.beforeEach(() => {
   let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
   setConfig({root})
   clearWorkspace()
-  Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
-
-  // Vite caches our mocked files, so we need to clear them out before each test.
-  let keys = server?.moduleGraph?.idToModuleMap?.keys() || []
-  keys.forEach((k: any) => {
-    if (!k.endsWith('?mock')) return
-    server.moduleGraph.invalidateModule(server.moduleGraph.getModuleById(k))
-  })
-})
-
-test.afterEach(async ({page}) => {
-  if (process.env.DEBUG) await page.pause()
 })
 
 async function getAvailablePort (): Promise<number> {

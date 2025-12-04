@@ -3,7 +3,7 @@ import {expect as vitestExpect} from 'vitest'
 import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {trimIndentation} from './util.ts'
 
-const DEBUG = !!process.env.DEBUG
+const DEBUG = !!process.env.INSPECT
 
 const ECOMM_SETUP = `
   create table users (
