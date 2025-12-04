@@ -31,7 +31,7 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
   browser: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
-      let b = await chromium.launch({headless: !process.env.INSPECT, devtools: !!process.env.INSPECT})
+      let b = await chromium.launch({headless: !process.env.GRAPHENE_DEBUG, devtools: !!process.env.GRAPHENE_DEBUG})
       await use(b)
       await b.close()
     },
@@ -44,7 +44,7 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
     let tracker = getTrackerForPage(page)
     await use(page)
     tracker.stop()
-    if (process.env.INSPECT) await page.pause()
+    if (process.env.GRAPHENE_DEBUG) await page.pause()
     await context.close()
   },
 

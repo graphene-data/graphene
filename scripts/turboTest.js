@@ -1,90 +1,47 @@
 import {readFile} from 'node:fs/promises'
-import path from 'path'
+import path from 'node:path'
+import {fileURLToPath} from 'node:url'
+import {startVitest} from 'vitest/node'
 
-const JSON_RESULTS_FILE = '/tmp/graphene-test-results.json'
+process.env.GRAPHENE_DEBUG = '1'
 
-async function findTestToRun () {
-  let results = JSON.parse(await readFile(JSON_RESULTS_FILE, 'utf8'))
-  let testNameQueryRaw = process.argv[2] || ''
-  let testNameQuery = testNameQueryRaw.toLowerCase()
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
-  if (testNameQuery) {
-    for (let testSuite of results.testResults) {
-      for (let test of testSuite.assertionResults) {
-        let name = test.title.toLowerCase()
-        let fullName = (test.fullName || '').toLowerCase()
-        if (name.includes(testNameQuery) || fullName.includes(testNameQuery)) {
-          return {
-            file: testSuite.name,
-            name: test.title,
-            fullName: test.fullName,
-          }
-        }
-      }
-    }
-    console.log(`⚠️ No test includes "${testNameQueryRaw}". Defaulting to first failed test.`)
+async function loadResults () {
+  try {
+    let raw = await readFile(path.join(ROOT_DIR, 'node_modules/.testResults.json'), 'utf8')
+    return JSON.parse(raw)
+  } catch (error) {
+    if (error?.code === 'ENOENT') console.log('No test results found. Run `pnpm test` first.')
+    else throw error
   }
-
-  for (let testSuite of results.testResults) {
-    if (testSuite.status === 'failed') {
-      for (let test of testSuite.assertionResults) {
-        if (test.status === 'failed') {
-          return {
-            file: testSuite.name,
-            name: test.title,
-            fullName: test.fullName,
-            error: test.failureMessages.join('\n'),
-          }
-        }
-      }
-    }
-  }
-
-  return null
 }
 
-// small wait for the debugger to attach
-await new Promise((r) => setTimeout(r, 1000))
+function selectTest (results) {
+  for (let suite of results?.testResults || []) {
+    if (suite.status !== 'failed') continue
+    for (let test of suite.assertionResults || []) {
+      if (test.status !== 'failed') continue
+      return {file: suite.name, name: test.title}
+    }
+  }
+}
 
-let selectedTest = await findTestToRun()
+let results = await loadResults()
+let selectedTest = selectTest(results)
+
 if (!selectedTest) {
-  console.log('No failed tests found. Run `ta` first.')
+  console.log('No failed tests found. Run `pnpm test` first.')
   process.exit(0)
 }
 
-console.log(`🔍 Running test: ${path.basename(selectedTest.file)} - ${selectedTest.name}`)
-
-global['__vitest_worker__'] = {environment: {name: 'TEST'}}
-
-let beforeAllFns = []
-let beforeEachFns = []
-let afterEachFns = []
-let testToRun = null
-
-process.prependListener('uncaughtExceptionMonitor', (error) => {
-  console.error(error.message)
-  if (error.expected) console.log('expected', error.expected)
-  if (error.actual) console.log('actual  ', error.actual)
-})
-
-global.describe = (name, fn) => fn()
-global.it = (name, fn) => {
-  if (name !== selectedTest.name) return
-  testToRun = fn
-}
-global.it.only = (name, fn) => {
-  testToRun = fn
-}
-
-global.beforeAll = (fn) => beforeAllFns.push(fn)
-global.beforeEach = (fn) => beforeEachFns.push(fn)
-global.afterEach = (fn) => afterEachFns.push(fn)
-global.it.skip = () => {}
-
-await import(selectedTest.file)
-// https://github.com/nodejs/node/issues/50430#issuecomment-2449419913
-process.nextTick(async () => {
-  for (let fn of beforeAllFns) await fn()
-  for (let fn of beforeEachFns) await fn()
-  await testToRun()
+await startVitest('test', [path.relative(ROOT_DIR, selectedTest.file)], {
+  testNamePattern: selectedTest.name,
+  root: ROOT_DIR,
+  config: path.join(ROOT_DIR, 'vitest.config.ts'),
+  run: true,
+  watch: false,
+  inspect: true,
+  fileParallelism: false,
+  reporters: ['dot'],
 })

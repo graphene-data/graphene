@@ -4,7 +4,7 @@
   "main": "core.ts",
   "scripts": {
     "test": "vitest run lang --root ..",
-    "test-one": "DEBUG=1 node --inspect-wait ../scripts/turboTest.js",
+    "test-one": "node ../scripts/turboTest.js",
     "generate": "lezer-generator lang.grammar -o parser.js && eslint --fix parser.js"
   },
   "dependencies": {
