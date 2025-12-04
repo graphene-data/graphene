@@ -3,8 +3,6 @@ import {expect as vitestExpect} from 'vitest'
 import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {trimIndentation} from './util.ts'
 
-const DEBUG = !!process.env.INSPECT
-
 const ECOMM_SETUP = `
   create table users (
     id integer primary key,
@@ -82,9 +80,15 @@ export async function prepareEcommerceTables () {
   await conn.run(ECOMM_SETUP)
 }
 
+// small delay to allow debugger to attach, since vitest doesn't support --inspect-wait
+if (process.env.GRAPHENE_DEBUG) {
+  beforeAll(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+  })
+}
+
 vitestExpect.extend({
   toRenderSql (received: string, expectedSql: string, opts: { preserveCase?: boolean } = {}) {
-    if (DEBUG) console.log('Query:', received)
     let content = trimIndentation(received)
     let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
     let diagnostics = getDiagnostics()
@@ -114,7 +118,6 @@ vitestExpect.extend({
   },
 
   async toReturnRows (received: string, ...expectedRows: unknown[][]) {
-    if (DEBUG) console.log('Query:', received)
     let content = trimIndentation(received)
     let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
     let diagnostics = getDiagnostics()
@@ -126,7 +129,6 @@ vitestExpect.extend({
       }
     }
     let sql = toSql(queries[0])
-    if (DEBUG) console.log('SQL:', sql)
 
     try {
       let reader = await conn.runAndReadAll(sql)
@@ -152,7 +154,6 @@ vitestExpect.extend({
   },
 
   toHaveDiagnostic (received: string, pattern: RegExp | string) {
-    if (DEBUG) console.log('Query:', received)
     let content = trimIndentation(received)
     analyze(content, content.includes('```') ? 'md' : 'gsql')
 
@@ -171,7 +172,6 @@ vitestExpect.extend({
   },
 
   toHaveNoErrors (received: string) {
-    if (DEBUG) console.log('Query:', received)
     let content = trimIndentation(received)
     analyze(content, content.includes('```') ? 'md' : 'gsql')
 

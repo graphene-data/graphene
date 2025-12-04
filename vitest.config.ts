@@ -3,7 +3,7 @@ import {defineConfig} from 'vitest/config'
 export default defineConfig({
   test: {
     globals: true,
-    testTimeout: process.env.INSPECT ? 0 : 10_000,
+    testTimeout: process.env.GRAPHENE_DEBUG ? 0 : 10_000,
     environment: 'node',
     reporters: ['default', 'json'],
     outputFile: 'node_modules/.testResults.json',
