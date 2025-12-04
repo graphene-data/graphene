@@ -58,7 +58,7 @@
     "@types/sanitize-html": "^2.16.0",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.21.5",
-    "vitest": "3.0.5",
+    "vitest": "4.0.15",
     "vscode-languageserver-types": "^3.17.0"
   },
   "scripts": {
