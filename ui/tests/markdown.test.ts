@@ -18,6 +18,7 @@ test('loads markdown files', async ({server, page}) => {
 })
 
 test('reports query errors', async ({server, page}) => {
+  expectConsoleError(page, 'Failed to load resource')
   server.mockFile('/index.md', `
     # Broken Dashboard
 
@@ -32,7 +33,6 @@ test('reports query errors', async ({server, page}) => {
   await page.goto(server.url() + '/')
   await waitForGrapheneQueries(page)
   await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
-  expectConsoleError(page, 'Failed to load resource')
   await expect(page).screenshot('reports-query-errors')
 })
 

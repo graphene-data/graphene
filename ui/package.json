@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "eslint --fix .",
     "test": "vitest run ui --root ..",
-    "test-one": "node ../scripts/turboTest.ts"
+    "test-one": "node ../scripts/turboTest.js"
   },
   "dependencies": {
     "@tidyjs/tidy": "^2.5.2",

@@ -1,57 +1,56 @@
-import {expect, type ConsoleMessage, type Page} from '@playwright/test'
+import {type ConsoleMessage, type Page} from '@playwright/test'
 
 type Matcher = string | RegExp | ((text: string) => boolean)
-type Tracker = {errors: string[], stop: () => void}
+type Tracker = {errors: string[], expectedMatchers: Matcher[]}
 
 const trackerKey = Symbol.for('graphene.console.errors')
 
+/** Register an expected console error. Matching errors will be suppressed from output. */
 export function expectConsoleError (page: Page, matcher: Matcher) {
   let tracker = getTracker(page)
-  let index = tracker.errors.findIndex(text => matches(text, matcher))
-  if (index === -1) {
-    let lines = tracker.errors.map(text => `- ${text}`).join('\n')
-    throw new Error(`Expected browser console error matching ${describe(matcher)}, but none matched.\nCurrent errors:\n${lines || '- <none>'}`)
-  }
-  tracker.errors.splice(index, 1)
+  tracker.expectedMatchers.push(matcher)
 }
 
-export function assertNoConsoleErrors (page: Page) {
+/** Asserts that all expected errors occurred and no unexpected errors were logged. */
+export function assertConsoleErrors (page: Page) {
   let tracker = getTracker(page)
-  expect(tracker.errors).toMatchObject([])
+  let unexpected = tracker.errors.filter(e => !tracker.expectedMatchers.some(m => matches(e, m)))
+  let missed = tracker.expectedMatchers.filter(m => !tracker.errors.some(e => matches(e, m)))
+
+  let problems: string[] = []
+  if (unexpected.length) problems.push(`Unexpected errors:\n${unexpected.map(e => `  - ${e}`).join('\n')}`)
+  if (missed.length) problems.push(`Expected errors not seen:\n${missed.map(m => `  - ${describe(m)}`).join('\n')}`)
+  if (problems.length) throw new Error(problems.join('\n\n'))
 }
 
-export function getTrackerForPage (page: Page): Tracker {
+export function trackerBrowserConsole (page: Page) {
   let existing: Tracker | undefined = (page as any)[trackerKey]
   if (existing) return existing
 
   let errors: string[] = []
-  let push = (text: string) => {
-    let message = text.trim()
-    errors.push(message)
-    console.error(`[browser error] ${message}`)
-  }
+  let expectedMatchers: Matcher[] = []
+  let isExpected = (text: string) => expectedMatchers.some(m => matches(text, m))
   let onConsole = (msg: ConsoleMessage) => {
     let type = msg.type()
     if (type == 'debug') return // noisy
-    if (type === 'warning' || type === 'error') push(msg.text())
-    console.log(`[browser ${type}] ${msg.text()}`)
+    let text = msg.text()
+    if (type === 'warning' || type === 'error') {
+      errors.push(text.trim())
+      if (isExpected(text)) return
+    }
+    console.log(`[browser ${type}] ${text}`)
   }
-  let onPageError = (error: Error) => push(error.message || String(error))
+  let onPageError = (error: Error) => {
+    let text = (error.message || String(error)).trim()
+    errors.push(text)
+    if (isExpected(text)) return
+    console.error(`[browser error] ${text}`)
+  }
 
   page.on('console', onConsole)
   page.on('pageerror', onPageError)
 
-  let tracker: Tracker = {
-    errors,
-    stop: () => {
-      if (!(page as any)[trackerKey]) return
-      page.off('console', onConsole)
-      page.off('pageerror', onPageError)
-      delete (page as any)[trackerKey]
-    },
-  }
-  ;(page as any)[trackerKey] = tracker
-  return tracker
+  ;(page as any)[trackerKey] = {errors, expectedMatchers}
 }
 
 function getTracker (page: Page) {

@@ -1,4 +1,3 @@
-import {assertNoConsoleErrors} from './browserConsole'
 import {expect, test, waitForGrapheneQueries} from './fixtures'
 import {tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData'
 
@@ -8,7 +7,6 @@ test('renders table data', async ({mount, page}) => {
   let table = page.locator('[data-testid="DataTable-no-id"] table')
   await expect(table).toBeVisible()
   await expect(table.getByRole('cell').first()).toHaveText('2021-01-01')
-  assertNoConsoleErrors(page)
 })
 
 test('sorts by column header', async ({mount, page}) => {
@@ -27,7 +25,6 @@ test('sorts by column header', async ({mount, page}) => {
 
   await header.click()
   await expect.poll(readFirstColumn).toEqual(['2021-03-01', '2021-02-01', '2021-01-01'])
-  assertNoConsoleErrors(page)
 })
 
 test('paginates rows', async ({mount, page}) => {
@@ -45,5 +42,4 @@ test('paginates rows', async ({mount, page}) => {
   await expect(firstCell()).toHaveText('Row 1')
   await expect(page.getByText('Page 1 of 3')).toBeVisible()
   await expect(page.locator('.pagination__meta')).toHaveText('5 of 12 rows')
-  assertNoConsoleErrors(page)
 })
