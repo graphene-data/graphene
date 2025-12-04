@@ -1,7 +1,6 @@
-Graphene is new data stack that allows you to define everything in code, from modeling to dashboards.
+Graphene is data framework that allows you to define everything in code.
 
-Graphene allows you define dashboards, analyses, and interactive data apps in Markdown, and define semantic models and queries in a superset of sql we call Graphene SQL (gsql).
-If you need to know more about Graphene's features, read @docs/graphene.md.
+Dashboards and reports can be built in mdx with components like <BarChart>. Queries and semantic models are written in a language we call gsql, which is mostly like sql with some special features like symmetric aggregates, synthetic columns for code reuse, and automatic join traversal. If you need to know more about Graphene's features, read @docs/graphene.md.
 
 # Repo structure
 * /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
@@ -10,27 +9,33 @@ If you need to know more about Graphene's features, read @docs/graphene.md.
 * /ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
 * /vscode - an extension that provides syntax highlighting and diagnostics on queries.
 
+# Graphene CLI commands
+Graphene provides a CLI that users (and agents) use to do data work.
+You can run any of these cli commands within all of our examples. It's important that your cwd is an example folder (like `/examples/flights`).
+
+`pnpm graphene check <mdFile>` - Checks the project for syntax and analysis errors in gsql files. `mdFile` is optional, but if provided it will load that page in a browser, check for runtime errors, and write a screenshot out to a file.
+`pnpm graphene serve --bg` - Starts (or restarts) the Graphene dev server. You should rarely need to call this, the server is started automatically by `check`, and because it's a vite server most files will hot-reload. You only need this if you've changed something about the server's config. Always run it with the --bg option.
+`pnpm graphene run <gsql>` - Runs a given gsql query against the configured database.
+`pnpm graphene compile <gsql>` - Compiles gsql to the underlying database sql and prints it out.
+`pnpm graphene schema <dataset_or_table>` - Prints out tables within a database/schema, or the columns of a given table.
+
 # Tech stack
-Graphene is mostly written in typescript. We parse Graphene SQL with Lezer, then translate it to Malloy's IR, and use Malloy to render dialect-specific SQL.
+Graphene is mostly written in typescript. We parse gsql with Lezer, then translate it to Malloy's IR, and use Malloy to render dialect-specific SQL.
 
 For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 4, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
 
 # Process
 NEVER run `pnpm install` or `pnpm add`. If the env seems broken, summarize what seems wrong and let the user fix it. If you need to add dependencies, explain what you'd like to add and why.
-Write a draft `.gitcommit` for changes you make. As we iterate on a change, keep this draft up to date.
-
-# Bugfixes
-Explain clearly what the underlying issue is, and how your fix addresses it. Ensure there's a test covering the issue, and that the tests pass. Write a draft to `.gitcommit` that explains the observed behaviour and the underlying fix. Your summary should include any other solutions you considered, and why you picked the one you did. This draft should be clear but succinct.
 
 # Testing
-Most directories have test files you can run to ensure they work correctly. You can run them via `pnpm test` in that directory.
-UI tests take screenshots of various states, so you can review `tests/snapshots` and `tests/results` to look at UI states. This is useful even if the test passes to just see what a give state looks like.
+`pnpm test` to run all tests. `pnpm test [cli|lang|ui]` to run all the tests for a section of the codebase. Uses vitest v4 under the hood, if you want to pass other options.
+For any test with UI, capture screenshots. They are always written to tests/snapshots, and it's prudent to view them after large changes to ensure the UI still looks right.
 Use `howDoesMalloy` to view the Malloy IR used for a given Malloy query.
 When testing AI features, always use a mock rather than hitting an API.
 Never ask for permission to run tests or update screenshots. Just do it.
 
 # Code style
-In Graphene, our primary stylistic goal is "high-level readability". We want to easily skim a file or function and get a sense of what it does. We care less about the tactical details of how it accomplishes that. There are a few concrete guidlines we usually follow in service of this:
+Our primary stylistic goal is "high-level readability". We want to easily skim a file or function and get a sense of what it does. We care less about the tactical details of how individual lines of code work. There are a few concrete guidlines we usually follow in service of this:
 
 ### Start simple
 Your first pass at an implementation should usually be the easiest thing that solves the problem in front of you. We can always add complexity later as needed.
@@ -96,12 +101,10 @@ function bad () {
 }
 
 ### Only use meaningful comments
-Most functions should have a comment describing what they do. For longer methods it's a good idea to add some high-level comments to help readers understand the flow.
-
-Comments are also great when there is code whose purpose isn't obvious from first reading it.
-DO NOT add silly little comments that say something the code obviously says. This is bad:
-> // process element
-> processEleme(e)
+Most functions should have a comment describing what they do.
+Long methods can ideally be organized into logical sections, and it's often worth a comment to help us understand the overall flow.
+Comments are also key when there is code whose purpose isn't obvious from first reading it.
+DO NOT add silly little comments that say something the code obviously says. This is bad: `processElem(e) // process element`
 
 ### Use guards and try/catch sparingly
 It's easier to read the happy-path. Avoid input checking or error handling unless there's a good way to recover. It's mostly fine to just let errors bubble up. In node, throwing an error already exits the process, so no need to catch just to process.exit.
