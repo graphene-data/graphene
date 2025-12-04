@@ -7,6 +7,10 @@ export default defineConfig({
     environment: 'node',
     reporters: ['default', 'json'],
     outputFile: 'node_modules/.testResults.json',
+    slowTestThreshold: 5_000,
+    onConsoleLog (log) {
+      if (log.startsWith('Server running at http://')) return false
+    },
     projects: [
       {
         extends: true,

@@ -1,4 +1,5 @@
 import {test, expect} from './fixtures'
+import {expectConsoleError} from './browserConsole'
 import {check} from '../../cli/check.ts'
 import {updateFile} from '../../lang/core.ts'
 import stripAnsi from 'strip-ansi'
@@ -34,6 +35,7 @@ test('check defaults to analyzing the whole workspace', async () => {
 })
 
 test('check with mdFile reports analysis errors', async ({server, page}) => {
+  expectConsoleError(page, 'Failed to load resource')
   server.mockFile('/other.md', `
     \`\`\`sql error_query
     from flights select wtfmate() as explode
@@ -58,6 +60,7 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
 })
 
 test('cli check command reports runtime query errors', async ({server, page}) => {
+  expectConsoleError(page, 'Failed to load resource')
   server.mockFile('/index.md', `
     # Runtime Cast Error Page
     \`\`\`sql runtime_error_query
@@ -76,6 +79,7 @@ test('cli check command reports runtime query errors', async ({server, page}) =>
 })
 
 test('check reports runtime chart configuration errors', async ({server, page}) => {
+  expectConsoleError(page, 'Error in Bar Chart')
   server.mockFile('/index.md', `
     # Runtime Chart Config Error
     \`\`\`sql chart_data

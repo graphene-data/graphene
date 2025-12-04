@@ -138,7 +138,7 @@ const handleRequestPlugin = {
           next()
         }
       } catch (err: any) {
-        console.error(err)
+        if (process.env.NODE_ENV != 'test') console.error(err) // ignore in tests because they're noisy, and any unexpected errors should be captured by browserConsole.
         res.statusCode = 500
         res.end(JSON.stringify([{message: err.message, stack: err.stack}]))
       }
