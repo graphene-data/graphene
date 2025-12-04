@@ -3,7 +3,7 @@
   "type": "module",
   "main": "core.ts",
   "scripts": {
-    "test": "vitest run --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
+    "test": "vitest run lang --root ..",
     "test-one": "DEBUG=1 node --inspect-wait ../scripts/turboTest.js",
     "generate": "lezer-generator lang.grammar -o parser.js && eslint --fix parser.js"
   },

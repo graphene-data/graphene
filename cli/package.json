@@ -63,7 +63,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && rm -f *.tgz && node ./esbuild.mjs",
-    "test": "vitest run --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
+    "test": "vitest run cli --root ..",
     "test-one": "DEBUG=1 node --inspect ../scripts/turboTest.js",
     "prepack": "pnpm run build"
   }

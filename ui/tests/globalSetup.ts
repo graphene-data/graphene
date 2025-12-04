@@ -1,0 +1,16 @@
+import {type TestProject} from 'vitest/node'
+import {prepareDeps} from '../../cli/serve2'
+import {fileURLToPath} from 'url'
+import path from 'path'
+import {setConfig} from '../../lang/config'
+
+export default async function setup (project: TestProject) {
+  let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
+  setConfig({root: viteRoot})
+
+  // we only need to prepareDeps if we're running ui tests
+  let files = project.testFilesList || []
+  if (!files.find(f => f.match(/\/ui\/tests\//))) return
+
+  await prepareDeps()
+}

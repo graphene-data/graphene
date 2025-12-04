@@ -6,13 +6,14 @@ import {type IncomingMessage, type ServerResponse} from 'http'
 import {WebSocketServer, type WebSocket} from 'ws'
 import {type PluginOption, type ViteDevServer} from 'vite'
 
-import {analyze, config, type Diagnostic, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
+import {analyze, clearWorkspace, config, type Diagnostic, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
 import {printDiagnostics} from './printer.ts'
 import {readFileSync} from 'node:fs'
 import {mockFileMap} from './mockFiles.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'
 import {styleText} from 'node:util'
 import {pollFor} from '../lang/util.ts'
+import {FILE_MAP} from '../lang/analyze.ts'
 
 interface CheckOptions {
   mdArg?: string
@@ -52,6 +53,13 @@ export async function check (options: CheckOptions): Promise<boolean> {
   if (!mdFile) {
     log('No errors found 💎')
     return true
+  }
+
+  // in tests, both `check` and the vite server are in the same process, so end up sharing the workspace.
+  // Because of that, we need to clear out the md file we loaded into the workspace (which the usually server never loads).
+  // Otherwise, you'll get `some_table already defined` errors.
+  if (process.env.NODE_ENV == 'test' && mdFile) {
+    delete FILE_MAP[mdFile]
   }
 
   // Remove .md extension if provided and ensure it's just the filename

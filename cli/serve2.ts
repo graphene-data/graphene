@@ -1,5 +1,5 @@
 import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '../lang/core.ts'
-import {createServer, optimizeDeps, type ViteDevServer} from 'vite'
+import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import fs from 'fs-extra'
 import crypto from 'crypto'
@@ -16,11 +16,23 @@ import {mockFileMap} from './mockFiles.ts'
 let uiRoot: string
 
 export async function serve2 (): Promise<ViteDevServer> {
+  let server = await createServer(await createConfig())
+  // I originally added this to avoid the page refreshing immediately on load.
+  // We def don't want to run it in tests, because its not safe to do in parallel.
+  // I'm not sure it's still needed, now that we explicitly list out `optimizeDeps.includes`, refreshes should be rare
+  // await optimizeDeps(server.config, true)
+  await server.listen()
+  console.log(`Server running at http://localhost:${server.config.server.port}`)
+
+  return server
+}
+
+async function createConfig (): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = Number(process.env.GRAPHENE_PORT) || 4000
   await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
 
-  let server = await createServer({
+  return {
     root: config.root,
     plugins: [
       svelte({
@@ -35,11 +47,15 @@ export async function serve2 (): Promise<ViteDevServer> {
           injectComponentImports(),
         ],
       }),
+      fixSvelteDepsInTests(),
       checkVitePlugin(),
       handleRequestPlugin,
       updateWorkspacePlugin,
       mockFilesForTests(),
     ],
+    publicDir: path.resolve(uiRoot, 'public'),
+    // on the fence about this one. This would make it less likely we need to optimize when alternating between dev and tests.
+    // cacheDir: process.env.NODE_ENV == 'test' ? 'node_modules/.vite-tests' : 'node_modules/.vite',
     server: {
       port,
       fs: {strict: false},
@@ -50,17 +66,43 @@ export async function serve2 (): Promise<ViteDevServer> {
         graphene: path.resolve(uiRoot, 'web.js'),
       },
     },
-    // optimizeDeps: { // this seems prudent in tests, but currently breaks because ssf needs to be optimized, even in tests
-    //   noDiscovery: process.env.NODE_ENV == 'test',
-    //   include: process.env.NODE_ENV == 'test' ? [] : undefined,
-    // },
-  })
 
-  await optimizeDeps(server.config) // optimize before starting, so we don't have a reload immediately after loading the first page
-  await server.listen()
-  console.log(`Server running at http://localhost:${port}`)
+    // vite's pre-bundling won't naturally discover these dependencies since they're transitive.
+    // Instead, we need to list them out here so vite knows where they are.
+    optimizeDeps: {
+      noDiscovery: process.env.NODE_ENV == 'test', // tests manually optimize before starting test workers
+      include: [
+        '@graphenedata/cli > svelte',
+        '@graphenedata/cli > ssf',
+        '@graphenedata/cli > @tidyjs/tidy',
+        '@graphenedata/cli > chroma-js',
+        '@graphenedata/cli > echarts/dist/echarts.esm.js',
+        '@graphenedata/cli > @graphenedata/html2canvas',
+      ],
+    },
+  }
+}
 
-  return server
+// Runs vite's pre-bundling of dependencies. Used by tests to do this once, instead of for each worker.
+export async function prepareDeps () {
+  let cfg = await resolveConfig(await createConfig(), 'serve')
+  await optimizeDeps(cfg, true)
+}
+
+// Svelte forces optimizeDeps whenever its own metadata has changed.
+// For tests, we already optimizeDeps before any tests start up, so we don't need this, and it causes problems
+// if multiple workers are all trying to optimizeDeps at the same time (vite isn't exactly concurrency-safe).
+function fixSvelteDepsInTests () {
+  let viteConfig: any
+
+  function configResolved (cfg:any) { viteConfig = cfg }
+
+  function buildStart () {
+    if (process.env.NODE_ENV != 'test') return
+    viteConfig.optimizeDeps.force = false
+  }
+  buildStart.sequential = true // force running after svelte hook
+  return {name: 'fix-svelte-deps', enforce: 'pre' as const, sequential: true, configResolved, buildStart}
 }
 
 // Watch for changes to gsql files and reload the workspace.
@@ -86,11 +128,6 @@ const handleRequestPlugin = {
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
         if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
-
-        if (pathName == '/favicon.ico') {
-          res.setHeader('Content-Type', 'image/x-icon')
-          return res.end(await fs.readFile(path.resolve(uiRoot, 'assets/favicon.ico')))
-        }
 
         if (!pathName || pathName == '/') pathName = 'index'
         let mdPath = path.join(config.root, pathName + '.md')
@@ -182,7 +219,8 @@ function mockFilesForTests () {
     },
     load (id: any) {
       if (!id.endsWith('?mock')) return null
-      return mockFileMap[id.replace(config.root + '/', '').replace(/\?mock$/, '')]
+      let content = mockFileMap[id.replace(config.root + '/', '').replace(/\?mock$/, '')]
+      return content
     },
   }
 }
