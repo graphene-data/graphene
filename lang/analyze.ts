@@ -54,7 +54,7 @@ function addColumnField (table: Table, node: SyntaxNode) {
     table.primaryKey = name
   }
   let type = convertDataType(txt(node.getChild('DataType')))!
-  if (!type) diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
+  if (!type) return diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
   addFieldToTable(table, {name, type, metadata: extractLeadingMetadata(node)}, node)
 }
 
