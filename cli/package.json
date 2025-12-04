@@ -62,7 +62,7 @@
     "vscode-languageserver-types": "^3.17.0"
   },
   "scripts": {
-    "build": "rm -rf dist && node ./esbuild.mjs",
+    "build": "rm -rf dist && rm -f *.tgz && node ./esbuild.mjs",
     "test": "vitest run --reporter=default --reporter=json --outputFile=/tmp/graphene-test-results.json",
     "test-one": "DEBUG=1 node --inspect ../scripts/turboTest.js",
     "prepack": "pnpm run build"
