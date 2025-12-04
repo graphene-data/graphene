@@ -69,30 +69,20 @@ let socket = null
 
 connectWebSocket()
 
-async function captureChart (chartTitle) {
-  await waitForQueriesToFinish()
-  let errors = getErrors()
+function captureChart (chartTitle) {
   let escaped = window.CSS.escape(chartTitle)
   let canvas = document.querySelector(`[data-chart-title="${escaped}"] canvas`)
-
-  if (!canvas) {
-    errors.push({message: `Could not find chart titled "${chartTitle}"`})
-    return {stillLoading: isLoading(), screenshot: null, errors}
-  }
-
-  return {stillLoading: isLoading(), screenshot: canvas.toDataURL('image/png'), errors}
+  return canvas?.toDataURL('image/png')
 }
 
 async function takeScreenshot () {
-  await waitForQueriesToFinish()
   if (!window.html2canvas) {
     let html2canvas = await import('@graphenedata/html2canvas')
     window.html2canvas = html2canvas.default
   }
 
   let canvas = await window.html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
-  let errors = getErrors().map(e => ({message: e.message, id: e.id}))
-  return {stillLoading: isLoading(), screenshot: canvas?.toDataURL('image/png'), errors}
+  return canvas?.toDataURL('image/png')
 }
 
 async function waitForQueriesToFinish () {
@@ -115,8 +105,11 @@ function connectWebSocket () {
     let {type, requestId, chart} = JSON.parse(event.data)
 
     if (type === 'check') {
-      let result = chart ? await captureChart(chart) : await takeScreenshot()
-      socket.send(JSON.stringify({type: 'checkResponse', requestId, ...result}))
+      await waitForQueriesToFinish()
+      let errors = getErrors().map(e => ({message: e.message, id: e.id}))
+      let stillLoading = isLoading()
+      let screenshot = chart ? captureChart(chart) : await takeScreenshot()
+      socket.send(JSON.stringify({type: 'checkResponse', requestId, errors, stillLoading, screenshot}))
     }
   }
 }
