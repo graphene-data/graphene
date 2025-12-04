@@ -64,7 +64,7 @@
   "scripts": {
     "build": "rm -rf dist && rm -f *.tgz && node ./esbuild.mjs",
     "test": "vitest run cli --root ..",
-    "test-one": "DEBUG=1 node --inspect ../scripts/turboTest.js",
+    "test-one": "node ../scripts/turboTest.js",
     "prepack": "pnpm run build"
   }
 }
