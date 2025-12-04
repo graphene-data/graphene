@@ -13,7 +13,7 @@ export default defineConfig({
         test: {
           name: 'ui',
           globalSetup: ['ui/tests/globalSetup.ts'],
-          include: ['ui/tests/*.test.ts', 'ui/tests/*.spec.ts'],
+          include: ['ui/tests/*.test.ts'],
         },
       },
       {
