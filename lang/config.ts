@@ -5,6 +5,7 @@ export interface Config {
   root: string
   dialect: string
   namespace?: string
+  ignoredFiles: string[]
   port?: number
   host?: string
 
@@ -24,7 +25,10 @@ export interface Config {
   duckdb?: Record<string, unknown>
 }
 
-export type ConfigInput = Omit<Config, 'dialect'> & {dialect?: Config['dialect']}
+export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles'> & {
+  dialect?: Config['dialect'],
+  ignoredFiles?: Config['ignoredFiles'],
+}
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
@@ -35,7 +39,10 @@ export function setConfig (cfg: ConfigInput) {
   else if (cfg.snowflake) dialect = 'snowflake'
   else if (cfg.duckdb) dialect = 'duckdb'
   Object.keys(config).forEach((key) => delete config[key])
-  Object.assign(config, cfg, {dialect})
+  Object.assign(config, cfg)
+  config.dialect = dialect
+  config.root ||= process.cwd()
+  config.ignoredFiles ||= ['agents.md', 'claude.md']
 }
 
 // Read graphene config out of package.json
@@ -45,8 +52,7 @@ export function loadConfig (dir:string) {
   let packageJsonObject = {} as any
   try {
     let txt = fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
-    let all = JSON.parse(txt)
-    packageJsonObject = all.graphene || {}
+    packageJsonObject = JSON.parse(txt).graphene || {}
   } catch {
     console.warn('No package.json found in current directory')
   }

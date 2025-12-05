@@ -544,7 +544,7 @@ function lookupTable (name: string, node: SyntaxNode): Table | void {
 }
 
 export function clearWorkspace () {
-  FILE_MAP = {}
+  Object.keys(FILE_MAP).forEach(k => delete FILE_MAP[k])
   TABLE_NODE_MAP = new WeakMap()
   diagnostics = []
 }

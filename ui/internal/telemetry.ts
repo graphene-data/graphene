@@ -1,6 +1,7 @@
 type ErrorProvider = () => Error[]
 
-window.$GRAPHENE = {getErrors}
+window.$GRAPHENE ||= {}
+window.$GRAPHENE.getErrors = getErrors
 
 let staticErrors: Error[] = []
 let errorProviders: Record<string, ErrorProvider> = {}
