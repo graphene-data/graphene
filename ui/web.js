@@ -1,6 +1,7 @@
 import {getErrors} from './internal/telemetry.ts'
 import './app.css'
 import {isLoading} from './internal/queryEngine.ts'
+import NavSidebar from './internal/NavSidebar.svelte'
 
 import Area from './components/Area.svelte'
 import AreaChart from './components/AreaChart.svelte'
@@ -31,6 +32,8 @@ import TableRow from './components/TableRow.svelte'
 import TableSubtotalRow from './components/TableSubtotalRow.svelte'
 import TableTotalRow from './components/TableTotalRow.svelte'
 import TextInput from './components/TextInput.svelte'
+
+window.$GRAPHENE = window.$GRAPHENE || {}
 
 window.$GRAPHENE.components = {
   Area,
@@ -64,8 +67,11 @@ window.$GRAPHENE.components = {
   TextInput,
 }
 
-
 let socket = null
+
+if (document.getElementById('nav')) {
+  new NavSidebar({target: document.getElementById('nav')})
+}
 
 connectWebSocket()
 

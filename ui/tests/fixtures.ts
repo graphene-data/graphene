@@ -44,7 +44,7 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
     trackerBrowserConsole(page)
     onTestFinished(() => assertConsoleErrors(page))
     await use(page)
-    if (process.env.GRAPHENE_DEBUG) await page.pause()
+    if (process.env.GRAPHENE_DEBUG) await new Promise(() => { })
     await context.close()
   },
 
@@ -106,15 +106,17 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
       await page.addScriptTag({type: 'module', content: `
         import Component from ${JSON.stringify(browserPath)}
 
-        window.__inst = new Component({
-          target: document.getElementById('content'),
-          props: window.__props,
-        })
+        document.getElementById('nav').remove()
+        let el = document.createElement('div')
+        el.id = 'component-test'
+        document.getElementById('content').appendChild(el)
+
+        window.__inst = new Component({target: el, props: window.__props})
       `})
     }
 
     await use(mountFn)
-    await expect(page.locator('#content > :not(dialog)').first()).toBeVisible()
+    await expect(page.locator('#component-test > :not(dialog)').first()).toBeVisible()
   },
 
   chart: async ({page}, use) => {
@@ -134,7 +136,7 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
       }, selectorSource)
     }
 
-    await use({config: readConfig, el: page.locator('#content')})
+    await use({config: readConfig, el: page.locator('#component-test')})
   },
 })
 

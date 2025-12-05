@@ -2,6 +2,7 @@ import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} f
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import fs from 'fs-extra'
+import {glob} from 'glob'
 import crypto from 'crypto'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {type IncomingMessage, type ServerResponse} from 'http'
@@ -107,16 +108,42 @@ function fixSvelteDepsInTests () {
 
 // Watch for changes to gsql files and reload the workspace.
 // This reload blocks all requests, so we shouldn't ever analyze without a workspace.
+// Also tracks all the md files in the workspace to populate the nav sidebar
 let workspaceLoadPromise: Promise<void> | undefined
+let mdFiles: string[] = []
 const updateWorkspacePlugin = {
   name: 'updateWorkspace',
+  resolveId (id: string) {
+    if (id == 'virtual:nav') return '\0virtual:nav'
+  },
+  load (id: string) {
+    if (id != '\0virtual:nav') return
+    let allFiles = [...mdFiles]
+    if (process.env.NODE_ENV == 'test') {
+      for (let key of Object.keys(mockFileMap)) {
+        if (!allFiles.includes(key)) allFiles.push(key)
+      }
+    }
+    return `export default ${JSON.stringify(allFiles)}`
+  },
   configureServer: (s: ViteDevServer) => {
-    s.watcher.add('**/*.gsql')
-    s.watcher.on('change', () => {
+    let refresh = async () => {
       clearWorkspace()
       workspaceLoadPromise = loadWorkspace(config.root, false)
-    })
-    workspaceLoadPromise = loadWorkspace(config.root, false)
+      mdFiles = await glob('**/*.md', {cwd: config.root, ignore: ['node_modules/**']})
+      mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))
+      if (process.env.NODE_ENV == 'test') {
+        mdFiles.push(...Object.keys(mockFileMap))
+      }
+
+      let mod = s.moduleGraph.getModuleById('\0virtual:nav')
+      if (!mod) return
+      s.reloadModule(mod) // triggers HMR of any `virtual:nav` imports
+    }
+
+    s.watcher.add(['**/*.gsql', '**/*.md'])
+    s.watcher.on('all', refresh)
+    refresh()
   },
 }
 
@@ -130,9 +157,10 @@ const handleRequestPlugin = {
         if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
 
         if (!pathName || pathName == '/') pathName = 'index'
-        let mdPath = path.join(config.root, pathName + '.md')
+        let relativeMdPath = pathName.replace(/^\//, '') + '.md'
+        let mdPath = path.join(config.root, relativeMdPath)
 
-        if (await fs.exists(mdPath)) {
+        if (mockFileMap[relativeMdPath] || await fs.exists(mdPath)) {
           await handlePage(s, res, mdPath, true)
         } else {
           next()
@@ -183,7 +211,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
   res.setHeader('Content-Type', 'text/html')
 
   let mdMount = mount ? `
-    import Page from ${JSON.stringify(filePath)};
+    import Page from ${JSON.stringify(filePath)}
     new Page({ target: document.getElementById('content'), props: {} })
   ` : ''
 
@@ -196,9 +224,8 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <link rel="icon" href="/favicon.ico" />
     </head>
     <body>
-      <main>
-        <div id="content"></div>
-      </main>
+      <nav id="nav"></nav>
+      <main id="content"></main>
       <script type="module">
         import 'graphene' // do this first so we can track errors caused by importing the md file
         ${mdMount}
