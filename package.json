@@ -7,8 +7,9 @@
     "build": "vite build --config frontend/vite.config.ts",
     "migrate": "node --env-file=.env node_modules/drizzle-kit/bin.cjs migrate",
     "generate": "node --env-file=.env node_modules/drizzle-kit/bin.cjs generate",
-    "test": "playwright test --config=playwright.config.ts",
-    "test-one": "DEBUG=1 playwright test --debug"
+    "lint": "",
+    "test": "vitest run",
+    "test-one": "node ../core/scripts/turboTest.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
@@ -40,7 +41,7 @@
     "playwright": "1.54.2",
     "typescript-eslint": "^8.38.0",
     "vite": "^7.1.9",
-    "vitest": "3.0.5",
+    "vitest": "4.0.15",
     "zx": "^8.8.4"
   }
 }

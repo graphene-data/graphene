@@ -1,5 +1,5 @@
-import {assertNoConsoleErrors} from '../../core/ui/tests/browserConsole'
 import {test, expect, expectConsoleError} from './fixtures'
+import {describe} from 'vitest'
 import {loginPkce} from '../../core/cli/auth.ts'
 import {setConfig} from '../../core/lang/config.ts'
 import {runQuery} from '../../core/cli/connections/index.ts'
@@ -7,16 +7,14 @@ import {runQuery} from '../../core/cli/connections/index.ts'
 const TEST_EMAIL = 'grant@graphenedata.com'
 const TEST_PASSWORD = 'graphenedata'
 
-test.describe('auth', () => {
-  test.describe.configure({mode: 'serial'})
-
-  test.use({realAuth: true})
+describe('auth', () => {
+  test.scoped({realAuth: true})
 
   test('login flow', async ({page, cloud}) => {
     await page.goto(cloud.url)
     // should redirect to /login, since we're not authed
     await expect(page.locator('#stytch-login')).toContainText('Sign up or log in')
-    await expect(page).toHaveScreenshot('auth-login-form.png')
+    await expect(page).screenshot('auth-login-form')
 
     let loginShell = page.locator('#stytch-login')
     await loginShell.locator('input[name="email"], input[type="email"]').first().fill(TEST_EMAIL)
@@ -25,12 +23,11 @@ test.describe('auth', () => {
 
     let btn = page.getByText(/Graphene Dev/i)
     await btn.waitFor()
-    await expect(page).toHaveScreenshot('auth-login-flow-org-picker.png')
+    await expect(page).screenshot('auth-login-flow-org-picker')
     await btn.click()
 
     await expect(page).toHaveURL(`${cloud.url}/`)
     await expect(page.locator('h1', {hasText: 'Flight Analytics Dashboard'})).toBeVisible()
-    assertNoConsoleErrors(page)
   })
 
   test('prevents unauthorized requests', async ({page, cloud}) => {
@@ -40,6 +37,7 @@ test.describe('auth', () => {
   })
 
   test('shows an error for invalid credentials', async ({page, cloud}) => {
+    expectConsoleError(page, 'Failed to load resource')
     await page.goto(cloud.url + '/login')
     let loginShell = page.locator('#stytch-login')
     await expect(loginShell).toContainText('Sign up or log in')
@@ -50,9 +48,8 @@ test.describe('auth', () => {
 
     let errorMessage = loginShell.locator('text=/unauthorized credentials|incorrect|invalid|wrong|mismatch|try again/i').first()
     await expect(errorMessage).toBeVisible({timeout: 15_000})
-    expectConsoleError(page, 'Failed to load resource')
     await expect(page).toHaveURL(`${cloud.url}/login`)
-    await expect(page).toHaveScreenshot('auth-invalid-credentials.png')
+    await expect(page).screenshot('auth-invalid-credentials')
   })
 
   test('cli pkce login works', async ({page, cloud}) => {
@@ -65,7 +62,7 @@ test.describe('auth', () => {
       await loginShell.getByRole('button', {name: /continue/i}).click()
       await page.getByText(/Graphene Dev/i).click()
 
-      // await expect(page).toHaveScreenshot('auth-allow-cli.png')
+      // await expect.screenshot(page, 'auth-allow-cli')
       await page.getByText('Allow').click()
       await expect(page.getByText('Login complete')).toBeVisible()
     })
