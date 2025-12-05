@@ -2,17 +2,24 @@ import {expect as baseExpect} from '@playwright/test'
 import {expect as vitestExpect} from 'vitest'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import {fileURLToPath} from 'node:url'
 import type {Locator, Page} from 'playwright'
+
+// Snapshot directory - must be set via setSnapshotDir() in a setupFiles script
+let snapshotDir: string | undefined
+
+export function setSnapshotDir (dir: string) {
+  snapshotDir = dir
+}
 
 const extendedExpect = baseExpect.extend({
   async screenshot (subject: Page | Locator, snapshotName: string) {
+    if (!snapshotDir) throw new Error('Snapshot directory not configured. Call setSnapshotDir() in a setup file.')
     let page = subject.constructor.name === 'Page' ? subject : (subject as Locator).page()
     let locator = subject.constructor.name === 'Page' ? undefined : subject
-    let testFile = path.basename(vitestExpect.getState().testPath || '')
+    let testPath = vitestExpect.getState().testPath || ''
+    let testFile = path.basename(testPath)
 
-    // todo get current test file
-    let snapshotPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), './snapshots', testFile, snapshotName + '.png')
+    let snapshotPath = path.resolve(snapshotDir, testFile, snapshotName + '.png')
     let expectedBuffer = await fs.readFile(snapshotPath).catch(() => null)
 
     let opts = {animations: 'disabled', caret: 'hide', scale: 'css', locator, timeout: 5_000} as any
