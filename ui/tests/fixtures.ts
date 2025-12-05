@@ -1,4 +1,4 @@
-import {test as base} from 'vitest'
+import {test as base, onTestFinished} from 'vitest'
 import {type Page, chromium, type Browser} from '@playwright/test'
 import {playwrightExpect as expect} from './matchers.ts'
 import path from 'path'
@@ -42,8 +42,8 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
     let context = await browser.newContext()
     let page = await context.newPage()
     trackerBrowserConsole(page)
+    onTestFinished(() => assertConsoleErrors(page))
     await use(page)
-    assertConsoleErrors(page)
     if (process.env.GRAPHENE_DEBUG) await page.pause()
     await context.close()
   },

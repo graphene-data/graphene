@@ -1,11 +1,12 @@
+import {execSync} from 'node:child_process'
 import {readFile} from 'node:fs/promises'
 import path from 'node:path'
-import {fileURLToPath} from 'node:url'
 import {startVitest} from 'vitest/node'
 
 process.env.GRAPHENE_DEBUG = '1'
+process.env.PWDEBUG = '1'
 
-const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const ROOT_DIR = execSync('git rev-parse --show-toplevel', {encoding: 'utf8'}).trim()
 
 async function loadResults () {
   try {
