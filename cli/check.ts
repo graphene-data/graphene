@@ -6,7 +6,7 @@ import {type IncomingMessage, type ServerResponse} from 'http'
 import {WebSocketServer, type WebSocket} from 'ws'
 import {type PluginOption, type ViteDevServer} from 'vite'
 
-import {analyze, clearWorkspace, config, type Diagnostic, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
+import {analyze, config, type Diagnostic, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
 import {printDiagnostics} from './printer.ts'
 import {readFileSync} from 'node:fs'
 import {mockFileMap} from './mockFiles.ts'
