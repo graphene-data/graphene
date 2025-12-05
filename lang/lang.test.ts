@@ -209,6 +209,19 @@ describe('lang', () => {
       .toReturnRows([1, 'Alice', 60], [2, 'Bob', 40])
   })
 
+  it('handles query_source nested in join chains', () => {
+    // Regression test: querying through nested joins to a query_source would crash with "Cannot read properties of null (reading 'type')"
+    // because structRef wasn't set on deeply nested query objects after structuredClone
+    updateFile(`
+      table order_items (id int primary_key, user_id int, join one users on users.id = user_id)
+      table users (id int primary_key, name string, join one user_facts on user_facts.id = id)
+      table user_facts as (from users select id, name as fact_name)
+    `, 'models.gsql')
+
+    expect('from order_items select id, users.name')
+      .toRenderSql('select base."id" as "id", users_0."name" as "users_name" from order_items as base left join users as users_0 on users_0."id"=base."user_id"')
+  })
+
   it('handles when the view is defined before the table', () => {
     // Covers a particular bug where if a view was analyzed before the table it queried, it'd break.
     // specifically the wildcard would include partially constructed joins
