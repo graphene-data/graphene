@@ -6,7 +6,7 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "lint": "eslint . && tsc",
+    "lint": "eslint .; tsc",
     "test": "vitest run",
     "test-one": "node scripts/turobTest.ts",
     "check-examples": "pnpm -C examples/flights graphene check && pnpm -C examples/ecomm graphene check && pnpm -C examples/snowflake graphene check"
