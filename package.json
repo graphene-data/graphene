@@ -17,6 +17,7 @@
     "@graphenedata/malloy": "0.0.304",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.18.0",
+    "dotenv": "^17.2.3",
     "eslint": "^9.32.0",
     "eslint-plugin-prefer-let": "^4.0.0",
     "eslint-plugin-svelte": "^3.12.4",

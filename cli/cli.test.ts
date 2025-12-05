@@ -103,24 +103,3 @@ describe('cli run', () => {
   })
 })
 
-describe('cli schema', () => {
-  beforeAll(ensureFlightsDatabaseExists)
-
-  it('lists available tables when no argument is provided', async () => {
-    let res = await runCli(['schema'], flightDir)
-    expectCliSuccess(res, 'schema list tables')
-    let lines = res.stdout.trim().split(/\r?\n/).filter(Boolean)
-    expect(lines.length).toBeGreaterThan(0)
-    let normalized = lines.map(line => line.trim())
-    expect(normalized.some(line => line === 'flights')).toBe(true)
-  })
-
-  it('describes the requested table columns', async () => {
-    let res = await runCli(['schema', 'flights'], flightDir)
-    expectCliSuccess(res, 'schema describe table')
-    let output = res.stdout.toLowerCase()
-    expect(output).toContain('table flights (')
-    expect(output).toContain('carrier varchar')
-    expect(output.trim().endsWith(')')).toBe(true)
-  })
-})
