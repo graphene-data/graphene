@@ -13,7 +13,7 @@ import {
 
 import {TextDocument} from 'vscode-languageserver-textdocument'
 import {readFile} from 'node:fs/promises'
-import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles, getHover, loadConfig, config} from '@graphenedata/lang'
+import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles, getHover, loadConfig, config} from '../../lang/core.ts'
 import path from 'node:path'
 
 const connection = createConnection(ProposedFeatures.all)

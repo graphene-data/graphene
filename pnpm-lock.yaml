@@ -285,9 +285,6 @@ importers:
         specifier: ^1.0.11
         version: 1.0.12
     devDependencies:
-      '@graphenedata/lang':
-        specifier: file:../lang
-        version: file:lang
       '@types/vscode':
         specifier: ^1.84.0
         version: 1.106.1
@@ -1148,9 +1145,6 @@ packages:
     resolution: {integrity: sha512-ChMOUckuvoY/K1hCtIi2V7GI+fKSfXwcTTW9HBY3zI5KMAWsznJHtW4IFzkg/Y1Zcse3E4KxTGAYWlgWDbFtwA==}
     engines: {node: '>=8.0.0'}
 
-  '@graphenedata/lang@file:lang':
-    resolution: {directory: lang, type: directory}
-
   '@graphenedata/malloy@0.0.304':
     resolution: {integrity: sha512-dseKG8dmKDfFbvYof2NbEOlGkbHG+dxdkOrn2buIJkpzEHyN/oxOrS7+5stTzZ3S3rIvUyCfchE+hqxy/glC4A==}
     engines: {node: '>=20'}
@@ -1207,18 +1201,12 @@ packages:
   '@lezer/common@1.2.3':
     resolution: {integrity: sha512-w7ojc8ejBqr2REPsWxJjrMFsA/ysDCFICn8zEOR9mrqzOu2amhITYuLD8ag6XZf0CFXDrhKqw7+tW8cX66NaDA==}
 
-  '@lezer/common@1.4.0':
-    resolution: {integrity: sha512-DVeMRoGrgn/k45oQNu189BoW4SZwgZFzJ1+1TV5j2NJ/KFC83oa/enRqZSGshyeMk5cPWMhsKs9nx+8o0unwGg==}
-
   '@lezer/generator@1.8.0':
     resolution: {integrity: sha512-/SF4EDWowPqV1jOgoGSGTIFsE7Ezdr7ZYxyihl5eMKVO5tlnpIhFcDavgm1hHY5GEonoOAEnJ0CU0x+tvuAuUg==}
     hasBin: true
 
   '@lezer/lr@1.4.2':
     resolution: {integrity: sha512-pu0K1jCIdnQ12aWNaAVU5bzi7Bd1w54J3ECgANPmYLtQKP0HBj2cE/5coBD66MT10xbtIuUr7tg0Shbsvk0mDA==}
-
-  '@lezer/lr@1.4.4':
-    resolution: {integrity: sha512-LHL17Mq0OcFXm1pGQssuGTQFPPdxARjKM8f7GA5+sGtHi0K3R84YaSbmche0+RKWHnCsx9asEe5OWOI4FHfe4A==}
 
   '@malloydata/malloy-filter@0.0.302':
     resolution: {integrity: sha512-tG2mahtIEodGWZrATIaXrw76XFfV+mKM6/alcRjHmpc6j/na0K62Qw4q8kOuV0MkBXE/VvpemxHfOx57nitP5Q==}
@@ -2544,11 +2532,6 @@ packages:
     engines: {node: 20 || >=22}
     hasBin: true
 
-  glob@11.1.0:
-    resolution: {integrity: sha512-vuNwKSaKiqm7g0THUBu2x7ckSs3XJLXE+2ssL7/MfTGPLLcrJQ/4Uq1CjPTtO5cCIiRxqvN6Twy1qOwhL0Xjcw==}
-    engines: {node: 20 || >=22}
-    hasBin: true
-
   globals@14.0.0:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
     engines: {node: '>=18'}
@@ -2946,10 +2929,6 @@ packages:
     resolution: {integrity: sha512-QIXZUBJUx+2zHUdQujWejBkcD9+cs94tLn0+YL8UrCh+D5sCXZ4c7LaEH48pNwRY3MLDgqUFyhlCyjJPf1WP0A==}
     engines: {node: 20 || >=22}
 
-  lru-cache@11.2.4:
-    resolution: {integrity: sha512-B5Y16Jr9LB9dHVkh6ZevG+vAbOsNOYCX+sXvFWFu7B3Iz5mijW3zdbMyhsh8ANd2mSWBYdJgnqi+mL7/LrOPYg==}
-    engines: {node: 20 || >=22}
-
   luxon@2.5.2:
     resolution: {integrity: sha512-Yg7/RDp4nedqmLgyH0LwgGRvMEKVzKbUdkBYyCosbHgJ+kaOUx0qzSiSatVc3DFygnirTPYnMM2P5dg2uH1WvA==}
     engines: {node: '>=12'}
@@ -3007,10 +2986,6 @@ packages:
 
   minimatch@10.0.3:
     resolution: {integrity: sha512-IPZ167aShDZZUMdRk66cyQAW3qr0WzbHkPdMYa8bzZhlHhO3jALbKdxcaak7W9FfT2rZNpQuUu4Od7ILEpXSaw==}
-    engines: {node: 20 || >=22}
-
-  minimatch@10.1.1:
-    resolution: {integrity: sha512-enIvLvRAFZYXJzkCYG5RKmPfrFArdLv+R+lbQ53BmIMLIry74bjKzX6iHAm8WYamJkhSSEabrWN5D97XnKObjQ==}
     engines: {node: 20 || >=22}
 
   minimatch@3.1.2:
@@ -3154,10 +3129,6 @@ packages:
 
   path-scurry@2.0.0:
     resolution: {integrity: sha512-ypGJsmGtdXUOeM5u93TyeIEfEhM6s+ljAhrk5vAvSx8uyY/02OvrZnA0YNGUrPXfpJMgI1ODd3nwz8Npx4O4cg==}
-    engines: {node: 20 || >=22}
-
-  path-scurry@2.0.1:
-    resolution: {integrity: sha512-oWyT4gICAu+kaA7QWk/jvCHWarMKNs6pXOGWKDTr7cw4IGcUbW+PeTfbaQiLGheFRpjo6O9J0PmyMfQPjH71oA==}
     engines: {node: 20 || >=22}
 
   pathe@2.0.3:
@@ -4978,13 +4949,6 @@ snapshots:
       css-line-break: 2.1.0
       text-segmentation: 1.0.3
 
-  '@graphenedata/lang@file:lang':
-    dependencies:
-      '@graphenedata/malloy': 0.0.304
-      '@lezer/common': 1.4.0
-      '@lezer/lr': 1.4.4
-      glob: 11.1.0
-
   '@graphenedata/malloy@0.0.304':
     dependencies:
       '@malloydata/malloy-filter': 0.0.302
@@ -5046,8 +5010,6 @@ snapshots:
 
   '@lezer/common@1.2.3': {}
 
-  '@lezer/common@1.4.0': {}
-
   '@lezer/generator@1.8.0':
     dependencies:
       '@lezer/common': 1.2.3
@@ -5056,10 +5018,6 @@ snapshots:
   '@lezer/lr@1.4.2':
     dependencies:
       '@lezer/common': 1.2.3
-
-  '@lezer/lr@1.4.4':
-    dependencies:
-      '@lezer/common': 1.4.0
 
   '@malloydata/malloy-filter@0.0.302':
     dependencies:
@@ -6669,15 +6627,6 @@ snapshots:
       package-json-from-dist: 1.0.1
       path-scurry: 2.0.0
 
-  glob@11.1.0:
-    dependencies:
-      foreground-child: 3.3.1
-      jackspeak: 4.1.1
-      minimatch: 10.1.1
-      minipass: 7.1.2
-      package-json-from-dist: 1.0.1
-      path-scurry: 2.0.1
-
   globals@14.0.0: {}
 
   globals@16.3.0: {}
@@ -7095,8 +7044,6 @@ snapshots:
 
   lru-cache@11.1.0: {}
 
-  lru-cache@11.2.4: {}
-
   luxon@2.5.2: {}
 
   luxon@3.7.1: {}
@@ -7143,10 +7090,6 @@ snapshots:
   minimalistic-assert@1.0.1: {}
 
   minimatch@10.0.3:
-    dependencies:
-      '@isaacs/brace-expansion': 5.0.0
-
-  minimatch@10.1.1:
     dependencies:
       '@isaacs/brace-expansion': 5.0.0
 
@@ -7285,11 +7228,6 @@ snapshots:
   path-scurry@2.0.0:
     dependencies:
       lru-cache: 11.1.0
-      minipass: 7.1.2
-
-  path-scurry@2.0.1:
-    dependencies:
-      lru-cache: 11.2.4
       minipass: 7.1.2
 
   pathe@2.0.3: {}
