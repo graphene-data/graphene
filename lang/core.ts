@@ -1,4 +1,4 @@
-import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, QueryModel, expandBlueprintMap, type StructRef} from '@graphenedata/malloy'
+import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, QueryModel, expandBlueprintMap} from '@graphenedata/malloy'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
 import {FILE_MAP, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors, analyzeTable, applyExtends} from './analyze.ts'
@@ -99,10 +99,17 @@ export function toSql (query: Query, params: Record<string, any> = {}): string {
   // structRef is Malloy parlance for the table on which a query is based. Malloy expects this to be a Table (more or less),
   // but for convenience we store just that table's name in `baseTableName`. Here, we look up that name and set the actual structRef.
   // We do it as late as possible so we can be sure we give it the right object (ie after filling params, converting to uppercase, etc)
-  let tableQueries = Object.values(contents).map(t => t.query)
-  let joinQueries = Object.values(contents).flatMap(t => t.fields.map(f => (f as any).query))
-  let allQueries: Query[] = [...tableQueries, ...joinQueries, query].filter(q => !!q)
-  allQueries.forEach(q => q.structRef = contents[q.baseTableName] as StructRef)
+  // We must set structRef recursively because join fields embed entire table structures (including nested joins with queries).
+  let visited = new Set()
+  function setStructRefs (obj: any) {
+    if (!obj || typeof obj !== 'object' || visited.has(obj)) return
+    visited.add(obj)
+    if (obj.baseTableName && obj.pipeline) obj.structRef = contents[obj.baseTableName] // looks like a query
+    if (obj.query) setStructRefs(obj.query) // View query
+    if (obj.fields) for (let f of obj.fields) setStructRefs(f) // recurse through all fields
+  }
+  Object.values(contents).forEach(setStructRefs)
+  setStructRefs(query)
 
   let qm = new QueryModel({
     name: 'generated_model',
