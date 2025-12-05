@@ -21,6 +21,7 @@ export default defineConfig({
         test: {
           name: 'ui',
           globalSetup: ['ui/tests/globalSetup.ts'],
+          setupFiles: ['ui/tests/setup.ts'],
           include: ['ui/tests/*.test.ts'],
         },
       },

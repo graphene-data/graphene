@@ -1,7 +1,7 @@
 import {type ConsoleMessage, type Page} from '@playwright/test'
 
 type Matcher = string | RegExp | ((text: string) => boolean)
-type Tracker = {errors: string[], expectedMatchers: Matcher[]}
+type Tracker = {errors: string[], expectedMatchers: Matcher[], onConsole: (msg: ConsoleMessage) => void, onPageError: (error: Error) => void}
 
 const trackerKey = Symbol.for('graphene.console.errors')
 
@@ -21,6 +21,13 @@ export function assertConsoleErrors (page: Page) {
   if (unexpected.length) problems.push(`Unexpected errors:\n${unexpected.map(e => `  - ${e}`).join('\n')}`)
   if (missed.length) problems.push(`Expected errors not seen:\n${missed.map(m => `  - ${describe(m)}`).join('\n')}`)
   if (problems.length) throw new Error(problems.join('\n\n'))
+}
+
+/** Stop tracking console errors. Call after assertConsoleErrors to avoid catching teardown errors. */
+export function stopTrackingConsole (page: Page) {
+  let tracker = getTracker(page)
+  page.off('console', tracker.onConsole)
+  page.off('pageerror', tracker.onPageError)
 }
 
 export function trackerBrowserConsole (page: Page) {
@@ -50,7 +57,7 @@ export function trackerBrowserConsole (page: Page) {
   page.on('console', onConsole)
   page.on('pageerror', onPageError)
 
-  ;(page as any)[trackerKey] = {errors, expectedMatchers}
+  ;(page as any)[trackerKey] = {errors, expectedMatchers, onConsole, onPageError}
 }
 
 function getTracker (page: Page) {
