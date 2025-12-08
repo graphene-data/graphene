@@ -6,6 +6,7 @@ import {resolve} from 'path'
 
 const BASE_PORT = 4003
 const PORT_INCREMENT = 3
+const COMMIT_TOOL = 'fork status'
 
 $.verbose = true
 
@@ -80,8 +81,6 @@ async function startWorktree (name: string) {
 
   console.log(`Assigned ports → core:${basePort}`)
 
-  await $`(cd ${treePath}/core && pnpm install)`
-  await $`(cd ${treePath}/cloud && pnpm install)`
   await $`ln -sf ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 
   writeFileSync(`${treePath}/AGENTS.md`, `
@@ -89,12 +88,15 @@ async function startWorktree (name: string) {
 
     There are two main repos, 'core' which contains our open-source package that allows for local development, and 'cloud' which contains a closed-source Graphene hosting platform we're developing.
 
-    It's important that you always go read core/AGENTS.md before you do anything, as it provides a lot of the context and coding convetions that are relevant to all Graphene development, not just that of core.
+    It's important that you always go read ./core/AGENTS.md before you do anything, as it provides a lot of the context and coding convetions that are relevant to all Graphene development, not just that of core.
   `.trim())
   await $`ln -s ${treePath}/AGENTS.md ${treePath}/CLAUDE.md`
 
   console.log('Opening Zed...')
   await $`zed ${treePath}`
+
+  await $`(cd ${treePath}/core && pnpm install)`
+  await $`(cd ${treePath}/cloud && pnpm install)`
 
   console.log(`Worktree '${name}' is ready at ${treePath}`)
 }
@@ -104,40 +106,89 @@ async function repoDirty (repo: string): Promise<boolean> {
   return !!status
 }
 
+async function createWipCommit (repo: string): Promise<boolean> {
+  if (!await repoDirty(repo)) return false
+  console.log(`Creating WIP commit in ${repo}`)
+  await $`git -C ${currentWorktree}/${repo} add -A`
+  await $`git -C ${currentWorktree}/${repo} commit -m WIP`
+  return true
+}
+
+async function resetWipCommit (repo: string): Promise<void> {
+  let message = (await $`git -C ${currentWorktree}/${repo} log -1 --format=%s`).stdout.trim()
+  if (message === 'WIP' || message.startsWith('WIP ')) {
+    console.log(`Resetting WIP commit in ${repo}`)
+    await $`git -C ${currentWorktree}/${repo} reset HEAD~1`
+  }
+}
+
+async function hasWipCommits (repo: string): Promise<boolean> {
+  // Check if any commits on the branch (not on origin/main) start with WIP
+  let log = (await $`git -C ${currentWorktree}/${repo} log origin/main..HEAD --format=%s`).stdout.trim()
+  if (!log) return false
+  return log.split('\n').some(msg => msg === 'WIP' || msg.startsWith('WIP '))
+}
+
 async function commitWorktree () {
-  if (await repoDirty('core')) await $`osascript -e 'do shell script "cd ${currentWorktree}/core && gitx -c"'`
-  if (await repoDirty('cloud')) await $`osascript -e 'do shell script "cd ${currentWorktree}/cloud && gitx -c"'`
+  if (await repoDirty('core')) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree + '/core'}`
+  if (await repoDirty('cloud')) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree + '/cloud'}`
 }
 
 async function pullWorktree () {
-  let stashCore = false, stashCloud = false
-  if (await repoDirty('core')) {
-    stashCore = true
-    console.log('Stashing core')
-    await $`git -C ${currentWorktree}/core stash -m 'pulling onto ${currentName}'`
-  }
-  if (await repoDirty('cloud')) {
-    stashCloud = true
-    console.log('Stashing cloud')
-    await $`git -C ${currentWorktree}/cloud stash -m 'pulling onto ${currentName}'`
-  }
+  let wipCore = await createWipCommit('core')
+  let wipCloud = await createWipCommit('cloud')
 
   await $`git -C ${currentWorktree}/core fetch origin`
   await $`git -C ${currentWorktree}/cloud fetch origin`
 
-  await $`git -C ${currentWorktree}/core rebase origin/main`
-  await $`git -C ${currentWorktree}/cloud rebase origin/main`
+  // Run both rebases even if one fails
+  let coreError: Error | null = null
+  let cloudError: Error | null = null
 
-  if (stashCore) await $`git -C ${currentWorktree}/core stash pop`
-  if (stashCloud) await $`git -C ${currentWorktree}/cloud stash pop`
+  let [coreResult, cloudResult] = await Promise.allSettled([
+    $`git -C ${currentWorktree}/core rebase origin/main`,
+    $`git -C ${currentWorktree}/cloud rebase origin/main`,
+  ])
+
+  if (coreResult.status === 'rejected') coreError = coreResult.reason
+  if (cloudResult.status === 'rejected') cloudError = cloudResult.reason
+
+  // Reset WIP commits on successful rebases
+  if (!coreError && wipCore) await resetWipCommit('core')
+  if (!cloudError && wipCloud) await resetWipCommit('cloud')
+
+  // Print helpful messages if there were conflicts
+  if (coreError || cloudError) {
+    console.log('\nRebase conflicts detected:')
+    if (coreError) console.log('  - core: resolve conflicts and run `git rebase --continue`')
+    if (cloudError) console.log('  - cloud: resolve conflicts and run `git rebase --continue`')
+
+    let wipRepos: string[] = []
+    if (wipCore && coreError) wipRepos.push('core')
+    if (wipCloud && cloudError) wipRepos.push('cloud')
+
+    if (wipRepos.length > 0) {
+      console.log(`\nReminder: You had uncommitted changes in ${wipRepos.join(' and ')} saved as WIP commits.`)
+      console.log('After resolving conflicts, run `git reset HEAD~1` to restore them as uncommitted changes.')
+    }
+  }
 }
 
 async function pushWorktree () {
   if (await repoDirty('core') || await repoDirty('cloud')) return commitWorktree()
 
+  // Check for WIP commits that shouldn't be pushed
+  let coreHasWip = await hasWipCommits('core')
+  let cloudHasWip = await hasWipCommits('cloud')
+  if (coreHasWip || cloudHasWip) {
+    let repos = [coreHasWip && 'core', cloudHasWip && 'cloud'].filter(Boolean).join(' and ')
+    console.error(`Cannot push: ${repos} has commits starting with "WIP". Please squash or rename them first.`)
+    return
+  }
+
   await pullWorktree()
   await $`(cd ${currentWorktree}/core && pnpm lint && pnpm test)`
-  await $`(cd ${currentWorktree}/cloud && pnpm test)`
+  await $`(cd ${currentWorktree}/cloud && pnpm lint && pnpm test)`
   await $`git -C ${currentWorktree}/core push origin HEAD:main`
   await $`git -C ${currentWorktree}/cloud push origin HEAD:main`
 }
