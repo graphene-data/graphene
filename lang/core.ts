@@ -10,7 +10,7 @@ import path from 'node:path'
 import {BIGQUERY_DIALECT_FUNCTIONS} from './functionDefs.ts'
 import {parser} from './parser.js'
 import {parseMarkdown} from './markdown.ts'
-import {uppercaseMalloyQuery, uppercaseTable} from './snowflake.ts'
+import {uppercaseTable} from './snowflake.ts'
 
 export {clearWorkspace}
 export {config, loadConfig}
@@ -94,7 +94,6 @@ export function toSql (query: Query, params: Record<string, any> = {}): string {
   // Same deal for the query: make a clone, prepare it for passing to Malloy.
   query = structuredClone(query)
   fillInParams(query, params)
-  if (config.dialect == 'snowflake') uppercaseMalloyQuery(query)
 
   // structRef is Malloy parlance for the table on which a query is based. Malloy expects this to be a Table (more or less),
   // but for convenience we store just that table's name in `baseTableName`. Here, we look up that name and set the actual structRef.

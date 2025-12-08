@@ -1,77 +1,51 @@
 import {walkExpression} from './util.ts'
 import type {Table, Field, ColumnField, Expression, Query, Join} from './types.ts'
 
-/**
- * Malloy treats identifier case literally when compiling Snowflake SQL. Rather than rewrite the final SQL string,
- * walk the already-cloned tables and query in-place so every consumer (CLI output, caching, connections) observes the
- * same uppercase representation.
- */
-
-export function uppercaseMalloyQuery (query: Query) {
-  query.baseTableName = uppercaseIdentifier(query.baseTableName)
-  for (let stage of query.pipeline || []) {
-    let fields = (stage as any).queryFields || []
-    fields.forEach((field: ColumnField) => uppercaseColumnField(field))
-
-    let filters = (stage as any).filterList || []
-    filters.forEach((filter: any) => uppercaseExpression(filter?.e))
-  }
-}
+// We like writing gsql with lower or camel case, but snowflake defaults to ALL_CAPS_FOR_EVERYTHING.
+// To work around this, we tweak the query just before we send it to Malloy to use uppercase names for columns and tables.
+// We do this by changing their `name` to uppercase, and setting `as` to be the version gsql expects, so lowercase downstream queries work just fine.
+// For tables, we change the `tablePath` to uppercase.
 
 export function uppercaseTable (table: Table) {
   if ((table as any).upperCased) return
   (table as any).upperCased = true
 
-  table.name = uppercaseIdentifier(table.name)
-  if (table.primaryKey) table.primaryKey = uppercaseIdentifier(table.primaryKey)
-  if (table.tableName) table.tableName = uppercaseQualified(table.tableName)
-  if (table.tablePath) table.tablePath = uppercaseQualified(table.tablePath)
+  if (table.query) return // query tables don't have actual columns in the db
 
-  table.fields?.forEach(field => uppercaseField(field))
-  if (table.query) uppercaseMalloyQuery(table.query)
+  table.tablePath = uppercaseIdentifier(table.tablePath)
+  table.fields.forEach(uppercaseField)
 }
 
+// This is a bit fiddly. Join fields are each distinct copies of the table, but the _fields_ in each join are shared.
+// That means we need to process every table and join, but fields could get hit multiple times if there are different paths to them.
 function uppercaseField (field: Field) {
-  if (!field) return
-  if (isJoinField(field)) {
-    field.name = uppercaseIdentifier(field.name)
-    if (field.tableName) field.tableName = uppercaseQualified(field.tableName)
-    if (field.tablePath) field.tablePath = uppercaseQualified(field.tablePath)
-    if ((field as any).structPath) (field as any).structPath = (field as any).structPath!.map(uppercaseIdentifier)
-    if ((field as any).path) (field as any).path = (field as any).path!.map(uppercaseIdentifier)
-    if (field.onExpression) uppercaseExpression(field.onExpression as Expression)
-    uppercaseTable(field as unknown as Table)
-  } else {
-    uppercaseColumnField(field as ColumnField)
-  }
-}
+  // Remember that each join field is a distinct partial copy of the table, so we need to uppercase each one.
+  if (isJoinField(field)) return uppercaseTable(field as any)
 
-function uppercaseColumnField (field: ColumnField) {
-  if (!field) return
+  // It's possible we'll visit the same field multiple times, since multiple joins can share the same child `field` object
+  // Processing multiple times would be wrong, as it would uppercase the `as` the second time
+  if ((field as any).upperCased) return
+  (field as any).upperCased = true
+
+
+  if (field.e) return uppercaseExpression(field.e)
+
+  ;(field as any).as = field.name
   field.name = uppercaseIdentifier(field.name)
-  if (field.path) field.path = field.path.map(uppercaseIdentifier)
-  if ((field as any).structPath) (field as any).structPath = (field as any).structPath.map(uppercaseIdentifier)
-  if ((field as any).tableName) (field as any).tableName = uppercaseQualified((field as any).tableName)
-  if ((field as any).tablePath) (field as any).tablePath = uppercaseQualified((field as any).tablePath)
-  if (field.e) uppercaseExpression(field.e)
 }
 
 function uppercaseExpression (expr?: Expression) {
   if (!expr) return
   walkExpression(expr, (node: any) => {
-    if (Array.isArray(node.path)) node.path = node.path.map(uppercaseIdentifier)
-    if (Array.isArray(node.structPath)) node.structPath = node.structPath.map(uppercaseIdentifier)
+    if (node.type == 'field') {
+      node.path = node.path.map(uppercaseIdentifier)
+    }
   })
 }
 
 function uppercaseIdentifier (value?: string): string {
   if (!value) return value || ''
   return value.toString().toUpperCase()
-}
-
-function uppercaseQualified (value?: string): string | undefined {
-  if (!value) return value
-  return value.split('.').map(part => part.startsWith('"') && part.endsWith('"') ? part : uppercaseIdentifier(part)).join('.')
 }
 
 function isJoinField (field: Field): field is Join {
