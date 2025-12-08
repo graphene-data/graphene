@@ -86,6 +86,9 @@ importers:
       playwright:
         specifier: 1.54.2
         version: 1.54.2
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
       typescript-eslint:
         specifier: ^8.38.0
         version: 8.46.1(eslint@9.37.0)(typescript@5.9.3)
