@@ -1,5 +1,5 @@
 import {walkExpression} from './util.ts'
-import type {Table, Field, ColumnField, Expression, Query, Join} from './types.ts'
+import type {Table, Field, Expression, Join} from './types.ts'
 
 // We like writing gsql with lower or camel case, but snowflake defaults to ALL_CAPS_FOR_EVERYTHING.
 // To work around this, we tweak the query just before we send it to Malloy to use uppercase names for columns and tables.
