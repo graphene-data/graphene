@@ -575,8 +575,8 @@ Here's an example:
 |----------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | false | column name, stored expression name, GSQL expression | First column |
-| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | false | column name, stored expression name, GSQL expression, list of any combination of these | Any non-assigned numeric columns |
-| y2 | Column(s) or expression(s) to include on a secondary y-axis. | false | column name, stored expression name, GSQL expression, list of any combination of these | - |
+| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | false | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | Any non-assigned numeric columns |
+| y2 | Column(s) or expression(s) to include on a secondary y-axis. | false | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | - |
 | y2SeriesType | Chart type to apply to the series on the y2 axis | false | `bar`, `line`, `scatter` | `bar` |
 | series | Column or expression to use to define the series (groups) in a multi-series chart. Use when values of a particular column dictate the multiple series to plot, eg. `country` would create a series for every distinct country in the column. | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
@@ -598,7 +598,7 @@ Here's an example:
 | outlineWidth | Width of line surrounding each bar | number | `0` |
 | outlineColor | Color to use for outline if outlineWidth > 0 | CSS name, hexademical, RGB, HSL | - |
 | colorPalette | List of custom colors to use for the chart | list of color strings (CSS name, hexademical, RGB, HSL) e.g. `"#cf0d06, #eb5752, #e88a87"` | built-in color palette |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | list of series names in the order they should be used in the chart `"Canada, US"` | default order implied by the data |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | list of series names in the order they should be used in the chart e.g. `"Canada, US"` | default order implied by the data |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | number | - |
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | `true`, `false` | `false` |
@@ -723,8 +723,8 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | - |
-| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | true | column name, stored expression name, GSQL expression, list of any combination of these | - |
-| y2 | Column(s) or expression(s) to include on a secondary y-axis. | false | column name, stored expression name, GSQL expression, list of any combination of these | - |
+| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | true | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | - |
+| y2 | Column(s) or expression(s) to include on a secondary y-axis. | false | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | - |
 | y2SeriesType | Chart type to apply to the series on the y2 axis | false | `line`, `bar`, `scatter` | `line` |
 | series | Column or expression to use to define the series (groups) in a multi-series chart. Use when values of a particular column dictate the multiple series to plot, eg. `country` would create a series for every distinct country in the column. | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
@@ -750,7 +750,7 @@ Here's an example:
 | markerShape | Shape to use if markers=true | false | `circle`, `emptyCircle`, `rect`, `triangle`, `diamond` | `circle` |
 | markerSize | Size of each shape (in pixels) | false | number | `8` |
 | colorPalette | List of custom colors to use for the chart | false | list of color strings (CSS name, hexademical, RGB, HSL) e.g. `"#cf0d06, #eb5752, #e88a87"` | - |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | list of series names in the order they should be used in the chart `"Canada, US"` | default order implied by the data |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | list of series names in the order they should be used in the chart e.g. `"Canada, US"` | default order implied by the data |
 | labels | Show value labels | false | `true`, `false` | `false` |
 | labelSize | Font size of value labels | false | number | `11` |
 | labelPosition | Where label will appear on your series | false | `above`, `middle`, `below` | `above` |
@@ -832,7 +832,7 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | data | Query name, wrapped in curly braces | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | First column |
-| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | true | column name, stored expression name, GSQL expression, list of any combination of these | Any non-assigned numeric columns |
+| y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | true | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | Any non-assigned numeric columns |
 | series | Column or expression to use to define the series (groups) in a multi-series chart. Use when values of a particular column dictate the multiple series to plot, eg. `country` would create a series for every distinct country in the column. | false | column name, stored expression name, GSQL expression | - |
 | sort | Whether to apply default sort to your data. Default sort is x ascending for number and date x-axes, and y descending for category x-axes | false | `true`, `false` | `true` |
 | type | Grouping method to use for multi-series charts | false | `stacked`, `stacked100` | `stacked` |
@@ -854,7 +854,7 @@ Here's an example:
 | fillOpacity | % of the full color that should be rendered, with remainder being transparent | false | number (0 to 1) | `0.7` |
 | line | Show line on top of the area | false | `true`, `false` | `true` |
 | colorPalette | List of custom colors to use for the chart | false | list of color strings (CSS name, hexademical, RGB, HSL) e.g. `"#cf0d06, #eb5752, #e88a87"` | built-in color palette |
-| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | list of series names in the order they should be used in the chart `"Canada, US"` | default order implied by the data |
+| seriesOrder | Apply a specific order to the series in a multi-series chart. | false | list of series names in the order they should be used in the chart e.g. `"Canada, US"` | default order implied by the data |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
