@@ -7,7 +7,7 @@
     "build": "vite build --config frontend/vite.config.ts",
     "migrate": "node --env-file=.env node_modules/drizzle-kit/bin.cjs migrate",
     "generate": "node --env-file=.env node_modules/drizzle-kit/bin.cjs generate",
-    "lint": "eslint .; tsc",
+    "lint": "eslint . && tsc",
     "test": "vitest run",
     "test-one": "node ../core/scripts/turboTest.js"
   },
