@@ -14,8 +14,8 @@ A comprehensive dashboard showcasing flight data metrics from 2000-2005.
 <Row>
   <BigValue data=flights value=cancellation_rate title="Cancellation Rate" fmt=pct2 />
   <BigValue data=flights value=diversion_rate title="Diversion Rate" fmt=pct2 />
-  <BigValue data=flights value=avg(dep_delay) title="Avg Departure Delay (min)" fmt=num1 />
-  <BigValue data=flights value=avg(arr_delay) title="Avg Arrival Delay (min)" fmt=num1 />
+  <BigValue data=flights value=avg_departure_delay title="Avg Departure Delay (min)" fmt=num1 />
+  <BigValue data=flights value=avg_arrival_delay title="Avg Arrival Delay (min)" fmt=num1 />
 </Row>
 
 ```sql weekly_trends
@@ -23,8 +23,8 @@ select
   date_trunc('week', dep_time) as week,
   cancellation_rate,
   diversion_rate,
-  avg(dep_delay) as avg_dep_delay,
-  avg(arr_delay) as avg_arr_delay,
+  avg_departure_delay as avg_dep_delay,
+  avg_arrival_delay as avg_arr_delay,
   on_time_departure_rate,
   on_time_arrival_rate,
   count(*) as flight_count,
@@ -64,8 +64,8 @@ select
   on_time_arrival_rate,
   1 - on_time_arrival_rate as delayed_arrival_rate,
   cancellation_rate,
-  avg(dep_delay) as avg_departure_delay,
-  avg(arr_delay) as avg_arrival_delay
+  avg_departure_delay as avg_departure_delay,
+  avg_arrival_delay as avg_arrival_delay
 from flights 
 group by 1
 order by 2 desc
