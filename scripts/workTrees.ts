@@ -146,16 +146,17 @@ async function pullWorktree () {
   let wipCore = await createWipCommit('core')
   let wipCloud = await createWipCommit('cloud')
 
-  await $`git -C ${currentWorktree}/core fetch origin`.noquiet()
-  await $`git -C ${currentWorktree}/cloud fetch origin`.noquiet()
+  let $$ = $({quiet: false})
+  await $$`git -C ${currentWorktree}/core fetch origin`
+  await $$`git -C ${currentWorktree}/cloud fetch origin`
 
   // Run both rebases even if one fails
   let coreError: Error | null = null
   let cloudError: Error | null = null
 
   let [coreResult, cloudResult] = await Promise.allSettled([
-    $`git -C ${currentWorktree}/core rebase origin/main`.noquiet(),
-    $`git -C ${currentWorktree}/cloud rebase origin/main`.noquiet(),
+    $$`git -C ${currentWorktree}/core rebase origin/main`,
+    $$`git -C ${currentWorktree}/cloud rebase origin/main`,
   ])
 
   if (coreResult.status === 'rejected') coreError = coreResult.reason
@@ -197,8 +198,9 @@ async function pushWorktree () {
   await pullWorktree()
   await $`(cd ${currentWorktree}/core && pnpm lint && pnpm test)`
   await $`(cd ${currentWorktree}/cloud && pnpm lint && pnpm test)`
-  await $`git -C ${currentWorktree}/core push origin HEAD:main`.noquiet()
-  await $`git -C ${currentWorktree}/cloud push origin HEAD:main`.noquiet()
+  let $$ = $({quiet: false})
+  await $$`git -C ${currentWorktree}/core push origin HEAD:main`
+  await $$`git -C ${currentWorktree}/cloud push origin HEAD:main`
 }
 
 async function doneWorktree () {
