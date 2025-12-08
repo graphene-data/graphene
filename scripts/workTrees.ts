@@ -9,6 +9,14 @@ const PORT_INCREMENT = 3
 const COMMIT_TOOL = 'fork status'
 
 $.verbose = true
+$.quiet = true
+
+// Show command output when a command fails
+process.on('unhandledRejection', (error: any) => {
+  if (error?.stdout) process.stdout.write(error.stdout)
+  if (error?.stderr) process.stderr.write(error.stderr)
+  process.exit(error?.exitCode ?? 1)
+})
 
 // root is the path that contains all of the graphene worktrees
 let root = resolve(import.meta.dirname, '../../..')
@@ -138,16 +146,16 @@ async function pullWorktree () {
   let wipCore = await createWipCommit('core')
   let wipCloud = await createWipCommit('cloud')
 
-  await $`git -C ${currentWorktree}/core fetch origin`
-  await $`git -C ${currentWorktree}/cloud fetch origin`
+  await $`git -C ${currentWorktree}/core fetch origin`.noquiet()
+  await $`git -C ${currentWorktree}/cloud fetch origin`.noquiet()
 
   // Run both rebases even if one fails
   let coreError: Error | null = null
   let cloudError: Error | null = null
 
   let [coreResult, cloudResult] = await Promise.allSettled([
-    $`git -C ${currentWorktree}/core rebase origin/main`,
-    $`git -C ${currentWorktree}/cloud rebase origin/main`,
+    $`git -C ${currentWorktree}/core rebase origin/main`.noquiet(),
+    $`git -C ${currentWorktree}/cloud rebase origin/main`.noquiet(),
   ])
 
   if (coreResult.status === 'rejected') coreError = coreResult.reason
@@ -189,8 +197,8 @@ async function pushWorktree () {
   await pullWorktree()
   await $`(cd ${currentWorktree}/core && pnpm lint && pnpm test)`
   await $`(cd ${currentWorktree}/cloud && pnpm lint && pnpm test)`
-  await $`git -C ${currentWorktree}/core push origin HEAD:main`
-  await $`git -C ${currentWorktree}/cloud push origin HEAD:main`
+  await $`git -C ${currentWorktree}/core push origin HEAD:main`.noquiet()
+  await $`git -C ${currentWorktree}/cloud push origin HEAD:main`.noquiet()
 }
 
 async function doneWorktree () {
