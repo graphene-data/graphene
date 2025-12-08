@@ -1,4 +1,4 @@
-import {config} from '../lang/config.ts'
+import {config} from '../../core/lang/config.ts'
 
 const templateMessages = [
   {

@@ -1,65 +1,70 @@
-import {query, type PermissionResult} from '@anthropic-ai/claude-code'
-import {type IncomingMessage, type ServerResponse} from 'http'
-import fs from 'fs-extra'
-import path from 'path'
-import {fileURLToPath} from 'url'
+// import {type IncomingMessage, type ServerResponse} from 'http'
+// import {query, type PermissionResult} from '@anthropic-ai/claude-code'
+// import fs from 'fs-extra'
+// import path from 'path'
+// import {fileURLToPath} from 'url'
 
-export async function handleAgentRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>, grapheneRoot: string) {
-  let chunks = [] as any[]
-  for await (let chunk of req) chunks.push(chunk)
-  let {prompt: inputPrompt, sessionId, targetFile} = JSON.parse(Buffer.concat(chunks).toString())
-  res.setHeader('Content-Type', 'application/json')
+// TODO: Re-enable when claude-code SDK is ready
+// export async function handleAgentRequest (_req: IncomingMessage, _res: ServerResponse<IncomingMessage>, _grapheneRoot: string) {
+//   throw new Error('Agent functionality not yet implemented')
+// }
 
-  if (inputPrompt == 'mock') {
-    let mod = await import('./mock.ts')
-    for (let msg of mod.getMockMessages()) {
-      res.write(JSON.stringify(msg) + '\n')
-      await new Promise(r => setTimeout(r, 50))
-    }
-    return res.end()
-  }
+// export async function handleAgentRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>, grapheneRoot: string) {
+//   let chunks = [] as any[]
+//   for await (let chunk of req) chunks.push(chunk)
+//   let {prompt: inputPrompt, sessionId, targetFile} = JSON.parse(Buffer.concat(chunks).toString())
+//   res.setHeader('Content-Type', 'application/json')
 
-  let grapheneDocs = await fs.readFile(path.join(fileURLToPath(import.meta.url), '../../docs/graphene.md'))
+//   if (inputPrompt == 'mock') {
+//     let mod = await import('./mock.ts')
+//     for (let msg of mod.getMockMessages()) {
+//       res.write(JSON.stringify(msg) + '\n')
+//       await new Promise(r => setTimeout(r, 50))
+//     }
+//     return res.end()
+//   }
 
-  let done: any // see https://github.com/anthropics/claude-code/issues/4775
-  let finishedPromise = new Promise(resolve => done = resolve)
-  let prompt = (async function* () {
-    yield {type: 'user', message: {role: 'user', content: inputPrompt}} as any
-    await finishedPromise
-  })()
+//   let grapheneDocs = await fs.readFile(path.join(fileURLToPath(import.meta.url), '../../docs/graphene.md'))
 
-  let appendSystemPrompt = `
-    You are a Graphene data analysis expert.
+//   let done: any // see https://github.com/anthropics/claude-code/issues/4775
+//   let finishedPromise = new Promise(resolve => done = resolve)
+//   let prompt = (async function* () {
+//     yield {type: 'user', message: {role: 'user', content: inputPrompt}} as any
+//     await finishedPromise
+//   })()
 
-    ${targetFile ?
-    `You are currently working on the file: ${targetFile}. Do not edit any other files.` :
-    'You should create a new markdown file with a descriptive name. Once you\'ve created a file, you should only continue to edit that file, and not create any others.'}
+//   let appendSystemPrompt = `
+//     You are a Graphene data analysis expert.
 
-    You can search for any gsql or md files below the current directory, but don't search outside this project, or look in node_modules.
+//     ${targetFile ?
+//     `You are currently working on the file: ${targetFile}. Do not edit any other files.` :
+//     'You should create a new markdown file with a descriptive name. Once you\'ve created a file, you should only continue to edit that file, and not create any others.'}
 
-    If the user asks for something simple, keep the md simple. Don't go building complex things they didn't ask for.
+//     You can search for any gsql or md files below the current directory, but don't search outside this project, or look in node_modules.
 
-    Here's a brief overview on how to use Graphene:
-    ${grapheneDocs}
-  `
+//     If the user asks for something simple, keep the md simple. Don't go building complex things they didn't ask for.
 
-  // let extraArgs = {'input-format': 'stream-json'}
-  let q = query({prompt, options: {
-    canUseTool,
-    appendSystemPrompt,
-  }})
+//     Here's a brief overview on how to use Graphene:
+//     ${grapheneDocs}
+//   `
 
-  for await (let msg of q) {
-    console.dir(msg, {depth: null})
-    if (msg.type === 'result') done()
-    res.write(JSON.stringify(msg) + '\n')
-  }
+//   // let extraArgs = {'input-format': 'stream-json'}
+//   let q = query({prompt, options: {
+//     canUseTool,
+//     appendSystemPrompt,
+//   }})
 
-  res.end()
-}
+//   for await (let msg of q) {
+//     console.dir(msg, {depth: null})
+//     if (msg.type === 'result') done()
+//     res.write(JSON.stringify(msg) + '\n')
+//   }
 
-async function canUseTool (toolName: string, input: any): Promise<PermissionResult> {
-  console.log('canUseTool', toolName, input)
-  await Promise.resolve()
-  return {behavior: 'allow', updatedInput: input}
-}
+//   res.end()
+// }
+
+// async function canUseTool (toolName: string, input: any): Promise<PermissionResult> {
+//   console.log('canUseTool', toolName, input)
+//   await Promise.resolve()
+//   return {behavior: 'allow', updatedInput: input}
+// }

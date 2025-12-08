@@ -1,24 +1,21 @@
-/// <reference types="svelte" />
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  readonly VITE_STYTCH_PUBLIC_TOKEN?: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
+// eslint-disable-next-line svelte/no-svelte-internal
+import type internal from 'svelte/internal'
+import {type SvelteComponent} from 'svelte'
 
 declare module '@stytch/vanilla-js/b2b';
 
-type GrapheneComponentCtor = typeof import('svelte').SvelteComponent;
-
 interface GrapheneGlobal {
-  components?: Record<string, GrapheneComponentCtor>;
-  svelte?: typeof import('svelte/internal');
+  components?: Record<string, SvelteComponent>;
+  svelte?: typeof internal;
   [key: string]: unknown;
 }
 
-interface Window {
-  $GRAPHENE?: GrapheneGlobal;
+declare global {
+  interface Window {
+    $GRAPHENE: GrapheneGlobal;
+  }
 }
+
+export {}

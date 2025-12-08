@@ -43,7 +43,7 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
   })
 
   fastify.use((req, res, next) => {
-    if (req.url.startsWith('/_api')) next()
+    if (req.url?.startsWith('/_api')) next()
     else vite.middlewares(req, res, next)
   })
 

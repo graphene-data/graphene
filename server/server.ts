@@ -1,4 +1,4 @@
-import Fastify from 'fastify'
+import Fastify, {type FastifyPluginAsync} from 'fastify'
 import cookie from '@fastify/cookie'
 
 import {authTokenExchange, checkAuth} from './auth.ts'
@@ -7,7 +7,7 @@ import {proxyQuery} from './query.ts'
 
 export function createServer () {
   let app = Fastify({logger: {level: 'warn'}})
-  app.register(cookie, {})
+  app.register(cookie as unknown as FastifyPluginAsync, {})
 
   app.decorateRequest('auth', null)
   app.addHook('onRequest', checkAuth)

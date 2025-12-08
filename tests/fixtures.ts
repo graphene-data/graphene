@@ -19,6 +19,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   realAuth: false,
   seedType: 'duckdb',
 
+  // eslint-disable-next-line no-empty-pattern
   browser: async ({}, use) => {
     let b = await chromium.launch({headless: !process.env.GRAPHENE_DEBUG, devtools: !!process.env.GRAPHENE_DEBUG})
     await use(b)

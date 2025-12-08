@@ -8,7 +8,7 @@ import {files} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 
 export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
-  if (!ensureUser(req, reply)) return
+  ensureUser(req, reply)
 
   let slug = (req.params as any).slug || 'index'
 

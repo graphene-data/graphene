@@ -1,10 +1,8 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import {B2BClient} from 'stytch'
+import type {AuthContext} from './types.js'
 
-export interface AuthContext {
-  userId: string
-  orgId: string
-}
+export type {AuthContext}
 
 let authOverride: AuthContext | null = null
 export function setAuthOverride (auth: AuthContext | null) {
@@ -37,12 +35,11 @@ export async function checkAuth (req: FastifyRequest) {
   // TODO check org matches subdomain
 }
 
-export function ensureUser (req: FastifyRequest, reply: FastifyReply) {
+export function ensureUser (req: FastifyRequest, reply: FastifyReply): asserts req is FastifyRequest & {auth: AuthContext} {
   if (!req.auth) {
     reply.code(401).send({error: 'Authentication required'})
-    return false
+    throw new Error('Unauthorized')
   }
-  return true
 }
 
 let stytchClient: B2BClient | undefined

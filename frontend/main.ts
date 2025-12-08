@@ -3,6 +3,8 @@ import '../../core/ui/internal/queryEngine.ts'
 import './app.css'
 
 import App from './App.svelte'
+
+// eslint-disable-next-line svelte/no-svelte-internal
 import * as svelteInternal from 'svelte/internal'
 
 const componentModules = import.meta.glob('../../core/ui/components/*.svelte', {eager: true}) as Record<string, {default: typeof App}>
@@ -13,8 +15,8 @@ const components = Object.fromEntries(
   }).filter((entry): entry is [string, typeof App] => Array.isArray(entry)),
 )
 
-let graphene = window.$GRAPHENE ?? {}
-graphene.components = {...(graphene.components ?? {}), ...components}
+let graphene = window.$GRAPHENE ?? {} as typeof window.$GRAPHENE
+graphene.components = {...(graphene.components ?? {}), ...components} as any
 graphene.svelte = svelteInternal
 window.$GRAPHENE = graphene
 

@@ -6,22 +6,29 @@ import {connections, files, type Connection} from '../schema.ts'
 import {updateFile, clearWorkspace, analyze, getDiagnostics, toSql} from '../../core/lang/core.ts'
 import {setConfig} from '../../core/lang/config.ts'
 
+interface QueryBody {
+  sql?: string
+  gsql?: string
+  params?: Record<string, any>
+}
+
 export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
-  if (!ensureUser(req, reply)) return
+  ensureUser(req, reply)
+  let body = req.body as QueryBody
 
   let connInfo = await getDb().query.connections.findFirst({where: eq(connections.orgId, req.auth.orgId)})
   if (!connInfo) return reply.code(400).send({error: 'No connection configured'})
-  let sql = req.body.sql
+  let sql = body.sql
   let fields = [] as any[]
 
   // We can proxy either sql or gsql. If it's gsql, we need to load up the workspace to render out the sql
-  if (req.body.gsql) {
+  if (body.gsql) {
     // Load up all gsql files into a graphene workspace
     let gsqlFiles = await getDb().query.files.findMany({where: and(eq(files.orgId, req.auth.orgId), eq(files.extension, 'gsql'))})
     clearWorkspace()
     setConfig({dialect: connInfo.kind, namespace: connInfo.namespace ?? undefined, root: '/dev/null'})
     gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))
-    let queries = analyze(req.body.gsql, 'gsql')
+    let queries = analyze(body.gsql, 'gsql')
 
     if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
     if (getDiagnostics().length) {
@@ -29,9 +36,11 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
     }
 
     // Then, turn the requested query into sql, and execute against the db
-    sql = toSql(queries[0], req.body.params)
+    sql = toSql(queries[0], body.params)
     fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
   }
+
+  if (!sql) return reply.code(400).send({error: 'No sql or gsql provided'})
 
   let conn = await getConnection(connInfo)
   let queryResults = await conn.runQuery(sql)
