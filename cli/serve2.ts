@@ -72,6 +72,7 @@ async function createConfig (): Promise<InlineConfig> {
     // Instead, we need to list them out here so vite knows where they are.
     optimizeDeps: {
       noDiscovery: process.env.NODE_ENV == 'test', // tests manually optimize before starting test workers
+      exclude: ['virtual:nav'],
       include: [
         '@graphenedata/cli > svelte',
         '@graphenedata/cli > ssf',
