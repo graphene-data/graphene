@@ -114,7 +114,7 @@ export class SnowflakeConnection implements QueryConnection {
       order by ordinal_position
     `)
     return res.rows.map(row => {
-      return {name: String(row['column_name']), dataType: String(row['data_type'])}
+      return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })
   }
 }

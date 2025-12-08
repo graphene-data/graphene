@@ -24,8 +24,7 @@ program.hook('preAction', async () => {
   loadConfig(process.cwd())
 })
 
-program
-  .command('compile')
+program.command('compile')
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
@@ -36,8 +35,7 @@ program
     console.log(toSql(queries[0]))
   })
 
-program
-  .command('run')
+program.command('run')
   .description('Run a query against your database')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
@@ -84,8 +82,7 @@ program.command('schema')
     console.log(')')
   })
 
-program
-  .command('serve')
+program.command('serve')
   .description('Run the local server')
   .option('--bg', 'Run the server in the background')
   .action(async (options: {bg?: boolean}) => {
@@ -103,8 +100,7 @@ program.command('stop')
   .description('Stop the local server')
   .action(async () => { await stopGrapheneIfRunning() })
 
-program
-  .command('check')
+program.command('check')
   .description('Check the project for errors, optionally capturing a page screenshot')
   .argument('[mdFile]', 'Markdown file to check (e.g., index.md)')
   .option('-c, --chart <chartTitle>', 'Title of a specific chart to capture')
