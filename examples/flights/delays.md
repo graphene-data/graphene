@@ -22,8 +22,8 @@ order by name
 from flights select
   carriers.name as carrier_name,
   count() as flights,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(arr_delay) as avg_arrival_delay_minutes,
+  avg_departure_delay as avg_departure_delay_minutes,
+  avg_arrival_delay as avg_arrival_delay_minutes,
   avg(case when dep_delay > 15 then 1 else 0 end) as departing_over_15_rate,
   avg(case when arr_delay > 15 then 1 else 0 end) as arriving_over_15_rate,
   cancellation_rate,
@@ -52,8 +52,8 @@ These trendlines track the selected carrier's monthly performance. Use them to s
 ```sql carrier_monthly_delay
 from flights select
   date_trunc('month', dep_time) as month,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(arr_delay) as avg_arrival_delay_minutes
+  avg_departure_delay as avg_departure_delay_minutes,
+  avg_arrival_delay as avg_arrival_delay_minutes
 where carrier = $carrier
 group by 1
 order by 1
@@ -150,8 +150,8 @@ Identify where the carrier burns the most minutes of delay.
 from flights select
   origin,
   origin_airport.full_name as origin_airport_name,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(arr_delay) as avg_arrival_delay_minutes,
+  avg_departure_delay as avg_departure_delay_minutes,
+  avg_arrival_delay as avg_arrival_delay_minutes,
   avg(case when dep_delay > 30 then 1 else 0 end) as share_over_30_minutes,
   count() as flights
 where carrier = $carrier
@@ -166,8 +166,8 @@ from flights select
   origin,
   destination,
   destination_airport.full_name as destination_airport_name,
-  avg(dep_delay) as avg_departure_delay_minutes,
-  avg(arr_delay) as avg_arrival_delay_minutes,
+  avg_departure_delay as avg_departure_delay_minutes,
+  avg_arrival_delay as avg_arrival_delay_minutes,
   count() as flights
 where carrier = $carrier
 group by 1, 2, 3
@@ -227,7 +227,7 @@ Late departures stack up as the day progresses, especially when the carrier is a
 ```sql carrier_delay_by_hour
 from flights select
   extract(hour from dep_time) as hour_of_day,
-  avg(dep_delay) as avg_departure_delay_minutes,
+  avg_departure_delay as avg_departure_delay_minutes,
   avg(case when dep_delay > 15 then 1 else 0 end) as severe_delay_rate,
   count() as flights
 where carrier = $carrier
