@@ -50,8 +50,8 @@ const EXAMPLE = `
 
   source: users is duckdb.table('users') extend {
     primary_key: id
-    join many: orders on orders.user_id = id
-    join many: payments on payments.user_id = id
+    join_many: orders on orders.user_id = id
+    join_many: payments on payments.user_id = id
     measure:
       total_orders is orders.count()
       amount_paid is payments.sum(payments.amount)

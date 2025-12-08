@@ -84,12 +84,14 @@ describe('lang', () => {
 
   it('uppercases identifiers for snowflake queries', () => {
     setConfig({dialect: 'snowflake', root: ''})
-    expect('from users select id, orders.amount')
-      .toRenderSql('SELECT base."ID" as "ID", ORDERS_0."AMOUNT" as "ORDERS_AMOUNT" FROM USERS as base LEFT JOIN ORDERS AS ORDERS_0 ON ORDERS_0."USER_ID"=base."ID"', {preserveCase: true})
+    // Column references are uppercase (to match Snowflake's case-insensitive identifiers),
+    // but aliases are lowercase (quoted) so result sets have the expected original casing.
+    expect('from users select id, orders.amount as amt order by amt desc')
+    // expect('from users select id, orders.amount as amt where amt > 0 order by amt desc')
+      .toRenderSql('SELECT base."ID" as "id", orders_0."AMOUNT" as "amt" FROM USERS as base LEFT JOIN ORDERS AS orders_0 ON orders_0."USER_ID"=base."ID" ORDER BY 2 desc NULLS LAST', {preserveCase: true})
   })
 
   it('uppercases nested join chains and query_source views for snowflake tables', () => {
-    // clearWorkspace()
     setConfig({dialect: 'snowflake', root: ''})
     updateFile(`
       table users_chain (
@@ -106,10 +108,11 @@ describe('lang', () => {
       )
     `, 'snowflake_chain.gsql')
 
+    // Column references uppercase, aliases lowercase (quoted) for proper result set casing
     expect('from users_chain select orders_chain.order_item_view_chain.order_id')
-      .toRenderSql(`SELECT ORDER_ITEM_VIEW_CHAIN_0."ORDER_ID" as "ORDERS_CHAIN_ORDER_ITEM_VIEW_CHAIN_ORDER_ID"
-        FROM USERS_CHAIN as base LEFT JOIN ORDERS_CHAIN AS ORDERS_CHAIN_0 ON ORDERS_CHAIN_0."USER_ID"=base."ID"
-        LEFT JOIN ORDER_ITEM_VIEW_CHAIN AS ORDER_ITEM_VIEW_CHAIN_0 ON ORDER_ITEM_VIEW_CHAIN_0."ORDER_ID"=ORDERS_CHAIN_0."ID"`, {preserveCase: true})
+      .toRenderSql(`SELECT order_item_view_chain_0."ORDER_ID" as "orders_chain_order_item_view_chain_order_id"
+        FROM USERS_CHAIN as base LEFT JOIN ORDERS_CHAIN AS orders_chain_0 ON orders_chain_0."USER_ID"=base."ID"
+        LEFT JOIN ORDER_ITEM_VIEW_CHAIN AS order_item_view_chain_0 ON order_item_view_chain_0."ORDER_ID"=orders_chain_0."ID"`, {preserveCase: true})
   })
 
   it('expands plain wildcard', () => {
@@ -686,6 +689,19 @@ describe('lang', () => {
       \`\`\`
       <BarChart data="test" x="name" y="avg(age)" />
     `).toRenderSql('with __stage0 as ( select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base where base."age">20 ) select base."name" as "name", avg(base."age") as "col_1" from __stage0 as base group by 1 order by 2 desc nulls last')
+  })
+
+  it('snowflake query_source (CTE) aliases match references', () => {
+    // When querying from a query_source table in Snowflake, the CTE's aliases must match
+    // the outer query's references. Both use uppercase for internal consistency, but
+    // the final output aliases are lowercase.
+    setConfig({dialect: 'snowflake', root: ''})
+    expect(`
+      \`\`\`gsql test
+        from users select count() as num
+      \`\`\`
+      <BigValue data="test" value="num" />
+    `).toRenderSql('WITH __stage0 AS ( SELECT COUNT(1) as "num" FROM USERS as base ) SELECT base."num" as "num" FROM __stage0 as base', {preserveCase: true})
   })
 
   it('reports the right line/col number for markdown errors', () => {
