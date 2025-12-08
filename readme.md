@@ -17,6 +17,9 @@ From `vscode`, use `pnpm run install-cursor` (or `-vscode`) to package up the cu
 
 To test out packaged graphene, `cd cli && pnpm pack`. In a new folder, you can `npm install <path-to-pack.tgz>`.
 
+# Publishing
+`node --env-file=../../publish.env ./scripts/publish.ts patch`
+
 # Malloy fork
 We maintain a fork of Malloy (specifically the `malloy` package) to better integrate it into Graphene.
 To deploy it, from `malloy/packages/malloy`, bump the version in package.json, then `npm publish --access public --tag stable`
