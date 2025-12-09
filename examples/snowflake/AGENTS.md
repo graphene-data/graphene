@@ -1,2 +1,2 @@
 This is a Graphene project covering restaurant and food service market data across North America, Europe, and Oceania. 
-Read the [Graphene documentation](../../docs/graphene.md) before doing anything. You can find the Graphene tables in the /tables directory.
+Read the @../../docs/graphene.md) before doing anything. You can find the Graphene tables in @./tables.
