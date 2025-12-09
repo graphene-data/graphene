@@ -4,7 +4,7 @@
   "displayName": "Graphene VSCode Language Support",
   "publisher": "graphene-data",
   "description": "",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "type": "commonjs",
   "repository": {},
   "engines": {
