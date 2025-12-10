@@ -45,7 +45,7 @@ Your first pass at an implementation should usually be the easiest thing that so
 When it's easy to inline a bit of code, prefer that over making tons of small functions. This is also true for files, avoid creating tons of files/folders that will have very little in them.
 
 ### Vertically compact
-It's easier to read 2-3 wide lines than 10 narrow ones.
+It's easier to read 2-3 wide lines than 10 narrow ones. When in doubt, try and follow the formatting of surrounding code.
 
 function good () {
   let ast = parseQuery(rawSql, {dialect: 'bigquery', functions: {...bqFunctions, hll}})
@@ -105,7 +105,9 @@ function bad () {
 Most functions should have a comment describing what they do.
 Long methods can ideally be organized into logical sections, and it's often worth a comment to help us understand the overall flow.
 Comments are also key when there is code whose purpose isn't obvious from first reading it.
-DO NOT add silly little comments that say something the code obviously says. This is bad: `processElem(e) // process element`
+Avoid comments that say something obvious from reading the code. For example: `processElem(e) // process element`
 
-### Use guards and try/catch sparingly
-It's easier to read the happy-path. Avoid input checking or error handling unless there's a good way to recover. It's mostly fine to just let errors bubble up. In node, throwing an error already exits the process, so no need to catch just to process.exit.
+### Avoid try/catch and excessive guards 99% of the time
+Lots of try/catch or null-checking code makes the overall flow harder to read.
+We almost never add try/catch unless we can do something meaningful. Logging the error doesn't count as meaninful, that would happen anyway as it bubbled up.
+Similarly, you don't need to check for nulls in cases where you never expect a value to be null. It's fine for unexpected nulls to implicitly throw errors.

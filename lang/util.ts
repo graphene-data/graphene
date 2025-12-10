@@ -1,4 +1,4 @@
-import type {Expression, FileInfo} from './types'
+import type {Expression, FileInfo} from './types.ts'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 
 function markdownOffset (offset: number, file: FileInfo) {
