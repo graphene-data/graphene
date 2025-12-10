@@ -1,7 +1,7 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import {cacheRead, cacheWrite, getHashes} from './clientCache'
+import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {errorProvider} from './telemetry.ts'
 
 interface QueryResult {
@@ -35,6 +35,8 @@ function registerQuery (name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
   queries.push({name, contents, loading: false, fields: new Map(), errors: []})
 }
+
+const getRoutePath = () => typeof window === 'undefined' ? '/' : (window.location.pathname || '/')
 
 function updateParam (name: string, value: any) {
   params[name] = value
@@ -79,7 +81,7 @@ async function runNode (n: QueryNode) {
     let response = await fetch('/_api/query', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({params, gsql, hashes}),
+      body: JSON.stringify({params, gsql, hashes, routePath: getRoutePath()}),
     })
     let hash = response.headers.get('ETag') || ''
 
