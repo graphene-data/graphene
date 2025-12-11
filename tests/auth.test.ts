@@ -21,7 +21,7 @@ describe('auth', () => {
     await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
     await loginShell.getByRole('button', {name: /continue/i}).click()
 
-    let btn = page.getByText(/Graphene Dev/i)
+    let btn = page.getByText(/Test/i)
     await btn.waitFor()
     await expect(page).screenshot('auth-login-flow-org-picker')
     await btn.click()
@@ -54,15 +54,20 @@ describe('auth', () => {
 
   test('cli pkce login works', async ({page, cloud}) => {
     setConfig({root: 'test', host: cloud.url})
+    expectConsoleError(page, /Failed to load resource.*127.0.0.1.*favicon.ico/, true)
+
     await loginPkce(async url => {
       await page.goto(url)
       let loginShell = page.locator('#stytch-login')
       await loginShell.locator('input[name="email"], input[type="email"]').first().fill(TEST_EMAIL)
       await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
       await loginShell.getByRole('button', {name: /continue/i}).click()
-      await page.getByText(/Graphene Dev/i).click()
+      await page.getByText(/Test/i).click()
 
-      // await expect.screenshot(page, 'auth-allow-cli')
+      await expect(page.getByText('Graphene CLI is requesting to')).toBeVisible()
+      // await page.getByText('Graphene CLI is requesting to').isVisible()
+      // await new Promise(() => { })
+      await expect(page).screenshot('auth-allow-cli')
       await page.getByText('Allow').click()
       await expect(page.getByText('Login complete')).toBeVisible()
     })

@@ -7,7 +7,7 @@ export interface AuthContext {
 
 declare module 'fastify' {
   interface FastifyRequest {
-    auth: AuthContext | null
+    auth: AuthContext
     cookies: Record<string, string | undefined>
   }
 
