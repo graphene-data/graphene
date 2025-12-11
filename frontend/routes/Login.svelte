@@ -24,10 +24,7 @@
         authFlowType: AuthFlowType.Discovery,
         sessionOptions: {sessionDurationMinutes: 60 * 24 * 30},
         products: ['passwords'],
-        // passwordOptions: {
-        //   loginRedirectURL: 'http://localhost:3000/_api/authenticate',
-        //   resetPasswordRedirectURL: 'http://localhost:3000/login',
-        // },
+        passwordOptions: {},
       },
     })
   })

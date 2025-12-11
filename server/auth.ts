@@ -10,8 +10,8 @@ export function setAuthOverride (auth: AuthContext | null) {
   authOverride = auth
 }
 
-export async function checkAuth (req: FastifyRequest) {
-  req.auth = null
+export async function auth (req: FastifyRequest, reply: FastifyReply) {
+  (req as any).auth = null
 
   if (process.env.NODE_ENV === 'test' && authOverride) {
     req.auth = authOverride
@@ -20,12 +20,14 @@ export async function checkAuth (req: FastifyRequest) {
 
   let bearer = req.headers['authorization']
   if (bearer) {
+    // TODO: errors here should turn in to 401s
     let claims = await getStytch().idp.introspectTokenLocal(bearer.replace(/^bearer /i, ''))
     req.auth = {userId: claims.subject, orgId: claims.organization.organization_id}
   }
 
   let session_jwt = req.cookies['stytch_session_jwt']
   if (session_jwt) {
+    // TODO: errors here should turn in to 401s
     let auth = await getStytch().sessions.authenticateJwt({session_jwt})
     let session = auth.member_session
     if (!session) return
@@ -33,9 +35,7 @@ export async function checkAuth (req: FastifyRequest) {
   }
 
   // TODO check org matches subdomain
-}
 
-export function ensureUser (req: FastifyRequest, reply: FastifyReply): asserts req is FastifyRequest & {auth: AuthContext} {
   if (!req.auth) {
     reply.code(401).send({error: 'Authentication required'})
     throw new Error('Unauthorized')

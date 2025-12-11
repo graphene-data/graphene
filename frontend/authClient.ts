@@ -21,8 +21,8 @@ class MockClient {
   }
 }
 
-export const session = writable<MemberSession>(
-  authClient().session.getSync() || undefined,
+export const session = writable<MemberSession | null>(
+  authClient().session.getSync() || null,
 )
 
 export {AuthFlowType, StytchEventType}

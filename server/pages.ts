@@ -1,6 +1,6 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import {and, eq} from 'drizzle-orm'
-import {ensureUser} from './auth.ts'
+import {auth} from './auth.ts'
 import {getDb} from './db.ts'
 import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
@@ -8,7 +8,7 @@ import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 
 export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
-  ensureUser(req, reply)
+  await auth(req, reply)
 
   let slug = (req.params as any).slug || 'index'
 
