@@ -796,4 +796,11 @@ describe('lang', () => {
     expect('from users select min(created_at)').toHaveNoErrors()
     expect('from users select extract(year from min(created_at))').toHaveNoErrors()
   })
+
+  it('supports standard functions in bigquery', () => {
+    // BigQuery uses a different dialect than the StandardSQL that many use in Malloy. Ensure that we're loading standard fns into bigquery
+    setConfig({root: '', bigquery: {}})
+    expect('from users select floor(age) as floored_age')
+      .toRenderSql('select floor(base.`age`) as `floored_age` from `users` as base')
+  })
 })

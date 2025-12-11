@@ -1,4 +1,4 @@
-import {type DialectFunctionOverloadDef, registerDialect, StandardSQLDialect, QueryModel, expandBlueprintMap} from '@graphenedata/malloy'
+import {QueryModel} from '@graphenedata/malloy'
 import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
 import {FILE_MAP, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors, analyzeTable, applyExtends} from './analyze.ts'
@@ -7,10 +7,10 @@ import {fillInParams} from './params.ts'
 import {getOffset} from './util.ts'
 import {config, loadConfig} from './config.ts'
 import path from 'node:path'
-import {BIGQUERY_DIALECT_FUNCTIONS} from './functionDefs.ts'
 import {parser} from './parser.js'
 import {parseMarkdown} from './markdown.ts'
 import {uppercaseTable} from './snowflake.ts'
+import './functionDefs.ts' // registers BigQueryDialect
 
 export {clearWorkspace}
 export {config, loadConfig}
@@ -148,16 +148,3 @@ export function getHover (path: string, line: number, col: number): string {
   }
   return ''
 }
-
-// Malloy doesn't provide a dialect for BigQuery, so create one.
-class BigQueryDialect extends StandardSQLDialect {
-  constructor () {
-    super()
-    this.name = 'bigquery'
-  }
-
-  getDialectFunctions (): {[name: string]: DialectFunctionOverloadDef[]} {
-    return expandBlueprintMap(BIGQUERY_DIALECT_FUNCTIONS)
-  }
-}
-registerDialect(new BigQueryDialect())
