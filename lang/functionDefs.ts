@@ -1,17 +1,4 @@
-import {type DefinitionBlueprintMap, type FunctionOverloadDef, DUCKDB_DIALECT_FUNCTIONS, GlobalNameSpace, DialectNameSpace, getDialect} from '@graphenedata/malloy'
-
-let globalNamespace = new GlobalNameSpace()
-let dialectNamespaces = new Map<string, DialectNameSpace>()
-
-export function findOverloads (name: string, dialect: string): FunctionOverloadDef[] {
-  if (!dialectNamespaces.has(dialect)) {
-    let d = getDialect(dialect)
-    dialectNamespaces.set(dialect, new DialectNameSpace(d))
-  }
-
-  let res = dialectNamespaces.get(dialect)!.getEntry(name) || globalNamespace.getEntry(name)
-  return res?.entry ? (res.entry as any).overloads : []
-}
+import {type DefinitionBlueprintMap, type DialectFunctionOverloadDef, type FunctionOverloadDef, DUCKDB_DIALECT_FUNCTIONS, GlobalNameSpace, DialectNameSpace, getDialect, registerDialect, StandardSQLDialect, expandBlueprintMap} from '@graphenedata/malloy'
 
 Object.assign(DUCKDB_DIALECT_FUNCTIONS, {
   'count_if': {
@@ -138,4 +125,29 @@ export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
       impl: {function: 'CURRENT_DATETIME'},
     },
   },
+}
+
+// Malloy doesn't provide a dialect for BigQuery, so create one.
+class BigQueryDialect extends StandardSQLDialect {
+  constructor () {
+    super()
+    this.name = 'bigquery'
+  }
+
+  getDialectFunctions (): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(BIGQUERY_DIALECT_FUNCTIONS)
+  }
+}
+
+
+registerDialect(new BigQueryDialect()) // This must happen before we create the GlobalNameSpace
+let globalNamespace = new GlobalNameSpace()
+let dialectNamespaces = new Map<string, DialectNameSpace>()
+
+export function findOverloads (name: string, dialect: string): FunctionOverloadDef[] {
+  if (!dialectNamespaces.has(dialect)) {
+    dialectNamespaces.set(dialect, new DialectNameSpace(getDialect(dialect)))
+  }
+  let res = dialectNamespaces.get(dialect)!.getEntry(name) || globalNamespace.getEntry(name)
+  return res?.entry ? (res.entry as any).overloads : []
 }
