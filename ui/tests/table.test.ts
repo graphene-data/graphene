@@ -1,5 +1,5 @@
-import {expect, test, waitForGrapheneQueries} from './fixtures'
-import {tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData'
+import {expect, test, waitForGrapheneQueries} from './fixtures.ts'
+import {tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData.ts'
 
 test('renders table data', async ({mount, page}) => {
   await mount('components/Table.svelte', {data: timeseriesGrouped(), title: 'Sales'})

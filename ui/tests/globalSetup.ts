@@ -1,8 +1,8 @@
 import {type TestProject} from 'vitest/node'
-import {prepareDeps} from '../../cli/serve2'
+import {prepareDeps} from '../../cli/serve2.ts'
 import {fileURLToPath} from 'url'
 import path from 'path'
-import {setConfig} from '../../lang/config'
+import {setConfig} from '../../lang/config.ts'
 
 export default async function setup (project: TestProject) {
   let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')

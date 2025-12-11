@@ -1,5 +1,5 @@
-import {test, expect} from './fixtures'
-import {expectConsoleError} from './browserConsole'
+import {test, expect} from './fixtures.ts'
+import {expectConsoleError} from './browserConsole.ts'
 import {check} from '../../cli/check.ts'
 import {updateFile} from '../../lang/core.ts'
 import stripAnsi from 'strip-ansi'
