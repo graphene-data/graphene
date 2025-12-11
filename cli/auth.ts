@@ -5,7 +5,7 @@ import {spawn} from 'child_process'
 import http from 'http'
 import {config} from '../lang/config.ts'
 
-export const AUTH_CLIENT_ID = 'connected-app-test-4685a2a0-1cb9-4a81-a6bf-01a3efe7b981'
+export const AUTH_CLIENT_ID = 'connected-app-test-75eae3e8-efa1-454d-8ad0-66288c750872'
 export const AUTH_SCOPES = 'offline_access'
 
 export interface Cred {
@@ -76,7 +76,7 @@ async function startLoopback () {
   await new Promise<void>(r => server.listen(0, '127.0.0.1', () => r()))
   let addr = server.address()
   if (!addr || typeof addr !== 'object') throw new Error('Couldnt start oauth callback server')
-  let redirectBase = `http://localhost:${addr.port}`
+  let redirectBase = `http://127.0.0.1:${addr.port}`
 
   let waitForCode = new Promise <{code: string, state: string}>(resolve => {
     server.on('request', (req, res) => {
