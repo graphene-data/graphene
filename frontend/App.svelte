@@ -1,9 +1,9 @@
 <script lang="ts">
-  import {session} from './authClient'
+  import {session} from './authClient.ts'
   import Login from './routes/Login.svelte'
   import Authenticate from './routes/Authenticate.svelte'
   import PageView from './routes/PageView.svelte'
-  import {route, go} from './router'
+  import {route, go} from './router.ts'
 
   $: {
     if (!$session) {

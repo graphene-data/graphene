@@ -1,4 +1,4 @@
-import {test, expect, expectConsoleError} from './fixtures'
+import {test, expect, expectConsoleError} from './fixtures.ts'
 import {describe} from 'vitest'
 import {loginPkce} from '../../core/cli/auth.ts'
 import {setConfig} from '../../core/lang/config.ts'

@@ -1,4 +1,4 @@
-import {test, expect} from './fixtures'
+import {test, expect} from './fixtures.ts'
 import {describe} from 'vitest'
 
 describe('duckdb', () => {
@@ -11,7 +11,7 @@ describe('duckdb', () => {
 describe('bigquery', () => {
   test.scoped({seedType: 'bigquery'})
 
-  test.skip('renders the index markdown page', async ({page, cloud}) => {
+  test('renders the index markdown page', async ({page, cloud}) => {
     await page.goto(cloud.url)
     await expect(page.locator('h1', {hasText: 'KPI Summary'})).toBeVisible()
   })

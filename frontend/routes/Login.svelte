@@ -1,7 +1,10 @@
 <script lang="ts">
   import {onMount} from 'svelte'
-  import {go} from '../router'
-  import {authClient, session, AuthFlowType, StytchEventType} from '../authClient'
+  import {go} from '../router.ts'
+  import {authClient, session, AuthFlowType, StytchEventType} from '../authClient.ts'
+
+  // This uses Stytch's built-in UI.
+  // It's smart enough to load the right state based on url params, so having all redirectURLs point to `<origin>/login` is sufficient.
 
   onMount(() => {
     let stytch = authClient()
