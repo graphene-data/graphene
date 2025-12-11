@@ -8,7 +8,8 @@
   $: {
     if (!$session) {
       let next = encodeURIComponent(`${window.location.pathname || '/'}${window.location.search || ''}`)
-      if ($route !== '/login') go(`/login?next=${next}`)
+      next = next != '%2F' ? `?next=${next}` : ''
+      if ($route !== '/login') go(`/login${next}`)
     }
   }
 </script>
