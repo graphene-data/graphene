@@ -1,6 +1,6 @@
 node_modules
 tests/results
-migrations/meta
+dist
 
 cloud.db
 .env

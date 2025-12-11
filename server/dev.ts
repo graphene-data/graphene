@@ -12,6 +12,7 @@ import {setAuthOverride} from './auth.ts'
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 const orgId = 'organization-test-5ecd5c3e-3173-494c-945f-8427215d4d9b'
 const userId = 'member-test-ebc75d39-bebe-46dd-8261-135af85f0a1a'
+const repoId = 'testrepo'
 
 export type SeedType = 'duckdb' | 'bigquery'
 
@@ -106,12 +107,16 @@ async function seedDatabase (connectionType: SeedType) {
     await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: JSON.stringify({dbPath})})
   }
 
+  let repoSlug = connectionType == 'bigquery' ? 'ecomm' : 'flights'
+  let gitUrl = `https://github.com/graphene-data/examples/${repoSlug}`
+  await db.insert(schema.repos).values({id: repoId, slug: repoSlug, orgId, gitUrl, isDefault: true}).run()
+
   // load our example files into the database
-  let exampleRoot = path.resolve(rootDir, '../core/examples', connectionType == 'bigquery' ? 'ecomm' : 'flights')
+  let exampleRoot = path.resolve(rootDir, '../core/examples', repoSlug)
   for (let filePath of globSync('**/*.{md,gsql}', {cwd: exampleRoot})) {
     let [relative, extension] = filePath.split('.')
     let content = fs.readFileSync(path.join(exampleRoot, filePath), 'utf-8')
-    await db.insert(schema.files).values({orgId, path: relative, extension, content}).run()
+    await db.insert(schema.files).values({repoId, path: relative, extension, content}).run()
   }
 }
 

@@ -2,7 +2,7 @@ import type {FastifyReply, FastifyRequest} from 'fastify'
 import {and, eq} from 'drizzle-orm'
 import {ensureUser} from './auth.ts'
 import {getDb} from './db.ts'
-import {connections, files, type Connection} from '../schema.ts'
+import {connections, files, repos, type Connection} from '../schema.ts'
 import {updateFile, clearWorkspace, analyze, getDiagnostics, toSql} from '../../core/lang/core.ts'
 import {setConfig} from '../../core/lang/config.ts'
 
@@ -23,8 +23,11 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
 
   // We can proxy either sql or gsql. If it's gsql, we need to load up the workspace to render out the sql
   if (body.gsql) {
+    let repo = await getDb().select().from(repos).where(and(eq(repos.orgId, req.auth.orgId), eq(repos.isDefault, true))).get()
+    if (!repo) return reply.code(404).send({error: 'No repo configured'})
+
     // Load up all gsql files into a graphene workspace
-    let gsqlFiles = await getDb().query.files.findMany({where: and(eq(files.orgId, req.auth.orgId), eq(files.extension, 'gsql'))})
+    let gsqlFiles = await getDb().query.files.findMany({where: and(eq(files.repoId, repo.id), eq(files.extension, 'gsql'))})
     clearWorkspace()
     setConfig({dialect: connInfo.kind, namespace: connInfo.namespace ?? undefined, root: '/dev/null'})
     gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))

@@ -4,7 +4,7 @@ import {ensureUser} from './auth.ts'
 import {getDb} from './db.ts'
 import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
-import {files} from '../schema.ts'
+import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 
 export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
@@ -12,9 +12,15 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
 
   let slug = (req.params as any).slug || 'index'
 
+  let repo = await getDb().select({id: repos.id}).from(repos).where(and(
+    eq(repos.orgId, req.auth.orgId),
+    eq(repos.isDefault, true),
+  )).get()
+  if (!repo) return reply.code(404).send({error: 'No repo configured'})
+
   let page = await getDb().select().from(files).where(
     and(
-      eq(files.orgId, req.auth.orgId),
+      eq(files.repoId, repo.id),
       eq(files.path, slug),
       eq(files.extension, 'md'),
     ),

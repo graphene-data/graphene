@@ -1,4 +1,4 @@
-import {integer, sqliteTable, text, uniqueIndex} from 'drizzle-orm/sqlite-core'
+import {index, integer, sqliteTable, text, uniqueIndex} from 'drizzle-orm/sqlite-core'
 import {ulid} from 'ulid'
 
 export const orgs = sqliteTable('orgs', {
@@ -30,19 +30,32 @@ export const connections = sqliteTable('connections', {
   byLabel: uniqueIndex('connections_org_label_idx').on(table.orgId, table.label),
 }))
 
-export const files = sqliteTable('files', {
+export const repos = sqliteTable('repos', {
   id: text('id').primaryKey().$defaultFn(() => ulid()),
   orgId: text('orgId').notNull().references(() => orgs.id, {onDelete: 'cascade'}),
+  slug: text('slug').notNull(),
+  gitUrl: text('gitUrl'),
+  isDefault: integer('isDefault', {mode: 'boolean'}).notNull().default(false),
+}, (table) => ({
+  orgIdx: index('repos_org_idx').on(table.orgId),
+  orgSlugIdx: uniqueIndex('repos_org_slug_idx').on(table.orgId, table.slug),
+}))
+
+export const files = sqliteTable('files', {
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
+  repoId: text('repoId').notNull().references(() => repos.id, {onDelete: 'cascade'}),
   path: text('path').notNull(),
   extension: text('extension').notNull(),
   title: text('title'),
   content: text('content').notNull(),
   updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).defaultNow(),
 }, (table) => ({
-  byPath: uniqueIndex('files_org_path_idx').on(table.orgId, table.path),
+  orgIdx: index('files_repo_idx').on(table.repoId),
+  byPath: uniqueIndex('files_repo_path_idx').on(table.repoId, table.path),
 }))
 
 export type Org = typeof orgs.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Connection = typeof connections.$inferSelect;
+export type Repo = typeof repos.$inferSelect;
 export type File = typeof files.$inferSelect;
