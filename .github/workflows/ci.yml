@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: cloud
+          token: ${{ secrets.GITHUB_TOKEN }}
+          lfs: true
+
+      - uses: actions/checkout@v5
+        with:
+          repository: graphene-data/graphene
+          path: core
+          ssh-key: ${{ secrets.CORE_DEPLOY_SSH_KEY }}
+          lfs: true
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "pnpm"
+          cache-dependency-path: "cloud/pnpm-lock.yaml"
+
+      - name: Cloud deps
+        working-directory: cloud
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Core deps
+        working-directory: core
+        shell: bash
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: cloud
+        run: pnpm lint
+
+      - name: Ensure migrations checked in
+        working-directory: cloud
+        run: |
+          pnpm db:generate
+          if [ -n "$(git status --porcelain)" ]; then
+            git status
+            exit 1
+          fi
+
+      # - name: Test
+      #   working-directory: cloud
+      #   run: pnpm test
+      #
+
+      - name: Vite build
+        working-directory: cloud
+        run: pnpm build
+        env:
+          VITE_STYTCH_PUBLIC_TOKEN: ${{ secrets.VITE_STYTCH_PUBLIC_TOKEN }}
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::772069004272:role/ci-deploy
+          aws-region: us-east-1
+
+      - name: ECR login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # todo: in theory this action can persist the cache between runs, which would be nice
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: cloud/server/Dockerfile
+          push: false
+          tags: |
+            772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:latest
+            772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}
+
+      ######################################################################
+      # Past this point, we're pretty commited to the deploy and don't expect any steps to fail
+
+      - name: Migrate DB
+        working-directory: cloud
+        run: pnpm db:migrate
+        env:
+          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+
+      # NB that AppRunner is currently configured to auto-update to latest, so pushing implicitly deploys
+      - name: Push image
+        run: |
+          docker push 772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:latest
+          docker push 772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}
