@@ -1,5 +1,5 @@
-import {expect, test} from './fixtures'
-import {singleDim, timeseries, timeseriesGrouped} from './testData'
+import {expect, test} from './fixtures.ts'
+import {singleDim, timeseries, timeseriesGrouped} from './testData.ts'
 
 test.beforeEach(async ({page}) => {
   await page.setViewportSize({width: 680, height: 400})

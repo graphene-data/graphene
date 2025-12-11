@@ -1,5 +1,5 @@
-import {test, expect, waitForGrapheneQueries} from './fixtures'
-import {expectConsoleError} from './browserConsole'
+import {test, expect, waitForGrapheneQueries} from './fixtures.ts'
+import {expectConsoleError} from './browserConsole.ts'
 
 test('loads markdown files', async ({server, page}) => {
   server.mockFile('/index.md', `
