@@ -30,7 +30,7 @@ interface DevServerHandle {
 export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: DevArgs): Promise<DevServerHandle> {
   port = Number(port || process.env.GRAPHENE_PORT || 4000)
 
-  let fastify = createServer()
+  let fastify = createServer(false)
   await fastify.register(middie, {hook: 'onRequest'})
 
   setAuthOverride(realAuth ? null : {userId, orgId})
