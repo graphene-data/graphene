@@ -14,6 +14,7 @@ export function setSnapshotDir (dir: string) {
 const extendedExpect = baseExpect.extend({
   async screenshot (subject: Page | Locator, snapshotName: string) {
     if (!snapshotDir) throw new Error('Snapshot directory not configured. Call setSnapshotDir() in a setup file.')
+    if (process.env.GRAPHENE_DEBUG) return {message: () => '', pass: true} // don't check screenshots when debugging (browser might not be the same size)
     let page = subject.constructor.name === 'Page' ? subject : (subject as Locator).page()
     let locator = subject.constructor.name === 'Page' ? undefined : subject
     let testPath = vitestExpect.getState().testPath || ''
