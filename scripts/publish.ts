@@ -16,8 +16,10 @@ if (!['major', 'minor', 'patch'].includes(bumpLevel)) {
 if (!process.env.VSCE_PAT) throw new Error('VSCE_PAT required')
 if (!process.env.OVSX_PAT) throw new Error('OVSX_PAT required')
 
+// Check that we're logged in befores starting things
 await $`(cd vscode && npx vsce verify-pat)`
 await $`(cd vscode && npx ovsx verify-pat)`
+await $`(cd cli && pnpm whoami)`
 
 let branch = (await $`git rev-parse --abbrev-ref HEAD`).stdout.trim()
 if (branch !== 'main') throw new Error('Publishing must run on main')
