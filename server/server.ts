@@ -2,7 +2,7 @@ import Fastify, {type FastifyPluginAsync} from 'fastify'
 import cookie from '@fastify/cookie'
 import staticPlugin from '@fastify/static'
 
-import {type AuthContext, authenticate, authTokenExchange} from './auth.ts'
+import {type AuthContext, authTokenExchange} from './auth.ts'
 import {renderPage} from './pages.ts'
 import {proxyQuery} from './query.ts'
 import {fileURLToPath} from 'url'
@@ -16,13 +16,12 @@ export function createServer (serveStatic: boolean) {
 
   app.get('/_api/pages/*', renderPage)
   app.post('/_api/query', proxyQuery)
-  app.get('/_api/authenticate', authenticate)
   app.post('/_api/oauth2/token', authTokenExchange)
 
   if (serveStatic) {
     let root = path.resolve(fileURLToPath(import.meta.url), '../../dist')
     app.register(staticPlugin, {root, wildcard: false})
-    app.get('*', (_, reply) => reply.sendFile('index.html'))
+    app.get('*', (_, reply) => (reply as any).sendFile('index.html'))
   }
 
   return app
