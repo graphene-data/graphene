@@ -30,6 +30,4 @@ table flights (
   on_time_arrival_rate: avg(case when arr_delay <= 0 then 1 else 0 end) -- Percentage of flights that arrived on time or early (0-1 scale)
   cancellation_rate: avg(case when cancelled = 'Y' then 1 else 0 end) -- Percentage of flights that were cancelled (0-1 scale)
   diversion_rate: avg(case when diverted = 'Y' then 1 else 0 end) -- Percentage of flights that were diverted (0-1 scale)
-  avg_departure_delay: avg(dep_delay) -- Average departure delay in minutes (negative = early, positive = late)
-  avg_arrival_delay: avg(arr_delay) -- Average arrival delay in minutes (negative = early, positive = late)
 );
