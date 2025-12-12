@@ -5,6 +5,7 @@ import {printDiagnostics, printTable} from './printer.ts'
 import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import fs from 'fs-extra'
 import path from 'path'
+import {fileURLToPath} from 'url'
 import dotenv from 'dotenv'
 import {config, loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
@@ -14,8 +15,12 @@ import {loginPkce} from './auth.ts'
 
 dotenv.config({quiet: true})
 const program = new Command()
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+// in dev: cli/cli.ts -> cli/package.json. in dist: cli/dist/cli/cli.js -> cli/package.json
+const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(__dirname, 'package.json') : path.join(__dirname, '../../package.json')
+const pkg = fs.readJsonSync(pkgPath)
 
-program.name('graphene').description('Graphene CLI').version('1.0.0')
+program.name('graphene').description('Graphene CLI').version(pkg.version, '-v, --version')
 
 program.hook('preAction', async () => {
   if (process.env.CLI_DELAY) { // useful if you want to attach a debugger
