@@ -100,6 +100,22 @@ async function startWorktree (name: string) {
   `.trim())
   await $`ln -s ${treePath}/AGENTS.md ${treePath}/CLAUDE.md`
 
+  mkdirSync(`${treePath}/.claude`)
+  writeFileSync(`${treePath}/.claude/settings.local.json`, `
+    {
+      "permissions": {
+        "allow": [
+          "Bash(xargs cat:*)",
+          "Bash(pnpm graphene:*)",
+          "Bash(grep:*)",
+          "Bash(pnpm generate:*)",
+          "Bash(pnpm test:*)",
+          "Bash(pnpm lint:*)"
+        ]
+      }
+    }
+  `)
+
   console.log('Opening Zed...')
   await $`zed ${treePath}`
 
