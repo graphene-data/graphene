@@ -618,6 +618,7 @@ function convertDataType (dataType: string): FieldType | null {
     case 'STRING': return 'string'
     case 'VARCHAR': return 'string'
     case 'INTEGER': return 'number'
+    case 'NUMERIC': return 'number'
     case 'FLOAT': return 'number'
     case 'FLOAT64': return 'number'
     case 'BOOL': return 'boolean'
@@ -638,4 +639,3 @@ function convertDataType (dataType: string): FieldType | null {
     default: return null
   }
 }
-
