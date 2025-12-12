@@ -8,6 +8,7 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
 
 **Table of Contents**
 
+- [Graphene CLI](#graphene-cli)
 - [Graphene SQL (GSQL)](#graphene-sql-gsql)
   - [`table` statements](#table-statements)
     - [Base columns (required)](#base-columns-required)
@@ -81,14 +82,21 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
       - [Currencies](#currencies)
       - [Numbers](#numbers)
       - [Percentages](#percentages)
-- [Graphene CLI](#graphene-cli)
-- [AGENT INSTRUCTIONS](#agent-instructions)
 
-## Graphene SQL (GSQL)
+# Graphene CLI
+
+These are the available commands:
+- `npm run graphene check` - Checks the syntax (GSQL and Markdown) for the entire Graphene project.
+- `npm run graphene check [mdPath]` - Checks the syntax for a specified Graphene markdown file. Will also do a runtime check if the dev server is running, and if successful, take a full page screenshot to a temp directory for the agent to view.
+- `npm run graphene check [mdPath] -c [chartTitle]` - Same as above, except if the runtime check is successful, only takes a screenshot of the specified chart. `[chartTitle]` must match (case sensitive) the `title` attribute on the chart component.
+- `npm run graphene compile [GSQL | gsqlPath]` - Shows how GSQL is translated into the underlying database SQL.
+- `npm run graphene run [GSQL | gsqlPath]` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
+
+# Graphene SQL (GSQL)
 
 GSQL is comprised of `table` statements that declare tables and `select` statements that query them.
 
-### `table` statements
+## `table` statements
 
 `table` statements manifest tables that already exist in your database. Here's an example of two tables, `orders` and `users`, in GSQL.
 
@@ -123,11 +131,11 @@ table users (
 
 We can break down a table statement into three parts: [base columns](#base-columns-required), [join relationships](#join-relationships), and [stored expressions](#stored-expressions) (aka dimensions and measures).
 
-#### Base columns (required)
+### Base columns (required)
 
 The base column set is simply a reflection of the underlying database table's schema. Similar to `create table` statements in regular SQL DDL, you list each column's name and data type. One column must be designated as the primary key.
 
-#### Join relationships
+### Join relationships
 
 Join relationships in a `table` statement declare joins that can be used when querying them. This makes query writing easier and more foolproof. See [Using join relationships in queries](#using-join-relationships-in-queries) below for how to use modeled joins in queries.
 
@@ -141,7 +149,7 @@ In the example above with `orders` and `users`, the joins confirm that there are
 
 Note that all joins in GSQL are left outer joins. There is no inner, right, or cross join.
 
-##### Multiple join relationships between the same two tables
+### Multiple join relationships between the same two tables
 
 Sometimes there are multiple valid ways to join two tables together. You can model this in Graphene by aliasing the various joins with `as`, just as you would in normal SQL. For example:
 
@@ -164,12 +172,12 @@ table users (
 )
 ```
 
-##### Best practices for modeling join relationships
+### Best practices for modeling join relationships
 
 - For a given `table` statement, only model joins that are directly on that table. Multi-hop join paths do not need to be written explicitly in order for queries to traverse them.
 - A join between two tables should be modeled in both the respective `table` statements. This may seem redundant but it offers more flexibility for queries to choose which table to set in the `from` (remember that direction matters in queries since all joins are left joins).
 
-#### Stored expressions
+### Stored expressions
 
 **Stored expressions** are GSQL expressions (ie. any arbitrary combination of functions, operators, and column references) that you want to make reusable to queries. Stored expressions are great for canonizing metrics, segments, and other important business definitions.
 
@@ -195,7 +203,7 @@ table orders (
 ```
 
 
-### `select` statements
+## `select` statements
 
 `select` is how you write queries in Graphene SQL. It behaves similarly to regular SQL except in the following ways:
 - It can invoke join relationships and stored expressions from `table` statements.
@@ -203,7 +211,7 @@ table orders (
 
 These differences are described in the sections below.
 
-#### Using join relationships in queries
+### Using join relationships in queries
 
 If a `table` has join relationships declared in it, a `select` query on that table can leverage that join without needing to write its own join statement. This is helpful for query writers who have not memorized all the correct join keys.
 
@@ -237,7 +245,7 @@ order by 2 desc
 limit 10
 ```
 
-##### Multi-hop joins
+### Multi-hop joins
 
 Sometimes you need to access columns or stored expressions in a table that is two or more joins away from the `from` table. To do this, simply use more dot operators to trace the desired join path. For example, say there is another table added to our project, `countries`:
 
@@ -278,7 +286,7 @@ order by 2 desc
 limit 10
 ```
 
-#### Using stored expressions in queries
+### Using stored expressions in queries
 
 A stored expression can be invoked in a query by simply referencing it by name.
 
@@ -351,7 +359,7 @@ order by 1 asc
 
 For this reason, in a query you would never wrap an aggregative stored expression in a `sum()` or `avg()` or any other agg function for the same reason you would never write `sum(sum(foo))` in SQL. That would throw an error!
 
-#### Safe aggregation in fan-outs
+### Safe aggregation in fan-outs
 
 A common and dangerous user error in regular SQL is aggregating data incorrectly after joining tables. This can happen when rows of one table match multiple rows of another, and effectively get duplicated for each match.
 
@@ -379,11 +387,11 @@ FROM `bigquery-public-data.thelook_ecommerce.orders` as base
 
 You don't have to understand this; the point is that GSQL is minimizing the chances that naive users aggregate data incorrectly.
 
-#### Percentile shorthand
+### Percentile shorthand
 
 Graphene provides percentile helpers so you rarely have to remember the SQL form for each warehouse. Anywhere you can call an aggregate, you can also write `pXX(column)` where `XX` is a whole number between 0 and 100. If you need precision finer than a whole percentile, append extra digits—everything after the first two digits is treated as decimals. Examples: `p975` → 97.5th percentile, `p9999` → 99.99th percentile. Graphene rewrites these shorthands to the dialect’s native function (`quantile_cont` on DuckDB, `approx_quantiles` on BigQuery, `PERCENTILE_CONT` on Snowflake) and ensures they behave like other aggregates (automatic grouping, structPath handling, etc.).
 
-### `table as` statements
+## `table as` statements
 
 You can turn the output of any `select` statement into a table with `table foo as (select ...)`. Here's an example of an additional table `user_facts` added to the two tables from earlier:
 
@@ -428,7 +436,7 @@ table user_facts as (
 - You cannot yet declare join relationships or stored expressions directly in a `table as` statement. Other tables can declare join relationships to it, though, as shown above.
 - In the example above, the `ltv` and `lifetime_orders` columns from `user_facts` are "hoisted" back into `users` so that they appear as if they are columns from `users`. This is simply a design choice which allows query writers to never need to know about `user_facts`.
 
-### `extend` statements
+## `extend` statements
 
 `extend` statements allow you to add join relationships or stored expressions to an existing table. This is especially useful for tables created via `table as` statements, which do not support defining these properties directly.
 
@@ -457,7 +465,7 @@ extend daily_orders (
 
 Note that you cannot add new base columns with `extend`; you can only add joins and stored expressions.
 
-### Working with dates, timestamps, and intervals
+## Working with dates, timestamps, and intervals
 
 Graphene understands a handful of common literal formats so you rarely need explicit casts when filtering or doing time math.
 
@@ -483,7 +491,7 @@ from users select
 
 Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days'`). Invalid strings produce a diagnostic such as “Could not parse interval literal: "many moons"”.
 
-### Other miscellaneous details about GSQL
+## Other miscellaneous details about GSQL
 
 - Trailing commas in `table` statements are optional.
 - Trailing semicolons after `table` and `table as` statements are optional.
@@ -503,7 +511,7 @@ Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days
    ```
   ```` 
 
-## Graphene data apps (dashboards)
+# Graphene data apps (dashboards)
 
 Graphene data apps are written in Markdown with the addition of special Graphene HTML components. Markdown files can contain named GSQL queries in code fences that components can then refer to. Those queries can use any tables defined in .gsql files.
 
@@ -537,9 +545,9 @@ Best practices
 - If you have multiple time series charts, align their x-axes to have the same range and granularity.
 - Use the same color for a given metric if it is used in multiple charts.
 
-### Visualization components
+## Visualization components
 
-#### Bar chart
+### Bar chart
 
 Use bar or column charts to compare a metric across categories. Bar charts are best with a small number of categories and series, and should generally start at 0.
 
@@ -555,9 +563,9 @@ Here's an example:
 />
 ```
 
-##### All bar chart attributes
+### All bar chart attributes
 
-###### General
+### General
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
@@ -569,7 +577,7 @@ Here's an example:
 | downloadableData | Whether to show the download button to allow users to download the data | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | `true`, `false` | `true` |
 
-###### Data
+### Data
 
 | Attribute | Description | Required | Options | Default |
 |----------|-------------|----------|---------|---------|
@@ -585,7 +593,7 @@ Here's an example:
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | No records |
 
-###### Formatting & Styling
+### Formatting & Styling
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
@@ -603,7 +611,7 @@ Here's an example:
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | `true`, `false` | `false` |
 
-###### Value Labels
+### Value Labels
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
@@ -618,7 +626,7 @@ Here's an example:
 | y2LabelFmt | Format to use for value labels for series on the y2 axis. Overrides any other formats ([see available formats](#value-formatting)) | Excel-style format, built-in format name | - |
 | showAllLabels | Allow all labels to appear on chart, including overlapping labels | `true`, `false` | `false` |
 
-###### Axes
+### Axes
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
@@ -648,13 +656,13 @@ Here's an example:
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | `true`, `false` | `false` |
 | yAxisColor | Turns on/off color on the y-axis (turned on by default when secondary y-axis is used). Can also be used to set a specific color | `true`, `false`, color string (CSS name, hexademical, RGB, HSL) | `true` when y2 used; `false` otherwise |
 
-###### Interactivity
+### Interactivity
 
 | Attribute | Description | Options |
 |----------|-------------|---------|
 | connectGroup | Group name to connect this chart to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | string |
 
-#### Pie chart
+### Pie chart
 
 Use a pie chart to show part-to-whole relationships across categories. Best for a small number of categories where proportions are easy to compare.
 
@@ -669,16 +677,16 @@ Here's an example:
 />
 ```
 
-##### All pie chart attributes
+### All pie chart attributes
 
-###### General
+### General
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
 | title | Chart title. Appears at top left of chart. | string | - |
 | subtitle | Chart subtitle. Appears just under title. | string | - |
 
-###### Data
+### Data
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -686,7 +694,7 @@ Here's an example:
 | category | Column or expression to use for slice names | true | column name, stored expression name, GSQL expression | - |
 | value | Column or expression to use for slice values | true | column name, stored expression name, GSQL expression | - |
 
-#### Line chart
+### Line chart
 
 Use line charts to display how one or more metrics vary over time. Line charts are suitable for plotting a large number of data points on the same chart.
 
@@ -703,9 +711,9 @@ Here's an example:
 />
 ```
 
-##### All line chart attributes
+### All line chart attributes
 
-###### General
+### General
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -717,7 +725,7 @@ Here's an example:
 | downloadableData | Whether to show the download button to allow users to download the data | false | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | false | `true`, `false` | `true` |
 
-###### Data
+### Data
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -732,7 +740,7 @@ Here's an example:
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | - |
 
-###### Formatting & Styling
+### Formatting & Styling
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -763,7 +771,7 @@ Here's an example:
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
 
-###### Axes
+### Axes
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -791,14 +799,14 @@ Here's an example:
 | y2Max | Maximum value for the y2-axis | false | number | - |
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | false | `true`, `false` | `false` |
 
-###### Interactivity
+### Interactivity
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | connectGroup | Group name to connect this chart to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | false | - | - |
 
 
-#### Area chart
+### Area chart
 
 Use area charts to track how a metric with multiple series changes over time, or a continuous range. Area charts emphasize changes in the sum of series over the individual series.
 
@@ -812,9 +820,9 @@ Here's an example:
 />
 ```
 
-##### All area chart attributes
+### All area chart attributes
 
-###### General
+### General
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -826,7 +834,7 @@ Here's an example:
 | downloadableData | Whether to show the download button to allow users to download the data | false | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | false | `true`, `false` | `true` |
 
-###### Data
+### Data
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -840,7 +848,7 @@ Here's an example:
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
 
-###### Formatting & Styling
+### Formatting & Styling
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -859,7 +867,7 @@ Here's an example:
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
 
-###### Value Labels
+### Value Labels
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -870,7 +878,7 @@ Here's an example:
 | labelFmt | Format to use for value labels ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | same as y column |
 | showAllLabels | Allow all labels to appear on chart, including overlapping labels | false | `true`, `false` | `false` |
 
-###### Axes
+### Axes
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -890,14 +898,14 @@ Here's an example:
 | yMax | Maximum value for the y-axis | false | number | - |
 | yScale | Whether to scale the y-axis to fit your data. `yMin` and `yMax` take precedence over `yScale` | false | `true`, `false` | `false` |
 
-###### Interactivity
+### Interactivity
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | connectGroup | Group name to connect this chart to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | false | - | - |
 
 
-#### Big value
+### Big value
 
 Use big values to display a large value standalone, and optionally include a comparison and a sparkline.
 
@@ -914,9 +922,9 @@ Here's an example:
 />
 ```
 
-##### All big value attributes
+### All big value attributes
 
-###### Data
+### Data
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -930,7 +938,7 @@ Here's an example:
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | `"No records"` |
 | link | Used to navigate to other pages. Can be a full external link like `"https://google.com"` or an internal link like `"/sales/performance"` | false | - | - |
 
-###### Comparison
+### Comparison
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -942,7 +950,7 @@ Here's an example:
 | neutralMax | Sets the top of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | `0` |
 | comparisonFmt | Sets format for the comparison ([see available formats](#value-formatting)) | false | Excel-style format, built-in format | - |
 
-###### Sparkline
+### Sparkline
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -955,7 +963,7 @@ Here's an example:
 | connectGroup | Group name to connect this sparkline to other charts for synchronized tooltip hovering. Charts with the same `connectGroup` name will become connected | false | string | - |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
-#### Table
+### Table
 
 Use a Table component to display a richly formatted table of data from a query. Tables are powerful default choice for data display that allow high information density, and are easy to read.
 
@@ -965,9 +973,9 @@ Here's an example:
 <Table data=orders_summary />
 ```
 
-##### All table attributes
+### All table attributes
 
-###### Table
+### Table
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -997,7 +1005,7 @@ Here's an example:
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
 
-###### Groups
+### Groups
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -1011,7 +1019,7 @@ Here's an example:
 | subtotalFontColor | [groupType=section] Font color for the subtotal row | false | Hex color code, css color name | - |
 | groupNamePosition | [groupType=section] Where the group label will appear in its cell | false | `top`, `middle`, `bottom` | `middle` |
 
-###### Column
+### Column
 
 Use the Column sub-component to choose specific columns to display in your table, and to apply options to specific columns. If you don't supply any columns to the table, it will display all columns from your query result.
 
@@ -1102,9 +1110,9 @@ Conditional formatting (`contentType=colorscale`)
 | colorBreakpoints | List of numbers to use as breakpoints for each color in your color scale. Should line up with the colors you provide in `colorScale` | false | list of numbers | - |
 | scaleColumn | Column or expression to use to define the color scale range. Values in this column will have their cell color determined by the value in the scaleColumn | false | column name, stored expression name, GSQL expression | - |
 
-### Input components
+## Input components
 
-#### Text input
+### Text input
 
 Creates a text input that can be used to filter or search. To see how to filter a query using a text input, see Filters.
 
@@ -1125,7 +1133,7 @@ from users
 where email ilike concat('%', $name_of_input, '%')
 ```
 
-##### All text input attributes
+### All text input attributes
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -1136,7 +1144,7 @@ where email ilike concat('%', $name_of_input, '%')
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
 
-#### Dropdown
+### Dropdown
 
 Creates a dropdown menu with a list of options that can be selected. The selected option can be used to filter queries or in markdown. To see how to filter a query using a dropdown, see Filters.
 
@@ -1164,7 +1172,7 @@ from orders
 where status = $status_dropdown
 ```
 
-##### All dropdown attributes
+### All dropdown attributes
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -1183,7 +1191,7 @@ where status = $status_dropdown
 | hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
-###### DropdownOption
+### DropdownOption
 
 The `DropdownOption` sub-component can be used to manually add options to a dropdown. This is useful to add a default option, or to add options that are not in a query.
 
@@ -1202,11 +1210,11 @@ Here's an example:
 | value | Value to use when the option is selected | true | - | - |
 | valueLabel | Label to display for the option in the dropdown | false | - | Uses the value |
 
-### Other components
+## Other components
 
 `<Row></Row>` - Evenly distributes components inside along the same row.
 
-### Value formatting
+## Value formatting
 
 The easiest way to format numbers and dates in Graphene is through component attributes. You can pass in either of the following:
 
@@ -1241,11 +1249,11 @@ In the example above, `xFmt` is passing in an Excel-style code to format the dat
 
 Formatting does not apply to the date axis of a chart. For example, if you set `xFmt` to `"m/d/yy"`, you will only see that formatting reflected in your chart tooltips and annotations. This is to ensure that the chart axis labels have the correct spacing.
 
-#### Built-in Formats
+### Built-in Formats
 
 Graphene supports a variety of date/time, number, percentage, and currency formats.
 
-##### Auto-Formatting
+### Auto-Formatting
 
 Wherever you see `auto` listed beside a format, that means Graphene will automatically format your value based on the context it is in.
 
@@ -1253,7 +1261,7 @@ For example, Graphene automatically formats large numbers into shortened version
 
 You can choose to handle these numbers differently by choosing a specific format code. For example, if Graphene is formatting a column as millions, but you want to see all numbers in thousands, you could use the `num0k` format, which will show all numbers in the column in thousands with 0 decimal places.
 
-##### Dates
+### Dates
 
 Graphene supports the following date formats:
 
@@ -1269,7 +1277,7 @@ Graphene supports the following date formats:
 * `dmy` - Day/month/year (e.g., 9/1/22)
 * `hms` - Time format (e.g., 11:45:03 AM)
 
-##### Currencies
+### Currencies
 
 Supported currencies include USD, AUD, BRL, CAD, CNY, EUR, GBP, JPY, INR, KRW, NGN, RUB, and SEK.
 
@@ -1288,7 +1296,7 @@ For example, the available tags for USD are:
 
 Similar patterns apply to other supported currencies.
 
-##### Numbers
+### Numbers
 
 The default number format (when no `fmt` is specified) automatically handles decimal places and summary units (in the same way that `usd` does for currency).
 
@@ -1303,7 +1311,7 @@ Available number formats:
 * `mult`, `mult0`, `mult1`, `mult2` - Multiplier format (e.g., 5.32x)
 * `sci` - Scientific notation
 
-##### Percentages
+### Percentages
 
 Available percentage formats:
 
@@ -1313,24 +1321,3 @@ Available percentage formats:
 * `pct2` - Percentage with 2 decimal places (e.g., 73.10%)
 * `pct3` - Percentage with 3 decimal places (e.g., 73.100%)
 
-## Graphene CLI
-
-These are the available commands:
-- `npm run graphene check` - Checks the syntax (GSQL and Markdown) for the entire Graphene project.
-- `npm run graphene check <mdPath>` - Checks the syntax for a specified Graphene markdown file. Will also do a runtime check if the dev server is running, and if successful, take a full page screenshot to a temp directory for the agent to view.
-- `npm run graphene check <mdPath> --chart "<chartTitle>"` - Same as above, except if the runtime check is successful, only takes a screenshot of the specified chart. `<chartTitle>` must match (case sensitive) the `title` attribute on the chart component. `-c` can be used as shorthand for `--chart`.
-- `npm run graphene compile "<GSQL>"` - Shows how GSQL is translated into the underlying database SQL.
-- `npm run graphene run "<GSQL>"` - Runs a GSQL query. The tables and semantics defined in all .gsql files in the project are available for the query to use.
-
-# AGENT INSTRUCTIONS
-
-Follow these guidelines when working in a Graphene project.
-- When formulating GSQL queries:
-   - First check all available stored expressions to see if there are any you can use. DO NOT redefine important business definitions like `profit` if they've already been modeled!
-   - Run your GSQL queries in the CLI first, _before_ you write them to a file. This way you can reason about the results to make sure they make sense.
-- Do not try to search the web for Graphene-specific info; you will not find anything. All the documentation is here in graphene.md.
-- When writing to a .gsql file, check your code with `npm run graphene check`.
-- When writing to a Graphene .md file:
-   - Always check your code with `npm run graphene check <mdPath>`. Run the command with full permissions because the screenshot may not work in a sandbox.
-   - Then do a visual check by either a) looking at the screenshot that `npm run graphene check <mdPath>` creates, or b) using your browser tool to open the .md file at `localhost:<port>/mdPath` (without the .md extension; default port 4000).
-      - Critique what you see: Are all the data values formatted in a way that is easy to read? Does the shape of the visualized data require an adjustment to scale, axis min/max, etc.? Are any visualizations missing data altogether? Is that visualization type really the best way to paint the picture? Etc.
