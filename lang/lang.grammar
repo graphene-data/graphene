@@ -285,11 +285,11 @@ Null { Kw<"null"> }
 Kw<term> { @specialize[@name={term}]<Identifier, term> }
 Alias { Identifier }
 
-@skip { whitespace | Comment }
+@skip { whitespace | comment }
 
 @tokens {
   whitespace { @whitespace+ }
-  Comment { "--" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
+  comment { "--" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
 
   Identifier { @asciiLetter (@asciiLetter | @digit | "_")* }
   Param { "$" (@asciiLetter | @digit | "_")+ }
@@ -297,9 +297,9 @@ Alias { Identifier }
   String { "'" ![']* "'" | '"' !["]* '"' }
   "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">=" "::"
 
-  @precedence { Comment, "-" }
-  @precedence { Comment, "*" }
-  @precedence { Comment, "/" }
+  @precedence { comment, "-" }
+  @precedence { comment, "*" }
+  @precedence { comment, "/" }
   @precedence { "::", ":" }
   ":"
 }

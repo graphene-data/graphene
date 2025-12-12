@@ -826,4 +826,14 @@ describe('lang', () => {
     expect('from users select cast(age as varchar) = name')
       .toRenderSql('select CAST(base."age" AS VARCHAR)=base."name" as "col_0" from users as base')
   })
+
+  it('ignores comments within table definitions', () => {
+    // Comments should be skipped and not interfere with expression parsing
+    expect(`table test (
+      id INT64
+      computed: id / 2
+      -- this is a comment
+      name STRING
+    ); from test select id`).toRenderSql('select base."id" as "id" from test as base')
+  })
 })
