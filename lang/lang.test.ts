@@ -803,4 +803,27 @@ describe('lang', () => {
     expect('from users select floor(age) as floored_age')
       .toRenderSql('select floor(base.`age`) as `floored_age` from `users` as base')
   })
+
+  it('supports cast() expressions', () => {
+    expect('from users select cast(age as varchar)')
+      .toRenderSql('select CAST(base."age" AS VARCHAR) as "col_0" from users as base')
+    expect('from users select cast(age as float64)')
+      .toRenderSql('select CAST(base."age" AS FLOAT64) as "col_0" from users as base')
+  })
+
+  it('supports :: cast syntax', () => {
+    expect('from users select age::VARCHAR')
+      .toRenderSql('select CAST(base."age" AS VARCHAR) as "col_0" from users as base')
+    expect('from users select name::int')
+      .toRenderSql('select CAST(base."name" AS INT) as "col_0" from users as base')
+  })
+
+  it('reports diagnostic for invalid cast type', () => {
+    expect('from users select cast(age as invalidtype)').toHaveDiagnostic(/Unsupported cast type: invalidtype/i)
+  })
+
+  it('supports cast in expressions', () => {
+    expect('from users select cast(age as varchar) = name')
+      .toRenderSql('select CAST(base."age" AS VARCHAR)=base."name" as "col_0" from users as base')
+  })
 })

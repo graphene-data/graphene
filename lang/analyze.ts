@@ -328,6 +328,16 @@ export function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 
       return {node: 'extract', type: 'number', units, e: e as any, isAgg: false}
     }
+    case 'CastExpression':
+    case 'TypeCastExpression': {
+      // CastExpression has Expression child, TypeCastExpression has the expr as firstChild
+      let innerExpr = expr.getChild('Expression') || expr.firstChild!
+      let e = analyzeExpression(innerExpr, scope)
+      let targetTypeStr = txt(expr.getChild('CastType'))
+      let type = convertDataType(targetTypeStr)
+      if (!type) return diag(expr.getChild('CastType')!, `Unsupported cast type: ${targetTypeStr}`, errExpr)
+      return {node: 'cast', safe: false, e, dstSQLType: targetTypeStr.toUpperCase(), type, isAgg: e.isAgg}
+    }
     case 'FunctionCall': return analyzeFunctionCall(expr, scope)
     case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
     case 'Count': {
@@ -628,3 +638,4 @@ function convertDataType (dataType: string): FieldType | null {
     default: return null
   }
 }
+
