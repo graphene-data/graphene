@@ -136,10 +136,24 @@ computedExpression[@isGroup=Expression] {
 // It seems like having an explicit rule works better than just using the generic T in such cases.
 // NB that we only need this as part of our support for the legacy `expr as alias` in `table` statements.
 compositeExpression<T> {
+  TypeCastExpression<T> |
   BinaryExpression<T> |
   InExpression<T> |
   NullTestExpression<T> |
   T
+}
+
+// Casting: supports both CAST(x AS type) and x::type syntaxes
+CastExpression {
+  Kw<"cast"> "(" expression Kw<"as"> CastType ")"
+}
+
+TypeCastExpression<T> {
+  compositeExpression<T> !cast "::" CastType
+}
+
+CastType {
+  Identifier
 }
 
 // baseExpression includes all expression starts that are NOT parentheses.
@@ -149,6 +163,7 @@ baseExpression {
   ExistsExpression |
   computedPrimary |
   ExtractExpression |
+  CastExpression |
   Param
 }
 
@@ -195,6 +210,7 @@ InValueList {
 }
 
 @precedence {
+  cast @left,
   unary @left,
   multiply @left,
   add @left,
@@ -279,11 +295,12 @@ Alias { Identifier }
   Param { "$" (@asciiLetter | @digit | "_")+ }
   Number { @digit+ ("." @digit+)? }
   String { "'" ![']* "'" | '"' !["]* '"' }
-  "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">="
+  "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">=" "::"
 
   @precedence { Comment, "-" }
   @precedence { Comment, "*" }
   @precedence { Comment, "/" }
+  @precedence { "::", ":" }
   ":"
 }
 
