@@ -38,6 +38,10 @@ jobs:
         working-directory: core/examples/flights
         run: pnpm run setup
 
+      - name: Playwright install
+        working-directory: cloud
+        run: npx playwright install --with-deps chromium
+
       - name: Test
         working-directory: cloud
         run: pnpm test
