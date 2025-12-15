@@ -3,6 +3,9 @@ import {describe} from 'vitest'
 import {loginPkce} from '../../core/cli/auth.ts'
 import {setConfig} from '../../core/lang/config.ts'
 import {runQuery} from '../../core/cli/connections/index.ts'
+import {setBaseDomainOverride} from '../server/auth.ts'
+import {getDb} from '../server/db.ts'
+import {orgs} from '../schema.ts'
 
 const TEST_EMAIL = 'grant@graphenedata.com'
 const TEST_PASSWORD = 'graphenedata'
@@ -20,11 +23,6 @@ describe('auth', () => {
     await loginShell.locator('input[name="email"], input[type="email"]').first().fill(TEST_EMAIL)
     await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
     await loginShell.getByRole('button', {name: /continue/i}).click()
-
-    let btn = page.getByText(/Test/i)
-    await btn.waitFor()
-    await expect(page).screenshot('auth-login-flow-org-picker')
-    await btn.click()
 
     await expect(page).toHaveURL(`${cloud.url}/`)
     await expect(page.locator('h1', {hasText: 'Flight Analytics Dashboard'})).toBeVisible()
@@ -62,7 +60,6 @@ describe('auth', () => {
       await loginShell.locator('input[name="email"], input[type="email"]').first().fill(TEST_EMAIL)
       await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
       await loginShell.getByRole('button', {name: /continue/i}).click()
-      await page.getByText(/Test/i).click()
 
       await expect(page.getByText('Graphene CLI is requesting to')).toBeVisible()
       // await page.getByText('Graphene CLI is requesting to').isVisible()
@@ -79,4 +76,22 @@ describe('auth', () => {
   // test.skip('can create a new account', async () => {
   //   // Sign-up flow not implemented yet.
   // })
+})
+
+test('validates subdomains', async ({page, cloud}) => {
+  setBaseDomainOverride('localhost')
+  await getDb().update(orgs).set({slug: 'dev'})
+
+  let r1 = await page.request.get(`${cloud.url}/_api/pages/index`, {
+    headers: {host: 'wrong.localhost'},
+  })
+  expect(r1.status()).toBe(403)
+  let body = await r1.json()
+  expect(body.error).toBe('Incorrect subdomain')
+  expect(body.correctDomain).toBe('dev.localhost')
+
+  let r2 = await page.request.get(`${cloud.url}/_api/pages/index`, {
+    headers: {host: 'dev.localhost'},
+  })
+  expect(r2.status()).toBe(200)
 })

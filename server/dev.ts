@@ -10,9 +10,9 @@ import * as schema from '../schema.ts'
 import {setAuthOverride} from './auth.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
-const orgId = 'organization-test-3c0636ef-201f-44d0-9905-f7f20cf6e47d'
-const userId = 'member-test-e3a2374e-b0cd-4073-a934-d8ed8f3ac926'
-const repoId = 'testrepo'
+export const orgId = 'organization-test-3c0636ef-201f-44d0-9905-f7f20cf6e47d'
+export const userId = 'member-test-e3a2374e-b0cd-4073-a934-d8ed8f3ac926'
+export const repoId = 'testrepo'
 
 export type SeedType = 'duckdb' | 'bigquery'
 

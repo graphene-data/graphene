@@ -14,9 +14,18 @@
       callbacks: {
         onEvent: e => {
           if (e.type == StytchEventType.AuthenticateFlowComplete) {
+            let stytchSession = stytch.session.getSync()
+            session.set(stytchSession)
+
+            let orgSlug = stytchSession?.organization?.organization_slug
             let url = new URL(window.location.href)
-            session.set(stytch.session.getSync())
-            go(url.searchParams.get('next') || '/')
+            let next = url.searchParams.get('next') || '/'
+
+            if (orgSlug && !window.location.hostname.includes('localhost')) {
+              window.location.href = `https://${orgSlug}.graphenedata.com${next}`
+            } else {
+              go(next)
+            }
           }
         },
       },
@@ -25,6 +34,11 @@
         sessionOptions: {sessionDurationMinutes: 60 * 24 * 30},
         products: ['passwords'],
         passwordOptions: {},
+        directLoginForSingleMembership: {
+          status: true,
+          ignoreInvites: true,
+          ignoreJitProvisioning: true,
+        },
       },
     })
   })

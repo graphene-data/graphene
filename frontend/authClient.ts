@@ -8,7 +8,12 @@ export function authClient () {
   if (import.meta.env.MODE == 'test' && import.meta.env.VITE_STYTCH_USE_MOCK) {
     _client = new MockClient() as StytchB2BUIClient
   } else {
-    _client = new StytchB2BUIClient(import.meta.env.VITE_STYTCH_PUBLIC_TOKEN)
+    _client = new StytchB2BUIClient(import.meta.env.VITE_STYTCH_PUBLIC_TOKEN, {
+      cookieOptions: {
+        availableToSubdomains: true,
+        domain: import.meta.env.DEV ? window.location.host : 'graphenedata.com',
+      },
+    })
   }
   return _client
 }

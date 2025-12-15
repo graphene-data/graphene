@@ -1,8 +1,18 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
+import {eq} from 'drizzle-orm'
 import {B2BClient} from 'stytch'
 import type {AuthContext} from './types.js'
+import {getDb} from './db.ts'
+import {orgs} from '../schema.ts'
 
 export type {AuthContext}
+
+let BASE_DOMAIN_FOR_MULTITENTANT = process.env.NODE_ENV == 'prod' ? 'graphenedata.com' : ''
+
+export function setBaseDomainOverride (domain: string) {
+  if (process.env.NODE_ENV !== 'test') return
+  BASE_DOMAIN_FOR_MULTITENTANT = domain
+}
 
 let authOverride: AuthContext | null = null
 export function setAuthOverride (auth: AuthContext | null) {
@@ -15,7 +25,6 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
 
   if (process.env.NODE_ENV === 'test' && authOverride) {
     req.auth = authOverride
-    return
   }
 
   let bearer = req.headers['authorization']
@@ -34,11 +43,21 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
     req.auth = {userId: session.member_id, orgId: session.organization_id}
   }
 
-  // TODO check org matches subdomain
-
   if (!req.auth) {
     reply.code(401).send({error: 'Authentication required'})
     throw new Error('Unauthorized')
+  }
+
+  // Validate subdomain matches user's org
+  let host = (req.hostname || '').split(':')[0]
+  if (BASE_DOMAIN_FOR_MULTITENTANT && host.endsWith(BASE_DOMAIN_FOR_MULTITENTANT)) {
+    let subdomain = host.replace('.' + BASE_DOMAIN_FOR_MULTITENTANT, '')
+    let org = await getDb().select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, req.auth.orgId)).get()
+    if (!org) throw new Error('Missing org for logged in user')
+    if (org.slug !== subdomain) {
+      reply.code(403).send({error: 'Incorrect subdomain', correctDomain: `${org?.slug}.${BASE_DOMAIN_FOR_MULTITENTANT}`})
+      throw new Error('Unauthorized')
+    }
   }
 }
 
