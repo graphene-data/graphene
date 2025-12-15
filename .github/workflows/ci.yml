@@ -45,6 +45,8 @@ jobs:
       - name: Test
         working-directory: cloud
         run: pnpm test
+        env:
+          BIGQUERY_TEST_CREDS: ${{ secrets.BIGQUERY_TEST_CREDS }}
 
   deploy:
     runs-on: ubuntu-latest
