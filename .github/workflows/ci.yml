@@ -47,6 +47,10 @@ jobs:
         run: pnpm test
         env:
           BIGQUERY_TEST_CREDS: ${{ secrets.BIGQUERY_TEST_CREDS }}
+          STYTCH_PROJECT_ID: project-test-eaaff9fe-3c7f-486e-90b9-23d249388064
+          STYTCH_SECRET: ${{ secrets.STYTCH_TEST_SECRET }}
+          STYTCH_DOMAIN: https://futuristic-coil-3570.customers.stytch.dev
+          VITE_STYTCH_PUBLIC_TOKEN: public-token-test-340ad761-ec19-47c0-b53e-094d5f65bd3a
 
   deploy:
     runs-on: ubuntu-latest
