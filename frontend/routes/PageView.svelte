@@ -1,7 +1,11 @@
 <script lang="ts">
+    import {onDestroy} from 'svelte'
+
   export let slug: string
 
   let content
+  let container: HTMLElement
+  let instance: any
   let loading = true
   let error = ''
 
@@ -16,7 +20,8 @@
     try {
       let modulePath = toModulePath(target)
       let mod = await import(/* @vite-ignore */ `/_api/pages${modulePath}`)
-      content = mod.default
+      // content = mod.default
+      instance = new mod.default({target: container})
     } catch (cause) {
       console.error(cause)
       error = cause instanceof Error ? cause.message : 'Failed to load page.'
@@ -32,6 +37,10 @@
     currentSlug = slug
     loadPage(slug)
   }
+
+  onDestroy(() => {
+    instance?.$destroy()
+  })
 </script>
 
 <section class="page">
@@ -42,6 +51,7 @@
   {:else}
     <svelte:component this={content} />
   {/if}
+  <div bind:this={container} class:hidden={loading || error}></div>
 </section>
 
 <style>
