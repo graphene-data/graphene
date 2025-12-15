@@ -92,11 +92,13 @@ async function seedDatabase (connectionType: SeedType) {
   await db.insert(schema.users).values({orgId, id: userId, email: 'dev@graphenedata.com', role: 'admin' as const}).run()
 
   if (connectionType == 'bigquery') {
-    let credentialsPath = process.env.BIGQUERY_TEST_CREDS
-    if (!credentialsPath) throw new Error('BIGQUERY_TEST_CREDS is required when using the bigquery dataset.')
+    let configJson = process.env.BIGQUERY_TEST_CREDS || ''
+    if (!configJson) throw new Error('BIGQUERY_TEST_CREDS is required when using the bigquery dataset.')
 
-    let absoluteCredentialsPath = path.resolve(credentialsPath)
-    let configJson = fs.readFileSync(absoluteCredentialsPath, 'utf-8')
+    if (!configJson.startsWith('{')) {
+      configJson = fs.readFileSync(path.resolve(configJson), 'utf-8')
+    }
+
     let namespace = 'bigquery-public-data.thelook_ecommerce'
     await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson, namespace})
   }
