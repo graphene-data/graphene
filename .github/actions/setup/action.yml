@@ -1,0 +1,37 @@
+name: Setup
+description: Checkout core repo and install dependencies
+
+inputs:
+  core-ssh-key:
+    description: SSH key for core repo
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v5
+      with:
+        repository: graphene-data/graphene
+        path: core
+        ssh-key: ${{ inputs.core-ssh-key }}
+        lfs: true
+
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: pnpm
+        cache-dependency-path: cloud/pnpm-lock.yaml
+
+    - name: Cloud deps
+      working-directory: cloud
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Core deps
+      working-directory: core
+      shell: bash
+      run: pnpm install --frozen-lockfile
