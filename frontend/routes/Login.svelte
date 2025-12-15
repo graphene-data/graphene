@@ -17,7 +17,7 @@
             let stytchSession = stytch.session.getSync()
             session.set(stytchSession)
 
-            let orgSlug = stytchSession?.organization?.organization_slug
+            let orgSlug = stytchSession?.organization_slug
             let url = new URL(window.location.href)
             let next = url.searchParams.get('next') || '/'
 
