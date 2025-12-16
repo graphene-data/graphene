@@ -403,6 +403,14 @@ describe('lang', () => {
     expect('table users (id int)').toHaveDiagnostic(/table "users" is already defined/i)
   })
 
+  it('allows duplicate table names across different markdown files', () => {
+    clearWorkspace()
+    updateFile('```gsql summary\nfrom users\n```', 'page1.md')
+    updateFile('```gsql summary\nfrom users\n```', 'page2.md')
+    updateFile(testTables, 'models.gsql')
+    expect(getDiagnostics().find(d => d.message.includes('already defined'))).toBeUndefined()
+  })
+
   it('reports diagnostics for unknown table in FROM', () => {
     expect('from not_a_table select id')
       .toHaveDiagnostic(/could not find table "not_a_table"/i)
