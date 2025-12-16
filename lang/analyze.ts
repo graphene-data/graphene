@@ -25,9 +25,11 @@ export function findTables (fi: FileInfo) {
   for (let syntaxNode of nodes) {
     let name = txt(syntaxNode.getChild('Ref'))
 
-    if (Object.values(FILE_MAP).find(f => f.tables.find(t => t.name == name))) {
-      diag(syntaxNode.getChild('Ref')!, `Table "${name}" is already defined`)
-    }
+    let existing = Object.values(FILE_MAP).find(f => {
+      if (f.path.endsWith('.md') && f.path != fi.path) return // ignore conflicts in md files (unless its the current file)
+      return f.tables.find(t => t.name == name)
+    })
+    if (existing) diag(syntaxNode.getChild('Ref')!, `Table "${name}" is already defined`)
 
     let table = makeTable(name, syntaxNode.getChild('QueryStatement') ? 'query_source' : 'table')
     table.metadata = extractLeadingMetadata(syntaxNode)
