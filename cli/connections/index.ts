@@ -1,6 +1,6 @@
 import {config} from '../../lang/config.ts'
 import {authenticatedFetch} from '../auth.ts'
-import {type QueryResult, type QueryConnection} from './types.ts'
+import {type QueryResult, type QueryConnection, type QueryParams} from './types.ts'
 
 export async function getConnection (): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
@@ -17,16 +17,16 @@ export async function getConnection (): Promise<QueryConnection> {
   }
 }
 
-export async function runQuery (sql:string): Promise<QueryResult> {
+export async function runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {
   if (config.host) {
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({sql}),
+      body: JSON.stringify({sql, params}),
     })
     return await resp.json()
   }
 
   let conn = await getConnection()
-  return await conn.runQuery(sql)
+  return await conn.runQuery(sql, params)
 }

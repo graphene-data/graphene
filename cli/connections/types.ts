@@ -8,8 +8,10 @@ export interface SchemaColumn {
   dataType: string
 }
 
+export type QueryParams = unknown[] | Record<string, unknown>
+
 export interface QueryConnection {
-  runQuery(sql: string): Promise<QueryResult>
+  runQuery(sql: string, params?: QueryParams): Promise<QueryResult>
   listDatasets(): Promise<string[]>
   listTables(dataset?: string): Promise<string[]>
   describeTable(table: string): Promise<SchemaColumn[]>

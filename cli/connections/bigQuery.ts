@@ -1,9 +1,14 @@
 import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
-import {type QueryConnection, type QueryResult, type SchemaColumn} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
 import {config} from '../../lang/config.ts'
 import {readFileSync} from 'fs'
 
 // You can also set GOOGLE_APPLICATION_CREDENTIALS to point at a service account key file
+
+// BigQuery identifiers can contain letters, numbers, underscores, and hyphens
+function validateBigQueryIdent (ident: string) {
+  if (!/^[\w.-]+$/.test(ident)) throw new Error(`Invalid BigQuery identifier: ${ident}`)
+}
 
 export class BigQueryConnection implements QueryConnection {
   private readonly client: BigQuery
@@ -29,8 +34,8 @@ export class BigQueryConnection implements QueryConnection {
     this.defaultNamespace = config.namespace
   }
 
-  async runQuery (sql: string): Promise<QueryResult> {
-    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false})
+  async runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {
+    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params})
     let [rows] = await job.getQueryResults({maxResults: 10000})
     let metadata = job.metadata || (await job.getMetadata())[0]
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
@@ -52,6 +57,7 @@ export class BigQueryConnection implements QueryConnection {
 
   async listTables (dataset?: string): Promise<string[]> {
     if (!dataset) throw new Error('BigQuery requires a dataset')
+    validateBigQueryIdent(dataset)
 
     let res = await this.runQuery(`select table_schema as table_schema, table_name as table_name
       from \`${dataset}.INFORMATION_SCHEMA.TABLES\`
@@ -64,19 +70,16 @@ export class BigQueryConnection implements QueryConnection {
     let parts = target.split('.')
     let table = parts.pop() || ''
     let dataset = parts.join('.')
+    validateBigQueryIdent(dataset)
     let sql = `
       select column_name as column_name, data_type as data_type, ordinal_position as ordinal_position
       from \`${dataset}.INFORMATION_SCHEMA.COLUMNS\`
-      where lower(table_name) = lower(${sqlStringLiteral(table)})
+      where lower(table_name) = lower(@table)
       order by ordinal_position
     `.trim()
-    let res = await this.runQuery(sql)
+    let res = await this.runQuery(sql, {table})
     return res.rows.map(row => {
       return {name: String(row['column_name']), dataType: String(row['data_type'])}
     })
   }
-}
-
-function sqlStringLiteral (value: string) {
-  return `'${value.replace(/'/g, "''")}'`
 }

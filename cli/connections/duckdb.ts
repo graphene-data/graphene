@@ -1,7 +1,7 @@
 import {promises as fs} from 'fs'
 import path from 'path'
 import {config} from '../../lang/config.ts'
-import {type QueryResult, type QueryConnection, type SchemaColumn} from './types.ts'
+import {type QueryResult, type QueryConnection, type SchemaColumn, type QueryParams} from './types.ts'
 import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 
 interface DuckDbOptions {
@@ -35,9 +35,11 @@ export class DuckDBConnection implements QueryConnection {
     await this.connection.run('use graphene_cli;')
   }
 
-  async runQuery (sql: string): Promise<QueryResult> {
+  async runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {
     await this.ready
-    let reader = await this.connection!.runAndReadAll(sql)
+    let reader = params
+      ? await this.connection!.runAndReadAll(sql, params as any)
+      : await this.connection!.runAndReadAll(sql)
     let rows = reader.getRowObjects().map(record => {
       let out: Record<string, unknown> = {}
       for (let [k, v] of Object.entries(record)) {
@@ -73,21 +75,18 @@ export class DuckDBConnection implements QueryConnection {
     let table = parts.pop() || ''
     let schema = parts[0]
     let schemaFilter = schema
-      ? `lower(table_schema) = lower(${sqlStringLiteral(schema)})`
+      ? 'lower(table_schema) = lower($2)'
       : "table_schema not in ('information_schema', 'pg_catalog')"
     let sql = `
       select column_name as column_name, data_type as data_type, ordinal_position as ordinal_position
       from information_schema.columns
-      where lower(table_name) = lower(${sqlStringLiteral(table)}) and ${schemaFilter}
+      where lower(table_name) = lower($1) and ${schemaFilter}
       order by ordinal_position
     `.trim()
-    let res = await this.runQuery(sql)
+    let params = schema ? [table, schema] : [table]
+    let res = await this.runQuery(sql, params)
     return res.rows.map(row => {
       return {name: String(row['column_name']), dataType: String(row['data_type'])}
     })
   }
-}
-
-function sqlStringLiteral (value: string) {
-  return `'${value.replace(/'/g, "''")}'`
 }
