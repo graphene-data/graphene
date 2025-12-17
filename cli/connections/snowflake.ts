@@ -1,7 +1,7 @@
 import {createPrivateKey} from 'node:crypto'
 import snowflake from 'snowflake-sdk'
 import {config} from '../../lang/config.ts'
-import {type QueryConnection, type QueryResult, type SchemaColumn} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
 
 interface SnowflakeOptions {
   username?: string
@@ -53,12 +53,13 @@ export class SnowflakeConnection implements QueryConnection {
     })
   }
 
-  async runQuery (sql: string): Promise<QueryResult> {
+  async runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {
     await this.ready
     return await new Promise<QueryResult>((resolve, reject) => {
       let rows: any[] = []
       this.connection.execute({
         sqlText: sql,
+        binds: params as any,
         streamResult: true,
         complete: (error, statement) => {
           if (error) {
@@ -95,9 +96,9 @@ export class SnowflakeConnection implements QueryConnection {
     let res = await this.runQuery(`
       select table_schema as "table_schema", table_name as "table_name"
       from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.TABLES
-      where table_type in ('BASE TABLE', 'VIEW') and table_schema = ${sqlStringLiteral(schema)}
+      where table_type in ('BASE TABLE', 'VIEW') and table_schema = ?
       order by table_name
-    `)
+    `, [schema])
     return res.rows.map(row => `${row['table_schema']}.${row['table_name']}`)
   }
 
@@ -110,9 +111,9 @@ export class SnowflakeConnection implements QueryConnection {
     let res = await this.runQuery(`
       select column_name as "column_name", data_type as "data_type", ordinal_position as ordinal_position
       from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.COLUMNS
-      where upper(table_schema) = upper(${sqlStringLiteral(schema)}) and upper(table_name) = upper(${sqlStringLiteral(table)})
+      where upper(table_schema) = upper(?) and upper(table_name) = upper(?)
       order by ordinal_position
-    `)
+    `, [schema, table])
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })
@@ -122,8 +123,4 @@ export class SnowflakeConnection implements QueryConnection {
 function snowflakeIdent (value: string) {
   if (!value) throw new Error('Snowflake identifiers cannot be empty')
   return `"${value.replace(/"/g, '""')}"`
-}
-
-function sqlStringLiteral (value: string) {
-  return `'${value.replace(/'/g, "''")}'`
 }
