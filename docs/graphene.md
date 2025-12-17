@@ -21,12 +21,15 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
       - [Multi-hop joins](#multi-hop-joins)
     - [Using stored expressions in queries](#using-stored-expressions-in-queries)
     - [Safe aggregation in fan-outs](#safe-aggregation-in-fan-outs)
+    - [Working with dates, timestamps, and intervals](#working-with-dates-timestamps-and-intervals)
+      - [Date and timestamp literals](#date-and-timestamp-literals)
+      - [Interval literals](#interval-literals)
+    - [Available functions](#available-functions)
+      - [Percentile shorthand](#percentile-shorthand)
+    - [Subqueries, CTEs, and chaining queries](#subqueries-ctes-and-chaining-queries)
+    - [Other miscellaneous details](#other-miscellaneous-details)
   - [`table as` statements](#table-as-statements)
   - [`extend` statements](#extend-statements)
-  - [Working with dates, timestamps, and intervals](#working-with-dates-timestamps-and-intervals)
-    - [Date and timestamp literals](#date-and-timestamp-literals)
-    - [Interval literals](#interval-literals)
-  - [Other miscellaneous details about GSQL](#other-miscellaneous-details-about-gsql)
 - [Graphene data apps (dashboards)](#graphene-data-apps-dashboards)
   - [Visualization components](#visualization-components)
     - [Bar chart](#bar-chart)
@@ -94,11 +97,15 @@ These are the available commands:
 
 # Graphene SQL (GSQL)
 
-GSQL is comprised of `table` statements that declare tables and `select` statements that query them.
+GSQL is comprised of four primary statements:
+1. `table` statements that declare existing tables and semantic metadata
+2. `select` statements that query tables
+3. `table as` statements that create new tables using `select`
+4. `extend` statements that attach semantic metadata to tables
 
 ## `table` statements
 
-`table` statements manifest tables that already exist in your database. Here's an example of two tables, `orders` and `users`, in GSQL.
+`table` statements declare tables that already exist in your database. Here's an example of two tables, `orders` and `users`, in GSQL.
 
 ```sql
 table orders (
@@ -141,15 +148,15 @@ Join relationships in a `table` statement declare joins that can be used when qu
 
 The other main difference about joins in GSQL vs. regular SQL is that you have to explain if there are many rows in the left table for each row in the right table, or vice versa. This additional bit of information allows Graphene to prevent incorrect aggregation as a result of row duplication (aka fan-out) through joins. See [Safe aggregation in fan-outs](#safe-aggregation-in-fan-outs) for more details.
 
-This information is provided with the two supported join types, `join_one` and `join_many`:
-- `join_one` is used if there are many rows in the **left** table for each row in the **right** table.
-- `join_many` is used if there are many rows in the **right** table for each row in the **left** table.
+This information is provided with the two supported join types, `join one` and `join many`:
+- `join one` is used if there are many rows in the **left** table for each row in the **right** table.
+- `join many` is used if there are many rows in the **right** table for each row in the **left** table.
 
 In the example above with `orders` and `users`, the joins confirm that there are many orders per user, and only one user per order.
 
 Note that all joins in GSQL are left outer joins. There is no inner, right, or cross join.
 
-### Multiple join relationships between the same two tables
+#### Multiple join relationships between the same two tables
 
 Sometimes there are multiple valid ways to join two tables together. You can model this in Graphene by aliasing the various joins with `as`, just as you would in normal SQL. For example:
 
@@ -172,7 +179,7 @@ table users (
 )
 ```
 
-### Best practices for modeling join relationships
+#### Best practices for modeling join relationships
 
 - For a given `table` statement, only model joins that are directly on that table. Multi-hop join paths do not need to be written explicitly in order for queries to traverse them.
 - A join between two tables should be modeled in both the respective `table` statements. This may seem redundant but it offers more flexibility for queries to choose which table to set in the `from` (remember that direction matters in queries since all joins are left joins).
@@ -201,7 +208,6 @@ table orders (
   profit_margin: profit / revenue
 )
 ```
-
 
 ## `select` statements
 
@@ -245,7 +251,7 @@ order by 2 desc
 limit 10
 ```
 
-### Multi-hop joins
+#### Multi-hop joins
 
 Sometimes you need to access columns or stored expressions in a table that is two or more joins away from the `from` table. To do this, simply use more dot operators to trace the desired join path. For example, say there is another table added to our project, `countries`:
 
@@ -365,7 +371,7 @@ A common and dangerous user error in regular SQL is aggregating data incorrectly
 
 For example, after joining `users` to `orders`, your joined result will have some users repeated multiple times if they've made multiple purchases. If you wanted to find the average age of customers over this joined result, simply using an `avg(users.age)` would be _incorrect_, because you would be weighting the average towards users with multiple purchases, rather than taking the true average.
 
-GSQL aims to solve this problem. With the additional information provided via `join_one` and `join_many`, Graphene knows under which scenarios when row dupliation occurs, and will rewrite aggregative expressions in a way that ignores the duplicate rows.
+GSQL aims to solve this problem. With the additional information provided via `join one` and `join many`, Graphene knows under which scenarios when row dupliation occurs, and will rewrite aggregative expressions in a way that ignores the duplicate rows.
 
 The query `select avg(users.age) from orders` will be rewritten to the following SQL when Graphene queries the underlying database (this is for BigQuery, specifically):
 
@@ -387,9 +393,84 @@ FROM `bigquery-public-data.thelook_ecommerce.orders` as base
 
 You don't have to understand this; the point is that GSQL is minimizing the chances that naive users aggregate data incorrectly.
 
-### Percentile shorthand
+### Working with dates, timestamps, and intervals
+
+Graphene understands a handful of common literal formats so you rarely need explicit casts when filtering or doing time math.
+
+#### Date and timestamp literals
+
+- `YYYY`, `YYYY-MM`, and `YYYY-MM-DD` strings are treated as dates. Leading/trailing spaces are ignored.
+- `YYYY-MM-DD HH[:MM[:SS]]` (with either a space or `T` between the date and time) is treated as a timestamp. Missing minutes or seconds default to `00`.
+
+```sql
+from users select id
+where created_at >= '2024-01-01' and created_at <= '2024-02-01'
+```
+
+#### Interval literals
+
+To add or subtract time, provide a quantity followed by a unit inside a string literal. Supported units include `second`, `minute`, `hour`, `day`, `week`, `month`, `quarter`, and `year` (plural forms or shorthands like `secs`, `mins`, `hrs` also work).
+
+```sql
+from users select
+  created_at + '5 minutes' as first_seen_plus_5,
+  created_at - '2 days' as first_seen_minus_2
+```
+
+Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days'`). Invalid strings produce a diagnostic such as “Could not parse interval literal: "many moons"”.
+
+### Available functions
+
+GSQL aims to support every function of the underlying connected database. This means that function availability and behavior varies from database to database. For example, `date_trunc()` in DuckDB and Snowflake has the arguments in the order `date_trunc(unit, date)` whereas in BigQuery it is `date_trunc(date, unit)`.
+
+#### Percentile shorthand
 
 Graphene provides percentile helpers so you rarely have to remember the SQL form for each warehouse. Anywhere you can call an aggregate, you can also write `pXX(column)` where `XX` is a whole number between 0 and 100. If you need precision finer than a whole percentile, append extra digits—everything after the first two digits is treated as decimals. Examples: `p975` → 97.5th percentile, `p9999` → 99.99th percentile. Graphene rewrites these shorthands to the dialect’s native function (`quantile_cont` on DuckDB, `approx_quantiles` on BigQuery, `PERCENTILE_CONT` on Snowflake) and ensures they behave like other aggregates (automatic grouping, structPath handling, etc.).
+
+### Subqueries, CTEs, and chaining queries
+
+Queries can be chained together for more complex, multi-stage query logic. Instead of using subqueries or CTEs (`WITH`), in GSQL this is done by using the `table as` statement, or in Markdown, by simply chaining queries.
+
+Using `table as`:
+
+```sql
+table sales_per_store as (
+  select
+    store_id,
+    sum(amount) as total_sales
+  from orders
+  group by store_id
+)
+
+-- average store sales
+select avg(total_sales)
+from sales_per_store
+```
+
+In a Markdown file:
+
+````md
+```sql sales_per_store
+  select
+    store_id,
+    sum(amount) as total_sales
+  from orders
+  group by store_id
+```
+
+```sql average_store_sales
+select avg(total_sales)
+from sales_per_store
+```
+````
+
+### Other miscellaneous details
+
+- The clauses in a `select` statement (`select`, `from`, `join`, `group by`, etc.) can be written in any order. They cannot be repeated, however.
+- `group by all` is implied if aggregative and scalar expressions are both present in the `select` clause. This means that `group by` can be omitted and the query will still effectively execute the `group by all`.
+- Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
+- `count` is a reserved word. Do not alias your columns as `count`.
+- Window functions and set operations are not supported.
 
 ## `table as` statements
 
@@ -432,8 +513,8 @@ table user_facts as (
 )
 ```
 
-`table as` statements are conceptually the same as view tables in regular SQL. A few things to note:
-- You cannot yet declare join relationships or stored expressions directly in a `table as` statement. Other tables can declare join relationships to it, though, as shown above.
+`table as` statements are conceptually the same as view tables and CTEs in regular SQL. A few things to note:
+- You cannot declare join relationships or stored expressions directly in a `table as` statement. Use an `extend` statement.
 - In the example above, the `ltv` and `lifetime_orders` columns from `user_facts` are "hoisted" back into `users` so that they appear as if they are columns from `users`. This is simply a design choice which allows query writers to never need to know about `user_facts`.
 
 ## `extend` statements
@@ -464,86 +545,6 @@ extend daily_orders (
 ```
 
 Note that you cannot add new base columns with `extend`; you can only add joins and stored expressions.
-
-## Working with dates, timestamps, and intervals
-
-Graphene understands a handful of common literal formats so you rarely need explicit casts when filtering or doing time math.
-
-**Date and timestamp literals**
-
-- `YYYY`, `YYYY-MM`, and `YYYY-MM-DD` strings are treated as dates. Leading/trailing spaces are ignored.
-- `YYYY-MM-DD HH[:MM[:SS]]` (with either a space or `T` between the date and time) is treated as a timestamp. Missing minutes or seconds default to `00`.
-
-```sql
-from users select id
-where created_at >= '2024-01-01' and created_at <= '2024-02-01'
-```
-
-**Interval literals**
-
-To add or subtract time, provide a quantity followed by a unit inside a string literal. Supported units include `second`, `minute`, `hour`, `day`, `week`, `month`, `quarter`, and `year` (plural forms or shorthands like `secs`, `mins`, `hrs` also work).
-
-```sql
-from users select
-  created_at + '5 minutes' as first_seen_plus_5,
-  created_at - '2 days' as first_seen_minus_2
-```
-
-Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days'`). Invalid strings produce a diagnostic such as “Could not parse interval literal: "many moons"”.
-
-## GSQL Functions
-
-GSQL aims to support every function of the underlying connected database. This means that function availability and behavior varies from database to database. For example, `date_trunc()` in DuckDB and Snowflake has the arguments in the order `date_trunc(unit, date)` whereas in BigQuery it is `date_trunc(date, unit)`.
-
-Additionally, GSQL supports a simple percentile function that's supported on all databases:
-- `pXX(column)`: Aggregate function that returns the XXth percentile (e.g., p50, p975, p9999).
-
-## Subqueries, CTEs, and chaining queries
-
-Queries can be chained together for more complex, multi-stage query logic. Instead of using subqueries or CTEs (`WITH`), in GSQL this is done by using the `table as` statement, or in Markdown, by simply chaining queries.
-
-Using `table as`:
-
-```sql
-table sales_per_store as (
-  select
-    store_id,
-    sum(amount) as total_sales
-  from orders
-  group by store_id
-)
-
--- average store sales
-select avg(total_sales)
-from sales_per_store
-```
-
-In a Markdown file:
-
-````md
-```sql sales_per_store
-  select
-    store_id,
-    sum(amount) as total_sales
-  from orders
-  group by store_id
-```
-
-```sql average_store_sales
-select avg(total_sales)
-from sales_per_store
-```
-````
-
-## Other miscellaneous details about GSQL
-
-- Trailing commas in `table` statements are optional.
-- Trailing semicolons after `table` and `table as` statements are optional.
-- The clauses in a `select` statement (`select`, `from`, `join`, `group by`, etc.) can be written in any order. They cannot be repeated, however.
-- `group by all` is implied if aggregative and scalar expressions are both present in the `select` clause. This means that `group by` can be omitted and the query will still effectively execute the `group by all`.
-- Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
-- `count` is a reserved word. Do not alias your columns as `count`.
-- Window functions and set operations are not supported.
 
 # Graphene data apps (dashboards)
 
@@ -597,9 +598,9 @@ Here's an example:
 />
 ```
 
-### All bar chart attributes
+#### All bar chart attributes
 
-### General
+##### General
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
@@ -611,7 +612,7 @@ Here's an example:
 | downloadableData | Whether to show the download button to allow users to download the data | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | `true`, `false` | `true` |
 
-### Data
+##### Data
 
 | Attribute | Description | Required | Options | Default |
 |----------|-------------|----------|---------|---------|
@@ -627,7 +628,7 @@ Here's an example:
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | No records |
 
-### Formatting & Styling
+##### Formatting & Styling
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
@@ -645,7 +646,7 @@ Here's an example:
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | `true`, `false` | `false` |
 
-### Value Labels
+##### Value Labels
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
@@ -660,7 +661,7 @@ Here's an example:
 | y2LabelFmt | Format to use for value labels for series on the y2 axis. Overrides any other formats ([see available formats](#value-formatting)) | Excel-style format, built-in format name | - |
 | showAllLabels | Allow all labels to appear on chart, including overlapping labels | `true`, `false` | `false` |
 
-### Axes
+##### Axes
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
@@ -690,7 +691,7 @@ Here's an example:
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | `true`, `false` | `false` |
 | yAxisColor | Turns on/off color on the y-axis (turned on by default when secondary y-axis is used). Can also be used to set a specific color | `true`, `false`, color string (CSS name, hexademical, RGB, HSL) | `true` when y2 used; `false` otherwise |
 
-### Interactivity
+##### Interactivity
 
 | Attribute | Description | Options |
 |----------|-------------|---------|
@@ -711,16 +712,16 @@ Here's an example:
 />
 ```
 
-### All pie chart attributes
+#### All pie chart attributes
 
-### General
+##### General
 
 | Attribute | Description | Options | Default |
 |----------|-------------|---------|---------|
 | title | Chart title. Appears at top left of chart. | string | - |
 | subtitle | Chart subtitle. Appears just under title. | string | - |
 
-### Data
+##### Data
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -745,9 +746,9 @@ Here's an example:
 />
 ```
 
-### All line chart attributes
+#### All line chart attributes
 
-### General
+##### General
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -759,7 +760,7 @@ Here's an example:
 | downloadableData | Whether to show the download button to allow users to download the data | false | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | false | `true`, `false` | `true` |
 
-### Data
+##### Data
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -774,7 +775,7 @@ Here's an example:
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | - |
 
-### Formatting & Styling
+##### Formatting & Styling
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -805,7 +806,7 @@ Here's an example:
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
 
-### Axes
+##### Axes
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -833,7 +834,7 @@ Here's an example:
 | y2Max | Maximum value for the y2-axis | false | number | - |
 | y2Scale | Whether to scale the y-axis to fit your data. `y2Min` and `y2Max` take precedence over `y2Scale` | false | `true`, `false` | `false` |
 
-### Interactivity
+##### Interactivity
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -854,9 +855,9 @@ Here's an example:
 />
 ```
 
-### All area chart attributes
+#### All area chart attributes
 
-### General
+##### General
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -868,7 +869,7 @@ Here's an example:
 | downloadableData | Whether to show the download button to allow users to download the data | false | `true`, `false` | `true` |
 | downloadableImage | Whether to show the button to allow users to save the chart as an image | false | `true`, `false` | `true` |
 
-### Data
+##### Data
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -882,7 +883,7 @@ Here's an example:
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
 
-### Formatting & Styling
+##### Formatting & Styling
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -901,7 +902,7 @@ Here's an example:
 | rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
 
-### Value Labels
+##### Value Labels
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -912,7 +913,7 @@ Here's an example:
 | labelFmt | Format to use for value labels ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | same as y column |
 | showAllLabels | Allow all labels to appear on chart, including overlapping labels | false | `true`, `false` | `false` |
 
-### Axes
+##### Axes
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -932,7 +933,7 @@ Here's an example:
 | yMax | Maximum value for the y-axis | false | number | - |
 | yScale | Whether to scale the y-axis to fit your data. `yMin` and `yMax` take precedence over `yScale` | false | `true`, `false` | `false` |
 
-### Interactivity
+##### Interactivity
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -956,9 +957,9 @@ Here's an example:
 />
 ```
 
-### All big value attributes
+#### All big value attributes
 
-### Data
+##### Data
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -972,7 +973,7 @@ Here's an example:
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | `"No records"` |
 | link | Used to navigate to other pages. Can be a full external link like `"https://google.com"` or an internal link like `"/sales/performance"` | false | - | - |
 
-### Comparison
+##### Comparison
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -984,7 +985,7 @@ Here's an example:
 | neutralMax | Sets the top of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | `0` |
 | comparisonFmt | Sets format for the comparison ([see available formats](#value-formatting)) | false | Excel-style format, built-in format | - |
 
-### Sparkline
+##### Sparkline
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -1007,9 +1008,9 @@ Here's an example:
 <Table data=orders_summary />
 ```
 
-### All table attributes
+#### All table attributes
 
-### Table
+##### Table
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -1039,7 +1040,7 @@ Here's an example:
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
 
-### Groups
+##### Groups
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -1053,7 +1054,7 @@ Here's an example:
 | subtotalFontColor | [groupType=section] Font color for the subtotal row | false | Hex color code, css color name | - |
 | groupNamePosition | [groupType=section] Where the group label will appear in its cell | false | `top`, `middle`, `bottom` | `middle` |
 
-### Column
+##### Column
 
 Use the Column sub-component to choose specific columns to display in your table, and to apply options to specific columns. If you don't supply any columns to the table, it will display all columns from your query result.
 
@@ -1167,7 +1168,7 @@ from users
 where email ilike concat('%', $name_of_input, '%')
 ```
 
-### All text input attributes
+#### All text input attributes
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -1206,7 +1207,7 @@ from orders
 where status = $status_dropdown
 ```
 
-### All dropdown attributes
+#### All dropdown attributes
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
@@ -1225,7 +1226,7 @@ where status = $status_dropdown
 | hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
-### DropdownOption
+##### DropdownOption
 
 The `DropdownOption` sub-component can be used to manually add options to a dropdown. This is useful to add a default option, or to add options that are not in a query.
 
