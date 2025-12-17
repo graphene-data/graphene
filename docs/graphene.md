@@ -491,6 +491,50 @@ from users select
 
 Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days'`). Invalid strings produce a diagnostic such as “Could not parse interval literal: "many moons"”.
 
+## GSQL Functions
+
+GSQL aims to support every function of the underlying connected database. This means that function availability and behavior varies from database to database. For example, `date_trunc()` in DuckDB and Snowflake has the arguments in the order `date_trunc(unit, date)` whereas in BigQuery it is `date_trunc(date, unit)`.
+
+Additionally, GSQL supports a simple percentile function that's supported on all databases:
+- `pXX(column)`: Aggregate function that returns the XXth percentile (e.g., p50, p975, p9999).
+
+## Subqueries, CTEs, and chaining queries
+
+Queries can be chained together for more complex, multi-stage query logic. Instead of using subqueries or CTEs (`WITH`), in GSQL this is done by using the `table as` statement, or in Markdown, by simply chaining queries.
+
+Using `table as`:
+
+```sql
+table sales_per_store as (
+  select
+    store_id,
+    sum(amount) as total_sales
+  from orders
+  group by store_id
+)
+
+-- average store sales
+select avg(total_sales)
+from sales_per_store
+```
+
+In a Markdown file:
+
+````md
+```sql sales_per_store
+  select
+    store_id,
+    sum(amount) as total_sales
+  from orders
+  group by store_id
+```
+
+```sql average_store_sales
+select avg(total_sales)
+from sales_per_store
+```
+````
+
 ## Other miscellaneous details about GSQL
 
 - Trailing commas in `table` statements are optional.
@@ -500,16 +544,6 @@ Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days
 - Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
 - `count` is a reserved word. Do not alias your columns as `count`.
 - Window functions and set operations are not supported.
-- Subqueries are not supported. However, you can accomplish the same functionality by chaining queries:
-  ````md
-   ```sql my_subquery
-   select ...
-   ```
-   
-   ```sql my_query
-   select ... from my_subquery
-   ```
-  ```` 
 
 # Graphene data apps (dashboards)
 
@@ -1320,4 +1354,3 @@ Available percentage formats:
 * `pct1` - Percentage with 1 decimal place (e.g., 73.1%)
 * `pct2` - Percentage with 2 decimal places (e.g., 73.10%)
 * `pct3` - Percentage with 3 decimal places (e.g., 73.100%)
-
