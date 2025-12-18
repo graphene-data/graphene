@@ -421,6 +421,8 @@ Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days
 
 ### Available functions
 
+Note that function availability varies depending on the connected database. Check your package.json to see what database you are connected to.
+
 #### Aggregate functions
 
 | Function | Description | Parameters | Return Type | DuckDB | BigQuery | Snowflake |
