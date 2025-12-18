@@ -81,7 +81,7 @@ async function runNode (n: QueryNode) {
     let response = await fetch('/_api/query', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({params, gsql, hashes, routePath: getRoutePath()}),
+      body: JSON.stringify({params, gsql, hashes, routePath: getRoutePath(), repoId: window.$GRAPHENE?.repoId}),
     })
     let hash = response.headers.get('ETag') || ''
 
