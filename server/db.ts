@@ -12,11 +12,6 @@ export function getDb (): CloudDatabase {
   let url = process.env.NODE_ENV == 'test' ? ':memory:' : process.env.TURSO_DATABASE_URL!
   let authToken = process.env.TURSO_AUTH_TOKEN || ''
 
-  // AWS secrets manager puts things in a json string
-  if (authToken.startsWith('{')) {
-    authToken = JSON.parse(authToken)['TURSO_AUTH_TOKEN']
-  }
-
   sqliteInstance = createClient({url, authToken})
   dbInstance = drizzle(sqliteInstance, {schema})
   return dbInstance

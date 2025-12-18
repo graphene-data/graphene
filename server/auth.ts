@@ -64,15 +64,9 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
 let stytchClient: B2BClient | undefined
 
 function getStytch (): B2BClient {
-  let secret = process.env.STYTCH_SECRET ?? ''
-
-  if (secret.startsWith('{')) { // unpack AWS secret as needed
-    secret = JSON.parse(secret)['STYTCH_SECRET']
-  }
-
   stytchClient ||= new B2BClient({
     project_id: process.env.STYTCH_PROJECT_ID ?? '',
-    secret,
+    secret: process.env.STYTCH_SECRET ?? '',
     custom_base_url: process.env.STYTCH_DOMAIN ?? '',
   })
   return stytchClient

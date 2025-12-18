@@ -1,0 +1,6 @@
+#!/bin/bash
+# Wrapper to export AWS CLI credentials for terraform
+# The S3 backend doesn't support AWS CLI's login credential type directly
+
+eval "$(aws configure export-credentials --format env)"
+terraform "$@"
