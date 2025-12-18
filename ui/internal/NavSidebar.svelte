@@ -17,10 +17,11 @@
   $: normalizedFiles = (files || [])
     .map((file) => file.replace(/^\.\//, '').replace(/\\/g, '/'))
 
-  $: normalizedCurrent = deriveCurrentFile()
+  // eslint-disable-next-line no-unused-vars
+  $: normalizedCurrent = deriveCurrentFile(currentFile, normalizedFiles, baseRoute)
   $: currentRoute = normalizedCurrent ? pathToRoute(normalizedCurrent) : '/'
 
-  function deriveCurrentFile () {
+  function deriveCurrentFile (_currentFile, _normalizedFiles, _baseRoute) {
     let fromProp = normalizeFilePath(currentFile)
     let route = getLocationRoute()
     if (route && normalizedFiles) {
