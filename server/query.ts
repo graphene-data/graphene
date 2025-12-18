@@ -10,6 +10,7 @@ interface QueryBody {
   sql?: string
   gsql?: string
   params?: Record<string, any>
+  repoId: string
 }
 
 export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
@@ -23,7 +24,7 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
 
   // We can proxy either sql or gsql. If it's gsql, we need to load up the workspace to render out the sql
   if (body.gsql) {
-    let repo = await getDb().select().from(repos).where(and(eq(repos.orgId, req.auth.orgId), eq(repos.isDefault, true))).get()
+    let repo = await getDb().select().from(repos).where(and(eq(repos.id, body.repoId), eq(repos.orgId, req.auth.orgId))).get()
     if (!repo) return reply.code(404).send({error: 'No repo configured'})
 
     // Load up all gsql files into a graphene workspace

@@ -1,5 +1,6 @@
 <script lang="ts">
-    import {onDestroy} from 'svelte'
+  import {onDestroy} from 'svelte'
+  import {go} from '../router.ts'
 
   export let slug: string
 
@@ -9,18 +10,26 @@
   let loading = true
   let error = ''
 
-  const toModulePath = (target: string) => {
-    if (!target || target === '/') return '/index'
-    return target.replace(/\/*$/, '') || '/index'
-  }
-
   const loadPage = async (target: string) => {
     loading = true
     error = ''
     try {
-      let modulePath = toModulePath(target)
-      let mod = await import(/* @vite-ignore */ `/_api/pages${modulePath}`)
-      // content = mod.default
+      let pagePath = target.replace(/\/*$/, '') || '/'
+      let res = await fetch(`/_api/pages${pagePath}`)
+      if (!res.ok) {
+        let body = await res.json()
+        throw new Error(body.error || 'Failed to load page')
+      }
+
+      let contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        let body = await res.json()
+        if (body.redirect) return go(body.redirect)
+      }
+
+      let code = contentType.includes('json') ? '' : await res.text()
+      let blob = new Blob([code], {type: 'text/javascript'})
+      let mod = await import(/* @vite-ignore */ URL.createObjectURL(blob))
       instance = new mod.default({target: container})
     } catch (cause) {
       console.error(cause)

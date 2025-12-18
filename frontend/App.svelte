@@ -3,6 +3,7 @@
   import Login from './routes/Login.svelte'
   import Authenticate from './routes/Authenticate.svelte'
   import PageView from './routes/PageView.svelte'
+  import Settings from './routes/Settings.svelte'
   import {route, go} from './router.ts'
 
   $: {
@@ -19,6 +20,8 @@
     <Login />
   {:else if $route === '/authenticate'}
     <Authenticate />
+  {:else if $route.startsWith('/settings')}
+    <Settings />
   {:else}
     <PageView slug={$route} />
   {/if}

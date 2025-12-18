@@ -24,7 +24,7 @@ describe('auth', () => {
     await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
     await loginShell.getByRole('button', {name: /continue/i}).click()
 
-    await expect(page).toHaveURL(`${cloud.url}/`)
+    await expect(page).toHaveURL(`${cloud.url}/flights`)
     await expect(page.locator('h1', {hasText: 'Flight Analytics Dashboard'})).toBeVisible()
   })
 
@@ -82,7 +82,7 @@ test('validates subdomains', async ({page, cloud}) => {
   setBaseDomainOverride('localhost')
   await getDb().update(orgs).set({slug: 'dev'})
 
-  let r1 = await page.request.get(`${cloud.url}/_api/pages/index`, {
+  let r1 = await page.request.get(`${cloud.url}/_api/pages/flights/index`, {
     headers: {host: 'wrong.localhost'},
   })
   expect(r1.status()).toBe(403)
@@ -90,7 +90,7 @@ test('validates subdomains', async ({page, cloud}) => {
   expect(body.error).toBe('Incorrect subdomain')
   expect(body.correctDomain).toBe('dev.localhost')
 
-  let r2 = await page.request.get(`${cloud.url}/_api/pages/index`, {
+  let r2 = await page.request.get(`${cloud.url}/_api/pages/flights/index`, {
     headers: {host: 'dev.localhost'},
   })
   expect(r2.status()).toBe(200)

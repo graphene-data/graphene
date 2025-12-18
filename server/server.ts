@@ -5,6 +5,7 @@ import staticPlugin from '@fastify/static'
 import {type AuthContext, authTokenExchange} from './auth.ts'
 import {renderPage} from './pages.ts'
 import {proxyQuery} from './query.ts'
+import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
 import {fileURLToPath} from 'url'
 import path from 'path'
 
@@ -17,6 +18,14 @@ export function createServer (serveStatic: boolean) {
   app.get('/_api/pages/*', renderPage)
   app.post('/_api/query', proxyQuery)
   app.post('/_api/oauth2/token', authTokenExchange)
+
+  // GitHub App integration
+  app.get('/_api/github/install', githubInstall)
+  app.get('/_api/github/setup', githubSetup)
+  app.get('/_api/github/repos', listAvailableRepos)
+  app.post('/_api/github/repos', addRepo)
+  app.delete('/_api/repos/:id', removeRepo)
+  app.post('/_api/github/webhook', githubWebhook)
 
   if (serveStatic) {
     let root = path.resolve(fileURLToPath(import.meta.url), '../../dist')

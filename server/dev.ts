@@ -36,6 +36,17 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
   setAuthOverride(realAuth ? null : {userId, orgId})
   process.env.VITE_STYTCH_USE_MOCK = realAuth ? '' : 'true'
 
+  if (process.env.DEV_GITHUB_APP) {
+    let {SmeeClient} = await import('smee-client')
+    new SmeeClient({source: 'https://smee.io/MkHzlt6xKj6dh9Sm', target: `http://localhost:${port}/_api/github/webhook`})
+  }
+  process.env.GITHUB_APP_SLUG = 'graphene-data-dev'
+  process.env.GITHUB_WEBHOOK_SECRET = 'devsecret'
+  process.env.GITHUB_APP_ID = '2484649'
+  process.env.GITHUB_APP_CLIENT_ID = 'Iv23liKKZeEBautjO5bE'
+  process.env.GITHUB_APP_CLIENT_SECRET = '84b80125dd489226f882b35692ecaa14e22ff795'
+  process.env.VITE_GITHUB_APP_SLUG = 'graphene-data-dev'
+
   let vite = await createViteServer({
     root: path.join(rootDir, 'frontend'),
     configFile: path.join(rootDir, 'frontend/vite.config.ts'),
@@ -110,8 +121,8 @@ async function seedDatabase (connectionType: SeedType) {
   }
 
   let repoSlug = connectionType == 'bigquery' ? 'ecomm' : 'flights'
-  let gitUrl = `https://github.com/graphene-data/examples/${repoSlug}`
-  await db.insert(schema.repos).values({id: repoId, slug: repoSlug, orgId, gitUrl, isDefault: true}).run()
+  let url = `https://github.com/graphene-data/examples/${repoSlug}`
+  await db.insert(schema.repos).values({id: repoId, slug: repoSlug, orgId, url}).run()
 
   // load our example files into the database
   let exampleRoot = path.resolve(rootDir, '../core/examples', repoSlug)
