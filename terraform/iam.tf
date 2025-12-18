@@ -103,7 +103,10 @@ resource "aws_iam_role_policy" "apprunner_instance_policy" {
         Action   = ["secretsmanager:GetSecretValue"]
         Resource = [
           aws_secretsmanager_secret.stytch_secret.arn,
-          aws_secretsmanager_secret.turso_auth_token.arn
+          aws_secretsmanager_secret.turso_auth_token.arn,
+          aws_secretsmanager_secret.github_webhook_secret.arn,
+          aws_secretsmanager_secret.github_app_client_secret.arn,
+          aws_secretsmanager_secret.github_app_private_key.arn
         ]
       },
       {

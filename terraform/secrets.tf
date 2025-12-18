@@ -20,3 +20,33 @@ resource "aws_secretsmanager_secret_version" "stytch_secret" {
   secret_id     = aws_secretsmanager_secret.stytch_secret.id
   secret_string = stytch_secret.prod.secret
 }
+
+resource "aws_secretsmanager_secret" "github_webhook_secret" {
+  name        = "GITHUB_WEBHOOK_SECRET"
+  description = "GitHub webhook secret"
+}
+
+resource "aws_secretsmanager_secret_version" "github_webhook_secret" {
+  secret_id     = aws_secretsmanager_secret.github_webhook_secret.id
+  secret_string = var.github_webhook_secret
+}
+
+resource "aws_secretsmanager_secret" "github_app_client_secret" {
+  name        = "GITHUB_APP_CLIENT_SECRET"
+  description = "GitHub App client secret"
+}
+
+resource "aws_secretsmanager_secret_version" "github_app_client_secret" {
+  secret_id     = aws_secretsmanager_secret.github_app_client_secret.id
+  secret_string = var.github_app_client_secret
+}
+
+resource "aws_secretsmanager_secret" "github_app_private_key" {
+  name        = "GITHUB_APP_PRIVATE_KEY"
+  description = "GitHub App private key"
+}
+
+resource "aws_secretsmanager_secret_version" "github_app_private_key" {
+  secret_id     = aws_secretsmanager_secret.github_app_private_key.id
+  secret_string = var.github_app_private_key
+}

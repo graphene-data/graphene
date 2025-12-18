@@ -1,23 +1,14 @@
 # Graphene Cloud Terraform
 
-### Configure Secrets
+### Setup for local dev
+Link the secrets into the worktree: `ln -s ../../terraform.tfvars terraform.tfvars`
+Install the aws CLI and `aws login`
 
-Create `terraform.tfvars` (gitignored) with your secret values:
-
-```hcl
-turso_auth_token = ""
-stytch_workspace_key_id   = ""
-stytch_workspace_key_secret = ""
-```
-
-### Running terraform
-`aws login` to connect to the correct aws account
-`./tf` script runs terraform using your aws credentials
-
+Use the `./tf` script to run terraform, as it loads in the aws credentials for you.
 
 ### Bootstrap S3 Backend for terraform state (one-time)
 
-Create the S3 bucket and DynamoDB table for state storage when creating a new account. Only needs to be done once.
+Create the S3 bucket for state storage when creating a new account. Only needs to be done once.
 
 ```bash
 # Create bucket (name must be globally unique)

@@ -12,14 +12,20 @@ resource "aws_apprunner_service" "cloud" {
         port = "3000"
 
         runtime_environment_variables = {
-          STYTCH_DOMAIN      = var.stytch_prod_domain
-          STYTCH_PROJECT_ID  = var.stytch_prod_project_id
-          TURSO_DATABASE_URL = var.turso_database_url
+          STYTCH_DOMAIN        = var.stytch_prod_domain
+          STYTCH_PROJECT_ID    = var.stytch_prod_project_id
+          TURSO_DATABASE_URL   = var.turso_database_url
+          GITHUB_APP_SLUG      = var.github_app_slug
+          GITHUB_APP_ID        = var.github_app_id
+          GITHUB_APP_CLIENT_ID = var.github_app_client_id
         }
 
         runtime_environment_secrets = {
-          STYTCH_SECRET    = aws_secretsmanager_secret.stytch_secret.arn
-          TURSO_AUTH_TOKEN = aws_secretsmanager_secret.turso_auth_token.arn
+          STYTCH_SECRET            = aws_secretsmanager_secret.stytch_secret.arn
+          TURSO_AUTH_TOKEN         = aws_secretsmanager_secret.turso_auth_token.arn
+          GITHUB_WEBHOOK_SECRET    = aws_secretsmanager_secret.github_webhook_secret.arn
+          GITHUB_APP_CLIENT_SECRET = aws_secretsmanager_secret.github_app_client_secret.arn
+          GITHUB_APP_PRIVATE_KEY   = aws_secretsmanager_secret.github_app_private_key.arn
         }
       }
 
