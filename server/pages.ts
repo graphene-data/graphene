@@ -7,6 +7,31 @@ import {compile as svelteCompile} from 'svelte/compiler'
 import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 
+const defaultIgnoredFiles = ['agents.md', 'claude.md']
+
+export async function listNavFiles (req: FastifyRequest, reply: FastifyReply) {
+  await auth(req, reply)
+
+  let repoSlug = (req.params as any)['repoSlug']
+  let repo = await getDb().select({id: repos.id}).from(repos).where(and(
+    eq(repos.orgId, req.auth.orgId),
+    eq(repos.slug, repoSlug),
+  )).get()
+  if (!repo) return reply.send([])
+
+  let pages = await getDb().select({path: files.path}).from(files).where(
+    and(
+      eq(files.repoId, repo.id),
+      eq(files.extension, 'md'),
+    ),
+  ).all()
+
+  let paths = pages
+    .map(p => `${p.path}.md`)
+    .filter(p => !defaultIgnoredFiles.includes(p.split('/').pop()?.toLowerCase() || ''))
+  reply.send(paths)
+}
+
 export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
 

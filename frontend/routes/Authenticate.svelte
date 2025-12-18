@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount} from 'svelte'
-  import {authClient} from '../authClient'
+  import {authClient} from '../authClient.ts'
 
   onMount(() => {
     authClient().mountIdentityProvider({elementId: '#idp'})

@@ -13,6 +13,10 @@
   const loadPage = async (target: string) => {
     loading = true
     error = ''
+    instance?.$destroy()
+    instance = null
+    // eslint-disable-next-line svelte/no-dom-manipulating -- clearing container for dynamic svelte component mount
+    if (container) container.innerHTML = ''
     try {
       let pagePath = target.replace(/\/*$/, '') || '/'
       let res = await fetch(`/_api/pages${pagePath}`)
