@@ -1,7 +1,7 @@
 import {getErrors} from './internal/telemetry.ts'
 import './app.css'
 import {isLoading} from './internal/queryEngine.ts'
-import NavSidebar from './internal/NavSidebar.svelte'
+import NavSidebar from './internal/NavSidebarHMR.svelte'
 
 import Area from './components/Area.svelte'
 import AreaChart from './components/AreaChart.svelte'

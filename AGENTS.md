@@ -33,7 +33,7 @@ NEVER run `pnpm install` or `pnpm add`. If the env seems broken, summarize what 
 For any test with UI, capture screenshots. They are always written to tests/snapshots, and it's prudent to view them after large changes to ensure the UI still looks right.
 Use `howDoesMalloy` to view the Malloy IR used for a given Malloy query.
 When testing AI features, always use a mock rather than hitting an API.
-Never ask for permission to run tests or update screenshots. Just do it.
+
 
 # Code style
 Our primary stylistic goal is "high-level readability". We want to easily skim a file or function and get a sense of what it does. We care less about the tactical details of how individual lines of code work. There are a few concrete guidlines we usually follow in service of this:

@@ -48,6 +48,7 @@ export default [
       'svelte/no-immutable-reactive-statements': 'off',
       'svelte/no-reactive-reassign': 'off',
       'svelte/require-event-dispatcher-types': 'off',
+      'svelte/no-unused-svelte-ignore': 'off', // svelte-check handles this differently
     },
   },
   {

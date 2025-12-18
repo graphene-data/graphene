@@ -32,7 +32,7 @@ export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles'> & {
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
-// Used by tests
+
 export function setConfig (cfg: ConfigInput) {
   let dialect = cfg.dialect || 'duckdb'
   if (cfg.bigquery) dialect = 'bigquery'
