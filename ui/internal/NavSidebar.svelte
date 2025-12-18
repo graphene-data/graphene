@@ -1,7 +1,12 @@
 <script>
-  import navData from 'virtual:nav'
-
+  /** @type {string} */
   export let currentFile = ''
+  /** @type {string[]} */
+  export let files = []
+  /** @type {((href: string) => void) | undefined} */
+  export let onNavigate = undefined
+  /** @type {string} */
+  export let baseRoute = ''
 
   let tree = []
   let flatNodes = []
@@ -9,7 +14,7 @@
   let treeSignature = ''
   let lastCurrent = ''
 
-  $: normalizedFiles = (navData || [])
+  $: normalizedFiles = (files || [])
     .map((file) => file.replace(/^\.\//, '').replace(/\\/g, '/'))
 
   $: normalizedCurrent = deriveCurrentFile()
@@ -18,7 +23,7 @@
   function deriveCurrentFile () {
     let fromProp = normalizeFilePath(currentFile)
     let route = getLocationRoute()
-    if (route) {
+    if (route && normalizedFiles) {
       let match = normalizedFiles.find((file) => pathToRoute(file) === route)
       if (match) return match
     }
@@ -190,8 +195,16 @@
 
   function pathToRoute (path) {
     let clean = path.replace(/\.md$/, '')
-    if (!clean || clean === 'index') return '/'
-    return '/' + clean
+    let prefix = baseRoute ? '/' + baseRoute : ''
+    if (!clean || clean === 'index') return prefix || '/'
+    return prefix + '/' + clean
+  }
+
+  function handleLinkClick (event, href) {
+    if (!onNavigate) return
+    if (href.startsWith('http') || href.startsWith('//')) return
+    event.preventDefault()
+    onNavigate(href)
   }
 </script>
 
@@ -221,6 +234,7 @@
               href={node.route}
               class={node.route === currentRoute ? 'active' : ''}
               aria-current={node.route === currentRoute ? 'page' : undefined}
+              on:click={(e) => handleLinkClick(e, node.route)}
             >
               {node.label}
             </a>
@@ -235,6 +249,7 @@
           href={node.route}
           class={node.path === normalizedCurrent ? 'active' : ''}
           aria-current={node.path === normalizedCurrent ? 'page' : undefined}
+          on:click={(e) => handleLinkClick(e, node.route)}
         >
           <span>{node.label}</span>
         </a>
