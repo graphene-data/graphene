@@ -25,7 +25,7 @@ export const connections = sqliteTable('connections', {
   kind: text('kind').notNull(),
   namespace: text('namespace'),
   configJson: text('configJson').notNull(),
-  updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).$defaultFn(() => Date.now()),
+  updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).$defaultFn(() => new Date()),
 }, (table) => ({
   byLabel: uniqueIndex('connections_org_label_idx').on(table.orgId, table.label),
 }))
@@ -34,7 +34,7 @@ export const vcsInstallations = sqliteTable('vcs_installations', {
   id: text('id').notNull(),
   orgId: text('orgId').notNull().references(() => orgs.id, {onDelete: 'cascade'}),
   type: text('type').notNull(),  // 'github', extensible to 'gitlab', 'bitbucket', etc.
-  updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).$defaultFn(() => Date.now()),
+  updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).$defaultFn(() => new Date()),
   updatedBy: text('updatedBy'),
 }, (table) => ({
   byOrg: uniqueIndex('vcs_installations_org_idx').on(table.orgId, table.id),
@@ -51,7 +51,7 @@ export const repos = sqliteTable('repos', {
   lastSyncedAt: integer('lastSyncedAt', {mode: 'timestamp_ms'}),
   lastSyncCommit: text('lastSyncCommit'),
   syncResult: text('syncResult'),  // 'success' or error message
-  updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).$defaultFn(() => Date.now()),
+  updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).$defaultFn(() => new Date()),
   updatedBy: text('updatedBy'),
 }, (table) => ({
   orgIdx: index('repos_org_idx').on(table.orgId),
@@ -65,7 +65,7 @@ export const files = sqliteTable('files', {
   extension: text('extension').notNull(),
   title: text('title'),
   content: text('content').notNull(),
-  updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).$defaultFn(() => Date.now()),
+  updatedAt: integer('updatedAt', {mode: 'timestamp_ms'}).$defaultFn(() => new Date()),
 }, (table) => ({
   orgIdx: index('files_repo_idx').on(table.repoId),
   byPath: uniqueIndex('files_repo_path_idx').on(table.repoId, table.path),
