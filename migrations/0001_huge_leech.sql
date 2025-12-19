@@ -15,6 +15,6 @@ ALTER TABLE `repos` ADD `vcsRepoId` text;--> statement-breakpoint
 ALTER TABLE `repos` ADD `lastSyncedAt` integer;--> statement-breakpoint
 ALTER TABLE `repos` ADD `lastSyncCommit` text;--> statement-breakpoint
 ALTER TABLE `repos` ADD `syncResult` text;--> statement-breakpoint
-ALTER TABLE `repos` ADD `updatedAt` integer DEFAULT (cast((julianday('now') - 2440587.5)*86400000 as integer));--> statement-breakpoint
+ALTER TABLE `repos` ADD `updatedAt` integer;--> statement-breakpoint
 ALTER TABLE `repos` ADD `updatedBy` text;--> statement-breakpoint
 ALTER TABLE `repos` DROP COLUMN `isDefault`;
