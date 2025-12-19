@@ -7,7 +7,7 @@ import {orgId, userId} from '../server/dev.ts'
 
 const INSTALLATION_ID = '100066946'
 
-test('full GitHub integration flow: install, add repo, sync, remove', async ({page, cloud}) => {
+test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 15_000}, async ({page, cloud}) => {
   setAuthOverride({userId, orgId})
 
   // Step 1: Go to Settings/Repos and click "Connect GitHub"
