@@ -17,7 +17,7 @@
   $: normalizedFiles = (files || [])
     .map((file) => file.replace(/^\.\//, '').replace(/\\/g, '/'))
 
-  // eslint-disable-next-line no-unused-vars
+
   $: normalizedCurrent = deriveCurrentFile(currentFile, normalizedFiles, baseRoute)
   $: currentRoute = normalizedCurrent ? pathToRoute(normalizedCurrent) : '/'
 
