@@ -54,7 +54,8 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
     let subdomain = host.replace('.' + BASE_DOMAIN_FOR_MULTITENTANT, '')
     let org = await getDb().select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, req.auth.orgId)).get()
     if (!org) throw new Error('Missing org for logged in user')
-    if (org.slug !== subdomain) {
+
+    if (org.slug !== subdomain && !['app', 'login'].includes(subdomain)) {
       reply.code(403).send({error: 'Incorrect subdomain', correctDomain: `${org?.slug}.${BASE_DOMAIN_FOR_MULTITENTANT}`})
       throw new Error('Unauthorized')
     }
