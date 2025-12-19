@@ -51,6 +51,8 @@ jobs:
           STYTCH_SECRET: ${{ secrets.STYTCH_TEST_SECRET }}
           STYTCH_DOMAIN: https://futuristic-coil-3570.customers.stytch.dev
           VITE_STYTCH_PUBLIC_TOKEN: public-token-test-340ad761-ec19-47c0-b53e-094d5f65bd3a
+          CI_GITHUB_APP_PRIVATE_KEY: ${{ secrets.CI_GITHUB_APP_PRIVATE_KEY }}
+          CI_GITHUB_APP_CLIENT_SECRET: ${{ secrets.CI_GITHUB_APP_CLIENT_SECRET }}
 
   deploy:
     runs-on: ubuntu-latest
