@@ -11,9 +11,9 @@ let app: App | null = null
 function getGitHubApp () {
   if (app) return app
   let appId = process.env.GITHUB_APP_ID
-  let privateKey = process.env.GITHUB_APP_PRIVATE_KEY
   let clientId = process.env.GITHUB_APP_CLIENT_ID
-  let clientSecret = process.env.GITHUB_APP_CLIENT_SECRET
+  let privateKey = process.env.GITHUB_APP_PRIVATE_KEY || process.env.CI_GITHUB_APP_PRIVATE_KEY
+  let clientSecret = process.env.GITHUB_APP_CLIENT_SECRET || process.env.CI_GITHUB_APP_CLIENT_SECRET
   if (!appId || !privateKey || !clientId || !clientSecret) throw new Error('GitHub App credentials not configured')
   app = new App({appId, privateKey, oauth: {clientId, clientSecret}, Octokit: Octokit.defaults({})})
   return app

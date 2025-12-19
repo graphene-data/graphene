@@ -44,7 +44,6 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
   process.env.GITHUB_WEBHOOK_SECRET = 'devsecret'
   process.env.GITHUB_APP_ID = '2484649'
   process.env.GITHUB_APP_CLIENT_ID = 'Iv23liKKZeEBautjO5bE'
-  process.env.GITHUB_APP_CLIENT_SECRET = '84b80125dd489226f882b35692ecaa14e22ff795'
   process.env.VITE_GITHUB_APP_SLUG = 'graphene-data-dev'
 
   let vite = await createViteServer({
