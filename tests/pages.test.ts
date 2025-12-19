@@ -5,15 +5,16 @@ describe('duckdb', () => {
   test('renders the flights overview page', async ({page, cloud}) => {
     await page.goto(cloud.url)
     await expect(page.locator('h1', {hasText: 'Flight Analytics Dashboard'})).toBeVisible()
+    await expect(page).screenshot('flights-overview')
   })
 
   test('shows navigation sidebar with links to pages', async ({page, cloud}) => {
     await page.goto(cloud.url)
-    let sidebar = page.locator('nav.sidebar')
-    await expect(sidebar).toBeVisible()
-    await expect(sidebar.locator('a', {hasText: 'Delays'})).toBeVisible()
+    let nav = page.locator('nav')
+    await expect(nav).toBeVisible()
+    await expect(nav.locator('a', {hasText: 'Delays'})).toBeVisible()
     // AGENTS.md is in defaultIgnoredFiles so should not appear
-    await expect(sidebar.locator('a', {hasText: 'Agents'})).not.toBeVisible()
+    await expect(nav.locator('a', {hasText: 'Agents'})).not.toBeVisible()
   })
 
   test('navigates to another page via sidebar', async ({page, cloud}) => {
@@ -21,7 +22,7 @@ describe('duckdb', () => {
     expectConsoleError(page, /was created with unknown prop/, true)
     expectConsoleError(page, /ECharts.*has been disposed/, true)
     await page.goto(cloud.url)
-    await page.locator('nav.sidebar').locator('a', {hasText: 'Delays'}).click()
+    await page.locator('nav').locator('a', {hasText: 'Delays'}).click()
     await expect(page).toHaveURL(/\/delays$/)
     await expect(page.locator('h1', {hasText: 'Carrier Delay Deep-Dive'})).toBeVisible()
   })

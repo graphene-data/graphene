@@ -1,14 +1,30 @@
 <script lang="ts">
   import {onDestroy} from 'svelte'
   import {go} from '../router.ts'
+  import NavSidebar from '../../../core/ui/internal/NavSidebar.svelte'
 
   export let slug: string
 
-  let content
   let container: HTMLElement
   let instance: any
   let loading = true
   let error = ''
+  let navFiles: string[] = []
+
+  $: repoSlug = slug.split('/')[1] || ''
+
+  $: if (repoSlug) fetchNavFiles(repoSlug)
+
+  async function fetchNavFiles (slug: string) {
+    try {
+      let res = await fetch(`/_api/nav/${slug}`)
+      if (res.ok) navFiles = await res.json()
+      else navFiles = []
+    } catch (e) {
+      console.error('Failed to fetch nav files:', e)
+      navFiles = []
+    }
+  }
 
   const loadPage = async (target: string) => {
     loading = true
@@ -38,7 +54,6 @@
     } catch (cause) {
       console.error(cause)
       error = cause instanceof Error ? cause.message : 'Failed to load page.'
-      content = null
     } finally {
       loading = false
     }
@@ -56,25 +71,20 @@
   })
 </script>
 
-<section class="page">
-  {#if loading}
-    <p class="muted">Loading…</p>
-  {:else if error}
-    <p class="alert">{error}</p>
-  {:else}
-    <svelte:component this={content} />
+{#if navFiles.length > 1}
+  <nav>
+    <NavSidebar files={navFiles} onNavigate={go} baseRoute={repoSlug} />
+  </nav>
+{/if}
+
+<main>
+  {#if loading}<p class="muted">Loading…</p>
+  {:else if error}<p class="alert">{error}</p>
   {/if}
   <div bind:this={container} class:hidden={loading || error}></div>
-</section>
+</main>
 
 <style>
-  .page {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 28px;
-    border-radius: 18px;
-    box-shadow: 0 24px 44px rgba(0, 0, 0, 0.25);
-  }
-
   .muted {
     color: rgba(255, 255, 255, 0.65);
   }
@@ -84,30 +94,5 @@
     border-radius: 8px;
     background: rgba(255, 83, 83, 0.12);
     border: 1px solid rgba(255, 83, 83, 0.35);
-  }
-
-  .page :global(h1) {
-    margin: 0 0 12px;
-    font-size: 26px;
-  }
-
-  .page :global(.meta) {
-    margin: 0 0 16px;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.55);
-  }
-
-  .page :global(pre) {
-    margin: 0;
-    white-space: pre-wrap;
-    word-break: break-word;
-    line-height: 1.5;
-    font-size: 15px;
-  }
-
-  @media (max-width: 720px) {
-    .page {
-      padding: 22px;
-    }
   }
 </style>

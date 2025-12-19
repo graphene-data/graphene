@@ -3,44 +3,47 @@
   import {go} from '../router.ts'
   import {authClient, session, AuthFlowType, StytchEventType} from '../authClient.ts'
 
-  // This uses Stytch's built-in UI.
-  // It's smart enough to load the right state based on url params, so having all redirectURLs point to `<origin>/login` is sufficient.
+  export let mode: 'login' | 'authenticate' = 'login'
 
   onMount(() => {
     let stytch = authClient()
 
-    stytch.mount({
-      elementId: '#stytch-login',
-      callbacks: {
-        onEvent: e => {
-          if (e.type == StytchEventType.AuthenticateFlowComplete) {
-            let stytchSession = stytch.session.getSync()
-            session.set(stytchSession)
+    if (mode === 'authenticate') {
+      stytch.mountIdentityProvider({elementId: '#stytch-login'})
+    } else {
+      stytch.mount({
+        elementId: '#stytch-login',
+        callbacks: {
+          onEvent: e => {
+            if (e.type == StytchEventType.AuthenticateFlowComplete) {
+              let stytchSession = stytch.session.getSync()
+              session.set(stytchSession)
 
-            let orgSlug = stytchSession?.organization_slug
-            let url = new URL(window.location.href)
-            let next = url.searchParams.get('next') || '/'
+              let orgSlug = stytchSession?.organization_slug
+              let url = new URL(window.location.href)
+              let next = url.searchParams.get('next') || '/'
 
-            if (orgSlug && !window.location.hostname.includes('localhost')) {
-              window.location.href = `https://${orgSlug}.graphenedata.com${next}`
-            } else {
-              go(next)
+              if (orgSlug && !window.location.hostname.includes('localhost')) {
+                window.location.href = `https://${orgSlug}.graphenedata.com${next}`
+              } else {
+                go(next)
+              }
             }
-          }
+          },
         },
-      },
-      config: {
-        authFlowType: AuthFlowType.Discovery,
-        sessionOptions: {sessionDurationMinutes: 60 * 24 * 30},
-        products: ['passwords'],
-        passwordOptions: {},
-        directLoginForSingleMembership: {
-          status: true,
-          ignoreInvites: true,
-          ignoreJitProvisioning: true,
+        config: {
+          authFlowType: AuthFlowType.Discovery,
+          sessionOptions: {sessionDurationMinutes: 60 * 24 * 30},
+          products: ['passwords'],
+          passwordOptions: {},
+          directLoginForSingleMembership: {
+            status: true,
+            ignoreInvites: true,
+            ignoreJitProvisioning: true,
+          },
         },
-      },
-    })
+      })
+    }
   })
 </script>
 
@@ -53,6 +56,7 @@
     width: 100%;
     display: flex;
     justify-content: center;
+    padding-top: 120px;
   }
 
   .login-shell {

@@ -7,7 +7,7 @@
   ]
 </script>
 
-<div class="settings-layout">
+<main>
   <aside class="sidebar">
     <h1>Settings</h1>
     <nav>
@@ -23,23 +23,23 @@
       {/each}
     </nav>
   </aside>
-  <main class="content">
+  <section class="content">
     {#if $route === '/settings/repos'}
       <Repos />
     {/if}
-  </main>
-</div>
+  </section>
+</main>
 
 <style>
-  .settings-layout {
+  main {
     display: flex;
     gap: 48px;
-    min-height: 400px;
   }
 
   .sidebar {
     width: 200px;
     flex-shrink: 0;
+    padding-top: 24px;
   }
 
   h1 {
@@ -75,5 +75,6 @@
   .content {
     flex: 1;
     min-width: 0;
+    padding-top: 24px;
   }
 </style>

@@ -20,4 +20,4 @@ graphene.components = {...(graphene.components ?? {}), ...components} as any
 graphene.svelte = svelteInternal
 window.$GRAPHENE = graphene
 
-new App({target: document.getElementById('app')!})
+new App({target: document.body})
