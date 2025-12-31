@@ -11,8 +11,9 @@
     "allowImportingTsExtensions": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
-    "types": ["node"]
+    "preserveSymlinks": true,
+    "types": ["node"],
   },
   "include": ["**/*.ts", "**/*.js", "**/*.svelte"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
 }

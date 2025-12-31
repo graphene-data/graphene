@@ -1,4 +1,4 @@
-import Fastify, {type FastifyPluginAsync} from 'fastify'
+import fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import staticPlugin from '@fastify/static'
 
@@ -10,8 +10,8 @@ import {fileURLToPath} from 'url'
 import path from 'path'
 
 export function createServer (serveStatic: boolean) {
-  let app = Fastify({logger: {level: 'warn'}})
-  app.register(cookie as unknown as FastifyPluginAsync, {})
+  let app = fastify({logger: {level: 'warn'}})
+  app.register(cookie, {})
 
   app.decorateRequest('auth', null as unknown as AuthContext)
 
