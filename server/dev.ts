@@ -36,12 +36,13 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
   setAuthOverride(realAuth ? null : {userId, orgId})
   process.env.VITE_STYTCH_USE_MOCK = realAuth ? '' : 'true'
 
-  if (process.env.DEV_GITHUB_APP) {
+  if (process.env.NODE_ENV != 'test') {
     let {SmeeClient} = await import('smee-client')
-    new SmeeClient({source: 'https://smee.io/MkHzlt6xKj6dh9Sm', target: `http://localhost:${port}/_api/github/webhook`})
+    let smee = new SmeeClient({source: 'https://smee.io/MkHzlt6xKj6dh9Sm', target: `http://localhost:${port}/_api/github/webhook`})
+    smee.start()
   }
   process.env.GITHUB_APP_SLUG = 'graphene-data-dev'
-  process.env.GITHUB_WEBHOOK_SECRET = 'devsecret'
+  process.env.GITHUB_APP_WEBHOOK_SECRET = 'devsecret'
   process.env.GITHUB_APP_ID = '2484649'
   process.env.GITHUB_APP_CLIENT_ID = 'Iv23liKKZeEBautjO5bE'
   process.env.VITE_GITHUB_APP_SLUG = 'graphene-data-dev'
@@ -110,21 +111,22 @@ async function seedDatabase (connectionType: SeedType) {
     }
 
     let namespace = 'bigquery-public-data.thelook_ecommerce'
-    await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson, namespace})
+    await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson, namespace}).run()
+    // NB this id is the current install of the `graphene-data-dev` github app into the `github.com/grant-gh-test/ecomm` repo. If you re-install, update the vcsInstallationId
+    let vcsInstallationId = '101959947'
+    await db.insert(schema.vcsInstallations).values({orgId, id: vcsInstallationId, type: 'github'}).run()
+    await db.insert(schema.repos).values({orgId, id: repoId, slug: 'ecomm', url: 'https://github.com/grant-gh-test/ecomm.git', vcsInstallationId, vcsRepoId: '1118425707'}).run()
   }
 
   if (connectionType == 'duckdb') {
     let dbPath = path.resolve(rootDir, '../core/examples/flights/flights.duckdb')
     if (!fs.existsSync(dbPath)) throw new Error(`Expected DuckDB database at ${dbPath}`)
-    await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: JSON.stringify({dbPath})})
+    await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: JSON.stringify({dbPath})}).run()
+    await db.insert(schema.repos).values({id: repoId, slug: 'flights', orgId, url: 'https://github.com/graphene-data/examples/${repoSlug}'}).run()
   }
 
-  let repoSlug = connectionType == 'bigquery' ? 'ecomm' : 'flights'
-  let url = `https://github.com/graphene-data/examples/${repoSlug}`
-  await db.insert(schema.repos).values({id: repoId, slug: repoSlug, orgId, url}).run()
-
   // load our example files into the database
-  let exampleRoot = path.resolve(rootDir, '../core/examples', repoSlug)
+  let exampleRoot = path.resolve(rootDir, '../core/examples', connectionType == 'bigquery' ? 'ecomm' : 'flights')
   for (let filePath of globSync('**/*.{md,gsql}', {cwd: exampleRoot})) {
     let [relative, extension] = filePath.split('.')
     let content = fs.readFileSync(path.join(exampleRoot, filePath), 'utf-8')

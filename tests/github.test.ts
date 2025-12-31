@@ -5,7 +5,7 @@ import * as schema from '../schema.ts'
 import {eq} from 'drizzle-orm'
 import {orgId, userId} from '../server/dev.ts'
 
-const INSTALLATION_ID = '100066946'
+const INSTALLATION_ID = '101959947'
 
 test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 15_000}, async ({page, cloud}) => {
   setAuthOverride({userId, orgId})
@@ -14,66 +14,44 @@ test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 
   await page.goto(cloud.url + '/settings/repos')
   await expect(page.locator('h1:has-text("Repositories")')).toBeVisible()
   await expect(page.locator('button:has-text("Connect GitHub")')).toBeVisible()
-
   await expect(page).screenshot('01-repos-not-connected')
 
-  // Listen for navigation to GitHub
-  let githubRequest = page.waitForRequest(req => req.url().includes('github.com/apps/'))
+  let githubRequest = page.waitForRequest(req => req.url().includes('github.com/apps/')) // Listen for navigation to GitHub
+  await page.locator('.empty-state button:has-text("Connect GitHub")').click() // Click Connect GitHub - this navigates to the API which redirects to GitHub
 
-  // Click Connect GitHub - this navigates to the API which redirects to GitHub
-  await page.locator('.empty-state button:has-text("Connect GitHub")').click()
-
-  // Wait for the GitHub redirect and capture the URL
-  let request = await githubRequest
+  let request = await githubRequest // Wait for the GitHub redirect and capture the URL
   let githubRedirectUrl = request.url()
 
-  // Verify the redirect URL is correct
-  expect(githubRedirectUrl).toContain('github.com/apps/')
+  expect(githubRedirectUrl).toContain('github.com/apps/') // Verify the redirect URL is correct
   expect(githubRedirectUrl).toContain('/installations/new')
   expect(githubRedirectUrl).toMatch(/state=[\w]+/)
 
-  // Extract the nonce from the redirect URL
-  let stateMatch = githubRedirectUrl.match(/state=([\w]+)/)
+  let stateMatch = githubRedirectUrl.match(/state=([\w]+)/) // Extract the nonce from the redirect URL
   let nonce = stateMatch![1]
 
   // Step 2: Simulate GitHub redirecting back after user completes installation
-  // The cookie was set by the server, so we reconstruct it with the same nonce
-  await page.context().addCookies([{
+  await page.context().addCookies([{ // The cookie was set by the server, so we reconstruct it with the same nonce
     name: 'github_install_state',
     value: JSON.stringify({nonce, orgId}),
     domain: new URL(cloud.url).hostname,
     path: '/',
   }])
 
-  // Navigate to the setup URL (simulating GitHub's redirect back)
-  await page.goto(cloud.url + `/_api/github/setup?installation_id=${INSTALLATION_ID}&state=${nonce}`)
-
-  // Should redirect to /settings/repos
-  await expect(page).toHaveURL(/\/settings\/repos/)
+  await page.goto(cloud.url + `/_api/github/setup?installation_id=${INSTALLATION_ID}&state=${nonce}`) // Navigate to the setup URL (simulating GitHub's redirect back)
+  await expect(page).toHaveURL(/\/settings\/repos/) // Should redirect to /settings/repos
 
   // Step 3: Should see the ecomm repo from GitHub
   let repoItem = page.locator('.repo-item').filter({hasText: 'grant-gh-test/ecomm'})
   await expect(repoItem).toBeVisible()
-
   await expect(page).screenshot('02-repos-available')
 
-  // Click Add
-  await repoItem.locator('.add-btn').click()
-
-  // Should see configuration form
-  await expect(page.locator('text=Configure grant-gh-test/ecomm')).toBeVisible()
-
-  // Slug should be pre-filled
-  await expect(page.locator('input[placeholder="my-repo"]')).toHaveValue('ecomm')
-
+  await repoItem.locator('.add-btn').click() // Click Add
+  await expect(page.locator('text=Configure grant-gh-test/ecomm')).toBeVisible() // Should see configuration form
+  await expect(page.locator('input[placeholder="my-repo"]')).toHaveValue('ecomm') // Slug should be pre-filled
   await expect(page).screenshot('03-repos-configure')
 
-  // Submit the form
-  await page.locator('button:has-text("Add Repository")').click()
-
-  // Should show Remove button (indicating it's added and synced)
-  await expect(repoItem.locator('.remove-btn')).toBeVisible({timeout: 15000})
-
+  await page.locator('button:has-text("Add Repository")').click() // Submit the form
+  await expect(repoItem.locator('.remove-btn')).toBeVisible({timeout: 15000}) // Should show Remove button (indicating it's added and synced)
   await expect(page).screenshot('04-repos-added')
 
   // Step 4: Verify sync happened in DB
@@ -83,8 +61,7 @@ test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 
   expect(repo!.syncResult).toBe('success')
   expect(repo!.lastSyncedAt).toBeDefined()
 
-  // Check expected files were synced (index.md and models.gsql)
-  let syncedFiles = await db.select().from(schema.files).where(eq(schema.files.repoId, repo!.id)).all()
+  let syncedFiles = await db.select().from(schema.files).where(eq(schema.files.repoId, repo!.id)).all() // Check expected files were synced (index.md and models.gsql)
   expect(syncedFiles).toHaveLength(2)
 
   let paths = syncedFiles.map(f => f.path).sort()
@@ -95,17 +72,12 @@ test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 
 
   // Step 5: Remove the repo
   await repoItem.locator('.remove-btn').click()
-
-  // Should show Add button again
-  await expect(repoItem.locator('.add-btn')).toBeVisible()
-
+  await expect(repoItem.locator('.add-btn')).toBeVisible() // Should show Add button again
   await expect(page).screenshot('05-repos-removed')
 
-  // Verify repo is deleted from DB
   let deletedRepo = await db.select().from(schema.repos).where(eq(schema.repos.slug, 'ecomm')).get()
-  expect(deletedRepo).toBeUndefined()
+  expect(deletedRepo).toBeUndefined() // Verify repo is deleted from DB
 
-  // Files should also be deleted (cascade)
   let remainingFiles = await db.select().from(schema.files).where(eq(schema.files.repoId, repo!.id)).all()
-  expect(remainingFiles).toHaveLength(0)
+  expect(remainingFiles).toHaveLength(0) // Files should also be deleted (cascade)
 })
