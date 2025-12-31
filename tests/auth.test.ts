@@ -3,7 +3,6 @@ import {describe} from 'vitest'
 import {loginPkce} from '../../core/cli/auth.ts'
 import {setConfig} from '../../core/lang/config.ts'
 import {runQuery} from '../../core/cli/connections/index.ts'
-import {setBaseDomainOverride} from '../server/auth.ts'
 import {getDb} from '../server/db.ts'
 import {orgs} from '../schema.ts'
 
@@ -79,7 +78,6 @@ describe('auth', () => {
 })
 
 test('validates subdomains', async ({page, cloud}) => {
-  setBaseDomainOverride('localhost')
   await getDb().update(orgs).set({slug: 'dev'})
 
   let r1 = await page.request.get(`${cloud.url}/_api/pages/flights/index`, {

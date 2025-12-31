@@ -6,7 +6,6 @@ import net from 'net'
 import dotenv from 'dotenv'
 import path from 'path'
 import {assertConsoleErrors, trackerBrowserConsole, expectConsoleError, stopTrackingConsole} from '../../core/ui/tests/browserConsole.ts'
-import {setBaseDomainOverride} from '../server/auth.ts'
 
 dotenv.config({path: path.resolve(import.meta.dirname, '../.env'), quiet: true})
 
@@ -29,7 +28,6 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   // cloud starts BEFORE page so it tears down AFTER page - this ensures the server is still running during assertions
   cloud: async ({realAuth, seedType}, use) => {
     let port = realAuth ? 3121 : await getAvailablePort()
-    setBaseDomainOverride('')
     let handle = await startDevServer({realAuth, port, seedType})
     try {
       await use({url: handle.url})

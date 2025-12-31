@@ -8,13 +8,6 @@ import {PROD, TEST} from './consts.ts'
 
 export type {AuthContext}
 
-let BASE_DOMAIN_FOR_MULTITENTANT = process.env.NODE_ENV == 'prod' ? 'graphenedata.com' : ''
-
-export function setBaseDomainOverride (domain: string) {
-  if (process.env.NODE_ENV !== 'test') return
-  BASE_DOMAIN_FOR_MULTITENTANT = domain
-}
-
 let authOverride: AuthContext | null = null
 export function setAuthOverride (auth: AuthContext | null) {
   if (!TEST) return
@@ -51,13 +44,14 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
 
   // Validate subdomain matches user's org
   let host = (req.hostname || '').split(':')[0]
-  if (BASE_DOMAIN_FOR_MULTITENTANT && host.endsWith(BASE_DOMAIN_FOR_MULTITENTANT)) {
-    let subdomain = host.replace('.' + BASE_DOMAIN_FOR_MULTITENTANT, '')
+  if (PROD || host.includes('.')) {
+    let base = PROD ? '.graphenedata.com' : '.localhost'
+    let subdomain = host.replace(base, '')
     let org = await getDb().select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, req.auth.orgId)).get()
     if (!org) throw new Error('Missing org for logged in user')
 
     if (org.slug !== subdomain && !['app', 'login'].includes(subdomain)) {
-      reply.code(403).send({error: 'Incorrect subdomain', correctDomain: `${org?.slug}.${BASE_DOMAIN_FOR_MULTITENTANT}`})
+      reply.code(403).send({error: 'Incorrect subdomain', correctDomain: `${org?.slug}${base}`})
       throw new Error('Unauthorized')
     }
   }
