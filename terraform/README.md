@@ -1,10 +1,14 @@
 # Graphene Cloud Terraform
 
 ### Setup for local dev
-Link the secrets into the worktree: `ln -s ../../terraform.tfvars terraform.tfvars`
 Install the aws CLI and `aws login`
+Refresh local state to match what's in s3: `./tf init -reconfigure`
 
 Use the `./tf` script to run terraform, as it loads in the aws credentials for you.
+
+### Common commands
+`./tf plan` see what infra changes will result from your code changes
+`./tf apply` apply those changes.
 
 ### Bootstrap S3 Backend for terraform state (one-time)
 

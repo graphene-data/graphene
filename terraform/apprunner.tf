@@ -21,11 +21,11 @@ resource "aws_apprunner_service" "cloud" {
         }
 
         runtime_environment_secrets = {
-          STYTCH_SECRET            = aws_secretsmanager_secret.stytch_secret.arn
-          TURSO_AUTH_TOKEN         = aws_secretsmanager_secret.turso_auth_token.arn
-          GITHUB_WEBHOOK_SECRET    = aws_secretsmanager_secret.github_webhook_secret.arn
-          GITHUB_APP_CLIENT_SECRET = aws_secretsmanager_secret.github_app_client_secret.arn
-          GITHUB_APP_PRIVATE_KEY   = aws_secretsmanager_secret.github_app_private_key.arn
+          STYTCH_SECRET             = aws_secretsmanager_secret.stytch_secret.arn
+          TURSO_AUTH_TOKEN          = aws_secretsmanager_secret.turso_auth_token.arn
+          GITHUB_APP_WEBHOOK_SECRET = aws_secretsmanager_secret.github_webhook_secret.arn
+          GITHUB_APP_CLIENT_SECRET  = aws_secretsmanager_secret.github_app_client_secret.arn
+          GITHUB_APP_PRIVATE_KEY    = aws_secretsmanager_secret.github_app_private_key.arn
         }
       }
 
