@@ -4,6 +4,7 @@ import {B2BClient} from 'stytch'
 import type {AuthContext} from './types.js'
 import {getDb} from './db.ts'
 import {orgs} from '../schema.ts'
+import {PROD, TEST} from './consts.ts'
 
 export type {AuthContext}
 
@@ -16,14 +17,14 @@ export function setBaseDomainOverride (domain: string) {
 
 let authOverride: AuthContext | null = null
 export function setAuthOverride (auth: AuthContext | null) {
-  if (process.env.NODE_ENV !== 'test') return
+  if (!TEST) return
   authOverride = auth
 }
 
 export async function auth (req: FastifyRequest, reply: FastifyReply) {
   (req as any).auth = null
 
-  if (process.env.NODE_ENV === 'test' && authOverride) {
+  if (TEST && authOverride) {
     req.auth = authOverride
   }
 

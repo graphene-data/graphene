@@ -6,6 +6,7 @@ import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
 import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
+import {PROD} from './consts.ts'
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
@@ -67,7 +68,7 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
 
   let compiled = svelteCompile(svelteSource.code, {
     generate: 'dom',
-    dev: process.env.NODE_ENV !== 'production',
+    dev: !PROD,
   })
   let code = rewriteSvelteImports(compiled.js.code, repo.id)
 

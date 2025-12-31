@@ -8,6 +8,7 @@ import {createServer} from './server.ts'
 import {getDb, resetDb} from './db.ts'
 import * as schema from '../schema.ts'
 import {setAuthOverride} from './auth.ts'
+import {TEST} from './consts.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 export const orgId = 'organization-test-3c0636ef-201f-44d0-9905-f7f20cf6e47d'
@@ -36,7 +37,7 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
   setAuthOverride(realAuth ? null : {userId, orgId})
   process.env.VITE_STYTCH_USE_MOCK = realAuth ? '' : 'true'
 
-  if (process.env.NODE_ENV != 'test') {
+  if (!TEST) {
     let {SmeeClient} = await import('smee-client')
     let smee = new SmeeClient({source: 'https://smee.io/MkHzlt6xKj6dh9Sm', target: `http://localhost:${port}/_api/github/webhook`})
     smee.start()
@@ -51,7 +52,7 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
     root: path.join(rootDir, 'frontend'),
     configFile: path.join(rootDir, 'frontend/vite.config.ts'),
     server: {middlewareMode: true, hmr: {server: fastify.server}},
-    mode: process.env.NODE_ENV == 'test' ? 'test' : 'dev',
+    mode: TEST ? 'test' : 'dev',
   })
 
   fastify.use((req, res, next) => {
@@ -63,7 +64,7 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
 
   await fastify.listen({port, host: 'localhost'})
   let url = `http://localhost:${port}`
-  if (process.env.NODE_ENV !== 'test') {
+  if (!TEST) {
     console.log(`Cloud dev server running at ${url}`)
   }
 
@@ -90,7 +91,7 @@ export async function loadDbSetup () {
 }
 
 async function seedDatabase (connectionType: SeedType) {
-  if (process.env.NODE_ENV == 'test') resetDb() // in tests, clear out our prev in-memory db
+  if (TEST) resetDb() // in tests, clear out our prev in-memory db
   else fs.rmSync(path.join(rootDir, 'cloud.db'), {force: true}) // in dev, remove the db file
   let db = getDb()
 

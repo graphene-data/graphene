@@ -9,7 +9,6 @@ import {assertConsoleErrors, trackerBrowserConsole, expectConsoleError, stopTrac
 import {setBaseDomainOverride} from '../server/auth.ts'
 
 dotenv.config({path: path.resolve(import.meta.dirname, '../.env'), quiet: true})
-process.env.NODE_ENV = 'test'
 
 interface CloudOptions {
   realAuth: boolean

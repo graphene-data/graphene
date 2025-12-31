@@ -21,5 +21,5 @@ COPY cloud ./cloud
 EXPOSE 3000
 
 WORKDIR /app/cloud
-ENV NODE_ENV=prod
+ENV NODE_ENV=production
 CMD ["node", "server/server.ts"]

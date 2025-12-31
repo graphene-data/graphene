@@ -6,6 +6,7 @@ import {Octokit} from '@octokit/rest'
 import {auth} from './auth.ts'
 import {getDb} from './db.ts'
 import {vcsInstallations, repos, files} from '../schema.ts'
+import {PROD} from './consts.ts'
 
 let app: App | null = null
 function getGitHubApp () {
@@ -36,7 +37,7 @@ export async function githubInstall (req: FastifyRequest, reply: FastifyReply) {
   reply.setCookie('github_install_state', cookieValue, {
     path: '/',
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: PROD,
     sameSite: 'lax',
     maxAge: 600, // 10 minutes
   })
