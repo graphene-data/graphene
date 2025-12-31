@@ -31,7 +31,7 @@ export async function githubInstall (req: FastifyRequest, reply: FastifyReply) {
   let appSlug = process.env.GITHUB_APP_SLUG
   if (!appSlug) return reply.code(500).send({error: 'GitHub App not configured'})
 
-  // Generate nonce and store orgId mapping in cookie
+  // Generate nonce and store orgId mapping in cookie. We use after the app is installed and github redirects back to us
   let nonce = crypto.randomBytes(16).toString('hex')
   let cookieValue = JSON.stringify({nonce, orgId: req.auth.orgId})
   reply.setCookie('github_install_state', cookieValue, {
@@ -39,13 +39,15 @@ export async function githubInstall (req: FastifyRequest, reply: FastifyReply) {
     httpOnly: true,
     secure: PROD,
     sameSite: 'lax',
-    maxAge: 600, // 10 minutes
+    maxAge: 60 * 60 * 24,
+    domain: PROD ? '.graphenedata.com' : undefined,
   })
 
   reply.redirect(`https://github.com/apps/${appSlug}/installations/new?state=${nonce}`)
 }
 
 // GitHub redirects here after app installation (Setup URL)
+// It gives us back the `state` param, and we use that to validate the request, then connect the gh install to this graphene org.
 export async function githubSetup (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
 
