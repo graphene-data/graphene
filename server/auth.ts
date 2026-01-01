@@ -25,7 +25,7 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
   if (bearer) {
     // TODO: errors here should turn in to 401s
     let claims = await getStytch().idp.introspectTokenLocal(bearer.replace(/^bearer /i, ''))
-    req.auth = {userId: claims.subject, orgId: claims.organization.organization_id}
+    req.auth = {userId: claims.subject, orgId: claims.organization.organization_id, slug: ''}
   }
 
   let session_jwt = req.cookies['stytch_session_jwt']
@@ -34,7 +34,7 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
     let auth = await getStytch().sessions.authenticateJwt({session_jwt})
     let session = auth.member_session
     if (!session) return
-    req.auth = {userId: session.member_id, orgId: session.organization_id}
+    req.auth = {userId: session.member_id, orgId: session.organization_id, slug: ''}
   }
 
   if (!req.auth) {
@@ -49,6 +49,7 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
     let subdomain = host.replace(base, '')
     let org = await getDb().select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, req.auth.orgId)).get()
     if (!org) throw new Error('Missing org for logged in user')
+    req.auth.slug = org.slug
 
     if (org.slug !== subdomain && !['app', 'login'].includes(subdomain)) {
       reply.code(403).send({error: 'Incorrect subdomain', correctDomain: `${org?.slug}${base}`})

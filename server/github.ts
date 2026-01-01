@@ -65,7 +65,7 @@ export async function githubSetup (req: FastifyRequest, reply: FastifyReply) {
 
   reply.clearCookie('github_install_state', {path: '/'}) // clear so the cookie cant be reused
   await getDb().insert(vcsInstallations).values({orgId, type: 'github', id: query.installation_id})
-  reply.redirect('/settings/repos')
+  reply.redirect(PROD ? `https://${req.auth.slug}.graphenedata.com/settings/repos` : '/settings/repos')
 }
 
 // List repos accessible to the GitHub installation for this org

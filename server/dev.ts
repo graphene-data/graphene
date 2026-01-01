@@ -34,7 +34,7 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
   let fastify = createServer(false)
   await fastify.register(middie, {hook: 'onRequest'})
 
-  setAuthOverride(realAuth ? null : {userId, orgId})
+  setAuthOverride(realAuth ? null : {userId, orgId, slug: ''})
   process.env.VITE_STYTCH_USE_MOCK = realAuth ? '' : 'true'
 
   if (!TEST) {

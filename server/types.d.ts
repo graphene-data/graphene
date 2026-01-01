@@ -4,6 +4,7 @@ import '@fastify/static'
 export interface AuthContext {
   userId: string
   orgId: string
+  slug: string
 }
 
 declare module 'fastify' {
