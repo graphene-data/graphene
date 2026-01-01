@@ -4,7 +4,7 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-packageExtensionsChecksum: sha256-nOKSuOyFrWt3icwPkn3xkMl/d4iWL+ApUx/P6Rmudug=
+packageExtensionsChecksum: sha256-yBhWOJFxi2UYHmfHlWZLmDoduDJI5MsC9cAZd0YH/7Q=
 
 importers:
 
@@ -2520,6 +2520,7 @@ snapshots:
   '@fastify/cookie@11.0.2':
     dependencies:
       cookie: 1.0.2
+      fastify: 5.6.1
       fastify-plugin: 5.1.0
 
   '@fastify/error@4.2.0': {}
@@ -2537,6 +2538,7 @@ snapshots:
   '@fastify/middie@9.0.3':
     dependencies:
       '@fastify/error': 4.2.0
+      fastify: 5.6.1
       fastify-plugin: 5.1.0
       path-to-regexp: 8.3.0
       reusify: 1.1.0

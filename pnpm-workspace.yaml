@@ -6,3 +6,12 @@ packageExtensions:
     dependencies:
       drizzle-orm: "*"
       "@libsql/client": "*"
+  # These Fastify plugins use TypeScript module augmentation but only list
+  # fastify as a devDependency. In pnpm's strict dependency isolation, this
+  # breaks the type augmentation. Adding fastify as a dependency fixes it.
+  "@fastify/cookie":
+    dependencies:
+      fastify: "*"
+  "@fastify/middie":
+    dependencies:
+      fastify: "*"
