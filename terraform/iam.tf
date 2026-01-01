@@ -24,7 +24,7 @@ resource "aws_iam_role" "ci_deploy" {
   })
 }
 
-# Inline policy for CI to push to ECR
+# Inline policy for CI to push to ECR and manage App Runner deployments
 resource "aws_iam_role_policy" "ci_deploy_ecr" {
   name = "ecr-push"
   role = aws_iam_role.ci_deploy.id
@@ -49,6 +49,19 @@ resource "aws_iam_role_policy" "ci_deploy_ecr" {
           "ecr:CompleteLayerUpload"
         ]
         Resource = aws_ecr_repository.cloud.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "apprunner:StartDeployment",
+          "apprunner:DescribeService"
+        ]
+        Resource = aws_apprunner_service.cloud.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["apprunner:ListServices"]
+        Resource = "*"
       }
     ]
   })

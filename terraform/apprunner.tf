@@ -33,7 +33,7 @@ resource "aws_apprunner_service" "cloud" {
       image_repository_type = "ECR"
     }
 
-    auto_deployments_enabled = true
+    auto_deployments_enabled = false
   }
 
   instance_configuration {
