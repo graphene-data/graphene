@@ -147,7 +147,7 @@
 
       <label class="field">
         <span class="label">Folder (optional)</span>
-        <input type="text" bind:value={folder} placeholder="graphene" />
+        <input type="text" bind:value={folder} />
         <span class="hint">Subfolder to use as the Graphene root. Leave empty to use repo root.</span>
       </label>
 
