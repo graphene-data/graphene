@@ -96,7 +96,7 @@ async function startWorktree (name: string) {
 
     There are two main repos, 'core' which contains our open-source package that allows for local development, and 'cloud' which contains a closed-source Graphene hosting platform we're developing.
 
-    It's important that you always go read ./core/AGENTS.md before you do anything, as it provides a lot of the context and coding convetions that are relevant to all Graphene development, not just that of core.
+    You should read @cloud/AGENTS.md and @core/AGENTS.md before doing anything.
   `.trim())
   await $`ln -s ${treePath}/AGENTS.md ${treePath}/CLAUDE.md`
 
@@ -108,6 +108,7 @@ async function startWorktree (name: string) {
           "Bash(xargs cat:*)",
           "Bash(pnpm graphene:*)",
           "Bash(grep:*)",
+          "Bash(find:*)",
           "Bash(pnpm generate:*)",
           "Bash(pnpm test:*)",
           "Bash(pnpm lint:*)"
