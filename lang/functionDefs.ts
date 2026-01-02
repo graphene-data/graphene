@@ -54,7 +54,11 @@ Object.assign(DUCKDB_DIALECT_FUNCTIONS, {
 })
 
 export const BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = {
-  'count_if': {...DUCKDB_DIALECT_FUNCTIONS['count_if']},
+  'countif': {
+    takes: {'value': 'boolean'},
+    returns: {measure: 'number'},
+    impl: {function: 'COUNTIF'},
+  },
   'if': {...DUCKDB_DIALECT_FUNCTIONS['if']},
   'safe_divide': {
     takes: {'numerator': 'number', 'denominator': 'number'},
