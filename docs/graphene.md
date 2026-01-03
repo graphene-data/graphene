@@ -434,7 +434,6 @@ Note that function availability varies depending on the connected database. Chec
 | avg(column) | Calculates the average (mean) of numeric values. | `column` - Numeric column/expression | Number | x | x | x |
 | min(column) | Returns the minimum value. | `column` - Any comparable column/expression | Same as input | x | x | x |
 | max(column) | Returns the maximum value. | `column` - Any comparable column/expression | Same as input | x | x | x |
-| count_if(condition) | Counts rows where the condition is true. | `condition` - Boolean expression | Number | x | x | |
 | string_agg(column) | Concatenates string values. | `column` - String column/expression | String | x | x | x |
 | stddev(column) | Calculates the standard deviation. | `column` - Numeric column/expression | Number | x | x | x |
 | pXX(column) | Returns the XXth percentile (e.g., p50, p975, p9999). | `column` - Numeric column/expression | Number | x | x (≤p99) | x |
