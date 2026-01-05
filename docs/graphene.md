@@ -666,7 +666,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |----------|-------------|----------|---------|---------|
-| data | Query name, wrapped in curly braces | true | query name | - |
+| data | GSQL query or table name | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | false | column name, stored expression name, GSQL expression | First column |
 | y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | false | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | Any non-assigned numeric columns |
 | y2 | Column(s) or expression(s) to include on a secondary y-axis. | false | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | - |
@@ -775,7 +775,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| data | Query name, wrapped in curly braces | true | query name | - |
+| data | GSQL query or table name | true | query name | - |
 | category | Column or expression to use for slice names | true | column name, stored expression name, GSQL expression | - |
 | value | Column or expression to use for slice values | true | column name, stored expression name, GSQL expression | - |
 
@@ -814,7 +814,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| data | Query name, wrapped in curly braces | true | query name | - |
+| data | GSQL query or table name | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | - |
 | y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | true | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | - |
 | y2 | Column(s) or expression(s) to include on a secondary y-axis. | false | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | - |
@@ -923,7 +923,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| data | Query name, wrapped in curly braces | true | query name | - |
+| data | GSQL query or table name | true | query name | - |
 | x | Column or expression to use for the x-axis of the chart | true | column name, stored expression name, GSQL expression | First column |
 | y | Column(s) or expression(s) to use for the y-axis of the chart. Each will create its own series. Consider a split axis with `y2` if there is a difference of scale or unit of measure between the series. | true | column name, stored expression name, GSQL expression, list of any combination of these e.g. `"col1, my_expr"` | Any non-assigned numeric columns |
 | series | Column or expression to use to define the series (groups) in a multi-series chart. Use when values of a particular column dictate the multiple series to plot, eg. `country` would create a series for every distinct country in the column. | false | column name, stored expression name, GSQL expression | - |
@@ -1013,7 +1013,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| data | Query name, wrapped in curly braces | true | query name | - |
+| data | GSQL query or table name | true | query name | - |
 | value | Column or expression to pull the main value from. | true | column name, stored expression name, GSQL expression | - |
 | title | Title of the card. | false | string | Title of the value column. |
 | minWidth | Overrides min-width of component | false | % or px value | `"18%"` |
@@ -1064,7 +1064,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| data | Query name, wrapped in curly braces | true | query name | - |
+| data | GSQL query or table name | true | query name | - |
 | rows | Number of rows to show in the table before paginating results. Use `"rows=all"` to show all rows in the table. | false | number, `all` | `10` |
 | title | Title for the table | false | string | - |
 | subtitle | Subtitle - appears under the title | false | string | - |
@@ -1262,7 +1262,7 @@ where status = $status_dropdown
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
 | name | Name of the dropdown, used to reference the selected value elsewhere as `"$name"` | true | - | - |
-| data | Query name, wrapped in curly braces | false | query name | - |
+| data | GSQL query or table name | false | query name | - |
 | value | Column name from the query containing values to pick from | false | column name | - |
 | multiple | Enables multi-select which returns a list | false | `true`, `false` | `false` |
 | defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Lists supported for multi-select. | false | value from dropdown, list of values e.g. `"Value 1, Value 2"` | - |
