@@ -1199,7 +1199,7 @@ Conditional formatting (`contentType=colorscale`)
 
 ### Text input
 
-Creates a text input that can be used to filter or search. To see how to filter a query using a text input, see Filters.
+Creates a text input that can be used to filter or search.
 
 Here's an example:
 
@@ -1231,7 +1231,7 @@ where email ilike concat('%', $name_of_input, '%')
 
 ### Dropdown
 
-Creates a dropdown menu with a list of options that can be selected. The selected option can be used to filter queries or in markdown. To see how to filter a query using a dropdown, see Filters.
+Creates a dropdown menu with a list of options that can be selected. The selected option can be used to filter queries or in markdown.
 
 Here's an example:
 
