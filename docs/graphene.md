@@ -447,16 +447,16 @@ Note that function availability varies depending on the connected database. Chec
 | current_timestamp() | Returns the current timestamp. | - | Timestamp | x | x | x |
 | local_timestamp() | Returns the local timestamp. | - | Timestamp | x | x | x |
 | current_datetime() | Returns the current datetime (BigQuery only). | - | Timestamp | | x | |
-| date_trunc(unit, date) | Truncates date/timestamp to unit (DuckDB). | `unit` - String ('year', 'month', 'day', etc.)<br>`date` - Timestamp | Timestamp | x | | |
-| date_trunc(date, unit) | Truncates date/timestamp to unit (BigQuery). | `date` - Date or timestamp<br>`unit` - Keyword (year, month, day, week, etc.) | Same as input | | x | |
-| extract(unit from timestamp) | Extracts a date part from timestamp. | `unit` - Date part (year, month, day, hour, etc.)<br>`timestamp` - Timestamp/date | Number | x | x | x |
-| timestamp_diff(start, end, unit) | Calculates difference between timestamps (BigQuery). | `start` - Timestamp<br>`end` - Timestamp<br>`unit` - Keyword (day, week, month, etc.) | Number | | x | |
+| date_trunc(unit, date) | Truncates date/timestamp to unit (DuckDB). | `unit` - Quoted date part ('year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second') ; `date` - Timestamp | Date or timestamp | x | | |
+| date_trunc(date, unit) | Truncates date/timestamp to unit (BigQuery). | `date` - Date or timestamp ; `unit` - Unquoted date part (year, quarter, month, week, day, hour, minute, second) | Date or timestamp | | x | |
+| extract(unit from timestamp) | Extracts a date part from timestamp. | `unit` - Date part (year, quarter, month, week, day, hour, minute, second, day_of_week, day_of_year) ; `timestamp` - Timestamp/date | Number | x | x | x |
+| timestamp_diff(start, end, unit) | Calculates difference between timestamps (BigQuery). | `start` - Timestamp ; `end` - Timestamp ; `unit` - Keyword (year, quarter, month, week, day, hour, minute, second) | Number | | x | |
 
 #### Conditional Functions
 
 | Function | Description | Parameters | Return Type | DuckDB | BigQuery | Snowflake |
 | - | - | - | - | - | - | - |
-| if(condition, trueValue, falseValue) | Returns one of two values based on condition. | `condition` - Boolean<br>`trueValue` - Any type<br>`falseValue` - Same type as trueValue | Same as value args | x | x | |
+| if(condition, trueValue, falseValue) | Returns one of two values based on condition. | `condition` - Boolean ; `trueValue` - Any type ; `falseValue` - Same type as trueValue | Same as value args | x | x | |
 | case when ... then ... else ... end | Evaluates conditions and returns values. | Multiple when/then clauses | Varies | x | x | x |
 | coalesce(value1, value2, ...) | Returns first non-null value. | `value1, value2, ...` - Same type | Same as input | x | x | x |
 
@@ -468,14 +468,14 @@ Note that function availability varies depending on the connected database. Chec
 | ceil(number) | Rounds up to nearest integer. | `number` - Numeric value | Number | x | x | x |
 | greatest(value1, value2, ...) | Returns the greatest value. | `value1, value2, ...` - Same type | Same as input | x | x | x |
 | least(value1, value2, ...) | Returns the smallest value. | `value1, value2, ...` - Same type | Same as input | x | x | x |
-| safe_divide(numerator, denominator) | Divides, returning null on division by zero (BigQuery). | `numerator` - Number<br>`denominator` - Number | Number | | x | |
+| safe_divide(numerator, denominator) | Divides, returning null on division by zero (BigQuery). | `numerator` - Number ; `denominator` - Number | Number | | x | |
 
 #### Type Conversion
 
 | Function | Description | Parameters | Return Type | DuckDB | BigQuery | Snowflake |
 | - | - | - | - | - | - | - |
-| cast(value as type) | Converts value to specified type. | `value` - Any value<br>`type` - Target type (varchar, int, float64, etc.) | Specified type | x | x | x |
-| value::type | Alternative cast syntax. | `value` - Any value<br>`type` - Target type | Specified type | x | x | x |
+| cast(value as type) | Converts value to specified type. | `value` - Any value ; `type` - Target type (int, int64, integer, bigint, smallint, tinyint, byteint, float, float64, double, decimal, numeric, bigdecimal, number, text, string, varchar, variant, bool, boolean, date, datetime, time, timestamp, timestamp_ntz, geography) | Specified type | x | x | x |
+| value::type | Alternative cast syntax. | `value` - Any value ; `type` - Target type | Specified type | x | x | x |
 
 ### Subqueries, CTEs, and chaining queries
 
