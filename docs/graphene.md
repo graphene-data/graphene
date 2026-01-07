@@ -367,31 +367,103 @@ For this reason, in a query you would never wrap an aggregative stored expressio
 
 ### Safe aggregation in fan-outs
 
-A common and dangerous user error in regular SQL is aggregating data incorrectly after joining tables. This can happen when rows of one table match multiple rows of another, and effectively get duplicated for each match.
+Aggregations in GSQL are fan-out safe. In the event of a join, Graphene knows which values are duplicated ("fanned out") and will discard the duplicates when calculating aggregates.
 
-For example, after joining `users` to `orders`, your joined result will have some users repeated multiple times if they've made multiple purchases. If you wanted to find the average age of customers over this joined result, simply using an `avg(users.age)` would be _incorrect_, because you would be weighting the average towards users with multiple purchases, rather than taking the true average.
+To do this, Graphene assumes that the column or expression you're aggregating is only dependent on one table. The grain of this table establishes the "correct" grain to compute the aggregate over. 
 
-GSQL aims to solve this problem. With the additional information provided via `join one` and `join many`, Graphene knows under which scenarios when row dupliation occurs, and will rewrite aggregative expressions in a way that ignores the duplicate rows.
+>NOTE: Graphene does not support aggregating over expressions that depend on multiple tables (e.g. `sum(table1.col - table2.col)`). To work around this, you can consolidate the expression into a dimension e.g. `my_dim: col - table2.col` and then aggregate over that dimension.
 
-The query `select avg(users.age) from orders` will be rewritten to the following SQL when Graphene queries the underlying database (this is for BigQuery, specifically):
+Here's an example of a fan-out:
 
 ```sql
-SELECT
-   (CAST((
-    (
-      SUM(DISTINCT
-        (CAST(ROUND(COALESCE(users_0.`age`,0)*(1*1.0), 9) AS NUMERIC) +
-        (cast(cast(concat('0x', substr(to_hex(md5(CAST(users_0.`id` AS STRING))), 1, 15)) as int64) as numeric) * 4294967296 + cast(cast(concat('0x', substr(to_hex(md5(CAST(users_0.`id` AS STRING))), 16, 8)) as int64) as numeric)) * 0.000000001
-      ))
-      -
-       SUM(DISTINCT (cast(cast(concat('0x', substr(to_hex(md5(CAST(users_0.`id` AS STRING))), 1, 15)) as int64) as numeric) * 4294967296 + cast(cast(concat('0x', substr(to_hex(md5(CAST(users_0.`id` AS STRING))), 16, 8)) as int64) as numeric)) * 0.000000001)
-    )/(1*1.0)) AS FLOAT64))/NULLIF(COUNT(DISTINCT CASE WHEN users_0.`age` IS NOT NULL THEN users_0.`id` END),0) as `col_0`
-FROM `bigquery-public-data.thelook_ecommerce.orders` as base
- LEFT JOIN `bigquery-public-data.thelook_ecommerce.users` AS users_0
-  ON users_0.`id`=base.`user_id`
+table orders (
+  id BIGINT primary_key
+  customer_name VARCHAR
+  amt_with_shipping FLOAT
+
+  join many order_items on id = order_items.order_id
+)
+
+table order_items (
+  id BIGINT primary_key
+  order_id BIGINT
+  product VARCHAR
+  price FLOAT
+
+  join one orders on order_id = orders.id
+)
 ```
 
-You don't have to understand this; the point is that GSQL is minimizing the chances that naive users aggregate data incorrectly.
+With the following data:
+
+**orders**
+
+| id | customer_name | amt_with_shipping |
+|----|---------------|-------------------|
+| 1  | Alice         | 110.00            |
+| 2  | Bob           | 85.00             |
+
+**order_items**
+
+| id | order_id | product | price |
+|----|----------|---------|-------|
+| 1  | 1        | Widget  | 60.00 |
+| 2  | 1        | Gadget  | 40.00 |
+| 3  | 2        | Widget  | 60.00 |
+| 4  | 2        | Thingamajig | 15.00 |
+
+When joining orders to order_items, the result looks like:
+
+**orders joined to order_items**
+
+| orders.id | customer_name | amt_with_shipping | order_items.id | product | price |
+|-----------|---------------|-------------------|----------------|---------|-------|
+| 1         | Alice         | 110.00            | 1              | Widget  | 60.00 |
+| 1         | Alice         | 110.00            | 2              | Gadget  | 40.00 |
+| 2         | Bob           | 85.00             | 3              | Widget  | 60.00 |
+| 2         | Bob           | 85.00             | 4              | Thingamajig | 15.00 |
+
+Notice that both orders appear twice because they each contain two items. In regular SQL, if you naively computed `sum(amt_with_shipping)` over this joined result, you'd get 390.00 instead of the correct 195.00. In GSQL, because `amt_with_shipping` belongs to the `orders` table, Graphene knows to compute the sum at the `orders` grain, yielding 195.00.
+
+Here's how you can use this to simplify your queries. Say you want to see total order value and total item count by customer. In GSQL, you can write this directly:
+
+```sql
+select
+  customer_name,
+  sum(orders.amt_with_shipping) as total_spent,
+  count(order_items.id) as items_purchased
+from orders
+group by customer_name
+```
+
+This returns:
+
+| customer_name | total_spent | items_purchased |
+|---------------|-------------|-----------------|
+| Alice         | 110.00      | 2               |
+| Bob           | 85.00       | 2               |
+
+In regular SQL, you'd need a subquery or CTE to avoid the fan-out problem:
+
+```sql
+WITH order_totals AS (
+  SELECT customer_name, SUM(amt_with_shipping) as total_spent
+  FROM orders
+  GROUP BY customer_name
+),
+item_counts AS (
+  SELECT o.customer_name, COUNT(oi.id) as items_purchased
+  FROM orders o
+  JOIN order_items oi ON o.id = oi.order_id
+  GROUP BY o.customer_name
+)
+SELECT
+  ot.customer_name,
+  ot.total_spent,
+  ic.items_purchased
+FROM order_totals ot
+JOIN item_counts ic ON ot.customer_name = ic.customer_name
+```
 
 ### Working with dates, timestamps, and intervals
 
@@ -421,7 +493,7 @@ Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days
 
 ### Available functions
 
-Note that function availability varies depending on the connected database. Check your package.json to see what database you are connected to.
+Function availability varies depending on the connected database, noted in the tables below. Check your package.json to see what database you are connected to.
 
 #### Aggregate functions
 
@@ -520,7 +592,7 @@ from sales_per_store
 - `group by all` is implied if aggregative and scalar expressions are both present in the `select` clause. This means that `group by` can be omitted and the query will still effectively execute the `group by all`.
 - Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
 - `count` is a reserved word. Do not alias your columns as `count`.
-- Window functions and set operations are not supported.
+- Window functions and set operations (`union [all]`, `intersect`, `except`) are not supported.
 
 ## `table as` statements
 
