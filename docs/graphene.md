@@ -292,7 +292,7 @@ order by 2 desc
 limit 10
 ```
 
-### Using stored expressions in queries
+### Using scalar stored expressions (dimensions) in queries
 
 A stored expression can be invoked in a query by simply referencing it by name.
 
@@ -340,7 +340,9 @@ group by 1
 
 You can see that invoking a stored expression is like using a macro: the definition for the stored expression is effectively expanded in-line by Graphene when it runs the query.
 
-This is an important concept to understand when invoking stored expressions that are **aggregative** (ie. contain agg functions). Here's an example.
+### Using aggregative stored expressions (measures) in queries
+
+The macro concept is important to understand when invoking stored expressions that are **aggregative** (ie. contain agg functions), which can also be called "measures." Here's an example.
 
 ```sql
 -- Profit by month
@@ -363,7 +365,13 @@ group by 1
 order by 1 asc
 ```
 
-For this reason, in a query you would never wrap an aggregative stored expression in a `sum()` or `avg()` or any other agg function for the same reason you would never write `sum(sum(foo))` in SQL. That would throw an error!
+[CRITICAL!] This means:
+- You would NEVER wrap a measure in an agg function like `sum(my_measure)`, for the same reason that you cannot do `SUM(SUM(foo))` in regular SQL.
+- You would NEVER group by a measure like `group by my_measure`, for the same reason that you cannot do `GROUP BY SUM(foo)` in regular SQL.
+- You CAN wrap a measure in a scalar function like `floor(my_measure)`, for the same reason that can do `FLOOR(SUM(foo))` in regular SQL.
+- You CAN compose measures together in expressions like `my_measure + my_other_measure`, for the same reason that you can do `SUM(foo) + SUM(bar)` in regular SQL.
+
+Another way of thinking about this is that measures are "self-aggregating."
 
 ### Safe aggregation in fan-outs
 
