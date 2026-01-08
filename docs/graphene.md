@@ -19,13 +19,18 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
   - [`select` statements](#select-statements)
     - [Using join relationships in queries](#using-join-relationships-in-queries)
       - [Multi-hop joins](#multi-hop-joins)
-    - [Using stored expressions in queries](#using-stored-expressions-in-queries)
+    - [Using scalar stored expressions (dimensions) in queries](#using-scalar-stored-expressions-dimensions-in-queries)
+    - [Using aggregative stored expressions (measures) in queries](#using-aggregative-stored-expressions-measures-in-queries)
     - [Safe aggregation in fan-outs](#safe-aggregation-in-fan-outs)
     - [Working with dates, timestamps, and intervals](#working-with-dates-timestamps-and-intervals)
       - [Date and timestamp literals](#date-and-timestamp-literals)
       - [Interval literals](#interval-literals)
     - [Available functions](#available-functions)
-      - [Percentile shorthand](#percentile-shorthand)
+      - [Aggregate functions](#aggregate-functions)
+      - [Date and time functions](#date-and-time-functions)
+      - [Conditional Functions](#conditional-functions)
+      - [Math Functions](#math-functions)
+      - [Type Conversion](#type-conversion)
     - [Subqueries, CTEs, and chaining queries](#subqueries-ctes-and-chaining-queries)
     - [Other miscellaneous details](#other-miscellaneous-details)
   - [`table as` statements](#table-as-statements)
@@ -72,8 +77,6 @@ Graphene also has a CLI that lets you check syntax, run queries, serve data apps
   - [Input components](#input-components)
     - [Text input](#text-input)
       - [All text input attributes](#all-text-input-attributes)
-    - [Date range](#date-range)
-      - [All date range attributes](#all-date-range-attributes)
     - [Dropdown](#dropdown)
       - [All dropdown attributes](#all-dropdown-attributes)
         - [DropdownOption](#dropdownoption)
@@ -1418,7 +1421,7 @@ Formatting does not apply to the date axis of a chart. For example, if you set `
 
 Graphene supports a variety of date/time, number, percentage, and currency formats.
 
-### Auto-Formatting
+#### Auto-Formatting
 
 Wherever you see `auto` listed beside a format, that means Graphene will automatically format your value based on the context it is in.
 
@@ -1426,7 +1429,7 @@ For example, Graphene automatically formats large numbers into shortened version
 
 You can choose to handle these numbers differently by choosing a specific format code. For example, if Graphene is formatting a column as millions, but you want to see all numbers in thousands, you could use the `num0k` format, which will show all numbers in the column in thousands with 0 decimal places.
 
-### Dates
+#### Dates
 
 Graphene supports the following date formats:
 
@@ -1442,7 +1445,7 @@ Graphene supports the following date formats:
 * `dmy` - Day/month/year (e.g., 9/1/22)
 * `hms` - Time format (e.g., 11:45:03 AM)
 
-### Currencies
+#### Currencies
 
 Supported currencies include USD, AUD, BRL, CAD, CNY, EUR, GBP, JPY, INR, KRW, NGN, RUB, and SEK.
 
@@ -1461,7 +1464,7 @@ For example, the available tags for USD are:
 
 Similar patterns apply to other supported currencies.
 
-### Numbers
+#### Numbers
 
 The default number format (when no `fmt` is specified) automatically handles decimal places and summary units (in the same way that `usd` does for currency).
 
@@ -1476,7 +1479,7 @@ Available number formats:
 * `mult`, `mult0`, `mult1`, `mult2` - Multiplier format (e.g., 5.32x)
 * `sci` - Scientific notation
 
-### Percentages
+#### Percentages
 
 Available percentage formats:
 
