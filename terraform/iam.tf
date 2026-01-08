@@ -130,3 +130,24 @@ resource "aws_iam_role_policy" "apprunner_instance_policy" {
     ]
   })
 }
+
+# Delve Auditor Role - allows Delve to audit AWS resources
+resource "aws_iam_role" "delve_auditor" {
+  name                 = "DelveAuditor"
+  max_session_duration = 43200
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { AWS = "arn:aws:iam::017820694923:root" }
+      Action    = "sts:AssumeRole"
+      Condition = {}
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "delve_auditor_readonly" {
+  role       = aws_iam_role.delve_auditor.name
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}

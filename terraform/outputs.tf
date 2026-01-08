@@ -20,6 +20,11 @@ output "apprunner_instance_role_arn" {
   value       = aws_iam_role.apprunner_instance.arn
 }
 
+output "delve_auditor_role_arn" {
+  description = "ARN of the Delve auditor role"
+  value       = aws_iam_role.delve_auditor.arn
+}
+
 # App Runner Outputs
 output "apprunner_service_url" {
   description = "URL of the App Runner service"
