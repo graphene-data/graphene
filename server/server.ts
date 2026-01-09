@@ -3,7 +3,7 @@ import cookie from '@fastify/cookie'
 import staticPlugin from '@fastify/static'
 
 import {type AuthContext, authTokenExchange} from './auth.ts'
-import {listNavFiles, renderPage} from './pages.ts'
+import {listNavFiles, renderPage, renderDynamic} from './pages.ts'
 import {proxyQuery} from './query.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
 import {fileURLToPath} from 'url'
@@ -17,6 +17,7 @@ export function createServer (serveStatic: boolean) {
 
   app.get('/_api/nav/:repoSlug', listNavFiles)
   app.get('/_api/pages/*', renderPage)
+  app.post('/_api/dynamic', renderDynamic)
   app.post('/_api/query', proxyQuery)
   app.post('/_api/oauth2/token', authTokenExchange)
 

@@ -18,6 +18,5 @@ const components = Object.fromEntries(
 let graphene = window.$GRAPHENE ?? {} as typeof window.$GRAPHENE
 graphene.components = {...(graphene.components ?? {}), ...components} as any
 graphene.svelte = svelteInternal
+graphene.App = App
 window.$GRAPHENE = graphene
-
-new App({target: document.body})

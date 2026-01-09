@@ -91,7 +91,7 @@ export async function loadDbSetup () {
   dbSetup = statementsToExecute
 }
 
-async function seedDatabase (connectionType: SeedType) {
+export async function seedDatabase (connectionType: SeedType) {
   if (TEST) resetDb() // in tests, clear out our prev in-memory db
   else fs.rmSync(path.join(rootDir, 'cloud.db'), {force: true}) // in dev, remove the db file
   let db = getDb()

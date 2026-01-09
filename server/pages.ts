@@ -7,6 +7,25 @@ import {compile as svelteCompile} from 'svelte/compiler'
 import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 import {PROD} from './consts.ts'
+import jwt from 'jsonwebtoken'
+
+function getTokenSecret () {
+  return process.env.AGENT_TOKEN_SECRET || process.env.CONNECTION_ENCRYPTION_KEY || 'dev-secret-key'
+}
+
+interface TokenClaims {
+  orgId: string
+  repoId: string
+  purpose: 'agent-render'
+}
+
+function verifyToken (token: string): TokenClaims | null {
+  try {
+    return jwt.verify(token, getTokenSecret()) as TokenClaims
+  } catch {
+    return null
+  }
+}
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
@@ -100,4 +119,56 @@ function rewriteSvelteImports (code: string, repoId: string) {
   code = code.replace(/import\s+["']svelte\/internal\/disclose-version["'];?\s*/m, '')
 
   return code
+}
+
+export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
+  let body = req.body as {
+    markdown: string
+    token: string
+  }
+
+  let claims = verifyToken(body.token || '')
+  if (!claims) return reply.code(401).send({error: 'Invalid token'})
+
+  // Compile markdown to svelte component
+  let svelteSource = await mdsvexCompile(body.markdown, {
+    filename: 'dynamic.md',
+    extensions: ['.md'],
+    remarkPlugins: [extractQueries, escapeAngles],
+    rehypePlugins: [sanitizeMarkdown],
+  })
+  if (!svelteSource) return reply.code(500).send({error: 'Failed to compile markdown'})
+
+  let compiled = svelteCompile(svelteSource.code, {generate: 'dom', dev: !PROD})
+  let componentCode = rewriteSvelteImports(compiled.js.code, claims.repoId)
+
+  // Return HTML page that loads the frontend and mounts the component
+  let html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Graphene Dynamic</title>
+  <style>
+    body { margin: 0; padding: 20px; font-family: system-ui, sans-serif; }
+    #content { max-width: 1200px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <div id="content"></div>
+  <script type="module">
+    // Load runtime (sets up $GRAPHENE without mounting App)
+    await import('/main.ts');
+
+    // Component code
+    ${componentCode}
+
+    // Mount component
+    new Component({ target: document.getElementById('content') });
+  </script>
+</body>
+</html>`
+
+  reply.type('text/html')
+  reply.send(html)
 }
