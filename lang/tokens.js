@@ -30,6 +30,9 @@ import {
   table,
   exists,
   primary_key,
+  interval,
+  date,
+  timestamp,
 } from './parser.terms.js'
 
 // Map of lowercase keywords to their token IDs
@@ -64,6 +67,9 @@ const keywords = {
   table: table,
   exists: exists,
   primary_key: primary_key,
+  interval: interval,
+  date: date,
+  timestamp: timestamp,
 }
 
 export function specializeIdentifier (value) {

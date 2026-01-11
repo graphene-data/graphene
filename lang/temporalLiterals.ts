@@ -1,4 +1,4 @@
-import type {Expression, FieldType} from './types.ts'
+import type {FieldType} from './types.ts'
 import type {TimestampUnit} from '@graphenedata/malloy'
 
 export type TemporalLiteral = {
@@ -60,34 +60,6 @@ export function parseTemporalLiteral (value: string, expected: string): Temporal
   return null
 }
 
-export function parseTemporal (node: Expression): TimestampUnit | null {
-  if (node.node !== 'stringLiteral') return null
-  let rawValue = typeof (node as any).literal === 'string' ? (node as any).literal.trim() : ''
-  if (!rawValue) return null
-
-  let parsedDate = parseTemporalLiteral(rawValue, 'date')
-  if (parsedDate) {
-    let typeDef = {type: parsedDate.type, timeframe: parsedDate.timeframe}
-    Object.assign(node, {node: 'timeLiteral', literal: parsedDate.literal, type: parsedDate.type, typeDef})
-    return parsedDate.timeframe
-  }
-
-  let parsedTimestamp = parseTemporalLiteral(rawValue, 'timestamp')
-  if (parsedTimestamp) {
-    let typeDef = {type: parsedTimestamp.type, timeframe: parsedTimestamp.timeframe}
-    Object.assign(node, {node: 'timeLiteral', literal: parsedTimestamp.literal, type: parsedTimestamp.type, typeDef})
-    return parsedTimestamp.timeframe
-  }
-
-  let interval = parseIntervalLiteral(rawValue)
-  if (interval) {
-    Object.assign(node, {node: 'numberLiteral', literal: interval.quantity.toString(), type: 'interval', intervalUnit: interval.unit})
-    return interval.unit
-  }
-
-  return null
-}
-
 const INTERVAL_UNITS: Record<string, TimestampUnit> = {
   second: 'second',
   seconds: 'second',
@@ -128,6 +100,10 @@ export function parseIntervalLiteral (value: string): IntervalLiteral | null {
   let unit = INTERVAL_UNITS[match[2]]
   if (!unit) return null
   return {quantity, unit}
+}
+
+export function parseIntervalUnit (value: string): TimestampUnit | null {
+  return INTERVAL_UNITS[value.toLowerCase()] || null
 }
 
 function buildResult (

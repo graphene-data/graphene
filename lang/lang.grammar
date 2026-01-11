@@ -109,8 +109,9 @@ ComputedDef {
   Alias ":" expression
 }
 
+// Allow temporal keywords as data types (date, timestamp, interval are valid SQL types)
 DataType {
-  Identifier
+  Identifier | Kw<"date"> | Kw<"timestamp"> | Kw<"interval">
 }
 
 // Ideally we could just use `expression` as the join condition, but that introduces ambiguity when parsing, since we don't know when the expression ends and new ComputedDef begins.
@@ -152,8 +153,9 @@ TypeCastExpression<T> {
   compositeExpression<T> !cast "::" CastType
 }
 
+// Allow temporal keywords as cast targets (date, timestamp, interval are valid SQL types)
 CastType {
-  Identifier
+  Identifier | Kw<"date"> | Kw<"timestamp"> | Kw<"interval">
 }
 
 // baseExpression includes all expression starts that are NOT parentheses.
@@ -164,7 +166,29 @@ baseExpression {
   computedPrimary |
   ExtractExpression |
   CastExpression |
+  IntervalExpression |
+  DateExpression |
+  TimestampExpression |
   Param
+}
+
+// Interval: supports `interval '1 day'` or `interval 1 day`
+IntervalExpression {
+  Kw<"interval"> (String | Number IntervalUnit)
+}
+
+IntervalUnit {
+  Identifier
+}
+
+// Date: supports `date '2025-01-01'`
+DateExpression {
+  Kw<"date"> String
+}
+
+// Timestamp: supports `timestamp '2025-01-01 12:00:00'`
+TimestampExpression {
+  Kw<"timestamp"> String
 }
 
 // parenExpression includes all expression starts that ARE parentheses.

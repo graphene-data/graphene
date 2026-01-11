@@ -565,36 +565,66 @@ describe('lang', () => {
       .toRenderSql('select base."name" as "name", null as "col_1", true as "col_2", false as "col_3" from users as base')
   })
 
-  it('coerces string literals to timestamps', () => {
-    expect("from users select id where created_at >= '2024-01-01'")
+  it('requires explicit timestamp keyword for comparisons', () => {
+    expect("from users select id where created_at >= timestamp '2024-01-01'")
       .toRenderSql("select base.\"id\" as \"id\" from users as base where base.\"created_at\">=TIMESTAMP '2024-01-01 00:00:00'")
   })
 
-  it('coerces string literals to timestamps inside in lists', () => {
-    expect("from users select id where created_at in ('2024-01-01','2024-01-02')")
+  it('requires explicit timestamp keywords in IN lists', () => {
+    expect("from users select id where created_at in (timestamp '2024-01-01', timestamp '2024-01-02')")
       .toRenderSql("select base.\"id\" as \"id\" from users as base where base.\"created_at\" in (TIMESTAMP '2024-01-01 00:00:00',TIMESTAMP '2024-01-02 00:00:00')")
   })
 
-  it('coerces string literals to intervals when needed', () => {
-    expect("from users select created_at + '5 minutes' as shifted")
-      .toRenderSql('select base."created_at" + interval (5) minute as "shifted" from users as base')
-  })
-
-  it('diagnoses invalid interval literals', () => {
+  it('diagnoses string used where interval expected', () => {
     expect("from users select created_at + 'many moons'")
-      .toHaveDiagnostic(/Could not parse interval/i)
+      .toHaveDiagnostic(/Expected right side to be a date, timestamp, or interval/i)
   })
 
-  it('coerces temporal parameters', () => {
+  it('parses temporal parameters at runtime', () => {
     let queries = analyze(`${testTables}
       from users select id where created_at >= $start_date
     `)
     expect(toSql(queries[0], {start_date: '2024-01-01'})).toMatch(/>=TIMESTAMP '2024-01-01 00:00:00'/)
   })
 
-  it('diagnoses invalid timestamp literals', () => {
+  it('diagnoses string used where timestamp expected', () => {
     expect("from users select id where created_at >= 'soonish'")
-      .toHaveDiagnostic(/Could not parse timestamp literal/i)
+      .toHaveDiagnostic(/Expected timestamp, got string/i)
+  })
+
+  it('supports interval keyword with quoted string', () => {
+    expect("from users select created_at + interval '5 minutes' as shifted")
+      .toRenderSql('select base."created_at" + interval (5) minute as "shifted" from users as base')
+  })
+
+  it('supports interval keyword with unquoted number and unit', () => {
+    expect('from users select created_at + interval 5 minutes as shifted')
+      .toRenderSql('select base."created_at" + interval (5) minute as "shifted" from users as base')
+  })
+
+  it('supports date keyword', () => {
+    expect('from users select date \'2024-01-01\' as d')
+      .toRenderSql('select DATE \'2024-01-01\' as "d" from users as base')
+  })
+
+  it('supports timestamp keyword', () => {
+    expect('from users select id where created_at >= timestamp \'2024-01-01 12:00:00\'')
+      .toRenderSql('select base."id" as "id" from users as base where base."created_at">=TIMESTAMP \'2024-01-01 12:00:00\'')
+  })
+
+  it('supports ::DATE cast syntax', () => {
+    expect('from users select \'2024-01-01\'::DATE as d')
+      .toRenderSql('select CAST(\'2024-01-01\' AS DATE) as "d" from users as base')
+  })
+
+  it('diagnoses invalid date literal in date keyword', () => {
+    expect('from users select date \'not-a-date\'')
+      .toHaveDiagnostic(/Could not parse date/i)
+  })
+
+  it('diagnoses invalid interval unit', () => {
+    expect('from users select created_at + interval 5 moons')
+      .toHaveDiagnostic(/Invalid interval unit/i)
   })
 
   it('warns on multiple joins in aggregate functions', async () => {
