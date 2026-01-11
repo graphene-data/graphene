@@ -6,7 +6,7 @@ import {extractLeadingMetadata} from './metadata.ts'
 import {config} from './config.ts'
 import {analyzeFunctionCall} from './functions.ts'
 import {inferParamTypes} from './params.ts'
-import {parseTemporalLiteral, parseIntervalLiteral, parseTemporal} from './temporalLiterals.ts'
+import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
@@ -340,6 +340,32 @@ export function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
       if (!type) return diag(expr.getChild('CastType')!, `Unsupported cast type: ${targetTypeStr}`, errExpr)
       return {node: 'cast', safe: false, e, dstSQLType: targetTypeStr.toUpperCase(), type, isAgg: e.isAgg}
     }
+    case 'IntervalExpression': {
+      // interval '1 day' or interval 1 day
+      let stringNode = expr.getChild('String')
+      if (stringNode) {
+        let parsed = parseIntervalLiteral(txt(stringNode).slice(1, -1))
+        if (!parsed) return diag(stringNode, 'Could not parse interval literal', errExpr)
+        return {node: 'numberLiteral', literal: parsed.quantity.toString(), type: 'interval', intervalUnit: parsed.unit, isAgg: false} as Expression
+      } else {
+        let numNode = expr.getChild('Number')!
+        let unitNode = expr.getChild('IntervalUnit')!
+        let quantity = Number(txt(numNode))
+        let unitStr = txt(unitNode).toLowerCase()
+        let unit = parseIntervalUnit(unitStr)
+        if (!unit) return diag(unitNode, `Invalid interval unit: "${unitStr}"`, errExpr)
+        return {node: 'numberLiteral', literal: quantity.toString(), type: 'interval', intervalUnit: unit, isAgg: false} as Expression
+      }
+    }
+    case 'DateExpression':
+    case 'TimestampExpression': {
+      let expectedType = expr.name === 'DateExpression' ? 'date' : 'timestamp'
+      let stringNode = expr.getChild('String')!
+      let parsed = parseTemporalLiteral(txt(stringNode).slice(1, -1), expectedType)
+      if (!parsed) return diag(stringNode, `Could not parse ${expectedType}`, errExpr)
+      let typeDef = {type: parsed.type, timeframe: parsed.timeframe}
+      return {node: 'timeLiteral', literal: parsed.literal, type: parsed.type, typeDef, isAgg: false} as Expression
+    }
     case 'FunctionCall': return analyzeFunctionCall(expr, scope)
     case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
     case 'Count': {
@@ -438,39 +464,29 @@ export function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
 
 // Malloy uses special nodes to represent timediff and time deltas (ie adding interval to a date)
 function analyzeTimeExpression (op: '-' | '+', left: Expression, right: Expression, node: SyntaxNode): Expression {
-  // only allow dates on the left side, so simplify the logic. Can revisit if people do this a lot.
+  // only allow dates on the left side, to simplify the logic. Can revisit if people do this a lot.
   if (left.type !== 'date' && left.type !== 'timestamp') return diag(node, 'Expected left side to be a date or timestamp', errExpr)
-
-  let units: TimestampUnit = left.type === 'timestamp' ? 'second' : 'day'
-  if (right.node == 'stringLiteral') {
-    units = parseTemporal(right) as TimestampUnit
-    if (right.node == 'stringLiteral') {
-      return diag(node, 'Could not parse interval', errExpr)
-    }
-  }
 
   if (right.type == 'date' || right.type == 'timestamp') {
     if (op !== '-') return diag(node, 'Only subtraction between dates is supported', errExpr)
     if (right.type !== left.type) return diag(node, `Expected right side to be a ${left.type}`, errExpr)
+    let units: TimestampUnit = left.type === 'timestamp' ? 'second' : 'day'
     return {node: 'timeDiff', kids: {left: left as any, right: right as any}, units, type: 'interval', isAgg: false}
   }
 
   if (right.type == 'interval') {
     let typeDef = {type: left.type}
+    let units = (right as any).intervalUnit
+    if (!units) return diag(node, 'Interval must have a unit', errExpr)
     return {node: 'delta', kids: {base: left as any, delta: right}, op: op as any, units, type: left.type, typeDef, isAgg: false}
   }
 
-  return diag(node, 'Expected right side to be a date or interval', errExpr)
+  return diag(node, 'Expected right side to be a date, timestamp, or interval', errExpr)
 }
 
 function ensureSameType (left: Expression, leftNode: SyntaxNode, right: Expression, rightNode: SyntaxNode): FieldType | undefined {
   if (left.type === 'error' || right.type === 'error') return
   if (left.node === 'parameter' || right.node === 'parameter') return
-
-  // if one side is a date/interval, allow the other to be coerced
-  if (isTemporalType(left.type)) checkTypes(right, [left.type as FieldType], rightNode)
-  if (isTemporalType(right.type)) checkTypes(left, [right.type as FieldType], leftNode)
-
   if (left.type !== right.type) diag(rightNode, `Expected ${left.type}, got ${right.type}`)
 }
 
@@ -479,23 +495,7 @@ export function checkTypes (expr: Expression, expected: FieldType[], node: Synta
   if (expr.node === 'parameter') return
   if (expected.includes(expr.type)) return // types match
   if (expected.includes('generic' as FieldType)) return
-
-  // string literals can be coerced to date/timestamp if needed
-  let dt = expected.find(t => t == 'date') || expected.find(t => t == 'timestamp')
-  if (expr.node == 'stringLiteral' && dt) {
-    let parsed = parseTemporalLiteral(expr.literal, dt)
-    if (!parsed) return diag(node, `Could not parse ${dt} literal: "${expr.literal}"`, undefined)
-    let typeDef = {type: parsed.type, timeframe: parsed.timeframe}
-    Object.assign(expr, {node: 'timeLiteral', literal: parsed?.literal, type: parsed?.type, typeDef})
-  }
-
-  else if (expr.node == 'stringLiteral' && expected.includes('interval')) {
-    let parsed = parseIntervalLiteral(expr.literal)
-    if (!parsed) return diag(node, `Could not parse interval literal: "${expr.literal}"`, undefined)
-    return Object.assign(expr, {node: 'numberLiteral', literal: parsed.quantity.toString(), type: 'interval', intervalUnit: parsed.unit})
-  }
-
-  else diag(node, `Expected types: ${expected.join(', ')}`)
+  diag(node, `Expected types: ${expected.join(', ')}`)
 }
 
 // Get the field that a Ref refers to.
