@@ -2,6 +2,7 @@ import type {FastifyReply, FastifyRequest} from 'fastify'
 import {and, eq} from 'drizzle-orm'
 import {auth} from './auth.ts'
 import {getDb} from './db.ts'
+import {decryptSecret} from './secrets.ts'
 import {connections, files, repos, type Connection} from '../schema.ts'
 import {updateFile, clearWorkspace, analyze, getDiagnostics, toSql} from '../../core/lang/core.ts'
 import {setConfig} from '../../core/lang/config.ts'
@@ -55,7 +56,7 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
 }
 
 async function getConnection (connInfo: Connection) {
-  let cfg = JSON.parse(decryptSecret(connInfo.configJson))
+  let cfg = JSON.parse(await decryptSecret(connInfo.configJson))
 
   if (connInfo.kind == 'bigquery') {
     let mod = await import('../../core/cli/connections/bigQuery.ts')
@@ -66,14 +67,4 @@ async function getConnection (connInfo: Connection) {
   } else {
     throw new Error('Unsupported cloud database ' + connInfo.kind)
   }
-}
-
-export function decryptSecret (cipher:string): string {
-  // TODO once we set up KMS
-  return cipher
-}
-
-export function encryptSecret (body: string): string {
-  // TODO once we set up KMS
-  return body
 }

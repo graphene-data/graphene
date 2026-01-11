@@ -109,7 +109,12 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
       {
         Effect   = "Allow"
         Action   = ["kms:Decrypt"]
-        Resource = "arn:aws:kms:us-east-1:772069004272:key/416d1be8-8f0d-47b9-abaf-7f9d5cad4e9d"
+        Resource = data.aws_kms_alias.secretsmanager.target_key_arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["kms:Encrypt", "kms:Decrypt"]
+        Resource = aws_kms_key.secrets.arn
       }
     ]
   })

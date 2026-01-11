@@ -8,6 +8,7 @@ import {createServer} from './server.ts'
 import {getDb, resetDb} from './db.ts'
 import * as schema from '../schema.ts'
 import {setAuthOverride} from './auth.ts'
+import {encryptSecret} from './secrets.ts'
 import {TEST} from './consts.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
@@ -112,7 +113,7 @@ async function seedDatabase (connectionType: SeedType) {
     }
 
     let namespace = 'bigquery-public-data.thelook_ecommerce'
-    await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson, namespace}).run()
+    await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson: await encryptSecret(configJson), namespace}).run()
     // NB this id is the current install of the `graphene-data-dev` github app into the `github.com/grant-gh-test/ecomm` repo. If you re-install, update the vcsInstallationId
     let vcsInstallationId = '101959947'
     await db.insert(schema.vcsInstallations).values({orgId, id: vcsInstallationId, type: 'github'}).run()
@@ -122,7 +123,7 @@ async function seedDatabase (connectionType: SeedType) {
   if (connectionType == 'duckdb') {
     let dbPath = path.resolve(rootDir, '../core/examples/flights/flights.duckdb')
     if (!fs.existsSync(dbPath)) throw new Error(`Expected DuckDB database at ${dbPath}`)
-    await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: JSON.stringify({dbPath})}).run()
+    await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: await encryptSecret(JSON.stringify({dbPath}))}).run()
     await db.insert(schema.repos).values({id: repoId, slug: 'flights', orgId, url: 'https://github.com/graphene-data/examples/${repoSlug}'}).run()
   }
 

@@ -1,5 +1,20 @@
+# AWS-managed KMS keys (created automatically by AWS services)
+data "aws_kms_alias" "secretsmanager" {
+  name = "alias/aws/secretsmanager"
+}
+
+# KMS key for encrypting user secrets (database credentials, etc)
+resource "aws_kms_key" "secrets" {
+  description         = "Encrypts user-provided secrets like database credentials"
+  enable_key_rotation = true
+}
+
+resource "aws_kms_alias" "secrets" {
+  name          = "alias/graphene-secrets"
+  target_key_id = aws_kms_key.secrets.key_id
+}
+
 # Individual secrets for the cloud application
-# App Runner references these directly by ARN
 
 resource "aws_secretsmanager_secret" "turso_auth_token" {
   name        = "TURSO_AUTH_TOKEN"
