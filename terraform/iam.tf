@@ -24,9 +24,9 @@ resource "aws_iam_role" "ci_deploy" {
   })
 }
 
-# Inline policy for CI to push to ECR and manage App Runner deployments
+# Inline policy for CI to push to ECR and manage ECS deployments
 resource "aws_iam_role_policy" "ci_deploy_ecr" {
-  name = "ecr-push"
+  name = "ecr-push-and-ecs-deploy"
   role = aws_iam_role.ci_deploy.id
 
   policy = jsonencode({
@@ -53,61 +53,45 @@ resource "aws_iam_role_policy" "ci_deploy_ecr" {
       {
         Effect = "Allow"
         Action = [
-          "apprunner:StartDeployment",
-          "apprunner:DescribeService"
+          "ecs:UpdateExpressGatewayService",
+          "ecs:DescribeExpressGatewayService"
         ]
-        Resource = aws_apprunner_service.cloud.arn
+        Resource = aws_ecs_express_gateway_service.cloud.service_arn
       },
       {
-        Effect   = "Allow"
-        Action   = ["apprunner:ListServices"]
+        Effect = "Allow"
+        Action = [
+          "ecs:DescribeServices",
+          "ecs:DescribeClusters"
+        ]
         Resource = "*"
       }
     ]
   })
 }
 
-# App Runner ECR Access Role - allows App Runner to pull images from ECR
-# Note: Uses AWS managed policy since that's required by App Runner
-resource "aws_iam_role" "apprunner_ecr_access" {
-  name        = "AppRunnerECRAccessRole"
-  path        = "/service-role/"
-  description = "This role gives App Runner permission to access ECR"
-
+# ECS Execution Role - used by the ECS agent *before* the container starts.
+# Needs permissions to pull images from ECR, send logs to CloudWatch, and fetch secrets from Secrets Manager.
+resource "aws_iam_role" "ecs_execution" {
+  name = "ecs-execution-role"
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { Service = "build.apprunner.amazonaws.com" }
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
       Action    = "sts:AssumeRole"
     }]
   })
 }
 
-resource "aws_iam_role_policy_attachment" "apprunner_ecr_access" {
-  role       = aws_iam_role.apprunner_ecr_access.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSAppRunnerServicePolicyForECRAccess"
+resource "aws_iam_role_policy_attachment" "ecs_execution" {
+  role       = aws_iam_role.ecs_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# App Runner Instance Role - the role the running container assumes
-resource "aws_iam_role" "apprunner_instance" {
-  name = "app-runner-instance-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "tasks.apprunner.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-# Inline policy for App Runner instance
-resource "aws_iam_role_policy" "apprunner_instance_policy" {
-  name = "apprunner-instance-policy"
-  role = aws_iam_role.apprunner_instance.id
-
+resource "aws_iam_role_policy" "ecs_execution_secrets" {
+  name = "secrets-access"
+  role = aws_iam_role.ecs_execution.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -128,6 +112,44 @@ resource "aws_iam_role_policy" "apprunner_instance_policy" {
         Resource = "arn:aws:kms:us-east-1:772069004272:key/416d1be8-8f0d-47b9-abaf-7f9d5cad4e9d"
       }
     ]
+  })
+}
+
+# ECS Infrastructure Role - used by ECS Express Mode to create and manage the AWS resources it provisions:
+# ALB, target groups, security groups, auto-scaling policies, and ACM certificates.
+resource "aws_iam_role" "ecs_infrastructure" {
+  name = "ecs-infrastructure-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ecs.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_infrastructure" {
+  role       = aws_iam_role.ecs_infrastructure.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSInfrastructureRoleforExpressGatewayServices"
+}
+
+# Additional permissions for CloudWatch Logs (not included in the managed policy)
+resource "aws_iam_role_policy" "ecs_infrastructure_logs" {
+  name = "cloudwatch-logs"
+  role = aws_iam_role.ecs_infrastructure.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:DescribeLogGroups",
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ]
+      Resource = "*"
+    }]
   })
 }
 

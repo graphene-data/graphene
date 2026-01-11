@@ -174,8 +174,15 @@ resource "aws_wafv2_web_acl" "main" {
   }
 }
 
-# Associate WAF with App Runner service
-resource "aws_wafv2_web_acl_association" "apprunner" {
-  resource_arn = aws_apprunner_service.cloud.arn
+# Look up the ALB created by ECS Express Mode (tagged with AmazonECSManaged=true)
+data "aws_lb" "ecs_express" {
+  tags = {
+    AmazonECSManaged = "true"
+  }
+}
+
+# Associate WAF with ECS Express Mode ALB
+resource "aws_wafv2_web_acl_association" "alb" {
+  resource_arn = data.aws_lb.ecs_express.arn
   web_acl_arn  = aws_wafv2_web_acl.main.arn
 }

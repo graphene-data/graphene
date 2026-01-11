@@ -15,25 +15,25 @@ output "ci_deploy_role_arn" {
   value       = aws_iam_role.ci_deploy.arn
 }
 
-output "apprunner_instance_role_arn" {
-  description = "ARN of the App Runner instance role"
-  value       = aws_iam_role.apprunner_instance.arn
-}
-
 output "delve_auditor_role_arn" {
   description = "ARN of the Delve auditor role"
   value       = aws_iam_role.delve_auditor.arn
 }
 
-# App Runner Outputs
-output "apprunner_service_url" {
-  description = "URL of the App Runner service"
-  value       = aws_apprunner_service.cloud.service_url
+# ECS Express Mode Outputs
+output "ecs_service_url" {
+  description = "URL of the ECS Express service (for testing before DNS switch)"
+  value       = "https://${aws_ecs_express_gateway_service.cloud.ingress_paths[0].endpoint}"
 }
 
-output "apprunner_service_arn" {
-  description = "ARN of the App Runner service"
-  value       = aws_apprunner_service.cloud.arn
+output "ecs_alb_endpoint" {
+  description = "ALB endpoint - point your external DNS here"
+  value       = aws_ecs_express_gateway_service.cloud.ingress_paths[0].endpoint
+}
+
+output "ecs_service_arn" {
+  description = "ARN of the ECS Express service"
+  value       = aws_ecs_express_gateway_service.cloud.service_arn
 }
 
 # Secrets Manager Outputs

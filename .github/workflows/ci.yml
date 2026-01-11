@@ -110,39 +110,17 @@ jobs:
           docker push 772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:latest
           docker push 772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}
 
-      - name: Get App Runner service ARN
-        id: apprunner
+      - name: Update ECS Express service
         run: |
-          SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='graphene-prod-us'].ServiceArn" --output text)
-          echo "service_arn=$SERVICE_ARN" >> $GITHUB_OUTPUT
-
-      - name: Start App Runner deployment
-        run: |
-          OPERATION_ID=$(aws apprunner start-deployment --service-arn ${{ steps.apprunner.outputs.service_arn }} --query "OperationId" --output text)
-          echo "Started deployment with operation ID: $OPERATION_ID"
+          aws ecs update-express-gateway-service \
+            --service-name graphene-cloud \
+            --cluster graphene-prod \
+            --primary-container image="772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}"
 
       - name: Wait for deployment to complete
         run: |
-          echo "Waiting for deployment to complete..."
-          MAX_ATTEMPTS=60
-          ATTEMPT=0
-
-          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-            STATUS=$(aws apprunner describe-service --service-arn ${{ steps.apprunner.outputs.service_arn }} --query "Service.Status" --output text)
-            echo "Deployment status: $STATUS (attempt $((ATTEMPT+1))/$MAX_ATTEMPTS)"
-
-            if [ "$STATUS" = "RUNNING" ]; then
-              echo "Deployment completed successfully!"
-              exit 0
-            elif [ "$STATUS" = "OPERATION_IN_PROGRESS" ]; then
-              echo "Deployment still in progress..."
-              sleep 10
-              ATTEMPT=$((ATTEMPT+1))
-            else
-              echo "Unexpected status: $STATUS"
-              exit 1
-            fi
-          done
-
-          echo "Deployment timed out after $((MAX_ATTEMPTS*10)) seconds"
-          exit 1
+          echo "Waiting for ECS service to stabilize..."
+          aws ecs wait services-stable \
+            --cluster graphene-prod \
+            --services graphene-cloud
+          echo "Deployment completed successfully!"
