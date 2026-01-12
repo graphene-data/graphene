@@ -476,32 +476,6 @@ FROM order_totals ot
 JOIN item_counts ic ON ot.customer_name = ic.customer_name
 ```
 
-### Working with dates, timestamps, and intervals
-
-Graphene understands a handful of common literal formats so you rarely need explicit casts when filtering or doing time math.
-
-#### Date and timestamp literals
-
-- `YYYY`, `YYYY-MM`, and `YYYY-MM-DD` strings are treated as dates. Leading/trailing spaces are ignored.
-- `YYYY-MM-DD HH[:MM[:SS]]` (with either a space or `T` between the date and time) is treated as a timestamp. Missing minutes or seconds default to `00`.
-
-```sql
-from users select id
-where created_at >= '2024-01-01' and created_at <= '2024-02-01'
-```
-
-#### Interval literals
-
-To add or subtract time, provide a quantity followed by a unit inside a string literal. Supported units include `second`, `minute`, `hour`, `day`, `week`, `month`, `quarter`, and `year` (plural forms or shorthands like `secs`, `mins`, `hrs` also work).
-
-```sql
-from users select
-  created_at + '5 minutes' as first_seen_plus_5,
-  created_at - '2 days' as first_seen_minus_2
-```
-
-Interval literals accept decimals (`'1.5 hours'`) and negative values (`'-7 days'`). Invalid strings produce a diagnostic such as “Could not parse interval literal: "many moons"”.
-
 ### Available functions
 
 Function availability varies depending on the connected database, noted in the tables below. Check your package.json to see what database you are connected to.
