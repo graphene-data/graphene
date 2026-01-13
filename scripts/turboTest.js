@@ -7,18 +7,19 @@ process.env.GRAPHENE_DEBUG = '1'
 process.env.PWDEBUG = '1'
 
 const ROOT_DIR = execSync('git rev-parse --show-toplevel', {encoding: 'utf8'}).trim()
+const searchString = process.argv[2]
 
 async function loadResults () {
   try {
     let raw = await readFile(path.join(ROOT_DIR, 'node_modules/.testResults.json'), 'utf8')
     return JSON.parse(raw)
   } catch (error) {
-    if (error?.code === 'ENOENT') console.log('No test results found. Run `pnpm test` first.')
-    else throw error
+    if (error?.code === 'ENOENT') return null
+    throw error
   }
 }
 
-function selectTest (results) {
+function selectFailedTest (results) {
   for (let suite of results?.testResults || []) {
     if (suite.status !== 'failed') continue
     for (let test of suite.assertionResults || []) {
@@ -28,12 +29,50 @@ function selectTest (results) {
   }
 }
 
-let results = await loadResults()
-let selectedTest = selectTest(results)
+function searchForTests (search) {
+  try {
+    let output = execSync(
+      `grep -rn --include="*.test.ts" -E "it\\(.*${search}" .`,
+      {encoding: 'utf8', cwd: ROOT_DIR},
+    )
+    let matches = []
+    for (let line of output.trim().split('\n')) {
+      let match = line.match(/^(.+?):(\d+):.*it\(['"`](.+?)['"`]/)
+      if (match) {
+        matches.push({file: path.join(ROOT_DIR, match[1]), name: match[3], lineNum: match[2]})
+      }
+    }
+    return matches
+  } catch (error) {
+    if (error.status === 1) return [] // grep found nothing
+    throw error
+  }
+}
 
-if (!selectedTest) {
-  console.log('No failed tests found. Run `pnpm test` first.')
-  process.exit(0)
+let selectedTest
+
+if (searchString) {
+  let matches = searchForTests(searchString)
+  if (matches.length === 0) {
+    console.log(`No tests found matching "${searchString}".`)
+    process.exit(1)
+  } else if (matches.length > 1) {
+    console.log(`Multiple tests match "${searchString}". Please be more specific:\n`)
+    for (let match of matches) {
+      console.log(`  - ${match.name}`)
+      console.log(`    ${path.relative(ROOT_DIR, match.file)}:${match.lineNum}\n`)
+    }
+    process.exit(1)
+  } else {
+    selectedTest = matches[0]
+  }
+} else {
+  let results = await loadResults()
+  selectedTest = selectFailedTest(results)
+  if (!selectedTest) {
+    console.log('No failed tests found. Run `pnpm test` first, or specify a test filter.')
+    process.exit(0)
+  }
 }
 
 await startVitest('test', [path.relative(ROOT_DIR, selectedTest.file)], {
