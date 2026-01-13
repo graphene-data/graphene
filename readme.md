@@ -17,6 +17,11 @@ From `vscode`, use `pnpm run install-cursor` (or `-vscode`) to package up the cu
 
 To test out packaged graphene, `cd cli && pnpm pack`. In a new folder, you can `npm install <path-to-pack.tgz>`.
 
+# Linking
+Linking allows you to use your local version of Graphene (including uncommitted/unpublished changes) in another project.
+Within Graphene, `cd cli && npm link`. Then in the project consuming Graphene, `npm link @graphenedata/cli`
+If you use worktrees, you'll have to rerun both steps if you want to change which worktree a link points at.
+
 # Publishing
 `node --env-file=../../publish.env ./scripts/publish.ts patch`
 

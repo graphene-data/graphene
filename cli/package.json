@@ -10,12 +10,13 @@
   },
   "files": [
     "dist",
+    "bin.js",
     "package.json",
     "LICENSE.md",
     "THIRD_PARTY_NOTICES.md"
   ],
   "bin": {
-    "graphene": "./dist/cli/cli.js"
+    "graphene": "./bin.js"
   },
   "exports": {
     "./ui": {
