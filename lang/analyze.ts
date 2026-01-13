@@ -487,6 +487,11 @@ function analyzeTimeExpression (op: '-' | '+', left: Expression, right: Expressi
 function ensureSameType (left: Expression, leftNode: SyntaxNode, right: Expression, rightNode: SyntaxNode): FieldType | undefined {
   if (left.type === 'error' || right.type === 'error') return
   if (left.node === 'parameter' || right.node === 'parameter') return
+
+  // if one side is a date/timestamp, allow the other (string) to be coerced
+  if (left.type === 'date' || left.type === 'timestamp') checkTypes(right, [left.type as FieldType], rightNode)
+  if (right.type === 'date' || right.type === 'timestamp') checkTypes(left, [right.type as FieldType], leftNode)
+
   if (left.type !== right.type) diag(rightNode, `Expected ${left.type}, got ${right.type}`)
 }
 
@@ -495,6 +500,17 @@ export function checkTypes (expr: Expression, expected: FieldType[], node: Synta
   if (expr.node === 'parameter') return
   if (expected.includes(expr.type)) return // types match
   if (expected.includes('generic' as FieldType)) return
+
+  // string literals can be coerced to date/timestamp if needed (but NOT interval, due to ambiguity with e.g. `5 * '1 hour'`)
+  let dt = expected.find(t => t == 'date') || expected.find(t => t == 'timestamp')
+  if (expr.node == 'stringLiteral' && dt) {
+    let parsed = parseTemporalLiteral(expr.literal, dt)
+    if (!parsed) return diag(node, `Could not parse ${dt} literal: "${expr.literal}"`, undefined)
+    let typeDef = {type: parsed.type, timeframe: parsed.timeframe}
+    Object.assign(expr, {node: 'timeLiteral', literal: parsed?.literal, type: parsed?.type, typeDef})
+    return
+  }
+
   diag(node, `Expected types: ${expected.join(', ')}`)
 }
 

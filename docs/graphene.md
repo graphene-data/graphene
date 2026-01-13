@@ -575,6 +575,7 @@ from sales_per_store
 - Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
 - `count` is a reserved word. Do not alias your columns as `count`.
 - Window functions and set operations (`union [all]`, `intersect`, `except`) are not supported.
+- Date and timestamp literals can be written with explicit keywords (`date '2024-01-01'` or `timestamp '2024-01-01 12:00:00'`), but these keywords are optional when the expected type is known from context (e.g., when comparing against a date or timestamp column). Interval literals always require the `interval` keyword.
 
 ## `table as` statements
 
