@@ -1,5 +1,5 @@
 import {expect, test, waitForGrapheneQueries} from './fixtures.ts'
-import {tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData.ts'
+import {groupedDataForSection, tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData.ts'
 
 test('renders table data', async ({mount, page}) => {
   await mount('components/Table.svelte', {data: timeseriesGrouped(), title: 'Sales'})
@@ -42,4 +42,28 @@ test('paginates rows', async ({mount, page}) => {
   await expect(firstCell()).toHaveText('Row 1')
   await expect(page.getByText('Page 1 of 3')).toBeVisible()
   await expect(page.locator('.pagination__meta')).toHaveText('5 of 12 rows')
+})
+
+test('groupType=section renders correct rowSpan for first row of each group', async ({mount, page}) => {
+  // expect(1).toBe(2)
+  await mount('components/Table.svelte', {data: groupedDataForSection(), groupBy: 'time_horizon', groupType: 'section'})
+  await waitForGrapheneQueries(page)
+  let table = page.locator('[data-testid="DataTable-no-id"] table')
+  await expect(table).toBeVisible()
+
+  // Find cells containing group names and verify they have correct rowspan
+  // "30 days" group has 3 rows, so its cell should have rowspan=3
+  let cell30days = table.locator('td', {hasText: '30 days'}).first()
+  await expect(cell30days).toBeVisible()
+  await expect(cell30days).toHaveAttribute('rowspan', '3')
+
+  // "60 days" group has 2 rows, so its cell should have rowspan=2
+  let cell60days = table.locator('td', {hasText: '60 days'}).first()
+  await expect(cell60days).toBeVisible()
+  await expect(cell60days).toHaveAttribute('rowspan', '2')
+
+  // "90 days" group has 1 row, so its cell should have rowspan=1
+  let cell90days = table.locator('td', {hasText: '90 days'}).first()
+  await expect(cell90days).toBeVisible()
+  await expect(cell90days).toHaveAttribute('rowspan', '1')
 })
