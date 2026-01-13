@@ -49,7 +49,7 @@ function makeTable (name: string, type: 'query_source' | 'table'): Table {
 }
 
 function addColumnField (table: Table, node: SyntaxNode) {
-  let name = txt(node.getChild('Identifier'))
+  let name = txt(node.getChild('ColumnName'))
 
   if (node.getChild('PrimaryKey')) {
     if (table.primaryKey) diag(node, `Table ${table.name} has multiple primary keys`)

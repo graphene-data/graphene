@@ -607,6 +607,13 @@ describe('lang', () => {
       .toRenderSql('select DATE \'2024-01-01\' as "d" from users as base')
   })
 
+  it('allows temporal keywords as column names', () => {
+    // Columns can be named 'date' or 'timestamp' even though these are also keywords for literals
+    updateFile('table foo (id VARCHAR, date DATE, timestamp TIMESTAMP)', 'foo.gsql')
+    expect('from foo select id')
+      .toRenderSql('select base."id" as "id" from foo as base')
+  })
+
   it('supports timestamp keyword', () => {
     expect('from users select id where created_at >= timestamp \'2024-01-01 12:00:00\'')
       .toRenderSql('select base."id" as "id" from users as base where base."created_at">=TIMESTAMP \'2024-01-01 12:00:00\'')

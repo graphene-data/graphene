@@ -88,8 +88,13 @@ extendItem {
   (JoinDef | ComputedDef)
 }
 
+// Allow temporal keywords as column names (date, timestamp, interval are common column names in SQL)
 ColumnDef {
-  Identifier DataType PrimaryKey?
+  ColumnName DataType PrimaryKey?
+}
+
+ColumnName {
+  Identifier | Kw<"date"> | Kw<"timestamp"> | Kw<"interval">
 }
 
 PrimaryKey {
