@@ -565,13 +565,13 @@ describe('lang', () => {
       .toRenderSql('select base."name" as "name", null as "col_1", true as "col_2", false as "col_3" from users as base')
   })
 
-  it('requires explicit timestamp keyword for comparisons', () => {
-    expect("from users select id where created_at >= timestamp '2024-01-01'")
+  it('coerces string literals to timestamps in comparisons', () => {
+    expect("from users select id where created_at >= '2024-01-01'")
       .toRenderSql("select base.\"id\" as \"id\" from users as base where base.\"created_at\">=TIMESTAMP '2024-01-01 00:00:00'")
   })
 
-  it('requires explicit timestamp keywords in IN lists', () => {
-    expect("from users select id where created_at in (timestamp '2024-01-01', timestamp '2024-01-02')")
+  it('coerces string literals to timestamps in IN lists', () => {
+    expect("from users select id where created_at in ('2024-01-01','2024-01-02')")
       .toRenderSql("select base.\"id\" as \"id\" from users as base where base.\"created_at\" in (TIMESTAMP '2024-01-01 00:00:00',TIMESTAMP '2024-01-02 00:00:00')")
   })
 
@@ -587,9 +587,9 @@ describe('lang', () => {
     expect(toSql(queries[0], {start_date: '2024-01-01'})).toMatch(/>=TIMESTAMP '2024-01-01 00:00:00'/)
   })
 
-  it('diagnoses string used where timestamp expected', () => {
+  it('diagnoses invalid timestamp literals', () => {
     expect("from users select id where created_at >= 'soonish'")
-      .toHaveDiagnostic(/Expected timestamp, got string/i)
+      .toHaveDiagnostic(/Could not parse timestamp literal/i)
   })
 
   it('supports interval keyword with quoted string', () => {
