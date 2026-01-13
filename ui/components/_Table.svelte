@@ -345,19 +345,21 @@
 
         {#if groupBy}
           {#each sortedGroupNames as groupName (groupName)}
-            <TableGroupRow
-              {groupName}
-              currentGroupData={groupedData[groupName]}
-              toggled={groupToggleStates[groupName]}
-              {columnSummary}
-              {rowNumbers}
-              rowColor={$accordionRowColorStore}
-              {subtotals}
-              on:toggle={handleToggle}
-              {orderedColumns}
-              {compact}
-            />
-            {#if groupToggleStates[groupName]}
+            {#if groupType !== 'section'}
+              <TableGroupRow
+                {groupName}
+                currentGroupData={groupedData[groupName]}
+                toggled={groupToggleStates[groupName]}
+                {columnSummary}
+                {rowNumbers}
+                rowColor={$accordionRowColorStore}
+                {subtotals}
+                on:toggle={handleToggle}
+                {orderedColumns}
+                {compact}
+              />
+            {/if}
+            {#if groupType === 'section' || groupToggleStates[groupName]}
               <TableRow
                 displayedData={groupedData[groupName]}
                 {rowShading}
@@ -372,6 +374,7 @@
                 groupNamePosition={groupNamePosition}
                 orderedColumns={orderedColumns}
                 index={groupOffsets[groupName] ?? 0}
+                rowSpan={groupedData[groupName].length}
               />
               {#if subtotals}
                 <TableSubtotalRow

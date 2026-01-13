@@ -61,6 +61,23 @@ export function tableDataForPagination (count = 15): TableRows {
   return {rows}
 }
 
+export function groupedDataForSection (): TableRows {
+  let rows = [
+    {time_horizon: '30 days', sku: 'SKU-A', units: 100},
+    {time_horizon: '30 days', sku: 'SKU-B', units: 80},
+    {time_horizon: '30 days', sku: 'SKU-C', units: 60},
+    {time_horizon: '60 days', sku: 'SKU-A', units: 150},
+    {time_horizon: '60 days', sku: 'SKU-B', units: 120},
+    {time_horizon: '90 days', sku: 'SKU-A', units: 200},
+  ] as any
+  rows._evidenceColumnTypes = [
+    {name: 'time_horizon', evidenceType: 'string'},
+    {name: 'sku', evidenceType: 'string'},
+    {name: 'units', evidenceType: 'number'},
+  ]
+  return {rows}
+}
+
 let ordersByCategory = [
   {
     'month': '2021-01-01T00:00:00.000Z',
