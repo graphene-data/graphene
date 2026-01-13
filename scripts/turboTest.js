@@ -32,14 +32,14 @@ function selectFailedTest (results) {
 function searchForTests (search) {
   try {
     let output = execSync(
-      `grep -rn --include="*.test.ts" -E "it\\(.*${search}" .`,
+      `grep -rn --include="*.test.ts" -E "(it|test)\\(.*${search}" .`,
       {encoding: 'utf8', cwd: ROOT_DIR},
     )
     let matches = []
     for (let line of output.trim().split('\n')) {
-      let match = line.match(/^(.+?):(\d+):.*it\(['"`](.+?)['"`]/)
+      let match = line.match(/^(.+?):(\d+):.*(it|test)\(['"`](.+?)['"`]/)
       if (match) {
-        matches.push({file: path.join(ROOT_DIR, match[1]), name: match[3], lineNum: match[2]})
+        matches.push({file: path.join(ROOT_DIR, match[1]), name: match[4], lineNum: match[2]})
       }
     }
     return matches
