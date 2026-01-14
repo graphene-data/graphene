@@ -89,7 +89,8 @@ async function startWorktree (name: string) {
 
   console.log(`Assigned ports → core:${basePort}`)
 
-  await $`ln -sf ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
+  // hard-link so that when mounted in a container we can still access it
+  await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 
   writeFileSync(`${treePath}/AGENTS.md`, `
     This folder contains the source for Graphene, a project that lets you define a data stack as code.
@@ -115,6 +116,47 @@ async function startWorktree (name: string) {
         ]
       }
     }
+  `)
+
+  // Generate devcontainer files
+  mkdirSync(`${treePath}/.devcontainer`)
+  writeFileSync(`${treePath}/.devcontainer/devcontainer.json`, JSON.stringify({
+    build: {
+      dockerfile: 'Dockerfile.dev',
+    },
+    runArgs: ['--env-file=../devcontainer.env'],
+    appPort: [basePort, basePort + 1],
+    postCreateCommand: '(cd cloud && pnpm install) && (cd core && pnpm install)',
+    workspaceMount: `source=\${localWorkspaceFolder},target=/${name},type=bind`,
+    workspaceFolder: `/${name}`,
+    mounts: [
+      {source: 'pnpm-store', target: '/pnpm/store', type: 'volume'},
+      {source: `${root}/main/cloud/.git`, target: `${root}/main/cloud/.git`, type: 'bind'},
+      {source: `${root}/main/core/.git`, target: `${root}/main/core/.git`, type: 'bind'},
+    ],
+  }, null, 2) + '\n')
+
+  writeFileSync(`${treePath}/.devcontainer/Dockerfile.dev`, `
+    FROM node:24-bookworm-slim
+
+    # https://stackoverflow.com/questions/67732260/how-to-fix-hash-sum-mismatch-in-docker-on-mac
+    RUN rm -rf /var/lib/apt/lists/*
+    RUN apt-get clean
+    RUN apt-get update -o Acquire::CompressionTypes::Order::=gz
+    RUN echo 'Acquire::http::Pipeline-Depth 0;\\nAcquire::http::No-Cache true;\\nAcquire::BrokenProxy true;\\n' > /etc/apt/apt.conf.d/99fixbadproxy
+
+    ENV PNPM_HOME="/pnpm"
+    ENV PATH="$PNPM_HOME:$PATH"
+    RUN corepack enable && corepack prepare pnpm@latest --activate
+
+    RUN npx -y playwright@1.54.2 install chromium --with-deps
+
+    RUN apt-get install -y curl git git-lfs
+
+    RUN npm install -g @anthropic-ai/claude-code
+    RUN curl -fsSL https://opencode.ai/install | bash
+
+    WORKDIR /${name}
   `)
 
   console.log('Opening Zed...')
