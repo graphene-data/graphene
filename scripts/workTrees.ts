@@ -118,47 +118,6 @@ async function startWorktree (name: string) {
     }
   `)
 
-  // Generate devcontainer files
-  mkdirSync(`${treePath}/.devcontainer`)
-  writeFileSync(`${treePath}/.devcontainer/devcontainer.json`, JSON.stringify({
-    build: {
-      dockerfile: 'Dockerfile.dev',
-    },
-    runArgs: ['--env-file=../devcontainer.env'],
-    appPort: [basePort, basePort + 1],
-    postCreateCommand: '(cd cloud && pnpm install) && (cd core && pnpm install)',
-    workspaceMount: `source=\${localWorkspaceFolder},target=/${name},type=bind`,
-    workspaceFolder: `/${name}`,
-    mounts: [
-      {source: 'pnpm-store', target: '/pnpm/store', type: 'volume'},
-      {source: `${root}/main/cloud/.git`, target: `${root}/main/cloud/.git`, type: 'bind'},
-      {source: `${root}/main/core/.git`, target: `${root}/main/core/.git`, type: 'bind'},
-    ],
-  }, null, 2) + '\n')
-
-  writeFileSync(`${treePath}/.devcontainer/Dockerfile.dev`, `
-    FROM node:24-bookworm-slim
-
-    # https://stackoverflow.com/questions/67732260/how-to-fix-hash-sum-mismatch-in-docker-on-mac
-    RUN rm -rf /var/lib/apt/lists/*
-    RUN apt-get clean
-    RUN apt-get update -o Acquire::CompressionTypes::Order::=gz
-    RUN echo 'Acquire::http::Pipeline-Depth 0;\\nAcquire::http::No-Cache true;\\nAcquire::BrokenProxy true;\\n' > /etc/apt/apt.conf.d/99fixbadproxy
-
-    ENV PNPM_HOME="/pnpm"
-    ENV PATH="$PNPM_HOME:$PATH"
-    RUN corepack enable && corepack prepare pnpm@latest --activate
-
-    RUN npx -y playwright@1.54.2 install chromium --with-deps
-
-    RUN apt-get install -y curl git git-lfs
-
-    RUN npm install -g @anthropic-ai/claude-code
-    RUN curl -fsSL https://opencode.ai/install | bash
-
-    WORKDIR /${name}
-  `)
-
   console.log('Opening Zed...')
   await $`zed ${treePath}`
 
@@ -262,6 +221,87 @@ async function pushWorktree () {
   await $$`git -C ${currentWorktree}/cloud push origin HEAD:main`
 }
 
+// Start up a container for this worktree
+async function upWorktree () {
+  let name = currentName
+  if (!name) throw new Error('Can only containerize named worktrees')
+  let containerName = `graphene-${name}`
+  let port = readGraphenePort(name)
+  if (!port) throw new Error(`Could not read port for worktree '${name}'`)
+
+  let envFile = `${root}/devcontainer.env`
+  if (!existsSync(envFile)) throw new Error(`Missing ${envFile} - create it with your API keys`)
+
+  writeFileSync(`${root}/${name}/Dockerfile.dev`, `
+    FROM node:24-bookworm-slim
+
+    # https://stackoverflow.com/questions/67732260/how-to-fix-hash-sum-mismatch-in-docker-on-mac
+    RUN rm -rf /var/lib/apt/lists/*
+    RUN apt-get clean
+    RUN apt-get update -o Acquire::CompressionTypes::Order::=gz
+    RUN echo 'Acquire::http::Pipeline-Depth 0;\\nAcquire::http::No-Cache true;\\nAcquire::BrokenProxy true;\\n' > /etc/apt/apt.conf.d/99fixbadproxy
+
+    ENV PNPM_HOME="/pnpm"
+    ENV PNPM_STORE_DIR="/pnpm/store"
+    ENV PATH="$PNPM_HOME:$PATH"
+    RUN corepack enable && corepack prepare pnpm@latest --activate
+    pnpm config set store-dir /pnpm/store
+
+    RUN npx -y playwright@1.54.2 install chromium --with-deps
+
+    RUN apt-get install -y curl git git-lfs
+
+    RUN npm install -g @anthropic-ai/claude-code
+    RUN curl -fsSL https://opencode.ai/install | bash
+
+    WORKDIR /${name}
+  `)
+
+  console.log('Building Docker image...')
+  await $`docker build -f ${currentWorktree}/Dockerfile.dev -t graphene-dev ${currentWorktree}`
+
+  // Stop existing container if running
+  await $`docker rm -f ${containerName}`.nothrow()
+
+  console.log('Starting container...')
+  await $`docker run -d --name ${containerName} \
+    --env-file ${envFile} \
+    -p ${port}:${port} -p ${port + 1}:${port + 1} \
+    --mount type=bind,source=${currentWorktree},target=/${name} \
+    --mount type=volume,source=pnpm-store,target=/pnpm/store \
+    --mount type=bind,source=${root}/main/cloud/.git,target=${root}/main/cloud/.git \
+    --mount type=bind,source=${root}/main/core/.git,target=${root}/main/core/.git \
+    graphene-dev \
+    tail -f /dev/null`
+
+  console.log('Installing dependencies...')
+  await $`docker exec ${containerName} bash -c "(cd cloud && pnpm --force install) && (cd core && pnpm --force install)"`
+
+  console.log(`Container '${containerName}' is running`)
+}
+
+// Run a command in the container. If no command is specified, open a shell
+async function execWorktree (args: string[]) {
+  let containerName = `graphene-${currentName}`
+
+  // Check if container is running
+  let running = await $`docker ps -q -f name=${containerName}`.nothrow()
+  if (!running.stdout.trim()) {
+    throw new Error(`Container '${containerName}' is not running. Run 'wt up' first.`)
+  }
+
+  if (args.length === 0) {
+    // Interactive shell - use spawnSync to properly inherit TTY
+    let {spawnSync} = await import('child_process')
+    let result = spawnSync('docker', ['exec', '-it', containerName, 'bash'], {stdio: 'inherit'})
+    if (result.status !== 0) process.exit(result.status ?? 1)
+  } else {
+    // Non-interactive command
+    let $$ = $({quiet: false})
+    await $$`docker exec ${containerName} ${args}`
+  }
+}
+
 async function doneWorktree () {
   console.log('Archiving worktree ' + currentName)
   if (currentName === 'main') throw new Error('Cannot mark main as done')
@@ -303,6 +343,8 @@ switch (command) {
   case 'pull': await pullWorktree(); break
   case 'commit': await commitWorktree(); break
   case 'push': await pushWorktree(); break
+  case 'up': await upWorktree(); break
+  case 'exec': await execWorktree(process.argv.slice(3)); break
   case 'done': await doneWorktree(); break
   default:
     console.log(`
@@ -313,6 +355,8 @@ ls              List all paired worktrees
 start <name>    Create a new paired worktree beside main
 pull            Pull down latest changes from main for both repos
 push            Rebase and push both repos
+up              Start the dev container for this worktree
+exec [cmd]      Run a command in the container (or bash if no command)
 done            Archive both worktrees
 `)
 }
