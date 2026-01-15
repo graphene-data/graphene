@@ -1,6 +1,6 @@
 {
   "name": "@graphenedata/cli",
-  "main": "cli.ts",
+  "main": "bin.js",
   "type": "module",
   "author": "Graphene Systems Inc",
   "version": "0.0.12",
