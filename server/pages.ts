@@ -7,25 +7,7 @@ import {compile as svelteCompile} from 'svelte/compiler'
 import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 import {PROD} from './consts.ts'
-import jwt from 'jsonwebtoken'
-
-function getTokenSecret () {
-  return process.env.AGENT_TOKEN_SECRET || process.env.CONNECTION_ENCRYPTION_KEY || 'dev-secret-key'
-}
-
-interface TokenClaims {
-  orgId: string
-  repoId: string
-  purpose: 'agent-render'
-}
-
-function verifyToken (token: string): TokenClaims | null {
-  try {
-    return jwt.verify(token, getTokenSecret()) as TokenClaims
-  } catch {
-    return null
-  }
-}
+import {verifyAgentToken} from './agent/tokens.ts'
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
@@ -127,7 +109,7 @@ export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
     token: string
   }
 
-  let claims = verifyToken(body.token || '')
+  let claims = verifyAgentToken(body.token || '')
   if (!claims) return reply.code(401).send({error: 'Invalid token'})
 
   // Compile markdown to svelte component
