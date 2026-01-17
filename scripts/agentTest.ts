@@ -1,5 +1,5 @@
-import {seedDatabase, orgId, repoId} from '../server/dev.ts'
-import {runAgent} from '../server/agent/agent.ts'
+import {seedDatabase, orgId, repoId} from '../cloud/server/dev.ts'
+import {runAgent} from '../cloud/server/agent/agent.ts'
 
 async function main () {
   let prompt = process.argv[2] || 'Which airports have the worst delays?'

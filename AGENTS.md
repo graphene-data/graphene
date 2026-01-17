@@ -45,3 +45,5 @@ The cloud service is run on AWS and configured with terraform. The server uses D
 
 ## Workflow notes
 * Always use `pnpm add` rather than editing package.json directly to ensure we get the latest version of new dependencies.
+* We use node-24 which has type stripping by default, so you should never need to use `tsc` or `tsx` to run things.
+*

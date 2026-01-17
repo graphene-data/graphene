@@ -9,7 +9,7 @@ const repoRoot = path.resolve(frontendDir, '..', '..')
 export default defineConfig({
   root: frontendDir,
   publicDir: path.join(repoRoot, 'core/ui/public'),
-  plugins: [svelte()],
+  plugins: [svelte() as any],
   resolve: {
     conditions: ['svelte', 'browser'],
   },

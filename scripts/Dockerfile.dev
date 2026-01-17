@@ -1,0 +1,21 @@
+FROM node:24-bookworm-slim
+
+# https://stackoverflow.com/questions/67732260/how-to-fix-hash-sum-mismatch-in-docker-on-mac
+RUN rm -rf /var/lib/apt/lists/*
+RUN apt-get clean
+RUN apt-get update -o Acquire::CompressionTypes::Order::=gz
+RUN echo 'Acquire::http::Pipeline-Depth 0;\nAcquire::http::No-Cache true;\nAcquire::BrokenProxy true;\n' > /etc/apt/apt.conf.d/99fixbadproxy
+
+# Mount pnpm store to a shared volume so containers can share the actual package contents
+ENV PNPM_HOME="/pnpm"
+ENV PNPM_STORE_DIR="/pnpm/store"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN pnpm config set store-dir /pnpm/store
+
+RUN npx -y playwright@1.54.2 install chromium --with-deps
+
+RUN apt-get install -y curl git git-lfs
+
+RUN npm install -g @anthropic-ai/claude-code
+RUN curl -fsSL https://opencode.ai/install | bash

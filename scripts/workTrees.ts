@@ -8,39 +8,41 @@ const BASE_PORT = 4003
 const PORT_INCREMENT = 3
 const COMMIT_TOOL = process.env.COMMIT_TOOL || 'fork status'
 
-// function readCmd(cmd: string): string {
-//   let res = $.sync`${cmd}`
-//   return res.stdout.trim()
-// }
+$.verbose = true
 
 // Get the top of the repo. We might be in a submodule, in which case we'd like the superproject
 let currentWorktree = (await $`git rev-parse --show-superproject-working-tree`).stdout.trim() || (await $`git rev-parse --show-toplevel`).stdout.trim()
 let root = resolve(currentWorktree, '..') // folder that contains all the worktrees
-let currentName = currentWorktree.split('/').pop()
+let currentName = currentWorktree.split('/').pop() || ''
 
+let args = process.argv.slice(2)
+let command = args[0]
+let flags = args.filter(a => a.startsWith('--'))
+let positional = args.slice(1).filter(a => !a.startsWith('--'))
 
-// function getTreeNames (): string[] {
-//   return readdirSync(root, {withFileTypes: true})
-//     .filter(entry => entry.isDirectory() && entry.name !== 'main' && !entry.name.startsWith('.'))
-//     .map(entry => entry.name)
-//     .sort()
-// }
+switch (command) {
+  case 'start': await startWorktree(positional[0]); break
+  // case 'drop': await dropWorktree(positional[0]); break
+  case 'pull': await pullWorktree(); break
+  case 'commit': await commitWorktree(); break
+  case 'push': await pushWorktree(flags.includes('--updateCore')); break
+  case 'up': await upWorktree(currentName); break
+  case 'exec': await execWorktree(process.argv.slice(3)); break
+  case 'done': await doneWorktree(); break
+  default:
+    console.log(`
+Usage: wt <command>
 
-// function readGraphenePort (treeName: string): number | null {
-//   let envPath = resolve(root, treeName, 'core/.env')
-//   if (!existsSync(envPath)) return null
-//   let match = readFileSync(envPath, 'utf8').match(/^GRAPHENE_PORT=(\d+)$/m)
-//   return match ? parseInt(match[1], 10) : null
-// }
-
-// function getNextPort (): number {
-//   let used = getTreeNames().map(readGraphenePort)
-//   let port = BASE_PORT
-//   while (used.includes(port)) {
-//     port += PORT_INCREMENT
-//   }
-//   return port
-// }
+Commands:
+ls                      List all paired worktrees
+start <name>            Create a new paired worktree beside main
+pull                    Pull down latest changes from main for both repos
+push [--updateCore]     Rebase and push both repos. Use --updateCore to update the submodule pointer.
+up                      Start the dev container for this worktree
+exec [cmd]              Run a command in the container (or bash if no command)
+done                    Archive both worktrees
+`)
+}
 
 async function startWorktree (name: string) {
   if (!name) throw new Error('Please provide a name for the worktree')
@@ -50,11 +52,16 @@ async function startWorktree (name: string) {
   if (fs.existsSync(treePath)) throw new Error(`${treePath} already exists`)
   fs.mkdirSync(treePath)
 
+  // create the worktree and init submodules
   await $`git -C ${root}/main fetch origin main`
   await $`git -C ${root}/main worktree add ${treePath} -b ${name} origin/main`
   await $`git -C ${treePath} submodule update --init --recursive`
 
-  let basePort = 5000 //getNextPort()
+  // Submodules start out detached. Create a branch so we can commit/push changes
+  await $`git -C ${treePath}/core checkout -b ${name}`
+
+  // Assign unique ports to the worktree, and write it to .env along with copying main's .env
+  let basePort = getNextPort()
   let envContent = fs.readFileSync(`${root}/main/.env`) + `\nWT_NAME=${name}\nGRAPHENE_PORT=${basePort}`
   fs.writeFileSync(`${treePath}/.env`, envContent)
   console.log(`Assigned ports → core:${basePort}`)
@@ -62,159 +69,36 @@ async function startWorktree (name: string) {
   // hard-link so that when mounted in a container we can still access it
   await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 
-  console.log('Opening Zed...')
+  await upWorktree(name)
   await $`zed ${treePath}`
-
-  await $`(cd ${treePath}/core && pnpm install)`
-  await $`(cd ${treePath}/cloud && pnpm install)`
 
   console.log(`Worktree '${name}' is ready at ${treePath}`)
 }
 
-async function repoDirty (repo: string): Promise<boolean> {
-  let status = (await $`git -C ${currentWorktree}/${repo} status --porcelain`).stdout.trim()
-  return !!status
-}
-
-async function createWipCommit (repo: string): Promise<boolean> {
-  if (!await repoDirty(repo)) return false
-  console.log(`Creating WIP commit in ${repo}`)
-  await $`git -C ${currentWorktree}/${repo} add -A`
-  await $`git -C ${currentWorktree}/${repo} commit -m WIP`
-  return true
-}
-
-async function resetWipCommit (repo: string): Promise<void> {
-  let message = (await $`git -C ${currentWorktree}/${repo} log -1 --format=%s`).stdout.trim()
-  if (message === 'WIP' || message.startsWith('WIP ')) {
-    console.log(`Resetting WIP commit in ${repo}`)
-    await $`git -C ${currentWorktree}/${repo} reset HEAD~1`
-  }
-}
-
-async function hasWipCommits (repo: string): Promise<boolean> {
-  // Check if any commits on the branch (not on origin/main) start with WIP
-  let log = (await $`git -C ${currentWorktree}/${repo} log origin/main..HEAD --format=%s`).stdout.trim()
-  if (!log) return false
-  return log.split('\n').some(msg => msg === 'WIP' || msg.startsWith('WIP '))
-}
-
-async function commitWorktree () {
-  if (await repoDirty('core')) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree + '/core'}`
-  if (await repoDirty('cloud')) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree + '/cloud'}`
-}
-
-async function pullWorktree () {
-  let wipCore = await createWipCommit('core')
-  let wipCloud = await createWipCommit('cloud')
-
-  let $$ = $({quiet: false})
-  await $$`git -C ${currentWorktree}/core fetch origin`
-  await $$`git -C ${currentWorktree}/cloud fetch origin`
-
-  // Run both rebases even if one fails
-  let coreError: Error | null = null
-  let cloudError: Error | null = null
-
-  let [coreResult, cloudResult] = await Promise.allSettled([
-    $$`git -C ${currentWorktree}/core rebase origin/main`,
-    $$`git -C ${currentWorktree}/cloud rebase origin/main`,
-  ])
-
-  if (coreResult.status === 'rejected') coreError = coreResult.reason
-  if (cloudResult.status === 'rejected') cloudError = cloudResult.reason
-
-  // Reset WIP commits on successful rebases
-  if (!coreError && wipCore) await resetWipCommit('core')
-  if (!cloudError && wipCloud) await resetWipCommit('cloud')
-
-  // Print helpful messages if there were conflicts
-  if (coreError || cloudError) {
-    console.log('\nRebase conflicts detected:')
-    if (coreError) console.log('  - core: resolve conflicts and run `git rebase --continue`')
-    if (cloudError) console.log('  - cloud: resolve conflicts and run `git rebase --continue`')
-
-    let wipRepos: string[] = []
-    if (wipCore && coreError) wipRepos.push('core')
-    if (wipCloud && cloudError) wipRepos.push('cloud')
-
-    if (wipRepos.length > 0) {
-      console.log(`\nReminder: You had uncommitted changes in ${wipRepos.join(' and ')} saved as WIP commits.`)
-      console.log('After resolving conflicts, run `git reset HEAD~1` to restore them as uncommitted changes.')
-    }
-  }
-}
-
-async function pushWorktree () {
-  if (await repoDirty('core') || await repoDirty('cloud')) return commitWorktree()
-
-  // Check for WIP commits that shouldn't be pushed
-  let coreHasWip = await hasWipCommits('core')
-  let cloudHasWip = await hasWipCommits('cloud')
-  if (coreHasWip || cloudHasWip) {
-    let repos = [coreHasWip && 'core', cloudHasWip && 'cloud'].filter(Boolean).join(' and ')
-    console.error(`Cannot push: ${repos} has commits starting with "WIP". Please squash or rename them first.`)
-    return
-  }
-
-  await pullWorktree()
-  await $`(cd ${currentWorktree}/core && pnpm lint && pnpm test)`
-  await $`(cd ${currentWorktree}/cloud && pnpm lint && pnpm test)`
-  let $$ = $({quiet: false})
-  await $$`git -C ${currentWorktree}/core push origin HEAD:main`
-  await $$`git -C ${currentWorktree}/cloud push origin HEAD:main`
-}
-
 // Start up a container for this worktree
-async function upWorktree () {
-  let name = currentName
-  if (!name) throw new Error('Can only containerize named worktrees')
+async function upWorktree(name:string) {
+  if (!name) throw new Error('Not in a worktree')
   let containerName = `graphene-${name}`
+  let treePath = `${root}/${name}`
   let port = readGraphenePort(name)
-  if (!port) throw new Error(`Could not read port for worktree '${name}'`)
-
+  if (!port) throw new Error('Couldnt determine ports for worktree')
   let envFile = `${root}/devcontainer.env`
-  if (!existsSync(envFile)) throw new Error(`Missing ${envFile} - create it with your API keys`)
 
-  writeFileSync(`${root}/${name}/Dockerfile.dev`, `
-    FROM node:24-bookworm-slim
-
-    # https://stackoverflow.com/questions/67732260/how-to-fix-hash-sum-mismatch-in-docker-on-mac
-    RUN rm -rf /var/lib/apt/lists/*
-    RUN apt-get clean
-    RUN apt-get update -o Acquire::CompressionTypes::Order::=gz
-    RUN echo 'Acquire::http::Pipeline-Depth 0;\\nAcquire::http::No-Cache true;\\nAcquire::BrokenProxy true;\\n' > /etc/apt/apt.conf.d/99fixbadproxy
-
-    ENV PNPM_HOME="/pnpm"
-    ENV PNPM_STORE_DIR="/pnpm/store"
-    ENV PATH="$PNPM_HOME:$PATH"
-    RUN corepack enable && corepack prepare pnpm@latest --activate
-    pnpm config set store-dir /pnpm/store
-
-    RUN npx -y playwright@1.54.2 install chromium --with-deps
-
-    RUN apt-get install -y curl git git-lfs
-
-    RUN npm install -g @anthropic-ai/claude-code
-    RUN curl -fsSL https://opencode.ai/install | bash
-
-    WORKDIR /${name}
-  `)
-
+  // Build our image against main, since it shouldn't change for any worktree
+  // We could skip this step if the image already exists, but this seems pretty fast, and catches dockerfile changes
   console.log('Building Docker image...')
-  await $`docker build -f ${currentWorktree}/Dockerfile.dev -t graphene-dev ${currentWorktree}`
+  await $`docker build -f ${root}/main/scripts/Dockerfile.dev -t graphene-dev ${root}/main`
 
-  // Stop existing container if running
-  await $`docker rm -f ${containerName}`.nothrow()
+  await $`docker rm -f ${containerName}`.nothrow() // Stop existing container if running
 
   console.log('Starting container...')
   await $`docker run -d --name ${containerName} \
     --env-file ${envFile} \
-    -p ${port}:${port} -p ${port + 1}:${port + 1} \
-    --mount type=bind,source=${currentWorktree},target=/${name} \
+    -p ${port}:${port} -p ${port + 1}:${port + 1} -p ${port + 2}:${port + 2} \
+    --workdir /${name} \
+    --mount type=bind,source=${treePath},target=/${name} \
     --mount type=volume,source=pnpm-store,target=/pnpm/store \
-    --mount type=bind,source=${root}/main/cloud/.git,target=${root}/main/cloud/.git \
-    --mount type=bind,source=${root}/main/core/.git,target=${root}/main/core/.git \
+    --mount type=bind,source=${root}/main/.git,target=${root}/main/.git \
     graphene-dev \
     tail -f /dev/null`
 
@@ -224,36 +108,132 @@ async function upWorktree () {
   console.log(`Container '${containerName}' is running`)
 }
 
+async function repoDirty (subdir?: string): Promise<boolean> {
+  let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
+  let exclude = subdir ? [] : ['core']
+  let status = (await $`git -C ${path} status --porcelain`).stdout.trim()
+
+  // in the co repo, we ignore outstanding change to submodules
+  let lines = status.split('\n').filter(l => {
+    return !exclude.some(e => l == `M ${e}`) && !!l
+  })
+  console.log('wtfmate', subdir, lines)
+  return lines.length > 0
+}
+
+async function hasWipCommits (subdir?: string): Promise<boolean> {
+  // Check if any commits on the branch (not on origin/main) start with WIP
+  let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
+  let log = (await $`git -C ${path} log origin/main..HEAD --format=%s`).stdout.trim()
+  if (!log) return false
+  return log.split('\n').some(msg => msg === 'WIP' || msg.startsWith('WIP '))
+}
+
+async function commitWorktree () {
+  if (await repoDirty('core')) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree + '/core'}`
+  if (await repoDirty()) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree}`
+}
+
+async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
+  let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
+  let label = subdir || 'co'
+
+  // Check for in-progress rebase
+  let rebaseMerge = resolve(path, '.git', 'rebase-merge')
+  let rebaseApply = resolve(path, '.git', 'rebase-apply')
+  if (fs.existsSync(rebaseMerge) || fs.existsSync(rebaseApply)) {
+    console.log(`${label} rebase still in progress. Resolve conflicts and run \`git rebase --continue\`, then run \`wt pull\` again.`)
+    return false
+  }
+
+  // Create WIP commit if dirty
+  if (await repoDirty(subdir)) {
+    console.log(`Creating WIP commit in ${label}`)
+    await $`git -C ${path} add -A`
+    await $`git -C ${path} commit -m WIP`
+  }
+
+  await $`git -C ${path} fetch origin`
+
+  try {
+    await $`git -C ${path} rebase ${onto || 'origin/main'}`
+  } catch (e) {
+    console.log(`\n${label} rebase conflicts detected. Resolve conflicts and run \`git rebase --continue\`, then run \`wt pull\` again.`)
+    return false
+  }
+
+  // Reset WIP commit if HEAD is one
+  let message = (await $`git -C ${path} log -1 --format=%s`).stdout.trim()
+  if (message === 'WIP' || message.startsWith('WIP ')) {
+    console.log(`Resetting WIP commit in ${label}`)
+    await $`git -C ${path} reset HEAD~1`
+  }
+
+  return true
+}
+
+async function pullWorktree (): Promise<boolean> {
+  // Rebase cloud first, then core
+  // Cloud goes first because rebasing cloud may update the submodule pointer to a different core commit.
+  // After cloud is rebased, we rebase core onto whatever commit the submodule now points to.
+  if (!await rebaseRepo()) return false
+
+  let submoduleCommit = (await $`git -C ${currentWorktree} ls-tree HEAD core`).stdout.trim().split(/\s+/)[2]
+  if (!await rebaseRepo('core', submoduleCommit)) return false
+
+  return true
+}
+
+async function pushWorktree (updateCore: boolean) {
+  // Check for uncommitted changes (excluding core submodule pointer from cloud check)
+  if (await repoDirty('core') || await repoDirty()) return commitWorktree()
+
+  let pullOk = await pullWorktree()
+  if (!pullOk) return
+
+  // Check for WIP commits that shouldn't be pushed
+  let coreHasWip = await hasWipCommits('core')
+  let cloudHasWip = await hasWipCommits()
+  if (coreHasWip || cloudHasWip) {
+    let repos = [coreHasWip && 'core', cloudHasWip && 'cloud'].filter(Boolean).join(' and ')
+    console.error(`Cannot push: ${repos} has commits starting with "WIP". Please squash or rename them first.`)
+    return
+  }
+
+  // ensure tests/lint pass before pushing
+  let containerName = `graphene-${currentName}`
+  await $`docker exec ${containerName} bash -c "cd cloud && pnpm lint && pnpm test"`
+  await $`docker exec ${containerName} bash -c "cd core && pnpm lint && pnpm test"`
+
+  // Push core first (so the commit exists on remote for the submodule reference)
+  await $`git -C ${currentWorktree}/core push origin HEAD:main`
+
+  if (updateCore) {
+    // Stage the updated submodule reference and amend the last commit
+    await $`git -C ${currentWorktree} add core`
+    let submoduleDirty = (await $`git -C ${currentWorktree} diff --cached --quiet`.nothrow()).exitCode !== 0
+    if (submoduleDirty) {
+      await $`git -C ${currentWorktree} commit --amend --no-edit`
+    }
+  }
+
+  await $`git -C ${currentWorktree} push origin HEAD:main`
+}
+
 // Run a command in the container. If no command is specified, open a shell
 async function execWorktree (args: string[]) {
-  let containerName = `graphene-${currentName}`
-
-  // Check if container is running
-  let running = await $`docker ps -q -f name=${containerName}`.nothrow()
-  if (!running.stdout.trim()) {
-    throw new Error(`Container '${containerName}' is not running. Run 'wt up' first.`)
-  }
-
-  if (args.length === 0) {
-    // Interactive shell - use spawnSync to properly inherit TTY
-    let {spawnSync} = await import('child_process')
-    let result = spawnSync('docker', ['exec', '-it', containerName, 'bash'], {stdio: 'inherit'})
-    if (result.status !== 0) process.exit(result.status ?? 1)
-  } else {
-    // Non-interactive command
-    let $$ = $({quiet: false})
-    await $$`docker exec ${containerName} ${args}`
-  }
+  let {spawnSync} = await import('child_process') // use spawnSync to properly inherit TTY
+  if (args.length == 0) args = ['bash']
+  let result = spawnSync('docker', ['exec', '-it', `graphene-${currentName}`, ...args], {stdio: 'inherit'})
+  process.exit(result.status ?? 0)
 }
 
 async function doneWorktree () {
-  console.log('Archiving worktree ' + currentName)
   if (currentName === 'main') throw new Error('Cannot mark main as done')
+  if (await repoDirty('core') || await repoDirty()) throw new Error('Repos have uncommitted changes')
+  console.log('Archiving worktree ' + currentName)
 
-  if (await repoDirty('core') || await repoDirty('cloud')) {
-    return console.log('Repos have uncommited changes. Consider committing first')
-  }
-
+  // Check that both branches have been merged into main
   try {
     await $`git -C ${currentWorktree}/core merge-base --is-ancestor ${currentName} origin/main`
   } catch {
@@ -261,46 +241,53 @@ async function doneWorktree () {
   }
 
   try {
-    await $`git -C ${currentWorktree}/cloud merge-base --is-ancestor ${currentName} origin/main`
+    await $`git -C ${currentWorktree} merge-base --is-ancestor ${currentName} origin/main`
   } catch {
     return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
   }
 
-  cd(root) // cd to root, since we might be about to delete the cwd
-  await $`git -C ${root}/main/core worktree remove ${currentWorktree}/core`
-  await $`git -C ${root}/main/cloud worktree remove ${currentWorktree}/cloud`
-  rmSync(currentWorktree, {recursive: true, force: true})
+  // Stop the container
+  await $`docker rm -f graphene-${currentName}`.nothrow()
 
-  // archive the branches for both worktrees
+  cd(root) // cd to root, since we might be about to delete the cwd
+
+  // Remove the worktree (superproject, which contains core as submodule)
+  await $`git -C ${root}/main worktree remove ${currentWorktree}`
+
+  // Archive the branches
   await $`git -C ${root}/main/core tag archive/${currentName} ${currentName}`
   await $`git -C ${root}/main/core branch -D ${currentName}`
-  await $`git -C ${root}/main/cloud tag archive/${currentName} ${currentName}`
-  await $`git -C ${root}/main/cloud branch -D ${currentName}`
+  await $`git -C ${root}/main tag archive/${currentName} ${currentName}`
+  await $`git -C ${root}/main branch -D ${currentName}`
 }
 
-let command = process.argv[2]
-let arg = process.argv[3]
+// useful when hacking on the workTree script itself, but otherwise kinda dangerous
+async function dropWorktree(name:string) {
+  await $`docker rm -f graphene-${name}`.nothrow()
+  await $`git -C ${root}/main worktree remove --force ${root}/${name}`
+  await $`git -C ${root}/main branch -D ${name}`
+}
 
-switch (command) {
-  // case 'ls': listWorktrees(); break
-  case 'start': await startWorktree(arg); break
-  case 'pull': await pullWorktree(); break
-  case 'commit': await commitWorktree(); break
-  case 'push': await pushWorktree(); break
-  case 'up': await upWorktree(); break
-  case 'exec': await execWorktree(process.argv.slice(3)); break
-  case 'done': await doneWorktree(); break
-  default:
-    console.log(`
-Usage: wt <command>
+function getTreeNames (): string[] {
+  return fs.readdirSync(root, {withFileTypes: true})
+    .filter(entry => entry.isDirectory() && entry.name !== 'main' && !entry.name.startsWith('.'))
+    .map(entry => entry.name)
+    .sort()
+}
 
-Commands:
-ls              List all paired worktrees
-start <name>    Create a new paired worktree beside main
-pull            Pull down latest changes from main for both repos
-push            Rebase and push both repos
-up              Start the dev container for this worktree
-exec [cmd]      Run a command in the container (or bash if no command)
-done            Archive both worktrees
-`)
+function readGraphenePort (treeName: string): number | null {
+  let envPath = resolve(root, treeName, '.env')
+  if (!fs.existsSync(envPath)) return null
+  let match = fs.readFileSync(envPath, 'utf8').match(/^GRAPHENE_PORT=(\d+)$/m)
+  if (!match) throw new Error('couldnt find port for worktree')
+  return parseInt(match[1], 10)
+}
+
+function getNextPort (): number {
+  let used = getTreeNames().map(readGraphenePort)
+  let port = BASE_PORT
+  while (used.includes(port)) {
+    port += PORT_INCREMENT
+  }
+  return port
 }

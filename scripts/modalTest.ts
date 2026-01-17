@@ -1,4 +1,4 @@
-import {captureScreenshot, setupModalSnapshot, type CaptureResult} from '../server/agent/runMd.ts'
+import {captureScreenshot, setupModalSnapshot, type CaptureResult} from '../cloud/server/agent/runMd.ts'
 import fs from 'node:fs'
 
 function printTimings (timings: CaptureResult['timings']) {
