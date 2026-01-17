@@ -1,6 +1,1 @@
 node_modules
-tests/results
-dist
-
-cloud.db
-.env

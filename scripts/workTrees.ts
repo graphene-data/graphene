@@ -1,122 +1,66 @@
 #!/usr/bin/env zx
 
 import {$, cd} from 'zx'
-import {existsSync, mkdirSync, readdirSync, rmSync, readFileSync, writeFileSync} from 'fs'
+import fs from 'fs'
 import {resolve} from 'path'
 
 const BASE_PORT = 4003
 const PORT_INCREMENT = 3
-const COMMIT_TOOL = 'fork status'
+const COMMIT_TOOL = process.env.COMMIT_TOOL || 'fork status'
 
-$.verbose = true
-$.quiet = true
+// function readCmd(cmd: string): string {
+//   let res = $.sync`${cmd}`
+//   return res.stdout.trim()
+// }
 
-// Show command output when a command fails
-process.on('unhandledRejection', (error: any) => {
-  if (error?.stdout) process.stdout.write(error.stdout)
-  if (error?.stderr) process.stderr.write(error.stderr)
-  process.exit(error?.exitCode ?? 1)
-})
-
-// root is the path that contains all of the graphene worktrees
-let root = resolve(import.meta.dirname, '../../..')
-
-let currentWorktree = ''
-if (resolve(process.cwd(), '..') == root) { // if cwd it at the top of the worktree (ie one below the root)
-  currentWorktree = process.cwd()
-} else { // otherwise, we're somewhere in one of the git repos, so use git to anchor our path
-  currentWorktree = (await $`git rev-parse --show-toplevel`).stdout.trim()
-  currentWorktree = resolve(currentWorktree, '..')
-}
-
+// Get the top of the repo. We might be in a submodule, in which case we'd like the superproject
+let currentWorktree = (await $`git rev-parse --show-superproject-working-tree`).stdout.trim() || (await $`git rev-parse --show-toplevel`).stdout.trim()
+let root = resolve(currentWorktree, '..') // folder that contains all the worktrees
 let currentName = currentWorktree.split('/').pop()
 
-function getTreeNames (): string[] {
-  return readdirSync(root, {withFileTypes: true})
-    .filter(entry => entry.isDirectory() && entry.name !== 'main' && !entry.name.startsWith('.'))
-    .map(entry => entry.name)
-    .sort()
-}
 
-function readGraphenePort (treeName: string): number | null {
-  let envPath = resolve(root, treeName, 'core/.env')
-  if (!existsSync(envPath)) return null
-  let match = readFileSync(envPath, 'utf8').match(/^GRAPHENE_PORT=(\d+)$/m)
-  return match ? parseInt(match[1], 10) : null
-}
+// function getTreeNames (): string[] {
+//   return readdirSync(root, {withFileTypes: true})
+//     .filter(entry => entry.isDirectory() && entry.name !== 'main' && !entry.name.startsWith('.'))
+//     .map(entry => entry.name)
+//     .sort()
+// }
 
-function getNextPort (): number {
-  let used = getTreeNames().map(readGraphenePort)
-  let port = BASE_PORT
-  while (used.includes(port)) {
-    port += PORT_INCREMENT
-  }
-  return port
-}
+// function readGraphenePort (treeName: string): number | null {
+//   let envPath = resolve(root, treeName, 'core/.env')
+//   if (!existsSync(envPath)) return null
+//   let match = readFileSync(envPath, 'utf8').match(/^GRAPHENE_PORT=(\d+)$/m)
+//   return match ? parseInt(match[1], 10) : null
+// }
 
-function writeEnvWithPort (sourcePath: string, targetPath: string, name: string, port: number) {
-  let content = existsSync(sourcePath) ? readFileSync(sourcePath, 'utf8') : ''
-  if (content.length && !content.endsWith('\n')) content += '\n'
-  content += `WT_NAME=${name}\nGRAPHENE_PORT=${port}\n`
-  writeFileSync(targetPath, content)
-}
-
-function listWorktrees () {
-  let trees = getTreeNames()
-  if (trees.length === 0) console.log('No active worktrees found')
-
-  for (let name of trees) {
-    console.log(`  ${name} :${readGraphenePort(name)}`)
-  }
-}
+// function getNextPort (): number {
+//   let used = getTreeNames().map(readGraphenePort)
+//   let port = BASE_PORT
+//   while (used.includes(port)) {
+//     port += PORT_INCREMENT
+//   }
+//   return port
+// }
 
 async function startWorktree (name: string) {
   if (!name) throw new Error('Please provide a name for the worktree')
   if (name === 'main') throw new Error('Cannot create a worktree named "main"')
 
   let treePath = resolve(root, name)
-  if (existsSync(treePath)) throw new Error(`${treePath} already exists`)
-  mkdirSync(treePath, {recursive: true})
+  if (fs.existsSync(treePath)) throw new Error(`${treePath} already exists`)
+  fs.mkdirSync(treePath)
 
-  await $`git -C ${root}/main/cloud fetch origin main`
-  await $`git -C ${root}/main/core fetch origin main`
-  await $`git -C ${root}/main/cloud worktree add ${root}/${name}/cloud -b ${name} origin/main`
-  await $`git -C ${root}/main/core worktree add ${root}/${name}/core -b ${name} origin/main`
+  await $`git -C ${root}/main fetch origin main`
+  await $`git -C ${root}/main worktree add ${treePath} -b ${name} origin/main`
+  await $`git -C ${treePath} submodule update --init --recursive`
 
-  let basePort = getNextPort()
-  writeEnvWithPort(`${root}/main/core/.env`, `${treePath}/core/.env`, name, basePort)
-  writeEnvWithPort(`${root}/main/cloud/.env`, `${treePath}/cloud/.env`, name, basePort + 1)
-
+  let basePort = 5000 //getNextPort()
+  let envContent = fs.readFileSync(`${root}/main/.env`) + `\nWT_NAME=${name}\nGRAPHENE_PORT=${basePort}`
+  fs.writeFileSync(`${treePath}/.env`, envContent)
   console.log(`Assigned ports → core:${basePort}`)
 
   // hard-link so that when mounted in a container we can still access it
   await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
-
-  writeFileSync(`${treePath}/AGENTS.md`, `
-    This folder contains the source for Graphene, a project that lets you define a data stack as code.
-
-    There are two main repos, 'core' which contains our open-source package that allows for local development, and 'cloud' which contains a closed-source Graphene hosting platform we're developing.
-
-    You should read @cloud/AGENTS.md and @core/AGENTS.md before doing anything.
-  `.trim())
-  await $`ln -s ${treePath}/AGENTS.md ${treePath}/CLAUDE.md`
-
-  mkdirSync(`${treePath}/.claude`)
-  writeFileSync(`${treePath}/.claude/settings.local.json`, `
-    {
-      "permissions": {
-        "allow": [
-          "Bash(xargs cat:*)",
-          "Bash(pnpm graphene:*)",
-          "Bash(grep:*)",
-          "Bash(find:*)",
-          "Bash(pnpm generate:*)",
-          "Bash(pnpm test:*)",
-          "Bash(pnpm lint:*)"
-        ]
-      }
-    }
-  `)
 
   console.log('Opening Zed...')
   await $`zed ${treePath}`
@@ -338,7 +282,7 @@ let command = process.argv[2]
 let arg = process.argv[3]
 
 switch (command) {
-  case 'ls': listWorktrees(); break
+  // case 'ls': listWorktrees(); break
   case 'start': await startWorktree(arg); break
   case 'pull': await pullWorktree(); break
   case 'commit': await commitWorktree(); break

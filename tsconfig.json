@@ -10,7 +10,8 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true,
     "noImplicitAny": false,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "moduleDetection": "force", // allow scripts to be treated as modules
   },
   "include": ["**/*.ts", "**/*.js", "**/*.svelte"],
   "exclude": ["node_modules"],
