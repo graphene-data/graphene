@@ -54,7 +54,6 @@ jobs:
         run: pnpm -C cli test
       - name: UI tests
         run: pnpm -C ui test
-        continue-on-error: true
       - name: Upload failures
         if: failure()
         uses: actions/upload-artifact@v4
