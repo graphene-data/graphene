@@ -32,12 +32,16 @@ const extendedExpect = baseExpect.extend({
 
     if (!result) throw new Error('Playwright did not return screenshot result')
 
-    // In CI, fail if screenshots don't match. Locally, update the snapshot.
+    // In CI, fail if screenshots don't match and save diffs. Locally, update the snapshot.
     if (process.env.CI) {
       if (!expectedBuffer) {
         return {message: () => `Screenshot ${snapshotName} does not exist. Run tests locally to create it.`, pass: false}
       }
       if (result.diff) {
+        let resultsDir = path.resolve(snapshotDir, '..', 'results', testFile)
+        await writeBuffer(path.join(resultsDir, snapshotName + '-actual.png'), result.actual)
+        await writeBuffer(path.join(resultsDir, snapshotName + '-expected.png'), result.previous)
+        await writeBuffer(path.join(resultsDir, snapshotName + '-diff.png'), result.diff)
         return {message: () => `Screenshot ${snapshotName} does not match expected`, pass: false}
       }
     } else {
