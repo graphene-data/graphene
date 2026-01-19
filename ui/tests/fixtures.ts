@@ -123,6 +123,11 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
     let readConfig: ChartConfigFn = async (selector) => {
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
+      // Wait for chart to be registered before reading config
+      await page.waitForFunction(() => {
+        let charts = window[Symbol.for('__evidence-chart-window-debug__') as unknown as keyof Window]
+        return charts && Object.keys(charts).length > 0
+      }, {timeout: 5000})
       return await page.evaluate((source) => {
         let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__') as any])[0] as any
         let option = chart.getModel().getOption()

@@ -126,11 +126,14 @@ export async function check (options: CheckOptions): Promise<boolean> {
 async function sendCheckRequest ({host, pageUrl, chart}) {
   let abort = new AbortController()
   let timeout = setTimeout(() => abort.abort(), 30_000)
+  // The browser registers with 'localhost' but we need to fetch via 127.0.0.1 (for IPv6 environments)
+  // So we use 127.0.0.1 for the fetch but send localhost in the pageUrl for WebSocket matching
+  let browserHost = host.replace('127.0.0.1', 'localhost')
   try {
     let response = await fetch(`${host}/_api/check`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({pageUrl: host + pageUrl, chart}),
+      body: JSON.stringify({pageUrl: browserHost + pageUrl, chart}),
       signal: abort.signal,
     })
     clearTimeout(timeout)
