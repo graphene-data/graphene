@@ -33,6 +33,10 @@ async function createConfig (): Promise<InlineConfig> {
   let port = Number(process.env.GRAPHENE_PORT) || 4000
   await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
 
+  // Bind to 0.0.0.0 when running in a container so port forwarding works from the host
+  let inContainer = fs.existsSync('/.dockerenv')
+  let host = inContainer ? '0.0.0.0' : '127.0.0.1'
+
   return {
     root: config.root,
     plugins: [
@@ -59,6 +63,7 @@ async function createConfig (): Promise<InlineConfig> {
     // cacheDir: process.env.NODE_ENV == 'test' ? 'node_modules/.vite-tests' : 'node_modules/.vite',
     server: {
       port,
+      host,
       fs: {strict: false},
       strictPort: true,
     },

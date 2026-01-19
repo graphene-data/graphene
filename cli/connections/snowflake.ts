@@ -32,6 +32,9 @@ export class SnowflakeConnection implements QueryConnection {
     let authOptions: any = {}
     if (privateKeyPath) {
       authOptions = {privateKeyPath, privateKeyPass}
+    } else if (process.env.SNOWFLAKE_PRI_KEY) {
+      let privateKey = createPrivateKey({key: process.env.SNOWFLAKE_PRI_KEY, format: 'pem', passphrase: privateKeyPass})
+      authOptions = {privateKey: privateKey.export({format: 'pem', type: 'pkcs8'})}
     } else if (opts.privateKey) {
       let privateKey = createPrivateKey({key: opts.privateKey, format: 'pem', passphrase: privateKeyPass})
       authOptions = {privateKey: privateKey.export({format: 'pem', type: 'pkcs8'})}

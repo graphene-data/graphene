@@ -20,6 +20,9 @@ const extendedExpect = baseExpect.extend({
     let testPath = vitestExpect.getState().testPath || ''
     let testFile = path.basename(testPath)
 
+    // Wait for fonts to load to ensure consistent rendering across environments
+    await (page as Page).evaluate(() => document.fonts.ready)
+
     let snapshotPath = path.resolve(snapshotDir, testFile, snapshotName + '.png')
     let expectedBuffer = await fs.readFile(snapshotPath).catch(() => null)
 

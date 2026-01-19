@@ -4,9 +4,9 @@
   "scripts": {
     "setup": "curl -L 'https://drive.google.com/uc?export=download&id=1qlio3d1W8k6bs9Z6-7U7vwnbuAYGZzZK' -o flights.duckdb",
     "graphene": "node ../../cli/cli.ts",
-    "serve": "npm run graphene serve",
-    "compile": "npm run graphene compile",
-    "run": "npm run graphene run"
+    "serve": "graphene serve",
+    "compile": "graphene compile",
+    "run": "graphene run"
   },
   "engines": {
     "npm": ">=7.0.0",

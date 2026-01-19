@@ -15,8 +15,8 @@ const flightDir = path.resolve(dir, '../examples/flights')
 const snowflakeDir = path.resolve(dir, '../examples/snowflake')
 const ecommDir = path.resolve(dir, '../examples/ecomm')
 
-const hasSnowflakeAuth = !!process.env.SNOWFLAKE_PRI_KEY_PATH
-const hasBigQueryAuth = !!process.env.GOOGLE_APPLICATION_CREDENTIALS
+const hasSnowflakeAuth = !!process.env.SNOWFLAKE_PRI_KEY_PATH || !!process.env.SNOWFLAKE_PRI_KEY
+const hasBigQueryAuth = !!process.env.GOOGLE_APPLICATION_CREDENTIALS || !!process.env.GOOGLE_CREDENTIALS_CONTENT
 
 function ensureFlightsDatabaseExists () {
   let dbPath = path.resolve(flightDir, 'flights.duckdb')
