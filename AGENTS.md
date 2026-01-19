@@ -31,7 +31,7 @@ Graphene provides CLIs that allow users (and coding agents) to run queries and l
 /core - Graphene's open-source core library. Lives in a separate repo and is submoduled here
 /core/cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
 /core/examples - a series of example datasets and graphene code. `flights` is the go-to as it's local, fast, and doesn't require auth.
-/core/lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
+/core/lang - language server that can parse gsql, generate diagnostics, and transform to dialect-specific SQL.
 /core/ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
 /core/vscode - an extension that provides syntax highlighting and diagnostics on queries.
 /cloud - Graphene's optional, paid hosted service.
@@ -43,7 +43,16 @@ For local development, the cli starts a vite server to host your md files and ex
 
 The cloud service is run on AWS and configured with terraform. The server uses Drizzle and Fastify, with Stytch for authentication.
 
+# Task notes
+It's important for each task to work on to keep some high-level notes on the work you did and why, in a file called task.md. That file should have these sections:
+* goal - what we're trying to accomplish on this task
+* current status - where we're currently at
+* remaining tasks - anything outstanding that still needs to be done
+* commit message - that summarizes the change
+* musings - this is a section for others to add to. You can safely ignore anything in there, and you should never change it.
+* log - high-level running log of what has happened on this task. Should be as concise as possible to just remind us of the key points.
+
 ## Workflow notes
 * Always use `pnpm add` rather than editing package.json directly to ensure we get the latest version of new dependencies.
-* We use node-24 which has type stripping by default, so you should never need to use `tsc` or `tsx` to run things.
+* We use node-24 which has type stripping by default, so you should never need `ts-node` or `tsx` to run things.
 *

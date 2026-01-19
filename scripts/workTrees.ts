@@ -66,6 +66,9 @@ async function startWorktree (name: string) {
   fs.writeFileSync(`${treePath}/.env`, envContent)
   console.log(`Assigned ports → core:${basePort}`)
 
+  await $`mkdir .opencode`
+  await $`ln -s ../dev/skills .opencode/skills`
+
   // hard-link so that when mounted in a container we can still access it
   await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 

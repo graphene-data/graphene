@@ -7,7 +7,7 @@ import dotenv from 'dotenv'
 import path from 'path'
 import {assertConsoleErrors, trackerBrowserConsole, expectConsoleError, stopTrackingConsole} from '../../core/ui/tests/browserConsole.ts'
 
-dotenv.config({path: path.resolve(import.meta.dirname, '../.env'), quiet: true})
+dotenv.config({path: path.resolve(import.meta.dirname, '../../.env'), quiet: true})
 
 interface CloudOptions {
   realAuth: boolean
