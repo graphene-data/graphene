@@ -31,9 +31,20 @@ const extendedExpect = baseExpect.extend({
     let result = await (page as any)._expectScreenshot(opts)
 
     if (!result) throw new Error('Playwright did not return screenshot result')
-    if (result.actual) await writeBuffer(snapshotPath, result.actual)
 
-    return {message: () => 'Screenshot ' + snapshotName + ' updated', pass: true}
+    // In CI, fail if screenshots don't match. Locally, update the snapshot.
+    if (process.env.CI) {
+      if (!expectedBuffer) {
+        return {message: () => `Screenshot ${snapshotName} does not exist. Run tests locally to create it.`, pass: false}
+      }
+      if (result.diff) {
+        return {message: () => `Screenshot ${snapshotName} does not match expected`, pass: false}
+      }
+    } else {
+      if (result.actual) await writeBuffer(snapshotPath, result.actual)
+    }
+
+    return {message: () => 'Screenshot ' + snapshotName + ' matches', pass: true}
   },
 })
 
