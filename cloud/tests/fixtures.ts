@@ -20,7 +20,13 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
 
   // eslint-disable-next-line no-empty-pattern
   browser: async ({}, use) => {
-    let b = await chromium.launch({headless: !process.env.GRAPHENE_DEBUG, devtools: !!process.env.GRAPHENE_DEBUG})
+    let b = await chromium.launch({
+      headless: !process.env.GRAPHENE_DEBUG,
+      devtools: !!process.env.GRAPHENE_DEBUG,
+      args: [
+        '--font-render-hinting=none', // Consistent font rendering across platforms
+      ],
+    })
     await use(b)
     await b.close()
   },
@@ -38,7 +44,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
 
   // page depends on cloud so it sets up after and tears down before (server still running during teardown)
   page: async ({browser, cloud: _cloud}, use) => {
-    let context = await browser.newContext()
+    let context = await browser.newContext({deviceScaleFactor: 2})
     let page = await context.newPage()
     trackerBrowserConsole(page)
     onTestFinished(() => {

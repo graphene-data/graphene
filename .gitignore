@@ -1,3 +1,6 @@
 .env
 node_modules
 .claude
+/opencode.jsonc
+task.md
+todo.md

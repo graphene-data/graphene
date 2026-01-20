@@ -8,7 +8,7 @@ const BASE_PORT = 4003
 const PORT_INCREMENT = 3
 const COMMIT_TOOL = process.env.COMMIT_TOOL || 'fork status'
 
-$.verbose = true
+$.verbose = !!process.env.DEBUG
 
 // Get the top of the repo. We might be in a submodule, in which case we'd like the superproject
 let currentWorktree = (await $`git rev-parse --show-superproject-working-tree`).stdout.trim() || (await $`git rev-parse --show-toplevel`).stdout.trim()
@@ -67,6 +67,7 @@ async function startWorktree (name: string) {
   console.log(`Assigned ports → core:${basePort}`)
 
   await $`mkdir .opencode`
+  await $`ln -s ../dev/opencode.jsonc opencode.jsonc`
   await $`ln -s ../dev/skills .opencode/skills`
 
   // hard-link so that when mounted in a container we can still access it
@@ -92,7 +93,7 @@ async function upWorktree(name:string) {
   console.log('Building Docker image...')
   await $`docker build -f ${root}/main/scripts/Dockerfile.dev -t graphene-dev ${root}/main`
 
-  await $`docker rm -f ${containerName}`.nothrow() // Stop existing container if running
+  await $`docker rm -f ${containerName}`.quiet().nothrow() // Stop existing container if running
 
   console.log('Starting container...')
   await $`docker run -d --name ${containerName} \
@@ -120,7 +121,6 @@ async function repoDirty (subdir?: string): Promise<boolean> {
   let lines = status.split('\n').filter(l => {
     return !exclude.some(e => l == `M ${e}`) && !!l
   })
-  console.log('wtfmate', subdir, lines)
   return lines.length > 0
 }
 
@@ -149,11 +149,20 @@ async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
     return false
   }
 
-  // Create WIP commit if dirty
+  // Create WIP commit if dirty (excluding submodule pointer in superproject to avoid conflicts)
   if (await repoDirty(subdir)) {
     console.log(`Creating WIP commit in ${label}`)
-    await $`git -C ${path} add -A`
-    await $`git -C ${path} commit -m WIP`
+    if (subdir) {
+      await $`git -C ${path} add -A`
+    } else {
+      // In superproject, add everything except the submodule pointer
+      await $`git -C ${path} add -A -- . :!core`
+    }
+    // Only commit if we actually staged something
+    let hasStagedChanges = (await $`git -C ${path} diff --cached --quiet`.nothrow()).exitCode !== 0
+    if (hasStagedChanges) {
+      await $`git -C ${path} commit -m WIP`
+    }
   }
 
   await $`git -C ${path} fetch origin`
@@ -176,13 +185,26 @@ async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
 }
 
 async function pullWorktree (): Promise<boolean> {
-  // Rebase cloud first, then core
-  // Cloud goes first because rebasing cloud may update the submodule pointer to a different core commit.
-  // After cloud is rebased, we rebase core onto whatever commit the submodule now points to.
+  // Rebase cloud first, then core (both onto origin/main)
   if (!await rebaseRepo()) return false
 
-  let submoduleCommit = (await $`git -C ${currentWorktree} ls-tree HEAD core`).stdout.trim().split(/\s+/)[2]
-  if (!await rebaseRepo('core', submoduleCommit)) return false
+  // Before rebasing core, check if all local commits already exist on origin/main (with different SHAs from rebase-merge).
+  // Use cherry to compare by patch content: - means equivalent exists, + means unique to our branch.
+  await $`git -C ${currentWorktree}/core fetch origin`
+  let cherryOutput = (await $`git -C ${currentWorktree}/core cherry origin/main`.nothrow()).stdout.trim()
+  let hasUnmergedCommits = cherryOutput.split('\n').some(line => line.startsWith('+ '))
+  if (!hasUnmergedCommits) {
+    // All our commits (if any) have been merged, just move to origin/main
+    let originMain = (await $`git -C ${currentWorktree}/core rev-parse origin/main`).stdout.trim()
+    let currentCore = (await $`git -C ${currentWorktree}/core rev-parse HEAD`).stdout.trim()
+    if (originMain !== currentCore) {
+      console.log('Updating core submodule to origin/main (local commits already merged)')
+      await $`git -C ${currentWorktree}/core checkout origin/main`
+    }
+  } else {
+    // We have local commits to preserve, rebase them onto origin/main
+    if (!await rebaseRepo('core', 'origin/main')) return false
+  }
 
   return true
 }
@@ -193,6 +215,17 @@ async function pushWorktree (updateCore: boolean) {
 
   let pullOk = await pullWorktree()
   if (!pullOk) return
+
+  // Check that the submodule points to a commit that exists on origin/main
+  // This can happen if you rebase-merge a PR in GitHub, which creates a new commit SHA
+  let submoduleCommit = (await $`git -C ${currentWorktree} ls-tree HEAD core`).stdout.trim().split(/\s+/)[2]
+  let isOnOriginMain = (await $`git -C ${currentWorktree}/core branch -r --contains ${submoduleCommit}`.nothrow()).stdout.includes('origin/main')
+  if (!isOnOriginMain) {
+    console.error(`Cannot push: submodule 'core' points to commit ${submoduleCommit.slice(0, 8)} which is not on origin/main.`)
+    console.error(`This often happens after rebase-merging a PR in GitHub.`)
+    console.error(`Fix with: cd core && git fetch origin && git checkout origin/main && cd .. && git add core && git commit --amend --no-edit`)
+    return
+  }
 
   // Check for WIP commits that shouldn't be pushed
   let coreHasWip = await hasWipCommits('core')
@@ -225,8 +258,8 @@ async function pushWorktree (updateCore: boolean) {
 
 // Run a command in the container. If no command is specified, open a shell
 async function execWorktree (args: string[]) {
-  let {spawnSync} = await import('child_process') // use spawnSync to properly inherit TTY
-  if (args.length == 0) args = ['bash']
+  let { spawnSync } = await import('child_process') // use spawnSync to properly inherit TTY
+  args = args.length > 0 ? ['bash', '-c', ...args] : ['bash']
   let result = spawnSync('docker', ['exec', '-it', `graphene-${currentName}`, ...args], {stdio: 'inherit'})
   process.exit(result.status ?? 0)
 }
@@ -278,7 +311,8 @@ function getTreeNames (): string[] {
     .sort()
 }
 
-function readGraphenePort (treeName: string): number | null {
+function readGraphenePort(treeName: string): number | null {
+  if (treeName == 'main') return 4000
   let envPath = resolve(root, treeName, '.env')
   if (!fs.existsSync(envPath)) return null
   let match = fs.readFileSync(envPath, 'utf8').match(/^GRAPHENE_PORT=(\d+)$/m)

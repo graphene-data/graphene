@@ -14,10 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          path: cloud
           lfs: true
 
-      - uses: ./cloud/.github/actions/setup
+      - uses: ./.github/actions/setup
         with:
           core-ssh-key: ${{ secrets.CORE_DEPLOY_SSH_KEY }}
 
@@ -46,7 +45,7 @@ jobs:
         working-directory: cloud
         run: pnpm test
         env:
-          BIGQUERY_TEST_CREDS: ${{ secrets.BIGQUERY_TEST_CREDS }}
+          GOOGLE_CREDENTIALS_CONTENT: ${{ secrets.BIGQUERY_TEST_CREDS }}
           STYTCH_PROJECT_ID: project-test-eaaff9fe-3c7f-486e-90b9-23d249388064
           STYTCH_SECRET: ${{ secrets.STYTCH_TEST_SECRET }}
           STYTCH_DOMAIN: https://futuristic-coil-3570.customers.stytch.dev
@@ -62,7 +61,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          path: cloud
           lfs: true
 
       - uses: ./cloud/.github/actions/setup

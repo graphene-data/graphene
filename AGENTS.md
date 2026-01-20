@@ -43,7 +43,7 @@ For local development, the cli starts a vite server to host your md files and ex
 
 The cloud service is run on AWS and configured with terraform. The server uses Drizzle and Fastify, with Stytch for authentication.
 
-# Task notes
+# Task note
 It's important for each task to work on to keep some high-level notes on the work you did and why, in a file called task.md. That file should have these sections:
 * goal - what we're trying to accomplish on this task
 * current status - where we're currently at
@@ -52,7 +52,13 @@ It's important for each task to work on to keep some high-level notes on the wor
 * musings - this is a section for others to add to. You can safely ignore anything in there, and you should never change it.
 * log - high-level running log of what has happened on this task. Should be as concise as possible to just remind us of the key points.
 
-## Workflow notes
+# Testing
+Our tests are run with vitest. Use `pnpm test` in either cloud or core to run the tests for either.
+You can run a single test with `pnpm test -t "part of test name"`
+Lint+typecheck with `pnpm lint` in either cloud or core.
+UI tests should always take snapshots each time they run. Be sure to add a snapshot for new ui tests you add, and you can view any snapshot to make sure that ui renders the way you expect.
+
+## Workflow
 * Always use `pnpm add` rather than editing package.json directly to ensure we get the latest version of new dependencies.
 * We use node-24 which has type stripping by default, so you should never need `ts-node` or `tsx` to run things.
-*
+* Avoid running `graphene dev` to test things. You should be able to set up just about any scenario in our automated tests.

@@ -15,7 +15,7 @@ RUN pnpm config set store-dir /pnpm/store
 
 RUN npx -y playwright@1.54.2 install chromium --with-deps
 
-RUN apt-get install -y curl git git-lfs
+RUN apt-get install -y curl git git-lfs lsof
 
 RUN npm install -g @anthropic-ai/claude-code
 RUN curl -fsSL https://opencode.ai/install | bash
