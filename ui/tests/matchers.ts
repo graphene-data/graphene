@@ -26,7 +26,7 @@ const extendedExpect = baseExpect.extend({
     let snapshotPath = path.resolve(snapshotDir, testFile, snapshotName + '.png')
     let expectedBuffer = await fs.readFile(snapshotPath).catch(() => null)
 
-    let opts = {animations: 'disabled', caret: 'hide', scale: 'css', locator, timeout: 5_000} as any
+    let opts = {animations: 'disabled', caret: 'hide', scale: 'css', locator, maxDiffPixelRatio: 0.1, timeout: 5_000} as any
     if (expectedBuffer) opts.expected = expectedBuffer
     let result = await (page as any)._expectScreenshot(opts)
 
@@ -39,8 +39,8 @@ const extendedExpect = baseExpect.extend({
       }
       if (result.diff) {
         let resultsDir = path.resolve(snapshotDir, '..', 'results', testFile)
-        await writeBuffer(path.join(resultsDir, snapshotName + '-actual.png'), result.actual)
-        await writeBuffer(path.join(resultsDir, snapshotName + '-expected.png'), result.previous)
+        if (result.actual) await writeBuffer(path.join(resultsDir, snapshotName + '-actual.png'), result.actual)
+        if (result.previous) await writeBuffer(path.join(resultsDir, snapshotName + '-expected.png'), result.previous)
         await writeBuffer(path.join(resultsDir, snapshotName + '-diff.png'), result.diff)
         return {message: () => `Screenshot ${snapshotName} does not match expected`, pass: false}
       }

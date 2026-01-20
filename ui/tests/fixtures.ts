@@ -31,7 +31,13 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
   browser: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
-      let b = await chromium.launch({headless: !process.env.GRAPHENE_DEBUG, devtools: !!process.env.GRAPHENE_DEBUG})
+      let b = await chromium.launch({
+        headless: !process.env.GRAPHENE_DEBUG,
+        devtools: !!process.env.GRAPHENE_DEBUG,
+        args: [
+          '--font-render-hinting=none', // Consistent font rendering across platforms
+        ],
+      })
       await use(b)
       await b.close()
     },
