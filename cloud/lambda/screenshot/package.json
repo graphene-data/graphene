@@ -1,0 +1,19 @@
+{
+  "name": "@graphene/screenshot-lambda",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "handler.js",
+  "scripts": {
+    "build": "rm -rf *.zip && zip -rq function.zip .",
+    "upload": "aws s3 cp function.zip s3://graphene-lambda-deployments-772069004272/screenshot/function.zip",
+    "update": "aws lambda update-function-code --function-name graphene-screenshot --s3-bucket graphene-lambda-deployments-772069004272 --s3-key screenshot/function.zip --no-cli-pager",
+    "deploy": "npm run build && npm run upload && npm run update && aws lambda wait function-updated --function-name graphene-screenshot"
+  },
+  "dependencies": {
+    "playwright-core": "^1.54.2"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "^143.0.4"
+  }
+}

@@ -115,6 +115,10 @@ jobs:
             --cluster graphene-prod \
             --primary-container image="772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}"
 
+      - name: Deploy Lambda function
+        working-directory: cloud/lambda/screenshot
+        run: npm run deploy
+
       - name: Wait for deployment to complete
         run: |
           echo "Waiting for ECS service to stabilize..."

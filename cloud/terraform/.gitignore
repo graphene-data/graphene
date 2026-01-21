@@ -7,7 +7,7 @@ crash.log
 crash.*.log
 
 # Terraform lock file (optional - some teams commit this, some don't)
-# .terraform.lock.hcl
+.terraform.lock.hcl
 
 # Terraform directory
 .terraform/

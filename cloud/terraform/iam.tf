@@ -24,7 +24,7 @@ resource "aws_iam_role" "ci_deploy" {
   })
 }
 
-# Inline policy for CI to push to ECR and manage ECS deployments
+# Inline policy for CI to push to ECR, manage ECS deployments, and deploy Lambda functions
 resource "aws_iam_role_policy" "ci_deploy_ecr" {
   name = "ecr-push-and-ecs-deploy"
   role = aws_iam_role.ci_deploy.id
@@ -65,6 +65,19 @@ resource "aws_iam_role_policy" "ci_deploy_ecr" {
           "ecs:DescribeClusters"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.lambda_deployments.arn}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["lambda:UpdateFunctionCode", "lambda:GetFunction"]
+        Resource = aws_lambda_function.screenshot.arn
       }
     ]
   })
@@ -115,6 +128,11 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
         Effect   = "Allow"
         Action   = ["kms:Encrypt", "kms:Decrypt"]
         Resource = aws_kms_key.secrets.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["lambda:InvokeFunction"]
+        Resource = aws_lambda_function.screenshot.arn
       }
     ]
   })
