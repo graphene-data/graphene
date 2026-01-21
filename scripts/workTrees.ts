@@ -22,7 +22,7 @@ let positional = args.slice(1).filter(a => !a.startsWith('--'))
 
 switch (command) {
   case 'start': await startWorktree(positional[0]); break
-  // case 'drop': await dropWorktree(positional[0]); break
+  case 'dangerously-drop': await dropWorktree(positional[0]); break
   case 'pull': await pullWorktree(); break
   case 'commit': await commitWorktree(); break
   case 'push': await pushWorktree(flags.includes('--updateCore')); break
@@ -52,12 +52,13 @@ async function startWorktree (name: string) {
   if (fs.existsSync(treePath)) throw new Error(`${treePath} already exists`)
   fs.mkdirSync(treePath)
 
-  // create the worktree and init submodules
+  // create the worktree
   await $`git -C ${root}/main fetch origin main`
   await $`git -C ${root}/main worktree add ${treePath} -b ${name} origin/main`
-  await $`git -C ${treePath} submodule update --init --recursive`
+  await $`git branch --unset-upstream` // so that `git push` creates the correct branch on github
 
-  // Submodules start out detached. Create a branch so we can commit/push changes
+  // Init submodules. They start detached, create a branch so we can commit/push changes
+  await $`git -C ${treePath} submodule update --init --recursive`
   await $`git -C ${treePath}/core checkout -b ${name}`
 
   // Assign unique ports to the worktree, and write it to .env along with copying main's .env
@@ -66,15 +67,15 @@ async function startWorktree (name: string) {
   fs.writeFileSync(`${treePath}/.env`, envContent)
   console.log(`Assigned ports → core:${basePort}`)
 
-  await $`mkdir .opencode`
-  await $`ln -s ../dev/opencode.jsonc opencode.jsonc`
-  await $`ln -s ../dev/skills .opencode/skills`
+  await $`mkdir ${treePath}/.opencode`
+  await $`ln -s dev/opencode.jsonc ${treePath}/opencode.jsonc`
+  await $`ln -s ../dev/skills ${treePath}/.opencode/skills`
 
   // hard-link so that when mounted in a container we can still access it
   await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 
-  await upWorktree(name)
   await $`zed ${treePath}`
+  await upWorktree(name)
 
   console.log(`Worktree '${name}' is ready at ${treePath}`)
 }

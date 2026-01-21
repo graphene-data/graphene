@@ -50,7 +50,7 @@ It's important for each task to work on to keep some high-level notes on the wor
 * remaining tasks - anything outstanding that still needs to be done
 * commit message - that summarizes the change
 * musings - this is a section for others to add to. You can safely ignore anything in there, and you should never change it.
-* log - high-level running log of what has happened on this task. Should be as concise as possible to just remind us of the key points.
+* log - high-level running log of what has happened on this task. Should be as concise as possible to just remind us of the key points. Each time the user gives feedback, that should be summarized into the log.
 
 # Testing
 Our tests are run with vitest. Use `pnpm test` in either cloud or core to run the tests for either.
