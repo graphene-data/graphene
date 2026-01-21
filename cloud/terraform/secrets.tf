@@ -7,6 +7,57 @@ data "aws_kms_alias" "secretsmanager" {
 resource "aws_kms_key" "secrets" {
   description         = "Encrypts user-provided secrets like database credentials"
   enable_key_rotation = true
+
+  tags = {
+    Name        = "graphene-secrets"
+    Environment = "production"
+    Workload    = "cloud-application"
+    Purpose     = "secrets-encryption"
+  }
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowKeyManagement"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${var.aws_account_id}:root"
+        }
+        Action = [
+          "kms:PutKeyPolicy",
+          "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus",
+          "kms:ListResourceTags",
+          "kms:DescribeKey",
+          "kms:EnableKeyRotation",
+          "kms:DisableKeyRotation",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:CreateAlias",
+          "kms:DeleteAlias",
+          "kms:UpdateAlias"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowECSExecutionRoleUsage"
+        Effect = "Allow"
+        Principal = {
+          AWS = aws_iam_role.ecs_execution.arn
+        }
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
 }
 
 resource "aws_kms_alias" "secrets" {

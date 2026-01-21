@@ -1,4 +1,6 @@
+# =============================================================================
 # GitHub OIDC Provider (for GitHub Actions to assume roles)
+# =============================================================================
 # Note: AWS manages thumbprints automatically for GitHub OIDC
 resource "aws_iam_openid_connect_provider" "github" {
   url            = "https://token.actions.githubusercontent.com"
@@ -13,9 +15,9 @@ resource "aws_iam_role" "ci_deploy" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect = "Allow"
+      Effect    = "Allow"
       Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
-      Action = "sts:AssumeRoleWithWebIdentity"
+      Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
         StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
         StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:graphene-data/cloud:*" }
@@ -109,8 +111,8 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = ["secretsmanager:GetSecretValue"]
+        Effect = "Allow"
+        Action = ["secretsmanager:GetSecretValue"]
         Resource = [
           aws_secretsmanager_secret.stytch_secret.arn,
           aws_secretsmanager_secret.turso_auth_token.arn,

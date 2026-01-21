@@ -87,3 +87,191 @@ output "screenshot_lambda_arn" {
   value       = aws_lambda_function.screenshot.arn
   description = "ARN of the screenshot Lambda function"
 }
+
+# =============================================================================
+# CloudWatch Alarms for Lambda Monitoring (SOC2 Compliance)
+# =============================================================================
+
+# KMS key for SNS topic encryption
+resource "aws_kms_key" "sns_lambda_alarms" {
+  description             = "KMS key for Lambda alarms SNS topic"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name        = "sns-lambda-alarms"
+    Environment = "production"
+    Workload    = "monitoring"
+    Purpose     = "sns-topic-encryption"
+  }
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowKeyManagement"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action = [
+          "kms:PutKeyPolicy",
+          "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus",
+          "kms:ListResourceTags",
+          "kms:DescribeKey",
+          "kms:EnableKeyRotation",
+          "kms:DisableKeyRotation",
+          "kms:ScheduleKeyDeletion",
+          "kms:CancelKeyDeletion",
+          "kms:TagResource",
+          "kms:UntagResource",
+          "kms:CreateAlias",
+          "kms:DeleteAlias",
+          "kms:UpdateAlias"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowCloudWatchAlarms"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudwatch.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey*"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      },
+      {
+        Sid    = "AllowSNSUsage"
+        Effect = "Allow"
+        Principal = {
+          Service = "sns.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey*"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_kms_alias" "sns_lambda_alarms" {
+  name          = "alias/sns-lambda-alarms"
+  target_key_id = aws_kms_key.sns_lambda_alarms.key_id
+}
+
+# SNS Topic for Lambda alarm notifications
+resource "aws_sns_topic" "lambda_alarms" {
+  name              = "graphene-lambda-alarms"
+  kms_master_key_id = aws_kms_key.sns_lambda_alarms.id
+}
+
+# Email subscription for Lambda alarm notifications
+resource "aws_sns_topic_subscription" "lambda_alarms_email" {
+  topic_arn = aws_sns_topic.lambda_alarms.arn
+  protocol  = "email"
+  endpoint  = var.alarm_notification_email
+}
+
+# Alarm: Lambda Errors
+# Triggers when the function encounters errors during execution
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  alarm_name          = "graphene-screenshot-errors"
+  alarm_description   = "Lambda function execution errors"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 0
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.screenshot.function_name
+  }
+
+  alarm_actions = [aws_sns_topic.lambda_alarms.arn]
+  ok_actions    = [aws_sns_topic.lambda_alarms.arn]
+}
+
+# Alarm: Lambda Throttles
+# Triggers when requests are throttled due to concurrency limits
+resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
+  alarm_name          = "graphene-screenshot-throttles"
+  alarm_description   = "Lambda function throttling events"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Throttles"
+  namespace           = "AWS/Lambda"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 0
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.screenshot.function_name
+  }
+
+  alarm_actions = [aws_sns_topic.lambda_alarms.arn]
+  ok_actions    = [aws_sns_topic.lambda_alarms.arn]
+}
+
+# Alarm: Lambda Duration (approaching timeout)
+# Triggers when function duration exceeds 80% of timeout (48s of 60s)
+resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
+  alarm_name          = "graphene-screenshot-duration"
+  alarm_description   = "Lambda function approaching timeout threshold"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "Duration"
+  namespace           = "AWS/Lambda"
+  period              = 300
+  statistic           = "Average"
+  threshold           = 48000 # 48 seconds (80% of 60s timeout)
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.screenshot.function_name
+  }
+
+  alarm_actions = [aws_sns_topic.lambda_alarms.arn]
+  ok_actions    = [aws_sns_topic.lambda_alarms.arn]
+}
+
+# Alarm: Lambda Concurrent Executions
+# Triggers when concurrent executions exceed warning threshold
+resource "aws_cloudwatch_metric_alarm" "lambda_concurrent_executions" {
+  alarm_name          = "graphene-screenshot-concurrent-executions"
+  alarm_description   = "Lambda concurrent executions exceeding threshold"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 2
+  metric_name         = "ConcurrentExecutions"
+  namespace           = "AWS/Lambda"
+  period              = 60
+  statistic           = "Maximum"
+  threshold           = 100 # Warn when approaching default account limit
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.screenshot.function_name
+  }
+
+  alarm_actions = [aws_sns_topic.lambda_alarms.arn]
+  ok_actions    = [aws_sns_topic.lambda_alarms.arn]
+}

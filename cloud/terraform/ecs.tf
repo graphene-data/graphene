@@ -74,6 +74,11 @@ resource "aws_ecs_express_gateway_service" "cloud" {
 
 resource "aws_ecs_cluster" "main" {
   name = "graphene-prod"
+
+  setting {
+    name  = "containerInsights"
+    value = "enhanced"
+  }
 }
 
 resource "aws_cloudwatch_log_group" "cloud" {

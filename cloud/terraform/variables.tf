@@ -78,3 +78,10 @@ variable "github_app_private_key" {
   type        = string
   sensitive   = true
 }
+
+# Monitoring Configuration
+variable "alarm_notification_email" {
+  description = "Email address for CloudWatch alarm notifications"
+  type        = string
+  default     = "alerts@graphenedata.com"
+}

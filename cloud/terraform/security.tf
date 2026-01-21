@@ -1,9 +1,10 @@
 # SOC2/HIPAA Security Resources
 
 # =============================================================================
-# GuardDuty - Intrusion Detection
+# GuardDuty - Intrusion Detection (All Regions)
 # =============================================================================
 
+# Primary region GuardDuty detector (us-east-1)
 resource "aws_guardduty_detector" "main" {
   enable = true
 }
@@ -23,6 +24,97 @@ resource "aws_guardduty_detector_feature" "malware_protection" {
   detector_id = aws_guardduty_detector.main.id
   name        = "EBS_MALWARE_PROTECTION"
   status      = "ENABLED"
+}
+
+resource "aws_guardduty_detector_feature" "ecs_runtime_monitoring" {
+  detector_id = aws_guardduty_detector.main.id
+  name        = "RUNTIME_MONITORING"
+  status      = "ENABLED"
+
+  additional_configuration {
+    name   = "ECS_FARGATE_AGENT_MANAGEMENT"
+    status = "ENABLED"
+  }
+}
+
+# GuardDuty detectors for all other regions
+resource "aws_guardduty_detector" "us_east_2" {
+  provider = aws.us_east_2
+}
+resource "aws_guardduty_detector" "us_west_1" {
+  provider = aws.us_west_1
+}
+resource "aws_guardduty_detector" "us_west_2" {
+  provider = aws.us_west_2
+}
+resource "aws_guardduty_detector" "af_south_1" {
+  provider = aws.af_south_1
+}
+resource "aws_guardduty_detector" "ap_east_1" {
+  provider = aws.ap_east_1
+}
+resource "aws_guardduty_detector" "ap_south_1" {
+  provider = aws.ap_south_1
+}
+resource "aws_guardduty_detector" "ap_south_2" {
+  provider = aws.ap_south_2
+}
+resource "aws_guardduty_detector" "ap_northeast_1" {
+  provider = aws.ap_northeast_1
+}
+resource "aws_guardduty_detector" "ap_northeast_2" {
+  provider = aws.ap_northeast_2
+}
+resource "aws_guardduty_detector" "ap_northeast_3" {
+  provider = aws.ap_northeast_3
+}
+resource "aws_guardduty_detector" "ap_southeast_1" {
+  provider = aws.ap_southeast_1
+}
+resource "aws_guardduty_detector" "ap_southeast_2" {
+  provider = aws.ap_southeast_2
+}
+resource "aws_guardduty_detector" "ap_southeast_3" {
+  provider = aws.ap_southeast_3
+}
+resource "aws_guardduty_detector" "ap_southeast_4" {
+  provider = aws.ap_southeast_4
+}
+resource "aws_guardduty_detector" "ca_central_1" {
+  provider = aws.ca_central_1
+}
+resource "aws_guardduty_detector" "eu_central_1" {
+  provider = aws.eu_central_1
+}
+resource "aws_guardduty_detector" "eu_central_2" {
+  provider = aws.eu_central_2
+}
+resource "aws_guardduty_detector" "eu_west_1" {
+  provider = aws.eu_west_1
+}
+resource "aws_guardduty_detector" "eu_west_2" {
+  provider = aws.eu_west_2
+}
+resource "aws_guardduty_detector" "eu_west_3" {
+  provider = aws.eu_west_3
+}
+resource "aws_guardduty_detector" "eu_north_1" {
+  provider = aws.eu_north_1
+}
+resource "aws_guardduty_detector" "eu_south_1" {
+  provider = aws.eu_south_1
+}
+resource "aws_guardduty_detector" "eu_south_2" {
+  provider = aws.eu_south_2
+}
+resource "aws_guardduty_detector" "me_south_1" {
+  provider = aws.me_south_1
+}
+resource "aws_guardduty_detector" "me_central_1" {
+  provider = aws.me_central_1
+}
+resource "aws_guardduty_detector" "sa_east_1" {
+  provider = aws.sa_east_1
 }
 
 # =============================================================================
@@ -185,4 +277,43 @@ data "aws_lb" "ecs_express" {
 resource "aws_wafv2_web_acl_association" "alb" {
   resource_arn = data.aws_lb.ecs_express.arn
   web_acl_arn  = aws_wafv2_web_acl.main.arn
+}
+
+# =============================================================================
+# AWS Security Hub - Centralized Security Findings (Primary Region Only)
+# =============================================================================
+
+resource "aws_securityhub_account" "main" {
+  enable_default_standards  = true
+  control_finding_generator = "SECURITY_CONTROL"
+}
+
+# Configure Security Hub to aggregate findings from all regions
+resource "aws_securityhub_finding_aggregator" "main" {
+  linking_mode = "ALL_REGIONS"
+  depends_on   = [aws_securityhub_account.main]
+}
+
+# Enable AWS Foundational Security Best Practices standard
+resource "aws_securityhub_standards_subscription" "aws_foundational" {
+  standards_arn = "arn:aws:securityhub:${var.aws_region}::standards/aws-foundational-security-best-practices/v/1.0.0"
+  depends_on    = [aws_securityhub_account.main]
+}
+
+# Enable CIS AWS Foundations Benchmark
+resource "aws_securityhub_standards_subscription" "cis" {
+  standards_arn = "arn:aws:securityhub:${var.aws_region}::standards/cis-aws-foundations-benchmark/v/1.4.0"
+  depends_on    = [aws_securityhub_account.main]
+}
+
+# Configure GuardDuty to send findings to Security Hub
+resource "aws_securityhub_product_subscription" "guardduty" {
+  product_arn = "arn:aws:securityhub:${var.aws_region}::product/aws/guardduty"
+  depends_on  = [aws_securityhub_account.main]
+}
+
+# Configure Inspector to send findings to Security Hub
+resource "aws_securityhub_product_subscription" "inspector" {
+  product_arn = "arn:aws:securityhub:${var.aws_region}::product/aws/inspector"
+  depends_on  = [aws_securityhub_account.main]
 }
