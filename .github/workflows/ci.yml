@@ -111,6 +111,7 @@ jobs:
       - name: Update ECS Express service
         run: |
           aws ecs update-express-gateway-service \
+            --service-arn arn:aws:ecs:us-east-1:772069004272:service/graphene-prod/graphene-cloud \
             --service-name graphene-cloud \
             --cluster graphene-prod \
             --primary-container image="772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}"
