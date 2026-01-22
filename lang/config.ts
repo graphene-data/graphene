@@ -8,6 +8,7 @@ export interface Config {
   ignoredFiles: string[]
   port?: number
   host?: string
+  envFile: string[] // array of paths where we can look for the env file
 
   bigquery?: {
     projectId?: string
@@ -25,9 +26,10 @@ export interface Config {
   duckdb?: Record<string, unknown>
 }
 
-export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles'> & {
+export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> & {
   dialect?: Config['dialect'],
   ignoredFiles?: Config['ignoredFiles'],
+  envFile?: string
 }
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
@@ -43,6 +45,7 @@ export function setConfig (cfg: ConfigInput) {
   config.dialect = dialect
   config.root ||= process.cwd()
   config.ignoredFiles ||= ['agents.md', 'claude.md']
+  config.envFile = [cfg.envFile, '.env'].filter((x): x is string => !!x).map(p => path.resolve(config.root, p))
 }
 
 // Read graphene config out of package.json
