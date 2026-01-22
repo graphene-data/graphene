@@ -63,7 +63,7 @@ jobs:
         with:
           lfs: true
 
-      - uses: ./cloud/.github/actions/setup
+      - uses: ./.github/actions/setup
         with:
           core-ssh-key: ${{ secrets.CORE_DEPLOY_SSH_KEY }}
 
