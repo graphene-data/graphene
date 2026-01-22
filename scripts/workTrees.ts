@@ -55,7 +55,7 @@ async function startWorktree (name: string) {
   // create the worktree
   await $`git -C ${root}/main fetch origin main`
   await $`git -C ${root}/main worktree add ${treePath} -b ${name} origin/main`
-  await $`git branch --unset-upstream` // so that `git push` creates the correct branch on github
+  await $`git -C ${treePath} branch --unset-upstream` // so that `git push` creates the correct branch on github
 
   // Init submodules. They start detached, create a branch so we can commit/push changes
   await $`git -C ${treePath} submodule update --init --recursive`
@@ -133,6 +133,17 @@ async function hasWipCommits (subdir?: string): Promise<boolean> {
   return log.split('\n').some(msg => msg === 'WIP' || msg.startsWith('WIP '))
 }
 
+// Check if branch has commits not yet on origin/main, using git cherry to compare by patch content.
+// This handles rebase-merge where commit SHAs change but the patch content is the same.
+// Returns true if there are local commits that haven't been merged.
+async function hasUnmergedCommits (subdir?: string): Promise<boolean> {
+  let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
+  await $`git -C ${path} fetch origin`
+  // git cherry outputs: '-' for commits with equivalent patches on upstream, '+' for unique commits
+  let cherryOutput = (await $`git -C ${path} cherry origin/main`.nothrow()).stdout.trim()
+  return cherryOutput.split('\n').some(line => line.startsWith('+ '))
+}
+
 async function commitWorktree () {
   if (await repoDirty('core')) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree + '/core'}`
   if (await repoDirty()) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree}`
@@ -186,25 +197,24 @@ async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
 }
 
 async function pullWorktree (): Promise<boolean> {
-  // Rebase cloud first, then core (both onto origin/main)
-  if (!await rebaseRepo()) return false
+  // For each repo: if all commits are already merged (e.g. via rebase-merge on GitHub),
+  // just move to origin/main. Otherwise rebase local commits onto origin/main.
+  for (let subdir of [undefined, 'core'] as const) {
+    let label = subdir || 'cloud'
+    let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
 
-  // Before rebasing core, check if all local commits already exist on origin/main (with different SHAs from rebase-merge).
-  // Use cherry to compare by patch content: - means equivalent exists, + means unique to our branch.
-  await $`git -C ${currentWorktree}/core fetch origin`
-  let cherryOutput = (await $`git -C ${currentWorktree}/core cherry origin/main`.nothrow()).stdout.trim()
-  let hasUnmergedCommits = cherryOutput.split('\n').some(line => line.startsWith('+ '))
-  if (!hasUnmergedCommits) {
-    // All our commits (if any) have been merged, just move to origin/main
-    let originMain = (await $`git -C ${currentWorktree}/core rev-parse origin/main`).stdout.trim()
-    let currentCore = (await $`git -C ${currentWorktree}/core rev-parse HEAD`).stdout.trim()
-    if (originMain !== currentCore) {
-      console.log('Updating core submodule to origin/main (local commits already merged)')
-      await $`git -C ${currentWorktree}/core checkout origin/main`
+    if (!await hasUnmergedCommits(subdir)) {
+      // All our commits (if any) have been merged, just move to origin/main
+      let originMain = (await $`git -C ${path} rev-parse origin/main`).stdout.trim()
+      let currentHead = (await $`git -C ${path} rev-parse HEAD`).stdout.trim()
+      if (originMain !== currentHead) {
+        console.log(`Updating ${label} to origin/main (local commits already merged)`)
+        await $`git -C ${path} checkout origin/main`
+      }
+    } else {
+      // We have local commits to preserve, rebase them onto origin/main
+      if (!await rebaseRepo(subdir, 'origin/main')) return false
     }
-  } else {
-    // We have local commits to preserve, rebase them onto origin/main
-    if (!await rebaseRepo('core', 'origin/main')) return false
   }
 
   return true
@@ -271,36 +281,25 @@ async function doneWorktree () {
   console.log('Archiving worktree ' + currentName)
 
   // Check that both branches have been merged into main
-  try {
-    await $`git -C ${currentWorktree}/core merge-base --is-ancestor ${currentName} origin/main`
-  } catch {
+  if (await hasUnmergedCommits('core')) {
     return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
   }
-
-  try {
-    await $`git -C ${currentWorktree} merge-base --is-ancestor ${currentName} origin/main`
-  } catch {
+  if (await hasUnmergedCommits()) {
     return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
   }
 
-  // Stop the container
-  await $`docker rm -f graphene-${currentName}`.nothrow()
+  await $`docker rm -f graphene-${currentName}`.nothrow() // Stop the container
 
   cd(root) // cd to root, since we might be about to delete the cwd
 
-  // Remove the worktree (superproject, which contains core as submodule)
-  await $`git -C ${root}/main worktree remove ${currentWorktree}`
-
-  // Archive the branches
-  await $`git -C ${root}/main/core tag archive/${currentName} ${currentName}`
-  await $`git -C ${root}/main/core branch -D ${currentName}`
-  await $`git -C ${root}/main tag archive/${currentName} ${currentName}`
-  await $`git -C ${root}/main branch -D ${currentName}`
+  // Remove the worktree. Force is required because the worktree has submodules
+  await $`git -C ${root}/main worktree remove --force ${currentWorktree}`
 }
 
 // useful when hacking on the workTree script itself, but otherwise kinda dangerous
 async function dropWorktree(name:string) {
   await $`docker rm -f graphene-${name}`.nothrow()
+  await $`git -C ${root}/${name} submodule deinit -f core`.nothrow()
   await $`git -C ${root}/main worktree remove --force ${root}/${name}`
   await $`git -C ${root}/main branch -D ${name}`
 }
