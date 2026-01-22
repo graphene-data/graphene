@@ -13,13 +13,12 @@ import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {loginPkce} from './auth.ts'
 
-dotenv.config({quiet: true})
 const program = new Command()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 // in dev: cli/cli.ts -> cli/package.json. in dist: cli/dist/cli/cli.js -> cli/package.json
 const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(__dirname, 'package.json') : path.join(__dirname, '../../package.json')
 const pkg = fs.readJsonSync(pkgPath)
-
 program.name('graphene').description('Graphene CLI').version(pkg.version, '-v, --version')
 
 program.hook('preAction', async () => {
@@ -27,6 +26,7 @@ program.hook('preAction', async () => {
     await new Promise(r => setTimeout(r, 1000))
   }
   loadConfig(process.cwd())
+  dotenv.config({quiet: true, path: config.envFile})
 })
 
 program.command('compile')

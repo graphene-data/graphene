@@ -19,6 +19,7 @@
   },
   "graphene": {
     "namespace": "bigquery-public-data.thelook_ecommerce",
+    "envFile": "../../../.env",
     "bigquery": {
       "projectId": "intense-acumen-470417-u5"
     }
