@@ -1,11 +1,11 @@
 import fs, {globSync} from 'node:fs'
 import path from 'node:path'
-import {createRequire} from 'node:module'
 import {fileURLToPath} from 'node:url'
 import middie from '@fastify/middie'
 import {createServer as createViteServer} from 'vite'
+import {migrate} from 'drizzle-orm/postgres-js/migrator'
 import {createServer} from './server.ts'
-import {getDb, resetDb} from './db.ts'
+import {getDb, resetDb, setupPglite} from './db.ts'
 import * as schema from '../schema.ts'
 import {setAuthOverride} from './auth.ts'
 import {encryptSecret} from './secrets.ts'
@@ -30,7 +30,7 @@ interface DevServerHandle {
 }
 
 export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: DevArgs): Promise<DevServerHandle> {
-  port = Number(port || process.env.GRAPHENE_PORT || 4000)
+  port = port || Number(process.env.GRAPHENE_PORT) + 1 || 4000
 
   let fastify = createServer(false)
   await fastify.register(middie, {hook: 'onRequest'})
@@ -63,7 +63,7 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
 
   await seedDatabase(seedType)
 
-  await fastify.listen({port, host: 'localhost'})
+  await fastify.listen({port, host: '0.0.0.0'})
   let url = `http://localhost:${port}`
   if (!TEST) {
     console.log(`Cloud dev server running at ${url}`)
@@ -80,29 +80,15 @@ export async function startDevServer ({realAuth, port, seedType = 'duckdb'}: Dev
   }
 }
 
-// load the statements we need to run to set up a fresh database. Done separately because we can cache for all test runs
-let dbSetup: string[]
-export async function loadDbSetup () {
-  if (dbSetup) return
-  let db = getDb()
-  let require = createRequire(import.meta.url)
-  let {pushSQLiteSchema} = require('drizzle-kit/api')
-  let {statementsToExecute} = await pushSQLiteSchema(schema, db)
-  dbSetup = statementsToExecute
-}
-
 export async function seedDatabase (connectionType: SeedType) {
-  if (TEST) resetDb() // in tests, clear out our prev in-memory db
-  else fs.rmSync(path.join(rootDir, 'cloud.db'), {force: true}) // in dev, remove the db file
+  await resetDb() // reset db instance (tests need fresh in-memory db, dev needs fresh pglite)
   let db = getDb()
 
-  // run schema migrations against this fresh db
-  if (!dbSetup) await loadDbSetup()
+  // Run migrations using drizzle's migrate function
+  await migrate(db, {migrationsFolder: path.join(rootDir, 'migrations')})
 
-  for (let statement of dbSetup) await (db as any).$client.execute(statement)
-
-  await db.insert(schema.orgs).values({id: orgId, slug: 'dev', name: 'Graphene Dev'}).run()
-  await db.insert(schema.users).values({orgId, id: userId, email: 'dev@graphenedata.com', role: 'admin' as const}).run()
+  await db.insert(schema.orgs).values({id: orgId, slug: 'dev', name: 'Graphene Dev'})
+  await db.insert(schema.users).values({orgId, id: userId, email: 'dev@graphenedata.com', role: 'admin' as const})
 
   if (connectionType == 'bigquery') {
     let configJson = process.env.GOOGLE_CREDENTIALS_CONTENT || ''
@@ -113,18 +99,18 @@ export async function seedDatabase (connectionType: SeedType) {
     }
 
     let namespace = 'bigquery-public-data.thelook_ecommerce'
-    await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson: await encryptSecret(configJson), namespace}).run()
+    await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson: await encryptSecret(configJson), namespace})
     // NB this id is the current install of the `graphene-data-dev` github app into the `github.com/grant-gh-test/ecomm` repo. If you re-install, update the vcsInstallationId
     let vcsInstallationId = '101959947'
-    await db.insert(schema.vcsInstallations).values({orgId, id: vcsInstallationId, type: 'github'}).run()
-    await db.insert(schema.repos).values({orgId, id: repoId, slug: 'ecomm', url: 'https://github.com/grant-gh-test/ecomm.git', vcsInstallationId, vcsRepoId: '1118425707'}).run()
+    await db.insert(schema.vcsInstallations).values({orgId, id: vcsInstallationId, type: 'github'})
+    await db.insert(schema.repos).values({orgId, id: repoId, slug: 'ecomm', url: 'https://github.com/grant-gh-test/ecomm.git', vcsInstallationId, vcsRepoId: '1118425707'})
   }
 
   if (connectionType == 'duckdb') {
     let dbPath = path.resolve(rootDir, '../core/examples/flights/flights.duckdb')
     if (!fs.existsSync(dbPath)) throw new Error(`Expected DuckDB database at ${dbPath}`)
-    await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: await encryptSecret(JSON.stringify({dbPath}))}).run()
-    await db.insert(schema.repos).values({id: repoId, slug: 'flights', orgId, url: 'https://github.com/graphene-data/examples/${repoSlug}'}).run()
+    await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: await encryptSecret(JSON.stringify({dbPath}))})
+    await db.insert(schema.repos).values({id: repoId, slug: 'flights', orgId, url: 'https://github.com/graphene-data/examples/${repoSlug}'})
   }
 
   // load our example files into the database
@@ -132,10 +118,11 @@ export async function seedDatabase (connectionType: SeedType) {
   for (let filePath of globSync('**/*.{md,gsql}', {cwd: exampleRoot})) {
     let [relative, extension] = filePath.split('.')
     let content = fs.readFileSync(path.join(exampleRoot, filePath), 'utf-8')
-    await db.insert(schema.files).values({repoId, path: relative, extension, content}).run()
+    await db.insert(schema.files).values({repoId, path: relative, extension, content})
   }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
+  await setupPglite(5454) // fixed port for dev server
   await startDevServer({realAuth: true, seedType: 'duckdb'})
 }

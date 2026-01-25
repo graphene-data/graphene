@@ -100,8 +100,9 @@ export async function runAgent (prompt: string, repoId: string, orgId: string, o
 }
 
 async function findContextFiles (repoId: string): Promise<string> {
+  let db = getDb()
   // Look for CLAUDE.md, AGENTS.md, or README.md
-  let _contextFiles = await getDb()
+  let _contextFiles = await db
     .select({path: files.path, content: files.content})
     .from(files)
     .where(or(
@@ -110,14 +111,14 @@ async function findContextFiles (repoId: string): Promise<string> {
       like(files.path, '%claude'),
       like(files.path, '%agents'),
     ))
-    .all()
+    .then(rows => rows)
 
   // Filter to only files in this repo
-  let repoFiles = await getDb()
+  let repoFiles = await db
     .select({path: files.path, content: files.content})
     .from(files)
     .where(eq(files.repoId, repoId))
-    .all()
+    .then(rows => rows)
 
   let contextContent = ''
   for (let pattern of ['CLAUDE', 'AGENTS', 'claude', 'agents']) {

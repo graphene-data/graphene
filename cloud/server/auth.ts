@@ -47,7 +47,7 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
   if (PROD || host.includes('.')) {
     let base = PROD ? '.graphenedata.com' : '.localhost'
     let subdomain = host.replace(base, '')
-    let org = await getDb().select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, req.auth.orgId)).get()
+    let org = await (getDb()).select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, req.auth.orgId)).then(rows => rows[0])
     if (!org) throw new Error('Missing org for logged in user')
     req.auth.slug = org.slug
 

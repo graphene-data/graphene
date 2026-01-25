@@ -64,24 +64,25 @@ export async function githubSetup (req: FastifyRequest, reply: FastifyReply) {
   }
 
   reply.clearCookie('github_install_state', {path: '/'}) // clear so the cookie cant be reused
-  await getDb().insert(vcsInstallations).values({orgId, type: 'github', id: query.installation_id})
+  await (getDb()).insert(vcsInstallations).values({orgId, type: 'github', id: query.installation_id})
   reply.redirect(PROD ? `https://${req.auth.slug}.graphenedata.com/settings/repos` : '/settings/repos')
 }
 
 // List repos accessible to the GitHub installation for this org
 export async function listAvailableRepos (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
+  let db = getDb()
 
-  let installation = await getDb().select().from(vcsInstallations)
-    .where(and(eq(vcsInstallations.orgId, req.auth.orgId), eq(vcsInstallations.type, 'github'))).get()
+  let installation = await db.select().from(vcsInstallations)
+    .where(and(eq(vcsInstallations.orgId, req.auth.orgId), eq(vcsInstallations.type, 'github'))).then(rows => rows[0])
   if (!installation) return reply.send({repos: [], hasInstallation: false})
 
   let octokit = await getInstallationOctokit(installation.id)
   let {data} = await octokit.rest.apps.listReposAccessibleToInstallation({per_page: 100})
 
   // Get already-added repos to mark them
-  let addedRepos = await getDb().select({id: repos.id, vcsRepoId: repos.vcsRepoId}).from(repos)
-    .where(eq(repos.vcsInstallationId, installation.id)).all()
+  let addedRepos = await db.select({id: repos.id, vcsRepoId: repos.vcsRepoId}).from(repos)
+    .where(eq(repos.vcsInstallationId, installation.id)).then(rows => rows)
   let addedMap = new Map(addedRepos.map(r => [r.vcsRepoId, r.id]))
 
   let available = data.repositories.map(r => ({
@@ -100,14 +101,15 @@ export async function listAvailableRepos (req: FastifyRequest, reply: FastifyRep
 // Add a repo from GitHub to this org
 export async function addRepo (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
+  let db = getDb()
 
   let body = req.body as {vcsRepoId: string; slug: string; folder?: string}
   if (!body.vcsRepoId || !body.slug) {
     return reply.code(400).send({error: 'Missing vcsRepoId or slug'})
   }
 
-  let installation = await getDb().select().from(vcsInstallations)
-    .where(and(eq(vcsInstallations.orgId, req.auth.orgId), eq(vcsInstallations.type, 'github'))).get()
+  let installation = await db.select().from(vcsInstallations)
+    .where(and(eq(vcsInstallations.orgId, req.auth.orgId), eq(vcsInstallations.type, 'github'))).then(rows => rows[0])
   if (!installation) return reply.code(400).send({error: 'No GitHub installation'})
 
   // Get repo details from GitHub
@@ -118,7 +120,7 @@ export async function addRepo (req: FastifyRequest, reply: FastifyReply) {
 
   // Create the repo record
   let directory = body.folder?.replace(/^\/|\/$/g, '') || null  // trim leading/trailing slashes
-  let [repo] = await getDb().insert(repos).values({
+  let [repo] = await db.insert(repos).values({
     orgId: req.auth.orgId,
     slug: body.slug,
     url: ghRepo.clone_url,
@@ -134,17 +136,18 @@ export async function addRepo (req: FastifyRequest, reply: FastifyReply) {
 // Remove a repo
 export async function removeRepo (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
+  let db = getDb()
 
   let params = req.params as {id?: string}
   if (!params.id) return reply.code(400).send({error: 'Missing repo id'})
 
   // Verify repo belongs to this org
-  let repo = await getDb().select().from(repos)
-    .where(and(eq(repos.id, params.id), eq(repos.orgId, req.auth.orgId))).get()
+  let repo = await db.select().from(repos)
+    .where(and(eq(repos.id, params.id), eq(repos.orgId, req.auth.orgId))).then(rows => rows[0])
   if (!repo) return reply.code(404).send({error: 'Repo not found'})
 
   // Delete repo (files cascade due to FK)
-  await getDb().delete(repos).where(eq(repos.id, params.id))
+  await db.delete(repos).where(eq(repos.id, params.id))
 
   reply.send({ok: true})
 }
@@ -169,7 +172,7 @@ export async function githubWebhook (req: FastifyRequest, reply: FastifyReply) {
 
     // Only sync pushes to the default branch for repos we've added
     if (ref === `refs/heads/${defaultBranch}`) {
-      let repo = await getDb().select().from(repos).where(eq(repos.vcsRepoId, String(payload.repository?.id))).get()
+      let repo = await (getDb()).select().from(repos).where(eq(repos.vcsRepoId, String(payload.repository?.id))).then(rows => rows[0])
       if (repo) {
         await fullSyncRepo(repo.id)
       }
@@ -192,7 +195,8 @@ function verifyWebhookSignature (payload: string, signature: string): boolean {
 
 // Full sync of all .md and .gsql files from a repo
 export async function fullSyncRepo (repoId: string) {
-  let gRepo = await getDb().select().from(repos).where(eq(repos.id, repoId)).get()
+  let db = getDb()
+  let gRepo = await db.select().from(repos).where(eq(repos.id, repoId)).then(rows => rows[0])
   if (!gRepo || !gRepo.url || !gRepo.vcsInstallationId) throw new Error('Missing repo or VCS config')
 
   let {owner, repo} = parseGitHubUrl(gRepo.url)
@@ -227,7 +231,7 @@ export async function fullSyncRepo (repoId: string) {
       let path = file.path.replace(/\.(md|gsql)$/, '')
       if (directory) path = path.slice(directory.length + 1)
 
-      await getDb().insert(files)
+      await db.insert(files)
         .values({repoId: gRepo.id, path, extension, content})
         .onConflictDoUpdate({
           target: [files.repoId, files.path],
@@ -242,14 +246,14 @@ export async function fullSyncRepo (repoId: string) {
     if (directory) path = path.slice(directory.length + 1)
     return path
   }))
-  let dbFiles = await getDb().select({path: files.path}).from(files).where(eq(files.repoId, gRepo.id)).all()
+  let dbFiles = await db.select({path: files.path}).from(files).where(eq(files.repoId, gRepo.id)).then(rows => rows)
   for (let dbFile of dbFiles) {
     if (!existingPaths.has(dbFile.path)) {
-      await getDb().delete(files).where(and(eq(files.repoId, gRepo.id), eq(files.path, dbFile.path)))
+      await db.delete(files).where(and(eq(files.repoId, gRepo.id), eq(files.path, dbFile.path)))
     }
   }
 
-  await getDb().update(repos).set({
+  await db.update(repos).set({
     lastSyncedAt: new Date(),
     lastSyncCommit: refData.object.sha,
     syncResult: 'success',

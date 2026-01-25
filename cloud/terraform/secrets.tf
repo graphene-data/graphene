@@ -67,14 +67,22 @@ resource "aws_kms_alias" "secrets" {
 
 # Individual secrets for the cloud application
 
-resource "aws_secretsmanager_secret" "turso_auth_token" {
-  name        = "TURSO_AUTH_TOKEN"
-  description = "Turso database auth token"
+# Database password - auto-generated and managed by Secrets Manager
+resource "random_password" "database" {
+  length           = 32
+  special          = true
+  override_special = "-_" # Keep it simple for URL safety
 }
 
-resource "aws_secretsmanager_secret_version" "turso_auth_token" {
-  secret_id     = aws_secretsmanager_secret.turso_auth_token.id
-  secret_string = var.turso_auth_token
+# Store the full DATABASE_URL as a secret for ECS
+resource "aws_secretsmanager_secret" "database_url" {
+  name        = "DATABASE_URL"
+  description = "Aurora PostgreSQL connection URL"
+}
+
+resource "aws_secretsmanager_secret_version" "database_url" {
+  secret_id     = aws_secretsmanager_secret.database_url.id
+  secret_string = "postgresql://${var.database_username}:${random_password.database.result}@${aws_rds_cluster.graphene.endpoint}:5432/${var.database_name}"
 }
 
 resource "aws_secretsmanager_secret" "stytch_secret" {

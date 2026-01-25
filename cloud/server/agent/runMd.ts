@@ -14,10 +14,11 @@ export interface RenderResult {
 
 /** Render markdown to an image via the screenshot Lambda */
 export async function renderMd (markdown: string, repoId: string): Promise<RenderResult> {
-  let repo = await getDb().select({orgId: repos.orgId}).from(repos).where(eq(repos.id, repoId)).get()
+  let db = getDb()
+  let repo = await db.select({orgId: repos.orgId}).from(repos).where(eq(repos.id, repoId)).then(rows => rows[0])
   if (!repo) return {success: false, error: 'Repo not found'}
 
-  let org = await getDb().select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, repo.orgId)).get()
+  let org = await db.select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, repo.orgId)).then(rows => rows[0])
   if (!org) return {success: false, error: 'Org not found'}
 
   let token = generateAgentToken(repo.orgId, repoId)

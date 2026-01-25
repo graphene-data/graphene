@@ -1,13 +1,17 @@
 import {test as base, onTestFinished} from 'vitest'
 import {chromium, type Browser, type Page} from 'playwright'
 import {playwrightExpect as expect} from '../../core/ui/tests/matchers.ts'
-import {loadDbSetup, startDevServer, type SeedType} from '../server/dev.ts'
+import {startDevServer, type SeedType} from '../server/dev.ts'
+import {setupPglite} from '../server/db.ts'
 import net from 'net'
 import dotenv from 'dotenv'
 import path from 'path'
 import {assertConsoleErrors, trackerBrowserConsole, expectConsoleError, stopTrackingConsole} from '../../core/ui/tests/browserConsole.ts'
 
 dotenv.config({path: path.resolve(import.meta.dirname, '../../.env'), quiet: true})
+
+// Load pglite classes once before all tests, with a random port for parallel execution
+await setupPglite(await getAvailablePort())
 
 interface CloudOptions {
   realAuth: boolean
@@ -55,10 +59,6 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
     if (process.env.GRAPHENE_DEBUG) await page.pause()
     await context.close()
   },
-})
-
-test.beforeAll(async () => {
-  await loadDbSetup()
 })
 
 export {expect, expectConsoleError}

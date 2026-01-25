@@ -1,4 +1,24 @@
-# ECS Express Mode service (replaces App Runner)
+# Security Group for ECS tasks
+resource "aws_security_group" "ecs" {
+  name        = "graphene-ecs-sg"
+  description = "Security group for Graphene ECS tasks"
+  vpc_id      = data.aws_vpc.default.id
+
+  # Allow all outbound for external services (GitHub, Stytch, Aurora, etc.)
+  egress {
+    description = "Allow all outbound"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "Graphene ECS Security Group"
+  }
+}
+
+# ECS Express Mode service
 resource "aws_ecs_express_gateway_service" "cloud" {
   service_name            = "graphene-cloud"
   cluster                 = aws_ecs_cluster.main.name
@@ -8,6 +28,11 @@ resource "aws_ecs_express_gateway_service" "cloud" {
   cpu               = "1024"
   memory            = "2048"
   health_check_path = "/"
+
+  network_configuration {
+    subnets         = data.aws_subnets.default.ids
+    security_groups = [aws_security_group.ecs.id]
+  }
 
   # Workaround for provider bug: AWS returns env vars in different order than sent
   # https://github.com/hashicorp/terraform-provider-aws/issues/XXXXX
@@ -32,9 +57,9 @@ resource "aws_ecs_express_gateway_service" "cloud" {
       name  = "STYTCH_PROJECT_ID"
       value = var.stytch_prod_project_id
     }
-    environment {
-      name  = "TURSO_DATABASE_URL"
-      value = var.turso_database_url
+    secret {
+      name       = "DATABASE_URL"
+      value_from = aws_secretsmanager_secret.database_url.arn
     }
     environment {
       name  = "GITHUB_APP_SLUG"
@@ -53,10 +78,7 @@ resource "aws_ecs_express_gateway_service" "cloud" {
       name       = "STYTCH_SECRET"
       value_from = aws_secretsmanager_secret.stytch_secret.arn
     }
-    secret {
-      name       = "TURSO_AUTH_TOKEN"
-      value_from = aws_secretsmanager_secret.turso_auth_token.arn
-    }
+
     secret {
       name       = "GITHUB_APP_WEBHOOK_SECRET"
       value_from = aws_secretsmanager_secret.github_webhook_secret.arn

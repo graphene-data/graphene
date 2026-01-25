@@ -18,11 +18,11 @@ export function listDirTool (repoId: string) {
     }),
     execute: async ({path}) => {
       let prefix = path ? `${path}/` : ''
-      let allFiles = await getDb()
+      let allFiles = await (getDb())
         .select({path: files.path, extension: files.extension})
         .from(files)
         .where(eq(files.repoId, repoId))
-        .all()
+        .then(rows => rows)
 
       // Filter to files that start with the prefix and extract immediate children
       let entries = new Set<string>()
@@ -62,11 +62,11 @@ export function readFileTool (repoId: string) {
       // Remove extension if provided
       let cleanPath = filePath.replace(/\.(md|gsql)$/, '')
 
-      let file = await getDb()
+      let file = await (getDb())
         .select({content: files.content, extension: files.extension})
         .from(files)
         .where(and(eq(files.repoId, repoId), eq(files.path, cleanPath)))
-        .get()
+        .then(rows => rows[0])
 
       if (!file) return {error: `File not found: ${filePath}`}
       return {content: file.content, extension: file.extension}
@@ -82,7 +82,7 @@ export function searchTool (repoId: string) {
     }),
     execute: async ({query}) => {
       let pattern = `%${query}%`
-      let results = await getDb()
+      let results = await (getDb())
         .select({path: files.path, extension: files.extension, content: files.content})
         .from(files)
         .where(and(
@@ -90,7 +90,7 @@ export function searchTool (repoId: string) {
           or(like(files.path, pattern), like(files.content, pattern)),
         ))
         .limit(20)
-        .all()
+        .then(rows => rows)
 
       return results.map(r => {
         let preview = extractPreview(r.content, query)

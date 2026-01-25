@@ -11,6 +11,10 @@ terraform {
       source  = "stytchauth/stytch"
       version = "~> 3.0.1"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 
   backend "s3" {

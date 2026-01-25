@@ -17,19 +17,20 @@ interface QueryBody {
 export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
   let body = req.body as QueryBody
+  let db = getDb()
 
-  let connInfo = await getDb().query.connections.findFirst({where: eq(connections.orgId, req.auth.orgId)})
+  let connInfo = await db.query.connections.findFirst({where: eq(connections.orgId, req.auth.orgId)})
   if (!connInfo) return reply.code(400).send({error: 'No connection configured'})
   let sql = body.sql
   let fields = [] as any[]
 
   // We can proxy either sql or gsql. If it's gsql, we need to load up the workspace to render out the sql
   if (body.gsql) {
-    let repo = await getDb().select().from(repos).where(and(eq(repos.id, body.repoId), eq(repos.orgId, req.auth.orgId))).get()
+    let repo = await db.select().from(repos).where(and(eq(repos.id, body.repoId), eq(repos.orgId, req.auth.orgId))).then(rows => rows[0])
     if (!repo) return reply.code(404).send({error: 'No repo configured'})
 
     // Load up all gsql files into a graphene workspace
-    let gsqlFiles = await getDb().query.files.findMany({where: and(eq(files.repoId, repo.id), eq(files.extension, 'gsql'))})
+    let gsqlFiles = await db.query.files.findMany({where: and(eq(files.repoId, repo.id), eq(files.extension, 'gsql'))})
     clearWorkspace()
     setConfig({dialect: connInfo.kind, namespace: connInfo.namespace ?? undefined, root: '/dev/null'})
     gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))

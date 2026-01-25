@@ -1,13 +1,13 @@
 import fastify from 'fastify'
 import cookie from '@fastify/cookie'
 import staticPlugin from '@fastify/static'
+import {fileURLToPath} from 'url'
+import path from 'path'
 
 import {type AuthContext, authTokenExchange} from './auth.ts'
 import {listNavFiles, renderPage, renderDynamic} from './pages.ts'
 import {proxyQuery} from './query.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
-import {fileURLToPath} from 'url'
-import path from 'path'
 
 export function createServer (serveStatic: boolean) {
   let app = fastify({logger: {level: 'warn'}})

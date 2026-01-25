@@ -13,20 +13,21 @@ const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
 export async function listNavFiles (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
+  let db = getDb()
 
   let repoSlug = (req.params as any)['repoSlug']
-  let repo = await getDb().select({id: repos.id}).from(repos).where(and(
+  let repo = await db.select({id: repos.id}).from(repos).where(and(
     eq(repos.orgId, req.auth.orgId),
     eq(repos.slug, repoSlug),
-  )).get()
+  )).then(rows => rows[0])
   if (!repo) return reply.send([])
 
-  let pages = await getDb().select({path: files.path}).from(files).where(
+  let pages = await db.select({path: files.path}).from(files).where(
     and(
       eq(files.repoId, repo.id),
       eq(files.extension, 'md'),
     ),
-  ).all()
+  ).then(rows => rows)
 
   let paths = pages
     .map(p => `${p.path}.md`)
@@ -36,9 +37,10 @@ export async function listNavFiles (req: FastifyRequest, reply: FastifyReply) {
 
 export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
+  let db = getDb()
 
   let segments = (req.params as any)['*'].split('/')
-  let orgRepos = await getDb().select({id: repos.id, slug: repos.slug}).from(repos).where(eq(repos.orgId, req.auth.orgId)).all()
+  let orgRepos = await db.select({id: repos.id, slug: repos.slug}).from(repos).where(eq(repos.orgId, req.auth.orgId)).then(rows => rows)
 
   let repo = orgRepos.find(r => r.slug == segments[0])
   if (!repo) {
@@ -50,13 +52,13 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
 
 
   let path = segments.slice(1).join('/') || 'index'
-  let page = await getDb().select().from(files).where(
+  let page = await db.select().from(files).where(
     and(
       eq(files.repoId, repo.id),
       eq(files.extension, 'md'),
       or(eq(files.path, path), eq(files.path, path + '/index')),
     ),
-  ).get()
+  ).then(rows => rows[0])
   if (!page) return reply.code(404).send({error: 'Page not found'})
 
   let svelteSource = await mdsvexCompile(page.content, {

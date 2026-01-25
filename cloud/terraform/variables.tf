@@ -29,17 +29,17 @@ variable "stytch_prod_domain" {
   default     = "https://iris-gouda-0163.customers.stytch.com"
 }
 
-# Turso Configuration
-variable "turso_database_url" {
-  description = "Turso database URL"
+# Database Configuration
+variable "database_name" {
+  description = "Aurora PostgreSQL database name"
   type        = string
-  default     = "libsql://graphene-prod-us-graphene.aws-us-east-1.turso.io"
+  default     = "graphene"
 }
 
-variable "turso_auth_token" {
-  description = "Turso auth token (set via TF_VAR_turso_auth_token)"
+variable "database_username" {
+  description = "Aurora PostgreSQL master username"
   type        = string
-  sensitive   = true
+  default     = "graphene"
 }
 
 # GitHub App Configuration

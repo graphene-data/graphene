@@ -42,7 +42,9 @@ output "stytch_secret_arn" {
   value       = aws_secretsmanager_secret.stytch_secret.arn
 }
 
-output "turso_auth_token_arn" {
-  description = "ARN of the Turso auth token secret"
-  value       = aws_secretsmanager_secret.turso_auth_token.arn
+output "database_url_secret_arn" {
+  description = "ARN of the DATABASE_URL secret"
+  value       = aws_secretsmanager_secret.database_url.arn
 }
+
+

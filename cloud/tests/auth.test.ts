@@ -78,7 +78,7 @@ describe('auth', () => {
 })
 
 test('validates subdomains', async ({page, cloud}) => {
-  await getDb().update(orgs).set({slug: 'dev'})
+  await (getDb()).update(orgs).set({slug: 'dev'})
 
   let r1 = await page.request.get(`${cloud.url}/_api/pages/flights/index`, {
     headers: {host: 'wrong.localhost'},
