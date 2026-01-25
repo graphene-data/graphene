@@ -9,12 +9,12 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v5
-      with:
-        repository: graphene-data/graphene
-        path: core
-        ssh-key: ${{ inputs.core-ssh-key }}
-        lfs: true
+    # - uses: actions/checkout@v5
+    #   with:
+    #     repository: graphene-data/graphene
+    #     path: core
+    #     ssh-key: ${{ inputs.core-ssh-key }}
+    #     lfs: true
 
     - uses: pnpm/action-setup@v4
       with:
