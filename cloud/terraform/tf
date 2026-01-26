@@ -1,6 +1,47 @@
 #!/bin/bash
 # Wrapper to export AWS CLI credentials for terraform
 # The S3 backend doesn't support AWS CLI's login credential type directly
+#
+# Usage: ./tf <environment> <command> [args...]
+# Example: ./tf production plan
+#          ./tf staging apply
 
-eval "$(aws configure export-credentials --format env)"
-terraform "$@" --var-file="../../../terraform.tfvars"
+set -e
+
+# Get the directory where this script lives
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+if [ -z "$1" ] || [ -z "$2" ]; then
+  echo "Usage: $0 <environment> <command> [args...]"
+  echo "  environment: production or staging"
+  echo "  command: plan, apply, init, etc."
+  exit 1
+fi
+
+ENV="$1"
+shift
+
+if [ ! -d "environments/$ENV" ]; then
+  echo "Error: Environment '$ENV' not found in environments/"
+  exit 1
+fi
+
+# Set up AWS credentials based on environment
+if [ "$ENV" = "staging" ]; then
+  # Staging: read credentials from repo root .env file
+  if [ -f ../../.env ]; then
+    set -a
+    source ../../.env
+    set +a
+  else
+    echo "Error: .env file not found at repo root (required for staging credentials)"
+    exit 1
+  fi
+else
+  # Production: use AWS CLI credentials
+  eval "$(aws configure export-credentials --format env)"
+fi
+
+cd "environments/$ENV"
+terraform "$@" --var-file="../../../../../terraform.tfvars"

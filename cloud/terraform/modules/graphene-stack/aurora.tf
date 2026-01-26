@@ -56,7 +56,7 @@ resource "aws_rds_cluster" "graphene" {
   # PITR is automatically enabled when backup_retention_period > 0
   backup_retention_period = 7
   preferred_backup_window = "03:00-04:00" # UTC
-  
+
   # Copy tags to snapshots for audit trail
   copy_tags_to_snapshot = true
 

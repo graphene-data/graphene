@@ -12,7 +12,7 @@ resource "stytch_project" "graphene" {
   vertical = "B2B"
 
   live_environment = {
-    name = "Production"
+    name             = "Production"
     environment_slug = "production"
   }
 }
@@ -38,12 +38,7 @@ resource "stytch_b2b_sdk_config" "prod" {
       allow_self_onboarding     = false
       enable_member_permissions = true
       bundle_ids                = []
-      domains = [
-        {
-          domain       = "https://graphenedata.com"
-          slug_pattern = "https://{{slug}}.graphenedata.com"
-        },
-      ]
+      domains                   = var.stytch_sdk_domains
     }
     sessions = {
       max_session_duration_minutes = 43200
@@ -151,7 +146,7 @@ resource "stytch_b2b_sdk_config" "test" {
 resource "stytch_redirect_url" "prod_login" {
   project_slug     = stytch_project.graphene.project_slug
   environment_slug = stytch_project.graphene.live_environment.environment_slug
-  url              = "https://login.graphenedata.com/login"
+  url              = var.stytch_redirect_url
 
   valid_types = [
     { type = "LOGIN", is_default = true },

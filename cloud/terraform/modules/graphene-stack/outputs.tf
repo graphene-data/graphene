@@ -17,7 +17,7 @@ output "ci_deploy_role_arn" {
 
 output "delve_auditor_role_arn" {
   description = "ARN of the Delve auditor role"
-  value       = aws_iam_role.delve_auditor.arn
+  value       = var.enable_delve_auditor ? aws_iam_role.delve_auditor[0].arn : null
 }
 
 # ECS Express Mode Outputs
@@ -45,6 +45,11 @@ output "stytch_secret_arn" {
 output "database_url_secret_arn" {
   description = "ARN of the DATABASE_URL secret"
   value       = aws_secretsmanager_secret.database_url.arn
+}
+
+output "ecs_execution_role_arn" {
+  description = "ARN of the ECS execution role"
+  value       = aws_iam_role.ecs_execution.arn
 }
 
 

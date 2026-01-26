@@ -9,11 +9,6 @@ resource "aws_guardduty_detector" "main" {
   enable = true
 }
 
-import {
-  to = aws_guardduty_detector.main
-  id = "60cdcd3ffa83f76d899ecd901fc06e9e"
-}
-
 resource "aws_guardduty_detector_feature" "s3_logs" {
   detector_id = aws_guardduty_detector.main.id
   name        = "S3_DATA_EVENTS"
@@ -35,9 +30,13 @@ resource "aws_guardduty_detector_feature" "ecs_runtime_monitoring" {
     name   = "ECS_FARGATE_AGENT_MANAGEMENT"
     status = "ENABLED"
   }
+
+  lifecycle {
+    ignore_changes = [additional_configuration]
+  }
 }
 
-# GuardDuty detectors for all other regions
+# GuardDuty detectors for all other regions (default-enabled regions)
 resource "aws_guardduty_detector" "us_east_2" {
   provider = aws.us_east_2
 }
@@ -47,17 +46,8 @@ resource "aws_guardduty_detector" "us_west_1" {
 resource "aws_guardduty_detector" "us_west_2" {
   provider = aws.us_west_2
 }
-resource "aws_guardduty_detector" "af_south_1" {
-  provider = aws.af_south_1
-}
-resource "aws_guardduty_detector" "ap_east_1" {
-  provider = aws.ap_east_1
-}
 resource "aws_guardduty_detector" "ap_south_1" {
   provider = aws.ap_south_1
-}
-resource "aws_guardduty_detector" "ap_south_2" {
-  provider = aws.ap_south_2
 }
 resource "aws_guardduty_detector" "ap_northeast_1" {
   provider = aws.ap_northeast_1
@@ -74,20 +64,11 @@ resource "aws_guardduty_detector" "ap_southeast_1" {
 resource "aws_guardduty_detector" "ap_southeast_2" {
   provider = aws.ap_southeast_2
 }
-resource "aws_guardduty_detector" "ap_southeast_3" {
-  provider = aws.ap_southeast_3
-}
-resource "aws_guardduty_detector" "ap_southeast_4" {
-  provider = aws.ap_southeast_4
-}
 resource "aws_guardduty_detector" "ca_central_1" {
   provider = aws.ca_central_1
 }
 resource "aws_guardduty_detector" "eu_central_1" {
   provider = aws.eu_central_1
-}
-resource "aws_guardduty_detector" "eu_central_2" {
-  provider = aws.eu_central_2
 }
 resource "aws_guardduty_detector" "eu_west_1" {
   provider = aws.eu_west_1
@@ -101,20 +82,50 @@ resource "aws_guardduty_detector" "eu_west_3" {
 resource "aws_guardduty_detector" "eu_north_1" {
   provider = aws.eu_north_1
 }
+resource "aws_guardduty_detector" "sa_east_1" {
+  provider = aws.sa_east_1
+}
+
+# GuardDuty detectors for opt-in regions (require explicit enablement in AWS account)
+resource "aws_guardduty_detector" "af_south_1" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
+  provider = aws.af_south_1
+}
+resource "aws_guardduty_detector" "ap_east_1" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
+  provider = aws.ap_east_1
+}
+resource "aws_guardduty_detector" "ap_south_2" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
+  provider = aws.ap_south_2
+}
+resource "aws_guardduty_detector" "ap_southeast_3" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
+  provider = aws.ap_southeast_3
+}
+resource "aws_guardduty_detector" "ap_southeast_4" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
+  provider = aws.ap_southeast_4
+}
+resource "aws_guardduty_detector" "eu_central_2" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
+  provider = aws.eu_central_2
+}
 resource "aws_guardduty_detector" "eu_south_1" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
   provider = aws.eu_south_1
 }
 resource "aws_guardduty_detector" "eu_south_2" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
   provider = aws.eu_south_2
 }
 resource "aws_guardduty_detector" "me_south_1" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
   provider = aws.me_south_1
 }
 resource "aws_guardduty_detector" "me_central_1" {
+  count    = var.enable_optin_region_guardduty ? 1 : 0
   provider = aws.me_central_1
-}
-resource "aws_guardduty_detector" "sa_east_1" {
-  provider = aws.sa_east_1
 }
 
 # =============================================================================
@@ -124,11 +135,6 @@ resource "aws_guardduty_detector" "sa_east_1" {
 resource "aws_inspector2_enabler" "main" {
   account_ids    = [var.aws_account_id]
   resource_types = ["ECR", "LAMBDA", "LAMBDA_CODE"]
-}
-
-import {
-  to = aws_inspector2_enabler.main
-  id = "772069004272-ECR:LAMBDA:LAMBDA_CODE"
 }
 
 # =============================================================================
@@ -267,7 +273,9 @@ resource "aws_wafv2_web_acl" "main" {
 }
 
 # Look up the ALB created by ECS Express Mode (tagged with AmazonECSManaged=true)
+# Only look this up if we're configuring ALB extras (requires ECS Express service to exist first)
 data "aws_lb" "ecs_express" {
+  count = var.configure_alb_extras ? 1 : 0
   tags = {
     AmazonECSManaged = "true"
   }
@@ -275,7 +283,8 @@ data "aws_lb" "ecs_express" {
 
 # Associate WAF with ECS Express Mode ALB
 resource "aws_wafv2_web_acl_association" "alb" {
-  resource_arn = data.aws_lb.ecs_express.arn
+  count        = var.configure_alb_extras ? 1 : 0
+  resource_arn = data.aws_lb.ecs_express[0].arn
   web_acl_arn  = aws_wafv2_web_acl.main.arn
 }
 

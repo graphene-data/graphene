@@ -180,6 +180,7 @@ resource "aws_iam_role_policy" "ecs_infrastructure_logs" {
 
 # Delve Auditor Role - allows Delve to audit AWS resources
 resource "aws_iam_role" "delve_auditor" {
+  count                = var.enable_delve_auditor ? 1 : 0
   name                 = "DelveAuditor"
   max_session_duration = 43200
 
@@ -195,6 +196,7 @@ resource "aws_iam_role" "delve_auditor" {
 }
 
 resource "aws_iam_role_policy_attachment" "delve_auditor_readonly" {
-  role       = aws_iam_role.delve_auditor.name
+  count      = var.enable_delve_auditor ? 1 : 0
+  role       = aws_iam_role.delve_auditor[0].name
   policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
 }

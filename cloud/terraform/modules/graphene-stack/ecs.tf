@@ -37,7 +37,7 @@ resource "aws_ecs_express_gateway_service" "cloud" {
   # Workaround for provider bug: AWS returns env vars in different order than sent
   # https://github.com/hashicorp/terraform-provider-aws/issues/XXXXX
   lifecycle {
-    ignore_changes = [primary_container]
+    ignore_changes = [primary_container, network_configuration, task_role_arn]
   }
 
   primary_container {
@@ -51,11 +51,11 @@ resource "aws_ecs_express_gateway_service" "cloud" {
 
     environment {
       name  = "STYTCH_DOMAIN"
-      value = var.stytch_prod_domain
+      value = var.stytch_domain
     }
     environment {
       name  = "STYTCH_PROJECT_ID"
-      value = var.stytch_prod_project_id
+      value = var.stytch_project_id
     }
     secret {
       name       = "DATABASE_URL"
@@ -101,9 +101,94 @@ resource "aws_ecs_cluster" "main" {
     name  = "containerInsights"
     value = "enhanced"
   }
+
+  lifecycle {
+    ignore_changes = [configuration]
+  }
 }
 
 resource "aws_cloudwatch_log_group" "cloud" {
   name              = "/ecs/graphene-prod"
   retention_in_days = 30
+}
+
+# =============================================================================
+# ECS Exec Support (for debugging/shell access to containers)
+# =============================================================================
+
+resource "aws_cloudwatch_log_group" "ecs_exec" {
+  name              = "/ecs/graphene-prod/exec"
+  retention_in_days = 90
+}
+
+# ECS Task Role - used by running containers for AWS API calls
+resource "aws_iam_role" "ecs_task" {
+  name = "ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "ecs_task_exec" {
+  name = "ecs-exec-ssm"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.ecs_exec.arn}:*"
+      }
+    ]
+  })
+}
+
+resource "aws_ecs_task_definition" "db_shell" {
+  family                   = "graphene-db-shell"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+  task_role_arn            = aws_iam_role.ecs_task.arn
+
+  container_definitions = jsonencode([{
+    name      = "db-shell"
+    image     = "${aws_ecr_repository.cloud.repository_url}:latest"
+    essential = true
+    command   = ["sleep", "infinity"]
+    secrets = [{
+      name      = "DATABASE_URL"
+      valueFrom = aws_secretsmanager_secret.database_url.arn
+    }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.cloud.name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "db-shell"
+      }
+    }
+  }])
 }
