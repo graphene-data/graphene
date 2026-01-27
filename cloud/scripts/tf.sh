@@ -41,4 +41,4 @@ else
 fi
 
 cd "$TF_DIR/environments/$ENV"
-terraform "$@" --var-file="$REPO_ROOT/terraform.tfvars"
+terraform "$@" --var-file="$REPO_ROOT/../terraform.tfvars"

@@ -179,6 +179,7 @@ module "graphene" {
   source = "../../modules/graphene-stack"
 
   aws_account_id = "772069004272"
+  domain_name    = "graphenedata.com"
 
   # Stytch configuration
   stytch_project_id = "project-live-6ce1d97b-eb01-42b7-a849-223d1a431224"

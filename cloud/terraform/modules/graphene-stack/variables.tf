@@ -88,10 +88,9 @@ variable "enable_optin_region_guardduty" {
 }
 
 # ACM Configuration (environment-specific)
-variable "acm_certificate_arn" {
-  description = "ARN of the ACM certificate to use for the ALB"
+variable "domain_name" {
+  description = "Primary domain name for the environment (e.g., graphenedata.com, graphene-staging.com)"
   type        = string
-  default     = null
 }
 
 variable "configure_alb_extras" {

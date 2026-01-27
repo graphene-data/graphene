@@ -1,11 +1,6 @@
 name: Setup
 description: Checkout core repo and install dependencies
 
-inputs:
-  core-ssh-key:
-    description: SSH key for core repo
-    required: true
-
 runs:
   using: composite
   steps:

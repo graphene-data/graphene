@@ -212,6 +212,7 @@ module "graphene" {
 
   # TODO: Update with staging account ID
   aws_account_id = "025223626139"
+  domain_name    = "graphene-staging.com"
 
   # Stytch configuration - TODO: update with staging stytch project
   stytch_project_id = "project-test-XXXXXXXX"

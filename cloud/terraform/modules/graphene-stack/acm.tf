@@ -1,8 +1,8 @@
-# ACM Certificate for *.graphenedata.com
+# ACM Certificate for the environment's domain
 
 resource "aws_acm_certificate" "wildcard" {
-  domain_name               = "*.graphenedata.com"
-  subject_alternative_names = ["graphenedata.com"]
+  domain_name               = "*.${var.domain_name}"
+  subject_alternative_names = [var.domain_name]
   validation_method         = "DNS"
 
   lifecycle {

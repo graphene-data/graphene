@@ -77,3 +77,20 @@ output "migrate_security_group" {
   description = "Security group for running migration task"
   value       = aws_security_group.ecs.id
 }
+
+# ACM Certificate Outputs
+output "acm_certificate_arn" {
+  description = "ARN of the ACM wildcard certificate"
+  value       = aws_acm_certificate.wildcard.arn
+}
+
+output "acm_certificate_domain_validation_options" {
+  description = "DNS validation records needed for ACM certificate. Add these to your DNS provider to validate the certificate."
+  value = {
+    for dvo in aws_acm_certificate.wildcard.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      type   = dvo.resource_record_type
+      record = dvo.resource_record_value
+    }
+  }
+}

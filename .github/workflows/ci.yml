@@ -19,8 +19,6 @@ jobs:
           token: ${{ secrets.CI_READ_TOKEN }}
 
       - uses: ./.github/actions/setup
-        with:
-          core-ssh-key: ${{ secrets.CORE_DEPLOY_SSH_KEY }}
 
       - name: Lint
         working-directory: cloud
