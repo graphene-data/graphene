@@ -49,23 +49,7 @@ variable "github_app_client_id" {
   type        = string
 }
 
-variable "github_webhook_secret" {
-  description = "GitHub webhook secret"
-  type        = string
-  sensitive   = true
-}
 
-variable "github_app_client_secret" {
-  description = "GitHub App client secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "github_app_private_key" {
-  description = "GitHub App private key"
-  type        = string
-  sensitive   = true
-}
 
 # Monitoring Configuration
 variable "alarm_notification_email" {

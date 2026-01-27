@@ -33,18 +33,6 @@ variable "stytch_workspace_key_id" {}
 variable "stytch_workspace_key_secret" {
   sensitive = true
 }
-variable "github_webhook_secret" {
-  type      = string
-  sensitive = true
-}
-variable "github_app_client_secret" {
-  type      = string
-  sensitive = true
-}
-variable "github_app_private_key" {
-  type      = string
-  sensitive = true
-}
 
 # =============================================================================
 # Providers
@@ -226,12 +214,9 @@ module "graphene" {
   stytch_redirect_url = "https://login.staging.graphenedata.com/login"
 
   # GitHub App configuration - can use same app or staging-specific
-  github_app_slug          = "graphene-data"
-  github_app_id            = "2480545"
-  github_app_client_id     = "Iv23litWr1CG7mzkNx5K"
-  github_webhook_secret    = var.github_webhook_secret
-  github_app_client_secret = var.github_app_client_secret
-  github_app_private_key   = var.github_app_private_key
+  github_app_slug      = "graphene-data"
+  github_app_id        = "2480545"
+  github_app_client_id = "Iv23litWr1CG7mzkNx5K"
 
   # Feature flags - disable Delve auditor and opt-in region GuardDuty for staging
   enable_delve_auditor          = false

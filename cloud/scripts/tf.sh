@@ -32,13 +32,14 @@ if [ "$ENV" = "staging" ]; then
     set -a
     source "$REPO_ROOT/.env"
     set +a
+    # Map .env variables to Terraform variables
+    export TF_VAR_stytch_workspace_key_id="$STYTCH_TERRAFORM_KEY_ID"
+    export TF_VAR_stytch_workspace_key_secret="$STYTCH_TERRAFORM_KEY_SECRET"
   else
     echo "Error: .env file not found at repo root (required for staging credentials)"
     exit 1
   fi
-else
-  eval "$(aws configure export-credentials --format env)"
 fi
 
 cd "$TF_DIR/environments/$ENV"
-terraform "$@" --var-file="$REPO_ROOT/../terraform.tfvars"
+terraform "$@"

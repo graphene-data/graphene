@@ -102,7 +102,11 @@ resource "aws_secretsmanager_secret" "github_webhook_secret" {
 
 resource "aws_secretsmanager_secret_version" "github_webhook_secret" {
   secret_id     = aws_secretsmanager_secret.github_webhook_secret.id
-  secret_string = var.github_webhook_secret
+  secret_string = "placeholder" # Managed manually in AWS console after initial deployment
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
 
 resource "aws_secretsmanager_secret" "github_app_client_secret" {
@@ -112,7 +116,11 @@ resource "aws_secretsmanager_secret" "github_app_client_secret" {
 
 resource "aws_secretsmanager_secret_version" "github_app_client_secret" {
   secret_id     = aws_secretsmanager_secret.github_app_client_secret.id
-  secret_string = var.github_app_client_secret
+  secret_string = "placeholder" # Managed manually in AWS console after initial deployment
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
 
 resource "aws_secretsmanager_secret" "github_app_private_key" {
@@ -122,5 +130,9 @@ resource "aws_secretsmanager_secret" "github_app_private_key" {
 
 resource "aws_secretsmanager_secret_version" "github_app_private_key" {
   secret_id     = aws_secretsmanager_secret.github_app_private_key.id
-  secret_string = var.github_app_private_key
+  secret_string = "placeholder" # Managed manually in AWS console after initial deployment
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
