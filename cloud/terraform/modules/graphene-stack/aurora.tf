@@ -225,4 +225,23 @@ resource "aws_cloudwatch_metric_alarm" "aurora_storage" {
   }
 }
 
+# Deadlocks Alarm
+resource "aws_cloudwatch_metric_alarm" "aurora_deadlocks" {
+  alarm_name          = "graphene-aurora-deadlocks"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Deadlocks"
+  namespace           = "AWS/RDS"
+  period              = 300 # 5 minutes
+  statistic           = "Sum"
+  threshold           = 0 # Alert on any deadlock
+  alarm_description   = "Alert when Aurora PostgreSQL detects deadlocks"
+  alarm_actions       = [aws_sns_topic.rds_alarms.arn]
+  ok_actions          = [aws_sns_topic.rds_alarms.arn]
+
+  dimensions = {
+    DBClusterIdentifier = aws_rds_cluster.graphene.cluster_identifier
+  }
+}
+
 
