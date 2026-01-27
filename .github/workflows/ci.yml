@@ -98,17 +98,13 @@ jobs:
       ######################################################################
       # Past this point, we're committed to the deploy and don't expect any steps to fail
 
-      - name: Migrate DB
-        working-directory: cloud
-        run: pnpm db:migrate
-        env:
-          TURSO_DATABASE_URL: ${{ secrets.TURSO_DATABASE_URL }}
-          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
-
       - name: Push image
         run: |
           docker push 772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:latest
           docker push 772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}
+
+      - name: Migrate DB
+        run: ./cloud/scripts/migrate.sh
 
       - name: Update ECS Express service
         run: |

@@ -175,7 +175,7 @@ resource "aws_ecs_task_definition" "db_shell" {
 
   container_definitions = jsonencode([{
     name      = "db-shell"
-    image     = "${aws_ecr_repository.cloud.repository_url}:latest"
+    image     = "postgres:16-alpine"
     essential = true
     command   = ["sleep", "infinity"]
     secrets = [{
@@ -191,4 +191,50 @@ resource "aws_ecs_task_definition" "db_shell" {
       }
     }
   }])
+}
+
+# =============================================================================
+# DB Migration Task (one-off task to run drizzle migrations)
+# =============================================================================
+
+resource "aws_ecs_task_definition" "db_migrate" {
+  family                   = "graphene-db-migrate"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.ecs_execution.arn
+
+  container_definitions = jsonencode([{
+    name      = "migrate"
+    image     = "${aws_ecr_repository.cloud.repository_url}:latest"
+    essential = true
+    command   = ["node", "server/migrate.ts"]
+    secrets = [{
+      name      = "DATABASE_URL"
+      valueFrom = aws_secretsmanager_secret.database_url.arn
+    }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.cloud.name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "db-migrate"
+      }
+    }
+  }])
+}
+
+# =============================================================================
+# DB Shell Access Notifications
+# =============================================================================
+
+resource "aws_sns_topic" "db_shell_access" {
+  name = "graphene-db-shell-access"
+}
+
+resource "aws_sns_topic_subscription" "db_shell_access_email" {
+  topic_arn = aws_sns_topic.db_shell_access.arn
+  protocol  = "email"
+  endpoint  = var.alarm_notification_email
 }

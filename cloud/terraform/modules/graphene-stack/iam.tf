@@ -69,6 +69,16 @@ resource "aws_iam_role_policy" "ci_deploy_ecr" {
         Resource = "*"
       },
       {
+        Effect   = "Allow"
+        Action   = ["ecs:RunTask", "ecs:DescribeTasks"]
+        Resource = aws_ecs_task_definition.db_migrate.arn
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["iam:PassRole"]
+        Resource = aws_iam_role.ecs_execution.arn
+      },
+      {
         Effect = "Allow"
         Action = [
           "s3:PutObject",
