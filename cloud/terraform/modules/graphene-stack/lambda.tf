@@ -92,93 +92,10 @@ output "screenshot_lambda_arn" {
 # CloudWatch Alarms for Lambda Monitoring (SOC2 Compliance)
 # =============================================================================
 
-# KMS key for SNS topic encryption
-resource "aws_kms_key" "sns_lambda_alarms" {
-  description             = "KMS key for Lambda alarms SNS topic"
-  deletion_window_in_days = 7
-  enable_key_rotation     = true
-
-  tags = {
-    Name        = "sns-lambda-alarms"
-    Environment = "production"
-    Workload    = "monitoring"
-    Purpose     = "sns-topic-encryption"
-  }
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "AllowKeyManagement"
-        Effect = "Allow"
-        Principal = {
-          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-        }
-        Action = [
-          "kms:PutKeyPolicy",
-          "kms:GetKeyPolicy",
-          "kms:GetKeyRotationStatus",
-          "kms:ListResourceTags",
-          "kms:DescribeKey",
-          "kms:EnableKeyRotation",
-          "kms:DisableKeyRotation",
-          "kms:ScheduleKeyDeletion",
-          "kms:CancelKeyDeletion",
-          "kms:TagResource",
-          "kms:UntagResource",
-          "kms:CreateAlias",
-          "kms:DeleteAlias",
-          "kms:UpdateAlias"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "AllowCloudWatchAlarms"
-        Effect = "Allow"
-        Principal = {
-          Service = "cloudwatch.amazonaws.com"
-        }
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey*"
-        ]
-        Resource = "*"
-        Condition = {
-          StringEquals = {
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-        }
-      },
-      {
-        Sid    = "AllowSNSUsage"
-        Effect = "Allow"
-        Principal = {
-          Service = "sns.amazonaws.com"
-        }
-        Action = [
-          "kms:Decrypt",
-          "kms:GenerateDataKey*"
-        ]
-        Resource = "*"
-        Condition = {
-          StringEquals = {
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-        }
-      }
-    ]
-  })
-}
-
-resource "aws_kms_alias" "sns_lambda_alarms" {
-  name          = "alias/sns-lambda-alarms"
-  target_key_id = aws_kms_key.sns_lambda_alarms.key_id
-}
-
 # SNS Topic for Lambda alarm notifications
 resource "aws_sns_topic" "lambda_alarms" {
   name              = "graphene-lambda-alarms"
-  kms_master_key_id = aws_kms_key.sns_lambda_alarms.id
+  kms_master_key_id = aws_kms_key.sns.id
 }
 
 # Email subscription for Lambda alarm notifications

@@ -230,7 +230,8 @@ resource "aws_ecs_task_definition" "db_migrate" {
 # =============================================================================
 
 resource "aws_sns_topic" "db_shell_access" {
-  name = "graphene-db-shell-access"
+  name              = "graphene-db-shell-access"
+  kms_master_key_id = aws_kms_key.sns.id
 }
 
 resource "aws_sns_topic_subscription" "db_shell_access_email" {

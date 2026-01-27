@@ -138,7 +138,8 @@ resource "aws_iam_role_policy_attachment" "rds_enhanced_monitoring" {
 
 # SNS Topic for RDS Alarms
 resource "aws_sns_topic" "rds_alarms" {
-  name = "graphene-rds-alarms"
+  name              = "graphene-rds-alarms"
+  kms_master_key_id = aws_kms_key.sns.id
 }
 
 resource "aws_sns_topic_subscription" "rds_alarms_email" {
@@ -240,7 +241,7 @@ resource "aws_cloudwatch_metric_alarm" "aurora_deadlocks" {
   ok_actions          = [aws_sns_topic.rds_alarms.arn]
 
   dimensions = {
-    DBClusterIdentifier = aws_rds_cluster.graphene.cluster_identifier
+    DBInstanceIdentifier = aws_rds_cluster_instance.graphene.identifier
   }
 }
 

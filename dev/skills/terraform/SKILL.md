@@ -7,7 +7,7 @@ description: Use when making infrastructure changes to test against the staging 
 
 You can test Terraform changes against the staging environment (AWS account `025223626139`) before applying to production.
 
-Use `cloud/scripts/tf.sh staging <command>` in place of the `terraform <command>` command, it will load creds for you.
+Use `cloud/scripts/tf.sh staging <command>` in place of the `terraform <command>`, it will load creds for you.
 You should always work against the staging env, production is updated by CI and the creds in this env won't work for it.
 
 Before starting work, `tf.sh staging init -reconfigure` to sync S3 state locally.
