@@ -33,7 +33,7 @@ CLUSTER="graphene-prod"
 SERVICE="graphene-cloud"
 
 case "$ENVIRONMENT" in
-  staging)    ACCOUNT="025223626139"; URL="https://graphene-staging.com" ;;
+  staging)    ACCOUNT="025223626139"; URL="https://graphene-staging.com"; VITE_STYTCH_PUBLIC_TOKEN="public-token-live-f2a46176-0127-4b0e-aa72-9843a4337482" ;;
   production) ACCOUNT="772069004272"; URL="https://graphenedata.com" ;;
 esac
 
@@ -53,10 +53,10 @@ fi
 
 if [ "$SKIP_BUILD" = false ]; then
   echo "=== Building Vite frontend ==="
-  (cd "$REPO_ROOT/cloud" && pnpm build)
+  # (cd "$REPO_ROOT/cloud" && VITE_STYTCH_PUBLIC_TOKEN=$VITE_STYTCH_PUBLIC_TOKEN pnpm build)
 
   echo "=== Building Docker image ==="
-  docker build --platform linux/amd64 -f cloud/server/Dockerfile -t "${ECR_REPO}:latest" "$REPO_ROOT"
+  docker build --platform linux/amd64 -f $REPO_ROOT/cloud/server/Dockerfile -t "${ECR_REPO}:latest" "$REPO_ROOT"
 
   echo "=== Pushing to ECR ==="
   aws ecr get-login-password --region "$REGION" \

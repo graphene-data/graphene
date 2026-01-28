@@ -99,6 +99,8 @@ resource "stytch_b2b_sdk_config" "test" {
         { domain = "http://localhost:4004", slug_pattern = "" },
         { domain = "http://localhost:4007", slug_pattern = "" },
         { domain = "http://localhost:4010", slug_pattern = "" },
+        { domain = "http://localhost:4013", slug_pattern = "" },
+        { domain = "http://localhost:4016", slug_pattern = "" },
       ]
     }
     sessions = {
@@ -140,6 +142,22 @@ resource "stytch_b2b_sdk_config" "test" {
 }
 
 # =============================================================================
+# Password Config - Test (relaxed for local development)
+# =============================================================================
+
+resource "stytch_password_config" "test" {
+  project_slug     = stytch_project.graphene.project_slug
+  environment_slug = stytch_environment.test.environment_slug
+
+  validation_policy              = "LUDS"
+  luds_min_password_length       = 8
+  luds_min_password_complexity   = 1
+  check_breach_on_creation       = false
+  check_breach_on_authentication = false
+  validate_on_authentication     = false
+}
+
+# =============================================================================
 # Redirect URLs - Production
 # =============================================================================
 
@@ -154,6 +172,46 @@ resource "stytch_redirect_url" "prod_login" {
     { type = "INVITE", is_default = true },
     { type = "RESET_PASSWORD", is_default = true },
     { type = "DISCOVERY", is_default = true },
+  ]
+}
+
+# =============================================================================
+# Redirect URLs - Test (localhost)
+# =============================================================================
+
+# Default redirect URL for test environment
+resource "stytch_redirect_url" "test_login_default" {
+  project_slug     = stytch_project.graphene.project_slug
+  environment_slug = stytch_environment.test.environment_slug
+  url              = "http://localhost:4001/login"
+
+  valid_types = [
+    { type = "LOGIN", is_default = true },
+    { type = "SIGNUP", is_default = true },
+    { type = "INVITE", is_default = true },
+    { type = "RESET_PASSWORD", is_default = true },
+    { type = "DISCOVERY", is_default = true },
+  ]
+}
+
+# Additional redirect URLs for other local dev ports
+locals {
+  test_redirect_ports = [3000, 3121, 4004, 4007, 4010, 4013, 4016]
+}
+
+resource "stytch_redirect_url" "test_login" {
+  for_each = toset([for port in local.test_redirect_ports : tostring(port)])
+
+  project_slug     = stytch_project.graphene.project_slug
+  environment_slug = stytch_environment.test.environment_slug
+  url              = "http://localhost:${each.value}/login"
+
+  valid_types = [
+    { type = "LOGIN", is_default = false },
+    { type = "SIGNUP", is_default = false },
+    { type = "INVITE", is_default = false },
+    { type = "RESET_PASSWORD", is_default = false },
+    { type = "DISCOVERY", is_default = false },
   ]
 }
 

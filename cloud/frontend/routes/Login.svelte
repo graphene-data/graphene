@@ -11,6 +11,11 @@
     if (mode === 'authenticate') {
       stytch.mountIdentityProvider({elementId: '#stytch-login'})
     } else {
+      // Check if this is a password reset flow by looking for stytch_token_type=multi_tenant_passwords
+      let url = new URL(window.location.href)
+      let tokenType = url.searchParams.get('stytch_token_type')
+      let isPasswordReset = tokenType === 'multi_tenant_passwords'
+
       stytch.mount({
         elementId: '#stytch-login',
         callbacks: {
@@ -20,7 +25,6 @@
               session.set(stytchSession)
 
               let orgSlug = stytchSession?.organization_slug
-              let url = new URL(window.location.href)
               let next = url.searchParams.get('next') || '/'
 
               if (orgSlug && !window.location.hostname.includes('localhost')) {
@@ -32,10 +36,14 @@
           },
         },
         config: {
-          authFlowType: AuthFlowType.Discovery,
+          authFlowType: isPasswordReset ? AuthFlowType.PasswordReset : AuthFlowType.Discovery,
           sessionOptions: {sessionDurationMinutes: 60 * 24 * 30},
           products: ['passwords'],
-          passwordOptions: {},
+          passwordOptions: {
+            resetPasswordRedirectURL: window.location.hostname.includes('localhost')
+              ? `${window.location.origin}/login`
+              : 'https://login.graphenedata.com/login',
+          },
           directLoginForSingleMembership: {
             status: true,
             ignoreInvites: true,
