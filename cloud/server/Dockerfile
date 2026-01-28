@@ -15,6 +15,9 @@ RUN cd core && pnpm install --prefer-frozen-lockfile --prod
 COPY cloud/package.json cloud/pnpm-lock.yaml ./cloud/
 RUN cd cloud && pnpm install --prefer-frozen-lockfile --prod
 
+# Clean up pnpm store and cache (saves ~600MB)
+RUN rm -rf /pnpm /root/.local /root/.cache
+
 COPY core ./core
 COPY cloud ./cloud
 

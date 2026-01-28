@@ -22,9 +22,6 @@ importers:
       '@fastify/cookie':
         specifier: ^11.0.2
         version: 11.0.2
-      '@fastify/middie':
-        specifier: ^9.0.3
-        version: 9.0.3
       '@fastify/static':
         specifier: ^8.3.0
         version: 8.3.0
@@ -34,12 +31,6 @@ importers:
       '@octokit/rest':
         specifier: ^22.0.1
         version: 22.0.1
-      '@stytch/vanilla-js':
-        specifier: ^5.38.0
-        version: 5.39.0
-      '@sveltejs/vite-plugin-svelte':
-        specifier: 3.1.2
-        version: 3.1.2(svelte@4.2.19)(vite@7.1.10(@types/node@22.18.10))
       ai:
         specifier: ^6.0.17
         version: 6.0.39(zod@4.3.5)
@@ -58,9 +49,6 @@ importers:
       mdsvex:
         specifier: ^0.12.6
         version: 0.12.6(svelte@4.2.19)
-      playwright-core:
-        specifier: ^1.57.0
-        version: 1.57.0
       postgres:
         specifier: ^3.4.8
         version: 3.4.8
@@ -98,9 +86,18 @@ importers:
       '@eslint/js':
         specifier: ^9.34.0
         version: 9.37.0
+      '@fastify/middie':
+        specifier: ^9.0.3
+        version: 9.0.3
       '@playwright/test':
         specifier: 1.54.2
         version: 1.54.2
+      '@stytch/vanilla-js':
+        specifier: ^5.38.0
+        version: 5.39.0
+      '@sveltejs/vite-plugin-svelte':
+        specifier: 3.1.2
+        version: 3.1.2(svelte@4.2.19)(vite@7.1.10(@types/node@22.18.10))
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
@@ -131,6 +128,9 @@ importers:
       playwright:
         specifier: 1.54.2
         version: 1.54.2
+      playwright-core:
+        specifier: ^1.57.0
+        version: 1.57.0
       smee-client:
         specifier: ^5.0.0
         version: 5.0.0
