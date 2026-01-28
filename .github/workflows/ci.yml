@@ -67,59 +67,17 @@ jobs:
         with:
           core-ssh-key: ${{ secrets.CORE_DEPLOY_SSH_KEY }}
 
-      - name: Vite build
-        working-directory: cloud
-        run: pnpm build
-        env:
-          VITE_STYTCH_PUBLIC_TOKEN: ${{ secrets.VITE_STYTCH_PUBLIC_TOKEN }}
-
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::772069004272:role/ci-deploy
           aws-region: us-east-1
 
-      - name: ECR login
-        uses: aws-actions/amazon-ecr-login@v2
-
-      # todo: in theory this action can persist the cache between runs, which would be nice
-      - name: Build image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: cloud/server/Dockerfile
-          push: false
-          tags: |
-            772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:latest
-            772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}
-
-      ######################################################################
-      # Past this point, we're committed to the deploy and don't expect any steps to fail
-
-      - name: Push image
-        run: |
-          docker push 772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:latest
-          docker push 772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}
-
-      - name: Migrate DB
-        run: ./cloud/scripts/migrate.sh
-
-      - name: Update ECS Express service
-        run: |
-          aws ecs update-express-gateway-service \
-            --service-arn arn:aws:ecs:us-east-1:772069004272:service/graphene-prod/graphene-cloud \
-            --service-name graphene-cloud \
-            --cluster graphene-prod \
-            --primary-container image="772069004272.dkr.ecr.us-east-1.amazonaws.com/graphene/cloud:${{ github.sha }}"
+      - name: Deploy
+        run: ./cloud/scripts/deploy.sh production
+        env:
+          VITE_STYTCH_PUBLIC_TOKEN: ${{ secrets.VITE_STYTCH_PUBLIC_TOKEN }}
 
       - name: Deploy Lambda function
         working-directory: cloud/lambda/screenshot
         run: npm run deploy
-
-      - name: Wait for deployment to complete
-        run: |
-          echo "Waiting for ECS service to stabilize..."
-          aws ecs wait services-stable \
-            --cluster graphene-prod \
-            --services graphene-cloud
-          echo "Deployment completed successfully!"

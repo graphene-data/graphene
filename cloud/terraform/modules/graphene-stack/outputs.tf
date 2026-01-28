@@ -94,3 +94,25 @@ output "acm_certificate_domain_validation_options" {
     }
   }
 }
+
+# Stytch Outputs
+output "stytch_project_slug" {
+  description = "Stytch project slug"
+  value       = stytch_project.graphene.project_slug
+}
+
+output "stytch_public_token" {
+  description = "Stytch public token for the production environment"
+  value       = stytch_public_token.prod.public_token
+}
+
+output "stytch_secret_id" {
+  description = "Stytch secret ID for the production environment"
+  value       = stytch_secret.prod.secret_id
+}
+
+output "stytch_secret" {
+  description = "Stytch secret for the production environment (for .env file)"
+  value       = stytch_secret.prod.secret
+  sensitive   = true
+}

@@ -28,7 +28,7 @@ resource "aws_lb_listener_certificate" "wildcard" {
 resource "aws_lb_listener_rule" "ecs_express" {
   count        = var.configure_alb_extras && var.lb_target_group_arns != null ? 1 : 0
   listener_arn = data.aws_lb_listener.https[0].arn
-  priority     = 1
+  priority     = 2 # Priority 1 is used by ECS Express's default rule
 
   action {
     type = "forward"

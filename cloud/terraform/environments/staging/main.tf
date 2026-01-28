@@ -202,16 +202,17 @@ module "graphene" {
   aws_account_id = "025223626139"
   domain_name    = "graphene-staging.com"
 
-  # Stytch configuration - TODO: update with staging stytch project
-  stytch_project_id = "project-test-XXXXXXXX"
-  stytch_domain     = "https://test.stytch.com"
+  # Stytch configuration - these values come from the Stytch dashboard
+  # for the staging workspace's production project
+  stytch_project_id = "project-live-f75f71b0-14d6-4f18-855c-372c36be4462"
+  stytch_domain     = "https://zenith-erigeron-9137.customers.stytch.com"
   stytch_sdk_domains = [
     {
-      domain       = "https://staging.graphenedata.com"
-      slug_pattern = "https://{{slug}}.staging.graphenedata.com"
+      domain       = "https://graphene-staging.com"
+      slug_pattern = "https://{{slug}}.graphene-staging.com"
     }
   ]
-  stytch_redirect_url = "https://login.staging.graphenedata.com/login"
+  stytch_redirect_url = "https://login.graphene-staging.com/login"
 
   # GitHub App configuration - can use same app or staging-specific
   github_app_slug      = "graphene-data"
@@ -222,10 +223,17 @@ module "graphene" {
   enable_delve_auditor          = false
   enable_optin_region_guardduty = false
 
-  # ACM/LB configuration - staging doesn't have ECS Express ALB yet
-  configure_alb_extras          = false
-  lb_listener_rule_host_headers = []
-  lb_target_group_arns          = null
+  # ACM/LB configuration - attach wildcard cert and configure host routing
+  configure_alb_extras = true
+  lb_listener_rule_host_headers = [
+    "gr-cc11cf826d8e47d0b8b20755a72fff5d.ecs.us-east-1.on.aws",
+    "*.graphene-staging.com",
+    "graphene-staging.com"
+  ]
+  lb_target_group_arns = {
+    primary   = "arn:aws:elasticloadbalancing:us-east-1:025223626139:targetgroup/ecs-gateway-tg-1a06ed137e5bb6c69/9277424ab3fa615a"
+    secondary = "arn:aws:elasticloadbalancing:us-east-1:025223626139:targetgroup/ecs-gateway-tg-ee1ca35d9a6e0d737/a1dcdcac8d959db1"
+  }
 
   providers = {
     aws                = aws
@@ -272,4 +280,21 @@ output "ecs_service_url" {
 
 output "ci_deploy_role_arn" {
   value = module.graphene.ci_deploy_role_arn
+}
+
+output "stytch_project_slug" {
+  value = module.graphene.stytch_project_slug
+}
+
+output "stytch_public_token" {
+  value = module.graphene.stytch_public_token
+}
+
+output "stytch_secret_id" {
+  value = module.graphene.stytch_secret_id
+}
+
+output "stytch_secret" {
+  value     = module.graphene.stytch_secret
+  sensitive = true
 }
