@@ -239,3 +239,79 @@ resource "aws_sns_topic_subscription" "db_shell_access_email" {
   protocol  = "email"
   endpoint  = var.alarm_notification_email
 }
+
+# EventBridge rule to notify SNS when db-shell task starts
+resource "aws_cloudwatch_event_rule" "db_shell_started" {
+  name        = "graphene-db-shell-started"
+  description = "Triggers when a db-shell ECS task is started"
+
+  event_pattern = jsonencode({
+    source      = ["aws.ecs"]
+    detail-type = ["ECS Task State Change"]
+    detail = {
+      clusterArn        = [aws_ecs_cluster.main.arn]
+      lastStatus        = ["RUNNING"]
+      taskDefinitionArn = [{ prefix = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:task-definition/graphene-db-shell" }]
+    }
+  })
+}
+
+resource "aws_cloudwatch_event_target" "db_shell_sns" {
+  rule      = aws_cloudwatch_event_rule.db_shell_started.name
+  target_id = "db-shell-sns-notification"
+  arn       = aws_sns_topic.db_shell_access.arn
+
+  input_transformer {
+    input_paths = {
+      taskArn   = "$.detail.taskArn"
+      startedBy = "$.detail.startedBy"
+      time      = "$.time"
+    }
+    input_template = <<-EOF
+      "Database shell access initiated.\n\nTask: <taskArn>\nStarted by: <startedBy>\nTime: <time>\n\nThis is an audit notification. If this access was not expected, investigate immediately."
+    EOF
+  }
+}
+
+# Allow EventBridge to publish to the SNS topic
+resource "aws_sns_topic_policy" "db_shell_access" {
+  arn = aws_sns_topic.db_shell_access.arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowEventBridgePublish"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action   = "sns:Publish"
+        Resource = aws_sns_topic.db_shell_access.arn
+        Condition = {
+          ArnLike = {
+            "aws:SourceArn" = aws_cloudwatch_event_rule.db_shell_started.arn
+          }
+        }
+      },
+      {
+        Sid    = "AllowAccountOwner"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action = [
+          "sns:GetTopicAttributes",
+          "sns:SetTopicAttributes",
+          "sns:AddPermission",
+          "sns:RemovePermission",
+          "sns:DeleteTopic",
+          "sns:Subscribe",
+          "sns:ListSubscriptionsByTopic",
+          "sns:Publish"
+        ]
+        Resource = aws_sns_topic.db_shell_access.arn
+      }
+    ]
+  })
+}

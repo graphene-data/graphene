@@ -1,28 +1,32 @@
 #!/bin/bash
 #
-# Opens a psql shell against the production database via ECS Exec.
-# Notifies SNS before connecting for audit purposes.
+# Run SQL against the database via ECS task
 #
 # Prerequisites:
-#   - AWS CLI v2 with Session Manager plugin installed
+#   - AWS CLI v2
+#   - For interactive mode: AWS Session Manager plugin
 #   - For staging: .env file at repo root with AWS credentials
-#   - For production: AWS CLI credentials configured
 #
-# Usage: ./db-shell.sh [staging|production]
+# Usage:
+#   ./db-shell.sh [staging|production]              # Interactive psql shell (requires Session Manager plugin)
+#   ./db-shell.sh [staging|production] "SQL query"  # Run query and exit
+#
+# Examples:
+#   ./db-shell.sh staging                           # Interactive shell
+#   ./db-shell.sh staging "SELECT * FROM orgs"      # Run query
 #
 set -euo pipefail
 
-# Get the directory where this script lives
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 ENVIRONMENT="${1:-staging}"
+QUERY="${2:-}"
 
 # Clear any existing AWS credentials to avoid conflicts
 unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE 2>/dev/null || true
 
 # Set up AWS credentials based on environment
 if [ "$ENVIRONMENT" = "staging" ]; then
-  # Staging: read credentials from repo root .env file
   if [ -f "$SCRIPT_DIR/../../.env" ]; then
     set -a
     source "$SCRIPT_DIR/../../.env"
@@ -31,118 +35,152 @@ if [ "$ENVIRONMENT" = "staging" ]; then
     echo "Error: .env file not found at repo root (required for staging credentials)"
     exit 1
   fi
-else
-  # Production: use AWS CLI credentials
+elif [ "$ENVIRONMENT" = "production" ]; then
   eval "$(aws configure export-credentials --format env)"
+else
+  echo "Usage: $0 [staging|production] [\"SQL query\"]"
+  echo ""
+  echo "Examples:"
+  echo "  $0 staging                        # Interactive shell"
+  echo "  $0 staging \"SELECT * FROM orgs\"  # Run query"
+  exit 1
 fi
 
 # Configuration per environment
 case "$ENVIRONMENT" in
   staging)
     CLUSTER="graphene-prod"
-    SNS_TOPIC="arn:aws:sns:us-east-1:025223626139:graphene-db-shell-access"
     ;;
   production)
     CLUSTER="graphene-prod"
-    SNS_TOPIC="arn:aws:sns:us-east-1:034362047778:graphene-db-shell-access"
-    ;;
-  *)
-    echo "Usage: $0 [staging|production]"
-    exit 1
     ;;
 esac
 
 TASK_DEFINITION="graphene-db-shell"
 CONTAINER_NAME="db-shell"
-SUBNETS=$(aws ec2 describe-subnets --filters "Name=default-for-az,Values=true" --query 'Subnets[*].SubnetId' --output text | tr '\t' ',')
-SECURITY_GROUP=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=graphene-ecs-sg" --query 'SecurityGroups[0].GroupId' --output text)
+REGION="${AWS_REGION:-us-east-1}"
+
+# Get network config
+SUBNETS=$(aws ec2 describe-subnets --filters "Name=default-for-az,Values=true" \
+  --query 'Subnets[0:2].SubnetId' --output text --region "$REGION" | tr '\t' ',')
+SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=graphene-ecs-sg" \
+  --query 'SecurityGroups[0].GroupId' --output text --region "$REGION")
 
 # Get caller identity for audit
-CALLER_IDENTITY=$(aws sts get-caller-identity --output json)
+CALLER_IDENTITY=$(aws sts get-caller-identity --output json --region "$REGION")
 USER_ARN=$(echo "$CALLER_IDENTITY" | jq -r '.Arn')
 ACCOUNT_ID=$(echo "$CALLER_IDENTITY" | jq -r '.Account')
+
+MODE="interactive"
+[ -n "$QUERY" ] && MODE="query"
 
 echo "Starting db-shell session..."
 echo "  Environment: $ENVIRONMENT"
 echo "  User: $USER_ARN"
-echo "  Cluster: $CLUSTER"
+echo "  Mode: $MODE"
+# Note: SNS notifications are handled automatically via EventBridge when the ECS task starts
 
-# Notify SNS before connecting
-echo "Sending SNS notification..."
-aws sns publish \
-  --topic-arn "$SNS_TOPIC" \
-  --subject "DB Shell Access: $ENVIRONMENT" \
-  --message "$(cat <<EOF
-Database shell access initiated.
+if [ -n "$QUERY" ]; then
+  # Query mode: run via task command override
+  echo ""
+  echo "Running query..."
 
-Environment: $ENVIRONMENT
-User: $USER_ARN
-Account: $ACCOUNT_ID
-Time: $(date -u +"%Y-%m-%dT%H:%M:%SZ")
-Cluster: $CLUSTER
+  OVERRIDES=$(jq -n --arg q "$QUERY" '{
+    containerOverrides: [{
+      name: "db-shell",
+      command: ["sh", "-c", ("psql $DATABASE_URL -c " + ($q | @sh))]
+    }]
+  }')
 
-This is an audit notification. If this access was not expected, investigate immediately.
-EOF
-)"
+  TASK_ARN=$(aws ecs run-task \
+    --cluster "$CLUSTER" \
+    --task-definition "$TASK_DEFINITION" \
+    --launch-type FARGATE \
+    --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
+    --overrides "$OVERRIDES" \
+    --region "$REGION" \
+    --query 'tasks[0].taskArn' \
+    --output text)
 
-echo "SNS notification sent."
+  TASK_ID=$(echo "$TASK_ARN" | rev | cut -d'/' -f1 | rev)
+  echo "Task: $TASK_ID"
+  echo "Waiting for task to complete..."
 
-# Run the task
-echo "Starting ECS task..."
-TASK_ARN=$(aws ecs run-task \
-  --cluster "$CLUSTER" \
-  --task-definition "$TASK_DEFINITION" \
-  --launch-type FARGATE \
-  --enable-execute-command \
-  --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SECURITY_GROUP],assignPublicIp=ENABLED}" \
-  --query 'tasks[0].taskArn' \
-  --output text)
+  aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ID" --region "$REGION"
 
-echo "Task started: $TASK_ARN"
+  EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ID" --region "$REGION" \
+    --query 'tasks[0].containers[?name==`db-shell`].exitCode' --output text)
 
-# Wait for task to be running
-echo "Waiting for task to be running..."
-aws ecs wait tasks-running --cluster "$CLUSTER" --tasks "$TASK_ARN"
+  echo ""
+  echo "=== Output ==="
+  aws logs get-log-events --log-group-name /ecs/graphene-prod \
+    --log-stream-name "db-shell/db-shell/$TASK_ID" \
+    --region "$REGION" \
+    --query 'events[*].message' --output text 2>/dev/null || echo "(no logs available yet)"
+  echo "=============="
 
-# Wait for ECS Exec agent to be ready (can take 30-60 seconds after task starts)
-echo "Waiting for execute command agent..."
-for i in {1..60}; do
-  # Check all containers for a running ExecuteCommandAgent (container order varies)
-  AGENT_STATUSES=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
-    --query "tasks[0].containers[*].managedAgents[0].lastStatus" \
-    --output text 2>/dev/null || echo "PENDING")
-  if echo "$AGENT_STATUSES" | grep -q "RUNNING"; then
-    AGENT_STATUS="RUNNING"
-    break
+  if [ "$EXIT_CODE" != "0" ]; then
+    echo ""
+    echo "Query failed with exit code $EXIT_CODE"
+    exit 1
   fi
-  printf "."
-  sleep 2
-done
-echo ""
+else
+  # Interactive mode: use ECS Exec
+  echo ""
+  echo "Starting ECS task..."
 
-if [ "$AGENT_STATUS" != "RUNNING" ]; then
-  echo "Error: Execute command agent failed to start"
+  TASK_ARN=$(aws ecs run-task \
+    --cluster "$CLUSTER" \
+    --task-definition "$TASK_DEFINITION" \
+    --launch-type FARGATE \
+    --enable-execute-command \
+    --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
+    --region "$REGION" \
+    --query 'tasks[0].taskArn' \
+    --output text)
+
+  TASK_ID=$(echo "$TASK_ARN" | rev | cut -d'/' -f1 | rev)
+  echo "Task: $TASK_ID"
+  echo "Waiting for task to be running..."
+
+  aws ecs wait tasks-running --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION"
+
+  echo "Waiting for execute command agent..."
+  AGENT_STATUS=""
+  for i in {1..60}; do
+    AGENT_STATUSES=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+      --query "tasks[0].containers[*].managedAgents[0].lastStatus" \
+      --output text --region "$REGION" 2>/dev/null || echo "PENDING")
+    if echo "$AGENT_STATUSES" | grep -q "RUNNING"; then
+      AGENT_STATUS="RUNNING"
+      break
+    fi
+    printf "."
+    sleep 2
+  done
+  echo ""
+
+  if [ "$AGENT_STATUS" != "RUNNING" ]; then
+    echo "Error: Execute command agent failed to start"
+    echo "Stopping task..."
+    aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" --reason "execute command agent failed" --region "$REGION" > /dev/null
+    exit 1
+  fi
+
+  echo "Connecting to psql..."
+  echo "Type \\q to exit psql, then the container will be stopped."
+  echo ""
+
+  aws ecs execute-command \
+    --cluster "$CLUSTER" \
+    --task "$TASK_ARN" \
+    --container "$CONTAINER_NAME" \
+    --interactive \
+    --region "$REGION" \
+    --command 'sh -c "psql \$DATABASE_URL"'
+
+  echo ""
   echo "Stopping task..."
-  aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" --reason "execute command agent failed" > /dev/null
-  exit 1
+  aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" --reason "db-shell session ended" --region "$REGION" > /dev/null
+  echo "Session complete."
 fi
-
-echo "Connecting to psql..."
-echo "Type \\q to exit psql, then the container will be stopped."
-echo ""
-
-# Connect via ECS Exec - run psql directly
-# Use sh -c to ensure DATABASE_URL is expanded inside the container
-aws ecs execute-command \
-  --cluster "$CLUSTER" \
-  --task "$TASK_ARN" \
-  --container "$CONTAINER_NAME" \
-  --interactive \
-  --command 'sh -c "psql \$DATABASE_URL"'
-
-# Cleanup: stop the task when done
-echo ""
-echo "Stopping task..."
-aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" --reason "db-shell session ended" > /dev/null
-
-echo "Task stopped. Session complete."
