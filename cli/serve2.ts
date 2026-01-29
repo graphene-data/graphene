@@ -14,6 +14,11 @@ import {escapeAngles, extractQueries, injectComponentImports, sanitizeMarkdown} 
 import {checkVitePlugin} from './check.ts'
 import {mockFileMap} from './mockFiles.ts'
 
+// Collect Svelte compiler warnings for test assertions
+export type SvelteWarning = {code: string, message: string, filename?: string}
+export const svelteWarnings: SvelteWarning[] = []
+export function clearSvelteWarnings () { svelteWarnings.length = 0 }
+
 let uiRoot: string
 
 export async function serve2 (): Promise<ViteDevServer> {
@@ -41,6 +46,7 @@ async function createConfig (): Promise<InlineConfig> {
     root: config.root,
     plugins: [
       svelte({
+        configFile: false,
         extensions: ['.svelte', '.md'],
         preprocess: [
           vitePreprocess(),
@@ -51,6 +57,12 @@ async function createConfig (): Promise<InlineConfig> {
           }) as any,
           injectComponentImports(),
         ],
+        onwarn (warning, defaultHandler) {
+          if (process.env.NODE_ENV === 'test') {
+            svelteWarnings.push({code: warning.code, message: warning.message, filename: warning.filename})
+          }
+          defaultHandler?.(warning) // Still call the default handler to print warnings
+        },
       }),
       fixSvelteDepsInTests(),
       checkVitePlugin(),
