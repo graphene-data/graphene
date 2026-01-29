@@ -223,17 +223,10 @@ module "graphene" {
   enable_delve_auditor          = false
   enable_optin_region_guardduty = false
 
-  # ACM/LB configuration - attach wildcard cert and configure host routing
+  # ACM/LB configuration - attach wildcard cert to the ALB
+  # NOTE: The listener rule's host-header condition must be updated manually in AWS console
+  # to include custom domains (*.graphene-staging.com, graphene-staging.com)
   configure_alb_extras = true
-  lb_listener_rule_host_headers = [
-    "gr-cc11cf826d8e47d0b8b20755a72fff5d.ecs.us-east-1.on.aws",
-    "*.graphene-staging.com",
-    "graphene-staging.com"
-  ]
-  lb_target_group_arns = {
-    primary   = "arn:aws:elasticloadbalancing:us-east-1:025223626139:targetgroup/ecs-gateway-tg-1a06ed137e5bb6c69/9277424ab3fa615a"
-    secondary = "arn:aws:elasticloadbalancing:us-east-1:025223626139:targetgroup/ecs-gateway-tg-ee1ca35d9a6e0d737/a1dcdcac8d959db1"
-  }
 
   providers = {
     aws                = aws
@@ -265,6 +258,12 @@ module "graphene" {
     aws.sa_east_1      = aws.sa_east_1
   }
 }
+
+# =============================================================================
+# Imports
+# =============================================================================
+
+
 
 # =============================================================================
 # Outputs

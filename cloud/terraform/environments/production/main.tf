@@ -188,16 +188,10 @@ module "graphene" {
   # Feature flags
   enable_delve_auditor = true
 
-  # ACM/LB configuration (production-specific)
-  lb_listener_rule_host_headers = [
-    "gr-e4d20105fe4d49dc9c7cf30d33bc836a.ecs.us-east-1.on.aws",
-    "*.graphenedata.com",
-    "graphenedata.com"
-  ]
-  lb_target_group_arns = {
-    primary   = "arn:aws:elasticloadbalancing:us-east-1:772069004272:targetgroup/ecs-gateway-tg-c88558fa89795edf8/81cabbbe7edd24e0"
-    secondary = "arn:aws:elasticloadbalancing:us-east-1:772069004272:targetgroup/ecs-gateway-tg-bbe2debacf5bf84d0/fc0e2807e1e63777"
-  }
+  # ACM/LB configuration - attach wildcard cert to the ALB
+  # NOTE: The listener rule's host-header condition must be updated manually in AWS console
+  # to include custom domains (*.graphenedata.com, graphenedata.com)
+  configure_alb_extras = true
 
   providers = {
     aws                = aws
@@ -249,10 +243,7 @@ import {
   id = "arn:aws:acm:us-east-1:772069004272:certificate/226c1e97-69ce-4169-bbed-8d4e8a218030"
 }
 
-import {
-  to = module.graphene.aws_lb_listener_rule.ecs_express[0]
-  id = "arn:aws:elasticloadbalancing:us-east-1:772069004272:listener-rule/app/ecs-express-gateway-alb-bd5cc8e0/c4bd5bd2e3fe97ff/07d5c7e54f9cf75a/c7e8dd24cef66ec9"
-}
+
 
 # =============================================================================
 # Outputs

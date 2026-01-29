@@ -83,20 +83,7 @@ variable "configure_alb_extras" {
   default     = true
 }
 
-variable "lb_listener_rule_host_headers" {
-  description = "Host headers for the LB listener rule"
-  type        = list(string)
-  default     = []
-}
 
-variable "lb_target_group_arns" {
-  description = "Target group ARNs for the LB listener rule (primary and secondary)"
-  type = object({
-    primary   = string
-    secondary = string
-  })
-  default = null
-}
 
 # Stytch SDK Configuration
 variable "stytch_sdk_domains" {

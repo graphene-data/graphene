@@ -188,6 +188,7 @@ resource "aws_iam_role_policy" "ecs_infrastructure_logs" {
   })
 }
 
+
 # Delve Auditor Role - allows Delve to audit AWS resources
 resource "aws_iam_role" "delve_auditor" {
   count                = var.enable_delve_auditor ? 1 : 0
