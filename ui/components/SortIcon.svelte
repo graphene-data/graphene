@@ -1,5 +1,9 @@
 <script lang="ts">
-  export let ascending: boolean | undefined = undefined
+  interface Props {
+    ascending?: boolean
+  }
+
+  let {ascending = undefined}: Props = $props()
 </script>
 
 <svg

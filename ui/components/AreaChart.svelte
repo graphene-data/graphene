@@ -1,90 +1,52 @@
-<script>
+<script lang="ts">
+  import type {Snippet} from 'svelte'
   import Chart from './Chart.svelte'
   import Area from './Area.svelte'
   import QueryLoad from './QueryLoad.svelte'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
+  interface Props {
+    data?: any, x?: any, y?: any, series?: any, xType?: any, yLog?: any, yLogBase?: any
+    yFmt?: any, xFmt?: any, title?: any, subtitle?: any, legend?: any, xAxisTitle?: any, yAxisTitle?: any
+    xGridlines?: any, yGridlines?: any, xAxisLabels?: any, yAxisLabels?: any, xBaseline?: any, yBaseline?: any
+    xTickMarks?: any, yTickMarks?: any, yMin?: any, yMax?: any, yScale?: any, sort?: any, line?: any
+    fillColor?: any, lineColor?: any, fillOpacity?: any, chartAreaHeight?: any, markers?: any
+    markerShape?: any, markerSize?: any, handleMissing?: any, step?: any, stepPosition?: any, type?: string
+    colorPalette?: string, labels?: any, labelSize?: any, labelPosition?: any, labelColor?: any
+    labelFmt?: any, showAllLabels?: any, echartsOptions?: any, seriesOptions?: any, seriesColors?: any
+    seriesOrder?: any, connectGroup?: any, seriesLabelFmt?: any, leftPadding?: any, rightPadding?: any
+    xLabelWrap?: any, children?: Snippet
+  }
+
   const {resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
 
-  export let data = undefined
-  export let x = undefined
-  export let y = undefined
-  export let series = undefined
-  export let xType = undefined
-  export let yLog = undefined
-  export let yLogBase = undefined
+  let {
+    data = undefined, x = undefined, y = undefined, series = undefined, xType = undefined, yLog = undefined,
+    yLogBase = undefined, yFmt = undefined, xFmt = undefined, title = undefined, subtitle = undefined,
+    legend = undefined, xAxisTitle = undefined, yAxisTitle = undefined, xGridlines = undefined,
+    yGridlines = undefined, xAxisLabels = undefined, yAxisLabels = undefined, xBaseline = undefined,
+    yBaseline = undefined, xTickMarks = undefined, yTickMarks = undefined, yMin = undefined, yMax = undefined,
+    yScale = undefined, sort = undefined, line = undefined, fillColor = undefined, lineColor = undefined,
+    fillOpacity = undefined, chartAreaHeight = undefined, markers = undefined, markerShape = undefined,
+    markerSize = undefined, handleMissing = undefined, step = undefined, stepPosition = undefined,
+    type = 'stacked', colorPalette = 'default', labels = undefined, labelSize = undefined,
+    labelPosition = undefined, labelColor = undefined, labelFmt = undefined, showAllLabels = undefined,
+    echartsOptions = undefined, seriesOptions = undefined, seriesColors = undefined, seriesOrder = undefined,
+    connectGroup = undefined, seriesLabelFmt = undefined, leftPadding = undefined, rightPadding = undefined,
+    xLabelWrap = undefined, children,
+  }: Props = $props()
 
-  export let yFmt = undefined
-  export let xFmt = undefined
+  let stacked100 = $derived(type === 'stacked100')
 
-  export let title = undefined
-  export let subtitle = undefined
-  export let legend = undefined
-  export let xAxisTitle = undefined
-  export let yAxisTitle = undefined
-  export let xGridlines = undefined
-  export let yGridlines = undefined
-  export let xAxisLabels = undefined
-  export let yAxisLabels = undefined
-  export let xBaseline = undefined
-  export let yBaseline = undefined
-  export let xTickMarks = undefined
-  export let yTickMarks = undefined
-  export let yMin = undefined
-  export let yMax = undefined
-  export let yScale = undefined
-  export let sort = undefined
-
-  export let line = undefined
-
-  export let fillColor = undefined
-  $: fillColorStore = resolveColor(fillColor)
-
-  export let lineColor = undefined
-  $: lineColorStore = resolveColor(lineColor)
-
-  export let fillOpacity = undefined
-  export let chartAreaHeight = undefined
-  export let markers = undefined
-  export let markerShape = undefined
-  export let markerSize = undefined
-  export let handleMissing = undefined
-  export let step = undefined
-  export let stepPosition = undefined
-
-  export let type = 'stacked'
-  let stacked100 = type === 'stacked100'
-
-  export let colorPalette = 'default'
-  $: colorPaletteStore = resolveColorPalette(colorPalette)
-
-  export let labels = undefined
-  export let labelSize = undefined
-  export let labelPosition = undefined
-
-  export let labelColor = undefined
-  $: labelColorStore = resolveColor(labelColor)
-
-  export let labelFmt = undefined
-  export let showAllLabels = undefined
-
-  export let echartsOptions = undefined
-  export let seriesOptions = undefined
-
-  export let seriesColors = undefined
-  $: seriesColorsStore = resolveColorsObject(seriesColors)
-
-  export let seriesOrder = undefined
-  export let connectGroup = undefined
-  export let seriesLabelFmt = undefined
-
-  export let leftPadding = undefined
-  export let rightPadding = undefined
-  export let xLabelWrap = undefined
+  let fillColorStore = $derived(resolveColor(fillColor))
+  let lineColorStore = $derived(resolveColor(lineColor))
+  let colorPaletteStore = $derived(resolveColorPalette(colorPalette))
+  let labelColorStore = $derived(resolveColor(labelColor))
+  let seriesColorsStore = $derived(resolveColorsObject(seriesColors))
 </script>
 
-<QueryLoad data={data} fields={{x, y: parseCommaList(y), series}} let:loaded>
+{#snippet areaChartContent(loaded: any[])}
   <Chart
     data={loaded}
     chartContext={{data, x, y, series}}
@@ -147,6 +109,8 @@
       {seriesOrder}
       {seriesLabelFmt}
     />
-    <slot />
+    {@render children?.()}
   </Chart>
-</QueryLoad>
+{/snippet}
+
+<QueryLoad data={data} fields={{x, y: parseCommaList(y), series}} children={areaChartContent} />

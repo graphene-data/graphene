@@ -6,7 +6,8 @@ test('renders table data', async ({mount, page}) => {
   await waitForGrapheneQueries(page)
   let table = page.locator('[data-testid="DataTable-no-id"] table')
   await expect(table).toBeVisible()
-  await expect(table.getByRole('cell').first()).toHaveText('2021-01-01')
+  // Use explicit td selector like other table tests since getByRole('cell') can match th elements
+  await expect(table.locator('tr:has(td) td:first-child').first()).toHaveText('2021-01-01')
 })
 
 test('sorts by column header', async ({mount, page}) => {

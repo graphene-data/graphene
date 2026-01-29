@@ -3,35 +3,54 @@
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
 
-  export let value: number | string | null | undefined = undefined
-  export let fmt: string | undefined = undefined
-  export let formatObject: any = undefined
-  export let columnUnitSummary: any = undefined
-  export let downIsGood = false
-  export let showValue = true
-  export let showSymbol = true
-  export let symbolPosition: 'left' | 'right' = 'right'
-  export let neutralMin = 0
-  export let neutralMax = 0
-  export let chip = false
-  export let align: 'left' | 'right' | 'center' | string = 'right'
-  export let text: string | undefined = undefined
-  export let className: string | undefined = undefined
+  interface Props {
+    value?: number | string | null
+    fmt?: string
+    formatObject?: any
+    columnUnitSummary?: any
+    downIsGood?: boolean
+    showValue?: boolean
+    showSymbol?: boolean
+    symbolPosition?: 'left' | 'right'
+    neutralMin?: number
+    neutralMax?: number
+    chip?: boolean
+    align?: 'left' | 'right' | 'center' | string
+    text?: string
+    className?: string
+  }
 
-  downIsGood = toBoolean(downIsGood) ?? false
-  showValue = toBoolean(showValue) ?? true
-  showSymbol = toBoolean(showSymbol) ?? true
-  chip = toBoolean(chip) ?? false
+  let {
+    value = undefined,
+    fmt = undefined,
+    formatObject = undefined,
+    columnUnitSummary = undefined,
+    downIsGood: downIsGoodProp = false,
+    showValue: showValueProp = true,
+    showSymbol: showSymbolProp = true,
+    symbolPosition = 'right',
+    neutralMin = 0,
+    neutralMax = 0,
+    chip: chipProp = false,
+    align = 'right',
+    text = undefined,
+    className = undefined,
+  }: Props = $props()
+
+  let downIsGood = $derived(toBoolean(downIsGoodProp) ?? false)
+  let showValue = $derived(toBoolean(showValueProp) ?? true)
+  let showSymbol = $derived(toBoolean(showSymbolProp) ?? true)
+  let chip = $derived(toBoolean(chipProp) ?? false)
 
   const {theme} = getThemeStores()
 
-  $: numericValue = value === null || value === undefined ? null : Number(value)
-  $: status = (() => {
+  let numericValue = $derived(value === null || value === undefined ? null : Number(value))
+  let status = $derived((() => {
     if (numericValue === null) return 'neutral'
     if (numericValue > neutralMax) return 'positive'
     if (numericValue < neutralMin) return 'negative'
     return 'neutral'
-  })()
+  })())
 
   const pickColor = (positive: string, negative: string, neutral: string) => {
     if (status === 'positive') return positive
@@ -39,39 +58,39 @@
     return neutral
   }
 
-  $: symbol = (() => {
+  let symbol = $derived((() => {
     if (status === 'positive') return '▲'
     if (status === 'negative') return '▼'
     return '–'
-  })()
-  $: symbolColor = pickColor(
+  })())
+  let symbolColor = $derived(pickColor(
     downIsGood ? $theme.colors.negative : $theme.colors.positive,
     downIsGood ? $theme.colors.positive : $theme.colors.negative,
     $theme.colors['base-content-muted'],
-  )
+  ))
 
-  $: textColor = pickColor(
+  let textColor = $derived(pickColor(
     downIsGood ? $theme.colors.negative : $theme.colors.positive,
     downIsGood ? $theme.colors.positive : $theme.colors.negative,
     $theme.colors['base-content-muted'],
-  )
+  ))
 
-  $: chipClass = pickColor('delta-chip--positive', 'delta-chip--negative', 'delta-chip--neutral')
+  let chipClass = $derived(pickColor('delta-chip--positive', 'delta-chip--negative', 'delta-chip--neutral'))
 
-  $: resolvedFormat = (() => {
+  let resolvedFormat = $derived((() => {
     if (formatObject) return formatObject
     if (fmt) return getFormatObjectFromString(fmt, 'number')
     return undefined
-  })()
+  })())
 
-  $: deltaClass = (() => {
+  let deltaClass = $derived((() => {
     let classes = ['delta']
     if (chip) classes = [...classes, 'delta-chip', chipClass]
     if (className) classes.push(className)
     return classes.join(' ')
-  })()
+  })())
 
-  $: resolvedAlign = align ?? 'right'
+  let resolvedAlign = $derived(align ?? 'right')
 
   const renderValue = () => {
     if (numericValue === null) return '–'

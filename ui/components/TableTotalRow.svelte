@@ -4,14 +4,21 @@
   import {safeExtractColumn, weightedMean} from '../component-utilities/tableUtils'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
 
-  export let data: any[] = []
-  export let rowNumbers: boolean | string | undefined = undefined
-  export let columnSummary: any[] = []
-  export let rowColor: string | undefined = undefined
-  export let fontColor: string | undefined = undefined
-  export let groupType: 'accordion' | 'section' | undefined = undefined
-  export let orderedColumns: any[] = []
-  export let compact: boolean | string | undefined = undefined
+  interface Props {
+    data?: any[]
+    rowNumbers?: boolean | string
+    columnSummary?: any[]
+    rowColor?: string
+    fontColor?: string
+    groupType?: 'accordion' | 'section'
+    orderedColumns?: any[]
+    compact?: boolean | string
+  }
+
+  let {
+    data = [], rowNumbers: rowNumbersProp = undefined, columnSummary = [], rowColor = undefined,
+    fontColor = undefined, groupType = undefined, orderedColumns = [], compact: compactProp = undefined,
+  }: Props = $props()
 
   const toBool = (value: boolean | string | undefined) => {
     if (value === undefined) return false
@@ -23,13 +30,13 @@
     return Boolean(value)
   }
 
-  rowNumbers = toBool(rowNumbers)
-  compact = toBool(compact)
+  let rowNumbers = $derived(toBool(rowNumbersProp))
+  let compact = $derived(toBool(compactProp))
 </script>
 
 <tr class="total-row" style:background-color={rowColor} style:color={fontColor}>
   {#if rowNumbers && groupType !== 'section'}
-    <TableCell class="index" {compact} topBorder="1px solid rgba(107, 114, 128, 0.5)" />
+    <TableCell class="index" {compact} topBorder="1px solid rgba(107, 114, 128, 0.5)"></TableCell>
   {/if}
 
   {#each orderedColumns as column (column.id)}

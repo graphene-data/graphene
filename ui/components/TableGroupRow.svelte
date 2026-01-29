@@ -1,5 +1,4 @@
 <script lang="ts">
-  import {createEventDispatcher} from 'svelte'
   import TableCell from './TableCell.svelte'
   import TableGroupToggle from './TableGroupToggle.svelte'
   import InlineDelta from './InlineDelta.svelte'
@@ -7,22 +6,30 @@
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import {toBoolean} from '../component-utilities/convert'
 
-  export let groupName: string
-  export let currentGroupData: any[] = []
-  export let toggled = true
-  export let columnSummary: any[] = []
-  export let rowNumbers: boolean | string | undefined = undefined
-  export let rowColor: string | undefined = undefined
-  export let subtotals: boolean | string | undefined = true
-  export let orderedColumns: any[] = []
-  export let compact: boolean | string | undefined = undefined
+  interface Props {
+    groupName: string
+    currentGroupData?: any[]
+    toggled?: boolean
+    columnSummary?: any[]
+    rowNumbers?: boolean | string
+    rowColor?: string
+    subtotals?: boolean | string
+    orderedColumns?: any[]
+    compact?: boolean | string
+    onToggle?: (detail: {groupName: string}) => void
+  }
 
-  rowNumbers = toBoolean(rowNumbers) ?? false
-  subtotals = toBoolean(subtotals) ?? true
-  compact = toBoolean(compact)
+  let {
+    groupName, currentGroupData = [], toggled = true, columnSummary = [],
+    rowNumbers: rowNumbersProp = undefined, rowColor = undefined, subtotals: subtotalsProp = true,
+    orderedColumns = [], compact: compactProp = undefined, onToggle,
+  }: Props = $props()
 
-  const dispatch = createEventDispatcher<{toggle: {groupName: string}}>()
-  const toggleGroup = () => dispatch('toggle', {groupName})
+  let rowNumbers = $derived(toBoolean(rowNumbersProp) ?? false)
+  let subtotals = $derived(toBoolean(subtotalsProp) ?? true)
+  let compact = $derived(toBoolean(compactProp))
+
+  const toggleGroup = () => onToggle?.({groupName})
 
   const handleKeydown = (event: KeyboardEvent) => {
     if (event.key === 'Enter' || event.key === ' ') {
@@ -31,7 +38,7 @@
     }
   }
 
-  const resolveFormat = (column, summary) => {
+  const resolveFormat = (column: any, summary: any) => {
     if (column.subtotalFmt) return getFormatObjectFromString(column.subtotalFmt)
     if (column.totalFmt) return getFormatObjectFromString(column.totalFmt)
     if (column.fmt) return getFormatObjectFromString(column.fmt, summary.format?.valueType)
@@ -42,8 +49,8 @@
 <tr
   class="group-row"
   tabindex="0"
-  on:click={toggleGroup}
-  on:keydown={handleKeydown}
+  onclick={toggleGroup}
+  onkeydown={handleKeydown}
   style:background-color={rowColor}
 >
   {#if rowNumbers}
@@ -97,7 +104,7 @@
         {/if}
       </TableCell>
     {:else}
-      <TableCell />
+      <TableCell></TableCell>
     {/if}
   {/each}
 </tr>

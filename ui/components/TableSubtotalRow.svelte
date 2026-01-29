@@ -4,15 +4,22 @@
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import TableCell from './TableCell.svelte'
 
-  export let groupName: string | undefined = undefined
-  export let currentGroupData: any[] = []
-  export let columnSummary: any[] = []
-  export let rowColor: string | undefined = undefined
-  export let groupBy: string | undefined = undefined
-  export let groupType: 'accordion' | 'section' | undefined = undefined
-  export let fontColor: string | undefined = undefined
-  export let orderedColumns: any[] = []
-  export let compact: boolean | string | undefined = undefined
+  interface Props {
+    groupName?: string
+    currentGroupData?: any[]
+    columnSummary?: any[]
+    rowColor?: string
+    groupBy?: string
+    groupType?: 'accordion' | 'section'
+    fontColor?: string
+    orderedColumns?: any[]
+    compact?: boolean | string
+  }
+
+  let {
+    groupName = undefined, currentGroupData = [], columnSummary = [], rowColor = undefined,
+    groupBy = undefined, groupType = undefined, fontColor = undefined, orderedColumns = [], compact = undefined,
+  }: Props = $props()
 </script>
 
 <tr class="subtotal-row" style:background-color={rowColor} style:color={fontColor}>
