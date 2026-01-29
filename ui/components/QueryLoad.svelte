@@ -1,22 +1,27 @@
 <script lang="ts">
+  import {onDestroy, onMount, type Snippet} from 'svelte'
   import ErrorChart from './ErrorChart.svelte'
-  import {onDestroy, onMount} from 'svelte'
 
-  export let data: string | {rows?: any[]}
-  export let height = 200
-  export let fields: Record<string, string | string[]> = {}
+  interface Props {
+    data: string | {rows?: any[]}
+    height?: number
+    fields?: Record<string, string | string[]>
+    children?: Snippet<[any[]]>
+  }
 
-  let errors: Error[] | null = null
-  let loaded: any[] | null = null
+  let {data, height = 200, fields = {}, children}: Props = $props()
 
-  let handleResults = (result) => {
+  let errors: Error[] | null = $state(null)
+  let loaded: any[] | null = $state(null)
+
+  let handleResults = (result: any) => {
     errors = result.errors || null
     loaded = result.rows
   }
 
   onMount(() => {
     if (typeof data !== 'string') {
-      loaded = data.rows
+      loaded = data.rows ?? null
     } else {
       let usedFields = Object.fromEntries(Object.entries(fields).filter(e => !!e[1]))
       window.$GRAPHENE.query(data, usedFields, handleResults)
@@ -32,12 +37,12 @@
   <ErrorChart title="Error" error={errors[0]} />
 {:else if !loaded}
   <div class='ql-skeleton' style={`height:${height}px`} role="status" aria-live="polite">
-    <span class="ql-skeleton__pulse" />
+    <span class="ql-skeleton__pulse"></span>
   </div>
 {:else if loaded.length == 0}
   <div class="empty-chart" role="note">Dataset is empty - query ran successfully, but no data was returned from the database</div>
 {:else}
-  <slot loaded={loaded} />
+  {@render children?.(loaded)}
 {/if}
 
 <style>

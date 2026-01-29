@@ -1,11 +1,13 @@
 <script lang="ts">
-  export let error: unknown
-  export let title: string
-  export let height = 200
+  interface Props {
+    error: unknown
+    title: string
+    height?: number
+  }
 
-  let message: string
+  let {error, title, height = 200}: Props = $props()
 
-  $: message = (() => {
+  let message = $derived((() => {
     if (error instanceof Error) return error.message
     if (typeof error === 'string') return error
     try {
@@ -13,7 +15,7 @@
     } catch {
       return String(error)
     }
-  })()
+  })())
 </script>
 
 <div class="error-chart" style={`min-height:${height}px`} role="alert">

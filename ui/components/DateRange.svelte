@@ -2,17 +2,25 @@
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
 
-  export let name: string
-  export let label: string | undefined = undefined
-  export let title: string | undefined = undefined
-  export let description: string | undefined = undefined
-  export let start: string | Date | undefined = undefined
-  export let end: string | Date | undefined = undefined
-  export let defaultValue: string | undefined = undefined
-  export let presetRanges: string | string[] | undefined = undefined
-  export let data: string | undefined = undefined
-  export let dates: string | undefined = undefined
-  export let hideDuringPrint: boolean | string = true
+  interface Props {
+    name: string
+    label?: string
+    title?: string
+    description?: string
+    start?: string | Date
+    end?: string | Date
+    defaultValue?: string
+    presetRanges?: string | string[]
+    data?: string
+    dates?: string
+    hideDuringPrint?: boolean | string
+  }
+
+  let {
+    name, label = undefined, title = undefined, description = undefined, start = undefined,
+    end = undefined, defaultValue = undefined, presetRanges = undefined, data = undefined,
+    dates = undefined, hideDuringPrint = true,
+  }: Props = $props()
 
   const DEFAULT_PRESETS = ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last 365 Days', 'Last Month', 'Last Year', 'Month to Date', 'Month to Today', 'Year to Date', 'Year to Today', 'All Time']
 
@@ -20,21 +28,21 @@
   let queryKey = ''
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
 
-  let domainStart: string | null = null
-  let domainEnd: string | null = null
+  let domainStart: string | null = $state(null)
+  let domainEnd: string | null = $state(null)
 
-  let currentStart: string | null = null
-  let currentEnd: string | null = null
-  let currentPreset: string = ''
+  let currentStart: string | null = $state(null)
+  let currentEnd: string | null = $state(null)
+  let currentPreset: string = $state('')
   let touched = false
 
-  $: hidePrint = toBoolean(hideDuringPrint)
-  $: presetList = (() => {
+  let hidePrint = $derived(toBoolean(hideDuringPrint))
+  let presetList = $derived((() => {
     if (Array.isArray(presetRanges)) return presetRanges
     if (presetRanges) return [presetRanges]
     return DEFAULT_PRESETS
-  })()
-  $: displayLabel = title || label
+  })())
+  let displayLabel = $derived(title || label)
 
   onMount(() => {
     mounted = true
@@ -55,7 +63,9 @@
     }
   })
 
-  $: refreshQuery()
+  $effect(() => {
+    refreshQuery()
+  })
 
   function refreshQuery () {
     if (!mounted) return
@@ -108,7 +118,7 @@
   }
 
   function addDays (value: Date, days: number): Date {
-    let copy = new Date(value)
+    let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
     copy.setDate(copy.getDate() + days)
     return copy
   }
@@ -128,13 +138,13 @@
   }
 
   function addMonths (value: Date, months: number): Date {
-    let copy = new Date(value)
+    let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
     copy.setMonth(copy.getMonth() + months)
     return copy
   }
 
   function addYears (value: Date, years: number): Date {
-    let copy = new Date(value)
+    let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
     copy.setFullYear(copy.getFullYear() + years)
     return copy
   }
@@ -263,12 +273,12 @@
     <div class="input-description">{description}</div>
   {/if}
   <div class="range-row">
-    <input id={`daterange-${name}-start`} class="date-input" type="date" value={currentStart || ''} on:change={onStartChange} />
+    <input id={`daterange-${name}-start`} class="date-input" type="date" value={currentStart || ''} onchange={onStartChange} />
     <span class="range-separator">to</span>
-    <input id={`daterange-${name}-end`} class="date-input" type="date" value={currentEnd || ''} on:change={onEndChange} />
+    <input id={`daterange-${name}-end`} class="date-input" type="date" value={currentEnd || ''} onchange={onEndChange} />
   </div>
   {#if presetList.length}
-    <select class="preset-select" on:change={onPresetChange}>
+    <select class="preset-select" onchange={onPresetChange}>
       <option value="">Custom range</option>
       {#each presetList as preset (preset)}
         <option value={preset} selected={preset === currentPreset}>{preset}</option>

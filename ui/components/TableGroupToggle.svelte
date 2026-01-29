@@ -1,15 +1,18 @@
 <script lang="ts">
   import {getThemeStores} from '../component-utilities/themeStores'
 
-  export let toggled = false
-  export let color: string | undefined = undefined
-  export let size = 10
+  interface Props {
+    toggled?: boolean
+    color?: string
+    size?: number
+  }
+
+  let {toggled = false, color = undefined, size = 10}: Props = $props()
 
   const {theme, resolveColor} = getThemeStores()
-  let colorStore = resolveColor(color)
 
-  $: colorStore = resolveColor(color)
-  $: fill = $colorStore ?? $theme.colors['base-content']
+  let colorStore = $derived(resolveColor(color))
+  let fill = $derived($colorStore ?? $theme.colors['base-content'])
 </script>
 
 <span aria-expanded={toggled} class="group-toggle">

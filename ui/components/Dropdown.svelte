@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {onMount, setContext, tick} from 'svelte'
+  import {onMount, setContext, tick, type Snippet} from 'svelte'
   import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
   import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
 
@@ -8,38 +8,48 @@
     label: string
   }
 
-  export let name: string
-  export let data: string | undefined = undefined
-  export let value: string = 'value'
-  export let label: string | undefined = undefined
-  export let optionLabel: string | undefined = undefined
-  export let labelField: string | undefined = undefined
-  export let title: string | undefined = undefined
-  export let placeholder: string = 'Select option'
-  export let multiple: boolean | string = false
-  export let defaultValue: string | string[] | undefined = undefined
-  export let selectAllByDefault: boolean | string = false
-  export let noDefault: boolean | string = false
-  export let disableSelectAll: boolean | string = false
-  export let hideDuringPrint: boolean | string = true
-  export let description: string | undefined = undefined
-  export let disabled: boolean | string = false
+  interface Props {
+    name: string
+    data?: string
+    value?: string
+    label?: string
+    optionLabel?: string
+    labelField?: string
+    title?: string
+    placeholder?: string
+    multiple?: boolean | string
+    defaultValue?: string | string[]
+    selectAllByDefault?: boolean | string
+    noDefault?: boolean | string
+    disableSelectAll?: boolean | string
+    hideDuringPrint?: boolean | string
+    description?: string
+    disabled?: boolean | string
+    children?: Snippet
+  }
+
+  let {
+    name, data = undefined, value = 'value', label = undefined, optionLabel = undefined,
+    labelField = undefined, title = undefined, placeholder = 'Select option', multiple = false,
+    defaultValue = undefined, selectAllByDefault = false, noDefault = false, disableSelectAll = false,
+    hideDuringPrint = true, description = undefined, disabled = false, children = undefined,
+  }: Props = $props()
 
   let mounted = false
-  let queryOptions: Option[] = []
-  let manualOptions: Option[] = []
-  let selection: any[] = []
+  let queryOptions: Option[] = $state([])
+  let manualOptions: Option[] = $state([])
+  let selection: any[] = $state([])
   let touched = false
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
 
-  let isOpen = false
-  let searchTerm = ''
-  let activeIndex = -1
-  let triggerEl: HTMLButtonElement | null = null
-  let menuEl: HTMLDivElement | null = null
-  let searchInput: HTMLInputElement | null = null
-  let triggerWidth = 0
+  let isOpen = $state(false)
+  let searchTerm = $state('')
+  let activeIndex = $state(-1)
+  let triggerEl: HTMLButtonElement | null = $state(null)
+  let menuEl: HTMLDivElement | null = $state(null)
+  let searchInput: HTMLInputElement | null = $state(null)
+  let triggerWidth = $state(0)
 
   const registerOption = (opt: Option) => {
     manualOptions = [...manualOptions, opt]
@@ -65,7 +75,7 @@
   }
 
   const combineOptions = (manual: Option[], queried: Option[]) => {
-    let map = new Map<string, Option>()
+    let map = new Map<string, Option>() // eslint-disable-line svelte/prefer-svelte-reactivity
     for (let opt of [...manual, ...queried]) {
       let key = optionKey(opt.value)
       if (!map.has(key)) map.set(key, opt)
@@ -73,23 +83,26 @@
     return Array.from(map.values())
   }
 
-  $: multi = toBoolean(multiple)
-  $: selectAllDefault = toBoolean(selectAllByDefault)
-  $: hasNoDefault = toBoolean(noDefault)
-  $: hidePrint = toBoolean(hideDuringPrint)
-  $: isDisabled = toBoolean(disabled)
-  $: disableSelectAllButton = toBoolean(disableSelectAll)
+  let multi = $derived(toBoolean(multiple))
+  let selectAllDefault = $derived(toBoolean(selectAllByDefault))
+  let hasNoDefault = $derived(toBoolean(noDefault))
+  let hidePrint = $derived(toBoolean(hideDuringPrint))
+  let isDisabled = $derived(toBoolean(disabled))
+  let disableSelectAllButton = $derived(toBoolean(disableSelectAll))
 
-  $: resolvedLabelField = optionLabel || labelField || (label && data ? label : undefined)
-  $: resolvedTitle = title || (!data ? label : undefined)
-  $: triggerPlaceholder = placeholder || resolvedTitle || 'Select option'
-  $: searchPlaceholder = resolvedTitle || placeholder || 'Search options'
+  let resolvedLabelField = $derived(optionLabel || labelField || (label && data ? label : undefined))
+  let resolvedTitle = $derived(title || (!data ? label : undefined))
+  let triggerPlaceholder = $derived(placeholder || resolvedTitle || 'Select option')
+  let searchPlaceholder = $derived(resolvedTitle || placeholder || 'Search options')
 
-  $: availableOptions = combineOptions(manualOptions, queryOptions)
-  $: valueMap = new Map(availableOptions.map(opt => [optionKey(opt.value), opt]))
-  $: filteredOptions = filterOptions(availableOptions, searchTerm)
-  $: if (isOpen) activeIndex = ensureActiveIndex(activeIndex, filteredOptions)
-  $: selectedDisplayOptions = selection.map(val => valueMap.get(optionKey(val)) || {value: val, label: String(val ?? '')})
+  let availableOptions = $derived(combineOptions(manualOptions, queryOptions))
+  let valueMap = $derived(new Map(availableOptions.map(opt => [optionKey(opt.value), opt])))
+  let filteredOptions = $derived(filterOptions(availableOptions, searchTerm))
+  let selectedDisplayOptions = $derived(selection.map(val => valueMap.get(optionKey(val)) || {value: val, label: String(val ?? '')}))
+
+  $effect(() => {
+    if (isOpen) activeIndex = ensureActiveIndex(activeIndex, filteredOptions)
+  })
 
   function setupQuery () {
     if (!mounted) return
@@ -276,7 +289,9 @@
     optionEl?.scrollIntoView({block: 'nearest'})
   }
 
-  $: if (isOpen && activeIndex >= 0) tick().then(scrollActiveIntoView)
+  $effect(() => {
+    if (isOpen && activeIndex >= 0) tick().then(scrollActiveIntoView)
+  })
 
   onMount(() => {
     mounted = true
@@ -303,9 +318,13 @@
     }
   })
 
-  $: setupQuery()
+  $effect(() => {
+    setupQuery()
+  })
 
-  $: if (triggerEl) updateTriggerWidth()
+  $effect(() => {
+    if (triggerEl) updateTriggerWidth()
+  })
 
   function syncSelection (fromUser: boolean) {
     let opts = availableOptions
@@ -356,8 +375,8 @@
     setSelection([], true)
   }
 
-  const elementId = `dropdown-${name}`
-  const menuId = `${elementId}-menu`
+  let elementId = $derived(`dropdown-${name}`)
+  let menuId = $derived(`${elementId}-menu`)
 
   function getContainerClass () {
     if (!hidePrint) return 'input-block'
@@ -377,6 +396,7 @@
   }
 </script>
 
+{@render children?.()}
 <div class={getContainerClass()}>
   {#if resolvedTitle}
     <label class="input-label" for={elementId}>{resolvedTitle}</label>
@@ -397,8 +417,8 @@
       aria-expanded={isOpen}
       aria-controls={menuId}
       aria-activedescendant={isOpen && activeIndex >= 0 ? `${menuId}-option-${activeIndex}` : undefined}
-      on:click={toggleMenu}
-      on:keydown={handleTriggerKeydown}
+      onclick={toggleMenu}
+      onkeydown={handleTriggerKeydown}
     >
       <span class="dropdown-trigger-label">
         {#if multi}
@@ -432,7 +452,7 @@
         tabindex="0"
         aria-multiselectable={multi}
         style={`min-width: ${Math.max(triggerWidth, 220)}px`}
-        on:keydown={handleMenuKeydown}
+        onkeydown={handleMenuKeydown}
       >
         <div class="dropdown-search">
           <input
@@ -455,10 +475,10 @@
                 aria-selected={isOptionSelected(opt)}
                 data-index={index}
                 id={`${menuId}-option-${index}`}
-                on:mousedown|preventDefault
-                on:mouseenter={() => activeIndex = index}
-                on:click={() => handleOptionSelect(opt, false)}
-                on:keydown={(event) => handleOptionKeydown(event, opt)}
+                onmousedown={(e) => e.preventDefault()}
+                onmouseenter={() => activeIndex = index}
+                onclick={() => handleOptionSelect(opt, false)}
+                onkeydown={(event) => handleOptionKeydown(event, opt)}
               >
                 <span class="dropdown-check" aria-hidden="true">
                   {#if multi}
@@ -501,13 +521,13 @@
         {#if multi}
           <div class="dropdown-footer">
             {#if !disableSelectAllButton}
-              <button type="button" class="dropdown-footer-action" on:click|stopPropagation={(event) => { event.preventDefault(); selectAll() }}>Select all</button>
+              <button type="button" class="dropdown-footer-action" onclick={(event) => { event.stopPropagation(); event.preventDefault(); selectAll() }}>Select all</button>
             {/if}
             <button
               type="button"
               class="dropdown-footer-action"
               disabled={!selection.length}
-              on:click|stopPropagation={(event) => { event.preventDefault(); clearSelection() }}
+              onclick={(event) => { event.stopPropagation(); event.preventDefault(); clearSelection() }}
             >
               Clear selection
             </button>

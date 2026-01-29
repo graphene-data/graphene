@@ -1,84 +1,52 @@
-<script context="module">
+<script lang="ts" module>
   export const evidenceInclude = true
 </script>
 
 <script lang="ts">
-  import {getContext, onDestroy} from 'svelte'
+  import {getContext, onDestroy, onMount, untrack} from 'svelte'
+  import {type Writable, get} from 'svelte/store'
   import {propKey, strictBuild} from '../component-utilities/chartContext.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
-  export let id: string
-  export let description: string | undefined = undefined
-  export let contentType: string | undefined = undefined
-  export let title: string | undefined = undefined
-  export let align: string | undefined = undefined
-  export let wrap: boolean | string | undefined = undefined
-  export let wrapTitle: boolean | string | undefined = undefined
-  export let height: string | undefined = undefined
-  export let width: string | undefined = undefined
-  export let alt: string | undefined = undefined
-  export let openInNewTab: boolean | string | undefined = undefined
-  export let linkLabel: string | undefined = undefined
-  export let fmt: string | undefined = undefined
-  export let totalAgg: string | undefined = undefined
-  export let totalFmt: string | undefined = undefined
-  export let weightCol: string | undefined = undefined
-  export let subtotalFmt: string | undefined = undefined
-  export let colorMax: string | undefined = undefined
-  export let colorMin: string | undefined = undefined
-  export let colorMid: string | undefined = undefined
-  export let colorBreakpoints: string[] | undefined = undefined
-  export let colorScale: any = 'default'
-  export let scaleColumn: string | undefined = undefined
-  export let downIsGood: boolean | string | undefined = undefined
-  export let showValue: boolean | string | undefined = undefined
-  export let deltaSymbol: boolean | string | undefined = undefined
-  export let neutralMin: number | string | undefined = 0
-  export let neutralMax: number | string | undefined = 0
-  export let chip: boolean | string | undefined = undefined
-  export let sparkWidth: number | string | undefined = undefined
-  export let sparkHeight: number | string | undefined = undefined
-  export let sparkColor: string | undefined = undefined
-  export let sparkX: string | undefined = undefined
-  export let sparkY: string | undefined = undefined
-  export let sparkYScale: boolean | string | undefined = undefined
-  export let barColor: string | undefined = '#a5cdee'
-  export let negativeBarColor: string | undefined = '#fca5a5'
-  export let backgroundColor: string | undefined = 'transparent'
-  export let hideLabels: boolean | string | undefined = undefined
-  export let colGroup: string | undefined = undefined
-  export let fmtColumn: string | undefined = undefined
-  export let redNegatives: boolean | string | undefined = undefined
+  interface Props {
+    id: string, description?: string, contentType?: string, title?: string, align?: string
+    wrap?: boolean | string, wrapTitle?: boolean | string, height?: string, width?: string, alt?: string
+    openInNewTab?: boolean | string, linkLabel?: string, fmt?: string, totalAgg?: string, totalFmt?: string
+    weightCol?: string, subtotalFmt?: string, colorMax?: string, colorMin?: string, colorMid?: string
+    colorBreakpoints?: string[], colorScale?: any, scaleColumn?: string, downIsGood?: boolean | string
+    showValue?: boolean | string, deltaSymbol?: boolean | string, neutralMin?: number | string
+    neutralMax?: number | string, chip?: boolean | string, sparkWidth?: number | string
+    sparkHeight?: number | string, sparkColor?: string, sparkX?: string, sparkY?: string
+    sparkYScale?: boolean | string, barColor?: string, negativeBarColor?: string, backgroundColor?: string
+    hideLabels?: boolean | string, colGroup?: string, fmtColumn?: string, redNegatives?: boolean | string
+  }
+
+  let {
+    id, description = undefined, contentType = undefined, title = undefined, align = undefined,
+    wrap = undefined, wrapTitle = undefined, height = undefined, width = undefined, alt = undefined,
+    openInNewTab = undefined, linkLabel = undefined, fmt = undefined, totalAgg = undefined,
+    totalFmt = undefined, weightCol = undefined, subtotalFmt = undefined, colorMax = undefined,
+    colorMin = undefined, colorMid = undefined, colorBreakpoints = undefined, colorScale = 'default',
+    scaleColumn = undefined, downIsGood = undefined, showValue = undefined, deltaSymbol = undefined,
+    neutralMin = 0, neutralMax = 0, chip = undefined, sparkWidth = undefined, sparkHeight = undefined,
+    sparkColor = undefined, sparkX = undefined, sparkY = undefined, sparkYScale = undefined,
+    barColor = '#a5cdee', negativeBarColor = '#fca5a5', backgroundColor = 'transparent',
+    hideLabels = undefined, colGroup = undefined, fmtColumn = undefined, redNegatives = undefined,
+  }: Props = $props()
 
   const {resolveColor, resolveColorPalette} = getThemeStores()
 
-  let barColorStore = resolveColor(barColor)
-  let negativeBarColorStore = resolveColor(negativeBarColor)
-  let backgroundColorStore = resolveColor(backgroundColor)
-  let colorScaleStore = resolveColorPalette(colorScale)
+  // Get stores reactively - use $derived to track prop changes
+  let barColorStore = $derived(resolveColor(barColor))
+  let negativeBarColorStore = $derived(resolveColor(negativeBarColor))
+  let backgroundColorStore = $derived(resolveColor(backgroundColor))
+  let colorScaleStore = $derived(resolveColorPalette(colorScale))
 
-  $: barColorStore = resolveColor(barColor)
-  $: negativeBarColorStore = resolveColor(negativeBarColor)
-  $: backgroundColorStore = resolveColor(backgroundColor)
-  $: colorScaleStore = resolveColorPalette(colorScale)
-
-  const props = getContext(propKey)
-  $: colorBreakpoints = parseCommaList(colorBreakpoints)
+  const chartProps = getContext<Writable<any>>(propKey)
 
   const identifier = Symbol('GrapheneColumn')
-
-  wrap = toBoolean(wrap) ?? false
-  wrapTitle = toBoolean(wrapTitle) ?? false
-  openInNewTab = toBoolean(openInNewTab) ?? false
-  downIsGood = toBoolean(downIsGood) ?? false
-  showValue = toBoolean(showValue) ?? true
-  deltaSymbol = toBoolean(deltaSymbol) ?? true
-  chip = toBoolean(chip) ?? false
-  sparkYScale = toBoolean(sparkYScale) ?? false
-  hideLabels = toBoolean(hideLabels) ?? false
-  redNegatives = toBoolean(redNegatives) ?? false
 
   const coerceNumber = (value: number | string | undefined): number | undefined => {
     if (value === undefined || value === null || value === '') return undefined
@@ -86,31 +54,19 @@
     return Number.isNaN(parsed) ? undefined : parsed
   }
 
-  const checkColumnName = () => {
-    try {
-      let data = $props.data?.[0]
-      if (!data || !Object.keys(data).includes(id)) {
-        let error = `Error in table: ${id} does not exist in the dataset`
-        if (strictBuild) throw new Error(error)
-        console.warn(error)
-      }
-    } catch (error) {
-      if (strictBuild) throw error
-    }
-  }
-
-  const options = () => ({
+  // Build the column options object - as a function so it can be called synchronously
+  const getColumnOptions = () => ({
     identifier,
     id,
     title,
     align,
-    wrap,
-    wrapTitle,
+    wrap: toBoolean(wrap) ?? false,
+    wrapTitle: toBoolean(wrapTitle) ?? false,
     contentType,
     height,
     width,
     alt,
-    openInNewTab,
+    openInNewTab: toBoolean(openInNewTab) ?? false,
     linkLabel,
     fmt,
     fmtColumn,
@@ -118,57 +74,90 @@
     totalFmt,
     subtotalFmt,
     weightCol,
-    downIsGood,
-    deltaSymbol,
-    chip,
+    downIsGood: toBoolean(downIsGood) ?? false,
+    deltaSymbol: toBoolean(deltaSymbol) ?? true,
+    chip: toBoolean(chip) ?? false,
     neutralMin: coerceNumber(neutralMin) ?? 0,
     neutralMax: coerceNumber(neutralMax) ?? 0,
-    showValue,
+    showValue: toBoolean(showValue) ?? true,
     colorMax,
     colorMin,
     colorMid,
-    colorScale: $colorScaleStore,
-    colorBreakpoints,
+    colorScale: get(colorScaleStore),
+    colorBreakpoints: parseCommaList(colorBreakpoints),
     scaleColumn,
     colGroup,
     description,
-    redNegatives,
+    redNegatives: toBoolean(redNegatives) ?? false,
     sparkWidth,
     sparkHeight,
     sparkColor,
     sparkX,
     sparkY,
-    sparkYScale,
-    barColor: $barColorStore,
-    negativeBarColor: $negativeBarColorStore,
-    backgroundColor: $backgroundColorStore,
-    hideLabels,
+    sparkYScale: toBoolean(sparkYScale) ?? false,
+    barColor: get(barColorStore),
+    negativeBarColor: get(negativeBarColorStore),
+    backgroundColor: get(backgroundColorStore),
+    hideLabels: toBoolean(hideLabels) ?? false,
   })
 
-  const updateProps = () => {
-    checkColumnName()
-    props.update((state: any) => {
-      let next = {...state}
-      let existing = next.columns.findIndex((column: any) => column.identifier === identifier)
-      let option = options()
-      if (existing === -1) {
-        next.columns = [...next.columns, option]
-      } else {
-        next.columns = [
-          ...next.columns.slice(0, existing),
-          option,
-          ...next.columns.slice(existing + 1),
-        ]
+  // Register column on mount
+  onMount(() => {
+    // Check column name once on mount (not reactively)
+    try {
+      let data = get(chartProps).data?.[0]
+      if (data && !Object.keys(data).includes(id)) {
+        let error = `Error in table: ${id} does not exist in the dataset`
+        if (strictBuild) throw new Error(error)
+        console.warn(error)
       }
+    } catch (error) {
+      if (strictBuild) throw error
+    }
+
+    // Initial registration
+    chartProps.update((state: any) => {
+      let next = {...state, columns: [...state.columns, getColumnOptions()]}
       return next
     })
-  }
+  })
 
-  $: updateProps()
+  // Update column options when props change
+  // Track all the props that affect columnOptions
+  $effect(() => {
+    // Read all props that could change
+    void [id, title, align, wrap, wrapTitle, contentType, height, width, alt, openInNewTab,
+      linkLabel, fmt, fmtColumn, totalAgg, totalFmt, subtotalFmt, weightCol, downIsGood,
+      deltaSymbol, chip, neutralMin, neutralMax, showValue, colorMax, colorMin, colorMid,
+      colorScale, colorBreakpoints, scaleColumn, colGroup, description, redNegatives,
+      sparkWidth, sparkHeight, sparkColor, sparkX, sparkY, sparkYScale, barColor,
+      negativeBarColor, backgroundColor, hideLabels]
+    // Also track store values
+    void [$colorScaleStore, $barColorStore, $negativeBarColorStore, $backgroundColorStore]
+
+    // Use untrack to prevent this update from creating a dependency loop
+    untrack(() => {
+      chartProps.update((state: any) => {
+        let next = {...state}
+        let existing = next.columns.findIndex((column: any) => column.identifier === identifier)
+        let option = getColumnOptions()
+        if (existing !== -1) {
+          next.columns = [
+            ...next.columns.slice(0, existing),
+            option,
+            ...next.columns.slice(existing + 1),
+          ]
+        }
+        return next
+      })
+    })
+  })
 
   onDestroy(() => {
-    props.update((state: any) => {
-      return {...state, columns: state.columns.filter((column: any) => column.identifier !== identifier)}
+    untrack(() => {
+      chartProps.update((state: any) => {
+        return {...state, columns: state.columns.filter((column: any) => column.identifier !== identifier)}
+      })
     })
   })
 </script>

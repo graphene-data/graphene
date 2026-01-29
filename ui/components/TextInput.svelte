@@ -1,30 +1,33 @@
 <script lang="ts">
-  import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
 
-  export let name: string
-  export let title: string | undefined = undefined
-  export let label: string | undefined = undefined
-  export let description: string | undefined = undefined
-  export let placeholder: string = 'Type to search'
-  export let defaultValue: string | undefined = undefined
-  export let hideDuringPrint: boolean | string = true
-  export let unsafe: boolean | string = false
+  interface Props {
+    name: string
+    title?: string
+    label?: string
+    description?: string
+    placeholder?: string
+    defaultValue?: string
+    hideDuringPrint?: boolean | string
+    unsafe?: boolean | string
+  }
 
-  let value = defaultValue || ''
+  let {
+    name, title = undefined, label = undefined, description = undefined,
+    placeholder = 'Type to search', defaultValue = undefined, hideDuringPrint = true, unsafe = false,
+  }: Props = $props()
 
-  $: hidePrint = toBoolean(hideDuringPrint)
-  $: allowUnsafe = toBoolean(unsafe)
-  $: displayLabel = title || label
+  // svelte-ignore state_referenced_locally - intentionally capturing initial value only
+  let value = $state(defaultValue ?? '')
 
-  onMount(() => {
+  let hidePrint = $derived(toBoolean(hideDuringPrint))
+  let allowUnsafe = $derived(toBoolean(unsafe))
+  let displayLabel = $derived(title || label)
+
+  // Push value changes to parent
+  $effect(() => {
     pushValue(value)
   })
-
-  $: if (defaultValue !== undefined && defaultValue !== value && !value) {
-    value = defaultValue
-    pushValue(value)
-  }
 
   function sanitize (input: string): string {
     if (allowUnsafe) return input
@@ -57,7 +60,7 @@
     type="text"
     value={value}
     placeholder={placeholder}
-    on:input={onInput}
+    oninput={onInput}
   />
 </div>
 

@@ -1,25 +1,22 @@
 <script>
+  import {SvelteSet, SvelteMap} from 'svelte/reactivity'
+
   /** @type {string} */
-  export let currentFile = ''
-  /** @type {string[]} */
-  export let files = []
-  /** @type {((href: string) => void) | undefined} */
-  export let onNavigate = undefined
-  /** @type {string} */
-  export let baseRoute = ''
+  let {currentFile = '', files = [], onNavigate = undefined, baseRoute = ''} = $props()
 
-  let tree = []
-  let flatNodes = []
-  let openFolders = new Set()
-  let treeSignature = ''
-  let lastCurrent = ''
+  let tree = $state([])
+  let flatNodes = $state([])
+  // eslint-disable-next-line svelte/no-unnecessary-state-wrap -- openFolders is reassigned, needs $state
+  let openFolders = $state(new SvelteSet())
+  let treeSignature = $state('')
+  let lastCurrent = $state('')
 
-  $: normalizedFiles = (files || [])
-    .map((file) => file.replace(/^\.\//, '').replace(/\\/g, '/'))
+  let normalizedFiles = $derived((files || [])
+    .map((file) => file.replace(/^\.\//, '').replace(/\\/g, '/')))
 
 
-  $: normalizedCurrent = deriveCurrentFile(currentFile, normalizedFiles, baseRoute)
-  $: currentRoute = normalizedCurrent ? pathToRoute(normalizedCurrent) : '/'
+  let normalizedCurrent = $derived(deriveCurrentFile(currentFile, normalizedFiles, baseRoute))
+  let currentRoute = $derived(normalizedCurrent ? pathToRoute(normalizedCurrent) : '/')
 
   function deriveCurrentFile (_currentFile, _normalizedFiles, _baseRoute) {
     let fromProp = normalizeFilePath(currentFile)
@@ -42,7 +39,7 @@
     return route
   }
 
-  $: {
+  $effect(() => {
     let nextSignature = normalizedFiles.join('|')
     if (nextSignature !== treeSignature) {
       treeSignature = nextSignature
@@ -50,18 +47,18 @@
       flatNodes = flattenTree(tree)
       openFolders = createDefaultOpenFolders(tree, normalizedCurrent)
     }
-  }
+  })
 
-  $: {
+  $effect(() => {
     if (normalizedCurrent !== lastCurrent) {
       openFolders = mergeAncestorFolders(openFolders, normalizedCurrent)
       lastCurrent = normalizedCurrent
     }
-  }
+  })
 
   function toggleFolder (path) {
     if (!path) return
-    let next = new Set(openFolders)
+    let next = new SvelteSet(openFolders)
     if (next.has(path)) next.delete(path)
     else next.add(path)
     openFolders = next
@@ -84,7 +81,7 @@
 
   function buildTree (paths) {
     let root = []
-    let folderMap = new Map()
+    let folderMap = new SvelteMap()
 
     for (let filePath of paths) {
       let cleanPath = filePath.replace(/^\.\//, '').replace(/^\//, '')
@@ -167,16 +164,16 @@
   }
 
   function createDefaultOpenFolders (_treeNodes, currentPath) {
-    let next = new Set()
+    let next = new SvelteSet()
     return mergeAncestorFolders(next, currentPath)
   }
 
   function mergeAncestorFolders (openSet, filePath) {
-    if (!filePath) return new Set(openSet)
+    if (!filePath) return new SvelteSet(openSet)
     let parts = filePath.split('/')
     parts.pop()
     let aggregate = []
-    let next = new Set(openSet)
+    let next = new SvelteSet(openSet)
     for (let part of parts) {
       aggregate.push(part)
       next.add(aggregate.join('/'))
@@ -217,15 +214,15 @@
           class={node.route ? 'folder-row' : 'folder-row clickable'}
           role={node.route ? undefined : 'button'}
           aria-expanded={node.route ? undefined : String(isOpen(node.path, openFolders))}
-          on:click={node.route ? undefined : () => toggleFolder(node.path)}
-          on:keydown={node.route ? undefined : (event) => handleFolderRowKey(event, node.path)}
+          onclick={node.route ? undefined : () => toggleFolder(node.path)}
+          onkeydown={node.route ? undefined : (event) => handleFolderRowKey(event, node.path)}
         >
           <button
             class="toggle"
             type="button"
             data-folder-toggle={node.path}
             aria-expanded={isOpen(node.path, openFolders)}
-            on:click={(event) => { event.stopPropagation(); toggleFolder(node.path) }}
+            onclick={(event) => { event.stopPropagation(); toggleFolder(node.path) }}
             aria-label={(isOpen(node.path, openFolders) ? 'Collapse' : 'Expand') + ' ' + node.label}
           >
             <span class={isOpen(node.path, openFolders) ? 'chevron open' : 'chevron'}>▸</span>
@@ -235,7 +232,7 @@
               href={node.route}
               class={node.route === currentRoute ? 'active' : ''}
               aria-current={node.route === currentRoute ? 'page' : undefined}
-              on:click={(e) => handleLinkClick(e, node.route)}
+              onclick={(e) => handleLinkClick(e, node.route)}
             >
               {node.label}
             </a>
@@ -250,7 +247,7 @@
           href={node.route}
           class={node.path === normalizedCurrent ? 'active' : ''}
           aria-current={node.path === normalizedCurrent ? 'page' : undefined}
-          on:click={(e) => handleLinkClick(e, node.route)}
+          onclick={(e) => handleLinkClick(e, node.route)}
         >
           <span>{node.label}</span>
         </a>

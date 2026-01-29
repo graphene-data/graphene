@@ -4,7 +4,7 @@ import * as chartWindowDebug from './chartWindowDebug'
 
 /**
  * @typedef {import("echarts").EChartsOption & {
- *     dispatch?: ReturnType<typeof import("svelte").createEventDispatcher>;
+ *     onclick?: (params: any) => void;
  *     showAllXAxisLabels?: boolean;
  *    theme: 'light' | 'dark';
  *   }
@@ -148,9 +148,8 @@ const echartsAction = (node, options) => {
   applySeriesOptions()
 
   // Click event handler:
-  let dispatch = options.dispatch
   chart.on('click', function (params) {
-    dispatch('click', params)
+    options.onclick?.(params)
   })
 
   // watching parent element is necessary for charts within `Fullscreen` components

@@ -1,22 +1,31 @@
-<script>
+<script lang="ts">
   import ECharts from './ECharts.svelte'
   import QueryLoad from './QueryLoad.svelte'
 
-  export let data
-  export let category
-  export let value
-  export let title = undefined
-  export let subtitle = undefined
-  export let printEchartsConfig = undefined
-  export let echartsOptions = undefined
-  export let seriesOptions = undefined
-  export let seriesColors = undefined
-  $: void printEchartsConfig
+  interface Props {
+    data: any
+    category: any
+    value: any
+    title?: any
+    subtitle?: any
+    printEchartsConfig?: any
+    echartsOptions?: any
+    seriesOptions?: any
+    seriesColors?: any
+  }
+
+  let {
+    data, category, value, title = undefined, subtitle = undefined, printEchartsConfig = undefined,
+    echartsOptions = undefined, seriesOptions = undefined, seriesColors = undefined,
+  }: Props = $props()
+
+  // printEchartsConfig is intentionally unused - it's a debug prop that
+  // users can pass but we don't implement it yet. Using $derived to read
+  // it reactively and suppress state_referenced_locally warning.
+  $effect(() => { void printEchartsConfig })
 </script>
 
-<style></style>
-
-<QueryLoad data={data} fields={{category, value}} let:loaded>
+{#snippet pieChartContent(loaded: any[])}
   <ECharts data={loaded} {echartsOptions} {seriesOptions} {seriesColors} config={{
     title: {
       text: title,
@@ -33,4 +42,6 @@
       },
     ],
   }} />
-</QueryLoad>
+{/snippet}
+
+<QueryLoad data={data} fields={{category, value}} children={pieChartContent} />

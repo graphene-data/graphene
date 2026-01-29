@@ -1,6 +1,6 @@
 <script lang="ts">
+  import {setContext, untrack, type Snippet} from 'svelte'
   import {writable} from 'svelte/store'
-  import {setContext} from 'svelte'
   import {propKey, strictBuild} from '../component-utilities/chartContext.js'
   import getColumnSummary from '../component-utilities/getColumnSummary.js'
   import {convertColumnToDate} from '../component-utilities/dateParsing.js'
@@ -15,237 +15,189 @@
   import {getFinalColumnOrder} from '../component-utilities/tableUtils'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
-    import {logError} from '../internal/telemetry.js'
+  import {logError} from '../internal/telemetry.js'
+
+  interface Props {
+    data?: any[], rows?: number | string, title?: string, subtitle?: string, rowNumbers?: boolean | string
+    sort?: string, sortable?: boolean | string, groupBy?: string, groupsOpen?: boolean | string
+    groupType?: 'accordion' | 'section', accordionRowColor?: string, groupNamePosition?: 'top' | 'middle' | 'bottom'
+    subtotals?: boolean | string, subtotalRowColor?: string, subtotalFontColor?: string
+    rowShading?: boolean | string, rowLines?: boolean | string, wrapTitles?: boolean | string
+    headerColor?: string, headerFontColor?: string, formatColumnTitles?: boolean | string
+    backgroundColor?: string, compact?: boolean | string, link?: string, showLinkCol?: boolean | string
+    totalRow?: boolean | string, totalRowColor?: string, totalFontColor?: string, emptyMessage?: string
+    isFullPage?: boolean | string, children?: Snippet
+  }
 
   const {resolveColor} = getThemeStores()
 
-  export let data: any[] = []
-  export let rows: number | string = 10
-  export let title: string | undefined = undefined
-  export let subtitle: string | undefined = undefined
-  export let rowNumbers: boolean | string | undefined = false
-  export let sort: string | undefined = undefined
-  export let sortable: boolean | string | undefined = true
-  export let groupBy: string | undefined = undefined
-  export let groupsOpen: boolean | string | undefined = true
-  export let groupType: 'accordion' | 'section' = 'accordion'
-  export let accordionRowColor: string | undefined = undefined
-  export let groupNamePosition: 'top' | 'middle' | 'bottom' = 'middle'
-  export let subtotals: boolean | string | undefined = false
-  export let subtotalRowColor: string | undefined = undefined
-  export let subtotalFontColor: string | undefined = undefined
-  export let rowShading: boolean | string | undefined = false
-  export let rowLines: boolean | string | undefined = true
-  export let wrapTitles: boolean | string | undefined = false
-  export let headerColor: string | undefined = undefined
-  export let headerFontColor: string | undefined = undefined
-  export let formatColumnTitles: boolean | string | undefined = true
-  export let backgroundColor: string | undefined = undefined
-  export let compact: boolean | string | undefined = undefined
-  export let link: string | undefined = undefined
-  export let showLinkCol: boolean | string | undefined = false
-  export let totalRow: boolean | string | undefined = false
-  export let totalRowColor: string | undefined = undefined
-  export let totalFontColor: string | undefined = undefined
-  export let emptyMessage: string | undefined = undefined
-  export let isFullPage: boolean | string | undefined = undefined
+  let {
+    data = [], rows = 10, title = undefined, subtitle = undefined, rowNumbers = false, sort = undefined,
+    sortable = true, groupBy = undefined, groupsOpen = true, groupType = 'accordion',
+    accordionRowColor = undefined, groupNamePosition = 'middle', subtotals = false,
+    subtotalRowColor = undefined, subtotalFontColor = undefined, rowShading = false, rowLines = true,
+    wrapTitles = false, headerColor = undefined, headerFontColor = undefined, formatColumnTitles = true,
+    backgroundColor = undefined, compact = undefined, link = undefined, showLinkCol = false,
+    totalRow = false, totalRowColor = undefined, totalFontColor = undefined, emptyMessage = undefined,
+    isFullPage = undefined, children,
+  }: Props = $props()
 
-  rows = Number.parseInt(String(rows), 10)
-  if (!Number.isFinite(rows) || rows <= 0) rows = 10
+  let rowsNum = $derived.by(() => {
+    let parsed = Number.parseInt(String(rows), 10)
+    return (!Number.isFinite(parsed) || parsed <= 0) ? 10 : parsed
+  })
 
-  rowNumbers = toBoolean(rowNumbers) ?? false
-  groupsOpen = toBoolean(groupsOpen) ?? true
-  subtotals = toBoolean(subtotals) ?? false
-  rowShading = toBoolean(rowShading) ?? false
-  rowLines = toBoolean(rowLines) ?? true
-  wrapTitles = toBoolean(wrapTitles) ?? false
-  formatColumnTitles = toBoolean(formatColumnTitles) ?? true
-  compact = toBoolean(compact)
-  showLinkCol = toBoolean(showLinkCol) ?? false
-  totalRow = toBoolean(totalRow) ?? false
-  sortable = toBoolean(sortable) ?? true
-  isFullPage = toBoolean(isFullPage) ?? false
+  let rowNumbersBool = $derived(toBoolean(rowNumbers) ?? false)
+  let groupsOpenBool = $derived(toBoolean(groupsOpen) ?? true)
+  let subtotalsBool = $derived(toBoolean(subtotals) ?? false)
+  let rowShadingBool = $derived(toBoolean(rowShading) ?? false)
+  let rowLinesBool = $derived(toBoolean(rowLines) ?? true)
+  let wrapTitlesBool = $derived(toBoolean(wrapTitles) ?? false)
+  let formatColumnTitlesBool = $derived(toBoolean(formatColumnTitles) ?? true)
+  let compactBool = $derived(toBoolean(compact))
+  let showLinkColBool = $derived(toBoolean(showLinkCol) ?? false)
+  let totalRowBool = $derived(toBoolean(totalRow) ?? false)
+  let sortableBool = $derived(toBoolean(sortable) ?? true)
+  let isFullPageBool = $derived(toBoolean(isFullPage) ?? false)
 
-  if (groupType === 'section') rowNumbers = false
+  let effectiveRowNumbers = $derived(groupType === 'section' ? false : rowNumbersBool)
 
-  const props = writable<{data: any[]; columns: any[]; priorityColumns:(string | undefined)[]}>({data, columns: [], priorityColumns: [groupBy]})
-  setContext(propKey, props)
+  // Initialize store without data - it will be populated by the effect below
+  const tablePropsStore = writable<{data: any[]; columns: any[]; priorityColumns:(string | undefined)[]}>({data: [], columns: [], priorityColumns: []})
+  setContext(propKey, tablePropsStore)
 
-  $: props.update((state) => ({...state, data, priorityColumns: [groupBy]}))
+  // Update store when data or groupBy changes
+  $effect(() => {
+    // Track data and groupBy
+    let currentData = data
+    let currentGroupBy = groupBy
+    untrack(() => {
+      tablePropsStore.update((state) => ({...state, data: currentData, priorityColumns: [currentGroupBy]}))
+    })
+  })
 
-  $: accordionRowColorStore = resolveColor(accordionRowColor)
-  $: subtotalRowColorStore = resolveColor(subtotalRowColor)
-  $: subtotalFontColorStore = resolveColor(subtotalFontColor)
-  $: totalRowColorStore = resolveColor(totalRowColor)
-  $: totalFontColorStore = resolveColor(totalFontColor)
-  $: headerColorStore = resolveColor(headerColor)
-  $: headerFontColorStore = resolveColor(headerFontColor)
-  $: backgroundColorStore = resolveColor(backgroundColor)
+  let accordionRowColorStore = $derived(resolveColor(accordionRowColor))
+  let subtotalRowColorStore = $derived(resolveColor(subtotalRowColor))
+  let subtotalFontColorStore = $derived(resolveColor(subtotalFontColor))
+  let totalRowColorStore = $derived(resolveColor(totalRowColor))
+  let totalFontColorStore = $derived(resolveColor(totalFontColor))
+  let headerColorStore = $derived(resolveColor(headerColor))
+  let headerFontColorStore = $derived(resolveColor(headerFontColor))
+  let backgroundColorStore = $derived(resolveColor(backgroundColor))
 
-  let error: string | undefined = undefined
-  let columnSummary: any[] = []
-  let priorityColumns: (string | undefined)[] = [groupBy]
-  let finalColumnOrder: string[] = []
-  let orderedColumns: any[] = []
-  let dataForDisplay: any[] = []
-  let displayedRows: any[] = []
+  let priorityColumns = $derived<(string | undefined)[]>([groupBy])
 
-  $: priorityColumns = [groupBy]
-  $: props.update((state) => ({...state, priorityColumns}))
-  $: finalColumnOrder = getFinalColumnOrder(($props.columns ?? []).map((column: any) => column.id), priorityColumns)
-  $: orderedColumns = [...($props.columns ?? [])].sort(
+  $effect(() => {
+    void priorityColumns
+    untrack(() => {
+      tablePropsStore.update((state) => ({...state, priorityColumns}))
+    })
+  })
+
+  // Use $derived to reactively read from the store
+  let tablePropsColumns = $derived($tablePropsStore.columns ?? [])
+
+  let finalColumnOrder = $derived(getFinalColumnOrder(tablePropsColumns.map((column: any) => column.id), priorityColumns))
+  let orderedColumns = $derived([...tablePropsColumns].sort(
     (a, b) => finalColumnOrder.indexOf(a.id) - finalColumnOrder.indexOf(b.id),
-  )
+  ))
 
-  let sortObj: {col: string | null; ascending: boolean | null} = {col: null, ascending: null}
-  let sortBy: string | undefined
-  let sortAsc: boolean | undefined
+  let sortObj: {col: string | null; ascending: boolean | null} = $state({col: null, ascending: null})
 
-  $: if (sort) {
+  // Parse initial sort on mount
+  let initialSort = $derived.by(() => {
+    if (!sort) return {sortBy: undefined, sortAsc: true}
     let [column, direction] = sort.split(/\s+/)
-    sortBy = column
-    if (direction) {
-      sortAsc = direction.toLowerCase() !== 'desc'
-    } else {
-      sortAsc = true
+    return {
+      sortBy: column,
+      sortAsc: direction ? direction.toLowerCase() !== 'desc' : true,
     }
-    sortObj = sortBy ? {col: sortBy, ascending: sortAsc ?? true} : {col: null, ascending: null}
-  }
+  })
 
-  $: props.update((state) => ({...state, data}))
-
-  $: try {
-    error = undefined
-    checkInputs(Array.isArray(data) ? data : [])
-    columnSummary = getColumnSummary(data ?? [], 'array')
-
-    if (sortBy) {
-      let columnNames = columnSummary.map((col) => col.id)
-      if (!columnNames.includes(sortBy)) {
-        throw new Error(`${sortBy} is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).`)
-      }
+  // Initialize sortObj when sort prop changes
+  $effect(() => {
+    if (sort && initialSort.sortBy) {
+      sortObj = {col: initialSort.sortBy, ascending: initialSort.sortAsc}
     }
-
-    let dateCols = columnSummary
-      .filter((col) => col.type === 'date' && !(data?.[0]?.[col.id] instanceof Date))
-      .map((col) => col.id)
-
-    for (let columnId of dateCols) {
-      data = convertColumnToDate(data, columnId)
-    }
-
-    if (link && !showLinkCol) {
-      let linkIndex = columnSummary.findIndex((col) => col.id === link)
-      if (linkIndex !== -1) {
-        columnSummary = [...columnSummary.slice(0, linkIndex), ...columnSummary.slice(linkIndex + 1)]
-      }
-    }
-  } catch (thrown) {
-    let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
-    logError(thrown, {id: 'DataTable'})
-    error = message
-    if (strictBuild) throw thrown
-  }
-
-  let paginated = false
-  let currentPage = 1
-  let pageCount = 1
-  let displayedPageLength = 0
-
-  const goToPage = (page: number) => {
-    if (!paginated) return
-    let next = Math.min(Math.max(page, 1), pageCount)
-    if (Number.isFinite(next)) currentPage = next
-  }
-
-  let groupedData: Record<string, any[]> = {}
-  let groupToggleStates: Record<string, boolean> = {}
+  })
 
   const coerceId = (value: any) => {
     if (value === undefined || value === null || value === '') return undefined
     return String(value)
   }
 
-  let dataTestId: string | undefined = undefined
+  // Process data - combine all data processing into one $derived.by block to avoid loops
+  let processedState = $derived.by(() => {
+    let resultError: string | undefined = undefined
+    let resultColumnSummary: any[] = []
+    let resultProcessedData: any[] = []
+    let resultDataTestId: string | undefined = undefined
+    let resultNormalizedData: any[] = []
 
-  $: {
-    if (!Array.isArray(data)) {
-      let raw = data as any
-      dataTestId = coerceId(raw?.id)
-      let candidate = raw?.rows
-      data = Array.isArray(candidate) ? candidate : []
-    } else {
-      dataTestId = coerceId((data as any)?.id)
+    try {
+      // First normalize data - extract rows array from object if needed
+      let inputData: any[]
+      if (!Array.isArray(data)) {
+        let raw = data as any
+        resultDataTestId = coerceId(raw?.id)
+        let candidate = raw?.rows
+        inputData = Array.isArray(candidate) ? candidate : []
+      } else {
+        resultDataTestId = coerceId((data as any)?.id)
+        inputData = data
+      }
+
+      checkInputs(inputData)
+      resultColumnSummary = getColumnSummary(inputData, 'array')
+
+      if (initialSort.sortBy) {
+        let columnNames = resultColumnSummary.map((col) => col.id)
+        if (!columnNames.includes(initialSort.sortBy)) {
+          throw new Error(`${initialSort.sortBy} is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).`)
+        }
+      }
+
+      let dateCols = resultColumnSummary
+        .filter((col) => col.type === 'date' && !(inputData?.[0]?.[col.id] instanceof Date))
+        .map((col) => col.id)
+
+      let tempData = inputData
+      for (let columnId of dateCols) {
+        tempData = convertColumnToDate(tempData, columnId)
+      }
+      resultProcessedData = tempData
+      resultNormalizedData = tempData
+
+      if (link && !showLinkColBool) {
+        let linkIndex = resultColumnSummary.findIndex((col) => col.id === link)
+        if (linkIndex !== -1) {
+          resultColumnSummary = [...resultColumnSummary.slice(0, linkIndex), ...resultColumnSummary.slice(linkIndex + 1)]
+        }
+      }
+    } catch (thrown) {
+      let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
+      logError(thrown, {id: 'DataTable'})
+      resultError = message
+      if (strictBuild) throw thrown
     }
-  }
 
-  $: paginated = !groupBy && rows > 0 && (dataForDisplay?.length ?? 0) > rows
-  $: pageCount = paginated ? Math.ceil((dataForDisplay?.length ?? 0) / rows) : 1
-  $: currentPage = Math.min(Math.max(currentPage, 1), pageCount)
-  $: displayedPageLength = paginated
-    ? Math.min(rows, (dataForDisplay?.length ?? 0) - rows * (currentPage - 1))
-    : dataForDisplay?.length ?? 0
-
-  $: if (groupBy && data) {
-    groupedData = data.reduce<Record<string, any[]>>((acc, row) => {
-      let groupName = row[groupBy]
-      let key = groupName ?? '(blank)'
-      if (!acc[key]) acc[key] = []
-      acc[key].push(row)
-      return acc
-    }, {})
-
-    for (let groupName of Object.keys(groupedData)) {
-      if (!(groupName in groupToggleStates)) groupToggleStates[groupName] = groupsOpen ?? true
+    return {
+      error: resultError,
+      columnSummary: resultColumnSummary,
+      processedData: resultProcessedData,
+      dataTestId: resultDataTestId,
+      normalizedData: resultNormalizedData,
     }
-  } else {
-    groupedData = {}
-  }
+  })
 
-  const handleToggle = (event: CustomEvent<{groupName: string}>) => {
-    let {groupName} = event.detail
-    groupToggleStates = {...groupToggleStates, [groupName]: !groupToggleStates[groupName]}
-  }
+  // Extract processed state
+  let columnSummary = $derived(processedState.columnSummary)
+  let normalizedData = $derived(processedState.normalizedData)
+  let dataTestId = $derived(processedState.dataTestId)
 
-  $: {
-    if (groupBy) {
-      displayedRows = data ?? []
-    } else if (paginated) {
-      let start = rows * (currentPage - 1)
-      let end = start + rows
-      displayedRows = dataForDisplay?.slice(start, end) ?? []
-    } else {
-      displayedRows = dataForDisplay ?? []
-    }
-  }
+  let error = $derived(processedState.error)
 
-  const applySort = (state: {col: string | null; ascending: boolean | null}) => {
-    if (!state.col) return
-    let ascending = state.ascending ?? true
-    if (groupBy) {
-      groupedData = Object.fromEntries(
-        Object.entries(groupedData).map(([groupName, rows]) => [
-          groupName,
-          [...rows].sort((a, b) => compareValues(a[state.col as string], b[state.col as string], ascending)),
-        ]),
-      )
-    } else {
-      let source = Array.isArray(data) ? data : []
-      dataForDisplay = [...source].sort((a, b) => compareValues(a[state.col as string], b[state.col as string], ascending))
-    }
-  }
-
-  const sortClick = (column: string) => () => {
-    if (!sortable) return
-    if (!column) return
-    if (sortObj.col === column) {
-      sortObj = {col: column, ascending: !sortObj.ascending}
-    } else {
-      sortObj = {col: column, ascending: true}
-    }
-    applySort(sortObj)
-  }
-
+  // Sorting helpers
   const normalizeForSort = (value: unknown) => {
     if (value instanceof Date) return value.getTime()
     if (typeof value === 'number') return Number.isFinite(value) ? value : Number.NEGATIVE_INFINITY
@@ -273,51 +225,142 @@
     return 0
   }
 
-  $: {
-    let source = Array.isArray(data) ? data : []
+  // Compute dataForDisplay as derived to avoid effect loops
+  let dataForDisplay = $derived.by(() => {
+    let source = Array.isArray(normalizedData) ? normalizedData : []
     if (groupBy) {
-      dataForDisplay = source
+      return source
     } else if (sortObj.col) {
       let ascending = sortObj.ascending ?? true
-      dataForDisplay = [...source].sort((a, b) => compareValues(a[sortObj.col as string], b[sortObj.col as string], ascending))
+      return [...source].sort((a, b) => compareValues(a[sortObj.col as string], b[sortObj.col as string], ascending))
     } else {
-      dataForDisplay = source
+      return source
+    }
+  })
+
+  // Pagination state and derived values
+  let currentPage = $state(1)
+  let paginated = $derived(!groupBy && rowsNum > 0 && (dataForDisplay?.length ?? 0) > rowsNum)
+  let pageCount = $derived(paginated ? Math.ceil((dataForDisplay?.length ?? 0) / rowsNum) : 1)
+
+  // Clamp currentPage when pageCount changes - but only update if needed
+  $effect(() => {
+    let clamped = Math.min(Math.max(currentPage, 1), pageCount)
+    if (clamped !== currentPage) {
+      untrack(() => {
+        currentPage = clamped
+      })
+    }
+  })
+
+  let displayedPageLength = $derived(paginated
+    ? Math.min(rowsNum, (dataForDisplay?.length ?? 0) - rowsNum * (currentPage - 1))
+    : dataForDisplay?.length ?? 0)
+
+  const goToPage = (page: number) => {
+    if (!paginated) return
+    let next = Math.min(Math.max(page, 1), pageCount)
+    if (Number.isFinite(next)) currentPage = next
+  }
+
+  let groupToggleStates: Record<string, boolean> = $state({})
+
+  // Compute grouped data as derived
+  let groupedData = $derived.by(() => {
+    if (!groupBy || !normalizedData) return {}
+    return normalizedData.reduce<Record<string, any[]>>((acc, row) => {
+      let groupName = row[groupBy]
+      let key = groupName ?? '(blank)'
+      if (!acc[key]) acc[key] = []
+      acc[key].push(row)
+      return acc
+    }, {})
+  })
+
+  // Initialize toggle states for new groups
+  $effect(() => {
+    if (groupBy && groupedData) {
+      for (let name of Object.keys(groupedData)) {
+        if (!(name in groupToggleStates)) {
+          untrack(() => {
+            groupToggleStates = {...groupToggleStates, [name]: groupsOpenBool}
+          })
+        }
+      }
+    }
+  })
+
+  const handleToggle = (event: CustomEvent<{groupName: string}>) => {
+    let {groupName} = event.detail
+    groupToggleStates = {...groupToggleStates, [groupName]: !groupToggleStates[groupName]}
+  }
+
+  // Compute displayedRows as derived
+  let displayedRows = $derived.by(() => {
+    if (groupBy) {
+      return normalizedData ?? []
+    } else if (paginated) {
+      let start = rowsNum * (currentPage - 1)
+      let end = start + rowsNum
+      return dataForDisplay?.slice(start, end) ?? []
+    } else {
+      return dataForDisplay ?? []
+    }
+  })
+
+  // Sort grouped data when sortObj changes
+  let sortedGroupedData = $derived.by(() => {
+    if (!groupBy || !sortObj.col) return groupedData
+    let ascending = sortObj.ascending ?? true
+    return Object.fromEntries(
+      Object.entries(groupedData).map(([name, rows]) => [
+        name,
+        [...rows].sort((a, b) => compareValues(a[sortObj.col as string], b[sortObj.col as string], ascending)),
+      ]),
+    )
+  })
+
+  const sortClick = (column: string) => () => {
+    if (!sortableBool) return
+    if (!column) return
+    if (sortObj.col === column) {
+      sortObj = {col: column, ascending: !sortObj.ascending}
+    } else {
+      sortObj = {col: column, ascending: true}
     }
   }
 
-  $: if (data && sortObj.col) applySort(sortObj)
+  let sortedGroupNames = $derived(groupBy
+    ? Object.keys(sortedGroupedData).sort((a, b) => a.localeCompare(b))
+    : [])
 
-  $: sortedGroupNames = groupBy
-    ? Object.keys(groupedData).sort((a, b) => a.localeCompare(b))
-    : []
-
-  let groupOffsets: Record<string, number> = {}
-  $: if (groupBy) {
+  let groupOffsets = $derived.by(() => {
+    if (!groupBy) return {}
     let running = 0
-    groupOffsets = {}
+    let offsets: Record<string, number> = {}
     for (let name of sortedGroupNames) {
-      groupOffsets[name] = running
-      running += groupedData[name]?.length ?? 0
+      offsets[name] = running
+      running += sortedGroupedData[name]?.length ?? 0
     }
-  } else {
-    groupOffsets = {}
-  }
+    return offsets
+  })
 
-  let totalRows = 0
-  $: totalRows = dataForDisplay?.length ?? 0
-  $: tableData = dataForDisplay ?? []
+  let totalRows = $derived(dataForDisplay?.length ?? 0)
+  let tableData = $derived(dataForDisplay ?? [])
 </script>
 
 {#if !error}
-  <slot>
+  {#if children}
+    {@render children()}
+  {:else}
     {#each columnSummary as column (column.id)}
       <Column id={column.id} />
     {/each}
-  </slot>
+  {/if}
 
   <div
     class={`table-container ${paginated ? 'table-container--has-pagination' : ''}`}
-    data-testid={isFullPage ? undefined : `DataTable-${dataTestId ?? 'no-id'}`}
+    data-testid={isFullPageBool ? undefined : `DataTable-${dataTestId ?? 'no-id'}`}
   >
     {#if title || subtitle}
       <div class="table-title">
@@ -329,17 +372,17 @@
     <div class="scrollbox pretty-scrollbar" style:background-color={$backgroundColorStore}>
       <table>
         <TableHeader
-          {rowNumbers}
+          rowNumbers={effectiveRowNumbers}
           headerColor={$headerColorStore}
           headerFontColor={$headerFontColorStore}
           {orderedColumns}
           {columnSummary}
-          {sortable}
+          sortable={sortableBool}
           {sortClick}
-          {formatColumnTitles}
+          formatColumnTitles={formatColumnTitlesBool}
           {sortObj}
-          {wrapTitles}
-          {compact}
+          wrapTitles={wrapTitlesBool}
+          compact={compactBool}
           link={link}
         />
 
@@ -348,25 +391,25 @@
             {#if groupType !== 'section'}
               <TableGroupRow
                 {groupName}
-                currentGroupData={groupedData[groupName]}
+                currentGroupData={sortedGroupedData[groupName]}
                 toggled={groupToggleStates[groupName]}
                 {columnSummary}
-                {rowNumbers}
+                rowNumbers={effectiveRowNumbers}
                 rowColor={$accordionRowColorStore}
-                {subtotals}
-                on:toggle={handleToggle}
+                subtotals={subtotalsBool}
+                ontoggle={handleToggle}
                 {orderedColumns}
-                {compact}
+                compact={compactBool}
               />
             {/if}
             {#if groupType === 'section' || groupToggleStates[groupName]}
               <TableRow
-                displayedData={groupedData[groupName]}
-                {rowShading}
+                displayedData={sortedGroupedData[groupName]}
+                rowShading={rowShadingBool}
                 {link}
-                {rowNumbers}
-                {rowLines}
-                {compact}
+                rowNumbers={effectiveRowNumbers}
+                rowLines={rowLinesBool}
+                compact={compactBool}
                 {columnSummary}
                 grouped={true}
                 {groupType}
@@ -374,19 +417,19 @@
                 groupNamePosition={groupNamePosition}
                 orderedColumns={orderedColumns}
                 index={groupOffsets[groupName] ?? 0}
-                rowSpan={groupedData[groupName].length}
+                rowSpan={sortedGroupedData[groupName].length}
               />
-              {#if subtotals}
+              {#if subtotalsBool}
                 <TableSubtotalRow
                   {groupName}
-                  currentGroupData={groupedData[groupName]}
+                  currentGroupData={sortedGroupedData[groupName]}
                   {columnSummary}
                   rowColor={$subtotalRowColorStore}
                   fontColor={$subtotalFontColorStore}
                   groupBy={groupBy}
                   groupType={groupType}
                   {orderedColumns}
-                  {compact}
+                  compact={compactBool}
                 />
               {/if}
             {/if}
@@ -394,31 +437,31 @@
         {:else}
           <TableRow
             displayedData={displayedRows}
-            {rowShading}
+            rowShading={rowShadingBool}
             {link}
-            {rowNumbers}
-            {rowLines}
-            {compact}
+            rowNumbers={effectiveRowNumbers}
+            rowLines={rowLinesBool}
+            compact={compactBool}
             {columnSummary}
             grouped={false}
             {groupType}
             groupColumn={groupBy}
             groupNamePosition={groupNamePosition}
             orderedColumns={orderedColumns}
-            index={rows * (currentPage - 1)}
+            index={rowsNum * (currentPage - 1)}
           />
         {/if}
 
-        {#if totalRow && !groupBy}
+        {#if totalRowBool && !groupBy}
           <TableTotalRow
             data={tableData}
-            {rowNumbers}
+            rowNumbers={effectiveRowNumbers}
             {columnSummary}
             rowColor={$totalRowColorStore}
             fontColor={$totalFontColorStore}
             groupType={groupType}
             {orderedColumns}
-            {compact}
+            compact={compactBool}
           />
         {/if}
       </table>
@@ -426,13 +469,13 @@
 
     {#if paginated && pageCount > 1}
       <div class="pagination">
-        <button class="pagination__button" disabled={currentPage === 1} on:click={() => goToPage(1)}>First</button>
-        <button class="pagination__button" disabled={currentPage === 1} on:click={() => goToPage(currentPage - 1)}>Prev</button>
+        <button class="pagination__button" disabled={currentPage === 1} onclick={() => goToPage(1)}>First</button>
+        <button class="pagination__button" disabled={currentPage === 1} onclick={() => goToPage(currentPage - 1)}>Prev</button>
         <div class="pagination__status">
           Page {currentPage.toLocaleString()} of {pageCount.toLocaleString()}
         </div>
-        <button class="pagination__button" disabled={currentPage === pageCount} on:click={() => goToPage(currentPage + 1)}>Next</button>
-        <button class="pagination__button" disabled={currentPage === pageCount} on:click={() => goToPage(pageCount)}>Last</button>
+        <button class="pagination__button" disabled={currentPage === pageCount} onclick={() => goToPage(currentPage + 1)}>Next</button>
+        <button class="pagination__button" disabled={currentPage === pageCount} onclick={() => goToPage(pageCount)}>Last</button>
         <div class="pagination__meta">{displayedPageLength.toLocaleString()} of {totalRows.toLocaleString()} rows</div>
       </div>
     {/if}

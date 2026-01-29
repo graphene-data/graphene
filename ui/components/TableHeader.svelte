@@ -3,24 +3,33 @@
   import {safeExtractColumn} from '../component-utilities/tableUtils'
   import {toBoolean} from '../component-utilities/convert'
 
-  export let rowNumbers: boolean | string | undefined = false
-  export let headerColor: string | undefined = undefined
-  export let headerFontColor: string | undefined = undefined
-  export let orderedColumns: any[] = []
-  export let columnSummary: any[] = []
-  export let sortable: boolean | string | undefined = true
-  export let sortClick: (columnId: string) => () => void = () => () => {}
-  export let formatColumnTitles: boolean | string | undefined = true
-  export let sortObj: {col: string | null; ascending: boolean | null} = {col: null, ascending: null}
-  export let wrapTitles: boolean | string | undefined = false
-  export let compact: boolean | string | undefined = false
-  export let link: string | undefined = undefined
+  interface Props {
+    rowNumbers?: boolean | string
+    headerColor?: string
+    headerFontColor?: string
+    orderedColumns?: any[]
+    columnSummary?: any[]
+    sortable?: boolean | string
+    sortClick?: (columnId: string) => () => void
+    formatColumnTitles?: boolean | string
+    sortObj?: {col: string | null; ascending: boolean | null}
+    wrapTitles?: boolean | string
+    compact?: boolean | string
+    link?: string
+  }
 
-  rowNumbers = toBoolean(rowNumbers) ?? false
-  sortable = toBoolean(sortable) ?? true
-  formatColumnTitles = toBoolean(formatColumnTitles) ?? true
-  wrapTitles = toBoolean(wrapTitles) ?? false
-  compact = toBoolean(compact) ?? false
+  let {
+    rowNumbers: rowNumbersProp = false, headerColor = undefined, headerFontColor = undefined,
+    orderedColumns = [], columnSummary = [], sortable: sortableProp = true, sortClick = () => () => {},
+    formatColumnTitles: formatColumnTitlesProp = true, sortObj = {col: null, ascending: null},
+    wrapTitles: wrapTitlesProp = false, compact: compactProp = false, link = undefined,
+  }: Props = $props()
+
+  let rowNumbers = $derived(toBoolean(rowNumbersProp) ?? false)
+  let sortable = $derived(toBoolean(sortableProp) ?? true)
+  let formatColumnTitles = $derived(toBoolean(formatColumnTitlesProp) ?? true)
+  let wrapTitles = $derived(toBoolean(wrapTitlesProp) ?? false)
+  let compact = $derived(toBoolean(compactProp) ?? false)
 
   const getWrapTitleAlignment = (column: any) => {
     if (column.align === 'right') return 'header-title--align-end'
@@ -30,8 +39,8 @@
     return 'header-title--align-start'
   }
 
-  const computeGroupSpans = () => {
-    return orderedColumns.map((column, index, array) => {
+  const computeGroupSpans = (columns: any[]) => {
+    return columns.map((column, index, array) => {
       let isNewGroup = index === 0 || column.colGroup !== array[index - 1].colGroup
       let span = 1
       if (column.colGroup) {
@@ -52,14 +61,14 @@
     return summary.id
   }
 
-  $: columnsWithGroupSpan = computeGroupSpans()
+  let columnsWithGroupSpan = $derived(computeGroupSpans(orderedColumns))
 </script>
 
 <thead>
   {#if columnsWithGroupSpan.length}
     <tr class="header-group-row" style:background-color={headerColor}>
       {#if rowNumbers}
-        <th class={`header-index ${compact ? 'header-index--compact' : ''}`} style:background-color={headerColor} />
+        <th class={`header-index ${compact ? 'header-index--compact' : ''}`} style:background-color={headerColor}></th>
       {/if}
       {#each columnsWithGroupSpan as column (column.id)}
         {#if column.colGroup && column.isNewGroup}
@@ -67,11 +76,11 @@
             <div class="header-group__label">{column.colGroup}</div>
           </th>
         {:else}
-          <th class="header-group--spacer" />
+          <th class="header-group--spacer"></th>
         {/if}
       {/each}
       {#if link}
-        <th class="header-group--spacer" />
+        <th class="header-group--spacer"></th>
       {/if}
     </tr>
   {/if}
@@ -83,7 +92,7 @@
         class={`header-index ${compact ? 'header-index--compact' : ''}`}
         style:background-color={headerColor}
         style:color={headerFontColor}
-      />
+      ></th>
     {/if}
     {#each orderedColumns as column (column.id)}
       {@const summary = safeExtractColumn(column, columnSummary)}
@@ -94,7 +103,7 @@
         style:background={headerColor}
         style:text-align={column.align ?? (['sparkline', 'sparkbar', 'sparkarea', 'bar'].includes(column.contentType) ? 'center' : undefined)}
         style:cursor={sortable ? 'pointer' : 'auto'}
-        on:click={sortable ? sortClick(column.id) : undefined}
+        onclick={sortable ? sortClick(column.id) : undefined}
         aria-sort={getAriaSortValue(column.id)}
       >
         <div class={`header-title ${wrapTitles || column.wrapTitle ? 'header-title--wrap' : ''} ${wrapTitles || column.wrapTitle ? getWrapTitleAlignment(column) : ''}`.trim()}>

@@ -1,105 +1,60 @@
-<script>
+<script lang="ts">
+  import type {Snippet} from 'svelte'
   import Chart from './Chart.svelte'
   import Line from './Line.svelte'
   import QueryLoad from './QueryLoad.svelte'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
+  interface Props {
+    data?: any, x?: any, y?: any, y2?: any, series?: any, xType?: any, yLog?: any, yLogBase?: any
+    y2SeriesType?: any, yFmt?: any, xFmt?: any, y2Fmt?: any, title?: any, subtitle?: any, legend?: any
+    xAxisTitle?: any, yAxisTitle?: any, y2AxisTitle?: any, xGridlines?: any, yGridlines?: any
+    y2Gridlines?: any, xAxisLabels?: any, yAxisLabels?: any, y2AxisLabels?: any, xBaseline?: any
+    yBaseline?: any, y2Baseline?: any, xTickMarks?: any, yTickMarks?: any, y2TickMarks?: any
+    yMin?: any, yMax?: any, yScale?: any, y2Min?: any, y2Max?: any, y2Scale?: any, sort?: any
+    lineColor?: any, lineType?: any, lineWidth?: any, lineOpacity?: any, chartAreaHeight?: any
+    markers?: any, markerShape?: any, markerSize?: any, handleMissing?: any, step?: any
+    stepPosition?: any, colorPalette?: string, labels?: any, labelSize?: any, labelPosition?: any
+    labelColor?: any, labelFmt?: any, yLabelFmt?: any, y2LabelFmt?: any, showAllLabels?: any
+    yAxisColor?: any, y2AxisColor?: any, echartsOptions?: any, seriesOptions?: any, seriesColors?: any
+    seriesOrder?: any, connectGroup?: any, seriesLabelFmt?: any, leftPadding?: any, rightPadding?: any
+    xLabelWrap?: any, children?: Snippet
+  }
+
   const {resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
 
-  export let data = undefined
-  export let x = undefined
-  export let y = undefined
-  export let y2 = undefined
-  export let series = undefined
-  export let xType = undefined
-  export let yLog = undefined
-  export let yLogBase = undefined
+  let {
+    data = undefined, x = undefined, y = undefined, y2 = undefined, series = undefined, xType = undefined,
+    yLog = undefined, yLogBase = undefined, y2SeriesType = undefined, yFmt = undefined, xFmt = undefined,
+    y2Fmt = undefined, title = undefined, subtitle = undefined, legend = undefined, xAxisTitle = undefined,
+    yAxisTitle = undefined, y2AxisTitle = undefined, xGridlines = undefined, yGridlines = undefined,
+    y2Gridlines = undefined, xAxisLabels = undefined, yAxisLabels = undefined, y2AxisLabels = undefined,
+    xBaseline = undefined, yBaseline = undefined, y2Baseline = undefined, xTickMarks = undefined,
+    yTickMarks = undefined, y2TickMarks = undefined, yMin = undefined, yMax = undefined, yScale = undefined,
+    y2Min = undefined, y2Max = undefined, y2Scale = undefined, sort = undefined, lineColor = undefined,
+    lineType = undefined, lineWidth = undefined, lineOpacity = undefined, chartAreaHeight = undefined,
+    markers = undefined, markerShape = undefined, markerSize = undefined, handleMissing = undefined,
+    step = undefined, stepPosition = undefined, colorPalette = 'default', labels = undefined,
+    labelSize = undefined, labelPosition = undefined, labelColor = undefined, labelFmt = undefined,
+    yLabelFmt = undefined, y2LabelFmt = undefined, showAllLabels = undefined, yAxisColor = undefined,
+    y2AxisColor = undefined, echartsOptions = undefined, seriesOptions = undefined, seriesColors = undefined,
+    seriesOrder = undefined, connectGroup = undefined, seriesLabelFmt = undefined, leftPadding = undefined,
+    rightPadding = undefined, xLabelWrap = undefined, children,
+  }: Props = $props()
 
-  export let y2SeriesType = undefined
+  let lineColorStore = $derived(resolveColor(lineColor))
+  let colorPaletteStore = $derived(resolveColorPalette(colorPalette))
+  let labelColorStore = $derived(resolveColor(labelColor))
+  let yAxisColorStore = $derived(resolveColor(yAxisColor))
+  let y2AxisColorStore = $derived(resolveColor(y2AxisColor))
+  let seriesColorsStore = $derived(resolveColorsObject(seriesColors))
 
-  export let yFmt = undefined
-  export let xFmt = undefined
-  export let y2Fmt = undefined
-
-  export let title = undefined
-  export let subtitle = undefined
-  export let legend = undefined
-  export let xAxisTitle = undefined
-  export let yAxisTitle = y2 ? 'true' : undefined
-  export let y2AxisTitle = y2 ? 'true' : undefined
-  export let xGridlines = undefined
-  export let yGridlines = undefined
-  export let y2Gridlines = undefined
-  export let xAxisLabels = undefined
-  export let yAxisLabels = undefined
-  export let y2AxisLabels = undefined
-  export let xBaseline = undefined
-  export let yBaseline = undefined
-  export let y2Baseline = undefined
-  export let xTickMarks = undefined
-  export let yTickMarks = undefined
-  export let y2TickMarks = undefined
-  export let yMin = undefined
-  export let yMax = undefined
-  export let yScale = undefined
-  export let y2Min = undefined
-  export let y2Max = undefined
-  export let y2Scale = undefined
-  export let sort = undefined
-
-  export let lineColor = undefined
-  $: lineColorStore = resolveColor(lineColor)
-
-  export let lineType = undefined
-  export let lineWidth = undefined
-  export let lineOpacity = undefined
-  export let chartAreaHeight = undefined
-
-  export let markers = undefined
-  export let markerShape = undefined
-  export let markerSize = undefined
-  export let handleMissing = undefined
-  export let step = undefined
-  export let stepPosition = undefined
-
-  export let colorPalette = 'default'
-  $: colorPaletteStore = resolveColorPalette(colorPalette)
-
-  export let labels = undefined
-  export let labelSize = undefined
-  export let labelPosition = undefined
-
-  export let labelColor = undefined
-  $: labelColorStore = resolveColor(labelColor)
-
-  export let labelFmt = undefined
-  export let yLabelFmt = undefined
-  export let y2LabelFmt = undefined
-  export let showAllLabels = undefined
-
-  export let yAxisColor = undefined
-  $: yAxisColorStore = resolveColor(yAxisColor)
-
-  export let y2AxisColor = undefined
-  $: y2AxisColorStore = resolveColor(y2AxisColor)
-
-  export let echartsOptions = undefined
-  export let seriesOptions = undefined
-
-  export let seriesColors = undefined
-  $: seriesColorsStore = resolveColorsObject(seriesColors)
-
-  export let seriesOrder = undefined
-  export let connectGroup = undefined
-  export let seriesLabelFmt = undefined
-
-  export let leftPadding = undefined
-  export let rightPadding = undefined
-  export let xLabelWrap = undefined
+  let derivedYAxisTitle = $derived(yAxisTitle ?? (y2 ? 'true' : undefined))
+  let derivedY2AxisTitle = $derived(y2AxisTitle ?? (y2 ? 'true' : undefined))
 </script>
 
-<QueryLoad data={data} fields={{x, y: parseCommaList(y), y2: parseCommaList(y2), series}} let:loaded>
+{#snippet lineChartContent(loaded: any[])}
   <Chart
     data={loaded}
     chartContext={{data, x, y, series}}
@@ -115,8 +70,8 @@
     {yLogBase}
     {legend}
     {xAxisTitle}
-    {yAxisTitle}
-    {y2AxisTitle}
+    yAxisTitle={derivedYAxisTitle}
+    y2AxisTitle={derivedY2AxisTitle}
     {xGridlines}
     {yGridlines}
     {y2Gridlines}
@@ -174,6 +129,8 @@
       {seriesOrder}
       {seriesLabelFmt}
     />
-    <slot />
+    {@render children?.()}
   </Chart>
-</QueryLoad>
+{/snippet}
+
+<QueryLoad data={data} fields={{x, y: parseCommaList(y), y2: parseCommaList(y2), series}} children={lineChartContent} />

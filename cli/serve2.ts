@@ -91,6 +91,10 @@ async function createConfig (): Promise<InlineConfig> {
       noDiscovery: process.env.NODE_ENV == 'test', // tests manually optimize before starting test workers
       exclude: ['virtual:nav'],
       include: [
+        // Svelte 5 has multiple entry points that need to be pre-bundled together
+        'svelte',
+        'svelte/internal/client',
+        'svelte/internal/disclose-version',
         '@graphenedata/cli > svelte',
         '@graphenedata/cli > ssf',
         '@graphenedata/cli > @tidyjs/tidy',
@@ -116,12 +120,14 @@ function fixSvelteDepsInTests () {
 
   function configResolved (cfg:any) { viteConfig = cfg }
 
+  // This must run AFTER Svelte's buildStart which sets force=true based on metadata changes.
+  // Using enforce:'post' and sequential:true ensures we run last and can override.
   function buildStart () {
     if (process.env.NODE_ENV != 'test') return
     viteConfig.optimizeDeps.force = false
   }
-  buildStart.sequential = true // force running after svelte hook
-  return {name: 'fix-svelte-deps', enforce: 'pre' as const, sequential: true, configResolved, buildStart}
+  buildStart.sequential = true // force running after other sequential hooks (like svelte's)
+  return {name: 'fix-svelte-deps', enforce: 'post' as const, configResolved, buildStart}
 }
 
 // Watch for changes to gsql files and reload the workspace.
@@ -229,11 +235,16 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
   res.setHeader('Content-Type', 'text/html')
 
   let mdMount = mount ? `
+    import { mount } from 'svelte'
     import Page from ${JSON.stringify(filePath)}
-    new Page({ target: document.getElementById('content'), props: {} })
+    mount(Page, { target: document.getElementById('content'), props: {} })
   ` : ''
 
-  let html = await server.transformIndexHtml(filePath, `<!doctype html>
+  // Use '/index.html' as the URL for transformIndexHtml, not the .md file path.
+  // Vite 7 uses the URL extension to determine which plugins process the content,
+  // and passing an .md path causes the svelte plugin to try to compile our HTML template.
+  let htmlUrl = filePath.replace('.md', '.html')
+  let html = await server.transformIndexHtml(htmlUrl, `<!doctype html>
   <html lang="en">
     <head>
       <meta charset="UTF-8" />

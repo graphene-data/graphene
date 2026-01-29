@@ -1,6 +1,7 @@
 import {getErrors} from './internal/telemetry.ts'
 import './app.css'
 import {isLoading} from './internal/queryEngine.ts'
+import {mount} from 'svelte'
 import NavSidebar from './internal/NavSidebarHMR.svelte'
 
 import Area from './components/Area.svelte'
@@ -70,7 +71,7 @@ window.$GRAPHENE.components = {
 let socket = null
 
 if (document.getElementById('nav')) {
-  new NavSidebar({target: document.getElementById('nav')})
+  mount(NavSidebar, {target: document.getElementById('nav')})
 }
 
 connectWebSocket()

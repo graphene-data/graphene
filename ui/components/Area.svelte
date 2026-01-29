@@ -1,177 +1,214 @@
-<script>
-  import {beforeUpdate, getContext} from 'svelte'
+<script lang="ts">
+  import {getContext} from 'svelte'
+  import type {Writable} from 'svelte/store'
   import {propKey, configKey} from '../component-utilities/chartContext.js'
   import getSeriesConfig from '../component-utilities/getSeriesConfig.js'
   import formatTitle from '../component-utilities/formatTitle.js'
   import replaceNulls from '../component-utilities/replaceNulls.js'
   import getCompletedData from '../component-utilities/getCompletedData.js'
-  import {
-    formatValue,
-    getFormatObjectFromString,
-  } from '../component-utilities/formatting.js'
+  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
-  const {resolveColor} = getThemeStores()
-  const props = getContext(propKey)
-  const config = getContext(configKey)
-
-  export let y = undefined
-  const ySet = !!y
-  export let series = undefined
-  const seriesSet = !!series
-  export let options = undefined
-  export let name = undefined
-  export let type = 'stacked'
-  export let fillColor = undefined
-  $: fillColorStore = resolveColor(fillColor)
-  export let lineColor = undefined
-  $: lineColorStore = resolveColor(lineColor)
-  export let fillOpacity = undefined
-  export let line = true
-  $: line = line === 'true' || line === true
-  export let markers = false
-  $: markers = markers === 'true' || markers === true
-  export let markerShape = 'circle'
-  export let markerSize = 8
-  export let handleMissing = 'gap'
-  export let step = false
-  $: step = step === 'true' || step === true
-  export let stepPosition = 'end'
-  export let labels = false
-  $: labels = labels === 'true' || labels === true
-  export let labelSize = 11
-  export let labelPosition = 'top'
-  export let labelColor = undefined
-  $: labelColorStore = resolveColor(labelColor)
-  export let labelFmt = undefined
-  export let showAllLabels = false
-  export let seriesOrder = undefined
-  export let seriesLabelFmt = undefined
-
-  let labelFormat
-  let data
-  let x
-  let swapXY
-  let yFormat
-  let xType
-  let xMismatch
-  let columnSummary
-  let seriesConfig
-  let chartOverrides
-  let defaultLabelPosition
-  let resolvedY
-  let stackName
-
-  if (labelFmt) labelFormat = getFormatObjectFromString(labelFmt)
-
-  $: data = $props.data
-  $: x = $props.x
-  $: swapXY = $props.swapXY
-  $: yFormat = $props.yFormat
-  $: xType = $props.xType
-  $: xMismatch = $props.xMismatch
-  $: columnSummary = $props.columnSummary
-  $: series = seriesSet ? series : $props.series
-  $: resolvedY = ySet ? parseCommaList(y) : $props.y
-  $: seriesOrder = parseCommaList(seriesOrder)
-
-  $: {
-    if (!series && (!Array.isArray(resolvedY) || resolvedY.length === 1)) {
-      stackName = undefined
-      let col = Array.isArray(resolvedY) ? resolvedY[0] : resolvedY
-      if (columnSummary?.[col]) name = name ?? formatTitle(col, columnSummary[col].title)
-    } else {
-      stackName = 'area'
-      data = getCompletedData(data, x, resolvedY, series, false, xType === 'value')
-      data = replaceNulls(data, resolvedY)
-      xType = xType === 'value' ? 'category' : xType
-    }
+  interface Props {
+    y?: any, series?: any, options?: any, name?: any, type?: string, fillColor?: any, lineColor?: any
+    fillOpacity?: any, line?: boolean | string, markers?: boolean | string, markerShape?: string
+    markerSize?: number, handleMissing?: string, step?: boolean | string, stepPosition?: string
+    labels?: boolean | string, labelSize?: number, labelPosition?: string, labelColor?: any
+    labelFmt?: any, showAllLabels?: boolean | string, seriesOrder?: any, seriesLabelFmt?: any
   }
 
-  $: if (handleMissing === 'zero') data = replaceNulls(data, resolvedY)
+  const {resolveColor} = getThemeStores()
+  const chartProps: Writable<any> = getContext(propKey)
+  const config: Writable<any> = getContext(configKey)
+
+  let {
+    y = undefined, series = undefined, options = undefined, name = undefined, type = 'stacked',
+    fillColor = undefined, lineColor = undefined, fillOpacity = undefined, line = true, markers = false,
+    markerShape = 'circle', markerSize = 8, handleMissing = 'gap', step = false, stepPosition = 'end',
+    labels = false, labelSize = 11, labelPosition = 'top', labelColor = undefined, labelFmt = undefined,
+    showAllLabels = false, seriesOrder = undefined, seriesLabelFmt = undefined,
+  }: Props = $props()
+
+  // Use $derived for values that depend on props
+  let ySet = $derived(y ? true : false)
+  let seriesSet = $derived(series ? true : false)
+
+  let fillColorStore = $derived(resolveColor(fillColor))
+  let lineColorStore = $derived(resolveColor(lineColor))
+  let lineBool = $derived(line === 'true' || line === true)
+  let markersBool = $derived(markers === 'true' || markers === true)
+  let stepBool = $derived(step === 'true' || step === true)
+  let labelsBool = $derived(labels === 'true' || labels === true)
+  let labelColorStore = $derived(resolveColor(labelColor))
+
+  // Format objects derived from props
+  let labelFormat = $derived(labelFmt ? getFormatObjectFromString(labelFmt) : undefined)
 
   const labelPositions = {above: 'top', below: 'bottom', middle: 'inside'}
   const swapXYLabelPositions = {above: 'right', below: 'left', middle: 'inside'}
 
-  $: {
-    defaultLabelPosition = swapXY ? 'right' : 'top'
-    labelPosition = (swapXY ? swapXYLabelPositions[labelPosition] : labelPositions[labelPosition]) ?? defaultLabelPosition
-  }
+  // Derive values from chartProps store instead of using $effect to assign
+  let data = $derived($chartProps.data)
+  let x = $derived($chartProps.x)
+  let swapXY = $derived($chartProps.swapXY)
+  let yFormat = $derived($chartProps.yFormat)
+  let baseXType = $derived($chartProps.xType)
+  let xMismatch = $derived($chartProps.xMismatch)
+  let columnSummary = $derived($chartProps.columnSummary)
+  let resolvedSeries = $derived(seriesSet ? series : $chartProps.series)
+  let resolvedY = $derived(ySet ? parseCommaList(y) : $chartProps.y)
+  let resolvedSeriesOrder = $derived(parseCommaList(seriesOrder))
 
-  $: baseConfig = {
-    type: 'line',
-    stack: stackName,
-    areaStyle: {color: $fillColorStore, opacity: fillOpacity},
-    connectNulls: handleMissing === 'connect',
-    lineStyle: {width: line ? 1 : 0, color: $lineColorStore},
-    label: {
-      show: labels,
-      formatter: (params) =>
-        params.value[swapXY ? 0 : 1] === 0
-          ? ''
-          : formatValue(params.value[swapXY ? 0 : 1], labelFormat ?? yFormat),
-      fontSize: labelSize,
-      color: $labelColorStore,
-      position: labelPosition,
-      padding: 3,
-    },
-    labelLayout: {hideOverlap: showAllLabels ? false : true},
-    emphasis: {focus: 'series'},
-    showSymbol: labels || markers,
-    symbol: markerShape,
-    symbolSize: labels && !markers ? 0 : markerSize,
-    step: step ? stepPosition : false,
-  }
+  // Compute all the derived state in one $derived.by block to avoid read/write conflicts
+  let computedState = $derived.by(() => {
+    let isSingleSeries = !resolvedSeries && (!Array.isArray(resolvedY) || resolvedY.length === 1)
+    let computedData = data
+    let computedXType = baseXType
+    let computedName = name
+    let computedStackName: string | undefined = undefined
+    let computedDefaultLabelPosition = swapXY ? 'right' : 'top'
 
-  $: seriesConfig = getSeriesConfig(
-    data,
-    x,
-    resolvedY,
-    series,
-    swapXY,
-    baseConfig,
-    name,
-    xMismatch,
-    columnSummary,
-    seriesOrder,
-    undefined,
-    undefined,
-    undefined,
-    seriesLabelFmt,
-  )
+    if (!data || !columnSummary) {
+      return {
+        data: computedData,
+        xType: computedXType,
+        name: computedName,
+        stackName: computedStackName,
+        defaultLabelPosition: computedDefaultLabelPosition,
+      }
+    }
 
-  $: config.update((value) => {
-    value.series.push(...seriesConfig)
-    value.legend.data.push(...seriesConfig.map((entry) => entry.name.toString()))
-    return value
+    if (isSingleSeries) {
+      // Single Series
+      let col = Array.isArray(resolvedY) ? resolvedY[0] : resolvedY
+      if (col && columnSummary[col]) {
+        computedName = computedName ?? formatTitle(col, columnSummary[col].title)
+      }
+    } else {
+      // Multi Series
+      computedStackName = 'area'
+      computedData = getCompletedData(computedData, x, resolvedY, resolvedSeries, false, computedXType === 'value')
+      computedData = replaceNulls(computedData, resolvedY)
+      computedXType = computedXType === 'value' ? 'category' : computedXType
+    }
+
+    // Handle missing values
+    if (handleMissing === 'zero') {
+      computedData = replaceNulls(computedData, resolvedY)
+    }
+
+    return {
+      data: computedData,
+      xType: computedXType,
+      name: computedName,
+      stackName: computedStackName,
+      defaultLabelPosition: computedDefaultLabelPosition,
+    }
   })
 
-  $: if (options) {
-    config.update((value) => ({...value, ...options}))
-  }
+  // Extract computed values for use in template and other derived values
+  let processedData = $derived(computedState.data)
+  let xType = $derived(computedState.xType)
+  let resolvedName = $derived(computedState.name)
+  let resolvedStackName = $derived(computedState.stackName)
+  let defaultLabelPosition = $derived(computedState.defaultLabelPosition)
 
-  $: chartOverrides = {
+  let resolvedLabelPosition = $derived(
+    (swapXY ? swapXYLabelPositions[labelPosition] : labelPositions[labelPosition]) ?? defaultLabelPosition,
+  )
+
+  let chartOverrides = $derived({
     yAxis: {boundaryGap: ['0%', '1%']},
     xAxis: {boundaryGap: ['4%', '4%'], type: xType},
-  }
+  })
 
-  beforeUpdate(() => {
-    config.update((value) => {
-      value.tooltip = {...value.tooltip, order: 'seriesDesc'}
-      if (swapXY) {
-        value.yAxis = {...value.yAxis, ...chartOverrides.xAxis}
-        value.xAxis = {...value.xAxis, ...chartOverrides.yAxis}
-      } else {
-        value.yAxis[0] = {...value.yAxis[0], ...chartOverrides.yAxis}
-        value.xAxis = {...value.xAxis, ...chartOverrides.xAxis}
-      }
-      if (type === 'stacked100') {
-        if (swapXY) value.xAxis = {...value.xAxis, max: 1}
-        else value.yAxis[0] = {...value.yAxis[0], max: 1}
-      }
-      if (labels) value.axisPointer = {triggerEmphasis: false}
-      return value
+  $effect(() => {
+    // Don't run until we have data
+    if (!processedData || !columnSummary) return
+
+    let baseConfig = {
+      type: 'line',
+      stack: resolvedStackName,
+      areaStyle: {color: $fillColorStore, opacity: fillOpacity},
+      connectNulls: handleMissing === 'connect',
+      lineStyle: {width: lineBool ? 1 : 0, color: $lineColorStore},
+      label: {
+        show: labelsBool,
+        formatter: (params: any) =>
+          params.value[swapXY ? 0 : 1] === 0
+            ? ''
+            : formatValue(params.value[swapXY ? 0 : 1], labelFormat ?? yFormat),
+        fontSize: labelSize,
+        color: $labelColorStore,
+        position: resolvedLabelPosition,
+        padding: 3,
+      },
+      labelLayout: {hideOverlap: showAllLabels ? false : true},
+      emphasis: {focus: 'series'},
+      showSymbol: labelsBool || markersBool,
+      symbol: markerShape,
+      symbolSize: labelsBool && !markersBool ? 0 : markerSize,
+      step: stepBool ? stepPosition : false,
+    }
+
+    let seriesConfig = getSeriesConfig(
+      processedData,
+      x,
+      resolvedY,
+      resolvedSeries,
+      swapXY,
+      baseConfig,
+      resolvedName,
+      xMismatch,
+      columnSummary,
+      resolvedSeriesOrder,
+      undefined,
+      undefined,
+      undefined,
+      seriesLabelFmt,
+    )
+
+    config.update((d: any) => {
+      // Guard against incomplete config state
+      if (!d.series) d.series = []
+      if (!d.legend) d.legend = {data: []}
+      if (!d.legend.data) d.legend.data = []
+
+      d.series.push(...seriesConfig)
+      d.legend.data.push(...seriesConfig.map((entry: any) => entry.name.toString()))
+      return d
     })
+  })
+
+  // Use $effect.pre() instead of beforeUpdate for runes mode
+  $effect.pre(() => {
+    if (options) {
+      config.update((d: any) => ({...d, ...options}))
+    }
+
+    if (chartOverrides) {
+      config.update((d: any) => {
+        // Guard against incomplete config state
+        if (!d.yAxis || !Array.isArray(d.yAxis)) return d
+
+        d.tooltip = {...d.tooltip, order: 'seriesDesc'}
+        if (swapXY) {
+          d.yAxis = {...d.yAxis, ...chartOverrides.xAxis}
+          d.xAxis = {...d.xAxis, ...chartOverrides.yAxis}
+        } else {
+          if (d.yAxis[0]) {
+            d.yAxis[0] = {...d.yAxis[0], ...chartOverrides.yAxis}
+          }
+          d.xAxis = {...d.xAxis, ...chartOverrides.xAxis}
+        }
+        if (type === 'stacked100') {
+          if (swapXY) d.xAxis = {...d.xAxis, max: 1}
+          else if (d.yAxis[0]) d.yAxis[0] = {...d.yAxis[0], max: 1}
+        }
+        if (labelsBool) d.axisPointer = {triggerEmphasis: false}
+        return d
+      })
+    }
   })
 </script>
