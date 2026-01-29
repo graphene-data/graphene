@@ -244,5 +244,3 @@ resource "aws_cloudwatch_metric_alarm" "aurora_deadlocks" {
     DBInstanceIdentifier = aws_rds_cluster_instance.graphene.identifier
   }
 }
-
-

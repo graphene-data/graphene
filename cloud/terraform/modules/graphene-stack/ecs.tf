@@ -34,12 +34,6 @@ resource "aws_ecs_express_gateway_service" "cloud" {
     security_groups = [aws_security_group.ecs.id]
   }
 
-  # Workaround for provider bug: AWS returns env vars in different order than sent
-  # https://github.com/hashicorp/terraform-provider-aws/issues/XXXXX
-  lifecycle {
-    ignore_changes = [primary_container, network_configuration, task_role_arn]
-  }
-
   primary_container {
     image          = "${aws_ecr_repository.cloud.repository_url}:latest"
     container_port = 3000
@@ -50,18 +44,6 @@ resource "aws_ecs_express_gateway_service" "cloud" {
     }]
 
     environment {
-      name  = "STYTCH_DOMAIN"
-      value = var.stytch_domain
-    }
-    environment {
-      name  = "STYTCH_PROJECT_ID"
-      value = var.stytch_project_id
-    }
-    secret {
-      name       = "DATABASE_URL"
-      value_from = aws_secretsmanager_secret.database_url.arn
-    }
-    environment {
       name  = "GITHUB_APP_SLUG"
       value = var.github_app_slug
     }
@@ -70,15 +52,25 @@ resource "aws_ecs_express_gateway_service" "cloud" {
       value = var.github_app_id
     }
     environment {
+      name  = "STYTCH_PROJECT_ID"
+      value = var.stytch_project_id
+    }
+    environment {
       name  = "GITHUB_APP_CLIENT_ID"
       value = var.github_app_client_id
     }
-
+    environment {
+      name  = "STYTCH_DOMAIN"
+      value = var.stytch_domain
+    }
+    secret {
+      name       = "DATABASE_URL"
+      value_from = aws_secretsmanager_secret.database_url.arn
+    }
     secret {
       name       = "STYTCH_SECRET"
       value_from = aws_secretsmanager_secret.stytch_secret.arn
     }
-
     secret {
       name       = "GITHUB_APP_WEBHOOK_SECRET"
       value_from = aws_secretsmanager_secret.github_webhook_secret.arn
@@ -100,10 +92,6 @@ resource "aws_ecs_cluster" "main" {
   setting {
     name  = "containerInsights"
     value = "enhanced"
-  }
-
-  lifecycle {
-    ignore_changes = [configuration]
   }
 }
 
