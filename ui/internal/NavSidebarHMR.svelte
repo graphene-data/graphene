@@ -2,7 +2,7 @@
   import navData from 'virtual:nav'
   import NavSidebar from './NavSidebar.svelte'
 
-  export let currentFile = ''
+  let {currentFile = ''} = $props()
 </script>
 
 <NavSidebar files={navData} {currentFile} />

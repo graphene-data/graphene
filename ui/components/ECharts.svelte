@@ -1,24 +1,31 @@
 <script lang="ts">
   import echarts from '../component-utilities/echarts.js'
-  import {createEventDispatcher} from 'svelte'
   import {getThemeStores} from '../component-utilities/themeStores'
+
+  interface Props {
+    config: any
+    height?: string | number
+    width?: string | number
+    data: any
+    queryID?: any
+    renderer?: 'canvas' | 'svg'
+    echartsOptions?: any
+    seriesOptions?: any
+    seriesColors?: any
+    connectGroup?: string
+    xAxisLabelOverflow?: 'truncate' | 'break'
+    chartTitle?: string
+    onclick?: (params: any) => void
+  }
 
   const {activeAppearance} = getThemeStores()
 
-  export let config: any
-  export let height: string | number = '291px'
-  export let width: string | number = '100%'
-  export let data: any
-  export let queryID: any = undefined
-  export let renderer: 'canvas' | 'svg' | undefined = undefined
-  export let echartsOptions: any = undefined
-  export let seriesOptions: any = undefined
-  export let seriesColors: any = undefined
-  export let connectGroup: string | undefined = undefined
-  export let xAxisLabelOverflow: 'truncate' | 'break' | undefined = undefined
-  export let chartTitle: string | undefined = undefined
+  let {
+    config, height = '240px', width = '100%', data, queryID = undefined, renderer = undefined,
+    echartsOptions = undefined, seriesOptions = undefined, seriesColors = undefined,
+    connectGroup = undefined, xAxisLabelOverflow = undefined, chartTitle = undefined, onclick = undefined,
+  }: Props = $props()
 
-  const dispatch = createEventDispatcher()
   const isBrowser = typeof window !== 'undefined'
 
   const toDimension = (dimension: string | number | undefined, fallback: string) => {
@@ -42,14 +49,14 @@
         data,
         echartsOptions,
         seriesOptions,
-        dispatch,
+        onclick,
         renderer,
         connectGroup,
         xAxisLabelOverflow,
         seriesColors,
         theme: $activeAppearance,
       }}
-    />
+    ></div>
   {/if}
 </div>
 

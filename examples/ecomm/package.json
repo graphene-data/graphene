@@ -15,11 +15,10 @@
   "type": "module",
   "dependencies": {
     "@graphenedata/cli": "workspace:*",
-    "svelte": "4.2.19"
+    "svelte": "5.48.0"
   },
   "graphene": {
     "namespace": "bigquery-public-data.thelook_ecommerce",
-    "envFile": "../../../.env",
     "bigquery": {
       "projectId": "intense-acumen-470417-u5"
     }

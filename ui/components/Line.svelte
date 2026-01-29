@@ -1,5 +1,6 @@
-<script>
-  import {beforeUpdate, getContext} from 'svelte'
+<script lang="ts">
+  import {getContext} from 'svelte'
+  import type {Writable} from 'svelte/store'
   import {propKey, configKey} from '../component-utilities/chartContext.js'
   import getSeriesConfig from '../component-utilities/getSeriesConfig.js'
   import formatTitle from '../component-utilities/formatTitle.js'
@@ -10,204 +11,218 @@
   import {toBoolean} from '../component-utilities/convert'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
+  interface Props {
+    y?: any, y2?: any, series?: any, options?: any, name?: any, lineColor?: any, lineWidth?: number
+    lineType?: string, lineOpacity?: any, markers?: boolean | string, markerShape?: string
+    markerSize?: number, labels?: boolean | string, labelSize?: number, labelPosition?: string
+    labelColor?: any, labelFmt?: any, yLabelFmt?: any, y2LabelFmt?: any, showAllLabels?: boolean | string
+    y2SeriesType?: any, handleMissing?: string, step?: boolean | string, stepPosition?: string
+    seriesOrder?: any, seriesLabelFmt?: any
+  }
+
   const {resolveColor} = getThemeStores()
-  const props = getContext(propKey)
-  const config = getContext(configKey)
+  const chartProps: Writable<any> = getContext(propKey)
+  const config: Writable<any> = getContext(configKey)
 
-  export let y = undefined
-  const ySet = !!y
-  export let y2 = undefined
-  const y2Set = !!y2
-  export let series = undefined
-  const seriesSet = !!series
-  export let options = undefined
-  export let name = undefined
+  let {
+    y = undefined, y2 = undefined, series = undefined, options = undefined, name = undefined,
+    lineColor = undefined, lineWidth = 2, lineType = 'solid', lineOpacity = undefined, markers = false,
+    markerShape = 'circle', markerSize = 8, labels = false, labelSize = 11, labelPosition = 'top',
+    labelColor = undefined, labelFmt = undefined, yLabelFmt = undefined, y2LabelFmt = undefined,
+    showAllLabels = false, y2SeriesType = undefined, handleMissing = 'gap', step = false,
+    stepPosition = 'end', seriesOrder = undefined, seriesLabelFmt = undefined,
+  }: Props = $props()
 
-  export let lineColor = undefined
-  $: lineColorStore = resolveColor(lineColor)
+  // Use $derived for values that depend on props
+  let ySet = $derived(y ? true : false)
+  let y2Set = $derived(y2 ? true : false)
+  let seriesSet = $derived(series ? true : false)
 
-  export let lineWidth = 2
-  export let lineType = 'solid'
-  export let lineOpacity = undefined
+  let lineColorStore = $derived(resolveColor(lineColor))
+  let labelColorStore = $derived(resolveColor(labelColor))
+  let markersBool = $derived(toBoolean(markers))
+  let labelsBool = $derived(toBoolean(labels))
+  let showAllLabelsBool = $derived(toBoolean(showAllLabels))
+  let stepBool = $derived(toBoolean(step))
 
-  export let markers = false
-  $: markers = toBoolean(markers)
-  export let markerShape = 'circle'
-  export let markerSize = 8
-
-  export let labels = false
-  $: labels = toBoolean(labels)
-  export let labelSize = 11
-  export let labelPosition = 'top'
-
-  export let labelColor = undefined
-  $: labelColorStore = resolveColor(labelColor)
-
-  export let labelFmt = undefined
-  export let yLabelFmt = undefined
-  export let y2LabelFmt = undefined
-  export let showAllLabels = false
-  $: showAllLabels = toBoolean(showAllLabels)
-
-  export let y2SeriesType = undefined
-  export let handleMissing = 'gap'
-  export let step = false
-  $: step = toBoolean(step)
-  export let stepPosition = 'end'
-  export let seriesOrder = undefined
-  export let seriesLabelFmt = undefined
-
-  let data
-  let x
-  let swapXY
-  let yFormat
-  let y2Format
-  let yCount
-  let y2Count
-  let xType
-  let xMismatch
-  let columnSummary
-  let resolvedY
-  let resolvedY2
-  let labelFormat
-  let yLabelFormat
-  let y2LabelFormat
-  let defaultLabelPosition
-  let chartOverrides
-  let seriesConfig
-
-  if (labelFmt) labelFormat = getFormatObjectFromString(labelFmt)
-  if (yLabelFmt) yLabelFormat = getFormatObjectFromString(yLabelFmt)
-  if (y2LabelFmt) y2LabelFormat = getFormatObjectFromString(y2LabelFmt)
-
-  $: data = $props.data
-  $: x = $props.x
-  $: swapXY = $props.swapXY
-  $: yFormat = $props.yFormat
-  $: y2Format = $props.y2Format
-  $: yCount = $props.yCount
-  $: y2Count = $props.y2Count
-  $: xType = $props.xType
-  $: xMismatch = $props.xMismatch
-  $: columnSummary = $props.columnSummary
-  $: series = seriesSet ? series : $props.series
-  $: resolvedY = ySet ? parseCommaList(y) : $props.y
-  $: resolvedY2 = y2Set ? parseCommaList(y2) : $props.y2
-  $: seriesOrder = parseCommaList(seriesOrder)
-
-  $: {
-    if (!series && (!Array.isArray(resolvedY) || resolvedY.length === 1)) {
-      let col = Array.isArray(resolvedY) ? resolvedY[0] : resolvedY
-      if (columnSummary?.[col]) name = name ?? formatTitle(col, columnSummary[col].title)
-    } else {
-      try {
-        data = getCompletedData(data, x, resolvedY, series)
-      } catch (error) {
-        globalThis.console?.warn('Failed to complete data', {error})
-        data = []
-      }
-    }
-  }
-
-  $: if (handleMissing === 'zero') {
-    try {
-      data = getCompletedData(data, x, resolvedY, series, true)
-    } catch (error) {
-      globalThis.console?.warn('Failed to complete data', {error})
-      data = []
-    }
-  }
+  // Format objects derived from props
+  let labelFormat = $derived(labelFmt ? getFormatObjectFromString(labelFmt) : undefined)
+  let yLabelFormat = $derived(yLabelFmt ? getFormatObjectFromString(yLabelFmt) : undefined)
+  let y2LabelFormat = $derived(y2LabelFmt ? getFormatObjectFromString(y2LabelFmt) : undefined)
 
   const labelPositions = {above: 'top', below: 'bottom', middle: 'inside'}
   const swapXYLabelPositions = {above: 'right', below: 'left', middle: 'inside'}
 
-  $: {
-    defaultLabelPosition = swapXY ? 'right' : 'top'
-    labelPosition = (swapXY ? swapXYLabelPositions[labelPosition] : labelPositions[labelPosition]) ?? defaultLabelPosition
-  }
+  // Derive values from chartProps store instead of using $effect to assign
+  let data = $derived($chartProps.data)
+  let x = $derived($chartProps.x)
+  let swapXY = $derived($chartProps.swapXY)
+  let yFormat = $derived($chartProps.yFormat)
+  let y2Format = $derived($chartProps.y2Format)
+  let yCount = $derived($chartProps.yCount)
+  let y2Count = $derived($chartProps.y2Count)
+  let xType = $derived($chartProps.xType)
+  let xMismatch = $derived($chartProps.xMismatch)
+  let columnSummary = $derived($chartProps.columnSummary)
+  let resolvedSeries = $derived(seriesSet ? series : $chartProps.series)
+  let resolvedY = $derived(ySet ? parseCommaList(y) : $chartProps.y)
+  let resolvedY2 = $derived(y2Set ? parseCommaList(y2) : $chartProps.y2)
+  let resolvedSeriesOrder = $derived(parseCommaList(seriesOrder))
 
-  $: baseConfig = {
-    type: 'line',
-    label: {
-      show: labels,
-      formatter: (params) =>
-        params.value[swapXY ? 0 : 1] === 0
-          ? ''
-          : formatValue(
-            params.value[swapXY ? 0 : 1],
-            [yLabelFormat ?? labelFormat ?? yFormat, y2LabelFormat ?? labelFormat ?? y2Format][
-              getYAxisIndex(params.componentIndex, yCount, y2Count)
-            ],
-          ),
-      fontSize: labelSize,
-      color: $labelColorStore,
-      position: labelPosition,
-      padding: 3,
-    },
-    labelLayout: {hideOverlap: showAllLabels ? false : true},
-    connectNulls: handleMissing === 'connect',
-    emphasis: {
-      focus: 'series',
-      endLabel: {show: false},
-      lineStyle: {opacity: 1, width: 3},
-    },
-    lineStyle: {width: parseInt(lineWidth), type: lineType, opacity: lineOpacity},
-    itemStyle: {color: $lineColorStore, opacity: lineOpacity},
-    showSymbol: labels || markers,
-    symbol: markerShape,
-    symbolSize: labels && !markers ? 0 : markerSize,
-    step: step ? stepPosition : false,
-  }
+  // Compute all the derived state in one $derived.by block to avoid read/write conflicts
+  let computedState = $derived.by(() => {
+    let isSingleSeries = !resolvedSeries && (!Array.isArray(resolvedY) || resolvedY.length === 1)
+    let computedData = data
+    let computedName = name
+    let computedDefaultLabelPosition = swapXY ? 'right' : 'top'
 
-  $: seriesConfig = getSeriesConfig(
-    data,
-    x,
-    resolvedY,
-    series,
-    swapXY,
-    baseConfig,
-    name,
-    xMismatch,
-    columnSummary,
-    seriesOrder,
-    undefined,
-    undefined,
-    resolvedY2,
-    seriesLabelFmt,
-  )
+    if (!data || !columnSummary) {
+      return {
+        data: computedData,
+        name: computedName,
+        defaultLabelPosition: computedDefaultLabelPosition,
+      }
+    }
 
-  $: config.update((value) => {
-    value.series.push(...seriesConfig)
-    value.legend.data.push(...seriesConfig.map((entry) => entry.name.toString()))
-    return value
+    if (isSingleSeries) {
+      // Single Series
+      let col = Array.isArray(resolvedY) ? resolvedY[0] : resolvedY
+      if (col && columnSummary[col]) {
+        computedName = computedName ?? formatTitle(col, columnSummary[col].title)
+      }
+    } else {
+      // Multi Series
+      try {
+        computedData = getCompletedData(computedData, x, resolvedY, resolvedSeries)
+      } catch (error) {
+        globalThis.console?.warn('Failed to complete data', {error})
+        computedData = []
+      }
+    }
+
+    // Handle missing values
+    if (handleMissing === 'zero') {
+      try {
+        computedData = getCompletedData(computedData, x, resolvedY, resolvedSeries, true)
+      } catch (error) {
+        globalThis.console?.warn('Failed to complete data', {error})
+        computedData = []
+      }
+    }
+
+    return {
+      data: computedData,
+      name: computedName,
+      defaultLabelPosition: computedDefaultLabelPosition,
+    }
   })
 
-  $: if (options) config.update((value) => ({...value, ...options}))
+  // Extract computed values for use in template and other derived values
+  let processedData = $derived(computedState.data)
+  let resolvedName = $derived(computedState.name)
+  let defaultLabelPosition = $derived(computedState.defaultLabelPosition)
 
-  $: chartOverrides = {
+  let resolvedLabelPosition = $derived(
+    (swapXY ? swapXYLabelPositions[labelPosition] : labelPositions[labelPosition]) ?? defaultLabelPosition,
+  )
+
+  let chartOverrides = $derived({
     yAxis: {boundaryGap: ['0%', '1%']},
     xAxis: {boundaryGap: [xType === 'time' ? '2%' : '0%', '2%']},
-  }
+  })
 
-  beforeUpdate(() => {
-    config.update((value) => {
+  $effect(() => {
+    // Don't run until we have data
+    if (!processedData || !columnSummary) return
+
+    let baseConfig = {
+      type: 'line',
+      label: {
+        show: labelsBool,
+        formatter: (params: any) =>
+          params.value[swapXY ? 0 : 1] === 0
+            ? ''
+            : formatValue(
+              params.value[swapXY ? 0 : 1],
+              [yLabelFormat ?? labelFormat ?? yFormat, y2LabelFormat ?? labelFormat ?? y2Format][
+                getYAxisIndex(params.componentIndex, yCount, y2Count)
+              ],
+            ),
+        fontSize: labelSize,
+        color: $labelColorStore,
+        position: resolvedLabelPosition,
+        padding: 3,
+      },
+      labelLayout: {hideOverlap: showAllLabelsBool ? false : true},
+      connectNulls: handleMissing === 'connect',
+      emphasis: {
+        focus: 'series',
+        endLabel: {show: false},
+        lineStyle: {opacity: 1, width: 3},
+      },
+      lineStyle: {width: parseInt(lineWidth as string), type: lineType, opacity: lineOpacity},
+      itemStyle: {color: $lineColorStore, opacity: lineOpacity},
+      showSymbol: labelsBool || markersBool,
+      symbol: markerShape,
+      symbolSize: labelsBool && !markersBool ? 0 : markerSize,
+      step: stepBool ? stepPosition : false,
+    }
+
+    let seriesConfig = getSeriesConfig(
+      processedData,
+      x,
+      resolvedY,
+      resolvedSeries,
+      swapXY,
+      baseConfig,
+      resolvedName,
+      xMismatch,
+      columnSummary,
+      resolvedSeriesOrder,
+      undefined,
+      undefined,
+      resolvedY2,
+      seriesLabelFmt,
+    )
+
+    config.update((d: any) => {
+      // Guard against incomplete config state
+      if (!d.series) d.series = []
+      if (!d.legend) d.legend = {data: []}
+      if (!d.legend.data) d.legend.data = []
+
+      d.series.push(...seriesConfig)
+      d.legend.data.push(...seriesConfig.map((entry: any) => entry.name.toString()))
+      return d
+    })
+  })
+
+  // Use $effect.pre() instead of beforeUpdate for runes mode
+  $effect.pre(() => {
+    if (options) {
+      config.update((d: any) => ({...d, ...options}))
+    }
+
+    if (!chartOverrides) return
+    config.update((d: any) => {
+      if (!d.yAxis || !Array.isArray(d.yAxis)) return d
       if (swapXY) {
-        value.yAxis = {...value.yAxis, ...chartOverrides.xAxis}
-        value.xAxis = {...value.xAxis, ...chartOverrides.yAxis}
-      } else {
-        value.yAxis[0] = {...value.yAxis[0], ...chartOverrides.yAxis}
-        value.xAxis = {...value.xAxis, ...chartOverrides.xAxis}
-        if (y2Count > 0) {
-          value.yAxis[1] = {...value.yAxis[1], show: true}
-          if (['line', 'bar', 'scatter'].includes(y2SeriesType)) {
-            for (let index = 0; index < y2Count; index++) {
-              value.series[yCount + index].type = y2SeriesType
-            }
-          }
+        d.yAxis = {...d.yAxis, ...chartOverrides.xAxis}
+        d.xAxis = {...d.xAxis, ...chartOverrides.yAxis}
+        if (labelsBool) d.axisPointer = {triggerEmphasis: false}
+        return d
+      }
+      if (d.yAxis[0]) d.yAxis[0] = {...d.yAxis[0], ...chartOverrides.yAxis}
+      d.xAxis = {...d.xAxis, ...chartOverrides.xAxis}
+      if (y2Count > 0 && d.yAxis[1]) {
+        d.yAxis[1] = {...d.yAxis[1], show: true}
+        let shouldSetY2Type = y2SeriesType && ['line', 'bar', 'scatter'].includes(y2SeriesType) && d.series
+        for (let i = 0; shouldSetY2Type && i < y2Count; i++) {
+          if (d.series[yCount + i]) d.series[yCount + i].type = y2SeriesType
         }
       }
-      if (labels) value.axisPointer = {triggerEmphasis: false}
-      return value
+      if (labelsBool) d.axisPointer = {triggerEmphasis: false}
+      return d
     })
   })
 </script>

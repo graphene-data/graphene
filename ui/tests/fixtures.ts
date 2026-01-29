@@ -84,8 +84,8 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
       }
 
       await use({
-        url: (options: Config = {} as Config) => {
-          setConfig({...options, root: options.root || viteRoot, port})
+        url: (options: Partial<Config> = {}) => {
+          setConfig({...options, root: options.root || viteRoot, port} as any)
           loadWorkspace(config.root, false)
           onTestFinished(cleanup)
           return `http://localhost:${port}`
@@ -117,15 +117,22 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
       let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
       let resolvedComponentPath = path.resolve(uiRoot, componentPath)
       let browserPath = '/@fs/' + resolvedComponentPath.replace(/\\/g, '/')
+      // Wait for web.js to finish loading (which sets up window.$GRAPHENE and loads svelte)
+      await page.waitForFunction(() => window.$GRAPHENE?.components)
+
+      // Dynamic import of both svelte and component together - this ensures Vite
+      // transforms the imports and we get the same module instances
       await page.addScriptTag({type: 'module', content: `
-        import Component from ${JSON.stringify(browserPath)}
+        // Import svelte via dynamic import so Vite can resolve it properly
+        const svelte = await import('/node_modules/.vite/deps/svelte.js')
+        const {default: Component} = await import(${JSON.stringify(browserPath)})
 
         document.getElementById('nav').remove()
         let el = document.createElement('div')
         el.id = 'component-test'
         document.getElementById('content').appendChild(el)
 
-        window.__inst = new Component({target: el, props: window.__props})
+        window.__inst = svelte.mount(Component, {target: el, props: window.__props})
       `})
     }
 

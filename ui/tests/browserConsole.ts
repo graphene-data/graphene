@@ -52,9 +52,11 @@ export function trackerBrowserConsole (page: Page) {
   }
   let onPageError = (error: Error) => {
     let text = (error.message || String(error)).trim()
+    let stack = error.stack || ''
     errors.push(text)
     if (isExpected(text)) return
     console.error(`[browser error] ${text}`)
+    if (stack) console.error(`[browser stack] ${stack}`)
   }
 
   page.on('console', onConsole)

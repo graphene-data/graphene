@@ -1,11 +1,15 @@
 <script lang="ts">
   import QueryLoad from './QueryLoad.svelte'
 
-  export let data: string | {rows?: any[]}
-  export let value: string | undefined = undefined
-  export let fmt: string | undefined = undefined
-  export let title: string | undefined = undefined
-  export let subtitle: string | undefined = undefined
+  interface Props {
+    data: string | {rows?: any[]}
+    value?: string
+    fmt?: string
+    title?: string
+    subtitle?: string
+  }
+
+  let {data, value = undefined, fmt = undefined, title = undefined, subtitle = undefined}: Props = $props()
 
   function formatValue (input: any) {
     if (input === null || input === undefined) return '—'
@@ -34,13 +38,15 @@
   }
 </script>
 
-<QueryLoad {data} fields={{value}} let:loaded>
+{#snippet bigValueContent(loaded: any[])}
   <div class="big-value">
     {#if title}<div class="big-value__title">{title}</div>{/if}
     {#if subtitle}<div class="big-value__subtitle">{subtitle}</div>{/if}
     <div class="big-value__value">{formatValue(loaded?.[0]?.[value])}</div>
   </div>
-</QueryLoad>
+{/snippet}
+
+<QueryLoad {data} fields={{value}} children={bigValueContent} />
 
 <style>
   .big-value {

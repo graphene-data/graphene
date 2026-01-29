@@ -6,20 +6,29 @@
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import {getThemeStores} from '../component-utilities/themeStores'
 
-  export let displayedData: any[] = []
-  export let rowShading: boolean | string | undefined = undefined
-  export let link: string | undefined = undefined
-  export let rowNumbers: boolean | string | undefined = undefined
-  export let rowLines: boolean | string | undefined = undefined
-  export let index = 0
-  export let columnSummary: any[] = []
-  export let grouped = false
-  export let groupType: 'accordion' | 'section' | undefined = undefined
-  export let groupColumn: string | undefined = undefined
-  export let rowSpan = 1
-  export let groupNamePosition: 'top' | 'middle' | 'bottom' = 'middle'
-  export let orderedColumns: any[] = []
-  export let compact: boolean | string | undefined = undefined
+  interface Props {
+    displayedData?: any[]
+    rowShading?: boolean | string
+    link?: string
+    rowNumbers?: boolean | string
+    rowLines?: boolean | string
+    index?: number
+    columnSummary?: any[]
+    grouped?: boolean
+    groupType?: 'accordion' | 'section'
+    groupColumn?: string
+    rowSpan?: number
+    groupNamePosition?: 'top' | 'middle' | 'bottom'
+    orderedColumns?: any[]
+    compact?: boolean | string
+  }
+
+  let {
+    displayedData = [], rowShading: rowShadingProp = undefined, link = undefined,
+    rowNumbers: rowNumbersProp = undefined, rowLines: rowLinesProp = undefined, index = 0,
+    columnSummary = [], grouped = false, groupType = undefined, groupColumn = undefined,
+    rowSpan = 1, groupNamePosition = 'middle', orderedColumns = [], compact: compactProp = undefined,
+  }: Props = $props()
 
   const {theme} = getThemeStores()
 
@@ -66,10 +75,10 @@
     return Boolean(val)
   }
 
-  rowShading = toBool(rowShading)
-  rowNumbers = toBool(rowNumbers)
-  rowLines = toBool(rowLines ?? true)
-  compact = toBool(compact)
+  let rowShading = $derived(toBool(rowShadingProp))
+  let rowNumbers = $derived(toBool(rowNumbersProp))
+  let rowLines = $derived(toBool(rowLinesProp ?? true))
+  let compact = $derived(toBool(compactProp))
 
   const isExternalUrl = (url: string) => {
     try {
@@ -105,7 +114,7 @@
     class:table-row--shaded={shaded}
     class:table-row--lined={rowLines}
     class:table-row--clickable={clickable}
-    on:click={(event) => clickable && navigateToLink(row, event)}
+    onclick={(event) => clickable && navigateToLink(row, event)}
   >
     {#if rowNumbers && groupType !== 'section'}
       <TableCell class="index" {compact}>
