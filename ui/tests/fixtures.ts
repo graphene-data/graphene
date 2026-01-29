@@ -6,7 +6,7 @@ import {fileURLToPath} from 'url'
 import net from 'net'
 import {type Config, config, setConfig} from '../../lang/config.ts'
 import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
-import {serve2} from '../../cli/serve2.ts'
+import {serve2, svelteWarnings, clearSvelteWarnings} from '../../cli/serve2.ts'
 import {assertConsoleErrors, trackerBrowserConsole} from './browserConsole.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 
@@ -48,7 +48,15 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
     let context = await browser.newContext()
     let page = await context.newPage()
     trackerBrowserConsole(page)
-    onTestFinished(() => assertConsoleErrors(page))
+    clearSvelteWarnings()
+
+    onTestFinished(() => {
+      assertConsoleErrors(page)
+      if (svelteWarnings.length) {
+        let formatted = svelteWarnings.map(w => `  - [${w.code}] ${w.message} (${w.filename})`).join('\n')
+        throw new Error(`Unexpected Svelte warnings:\n${formatted}`)
+      }
+    })
     await use(page)
     if (process.env.GRAPHENE_DEBUG) await new Promise(() => { })
     await context.close()
