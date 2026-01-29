@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {go} from '../router.ts'
-  import {authClient, session, AuthFlowType, StytchEventType} from '../authClient.ts'
+  import {authClient, session, AuthFlowType, StytchEventType, loginUrl, baseDomain} from '../authClient.ts'
 
   export let mode: 'login' | 'authenticate' = 'login'
 
@@ -11,10 +11,7 @@
     if (mode === 'authenticate') {
       stytch.mountIdentityProvider({elementId: '#stytch-login'})
     } else {
-      // Check if this is a password reset flow by looking for stytch_token_type=multi_tenant_passwords
       let url = new URL(window.location.href)
-      let tokenType = url.searchParams.get('stytch_token_type')
-      let isPasswordReset = tokenType === 'multi_tenant_passwords'
 
       stytch.mount({
         elementId: '#stytch-login',
@@ -28,7 +25,7 @@
               let next = url.searchParams.get('next') || '/'
 
               if (orgSlug && !window.location.hostname.includes('localhost')) {
-                window.location.href = `https://${orgSlug}.graphenedata.com${next}`
+                window.location.href = `https://${orgSlug}.${baseDomain}${next}`
               } else {
                 go(next)
               }
@@ -36,14 +33,11 @@
           },
         },
         config: {
-          authFlowType: isPasswordReset ? AuthFlowType.PasswordReset : AuthFlowType.Discovery,
+          authFlowType: AuthFlowType.Discovery,
           sessionOptions: {sessionDurationMinutes: 60 * 24 * 30},
           products: ['passwords'],
-          passwordOptions: {
-            resetPasswordRedirectURL: window.location.hostname.includes('localhost')
-              ? `${window.location.origin}/login`
-              : 'https://login.graphenedata.com/login',
-          },
+          passwordOptions: {resetPasswordRedirectURL: loginUrl},
+          // Auto-login if user is only a member of one organization
           directLoginForSingleMembership: {
             status: true,
             ignoreInvites: true,
