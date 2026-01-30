@@ -8,7 +8,7 @@
   <body>
     <script type="module">
       await import('/main.ts');
-      new window.$GRAPHENE.App({target: document.body});
+      window.$GRAPHENE.mount(window.$GRAPHENE.App, {target: document.body});
     </script>
   </body>
 </html>

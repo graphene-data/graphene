@@ -1,19 +1,21 @@
 <script lang="ts">
-  import {onDestroy} from 'svelte'
+  import {onDestroy, mount, unmount} from 'svelte'
   import {go} from '../router.ts'
   import NavSidebar from '../../../core/ui/internal/NavSidebar.svelte'
 
-  export let slug: string
+  let {slug}: {slug: string} = $props()
 
   let container: HTMLElement
   let instance: any
-  let loading = true
-  let error = ''
-  let navFiles: string[] = []
+  let loading = $state(true)
+  let error = $state('')
+  let navFiles: string[] = $state([])
 
-  $: repoSlug = slug.split('/')[1] || ''
+  let repoSlug = $derived(slug.split('/')[1] || '')
 
-  $: if (repoSlug) fetchNavFiles(repoSlug)
+  $effect(() => {
+    if (repoSlug) fetchNavFiles(repoSlug)
+  })
 
   async function fetchNavFiles (slug: string) {
     try {
@@ -29,7 +31,7 @@
   const loadPage = async (target: string) => {
     loading = true
     error = ''
-    instance?.$destroy()
+    if (instance) unmount(instance)
     instance = null
     // eslint-disable-next-line svelte/no-dom-manipulating -- clearing container for dynamic svelte component mount
     if (container) container.innerHTML = ''
@@ -50,7 +52,7 @@
       let code = contentType.includes('json') ? '' : await res.text()
       let blob = new Blob([code], {type: 'text/javascript'})
       let mod = await import(/* @vite-ignore */ URL.createObjectURL(blob))
-      instance = new mod.default({target: container})
+      instance = mount(mod.default, {target: container})
     } catch (cause) {
       console.error(cause)
       error = cause instanceof Error ? cause.message : 'Failed to load page.'
@@ -59,15 +61,17 @@
     }
   }
 
-  let currentSlug = ''
+  let currentSlug = $state('')
 
-  $: if (slug && slug !== currentSlug) {
-    currentSlug = slug
-    loadPage(slug)
-  }
+  $effect(() => {
+    if (slug && slug !== currentSlug) {
+      currentSlug = slug
+      loadPage(slug)
+    }
+  })
 
   onDestroy(() => {
-    instance?.$destroy()
+    if (instance) unmount(instance)
   })
 </script>
 

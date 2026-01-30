@@ -22,4 +22,8 @@ export default defineConfig({
     outDir: path.join(frontendDir, '../dist'),
     emptyOutDir: true,
   },
+  optimizeDeps: {
+    // Don't pre-bundle svelte components from core/ui, let vite-plugin-svelte handle them fresh
+    exclude: ['svelte'],
+  },
 })

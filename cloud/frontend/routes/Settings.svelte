@@ -16,7 +16,7 @@
           href={page.path}
           class="nav-item"
           class:active={$route === page.path}
-          on:click|preventDefault={() => go(page.path)}
+          onclick={(e) => { e.preventDefault(); go(page.path) }}
         >
           {page.label}
         </a>

@@ -56,7 +56,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
       stopTrackingConsole(page)
     })
     await use(page)
-    if (process.env.GRAPHENE_DEBUG) await page.pause()
+    if (process.env.GRAPHENE_DEBUG) await new Promise(() => { })
     await context.close()
   },
 })

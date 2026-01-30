@@ -5,13 +5,13 @@
   import Settings from './routes/Settings.svelte'
   import {route, go} from './router.ts'
 
-  $: {
+  $effect(() => {
     if (!$session) {
       let next = encodeURIComponent(`${window.location.pathname || '/'}${window.location.search || ''}`)
       next = next != '%2F' ? `?next=${next}` : ''
       if ($route !== '/login') go(`/login${next}`)
     }
-  }
+  })
 </script>
 
 {#if $route === '/login'}<main><Login /></main>

@@ -70,7 +70,7 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
   if (!svelteSource) return reply.code(500).send({error: 'Failed to compile page'})
 
   let compiled = svelteCompile(svelteSource.code, {
-    generate: 'dom',
+    generate: 'client',
     dev: !PROD,
   })
   let code = rewriteSvelteImports(compiled.js.code, repo.id)
@@ -82,16 +82,15 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
 // The generated Svelte component is going to import a bunch of Svelte internals and visualization components.
 // Because we're doing this at runtime and we don't have a bundler, we need to figure out a way to make these imports work.
 // For now just do the simple thing and rewrite them to import from a global that we set in main.ts
-function rewriteSvelteImports (code: string, repoId: string) {
-  let runtimeImportPattern = /import\s*\{\s*([^}]*)\}\s*from\s*["']svelte\/internal["'];?\s*/m
+function rewriteSvelteImports (code: string, repoId: string, inline = false) {
+  // Svelte 5 uses 'svelte/internal/client' with namespace import
+  let runtimeImportPattern = /import\s*\*\s*as\s*(\$)\s*from\s*["']svelte\/internal\/client["'];?\s*/m
   let runtimeMatch = code.match(runtimeImportPattern)
   if (!runtimeMatch) throw new Error('Couldnt find expected imports in generated svelte')
 
-  let svelteInternalImports = runtimeMatch[1].split(',').map(s => s.trim()).filter(Boolean)
   let prelude = [
-    'const __svelte = window.$GRAPHENE?.svelte;',
-    "if (!__svelte) throw new Error('Graphene runtime is missing Svelte internals');",
-    `const {${svelteInternalImports.join(', ')}} = __svelte;`,
+    'const $ = window.$GRAPHENE?.svelte;',
+    "if (!$) throw new Error('Graphene runtime is missing Svelte internals');",
     `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`,
     `window.$GRAPHENE.repoId = ${JSON.stringify(repoId)};`,
     '',
@@ -99,8 +98,24 @@ function rewriteSvelteImports (code: string, repoId: string) {
 
   code = code.replace(runtimeImportPattern, `${prelude}`)
 
-  // not sure what this is, or if we need it, so just removing for now
+  // Remove version disclosure imports (Svelte 5)
   code = code.replace(/import\s+["']svelte\/internal\/disclose-version["'];?\s*/m, '')
+  // Remove legacy flags import (Svelte 5)
+  code = code.replace(/import\s+["']svelte\/internal\/flags\/legacy["'];?\s*/m, '')
+  // Remove filename metadata lines (pattern like: ComponentName[$.FILENAME] = 'filename';)
+  // This line tries to set a property on the component before it's defined
+  code = code.replace(/\w+\[\$\.FILENAME\]\s*=\s*['"][^'"]*['"];?\s*/gm, '')
+
+  if (inline) {
+    // For inline use: Convert 'export default function ComponentName' to 'const Component = function ComponentName'
+    // This allows the component to be used inline without ES module exports
+    code = code.replace(/export\s+default\s+function\s+(\w+)/m, 'const Component = function $1')
+  }
+  // Keep 'export default' for dynamic import via blob URL (non-inline case)
+
+  // Handle the case where add_locations references the FILENAME
+  // Replace ComponentName[$.FILENAME] with a simple string in add_locations calls
+  code = code.replace(/(\w+)\[\$\.FILENAME\]/g, '"dynamic.md"')
 
   return code
 }
@@ -123,8 +138,8 @@ export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
   })
   if (!svelteSource) return reply.code(500).send({error: 'Failed to compile markdown'})
 
-  let compiled = svelteCompile(svelteSource.code, {generate: 'dom', dev: !PROD})
-  let componentCode = rewriteSvelteImports(compiled.js.code, claims.repoId)
+  let compiled = svelteCompile(svelteSource.code, {generate: 'client', dev: !PROD})
+  let componentCode = rewriteSvelteImports(compiled.js.code, claims.repoId, true)
 
   // Return HTML page that loads the frontend and mounts the component
   let html = `<!DOCTYPE html>
@@ -147,8 +162,8 @@ export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
     // Component code
     ${componentCode}
 
-    // Mount component
-    new Component({ target: document.getElementById('content') });
+    // Mount component (Svelte 5 uses mount from svelte)
+    window.$GRAPHENE.mount(Component, { target: document.getElementById('content') });
   </script>
 </body>
 </html>`

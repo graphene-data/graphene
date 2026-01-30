@@ -3,7 +3,7 @@
   import {go} from '../router.ts'
   import {authClient, session, AuthFlowType, StytchEventType, loginUrl, baseDomain} from '../authClient.ts'
 
-  export let mode: 'login' | 'authenticate' = 'login'
+  let {mode = 'login'}: {mode?: 'login' | 'authenticate'} = $props()
 
   onMount(() => {
     let stytch = authClient()

@@ -2,9 +2,9 @@
   import {onMount} from 'svelte'
   import AgentMessages from './internal/agentMessages.svelte'
 
-  let messages = []
-  let prompt = ''
-  let content
+  let messages = $state([])
+  let prompt = $state('')
+  let content = $state(undefined)
   let promptField
 
   async function updateContent (fileName) {
@@ -259,14 +259,14 @@
       </div>
     </section>
 
-    <form class="prompt" on:submit|preventDefault={submitPrompt}>
+    <form class="prompt" onsubmit={(e) => { e.preventDefault(); submitPrompt() }}>
       <div class="prompt__field">
         <textarea
           bind:this={promptField}
           bind:value={prompt}
-          on:input={handlePromptInput}
-          on:keydown={handleKeyDown}
-        />
+          oninput={handlePromptInput}
+          onkeydown={handleKeyDown}
+        ></textarea>
         <div class="prompt__footer">
           <span class="prompt__hint"></span>
           <button type="submit" class="prompt__run">Run</button>
@@ -277,8 +277,9 @@
 
   <main class="workspace">
     {#if content}
+      {@const DynamicContent = content}
       <div class="workspace__content">
-        <svelte:component this={content} />
+        <DynamicContent />
       </div>
     {:else}
       <div class="workspace__empty">

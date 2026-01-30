@@ -1,13 +1,15 @@
 <script>
-  import {afterUpdate, beforeUpdate, onMount} from 'svelte'
+  import {onMount} from 'svelte'
+  import {SvelteMap} from 'svelte/reactivity'
   import {marked} from 'marked'
   import DOMPurify from 'dompurify'
 
-  export let messages = []
+  let {messages = []} = $props()
 
-  let grapheneRoot = typeof window !== 'undefined' && window.grapheneRoot ? window.grapheneRoot : ''
+  let initialRoot = typeof window !== 'undefined' && window.grapheneRoot ? window.grapheneRoot : ''
+  let grapheneRoot = $derived(findGrapheneRoot(messages) || initialRoot)
   let container
-  let stickToBottom = true
+  let stickToBottom = $state(true)
   const BOTTOM_BUFFER = 40
 
   // Marked produces HTML from markdown; DOMPurify keeps it safe for injection.
@@ -19,15 +21,13 @@
     return sanitizeHtml(html)
   }
 
-  $: displayMessages = buildDisplayMessages(messages)
+  let displayMessages = $derived(buildDisplayMessages(messages))
 
   function buildDisplayMessages (source) {
-    grapheneRoot = findGrapheneRoot(source) || grapheneRoot
     let combined = []
-    let toolIndex = new Map()
+    let toolIndex = new SvelteMap()
 
     for (let message of source) {
-      if (message.type === 'system' && message.cwd) grapheneRoot = message.cwd
       if (message.type === 'assistant' && message.message?.content) {
         for (let chunk of message.message.content) {
           if (chunk.type === 'text') {
@@ -131,11 +131,15 @@
     handleScroll()
   })
 
-  beforeUpdate(() => {
+  $effect.pre(() => {
+    // Access displayMessages to track changes
+    void displayMessages
     handleScroll()
   })
 
-  afterUpdate(() => {
+  $effect(() => {
+    // Access displayMessages to track changes
+    void displayMessages
     if (!container) return
     if (stickToBottom) container.scrollTop = container.scrollHeight
     handleScroll()
@@ -270,7 +274,7 @@
   }
 </style>
 
-<div class="messages-container" bind:this={container} on:scroll={handleScroll}>
+<div class="messages-container" bind:this={container} onscroll={handleScroll}>
   {#each displayMessages as item (item.id)}
     {#if item.kind === 'assistant-text'}
       <div class="message message-assistant">

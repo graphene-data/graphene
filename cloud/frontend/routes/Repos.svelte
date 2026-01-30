@@ -11,17 +11,17 @@
     repoId: string | null
   }
 
-  let loading = true
-  let error = ''
-  let hasInstallation = false
-  let availableRepos: AvailableRepo[] = []
-  let adding = false
-  let removing: string | null = null
+  let loading = $state(true)
+  let error = $state('')
+  let hasInstallation = $state(false)
+  let availableRepos: AvailableRepo[] = $state([])
+  let adding = $state(false)
+  let removing: string | null = $state(null)
 
   // Form state for adding a repo
-  let selectedRepo: AvailableRepo | null = null
-  let slug = ''
-  let folder = ''
+  let selectedRepo: AvailableRepo | null = $state(null)
+  let slug = $state('')
+  let folder = $state('')
 
   onMount(async () => {
     try {
@@ -115,7 +115,7 @@
   <div class="header">
     <h1>Repositories</h1>
     {#if hasInstallation}
-      <button class="connect-btn" on:click={connectGitHub}>
+      <button class="connect-btn" onclick={connectGitHub}>
         Connect GitHub
       </button>
     {/if}
@@ -128,12 +128,12 @@
   {:else if !hasInstallation}
     <div class="empty-state">
       <p>Connect your GitHub account to sync repositories with Graphene.</p>
-      <button class="connect-btn" on:click={connectGitHub}>Connect GitHub</button>
+      <button class="connect-btn" onclick={connectGitHub}>Connect GitHub</button>
     </div>
   {:else if availableRepos.length === 0}
     <div class="empty-state">
       <p>No repositories available. Grant access to repositories in your GitHub App settings.</p>
-      <button class="connect-btn" on:click={connectGitHub}>Manage GitHub App</button>
+      <button class="connect-btn" onclick={connectGitHub}>Manage GitHub App</button>
     </div>
   {:else if selectedRepo}
     <div class="add-form">
@@ -152,8 +152,8 @@
       </label>
 
       <div class="form-actions">
-        <button class="secondary-btn" on:click={cancelSelection} disabled={adding}>Cancel</button>
-        <button class="primary-btn" on:click={addRepo} disabled={adding || !slug}>
+        <button class="secondary-btn" onclick={cancelSelection} disabled={adding}>Cancel</button>
+        <button class="primary-btn" onclick={addRepo} disabled={adding || !slug}>
           {adding ? 'Adding...' : 'Add Repository'}
         </button>
       </div>
@@ -169,11 +169,11 @@
             <span class="repo-branch">{repo.defaultBranch}</span>
           </div>
           {#if repo.added}
-            <button class="remove-btn" on:click={() => removeRepo(repo)} disabled={removing === repo.id}>
+            <button class="remove-btn" onclick={() => removeRepo(repo)} disabled={removing === repo.id}>
               {removing === repo.id ? 'Removing...' : 'Remove'}
             </button>
           {:else}
-            <button class="add-btn" on:click={() => selectRepo(repo)}>Add</button>
+            <button class="add-btn" onclick={() => selectRepo(repo)}>Add</button>
           {/if}
         </li>
       {/each}

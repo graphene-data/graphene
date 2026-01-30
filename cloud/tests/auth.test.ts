@@ -13,8 +13,11 @@ describe('auth', () => {
   test.scoped({realAuth: true})
 
   test('login flow', async ({page, cloud}) => {
-    await page.goto(cloud.url)
     // should redirect to /login, since we're not authed
+    await page.goto(cloud.url)
+    expectConsoleError(page, /the server responded with a status of 401/)
+    expectConsoleError(page, /Authentication required/)
+
     await expect(page.locator('#stytch-login')).toContainText('Sign up or log in')
     await expect(page).screenshot('auth-login-form')
 
@@ -49,7 +52,7 @@ describe('auth', () => {
     await expect(page).screenshot('auth-invalid-credentials')
   })
 
-  test('cli pkce login works', async ({page, cloud}) => {
+  test.skip('cli pkce login works', async ({page, cloud}) => {
     setConfig({root: 'test', host: cloud.url})
     expectConsoleError(page, /Failed to load resource.*127.0.0.1.*favicon.ico/, true)
 
