@@ -26,9 +26,9 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   browser: async ({}, use) => {
     let b = await chromium.launch({
       headless: !process.env.GRAPHENE_DEBUG,
-      devtools: !!process.env.GRAPHENE_DEBUG,
       args: [
         '--font-render-hinting=none', // Consistent font rendering across platforms
+        ...(process.env.GRAPHENE_DEBUG ? ['--auto-open-devtools-for-tabs'] : []),
       ],
     })
     await use(b)

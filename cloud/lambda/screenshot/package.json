@@ -11,7 +11,7 @@
     "deploy": "npm run build && npm run upload && npm run update && aws lambda wait function-updated --function-name graphene-screenshot"
   },
   "dependencies": {
-    "playwright-core": "^1.54.2"
+    "playwright-core": "^1.58.0"
   },
   "devDependencies": {
     "@sparticuz/chromium": "^143.0.4"
