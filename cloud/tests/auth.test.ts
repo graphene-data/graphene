@@ -52,7 +52,8 @@ describe('auth', () => {
     await expect(page).screenshot('auth-invalid-credentials')
   })
 
-  test.skip('cli pkce login works', async ({page, cloud}) => {
+  // Skip: Stytch IDP/connected apps feature needs to be configured in test project
+  test('cli pkce login works', async ({page, cloud}) => {
     setConfig({root: 'test', host: cloud.url})
     expectConsoleError(page, /Failed to load resource.*127.0.0.1.*favicon.ico/, true)
 
