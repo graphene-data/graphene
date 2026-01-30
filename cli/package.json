@@ -6,7 +6,7 @@
   "version": "0.0.13",
   "license": "Elastic-2.0",
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "files": [
     "dist",
