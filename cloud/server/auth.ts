@@ -4,7 +4,7 @@ import {B2BClient} from 'stytch'
 import type {AuthContext} from './types.js'
 import {getDb} from './db.ts'
 import {orgs} from '../schema.ts'
-import {PROD, TEST} from './consts.ts'
+import {DOMAIN, PROD, TEST} from './consts.ts'
 
 export type {AuthContext}
 
@@ -45,7 +45,8 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
   // Validate subdomain matches user's org
   let host = (req.hostname || '').split(':')[0]
   if (PROD || host.includes('.')) {
-    let base = PROD ? '.graphenedata.com' : '.localhost'
+    let base = '.localhost'
+    if (PROD) base = '.' + DOMAIN
     let subdomain = host.replace(base, '')
     let org = await (getDb()).select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, req.auth.orgId)).then(rows => rows[0])
     if (!org) throw new Error('Missing org for logged in user')

@@ -6,7 +6,7 @@ import {Octokit} from '@octokit/rest'
 import {auth} from './auth.ts'
 import {getDb} from './db.ts'
 import {vcsInstallations, repos, files} from '../schema.ts'
-import {PROD} from './consts.ts'
+import {DOMAIN, PROD} from './consts.ts'
 
 let app: App | null = null
 function getGitHubApp () {
@@ -40,7 +40,7 @@ export async function githubInstall (req: FastifyRequest, reply: FastifyReply) {
     secure: PROD,
     sameSite: 'lax',
     maxAge: 60 * 60 * 24,
-    domain: PROD ? '.graphenedata.com' : undefined,
+    domain: PROD ? '.' + DOMAIN : undefined, // in prod, set the cookie against the root domain, since github always redirects back to app.DOMAIN
   })
 
   reply.redirect(`https://github.com/apps/${appSlug}/installations/new?state=${nonce}`)
@@ -65,7 +65,7 @@ export async function githubSetup (req: FastifyRequest, reply: FastifyReply) {
 
   reply.clearCookie('github_install_state', {path: '/'}) // clear so the cookie cant be reused
   await (getDb()).insert(vcsInstallations).values({orgId, type: 'github', id: query.installation_id})
-  reply.redirect(PROD ? `https://${req.auth.slug}.graphenedata.com/settings/repos` : '/settings/repos')
+  reply.redirect(PROD ? `https://${req.auth.slug}.${DOMAIN}/settings/repos` : '/settings/repos')
 }
 
 // List repos accessible to the GitHub installation for this org

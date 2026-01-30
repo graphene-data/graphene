@@ -215,9 +215,9 @@ module "graphene" {
   stytch_redirect_url = "https://login.graphene-staging.com/login"
 
   # GitHub App configuration - can use same app or staging-specific
-  github_app_slug      = "graphene-data-dev"
-  github_app_id        = "2484649"
-  github_app_client_id = "Iv23liKKZeEBautjO5bE"
+  github_app_slug      = "graphene-data-staging"
+  github_app_id        = "2755825"
+  github_app_client_id = "Iv23liH7Zlmwp8NaQjdj"
 
   # Feature flags - disable Delve auditor and opt-in region GuardDuty for staging
   enable_delve_auditor          = false

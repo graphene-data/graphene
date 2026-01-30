@@ -43,6 +43,8 @@ resource "aws_ecs_express_gateway_service" "cloud" {
       log_stream_prefix = "ecs"
     }]
 
+    # Adding new vars might cause "Provider produced inconsistent result after apply": https://github.com/hashicorp/terraform-provider-aws/issues/45792
+    # The "solution" is to put these vars in the same order that aws responds with.
     environment {
       name  = "GITHUB_APP_SLUG"
       value = var.github_app_slug
@@ -50,6 +52,10 @@ resource "aws_ecs_express_gateway_service" "cloud" {
     environment {
       name  = "GITHUB_APP_ID"
       value = var.github_app_id
+    }
+    environment {
+      name  = "DOMAIN"
+      value = var.domain_name
     }
     environment {
       name  = "STYTCH_PROJECT_ID"

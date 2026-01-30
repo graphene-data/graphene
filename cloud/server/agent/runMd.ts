@@ -3,6 +3,7 @@ import {eq} from 'drizzle-orm'
 import {getDb} from '../db.ts'
 import {repos, orgs} from '../../schema.ts'
 import {generateAgentToken} from './tokens.ts'
+import {DOMAIN} from '../consts.ts'
 
 let lambda = new LambdaClient({region: process.env.AWS_REGION || 'us-east-1'})
 
@@ -22,7 +23,7 @@ export async function renderMd (markdown: string, repoId: string): Promise<Rende
   if (!org) return {success: false, error: 'Org not found'}
 
   let token = generateAgentToken(repo.orgId, repoId)
-  let baseUrl = `https://${org.slug}.graphenedata.com`
+  let baseUrl = `https://${org.slug}.${DOMAIN}`
 
   let response = await lambda.send(new InvokeCommand({
     FunctionName: 'graphene-screenshot',
