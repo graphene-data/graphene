@@ -39,6 +39,9 @@ if [ "$ENV" = "staging" ]; then
     echo "Error: .env file not found at repo root (required for staging credentials)"
     exit 1
   fi
+elif [ "$ENV" = "production" ]; then
+  # Load credentials from AWS CLI (requires 'aws configure' or AWS_PROFILE to be set up)
+  eval "$(aws configure export-credentials --format env)"
 fi
 
 cd "$TF_DIR/environments/$ENV"

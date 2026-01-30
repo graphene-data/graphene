@@ -24,6 +24,7 @@ resource "aws_ecs_express_gateway_service" "cloud" {
   cluster                 = aws_ecs_cluster.main.name
   execution_role_arn      = aws_iam_role.ecs_execution.arn
   infrastructure_role_arn = aws_iam_role.ecs_infrastructure.arn
+  task_role_arn           = aws_iam_role.ecs_task.arn
 
   cpu               = "1024"
   memory            = "2048"
@@ -37,6 +38,7 @@ resource "aws_ecs_express_gateway_service" "cloud" {
   primary_container {
     image          = "${aws_ecr_repository.cloud.repository_url}:latest"
     container_port = 3000
+    command        = []
 
     aws_logs_configuration = [{
       log_group         = aws_cloudwatch_log_group.cloud.name
