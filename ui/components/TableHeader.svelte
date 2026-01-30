@@ -62,10 +62,11 @@
   }
 
   let columnsWithGroupSpan = $derived(computeGroupSpans(orderedColumns))
+  let hasColumnGroups = $derived(orderedColumns.some((col) => col.colGroup))
 </script>
 
 <thead>
-  {#if columnsWithGroupSpan.length}
+  {#if hasColumnGroups}
     <tr class="header-group-row" style:background-color={headerColor}>
       {#if rowNumbers}
         <th class={`header-index ${compact ? 'header-index--compact' : ''}`} style:background-color={headerColor}></th>
