@@ -5,7 +5,11 @@ import {spawn} from 'child_process'
 import http from 'http'
 import {config} from '../lang/config.ts'
 
-export const AUTH_CLIENT_ID = 'connected-app-test-75eae3e8-efa1-454d-8ad0-66288c750872'
+export const AUTH_CLIENT_ID = process.env.AUTH_CLIENT_ID ||
+  (process.env.NODE_ENV == 'test' ?
+    'connected-app-test-1e207553-009e-4382-9bc1-27aceac2a7a0' :
+    'connected-app-live-8264d0af-df18-4021-af96-157482d17856')
+
 export const AUTH_SCOPES = 'offline_access'
 
 export interface Cred {
