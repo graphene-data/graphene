@@ -16,6 +16,22 @@ export function analyzeFunctionCall (expr: SyntaxNode, scope: Scope): Expression
   let rawName = txt(expr.getChild('Identifier')).toLowerCase()
   let argNodes = expr.getChildren('Expression')
 
+  // Special handling for agg() - passthrough identity function
+  if (rawName === 'agg') {
+    if (argNodes.length !== 1) {
+      return diag(expr, 'agg() requires exactly one argument', errExpr)
+    }
+    
+    let argExpr = analyzeExpression(argNodes[0], scope)
+    
+    if (!argExpr.isAgg) {
+      return diag(argNodes[0], 'agg() can only wrap aggregate expressions', errExpr)
+    }
+    
+    // Return the argument directly - true passthrough
+    return argExpr
+  }
+
   let name = rawName as AggregateFunctionType
 
   // get the right overload for the args. Also check out malloy's `findOverload` for picking the right one

@@ -483,6 +483,100 @@ describe('lang', () => {
       .toReturnRows(['Alice', 100, 1], ['Bob', 50, 0])
   })
 
+  describe('agg() passthrough function', () => {
+    it('allows agg() to wrap built-in aggregates', () => {
+      expect('from orders select agg(sum(amount))')
+        .toRenderSql('select coalesce(sum(base."amount"),0) as "col_0" from orders as base')
+    })
+
+    it('produces identical SQL with and without agg()', () => {
+      let withAgg = analyze('from orders select agg(sum(amount))')[0]
+      let withoutAgg = analyze('from orders select sum(amount)')[0]
+      expect(toSql(withAgg)).toBe(toSql(withoutAgg))
+    })
+
+    it('allows agg() to wrap computed aggregate fields', async () => {
+      expect('from orders select agg(total_revenue)')
+        .toRenderSql('select (coalesce(sum(base."amount"),0)) as "total_revenue" from orders as base')
+      
+      await expect('from orders select agg(total_revenue)')
+        .toReturnRows([100])
+    })
+
+    it('allows agg() to wrap count()', () => {
+      expect('from users select agg(count())')
+        .toRenderSql('select count(1) as "col_0" from users as base')
+    })
+
+    it('allows agg() to wrap aggregate functions like count_if', () => {
+      expect('from orders select agg(count_if(amount > 30))')
+        .toRenderSql('select count_if(base."amount">30) as "col_0" from orders as base')
+    })
+
+    it('allows agg() to wrap percentile aggregates', () => {
+      expect('from orders select agg(p50(amount))')
+        .toRenderSql('select quantile_cont(base."amount", 0.5) as "col_0" from orders as base')
+    })
+
+    it('allows agg() to wrap complex aggregate expressions', () => {
+      expect('from orders select agg(sum(amount) / count())')
+        .toRenderSql('select coalesce(sum(base."amount"),0)*1.0/count(1) as "col_0" from orders as base')
+    })
+
+    it('rejects agg() wrapping non-aggregate columns', () => {
+      expect('from users select agg(name)')
+        .toHaveDiagnostic(/agg\(\) can only wrap aggregate expressions/i)
+    })
+
+    it('rejects agg() wrapping scalar expressions', () => {
+      expect('from users select agg(age * 2)')
+        .toHaveDiagnostic(/agg\(\) can only wrap aggregate expressions/i)
+    })
+
+    it('rejects agg() wrapping literals', () => {
+      expect('from users select agg(42)')
+        .toHaveDiagnostic(/agg\(\) can only wrap aggregate expressions/i)
+    })
+
+    it('rejects agg() with no arguments', () => {
+      expect('from users select agg()')
+        .toHaveDiagnostic(/agg\(\) requires exactly one argument/i)
+    })
+
+    it('rejects agg() with multiple arguments', () => {
+      expect('from users select agg(sum(age), count())')
+        .toHaveDiagnostic(/agg\(\) requires exactly one argument/i)
+    })
+
+    it('works with agg() in where clauses for post-agg filtering', async () => {
+      await expect('from users select name, agg(sum(orders.amount)) as total where total > 50')
+        .toReturnRows(['Alice', 60])
+    })
+
+    it('preserves aggregate behavior across joins', () => {
+      expect('from users select name, agg(count(orders.id))')
+        .toRenderSql('select base."name" as "name", count(distinct orders_0."id") as "col_1" from users as base left join orders as orders_0 on orders_0."user_id"=base."id" group by 1 order by 2 desc nulls last')
+    })
+
+    it('allows nested agg() calls', () => {
+      expect('from orders select agg(agg(sum(amount)))')
+        .toRenderSql('select coalesce(sum(base."amount"),0) as "col_0" from orders as base')
+    })
+
+    it('works with agg() in computed fields', () => {
+      updateFile(`
+        table orders_with_agg (
+          id int primary_key
+          amount numeric
+          total: agg(sum(amount))
+        )
+      `, 'orders_with_agg.gsql')
+      
+      expect('from orders_with_agg select agg(total)')
+        .toRenderSql('select (coalesce(sum(base."amount"),0)) as "total" from orders_with_agg as base')
+    })
+  })
+
   it.skip('supports malloy date functions', () => {
     expect('from users select name, month(created_at)')
       .toRenderSql('select base."name" as "name", extract(month from base."created_at") as "col_1" from users as base')
