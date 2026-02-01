@@ -46,10 +46,10 @@ jobs:
         run: pnpm test
         env:
           GOOGLE_CREDENTIALS_CONTENT: ${{ secrets.BIGQUERY_TEST_CREDS }}
-          STYTCH_PROJECT_ID: project-test-eaaff9fe-3c7f-486e-90b9-23d249388064
+          STYTCH_PROJECT_ID: project-test-34239fee-cb48-4366-a8db-afe04e2cf07d
           STYTCH_SECRET: ${{ secrets.STYTCH_TEST_SECRET }}
-          STYTCH_DOMAIN: https://futuristic-coil-3570.customers.stytch.dev
-          VITE_STYTCH_PUBLIC_TOKEN: public-token-test-340ad761-ec19-47c0-b53e-094d5f65bd3a
+          STYTCH_DOMAIN: https://forested-taurus-9604.customers.stytch.dev
+          VITE_STYTCH_PUBLIC_TOKEN: public-token-test-9ca7ff1b-435c-4a2f-b74b-18f919494205
           CI_GITHUB_APP_PRIVATE_KEY: ${{ secrets.CI_GITHUB_APP_PRIVATE_KEY }}
           CI_GITHUB_APP_CLIENT_SECRET: ${{ secrets.CI_GITHUB_APP_CLIENT_SECRET }}
 
