@@ -57,25 +57,15 @@ output "db_shell_sns_topic_arn" {
   value       = aws_sns_topic.db_shell_access.arn
 }
 
-# Migration task outputs - for CI to run migrations
-output "migrate_task_definition" {
-  description = "Task definition ARN for running migrations"
-  value       = aws_ecs_task_definition.db_migrate.arn
+# DB Ops task outputs
+output "db_ops_task_definition" {
+  description = "Task definition ARN for db-ops (migrations and db-shell)"
+  value       = aws_ecs_task_definition.db_ops.arn
 }
 
-output "migrate_cluster" {
-  description = "ECS cluster name for running migrations"
+output "db_ops_cluster" {
+  description = "ECS cluster name for db-ops task"
   value       = aws_ecs_cluster.main.name
-}
-
-output "migrate_subnets" {
-  description = "Subnets for running migration task"
-  value       = join(",", data.aws_subnets.default.ids)
-}
-
-output "migrate_security_group" {
-  description = "Security group for running migration task"
-  value       = aws_security_group.ecs.id
 }
 
 # ACM Certificate Outputs

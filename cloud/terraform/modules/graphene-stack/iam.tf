@@ -69,14 +69,31 @@ resource "aws_iam_role_policy" "ci_deploy_ecr" {
         Resource = "*"
       },
       {
+        # db-ops task: find running task, check image, start if needed
+        Effect = "Allow"
+        Action = [
+          "ecs:ListTasks",
+          "ecs:DescribeTasks",
+          "ecs:RunTask",
+          "ecs:StopTask",
+          "ecs:ExecuteCommand"
+        ]
+        Resource = "*"
+        Condition = {
+          ArnEquals = {
+            "ecs:cluster" = aws_ecs_cluster.main.arn
+          }
+        }
+      },
+      {
         Effect   = "Allow"
-        Action   = ["ecs:RunTask", "ecs:DescribeTasks"]
-        Resource = aws_ecs_task_definition.db_migrate.arn
+        Action   = ["ecr:DescribeImages"]
+        Resource = aws_ecr_repository.cloud.arn
       },
       {
         Effect   = "Allow"
         Action   = ["iam:PassRole"]
-        Resource = aws_iam_role.ecs_execution.arn
+        Resource = [aws_iam_role.ecs_execution.arn, aws_iam_role.ecs_task.arn]
       },
       {
         Effect = "Allow"

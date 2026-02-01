@@ -160,8 +160,15 @@ resource "aws_iam_role_policy" "ecs_task_exec" {
   })
 }
 
-resource "aws_ecs_task_definition" "db_shell" {
-  family                   = "graphene-db-shell"
+# =============================================================================
+# DB Ops Task - on-demand task for db-shell and migrations
+# =============================================================================
+# Uses app image so it has both psql and node/drizzle available.
+# Default command is sleep infinity (for interactive db-shell), but callers
+# can override the command for one-shot operations like migrations.
+
+resource "aws_ecs_task_definition" "db_ops" {
+  family                   = "graphene-db-ops"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
@@ -170,8 +177,8 @@ resource "aws_ecs_task_definition" "db_shell" {
   task_role_arn            = aws_iam_role.ecs_task.arn
 
   container_definitions = jsonencode([{
-    name      = "db-shell"
-    image     = "postgres:16-alpine"
+    name      = "db-ops"
+    image     = "${aws_ecr_repository.cloud.repository_url}:latest"
     essential = true
     command   = ["sleep", "infinity"]
     secrets = [{
@@ -183,39 +190,7 @@ resource "aws_ecs_task_definition" "db_shell" {
       options = {
         "awslogs-group"         = aws_cloudwatch_log_group.cloud.name
         "awslogs-region"        = var.aws_region
-        "awslogs-stream-prefix" = "db-shell"
-      }
-    }
-  }])
-}
-
-# =============================================================================
-# DB Migration Task (one-off task to run drizzle migrations)
-# =============================================================================
-
-resource "aws_ecs_task_definition" "db_migrate" {
-  family                   = "graphene-db-migrate"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  cpu                      = "256"
-  memory                   = "512"
-  execution_role_arn       = aws_iam_role.ecs_execution.arn
-
-  container_definitions = jsonencode([{
-    name      = "migrate"
-    image     = "${aws_ecr_repository.cloud.repository_url}:latest"
-    essential = true
-    command   = ["node", "server/migrate.ts"]
-    secrets = [{
-      name      = "DATABASE_URL"
-      valueFrom = aws_secretsmanager_secret.database_url.arn
-    }]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = aws_cloudwatch_log_group.cloud.name
-        "awslogs-region"        = var.aws_region
-        "awslogs-stream-prefix" = "db-migrate"
+        "awslogs-stream-prefix" = "db-ops"
       }
     }
   }])
@@ -236,10 +211,10 @@ resource "aws_sns_topic_subscription" "db_shell_access_email" {
   endpoint  = var.alarm_notification_email
 }
 
-# EventBridge rule to notify SNS when db-shell task starts
+# EventBridge rule to notify SNS when db-ops task starts
 resource "aws_cloudwatch_event_rule" "db_shell_started" {
-  name        = "graphene-db-shell-started"
-  description = "Triggers when a db-shell ECS task is started"
+  name        = "graphene-db-ops-started"
+  description = "Triggers when a db-ops ECS task is started"
 
   event_pattern = jsonencode({
     source      = ["aws.ecs"]
@@ -247,7 +222,7 @@ resource "aws_cloudwatch_event_rule" "db_shell_started" {
     detail = {
       clusterArn        = [aws_ecs_cluster.main.arn]
       lastStatus        = ["RUNNING"]
-      taskDefinitionArn = [{ prefix = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:task-definition/graphene-db-shell" }]
+      taskDefinitionArn = [{ prefix = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:task-definition/graphene-db-ops" }]
     }
   })
 }
@@ -264,7 +239,7 @@ resource "aws_cloudwatch_event_target" "db_shell_sns" {
       time      = "$.time"
     }
     input_template = <<-EOF
-      "Database shell access initiated.\n\nTask: <taskArn>\nStarted by: <startedBy>\nTime: <time>\n\nThis is an audit notification. If this access was not expected, investigate immediately."
+      "DB ops task started.\n\nTask: <taskArn>\nStarted by: <startedBy>\nTime: <time>\n\nThis is an audit notification. If this access was not expected, investigate immediately."
     EOF
   }
 }

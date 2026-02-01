@@ -1,26 +1,39 @@
 #!/bin/bash
 #
-# Run SQL against the database via ECS task
+# Run commands against the database via ECS task.
+# Reuses existing task if running with correct image, otherwise starts a new one.
 #
 # Prerequisites:
 #   - AWS CLI v2
-#   - For interactive mode: AWS Session Manager plugin
+#   - AWS Session Manager plugin
 #   - For staging: .env file at repo root with AWS credentials
 #
 # Usage:
-#   ./db-shell.sh [staging|production]              # Interactive psql shell (requires Session Manager plugin)
-#   ./db-shell.sh [staging|production] "SQL query"  # Run query and exit
+#   ./db-shell.sh [staging|production]                # Interactive psql shell
+#   ./db-shell.sh [staging|production] "SQL query"    # Run SQL query
+#   ./db-shell.sh [staging|production] --migrate      # Run database migrations
 #
 # Examples:
-#   ./db-shell.sh staging                           # Interactive shell
-#   ./db-shell.sh staging "SELECT * FROM orgs"      # Run query
+#   ./db-shell.sh staging                             # Interactive shell
+#   ./db-shell.sh staging "SELECT * FROM orgs"        # Run query
+#   ./db-shell.sh staging --migrate                   # Run migrations
 #
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 ENVIRONMENT="${1:-staging}"
-QUERY="${2:-}"
+COMMAND="${2:-}"
+
+if [ "$ENVIRONMENT" != "staging" ] && [ "$ENVIRONMENT" != "production" ]; then
+  echo "Usage: $0 [staging|production] [\"SQL query\" | --migrate]"
+  echo ""
+  echo "Examples:"
+  echo "  $0 staging                        # Interactive psql shell"
+  echo "  $0 staging \"SELECT * FROM orgs\"  # Run SQL query"
+  echo "  $0 staging --migrate              # Run database migrations"
+  exit 1
+fi
 
 # Clear any existing AWS credentials to avoid conflicts
 unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE 2>/dev/null || true
@@ -32,102 +45,66 @@ if [ "$ENVIRONMENT" = "staging" ]; then
     source "$SCRIPT_DIR/../../.env"
     set +a
   else
-    echo "Error: .env file not found at repo root (required for staging credentials)"
+    echo "Error: .env file not found at repo root (required for staging credentials)" >&2
     exit 1
   fi
 elif [ "$ENVIRONMENT" = "production" ]; then
   eval "$(aws configure export-credentials --format env)"
-else
-  echo "Usage: $0 [staging|production] [\"SQL query\"]"
-  echo ""
-  echo "Examples:"
-  echo "  $0 staging                        # Interactive shell"
-  echo "  $0 staging \"SELECT * FROM orgs\"  # Run query"
-  exit 1
 fi
 
-# Configuration per environment
-case "$ENVIRONMENT" in
-  staging)
-    CLUSTER="graphene-prod"
-    ;;
-  production)
-    CLUSTER="graphene-prod"
-    ;;
-esac
-
-TASK_DEFINITION="graphene-db-shell"
-CONTAINER_NAME="db-shell"
+# Configuration
+CLUSTER="graphene-prod"
+TASK_DEFINITION="graphene-db-ops"
+CONTAINER_NAME="db-ops"
 REGION="${AWS_REGION:-us-east-1}"
 
-# Get network config
-SUBNETS=$(aws ec2 describe-subnets --filters "Name=default-for-az,Values=true" \
-  --query 'Subnets[0:2].SubnetId' --output text --region "$REGION" | tr '\t' ',')
-SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=graphene-ecs-sg" \
-  --query 'SecurityGroups[0].GroupId' --output text --region "$REGION")
+case "$ENVIRONMENT" in
+  staging)    ACCOUNT="025223626139" ;;
+  production) ACCOUNT="772069004272" ;;
+esac
 
-# Get caller identity for audit
-CALLER_IDENTITY=$(aws sts get-caller-identity --output json --region "$REGION")
-USER_ARN=$(echo "$CALLER_IDENTITY" | jq -r '.Arn')
-ACCOUNT_ID=$(echo "$CALLER_IDENTITY" | jq -r '.Account')
+# Get the current image digest from ECR (what :latest points to)
+EXPECTED_DIGEST=$(aws ecr describe-images \
+  --repository-name graphene/cloud \
+  --image-ids imageTag=latest \
+  --region "$REGION" \
+  --query 'imageDetails[0].imageDigest' \
+  --output text 2>/dev/null || echo "")
 
-MODE="interactive"
-[ -n "$QUERY" ] && MODE="query"
+# Find any running db-ops task
+TASK_ARN=$(aws ecs list-tasks \
+  --cluster "$CLUSTER" \
+  --family "$TASK_DEFINITION" \
+  --desired-status RUNNING \
+  --region "$REGION" \
+  --query 'taskArns[0]' \
+  --output text)
 
-echo "Starting db-shell session..."
-echo "  Environment: $ENVIRONMENT"
-echo "  User: $USER_ARN"
-echo "  Mode: $MODE"
-# Note: SNS notifications are handled automatically via EventBridge when the ECS task starts
-
-if [ -n "$QUERY" ]; then
-  # Query mode: run via task command override
-  echo ""
-  echo "Running query..."
-
-  OVERRIDES=$(jq -n --arg q "$QUERY" '{
-    containerOverrides: [{
-      name: "db-shell",
-      command: ["sh", "-c", ("psql $DATABASE_URL -c " + ($q | @sh))]
-    }]
-  }')
-
-  TASK_ARN=$(aws ecs run-task \
+if [ "$TASK_ARN" != "None" ] && [ -n "$TASK_ARN" ]; then
+  # Check if the running task has the correct image
+  TASK_IMAGE_DIGEST=$(aws ecs describe-tasks \
     --cluster "$CLUSTER" \
-    --task-definition "$TASK_DEFINITION" \
-    --launch-type FARGATE \
-    --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
-    --overrides "$OVERRIDES" \
+    --tasks "$TASK_ARN" \
     --region "$REGION" \
-    --query 'tasks[0].taskArn' \
+    --query 'tasks[0].containers[?name==`db-ops`].imageDigest' \
     --output text)
 
-  TASK_ID=$(echo "$TASK_ARN" | rev | cut -d'/' -f1 | rev)
-  echo "Task: $TASK_ID"
-  echo "Waiting for task to complete..."
-
-  aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ID" --region "$REGION"
-
-  EXIT_CODE=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ID" --region "$REGION" \
-    --query 'tasks[0].containers[?name==`db-shell`].exitCode' --output text)
-
-  echo ""
-  echo "=== Output ==="
-  aws logs get-log-events --log-group-name /ecs/graphene-prod \
-    --log-stream-name "db-shell/db-shell/$TASK_ID" \
-    --region "$REGION" \
-    --query 'events[*].message' --output text 2>/dev/null || echo "(no logs available yet)"
-  echo "=============="
-
-  if [ "$EXIT_CODE" != "0" ]; then
-    echo ""
-    echo "Query failed with exit code $EXIT_CODE"
-    exit 1
+  if [ "$TASK_IMAGE_DIGEST" != "$EXPECTED_DIGEST" ]; then
+    echo "Running task has stale image, stopping it..."
+    aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" --reason "stale image" --region "$REGION" > /dev/null
+    aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION" 2>/dev/null || true
+    TASK_ARN="None"
   fi
-else
-  # Interactive mode: use ECS Exec
-  echo ""
-  echo "Starting ECS task..."
+fi
+
+# Start a new task if needed
+if [ "$TASK_ARN" = "None" ] || [ -z "$TASK_ARN" ]; then
+  echo "Starting db-ops task..."
+
+  SUBNETS=$(aws ec2 describe-subnets --filters "Name=default-for-az,Values=true" \
+    --query 'Subnets[0:2].SubnetId' --output text --region "$REGION" | tr '\t' ',')
+  SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=graphene-ecs-sg" \
+    --query 'SecurityGroups[0].GroupId' --output text --region "$REGION")
 
   TASK_ARN=$(aws ecs run-task \
     --cluster "$CLUSTER" \
@@ -139,48 +116,55 @@ else
     --query 'tasks[0].taskArn' \
     --output text)
 
-  TASK_ID=$(echo "$TASK_ARN" | rev | cut -d'/' -f1 | rev)
-  echo "Task: $TASK_ID"
   echo "Waiting for task to be running..."
-
   aws ecs wait tasks-running --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION"
 
   echo "Waiting for execute command agent..."
-  AGENT_STATUS=""
   for i in {1..60}; do
-    AGENT_STATUSES=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
-      --query "tasks[0].containers[*].managedAgents[0].lastStatus" \
+    AGENT_STATUS=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
+      --query "tasks[0].containers[?name==\`$CONTAINER_NAME\`].managedAgents[?name==\`ExecuteCommandAgent\`].lastStatus" \
       --output text --region "$REGION" 2>/dev/null || echo "PENDING")
-    if echo "$AGENT_STATUSES" | grep -q "RUNNING"; then
-      AGENT_STATUS="RUNNING"
+    if [ "$AGENT_STATUS" = "RUNNING" ]; then
       break
     fi
-    printf "."
     sleep 2
   done
-  echo ""
 
   if [ "$AGENT_STATUS" != "RUNNING" ]; then
     echo "Error: Execute command agent failed to start"
-    echo "Stopping task..."
     aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" --reason "execute command agent failed" --region "$REGION" > /dev/null
     exit 1
   fi
+fi
 
-  echo "Connecting to psql..."
-  echo "Type \\q to exit psql, then the container will be stopped."
-  echo ""
+TASK_ID=$(echo "$TASK_ARN" | rev | cut -d'/' -f1 | rev)
+echo "Using task: $TASK_ID"
 
-  aws ecs execute-command \
+# Execute the command
+if [ -z "$COMMAND" ]; then
+  # Interactive psql shell
+  exec aws ecs execute-command \
     --cluster "$CLUSTER" \
     --task "$TASK_ARN" \
     --container "$CONTAINER_NAME" \
     --interactive \
     --region "$REGION" \
     --command 'sh -c "psql \$DATABASE_URL"'
-
-  echo ""
-  echo "Stopping task..."
-  aws ecs stop-task --cluster "$CLUSTER" --task "$TASK_ARN" --reason "db-shell session ended" --region "$REGION" > /dev/null
-  echo "Session complete."
+elif [ "$COMMAND" = "--migrate" ]; then
+  # Run migrations
+  echo "Running migrations..."
+  exec aws ecs execute-command \
+    --cluster "$CLUSTER" \
+    --task "$TASK_ARN" \
+    --container "$CONTAINER_NAME" \
+    --region "$REGION" \
+    --command "node server/migrate.ts"
+else
+  # Run SQL query
+  exec aws ecs execute-command \
+    --cluster "$CLUSTER" \
+    --task "$TASK_ARN" \
+    --container "$CONTAINER_NAME" \
+    --region "$REGION" \
+    --command "psql \$DATABASE_URL -c '$COMMAND'"
 fi

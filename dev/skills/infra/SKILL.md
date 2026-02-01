@@ -38,3 +38,7 @@ You can run queries against the staging database like so:
 ```bash
 ./cloud/scripts/db-shell.sh staging "SELECT * FROM orgs"
 ```
+
+Other db-shell.sh options:
+- `./cloud/scripts/db-shell.sh staging` - interactive psql shell
+- `./cloud/scripts/db-shell.sh staging --migrate` - run database migrations

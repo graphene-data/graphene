@@ -71,18 +71,7 @@ fi
 
 if [ "$NO_MIGRATE" = false ]; then
   echo "=== Running database migrations ==="
-
-  SUBNETS=$(aws ec2 describe-subnets --filters "Name=default-for-az,Values=true" \
-    --query 'Subnets[0:2].SubnetId' --output text --region "$REGION" | tr '\t' ',')
-  SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=graphene-ecs-sg" \
-    --query 'SecurityGroups[0].GroupId' --output text --region "$REGION")
-
-  TASK_ARN=$(aws ecs run-task --cluster "$CLUSTER" --task-definition "graphene-db-migrate" --launch-type FARGATE \
-    --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
-    --region "$REGION" --query 'tasks[0].taskArn' --output text)
-
-  echo "Migration task: ${TASK_ARN##*/}"
-  aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "${TASK_ARN##*/}" --region "$REGION"
+  "$REPO_ROOT/cloud/scripts/db-shell.sh" "$ENVIRONMENT" --migrate
 else
   echo "=== Skipping database migrations ==="
 fi
