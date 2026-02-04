@@ -14,6 +14,7 @@ export default defineConfig({
     conditions: ['svelte', 'browser'],
   },
   server: {
+    allowedHosts: ['.ngrok-free.dev'],
     fs: {
       allow: [repoRoot],
     },

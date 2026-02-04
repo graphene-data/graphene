@@ -64,7 +64,7 @@ resource "aws_lambda_function" "screenshot" {
   handler       = "handler.handler"
   runtime       = "nodejs22.x"
   architectures = ["x86_64"]
-  memory_size   = 1536
+  memory_size   = 2048
   timeout       = 60
 
   # Deployment package will be uploaded via CI/CD

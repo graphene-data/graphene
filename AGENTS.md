@@ -63,3 +63,4 @@ UI tests should always take snapshots each time they run. Be sure to add a snaps
 * Always use `pnpm add` rather than editing package.json directly to ensure we get the latest version of new dependencies.
 * We use node-24 which has type stripping by default, so you should never need `ts-node` or `tsx` to run things.
 * Avoid running `graphene dev` to test things. You should be able to set up just about any scenario in our automated tests.
+* Don't make infra changes directly via the `aws` cli. Make changes to the terraform config and deploy that.

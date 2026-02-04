@@ -1,12 +1,53 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import {eq} from 'drizzle-orm'
 import {B2BClient} from 'stytch'
+import jwt from 'jsonwebtoken'
 import type {AuthContext} from './types.js'
 import {getDb} from './db.ts'
 import {orgs} from '../schema.ts'
 import {DOMAIN, PROD, TEST} from './consts.ts'
 
 export type {AuthContext}
+
+// --- Agent Token Authentication ---
+
+function getAgentTokenSecret () {
+  let secret = process.env.AGENT_TOKEN_SECRET
+  if (!secret && PROD) {
+    throw new Error('AGENT_TOKEN_SECRET must be set in production')
+  }
+  return secret || 'dev-secret-key'
+}
+
+export interface AgentTokenClaims {
+  orgId: string
+  repoId: string
+  purpose: 'agent-render'
+}
+
+/**
+ * Generate a short-lived JWT for the agent to authenticate with the dynamic endpoint.
+ */
+export function generateAgentToken (orgId: string, repoId: string): string {
+  return jwt.sign(
+    {orgId, repoId, purpose: 'agent-render'} satisfies AgentTokenClaims,
+    getAgentTokenSecret(),
+    {expiresIn: '5m'},
+  )
+}
+
+/**
+ * Verify an agent token and return the claims.
+ */
+export function verifyAgentToken (token: string): AgentTokenClaims | null {
+  try {
+    let claims = jwt.verify(token, getAgentTokenSecret()) as AgentTokenClaims
+    if (claims.purpose !== 'agent-render') return null
+    return claims
+  } catch {
+    return null
+  }
+}
 
 let authOverride: AuthContext | null = null
 export function setAuthOverride (auth: AuthContext | null) {
@@ -16,31 +57,44 @@ export function setAuthOverride (auth: AuthContext | null) {
 
 export async function auth (req: FastifyRequest, reply: FastifyReply) {
   (req as any).auth = null
+  let isAgentAuth = false
 
   if (TEST && authOverride) {
     req.auth = authOverride
   }
 
+  // Check for agent token cookie first (used by screenshot Lambda for dynamic renders)
+  let agentToken = req.cookies['graphene_agent_token']
+  if (!req.auth && agentToken) {
+    let claims = verifyAgentToken(agentToken)
+    if (claims) {
+      req.auth = {userId: 'agent', orgId: claims.orgId, slug: ''}
+      isAgentAuth = true
+    }
+  }
+
   let bearer = req.headers['authorization']
-  if (bearer) {
-    // TODO: errors here should turn in to 401s
+  if (!req.auth && bearer) {
     let claims = await getStytch().idp.introspectTokenLocal(bearer.replace(/^bearer /i, ''))
     req.auth = {userId: claims.subject, orgId: claims.organization.organization_id, slug: ''}
   }
 
   let session_jwt = req.cookies['stytch_session_jwt']
-  if (session_jwt) {
-    // TODO: errors here should turn in to 401s
+  if (!req.auth && session_jwt) {
     let auth = await getStytch().sessions.authenticateJwt({session_jwt})
     let session = auth.member_session
-    if (!session) return
-    req.auth = {userId: session.member_id, orgId: session.organization_id, slug: ''}
+    if (session) {
+      req.auth = {userId: session.member_id, orgId: session.organization_id, slug: ''}
+    }
   }
 
   if (!req.auth) {
     reply.code(401).send({error: 'Authentication required'})
     throw new Error('Unauthorized')
   }
+
+  // Skip subdomain validation for agent auth (Lambda accesses via ngrok tunnel)
+  if (isAgentAuth || !PROD) return
 
   // Validate subdomain matches user's org
   let host = (req.hostname || '').split(':')[0]

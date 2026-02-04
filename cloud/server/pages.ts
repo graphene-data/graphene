@@ -1,13 +1,12 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import {and, eq, or} from 'drizzle-orm'
-import {auth} from './auth.ts'
+import {auth, verifyAgentToken} from './auth.ts'
 import {getDb} from './db.ts'
 import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
 import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 import {PROD} from './consts.ts'
-import {verifyAgentToken} from './agent/tokens.ts'
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
@@ -121,16 +120,22 @@ function rewriteSvelteImports (code: string, repoId: string, inline = false) {
 }
 
 export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
-  let body = req.body as {
-    markdown: string
-    token: string
-  }
+  let query = req.query as {md?: string; token?: string}
 
-  let claims = verifyAgentToken(body.token || '')
+  let claims = verifyAgentToken(query.token || '')
   if (!claims) return reply.code(401).send({error: 'Invalid token'})
 
+  // Decode base64 markdown from query param
+  let markdown: string
+  try {
+    markdown = Buffer.from(query.md || '', 'base64').toString('utf-8')
+  } catch {
+    return reply.code(400).send({error: 'Invalid base64 markdown'})
+  }
+  if (!markdown) return reply.code(400).send({error: 'Missing md parameter'})
+
   // Compile markdown to svelte component
-  let svelteSource = await mdsvexCompile(body.markdown, {
+  let svelteSource = await mdsvexCompile(markdown, {
     filename: 'dynamic.md',
     extensions: ['.md'],
     remarkPlugins: [extractQueries, escapeAngles],
@@ -148,21 +153,12 @@ export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Graphene Dynamic</title>
-  <style>
-    body { margin: 0; padding: 20px; font-family: system-ui, sans-serif; }
-    #content { max-width: 1200px; margin: 0 auto; }
-  </style>
 </head>
 <body>
-  <div id="content"></div>
+  <main id="content"></main>
   <script type="module">
-    // Load runtime (sets up $GRAPHENE without mounting App)
-    await import('/main.ts');
-
-    // Component code
+    await import('/main.ts')
     ${componentCode}
-
-    // Mount component (Svelte 5 uses mount from svelte)
     window.$GRAPHENE.mount(Component, { target: document.getElementById('content') });
   </script>
 </body>

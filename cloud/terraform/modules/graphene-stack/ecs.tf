@@ -72,16 +72,12 @@ resource "aws_ecs_express_gateway_service" "cloud" {
       value = var.stytch_domain
     }
     secret {
+      name       = "AGENT_TOKEN_SECRET"
+      value_from = aws_secretsmanager_secret.agent_token_secret.arn
+    }
+    secret {
       name       = "DATABASE_URL"
       value_from = aws_secretsmanager_secret.database_url.arn
-    }
-    secret {
-      name       = "STYTCH_SECRET"
-      value_from = aws_secretsmanager_secret.stytch_secret.arn
-    }
-    secret {
-      name       = "GITHUB_APP_WEBHOOK_SECRET"
-      value_from = aws_secretsmanager_secret.github_webhook_secret.arn
     }
     secret {
       name       = "GITHUB_APP_CLIENT_SECRET"
@@ -90,6 +86,14 @@ resource "aws_ecs_express_gateway_service" "cloud" {
     secret {
       name       = "GITHUB_APP_PRIVATE_KEY"
       value_from = aws_secretsmanager_secret.github_app_private_key.arn
+    }
+    secret {
+      name       = "GITHUB_APP_WEBHOOK_SECRET"
+      value_from = aws_secretsmanager_secret.github_webhook_secret.arn
+    }
+    secret {
+      name       = "STYTCH_SECRET"
+      value_from = aws_secretsmanager_secret.stytch_secret.arn
     }
   }
 }

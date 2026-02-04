@@ -136,3 +136,19 @@ resource "aws_secretsmanager_secret_version" "github_app_private_key" {
     ignore_changes = [secret_string]
   }
 }
+
+# Agent token secret - auto-generated for signing agent JWTs
+resource "random_password" "agent_token_secret" {
+  length  = 64
+  special = false # Keep it simple for JWT signing
+}
+
+resource "aws_secretsmanager_secret" "agent_token_secret" {
+  name        = "AGENT_TOKEN_SECRET"
+  description = "Secret key for signing agent authentication JWTs"
+}
+
+resource "aws_secretsmanager_secret_version" "agent_token_secret" {
+  secret_id     = aws_secretsmanager_secret.agent_token_secret.id
+  secret_string = random_password.agent_token_secret.result
+}

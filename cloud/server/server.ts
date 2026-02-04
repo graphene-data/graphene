@@ -8,6 +8,8 @@ import {type AuthContext, authTokenExchange} from './auth.ts'
 import {listNavFiles, renderPage, renderDynamic} from './pages.ts'
 import {proxyQuery} from './query.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
+import {agentTest, testRenderMd} from './agent/testEndpoint.ts'
+
 
 export function createServer (serveStatic: boolean) {
   let app = fastify({logger: {level: 'warn'}})
@@ -17,7 +19,7 @@ export function createServer (serveStatic: boolean) {
 
   app.get('/_api/nav/:repoSlug', listNavFiles)
   app.get('/_api/pages/*', renderPage)
-  app.post('/_api/dynamic', renderDynamic)
+  app.get('/_api/dynamic', renderDynamic)
   app.post('/_api/query', proxyQuery)
   app.post('/_api/oauth2/token', authTokenExchange)
 
@@ -28,6 +30,9 @@ export function createServer (serveStatic: boolean) {
   app.post('/_api/github/repos', addRepo)
   app.delete('/_api/repos/:id', removeRepo)
   app.post('/_api/github/webhook', githubWebhook)
+
+  app.get('/_api/agent/test', agentTest)
+  app.get('/_api/agent/test-render', testRenderMd)
 
   if (serveStatic) {
     let root = path.resolve(fileURLToPath(import.meta.url), '../../dist')

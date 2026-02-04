@@ -117,14 +117,29 @@ function extractPreview (content: string, query: string, contextChars = 100): st
   return preview
 }
 
-export function renderMdTool (repoId: string) {
+export function renderMdTool (repoId: string, baseUrl?: string) {
+  // Using 'as any' because toModelOutput is a runtime feature not yet in TypeScript types
   return tool({
     description: 'Render markdown containing a chart to an image. Returns a screenshot or errors. Use this when the user wants to see a visualization.',
     inputSchema: z.object({
       markdown: z.string().describe('Markdown content with graphene chart blocks to render'),
     }),
     execute: async ({markdown}) => {
-      return await renderMd(markdown, repoId)
+      return await renderMd(markdown, repoId, baseUrl)
     },
-  })
+    // Convert screenshot to multi-modal content for the model
+    // This allows images to be sent as vision content instead of base64 strings
+    toModelOutput ({output}: {output: {success: boolean, screenshot?: string, error?: string}}) {
+      if (output.success && output.screenshot) {
+        return {
+          type: 'content' as const,
+          value: [
+            {type: 'media' as const, data: output.screenshot, mediaType: 'image/png' as const},
+          ],
+        }
+      }
+      // For errors, just return as JSON
+      return {type: 'json' as const, value: output}
+    },
+  } as any)
 }
