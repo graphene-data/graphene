@@ -10,7 +10,7 @@ import path from 'node:path'
 import {parser} from './parser.js'
 import {parseMarkdown} from './markdown.ts'
 import {uppercaseTable} from './snowflake.ts'
-import './functionDefs.ts' // registers BigQueryDialect
+import './functions.ts' // registers dialects (BigQuery, DuckDB, Snowflake)
 
 export {clearWorkspace}
 export {config, loadConfig}

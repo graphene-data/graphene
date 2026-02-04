@@ -528,6 +528,18 @@ describe('lang', () => {
       .toRenderSql('select count_if(base."amount">100) as "col_0" from orders as base')
   })
 
+  it('supports BigQuery math functions', () => {
+    setConfig({root: '', bigquery: {}})
+    expect('from orders select abs(amount), sqrt(amount), round(amount, 2)')
+      .toRenderSql('select abs(base.`amount`) as `col_0`, sqrt(base.`amount`) as `col_1`, round(base.`amount`,2) as `col_2` from `orders` as base')
+  })
+
+  it('supports BigQuery string functions', () => {
+    setConfig({root: '', bigquery: {}})
+    expect('from users select lower(name), upper(name), length(name)')
+      .toRenderSql('select lower(base.`name`) as `col_0`, upper(base.`name`) as `col_1`, length(base.`name`) as `col_2` from `users` as base')
+  })
+
   it('supports functions with keyword args', () => {
     setConfig({root: '', bigquery: {}})
     expect('from users select timestamp_diff(created_at, created_at, day)')
