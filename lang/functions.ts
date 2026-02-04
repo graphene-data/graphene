@@ -1,14 +1,199 @@
 import {type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
-import {type AggregateFunctionType, type AtomicTypeDef} from '@graphenedata/malloy'
+import {type AggregateFunctionType, type AtomicTypeDef, type DefinitionBlueprintMap, type DefinitionBlueprint, type DialectFunctionOverloadDef, type FunctionOverloadDef, GlobalNameSpace, DialectNameSpace, getDialect, registerDialect, StandardSQLDialect, SnowflakeDialect as MalloySnowflakeDialect, DuckDBDialect as MalloyDuckDBDialect, expandBlueprintMap} from '@graphenedata/malloy'
 import {config} from './config.ts'
-import {findOverloads} from './functionDefs.ts'
 import {txt, walkExpression} from './util.ts'
 import type {Expression, Scope, FieldType} from './types.ts'
 import {analyzeExpression, checkTypes, diag} from './analyze.ts'
+import {bigQueryFunctions} from './bigQueryFunctions.ts'
+import {duckDbFunctions} from './duckDbFunctions.ts'
+import {snowflakeFunctions} from './snowflakeFunctions.ts'
+import type {FunctionDef, ArgDef} from './functionTypes.ts'
 
 export type AnalyzeExpressionFn = (expr: SyntaxNode, scope: Scope) => Expression
 export type CheckTypesFn = (expr: Expression, expected: FieldType[], node: SyntaxNode) => void
 export type DiagFn = <T>(node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T) => T
+
+// ============================================================================
+// FunctionDef to Malloy Blueprint Conversion
+// ============================================================================
+
+// Get arg info from ArgDef
+function getArgInfo (arg: ArgDef): {name: string; type: string} {
+  if (Array.isArray(arg)) {
+    return {name: arg[0], type: arg[1]}
+  }
+  return {name: arg.name, type: arg.type}
+}
+
+// Check if an arg type is optional
+function isOptionalArg (typeStr: string): boolean {
+  return typeStr.endsWith('?')
+}
+
+// Convert our FunctionDef format to Malloy's DefinitionBlueprint format
+function convertToMalloyBlueprint (def: FunctionDef): DefinitionBlueprint {
+  // Check if we have optional arguments - if so, we need to generate multiple overloads
+  let optionalStartIdx = def.args.findIndex(arg => isOptionalArg(getArgInfo(arg).type))
+
+  if (optionalStartIdx >= 0) {
+    // Generate overloads: one for each possible number of args from required up to all args
+    let overloads: Record<string, any> = {}
+    let requiredArgs = def.args.slice(0, optionalStartIdx)
+    let optionalArgs = def.args.slice(optionalStartIdx)
+
+    // Generate overload names based on arg count
+    for (let i = 0; i <= optionalArgs.length; i++) {
+      let argsForOverload = [...requiredArgs, ...optionalArgs.slice(0, i)]
+      let overloadName = i === 0 ? 'no_opt' : `opt_${i}`
+      overloads[overloadName] = buildSingleOverload(def, argsForOverload)
+    }
+
+    return overloads as any
+  }
+
+  // No optional args - single overload
+  return buildSingleOverload(def, def.args)
+}
+
+// Build a single overload blueprint from a function def and its args
+function buildSingleOverload (def: FunctionDef, args: ArgDef[]): any {
+  let takes: Record<string, any> = {}
+  let hasGeneric = false
+
+  for (let arg of args) {
+    let {name, type: typeStr} = getArgInfo(arg)
+    // Strip the optional marker for the actual type
+    typeStr = typeStr.replace('?', '')
+    let type: any = parseArgType(typeStr, def.aggregate)
+    if (typeStr.includes('T')) {
+      hasGeneric = true
+    }
+    takes[name] = type
+  }
+
+  let returns: any = def.returns
+  if (def.returns === 'T') {
+    returns = {generic: 'T'}
+  } else if (def.aggregate) {
+    returns = {measure: def.returns}
+  }
+
+  // Determine the implementation
+  let impl: any
+  let sqlName = def.sqlName || def.name.toUpperCase()
+  if (def.sqlTemplate) {
+    impl = {sql: def.sqlTemplate}
+  } else {
+    impl = {function: sqlName}
+  }
+
+  let blueprint: any = {
+    takes,
+    returns,
+    impl,
+  }
+
+  if (hasGeneric) {
+    blueprint.generic = {T: ['any']}
+  }
+
+  return blueprint
+}
+
+// Parse argument type string into Malloy type format
+function parseArgType (typeStr: string, isAggregate?: boolean): any {
+  let isVariadic = typeStr.endsWith('...')
+  let baseType = typeStr.replace(/[?.]*/g, '')
+
+  // Handle 'kw' type for SQL keywords
+  if (baseType === 'kw') {
+    return {sql_native: 'kw'}
+  }
+
+  // Handle generic types
+  if (baseType === 'T') {
+    let type: any = {generic: 'T'}
+    if (isAggregate) type = {dimension: type}
+    if (isVariadic) type = {variadic: type}
+    return type
+  }
+
+  // Handle basic types
+  let type: any = baseType
+  if (isAggregate && !isVariadic) {
+    type = {dimension: baseType}
+  }
+  if (isVariadic) {
+    type = {variadic: baseType}
+  }
+
+  return type
+}
+
+// Build function map from FunctionDef array
+function buildFunctionMap (functions: FunctionDef[]): DefinitionBlueprintMap {
+  return Object.fromEntries(
+    functions.map(fn => [fn.name, convertToMalloyBlueprint(fn)]),
+  )
+}
+
+// ============================================================================
+// Dialect Function Maps
+// ============================================================================
+
+export let BIGQUERY_DIALECT_FUNCTIONS: DefinitionBlueprintMap = buildFunctionMap(bigQueryFunctions)
+export let DUCKDB_DIALECT_FUNCTIONS: DefinitionBlueprintMap = buildFunctionMap(duckDbFunctions)
+export let SNOWFLAKE_DIALECT_FUNCTIONS: DefinitionBlueprintMap = buildFunctionMap(snowflakeFunctions)
+
+// ============================================================================
+// Dialect Registration
+// ============================================================================
+
+// Malloy doesn't provide a dialect for BigQuery, so create one.
+class BigQueryDialect extends StandardSQLDialect {
+  constructor () {
+    super()
+    this.name = 'bigquery'
+  }
+
+  getDialectFunctions (): {[name: string]: DialectFunctionOverloadDef[]} {
+    return expandBlueprintMap(BIGQUERY_DIALECT_FUNCTIONS)
+  }
+}
+
+// Extend Malloy's DuckDBDialect with our function definitions (replacing Malloy's built-ins)
+class DuckDBDialect extends MalloyDuckDBDialect {
+  getDialectFunctions (): {[name: string]: DialectFunctionOverloadDef[]} {
+    // Use our functions exclusively, not merging with Malloy's
+    return expandBlueprintMap(DUCKDB_DIALECT_FUNCTIONS)
+  }
+}
+
+// Extend Malloy's SnowflakeDialect with our function definitions
+class SnowflakeDialect extends MalloySnowflakeDialect {
+  getDialectFunctions (): {[name: string]: DialectFunctionOverloadDef[]} {
+    // Use our functions exclusively, not merging with Malloy's
+    return expandBlueprintMap(SNOWFLAKE_DIALECT_FUNCTIONS)
+  }
+}
+
+registerDialect(new BigQueryDialect()) // This must happen before we create the GlobalNameSpace
+registerDialect(new DuckDBDialect())
+registerDialect(new SnowflakeDialect())
+let globalNamespace = new GlobalNameSpace()
+let dialectNamespaces = new Map<string, DialectNameSpace>()
+
+export function findOverloads (name: string, dialect: string): FunctionOverloadDef[] {
+  if (!dialectNamespaces.has(dialect)) {
+    dialectNamespaces.set(dialect, new DialectNameSpace(getDialect(dialect)))
+  }
+  let res = dialectNamespaces.get(dialect)!.getEntry(name) || globalNamespace.getEntry(name)
+  return res?.entry ? (res.entry as any).overloads : []
+}
+
+// ============================================================================
+// Function Call Analysis
+// ============================================================================
 
 let errExpr = {node: 'error', type: 'error'} as Expression
 
