@@ -9,8 +9,10 @@ RESPONSE=$(aws lambda invoke \
   --cli-binary-format raw-in-base64-out \
   /dev/stdout 2>/dev/null)
 
-if echo "$RESPONSE" | jq -e '.success' > /dev/null; then
+# Check for success without requiring jq
+if echo "$RESPONSE" | grep -q '"success":true'; then
   echo "OK"
+  echo $RESPONSE
 else
   echo "FAIL: $RESPONSE"
   exit 1

@@ -80,4 +80,4 @@ jobs:
 
       - name: Deploy Lambda function
         working-directory: cloud/lambda/screenshot
-        run: npm run deploy
+        run: bash deploy.sh 772069004272
