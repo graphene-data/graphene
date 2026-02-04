@@ -70,6 +70,7 @@ async function startWorktree (name: string) {
   await $`mkdir ${treePath}/.opencode`
   await $`ln -s dev/opencode.jsonc ${treePath}/opencode.jsonc`
   await $`ln -s ../dev/skills ${treePath}/.opencode/skills`
+  await $`ln -s ../dev/agents ${treePath}/.opencode/agents`
 
   // hard-link so that when mounted in a container we can still access it
   await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
@@ -107,8 +108,8 @@ async function upWorktree(name:string) {
     graphene-dev \
     tail -f /dev/null`
 
-  console.log('Installing dependencies...')
-  await $`docker exec ${containerName} bash -c "(cd cloud && pnpm --force install) && (cd core && pnpm --force install)"`
+  console.log('Running containerStart.sh...')
+  await $`docker exec ${containerName} bash -lc "dev/containerStart.sh"`
 
   console.log(`Container '${containerName}' is running`)
 }
@@ -164,17 +165,13 @@ async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
   // Create WIP commit if dirty (excluding submodule pointer in superproject to avoid conflicts)
   if (await repoDirty(subdir)) {
     console.log(`Creating WIP commit in ${label}`)
+    // In superproject, add everything except the submodule pointer
     if (subdir) {
       await $`git -C ${path} add -A`
     } else {
-      // In superproject, add everything except the submodule pointer
       await $`git -C ${path} add -A -- . :!core`
     }
-    // Only commit if we actually staged something
-    let hasStagedChanges = (await $`git -C ${path} diff --cached --quiet`.nothrow()).exitCode !== 0
-    if (hasStagedChanges) {
-      await $`git -C ${path} commit -m WIP`
-    }
+    await $`git -C ${path} commit -m WIP`
   }
 
   await $`git -C ${path} fetch origin`
@@ -197,27 +194,11 @@ async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
 }
 
 async function pullWorktree (): Promise<boolean> {
-  // For each repo: if all commits are already merged (e.g. via rebase-merge on GitHub),
-  // just move to origin/main. Otherwise rebase local commits onto origin/main.
+  let success = true
   for (let subdir of [undefined, 'core'] as const) {
-    let label = subdir || 'cloud'
-    let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
-
-    if (!await hasUnmergedCommits(subdir)) {
-      // All our commits (if any) have been merged, just move to origin/main
-      let originMain = (await $`git -C ${path} rev-parse origin/main`).stdout.trim()
-      let currentHead = (await $`git -C ${path} rev-parse HEAD`).stdout.trim()
-      if (originMain !== currentHead) {
-        console.log(`Updating ${label} to origin/main (local commits already merged)`)
-        await $`git -C ${path} checkout origin/main`
-      }
-    } else {
-      // We have local commits to preserve, rebase them onto origin/main
-      if (!await rebaseRepo(subdir, 'origin/main')) return false
-    }
+    success = success && await rebaseRepo(subdir, 'origin/main')
   }
-
-  return true
+  return success
 }
 
 async function pushWorktree (updateCore: boolean) {
