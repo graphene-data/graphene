@@ -74,8 +74,9 @@ function buildSingleOverload (def: FunctionDef, args: ArgDef[]): any {
   let returns: any = def.returns
   if (def.returns === 'T') {
     returns = {generic: 'T'}
-  } else if (def.aggregate) {
-    returns = {measure: def.returns}
+  }
+  if (def.aggregate) {
+    returns = {measure: returns}
   }
 
   // Determine the implementation
