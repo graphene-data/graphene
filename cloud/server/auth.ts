@@ -9,50 +9,19 @@ import {DOMAIN, PROD, TEST} from './consts.ts'
 
 export type {AuthContext}
 
-// --- Agent Token Authentication ---
-
-function getAgentTokenSecret () {
-  let secret = process.env.AGENT_TOKEN_SECRET
-  if (!secret && PROD) {
-    throw new Error('AGENT_TOKEN_SECRET must be set in production')
-  }
-  return secret || 'dev-secret-key'
-}
-
-export interface AgentTokenClaims {
-  orgId: string
-  repoId: string
-  purpose: 'agent-render'
-}
-
-/**
- * Generate a short-lived JWT for the agent to authenticate with the dynamic endpoint.
- */
-export function generateAgentToken (orgId: string, repoId: string): string {
-  return jwt.sign(
-    {orgId, repoId, purpose: 'agent-render'} satisfies AgentTokenClaims,
-    getAgentTokenSecret(),
-    {expiresIn: '5m'},
-  )
-}
-
-/**
- * Verify an agent token and return the claims.
- */
-export function verifyAgentToken (token: string): AgentTokenClaims | null {
-  try {
-    let claims = jwt.verify(token, getAgentTokenSecret()) as AgentTokenClaims
-    if (claims.purpose !== 'agent-render') return null
-    return claims
-  } catch {
-    return null
-  }
-}
-
 let authOverride: AuthContext | null = null
 export function setAuthOverride (auth: AuthContext | null) {
   if (!TEST) return
   authOverride = auth
+}
+
+export interface AgentTokenClaims {
+  orgId: string
+}
+
+// Generate a short-lived JWT for the agent to authenticate with the dynamic endpoint.
+export function generateAgentToken (orgId: string): string {
+  return jwt.sign({orgId}, getAgentTokenSecret(), {expiresIn: '5m'})
 }
 
 export async function auth (req: FastifyRequest, reply: FastifyReply) {
@@ -66,8 +35,8 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
   // Check for agent token cookie first (used by screenshot Lambda for dynamic renders)
   let agentToken = req.cookies['graphene_agent_token']
   if (!req.auth && agentToken) {
-    let claims = verifyAgentToken(agentToken)
-    if (claims) {
+    let claims = jwt.verify(agentToken, getAgentTokenSecret()) as AgentTokenClaims
+    if (claims && claims.orgId) {
       req.auth = {userId: 'agent', orgId: claims.orgId, slug: ''}
       isAgentAuth = true
     }
@@ -122,6 +91,14 @@ function getStytch (): B2BClient {
     custom_base_url: process.env.STYTCH_DOMAIN ?? '',
   })
   return stytchClient
+}
+
+function getAgentTokenSecret () {
+  let secret = process.env.AGENT_TOKEN_SECRET
+  if (!secret && PROD) {
+    throw new Error('AGENT_TOKEN_SECRET must be set in production')
+  }
+  return secret || 'dev-secret-key'
 }
 
 export async function authTokenExchange (req: FastifyRequest, reply: FastifyReply) {

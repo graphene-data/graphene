@@ -13,12 +13,6 @@ export interface RenderResult {
   error?: string
 }
 
-/** Build the URL for the dynamic render endpoint */
-export function buildRenderUrl (markdown: string, token: string, baseUrl: string): string {
-  let md = Buffer.from(markdown).toString('base64')
-  return `${baseUrl}/_api/dynamic?md=${encodeURIComponent(md)}&token=${encodeURIComponent(token)}`
-}
-
 /** Render markdown to an image via the screenshot Lambda */
 export async function renderMd (markdown: string, repoId: string, baseUrlOverride?: string): Promise<RenderResult> {
   let db = getDb()
@@ -30,7 +24,8 @@ export async function renderMd (markdown: string, repoId: string, baseUrlOverrid
 
   let token = generateAgentToken(repo.orgId, repoId)
   let baseUrl = baseUrlOverride || `https://${org.slug}.${DOMAIN}`
-  let url = buildRenderUrl(markdown, token, baseUrl)
+  let md = Buffer.from(markdown).toString('base64')
+  let url = `${baseUrl}/_api/dynamic?md=${encodeURIComponent(md)}`
 
   let response = await lambda.send(new InvokeCommand({
     FunctionName: 'graphene-screenshot',

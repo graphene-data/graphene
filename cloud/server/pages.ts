@@ -1,12 +1,12 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import {and, eq, or} from 'drizzle-orm'
-import {auth, verifyAgentToken} from './auth.ts'
 import {getDb} from './db.ts'
 import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
 import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 import {PROD} from './consts.ts'
+import {auth} from './auth.ts'
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
@@ -120,10 +120,8 @@ function rewriteSvelteImports (code: string, repoId: string, inline = false) {
 }
 
 export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
-  let query = req.query as {md?: string; token?: string}
-
-  let claims = verifyAgentToken(query.token || '')
-  if (!claims) return reply.code(401).send({error: 'Invalid token'})
+  await auth(req, reply)
+  let query = req.query as { md?: string; token?: string }
 
   // Decode base64 markdown from query param
   let markdown: string
