@@ -483,6 +483,14 @@ describe('lang', () => {
       .toReturnRows(['Alice', 100, 1], ['Bob', 50, 0])
   })
 
+  it('treats generic aggregate functions as aggregates', () => {
+    // any_value returns T and is an aggregate - it should be treated as an aggregate
+    // This test ensures generic return types with aggregate: true are properly marked as measures
+    // When working correctly, it should generate SQL with group by (since it's an aggregate)
+    expect('from users select name, any_value(age) as sample_age')
+      .toRenderSql('select base."name" as "name", any_value(base."age") as "sample_age" from users as base group by 1 order by 2 desc nulls last')
+  })
+
   it.skip('supports malloy date functions', () => {
     expect('from users select name, month(created_at)')
       .toRenderSql('select base."name" as "name", extract(month from base."created_at") as "col_1" from users as base')
