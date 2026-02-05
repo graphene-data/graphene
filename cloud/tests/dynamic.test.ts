@@ -5,11 +5,9 @@ import {orgId, repoId} from '../server/dev.ts'
 
 function createToken () {
   let secret = process.env.AGENT_TOKEN_SECRET || 'dev-secret-key'
-  return jwt.sign({orgId, repoId, purpose: 'agent-render'}, secret, {expiresIn: '5m'})
+  return jwt.sign({orgId}, secret, {expiresIn: '5m'})
 }
 
-// Test with realAuth to verify cookie-based agent token auth works
-// This simulates what the Lambda does: set cookie, then navigate
 describe('dynamic endpoint', () => {
   test.scoped({realAuth: true})
 
@@ -37,7 +35,7 @@ from flights select carrier, avg(dep_delay) as avg_delay order by avg_delay desc
 <BarChart data=delays x=carrier y=avg_delay />
 `
     let md = Buffer.from(markdown).toString('base64')
-    let url = `${cloud.url}/_api/dynamic?md=${encodeURIComponent(md)}&token=${encodeURIComponent(token)}`
+    let url = `${cloud.url}/_api/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(repoId)}`
 
     await page.goto(url)
 

@@ -121,7 +121,9 @@ function rewriteSvelteImports (code: string, repoId: string, inline = false) {
 
 export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
-  let query = req.query as { md?: string; token?: string }
+  let query = req.query as {md?: string; repoId?: string}
+
+  if (!query.repoId) return reply.code(400).send({error: 'Missing repoId parameter'})
 
   // Decode base64 markdown from query param
   let markdown: string
@@ -142,7 +144,7 @@ export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
   if (!svelteSource) return reply.code(500).send({error: 'Failed to compile markdown'})
 
   let compiled = svelteCompile(svelteSource.code, {generate: 'client', dev: !PROD})
-  let componentCode = rewriteSvelteImports(compiled.js.code, claims.repoId, true)
+  let componentCode = rewriteSvelteImports(compiled.js.code, query.repoId, true)
 
   // Return HTML page that loads the frontend and mounts the component
   let html = `<!DOCTYPE html>

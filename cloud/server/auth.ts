@@ -15,10 +15,6 @@ export function setAuthOverride (auth: AuthContext | null) {
   authOverride = auth
 }
 
-export interface AgentTokenClaims {
-  orgId: string
-}
-
 // Generate a short-lived JWT for the agent to authenticate with the dynamic endpoint.
 export function generateAgentToken (orgId: string): string {
   return jwt.sign({orgId}, getAgentTokenSecret(), {expiresIn: '5m'})
@@ -35,11 +31,9 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
   // Check for agent token cookie first (used by screenshot Lambda for dynamic renders)
   let agentToken = req.cookies['graphene_agent_token']
   if (!req.auth && agentToken) {
-    let claims = jwt.verify(agentToken, getAgentTokenSecret()) as AgentTokenClaims
-    if (claims && claims.orgId) {
-      req.auth = {userId: 'agent', orgId: claims.orgId, slug: ''}
-      isAgentAuth = true
-    }
+    let claims = jwt.verify(agentToken, getAgentTokenSecret()) as {orgId: string}
+    req.auth = {userId: 'agent', orgId: claims.orgId, slug: ''}
+    isAgentAuth = true
   }
 
   let bearer = req.headers['authorization']
@@ -62,8 +56,8 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
     throw new Error('Unauthorized')
   }
 
-  // Skip subdomain validation for agent auth (Lambda accesses via ngrok tunnel)
-  if (isAgentAuth || !PROD) return
+  // Skip subdomain validation for agent auth in dev (Lambda accesses via ngrok tunnel)
+  if (isAgentAuth && !PROD) return
 
   // Validate subdomain matches user's org
   let host = (req.hostname || '').split(':')[0]

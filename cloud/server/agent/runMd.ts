@@ -22,10 +22,10 @@ export async function renderMd (markdown: string, repoId: string, baseUrlOverrid
   let org = await db.select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, repo.orgId)).then(rows => rows[0])
   if (!org) return {success: false, error: 'Org not found'}
 
-  let token = generateAgentToken(repo.orgId, repoId)
+  let token = generateAgentToken(repo.orgId)
   let baseUrl = baseUrlOverride || `https://${org.slug}.${DOMAIN}`
   let md = Buffer.from(markdown).toString('base64')
-  let url = `${baseUrl}/_api/dynamic?md=${encodeURIComponent(md)}`
+  let url = `${baseUrl}/_api/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(repoId)}`
 
   let response = await lambda.send(new InvokeCommand({
     FunctionName: 'graphene-screenshot',

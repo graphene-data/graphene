@@ -11,13 +11,7 @@ import {PROD} from '../consts.ts'
 
 // Read Graphene documentation at module load time
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const grapheneDocsPath = path.resolve(__dirname, '../../../core/docs/graphene.md')
-let grapheneDocs = ''
-try {
-  grapheneDocs = readFileSync(grapheneDocsPath, 'utf-8')
-} catch {
-  console.warn('Could not load graphene.md documentation')
-}
+let grapheneDocs = readFileSync(path.resolve(__dirname, '../../../core/docs/base.md'), 'utf-8')
 
 interface AgentMessage {
   type: 'system' | 'assistant' | 'user'
@@ -39,8 +33,9 @@ interface RunAgentOptions {
 
 export async function runAgent ({prompt, repoId, orgId: _orgId, onMessage, port}: RunAgentOptions) {
   // Read CLAUDE.md or AGENTS.md first for context
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let contextContent = await findContextFiles(repoId)
-  let systemPrompt = buildSystemPrompt(contextContent)
+  let systemPrompt = buildSystemPrompt()
 
   // In dev mode, start ngrok tunnel for renderMd to work
   let tunnelUrl: string | undefined
@@ -160,9 +155,11 @@ async function findContextFiles (repoId: string): Promise<string> {
   return contextContent
 }
 
-function buildSystemPrompt (contextContent: string): string {
+function buildSystemPrompt (): string {
   let base = `
     You are a data analyst assistant that answers questions using Graphene.
+
+    ${grapheneDocs}
 
     IMPORTANT: You must ALWAYS call renderMd to show the user a chart or table. Never just describe data - visualize it.
 
