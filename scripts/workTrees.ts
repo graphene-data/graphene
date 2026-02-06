@@ -97,6 +97,8 @@ async function upWorktree(name:string) {
   await $`docker rm -f ${containerName}`.quiet().nothrow() // Stop existing container if running
 
   console.log('Starting container...')
+  // We mount main/.git at its absolute host path (for the superproject .git file which uses an absolute gitdir)
+  // AND at /main/.git (for the core submodule .git file which uses a relative gitdir like ../../main/.git/...)
   await $`docker run -d --name ${containerName} \
     --env-file ${envFile} \
     -p ${port}:${port} -p ${port + 1}:${port + 1} -p ${port + 2}:${port + 2} \
@@ -104,6 +106,7 @@ async function upWorktree(name:string) {
     --mount type=bind,source=${treePath},target=/${name} \
     --mount type=volume,source=pnpm-store,target=/pnpm/store \
     --mount type=bind,source=${root}/main/.git,target=${root}/main/.git \
+    --mount type=bind,source=${root}/main/.git,target=/main/.git \
     graphene-dev \
     tail -f /dev/null`
 
