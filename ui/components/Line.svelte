@@ -215,7 +215,6 @@
       if (d.yAxis[0]) d.yAxis[0] = {...d.yAxis[0], ...chartOverrides.yAxis}
       d.xAxis = {...d.xAxis, ...chartOverrides.xAxis}
       if (y2Count > 0 && d.yAxis[1]) {
-        d.yAxis[1] = {...d.yAxis[1], show: true}
         let shouldSetY2Type = y2SeriesType && ['line', 'bar', 'scatter'].includes(y2SeriesType) && d.series
         for (let i = 0; shouldSetY2Type && i < y2Count; i++) {
           if (d.series[yCount + i]) d.series[yCount + i].type = y2SeriesType

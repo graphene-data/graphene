@@ -333,7 +333,6 @@
           }
           d.xAxis = {...d.xAxis, ...chartOverrides.xAxis}
           if (y2Count > 0 && d.yAxis[1]) {
-            d.yAxis[1] = {...d.yAxis[1], show: true}
             if (['line', 'bar', 'scatter'].includes(y2SeriesType) && d.series) {
               for (let i = 0; i < y2Count; i++) {
                 if (d.series[yCount + i]) {

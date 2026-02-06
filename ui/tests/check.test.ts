@@ -80,6 +80,7 @@ test('cli check command reports runtime query errors', async ({server, page}) =>
 
 test('check reports runtime chart configuration errors', async ({server, page}) => {
   expectConsoleError(page, 'Error in Bar Chart')
+  expectConsoleError(page, /ECharts.*has been disposed/, true)
   server.mockFile('/index.md', `
     # Runtime Chart Config Error
     \`\`\`sql chart_data
