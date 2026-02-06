@@ -1,6 +1,6 @@
 <script lang="ts">
   import {setContext, type Snippet} from 'svelte'
-  import {type Writable, writable} from 'svelte/store'
+  import {type Writable, writable, get} from 'svelte/store'
   import {propKey, configKey} from '../component-utilities/chartContext.js'
   import ECharts from './ECharts.svelte'
   import getColumnSummary from '../component-utilities/getColumnSummary.js'
@@ -165,12 +165,9 @@
   let heightMultiplier
 
   // Set final chart height:
-  // Note: These are intentionally not $state - they're set imperatively in the effect
-  // and we don't want updates to trigger re-renders.
-  // svelte-ignore non_reactive_update
-  let height
-  // svelte-ignore non_reactive_update
-  let width
+  // Using a separate writable store for dimensions so they're reactive in the template
+  // without causing infinite effect loops (which $state would cause since the effect reads+writes them).
+  let dimensions = writable<{height?: string, width?: string}>({})
 
   let missingCols = []
 
@@ -182,7 +179,6 @@
   let optCols = []
   let i
 
-  // Note: Not $state - set imperatively in effect, we don't want updates to trigger re-renders
   // svelte-ignore non_reactive_update
   let error
 
@@ -663,14 +659,16 @@
       } else {
         let primaryAxisColor = (() => {
           if (!(Array.isArray(y2Local) && y2Local.length)) return undefined
-          if (yAxisColorStore === 'true') return $colorPaletteResolved?.[0]
-          if (yAxisColorStore === 'false') return undefined
-          return yAxisColorStore
+          let yColor = get(yAxisColorStore)
+          if (yColor === 'true') return $colorPaletteResolved?.[0]
+          if (yColor === 'false') return undefined
+          return yColor
         })()
         let secondaryAxisColor = (() => {
-          if (y2AxisColorStore === 'true') return $colorPaletteResolved?.[ySeriesCount]
-          if (y2AxisColorStore === 'false') return undefined
-          return y2AxisColorStore
+          let y2Color = get(y2AxisColorStore)
+          if (y2Color === 'true') return $colorPaletteResolved?.[ySeriesCount]
+          if (y2Color === 'false') return undefined
+          return y2Color
         })()
 
         verticalAxisConfig = {
@@ -713,7 +711,7 @@
 
         secondaryAxis = {
           type: 'value',
-          show: false,
+          show: y2Count > 0,
           alignTicks: true,
           splitLine: {
             show: y2Gridlines_bool,
@@ -803,8 +801,7 @@
       topAxisTitleTop = legendTop + legendHeight + 7
 
       // Set final chart height:
-      height = chartContainerHeight + 'px'
-      width = '100%'
+      dimensions.set({height: chartContainerHeight + 'px', width: '100%'})
 
       // ---------------------------------------------------------------------------------------
       // Set up horizontal axis title (custom graphic)
@@ -838,7 +835,7 @@
           text: title,
           subtext: subtitle,
           subtextStyle: {
-            width: width,
+            width: '100%',
           },
         },
         tooltip: {
@@ -968,12 +965,12 @@
   })
 </script>
 
-{#if !error}
+{#if !$chartProps.error}
   {@render children?.()}
   <ECharts
     config={$config}
-    {height}
-    {width}
+    height={$dimensions.height}
+    width={$dimensions.width}
     {data}
     {queryID}
     chartTitle={title}
@@ -984,5 +981,5 @@
     seriesColors={$seriesColorsResolved}
   />
 {:else}
-  <ErrorChart {error} title={chartType} />
+  <ErrorChart error={$chartProps.error} title={chartType} />
 {/if}
