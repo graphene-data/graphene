@@ -217,7 +217,7 @@ async function pushWorktree (updateCore: boolean) {
   if (!isOnOriginMain) {
     console.error(`Cannot push: submodule 'core' points to commit ${submoduleCommit.slice(0, 8)} which is not on origin/main.`)
     console.error(`This often happens after rebase-merging a PR in GitHub.`)
-    console.error(`Fix with: cd core && git fetch origin && git checkout origin/main && cd .. && git add core && git commit --amend --no-edit`)
+    console.error(`Fix by running "worktrees.ts pull"`)
     return
   }
 
@@ -263,14 +263,8 @@ async function doneWorktree (force = false) {
 
   if (!force) {
     if (await repoDirty('core') || await repoDirty()) throw new Error('Repos have uncommitted changes')
-
-    // Check that both branches have been merged into main
-    if (await hasUnmergedCommits('core')) {
-      return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
-    }
-    if (await hasUnmergedCommits()) {
-      return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
-    }
+    if (await hasUnmergedCommits('core')) return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
+    if (await hasUnmergedCommits()) return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
   }
 
   console.log('Archiving worktree ' + currentName)
