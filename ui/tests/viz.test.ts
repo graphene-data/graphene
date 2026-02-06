@@ -91,6 +91,33 @@ test('series colors accepts json string input', async ({mount, chart}) => {
   expect(colors).toContain('#123456')
 })
 
+test('line chart dual axis shows both y-axis labels', async ({mount, chart}) => {
+  let data = timeseries() as any
+  let rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k * 0.1}))
+  rows._evidenceColumnTypes = [
+    ...data.rows._evidenceColumnTypes,
+    {name: 'profit_usd0k', evidenceType: 'number'},
+  ]
+  data.rows = rows
+
+  await mount('components/LineChart.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
+
+  // Verify both y-axes are visible and have labels enabled
+  let yAxisConfig = await chart.config((c) => (c.yAxis ?? []).map((a: any) => ({
+    show: a.show,
+    labelShow: a.axisLabel?.show,
+    // Axis label color must be a string (not a store object) for ECharts to render
+    labelColorType: typeof a.axisLabel?.color,
+  })))
+  expect(yAxisConfig[0]).toMatchObject({show: true, labelShow: true})
+  expect(yAxisConfig[1]).toMatchObject({show: true, labelShow: true})
+  // Ensure colors are properly resolved strings, not store objects
+  for (let axis of yAxisConfig) {
+    expect(axis.labelColorType).not.toBe('object')
+  }
+  await expect(chart.el).screenshot('line-chart-dual-axis')
+})
+
 test('bar chart accepts comma-separated multi y', async ({mount, chart}) => {
   let data = timeseries() as any
   // augment dataset with a second numeric column while preserving metadata
