@@ -1,5 +1,5 @@
 // Type definitions for SQL function references
-// These are used to define functions in a human-readable format that gets converted to Malloy blueprints
+// These are used to define functions in a human-readable format that gets converted to overloads for type checking
 
 export type SQLType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'any' | 'bytes'
 

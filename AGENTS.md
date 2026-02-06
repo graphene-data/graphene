@@ -20,9 +20,9 @@ You can run any of these cli commands within all of our examples. It's important
 `pnpm graphene schema <dataset_or_table>` - Prints out tables within a database/schema, or the columns of a given table.
 
 # Tech stack
-Graphene is mostly written in typescript. We parse gsql with Lezer, then translate it to Malloy's IR, and use Malloy to render dialect-specific SQL.
+Graphene is mostly written in typescript. We parse gsql with Lezer, analyze it for errors, and render to dialect-specific sql.
 
-For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 4, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
+For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 5, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
 
 # Process
 NEVER run `pnpm install` or `pnpm add`. If the env seems broken, summarize what seems wrong and let the user fix it. If you need to add dependencies, explain what you'd like to add and why.
@@ -31,7 +31,6 @@ NEVER run `pnpm install` or `pnpm add`. If the env seems broken, summarize what 
 `pnpm lint` to run both eslint and tsc
 `pnpm test` to run all tests. `pnpm test [cli|lang|ui]` to run all the tests for a section of the codebase. Uses vitest v4 under the hood, if you want to pass other options.
 For any test with UI, capture screenshots. They are always written to tests/snapshots, and it's prudent to view them after large changes to ensure the UI still looks right. When a screenshot is sufficient to verify visual behavior (colors, layout, rendering), prefer it over programmatic assertions — it's simpler and easier to maintain.
-Use `howDoesMalloy` to view the Malloy IR used for a given Malloy query.
 When testing AI features, always use a mock rather than hitting an API.
 
 
