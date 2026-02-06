@@ -526,6 +526,7 @@
       chartProps.update((d) => {
         return {
           ...d,
+          error: undefined,
           data: dataLocal,
           x: xLocal,
           y: yLocal,
