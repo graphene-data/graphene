@@ -69,8 +69,8 @@ program.command('schema')
     let dsToList: string | null = null
     let parts = tableArg ? tableArg.split('.') : []
     if (datasets.includes(tableArg)) dsToList = tableArg // you gave the name of a dataset
-    else if (!tableArg && datasets.length == 1) dsToList = datasets[0] // only one dataset, and no args
     else if (!tableArg && config.namespace) dsToList = config.namespace // default namespace configured
+    else if (!tableArg && datasets.length == 1) dsToList = datasets[0] // only one dataset, and no args
     else if (!tableArg && config.dialect == 'duckdb') dsToList = '<default>'
     else if (tableArg && config.dialect == 'snowflake' && parts.length == 2) dsToList = tableArg
 
