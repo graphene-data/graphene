@@ -68,6 +68,20 @@ describe('lang', () => {
     updateFile(testTables, 'models.gsql')
   })
 
+
+  it('imports all keywords as tokens', async () => {
+    // Every keyword used via Kw<"..."> in the grammar must be in the specializeIdentifier keyword map in tokens.js.
+    // Without this, those keywords would only parse in lowercase (the inline spec_Identifier table is exact-match).
+    // We have a test because it's easy to add keywords and forget to add them to tokens, causing the parsing to break if you use the uppercase version of a keyword
+    let fs = await import('fs')
+    let grammar = fs.readFileSync(new URL('./lang.grammar', import.meta.url), 'utf8')
+    let tokens = fs.readFileSync(new URL('./tokens.js', import.meta.url), 'utf8')
+    let grammarKeywords = new Set([...grammar.matchAll(/Kw<"(\w+)">/g)].map(m => m[1]))
+    let tokenKeywords = new Set([...tokens.matchAll(/^\s+(\w+):/gm)].map(m => m[1]))
+    let missing = [...grammarKeywords].filter(k => !tokenKeywords.has(k))
+    expect(missing, 'Keywords in grammar but missing from tokens.js specializeIdentifier').toEqual([])
+  })
+
   it('handles basic select query', async () => {
     expect('from users select id, name where id = 1')
       .toRenderSql('SELECT base."id" as "id", base."name" as "name" FROM users as base WHERE base."id"=1')

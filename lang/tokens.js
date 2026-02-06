@@ -33,6 +33,19 @@ import {
   interval,
   date,
   timestamp,
+  _case,
+  when,
+  then,
+  _else,
+  end,
+  count,
+  extract,
+  cast,
+  distinct,
+  having,
+  one,
+  many,
+  extend,
 } from './parser.terms.js'
 
 // Map of lowercase keywords to their token IDs
@@ -70,6 +83,19 @@ const keywords = {
   interval: interval,
   date: date,
   timestamp: timestamp,
+  case: _case,
+  when: when,
+  then: then,
+  else: _else,
+  end: end,
+  count: count,
+  extract: extract,
+  cast: cast,
+  distinct: distinct,
+  having: having,
+  one: one,
+  many: many,
+  extend: extend,
 }
 
 export function specializeIdentifier (value) {
