@@ -63,7 +63,11 @@ export class BigQueryConnection implements QueryConnection {
       from \`${dataset}.INFORMATION_SCHEMA.TABLES\`
       where table_type in ('BASE TABLE', 'VIEW') order by table_name`)
 
-    return res.rows.map(r => `${r['table_schema']}.${r['table_name']}`)
+    // If dataset includes a project prefix (e.g. "bigquery-public-data.thelook_ecommerce"),
+    // include it in the output so describeTable gets a fully-qualified path
+    let parts = dataset.split('.')
+    let projectPrefix = parts.length > 1 ? parts.slice(0, -1).join('.') + '.' : ''
+    return res.rows.map(r => `${projectPrefix}${r['table_schema']}.${r['table_name']}`)
   }
 
   async describeTable (target: string): Promise<SchemaColumn[]> {
