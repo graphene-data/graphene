@@ -22,13 +22,12 @@ let positional = args.slice(1).filter(a => !a.startsWith('--'))
 
 switch (command) {
   case 'start': await startWorktree(positional[0]); break
-  case 'dangerously-drop': await dropWorktree(positional[0]); break
   case 'pull': await pullWorktree(); break
   case 'commit': await commitWorktree(); break
   case 'push': await pushWorktree(flags.includes('--updateCore')); break
   case 'up': await upWorktree(currentName); break
   case 'exec': await execWorktree(process.argv.slice(3)); break
-  case 'done': await doneWorktree(); break
+  case 'done': await doneWorktree(flags.includes('--force')); break
   default:
     console.log(`
 Usage: wt <command>
@@ -40,7 +39,7 @@ pull                    Pull down latest changes from main for both repos
 push [--updateCore]     Rebase and push both repos. Use --updateCore to update the submodule pointer.
 up                      Start the dev container for this worktree
 exec [cmd]              Run a command in the container (or bash if no command)
-done                    Archive both worktrees
+done [--force]          Archive both worktrees, or force-drop current worktree
 `)
 }
 
@@ -256,33 +255,25 @@ async function execWorktree (args: string[]) {
   process.exit(result.status ?? 0)
 }
 
-async function doneWorktree () {
+async function doneWorktree (force = false) {
   if (currentName === 'main') throw new Error('Cannot mark main as done')
-  if (await repoDirty('core') || await repoDirty()) throw new Error('Repos have uncommitted changes')
+
+  if (!force) {
+    if (await repoDirty('core') || await repoDirty()) throw new Error('Repos have uncommitted changes')
+
+    // Check that both branches have been merged into main
+    if (await hasUnmergedCommits('core')) {
+      return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
+    }
+    if (await hasUnmergedCommits()) {
+      return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
+    }
+  }
+
   console.log('Archiving worktree ' + currentName)
-
-  // Check that both branches have been merged into main
-  if (await hasUnmergedCommits('core')) {
-    return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
-  }
-  if (await hasUnmergedCommits()) {
-    return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
-  }
-
-  await $`docker rm -f graphene-${currentName}`.nothrow() // Stop the container
-
   cd(root) // cd to root, since we might be about to delete the cwd
-
-  // Remove the worktree. Force is required because the worktree has submodules
-  await $`git -C ${root}/main worktree remove --force ${currentWorktree}`
-}
-
-// useful when hacking on the workTree script itself, but otherwise kinda dangerous
-async function dropWorktree(name:string) {
-  await $`docker rm -f graphene-${name}`.nothrow()
-  await $`git -C ${root}/${name} submodule deinit -f core`.nothrow()
-  await $`git -C ${root}/main worktree remove --force ${root}/${name}`
-  await $`git -C ${root}/main branch -D ${name}`
+  await $`docker rm -f graphene-${currentName}`.nothrow() // Stop the container, if running
+  await $`git -C ${root}/main worktree remove --force ${currentName}`
 }
 
 function getTreeNames (): string[] {
