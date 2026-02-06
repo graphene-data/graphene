@@ -57,17 +57,29 @@ export async function handler (event) {
       pageErrors.push(err.message)
     })
 
-    await page.goto(event.url, {waitUntil: 'load', timeout: 30000})
+    let response = await page.goto(event.url, {waitUntil: 'load', timeout: 30000})
     mark('navigation')
 
-    // Wait for network to be idle (JS modules loading, data fetching)
-    await page.waitForLoadState('networkidle')
+    // If the page loaded successfully, wait for async queries to finish
+    let httpError = response && !response.ok()
+      ? await response.text().catch(() => '').then(b => { try { return JSON.parse(b).message || b } catch { return b } })
+      : null
+    if (!httpError) await page.waitForLoadState('networkidle')
     mark('networkIdle')
 
     let screenshot = await page.screenshot({type: 'png', animations: 'disabled', fullPage: true})
     mark('screenshot')
 
-    return {success: true, screenshot: screenshot.toString('base64'), timings, pageErrors}
+    // Extract query results and errors from the page (will be empty if page failed to load)
+    let {queryData, errors} = await page.evaluate(() => {
+      let errs = (window.$GRAPHENE?.getErrors?.() || []).map(e => ({message: e.message, id: e.id}))
+      return {queryData: window.$GRAPHENE?.queryResults || {}, errors: errs}
+    })
+    mark('queryData')
+
+    if (httpError) errors = [{message: httpError}]
+
+    return {success: true, screenshot: screenshot.toString('base64'), queryData, errors, timings, pageErrors}
   } catch (err) {
     let error = err instanceof Error ? err.message : String(err)
     return {success: false, error, timings}

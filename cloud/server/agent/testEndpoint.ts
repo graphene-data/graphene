@@ -97,9 +97,6 @@ export async function agentTest (req: FastifyRequest, reply: FastifyReply) {
             delete displayResult.screenshot
             if (Object.keys(displayResult).length > 0) {
               let resultStr = JSON.stringify(displayResult, null, 2)
-              if (resultStr.length > 2000) {
-                resultStr = resultStr.slice(0, 2000) + '\n... (truncated)'
-              }
               resultHtml += `<div class="label">Result:</div><pre>${escapeHtml(resultStr)}</pre>\n`
             }
 

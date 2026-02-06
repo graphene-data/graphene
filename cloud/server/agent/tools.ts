@@ -120,25 +120,35 @@ function extractPreview (content: string, query: string, contextChars = 100): st
 export function renderMdTool (repoId: string, baseUrl?: string) {
   // Using 'as any' because toModelOutput is a runtime feature not yet in TypeScript types
   return tool({
-    description: 'Render markdown containing a chart to an image. Returns a screenshot or errors. Use this when the user wants to see a visualization.',
+    description: 'Render markdown containing a chart to an image. Returns a screenshot and the underlying tabular data. Use this when the user wants to see a visualization.',
     inputSchema: z.object({
       markdown: z.string().describe('Markdown content with graphene chart blocks to render'),
     }),
     execute: async ({markdown}) => {
       return await renderMd(markdown, repoId, baseUrl)
     },
-    // Convert screenshot to multi-modal content for the model
-    // This allows images to be sent as vision content instead of base64 strings
-    toModelOutput ({output}: {output: {success: boolean, screenshot?: string, error?: string}}) {
-      if (output.success && output.screenshot) {
-        return {
-          type: 'content' as const,
-          value: [
-            {type: 'media' as const, data: output.screenshot, mediaType: 'image/png' as const},
-          ],
-        }
+    // Convert results to multi-modal content for the model.
+    // If there are query errors, skip the screenshot and just return the errors so the agent can fix them.
+    toModelOutput ({output}: {output: {success: boolean, screenshot?: string, queryData?: Record<string, {rows: any[]}>, errors?: {message: string, id?: string}[], error?: string}}) {
+      if (output.success && output.errors?.length) {
+        let errText = output.errors.map(e => e.id ? `${e.id}: ${e.message}` : e.message).join('\n')
+        return {type: 'content' as const, value: [{type: 'text' as const, text: `Query errors:\n${errText}`}]}
       }
-      // For errors, just return as JSON
+      if (output.success && output.screenshot) {
+        let content: any[] = [
+          {type: 'media' as const, data: output.screenshot, mediaType: 'image/png' as const},
+        ]
+        if (output.queryData && Object.keys(output.queryData).length > 0) {
+          let dataSummary = Object.entries(output.queryData).map(([name, {rows}]) => {
+            let header = rows.length > 0 ? Object.keys(rows[0]).join(' | ') : '(no columns)'
+            let dataRows = rows.slice(0, 50).map(r => Object.values(r).join(' | '))
+            let truncated = rows.length > 50 ? `\n... (${rows.length - 50} more rows)` : ''
+            return `Query "${name}" (${rows.length} rows):\n${header}\n${dataRows.join('\n')}${truncated}`
+          }).join('\n\n')
+          content.push({type: 'text' as const, text: `Underlying data:\n\n${dataSummary}`})
+        }
+        return {type: 'content' as const, value: content}
+      }
       return {type: 'json' as const, value: output}
     },
   } as any)

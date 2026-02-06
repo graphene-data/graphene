@@ -36,10 +36,10 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
     gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))
     let queries = analyze(body.gsql, 'gsql')
 
-    if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
     if (getDiagnostics().length) {
       return reply.code(400).send(JSON.stringify(getDiagnostics()))
     }
+    if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
 
     // Then, turn the requested query into sql, and execute against the db
     sql = toSql(queries[0], body.params)

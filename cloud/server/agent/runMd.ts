@@ -10,6 +10,8 @@ let lambda = new LambdaClient({region: process.env.AWS_REGION || 'us-east-1'})
 export interface RenderResult {
   success: boolean
   screenshot?: string
+  queryData?: Record<string, {rows: any[], fields?: {name: string, type?: string}[]}>
+  errors?: {message: string, id?: string}[]
   error?: string
 }
 
