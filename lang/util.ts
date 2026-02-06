@@ -1,4 +1,4 @@
-import type {Expression, FileInfo} from './types.ts'
+import type {FileInfo} from './types.ts'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 
 function markdownOffset (offset: number, file: FileInfo) {
@@ -52,13 +52,13 @@ export function getOffset (line: number, col: number, file: FileInfo) {
 }
 
 export function getFile (node: SyntaxNode | SyntaxNodeRef): FileInfo {
-  if (node.node) node = node.node // SyntaxNodeRef has a `tree` prop, but it's wrong, so create a SyntaxNode and walk up
+  if (node.node) node = node.node
   let top: SyntaxNode = node as SyntaxNode
   while (top.parent) top = top.parent
   return top!.tree!.fileInfo
 }
 
-export function txt (node:SyntaxNode | null | undefined) {
+export function txt (node: SyntaxNode | null | undefined) {
   if (!node) return ''
   let file = getFile(node)
   let source = file.virtualContents ?? file.contents
@@ -69,33 +69,21 @@ export function compact<T> (obj: T): T {
   return Object.fromEntries(Object.entries(obj as any).filter(([_, v]) => v !== undefined)) as T
 }
 
-export function walkExpression (root: any, fn: (expr: Expression, parent?: Expression | null) => void, parent: Expression | null = null) {
-  if (!root) return
-  fn(root, parent)
-  if (root.e) walkExpression(root.e, fn, root)
-  if (root.kids) {
-    Object.values(root.kids).forEach(kid => {
-      if (Array.isArray(kid)) kid.forEach(k => walkExpression(k, fn, root))
-      else walkExpression(kid, fn, root)
-    })
-  }
-}
-
-export function trimIndentation (str:string) {
+export function trimIndentation (str: string) {
   let lines = str.trim().split('\n')
   let indent = lines.slice(1)
-    .filter(l => l.trim() !== '') // empty lines don't count
+    .filter(l => l.trim() !== '')
     .map(l => l.match(/^\s*/)![0].length)
 
   let toRemove = Math.min(...indent)
   return lines.map((line, index) => {
     if (index == 0) return line
-    if (line.trim() === '') return '' // empty lines don't count
+    if (line.trim() === '') return ''
     return line.slice(toRemove)
   }).join('\n')
 }
 
-export async function pollFor<T> (fn: () => T, timeoutMs:number, interval?: number): Promise<T | null> {
+export async function pollFor<T> (fn: () => T, timeoutMs: number, interval?: number): Promise<T | null> {
   let end = Date.now() + timeoutMs
   while (Date.now() < end) {
     let res = fn()

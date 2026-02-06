@@ -45,21 +45,18 @@ export class BigQueryConnection implements QueryConnection {
     if (!dataset) throw new Error('BigQuery requires a dataset')
     validateBigQueryIdent(dataset)
 
-    let res = await this.runQuery(`select table_schema as table_schema, table_name as table_name
+    let res = await this.runQuery(`select table_name as table_name
       from \`${dataset}.INFORMATION_SCHEMA.TABLES\`
       where table_type in ('BASE TABLE', 'VIEW') order by table_name`)
 
-    // If dataset includes a project prefix (e.g. "bigquery-public-data.thelook_ecommerce"),
-    // include it in the output so describeTable gets a fully-qualified path
-    let parts = dataset.split('.')
-    let projectPrefix = parts.length > 1 ? parts.slice(0, -1).join('.') + '.' : ''
-    return res.rows.map(r => `${projectPrefix}${r['table_schema']}.${r['table_name']}`)
+    return res.rows.map(r => `${dataset}.${r['table_name']}`)
   }
 
   async describeTable (target: string): Promise<SchemaColumn[]> {
     let parts = target.split('.')
     let table = parts.pop() || ''
-    let dataset = parts.join('.')
+    let dataset = parts.join('.') || this.defaultNamespace
+    if (!dataset) throw new Error('No dataset specified and no default namespace configured')
     validateBigQueryIdent(dataset)
     let sql = `
       select column_name as column_name, data_type as data_type, ordinal_position as ordinal_position

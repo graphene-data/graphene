@@ -1,23 +1,45 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
-import type {Table, Query, Join, Expression, Field, ColumnField, FieldType, Scope, FileInfo, Diagnostic} from './types.ts'
-import {isExtractUnit, isTemporalType, type StructRef, type AtomicTypeDef, type TimestampUnit} from '@graphenedata/malloy'
-import {txt, compact, getFile, getPosition} from './util.ts'
+import {type Table, type Query, type QueryJoin, type Join, type Column, type FieldType, type FileInfo, type Diagnostic, type Expr, type QueryField, type Filter} from './types.ts'
+import {txt, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config} from './config.ts'
-import {analyzeFunctionCall} from './functions.ts'
-import {inferParamTypes} from './params.ts'
+import {analyzeFunction} from './functions.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
+
+// Analyze is the heart of gsql processing. It works in 2 phases:
+// First, walk the parse tree looking for tables, views, and extend blocks.
+// Second, starting from a query, recursively analyze every expression it touches. When a query refers to a join and column,
+// we lazily traverse to that table and analyze that column, also analyzing any tables/columns that it refers to.
+// It's also possible to do a "full" analysis where we look at every field on every table.
+// Analyzing checks that expression are valid, that types are correct, and generates dialect-specific sql.
+//
+// NB that while the first step of collecting tables can be used between runs, analysis kinda can't since the alias for a given
+// join could change from query to query.
+
 
 export let FILE_MAP: Record<string, FileInfo> = {}
 export let diagnostics: Diagnostic[] = []
 
-// Because table objects are sent to Malloy, I want to avoid putting large objects on it that Malloy isn't expecting.
-let TABLE_NODE_MAP = new WeakMap<Table, SyntaxNode>()
-let FIELD_NODE_MAP = new WeakMap<Field, SyntaxNode>()
 let NODE_ENTITY_MAP = new NodeWeakMap<any>()
 
+// Mutable query state - shared across all scopes during query analysis
+interface QueryState {
+  fields: QueryField[]
+  joins: Map<string, QueryJoin>
+  filters: Filter[]
+}
+
+// Context for analyzing expressions - table/alias change as we traverse joins, but query is shared
+export interface Scope {
+  query: QueryState | null  // null when analyzing table definitions (not in a query context)
+  table: Table
+  alias: string  // current alias for this table context (e.g., "base", "users", "users_orders")
+  // When analyzing a join's ON clause, tells us about the target table/alias.
+  // e.g., `join one users on users.id = user_id` - "users.id" resolves to targetTable with targetAlias
+  joinTarget?: { name: string, table: Table, alias: string }
+}
+
 // Creates tables without analyzing them.
-// We need to know all the tables before we can analyze any table, since they refer to each other.
 export function findTables (fi: FileInfo) {
   let tn = fi.tree!.topNode
   fi.tables = []
@@ -26,543 +48,602 @@ export function findTables (fi: FileInfo) {
     let name = txt(syntaxNode.getChild('Ref'))
 
     let existing = Object.values(FILE_MAP).find(f => {
-      if (f.path.endsWith('.md') && f.path != fi.path) return // ignore conflicts in md files (unless its the current file)
+      if (f.path.endsWith('.md') && f.path != fi.path) return
       return f.tables.find(t => t.name == name)
     })
     if (existing) diag(syntaxNode.getChild('Ref')!, `Table "${name}" is already defined`)
 
-    let table = makeTable(name, syntaxNode.getChild('QueryStatement') ? 'query_source' : 'table')
-    table.metadata = extractLeadingMetadata(syntaxNode)
+    let isView = !!syntaxNode.getChild('QueryStatement')
+    let tablePath = config.namespace ? `${config.namespace}.${name}` : name
+    let table: Table = {name, type: isView ? 'view' : 'table', tablePath, columns: [], joins: [], metadata: extractLeadingMetadata(syntaxNode), syntaxNode}
 
-    syntaxNode.getChildren('ColumnDef').forEach(cn => addColumnField(table, cn))
-    syntaxNode.getChildren('JoinDef').forEach(jn => addJoinField(table, jn))
-    syntaxNode.getChildren('ComputedDef').forEach(cn => addComputedField(table, cn))
+    syntaxNode.getChildren('ColumnDef').forEach(cn => addColumn(table, cn))
+    syntaxNode.getChildren('JoinDef').forEach(jn => addJoin(table, jn))
+    syntaxNode.getChildren('ComputedDef').forEach(cn => addComputedColumn(table, cn))
 
-    TABLE_NODE_MAP.set(table, syntaxNode)
     fi.tables.push(table)
   }
 }
 
-function makeTable (name: string, type: 'query_source' | 'table'): Table {
-  let tablePath = config.namespace ? `${config.namespace}.${name}` : name
-  return {name, type, fields: [], connection: config.dialect, dialect: config.dialect, tableName: name, tablePath, metadata: {}}
-}
-
-function addColumnField (table: Table, node: SyntaxNode) {
-  let name = txt(node.getChild('ColumnName'))
-
-  if (node.getChild('PrimaryKey')) {
-    if (table.primaryKey) diag(node, `Table ${table.name} has multiple primary keys`)
-    table.primaryKey = name
-  }
-  let type = convertDataType(txt(node.getChild('DataType')))!
-  if (!type) return diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
-  addFieldToTable(table, {name, type, metadata: extractLeadingMetadata(node)}, node)
-}
-
-function addJoinField (table: Table, node: SyntaxNode) {
-  // If no explicit alias, default to the last part of the Ref (table name without namespace)
-  let nameNode = node.getChild('Alias') || node.getChild('Ref')!.getChildren('Identifier').pop()
-  return addFieldToTable(table, {name: txt(nameNode)}, node)
-}
-
-function addComputedField (table: Table, node: SyntaxNode) {
-  let name = txt(node.getChild('Alias'))
-  addFieldToTable(table, {name, metadata: extractLeadingMetadata(node)}, node)
-}
-
-function addFieldToTable (table: Table, field: Field, node: SyntaxNode) {
-  if (table.fields.find(f => f.name == field.name)) {
-    return diag(node, `Table already has a field called "${field.name}"`)
-  }
-  table.fields.push(field)
-  FIELD_NODE_MAP.set(field, node)
-}
-
-// `extend` blocks can add columns and joins to existing tables (usually views)
+// `extend` blocks add columns and joins to existing tables
 export function applyExtends (fi: FileInfo) {
   fi.tree!.topNode.getChildren('ExtendStatement').forEach(node => {
     let tableName = txt(node.getChild('Ref'))
     let target = lookupTable(tableName, node)
-    if (!target) {
-      return diag(node.getChild('Ref') || node, `Cannot extend unknown table "${tableName}"`)
-    }
-
-    node.getChildren('JoinDef').forEach(jn => addJoinField(target, jn))
-    node.getChildren('ComputedDef').forEach(cn => addComputedField(target, cn))
+    if (!target) return diag(node.getChild('Ref') || node, `Cannot extend unknown table "${tableName}"`)
+    node.getChildren('JoinDef').forEach(jn => addJoin(target, jn))
+    node.getChildren('ComputedDef').forEach(cn => addComputedColumn(target, cn))
   })
 }
 
-export function analyzeTable (table: Table) {
-  if (table.type == 'query_source') {
-    if (table.query) return // already analyzed
-    let node = TABLE_NODE_MAP.get(table)!
-    let query = analyzeQuery(node.getChild('QueryStatement')!)
-    if (!query) return
-
-    let queryFields = query.fields.map(f => ({type: f.type as FieldType, name: f.name, metadata: f.metadata}))
-    table.fields.push(...queryFields)
-    table.query = query
-  }
-
-  table.fields.map(f => analyzeField(f, table))
+function addColumn (table: Table, node: SyntaxNode) {
+  let name = txt(node.getChild('ColumnName'))
+  let type = convertDataType(txt(node.getChild('DataType')))
+  if (!type) return diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
+  let col: Column = {name, type, metadata: extractLeadingMetadata(node)}
+  if (getField(name, table)) return diag(node, `Table already has a field called "${name}"`)
+  table.columns.push(col)
 }
 
-let analysisQueue = new Set<Field>()
-export function analyzeField (field: Field, table: Table) {
-  if (field.type) return // already analyzed
+function addJoin (table: Table, node: SyntaxNode) {
+  let nameNode = node.getChild('Alias') || node.getChild('Ref')!.getChildren('Identifier').pop()
+  let name = txt(nameNode)
 
-  let node = FIELD_NODE_MAP.get(field)!
-  if (analysisQueue.has(field)) {
-    diag(node, 'Cycles are not allowed between computed columns')
-  }
-  analysisQueue.add(field)
+  let joinTypeStr = txt(node.getChild('JoinType')).replace(/\s+/g, ' ')
+  let joinType = {'join many': 'many', 'join one': 'one'}[joinTypeStr] as 'one' | 'many'
+  if (!joinType) return diag(node, 'Unknown join type')
 
-  if (node.name == 'JoinDef') {
-    field = field as Join
-    let target = lookupTable(txt(node.getChild('Ref')), node)
-    if (!target) return diag(node, 'Unknown table to join')
+  let targetNode = node.getChild('Ref')!
+  let targetTable = txt(targetNode)
+  let onExpr = node.getChild('BinaryExpression')!
 
-    // query_source tables are all-or-nothing, so when we encounter them as a join we need to analyze them
-    if (target.type == 'query_source') analyzeTable(target)
-
-    let joinTypeStr = txt(node.getChild('JoinType')).replace(/\s+/g, ' ')
-    let jt = {'join many': 'many', 'join one': 'one'}[joinTypeStr]
-    if (!jt) return diag(node, 'Unknown join type')
-
-    // Malloy expects join fields to have not just join info, but the entire contents of the thing they're joining (the `target` table)
-    // This is wild, and maybe it'd be better to do this closer to when we create the Malloy QueryModel.
-    Object.assign(field, target, {name: field.name, join: jt})
-
-    // It's important we analyze this expression _after_ setting the join, since the expression might refer to it (ie join one user on user.id = user_id)
-    field.onExpression = analyzeExpression(node.getChild('BinaryExpression')!, {table, outputFields: []})
-  }
-
-  if (node.name == 'ComputedDef') {
-    let e = analyzeExpression(node.getChild('Expression')!, {table, outputFields: []})
-    let metadata = extractLeadingMetadata(node)
-    Object.assign(field, {e, metadata, type: e.type, isAgg: e.isAgg})
-  }
-
-  analysisQueue.delete(field)
+  let join: Join = {name, targetTable, targetNode, joinType, onExpr}
+  if (getField(name, table)) return diag(node, `Table already has a field called "${name}"`)
+  table.joins.push(join)
 }
 
-// Walks each part of the query checking types, rendering sql
-// NB that this creates a scope for the query, and function like analyzeExpression and lookup operate within that scope, which is crucial for subquery support.
+function addComputedColumn (table: Table, node: SyntaxNode) {
+  let name = txt(node.getChild('Alias'))
+  let col: Column = {name, type: 'string', exprNode: node.getChild('Expression')!, metadata: extractLeadingMetadata(node)}
+  if (getField(name, table)) return diag(node, `Table already has a field called "${name}"`)
+  table.columns.push(col)
+}
+
+function getField (name: string, table: Table) {
+  return table.columns.find(c => c.name == name) || table.joins.find(j => j.name == name)
+}
+
+// Analyze a view's underlying query to determine its output columns
+function analyzeView (table: Table) {
+  if (table.query) return  // already analyzed
+  let query = analyzeQuery(table.syntaxNode!.getChild('QueryStatement')!)
+  if (!query) return
+  let viewCols = query.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
+  table.columns.push(...viewCols)
+  table.query = query
+}
+
+// Analyze everything in a table - used for full project analysis (e.g., `check` command)
+export function analyzeTableFully (table: Table) {
+  if (table.type == 'view') analyzeView(table)
+  let scope: Scope = {query: null, table, alias: 'base'}
+  table.columns.forEach(c => {
+    if (!c.exprNode) return
+    let expr = analyzeExpr(c.exprNode, scope)
+    c.isAgg = expr.isAgg
+  })
+  table.joins.forEach(j => analyzeJoin(j))
+}
+
+// Track computed columns being analyzed to detect cycles
+let analysisStack = new Set<Column>()
+
+// Expand all non-aggregate columns from a table into query fields
+function expandColumns (scope: Scope, queryState: QueryState) {
+  for (let col of scope.table.columns) {
+    if (col.exprNode) {
+      // Determine if aggregate (without query context to avoid side-effect diagnostics), then skip measures
+      if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {query: null, table: scope.table, alias: scope.alias}).isAgg
+      if (col.isAgg) continue
+      let expr = analyzeExpr(col.exprNode, scope)
+      queryState.fields.push({name: col.name, sql: expr.sql, type: expr.type, metadata: col.metadata})
+    } else {
+      queryState.fields.push({name: col.name, sql: `${scope.alias}.${quote(col.name)}`, type: col.type, metadata: col.metadata})
+    }
+  }
+}
+
+// Validate join target exists and analyze if it's a view
+function analyzeJoin (join: Join) {
+  let target = lookupTable(join.targetTable, join.targetNode)
+  if (!target) return diag(join.targetNode, `Unknown table "${join.targetTable}"`)
+  if (target.type == 'view') analyzeView(target)
+}
+
+// Main query analysis - analyzes and returns a Query with computed SQL
 export function analyzeQuery (queryNode: SyntaxNode): Query | void {
-  let baseTableName: string
-  let scope: Scope = {table: null as any, outputFields: []}
-  let isAgg = false
+  if (!txt(queryNode)) return
 
-  if (!txt(queryNode)) return // lezer sometimes parses an empty string as a query, if the file doesn't have one.
-
-  // agents sometimes use this query to test that a connection works. Hack it to work for now.
-  if (txt(queryNode).trim().toLowerCase() == 'select 1') {
-    let fields: ColumnField[] = [{name: 'col_0', type: 'number', metadata: {}, e: {node: 'numberLiteral', literal: '1', type: 'number'} as any}]
-    return {fields, baseTableName: '', rawSql: 'select 1', structRef: {} as StructRef, pipeline: []}
-  }
-
-  // FROM
-  // For now, we only support queries with exactly one table in the FROM clause.
+  // FROM clause
   let froms = queryNode.getChild('FromClause')?.getChildren('TablePrimary') || []
   if (froms.find(f => f.name == 'JoinClause')) diag(froms[0], 'Query joins not yet supported')
-  if (froms.length == 0) return diag(queryNode, 'No tables in FROM clause')
-  if (froms.length > 1) diag(froms[0], 'Multiple tables/joins in FROM clause not yet supported')
+  if (froms.length > 1) diag(froms[0], 'Multiple tables in FROM clause not yet supported')
 
-  // First, figure out the base table we're querying from.
-  if (froms[0].name == 'Subquery') {
-    // Malloy doesn't support subqueries in FROM. We could either add the subquery to the pipeline, or create a "query_source" table for it.
-    // I'm opting for query_source, because it's easier to reason about how multiple subqueries might work.
-    // For now I've disabled this until I have time to think about how this should properly work.
-    // It's possible to have a subquery with a `table foo as (...)`, and that wouldn't have worked with what I wrote here.
-    diag(froms[0], "Graphene doesn't yet support subqueries. Try chaining queries instead.")
-    baseTableName = txt(froms[0].getChild('Alias')) || 'subquery'
-    scope.table = makeTable(baseTableName, 'query_source')
-    TABLE_NODE_MAP.set(scope.table, froms[0].getChild('SubqueryExpression')!)
-    analyzeTable(scope.table)
-  } else { // from a regular table
-    baseTableName = txt(froms[0].getChild('Ref'))
-    scope.table = lookupTable(baseTableName, froms[0])!
-    if (!scope.table) return diag(froms[0], `could not find table "${baseTableName}"`)
-    NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: scope.table})
+  let baseTableName = froms.length ? txt(froms[0].getChild('Ref')) : ''
+  let baseTable = baseTableName ? (lookupTable(baseTableName, froms[0]) || null) : null
+  if (baseTableName && !baseTable) return diag(froms[0], `Unknown table "${baseTableName}"`)
+  if (baseTable?.type == 'view') analyzeView(baseTable)
+  if (baseTable) NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: baseTable})
+
+  // Shared query state - all scopes during this query analysis share this
+  let queryState: QueryState = {fields: [], joins: new Map(), filters: []}
+  let scope: Scope = {query: queryState, table: baseTable!, alias: 'base'}
+  let isAgg = false
+
+  // SELECT clause
+  let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
+  let isSelectDistinct = !!queryNode.getChild('SelectClause')?.getChildren('Kw').find(n => txt(n).toLowerCase() == 'distinct')
+  isAgg ||= isSelectDistinct
+
+  for (let s of selects) {
+    if (s.getChild('Wildcard')) {
+      let pathNodes = s.getChild('Wildcard')!.getChildren('Identifier')
+      let targetScope = followJoins(pathNodes, scope)
+      if (!targetScope) continue
+      expandColumns(targetScope, queryState)
+    } else {
+      let expr = analyzeExpr(s.getChild('Expression')!, scope)
+      let name = s.getChild('Alias') ? txt(s.getChild('Alias')) : inferName(s.getChild('Expression')!, scope)
+      isAgg ||= !!expr.isAgg
+      queryState.fields.push({name, sql: expr.sql, type: expr.type, isAgg: expr.isAgg})
+    }
   }
 
-  // SELECT
-  // Next, get the columns this query will return (including wildcard expansion)
-  let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
-  let isSelectDistinct = queryNode.getChild('SelectClause')?.getChildren('Kw').find(n => txt(n).toLowerCase() == 'distinct')
-  isAgg ||= !!isSelectDistinct // select distinct makes the query a reduction
-  selects.forEach(s => {
-    if (s.getChild('Wildcard')) {
-      let path = s.getChild('Wildcard')!.getChildren('Identifier')
-      let pathStrings = path.map(p => txt(p))
-      let target = followJoins(path, scope.table)
-      if (!target) return // followJoins handles diags
-      target.fields.forEach(f => {
-        analyzeField(f, target)
-        if (isJoin(f) || f.isAgg) return
-        scope.outputFields.push({...f, e: {node: 'field', path: [...pathStrings, f.name], type: f.type!}})
-      })
-    } else {
-      let expr = analyzeExpression(s.getChild('Expression')!, scope)
-      let name = nameExpression(expr, scope, s.getChild('Alias'))
-      isAgg ||= !!expr.isAgg
-      let metadata = {}
-
-      if (expr.isAgg) {
-        scope.outputFields.push({type: expr.type, name, metadata, e: expr, expressionType: 'aggregate', isAgg: true})
-      } else {
-        scope.outputFields.push({type: expr.type, name, metadata, e: expr})
-      }
+  // WHERE / HAVING - we allow aggregate filters in WHERE (moved to HAVING automatically)
+  let whereNode = queryNode.getChild('WhereClause')?.getChild('Expression')
+  let havingNode = queryNode.getChild('HavingClause')?.getChild('Expression')
+  for (let node of [whereNode, havingNode]) {
+    if (!node) continue
+    for (let expr of unpackAnds(node, scope)) {
+      queryState.filters.push({sql: expr.sql, isAgg: expr.isAgg})
     }
-  })
+  }
 
-  // WHERE / HAVING
-  // In Malloy, `where` and `having` are both in the `filterList`, just the `expressionType` is different.
-  // We want to allow you to write both pre- and post-agg filters in the `where`, clause, which seems mostly safe if they're and-ed together.
-  // We also support explicit `having` clauses, for users who know that's a thing and want to use it.
-  let where = queryNode.getChild('WhereClause')?.getChild('Expression')
-  let having = queryNode.getChild('HavingClause')?.getChild('Expression')
-  let filterList = [where, having].flatMap(node => {
-    if (!node) return []
-    let ands = unpackAnds(analyzeExpression(node, scope))
-    return ands.map(e => ({
-      node: 'filterCondition',
-      expressionType: e.isAgg ? 'aggregate' : 'scalar',
-      e: e,
-    }))
-  })
-
-  // GROUP BY
-  // In Malloy, non-agg fields in a reduction query are implicitly grouped by.
-  // In Graphene, we allow you say `group by BLAH` without having to `select BLAH`.
+  // GROUP BY - adds fields if not already selected
   let groupBys = queryNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
-  isAgg ||= !!groupBys.length
-  groupBys.forEach(g => {
-    let expr = analyzeExpression(g.getChild('Expression')!, scope)
-    let name = nameExpression(expr, scope, g.getChild('Alias'))
-    if (expr.isAgg) return diag(g, 'Cannot group by aggregate expressions')
-    if (scope.outputFields.find(f => f.name == name)) return // do nothing, it's already in there
-    scope.outputFields.unshift({type: expr.type, name, metadata: {}, e: expr})
-  })
+  isAgg ||= groupBys.length > 0
+  for (let g of groupBys) {
+    let expr = analyzeExpr(g.getChild('Expression')!, scope)
+    if (expr.isAgg) { diag(g, 'Cannot group by aggregate expressions'); continue }
+    let name = g.getChild('Alias') ? txt(g.getChild('Alias')) : inferName(g.getChild('Expression')!, scope)
+    if (!queryState.fields.find(f => f.name == name)) {
+      queryState.fields.unshift({name, sql: expr.sql, type: expr.type})
+    }
+  }
 
   // ORDER BY
   let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
-  let orderByList = orderBys.map(o => {
-    let field = txt(o.getChild('Identifier')) || Number(txt(o.getChild('Number')))
-    let dir = txt(o.getChild('Kw')).toLowerCase() == 'desc' ? 'desc' : 'asc' as 'asc' | 'desc'
-    return {field, dir}
+  let orderBy: {idx: number, desc: boolean}[] = []
+  for (let o of orderBys) {
+    let fieldRef = txt(o.getChild('Identifier')) || txt(o.getChild('Number'))
+    let desc = txt(o.getChild('Kw')).toLowerCase() == 'desc'
+    let idx = Number(fieldRef) || (queryState.fields.findIndex(f => f.name == fieldRef) + 1)
+    if (idx > 0) orderBy.push({idx, desc})
+  }
+
+  // LIMIT
+  let limitNodes = queryNode.getChild('LimitClause')?.getChildren('Number') || []
+  let limit = limitNodes[0] ? Number(txt(limitNodes[0])) : undefined
+  if (limitNodes[1]) diag(limitNodes[1], 'OFFSET is not supported yet')
+
+  // Implicit `select *` if nothing selected (only when we have a base table)
+  if (queryState.fields.length == 0 && baseTable) expandColumns(scope, queryState)
+
+  // Compute GROUP BY indices (non-aggregate fields, 1-indexed)
+  let groupByIndices = queryState.fields.map((f, i) => f.isAgg ? 0 : i + 1).filter(i => i > 0)
+
+  // Default ORDER BY for aggregate queries
+  if (orderBy.length == 0 && isAgg && groupByIndices.length > 0) {
+    let firstAggIdx = queryState.fields.findIndex(f => f.isAgg)
+    if (firstAggIdx >= 0) {
+      orderBy.push({idx: firstAggIdx + 1, desc: true})
+    } else {
+      orderBy.push({idx: 1, desc: false})  // SELECT DISTINCT
+    }
+  }
+
+  // Check for chasm trap: aggregates touching multiple distinct join_many paths
+  if (baseTable && isAgg) checkChasmTrap(baseTable, queryState.fields, queryNode)
+
+  let joins = Array.from(queryState.joins.values())
+  let groupBy = isAgg ? groupByIndices : []
+  let sql = buildSql(baseTable, queryState.fields, joins, queryState.filters, groupBy, orderBy, limit)
+
+  return {sql, baseTable: baseTableName, fields: queryState.fields, joins, filters: queryState.filters, groupBy, orderBy, limit, isAggregate: isAgg}
+}
+
+// Assemble query parts into final SQL
+// Format a table path for the current dialect
+function formatTablePath (path: string): string {
+  if (config.dialect === 'bigquery') return `\`${path}\``
+  if (config.dialect === 'snowflake') return path.toUpperCase()
+  return path
+}
+
+function buildSql (baseTable: Table | null, fields: QueryField[], joins: QueryJoin[], filters: Filter[], groupBy: number[], orderBy: {idx: number, desc: boolean}[], limit?: number): string {
+  let ctes: string[] = []
+  let selectParts = fields.map(f => `${f.sql} as ${quote(f.name)}`)
+
+  // No FROM clause (e.g. `select 1`)
+  if (!baseTable) return `SELECT ${selectParts.join(', ')}`
+
+  // FROM - handle views as CTEs
+  let fromTable: string
+  if (baseTable.type === 'view' && baseTable.query) {
+    ctes.push(`${quote(baseTable.name)} as ( ${baseTable.query.sql} )`)
+    fromTable = quote(baseTable.name)
+  } else {
+    fromTable = formatTablePath(baseTable.tablePath)
+  }
+
+  // JOINs
+  let joinClauses = joins.map(j => {
+    let joinTable = lookupTableByName(j.targetTable)
+    let tablePath: string
+    if (joinTable?.type === 'view') {
+      tablePath = quote(joinTable.name)
+    } else {
+      let path = joinTable?.tablePath || j.targetTable
+      tablePath = formatTablePath(path)
+    }
+    return `LEFT JOIN ${tablePath} as ${j.alias} ON ${j.onClause}`
   })
 
-  // LIMIT / OFFSET
-  let limts = queryNode.getChild('LimitClause')?.getChildren('Number') || []
-  let queryLimit = limts[0] ? Number(txt(limts[0])) : undefined
-  let queryOffset = limts[1] ? Number(txt(limts[1])) : undefined
-  if (queryOffset) diag(limts[1], 'OFFSET is not supported yet')
+  // WHERE / HAVING
+  let whereFilters = filters.filter(f => !f.isAgg).map(f => f.sql)
+  let havingFilters = filters.filter(f => f.isAgg).map(f => f.sql)
 
-  // Queries without a SELECT are implicitly `select *`
-  if (scope.outputFields.length == 0) {
-    scope.table.fields.forEach(f => {
-      if (isJoin(f) || f.isAgg) return
-      scope.outputFields.push({...f, e: {node: 'field', path: [f.name], type: f.type!}})
-    })
+  // Assemble
+  let sql = `SELECT ${selectParts.join(', ')} FROM ${fromTable} as base`
+  if (joinClauses.length) sql += ' ' + joinClauses.join(' ')
+  if (whereFilters.length) sql += ` WHERE ${whereFilters.join(' AND ')}`
+  if (groupBy.length) sql += ` GROUP BY ${groupBy.join(',')}`
+  if (havingFilters.length) sql += ` HAVING ${havingFilters.join(' AND ')}`
+  if (orderBy.length) {
+    let parts = orderBy.map(o => `${o.idx} ${o.desc ? 'desc' : 'asc'} NULLS LAST`)
+    sql += ` ORDER BY ${parts.join(',')}`
   }
+  if (limit) sql += ` LIMIT ${limit}`
+  if (ctes.length) sql = `WITH ${ctes.join(', ')} ${sql}`
 
-  let q = {
-    fields: scope.outputFields,
-    baseTableName,
-    type: 'query',
-    structRef: (null as unknown) as StructRef, // We fill this in as part of `toSql`
-    pipeline: [{
-      type: isAgg ? 'reduce' : 'project',
-      queryFields: scope.outputFields as any,
-      filterList: filterList as any,
-      outputStruct: null as any,
-      isRepeated: false,
-      orderBy: orderByList.length ? orderByList : undefined,
-      limit: queryLimit,
-    }],
-  } satisfies Query
-
-  inferParamTypes(q)
-  return q
+  return sql
 }
 
-// Called for each expression in a query (recursively for complex expressions) including computed columns.
-// This reports errors and warnings for symantic issues, as well as generating the final SQL.
-// Scope is used to track the current table we're operating within when analyzing measures.
-export function analyzeExpression (expr:SyntaxNode, scope:Scope): Expression {
-  if (expr.type.isError) {
-    return diag(expr, 'Invalid expression', errExpr)
+// Simple table lookup by name (without needing a node for diagnostics)
+function lookupTableByName (name: string): Table | undefined {
+  for (let file of Object.values(FILE_MAP)) {
+    let match = file.tables.find(t => t.name == name)
+    if (match) return match
   }
+}
 
-  switch (expr.name) {
-    case 'Number': return {node: 'numberLiteral', literal: txt(expr), type: 'number'}
-    case 'Boolean': return {node: txt(expr).toLowerCase() == 'true' ? 'true' : 'false', type: 'boolean'}
-    case 'Null': return {node: 'null', type: 'string'}
-    case 'String': return {node: 'stringLiteral', literal: txt(expr).slice(1, -1), type: 'string'}
-    case 'Param': return {node: 'parameter', path: [txt(expr).slice(1)], type: 'string'}
+// Analyze an expression node and return SQL + type info
+export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
+  if (node.type.isError) return diag(node, 'Invalid expression', {sql: 'NULL', type: 'error'})
+
+  switch (node.name) {
+    case 'Number': return {sql: txt(node), type: 'number'}
+    case 'Boolean': return {sql: txt(node).toLowerCase(), type: 'boolean'}
+    case 'Null': return {sql: 'NULL', type: 'null'}
+    case 'String': return {sql: `'${txt(node).slice(1, -1).replace(/'/g, "''")}'`, type: 'string'}
+    case 'Param': return {sql: txt(node), type: 'string'}  // $param - type inferred later
+
     case 'Ref': {
-      let field = lookupField(expr, scope)
-      if (!field) return errExpr // diag handled by lookupField
+      let pathNodes = node.getChildren('Identifier')
+      let fieldNode = pathNodes.pop()!
+      let fieldName = txt(fieldNode)
 
-      // fields have types, but Malloy also expects additional `typeDef` for some types (dates, array, records)
-      let type = field.type || 'unknown'
-      let typeInfo = {type} as {type: FieldType, typeDef?: AtomicTypeDef}
-      if (type === 'date' || type === 'timestamp') typeInfo.typeDef = {type}
-
-      // Malloy uses the special 'outputField' when referring to an aggregated column in the output. Non-agg output fields just use `field`.
-      if (scope.outputFields.includes(field) && field.isAgg) {
-        return {node: 'outputField' as const, name: field.name, ...typeInfo, isAgg: field.isAgg}
+      // Check output fields first (for referencing aliases in HAVING)
+      if (scope.query && pathNodes.length == 0) {
+        let outField = scope.query.fields.find(f => f.name == fieldName)
+        if (outField) {
+          return {sql: outField.isAgg ? quote(fieldName) : outField.sql, type: outField.type, isAgg: outField.isAgg}
+        }
       }
 
-      let path = expr.getChildren('Identifier').map(i => txt(i))
-      return {node: 'field' as const, path, ...typeInfo, isAgg: field.isAgg}
-    }
-    case 'ExtractExpression': {
-      let extractExprNode = expr.getChild('Expression')!
-      let e = analyzeExpression(extractExprNode, scope)
-      checkTypes(e, ['date', 'timestamp'], extractExprNode)
-      if (!isTemporalType(e.type) || !e.typeDef) return diag(expr, 'Expression must be a date or timestamp', errExpr)
+      // Follow join path - returns a new scope with the target table/alias
+      let targetScope = followJoins(pathNodes, scope)
+      if (!targetScope) return {sql: 'NULL', type: 'error'}
 
-      let units = txt(expr.getChild('ExtractUnit')!).replace(/^['"]|['"]$/g, '').toLowerCase()
-      if (!isExtractUnit(units)) return diag(expr, 'Not a valid unit to extract', errExpr)
+      let col = targetScope.table.columns.find(c => c.name == fieldName)
+      let join = targetScope.table.joins.find(j => j.name == fieldName)
 
-      return {node: 'extract', type: 'number', units, e: e as any, isAgg: false}
+      if (join) return diag(fieldNode, `"${fieldName}" is a join, not a column`, {sql: 'NULL', type: 'error'})
+      if (!col) return diag(fieldNode, `Unknown field "${fieldName}" on ${targetScope.table.name}`, {sql: 'NULL', type: 'error'})
+
+      NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field: col, table: targetScope.table})
+
+      // Computed column - analyze its expression in the target scope (with correct alias)
+      if (col.exprNode) {
+        if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
+        analysisStack.add(col)
+        let expr = analyzeExpr(col.exprNode, targetScope)
+        analysisStack.delete(col)
+        return {sql: `(${expr.sql})`, type: expr.type, isAgg: expr.isAgg}
+      }
+
+      return {sql: `${targetScope.alias}.${quote(fieldName)}`, type: col.type}
     }
+
+    case 'FunctionCall':
+      return analyzeFunction(node, scope, analyzeExpr)
+
+    case 'Parenthetical':
+      return analyzeExpr(node.getChild('Expression')!, scope)
+
+    case 'Count': {
+      let inner = node.getChild('Expression')
+      if (inner) {
+        let e = analyzeExpr(inner, scope)
+        return {sql: `count(distinct ${e.sql})`, type: 'number', isAgg: true}
+      }
+      return {sql: 'count(1)', type: 'number', isAgg: true}
+    }
+
+    case 'BinaryExpression': {
+      let left = analyzeExpr(node.firstChild!, scope)
+      let right = analyzeExpr(node.lastChild!, scope)
+      let op = txt(node.firstChild?.nextSibling).toLowerCase()
+
+      // Type coercion for dates
+      if ((left.type == 'date' || left.type == 'timestamp') && right.type == 'string') {
+        right = coerceToTemporal(right, left.type, node.lastChild!)
+      }
+      if ((right.type == 'date' || right.type == 'timestamp') && left.type == 'string') {
+        left = coerceToTemporal(left, right.type, node.firstChild!)
+      }
+
+      // Date arithmetic
+      if (op == '+' || op == '-') {
+        if (left.type == 'date' || left.type == 'timestamp' || left.type == 'interval' || right.type == 'interval') {
+          return analyzeDateArithmetic(op, left, right, node)
+        }
+      }
+
+      // Type checking for operators
+      if (op == '*' || op == '/' || op == '%') {
+        checkTypes(left, ['number'], node.firstChild!)
+        checkTypes(right, ['number'], node.lastChild!)
+      }
+      if (op == 'like' || op == 'ilike') {
+        checkTypes(left, ['string'], node.firstChild!)
+        checkTypes(right, ['string'], node.lastChild!)
+      }
+
+      let resultType = left.type
+      if (['and', 'or', '<', '<=', '>', '>=', '=', '!=', '<>', 'like', 'ilike'].includes(op)) resultType = 'boolean'
+      if (op == '<>') op = '!='
+
+      // ILIKE handling for BigQuery
+      let sql: string
+      if (op == 'ilike' && config.dialect == 'bigquery') {
+        sql = `LOWER(${left.sql}) LIKE LOWER(${right.sql})`
+      } else if (op == 'and' || op == 'or') {
+        sql = `(${left.sql} ${op.toUpperCase()} ${right.sql})`
+      } else if (op == 'like' || op == 'ilike') {
+        sql = `${left.sql} ${op.toUpperCase()} ${right.sql}`
+      } else {
+        sql = `${left.sql}${op}${right.sql}`
+      }
+
+      return {sql, type: resultType, isAgg: left.isAgg || right.isAgg}
+    }
+
+    case 'UnaryExpression': {
+      let op = txt(node.firstChild).toLowerCase()
+      let child = analyzeExpr(node.lastChild!, scope)
+      if (op == 'not') return {sql: `NOT (${child.sql})`, type: 'boolean', isAgg: child.isAgg}
+      if (op == '-') return {sql: `-(${child.sql})`, type: child.type, isAgg: child.isAgg}
+      if (op == '+') return {sql: `(${child.sql})`, type: child.type, isAgg: child.isAgg}
+      return diag(node, `Unknown unary operator: ${op}`, {sql: 'NULL', type: 'error'})
+    }
+
+    case 'NullTestExpression': {
+      let isNot = !!node.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not')
+      let e = analyzeExpr(node.firstChild!, scope)
+      return {sql: `${e.sql} IS ${isNot ? 'NOT ' : ''}NULL`, type: 'boolean', isAgg: e.isAgg}
+    }
+
+    case 'CaseExpression': {
+      let parts = ['CASE']
+      let caseValue = node.getChild('Expression')
+      if (caseValue) parts.push(analyzeExpr(caseValue, scope).sql)
+
+      let resultType: FieldType = 'string'
+      for (let w of node.getChildren('WhenClause')) {
+        let exprs = w.getChildren('Expression')
+        let when = analyzeExpr(exprs[0], scope)
+        let then = analyzeExpr(exprs[1], scope)
+        resultType = then.type
+        parts.push(`WHEN (${when.sql}) THEN ${then.sql}`)
+      }
+
+      let elseClause = node.getChild('ElseClause')
+      if (elseClause) {
+        let elseExpr = analyzeExpr(elseClause.getChild('Expression')!, scope)
+        parts.push(`ELSE ${elseExpr.sql}`)
+      }
+      parts.push('END')
+      return {sql: parts.join(' '), type: resultType}
+    }
+
+    case 'InExpression': {
+      let not = txt(node.getChild('Kw')).toLowerCase() == 'not'
+      let e = analyzeExpr(node.firstChild!, scope)
+      let valueList = node.getChild('InValueList')
+      if (!valueList) {
+        diag(node, 'IN (<subquery>) is not yet supported')
+        return {sql: 'false', type: 'boolean'}
+      }
+      let values = valueList.getChildren('Expression').map(v => {
+        let val = analyzeExpr(v, scope)
+        // Coerce string literals to temporal types if needed
+        if ((e.type == 'date' || e.type == 'timestamp') && val.type == 'string') {
+          val = coerceToTemporal(val, e.type, v)
+        }
+        return val.sql
+      })
+      return {sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: 'boolean', isAgg: e.isAgg}
+    }
+
     case 'CastExpression':
     case 'TypeCastExpression': {
-      // CastExpression has Expression child, TypeCastExpression has the expr as firstChild
-      let innerExpr = expr.getChild('Expression') || expr.firstChild!
-      let e = analyzeExpression(innerExpr, scope)
-      let targetTypeStr = txt(expr.getChild('CastType'))
-      let type = convertDataType(targetTypeStr)
-      if (!type) return diag(expr.getChild('CastType')!, `Unsupported cast type: ${targetTypeStr}`, errExpr)
-      return {node: 'cast', safe: false, e, dstSQLType: targetTypeStr.toUpperCase(), type, isAgg: e.isAgg}
+      let inner = node.getChild('Expression') || node.firstChild!
+      let e = analyzeExpr(inner, scope)
+      let typeNode = node.getChild('CastType')!
+      let targetType = txt(typeNode).toUpperCase()
+      let resultType = convertDataType(targetType)
+      if (!resultType) return diag(typeNode, `Unsupported cast type: ${targetType.toLowerCase()}`, {sql: 'NULL', type: 'error'})
+      return {sql: `CAST(${e.sql} AS ${targetType})`, type: resultType, isAgg: e.isAgg}
     }
+
+    case 'ExtractExpression': {
+      let extractInner = node.getChild('Expression')!
+      let e = analyzeExpr(extractInner, scope)
+      checkTypes(e, ['date', 'timestamp'], extractInner)
+      let unit = txt(node.getChild('ExtractUnit')!).replace(/^['"]|['"]$/g, '').toLowerCase()
+      return {sql: `EXTRACT(${unit} FROM ${e.sql})`, type: 'number', isAgg: e.isAgg}
+    }
+
     case 'IntervalExpression': {
-      // interval '1 day' or interval 1 day
-      let stringNode = expr.getChild('String')
+      let stringNode = node.getChild('String')
       if (stringNode) {
         let parsed = parseIntervalLiteral(txt(stringNode).slice(1, -1))
-        if (!parsed) return diag(stringNode, 'Could not parse interval literal', errExpr)
-        return {node: 'numberLiteral', literal: parsed.quantity.toString(), type: 'interval', intervalUnit: parsed.unit, isAgg: false} as Expression
-      } else {
-        let numNode = expr.getChild('Number')!
-        let unitNode = expr.getChild('IntervalUnit')!
-        let quantity = Number(txt(numNode))
-        let unitStr = txt(unitNode).toLowerCase()
-        let unit = parseIntervalUnit(unitStr)
-        if (!unit) return diag(unitNode, `Invalid interval unit: "${unitStr}"`, errExpr)
-        return {node: 'numberLiteral', literal: quantity.toString(), type: 'interval', intervalUnit: unit, isAgg: false} as Expression
+        if (!parsed) return diag(stringNode, 'Could not parse interval', {sql: 'NULL', type: 'error'})
+        return {sql: `INTERVAL ${parsed.quantity} ${parsed.unit}`, type: 'interval'}
       }
+      let num = txt(node.getChild('Number')!)
+      let unit = parseIntervalUnit(txt(node.getChild('IntervalUnit')!).toLowerCase())
+      if (!unit) return diag(node, 'Invalid interval unit', {sql: 'NULL', type: 'error'})
+      return {sql: `INTERVAL ${num} ${unit}`, type: 'interval'}
     }
+
     case 'DateExpression':
     case 'TimestampExpression': {
-      let expectedType = expr.name === 'DateExpression' ? 'date' : 'timestamp'
-      let stringNode = expr.getChild('String')!
-      let parsed = parseTemporalLiteral(txt(stringNode).slice(1, -1), expectedType)
-      if (!parsed) return diag(stringNode, `Could not parse ${expectedType}`, errExpr)
-      let typeDef = {type: parsed.type, timeframe: parsed.timeframe}
-      return {node: 'timeLiteral', literal: parsed.literal, type: parsed.type, typeDef, isAgg: false} as Expression
+      let isDate = node.name == 'DateExpression'
+      let lit = txt(node.getChild('String')!).slice(1, -1)
+      let parsed = parseTemporalLiteral(lit, isDate ? 'date' : 'timestamp')
+      if (!parsed) return diag(node, `Invalid ${isDate ? 'date' : 'timestamp'}`, {sql: 'NULL', type: 'error'})
+      return {sql: `${isDate ? 'DATE' : 'TIMESTAMP'} '${parsed.literal}'`, type: isDate ? 'date' : 'timestamp'}
     }
-    case 'FunctionCall': return analyzeFunctionCall(expr, scope)
-    case 'Parenthetical': return analyzeExpression(expr.getChild('Expression')!, scope)
-    case 'Count': {
-      let countExpr = expr.getChild('Expression')
-      if (countExpr) {
-        let e = analyzeExpression(countExpr, scope)
-        return {node: 'aggregate', function: 'distinct', e, type: 'number', isAgg: true}
-      } else {
-        return {node: 'aggregate', function: 'count', e: {node: ''}, type: 'number', isAgg: true}
-      }
-    }
-    case 'BinaryExpression': {
-      let left = analyzeExpression(expr.firstChild!, scope)
-      let right = analyzeExpression(expr.lastChild!, scope)
-      let op = txt(expr.firstChild?.nextSibling).toLowerCase()
-      let type = left.type as FieldType
 
-      if (op == 'or' || op == 'and') type = 'boolean'
-
-      if (op == '+' || op == '-') {
-        if (['date', 'timestamp', 'interval'].find(t => left.type == t || right.type == t)) {
-          return analyzeTimeExpression(op, left, right, expr)
-        }
-        ensureSameType(left, expr.firstChild!, right, expr.lastChild!)
-      }
-
-      if (op == '*' || op == '/' || op == '%') {
-        checkTypes(left, ['number'], expr.firstChild!)
-        checkTypes(right, ['number'], expr.lastChild!)
-      }
-
-      if (op == '<' || op == '<=' || op == '>' || op == '>=' || op == '=' || op == '!=' || op == '<>') {
-        if (op == '<>') op = '!='
-        ensureSameType(left, expr.firstChild!, right, expr.lastChild!)
-        type = 'boolean'
-      }
-
-      if (op == 'like' || op == 'ilike') {
-        checkTypes(left, ['string'], expr.firstChild!)
-        checkTypes(right, ['string'], expr.lastChild!)
-        type = 'boolean'
-      }
-
-      return {node: op as any, kids: {left, right}, type, isAgg: left.isAgg || right.isAgg}
-    }
-    case 'NullTestExpression': {
-      let node = expr.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not') ? 'is-not-null' : 'is-null'
-      let e = analyzeExpression(expr.firstChild!, scope)
-      return {node: node as 'is-not-null' | 'is-null', type: 'boolean', isAgg: e.isAgg, e}
-    }
-    case 'UnaryExpression': {
-      let opTxt = txt(expr.firstChild).toLowerCase()
-      let child = analyzeExpression(expr.lastChild!, scope)
-      if (opTxt === 'not') return {node: 'not', e: child, type: 'boolean', isAgg: child.isAgg}
-      if (opTxt === '-') return {node: 'unary-', e: child, type: child.type, isAgg: child.isAgg}
-      if (opTxt === '+') return {node: '()', e: child, type: child.type, isAgg: child.isAgg}
-      return diag(expr, `Unknown unary operator: ${opTxt}`, errExpr)
-    }
-    case 'CaseExpression': {
-      let caseValue = expr.getChild('Expression')
-      let whens = expr.getChildren('WhenClause')
-      let els = expr.getChild('ElseClause')
-      let kids: any = {
-        caseValue: caseValue ? analyzeExpression(caseValue, scope) : undefined,
-        caseElse: els ? analyzeExpression(els.getChild('Expression')!, scope) : undefined,
-        caseWhen: whens.map(w => analyzeExpression(w.getChildren('Expression')[0]!, scope)),
-        caseThen: whens.map(w => analyzeExpression(w.getChildren('Expression')[1]!, scope)),
-      }
-      let thenType = (kids.caseThen[0]?.type) || 'string' // TODO ensure that all thens have the same type
-      return {node: 'case', kids: compact(kids), type: thenType as FieldType, isAgg: false}
-    }
-    case 'InExpression': {
-      let not = txt(expr.getChild('Kw')).toLowerCase() == 'not'
-      let eNode = analyzeExpression(expr.firstChild!, scope)
-      let oneOf: Expression[] = []
-      let valueList = expr.getChild('InValueList')
-      if (valueList) {
-        oneOf = valueList.getChildren('Expression').map(v => {
-          let e = analyzeExpression(v, scope)
-          checkTypes(e, [eNode.type], v)
-          return e
-        })
-      } else {
-        diag(expr, 'IN (<subquery>) is not yet supported')
-        oneOf = [{node: 'genericSQLExpr', kids: {args: []}, type: 'array'} as any]
-      }
-      let isAgg = eNode.isAgg || oneOf.some(v => (v as any).isAgg)
-      return {node: 'in', not, kids: {e: eNode as any, oneOf: oneOf as any}, type: 'boolean', isAgg} as any
-    }
-    case 'SubqueryExpression':
     default:
-      return diag(expr, `Unsupported expression "${expr.name}": ${txt(expr)}`, errExpr)
+      return diag(node, `Unsupported expression: ${node.name}`, {sql: 'NULL', type: 'error'})
   }
 }
 
-
-// Malloy uses special nodes to represent timediff and time deltas (ie adding interval to a date)
-function analyzeTimeExpression (op: '-' | '+', left: Expression, right: Expression, node: SyntaxNode): Expression {
-  // only allow dates on the left side, to simplify the logic. Can revisit if people do this a lot.
-  if (left.type !== 'date' && left.type !== 'timestamp') return diag(node, 'Expected left side to be a date or timestamp', errExpr)
-
-  if (right.type == 'date' || right.type == 'timestamp') {
-    if (op !== '-') return diag(node, 'Only subtraction between dates is supported', errExpr)
-    if (right.type !== left.type) return diag(node, `Expected right side to be a ${left.type}`, errExpr)
-    let units: TimestampUnit = left.type === 'timestamp' ? 'second' : 'day'
-    return {node: 'timeDiff', kids: {left: left as any, right: right as any}, units, type: 'interval', isAgg: false}
+function analyzeDateArithmetic (op: '+' | '-', left: Expr, right: Expr, node: SyntaxNode): Expr {
+  // date - date = interval
+  if ((left.type == 'date' || left.type == 'timestamp') && (right.type == 'date' || right.type == 'timestamp')) {
+    if (op != '-') return diag(node, 'Can only subtract dates', {sql: 'NULL', type: 'error'})
+    let unit = left.type == 'timestamp' ? 'SECOND' : 'DAY'
+    if (config.dialect == 'bigquery') {
+      return {sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: 'number'}
+    }
+    if (config.dialect == 'snowflake') {
+      return {sql: `TIMESTAMPDIFF(${unit}, ${right.sql}, ${left.sql})`, type: 'number'}
+    }
+    return {sql: `DATE_DIFF('${unit.toLowerCase()}', ${right.sql}, ${left.sql})`, type: 'number'}
   }
 
-  if (right.type == 'interval') {
-    let typeDef = {type: left.type}
-    let units = (right as any).intervalUnit
-    if (!units) return diag(node, 'Interval must have a unit', errExpr)
-    return {node: 'delta', kids: {base: left as any, delta: right}, op: op as any, units, type: left.type, typeDef, isAgg: false}
+  // date +/- interval
+  if ((left.type == 'date' || left.type == 'timestamp') && right.type == 'interval') {
+    return {sql: `${left.sql} ${op} ${right.sql}`, type: left.type}
   }
 
-  return diag(node, 'Expected right side to be a date, timestamp, or interval', errExpr)
-}
-
-function ensureSameType (left: Expression, leftNode: SyntaxNode, right: Expression, rightNode: SyntaxNode): FieldType | undefined {
-  if (left.type === 'error' || right.type === 'error') return
-  if (left.node === 'parameter' || right.node === 'parameter') return
-
-  // if one side is a date/timestamp, allow the other (string) to be coerced
-  if (left.type === 'date' || left.type === 'timestamp') checkTypes(right, [left.type as FieldType], rightNode)
-  if (right.type === 'date' || right.type === 'timestamp') checkTypes(left, [right.type as FieldType], leftNode)
-
-  if (left.type !== right.type) diag(rightNode, `Expected ${left.type}, got ${right.type}`)
-}
-
-export function checkTypes (expr: Expression, expected: FieldType[], node: SyntaxNode) {
-  if (expr.type === 'error') return
-  if (expr.node === 'parameter') return
-  if (expected.includes(expr.type)) return // types match
-  if (expected.includes('generic' as FieldType)) return
-
-  // string literals can be coerced to date/timestamp if needed (but NOT interval, due to ambiguity with e.g. `5 * '1 hour'`)
-  let dt = expected.find(t => t == 'date') || expected.find(t => t == 'timestamp')
-  if (expr.node == 'stringLiteral' && dt) {
-    let parsed = parseTemporalLiteral(expr.literal, dt)
-    if (!parsed) return diag(node, `Could not parse ${dt} literal: "${expr.literal}"`, undefined)
-    let typeDef = {type: parsed.type, timeframe: parsed.timeframe}
-    Object.assign(expr, {node: 'timeLiteral', literal: parsed?.literal, type: parsed?.type, typeDef})
-    return
+  // interval + date (normalize to date + interval)
+  if (left.type == 'interval' && (right.type == 'date' || right.type == 'timestamp')) {
+    if (op == '-') return diag(node, 'Cannot subtract date from interval', {sql: 'NULL', type: 'error'})
+    return {sql: `${right.sql} + ${left.sql}`, type: right.type}
   }
 
-  diag(node, `Expected types: ${expected.join(', ')}`)
+  return diag(node, 'Invalid date arithmetic', {sql: 'NULL', type: 'error'})
 }
 
-// Get the field that a Ref refers to.
-// This could be a column on a table, or the alias of a column in the query. We'll also follow dotted paths to traverse joins.
-// The lookup is redundant with Malloy, but doing it means we get type info and metadata on all fields.
-function lookupField (expr: SyntaxNode, scope: Scope): ColumnField | null {
-  let pathNodes = expr.getChildren('Identifier')
-  let fieldNode = pathNodes.pop()
-  if (!fieldNode) return diag(expr, 'Missing identifiers in ref', null)
-  let fieldName = txt(fieldNode)
-
-  // referring to something already in the output takes precedence
-  let outField = scope.outputFields.find(of => of.name == fieldName)
-  if (pathNodes.length == 0 && outField) return outField
-
-  let table = followJoins(pathNodes, scope.table)
-  if (!table) return null // diagnostics already handled
-  let field = table.fields.find(f => f.name == fieldName)
-  if (!field) return diag(fieldNode, `Could not find "${fieldName}" on ${table.name}`, null)
-  if (isJoin(field)) return diag(fieldNode, `${fieldName} is a join, but is used as a column here`, null)
-  analyzeField(field, table)
-  NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field, table})
-  return field
+function coerceToTemporal (expr: Expr, targetType: 'date' | 'timestamp', node: SyntaxNode): Expr {
+  // Extract the string literal value (remove quotes)
+  let match = expr.sql.match(/^'(.+)'$/)
+  if (!match) return expr
+  let parsed = parseTemporalLiteral(match[1], targetType)
+  if (!parsed) { diag(node, `Cannot parse as ${targetType}: ${expr.sql}`); return expr }
+  return {sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
 }
 
+// Check for chasm trap: aggregates spanning multiple join_many paths (or base + join_many) produce incorrect results
+function checkChasmTrap (baseTable: Table, fields: QueryField[], queryNode: SyntaxNode) {
+  let manyJoins = baseTable.joins.filter(j => j.joinType == 'many').map(j => j.name)
+  if (manyJoins.length == 0) return
+  let aggSources = new Set<string>() // 'base' or join name
+  for (let f of fields) {
+    if (!f.isAgg) continue
+    let touchesMany = false
+    for (let name of manyJoins) {
+      if (new RegExp(`\\b${name}[."]`).test(f.sql)) { aggSources.add(name); touchesMany = true }
+    }
+    if (!touchesMany) aggSources.add('base')
+  }
+  if (aggSources.size > 1) {
+    diag(queryNode, `Query aggregates across multiple sources (${[...aggSources].join(', ')}), which may produce incorrect results (chasm trap)`)
+  }
+}
 
-// Step through all the parts of the dotted path to get the right table
-function followJoins (pathNodes: SyntaxNode[], curr: Table): Table | null {
+// Traverse a join path, returning a new scope pointing to the target table.
+// Adds joins to query state as we traverse.
+function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
+  let current = scope
+
   for (let part of pathNodes) {
     let name = txt(part)
-    let next = curr.fields.find(f => f.name == name)
+    if (name == current.table.name) continue  // self-reference, skip
 
-    if (name == curr.name) continue // expression (unnecessarily) refers to the current table
-    if (!next) {
-      let other = curr.fields.find(f => isJoin(f) && f.tableName == name)
-      let dym = other ? `. Did you mean "${other.name}"?` : ''
-      return diag(part, `Join "${name}" does not exist on table "${curr.name}"${dym}`, null)
+    // Check joinTarget first (for ON clause analysis), then regular joins
+    let targetTable: Table | undefined
+    let newAlias: string
+    if (current.joinTarget && (name == current.joinTarget.name || name == current.joinTarget.table.name)) {
+      targetTable = current.joinTarget.table
+      newAlias = current.joinTarget.alias
+    } else {
+      let join = current.table.joins.find(j => j.name == name)
+      let col = current.table.columns.find(c => c.name == name)
+
+      if (col) return diag(part, `"${name}" is not a join`, null)
+      if (!join) return diag(part, `Unknown join "${name}" on ${current.table.name}`, null)
+
+      analyzeJoin(join)
+
+      targetTable = lookupTable(join.targetTable, part)
+      if (!targetTable) return diag(part, `Cannot find table "${join.targetTable}"`, null)
+
+      // Build alias: base.users -> "users", base.users.orders -> "users_orders"
+      newAlias = current.alias == 'base' ? name : `${current.alias}_${name}`
+
+      // Add join to query state - analyze ON clause with correct aliases
+      if (scope.query && !scope.query.joins.has(newAlias)) {
+        let joinTarget = {name: join.name, table: targetTable, alias: newAlias}
+        let onScope: Scope = {query: null, table: current.table, alias: current.alias, joinTarget}
+        let onClause = analyzeExpr(join.onExpr, onScope).sql
+        scope.query.joins.set(newAlias, {alias: newAlias, targetTable: join.targetTable, onClause})
+      }
     }
-    analyzeField(next, curr)
-    if (!isJoin(next)) return diag(part, `"${name}" is not a join on "${curr.name}"`, null)
 
-    curr = lookupTable(next.tableName || '', part)!
-    if (!curr) return diag(part, 'Following valid join but we couldnt find the table', null)
-    NODE_ENTITY_MAP.set(part, {entityType: 'table', table: curr})
+    NODE_ENTITY_MAP.set(part, {entityType: 'table', table: targetTable})
+    current = {query: scope.query, table: targetTable, alias: newAlias}
   }
-  return curr
+  return current
 }
 
-function lookupTable (name: string, node: SyntaxNode): Table | void {
+function lookupTable (name: string, node: SyntaxNode): Table | undefined {
   let currentUri = getFile(node).path
-
   for (let file of Object.values(FILE_MAP)) {
     if (file.path.endsWith('.gsql') || file.path == currentUri) {
       let match = file.tables.find(t => t.name == name)
@@ -571,34 +652,37 @@ function lookupTable (name: string, node: SyntaxNode): Table | void {
   }
 }
 
+function inferName (exprNode: SyntaxNode, scope: Scope): string {
+  if (exprNode.name == 'Ref') {
+    return exprNode.getChildren('Identifier').map(i => txt(i)).join('_')
+  }
+  return `col_${scope.query?.fields.length || 0}`
+}
+
+function unpackAnds (node: SyntaxNode, scope: Scope): Expr[] {
+  if (node.name == 'BinaryExpression') {
+    let op = txt(node.firstChild?.nextSibling).toLowerCase()
+    if (op == 'and') {
+      return [...unpackAnds(node.firstChild!, scope), ...unpackAnds(node.lastChild!, scope)]
+    }
+  }
+  return [analyzeExpr(node, scope)]
+}
+
 export function clearWorkspace () {
   Object.keys(FILE_MAP).forEach(k => delete FILE_MAP[k])
-  TABLE_NODE_MAP = new WeakMap()
-  diagnostics = []
-}
-export function clearDiagnostics () {
   diagnostics = []
 }
 
-export function getNodeEntity (node: SyntaxNode): any {
-  return NODE_ENTITY_MAP.get(node)
+export function clearDiagnostics () { diagnostics = [] }
+export function getNodeEntity (node: SyntaxNode) { return NODE_ENTITY_MAP.get(node) }
+
+export function recordSyntaxErrors (fi: FileInfo) {
+  fi.tree!.topNode.cursor().iterate(n => {
+    if (n.type.isError) diag(n.node, 'Syntax error')
+  })
 }
 
-// Pick a sensible name for a column
-// If a select is pointing to a field (ie `tableA.name`) malloy will use {type: 'fieldref', path: ['tableA', 'name']}
-// This kinda sucks, because it will always call the field `name` and throw an error if you select another column called `name` from a different join.
-// Instead, we're opting to pass this to malloy as an expression field, which lets us control the field's name.
-// The one minor downside I'm aware of is that malloy sometimes renders extra parenthesis it doesn't need in this case.
-function nameExpression (expr: Expression, scope: Scope, aliasNode: SyntaxNode | null) {
-  if (aliasNode) return txt(aliasNode)
-  if (expr.node == 'field') return expr.path.join('_')
-  return `col_${scope.outputFields.length}`
-}
-
-let errExpr = {node: 'error', type: 'error'} as Expression
-
-// Logs that we found an issue in the parse tree. The optional return lets return IR and try to continue the analysis.
-// The alternative is we throw an error, but then we wouldn't see other errors later in the tree.
 export function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
   let file = getFile(node)
   let from = getPosition(node.from, file)
@@ -607,53 +691,32 @@ export function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defa
   return defaultReturn as T
 }
 
-export function recordSyntaxErrors (fi: FileInfo) {
-  fi.tree!.topNode.cursor().iterate(n => {
-    if (n.type.isError) diag(n.node, 'Syntax error')
-  })
-}
-
-// turn `a and b and c` into `[a, b, c]`
-function unpackAnds (expr: Expression): Expression[] {
-  if (expr.node == 'and') {
-    return [expr.kids.left as Expression, expr.kids.right as Expression].flatMap(unpackAnds)
-  }
-  return [expr]
-}
-
-function isJoin (field: Field): field is Join {
-  // I think the types here are a bit wrong. Join says it can only point
-  return field.type == 'table' || (field as any).type == 'query_source'
+export function checkTypes (expr: Expr, expected: FieldType[], node: SyntaxNode) {
+  if (expr.type == 'error' || expr.type == 'null') return
+  if (expected.includes(expr.type)) return
+  diag(node, `Expected ${expected.join(' or ')}, got ${expr.type}`)
 }
 
 function convertDataType (dataType: string): FieldType | null {
   switch (dataType.toUpperCase()) {
-    case 'INT': return 'number'
-    case 'INT64': return 'number'
-    case 'NUMBER': return 'number'
-    case 'VARIANT': return 'string'
-    case 'TEXT': return 'string'
-    case 'STRING': return 'string'
-    case 'VARCHAR': return 'string'
-    case 'INTEGER': return 'number'
-    case 'NUMERIC': return 'number'
-    case 'FLOAT': return 'number'
-    case 'FLOAT64': return 'number'
-    case 'BOOL': return 'boolean'
-    case 'BOOLEAN': return 'boolean'
-    case 'DATE': return 'date'
-    case 'DATETIME': return 'timestamp'
-    case 'TIME': return 'timestamp'
-    case 'TIMESTAMP': return 'timestamp'
-    case 'TIMESTAMP_NTZ': return 'timestamp'
-    case 'DECIMAL': return 'number'
-    case 'DOUBLE': return 'number'
-    case 'BIGINT': return 'number'
-    case 'SMALLINT': return 'number'
-    case 'TINYINT': return 'number'
-    case 'BYTEINT': return 'number'
-    case 'BIGDECIMAL': return 'number'
-    case 'GEOGRAPHY': return 'string'
-    default: return null
+    case 'INT': case 'INT64': case 'NUMBER': case 'INTEGER': case 'NUMERIC': case 'FLOAT': case 'FLOAT64':
+    case 'DECIMAL': case 'DOUBLE': case 'BIGINT': case 'SMALLINT': case 'TINYINT': case 'BYTEINT': case 'BIGDECIMAL':
+      return 'number'
+    case 'VARIANT': case 'TEXT': case 'STRING': case 'VARCHAR': case 'GEOGRAPHY':
+      return 'string'
+    case 'BOOL': case 'BOOLEAN':
+      return 'boolean'
+    case 'DATE':
+      return 'date'
+    case 'DATETIME': case 'TIME': case 'TIMESTAMP': case 'TIMESTAMP_NTZ':
+      return 'timestamp'
+    default:
+      return null
   }
+}
+
+// Quote an identifier for the current dialect
+function quote (name: string): string {
+  if (config.dialect === 'bigquery') return `\`${name}\``
+  return `"${name}"`
 }

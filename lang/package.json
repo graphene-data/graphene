@@ -10,7 +10,6 @@
   "dependencies": {
     "@lezer/common": "^1.2.3",
     "@lezer/lr": "^1.4.2",
-    "@graphenedata/malloy": "0.0.304",
     "glob": "^13.0.1"
   },
   "devDependencies": {

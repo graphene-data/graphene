@@ -14,7 +14,6 @@
   "devDependencies": {
     "@eslint/compat": "^1.4.1",
     "@eslint/js": "^9.39.2",
-    "@graphenedata/malloy": "0.0.304",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.19.7",
     "dotenv": "^17.2.3",
