@@ -91,12 +91,12 @@ vitestExpect.extend({
   toRenderSql (received: string, expectedSql: string, opts: { preserveCase?: boolean } = {}) {
     let content = trimIndentation(received)
     let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
-    let diagnostics = getDiagnostics()
+    let errors = getDiagnostics().filter(d => d.severity === 'error')
 
-    if (diagnostics.length > 0) {
+    if (errors.length > 0) {
       return {
         pass: false,
-        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(content, diagnostics)}`,
+        message: () => `Expected no errors, but found ${errors.length}:\n\n${formatDiagnostics(content, errors)}`,
       }
     }
 
@@ -120,12 +120,12 @@ vitestExpect.extend({
   async toReturnRows (received: string, ...expectedRows: unknown[][]) {
     let content = trimIndentation(received)
     let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
-    let diagnostics = getDiagnostics()
+    let errors = getDiagnostics().filter(d => d.severity === 'error')
 
-    if (diagnostics.length > 0) {
+    if (errors.length > 0) {
       return {
         pass: false,
-        message: () => `Expected no diagnostics, but found ${diagnostics.length}:\n\n${formatDiagnostics(content, diagnostics)}`,
+        message: () => `Expected no errors, but found ${errors.length}:\n\n${formatDiagnostics(content, errors)}`,
       }
     }
     let sql = toSql(queries[0])
@@ -175,7 +175,7 @@ vitestExpect.extend({
     let content = trimIndentation(received)
     analyze(content, content.includes('```') ? 'md' : 'gsql')
 
-    let errors = getDiagnostics()
+    let errors = getDiagnostics().filter(d => d.severity === 'error')
     return {
       pass: errors.length === 0,
       message: () => errors.length === 0

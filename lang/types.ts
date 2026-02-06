@@ -1,5 +1,4 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
-import type {Expr, JoinFieldDef, Query as MalloyQuery} from '@graphenedata/malloy'
 
 declare module '@lezer/common' {
   interface Tree {
@@ -7,58 +6,75 @@ declare module '@lezer/common' {
   }
 }
 
-export interface Scope {
-  table: Table,
-  outputFields: ColumnField[],
+export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
+
+// An analyzed expression - contains the SQL string plus metadata for validation
+export interface Expr {
+  sql: string        // the SQL for this expression, e.g. "base.\"name\"" or "sum(base.\"amount\")"
+  type: FieldType    // result type for validation
+  isAgg?: boolean    // true if contains an aggregate function
 }
 
-export type Expression = Expr & {
-  type: FieldType
-  isAgg?: boolean
-  structPath?: string[]
-}
-
-export type Join = JoinFieldDef & {
-  name: string // the name the table in this join. Defaults to tableName
-  expression?: SyntaxNode | null
+// A field in a query's SELECT clause
+export interface QueryField extends Expr {
+  name: string                 // output column name
   metadata?: Record<string, string>
-  tableName?: string // the table's name in the database
-  tablePath?: string // the full name, including namespace
 }
 
-export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'fieldref' | 'array' | 'record' | 'null' | 'interval';
+// A filter (WHERE or HAVING)
+export interface Filter {
+  sql: string
+  isAgg?: boolean  // if true, goes in HAVING; otherwise WHERE
+}
 
-export interface ColumnField {
+// A join used in a query (with alias for rendering)
+export interface QueryJoin {
+  alias: string                // e.g., "orders_0"
+  targetTable: string          // name of the table being joined
+  onClause: string             // SQL for the ON expression
+}
+
+// A fully analyzed query
+export interface Query {
+  sql: string                  // the complete SQL string
+  baseTable: string            // name of the table in FROM
+  fields: QueryField[]         // SELECT columns
+  joins: QueryJoin[]           // JOINs needed for this query
+  filters: Filter[]            // WHERE/HAVING conditions
+  groupBy: number[]            // indices into fields for GROUP BY (1-indexed)
+  orderBy: {idx: number, desc: boolean}[]  // ORDER BY (1-indexed field indices)
+  limit?: number
+  isAggregate: boolean         // true if this query has any aggregation
+}
+
+// A column definition (from table schema or computed)
+export interface Column {
   name: string
-  type?: FieldType
+  type: FieldType
+  isAgg?: boolean              // for computed columns that are aggregates
+  exprNode?: SyntaxNode        // for computed columns, the expression AST node (analyzed lazily in query context)
   metadata?: Record<string, string>
-  e?: Expression
-  path?: string[]
-  isAgg?: boolean
-  targetType?: string
-  expressionType?: string
 }
 
-export type Field = ColumnField | Join
+// Join definition on a table
+export interface Join {
+  name: string                 // alias for this join in the current table
+  targetTable: string          // name of the table being joined
+  joinType: 'one' | 'many'
+  onExpr: SyntaxNode          // ON clause AST node (analyzed lazily with correct aliases)
+  targetNode: SyntaxNode
+}
 
+// A table definition
 export interface Table {
-  type: 'table' | 'query_source'
-  name: string // the name the table has in this context. Could be an alias if this is a join
-  fields: Field[]
-  analyzed?: boolean
-  metadata: Record<string, string>
-  connection?: string
-  dialect?: string
-  tableName?: string // the table's name in the database
-  tablePath?: string // the full name, including namespace
-  primaryKey?: string
-  query?: Query
-}
-
-export type Query = MalloyQuery & {
-  fields: ColumnField[]
-  baseTableName: string
-  rawSql?: string
+  name: string
+  type: 'table' | 'view'       // 'view' = defined with a subquery
+  tablePath: string            // full path including namespace
+  columns: Column[]
+  joins: Join[]
+  query?: Query                // for views, the underlying query
+  metadata?: Record<string, string>
+  syntaxNode?: SyntaxNode      // the TableStatement/ViewStatement AST node
 }
 
 export interface Position {
@@ -81,6 +97,6 @@ export interface FileInfo {
   tree: Tree | null
   tables: Table[]
   queries: Query[]
-  virtualContents?: string // For markdown files, this is the effective gsql
-  virtualToMarkdownOffset?: number[] // mapping so we can get positions in the original md
+  virtualContents?: string
+  virtualToMarkdownOffset?: number[]
 }

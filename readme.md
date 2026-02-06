@@ -24,8 +24,3 @@ If you use worktrees, you'll have to rerun both steps if you want to change whic
 
 # Publishing
 `node --env-file=../../publish.env ./scripts/publish.ts patch`
-
-# Malloy fork
-We maintain a fork of Malloy (specifically the `malloy` package) to better integrate it into Graphene.
-To deploy it, from `malloy/packages/malloy`, bump the version in package.json, then `npm publish --access public --tag stable`
-After deploying, you'll want to bump the version that Graphene points to.
