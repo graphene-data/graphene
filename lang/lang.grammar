@@ -98,7 +98,7 @@ ColumnName {
 }
 
 PrimaryKey {
-  Kw<"primary_key">
+  Kw<"primary"> Kw<"key">
 }
 
 JoinDef {

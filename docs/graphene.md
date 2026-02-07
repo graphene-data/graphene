@@ -109,7 +109,7 @@ GSQL is comprised of four primary statements:
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT primary key
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
@@ -126,7 +126,7 @@ table orders (
 )
 
 table users (
-  id BIGINT primary_key
+  id BIGINT primary key
   name VARCHAR
   email VARCHAR
   age INTEGER
@@ -231,7 +231,7 @@ table orders (
 )
 
 table users (
-  id BIGINT primary_key,
+  id BIGINT primary key,
   name VARCHAR,
   ...
 )
@@ -270,7 +270,7 @@ table users (
 )
 
 table countries (
-  code VARCHAR primary_key
+  code VARCHAR primary key
   name VARCHAR
   currency VARCHAR
   free_shipping BOOLEAN
@@ -300,7 +300,7 @@ Again, using the orders table from before:
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT primary key
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
@@ -385,7 +385,7 @@ Here's an example of a fan-out:
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT primary key
   customer_name VARCHAR
   amt_with_shipping FLOAT
 
@@ -393,7 +393,7 @@ table orders (
 )
 
 table order_items (
-  id BIGINT primary_key
+  id BIGINT primary key
   order_id BIGINT
   product VARCHAR
   price FLOAT
@@ -583,7 +583,7 @@ You can turn the output of any `select` statement into a table with `table foo a
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT primary key
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
@@ -600,7 +600,7 @@ table orders (
 )
 
 table users (
-  id BIGINT primary_key
+  id BIGINT primary key
   name VARCHAR
   email VARCHAR
   age INTEGER

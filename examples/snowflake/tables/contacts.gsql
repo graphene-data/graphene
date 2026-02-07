@@ -1,5 +1,5 @@
 table contacts (
-  unique_id TEXT primary_key
+  unique_id TEXT primary key
   is_current BOOLEAN -- Indicates the most recent currently active contacts for a given establishment. Note: The is_current status will always be FALSE for closed establishments
   email_test_date DATE
   company_name TEXT -- Establishment owner name, if different than Establishment name

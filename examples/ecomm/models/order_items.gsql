@@ -1,5 +1,5 @@
 table order_items (
-  id INT64 primary_key
+  id INT64 primary key
   order_id INT64
   user_id INT64
   product_id INT64

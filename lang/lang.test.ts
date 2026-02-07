@@ -7,7 +7,7 @@ import {trimIndentation} from './util.ts'
 
 const testTables = `
   table users (
-    id int primary_key
+    id int primary key
     name text
     -- email address of the user
     --# pii=true
@@ -24,7 +24,7 @@ const testTables = `
   )
 
   table orders (
-    id int primary_key
+    id int primary key
     user_id int
     amount int
     status text
@@ -38,7 +38,7 @@ const testTables = `
   )
 
   table order_items (
-    id int primary_key
+    id int primary key
     order_id int
     sku text
     quantity int
@@ -47,7 +47,7 @@ const testTables = `
   )
 
   table payments (
-    id int primary_key
+    id int primary key
     user_id int
     payment_date timestamp
     amount int
@@ -109,16 +109,16 @@ describe('lang', () => {
     setConfig({dialect: 'snowflake', root: ''})
     updateFile(`
       table users_chain (
-        id int primary_key
+        id int primary key
         join many orders_chain on orders_chain.user_id = id
       )
       table orders_chain (
-        id int primary_key
+        id int primary key
         user_id int
         join one order_item_view_chain on order_item_view_chain.order_id = id
       )
       table order_item_view_chain (
-        order_id int primary_key
+        order_id int primary key
       )
     `, 'snowflake_chain.gsql')
 
@@ -206,13 +206,13 @@ describe('lang', () => {
   it('supports "table as" (aka view) queries', async () => {
     updateFile(`
       table users (
-        id int primary_key
+        id int primary key
         name string
         join many orders on orders.user_id = id
         join one user_facts on user_facts.id = id
         user_facts.ltv as ltv -- test out joining the view back in to its original source
       )
-      table orders (id int primary_key, user_id int, amount int, sum(amount) as total_revenue)
+      table orders (id int primary key, user_id int, amount int, sum(amount) as total_revenue)
       table user_facts as (from users select id, orders.total_revenue as ltv)
     `, 'models.gsql')
 
@@ -230,8 +230,8 @@ describe('lang', () => {
     // Regression test: querying through nested joins to a query_source would crash with "Cannot read properties of null (reading 'type')"
     // because structRef wasn't set on deeply nested query objects after structuredClone
     updateFile(`
-      table order_items (id int primary_key, user_id int, join one users on users.id = user_id)
-      table users (id int primary_key, name string, join one user_facts on user_facts.id = id)
+      table order_items (id int primary key, user_id int, join one users on users.id = user_id)
+      table users (id int primary key, name string, join one user_facts on user_facts.id = id)
       table user_facts as (from users select id, name as fact_name)
     `, 'models.gsql')
 
@@ -252,8 +252,8 @@ describe('lang', () => {
 
   it('qualified joins default to table name alias', () => {
     updateFile(`
-      table dataset.users (id int primary_key, join many dataset.orders on id = orders.user_id)
-      table dataset.orders (id int primary_key, user_id int)
+      table dataset.users (id int primary key, join many dataset.orders on id = orders.user_id)
+      table dataset.orders (id int primary key, user_id int)
     `, 'models.gsql')
 
     expect('from dataset.users select id, orders.id')
@@ -362,7 +362,7 @@ describe('lang', () => {
     analyze(`
       -- this is my test table
       table t (
-        id int primary_key,
+        id int primary key,
         -- a description
         --# format=first_last
         name text,
@@ -394,9 +394,10 @@ describe('lang', () => {
   })
 
   it('reports diagnostics for multiple primary keys', () => {
-    expect('table t (id int primary_key, id2 int primary_key) from t select id')
+    expect('table t (id int primary key, id2 int primary key) from t select id')
       .toHaveDiagnostic(/Table t has multiple primary keys/i)
   })
+
 
   it('reports diagnostics for duplicate table definitions', () => {
     expect(`
@@ -534,7 +535,7 @@ describe('lang', () => {
 
   it('allows optional commas between table items and semicolon terminators', () => {
     expect(`table t (
-      id int primary_key,
+      id int primary key,
       name text
     );
     from t select id, name`)
@@ -817,13 +818,13 @@ describe('lang', () => {
     setConfig({root: ''})
     updateFile(`
       table alpha (
-        id int primary_key
+        id int primary key
         join many beta on beta.alpha_id = id
         avg(beta.num) as avg_num
       )
 
       table beta (
-        id int primary_key
+        id int primary key
         alpha_id int
         num int
         join one alpha on alpha.id = alpha_id
@@ -837,7 +838,7 @@ describe('lang', () => {
   it('supports legacy computed column syntax (expr as alias)', () => {
     updateFile(`
       table users (
-        id int primary_key,
+        id int primary key,
         name text,
         age int,
         age >= 18 as is_adult

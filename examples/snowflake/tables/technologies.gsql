@@ -1,5 +1,5 @@
 table technologies (
-  unique_id TEXT primary_key
+  unique_id TEXT primary key
   is_current BOOLEAN -- Indicates technologies that are currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
   first_observed_at DATE -- When the tech was first seen by Brizo
   last_observed_at DATE -- When the tech was last seen by Brizo

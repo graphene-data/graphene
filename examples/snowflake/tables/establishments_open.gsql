@@ -1,5 +1,5 @@
 table establishments_open (
-  establishment_id TEXT primary_key
+  establishment_id TEXT primary key
   first_seen DATE -- Date establishment was first seen by Brizo
   last_reviewed DATE -- Date of most recent review seen by Brizo
   location_latitude FLOAT

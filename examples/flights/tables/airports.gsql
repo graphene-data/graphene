@@ -1,6 +1,6 @@
 table airports (
   
-  id BIGINT primary_key -- Unique identifier for the airport
+  id BIGINT primary key -- Unique identifier for the airport
   code VARCHAR -- IATA airport code (e.g., 'JFK', 'LAX', 'ORD')
   site_number VARCHAR -- FAA site number identifier
   fac_type VARCHAR -- Facility type (e.g., 'AIRPORT', 'HELIPORT', 'SEAPLANE BASE', 'BALLOONPORT', 'GLIDERPORT', 'STOLPORT', 'ULTRALIGHT')

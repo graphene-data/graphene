@@ -1,5 +1,5 @@
 table establishments_closed (
-  establishment_id TEXT primary_key
+  establishment_id TEXT primary key
   closed_date DATE -- Date Brizo identified the establishment as closed
   first_seen DATE -- Date establishment was first seen by Brizo
   alternate_name TEXT -- Alternate name or parent corporation
