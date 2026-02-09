@@ -30,6 +30,7 @@ interface QueryNode {
 let runPending: Promise<void> | null = null
 let params = {} as Record<string, any>
 let queries = [] as QueryNode[]
+let queryResults = {} as Record<string, {rows: any[], fields?: Field[]}>
 
 function registerQuery (name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
@@ -87,11 +88,16 @@ async function runNode (n: QueryNode) {
 
     if (response.status == 304) { // cache hit. Read it out and use that
       let body = await cacheRead(hash)
-      n.callback(translateData(body, n))
+      let result = translateData(body, n)
+      if (n.source) queryResults[n.source] = {rows: result.rows, fields: body.fields}
+      n.callback(result)
     } else if (response.ok) { // cache miss. write it to the cache, and return the data
       cacheWrite(hash, response.clone()) // clone allows us to write the raw response into the cache
       let body = await response.json()
-      n.callback(translateData(body, n)) // nb that translateData modifies in place for performance
+      let fields = body.fields // grab before translateData mutates
+      let result = translateData(body, n) // nb that translateData modifies in place for performance
+      if (n.source) queryResults[n.source] = {rows: result.rows, fields}
+      n.callback(result)
     } else { // request failed. Record it
       let isJson = response.headers.get('Content-Type') === 'application/json'
       let body = isJson ? await response.json() : await response.text()
@@ -192,4 +198,5 @@ Object.assign(window.$GRAPHENE, {
   query,
   unsubscribe,
   waitForQueries,
+  queryResults,
 })
