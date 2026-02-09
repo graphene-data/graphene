@@ -577,6 +577,7 @@
           },
           min: yMin,
           max: yMax,
+          minInterval: yUnitSummary?.maxDecimals === 0 ? 1 : undefined,
           scale: yScale_bool,
           splitLine: {
             show: yGridlines_bool,
@@ -705,8 +706,9 @@
           nameGap: 6,
           min: yMin,
           max: yMax,
+          minInterval: yUnitSummary?.maxDecimals === 0 ? 1 : undefined,
           scale: yScale_bool,
-          boundaryGap: ['0%', '1%'],
+          boundaryGap: yUnitSummary?.maxDecimals === 0 ? false : ['0%', '1%'],
           z: 2,
         }
 
@@ -744,8 +746,9 @@
           nameGap: 6,
           min: y2Min,
           max: y2Max,
+          minInterval: y2UnitSummary?.maxDecimals === 0 ? 1 : undefined,
           scale: y2Scale_bool,
-          boundaryGap: ['0%', '1%'],
+          boundaryGap: y2UnitSummary?.maxDecimals === 0 ? false : ['0%', '1%'],
           z: 2,
         }
 

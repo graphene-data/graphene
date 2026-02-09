@@ -91,6 +91,16 @@ test('series colors accepts json string input', async ({mount, chart}) => {
   expect(colors).toContain('#123456')
 })
 
+test('bar chart y-axis uses integer ticks for integer data', async ({mount, chart}) => {
+  // there was a regression where we'd try to render fractional ticks (0, 0.25, 0.5, 0.75, 1), but they got rounded
+  let rows = [{category: 'A', count: 1}, {category: 'B', count: 1}, {category: 'C', count: 1}] as any
+  rows._evidenceColumnTypes = [{name: 'category', evidenceType: 'string'}, {name: 'count', evidenceType: 'number'}]
+  await mount('components/BarChart.svelte', {data: {rows}, x: 'category', y: 'count'})
+  let minInterval = await chart.config(c => (Array.isArray(c.yAxis) ? c.yAxis[0] : c.yAxis).minInterval)
+  expect(minInterval).toBe(1)
+  await expect(chart.el).screenshot('bar-chart-integer-ticks')
+})
+
 test('line chart dual axis shows both y-axis labels', async ({mount, chart}) => {
   let data = timeseries() as any
   let rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k * 0.1}))
