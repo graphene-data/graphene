@@ -67,7 +67,10 @@ export async function handler (event) {
     if (!httpError) await page.waitForLoadState('networkidle')
     mark('networkIdle')
 
-    let screenshot = await page.screenshot({type: 'png', animations: 'disabled', fullPage: true})
+    let element = event.selector ? await page.$(event.selector) : null
+    let screenshot = element
+      ? await element.screenshot({type: 'png', animations: 'disabled'})
+      : await page.screenshot({type: 'png', animations: 'disabled', fullPage: true})
     mark('screenshot')
 
     // Extract query results and errors from the page (will be empty if page failed to load)

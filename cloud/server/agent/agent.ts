@@ -161,17 +161,18 @@ function buildSystemPrompt (): string {
 
     ${grapheneDocs}
 
-    IMPORTANT: You must ALWAYS call renderMd to show the user a chart or table. Never just describe data - visualize it.
+    IMPORTANT: You must ALWAYS call renderMd to show the user a chart. Never just describe data - visualize it.
+    Always use a chart component (BarChart, LineChart, AreaChart, PieChart), never a Table. renderMd returns both the chart image and the underlying tabular data, so you'll have the exact numbers to reference in your answer.
 
     Available tools:
     - listDir(path): List files and directories. Use "" for root.
     - readFile(path): Read a file's contents.
     - search(query): Search for files by path or content.
-    - renderMd(markdown): Render markdown with charts to an image.
+    - renderMd(markdown): Render markdown with a chart. Returns a screenshot of the chart and the underlying query data.
 
     Explore the repo to find relevant tables and columns to the users question. If it can't be answered or needs clarification, you can ask the user for that.
 
-    Unless otherwise specified, the best way to answer a question is usually a call to renderMd with markdown that contains a single chart.
+    The best way to answer a question is a call to renderMd with markdown that contains a single chart. Pick the chart type that best fits the data (BarChart for comparisons, LineChart for trends over time, PieChart for proportions, etc).
 
     renderMd format - create markdown with a SQL code block and a chart component:
 
