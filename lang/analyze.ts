@@ -253,8 +253,6 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   }
 
   // Check for chasm trap: aggregates touching multiple distinct join_many paths
-  if (baseTable && isAgg) checkChasmTrap(baseTable, queryState.fields, queryNode)
-
   let joins = Array.from(queryState.joins.values())
   let groupBy = isAgg ? groupByIndices : []
   let sql = buildSql(baseTable, queryState.fields, joins, queryState.filters, groupBy, orderBy, limit)
@@ -577,24 +575,6 @@ function coerceToTemporal (expr: Expr, targetType: 'date' | 'timestamp', node: S
   let parsed = parseTemporalLiteral(match[1], targetType)
   if (!parsed) { diag(node, `Cannot parse as ${targetType}: ${expr.sql}`); return expr }
   return {sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
-}
-
-// Check for chasm trap: aggregates spanning multiple join_many paths (or base + join_many) produce incorrect results
-function checkChasmTrap (baseTable: Table, fields: QueryField[], queryNode: SyntaxNode) {
-  let manyJoins = baseTable.joins.filter(j => j.joinType == 'many').map(j => j.name)
-  if (manyJoins.length == 0) return
-  let aggSources = new Set<string>() // 'base' or join name
-  for (let f of fields) {
-    if (!f.isAgg) continue
-    let touchesMany = false
-    for (let name of manyJoins) {
-      if (new RegExp(`\\b${name}[."]`).test(f.sql)) { aggSources.add(name); touchesMany = true }
-    }
-    if (!touchesMany) aggSources.add('base')
-  }
-  if (aggSources.size > 1) {
-    diag(queryNode, `Query aggregates across multiple sources (${[...aggSources].join(', ')}), which may produce incorrect results (chasm trap)`)
-  }
 }
 
 // Traverse a join path, returning a new scope pointing to the target table.

@@ -635,26 +635,6 @@ describe('lang', () => {
       .toHaveDiagnostic(/Invalid interval unit/i)
   })
 
-  it('warns on chasm traps from multiple aggregate sources', () => {
-    // Aggregating across two different join_manys
-    expect('from users select name, sum(orders.amount), sum(payments.amount)')
-      .toHaveDiagnostic(/chasm trap/i)
-
-    // Mixing base-table aggregate with join_many aggregate
-    expect('from users select name, avg(age), sum(payments.amount)')
-      .toHaveDiagnostic(/chasm trap/i)
-
-    // Single aggregate touching multiple join_manys
-    expect('from users select name, sum(orders.amount + payments.amount)')
-      .toHaveDiagnostic(/chasm trap/i)
-
-    // Single join_many aggregate is fine
-    expect('from users select name, sum(payments.amount)').toHaveNoErrors()
-
-    // Base-only aggregates are fine
-    expect('from users select avg(age)').toHaveNoErrors()
-  })
-
   it.skip('errors when aggregates are nested', () => {
     expect('from users select name, sum(total_orders)')
       .toHaveDiagnostic(/Aggregates cannot be nested/i)
