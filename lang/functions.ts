@@ -13,7 +13,6 @@ interface Overload {
   params: {name: string, allowedTypes: {type: FieldType | 'sql native', rawType?: string}[], isVariadic?: boolean}[]
   returnType: {type: FieldType | 'generic', expressionType?: 'aggregate' | 'scalar'}
   sqlName?: string
-  sqlTemplate?: string
 }
 
 // Convert a FunctionDef arg type string (e.g. 'number', 'T', 'string...', 'kw') to allowedTypes
@@ -48,7 +47,6 @@ function convertDef (def: FunctionDef): Overload[] {
     }),
     returnType: {type: returnType, expressionType},
     sqlName: def.sqlName,
-    sqlTemplate: def.sqlTemplate,
   }))
 }
 
@@ -112,15 +110,8 @@ export function analyzeFunction (node: SyntaxNode, scope: Scope, analyzeExpr: An
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || 'string'
 
   let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
-  let sql: string
-  if (overload.sqlTemplate) {
-    // Fill in template placeholders like ${date_expression} with positional args
-    sql = overload.sqlTemplate
-    overload.params.forEach((p, i) => { sql = sql.replace(`\${${p.name}}`, args[i]?.sql || 'NULL') })
-  } else {
-    let fnName = overload.sqlName || name
-    sql = `${fnName}(${args.map(a => a.sql).join(',')})`
-  }
+  let fnName = overload.sqlName || name
+  let sql = `${fnName}(${args.map(a => a.sql).join(',')})`
   return {sql, type: returnType, isAgg}
 }
 
