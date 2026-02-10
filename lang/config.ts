@@ -29,11 +29,10 @@ export interface Config {
 export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> & {
   dialect?: Config['dialect'],
   ignoredFiles?: Config['ignoredFiles'],
-  envFile?: string
+  envFile?: string | string[]
 }
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
-
 
 export function setConfig (cfg: ConfigInput) {
   let dialect = cfg.dialect || 'duckdb'
@@ -44,12 +43,12 @@ export function setConfig (cfg: ConfigInput) {
   Object.assign(config, cfg)
   config.dialect = dialect
   config.root ||= process.cwd()
+  config.port ||= Number(process.env.GRAPHENE_PORT) || 4000
   config.ignoredFiles ||= ['agents.md', 'claude.md']
-  config.envFile = [cfg.envFile, '.env'].filter((x): x is string => !!x).map(p => path.resolve(config.root, p))
 }
 
 // Read graphene config out of package.json
-export function loadConfig (dir:string) {
+export function loadConfig (dir:string, envLoader?: (envFiles: string[] | string) => void) {
   if (config.root) return
 
   let packageJsonObject = {} as any
@@ -59,6 +58,8 @@ export function loadConfig (dir:string) {
   } catch {
     console.warn('No package.json found in current directory')
   }
+
+  if (envLoader) envLoader(packageJsonObject.envFile || [])
 
   setConfig({...packageJsonObject, root: packageJsonObject.root || process.cwd()})
 }
