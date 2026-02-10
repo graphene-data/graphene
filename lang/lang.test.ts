@@ -824,6 +824,15 @@ describe('lang', () => {
     expect(errors[0].to.col).toBe(errors[0].from.col + 4)
   })
 
+  it('parses components with > inside quoted attribute values', () => {
+    expect(`
+      \`\`\`gsql test
+        from users where age > 20
+      \`\`\`
+      <BarChart data="test" x="name" y="avg(age)" title="Count > 0" />
+    `).toRenderSql('with "test" as ( select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base where base."age">20 ) select base."name" as "name", avg(base."age") as "col_1" from "test" as base group by 1 order by 2 desc nulls last')
+  })
+
   it('handles params in a md code fence', () => {
     let queries = analyze('```gsql test\nfrom users where age > $cutoff\n```\n<BarChart data="test" x="name" y="avg(age)" />', 'md')
     let sql = toSql(queries[0], {cutoff: 20})
