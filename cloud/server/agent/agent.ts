@@ -156,8 +156,11 @@ async function findContextFiles (repoId: string): Promise<string> {
 }
 
 function buildSystemPrompt (): string {
+  let today = new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})
   let base = `
     You are a data analyst assistant that answers questions using Graphene.
+
+    Today's date is ${today}.
 
     ${grapheneDocs}
 
