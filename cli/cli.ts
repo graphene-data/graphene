@@ -16,17 +16,14 @@ import {loginPkce} from './auth.ts'
 const program = new Command()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// Look at the graphene library's package.json (as opposed to the project using graphene) to get the version
 // in dev: cli/cli.ts -> cli/package.json. in dist: cli/dist/cli/cli.js -> cli/package.json
 const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(__dirname, 'package.json') : path.join(__dirname, '../../package.json')
-const pkg = fs.readJsonSync(pkgPath)
-program.name('graphene').description('Graphene CLI').version(pkg.version, '-v, --version')
+const libPkg = fs.readJsonSync(pkgPath)
+program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
 
-program.hook('preAction', async () => {
-  if (process.env.CLI_DELAY) { // useful if you want to attach a debugger
-    await new Promise(r => setTimeout(r, 1000))
-  }
-  loadConfig(process.cwd())
-  dotenv.config({quiet: true, path: config.envFile})
+loadConfig(process.cwd(), envFiles => {
+  dotenv.config({quiet: true, path: envFiles || '.env'})
 })
 
 program.command('compile')

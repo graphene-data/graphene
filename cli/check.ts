@@ -1,7 +1,6 @@
 import fs from 'fs-extra'
 import os from 'os'
 import path from 'path'
-import {spawn} from 'child_process'
 import {type IncomingMessage, type ServerResponse} from 'http'
 import {WebSocketServer, type WebSocket} from 'ws'
 import {type PluginOption, type ViteDevServer} from 'vite'
@@ -11,6 +10,7 @@ import {printDiagnostics} from './printer.ts'
 import {readFileSync} from 'node:fs'
 import {mockFileMap} from './mockFiles.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'
+import {openInBrowser} from './auth.ts'
 import {styleText} from 'node:util'
 import {pollFor} from '../lang/util.ts'
 import {FILE_MAP} from '../lang/analyze.ts'
@@ -63,7 +63,7 @@ export async function check (options: CheckOptions): Promise<boolean> {
   }
 
   // Remove .md extension if provided and ensure it's just the filename
-  let host = `http://localhost:${config.port || Number(process.env.GRAPHENE_PORT) || 4000}`
+  let host = `http://localhost:${config.port}`
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
   if (pageUrl === '/index') pageUrl = '/'
 
@@ -81,7 +81,7 @@ export async function check (options: CheckOptions): Promise<boolean> {
 
   if (resp.checkError == 'no_tab' && process.env.NODE_ENV !== 'test') {
     log(`Opening page ${host}${pageUrl}`)
-    spawn('open', [host + pageUrl])
+    openInBrowser(host + pageUrl)
     await new Promise(resolve => setTimeout(resolve, 500))
     resp = await sendCheckRequest({host, pageUrl, chart: options.chart})
   }

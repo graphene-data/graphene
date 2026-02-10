@@ -21,6 +21,7 @@
     "namespace": "bigquery-public-data.thelook_ecommerce",
     "bigquery": {
       "projectId": "intense-acumen-470417-u5"
-    }
+    },
+    "envFile": [".env", "../../.env", "../../../.env"]
   }
 }
