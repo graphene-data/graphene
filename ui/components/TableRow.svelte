@@ -38,7 +38,8 @@
     columnMax: number | undefined,
   ) => {
     if (!column?.colorScale || !column?.colorScale.length) return undefined
-    if (!hasFiniteNumber(columnMin) || !hasFiniteNumber(columnMax) || columnMin === columnMax) return undefined
+    let hasBreakpoints = Array.isArray(column.colorBreakpoints) && column.colorBreakpoints.length >= 2
+    if (!hasBreakpoints && (!hasFiniteNumber(columnMin) || !hasFiniteNumber(columnMax) || columnMin === columnMax)) return undefined
 
     let rawDomain
     if (Array.isArray(column.colorBreakpoints) && column.colorBreakpoints.length) {
