@@ -95,7 +95,12 @@ export function analyzeFunction (node: SyntaxNode, scope: Scope, analyzeExpr: An
 
   // Find matching overload
   let overloads = findOverloads(name, config.dialect)
-  let overload = overloads.find(o => o.params.length == argNodes.length || o.params.some(p => p.isVariadic))
+  let overload = overloads.find(o => {
+    if (o.params.length == argNodes.length) return true
+    if (!o.params.some(p => p.isVariadic)) return false
+    let requiredCount = o.params.filter(p => !p.isVariadic).length || 1
+    return argNodes.length >= requiredCount
+  })
 
   // Analyze arguments and check types against overload
   let args = argNodes.map((argNode, idx) => {
