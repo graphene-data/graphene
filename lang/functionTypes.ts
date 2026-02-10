@@ -33,6 +33,8 @@ export interface FunctionDef {
   sqlName?: string
   // For functions that need a custom SQL template (e.g., 'DATE_TRUNC(${date}, ${unit})')
   sqlTemplate?: string
+  // Alternative names that should also resolve to this function (e.g., ['count_if'] for 'countif')
+  aliases?: string[]
   // For functions with multiple overloads (e.g., string_agg with/without separator)
   // When present, `args` and `returns` are ignored in favor of overloads
   overloads?: FunctionOverload[]
