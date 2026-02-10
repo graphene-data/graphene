@@ -65,17 +65,18 @@ export interface Join {
   targetNode: SyntaxNode
 }
 
-// A table definition
-export interface Table {
+// A table definition - discriminated union so views guarantee a query
+interface TableBase {
   name: string
-  type: 'table' | 'view'       // 'view' = defined with a subquery
-  tablePath: string            // full path including namespace
+  tablePath: string
   columns: Column[]
   joins: Join[]
-  query?: Query                // for views, the underlying query
   metadata?: Record<string, string>
-  syntaxNode?: SyntaxNode      // the TableStatement/ViewStatement AST node
+  syntaxNode?: SyntaxNode
 }
+export interface PhysicalTable extends TableBase { type: 'table' }
+export interface ViewTable extends TableBase { type: 'view', query: Query }
+export type Table = PhysicalTable | ViewTable
 
 export interface Position {
   offset: number
