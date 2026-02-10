@@ -1,5 +1,5 @@
 import {expect, test} from './fixtures.ts'
-import {singleDim, timeseries, timeseriesGrouped} from './testData.ts'
+import {singleDim, timeseries, timeseriesGrouped, timeseriesWithDateSeries} from './testData.ts'
 
 test.beforeEach(async ({page}) => {
   await page.setViewportSize({width: 680, height: 400})
@@ -126,6 +126,19 @@ test('line chart dual axis shows both y-axis labels', async ({mount, chart}) => 
     expect(axis.labelColorType).not.toBe('object')
   }
   await expect(chart.el).screenshot('line-chart-dual-axis')
+})
+
+test('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
+  await mount('components/LineChart.svelte', {
+    data: timeseriesWithDateSeries(),
+    x: 'category',
+    y: 'sales',
+    series: 'quarter',
+    seriesLabelFmt: 'yyyy-mm',
+  })
+  let names = await chart.config((c) => (c.series ?? []).map((s: any) => s.name).sort())
+  expect(names).toEqual(['2021-01', '2021-04', '2021-07'])
+  await expect(chart.el).screenshot('line-chart-series-label-fmt')
 })
 
 test('bar chart accepts comma-separated multi y', async ({mount, chart}) => {
