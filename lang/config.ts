@@ -59,7 +59,7 @@ export function loadConfig (dir:string, envLoader?: (envFiles: string[] | string
     console.warn('No package.json found in current directory')
   }
 
-  if (envLoader) envLoader(packageJsonObject.envFile || [])
+  if (envLoader) envLoader(packageJsonObject.envFile || ['.env'])
 
   setConfig({...packageJsonObject, root: packageJsonObject.root || process.cwd()})
 }
