@@ -348,6 +348,11 @@ describe('lang', () => {
       .toRenderSql("select case when (base.\"age\">35) then 'old' else 'young' end as \"bucket\" from users as base")
   })
 
+  it('propagates isAgg through case expressions for GROUP BY', () => {
+    expect("from users select name, case when count() > 2 then 'many' else 'few' end as bucket")
+      .toRenderSql("select base.\"name\" as \"name\", case WHEN (count(1)>2) THEN 'many' ELSE 'few' END as \"bucket\" from users as base group by 1 order by 2 desc nulls last")
+  })
+
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
     expect('from users select id = >>;').toHaveDiagnostic(/syntax error/i)
   })

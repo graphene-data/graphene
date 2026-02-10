@@ -454,8 +454,9 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
 
     case 'CaseExpression': {
       let parts = ['CASE']
+      let isAgg = false
       let caseValue = node.getChild('Expression')
-      if (caseValue) parts.push(analyzeExpr(caseValue, scope).sql)
+      if (caseValue) { let e = analyzeExpr(caseValue, scope); parts.push(e.sql); isAgg ||= !!e.isAgg }
 
       let resultType: FieldType = 'string'
       for (let w of node.getChildren('WhenClause')) {
@@ -463,6 +464,7 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
         let when = analyzeExpr(exprs[0], scope)
         let then = analyzeExpr(exprs[1], scope)
         resultType = then.type
+        isAgg ||= !!when.isAgg || !!then.isAgg
         parts.push(`WHEN (${when.sql}) THEN ${then.sql}`)
       }
 
@@ -470,9 +472,10 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
       if (elseClause) {
         let elseExpr = analyzeExpr(elseClause.getChild('Expression')!, scope)
         parts.push(`ELSE ${elseExpr.sql}`)
+        isAgg ||= !!elseExpr.isAgg
       }
       parts.push('END')
-      return {sql: parts.join(' '), type: resultType}
+      return {sql: parts.join(' '), type: resultType, isAgg: isAgg || undefined}
     }
 
     case 'InExpression': {
