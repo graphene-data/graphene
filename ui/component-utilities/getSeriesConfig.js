@@ -227,8 +227,9 @@ export default function getSeriesConfig (
 
   // format series config:
   if (seriesLabelFmt) {
+    let seriesType = series ? columnSummary[series]?.type : undefined
     seriesConfig.forEach((item) => {
-      item.name = fmt(item.name, seriesLabelFmt)
+      item.name = fmt(item.name, seriesLabelFmt, seriesType)
     })
   }
 

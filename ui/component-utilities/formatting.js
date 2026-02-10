@@ -241,18 +241,10 @@ function maybeExtractFormatTag (columnName) {
  * Formats a value to whichever format is passed in
  * @param {*} value the value to be formatted
  * @param {string} format string containing an Excel-style format code, or a format name matching a built-in or custom format
+ * @param {'number' | 'date' | 'boolean' | 'string'} [valueType] the known column type
  * @returns a formatted value
  */
-export function fmt (value, format) {
-  let formatObj = getFormatObjectFromString(format)
-  let valueType = valueTypeFromSample(value)
-  formatObj.valueType = valueType
+export function fmt (value, format, valueType = undefined) {
+  let formatObj = getFormatObjectFromString(format, valueType)
   return formatValue(value, formatObj)
-}
-
-function valueTypeFromSample (value) {
-  if (typeof value === 'number') return 'number'
-  if (typeof value === 'boolean') return 'boolean'
-  if (value instanceof Date) return 'date'
-  return 'string'
 }
