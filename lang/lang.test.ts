@@ -461,6 +461,11 @@ describe('lang', () => {
       .toRenderSql('select base."age" as "age", string_agg(base."name") as "col_1" from users as base group by 1 order by 2 desc nulls last')
   })
 
+  it('rejects variadic functions called with 0 args', () => {
+    expect('from users select coalesce() as empty')
+      .toHaveDiagnostic(/unknown function/i)
+  })
+
 
 
 
