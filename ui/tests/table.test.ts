@@ -45,6 +45,46 @@ test('paginates rows', async ({mount, page}) => {
   await expect(page.locator('.pagination__meta')).toHaveText('5 of 12 rows')
 })
 
+test('colorscale with colorBreakpoints applies correct background colors', async ({server, page}) => {
+  // Three columns with different value ranges against the same 0-1 breakpoints.
+  // High column should be green, low column should be red — verify via screenshot.
+  server.mockFile('/index.md', `
+    \`\`\`sql retention_data
+    from flights select carrier, count(*) / 100000.0 as high_val, count(*) / 500000.0 as mid_val, count(*) / 2000000.0 as low_val group by carrier limit 5
+    \`\`\`
+
+    <Table data=retention_data rows=all>
+      <Column id=carrier title="Carrier" />
+      <Column id=high_val fmt=pct0 title="High" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+      <Column id=mid_val fmt=pct0 title="Mid" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+      <Column id=low_val fmt=pct0 title="Low" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+    </Table>
+  `)
+
+  await page.goto(server.url() + '/', {waitUntil: 'commit'})
+  await page.locator('table tr:has(td)').first().waitFor()
+  await expect(page.locator('.table-container')).screenshot('colorscale-breakpoints')
+})
+
+test('colorBreakpoints work when all column values are identical', async ({server, page}) => {
+  // Edge case: all rows have the same value (columnMin === columnMax).
+  // Breakpoints define the domain, so val=1.0 should map to green end of 0/0.5/1 scale.
+  server.mockFile('/index.md', `
+    \`\`\`sql uniform_data
+    from flights select carrier, 1.0 as val limit 3
+    \`\`\`
+
+    <Table data=uniform_data rows=all>
+      <Column id=carrier title="Carrier" />
+      <Column id=val fmt=pct0 title="Value" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+    </Table>
+  `)
+
+  await page.goto(server.url() + '/', {waitUntil: 'commit'})
+  await page.locator('table tr:has(td)').first().waitFor()
+  await expect(page.locator('.table-container')).screenshot('colorscale-breakpoints-uniform')
+})
+
 test('groupType=section renders correct rowSpan for first row of each group', async ({mount, page}) => {
   // expect(1).toBe(2)
   await mount('components/Table.svelte', {data: groupedDataForSection(), groupBy: 'time_horizon', groupType: 'section'})
