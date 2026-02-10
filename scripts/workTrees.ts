@@ -2,7 +2,9 @@
 
 import {$, cd} from 'zx'
 import fs from 'fs'
+import net from 'net'
 import {resolve} from 'path'
+import {spawn} from 'child_process'
 
 const BASE_PORT = 4003
 const PORT_INCREMENT = 3
@@ -42,6 +44,28 @@ up                      Start the dev container for this worktree
 exec [cmd]              Run a command in the container (or bash if no command)
 done [--force]          Archive both worktrees, or force-drop current worktree
 `)
+}
+
+// Host commands that the container can invoke via the `host` CLI. Each handler receives an args object and returns a response.
+let wtScript = process.argv[1]
+const HOST_COMMANDS: Record<string, (args: any) => Promise<{ok: boolean, data?: any, error?: string}>> = {
+  'open-browser': async ({url}) => {
+    if (!url) return {ok: false, error: 'missing --url'}
+    await $`open ${url}`
+    return {ok: true}
+  },
+  'open-diff': async () => {
+    await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree}`
+    return {ok: true}
+  },
+  'pull': async () => {
+    let result = await $`zx ${wtScript} pull`.nothrow()
+    return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
+  },
+  'push': async () => {
+    let result = await $`zx ${wtScript} push`.nothrow()
+    return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
+  },
 }
 
 async function startWorktree (name: string) {
@@ -254,12 +278,34 @@ async function pushWorktree (updateCore: boolean) {
   await $`git -C ${currentWorktree} push origin HEAD:main`
 }
 
-// Run a command in the container. If no command is specified, open a shell
+// Start a simple server that allows containers to execute HOST_COMMANDS
+// Protocol: client sends newline-delimited JSON, server responds with the same.
+function startHostIPC (): Promise<number> {
+  return new Promise(resolve => {
+    let server = net.createServer({allowHalfOpen: true}, conn => {
+      let buf = ''
+      conn.on('data', chunk => {
+        buf += chunk
+        if (!buf.includes('\n')) return
+        let {command, args} = JSON.parse(buf.slice(0, buf.indexOf('\n')))
+        let handler = HOST_COMMANDS[command]
+        let respond = (res: object) => conn.end(JSON.stringify(res) + '\n')
+        if (!handler) return respond({ok: false, error: `unknown command: ${command}`})
+        handler(args || {}).then(respond).catch((e: any) => respond({ok: false, error: e.message}))
+      })
+    })
+    server.listen(0, '127.0.0.1', () => resolve(server.address().port))
+  })
+}
+
+// Run a command in the container. If no command is specified, open a shell.
+// Starts a per-session TCP server so the container can send commands back to the host.
 async function execWorktree (args: string[]) {
-  let { spawnSync } = await import('child_process') // use spawnSync to properly inherit TTY
-  args = args.length > 0 ? ['bash', '-c', ...args] : ['bash']
-  let result = spawnSync('docker', ['exec', '-it', `graphene-${currentName}`, ...args], {stdio: 'inherit'})
-  process.exit(result.status ?? 0)
+  let port = await startHostIPC()
+  args = args.length > 0 ? ['bash', '-lc', ...args] : ['bash']
+  let child = spawn('docker', ['exec', '-it', '-e', `HOST_IPC_PORT=${port}`, `graphene-${currentName}`, ...args], {stdio: 'inherit'})
+
+  child.on('exit', (code) => process.exit(code ?? 0))
 }
 
 async function doneWorktree (force = false) {

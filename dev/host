@@ -1,0 +1,65 @@
+#!/usr/bin/env node
+
+// Container-side CLI for sending commands to the host via TCP.
+// The host runs a TCP server during `wt exec` sessions, reachable
+// from inside the container at host.docker.internal:<port>.
+// Usage: host <command> [--key value ...]
+// Example: host open-browser --url http://localhost:4012
+//          host open-diff
+
+import net from 'node:net'
+
+let args = process.argv.slice(2)
+let command = args[0]
+
+if (!command) {
+  console.error('Usage: host <command> [--key value ...]')
+  process.exit(1)
+}
+
+let port = parseInt(process.env.HOST_IPC_PORT || '', 10)
+if (!port) {
+  console.error('HOST_IPC_PORT is not set. Are you running inside a `wt exec` session?')
+  process.exit(1)
+}
+
+// Parse --key value pairs into an args object
+let commandArgs = {}
+for (let i = 1; i < args.length; i++) {
+  if (args[i].startsWith('--') && i + 1 < args.length) {
+    commandArgs[args[i].slice(2)] = args[++i]
+  } else if (args[i].startsWith('--')) {
+    commandArgs[args[i].slice(2)] = true
+  }
+}
+
+let request = JSON.stringify({command, args: commandArgs}) + '\n'
+
+let socket = net.createConnection(port, 'host.docker.internal', () => {
+  socket.end(request)
+})
+
+let data = ''
+socket.on('data', chunk => { data += chunk })
+socket.on('end', () => {
+  try {
+    let response = JSON.parse(data)
+    if (response.data !== undefined) console.log(typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2))
+    if (!response.ok) {
+      console.error('Error:', response.error || 'unknown error')
+      process.exit(1)
+    }
+  } catch {
+    console.error('Invalid response from host:', data)
+    process.exit(1)
+  }
+})
+
+socket.on('error', err => {
+  if (err.code === 'ECONNREFUSED') {
+    console.error('Could not connect to host. The `wt exec` session may have ended.')
+  } else {
+    console.error('Socket error:', err.message)
+  }
+  process.exit(1)
+})
