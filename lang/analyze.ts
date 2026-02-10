@@ -229,6 +229,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
     let desc = txt(o.getChild('Kw')).toLowerCase() == 'desc'
     let idx = Number(fieldRef) || (queryState.fields.findIndex(f => f.name == fieldRef) + 1)
     if (idx > 0) orderBy.push({idx, desc})
+    else if (fieldRef && isNaN(Number(fieldRef))) diag(o, `Unknown field in ORDER BY: ${fieldRef}`)
   }
 
   // LIMIT

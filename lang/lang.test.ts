@@ -331,6 +331,11 @@ describe('lang', () => {
       .toRenderSql('select base."name" as "name", base."email" as "email" from users as base order by 2 asc nulls last,1 desc nulls last')
   })
 
+  it('order by nonexistent field produces diagnostic', () => {
+    expect('from users select name order by nonexistent')
+      .toHaveDiagnostic(/Unknown field in ORDER BY: nonexistent/i)
+  })
+
   it('supports limit clause', async () => {
     await expect('from users select name order by name asc limit 1')
       .toReturnRows(['Alice'])
