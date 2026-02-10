@@ -36,6 +36,23 @@ export function timeseriesGrouped (): TableRows {
   return {rows}
 }
 
+export function timeseriesWithDateSeries (): TableRows {
+  let rows = [
+    {quarter: '2021-01-01', category: 'Widgets', sales: 100},
+    {quarter: '2021-01-01', category: 'Gadgets', sales: 200},
+    {quarter: '2021-04-01', category: 'Widgets', sales: 150},
+    {quarter: '2021-04-01', category: 'Gadgets', sales: 250},
+    {quarter: '2021-07-01', category: 'Widgets', sales: 175},
+    {quarter: '2021-07-01', category: 'Gadgets', sales: 300},
+  ] as any
+  rows._evidenceColumnTypes = [
+    {name: 'quarter', evidenceType: 'date'},
+    {name: 'category', evidenceType: 'string'},
+    {name: 'sales', evidenceType: 'number'},
+  ]
+  return {rows}
+}
+
 export function tableDataWithDates (): TableRows {
   let rows = [
     {month: '2021-03-01', sales: 50},
