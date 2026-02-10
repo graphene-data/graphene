@@ -288,7 +288,10 @@ function buildSql (baseTable: Table | null, fields: QueryField[], joins: QueryJo
   let joinClauses = joins.map(j => {
     let joinTable = lookupTableByName(j.targetTable)
     let tablePath: string
-    if (joinTable?.type === 'view') {
+    if (joinTable?.type === 'view' && joinTable.query) {
+      if (!ctes.some(c => c.startsWith(quote(joinTable.name) + ' '))) {
+        ctes.push(`${quote(joinTable.name)} as ( ${joinTable.query.sql} )`)
+      }
       tablePath = quote(joinTable.name)
     } else {
       let path = joinTable?.tablePath || j.targetTable
