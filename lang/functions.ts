@@ -119,7 +119,11 @@ export function analyzeFunction (node: SyntaxNode, scope: Scope, analyzeExpr: An
     return arg
   })
 
-  if (!overload) return diag(node, `Unknown function: ${name}`, {sql: 'NULL', type: 'error'})
+  if (!overload) {
+    if (overloads.length === 0) return diag(node, `Unknown function: ${name}`, {sql: 'NULL', type: 'error'})
+    let expected = [...new Set(overloads.map(o => o.params.length))].sort().join(' or ')
+    return diag(node, `Wrong number of arguments for ${name}: expected ${expected}, got ${argNodes.length}`, {sql: 'NULL', type: 'error'})
+  }
 
   let returnType: FieldType = overload.returnType.type as FieldType
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || 'string'
