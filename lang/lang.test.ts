@@ -463,7 +463,12 @@ describe('lang', () => {
 
   it('rejects variadic functions called with 0 args', () => {
     expect('from users select coalesce() as empty')
-      .toHaveDiagnostic(/unknown function/i)
+      .toHaveDiagnostic(/wrong number of arguments/i)
+  })
+
+  it('reports wrong number of arguments instead of unknown function', () => {
+    expect('from users select lpad(name, 5)')
+      .toHaveDiagnostic(/wrong number of arguments for lpad/i)
   })
 
   it('type-checks variadic args beyond the first', () => {
