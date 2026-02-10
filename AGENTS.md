@@ -30,7 +30,7 @@ NEVER run `pnpm install` or `pnpm add`. If the env seems broken, summarize what 
 # Testing
 `pnpm lint` to run both eslint and tsc
 `pnpm test` to run all tests. `pnpm test [cli|lang|ui]` to run all the tests for a section of the codebase. Uses vitest v4 under the hood, if you want to pass other options.
-For any test with UI, capture screenshots. They are always written to tests/snapshots, and it's prudent to view them after large changes to ensure the UI still looks right.
+For any test with UI, capture screenshots. They are always written to tests/snapshots, and it's prudent to view them after large changes to ensure the UI still looks right. When a screenshot is sufficient to verify visual behavior (colors, layout, rendering), prefer it over programmatic assertions — it's simpler and easier to maintain.
 Use `howDoesMalloy` to view the Malloy IR used for a given Malloy query.
 When testing AI features, always use a mock rather than hitting an API.
 
