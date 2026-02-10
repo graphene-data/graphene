@@ -26,6 +26,7 @@ switch (command) {
   case 'commit': await commitWorktree(); break
   case 'push': await pushWorktree(flags.includes('--updateCore')); break
   case 'up': await upWorktree(currentName); break
+  case 'down': await downWorktree(currentName); break
   case 'exec': await execWorktree(process.argv.slice(3)); break
   case 'done': await doneWorktree(flags.includes('--force')); break
   default:
@@ -93,8 +94,7 @@ async function upWorktree(name:string) {
   // We could skip this step if the image already exists, but this seems pretty fast, and catches dockerfile changes
   console.log('Building Docker image...')
   await $`docker build -f ${root}/main/scripts/Dockerfile.dev -t graphene-dev ${root}/main`
-
-  await $`docker rm -f ${containerName}`.quiet().nothrow() // Stop existing container if running
+  await downWorktree(containerName)
 
   console.log('Starting container...')
   // We mount main/.git at its absolute host path (for the superproject .git file which uses an absolute gitdir)
@@ -114,6 +114,10 @@ async function upWorktree(name:string) {
   await $`docker exec ${containerName} bash -lc "dev/containerStart.sh"`
 
   console.log(`Container '${containerName}' is running`)
+}
+
+async function downWorktree(name: string) {
+  await $`docker rm -f graphene-${name}`.quiet().nothrow() // Stop existing container if running
 }
 
 async function repoDirty (subdir?: string): Promise<boolean> {
