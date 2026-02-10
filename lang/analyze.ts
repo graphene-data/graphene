@@ -1,5 +1,5 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
-import {type Table, type Query, type QueryJoin, type Join, type Column, type FieldType, type FileInfo, type Diagnostic, type Expr, type QueryField, type Filter} from './types.ts'
+import {type Table, type ViewTable, type Query, type QueryJoin, type Join, type Column, type FieldType, type FileInfo, type Diagnostic, type Expr, type QueryField, type Filter} from './types.ts'
 import {txt, getFile, getPosition} from './util.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {config} from './config.ts'
@@ -53,9 +53,8 @@ export function findTables (fi: FileInfo) {
     })
     if (existing) diag(syntaxNode.getChild('Ref')!, `Table "${name}" is already defined`)
 
-    let isView = !!syntaxNode.getChild('QueryStatement')
     let tablePath = config.namespace ? `${config.namespace}.${name}` : name
-    let table: Table = {name, type: isView ? 'view' : 'table', tablePath, columns: [], joins: [], metadata: extractLeadingMetadata(syntaxNode), syntaxNode}
+    let table: Table = {name, type: 'table', tablePath, columns: [], joins: [], metadata: extractLeadingMetadata(syntaxNode), syntaxNode}
 
     syntaxNode.getChildren('ColumnDef').forEach(cn => addColumn(table, cn))
     syntaxNode.getChildren('JoinDef').forEach(jn => addJoin(table, jn))
@@ -113,19 +112,26 @@ function getField (name: string, table: Table) {
   return table.columns.find(c => c.name == name) || table.joins.find(j => j.name == name)
 }
 
-// Analyze a view's underlying query to determine its output columns
-function analyzeView (table: Table) {
-  if (table.query) return  // already analyzed
-  let query = analyzeQuery(table.syntaxNode!.getChild('QueryStatement')!)
-  if (!query) return
+// Analyze a view's underlying query to determine its output columns.
+// Converts a PhysicalTable with a QueryStatement into a ViewTable with a query.
+// Returns true if the table is (or was already) a successfully analyzed view.
+function analyzeView (table: Table): table is ViewTable {
+  if (table.type === 'view') return true  // already analyzed
+  let queryNode = table.syntaxNode?.getChild('QueryStatement')
+  if (!queryNode) return false
+  let query = analyzeQuery(queryNode)
+  if (!query) return false
   let viewCols = query.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
   table.columns.push(...viewCols)
-  table.query = query
+  // Promote to ViewTable
+  ;(table as any).type = 'view'
+  ;(table as any).query = query
+  return true
 }
 
 // Analyze everything in a table - used for full project analysis (e.g., `check` command)
 export function analyzeTableFully (table: Table) {
-  if (table.type == 'view') analyzeView(table)
+  analyzeView(table)
   let scope: Scope = {query: null, table, alias: 'base'}
   table.columns.forEach(c => {
     if (!c.exprNode) return
@@ -157,7 +163,7 @@ function expandColumns (scope: Scope, queryState: QueryState) {
 function analyzeJoin (join: Join) {
   let target = lookupTable(join.targetTable, join.targetNode)
   if (!target) return diag(join.targetNode, `Unknown table "${join.targetTable}"`)
-  if (target.type == 'view') analyzeView(target)
+  analyzeView(target)
 }
 
 // Main query analysis - analyzes and returns a Query with computed SQL
@@ -172,7 +178,7 @@ export function analyzeQuery (queryNode: SyntaxNode): Query | void {
   let baseTableName = froms.length ? txt(froms[0].getChild('Ref')) : ''
   let baseTable = baseTableName ? (lookupTable(baseTableName, froms[0]) || null) : null
   if (baseTableName && !baseTable) return diag(froms[0], `Unknown table "${baseTableName}"`)
-  if (baseTable?.type == 'view') analyzeView(baseTable)
+  if (baseTable) analyzeView(baseTable)
   if (baseTable) NODE_ENTITY_MAP.set(froms[0], {entityType: 'table', table: baseTable})
 
   // Shared query state - all scopes during this query analysis share this
@@ -278,7 +284,7 @@ function buildSql (baseTable: Table | null, fields: QueryField[], joins: QueryJo
 
   // FROM - handle views as CTEs
   let fromTable: string
-  if (baseTable.type === 'view' && baseTable.query) {
+  if (baseTable.type === 'view') {
     ctes.push(`${quote(baseTable.name)} as ( ${baseTable.query.sql} )`)
     fromTable = quote(baseTable.name)
   } else {
@@ -289,7 +295,7 @@ function buildSql (baseTable: Table | null, fields: QueryField[], joins: QueryJo
   let joinClauses = joins.map(j => {
     let joinTable = lookupTableByName(j.targetTable)
     let tablePath: string
-    if (joinTable?.type === 'view' && joinTable.query) {
+    if (joinTable?.type === 'view') {
       if (!ctes.some(c => c.startsWith(quote(joinTable.name) + ' '))) {
         ctes.push(`${quote(joinTable.name)} as ( ${joinTable.query.sql} )`)
       }
