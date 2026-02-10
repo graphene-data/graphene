@@ -96,15 +96,22 @@ export async function agentTest (req: FastifyRequest, reply: FastifyReply) {
             let displayResult = {...result}
             delete displayResult.screenshot
             if (Object.keys(displayResult).length > 0) {
-              let resultStr = JSON.stringify(displayResult, null, 2)
+              let resultStr = toolName === 'readFile' && displayResult.content
+                ? formatReadFileResult(displayResult)
+                : JSON.stringify(displayResult, null, 2)
               resultHtml += `<div class="label">Result:</div><pre>${escapeHtml(resultStr)}</pre>\n`
             }
+
+            // For renderMd, show the markdown input with real newlines
+            let displayInput = toolName === 'renderMd'
+              ? formatRenderMdInput(toolInput)
+              : toolInput
 
             // Write the complete tool call with input and result inside details
             reply.raw.write(`<details class="tool-call">
 <summary>${escapeHtml(toolName)}()</summary>
 <div class="label">Input:</div>
-<pre>${escapeHtml(toolInput)}</pre>
+<pre>${escapeHtml(displayInput)}</pre>
 ${resultHtml}
 </details>\n`)
           }
@@ -196,6 +203,20 @@ ${screenshotHtml}
     //   console.log('ngrok tunnel closed')
     // }
   }
+}
+
+/** Format readFile result so the file content displays with real newlines */
+function formatReadFileResult (result: {content: string}): string {
+  return result.content
+}
+
+/** Format renderMd input so the markdown displays with real newlines */
+function formatRenderMdInput (inputStr: string): string {
+  try {
+    let parsed = JSON.parse(inputStr)
+    if (parsed.markdown) return parsed.markdown
+  } catch { /* not JSON, use as-is */ }
+  return inputStr
 }
 
 function escapeHtml (str: string): string {
