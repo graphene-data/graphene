@@ -104,12 +104,17 @@ export function analyzeFunction (node: SyntaxNode, scope: Scope, analyzeExpr: An
 
   // Analyze arguments and check types against overload
   let args = argNodes.map((argNode, idx) => {
-    let firstType = overload?.params[idx]?.allowedTypes[0]
+    let paramIdx = idx
+    if (overload && paramIdx >= overload.params.length) {
+      let lastParam = overload.params[overload.params.length - 1]
+      if (lastParam?.isVariadic) paramIdx = overload.params.length - 1
+    }
+    let firstType = overload?.params[paramIdx]?.allowedTypes[0]
     if (firstType?.type === 'sql native' && firstType?.rawType === 'kw') {
       return {sql: txt(argNode), type: 'sql native' as FieldType}
     }
     let arg = analyzeExpr(argNode, scope)
-    let allowed = overload?.params[idx]?.allowedTypes.map(t => t.type as FieldType)
+    let allowed = overload?.params[paramIdx]?.allowedTypes.map(t => t.type as FieldType)
     if (allowed) checkTypes(arg, allowed, argNode)
     return arg
   })

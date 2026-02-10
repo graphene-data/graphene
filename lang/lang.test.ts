@@ -466,6 +466,12 @@ describe('lang', () => {
       .toHaveDiagnostic(/unknown function/i)
   })
 
+  it('type-checks variadic args beyond the first', () => {
+    // concat expects string... — passing a number as the 2nd arg should be caught
+    expect('from users select concat(name, age)')
+      .toHaveDiagnostic(/expected.*string/i)
+  })
+
 
 
 
