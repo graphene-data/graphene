@@ -114,6 +114,9 @@ async function upWorktree(name:string) {
   if (!port) throw new Error('Couldnt determine ports for worktree')
   let envFile = `${root}/devcontainer.env`
 
+  // Ensure shared opencode config dir exists so sessions/auth are shared across containers
+  fs.mkdirSync(`${root}/.opencode`, {recursive: true})
+
   // Build our image against main, since it shouldn't change for any worktree
   // We could skip this step if the image already exists, but this seems pretty fast, and catches dockerfile changes
   console.log('Building Docker image...')
@@ -131,6 +134,7 @@ async function upWorktree(name:string) {
     --mount type=volume,source=pnpm-store,target=/pnpm/store \
     --mount type=bind,source=${root}/main/.git,target=${root}/main/.git \
     --mount type=bind,source=${root}/main/.git,target=/main/.git \
+    --mount type=bind,source=${root}/.opencode,target=/root/.local/share/opencode \
     graphene-dev \
     tail -f /dev/null`
 
