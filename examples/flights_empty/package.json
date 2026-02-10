@@ -17,6 +17,7 @@
     "@graphenedata/cli": "workspace:*"
   },
   "graphene": {
-    "dialect": "duckdb"
+    "dialect": "duckdb",
+    "envFile": [".env", "../../.env", "../../../.env"]
   }
 }

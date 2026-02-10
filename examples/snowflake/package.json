@@ -2,7 +2,7 @@
   "name": "snowflake-example",
   "version": "0.0.1",
   "scripts": {
-    "graphene": "node --env-file=../../.env ../../cli/cli.ts",
+    "graphene": "node ../../cli/cli.ts",
     "dev": "npm run graphene serve",
     "compile": "npm run graphene compile",
     "run": "npm run graphene run",
@@ -22,6 +22,7 @@
     "snowflake": {
       "account": "adarjvr-ve40413",
       "username": "demouser"
-    }
+    },
+    "envFile": [".env", "../../.env", "../../../.env"]
   }
 }
