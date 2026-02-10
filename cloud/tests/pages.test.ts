@@ -29,7 +29,7 @@ describe('duckdb', () => {
 })
 
 describe('bigquery', () => {
-  test.scoped({seedType: 'bigquery'})
+  test.scoped({project: 'ecomm'})
 
   test('renders the index markdown page', async ({page, cloud}) => {
     await page.goto(cloud.url)

@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --env-file=../.env --inspect  server/dev.ts | pino-pretty",
+    "dev": "f() { node --env-file=../.env --inspect server/dev.ts $@ | pino-pretty; }; f",
     "build": "vite build --config frontend/vite.config.ts",
     "docker:build": "pnpm build && (cd .. && DOCKER_BUILDKIT=1 docker build -f cloud/server/Dockerfile -t cloud .)",
     "docker:shell": "pnpm docker:build && docker run -it --entrypoint /bin/bash --rm cloud",

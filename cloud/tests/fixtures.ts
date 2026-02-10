@@ -1,7 +1,7 @@
 import {test as base, onTestFinished} from 'vitest'
 import {chromium, type Browser, type Page} from 'playwright'
 import {playwrightExpect as expect} from '../../core/ui/tests/matchers.ts'
-import {startDevServer, type SeedType} from '../server/dev.ts'
+import {startDevServer} from '../server/dev.ts'
 import {setupPglite} from '../server/db.ts'
 import net from 'net'
 import dotenv from 'dotenv'
@@ -15,12 +15,12 @@ await setupPglite(await getAvailablePort())
 
 interface CloudOptions {
   realAuth: boolean
-  seedType: SeedType
+  project: string
 }
 
 export const test = base.extend<{browser: Browser, page: Page, cloud: {url: string}} & CloudOptions>({
   realAuth: false,
-  seedType: 'duckdb',
+  project: 'flights',
 
   // eslint-disable-next-line no-empty-pattern
   browser: async ({}, use) => {
@@ -36,9 +36,9 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   },
 
   // cloud starts BEFORE page so it tears down AFTER page - this ensures the server is still running during assertions
-  cloud: async ({realAuth, seedType}, use) => {
+  cloud: async ({realAuth, project}, use) => {
     let port = realAuth ? 3121 : await getAvailablePort()
-    let handle = await startDevServer({realAuth, port, seedType})
+    let handle = await startDevServer({realAuth, port, project})
     try {
       await use({url: handle.url})
     } finally {

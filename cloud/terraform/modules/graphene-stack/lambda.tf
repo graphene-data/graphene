@@ -64,8 +64,8 @@ resource "aws_lambda_function" "screenshot" {
   handler       = "handler.handler"
   runtime       = "nodejs22.x"
   architectures = ["x86_64"]
-  memory_size   = 2048
-  timeout       = 60
+  memory_size   = 3008
+  timeout       = 120
 
   # Deployment package will be uploaded via CI/CD
   s3_bucket = aws_s3_bucket.lambda_deployments.id
@@ -160,7 +160,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   namespace           = "AWS/Lambda"
   period              = 300
   statistic           = "Average"
-  threshold           = 48000 # 48 seconds (80% of 60s timeout)
+  threshold           = 96000 # 96 seconds (80% of 120s timeout)
   treat_missing_data  = "notBreaching"
 
   dimensions = {
