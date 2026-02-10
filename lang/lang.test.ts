@@ -517,6 +517,12 @@ describe('lang', () => {
       .toRenderSql('select count_if(base."amount">100) as "col_0" from orders as base')
   })
 
+  it('supports count_if alias for countif on BigQuery', () => {
+    setConfig({root: '', bigquery: {}})
+    expect('from orders select count_if(amount > 100)')
+      .toRenderSql('select countif(base.`amount`>100) as `col_0` from `orders` as base')
+  })
+
   it('supports BigQuery math functions', () => {
     setConfig({root: '', bigquery: {}})
     expect('from orders select abs(amount), sqrt(amount), round(amount, 2)')
