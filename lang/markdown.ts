@@ -19,7 +19,7 @@ const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'series', 'value', 'category']
 type ComponentAttributeKey = typeof COMPONENT_ATTRIBUTE_KEYS[number]
 
 const GSQL_FENCE = /^([ \t]*)(`{3,})g?sql[^\n]*\n([\s\S]*?)^\1\2[ \t]*$/gim
-const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+[^>]*\/>/g
+const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+(?:[^>"']|"[^"]*"|'[^']*')*\/>/g
 const ATTRIBUTE = /(\w+)="([^"]*)"/g
 
 interface FenceMatch {
