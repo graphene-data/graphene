@@ -26,7 +26,7 @@ switch (command) {
   case 'start': await startWorktree(positional[0]); break
   case 'pull': await pullWorktree(); break
   case 'commit': await commitWorktree(); break
-  case 'push': await pushWorktree(flags.includes('--updateCore')); break
+  case 'push': await pushWorktree(); break
   case 'up': await upWorktree(currentName); break
   case 'down': await downWorktree(currentName); break
   case 'exec': await execWorktree(process.argv.slice(3)); break
@@ -39,7 +39,7 @@ Commands:
 ls                      List all paired worktrees
 start <name>            Create a new paired worktree beside main
 pull                    Pull down latest changes from main for both repos
-push [--updateCore]     Rebase and push both repos. Use --updateCore to update the submodule pointer.
+push                    Push changes: core first (with PR), then cloud (with submodule bump)
 up                      Start the dev container for this worktree
 exec [cmd]              Run a command in the container (or bash if no command)
 done [--force]          Archive both worktrees, or force-drop current worktree
@@ -235,51 +235,58 @@ async function pullWorktree (): Promise<boolean> {
   return success
 }
 
-async function pushWorktree (updateCore: boolean) {
-  // Check for uncommitted changes (excluding core submodule pointer from cloud check)
-  if (await repoDirty('core') || await repoDirty()) return commitWorktree()
+// Ensure a PR exists for the given branch. If one already exists, return its URL without modifying it.
+async function ensurePR (repoPath: string, branch: string): Promise<string> {
+  // Check if a PR already exists for this branch
+  let existing = (await $`gh pr list --repo ${getGhRepo(repoPath)} --head ${branch} --json url --jq .[0].url`.nothrow()).stdout.trim()
+  if (existing) return existing
 
-  let pullOk = await pullWorktree()
-  if (!pullOk) return
+  // Use last commit message as title and body
+  let title = (await $`git -C ${repoPath} log -1 --format=%s`).stdout.trim()
+  let body = (await $`git -C ${repoPath} log -1 --format=%b`).stdout.trim()
 
-  // Check that the submodule points to a commit that exists on origin/main
-  // This can happen if you rebase-merge a PR in GitHub, which creates a new commit SHA
-  let submoduleCommit = (await $`git -C ${currentWorktree} ls-tree HEAD core`).stdout.trim().split(/\s+/)[2]
-  let isOnOriginMain = (await $`git -C ${currentWorktree}/core branch -r --contains ${submoduleCommit}`.nothrow()).stdout.includes('origin/main')
-  if (!isOnOriginMain) {
-    console.error(`Cannot push: submodule 'core' points to commit ${submoduleCommit.slice(0, 8)} which is not on origin/main.`)
-    console.error(`This often happens after rebase-merging a PR in GitHub.`)
-    console.error(`Fix by running "worktrees.ts pull"`)
+  let url = (await $`gh pr create --repo ${getGhRepo(repoPath)} --head ${branch} --base main --title ${title} --body ${body} --reviewer kevinmarr`).stdout.trim()
+  await $`(cd ${repoPath} && gh pr merge --auto --rebase)`
+  return url
+}
+
+// Get the GitHub owner/repo slug from git remote
+function getGhRepo (repoPath: string): string {
+  // We know our remotes are git@github.com:org/repo.git - just hardcode based on path
+  return repoPath.endsWith('/core') || repoPath.endsWith('/core/') ? 'graphene-data/graphene' : 'graphene-data/co'
+}
+
+async function pushWorktree() {
+  if (!await pullWorktree()) return console.error('Pull failed. Resolve before pushing')
+  if (await repoDirty('core')) return commitWorktree()
+  if (await hasWipCommits('core')) return console.error('Core has WIP commits that must be squashed')
+
+  let cloudHasCommits = await hasUnmergedCommits()
+
+  // If there are commits on core, we're going to wait until they're fully merged before pushing cloud.
+  // This ensures we never merge something to cloud without having the submodule point at the correct commit.
+  if (await hasUnmergedCommits('core')) {
+    console.log('Pushing core...')
+    await $`git -C ${currentWorktree}/core push -f -u origin ${currentName}`
+    let url = await ensurePR(`${currentWorktree}/core`, currentName)
+    console.log('core PR: ' + url)
+
+    if (cloudHasCommits) return console.log('Once merged, run `wt push` again to push cloud')
+  }
+
+  if (await repoDirty()) return commitWorktree()
+  if (await hasWipCommits()) return console.error('co has WIP commits that must be squashed')
+
+
+  if (cloudHasCommits) {
+    console.log('Pushing cloud...')
+    await $`git -C ${currentWorktree} push -f -u origin ${currentName}`
+    let url = await ensurePR(currentWorktree, currentName)
+    console.log('co PR: ' + url)
     return
   }
 
-  // Check for WIP commits that shouldn't be pushed
-  let coreHasWip = await hasWipCommits('core')
-  let cloudHasWip = await hasWipCommits()
-  if (coreHasWip || cloudHasWip) {
-    let repos = [coreHasWip && 'core', cloudHasWip && 'cloud'].filter(Boolean).join(' and ')
-    console.error(`Cannot push: ${repos} has commits starting with "WIP". Please squash or rename them first.`)
-    return
-  }
-
-  // ensure tests/lint pass before pushing
-  let containerName = `graphene-${currentName}`
-  await $`docker exec ${containerName} bash -c "cd cloud && pnpm lint && pnpm test"`
-  await $`docker exec ${containerName} bash -c "cd core && pnpm lint && pnpm test"`
-
-  // Push core first (so the commit exists on remote for the submodule reference)
-  await $`git -C ${currentWorktree}/core push origin HEAD:main`
-
-  if (updateCore) {
-    // Stage the updated submodule reference and amend the last commit
-    await $`git -C ${currentWorktree} add core`
-    let submoduleDirty = (await $`git -C ${currentWorktree} diff --cached --quiet`.nothrow()).exitCode !== 0
-    if (submoduleDirty) {
-      await $`git -C ${currentWorktree} commit --amend --no-edit`
-    }
-  }
-
-  await $`git -C ${currentWorktree} push origin HEAD:main`
+  console.log('All changes pushed')
 }
 
 // Start a simple server that allows containers to execute HOST_COMMANDS

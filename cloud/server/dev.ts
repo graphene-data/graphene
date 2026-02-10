@@ -111,8 +111,8 @@ export async function seedDatabase (project = 'flights') {
     let envContent = fs.readFileSync(path.resolve(projectRoot, '.env'), 'utf-8') || ''
     console.log(envContent)
     let match = envContent.match(/^GOOGLE_APPLICATION_CREDENTIALS\s*=\s*(.+)$/m)
-    let credsPath = path.resolve(match[1].trim().replace(/^['"]|['"]$/g, ''))
-    let configJson = fs.readFileSync(credsPath, 'utf-8')
+    let credsPath = match && path.resolve(match[1].trim().replace(/^['"]|['"]$/g, ''))
+    let configJson = credsPath && fs.readFileSync(credsPath, 'utf-8')
 
     await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson: await encryptSecret(configJson)})
     await db.insert(schema.repos).values({id: repoId, slug: path.basename(projectRoot), orgId, url: ''})
