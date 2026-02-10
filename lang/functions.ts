@@ -54,7 +54,12 @@ function convertDef (def: FunctionDef): Overload[] {
 function buildMap (defs: FunctionDef[]): Record<string, Overload[]> {
   let map: Record<string, Overload[]> = {}
   for (let def of defs) {
-    map[def.name] = convertDef(def)
+    let overloads = convertDef(def)
+    map[def.name] = overloads
+    // Register aliases, ensuring they emit the original SQL name
+    for (let alias of def.aliases || []) {
+      map[alias] = overloads.map(o => ({...o, sqlName: o.sqlName || def.name}))
+    }
   }
   return map
 }

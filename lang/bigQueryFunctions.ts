@@ -161,6 +161,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'countif',
+    aliases: ['count_if'],
     description: trim(`
       COUNTIF([DISTINCT] expression) [OVER over_clause]
 
