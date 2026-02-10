@@ -7,6 +7,9 @@ interface SnowflakeOptions {
   username?: string
   account?: string
   privateKey?: string
+  privateKeyPath?: string
+  privateKeyPass?: string
+  logLevel?: string
 }
 
 // Raw notes on setting up a new user:
@@ -26,22 +29,18 @@ export class SnowflakeConnection implements QueryConnection {
   }
 
   async initialize (opts: SnowflakeOptions) {
-    let privateKeyPath = process.env.SNOWFLAKE_PRI_KEY_PATH || config.snowflake?.privateKeyPath
-    let privateKeyPass = process.env.SNOWFLAKE_PRI_PASSPHRASE
+    let privateKeyPath = opts.privateKeyPath || config.snowflake?.privateKeyPath
 
     let authOptions: any = {}
     if (privateKeyPath) {
-      authOptions = {privateKeyPath, privateKeyPass}
-    } else if (process.env.SNOWFLAKE_PRI_KEY) {
-      let privateKey = createPrivateKey({key: process.env.SNOWFLAKE_PRI_KEY, format: 'pem', passphrase: privateKeyPass})
-      authOptions = {privateKey: privateKey.export({format: 'pem', type: 'pkcs8'})}
+      authOptions = {privateKeyPath, privateKeyPass: opts.privateKeyPass}
     } else if (opts.privateKey) {
-      let privateKey = createPrivateKey({key: opts.privateKey, format: 'pem', passphrase: privateKeyPass})
+      let privateKey = createPrivateKey({key: opts.privateKey, format: 'pem', passphrase: opts.privateKeyPass})
       authOptions = {privateKey: privateKey.export({format: 'pem', type: 'pkcs8'})}
     }
 
     // default is info, which is kinda chatty on success. TRACE is super useful for debugging though
-    snowflake.configure({logLevel: process.env.SNOWFLAKE_LOG_LEVEL as any || 'WARN', logFilePath: '/dev/null'})
+    snowflake.configure({logLevel: opts.logLevel as any || 'WARN', logFilePath: '/dev/null'})
 
     this.connection = snowflake.createConnection({
       ...opts,
