@@ -704,6 +704,22 @@ describe('lang', () => {
     expect(toSql(queries[0], {name: 'Alice'})).toMatch(/WHERE base\."name"='Alice'/)
   })
 
+  it('does not treat $word inside single-quoted strings as params', () => {
+    let queries = analyze(`${testTables}
+      from users select id where name = '$test'
+    `)
+    expect(toSql(queries[0])).toMatch(/\$test/)
+  })
+
+  it('replaces params outside quotes but not inside', () => {
+    let queries = analyze(`${testTables}
+      from users select id where name = $name and email = '$literal'
+    `)
+    let sql = toSql(queries[0], {name: 'Alice'})
+    expect(sql).toMatch(/'Alice'/)
+    expect(sql).toMatch(/\$literal/)
+  })
+
   it('supports duckdb current datetime functions', () => {
     expect(`
       from users select

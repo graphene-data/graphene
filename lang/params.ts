@@ -8,7 +8,10 @@ export function fillInParams (query: Query, params: Record<string, any>) {
 }
 
 function replaceParams (sql: string, params: Record<string, any>): string {
-  return sql.replace(/\$(\w+)/g, (match, name) => {
+  // Alternation: match single-quoted strings (including escaped '') first, then $params.
+  // When we match a quoted string the capture group is undefined, so we return it unchanged.
+  return sql.replace(/'(?:[^']|'')*'|\$(\w+)/g, (match, name) => {
+    if (!name) return match
     let value = params[name]
     if (value === undefined) throw new Error(`Missing param $${name}`)
     if (value === null) return 'NULL'
