@@ -268,6 +268,19 @@ describe('lang', () => {
       .toReturnRows([1, 2, true], [2, 1, false])
   })
 
+  it('emits CTE for views referenced through joins', async () => {
+    updateFile(`${testTables}
+      table order_stats as (from orders select user_id, sum(amount) as total_spent)
+      extend users (join one order_stats on order_stats.user_id = id)
+    `, 'models.gsql')
+
+    expect('from users select name, order_stats.total_spent order by name')
+      .toRenderSql('with "order_stats" as ( select base."user_id" as "user_id", sum(base."amount") as "total_spent" from orders as base group by 1 order by 2 desc nulls last ) select base."name" as "name", order_stats."total_spent" as "order_stats_total_spent" from users as base left join "order_stats" as order_stats on order_stats."user_id"=base."id" order by 1 asc nulls last')
+
+    await expect('from users select name, order_stats.total_spent order by name')
+      .toReturnRows(['Alice', 60], ['Bob', 40])
+  })
+
   it('supports select distinct', () => {
     expect('from users select distinct name, email')
       .toRenderSql('select base."name" as "name", base."email" as "email" from users as base group by 1,2 order by 1 asc nulls last')
