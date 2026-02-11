@@ -1,6 +1,6 @@
 -- It is extremely important that you consider the order status when doing analysis.
 table orders (
-  order_id INT64 primary_key
+  order_id INT64
   user_id INT64
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
   created_at TIMESTAMP

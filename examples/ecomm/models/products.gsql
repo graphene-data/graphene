@@ -1,5 +1,5 @@
 table products (
-  id INT64 primary_key
+  id INT64
   cost FLOAT64
   category STRING
   name STRING

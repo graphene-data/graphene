@@ -1,5 +1,5 @@
 table flights (
-  id2 BIGINT primary_key -- Unique identifier for the flight record
+  id2 BIGINT -- Unique identifier for the flight record
   carrier VARCHAR -- Airline carrier code (e.g., 'AA', 'UA', 'DL')
   origin VARCHAR -- IATA airport code for the origin airport
   destination VARCHAR -- IATA airport code for the destination airport
