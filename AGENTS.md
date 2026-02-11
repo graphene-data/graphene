@@ -4,12 +4,11 @@ Graphene allows users to create interactive reports and dashboards with Markdown
 
 ---- models.gsql example file
 table carriers (
-  code VARCHAR primary_key
+  code VARCHAR
   name VARCHAR
 )
 
 table flights (
-  id2 BIGINT primary_key -- Unique identifier for the flight record
   carrier VARCHAR -- Airline carrier code (e.g., 'AA', 'UA', 'DL')
   dep_delay BIGINT -- Departure delay in minutes (negative = early, positive = late)
   join one carriers on carrier = carriers.code
@@ -37,7 +36,7 @@ Graphene provides CLIs that allow users (and coding agents) to run queries and l
 /cloud - Graphene's optional, paid hosted service.
 
 # Tech stack
-Graphene is mostly written in typescript. We parse gsql with Lezer, then translate it to Malloy's IR, and use Malloy to render dialect-specific SQL.
+Graphene is mostly written in typescript. We parse gsql with Lezer, then render it to dialect-specific SQL.
 
 For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 4, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
 
@@ -63,4 +62,5 @@ UI tests should always take snapshots each time they run. Be sure to add a snaps
 * Always use `pnpm add` rather than editing package.json directly to ensure we get the latest version of new dependencies.
 * We use node-24 which has type stripping by default, so you should never need `ts-node` or `tsx` to run things.
 * Avoid running `graphene dev` to test things. You should be able to set up just about any scenario in our automated tests.
+* If you notice the user modifying code between your edits, don't undo their changes. It's probably a nudge towards what you should be doing, but if it seems problematic or doesn't make sense, ask rather than just changing it back.
 * Don't make infra changes directly via the `aws` cli. Make changes to the terraform config and deploy that.
