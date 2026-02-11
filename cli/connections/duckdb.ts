@@ -2,7 +2,7 @@ import {promises as fs} from 'fs'
 import path from 'path'
 import {config} from '../../lang/config.ts'
 import {type QueryResult, type QueryConnection, type SchemaColumn, type QueryParams} from './types.ts'
-import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
+import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, DuckDBDecimalValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 
 interface DuckDbOptions {
   path?: string
@@ -47,6 +47,7 @@ export class DuckDBConnection implements QueryConnection {
         else if (v === null) out[k] = null
         else if (v instanceof DuckDBTimestampValue) out[k] = new Date(Number(v.micros / 1000n)).toUTCString()
         else if (v instanceof DuckDBDateValue) out[k] = v.toString()
+        else if (v instanceof DuckDBDecimalValue) out[k] = v.toDouble()
         else if (typeof v === 'object') throw new Error(`Unsupported datatype ${v.constructor?.name}`)
         else out[k] = v
       }
