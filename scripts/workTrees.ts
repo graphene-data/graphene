@@ -47,8 +47,10 @@ done [--force]          Archive both worktrees, or force-drop current worktree
 }
 
 // Host commands that the container can invoke via the `host` CLI. Each handler receives an args object and returns a response.
-let wtScript = process.argv[1]
-const HOST_COMMANDS: Record<string, (args: any) => Promise<{ok: boolean, data?: any, error?: string}>> = {
+// Its important we use the worktree script from `main`, so agents cant change it to execute stuff on the host.
+let mainWtScript = resolve(root, 'main/dev/workTrees.ts')
+
+const HOST_COMMANDS: Record<string, (args: any) => Promise<{ ok: boolean, data?: any, error?: string }>> = {
   'open-browser': async ({url}) => {
     if (!url) return {ok: false, error: 'missing --url'}
     await $`open ${url}`
@@ -59,11 +61,16 @@ const HOST_COMMANDS: Record<string, (args: any) => Promise<{ok: boolean, data?: 
     return {ok: true}
   },
   'pull': async () => {
-    let result = await $`zx ${wtScript} pull`.nothrow()
+    let result = await $`zx ${mainWtScript} pull`.nothrow()
     return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
   },
   'push': async () => {
-    let result = await $`zx ${wtScript} push`.nothrow()
+    // Refuse to push if the branch modifies .github in any way (prevents CI tampering from agents)
+    let ghDiff = (await $`git -C ${currentWorktree} diff origin/main --name-only -- .github`.nothrow()).stdout.trim()
+    let ghDiffCore = (await $`git -C ${currentWorktree}/core diff origin/main --name-only -- .github`.nothrow()).stdout.trim()
+    if (ghDiff || ghDiffCore) return {ok: false, error: 'Push rejected: branch modifies .github. Check the changes and push from the host'}
+
+    let result = await $`zx ${mainWtScript} push`.nothrow()
     return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
   },
 }
