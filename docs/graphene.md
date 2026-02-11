@@ -109,7 +109,7 @@ GSQL is comprised of four primary statements:
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
@@ -126,7 +126,7 @@ table orders (
 )
 
 table users (
-  id BIGINT primary_key
+  id BIGINT
   name VARCHAR
   email VARCHAR
   age INTEGER
@@ -140,7 +140,7 @@ We can break down a table statement into three parts: [base columns](#base-colum
 
 ### Base columns (required)
 
-The base column set is simply a reflection of the underlying database table's schema. Similar to `create table` statements in regular SQL DDL, you list each column's name and data type. One column must be designated as the primary key.
+The base column set is simply a reflection of the underlying database table's schema. Similar to `create table` statements in regular SQL DDL, you list each column's name and data type.
 
 ### Join relationships
 
@@ -231,7 +231,7 @@ table orders (
 )
 
 table users (
-  id BIGINT primary_key,
+  id BIGINT,
   name VARCHAR,
   ...
 )
@@ -270,7 +270,7 @@ table users (
 )
 
 table countries (
-  code VARCHAR primary_key
+  code VARCHAR
   name VARCHAR
   currency VARCHAR
   free_shipping BOOLEAN
@@ -300,7 +300,7 @@ Again, using the orders table from before:
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
@@ -385,7 +385,7 @@ Here's an example of a fan-out:
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT
   customer_name VARCHAR
   amt_with_shipping FLOAT
 
@@ -393,7 +393,7 @@ table orders (
 )
 
 table order_items (
-  id BIGINT primary_key
+  id BIGINT
   order_id BIGINT
   product VARCHAR
   price FLOAT
@@ -583,7 +583,7 @@ You can turn the output of any `select` statement into a table with `table foo a
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
@@ -600,7 +600,7 @@ table orders (
 )
 
 table users (
-  id BIGINT primary_key
+  id BIGINT
   name VARCHAR
   email VARCHAR
   age INTEGER

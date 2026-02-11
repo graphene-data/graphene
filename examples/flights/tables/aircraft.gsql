@@ -1,6 +1,6 @@
 table aircraft (
   
-  id BIGINT primary_key -- Unique identifier for the aircraft record
+  id BIGINT -- Unique identifier for the aircraft record
   tail_num VARCHAR -- Aircraft tail number (registration identifier, e.g., 'N806MD')
   aircraft_serial VARCHAR -- Aircraft serial number
   aircraft_model_code VARCHAR -- Code identifying the aircraft model

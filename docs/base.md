@@ -17,7 +17,7 @@ A few common features are not supported in gsql, and must be avoided: window fun
 
 ```sql
 table orders (
-  id BIGINT primary_key
+  id BIGINT
   user_id BIGINT
   amount FLOAT
   status STRING
@@ -27,7 +27,7 @@ table orders (
   avg_order: revenue / count(*)         -- measures can compose
 )
 table users (
-  id BIGINT primary_key
+  id BIGINT
   name VARCHAR
   join many orders on id = orders.user_id
 )

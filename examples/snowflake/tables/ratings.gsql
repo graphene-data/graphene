@@ -1,5 +1,5 @@
 table ratings (
-  unique_id TEXT primary_key
+  unique_id TEXT
   is_current BOOLEAN -- Indicates the most recent entry per ratings source currently in use by the establishment. Note: The is_current status will always be FALSE for closed establishments
   seen DATE
   score FLOAT -- Rating score 1-5

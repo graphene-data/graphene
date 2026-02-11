@@ -1,5 +1,5 @@
 table aircraft_models (
-  aircraft_model_code VARCHAR primary_key -- Unique code identifying the aircraft model
+  aircraft_model_code VARCHAR -- Unique code identifying the aircraft model
   manufacturer VARCHAR -- Name of the aircraft manufacturer (e.g., 'BOEING', 'AIRBUS', 'CESSNA')
   model VARCHAR -- Model name or designation (e.g., '737', 'A320', '172')
   aircraft_type_id BIGINT -- Identifier for the aircraft type category
