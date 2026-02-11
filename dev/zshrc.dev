@@ -11,7 +11,7 @@ zstyle ':vcs_info:git*' actionformats '%F{14}⏱ %*%f'
 zstyle ':vcs_info:git*' unstagedstr '*'
 zstyle ':vcs_info:git*' stagedstr '+'
 
-PROMPT='%(?.%F{2}▪.%F{1}▪)%f ${vcs_info_msg_0_} %1~ > '
+PROMPT='%(?.%F{2}⏺.%F{1}⏺)%f %1~ # '
 
 repo_root() { git rev-parse --show-toplevel 2>/dev/null; }
 graphene_root() { dirname "$(repo_root)"; }

@@ -98,6 +98,7 @@ export async function seedDatabase (project = 'flights') {
   } else if (project === 'ecomm') {
     projectRoot = path.resolve(rootDir, '../core/examples/ecomm')
     let configJson = process.env.GOOGLE_CREDENTIALS_CONTENT
+    if (!configJson) throw new Error('Couldnt find credentials')
     await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson: await encryptSecret(configJson), namespace: 'bigquery-public-data.thelook_ecommerce'})
     // NB this id is the current install of the `graphene-data-dev` github app into the `github.com/grant-gh-test/ecomm` repo. If you re-install, update the vcsInstallationId
     let vcsInstallationId = '101959947'
@@ -109,10 +110,10 @@ export async function seedDatabase (project = 'flights') {
     // Assume `.env` which has a GOOGLE_APPLICATION_CREDENTIALS that points to the cred file.
     // Slight convoluted as it lets you put the key outside of the project to slightly obscure it from agents
     let envContent = fs.readFileSync(path.resolve(projectRoot, '.env'), 'utf-8') || ''
-    console.log(envContent)
     let match = envContent.match(/^GOOGLE_APPLICATION_CREDENTIALS\s*=\s*(.+)$/m)
     let credsPath = match && path.resolve(match[1].trim().replace(/^['"]|['"]$/g, ''))
     let configJson = credsPath && fs.readFileSync(credsPath, 'utf-8')
+    if (!configJson) throw new Error('Couldnt find credentials')
 
     await db.insert(schema.connections).values({orgId, label: 'bq', kind: 'bigquery', configJson: await encryptSecret(configJson)})
     await db.insert(schema.repos).values({id: repoId, slug: path.basename(projectRoot), orgId, url: ''})
