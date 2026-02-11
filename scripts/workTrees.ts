@@ -121,14 +121,16 @@ async function upWorktree(name:string) {
   if (!port) throw new Error('Couldnt determine ports for worktree')
   let envFile = `${root}/devcontainer.env`
 
+  await downWorktree(name) // stop container if running
+
   // Ensure shared opencode config dir exists so sessions/auth are shared across containers
   fs.mkdirSync(`${root}/.opencode`, {recursive: true})
+  fs.mkdirSync(`${root}/.pi`, {recursive: true})
 
   // Build our image against main, since it shouldn't change for any worktree
   // We could skip this step if the image already exists, but this seems pretty fast, and catches dockerfile changes
   console.log('Building Docker image...')
   await $`docker build -f ${root}/main/scripts/Dockerfile.dev -t graphene-dev ${root}/main`
-  await downWorktree(containerName)
 
   console.log('Starting container...')
   // We mount main/.git at its absolute host path (for the superproject .git file which uses an absolute gitdir)
@@ -142,6 +144,7 @@ async function upWorktree(name:string) {
     --mount type=bind,source=${root}/main/.git,target=${root}/main/.git \
     --mount type=bind,source=${root}/main/.git,target=/main/.git \
     --mount type=bind,source=${root}/.opencode,target=/root/.local/share/opencode \
+    --mount type=bind,source=${root}/.pi,target=/root/.pi \
     graphene-dev \
     tail -f /dev/null`
 

@@ -30,3 +30,4 @@ RUN apt-get install -y git git-lfs lsof zsh
 # Coding agents
 RUN npm install -g @anthropic-ai/claude-code
 RUN curl -fsSL https://opencode.ai/install | bash
+RUN npm install -g @mariozechner/pi-coding-agent
