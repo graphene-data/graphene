@@ -25,7 +25,7 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN pnpm config set store-dir /pnpm/store
 
 RUN npx -y playwright@1.58.0 install chromium --with-deps
-RUN apt-get install -y git git-lfs lsof
+RUN apt-get install -y git git-lfs lsof zsh
 
 # Coding agents
 RUN npm install -g @anthropic-ai/claude-code

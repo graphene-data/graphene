@@ -1,0 +1,39 @@
+setopt HIST_IGNORE_ALL_DUPS
+
+autoload -Uz add-zsh-hook vcs_info
+setopt prompt_subst
+add-zsh-hook precmd vcs_info
+
+zstyle ':vcs_info:*' enable git # Style the vcs_info message
+zstyle ':vcs_info:git*' formats '%F{6}%b%f%u%c'
+# Format when the repo is in an action (merge, rebase, etc)
+zstyle ':vcs_info:git*' actionformats '%F{14}⏱ %*%f'
+zstyle ':vcs_info:git*' unstagedstr '*'
+zstyle ':vcs_info:git*' stagedstr '+'
+
+PROMPT='%(?.%F{2}▪.%F{1}▪)%f ${vcs_info_msg_0_} %1~ > '
+
+repo_root() { git rev-parse --show-toplevel 2>/dev/null; }
+graphene_root() { dirname "$(repo_root)"; }
+
+cdd() { cd "$(graphene_root)"; }
+cdo() { cd "$(graphene_root)/cloud"; }
+cdr() { cd "$(graphene_root)/core"; }
+cdl() { cd "$(graphene_root)/core/lang"; }
+cdc() { cd "$(graphene_root)/core/cli"; }
+cdf() { cd "$(graphene_root)/core/examples/flights"; }
+cde() { cd "$(graphene_root)/core/examples/ecomm"; }
+cdu() { cd "$(graphene_root)/core/ui"; }
+
+bp()  { (cd "$(graphene_root)/core/lang" && npm run generate); }
+gp()  { node $(graphene_root)/core/cli/cli.ts "$@"; }
+gpi() { node --inspect-wait $(graphene_root)/core/cli/cli.ts "$@"; }
+goi() { node --inspect-wait $(graphene_root)/cloud/server/dev.ts; }
+
+alias p="pnpm"
+alias ta="p test"
+tt() { pnpm run test-one "$@"; }
+
+alias wtu="host pull"
+alias wtp="host push"
+alias wtc="host commit"
