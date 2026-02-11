@@ -1,6 +1,6 @@
 -- Items found on a menu
 table menu_items (
-  menu_item_id TEXT primary_key
+  menu_item_id TEXT
   is_current BOOLEAN -- Indicates the most recent entry for active menu items per menu source currently used by a given establishment. Note: The is_current status will always be FALSE for closed establishments
   observed_at DATE
   price NUMBER

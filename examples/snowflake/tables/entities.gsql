@@ -1,5 +1,5 @@
 table entities (
-  entity_id TEXT primary_key -- Brizo entity ID
+  entity_id TEXT -- Brizo entity ID
   score NUMBER -- Percentage score of matched ingredient (score can be 100 for extracted items and maximum of 99 for predicted)
   category TEXT
   menu_item_id TEXT

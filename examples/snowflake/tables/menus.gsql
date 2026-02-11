@@ -1,5 +1,5 @@
 table menus (
-  menu_id TEXT primary_key
+  menu_id TEXT
   is_current BOOLEAN -- Indicates currently active menu sources per establishment. Note: The is_current status will always be FALSE for closed establishments
   last_observed_at DATE -- The date on which this menu was last observed at this source
   menu_item_price_20th_percentile NUMBER -- The rounded 20th percentile price of current items on this menu. If a menu is not current, the last set of observed menu items are used for the calculation
