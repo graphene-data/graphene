@@ -8,7 +8,15 @@ queryWithSemi {
 }
 
 QueryStatement {
-  (FromClause | SelectClause | WhereClause | GroupByClause | HavingClause | OrderByClause | LimitClause)+
+  WithClause? (FromClause | SelectClause | WhereClause | GroupByClause | HavingClause | OrderByClause | LimitClause)+
+}
+
+WithClause {
+  Kw<"with"> CteDef ("," CteDef)*
+}
+
+CteDef {
+  Alias Kw<"as"> "(" QueryStatement ")"
 }
 
 SelectClause {

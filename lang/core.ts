@@ -58,7 +58,7 @@ export function analyze (contents?: string, contentType?: 'gsql' | 'md'): Query[
     let fi = FILE_MAP['input']
     fi.tables.forEach(analyzeTableFully)
     let nodes = fi.tree!.topNode.getChildren('QueryStatement') || []
-    fi.queries = nodes.map(analyzeQuery).filter((q): q is Query => !!q)
+    fi.queries = nodes.map(n => analyzeQuery(n)).filter((q): q is Query => !!q)
     return fi.queries
   }
 
