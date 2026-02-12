@@ -76,7 +76,8 @@ interface TableBase {
 }
 export interface PhysicalTable extends TableBase { type: 'table' }
 export interface ViewTable extends TableBase { type: 'view', query: Query }
-export type Table = PhysicalTable | ViewTable
+export interface CteTable extends TableBase { type: 'cte', query: Query }
+export type Table = PhysicalTable | ViewTable | CteTable
 
 export interface Position {
   offset: number

@@ -994,4 +994,30 @@ describe('lang', () => {
     expect('from users select recent_orders.discounted, old_orders.discounted')
       .toRenderSql('select (recent_orders."amount"*0.9) as "recent_orders_discounted", (old_orders."amount"*0.9) as "old_orders_discounted" from users as base left join orders as recent_orders on recent_orders."user_id"=base."id" left join orders as old_orders on old_orders."user_id"=base."id"')
   })
+
+  it('supports CTEs', async () => {
+    let q = `with
+      high_value as (from orders where amount >= 40 select id, user_id, amount),
+      hv_users as (from high_value select user_id)
+      from hv_users select user_id order by user_id`
+    expect(q).toRenderSql('with "high_value" as ( select base."id" as "id", base."user_id" as "user_id", base."amount" as "amount" from orders as base where base."amount">=40 ), "hv_users" as ( select base."user_id" as "user_id" from high_value as base ) select base."user_id" as "user_id" from hv_users as base order by 1 asc nulls last')
+    await expect(q).toReturnRows([1], [2])
+  })
+
+  it('CTE shadows existing table names', () => {
+    // CTE named "orders" should shadow the real orders table
+    expect('with orders as (from users select id, name) from orders select id, name order by id')
+      .toRenderSql('with "orders" as ( select base."id" as "id", base."name" as "name" from users as base ) select base."id" as "id", base."name" as "name" from orders as base order by 1 asc nulls last')
+  })
+
+  it('supports nested CTEs referencing earlier siblings', () => {
+    // The second CTE's inner query has its own WITH that references the first CTE
+    expect(`with
+      completed as (from orders where status = 'completed' select user_id, amount),
+      summary as (with totals as (from completed select user_id, sum(amount) as total) from totals select user_id, total)
+      from summary select user_id, total order by user_id`)
+      .toRenderSql(`with "completed" as ( select base."user_id" as "user_id", base."amount" as "amount" from orders as base where base."status"='completed' ),
+        "summary" as ( with "totals" as ( select base."user_id" as "user_id", sum(base."amount") as "total" from completed as base group by 1 order by 2 desc nulls last ) select base."user_id" as "user_id", base."total" as "total" from totals as base )
+        select base."user_id" as "user_id", base."total" as "total" from summary as base order by 1 asc nulls last`)
+  })
 })
