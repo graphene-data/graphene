@@ -46,6 +46,7 @@ import {
   one,
   many,
   extend,
+  _with,
 } from './parser.terms.js'
 
 // Map of lowercase keywords to their token IDs
@@ -96,6 +97,7 @@ const keywords = {
   one: one,
   many: many,
   extend: extend,
+  with: _with,
 }
 
 export function specializeIdentifier (value) {
