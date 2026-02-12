@@ -25,6 +25,8 @@ export interface ChartFixture {
 export interface ServerFixture {
   url: (options?: Config) => string
   mockFile: (path: string, content: string) => void
+  /** Update a mock file and trigger HMR, simulating a real file edit */
+  updateMockFile: (path: string, content: string) => void
 }
 
 export const test = base.extend<{ browser: Browser, page: Page, server: ServerFixture, mount: MountFn, chart: ChartFixture }>({
@@ -77,10 +79,12 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
         Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
 
         // Vite caches our mocked files, so we need to clear them out after each test.
-        let keys = Array.from(server?.moduleGraph?.idToModuleMap?.keys()) || []
-        keys = Array.from(keys.filter(k => k.endsWith('?mock') || k == '\0virtual:nav'))
-        let mods = keys.map(k => server.moduleGraph.getModuleById(k)).filter(m => !!m)
-        mods.forEach(m => server.moduleGraph.invalidateModule(m))
+        // Vite 7 has separate module graphs for server.moduleGraph and environments.client — invalidate both.
+        for (let graph of [server.moduleGraph, server.environments.client.moduleGraph] as any[]) {
+          let keys: string[] = Array.from(graph?.idToModuleMap?.keys() || [])
+          let mockKeys = keys.filter(k => k.endsWith('?mock') || k == '\0virtual:nav')
+          mockKeys.forEach(k => { let m = graph.getModuleById(k); if (m) graph.invalidateModule(m) })
+        }
       }
 
       await use({
@@ -90,8 +94,15 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
           onTestFinished(cleanup)
           return `http://localhost:${port}`
         },
-        mockFile: (path: string, content: string) => {
-          mockFileMap[path.replace(/^\//, '')] = trimIndentation(content)
+        mockFile: (filePath: string, content: string) => {
+          mockFileMap[filePath.replace(/^\//, '')] = trimIndentation(content)
+        },
+        updateMockFile: (filePath: string, content: string) => {
+          let relativePath = filePath.replace(/^\//, '')
+          mockFileMap[relativePath] = trimIndentation(content)
+          let absPath = path.join(viteRoot, relativePath)
+          // Emit a watcher 'change' event so Vite runs the full HMR pipeline (including hotUpdate hooks)
+          server.watcher.emit('change', absPath)
         },
       })
     },

@@ -74,7 +74,6 @@ test('renders literal less-than characters', async ({server, page}) => {
   `)
 
   await page.goto(server.url() + '/')
-  await page.pause()
   await expect(page.getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
   await expect(page.locator('main')).toHaveText(/1 < 2/)
 })

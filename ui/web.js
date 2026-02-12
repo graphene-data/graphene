@@ -1,8 +1,10 @@
-import {getErrors} from './internal/telemetry.ts'
+import {getErrors, errorProvider} from './internal/telemetry.ts'
 import './app.css'
 import {isLoading} from './internal/queryEngine.ts'
 import {mount} from 'svelte'
-import NavSidebar from './internal/NavSidebarHMR.svelte'
+import navFiles from 'virtual:nav'
+import NavSidebar from './internal/NavSidebar.svelte'
+import PageError from './internal/PageError.svelte'
 
 import Area from './components/Area.svelte'
 import AreaChart from './components/AreaChart.svelte'
@@ -69,12 +71,23 @@ window.$GRAPHENE.components = {
 }
 
 let socket = null
+connectWebSocket()
 
 if (document.getElementById('nav')) {
-  mount(NavSidebar, {target: document.getElementById('nav')})
+  mount(NavSidebar, {target: document.getElementById('nav'), props: {files: navFiles}})
 }
 
-connectWebSocket()
+// Capture Vite compilation errors (e.g. broken Svelte syntax in md files) via HMR.
+// Only handle errors for the current page's MD file to avoid cross-page interference.
+// Uses errorProvider so repeated failed saves replace (not accumulate) the error.
+let compileError = null
+errorProvider('compile', () => compileError ? [compileError] : [])
+import.meta.hot?.on('vite:error', (payload) => {
+  compileError = payload.err
+  compileError.type = 'compile'
+  compileError.file = payload.err.id // rewrite from vite's format to what we usually expect
+  mount(PageError, {target: document.getElementById('content'), props: {error: compileError}})
+})
 
 function captureChart (chartTitle) {
   let escaped = window.CSS.escape(chartTitle)
@@ -113,7 +126,7 @@ function connectWebSocket () {
 
     if (type === 'check') {
       await waitForQueriesToFinish()
-      let errors = getErrors().map(e => ({message: e.message, id: e.id}))
+      let errors = getErrors().map(e => ({type: e.type, message: e.message, id: e.id, file: e.file, line: e.loc?.line, frame: e.frame, from: e.from, to: e.to}))
       let stillLoading = isLoading()
       let screenshot = chart ? captureChart(chart) : await takeScreenshot()
       socket.send(JSON.stringify({type: 'checkResponse', requestId, errors, stillLoading, screenshot}))

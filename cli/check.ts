@@ -102,10 +102,20 @@ export async function check (options: CheckOptions): Promise<boolean> {
   } else {
     log('No errors found 💎')
   }
-  errors.forEach((e:any) => {
-    if (e.file && e.line) printDiagnostics([e as Diagnostic], log)
-    else if (e.id) log(`${e.id}: ${e.message}`)
-    else log(e.message)
+
+  errors.forEach((e: any) => {
+    if (e.type === 'compile') {
+      let file = e.file && path.isAbsolute(e.file) ? path.relative(config.root, e.file) : e.file
+      let msg = e.message.replace(/^.*?:\d+:\d+\s*/, '').replace(/\s*https:\/\/svelte\.dev\/\S+/g, '')
+      log(`${styleText('red', 'ERROR')}: ${file} line ${e.line}: ${msg}`)
+      for (let frameLine of e.frame.split('\n')) log('  ' + frameLine)
+    } else if (e.file && e.from) {
+      printDiagnostics([e as Diagnostic], log)
+    } else if (e.id) {
+      log(`${e.id}: ${e.message}`)
+    } else {
+      log(e.message)
+    }
   })
 
   if (resp?.stillLoading) {
