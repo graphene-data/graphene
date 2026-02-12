@@ -65,6 +65,7 @@ async function createConfig (): Promise<InlineConfig> {
         },
       }),
       fixSvelteDepsInTests(),
+      fixHmrForFailedModules(),
       checkVitePlugin(),
       handleRequestPlugin,
       updateWorkspacePlugin,
@@ -78,6 +79,7 @@ async function createConfig (): Promise<InlineConfig> {
       host,
       fs: {strict: false},
       strictPort: true,
+      hmr: {overlay: false}, // we handle compilation errors ourselves (see handlePage catch block)
     },
     resolve: {
       alias: {
@@ -106,6 +108,76 @@ async function createConfig (): Promise<InlineConfig> {
   }
 }
 
+async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
+  let chunks = [] as any[]
+  for await (let chunk of req) chunks.push(chunk)
+  let {gsql, params, hashes} = JSON.parse(Buffer.concat(chunks).toString())
+  res.setHeader('Content-Type', 'application/json')
+
+  await workspaceLoadPromise
+  let queries = analyze(gsql)
+
+  if (getDiagnostics().length) {
+    res.statusCode = 400
+    res.end(JSON.stringify(getDiagnostics()))
+    return
+  }
+
+  if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
+  let sql = toSql(queries[0], params)
+
+  // If the client already has this data, dont run the query
+  let hash = crypto.createHash('SHA1').update(sql).digest('hex')
+  res.setHeader('ETag', hash)
+  if (hashes.includes(hash) && req.headers['cache-control'] != 'no-cache') {
+    res.statusCode = 304
+    return res.end()
+  }
+
+  let queryResults = await runQuery(sql)
+  let totalRows = queryResults.totalRows ?? queryResults.rows.length
+  if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
+  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
+  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
+}
+
+async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, filePath: string, mount: boolean) {
+  res.setHeader('Content-Type', 'text/html')
+
+  // Use a dynamic import for the md file so that web.js always loads first (sets up telemetry, nav, websocket).
+  // Without this, a Svelte compilation error in the md file kills the entire module block and web.js never runs,
+  // resulting in a blank page and `check` reporting "Failed to open a new tab".
+  let mdMount = mount ? `
+    window.$GRAPHENE.currentMdFile = ${JSON.stringify(filePath)}
+    import {mount} from 'svelte'
+    let {default: Page} = await import(${JSON.stringify(filePath)})
+    mount(Page, { target: document.getElementById('content'), props: {} })
+  ` : ''
+
+  // Use '/XXX.html' as the URL for transformIndexHtml, not the .md file path.
+  // Vite 7 uses the URL extension to determine which plugins process the content,
+  // and passing an .md path causes the svelte plugin to try to compile our HTML template.
+  let htmlUrl = filePath.replace('.md', '.html')
+  let html = await server.transformIndexHtml(htmlUrl, `<!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Graphene</title>
+      <link rel="icon" href="/favicon.ico" />
+    </head>
+    <body>
+      <nav id="nav"></nav>
+      <main id="content"></main>
+      <script type="module">
+        import 'graphene' // do this first so we can track errors caused by importing the md file
+        ${mdMount}
+      </script>
+    </body>
+  </html>`)
+  return res.end(html)
+}
+
 // Runs vite's pre-bundling of dependencies. Used by tests to do this once, instead of for each worker.
 export async function prepareDeps () {
   let cfg = await resolveConfig(await createConfig(), 'serve')
@@ -128,6 +200,28 @@ function fixSvelteDepsInTests () {
   }
   buildStart.sequential = true // force running after other sequential hooks (like svelte's)
   return {name: 'fix-svelte-deps', enforce: 'post' as const, configResolved, buildStart}
+}
+
+// When a module's transform fails (e.g. Svelte compilation error in an md file), Vite's import analysis
+// never runs on it, leaving `isSelfAccepting` as undefined. Vite's `propagateUpdate` silently skips
+// unanalyzed modules, so fixing the file produces no HMR update and the page stays broken.
+// We detect this and send a full-reload instead, since the module was never successfully loaded
+// and can't be hot-swapped.
+function fixHmrForFailedModules () {
+  return {
+    name: 'fix-hmr-for-failed-modules',
+    hotUpdate (this: any, {modules}: {modules: any[]}) {
+      // When a module's last transform failed, its transformResult is null. Vite's normal HMR can't
+      // hot-swap a module that has no valid transform — either because it was never analyzed
+      // (isSelfAccepting === undefined) or because it was previously working but is now broken.
+      // In both cases, force a full page reload so the browser re-requests everything fresh.
+      let hasFailed = modules.some(m => !m.transformResult && m.importers.size)
+      if (hasFailed) {
+        this.environment.hot.send({type: 'full-reload', path: '*'})
+        return []
+      }
+    },
+  }
 }
 
 // Watch for changes to gsql files and reload the workspace.
@@ -196,72 +290,6 @@ const handleRequestPlugin = {
       }
     })
   },
-}
-
-async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
-  let chunks = [] as any[]
-  for await (let chunk of req) chunks.push(chunk)
-  let {gsql, params, hashes} = JSON.parse(Buffer.concat(chunks).toString())
-  res.setHeader('Content-Type', 'application/json')
-
-  await workspaceLoadPromise
-  let queries = analyze(gsql)
-
-  if (getDiagnostics().length) {
-    res.statusCode = 400
-    res.end(JSON.stringify(getDiagnostics()))
-    return
-  }
-
-  if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
-  let sql = toSql(queries[0], params)
-
-  // If the client already has this data, dont run the query
-  let hash = crypto.createHash('SHA1').update(sql).digest('hex')
-  res.setHeader('ETag', hash)
-  if (hashes.includes(hash) && req.headers['cache-control'] != 'no-cache') {
-    res.statusCode = 304
-    return res.end()
-  }
-
-  let queryResults = await runQuery(sql)
-  let totalRows = queryResults.totalRows ?? queryResults.rows.length
-  if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
-  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
-}
-
-async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, filePath: string, mount: boolean) {
-  res.setHeader('Content-Type', 'text/html')
-
-  let mdMount = mount ? `
-    import { mount } from 'svelte'
-    import Page from ${JSON.stringify(filePath)}
-    mount(Page, { target: document.getElementById('content'), props: {} })
-  ` : ''
-
-  // Use '/index.html' as the URL for transformIndexHtml, not the .md file path.
-  // Vite 7 uses the URL extension to determine which plugins process the content,
-  // and passing an .md path causes the svelte plugin to try to compile our HTML template.
-  let htmlUrl = filePath.replace('.md', '.html')
-  let html = await server.transformIndexHtml(htmlUrl, `<!doctype html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Graphene</title>
-      <link rel="icon" href="/favicon.ico" />
-    </head>
-    <body>
-      <nav id="nav"></nav>
-      <main id="content"></main>
-      <script type="module">
-        import 'graphene' // do this first so we can track errors caused by importing the md file
-        ${mdMount}
-      </script>
-    </body>
-  </html>`)
-  return res.end(html)
 }
 
 function mockFilesForTests () {

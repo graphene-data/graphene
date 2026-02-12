@@ -35,7 +35,7 @@ test('check defaults to analyzing the whole workspace', async () => {
 })
 
 test('check with mdFile reports analysis errors', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource')
+  expectConsoleError(page, 'Failed to load resource', true)
   server.mockFile('/other.md', `
     \`\`\`sql error_query
     from flights select wtfmate() as explode
@@ -114,6 +114,25 @@ test('check table configuration errors', async ({server, page}) => {
     DataTable: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
 `))
+})
+
+test('check reports html compilation errors', async ({server, page}) => {
+  expectConsoleError(page, 'Failed to load resource')
+  expectConsoleError(page, 'Internal Server Error', true)
+  expectConsoleError(page, 'Failed to fetch dynamically imported module', true)
+  server.mockFile('/index.md', `
+    # Test
+    {#if true}oops{/if}
+  `)
+
+  await page.goto(server.url())
+  let result = await check({mdArg: 'index.md', log})
+  expect(result).toBe(false)
+  let output = outputLines()
+  expect(output).toContain('Runtime errors in index.md:')
+  expect(output).toMatch(/ERROR: .*index\.md line 7: Unexpected block closing tag/)
+  expect(output).toContain('<p>oops{/if}</p>')
+  expect(output).toContain('^')
 })
 
 test('cli check with --chart captures a single chart screenshot', async ({server, page}) => {
