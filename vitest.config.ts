@@ -12,8 +12,10 @@ export default defineConfig({
     reporters: ['default', 'json'],
     outputFile: 'node_modules/.testResults.json',
     slowTestThreshold: 5_000,
-    onConsoleLog (log) {
+    onConsoleLog (log, type) {
       if (log.startsWith('Server running at http://')) return false
+      if (log.startsWith('manually calling optimizeDeps is deprecated.')) return false
+      throw new Error(`Unexpected ${type || 'console'} output during tests: ${log}`)
     },
     projects: [
       {
