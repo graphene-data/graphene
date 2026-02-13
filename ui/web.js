@@ -1,10 +1,8 @@
-import {getErrors, errorProvider} from './internal/telemetry.ts'
+import './internal/telemetry.ts'
+import './internal/checkSocket.ts'
 import './app.css'
-import {isLoading} from './internal/queryEngine.ts'
 import {mount} from 'svelte'
-import navFiles from 'virtual:nav'
-import NavSidebar from './internal/NavSidebar.svelte'
-import PageError from './internal/PageError.svelte'
+import LocalApp from './internal/LocalApp.svelte'
 
 import Area from './components/Area.svelte'
 import AreaChart from './components/AreaChart.svelte'
@@ -70,66 +68,4 @@ window.$GRAPHENE.components = {
   TextInput,
 }
 
-let socket = null
-connectWebSocket()
-
-if (document.getElementById('nav')) {
-  mount(NavSidebar, {target: document.getElementById('nav'), props: {files: navFiles}})
-}
-
-// Capture Vite compilation errors (e.g. broken Svelte syntax in md files) via HMR.
-// Only handle errors for the current page's MD file to avoid cross-page interference.
-// Uses errorProvider so repeated failed saves replace (not accumulate) the error.
-let compileError = null
-errorProvider('compile', () => compileError ? [compileError] : [])
-import.meta.hot?.on('vite:error', (payload) => {
-  compileError = payload.err
-  compileError.type = 'compile'
-  compileError.file = payload.err.id // rewrite from vite's format to what we usually expect
-  mount(PageError, {target: document.getElementById('content'), props: {error: compileError}})
-})
-
-function captureChart (chartTitle) {
-  let escaped = window.CSS.escape(chartTitle)
-  let canvas = document.querySelector(`[data-chart-title="${escaped}"] canvas`)
-  return canvas?.toDataURL('image/png')
-}
-
-async function takeScreenshot () {
-  if (!window.html2canvas) {
-    let html2canvas = await import('@graphenedata/html2canvas')
-    window.html2canvas = html2canvas.default
-  }
-
-  let canvas = await window.html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
-  return canvas?.toDataURL('image/png')
-}
-
-async function waitForQueriesToFinish () {
-  let startTime = Date.now()
-  while (isLoading() && Date.now() - startTime < 20_000) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-}
-
-function connectWebSocket () {
-  let wsUrl = `ws://${window.location.host}/_api/ws`
-  socket = new WebSocket(wsUrl)
-  socket.onclose = () => setTimeout(connectWebSocket, 2000)
-
-  socket.onopen = () => {
-    socket.send(JSON.stringify({type: 'register', url: window.location.href}))
-  }
-
-  socket.onmessage = async (event) => {
-    let {type, requestId, chart} = JSON.parse(event.data)
-
-    if (type === 'check') {
-      await waitForQueriesToFinish()
-      let errors = getErrors().map(e => ({type: e.type, message: e.message, id: e.id, file: e.file, line: e.loc?.line, frame: e.frame, from: e.from, to: e.to}))
-      let stillLoading = isLoading()
-      let screenshot = chart ? captureChart(chart) : await takeScreenshot()
-      socket.send(JSON.stringify({type: 'checkResponse', requestId, errors, stillLoading, screenshot}))
-    }
-  }
-}
+mount(LocalApp, {target: document.body})
