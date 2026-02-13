@@ -79,7 +79,7 @@ async function createConfig (): Promise<InlineConfig> {
       host,
       fs: {strict: false},
       strictPort: true,
-      hmr: {overlay: false}, // we handle compilation errors ourselves (see handlePage catch block)
+      hmr: {overlay: false}, // we handle compilation errors ourselves (see LocalApp.svelte)
     },
     resolve: {
       alias: {
@@ -141,24 +141,11 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
 
-async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>, filePath: string, mount: boolean) {
+async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>) {
   res.setHeader('Content-Type', 'text/html')
 
-  // Use a dynamic import for the md file so that web.js always loads first (sets up telemetry, nav, websocket).
-  // Without this, a Svelte compilation error in the md file kills the entire module block and web.js never runs,
-  // resulting in a blank page and `check` reporting "Failed to open a new tab".
-  let mdMount = mount ? `
-    window.$GRAPHENE.currentMdFile = ${JSON.stringify(filePath)}
-    import {mount} from 'svelte'
-    let {default: Page} = await import(${JSON.stringify(filePath)})
-    mount(Page, { target: document.getElementById('content'), props: {} })
-  ` : ''
-
-  // Use '/XXX.html' as the URL for transformIndexHtml, not the .md file path.
-  // Vite 7 uses the URL extension to determine which plugins process the content,
-  // and passing an .md path causes the svelte plugin to try to compile our HTML template.
-  let htmlUrl = filePath.replace('.md', '.html')
-  let html = await server.transformIndexHtml(htmlUrl, `<!doctype html>
+  // Use a .html URL for transformIndexHtml so Vite doesn't run the svelte plugin on our HTML template.
+  let html = await server.transformIndexHtml('/index.html', `<!doctype html>
   <html lang="en">
     <head>
       <meta charset="UTF-8" />
@@ -167,11 +154,8 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
       <link rel="icon" href="/favicon.ico" />
     </head>
     <body>
-      <nav id="nav"></nav>
-      <main id="content"></main>
       <script type="module">
-        import 'graphene' // do this first so we can track errors caused by importing the md file
-        ${mdMount}
+        import 'graphene'
       </script>
     </body>
   </html>`)
@@ -215,7 +199,7 @@ function fixHmrForFailedModules () {
       // hot-swap a module that has no valid transform — either because it was never analyzed
       // (isSelfAccepting === undefined) or because it was previously working but is now broken.
       // In both cases, force a full page reload so the browser re-requests everything fresh.
-      let hasFailed = modules.some(m => !m.transformResult && m.importers.size)
+      let hasFailed = modules.some(m => !m.transformResult)
       if (hasFailed) {
         this.environment.hot.send({type: 'full-reload', path: '*'})
         return []
@@ -272,14 +256,14 @@ const handleRequestPlugin = {
       try {
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
-        if (pathName == '/__ct') return await handlePage(s, res, '__ct', false)
+        if (pathName == '/__ct') return await handlePage(s, res)
 
         if (!pathName || pathName == '/') pathName = 'index'
         let relativeMdPath = pathName.replace(/^\//, '') + '.md'
         let mdPath = path.join(config.root, relativeMdPath)
 
         if (mockFileMap[relativeMdPath] || await fs.exists(mdPath)) {
-          await handlePage(s, res, mdPath, true)
+          await handlePage(s, res)
         } else {
           next()
         }
@@ -295,16 +279,23 @@ const handleRequestPlugin = {
 function mockFilesForTests () {
   if (process.env.NODE_ENV !== 'test') return null
 
+  function toMockKey (id: string) {
+    // Handle both absolute paths (/wt/.../index.md) and root-relative paths (/index.md)
+    return id.replace(config.root + '/', '').replace(/^\//, '')
+  }
+
   return {
     name: 'mock-files-for-tests',
     enforce: 'pre' as const,
     resolveId (id: any) {
-      if (mockFileMap[id.replace(config.root + '/', '')]) return id + '?mock'
+      if (!mockFileMap[toMockKey(id)]) return
+      // Always resolve to the absolute path so the module graph key matches
+      // what updateMockFile emits via server.watcher (needed for HMR to work).
+      return path.join(config.root, toMockKey(id)) + '?mock'
     },
     load (id: any) {
       if (!id.endsWith('?mock')) return null
-      let content = mockFileMap[id.replace(config.root + '/', '').replace(/\?mock$/, '')]
-      return content
+      return mockFileMap[toMockKey(id.replace(/\?mock$/, ''))]
     },
   }
 }
