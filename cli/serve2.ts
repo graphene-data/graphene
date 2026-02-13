@@ -44,6 +44,7 @@ async function createConfig (): Promise<InlineConfig> {
 
   return {
     root: config.root,
+    logLevel: process.env.NODE_ENV == 'test' ? 'silent' : 'info',
     plugins: [
       svelte({
         configFile: false,
