@@ -48,7 +48,7 @@ test('allows collapsing and expanding folders', async ({server, page}) => {
 })
 
 
-test('reports query errors', async ({server, page}) => {
+test('renders gsql query errors clearly with file context', async ({server, page}) => {
   expectConsoleError(page, 'Failed to load resource')
   server.mockFile('/index.md', `
     # Broken Dashboard
@@ -64,7 +64,59 @@ test('reports query errors', async ({server, page}) => {
   await page.goto(server.url() + '/')
   await waitForGrapheneQueries(page)
   await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
-  await expect(page).screenshot('reports-query-errors')
+  await expect(page.getByText('GSQL error - Unknown function: not_a_function')).toBeVisible()
+  let details = page.locator('.error-chart__details').first()
+  await expect(details).not.toContainText('input')
+  await expect(details).toContainText('Query (data="broken_query" x="origin" y="boom")')
+  await expect(details).toContainText('^')
+  await expect(details).not.toContainText('"message"')
+  await expect(page).screenshot('reports-analysis-query-errors')
+})
+
+test('renders database query failures clearly', async ({server, page}) => {
+  expectConsoleError(page, 'Failed to load resource')
+  server.mockFile('/index.md', `
+    # Database Failure
+
+    \`\`\`sql broken_query
+    from flights select origin, sqrt(dep_delay) as boom
+    \`\`\`
+
+    <BarChart data="broken_query" x="origin" y="boom" />
+  `)
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneQueries(page)
+  await expect(page.getByText(/(Database query failed|Server error while running query|Query failed)/)).toBeVisible()
+  await expect(page.getByText('Out of Range Error')).toBeVisible()
+  await expect(page).screenshot('reports-database-query-errors')
+})
+
+test('renders generic server failures clearly', async ({server, page}) => {
+  expectConsoleError(page, 'Failed to load resource')
+  server.mockFile('/index.md', `
+    # Server Failure
+
+    \`\`\`sql broken_query
+    from flights select origin, dep_delay
+    \`\`\`
+
+    <BarChart data="broken_query" x="origin" y="dep_delay" />
+  `)
+
+  await page.route('**/_api/query', async (route) => {
+    await route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify([{type: 'server', message: 'Internal Server Error'}]),
+    })
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneQueries(page)
+  await expect(page.getByText('Server error while running query')).toBeVisible()
+  await expect(page.getByText('Internal Server Error')).toBeVisible()
+  await expect(page).screenshot('reports-server-query-errors')
 })
 
 test('renders literal less-than characters', async ({server, page}) => {
