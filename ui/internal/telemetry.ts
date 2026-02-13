@@ -7,7 +7,7 @@ let staticErrors: Error[] = []
 let errorProviders: Record<string, ErrorProvider> = {}
 
 window.addEventListener('error', (event) => {
-  if ((event.error.message || '').match(/Failed to fetch dynamically imported module.*\.md\?import/)) return
+  if ((event.error?.message || '').match(/Failed to fetch dynamically imported module.*\.md\?import/)) return
   staticErrors.push(event.error)
 })
 window.addEventListener('unhandledrejection', (event) => {
