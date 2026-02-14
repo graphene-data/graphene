@@ -27,17 +27,35 @@ export interface Filter {
   isAgg?: boolean  // if true, goes in HAVING; otherwise WHERE
 }
 
-// A join used in a query (with alias for rendering)
+// Context for analyzing expressions - table/alias change as we traverse joins, but query is shared
+export interface Scope {
+  query: Query | null  // null when analyzing table definitions (not in a query context)
+  table: Table | null
+  alias: string  // current alias for this table context (e.g., "base", "users", "users_orders")
+  otherTables?: Table[]  // CTEs and other tables visible for name resolution
+  joinTarget?: { name: string, table: Table, alias: string } // When analyzing a join's ON clause, tells us about the target table/alias.
+}
+
+export type JoinType = 'left' | 'right' | 'full' | 'inner' | 'cross'
+
+// A join relation used throughout analysis.
+// For table-defined joins, targetTable/onExpr are populated first.
+// For analyzed query joins, table/onClause are populated.
 export interface QueryJoin {
-  alias: string                // e.g., "orders_0"
-  targetTable: string          // name of the table being joined
-  onClause: string             // SQL for the ON expression
+  alias: string
+  source: 'from' | 'ad-hoc' | 'implicit'
+  table?: Table
+  targetTable?: string
+  cardinality?: 'one' | 'many'
+  joinType?: JoinType
+  onClause?: string
+  onExpr?: SyntaxNode
+  targetNode?: SyntaxNode
 }
 
 // A fully analyzed query
 export interface Query {
   sql: string                  // the complete SQL string
-  baseTable: string            // name of the table in FROM
   fields: QueryField[]         // SELECT columns
   joins: QueryJoin[]           // JOINs needed for this query
   filters: Filter[]            // WHERE/HAVING conditions
@@ -56,21 +74,12 @@ export interface Column {
   metadata?: Record<string, string>
 }
 
-// Join definition on a table
-export interface Join {
-  name: string                 // alias for this join in the current table
-  targetTable: string          // name of the table being joined
-  joinType: 'one' | 'many'
-  onExpr: SyntaxNode          // ON clause AST node (analyzed lazily with correct aliases)
-  targetNode: SyntaxNode
-}
-
 // A table definition - discriminated union so views guarantee a query
 interface TableBase {
   name: string
   tablePath: string
   columns: Column[]
-  joins: Join[]
+  joins: QueryJoin[]
   metadata?: Record<string, string>
   syntaxNode?: SyntaxNode
 }
