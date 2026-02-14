@@ -160,6 +160,29 @@ describe('lang', () => {
       .toRenderSql('select users."id" as "users_id", order_items."id" as "order_items_id" from orders as base left join users as users on users."id"=base."user_id" left join order_items as order_items on order_items."order_id"=base."id"')
   })
 
+  it('supports ad-hoc query joins', () => {
+    expect('from orders join users on users.id = orders.user_id select amount, users.name')
+      .toRenderSql('select base."amount" as "amount", users."name" as "users_name" from orders as base inner join users as users on users."id"=base."user_id"')
+  })
+
+  it('resolves bare refs across ad-hoc joins and errors on ambiguity', () => {
+    expect('from orders join users on users.id = orders.user_id select amount')
+      .toRenderSql('select base."amount" as "amount" from orders as base inner join users as users on users."id"=base."user_id"')
+
+    expect('from orders join users on users.id = orders.user_id select id')
+      .toHaveDiagnostic(/ambiguous field "id"/i)
+  })
+
+  it('joins views and CTEs in queries', () => {
+    updateFile('table user_totals as (from orders select user_id, sum(amount) as total)', 'user_totals.gsql')
+
+    expect('from users join user_totals on user_totals.user_id = users.id select name, user_totals.total')
+      .toRenderSql('with "user_totals" as ( select base."user_id" as "user_id", sum(base."amount") as "total" from orders as base group by 1 order by 2 desc nulls last ) select base."name" as "name", user_totals."total" as "user_totals_total" from users as base inner join "user_totals" as user_totals on user_totals."user_id"=base."id"')
+
+    expect('with active_users as (from users select id, name) from orders join active_users on active_users.id = orders.user_id select active_users.name')
+      .toRenderSql('with "active_users" as ( select base."id" as "id", base."name" as "name" from users as base ) select active_users."name" as "active_users_name" from orders as base inner join active_users as active_users on active_users."id"=base."user_id"')
+  })
+
   it('expands measures', async () => {
     expect('from users select name, total_orders')
       .toRenderSql('select base."name" as "name", (count(distinct orders."id")) as "total_orders" from users as base left join orders as orders on orders."user_id"=base."id" group by 1 order by 2 desc nulls last')
@@ -451,11 +474,11 @@ describe('lang', () => {
       .toHaveDiagnostic(/unknown field "does_not_exist" on users/i)
   })
 
-  it('suggests join aliases when referencing table names', () => {
+  it('reports not being able to find a join on a query', () => {
     expect(`
       table t (oid int, join one users as usr on usr.id = oid);
       from t select users.name
-    `).toHaveDiagnostic(/unknown join "users" on t/i)
+    `).toHaveDiagnostic(/Could not find "users" on query/i)
   })
 
   it('can create new tables from queries', () => {
