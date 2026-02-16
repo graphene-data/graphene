@@ -937,7 +937,7 @@
         xAxis: horizAxisConfig,
         yAxis: verticalAxisConfig,
         series: [],
-        animation: true,
+        animation: false,
         graphic: horizAxisTitleConfig,
         color: $colorPaletteResolved,
       }
