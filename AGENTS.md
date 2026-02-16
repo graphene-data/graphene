@@ -55,7 +55,7 @@ It's important for each task to work on to keep some high-level notes on the wor
 Our tests are run with vitest. Use `pnpm test` in either cloud or core to run the tests for either.
 You can run a single test with `pnpm test -t "part of test name"`
 Lint+typecheck with `pnpm lint` in either cloud or core.
-UI tests should always take snapshots each time they run. Be sure to add a snapshot for new ui tests you add, and you can view any snapshot to make sure that ui renders the way you expect.
+UI tests should always take snapshots each time they run. Be sure to add a snapshot for new ui tests you add, and you can view any snapshot to make sure that ui renders the way you expect. When a screenshot is sufficient to verify visual behavior (colors, layout, rendering), prefer it over programmatic assertions — it's simpler and easier to maintain.
 
 ## Workflow
 * `/core` is a submodule, so to do git operations there you'll want to `git -C core status`

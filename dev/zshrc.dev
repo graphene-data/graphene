@@ -1,5 +1,7 @@
 setopt HIST_IGNORE_ALL_DUPS
 
+export PATH="/root/.opencode/bin:$PATH"
+
 autoload -Uz add-zsh-hook vcs_info
 setopt prompt_subst
 add-zsh-hook precmd vcs_info
