@@ -139,6 +139,11 @@ describe('lang', () => {
       .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base')
   })
 
+  it('expands plain wildcard when mixed with other select items', () => {
+    expect('from users select *, email as contact')
+      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age", base."email" as "contact" from users as base')
+  })
+
   it('expands wildcards on a specific join', () => {
     expect('from orders select users.*')
       .toRenderSql('select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age" from orders as base left join users as users on users."id"=base."user_id"')
@@ -163,6 +168,16 @@ describe('lang', () => {
   it('supports ad-hoc query joins', () => {
     expect('from orders join users on users.id = orders.user_id select amount, users.name')
       .toRenderSql('select base."amount" as "amount", users."name" as "users_name" from orders as base inner join users as users on users."id"=base."user_id"')
+  })
+
+  it('supports cross join without an ON clause', () => {
+    expect('from orders cross join users select amount, users.name')
+      .toRenderSql('select base."amount" as "amount", users."name" as "users_name" from orders as base cross join users as users')
+  })
+
+  it('rejects cross join with an ON clause', () => {
+    expect('from orders cross join users on users.id = orders.user_id select amount')
+      .toHaveDiagnostic(/cross join cannot have an on clause/i)
   })
 
   it('resolves bare refs across ad-hoc joins and errors on ambiguity', () => {
