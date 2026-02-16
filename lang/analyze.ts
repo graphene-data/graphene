@@ -217,6 +217,9 @@ export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query
     NODE_ENTITY_MAP.set(targetNameNode, {entityType: 'table', table})
 
     let onExpr = joinNode.getChild('Expression')
+    if (joinType == 'cross' && onExpr) {
+      return diag(joinNode, 'CROSS JOIN cannot have an ON clause')
+    }
     if (onExpr) {
       let onScope: Scope = {query, table: null, alias: baseAlias, otherTables: scope.otherTables}
       qj.onClause = analyzeExpr(onExpr, onScope).sql
@@ -233,7 +236,7 @@ export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query
   for (let s of selects) {
     if (s.getChild('Wildcard')) {
       let pathNodes = s.getChild('Wildcard')!.getChildren('Identifier')
-      if (pathNodes.length == 0 && query.joins.some(j => j.source == 'ad-hoc')) {
+      if (pathNodes.length == 0) {
         expandColumns(null, '', query, scope)
         continue
       }
