@@ -114,7 +114,7 @@ function analyzeView (table: Table) {
 // Analyze everything in a table - used for full project analysis (e.g., `check` command)
 export function analyzeTableFully (table: Table) {
   if (table.type == 'view') analyzeView(table)
-  let scope: Scope = {query: null, table, alias: 'base'}
+  let scope: Scope = {query: null, table, alias: table.name}
   table.columns.forEach(c => {
     if (!c.exprNode) return
     let expr = analyzeExpr(c.exprNode, scope)
@@ -162,7 +162,7 @@ function analyzeJoin (join: QueryJoin) {
 export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
   let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: [], isAggregate: false}
   let ctes = new Map<string, CteTable>()
-  let scope: Scope = {query, table: null, alias: 'base', otherTables: outerCtes || []}
+  let scope: Scope = {query, table: null, alias: '', otherTables: outerCtes || []}
   let isAgg = false
 
   // WITH clause - analyze each CTE. Store them on Scope, as they're accessible to later CTEs, and valid tables for the query to from/join
@@ -179,7 +179,7 @@ export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query
 
   // FROM
   let fromClause = queryNode.getChild('FromClause')
-  let baseAlias = 'base'
+  let baseAlias = ''
   let basePrimary = fromClause?.getChild('TablePrimary')
   if (basePrimary) {
     let baseRef = basePrimary.getChild('Ref')
@@ -187,7 +187,8 @@ export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query
     let baseTableName = txt(baseRef)
     let baseTable = lookupTable(baseTableName, basePrimary, scope) || null
     if (!baseTable) return diag(basePrimary, `Unknown table "${baseTableName}"`)
-    let baseAlias = txt(basePrimary.getChild('Alias')) || 'base'
+    let defaultAlias = txt(baseRef.getChildren('Identifier').at(-1)) || baseTable.name.split('.').pop() || baseTable.name
+    baseAlias = txt(basePrimary.getChild('Alias')) || defaultAlias
     query.joins.push({alias: baseAlias, source: 'from', table: baseTable, targetTable: baseTableName})
     analyzeView(baseTable)
     NODE_ENTITY_MAP.set(basePrimary, {entityType: 'table', table: baseTable})
@@ -647,8 +648,8 @@ function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
 
   // If we're analyzing an ON clause, any path nodes must point at the source or target table
   if (scope.joinTarget) {
-    let pointsAtSource = !!scope.table && (name == scope.alias || name == scope.table.name)
-    let pointsAtTarget = name == scope.joinTarget.alias || name == scope.joinTarget.name || name == scope.joinTarget.table.name
+    let pointsAtSource = !!scope.table && (name == scope.alias)
+    let pointsAtTarget = name == scope.joinTarget.alias || name == scope.joinTarget.name
     if (!pointsAtSource && !pointsAtTarget) return diag(pathNodes[0], 'Joins must point at either the source or target table', null)
 
     let table = pointsAtTarget ? scope.joinTarget.table : scope.table!
@@ -662,8 +663,7 @@ function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
   // But it could also refer to a join _on_ one of those tables (assuming the name is unique).
   if (!scope.table) {
     // This could be a ref to an existing FROM/JOIN alias
-    // TODO we could remove the `table.name` condition if we stopped auto-aliasing the main FROM as `base`
-    let existing = scope.query!.joins.find(j => j.alias == name || j.table?.name == name)
+    let existing = scope.query!.joins.find(j => j.alias == name)
     if (existing) {
       NODE_ENTITY_MAP.set(part, {entityType: 'table', table: existing.table})
       scope = {...scope, table: existing.table!, alias: existing.alias}
@@ -692,7 +692,8 @@ function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     if (!next.table) return null
 
     // Construct a new implied join and attache it to the query
-    let newAlias = alias == 'base' ? name : `${alias}_${name}`
+    let fromAlias = scope.query?.joins.find(j => j.source == 'from')?.alias
+    let newAlias = alias == fromAlias ? name : `${alias}_${name}`
     if (scope.query && !scope.query.joins.find(j => j.alias == newAlias)) {
       let joinTarget = {name: next.alias, table: next.table, alias: newAlias}
       let onClause = analyzeExpr(next.onExpr!, {query: null, table, alias, joinTarget}).sql

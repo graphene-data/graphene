@@ -10,7 +10,7 @@ export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' |
 
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {
-  sql: string        // the SQL for this expression, e.g. "base.\"name\"" or "sum(base.\"amount\")"
+  sql: string        // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
   type: FieldType    // result type for validation
   isAgg?: boolean    // true if contains an aggregate function
 }
@@ -31,7 +31,7 @@ export interface Filter {
 export interface Scope {
   query: Query | null  // null when analyzing table definitions (not in a query context)
   table: Table | null
-  alias: string  // current alias for this table context (e.g., "base", "users", "users_orders")
+  alias: string  // current alias for this table context (e.g., "users", "orders", "users_orders")
   otherTables?: Table[]  // CTEs and other tables visible for name resolution
   joinTarget?: { name: string, table: Table, alias: string } // When analyzing a join's ON clause, tells us about the target table/alias.
 }
