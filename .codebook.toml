@@ -1,0 +1,8 @@
+dictionaries = ["en_us"]
+
+words = [
+  "Graphene",
+  "Graphene's",
+  "subagent",
+  "subagents",
+]
