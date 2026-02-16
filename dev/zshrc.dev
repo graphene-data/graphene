@@ -13,8 +13,17 @@ zstyle ':vcs_info:git*' stagedstr '+'
 
 PROMPT='%(?.%F{2}⏺.%F{1}⏺)%f %1~ # '
 
-repo_root() { git rev-parse --show-toplevel 2>/dev/null; }
-graphene_root() { dirname "$(repo_root)"; }
+graphene_root() {
+  local root super
+  root="$(git rev-parse --show-toplevel 2>/dev/null)"
+  super="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
+
+  if [[ -n "$super" ]]; then
+    print -r -- "$super"
+  else
+    print -r -- "$root"
+  fi
+}
 
 cdd() { cd "$(graphene_root)"; }
 cdo() { cd "$(graphene_root)/cloud"; }

@@ -1,6 +1,9 @@
 #!/usr/bin/env zx
 
-import {$, cd} from 'zx'
+// Worktrees is the script we use to manage local development. Besides handling git worktrees,
+// it can push/pull from main, and manages containers to execute code/agents safely.
+
+import {$, cd, quote} from 'zx'
 import fs from 'fs'
 import net from 'net'
 import {resolve} from 'path'
@@ -56,9 +59,9 @@ const HOST_COMMANDS: Record<string, (args: any) => Promise<{ ok: boolean, data?:
     await $`open ${url}`
     return {ok: true}
   },
-  'open-diff': async () => {
-    await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree}`
-    return {ok: true}
+  'commit': async () => {
+    let result = await $`zx ${mainWtScript} commit`.nothrow()
+    return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
   },
   'pull': async () => {
     let result = await $`zx ${mainWtScript} pull`.nothrow()
@@ -189,9 +192,14 @@ async function hasUnmergedCommits (subdir?: string): Promise<boolean> {
   return cherryOutput.split('\n').some(line => line.startsWith('+ '))
 }
 
+function runCommitTool (cwd: string) {
+  let script = `cd ${quote(cwd)} && ${COMMIT_TOOL}`
+  return $`sh -lc ${script}`
+}
+
 async function commitWorktree () {
-  if (await repoDirty('core')) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree + '/core'}`
-  if (await repoDirty()) await $`sh -c ${COMMIT_TOOL + ' ' + currentWorktree}`
+  if (await repoDirty('core')) await runCommitTool(`${currentWorktree}/core`)
+  if (await repoDirty()) await runCommitTool(currentWorktree)
 }
 
 async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
