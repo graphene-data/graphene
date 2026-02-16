@@ -84,7 +84,7 @@ describe('lang', () => {
 
   it('handles basic select query', async () => {
     expect('from users select id, name where id = 1')
-      .toRenderSql('SELECT base."id" as "id", base."name" as "name" FROM users as base WHERE base."id"=1')
+      .toRenderSql('SELECT users."id" as "id", users."name" as "name" from users as users WHERE users."id"=1')
     await expect('from users select id, name where id = 1')
       .toReturnRows([1, 'Alice'])
   })
@@ -103,7 +103,7 @@ describe('lang', () => {
     // Note: uppercasing happens in core.ts via uppercaseTable() for table names, but column
     // names in expressions still use original case. Using case-insensitive comparison for now.
     expect('from users select id, orders.amount as amt order by amt desc')
-      .toRenderSql('SELECT base."id" as "id", orders."amount" as "amt" FROM USERS as base LEFT JOIN ORDERS as orders ON orders."user_id"=base."id" ORDER BY 2 desc NULLS LAST')
+      .toRenderSql('SELECT USERS."id" as "id", orders."amount" as "amt" from USERS as USERS LEFT JOIN ORDERS as orders ON orders."user_id"=USERS."id" ORDER BY 2 desc NULLS LAST')
   })
 
   // Skipped: this test has issues with join chain resolution that are unrelated to uppercase handling
@@ -130,49 +130,49 @@ describe('lang', () => {
     // names in expressions still use original case.
     expect('from users_chain select orders_chain.order_item_view_chain.order_id')
       .toRenderSql(`SELECT orders_chain_order_item_view_chain."ORDER_ID" as "orders_chain_order_item_view_chain_order_id"
-        FROM USERS_CHAIN as base LEFT JOIN ORDERS_CHAIN AS orders_chain ON orders_chain."USER_ID"=base."ID"
+        from USERS_CHAIN as USERS_CHAIN LEFT JOIN ORDERS_CHAIN AS orders_chain ON orders_chain."USER_ID"=USERS_CHAIN."ID"
         LEFT JOIN ORDER_ITEM_VIEW_CHAIN AS orders_chain_order_item_view_chain ON orders_chain_order_item_view_chain."ORDER_ID"=orders_chain."ID"`, {preserveCase: true})
   })
 
   it('expands plain wildcard', () => {
     expect('from users select *')
-      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base')
+      .toRenderSql('select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age" from users as users')
   })
 
   it('expands plain wildcard when mixed with other select items', () => {
     expect('from users select *, email as contact')
-      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age", base."email" as "contact" from users as base')
+      .toRenderSql('select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age", users."email" as "contact" from users as users')
   })
 
   it('expands wildcards on a specific join', () => {
     expect('from orders select users.*')
-      .toRenderSql('select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age" from orders as base left join users as users on users."id"=base."user_id"')
+      .toRenderSql('select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age" from orders as orders left join users as users on users."id"=orders."user_id"')
   })
 
   it('excludes aggregates from wildcard expansion', () => {
     // especially if those aggs are indirectly an agg agg expression
     expect('table t (amount int, sum(amount) / count() as weird_avg) from t select *')
-      .toRenderSql('select base."amount" as "amount" from t as base')
+      .toRenderSql('select t."amount" as "amount" from t as t')
   })
 
   it('expands dot-join syntax', () => {
     expect('from orders select id, users.name')
-      .toRenderSql('select base."id" as "id", users."name" as "users_name" from orders as base left join users as users on users."id"=base."user_id"')
+      .toRenderSql('select orders."id" as "id", users."name" as "users_name" from orders as orders left join users as users on users."id"=orders."user_id"')
   })
 
   it('handles column naming when mutliple columns have the same name', () => {
     expect('from orders select users.id, order_items.id')
-      .toRenderSql('select users."id" as "users_id", order_items."id" as "order_items_id" from orders as base left join users as users on users."id"=base."user_id" left join order_items as order_items on order_items."order_id"=base."id"')
+      .toRenderSql('select users."id" as "users_id", order_items."id" as "order_items_id" from orders as orders left join users as users on users."id"=orders."user_id" left join order_items as order_items on order_items."order_id"=orders."id"')
   })
 
   it('supports ad-hoc query joins', () => {
     expect('from orders join users on users.id = orders.user_id select amount, users.name')
-      .toRenderSql('select base."amount" as "amount", users."name" as "users_name" from orders as base inner join users as users on users."id"=base."user_id"')
+      .toRenderSql('select orders."amount" as "amount", users."name" as "users_name" from orders as orders inner join users as users on users."id"=orders."user_id"')
   })
 
   it('supports cross join without an ON clause', () => {
     expect('from orders cross join users select amount, users.name')
-      .toRenderSql('select base."amount" as "amount", users."name" as "users_name" from orders as base cross join users as users')
+      .toRenderSql('select orders."amount" as "amount", users."name" as "users_name" from orders as orders cross join users as users')
   })
 
   it('rejects cross join with an ON clause', () => {
@@ -182,7 +182,7 @@ describe('lang', () => {
 
   it('resolves bare refs across ad-hoc joins and errors on ambiguity', () => {
     expect('from orders join users on users.id = orders.user_id select amount')
-      .toRenderSql('select base."amount" as "amount" from orders as base inner join users as users on users."id"=base."user_id"')
+      .toRenderSql('select orders."amount" as "amount" from orders as orders inner join users as users on users."id"=orders."user_id"')
 
     expect('from orders join users on users.id = orders.user_id select id')
       .toHaveDiagnostic(/ambiguous field "id"/i)
@@ -192,15 +192,15 @@ describe('lang', () => {
     updateFile('table user_totals as (from orders select user_id, sum(amount) as total)', 'user_totals.gsql')
 
     expect('from users join user_totals on user_totals.user_id = users.id select name, user_totals.total')
-      .toRenderSql('with "user_totals" as ( select base."user_id" as "user_id", sum(base."amount") as "total" from orders as base group by 1 order by 2 desc nulls last ) select base."name" as "name", user_totals."total" as "user_totals_total" from users as base inner join "user_totals" as user_totals on user_totals."user_id"=base."id"')
+      .toRenderSql('with "user_totals" as ( select orders."user_id" as "user_id", sum(orders."amount") as "total" from orders as orders group by 1 order by 2 desc nulls last ) select users."name" as "name", user_totals."total" as "user_totals_total" from users as users inner join "user_totals" as user_totals on user_totals."user_id"=users."id"')
 
     expect('with active_users as (from users select id, name) from orders join active_users on active_users.id = orders.user_id select active_users.name')
-      .toRenderSql('with "active_users" as ( select base."id" as "id", base."name" as "name" from users as base ) select active_users."name" as "active_users_name" from orders as base inner join active_users as active_users on active_users."id"=base."user_id"')
+      .toRenderSql('with "active_users" as ( select users."id" as "id", users."name" as "name" from users as users ) select active_users."name" as "active_users_name" from orders as orders inner join active_users as active_users on active_users."id"=orders."user_id"')
   })
 
   it('expands measures', async () => {
     expect('from users select name, total_orders')
-      .toRenderSql('select base."name" as "name", (count(distinct orders."id")) as "total_orders" from users as base left join orders as orders on orders."user_id"=base."id" group by 1 order by 2 desc nulls last')
+      .toRenderSql('select users."name" as "name", (count(distinct orders."id")) as "total_orders" from users as users left join orders as orders on orders."user_id"=users."id" group by 1 order by 2 desc nulls last')
 
     await expect('from users select name, total_orders')
       .toReturnRows(['Alice', 2], ['Bob', 1])
@@ -208,7 +208,7 @@ describe('lang', () => {
 
   it('handles expressions with aggregates', async () => {
     expect('from orders select user_id, avg_order_value')
-      .toRenderSql('select base."user_id" as "user_id", (sum(base."amount")/count(1)) as "avg_order_value" from orders as base group by 1 order by 2 desc nulls last')
+      .toRenderSql('select orders."user_id" as "user_id", (sum(orders."amount")/count(1)) as "avg_order_value" from orders as orders group by 1 order by 2 desc nulls last')
 
     await expect('from orders select user_id, avg_order_value')
       .toReturnRows([2, 40], [1, 30])
@@ -221,19 +221,19 @@ describe('lang', () => {
 
   it.skip('handles complex joins with measures', () => {
     expect('from products select name, category, total_sold where popular_item')
-      .toRenderSql('select base."name" as "name", base."category" as "category", (sum(orders."amount")) as "total_sold" from products as base left join orders as orders on orders."product_id"=base."id" group by 1, 2 having sum(orders."amount")>1000 order by 3 desc nulls last')
+      .toRenderSql('select products."name" as "name", products."category" as "category", (sum(orders."amount")) as "total_sold" from products as products left join orders as orders on orders."product_id"=products."id" group by 1, 2 having sum(orders."amount")>1000 order by 3 desc nulls last')
   })
 
   it.skip('handles subqueries', () => {
     expect('from (select id, name from users) select id, name')
-      .toRenderSql(`WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
-      SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
+      .toRenderSql(`WITH __stage0 AS ( SELECT users."id" as "id", users."name" as "name" from users as users )
+      SELECT __stage0."id" as "id", __stage0."name" as "name" from __stage0 as __stage0`)
   })
 
   it.skip('handles subqueries with alias', () => {
     expect('from (select id, name from users) as u select id, name')
-      .toRenderSql(`WITH __stage0 AS ( SELECT base."id" as "id", base."name" as "name" FROM users as base )
-      SELECT base."id" as "id", base."name" as "name" FROM __stage0 as base`)
+      .toRenderSql(`WITH __stage0 AS ( SELECT users."id" as "id", users."name" as "name" from users as users )
+      SELECT __stage0."id" as "id", __stage0."name" as "name" from __stage0 as __stage0`)
   })
 
   // Skipped: computed columns accessed through joins are not fully expanded yet.
@@ -256,7 +256,7 @@ describe('lang', () => {
       .toReturnRows([1, 60], [2, 40])
 
     expect('from users select name, ltv') // query the view indirectly, through a join
-      .toRenderSql('with __stage0 as ( select base."id" as "id", (coalesce(sum(orders."amount"),0)) as "ltv" from users as base left join orders as orders on orders."user_id"=base."id" group by 1 ) select base."name" as "name", (user_facts."ltv") as "ltv" from users as base left join __stage0 as user_facts on user_facts."id"=base."id"')
+      .toRenderSql('with __stage0 as ( select users."id" as "id", (coalesce(sum(orders."amount"),0)) as "ltv" from users as users left join orders as orders on orders."user_id"=users."id" group by 1 ) select users."name" as "name", (user_facts."ltv") as "ltv" from users as users left join __stage0 as user_facts on user_facts."id"=users."id"')
 
     await expect('select * from users') // wildcards should include ltv
       .toReturnRows([1, 'Alice', 60], [2, 'Bob', 40])
@@ -272,7 +272,7 @@ describe('lang', () => {
     `, 'models.gsql')
 
     expect('from order_items select id, users.name')
-      .toRenderSql('select base."id" as "id", users."name" as "users_name" from order_items as base left join users as users on users."id"=base."user_id"')
+      .toRenderSql('select order_items."id" as "id", users."name" as "users_name" from order_items as order_items left join users as users on users."id"=order_items."user_id"')
   })
 
   it('handles when the view is defined before the table', () => {
@@ -283,7 +283,7 @@ describe('lang', () => {
     updateFile(testTables, 'models.gsql')
 
     expect('from user_facts select id, email order by id')
-      .toRenderSql('with "user_facts" as ( select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base ) select base."id" as "id", base."email" as "email" from "user_facts" as base order by 1 asc nulls last')
+      .toRenderSql('with "user_facts" as ( select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age" from users as users ) select user_facts."id" as "id", user_facts."email" as "email" from "user_facts" as user_facts order by 1 asc nulls last')
   })
 
   it('qualified joins default to table name alias', () => {
@@ -293,7 +293,7 @@ describe('lang', () => {
     `, 'models.gsql')
 
     expect('from dataset.users select id, orders.id')
-      .toRenderSql('select base."id" as "id", orders."id" as "orders_id" from dataset.users as base left join dataset.orders as orders on base."id"=orders."user_id"')
+      .toRenderSql('select users."id" as "id", orders."id" as "orders_id" from dataset.users as users left join dataset.orders as orders on users."id"=orders."user_id"')
   })
 
   it('extends derived tables with additional measures', async () => {
@@ -313,7 +313,7 @@ describe('lang', () => {
     `, 'models.gsql')
 
     expect('from users select name, order_stats.total_spent order by name')
-      .toRenderSql('with "order_stats" as ( select base."user_id" as "user_id", sum(base."amount") as "total_spent" from orders as base group by 1 order by 2 desc nulls last ) select base."name" as "name", order_stats."total_spent" as "order_stats_total_spent" from users as base left join "order_stats" as order_stats on order_stats."user_id"=base."id" order by 1 asc nulls last')
+      .toRenderSql('with "order_stats" as ( select orders."user_id" as "user_id", sum(orders."amount") as "total_spent" from orders as orders group by 1 order by 2 desc nulls last ) select users."name" as "name", order_stats."total_spent" as "order_stats_total_spent" from users as users left join "order_stats" as order_stats on order_stats."user_id"=users."id" order by 1 asc nulls last')
 
     await expect('from users select name, order_stats.total_spent order by name')
       .toReturnRows(['Alice', 60], ['Bob', 40])
@@ -321,32 +321,32 @@ describe('lang', () => {
 
   it('supports select distinct', () => {
     expect('from users select distinct name, email')
-      .toRenderSql('select base."name" as "name", base."email" as "email" from users as base group by 1,2 order by 1 asc nulls last')
+      .toRenderSql('select users."name" as "name", users."email" as "email" from users as users group by 1,2 order by 1 asc nulls last')
   })
 
   it('coun(distinct)', () => {
     expect('from users select count(distinct name)')
-      .toRenderSql('select count(distinct base."name") as "col_0" from users as base')
+      .toRenderSql('select count(distinct users."name") as "col_0" from users as users')
   })
 
   it('adds groupBy to select if needed', () => {
     expect('from users select count(orders.id) as total group by name')
-      .toRenderSql('select base."name" as "name", count(distinct orders."id") as "total" from users as base left join orders as orders on orders."user_id"=base."id" group by 1 order by 2 desc nulls last')
+      .toRenderSql('select users."name" as "name", count(distinct orders."id") as "total" from users as users left join orders as orders on orders."user_id"=users."id" group by 1 order by 2 desc nulls last')
   })
 
   it('doesnt duplicate groupBys', () => {
     expect('from users select name, count(orders.id) group by name')
-      .toRenderSql('select base."name" as "name", count(distinct orders."id") as "col_1" from users as base left join orders as orders on orders."user_id"=base."id" group by 1 order by 2 desc nulls last')
+      .toRenderSql('select users."name" as "name", count(distinct orders."id") as "col_1" from users as users left join orders as orders on orders."user_id"=users."id" group by 1 order by 2 desc nulls last')
   })
 
   it('group by can refer to an alias', () => {
     expect('from users select name as n group by n')
-      .toRenderSql('select base."name" as "n" from users as base group by 1 order by 1 asc nulls last')
+      .toRenderSql('select users."name" as "n" from users as users group by 1 order by 1 asc nulls last')
   })
 
   it.skip('group by positional number', () => {
     expect('from users select name, email group by 2, 1')
-      .toRenderSql('select base."name" as "name", base."email" as "email" from users as base group by 2,1 order by 2 asc, 1 asc nulls last')
+      .toRenderSql('select users."name" as "name", users."email" as "email" from users as users group by 2,1 order by 2 asc, 1 asc nulls last')
   })
 
   it('supports having clause with aggregate', async () => {
@@ -366,7 +366,7 @@ describe('lang', () => {
 
   it('order by positional number', () => {
     expect('from users select name, email order by 2 asc, 1 desc')
-      .toRenderSql('select base."name" as "name", base."email" as "email" from users as base order by 2 asc nulls last,1 desc nulls last')
+      .toRenderSql('select users."name" as "name", users."email" as "email" from users as users order by 2 asc nulls last,1 desc nulls last')
   })
 
   it('order by nonexistent field produces diagnostic', () => {
@@ -381,10 +381,10 @@ describe('lang', () => {
 
   it('supports is null/is not null', () => {
     expect('from users select name where email is null')
-      .toRenderSql('select base."name" as "name" from users as base where base."email" is null')
+      .toRenderSql('select users."name" as "name" from users as users where users."email" is null')
 
     expect('from users select name where email is not null')
-      .toRenderSql('select base."name" as "name" from users as base where base."email" is not null')
+      .toRenderSql('select users."name" as "name" from users as users where users."email" is not null')
   })
 
   it('parses offset but reports diagnostic', () => {
@@ -394,19 +394,19 @@ describe('lang', () => {
 
   it('supports in expressions', () => {
     expect("from users select id where name in ('Alice','Bob')")
-      .toRenderSql('select base."id" as "id" from users as base where base."name" in (\'Alice\',\'Bob\')')
+      .toRenderSql('select users."id" as "id" from users as users where users."name" in (\'Alice\',\'Bob\')')
     expect("from users select id where name not in ('Alice','Bob')")
-      .toRenderSql('select base."id" as "id" from users as base where base."name" not in (\'Alice\',\'Bob\')')
+      .toRenderSql('select users."id" as "id" from users as users where users."name" not in (\'Alice\',\'Bob\')')
   })
 
   it('supports case expressions', () => {
     expect("from users select case when age > 35 then 'old' else 'young' end as bucket")
-      .toRenderSql("select case when (base.\"age\">35) then 'old' else 'young' end as \"bucket\" from users as base")
+      .toRenderSql("select case when (users.\"age\">35) then 'old' else 'young' end as \"bucket\" from users as users")
   })
 
   it('propagates isAgg through case expressions for GROUP BY', () => {
     expect("from users select name, case when count() > 2 then 'many' else 'few' end as bucket")
-      .toRenderSql("select base.\"name\" as \"name\", case WHEN (count(1)>2) THEN 'many' ELSE 'few' END as \"bucket\" from users as base group by 1 order by 2 desc nulls last")
+      .toRenderSql("select users.\"name\" as \"name\", case WHEN (count(1)>2) THEN 'many' ELSE 'few' END as \"bucket\" from users as users group by 1 order by 2 desc nulls last")
   })
 
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
@@ -499,27 +499,27 @@ describe('lang', () => {
   it('can create new tables from queries', () => {
     expect(`table completed_orders as (from orders where status = 'completed' select id)
       from completed_orders select id`)
-      .toRenderSql('with "completed_orders" as ( select base."id" as "id" from orders as base where base."status"=\'completed\' ) select base."id" as "id" from "completed_orders" as base')
+      .toRenderSql('with "completed_orders" as ( select orders."id" as "id" from orders as orders where orders."status"=\'completed\' ) select completed_orders."id" as "id" from "completed_orders" as completed_orders')
   })
 
   it('can correctly count through a join', () => {
     expect('from orders select count(users.id)')
-      .toRenderSql('select count(distinct users."id") as "col_0" from orders as base left join users as users on users."id"=base."user_id"')
+      .toRenderSql('select count(distinct users."id") as "col_0" from orders as orders left join users as users on users."id"=orders."user_id"')
   })
 
   it('handles min/max through a join', () => {
     expect('from orders select min(users.age)')
-      .toRenderSql('select min(users."age") as "col_0" from orders as base left join users as users on users."id"=base."user_id"')
+      .toRenderSql('select min(users."age") as "col_0" from orders as orders left join users as users on users."id"=orders."user_id"')
   })
 
   it('supports function calling', () => {
     expect('from users select coalesce(name, \'Unknown\') as name2')
-      .toRenderSql('select coalesce(base."name",\'Unknown\') as "name2" from users as base')
+      .toRenderSql('select coalesce(users."name",\'Unknown\') as "name2" from users as users')
   })
 
   it('supports agg function calling', () => {
     expect('from users select age, string_agg(name)')
-      .toRenderSql('select base."age" as "age", string_agg(base."name") as "col_1" from users as base group by 1 order by 2 desc nulls last')
+      .toRenderSql('select users."age" as "age", string_agg(users."name") as "col_1" from users as users group by 1 order by 2 desc nulls last')
   })
 
   it('rejects variadic functions called with 0 args', () => {
@@ -546,34 +546,34 @@ describe('lang', () => {
     // This test ensures generic return types with aggregate: true are properly marked as measures
     // When working correctly, it should generate SQL with group by (since it's an aggregate)
     expect('from users select name, any_value(age) as sample_age')
-      .toRenderSql('select base."name" as "name", any_value(base."age") as "sample_age" from users as base group by 1 order by 2 desc nulls last')
+      .toRenderSql('select users."name" as "name", any_value(users."age") as "sample_age" from users as users group by 1 order by 2 desc nulls last')
   })
 
   it.skip('supports malloy date functions', () => {
     expect('from users select name, month(created_at)')
-      .toRenderSql('select base."name" as "name", extract(month from base."created_at") as "col_1" from users as base')
+      .toRenderSql('select users."name" as "name", extract(month from users."created_at") as "col_1" from users as users')
   })
 
   it('allows queries with semicolons', () => {
     expect('table t (id int); select id, name from users;')
-      .toRenderSql('select base."id" as "id", base."name" as "name" from users as base')
+      .toRenderSql('select users."id" as "id", users."name" as "name" from users as users')
   })
 
   it('allows trailing commas in select/group/order/in lists and function args', () => {
     expect('select id, name, from users')
-      .toRenderSql('select base."id" as "id", base."name" as "name" from users as base')
+      .toRenderSql('select users."id" as "id", users."name" as "name" from users as users')
 
     expect('from users select count() group by name,')
-      .toRenderSql('select base."name" as "name", count(1) as "col_0" from users as base group by 1 order by 2 desc nulls last')
+      .toRenderSql('select users."name" as "name", count(1) as "col_0" from users as users group by 1 order by 2 desc nulls last')
 
     expect('from users select name order by name asc,')
-      .toRenderSql('select base."name" as "name" from users as base order by 1 asc nulls last')
+      .toRenderSql('select users."name" as "name" from users as users order by 1 asc nulls last')
 
     expect("from users select id where name in ('Alice','Bob',)")
-      .toRenderSql('select base."id" as "id" from users as base where base."name" in (\'Alice\',\'Bob\')')
+      .toRenderSql('select users."id" as "id" from users as users where users."name" in (\'Alice\',\'Bob\')')
 
     expect("from users select coalesce(name, 'Unknown',) as name2")
-      .toRenderSql("select coalesce(base.\"name\",'Unknown') as \"name2\" from users as base")
+      .toRenderSql("select coalesce(users.\"name\",'Unknown') as \"name2\" from users as users")
   })
 
   it('allows optional commas between table items and semicolon terminators', () => {
@@ -582,40 +582,40 @@ describe('lang', () => {
       name text
     );
     from t select id, name`)
-      .toRenderSql('select base."id" as "id", base."name" as "name" from t as base')
+      .toRenderSql('select t."id" as "id", t."name" as "name" from t as t')
 
     expect(`table completed_ids as (from users select id,) ;
       from completed_ids select id`)
-      .toRenderSql('with "completed_ids" as ( select base."id" as "id" from users as base ) select base."id" as "id" from "completed_ids" as base')
+      .toRenderSql('with "completed_ids" as ( select users."id" as "id" from users as users ) select completed_ids."id" as "id" from "completed_ids" as completed_ids')
   })
 
   it('supports count_if (function we added)', () => {
     expect('from orders select count_if(amount > 100)')
-      .toRenderSql('select count_if(base."amount">100) as "col_0" from orders as base')
+      .toRenderSql('select count_if(orders."amount">100) as "col_0" from orders as orders')
   })
 
   it('supports count_if alias for countif on BigQuery', () => {
     setConfig({root: '', bigquery: {}})
     expect('from orders select count_if(amount > 100)')
-      .toRenderSql('select countif(base.`amount`>100) as `col_0` from `orders` as base')
+      .toRenderSql('select countif(orders.`amount`>100) as `col_0` from `orders` as orders')
   })
 
   it('supports BigQuery math functions', () => {
     setConfig({root: '', bigquery: {}})
     expect('from orders select abs(amount), sqrt(amount), round(amount, 2)')
-      .toRenderSql('select abs(base.`amount`) as `col_0`, sqrt(base.`amount`) as `col_1`, round(base.`amount`,2) as `col_2` from `orders` as base')
+      .toRenderSql('select abs(orders.`amount`) as `col_0`, sqrt(orders.`amount`) as `col_1`, round(orders.`amount`,2) as `col_2` from `orders` as orders')
   })
 
   it('supports BigQuery string functions', () => {
     setConfig({root: '', bigquery: {}})
     expect('from users select lower(name), upper(name), length(name)')
-      .toRenderSql('select lower(base.`name`) as `col_0`, upper(base.`name`) as `col_1`, length(base.`name`) as `col_2` from `users` as base')
+      .toRenderSql('select lower(users.`name`) as `col_0`, upper(users.`name`) as `col_1`, length(users.`name`) as `col_2` from `users` as users')
   })
 
   it('supports functions with keyword args', () => {
     setConfig({root: '', bigquery: {}})
     expect('from users select timestamp_diff(created_at, created_at, day)')
-      .toRenderSql('select timestamp_diff(base.`created_at`,base.`created_at`,day) as `col_0` from `users` as base')
+      .toRenderSql('select timestamp_diff(users.`created_at`,users.`created_at`,day) as `col_0` from `users` as users')
   })
 
   it('treats date part keywords as literals only when allowed', () => {
@@ -623,40 +623,40 @@ describe('lang', () => {
     updateFile('table calendar (created_at timestamp, day text, week text)', 'calendar.gsql')
 
     expect('from calendar select week')
-      .toRenderSql('select base.`week` as `week` from `calendar` as base')
+      .toRenderSql('select calendar.`week` as `week` from `calendar` as calendar')
 
     expect('from calendar select timestamp_diff(created_at, created_at, week)')
-      .toRenderSql('select timestamp_diff(base.`created_at`,base.`created_at`,week) as `col_0` from `calendar` as base')
+      .toRenderSql('select timestamp_diff(calendar.`created_at`,calendar.`created_at`,week) as `col_0` from `calendar` as calendar')
 
     expect('from calendar select date_trunc(created_at, week)')
-      .toRenderSql('select date_trunc(base.`created_at`,week) as `col_0` from `calendar` as base')
+      .toRenderSql('select date_trunc(calendar.`created_at`,week) as `col_0` from `calendar` as calendar')
   })
 
   it('supports date_trunc on date columns (as opposed to timestamp)', () => {
     setConfig({root: '', bigquery: {}})
     updateFile('table events (event_date date)', 'events.gsql')
     expect('from events select date_trunc(event_date, month)')
-      .toRenderSql('select date_trunc(base.`event_date`,month) as `col_0` from `events` as base')
+      .toRenderSql('select date_trunc(events.`event_date`,month) as `col_0` from `events` as events')
   })
 
   it('supports extract expressions', () => {
     expect('from users select extract(hour from created_at)')
-      .toRenderSql('select extract(hour from base."created_at") as "col_0" from users as base')
+      .toRenderSql('select extract(hour from users."created_at") as "col_0" from users as users')
   })
 
   it('supports null and boolean literals', () => {
     expect('from users select name, null, true, FALSE')
-      .toRenderSql('select base."name" as "name", null as "col_1", true as "col_2", false as "col_3" from users as base')
+      .toRenderSql('select users."name" as "name", null as "col_1", true as "col_2", false as "col_3" from users as users')
   })
 
   it('coerces string literals to timestamps in comparisons', () => {
     expect("from users select id where created_at >= '2024-01-01'")
-      .toRenderSql("select base.\"id\" as \"id\" from users as base where base.\"created_at\">=TIMESTAMP '2024-01-01 00:00:00'")
+      .toRenderSql("select users.\"id\" as \"id\" from users as users where users.\"created_at\">=TIMESTAMP '2024-01-01 00:00:00'")
   })
 
   it('coerces string literals to timestamps in IN lists', () => {
     expect("from users select id where created_at in ('2024-01-01','2024-01-02')")
-      .toRenderSql("select base.\"id\" as \"id\" from users as base where base.\"created_at\" in (TIMESTAMP '2024-01-01 00:00:00',TIMESTAMP '2024-01-02 00:00:00')")
+      .toRenderSql("select users.\"id\" as \"id\" from users as users where users.\"created_at\" in (TIMESTAMP '2024-01-01 00:00:00',TIMESTAMP '2024-01-02 00:00:00')")
   })
 
   it('diagnoses string used where interval expected', () => {
@@ -678,34 +678,34 @@ describe('lang', () => {
 
   it('supports interval keyword with quoted string', () => {
     expect("from users select created_at + interval '5 minutes' as shifted")
-      .toRenderSql('select base."created_at" + INTERVAL 5 minute as "shifted" from users as base')
+      .toRenderSql('select users."created_at" + INTERVAL 5 minute as "shifted" from users as users')
   })
 
   it('supports interval keyword with unquoted number and unit', () => {
     expect('from users select created_at + interval 5 minutes as shifted')
-      .toRenderSql('select base."created_at" + INTERVAL 5 minute as "shifted" from users as base')
+      .toRenderSql('select users."created_at" + INTERVAL 5 minute as "shifted" from users as users')
   })
 
   it('supports date keyword', () => {
     expect('from users select date \'2024-01-01\' as d')
-      .toRenderSql('select DATE \'2024-01-01\' as "d" from users as base')
+      .toRenderSql('select DATE \'2024-01-01\' as "d" from users as users')
   })
 
   it('allows temporal keywords as column names', () => {
     // Columns can be named 'date' or 'timestamp' even though these are also keywords for literals
     updateFile('table foo (id VARCHAR, date DATE, timestamp TIMESTAMP)', 'foo.gsql')
     expect('from foo select id')
-      .toRenderSql('select base."id" as "id" from foo as base')
+      .toRenderSql('select foo."id" as "id" from foo as foo')
   })
 
   it('supports timestamp keyword', () => {
     expect('from users select id where created_at >= timestamp \'2024-01-01 12:00:00\'')
-      .toRenderSql('select base."id" as "id" from users as base where base."created_at">=TIMESTAMP \'2024-01-01 12:00:00\'')
+      .toRenderSql('select users."id" as "id" from users as users where users."created_at">=TIMESTAMP \'2024-01-01 12:00:00\'')
   })
 
   it('supports ::DATE cast syntax', () => {
     expect('from users select \'2024-01-01\'::DATE as d')
-      .toRenderSql('select CAST(\'2024-01-01\' AS DATE) as "d" from users as base')
+      .toRenderSql('select CAST(\'2024-01-01\' AS DATE) as "d" from users as users')
   })
 
   it('diagnoses invalid date literal in date keyword', () => {
@@ -733,7 +733,7 @@ describe('lang', () => {
 
   it('allows join expressions to refer to the alias', () => {
     expect('table t (oid int, join one users as usr on usr.id = oid); from t select usr.name')
-      .toRenderSql('select usr."name" as "usr_name" from t as base left join users as usr on usr."id"=base."oid"')
+      .toRenderSql('select usr."name" as "usr_name" from t as t left join users as usr on usr."id"=t."oid"')
   })
 
   it('allows measures to refer to themselves', () => {
@@ -744,7 +744,7 @@ describe('lang', () => {
     let queries = analyze(`${testTables}
       from users select id where name = $name
     `)
-    expect(toSql(queries[0], {name: 'Alice'})).toMatch(/WHERE base\."name"='Alice'/)
+    expect(toSql(queries[0], {name: 'Alice'})).toMatch(/WHERE users\."name"='Alice'/)
   })
 
   it('does not treat $word inside single-quoted strings as params', () => {
@@ -771,7 +771,7 @@ describe('lang', () => {
         current_timestamp(),
         current_timestamp(3),
         local_timestamp()
-    `).toRenderSql('select current_date() as "col_0", current_time() as "col_1", current_timestamp() as "col_2", current_timestamp(3) as "col_3", localtimestamp() as "col_4" from users as base')
+    `).toRenderSql('select current_date() as "col_0", current_time() as "col_1", current_timestamp() as "col_2", current_timestamp(3) as "col_3", localtimestamp() as "col_4" from users as users')
   })
 
   it('supports bigquery current datetime functions with optional args', () => {
@@ -788,7 +788,7 @@ describe('lang', () => {
           local_timestamp(),
           current_datetime(),
           current_datetime('UTC')
-      `).toRenderSql("select current_date() as `col_0`, current_date('America/Los_Angeles') as `col_1`, current_time() as `col_2`, current_time('UTC') as `col_3`, current_timestamp() as `col_4`, current_timestamp('America/Los_Angeles') as `col_5`, current_datetime() as `col_6`, current_datetime() as `col_7`, current_datetime('UTC') as `col_8` from `users` as base")
+      `).toRenderSql("select current_date() as `col_0`, current_date('America/Los_Angeles') as `col_1`, current_time() as `col_2`, current_time('UTC') as `col_3`, current_timestamp() as `col_4`, current_timestamp('America/Los_Angeles') as `col_5`, current_datetime() as `col_6`, current_datetime() as `col_7`, current_datetime('UTC') as `col_8` from `users` as users")
     } finally {
       setConfig({root: ''})
     }
@@ -799,7 +799,7 @@ describe('lang', () => {
       table active_users as (from users select id where age > $minAge)
       from active_users select id
     `)
-    expect(toSql(queries[0], {minAge: 20})).toMatch(/WHERE base\."age">20/)
+    expect(toSql(queries[0], {minAge: 20})).toMatch(/WHERE users\."age">20/)
   })
 
   it.skip('supports array parameters in filters', () => {
@@ -812,7 +812,7 @@ describe('lang', () => {
 
   it('assumes * when no fields are selected', () => {
     expect('from users')
-      .toRenderSql('select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base')
+      .toRenderSql('select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age" from users as users')
   })
 
   it('can analyze markdown files', () => {
@@ -821,7 +821,7 @@ describe('lang', () => {
         from users where age > 20
       \`\`\`
       <BarChart data="test" x="name" y="avg(age)" />
-    `).toRenderSql('with "test" as ( select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base where base."age">20 ) select base."name" as "name", avg(base."age") as "col_1" from "test" as base group by 1 order by 2 desc nulls last')
+    `).toRenderSql('with "test" as ( select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age" from users as users where users."age">20 ) select test."name" as "name", avg(test."age") as "col_1" from "test" as test group by 1 order by 2 desc nulls last')
   })
 
   it('snowflake query_source (CTE) aliases match references', () => {
@@ -836,7 +836,7 @@ describe('lang', () => {
         from users select count() as num
       \`\`\`
       <BigValue data="test" value="num" />
-    `).toRenderSql('WITH "test" as ( SELECT count(1) as "num" FROM USERS as base ) SELECT base."num" as "num" FROM "test" as base')
+    `).toRenderSql('WITH "test" as ( SELECT count(1) as "num" from USERS as USERS ) SELECT test."num" as "num" from "test" as test')
   })
 
   it('reports the right line/col number for markdown errors', () => {
@@ -868,7 +868,7 @@ describe('lang', () => {
         from users where age > 20
       \`\`\`
       <BarChart data="test" x="name" y="avg(age)" title="Count > 0" />
-    `).toRenderSql('with "test" as ( select base."id" as "id", base."name" as "name", base."email" as "email", base."created_at" as "created_at", base."age" as "age" from users as base where base."age">20 ) select base."name" as "name", avg(base."age") as "col_1" from "test" as base group by 1 order by 2 desc nulls last')
+    `).toRenderSql('with "test" as ( select users."id" as "id", users."name" as "name", users."email" as "email", users."created_at" as "created_at", users."age" as "age" from users as users where users."age">20 ) select test."name" as "name", avg(test."age") as "col_1" from "test" as test group by 1 order by 2 desc nulls last')
   })
 
   it('handles params in a md code fence', () => {
@@ -894,8 +894,8 @@ describe('lang', () => {
         join one alpha on alpha.id = alpha_id
       )
     `, 'cycle.gsql')
-    expect('from alpha select count(*)').toRenderSql('select count(1) as "col_0" from alpha as base')
-    expect('from alpha select avg_num').toRenderSql('select (avg(beta."num")) as "avg_num" from alpha as base left join beta as beta on beta."alpha_id"=base."id"')
+    expect('from alpha select count(*)').toRenderSql('select count(1) as "col_0" from alpha as alpha')
+    expect('from alpha select avg_num').toRenderSql('select (avg(beta."num")) as "avg_num" from alpha as alpha left join beta as beta on beta."alpha_id"=alpha."id"')
     // expect('from beta select alpha.avg_num').toRenderSql('')
   })
 
@@ -910,7 +910,7 @@ describe('lang', () => {
     `, 'models.gsql')
 
     expect('from users select name where is_adult')
-      .toRenderSql('select base."name" as "name" from users as base where (base."age">=18)')
+      .toRenderSql('select users."name" as "name" from users as users where (users."age">=18)')
   })
 
   it('has correct precedence between binary and logic expressions', () => {
@@ -945,21 +945,21 @@ describe('lang', () => {
     // BigQuery uses a different dialect than the StandardSQL that many use in Malloy. Ensure that we're loading standard fns into bigquery
     setConfig({root: '', bigquery: {}})
     expect('from users select floor(age) as floored_age')
-      .toRenderSql('select floor(base.`age`) as `floored_age` from `users` as base')
+      .toRenderSql('select floor(users.`age`) as `floored_age` from `users` as users')
   })
 
   it('supports cast() expressions', () => {
     expect('from users select cast(age as varchar)')
-      .toRenderSql('select CAST(base."age" AS VARCHAR) as "col_0" from users as base')
+      .toRenderSql('select CAST(users."age" AS VARCHAR) as "col_0" from users as users')
     expect('from users select cast(age as float64)')
-      .toRenderSql('select CAST(base."age" AS FLOAT64) as "col_0" from users as base')
+      .toRenderSql('select CAST(users."age" AS FLOAT64) as "col_0" from users as users')
   })
 
   it('supports :: cast syntax', () => {
     expect('from users select age::VARCHAR')
-      .toRenderSql('select CAST(base."age" AS VARCHAR) as "col_0" from users as base')
+      .toRenderSql('select CAST(users."age" AS VARCHAR) as "col_0" from users as users')
     expect('from users select name::int')
-      .toRenderSql('select CAST(base."name" AS INT) as "col_0" from users as base')
+      .toRenderSql('select CAST(users."name" AS INT) as "col_0" from users as users')
   })
 
   it('reports diagnostic for invalid cast type', () => {
@@ -968,7 +968,7 @@ describe('lang', () => {
 
   it('supports cast in expressions', () => {
     expect('from users select cast(age as varchar) = name')
-      .toRenderSql('select CAST(base."age" AS VARCHAR)=base."name" as "col_0" from users as base')
+      .toRenderSql('select CAST(users."age" AS VARCHAR)=users."name" as "col_0" from users as users')
   })
 
   it('ignores comments within table definitions', () => {
@@ -978,7 +978,7 @@ describe('lang', () => {
       computed: id / 2
       -- this is a comment
       name STRING
-    ); from test select id`).toRenderSql('select base."id" as "id" from test as base')
+    ); from test select id`).toRenderSql('select test."id" as "id" from test as test')
   })
 
   it('single join_many aggregate is fine, join_one is fine', () => {
@@ -1012,7 +1012,7 @@ describe('lang', () => {
     `, 'chain.gsql')
 
     expect('from orders select user_country')
-      .toRenderSql('select (users_countries."name") as "user_country" from orders as base left join users as users on users."id"=base."user_id" left join countries as users_countries on users_countries."id"=users."country_id"')
+      .toRenderSql('select (users_countries."name") as "user_country" from orders as orders left join users as users on users."id"=orders."user_id" left join countries as users_countries on users_countries."id"=users."country_id"')
   })
 
   // When the same table is joined multiple times with different aliases, each reference
@@ -1030,7 +1030,7 @@ describe('lang', () => {
     `, 'multi_join.gsql')
 
     expect('from users select recent_orders.discounted, old_orders.discounted')
-      .toRenderSql('select (recent_orders."amount"*0.9) as "recent_orders_discounted", (old_orders."amount"*0.9) as "old_orders_discounted" from users as base left join orders as recent_orders on recent_orders."user_id"=base."id" left join orders as old_orders on old_orders."user_id"=base."id"')
+      .toRenderSql('select (recent_orders."amount"*0.9) as "recent_orders_discounted", (old_orders."amount"*0.9) as "old_orders_discounted" from users as users left join orders as recent_orders on recent_orders."user_id"=users."id" left join orders as old_orders on old_orders."user_id"=users."id"')
   })
 
   it('supports CTEs', async () => {
@@ -1038,14 +1038,14 @@ describe('lang', () => {
       high_value as (from orders where amount >= 40 select id, user_id, amount),
       hv_users as (from high_value select user_id)
       from hv_users select user_id order by user_id`
-    expect(q).toRenderSql('with "high_value" as ( select base."id" as "id", base."user_id" as "user_id", base."amount" as "amount" from orders as base where base."amount">=40 ), "hv_users" as ( select base."user_id" as "user_id" from high_value as base ) select base."user_id" as "user_id" from hv_users as base order by 1 asc nulls last')
+    expect(q).toRenderSql('with "high_value" as ( select orders."id" as "id", orders."user_id" as "user_id", orders."amount" as "amount" from orders as orders where orders."amount">=40 ), "hv_users" as ( select high_value."user_id" as "user_id" from high_value as high_value ) select hv_users."user_id" as "user_id" from hv_users as hv_users order by 1 asc nulls last')
     await expect(q).toReturnRows([1], [2])
   })
 
   it('CTE shadows existing table names', () => {
     // CTE named "orders" should shadow the real orders table
     expect('with orders as (from users select id, name) from orders select id, name order by id')
-      .toRenderSql('with "orders" as ( select base."id" as "id", base."name" as "name" from users as base ) select base."id" as "id", base."name" as "name" from orders as base order by 1 asc nulls last')
+      .toRenderSql('with "orders" as ( select users."id" as "id", users."name" as "name" from users as users ) select orders."id" as "id", orders."name" as "name" from orders as orders order by 1 asc nulls last')
   })
 
   it('supports nested CTEs referencing earlier siblings', () => {
@@ -1054,8 +1054,8 @@ describe('lang', () => {
       completed as (from orders where status = 'completed' select user_id, amount),
       summary as (with totals as (from completed select user_id, sum(amount) as total) from totals select user_id, total)
       from summary select user_id, total order by user_id`)
-      .toRenderSql(`with "completed" as ( select base."user_id" as "user_id", base."amount" as "amount" from orders as base where base."status"='completed' ),
-        "summary" as ( with "totals" as ( select base."user_id" as "user_id", sum(base."amount") as "total" from completed as base group by 1 order by 2 desc nulls last ) select base."user_id" as "user_id", base."total" as "total" from totals as base )
-        select base."user_id" as "user_id", base."total" as "total" from summary as base order by 1 asc nulls last`)
+      .toRenderSql(`with "completed" as ( select orders."user_id" as "user_id", orders."amount" as "amount" from orders as orders where orders."status"='completed' ),
+        "summary" as ( with "totals" as ( select completed."user_id" as "user_id", sum(completed."amount") as "total" from completed as completed group by 1 order by 2 desc nulls last ) select totals."user_id" as "user_id", totals."total" as "total" from totals as totals )
+        select summary."user_id" as "user_id", summary."total" as "total" from summary as summary order by 1 asc nulls last`)
   })
 })
