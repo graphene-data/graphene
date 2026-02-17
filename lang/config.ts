@@ -4,7 +4,7 @@ import path from 'path'
 export interface Config {
   root: string
   dialect: string
-  namespace?: string
+  defaultNamespace?: string
   ignoredFiles: string[]
   port?: number
   host?: string
@@ -29,12 +29,14 @@ export interface Config {
 export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> & {
   dialect?: Config['dialect'],
   ignoredFiles?: Config['ignoredFiles'],
-  envFile?: string | string[]
+  envFile?: string | string[],
+  namespace?: string
 }
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
 export function setConfig (cfg: ConfigInput) {
+  if (cfg.namespace && !cfg.defaultNamespace) cfg.defaultNamespace = cfg.namespace
   let dialect = cfg.dialect || 'duckdb'
   if (cfg.bigquery) dialect = 'bigquery'
   else if (cfg.snowflake) dialect = 'snowflake'

@@ -17,7 +17,7 @@ export class BigQueryConnection implements QueryConnection {
     if (!options.projectId) throw new Error('projectId must be set in config or provided in service account credentials')
     this.projectId = options.projectId
     this.client = new BigQuery({...options, userAgent: 'Graphene'})
-    this.defaultNamespace = config.namespace
+    this.defaultNamespace = config.defaultNamespace
   }
 
   async runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {

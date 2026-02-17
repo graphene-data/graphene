@@ -18,7 +18,7 @@
     "svelte": "5.48.0"
   },
   "graphene": {
-    "namespace": "bigquery-public-data.thelook_ecommerce",
+    "defaultNamespace": "bigquery-public-data.thelook_ecommerce",
     "bigquery": {
       "projectId": "intense-acumen-470417-u5"
     },

@@ -39,7 +39,8 @@ export function findTables (fi: FileInfo) {
     })
     if (existing) diag(syntaxNode.getChild('Ref')!, `Table "${name}" is already defined`)
 
-    let tablePath = config.namespace ? `${config.namespace}.${name}` : name
+    let hasNamespace = name.includes('.')
+    let tablePath = !hasNamespace && config.defaultNamespace ? `${config.defaultNamespace}.${name}` : name
     let type = syntaxNode.getChild('QueryStatement') ? 'view' : 'table' as const
     let table = {name, type, tablePath, columns: [], joins: [], metadata: extractLeadingMetadata(syntaxNode), syntaxNode} as Table
 
