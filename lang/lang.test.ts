@@ -106,6 +106,17 @@ describe('lang', () => {
       .toRenderSql('SELECT USERS."id" as "id", orders."amount" as "amt" from USERS as USERS LEFT JOIN ORDERS as orders ON orders."user_id"=USERS."id" ORDER BY 2 desc NULLS LAST')
   })
 
+  it('applies defaultNamespace to unqualified table paths', () => {
+    setConfig({root: '', defaultNamespace: 'analytics'})
+    expect('from users select id').toRenderSql('select users."id" as "id" from analytics.users as users')
+  })
+
+  it('does not apply defaultNamespace to already-qualified table paths', () => {
+    setConfig({root: '', defaultNamespace: 'analytics'})
+    updateFile('table raw.users (id int)', 'namespaced.gsql')
+    expect('from raw.users select id').toRenderSql('select users."id" as "id" from raw.users as users')
+  })
+
   // Skipped: this test has issues with join chain resolution that are unrelated to uppercase handling
   // The SQL output doesn't match expectations for nested joins through snowflake tables
   it.skip('uppercases nested join chains and query_source views for snowflake tables', () => {
