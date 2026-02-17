@@ -29,8 +29,8 @@ export interface Filter {
 
 // Context for analyzing expressions - table/alias change as we traverse joins, but query is shared
 export interface Scope {
-  query: Query | null  // null when analyzing table definitions (not in a query context)
-  table: Table | null
+  query?: Query  // null when analyzing table definitions (not in a query context)
+  table?: Table
   alias: string  // current alias for this table context (e.g., "users", "orders", "users_orders")
   otherTables?: Table[]  // CTEs and other tables visible for name resolution
   joinTarget?: { name: string, table: Table, alias: string } // When analyzing a join's ON clause, tells us about the target table/alias.
@@ -86,7 +86,8 @@ interface TableBase {
 export interface PhysicalTable extends TableBase { type: 'table' }
 export interface ViewTable extends TableBase { type: 'view', query: Query }
 export interface CteTable extends TableBase { type: 'cte', query: Query }
-export type Table = PhysicalTable | ViewTable | CteTable
+export interface SubqueryTable extends TableBase { type: 'subquery', query: Query }
+export type Table = PhysicalTable | ViewTable | CteTable | SubqueryTable
 
 export interface Position {
   offset: number
