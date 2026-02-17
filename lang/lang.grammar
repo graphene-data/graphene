@@ -151,6 +151,7 @@ computedExpression[@isGroup=Expression] {
 // NB that we only need this as part of our support for the legacy `expr as alias` in `table` statements.
 compositeExpression<T> {
   TypeCastExpression<T> |
+  BetweenExpression<T> |
   BinaryExpression<T> |
   InExpression<T> |
   NullTestExpression<T> |
@@ -268,6 +269,11 @@ BinaryExpression<T> {
 InExpression<T> {
   compositeExpression<T> !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
   compositeExpression<T> !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
+}
+
+BetweenExpression<T> {
+  compositeExpression<T> !compare Kw<"between"> expression Kw<"and"> expression |
+  compositeExpression<T> !compare Kw<"not"> Kw<"between"> expression Kw<"and"> expression
 }
 
 NullTestExpression<T> {

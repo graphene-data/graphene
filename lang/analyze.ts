@@ -548,6 +548,23 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
       return {sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: 'boolean', isAgg: e.isAgg}
     }
 
+    case 'BetweenExpression': {
+      let kws = node.getChildren('Kw').map(n => txt(n).toLowerCase())
+      let not = kws[0] == 'not'
+      let e = analyzeExpr(node.firstChild!, scope)
+      let [lowNode, highNode] = node.getChildren('Expression').slice(-2)
+      let low = analyzeExpr(lowNode, scope)
+      let high = analyzeExpr(highNode, scope)
+
+      if (e.type == 'date' || e.type == 'timestamp') {
+        low = coerceToTemporal(low, e.type, lowNode)
+        high = coerceToTemporal(high, e.type, highNode)
+      }
+
+      let sql = `${e.sql} ${not ? 'NOT BETWEEN' : 'BETWEEN'} ${low.sql} AND ${high.sql}`
+      return {sql, type: 'boolean', isAgg: e.isAgg || low.isAgg || high.isAgg}
+    }
+
     case 'SubqueryExpression': {
       let subquery = analyzeQuery(node.getChild('QueryStatement')!, scope.otherTables)
       if (!subquery) return {sql: 'NULL', type: 'error'}

@@ -399,6 +399,13 @@ describe('lang', () => {
       .toRenderSql('select users."id" as "id" from users as users where users."name" not in (\'Alice\',\'Bob\')')
   })
 
+  it('supports between expressions', () => {
+    expect('from users select id where age between 18 and 30')
+      .toRenderSql('select users."id" as "id" from users as users where users."age" BETWEEN 18 AND 30')
+    expect('from users select id where age not between 18 and 30')
+      .toRenderSql('select users."id" as "id" from users as users where users."age" NOT BETWEEN 18 AND 30')
+  })
+
   it('supports case expressions', () => {
     expect("from users select case when age > 35 then 'old' else 'young' end as bucket")
       .toRenderSql("select case when (users.\"age\">35) then 'old' else 'young' end as \"bucket\" from users as users")
@@ -657,6 +664,11 @@ describe('lang', () => {
   it('coerces string literals to timestamps in IN lists', () => {
     expect("from users select id where created_at in ('2024-01-01','2024-01-02')")
       .toRenderSql("select users.\"id\" as \"id\" from users as users where users.\"created_at\" in (TIMESTAMP '2024-01-01 00:00:00',TIMESTAMP '2024-01-02 00:00:00')")
+  })
+
+  it('coerces string literals to timestamps in BETWEEN bounds', () => {
+    expect("from users select id where created_at between '2024-01-01' and '2024-01-31'")
+      .toRenderSql("select users.\"id\" as \"id\" from users as users where users.\"created_at\" BETWEEN TIMESTAMP '2024-01-01 00:00:00' AND TIMESTAMP '2024-01-31 00:00:00'")
   })
 
   it('diagnoses string used where interval expected', () => {
