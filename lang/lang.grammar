@@ -133,38 +133,36 @@ JoinCondition[@isGroup=Expression, @name=BinaryExpression] {
   Ref "=" Ref
 }
 
-// We use a parameterized compositeExpression to avoid duplication between 'expression' (which can start with anything)
+// We use a parameterized precedence ladder to avoid duplication between 'expression' (which can start with anything)
 // and 'computedExpression' (which cannot start with a parenthesis, to avoid ambiguity with the 'name: expr' syntax).
 expression[@isGroup=Expression] {
-  compositeExpression<baseExpression | parenExpression>
+  orTier<baseExpression | parenExpression>
 }
 
 // computedExpression is the restricted expression rule we use for `expr as alias` syntax.
 // Because we dont require commas, lezer can't tell if `count(x)` a function call, or `count` in one def, while `(x)` is the start of a new one.
 // The fix here is to disallow expressions that start with parentheses, which seems to fix the ambiguity.
 computedExpression[@isGroup=Expression] {
-  compositeExpression<baseExpression>
+  orTier<baseExpression>
 }
 
-// This is a workaround to get precedence working properly. Without it, BinaryExpression (for example) would interpret `A = B or C` as `A = (B or C)`
-// It seems like having an explicit rule works better than just using the generic T in such cases.
-// NB that we only need this as part of our support for the legacy `expr as alias` in `table` statements.
-compositeExpression<T> {
-  TypeCastExpression<T> |
-  BetweenExpression<T> |
-  BinaryExpression<T> |
-  InExpression<T> |
-  NullTestExpression<T> |
-  T
-}
+// Expression precedence ladder: each tier either parses its own operator or falls through to the next tighter tier.
+// This lets us handle precedence at the parsing layer.
+orTier<T> { OrExpression<T> | andTier<T> }
+andTier<T> { AndExpression<T> | compareTier<T> }
+compareTier<T> { BetweenExpression<T> | InExpression<T> | NullTestExpression<T> | ComparisonExpression<T> | addTier<T> }
+addTier<T> { AddExpression<T> | multiplyTier<T> }
+multiplyTier<T> { MultiplyExpression<T> | unaryTier<T> }
+unaryTier<T> { UnaryExpression<T> | castTier<T> }
+castTier<T> { TypeCastExpression<T> | T }
 
 // Casting: supports both CAST(x AS type) and x::type syntaxes
 CastExpression {
   Kw<"cast"> "(" expression Kw<"as"> CastType ")"
 }
 
-TypeCastExpression<T> {
-  compositeExpression<T> !cast "::" CastType
+TypeCastExpression[@isGroup=Expression]<T> {
+  castTier<T> !cast "::" CastType
 }
 
 // Allow temporal keywords as cast targets (date, timestamp, interval are valid SQL types)
@@ -174,7 +172,6 @@ CastType {
 
 // baseExpression includes all expression starts that are NOT parentheses.
 baseExpression {
-  UnaryExpression |
   CaseExpression |
   ExistsExpression |
   computedPrimary |
@@ -211,8 +208,8 @@ parenExpression {
   SubqueryExpression
 }
 
-UnaryExpression {
-  UnaryOperator !unary expression
+UnaryExpression[@isGroup=Expression]<T> {
+  UnaryOperator !unary unaryTier<T>
 }
 
 ComparisonOp {
@@ -258,26 +255,38 @@ InValueList {
   binary @cut
 }
 
-BinaryExpression<T> {
-  compositeExpression<T> !or Kw<"or"> expression |
-  compositeExpression<T> !and Kw<"and"> expression |
-  compositeExpression<T> !compare ComparisonOp expression |
-  compositeExpression<T> !add AddOp expression |
-  compositeExpression<T> !multiply MulOp expression
+OrExpression[@isGroup=Expression]<T> {
+  orTier<T> !or Kw<"or"> andTier<T>
 }
 
-InExpression<T> {
-  compositeExpression<T> !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
-  compositeExpression<T> !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
+AndExpression[@isGroup=Expression]<T> {
+  andTier<T> !and Kw<"and"> compareTier<T>
 }
 
-BetweenExpression<T> {
-  compositeExpression<T> !compare Kw<"between"> expression Kw<"and"> expression |
-  compositeExpression<T> !compare Kw<"not"> Kw<"between"> expression Kw<"and"> expression
+ComparisonExpression[@isGroup=Expression]<T> {
+  addTier<T> !compare ComparisonOp addTier<T>
 }
 
-NullTestExpression<T> {
-  compositeExpression<T> !compare Kw<"is"> Kw<"not">? Kw<"null">
+AddExpression[@isGroup=Expression]<T> {
+  addTier<T> !add AddOp multiplyTier<T>
+}
+
+MultiplyExpression[@isGroup=Expression]<T> {
+  multiplyTier<T> !multiply MulOp unaryTier<T>
+}
+
+InExpression[@isGroup=Expression]<T> {
+  addTier<T> !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
+  addTier<T> !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
+}
+
+BetweenExpression[@isGroup=Expression]<T> {
+  addTier<T> !compare Kw<"between"> addTier<T> Kw<"and"> addTier<T> |
+  addTier<T> !compare Kw<"not"> Kw<"between"> addTier<T> Kw<"and"> addTier<T>
+}
+
+NullTestExpression[@isGroup=Expression]<T> {
+  addTier<T> !compare Kw<"is"> Kw<"not">? Kw<"null">
 }
 
 computedPrimary {

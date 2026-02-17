@@ -433,7 +433,12 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
       return {sql: 'count(1)', type: 'number', isAgg: true}
     }
 
-    case 'BinaryExpression': {
+    case 'BinaryExpression':
+    case 'OrExpression':
+    case 'AndExpression':
+    case 'ComparisonExpression':
+    case 'AddExpression':
+    case 'MultiplyExpression': {
       let left = analyzeExpr(node.firstChild!, scope)
       let right = analyzeExpr(node.lastChild!, scope)
       let op = txt(node.firstChild?.nextSibling).toLowerCase()
@@ -549,12 +554,9 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
     }
 
     case 'BetweenExpression': {
-      let kws = node.getChildren('Kw').map(n => txt(n).toLowerCase())
-      let not = kws[0] == 'not'
-      let e = analyzeExpr(node.firstChild!, scope)
-      let [lowNode, highNode] = node.getChildren('Expression').slice(-2)
-      let low = analyzeExpr(lowNode, scope)
-      let high = analyzeExpr(highNode, scope)
+      let not = !!node.getChildren('Kw').map(n => txt(n).toLowerCase()).find(k => k == 'not')
+      let [eNode, lowNode, highNode] = node.getChildren('Expression')
+      let [e, low, high] = [eNode, lowNode, highNode].map(n => analyzeExpr(n, scope))
 
       if (e.type == 'date' || e.type == 'timestamp') {
         low = coerceToTemporal(low, e.type, lowNode)
