@@ -1033,6 +1033,28 @@ describe('lang', () => {
       .toRenderSql('select (recent_orders."amount"*0.9) as "recent_orders_discounted", (old_orders."amount"*0.9) as "old_orders_discounted" from users as users left join orders as recent_orders on recent_orders."user_id"=users."id" left join orders as old_orders on old_orders."user_id"=users."id"')
   })
 
+  it('supports subqueries in FROM', () => {
+    expect('from (from users where age > 20 select id, name) as adults select name')
+      .toRenderSql('select adults."name" as "name" from ( select users."id" as "id", users."name" as "name" from users as users where users."age">20 ) as adults')
+  })
+
+  it('supports subqueries in JOIN', () => {
+    expect(`from users
+      join (from orders select user_id, sum(amount) as total group by user_id) as order_totals on order_totals.user_id = users.id
+      select users.name as name, order_totals.total as total`)
+      .toRenderSql('select users."name" as "name", order_totals."total" as "total" from users as users inner join ( select orders."user_id" as "user_id", sum(orders."amount") as "total" from orders as orders group by 1 order by 2 desc nulls last ) as order_totals on order_totals."user_id"=users."id"')
+  })
+
+  it('supports subqueries in IN expressions', () => {
+    expect('from users where id in (from orders where amount > 10 select user_id) select id')
+      .toRenderSql('select users."id" as "id" from users as users where users."id" in (select orders."user_id" as "user_id" from orders as orders where orders."amount">10)')
+  })
+
+  it('supports scalar subquery expressions in WHERE', () => {
+    expect('from users where age > (from users select avg(age)) select id')
+      .toRenderSql('select users."id" as "id" from users as users where users."age">(select avg(users."age") as "col_0" from users as users)')
+  })
+
   it('supports CTEs', async () => {
     let q = `with
       high_value as (from orders where amount >= 40 select id, user_id, amount),

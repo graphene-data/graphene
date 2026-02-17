@@ -54,9 +54,8 @@ export function findTables (fi: FileInfo) {
 // `extend` blocks add columns and joins to existing tables
 export function applyExtends (fi: FileInfo) {
   fi.tree!.topNode.getChildren('ExtendStatement').forEach(node => {
-    let tableName = txt(node.getChild('Ref'))
-    let target = lookupTable(tableName, node)
-    if (!target) return diag(node.getChild('Ref') || node, `Cannot extend unknown table "${tableName}"`)
+    let target = lookupTable(node.getChild('Ref')!)
+    if (!target) return
     node.getChildren('JoinDef').forEach(jn => addJoin(target, jn))
     node.getChildren('ComputedDef').forEach(cn => addComputedColumn(target, cn))
   })
@@ -114,13 +113,13 @@ function analyzeView (table: Table) {
 // Analyze everything in a table - used for full project analysis (e.g., `check` command)
 export function analyzeTableFully (table: Table) {
   if (table.type == 'view') analyzeView(table)
-  let scope: Scope = {query: null, table, alias: table.name}
+  let scope: Scope = {table, alias: table.name}
   table.columns.forEach(c => {
     if (!c.exprNode) return
     let expr = analyzeExpr(c.exprNode, scope)
     c.isAgg = expr.isAgg
   })
-  table.joins.forEach(j => analyzeJoin(j))
+  table.joins.forEach(j => j.table = lookupTable(j.targetNode!))
 }
 
 // Expand non-aggregate columns into query fields.
@@ -140,7 +139,7 @@ function expandColumns (table: Table | null, alias: string, query: Query, scope:
     let outName = namePrefix ? `${namePrefix}_${col.name}` : col.name
     if (col.exprNode) {
       // Determine if aggregate (without query context to avoid side-effect diagnostics), then skip measures
-      if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {query: null, table, alias}).isAgg
+      if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {table, alias}).isAgg
       if (col.isAgg) continue
       let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables})
       query.fields.push({name: outName, sql: expr.sql, type: expr.type, metadata: col.metadata})
@@ -150,19 +149,11 @@ function expandColumns (table: Table | null, alias: string, query: Query, scope:
   }
 }
 
-// Validate join target exists and analyze if it's a view
-function analyzeJoin (join: QueryJoin) {
-  if (!join.targetTable || !join.targetNode) return
-  join.table = lookupTable(join.targetTable, join.targetNode)
-  if (!join.table) return diag(join.targetNode, `Unknown table "${join.targetTable}"`)
-  analyzeView(join.table)
-}
-
 // Main query analysis - analyzes and returns a Query with computed SQL
 export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
   let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: [], isAggregate: false}
   let ctes = new Map<string, CteTable>()
-  let scope: Scope = {query, table: null, alias: '', otherTables: outerCtes || []}
+  let scope: Scope = {query, alias: '', otherTables: outerCtes || []}
   let isAgg = false
 
   // WITH clause - analyze each CTE. Store them on Scope, as they're accessible to later CTEs, and valid tables for the query to from/join
@@ -177,56 +168,50 @@ export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query
     scope.otherTables!.push(cte)
   }
 
-  // FROM
+  // FROM / JOIN
+  // We represent both as `joins` on the query, since they're conceptually similar for most of analysis
   let fromClause = queryNode.getChild('FromClause')
-  let baseAlias = ''
-  let basePrimary = fromClause?.getChild('TablePrimary')
-  if (basePrimary) {
-    let baseRef = basePrimary.getChild('Ref')
-    if (!baseRef) return diag(basePrimary, 'Subqueries in FROM are not yet supported')
-    let baseTableName = txt(baseRef)
-    let baseTable = lookupTable(baseTableName, basePrimary, scope) || null
-    if (!baseTable) return diag(basePrimary, `Unknown table "${baseTableName}"`)
-    let defaultAlias = txt(baseRef.getChildren('Identifier').at(-1)) || baseTable.name.split('.').pop() || baseTable.name
-    baseAlias = txt(basePrimary.getChild('Alias')) || defaultAlias
-    query.joins.push({alias: baseAlias, source: 'from', table: baseTable, targetTable: baseTableName})
-    analyzeView(baseTable)
-    NODE_ENTITY_MAP.set(basePrimary, {entityType: 'table', table: baseTable})
-  }
+  let sources: SyntaxNode[] = fromClause ? [fromClause, ...fromClause.getChildren('JoinClause')] : []
+  for (let sourceNode of sources) {
+    let isJoin = sourceNode.name == 'JoinClause'
+    let tablePrimary = sourceNode.getChild('TablePrimary')
+    if (!tablePrimary) return diag(sourceNode, `Invalid ${isJoin ? 'JOIN' : 'FROM'} source`)
+    let alias = txt(tablePrimary.getChild('Alias'))
+    let table: Table | undefined
 
-  // JOIN clauses
-  let joinClauses = fromClause?.getChildren('JoinClause') || []
-  for (let joinNode of joinClauses) {
-    let targetNameNode = joinNode.getChild('TablePrimary')?.getChild('Ref')
-    let targetName = txt(targetNameNode)
-    let alias = txt(joinNode.getChild('TablePrimary')?.getChild('Alias')) || targetName
+    // This might be referring to a table by name
+    let refNode = tablePrimary.getChild('Ref') || undefined
+    if (refNode) {
+      table = lookupTable(refNode, scope)
+      if (!table) return
+      alias ||= txt(refNode.getChildren('Identifier').at(-1))
+    }
 
-    if (!targetNameNode) return diag(joinNode, 'Subqueries in JOIN are not yet supported')
-    let table = lookupTable(targetName, targetNameNode, scope)
-    if (!table) return diag(targetNameNode, `Unknown table "${targetName}"`)
-    analyzeView(table)
+    // or it could be a subquery
+    if (tablePrimary.getChild('SubqueryExpression')) {
+      let subquery = analyzeQuery(tablePrimary.getChild('SubqueryExpression')!.getChild('QueryStatement')!, scope.otherTables)
+      if (!subquery) return
+      let columns = subquery.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
+      table = {name: 'subquery', type: 'subquery', tablePath: alias, columns, joins: [], query: subquery}
+      alias ||= 'subquery'
+    }
 
-    if (query.joins.find(j => j.alias == alias)) return diag(joinNode, `Duplicate join alias "${alias}"`)
-
-    let joinType: JoinType = 'inner'
-    let firstKw = txt(joinNode.getChildren('Kw')[0]).toLowerCase()
+    let joinType: JoinType | undefined = isJoin ? 'inner' : undefined
+    let firstKw = txt(sourceNode.getChildren('Kw')[0]).toLowerCase()
     if (firstKw == 'left' || firstKw == 'right' || firstKw == 'full' || firstKw == 'cross') joinType = firstKw
 
-    // Add join to the query BEFORE analyzing it's onExpr, since the expr will reference that table/alias
-    let qj: QueryJoin = {alias, source: 'ad-hoc', targetTable: targetName, table, joinType}
+    // Now that we have all the bits, construct the join for it.
+    if (query.joins.find(j => j.alias == alias)) return diag(tablePrimary, `Query already has table called "${alias}"`)
+    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType}
     query.joins.push(qj)
-    NODE_ENTITY_MAP.set(targetNameNode, {entityType: 'table', table})
+    NODE_ENTITY_MAP.set(tablePrimary, {entityType: 'table', table})
 
-    let onExpr = joinNode.getChild('Expression')
-    if (joinType == 'cross' && onExpr) {
-      return diag(joinNode, 'CROSS JOIN cannot have an ON clause')
-    }
-    if (onExpr) {
-      let onScope: Scope = {query, table: null, alias: baseAlias, otherTables: scope.otherTables}
-      qj.onClause = analyzeExpr(onExpr, onScope).sql
-    } else if (joinType != 'cross') {
-      return diag(joinNode, `${joinType.toUpperCase()} JOIN requires an ON clause`)
-    }
+    // If this is a JOIN, analyze the ON expr
+    // It's important we do this _after_ adding the join to the query, since analyzing the expression looks at the query
+    let onExpr = sourceNode.getChild('Expression') || undefined
+    if (joinType == 'cross' && onExpr) return diag(sourceNode, 'CROSS JOIN cannot have an ON clause')
+    if (isJoin && !onExpr && joinType != 'cross') return diag(sourceNode, `${joinType!.toUpperCase()} JOIN requires an ON clause`)
+    qj.onClause = onExpr && analyzeExpr(onExpr, {query, alias: '', otherTables: scope.otherTables}).sql
   }
 
   // SELECT clause
@@ -342,6 +327,7 @@ function buildSql (query: Query, cteMap: Map<string, CteTable>): string {
       }
       return quote(table.name)
     }
+    if (table.type === 'subquery') return `( ${table.query.sql} )`
     return formatTablePath(table.tablePath)
   }
 
@@ -541,9 +527,15 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
       let not = txt(node.getChild('Kw')).toLowerCase() == 'not'
       let e = analyzeExpr(node.firstChild!, scope)
       let valueList = node.getChild('InValueList')
+      let subqueryNode = node.getChild('QueryStatement')
+      if (subqueryNode) {
+        let subquery = analyzeQuery(subqueryNode, scope.otherTables)
+        if (!subquery) return {sql: 'NULL', type: 'error'}
+        if (subquery.fields.length != 1) return diag(subqueryNode, 'Subquery in IN must return exactly one column', {sql: 'NULL', type: 'error'})
+        return {sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${subquery.sql})`, type: 'boolean', isAgg: e.isAgg}
+      }
       if (!valueList) {
-        diag(node, 'IN (<subquery>) is not yet supported')
-        return {sql: 'false', type: 'boolean'}
+        return diag(node, 'IN expression must provide either values or a subquery', {sql: 'NULL', type: 'error'})
       }
       let values = valueList.getChildren('Expression').map(v => {
         let val = analyzeExpr(v, scope)
@@ -554,6 +546,13 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
         return val.sql
       })
       return {sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: 'boolean', isAgg: e.isAgg}
+    }
+
+    case 'SubqueryExpression': {
+      let subquery = analyzeQuery(node.getChild('QueryStatement')!, scope.otherTables)
+      if (!subquery) return {sql: 'NULL', type: 'error'}
+      if (subquery.fields.length != 1) return diag(node, 'Subquery expression must return exactly one column', {sql: 'NULL', type: 'error'})
+      return {sql: `(${subquery.sql})`, type: subquery.fields[0].type}
     }
 
     case 'CastExpression':
@@ -688,7 +687,7 @@ function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     let next = table.joins.find(j => j.alias == name)
     if (!next) return diag(part, `Unknown join "${name}" on ${table.name}`, null)
 
-    analyzeJoin(next)
+    next.table = lookupTable(next.targetNode!)
     if (!next.table) return null
 
     // Construct a new implied join and attache it to the query
@@ -696,7 +695,7 @@ function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     let newAlias = alias == fromAlias ? name : `${alias}_${name}`
     if (scope.query && !scope.query.joins.find(j => j.alias == newAlias)) {
       let joinTarget = {name: next.alias, table: next.table, alias: newAlias}
-      let onClause = analyzeExpr(next.onExpr!, {query: null, table, alias, joinTarget}).sql
+      let onClause = analyzeExpr(next.onExpr!, {table, alias, joinTarget}).sql
       scope.query.joins.push({alias: newAlias, targetTable: next.targetTable, table: next.table, source: 'implicit', cardinality: next.cardinality, joinType: 'left', onClause})
     }
 
@@ -707,17 +706,25 @@ function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
   return scope
 }
 
-function lookupTable (name: string, node: SyntaxNode, scope?: Scope): Table | undefined {
+// Find a table by Ref node, failing if it doesn't exist
+function lookupTable (node: SyntaxNode, scope?: Scope): Table | undefined {
+  let name = txt(node)
+  let table: Table | undefined
+
   for (let scopeTable of scope?.otherTables || []) {
-    if (scopeTable.name == name) return scopeTable
+    if (scopeTable.name == name) table = scopeTable
   }
   let currentUri = getFile(node).path
   for (let file of Object.values(FILE_MAP)) {
+    if (table) break
     if (file.path.endsWith('.gsql') || file.path == currentUri) {
       let match = file.tables.find(t => t.name == name)
-      if (match) return match
+      if (match) table = match
     }
   }
+  if (!table) return diag(node, `Unknown table "${name}"`)
+  analyzeView(table)
+  return table
 }
 
 function inferName (exprNode: SyntaxNode, scope: Scope): string {
