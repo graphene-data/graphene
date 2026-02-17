@@ -18,7 +18,7 @@
   },
   "graphene": {
     "dialect": "snowflake",
-    "namespace": "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02",
+    "defaultNamespace": "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02",
     "snowflake": {
       "account": "adarjvr-ve40413",
       "username": "demouser"
