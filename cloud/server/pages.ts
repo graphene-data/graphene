@@ -60,22 +60,22 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
   ).then(rows => rows[0])
   if (!page) return reply.code(404).send({error: 'Page not found'})
 
-  let svelteSource = await mdsvexCompile(page.content, {
-    filename: `${page.path}.md`,
+  let code = await compileMd(page.content, `${page.path}.md`, repo.id)
+  reply.type('text/javascript').send(code)
+}
+
+async function compileMd (markdown:string, filename:string, repoId:string, inline?:boolean): Promise<string> {
+  let svelteSource = await mdsvexCompile(markdown, {
+    filename,
     extensions: ['.md'],
     remarkPlugins: [extractQueries, escapeAngles],
     rehypePlugins: [sanitizeMarkdown],
   })
-  if (!svelteSource) return reply.code(500).send({error: 'Failed to compile page'})
+  if (!svelteSource) throw new Error('Failed to compile')
 
-  let compiled = svelteCompile(svelteSource.code, {
-    generate: 'client',
-    dev: !PROD,
-  })
-  let code = rewriteSvelteImports(compiled.js.code, repo.id)
-
-  reply.type('text/javascript')
-  reply.send(code)
+  let compiled = svelteCompile(svelteSource.code, {generate: 'client', dev: !PROD})
+  let componentCode = rewriteSvelteImports(compiled.js.code, repoId, inline)
+  return componentCode
 }
 
 // The generated Svelte component is going to import a bunch of Svelte internals and visualization components.
@@ -122,48 +122,28 @@ function rewriteSvelteImports (code: string, repoId: string, inline = false) {
 export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
   let query = req.query as {md?: string; repoId?: string}
-
-  if (!query.repoId) return reply.code(400).send({error: 'Missing repoId parameter'})
-
-  // Decode base64 markdown from query param
-  let markdown: string
-  try {
-    markdown = Buffer.from(query.md || '', 'base64').toString('utf-8')
-  } catch {
-    return reply.code(400).send({error: 'Invalid base64 markdown'})
-  }
-  if (!markdown) return reply.code(400).send({error: 'Missing md parameter'})
-
-  // Compile markdown to svelte component
-  let svelteSource = await mdsvexCompile(markdown, {
-    filename: 'dynamic.md',
-    extensions: ['.md'],
-    remarkPlugins: [extractQueries, escapeAngles],
-    rehypePlugins: [sanitizeMarkdown],
-  })
-  if (!svelteSource) return reply.code(500).send({error: 'Failed to compile markdown'})
-
-  let compiled = svelteCompile(svelteSource.code, {generate: 'client', dev: !PROD})
-  let componentCode = rewriteSvelteImports(compiled.js.code, query.repoId, true)
+  let markdown = Buffer.from(query.md || '', 'base64').toString('utf-8')
+  let code = await compileMd(markdown, 'dynamic.md', query.repoId || '', true)
 
   // Return HTML page that loads the frontend and mounts the component
   let html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Graphene Dynamic</title>
-</head>
-<body>
-  <main id="content"></main>
-  <script type="module">
-    await import('/main.ts')
-    ${componentCode}
-    window.$GRAPHENE.mount(Component, { target: document.getElementById('content') });
-  </script>
-</body>
-</html>`
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Graphene Dynamic</title>
+    </head>
+    <body>
+      <main id="content"></main>
+      <script type="module">
+        await import('/main.ts')
+        let target = document.getElementById('content')
+        ${code}
+        window.$GRAPHENE.mount(Component, {target})
+      </script>
+    </body>
+    </html>
+  `
 
-  reply.type('text/html')
-  reply.send(html)
+  reply.type('text/html').send(html)
 }

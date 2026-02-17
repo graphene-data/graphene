@@ -1,5 +1,9 @@
 import {test, expect, expectConsoleError} from './fixtures.ts'
 import {describe} from 'vitest'
+import {and, eq} from 'drizzle-orm'
+import {getDb} from '../server/db.ts'
+import {files} from '../schema.ts'
+import {repoId} from '../server/dev.ts'
 
 describe('duckdb', () => {
   test('renders the flights overview page', async ({page, cloud}) => {
@@ -25,6 +29,25 @@ describe('duckdb', () => {
     await page.locator('nav').locator('a', {hasText: 'Delays'}).click()
     await expect(page).toHaveURL(/\/delays$/)
     await expect(page.locator('h1', {hasText: 'Carrier Delay Deep-Dive'})).toBeVisible()
+  })
+
+  test('shows a styled compile error for broken markdown pages', async ({page, cloud}) => {
+    expectConsoleError(page, /Failed to load resource/, true)
+
+    await getDb().update(files).set({
+      content: '# Broken\n\n{#if true}\nThis block never closes.',
+    }).where(and(
+      eq(files.repoId, repoId),
+      eq(files.path, 'index'),
+      eq(files.extension, 'md'),
+    ))
+
+    await page.goto(cloud.url)
+    await expect(page.locator('.compile-error')).toBeVisible()
+    await expect(page.locator('.compile-error__title')).toHaveText('We could not build this page')
+    await expect(page.locator('.compile-error__body')).toHaveText('flights.md failed to compile.')
+    await expect(page.locator('.compile-error__file')).toHaveText('flights.md')
+    await expect(page).screenshot('flights-compile-error')
   })
 })
 
