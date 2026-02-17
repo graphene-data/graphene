@@ -415,6 +415,10 @@ describe('lang', () => {
       .toRenderSql('select users."id" as "id" from users as users where users."age" BETWEEN 18 AND 30')
     expect('from users select id where age not between 18 and 30')
       .toRenderSql('select users."id" as "id" from users as users where users."age" NOT BETWEEN 18 AND 30')
+    expect('from users select id where age between 18 and 30 and email is not null')
+      .toRenderSql('select users."id" as "id" from users as users where (users."age" BETWEEN 18 AND 30 AND users."email" IS NOT NULL)')
+    expect('from users select id where age between 18 and 30 or email is not null')
+      .toRenderSql('select users."id" as "id" from users as users where (users."age" BETWEEN 18 AND 30 OR users."email" IS NOT NULL)')
   })
 
   it('supports case expressions', () => {
