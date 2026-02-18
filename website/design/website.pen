@@ -443,7 +443,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "Screenshot 2026-02-14 at 10.45.39 AM.png",
+                            "url": "../src/assets/dashboard_screenshot.png",
                             "mode": "fill"
                           },
                           "width": 760,
@@ -1534,7 +1534,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "Screenshot 2026-02-14 at 10.45.39 AM.png",
+                            "url": "../src/assets/dashboard_screenshot.png",
                             "mode": "fill"
                           },
                           "width": 760,
@@ -2476,7 +2476,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "Screenshot 2026-02-14 at 10.45.39 AM.png",
+                            "url": "../src/assets/dashboard_screenshot.png",
                             "mode": "fill"
                           },
                           "width": 560,
@@ -3349,7 +3349,7 @@
                           "fill": {
                             "type": "image",
                             "enabled": true,
-                            "url": "Screenshot 2026-02-14 at 10.45.39 AM.png",
+                            "url": "../src/assets/dashboard_screenshot.png",
                             "mode": "fill"
                           },
                           "width": 420,
