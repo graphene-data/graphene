@@ -2,8 +2,8 @@
 import logoSrc from '../assets/logo_transparent.png';
 ---
 
-<header class="border-b border-border/20">
-  <div class="max-w-[1312px] mx-auto px-[52px] h-[72px] flex items-center justify-between">
+<header>
+  <div class="max-w-[1312px] mx-auto px-4 sm:px-8 lg:px-[52px] h-14 sm:h-16 lg:h-[72px] flex items-center justify-between">
     <a href="/" class="flex items-center gap-2.5">
       <img src={logoSrc.src} alt="Graphene" width="28" height="28" />
       <span class="font-logo text-xl font-bold tracking-[-0.5px] text-primary-dark">Graphene</span>
@@ -15,18 +15,20 @@ import logoSrc from '../assets/logo_transparent.png';
       <button class="bg-primary-dark text-bg text-sm font-medium rounded-lg px-6 py-2.5 hover:opacity-90 transition-opacity cursor-pointer">Join waitlist</button>
     </nav>
 
-    <button id="menu-toggle" class="md:hidden flex flex-col gap-1.5 p-2 cursor-pointer bg-transparent border-none" aria-label="Toggle menu">
-      <span class="block w-5 h-0.5 bg-primary-dark transition-transform" id="bar1"></span>
-      <span class="block w-5 h-0.5 bg-primary-dark transition-opacity" id="bar2"></span>
-      <span class="block w-5 h-0.5 bg-primary-dark transition-transform" id="bar3"></span>
-    </button>
+    <div class="md:hidden flex items-center gap-3">
+      <button class="bg-primary-dark text-bg text-xs font-medium rounded-lg px-4 py-2 hover:opacity-90 transition-opacity cursor-pointer">Join waitlist</button>
+      <button id="menu-toggle" class="flex flex-col justify-center items-center w-10 h-10 cursor-pointer bg-transparent border-none relative" aria-label="Toggle menu">
+        <span class="block w-5 h-[1px] bg-primary-dark transition-all duration-300 absolute" id="bar1"></span>
+        <span class="block w-5 h-[1px] bg-primary-dark transition-all duration-300 absolute" id="bar2"></span>
+        <span class="block w-5 h-[1px] bg-primary-dark transition-all duration-300 absolute" id="bar3"></span>
+      </button>
+    </div>
   </div>
 
-  <div id="mobile-menu" class="hidden md:hidden border-t border-border/20">
-    <div class="max-w-[1312px] mx-auto px-[52px] py-4 flex flex-col gap-4">
+  <div id="mobile-menu" class="hidden md:hidden">
+    <div class="max-w-[1312px] mx-auto px-4 sm:px-8 lg:px-[52px] py-4 flex flex-col gap-4 items-end">
       <a href="/about" class="text-sm font-medium text-body">About</a>
       <a href="https://github.com/graphene-data/graphene" target="_blank" rel="noopener" class="text-sm font-medium text-body">GitHub</a>
-      <button class="bg-primary-dark text-bg text-sm font-medium rounded-lg px-6 py-2.5 w-fit cursor-pointer">Join waitlist</button>
     </div>
   </div>
 </header>
@@ -38,17 +40,41 @@ import logoSrc from '../assets/logo_transparent.png';
   const bar2 = document.getElementById('bar2');
   const bar3 = document.getElementById('bar3');
 
+  // Initially position the bars
+  if (bar1 && bar2 && bar3) {
+    bar1.style.top = '35%';
+    bar1.style.transform = 'translateY(-50%)';
+    bar1.style.left = '50%';
+    bar1.style.marginLeft = '-10px';
+
+    bar2.style.top = '50%';
+    bar2.style.transform = 'translateY(-50%)';
+    bar2.style.left = '50%';
+    bar2.style.marginLeft = '-10px';
+
+    bar3.style.top = '65%';
+    bar3.style.transform = 'translateY(-50%)';
+    bar3.style.left = '50%';
+    bar3.style.marginLeft = '-10px';
+  }
+
   toggle?.addEventListener('click', () => {
     const isOpen = !menu?.classList.contains('hidden');
     menu?.classList.toggle('hidden');
     if (isOpen) {
-      bar1!.style.transform = '';
-      bar2!.style.opacity = '';
-      bar3!.style.transform = '';
+      // Close - back to hamburger
+      bar1!.style.transform = 'translateY(-50%)';
+      bar1!.style.top = '35%';
+      bar2!.style.opacity = '1';
+      bar3!.style.transform = 'translateY(-50%)';
+      bar3!.style.top = '65%';
     } else {
-      bar1!.style.transform = 'rotate(45deg) translate(3px, 3px)';
+      // Open - make X
+      bar1!.style.transform = 'translateY(-50%) rotate(45deg)';
+      bar1!.style.top = '50%';
       bar2!.style.opacity = '0';
-      bar3!.style.transform = 'rotate(-45deg) translate(3px, -3px)';
+      bar3!.style.transform = 'translateY(-50%) rotate(-45deg)';
+      bar3!.style.top = '50%';
     }
   });
 </script>

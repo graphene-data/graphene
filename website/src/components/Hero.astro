@@ -4,29 +4,55 @@ import slackMock from '../assets/slack_agent_mock.png';
 import webMock from '../assets/web_agent_mock.png';
 ---
 
-<section class="flex flex-col items-center pt-[100px] pb-[40px] gap-8 max-w-[1312px] mx-auto px-[52px]">
-  <h1 class="font-serif text-[80px] text-primary-dark tracking-[-2px] leading-[0.95] text-center">
-    BI built for <em>agents</em>
+<section class="flex flex-col items-center pt-12 sm:pt-20 lg:pt-[100px] pb-8 lg:pb-[40px] gap-6 lg:gap-8 max-w-[1312px] mx-auto px-4 sm:px-8 lg:px-[52px]">
+  <h1 class="font-serif text-[60px] sm:text-[60px] lg:text-[80px] text-primary-dark tracking-[-1.5px] sm:tracking-[-1.5px] lg:tracking-[-2px] leading-[0.95] text-center">
+    <span class="sm:inline">BI built for</span><br class="sm:hidden" />
+    <em class="sm:inline">agents</em>
   </h1>
-  <p class="font-sans text-xl text-body text-center leading-[1.5] max-w-[600px]">
+  <p class="font-sans text-base sm:text-lg lg:text-xl text-body text-center leading-[1.5] max-w-[600px]">
     With Graphene, agents do the busy work of querying and visualizing data so you can ask 10x more questions.
   </p>
 </section>
 
-<div class="relative w-full h-[600px] overflow-hidden">
-  <img src={heroBg.src} alt="" class="absolute inset-0 w-full h-full object-cover" />
-  <div class="absolute inset-0 flex items-center justify-center">
-    <div class="relative w-[1105px] h-[470px]">
-      <img
-        src={slackMock.src}
-        alt="Graphene Slack agent"
-        class="absolute left-0 w-[284px] h-[470px] rounded-[10px] border border-[#D8D8D8] shadow-[0_2px_12px_rgba(0,0,0,0.094)] object-cover"
-      />
-      <img
-        src={webMock.src}
-        alt="Graphene web agent"
-        class="absolute right-0 w-[797px] h-[470px] rounded-[10px] border border-[#D8D8D8] shadow-[0_4px_20px_rgba(0,0,0,0.082)] object-cover"
-      />
+<!-- Mobile hero: Just Slack mock -->
+<div class="sm:hidden flex justify-center px-4">
+  <img
+    src={slackMock.src}
+    alt="Graphene Slack agent"
+    class="w-full max-w-[320px] h-auto rounded-[10px] border border-[#D8D8D8] shadow-[0_2px_12px_rgba(0,0,0,0.094)]"
+  />
+</div>
+
+<!-- Tablet/Desktop hero: Full layout with background -->
+<div class="hidden sm:block relative w-full overflow-hidden">
+  <!-- Background image container with aspect ratio -->
+  <div class="relative w-full" style="padding-bottom: 50%"> <!-- 2:1 aspect ratio -->
+    <img src={heroBg.src} alt="" class="absolute inset-0 w-full h-full object-cover" />
+
+    <!-- Screenshots container -->
+    <div class="absolute inset-0 flex items-center justify-center px-4 sm:px-8 lg:px-12">
+      <div class="relative w-full max-w-[1105px] flex gap-4">
+        <!-- Slack mock - maintains aspect ratio -->
+        <div class="relative w-[25.7%]"> <!-- 284/1105 = 25.7% -->
+          <img
+            src={slackMock.src}
+            alt="Graphene Slack agent"
+            class="w-full h-auto rounded-[8px] lg:rounded-[10px] border border-[#D8D8D8] shadow-[0_2px_12px_rgba(0,0,0,0.094)]"
+          />
+        </div>
+
+        <!-- Spacer -->
+        <div class="flex-1"></div>
+
+        <!-- Web mock - maintains aspect ratio -->
+        <div class="relative w-[72.1%]"> <!-- 797/1105 = 72.1% -->
+          <img
+            src={webMock.src}
+            alt="Graphene web agent"
+            class="w-full h-auto rounded-[8px] lg:rounded-[10px] border border-[#D8D8D8] shadow-[0_4px_20px_rgba(0,0,0,0.082)]"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </div>

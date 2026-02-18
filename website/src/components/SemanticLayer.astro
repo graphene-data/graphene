@@ -41,19 +41,20 @@ left join users on orders.user_id = users.id
 group by 1`;
 ---
 
-<section class="mt-[150px]">
-  <div class="max-w-[1312px] mx-auto px-[52px] flex flex-col gap-12">
+<section class="mt-20 sm:mt-[100px] lg:mt-[150px]">
+  <div class="max-w-[1312px] mx-auto px-4 sm:px-8 lg:px-[52px] flex flex-col gap-8 lg:gap-12">
     <div class="flex flex-col gap-4 items-center text-center">
-      <h2 class="font-serif text-[48px] text-primary-dark tracking-[-1.5px] leading-[1]">The semantic layer, reimagined</h2>
-      <p class="text-lg text-body leading-[1.6] max-w-[700px]">
+      <h2 class="font-serif text-[32px] sm:text-[40px] lg:text-[48px] text-primary-dark tracking-[-1px] sm:tracking-[-1.25px] lg:tracking-[-1.5px] leading-[1]">The semantic layer, reimagined</h2>
+      <p class="text-base sm:text-[17px] lg:text-lg text-body leading-[1.6] max-w-[700px]">
           Introducing GSQL: a data modeling and query language designed for agents. Agents perform better with GSQL than both regular SQL and traditional BI APIs.
       </p>
-      <a href="https://www.linkedin.com/pulse/semantic-layers-agents-can-we-do-better-than-english-kevin-marr-5z9gc" target="_blank" rel="noopener" class="text-base italic font-medium text-muted underline underline-offset-4 hover:text-primary-dark transition-colors">
+      <a href="https://www.linkedin.com/pulse/semantic-layers-agents-can-we-do-better-than-english-kevin-marr-5z9gc" target="_blank" rel="noopener" class="text-sm sm:text-[15px] lg:text-base italic font-medium text-muted underline underline-offset-4 hover:text-primary-dark transition-colors">
         Read more →
       </a>
     </div>
 
-    <div class="flex items-center gap-6">
+    <!-- Desktop layout -->
+    <div class="hidden lg:flex items-center gap-6">
       <div class="flex flex-col gap-6 shrink-0">
         <CodeBlock label="GSQL Model" code={gsqlModel} language="sql" />
         <CodeBlock label="GSQL Query" code={gsqlQuery} language="sql" />
@@ -66,6 +67,18 @@ group by 1`;
       </div>
 
       <CodeBlock label="Compiled SQL" code={compiledSql} class="flex-1" language="sql" />
+    </div>
+
+    <!-- Mobile/Tablet layout -->
+    <div class="lg:hidden flex flex-col gap-6">
+      <CodeBlock label="GSQL Model" code={gsqlModel} language="sql" />
+      <CodeBlock label="GSQL Query" code={gsqlQuery} language="sql" />
+      <div class="flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted rotate-90">
+          <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+        </svg>
+      </div>
+      <CodeBlock label="Compiled SQL" code={compiledSql} language="sql" />
     </div>
   </div>
 </section>
