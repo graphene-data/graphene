@@ -55,8 +55,8 @@ group by 1`;
 
     <div class="flex items-center gap-6">
       <div class="flex flex-col gap-6 shrink-0">
-        <CodeBlock label="GSQL Model" code={gsqlModel} />
-        <CodeBlock label="GSQL Query" code={gsqlQuery} />
+        <CodeBlock label="GSQL Model" code={gsqlModel} language="sql" />
+        <CodeBlock label="GSQL Query" code={gsqlQuery} language="sql" />
       </div>
 
       <div class="flex items-center justify-center w-5 shrink-0">
@@ -65,7 +65,7 @@ group by 1`;
         </svg>
       </div>
 
-      <CodeBlock label="Compiled SQL" code={compiledSql} class="flex-1" />
+      <CodeBlock label="Compiled SQL" code={compiledSql} class="flex-1" language="sql" />
     </div>
   </div>
 </section>
