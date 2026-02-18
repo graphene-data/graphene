@@ -1,0 +1,57 @@
+---
+import CodeBlock from './CodeBlock.astro';
+import dashboardImg from '../assets/dashboard_screenshot.png';
+
+const code = `# Flight Analytics Dashboard
+
+A comprehensive dashboard showcasing flight data metrics from 2000-2005.
+
+## Key Metrics
+
+<Row>
+  <BigValue data=flights value=count(*) title="Total Flights" fmt=num0 />
+  <BigValue data=flights value=sum(miles_flown) title="Total Miles Flown" fmt=num0m />
+  <BigValue data=flights value=on_time_departure_rate title="On-Time Departure Rate" fmt=pct1 />
+  <BigValue data=flights value=on_time_arrival_rate title="On-Time Arrival Rate" fmt=pct1 />
+</Row>
+
+\`\`\`sql weekly_trends
+select
+  date_trunc('week', dep_time) as week,
+  cancellation_rate,
+  diversion_rate,
+  avg(dep_delay) as avg_dep_delay,
+  avg(arr_delay) as avg_arr_delay,
+  on_time_departure_rate,
+  on_time_arrival_rate,
+  count(*) as flight_count,
+  avg(distance) as avg_distance
+from flights
+group by 1
+order by 1 asc
+\`\`\``;
+---
+
+<section class="py-[100px]">
+  <div class="max-w-[1312px] mx-auto px-[52px] flex flex-col gap-12">
+    <div class="flex flex-col gap-4">
+      <h2 class="font-serif text-[48px] text-primary-dark tracking-[-1.5px] leading-[1]">Rooted in code</h2>
+      <p class="text-lg text-body leading-[1.6] max-w-[600px]">
+        Everything is backed by code and CLIs, which agents do best with. Lives in your repo. Open source.
+      </p>
+      <a href="https://github.com/graphene-data/example-flights" target="_blank" rel="noopener" class="inline-flex flex-col gap-0.5 w-fit group">
+        <span class="text-base italic font-medium text-tertiary">See example project →</span>
+        <span class="h-px w-full bg-body group-hover:bg-primary-dark transition-colors"></span>
+      </a>
+    </div>
+
+    <div class="flex gap-8 items-start">
+      <CodeBlock label="flight-analytics-dashboard.md" code={code} class="w-[853px] shrink-0" />
+      <div class="flex-1 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] overflow-hidden bg-[#F5F5F4]">
+        <div class="bg-white overflow-hidden">
+          <img src={dashboardImg.src} alt="Flight Analytics Dashboard" class="w-full h-auto" />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

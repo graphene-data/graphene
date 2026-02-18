@@ -1,5 +1,6 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import tailwindcss from '@tailwindcss/vite';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync } from 'node:fs';
@@ -23,5 +24,8 @@ const devPort = Number.isFinite(graphenePort) ? graphenePort + 2 : fallbackDevPo
 export default defineConfig({
   server: {
     port: devPort,
+  },
+  vite: {
+    plugins: [tailwindcss()],
   },
 });

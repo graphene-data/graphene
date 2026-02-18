@@ -1,0 +1,82 @@
+---
+import CodeBlock from './CodeBlock.astro';
+
+const gsqlModel = `table orders (
+  id BIGINT -- Primary key
+  user_id BIGINT
+  created_at DATETIME
+  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
+  amount FLOAT -- Amount paid by customer
+  cost FLOAT -- Cost of materials
+
+  join one users on user_id = users.id
+
+  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
+  revenue: sum(case when revenue_recognized then amount else 0 end)
+  cogs: sum(case when revenue_recognized then cost else 0 end)
+  profit: revenue - cogs
+  profit_margin: profit / revenue
+)
+
+table users (
+  id BIGINT -- Primary key
+  email VARCHAR
+  country_code VARCHAR
+)`;
+
+const gsqlQuery = `select users.country_code, -- Join is implied via your model
+  profit_margin -- Invoke modeled measures
+from orders`;
+
+const compiledSql = `select users.country_code,
+  (sum(
+    case when status in ('Processing', 'Shipped', 'Complete')
+    then amount
+    else 0 end
+  )
+  -
+  sum(
+    case when status in ('Processing', 'Shipped', 'Complete')
+    then cost
+    else 0 end
+  ))
+  /
+  sum(
+    case when status in ('Processing', 'Shipped', 'Complete')
+    then amount
+    else 0 end
+  ) as profit_margin
+from orders
+left join users on orders.user_id = users.id
+group by 1`;
+---
+
+<section class="py-[100px]">
+  <div class="max-w-[1312px] mx-auto px-[52px] flex flex-col gap-12">
+    <div class="flex flex-col gap-4">
+      <h2 class="font-serif text-[48px] text-primary-dark tracking-[-1.5px] leading-[1]">The semantic layer, reimagined</h2>
+      <p class="text-lg text-body leading-[1.6] max-w-[700px]">
+        GSQL extends SQL with joins, measures, and dimensions defined once in your model. Queries stay short; compiled SQL handles the rest.
+      </p>
+      <a href="https://www.linkedin.com/pulse/semantic-layers-agents-can-we-do-better-than-english-kevin-marr-5z9gc" target="_blank" rel="noopener" class="inline-flex flex-col gap-0.5 w-fit group">
+        <span class="text-base italic font-medium text-tertiary">Read more →</span>
+        <span class="h-px w-full bg-body group-hover:bg-primary-dark transition-colors"></span>
+      </a>
+    </div>
+
+    <div class="flex items-center gap-6">
+      <div class="flex flex-col gap-6 shrink-0">
+        <CodeBlock label="GSQL Model" code={gsqlModel} />
+        <CodeBlock label="GSQL Query" code={gsqlQuery} />
+      </div>
+
+      <div class="flex items-center justify-center w-5 shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted">
+          <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+        </svg>
+      </div>
+
+      <CodeBlock label="Compiled SQL" code={compiledSql} class="flex-1" />
+    </div>
+  </div>
+</section>

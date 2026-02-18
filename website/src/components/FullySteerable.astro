@@ -1,0 +1,177 @@
+---
+import CodeBlock from './CodeBlock.astro';
+
+const skill1Label = 'cohort-analysis/SKILL.md';
+const skill1Code = `---
+name: cohort-analysis
+description: How to build cohort analysis and retention reports in gsql, including defining cohorts, calculating period offsets, and displaying retention matrices.
+---
+
+# Cohort Analysis in gsql
+
+Cohort analysis groups users by a shared characteristic (usually their sign-up or first-purchase date) and tracks their behavior over subsequent time periods. This is commonly used for retention analysis.
+
+## Defining a cohort
+
+Use \`datetrunc()\` on the user's first activity date to define their cohort:
+
+\`\`\`gsql
+table users (
+  id INT
+  created_at TIMESTAMP
+  cohort_month: datetrunc('month', created_at)
+)
+\`\`\`
+
+## Calculating period offset
+
+For events tied to users, compute how many periods have elapsed since the cohort date:
+
+\`\`\`gsql
+table orders (
+  user_id INT
+  order_date TIMESTAMP
+  join one users on user_id = users.id
+
+  order_month: datetrunc('month', order_date)
+  months_since_signup: datediff('month', user.cohort_month, order_month)
+)
+\`\`\`
+
+## Building a retention query
+
+Count distinct users per cohort per period:
+
+\`\`\`gsql cohort_retention
+from orders
+where months_since_signup >= 0 and months_since_signup <= 12
+select
+  user.cohort_month,
+  months_since_signup,
+  count(distinct user_id) as active_users
+\`\`\``;
+
+const skill2Label = 'about-sales-team/SKILL.md';
+const skill2Code = `---
+name: about-sales-team
+description: How to perform analytics for sales and GTM-related areas
+---
+
+# Sales
+
+## Overview
+
+The sales team is broken down into sub-teams for inbound sales, outbound sales, and enterprise sales. The Enterprise Sales owns all accounts at the enterprise level (>1,000 employees) and includes both the inbound and outbound directions for this level.
+
+We use Salesforce to manage our sales operations. The most important tables are \`dim_salesforce_opportunities\` and \`dim_salesforce_accounts\`.
+
+## Key Concepts
+
+### Opportunity Types
+* **New Business:** First-time purchase by a new account.
+* **Expansion:** Upsell or cross-sell to an existing account.
+* **Renewal:** Continuation of an existing contract.
+
+### Pipeline Stages
+1. Prospecting
+2. Qualification
+3. Proposal
+4. Negotiation
+5. Closed Won / Closed Lost
+
+### Key Metrics
+- **Win Rate:** Closed Won / (Closed Won + Closed Lost)
+- **Average Deal Size:** sum(amount) / count(distinct id) where stage = 'Closed Won'
+- **Sales Cycle Length:** avg(datediff('day', created_date, close_date))
+- **Pipeline Coverage:** Open pipeline amount / Quota`;
+---
+
+<section class="py-[100px]">
+  <div class="max-w-[1312px] mx-auto px-[52px] flex flex-col gap-12">
+    <div class="flex flex-col gap-4">
+      <h2 class="font-serif text-[48px] text-primary-dark tracking-[-1.5px] leading-[1]">Fully steerable</h2>
+      <p class="text-lg text-body leading-[1.6] max-w-[700px]">
+        Agent skills allow you to customize agent behavior based on your unique data and business processes. Graphene follows the open standard skill format.
+      </p>
+    </div>
+
+    <div class="flex flex-col gap-6">
+      <div class="flex gap-8 relative">
+        <button id="tab-0" class="text-sm font-medium text-primary-dark cursor-pointer bg-transparent border-none p-0 pb-2 relative" data-tab="0">
+          Analytical patterns
+          <span class="absolute bottom-0 left-0 h-0.5 bg-primary-dark" id="underline-0" style="width: 0%"></span>
+        </button>
+        <button id="tab-1" class="text-sm font-medium text-muted cursor-pointer bg-transparent border-none p-0 pb-2 relative" data-tab="1">
+          Business domains
+          <span class="absolute bottom-0 left-0 h-0.5 bg-primary-dark" id="underline-1" style="width: 0%"></span>
+        </button>
+      </div>
+
+      <div id="carousel-panel-0">
+        <CodeBlock label={skill1Label} code={skill1Code} />
+      </div>
+      <div id="carousel-panel-1" class="hidden">
+        <CodeBlock label={skill2Label} code={skill2Code} />
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  @keyframes progress {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
+  .underline-active {
+    animation: progress 10s linear forwards;
+  }
+</style>
+
+<script>
+  const tabs = [document.getElementById('tab-0'), document.getElementById('tab-1')];
+  const panels = [document.getElementById('carousel-panel-0'), document.getElementById('carousel-panel-1')];
+  const underlines = [document.getElementById('underline-0'), document.getElementById('underline-1')];
+  let activeTab = 0;
+  let timer: ReturnType<typeof setTimeout>;
+
+  function switchTo(index: number) {
+    // Update tab text styles
+    tabs.forEach((tab, i) => {
+      if (i === index) {
+        tab!.classList.remove('text-muted');
+        tab!.classList.add('text-primary-dark');
+      } else {
+        tab!.classList.remove('text-primary-dark');
+        tab!.classList.add('text-muted');
+      }
+    });
+
+    // Update panels
+    panels.forEach((panel, i) => {
+      panel!.classList.toggle('hidden', i !== index);
+    });
+
+    // Reset all underlines, animate active one
+    underlines.forEach((ul, i) => {
+      ul!.classList.remove('underline-active');
+      ul!.style.width = '0%';
+    });
+    // Force reflow to restart animation
+    void underlines[index]!.offsetWidth;
+    underlines[index]!.classList.add('underline-active');
+
+    activeTab = index;
+
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      switchTo((activeTab + 1) % 2);
+    }, 10000);
+  }
+
+  tabs.forEach((tab, i) => {
+    tab!.addEventListener('click', () => switchTo(i));
+  });
+
+  // Start auto-cycling
+  switchTo(0);
+</script>
