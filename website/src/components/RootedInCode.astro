@@ -18,18 +18,14 @@ A comprehensive dashboard showcasing flight data metrics from 2000-2005.
 \`\`\`sql weekly_trends
 select
   date_trunc('week', dep_time) as week,
-  cancellation_rate,
-  diversion_rate,
-  avg(dep_delay) as avg_dep_delay,
-  avg(arr_delay) as avg_arr_delay,
-  on_time_departure_rate,
-  on_time_arrival_rate,
   count(*) as flight_count,
-  avg(distance) as avg_distance
+  avg(distance) as avg_distance,
+  cancellation_rate
 from flights
 group by 1
 order by 1 asc
-\`\`\``;
+\`\`\`
+...`;
 ---
 
 <section class="mt-[150px]">
@@ -44,11 +40,13 @@ order by 1 asc
       </a>
     </div>
 
-    <div class="flex gap-8 items-start">
-      <CodeBlock label="flight-analytics-dashboard.md" code={code} class="w-[853px] shrink-0" />
-      <div class="flex-1 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] overflow-hidden bg-[#F5F5F4]">
-        <div class="bg-white overflow-hidden">
-          <img src={dashboardImg.src} alt="Flight Analytics Dashboard" class="w-full h-auto" />
+    <div class="relative h-[620px] flex items-start justify-center">
+      <div class="relative w-[1172px] flex items-center">
+        <CodeBlock label="flight-analytics-dashboard.md" code={code} class="relative w-[480px] shrink-0 z-10" />
+        <div class="absolute left-[412px] top-1/2 -translate-y-1/2 w-[760px] h-[478px] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] overflow-hidden bg-[#F5F5F4] border border-[#E7E5E4] z-20">
+          <div class="bg-white h-full overflow-hidden">
+            <img src={dashboardImg.src} alt="Flight Analytics Dashboard" class="w-full h-full object-cover object-top" />
+          </div>
         </div>
       </div>
     </div>
