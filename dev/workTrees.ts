@@ -369,7 +369,14 @@ function startHostIPC (): Promise<number> {
 // Starts a per-session TCP server so the container can send commands back to the host.
 async function execWorktree (args: string[]) {
   let port = await startHostIPC()
-  args = args.length > 0 ? ['zsh', '-lc', ...args] : ['zsh']
+  if (args.length > 0) {
+    // Run commands in an interactive shell so user aliases/PATH setup from .zshrc are available.
+    // If multiple args are provided, safely reconstruct a command string.
+    let command = args.length === 1 ? args[0] : args.map(arg => quote(arg)).join(' ')
+    args = ['zsh', '-ic', command]
+  } else {
+    args = ['zsh']
+  }
   let child = spawn('docker', ['exec', '-it', '-e', `HOST_IPC_PORT=${port}`, `graphene-${currentName}`, ...args], {stdio: 'inherit'})
   child.on('exit', (code:any) => process.exit(code ?? 0))
 }
