@@ -1,0 +1,3998 @@
+{
+  "version": "2.8",
+  "children": [
+    {
+      "type": "frame",
+      "id": "I5Tet",
+      "x": 1900,
+      "y": 1,
+      "name": "Graphene Landing Page",
+      "clip": true,
+      "width": 1440,
+      "fill": "#FAFAF9",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "8veWA",
+          "name": "Header",
+          "width": "fill_container",
+          "height": 72,
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#E7E5E420"
+          },
+          "padding": [
+            0,
+            64
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "H5bV9",
+              "name": "Logo Group",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "GkmuR",
+                  "name": "Logo",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "kellysikkema",
+                    "link": "https://unsplash.com/@kellysikkema",
+                    "author": "Kelly Sikkema"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Google Drive/Shared drives/Graphene/Brand/logo_transparent.png",
+                    "mode": "stretch"
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "LlqSM",
+                  "name": "logoText",
+                  "fill": "#0C0A09",
+                  "content": "Graphene",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 20,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "gx5VR",
+              "name": "Nav Right",
+              "gap": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "tJc5t",
+                  "name": "aboutLink",
+                  "fill": "#57534E",
+                  "content": "About",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "5lhyj",
+                  "name": "githubLink",
+                  "fill": "#57534E",
+                  "content": "GitHub",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "2qQ49",
+                  "name": "Waitlist Button",
+                  "fill": "#0C0A09",
+                  "cornerRadius": 8,
+                  "padding": [
+                    10,
+                    24
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "JYAGj",
+                      "name": "waitlistText",
+                      "fill": "#FAFAF9",
+                      "content": "Join waitlist",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "aAvOG",
+          "name": "Hero Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            100,
+            64,
+            80,
+            64
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "dq7BU",
+              "name": "Headline",
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "799CN",
+                  "name": "headPart1",
+                  "fill": "#0C0A09",
+                  "content": "BI built for ",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 80,
+                  "fontWeight": "500",
+                  "letterSpacing": -2
+                },
+                {
+                  "type": "text",
+                  "id": "dNOOj",
+                  "name": "headPart2",
+                  "fill": "#0C0A09",
+                  "content": "agents",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 80,
+                  "fontWeight": "normal",
+                  "letterSpacing": -2,
+                  "fontStyle": "italic"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "joYZ5",
+              "name": "subheadline",
+              "fill": "#57534E",
+              "textGrowth": "fixed-width",
+              "width": 600,
+              "content": "With Graphene, agents do the busy work of querying and visualizing data so you can ask 10x more questions.",
+              "lineHeight": 1.5,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 20,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "GJ3j3",
+              "name": "Hero Visuals",
+              "width": "fill_container",
+              "height": 592,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Ac3pn",
+                  "x": -64,
+                  "y": 4,
+                  "name": "Hero Background Image",
+                  "clip": true,
+                  "width": 1440,
+                  "height": 584,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Desktop/hulki-okan-tabak-x3kQTL7yw30-unsplash.jpg",
+                    "mode": "fill"
+                  },
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 0,
+                    "fill": "#00000000"
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "Peb64",
+                  "x": 103.5,
+                  "y": 61,
+                  "name": "Slack Agent Mock PNG",
+                  "clip": true,
+                  "width": 283.88,
+                  "height": 470,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Documents/slack_agent_mock.png",
+                    "mode": "fit"
+                  },
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#D8D8D8"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000018",
+                    "offset": {
+                      "x": 0,
+                      "y": 2
+                    },
+                    "blur": 12
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "x0miy",
+                  "x": 411.38,
+                  "y": 61,
+                  "name": "Web Agent Mock PNG",
+                  "clip": true,
+                  "width": 797.12,
+                  "height": 470,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Documents/web_agent_mock.png",
+                    "mode": "fit"
+                  },
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#D8D8D8"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000015",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 20
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "IXS6d",
+          "name": "Rooted in Code Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            100,
+            64
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "RBFHH",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uB6YX",
+                  "name": "s2title",
+                  "fill": "#0C0A09",
+                  "content": "Rooted in code",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "0Xnp6",
+                  "name": "s2sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 520,
+                  "content": "Everything is backed by code and CLIs, which agents do best with. Lives in your repo. Open source.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "Isnio",
+                  "name": "Rooted Link Wrap",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Tf1Nz",
+                      "name": "rootedTxt",
+                      "fill": "#7A726A",
+                      "content": "See example project ->",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "6Qw5e",
+                      "name": "rootedLine",
+                      "fill": "#57534E",
+                      "width": 176,
+                      "height": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Z0Pqx",
+              "name": "Code Visuals",
+              "width": "fill_container",
+              "height": 620,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "dPtrJ",
+                  "type": "ref",
+                  "ref": "69r4N",
+                  "name": "Code Panel",
+                  "width": 480,
+                  "height": "fit_content",
+                  "x": 70,
+                  "y": 15,
+                  "descendants": {
+                    "EaVOv": {
+                      "height": 44
+                    },
+                    "V2U5E": {
+                      "content": "flight-analytics-dashboard.md",
+                      "fill": "#847b73"
+                    },
+                    "FBW20": {
+                      "content": "# Flight Analytics Dashboard\n\nA comprehensive dashboard showcasing flight data metrics from 2000-2005.\n\n## Key Metrics\n\n<Row>\n  <BigValue data=flights value=count(*) title=\"Total Flights\" fmt=num0 />\n  <BigValue data=flights value=sum(miles_flown) title=\"Total Miles Flown\" fmt=num0m />\n  <BigValue data=flights value=on_time_departure_rate title=\"On-Time Departure Rate\" fmt=pct1 />\n  <BigValue data=flights value=on_time_arrival_rate title=\"On-Time Arrival Rate\" fmt=pct1 />\n</Row>\n\n```sql weekly_trends\nselect \n  date_trunc('week', dep_time) as week,\n  cancellation_rate,\n  diversion_rate,\n  avg(dep_delay) as avg_dep_delay,\n  avg(arr_delay) as avg_arr_delay,\n  on_time_departure_rate,\n  on_time_arrival_rate,\n  count(*) as flight_count,\n  avg(distance) as avg_distance\nfrom flights\ngroup by 1\norder by 1 asc\n```",
+                      "width": 1400,
+                      "fontSize": "$code_font_size"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "r7Um4",
+                  "x": 482,
+                  "y": 71,
+                  "name": "Dashboard Panel",
+                  "clip": true,
+                  "width": 760,
+                  "height": 478,
+                  "fill": "#F5F5F4",
+                  "cornerRadius": 12,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#E7E5E4"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0000000D",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 24
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yChwb",
+                      "x": 0,
+                      "y": 0,
+                      "name": "dashCopy",
+                      "clip": true,
+                      "width": 760,
+                      "height": 478,
+                      "fill": "#FFFFFF",
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "dYM1k",
+                          "x": 0,
+                          "y": 0,
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "Screenshot 2026-02-14 at 10.45.39 AM.png",
+                            "mode": "fill"
+                          },
+                          "width": 760,
+                          "height": 478
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "9wLg5",
+          "name": "Fully Steerable Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            100,
+            64
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "R4TNV",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "flVhE",
+                  "name": "s3title",
+                  "fill": "#0C0A09",
+                  "content": "Fully steerable",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "j2Lss",
+                  "name": "s3sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 540,
+                  "content": "Agent skills allow you to customize agent behavior based on your unique data and business processes. Graphene follows the open standard skill format.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "vCgKJ",
+              "name": "Skills Examples",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "PJy2W",
+                  "name": "Carousel State A",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "JNA2i",
+                      "name": "Toggle",
+                      "width": 853,
+                      "gap": 16,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "AoRoY",
+                          "name": "stateAOpt1",
+                          "fill": "#0C0A09",
+                          "content": "Analytical patterns",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Cj22P",
+                          "name": "stateAOpt2",
+                          "fill": "#A8A29E",
+                          "content": "Business domains",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "iuj2T",
+                      "name": "Underline Row",
+                      "width": 853,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "jfMDk",
+                          "name": "Active Underline",
+                          "fill": "#0C0A09",
+                          "width": 132,
+                          "height": 2
+                        }
+                      ]
+                    },
+                    {
+                      "id": "14tNi",
+                      "type": "ref",
+                      "ref": "69r4N",
+                      "name": "Skill 1 - Cohort Analysis",
+                      "width": 853,
+                      "descendants": {
+                        "EaVOv": {
+                          "height": 44
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "8cjyp",
+          "name": "Semantic Layer Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            100,
+            64
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "3jSMw",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "JSwSt",
+                  "name": "s4title",
+                  "fill": "#0C0A09",
+                  "content": "The semantic layer, reimagined",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "PjAV8",
+                  "name": "s4sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 560,
+                  "content": "Graphene is powered by GSQL, a data modeling and query language designed for agents. Agents perform better with GSQL than both regular SQL and traditional BI APIs.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "PV8zj",
+                  "name": "Semantic Link Wrap",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "c19X5",
+                      "name": "semanticTxt",
+                      "fill": "#7A726A",
+                      "content": "Read more ->",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "Ltnrq",
+                      "name": "semanticLine",
+                      "fill": "#57534E",
+                      "width": 103,
+                      "height": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "ewkMx",
+              "name": "SQL Comparison",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "iUOSZ",
+                  "name": "Cards Row",
+                  "width": 1136,
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "54LRd",
+                      "name": "Left Card",
+                      "width": 530,
+                      "layout": "vertical",
+                      "gap": 24,
+                      "children": [
+                        {
+                          "id": "QuI6Y",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "GSQL Model",
+                          "height": "fit_content",
+                          "width": 530,
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 0,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "GSQL Model",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "content": "table orders (\n  id BIGINT -- Primary key\n  user_id BIGINT\n  created_at DATETIME\n  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'\n  amount FLOAT -- Amount paid by customer\n  cost FLOAT -- Cost of materials\n\n  join one users on user_id = users.id\n\n  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')\n  revenue: sum(case when revenue_recognized then amount else 0 end)\n  cogs: sum(case when revenue_recognized then cost else 0 end)\n  profit: revenue - cogs\n  profit_margin: profit / revenue\n)\n\ntable users (\n  id BIGINT -- Primary key\n  email VARCHAR\n  country_code VARCHAR\n)",
+                              "width": 474,
+                              "fontSize": "$code_font_size"
+                            }
+                          }
+                        },
+                        {
+                          "id": "oDTUt",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "GSQL",
+                          "width": 530,
+                          "height": "fit_content",
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 583,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "GSQL Query",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "content": "select users.country_code, -- Join is implied via your model\n  profit_margin -- Invoke modeled measures \nfrom orders ",
+                              "width": 474,
+                              "fontSize": "$code_font_size"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "BlCH4",
+                      "name": "Arrow Column",
+                      "width": 44,
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "7FhLC",
+                          "name": "arrowIcon",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "arrow-right",
+                          "iconFontFamily": "lucide",
+                          "fill": "#A8A29E"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WV4Fh",
+                      "name": "Right Card",
+                      "width": 530,
+                      "children": [
+                        {
+                          "id": "9mvSm",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "Compiled SQL",
+                          "width": 530,
+                          "height": "fit_content",
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 0,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "Compiled SQL",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "content": "select users.country_code, \n  (sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then amount \n    else 0 end\n  ) \n  - \n  sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then cost \n    else 0 end\n  )) \n  / \n  sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then amount \n    else 0 end\n  ) as profit_margin\nfrom orders \nleft join users on orders.user_id = users.id \ngroup by 1 \n",
+                              "width": 474,
+                              "fontSize": "$code_font_size"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "6WGNl",
+          "name": "CTA Section",
+          "width": "fill_container",
+          "fill": "#0C0A09",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            120,
+            64
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "SBH67",
+              "name": "ctaTitle",
+              "fill": "#FAFAF9",
+              "content": "Try it on your data",
+              "lineHeight": 0.95,
+              "fontFamily": "Instrument Serif",
+              "fontSize": 44,
+              "fontWeight": "normal",
+              "letterSpacing": -1
+            },
+            {
+              "type": "text",
+              "id": "psr0R",
+              "name": "ctaSub",
+              "fill": "#A8A29E",
+              "textGrowth": "fixed-width",
+              "width": 480,
+              "content": "Graphene is currently in a closed access beta. \nWe work closely with our early customers to solve \nreal-world problems.",
+              "lineHeight": 1.6,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 17,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "XrhLC",
+              "name": "CTA Button",
+              "fill": "#FAFAF9",
+              "cornerRadius": 8,
+              "padding": [
+                14,
+                36
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Nv5KV",
+                  "name": "ctaBtnText",
+                  "fill": "#0C0A09",
+                  "content": "Join the waitlist",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "AgaQC",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 72,
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "top": 1
+            },
+            "fill": "#E7E5E4"
+          },
+          "padding": [
+            0,
+            64
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "coB9X",
+              "name": "footerLeft",
+              "fill": "#A8A29E",
+              "content": "© 2026 Graphene Systems, Inc.",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "ct2Fq",
+              "name": "Footer Links",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "oFpiA",
+                  "name": "footerLink1",
+                  "fill": "#A8A29E",
+                  "content": "About",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "Ss330",
+                  "name": "footerLink2",
+                  "fill": "#A8A29E",
+                  "content": "GitHub",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "GUko8",
+      "x": 3460,
+      "y": 2029,
+      "name": "Fully Steerable - State B Mock",
+      "width": 1440,
+      "fill": "#FAFAF9",
+      "layout": "vertical",
+      "gap": 48,
+      "padding": [
+        100,
+        64
+      ],
+      "alignItems": "center",
+      "children": [
+        {
+          "type": "frame",
+          "id": "Vs9Y6",
+          "name": "stateBHeader",
+          "layout": "vertical",
+          "gap": 16,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "WELJH",
+              "name": "s3title",
+              "fill": "#0C0A09",
+              "content": "Fully steerable",
+              "lineHeight": 0.95,
+              "fontFamily": "Instrument Serif",
+              "fontSize": 48,
+              "fontWeight": "normal",
+              "letterSpacing": -1.5
+            },
+            {
+              "type": "text",
+              "id": "RZT7x",
+              "name": "s3sub",
+              "fill": "#57534E",
+              "textGrowth": "fixed-width",
+              "width": 540,
+              "content": "Agent skills allow you to customize agent behavior based on your unique data and business processes. Graphene follows the open standard skill format.",
+              "lineHeight": 1.5,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 18,
+              "fontWeight": "normal"
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ks9lJ",
+          "name": "stateBCarousel",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 10,
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "f22c3",
+              "name": "Toggle",
+              "width": 853,
+              "gap": 16,
+              "padding": [
+                0,
+                4
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "sDrIc",
+                  "name": "stateBOpt1",
+                  "fill": "#A8A29E",
+                  "content": "Analytical patterns",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "DNW0m",
+                  "name": "stateBOpt2",
+                  "fill": "#0C0A09",
+                  "content": "Business domains",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Jqp6z",
+              "name": "Underline Row",
+              "width": 853,
+              "gap": 16,
+              "padding": [
+                0,
+                4
+              ],
+              "children": [
+                {
+                  "type": "rectangle",
+                  "id": "BTbt1",
+                  "name": "Spacer",
+                  "fill": "#00000000",
+                  "width": 126,
+                  "height": 2
+                },
+                {
+                  "type": "rectangle",
+                  "id": "zLoBA",
+                  "name": "Active Underline",
+                  "fill": "#0C0A09",
+                  "width": 123,
+                  "height": 2
+                }
+              ]
+            },
+            {
+              "id": "ZUfHU",
+              "type": "ref",
+              "ref": "69r4N",
+              "name": "Skill 2 - Sales Team",
+              "width": 853,
+              "descendants": {
+                "EaVOv": {
+                  "height": 44
+                },
+                "V2U5E": {
+                  "content": "about-sales-team/SKILL.md",
+                  "fill": "#847b73"
+                },
+                "FBW20": {
+                  "content": "---\nname: about-sales-team\ndescription: How to perform analytics for sales and GTM-related areas\n---\n\n# Sales\n\n## Overview\n\nThe sales team is broken down into sub-teams for inbound sales, outbound sales, and enterprise sales. The Enterprise Sales owns all accounts at the enterprise level (>1,000 employees) and includes both the inbound and outbound directions for this level.\n\nWe use Salesforce to manage our sales operations. The most important tables are `dim_salesforce_opportunities` and `dim_salesforce_accounts`. \n\n## Key Concepts\n\n### Opportunity Types\n* **New Business:** First-time purchase by a new account.\n* **Expansion:** Upsell or cross-sell to an existing account.\n* **Renewal:** Continuation of an existing contract.\n...",
+                  "width": "fill_container",
+                  "fontSize": "$code_font_size"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "h0ONl",
+      "x": 5120,
+      "y": 1,
+      "name": "Graphene Landing Page - Large Desktop",
+      "clip": true,
+      "width": 1920,
+      "fill": "#FAFAF9",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "mT6QP",
+          "name": "Header",
+          "width": "fill_container",
+          "height": 72,
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#E7E5E420"
+          },
+          "padding": [
+            0,
+            304
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "VraNI",
+              "name": "Logo Group",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "qj3FQ",
+                  "name": "Logo",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "kellysikkema",
+                    "link": "https://unsplash.com/@kellysikkema",
+                    "author": "Kelly Sikkema"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Google Drive/Shared drives/Graphene/Brand/logo_transparent.png",
+                    "mode": "stretch"
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "kQ3ck",
+                  "name": "logoText",
+                  "fill": "#0C0A09",
+                  "content": "Graphene",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 20,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "UC9t8",
+              "name": "Nav Right",
+              "gap": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "e7U0N",
+                  "name": "aboutLink",
+                  "fill": "#57534E",
+                  "content": "About",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "4D0iL",
+                  "name": "githubLink",
+                  "fill": "#57534E",
+                  "content": "GitHub",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "6naTP",
+                  "name": "Waitlist Button",
+                  "fill": "#0C0A09",
+                  "cornerRadius": 8,
+                  "padding": [
+                    10,
+                    24
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "rWrXo",
+                      "name": "waitlistText",
+                      "fill": "#FAFAF9",
+                      "content": "Join waitlist",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "sptMv",
+          "name": "Hero Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            100,
+            304,
+            80,
+            304
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "11M39",
+              "name": "Headline",
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HqmEW",
+                  "name": "headPart1",
+                  "fill": "#0C0A09",
+                  "content": "BI built for ",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 80,
+                  "fontWeight": "500",
+                  "letterSpacing": -2
+                },
+                {
+                  "type": "text",
+                  "id": "fe3u4",
+                  "name": "headPart2",
+                  "fill": "#0C0A09",
+                  "content": "agents",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 80,
+                  "fontWeight": "normal",
+                  "letterSpacing": -2,
+                  "fontStyle": "italic"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "PGK38",
+              "name": "subheadline",
+              "fill": "#57534E",
+              "textGrowth": "fixed-width",
+              "width": 600,
+              "content": "With Graphene, agents do the busy work of querying and visualizing data so you can ask 10x more questions.",
+              "lineHeight": 1.5,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 20,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "pW6J5",
+              "name": "Hero Visuals",
+              "width": "fill_container",
+              "height": 592,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "BC8Jq",
+                  "x": -304,
+                  "y": 4,
+                  "name": "Hero Background Image",
+                  "clip": true,
+                  "width": 1920,
+                  "height": 584,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Desktop/hulki-okan-tabak-x3kQTL7yw30-unsplash.jpg",
+                    "mode": "fill"
+                  },
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 0,
+                    "fill": "#00000000"
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "8vvaF",
+                  "x": 103.5,
+                  "y": 61,
+                  "name": "Slack Agent Mock PNG",
+                  "clip": true,
+                  "width": 283.88,
+                  "height": 470,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Documents/slack_agent_mock.png",
+                    "mode": "fit"
+                  },
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#D8D8D8"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000018",
+                    "offset": {
+                      "x": 0,
+                      "y": 2
+                    },
+                    "blur": 12
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "5nuPR",
+                  "x": 411.38,
+                  "y": 61,
+                  "name": "Web Agent Mock PNG",
+                  "clip": true,
+                  "width": 797.12,
+                  "height": 470,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Documents/web_agent_mock.png",
+                    "mode": "fit"
+                  },
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#D8D8D8"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000015",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 20
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "gEnac",
+          "name": "Rooted in Code Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            100,
+            304
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "WaZdj",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Z80Uc",
+                  "name": "s2title",
+                  "fill": "#0C0A09",
+                  "content": "Rooted in code",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "hVCr0",
+                  "name": "s2sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 520,
+                  "content": "Everything is backed by code and CLIs, which agents do best with. Lives in your repo. Open source.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "uxrnY",
+                  "name": "Rooted Link Wrap",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "R2AbI",
+                      "name": "rootedTxt",
+                      "fill": "#7A726A",
+                      "content": "See example project ->",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "bmrpI",
+                      "name": "rootedLine",
+                      "fill": "#57534E",
+                      "width": 176,
+                      "height": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zfJ3w",
+              "name": "Code Visuals",
+              "width": "fill_container",
+              "height": 620,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "Nm2Q3",
+                  "type": "ref",
+                  "ref": "69r4N",
+                  "name": "Code Panel",
+                  "width": 480,
+                  "height": "fit_content",
+                  "x": 70,
+                  "y": 15,
+                  "descendants": {
+                    "EaVOv": {
+                      "height": 44
+                    },
+                    "V2U5E": {
+                      "content": "flight-analytics-dashboard.md",
+                      "fill": "#847b73"
+                    },
+                    "FBW20": {
+                      "content": "# Flight Analytics Dashboard\n\nA comprehensive dashboard showcasing flight data metrics from 2000-2005.\n\n## Key Metrics\n\n<Row>\n  <BigValue data=flights value=count(*) title=\"Total Flights\" fmt=num0 />\n  <BigValue data=flights value=sum(miles_flown) title=\"Total Miles Flown\" fmt=num0m />\n  <BigValue data=flights value=on_time_departure_rate title=\"On-Time Departure Rate\" fmt=pct1 />\n  <BigValue data=flights value=on_time_arrival_rate title=\"On-Time Arrival Rate\" fmt=pct1 />\n</Row>\n\n```sql weekly_trends\nselect \n  date_trunc('week', dep_time) as week,\n  cancellation_rate,\n  diversion_rate,\n  avg(dep_delay) as avg_dep_delay,\n  avg(arr_delay) as avg_arr_delay,\n  on_time_departure_rate,\n  on_time_arrival_rate,\n  count(*) as flight_count,\n  avg(distance) as avg_distance\nfrom flights\ngroup by 1\norder by 1 asc\n```",
+                      "width": 1400,
+                      "fontSize": "$code_font_size"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "DrQbw",
+                  "x": 482,
+                  "y": 71,
+                  "name": "Dashboard Panel",
+                  "clip": true,
+                  "width": 760,
+                  "height": 478,
+                  "fill": "#F5F5F4",
+                  "cornerRadius": 12,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#E7E5E4"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0000000D",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 24
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "78Oh2",
+                      "x": 0,
+                      "y": 0,
+                      "name": "dashCopy",
+                      "clip": true,
+                      "width": 760,
+                      "height": 478,
+                      "fill": "#FFFFFF",
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "iQuVq",
+                          "x": 0,
+                          "y": 0,
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "Screenshot 2026-02-14 at 10.45.39 AM.png",
+                            "mode": "fill"
+                          },
+                          "width": 760,
+                          "height": 478
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "3fMf9",
+          "name": "Fully Steerable Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            100,
+            304
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "bv3Vk",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "2KsQX",
+                  "name": "s3title",
+                  "fill": "#0C0A09",
+                  "content": "Fully steerable",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "ZBMKe",
+                  "name": "s3sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 540,
+                  "content": "Agent skills allow you to customize agent behavior based on your unique data and business processes. Graphene follows the open standard skill format.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "YU85j",
+              "name": "Skills Examples",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "n2g0Y",
+                  "name": "Carousel State A",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "3hbOa",
+                      "name": "Toggle",
+                      "width": 853,
+                      "gap": 16,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "9xO8k",
+                          "name": "stateAOpt1",
+                          "fill": "#0C0A09",
+                          "content": "Analytical patterns",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "YlwFT",
+                          "name": "stateAOpt2",
+                          "fill": "#A8A29E",
+                          "content": "Business domains",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "WFzlr",
+                      "name": "Underline Row",
+                      "width": 853,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "ulADL",
+                          "name": "Active Underline",
+                          "fill": "#0C0A09",
+                          "width": 132,
+                          "height": 2
+                        }
+                      ]
+                    },
+                    {
+                      "id": "GP0Wb",
+                      "type": "ref",
+                      "ref": "69r4N",
+                      "name": "Skill 1 - Cohort Analysis",
+                      "width": 853,
+                      "descendants": {
+                        "EaVOv": {
+                          "height": 44
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "1wcti",
+          "name": "Semantic Layer Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            100,
+            304
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "odTgE",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "JQy4f",
+                  "name": "s4title",
+                  "fill": "#0C0A09",
+                  "content": "The semantic layer, reimagined",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "ByyFQ",
+                  "name": "s4sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 560,
+                  "content": "Graphene is powered by GSQL, a data modeling and query language designed for agents. Agents perform better with GSQL than both regular SQL and traditional BI APIs.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "RV5R3",
+                  "name": "Semantic Link Wrap",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "G2ISf",
+                      "name": "semanticTxt",
+                      "fill": "#7A726A",
+                      "content": "Read more ->",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "CB0gz",
+                      "name": "semanticLine",
+                      "fill": "#57534E",
+                      "width": 103,
+                      "height": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "zemqy",
+              "name": "SQL Comparison",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "U9PpI",
+                  "name": "Cards Row",
+                  "width": 1136,
+                  "gap": 16,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "s7lNg",
+                      "name": "Left Card",
+                      "width": 530,
+                      "layout": "vertical",
+                      "gap": 24,
+                      "children": [
+                        {
+                          "id": "jojnP",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "GSQL Model",
+                          "height": "fit_content",
+                          "width": 530,
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 0,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "GSQL Model",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "content": "table orders (\n  id BIGINT -- Primary key\n  user_id BIGINT\n  created_at DATETIME\n  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'\n  amount FLOAT -- Amount paid by customer\n  cost FLOAT -- Cost of materials\n\n  join one users on user_id = users.id\n\n  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')\n  revenue: sum(case when revenue_recognized then amount else 0 end)\n  cogs: sum(case when revenue_recognized then cost else 0 end)\n  profit: revenue - cogs\n  profit_margin: profit / revenue\n)\n\ntable users (\n  id BIGINT -- Primary key\n  email VARCHAR\n  country_code VARCHAR\n)",
+                              "width": 474,
+                              "fontSize": "$code_font_size"
+                            }
+                          }
+                        },
+                        {
+                          "id": "mMzzA",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "GSQL",
+                          "width": 530,
+                          "height": "fit_content",
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 583,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "GSQL Query",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "content": "select users.country_code, -- Join is implied via your model\n  profit_margin -- Invoke modeled measures \nfrom orders ",
+                              "width": 474,
+                              "fontSize": "$code_font_size"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "j039a",
+                      "name": "Arrow Column",
+                      "width": 44,
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "GLSJr",
+                          "name": "arrowIcon",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "arrow-right",
+                          "iconFontFamily": "lucide",
+                          "fill": "#A8A29E"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "90iOB",
+                      "name": "Right Card",
+                      "width": 530,
+                      "children": [
+                        {
+                          "id": "YaFw9",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "Compiled SQL",
+                          "width": 530,
+                          "height": "fit_content",
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 0,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "Compiled SQL",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "content": "select users.country_code, \n  (sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then amount \n    else 0 end\n  ) \n  - \n  sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then cost \n    else 0 end\n  )) \n  / \n  sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then amount \n    else 0 end\n  ) as profit_margin\nfrom orders \nleft join users on orders.user_id = users.id \ngroup by 1 \n",
+                              "width": 474,
+                              "fontSize": "$code_font_size"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "Xsjfh",
+          "name": "CTA Section",
+          "width": "fill_container",
+          "fill": "#0C0A09",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            120,
+            304
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Ciahu",
+              "name": "ctaTitle",
+              "fill": "#FAFAF9",
+              "content": "Try it on your data",
+              "lineHeight": 0.95,
+              "fontFamily": "Instrument Serif",
+              "fontSize": 44,
+              "fontWeight": "normal",
+              "letterSpacing": -1
+            },
+            {
+              "type": "text",
+              "id": "yFI5d",
+              "name": "ctaSub",
+              "fill": "#A8A29E",
+              "textGrowth": "fixed-width",
+              "width": 480,
+              "content": "Graphene is currently in a closed access beta. \nWe work closely with our early customers to solve \nreal-world problems.",
+              "lineHeight": 1.6,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 17,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "nYsNR",
+              "name": "CTA Button",
+              "fill": "#FAFAF9",
+              "cornerRadius": 8,
+              "padding": [
+                14,
+                36
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "GJyPN",
+                  "name": "ctaBtnText",
+                  "fill": "#0C0A09",
+                  "content": "Join the waitlist",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "TLbpT",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 72,
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "top": 1
+            },
+            "fill": "#E7E5E4"
+          },
+          "padding": [
+            0,
+            304
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "yX5TB",
+              "name": "footerLeft",
+              "fill": "#A8A29E",
+              "content": "© 2026 Graphene Systems, Inc.",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "lCekT",
+              "name": "Footer Links",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "KiUeA",
+                  "name": "footerLink1",
+                  "fill": "#A8A29E",
+                  "content": "About",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "29tQu",
+                  "name": "footerLink2",
+                  "fill": "#A8A29E",
+                  "content": "GitHub",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "PwIid",
+      "x": 7300,
+      "y": 1,
+      "name": "Graphene Landing Page - Tablet",
+      "clip": true,
+      "width": 1024,
+      "fill": "#FAFAF9",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "LO4g1",
+          "name": "Header",
+          "width": "fill_container",
+          "height": 72,
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#E7E5E420"
+          },
+          "padding": [
+            0,
+            40
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "u0LE0",
+              "name": "Logo Group",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "ldmIk",
+                  "name": "Logo",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "kellysikkema",
+                    "link": "https://unsplash.com/@kellysikkema",
+                    "author": "Kelly Sikkema"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Google Drive/Shared drives/Graphene/Brand/logo_transparent.png",
+                    "mode": "stretch"
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "iJ9rH",
+                  "name": "logoText",
+                  "fill": "#0C0A09",
+                  "content": "Graphene",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 20,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "O8zov",
+              "name": "Nav Right",
+              "gap": 32,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "ujfoW",
+                  "name": "aboutLink",
+                  "fill": "#57534E",
+                  "content": "About",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "text",
+                  "id": "AStqw",
+                  "name": "githubLink",
+                  "fill": "#57534E",
+                  "content": "GitHub",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "500"
+                },
+                {
+                  "type": "frame",
+                  "id": "Jev1N",
+                  "name": "Waitlist Button",
+                  "fill": "#0C0A09",
+                  "cornerRadius": 8,
+                  "padding": [
+                    10,
+                    24
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "4HEnf",
+                      "name": "waitlistText",
+                      "fill": "#FAFAF9",
+                      "content": "Join waitlist",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "EQm96",
+          "name": "Hero Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": [
+            80,
+            40,
+            64,
+            40
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "LPMAv",
+              "name": "Headline",
+              "alignItems": "end",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "uiXmV",
+                  "name": "headPart1",
+                  "fill": "#0C0A09",
+                  "content": "BI built for ",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 60,
+                  "fontWeight": "500",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "Y5lVv",
+                  "name": "headPart2",
+                  "fill": "#0C0A09",
+                  "content": "agents",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 60,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5,
+                  "fontStyle": "italic"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "k8RC2",
+              "name": "subheadline",
+              "fill": "#57534E",
+              "textGrowth": "fixed-width",
+              "width": 600,
+              "content": "With Graphene, agents do the busy work of querying and visualizing data so you can ask 10x more questions.",
+              "lineHeight": 1.5,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 20,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "iZpD5",
+              "name": "Hero Visuals",
+              "width": "fill_container",
+              "height": 460,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "EZWRu",
+                  "x": -40,
+                  "y": 0,
+                  "name": "Hero Background Image",
+                  "clip": true,
+                  "width": 1024,
+                  "height": 450,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Desktop/hulki-okan-tabak-x3kQTL7yw30-unsplash.jpg",
+                    "mode": "fill"
+                  },
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 0,
+                    "fill": "#00000000"
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "dhr4U",
+                  "x": 62,
+                  "y": 60,
+                  "name": "Slack Agent Mock PNG",
+                  "clip": true,
+                  "width": 206.16,
+                  "height": 341,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Documents/slack_agent_mock.png",
+                    "mode": "fit"
+                  },
+                  "cornerRadius": 8,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#D8D8D8"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000018",
+                    "offset": {
+                      "x": 0,
+                      "y": 2
+                    },
+                    "blur": 12
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "Wecoc",
+                  "x": 302,
+                  "y": 60,
+                  "name": "Web Agent Mock PNG",
+                  "clip": true,
+                  "width": 580.03,
+                  "height": 342,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Documents/web_agent_mock.png",
+                    "mode": "fit"
+                  },
+                  "cornerRadius": 8,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#D8D8D8"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000015",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 20
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "WxYRC",
+          "name": "Rooted in Code Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            84,
+            40
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "IFipW",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "a1T6h",
+                  "name": "s2title",
+                  "fill": "#0C0A09",
+                  "content": "Rooted in code",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "Oi6Xg",
+                  "name": "s2sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 520,
+                  "content": "Everything is backed by code and CLIs, which agents do best with. Lives in your repo. Open source.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "YRTsp",
+                  "name": "Rooted Link Wrap",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "8XYCN",
+                      "name": "rootedTxt",
+                      "fill": "#7A726A",
+                      "content": "See example project ->",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "t7rla",
+                      "name": "rootedLine",
+                      "fill": "#57534E",
+                      "width": 176,
+                      "height": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "wWWiH",
+              "name": "Code Visuals",
+              "width": "fill_container",
+              "height": 700,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "0sisO",
+                  "type": "ref",
+                  "ref": "69r4N",
+                  "name": "Code Panel",
+                  "width": 500,
+                  "height": "fit_content",
+                  "x": 72,
+                  "y": 24,
+                  "descendants": {
+                    "EaVOv": {
+                      "height": 44
+                    },
+                    "V2U5E": {
+                      "content": "flight-analytics-dashboard.md",
+                      "fill": "#847b73"
+                    },
+                    "FBW20": {
+                      "content": "# Flight Analytics Dashboard\n\nA comprehensive dashboard showcasing flight data metrics from 2000-2005.\n\n## Key Metrics\n\n<Row>\n  <BigValue data=flights value=count(*) title=\"Total Flights\" fmt=num0 />\n  <BigValue data=flights value=sum(miles_flown) title=\"Total Miles Flown\" fmt=num0m />\n  <BigValue data=flights value=on_time_departure_rate title=\"On-Time Departure Rate\" fmt=pct1 />\n  <BigValue data=flights value=on_time_arrival_rate title=\"On-Time Arrival Rate\" fmt=pct1 />\n</Row>\n\n```sql weekly_trends\nselect \n  date_trunc('week', dep_time) as week,\n  cancellation_rate,\n  diversion_rate,\n  avg(dep_delay) as avg_dep_delay,\n  avg(arr_delay) as avg_arr_delay,\n  on_time_departure_rate,\n  on_time_arrival_rate,\n  count(*) as flight_count,\n  avg(distance) as avg_distance\nfrom flights\ngroup by 1\norder by 1 asc\n```",
+                      "width": 1400,
+                      "fontSize": "$code_font_size"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "DhIL7",
+                  "x": 300,
+                  "y": 165,
+                  "name": "Dashboard Panel",
+                  "clip": true,
+                  "width": 560,
+                  "height": 330,
+                  "fill": "#F5F5F4",
+                  "cornerRadius": 9,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#E7E5E4"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0000000D",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 24
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "rjKuH",
+                      "x": 0,
+                      "y": 0,
+                      "name": "dashCopy",
+                      "clip": true,
+                      "width": 560,
+                      "height": 330,
+                      "fill": "#FFFFFF",
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "6W8rJ",
+                          "x": 0,
+                          "y": 0,
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "Screenshot 2026-02-14 at 10.45.39 AM.png",
+                            "mode": "fill"
+                          },
+                          "width": 560,
+                          "height": 330
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "4GTUY",
+          "name": "Fully Steerable Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            84,
+            40
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "eHQYw",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "FJyMc",
+                  "name": "s3title",
+                  "fill": "#0C0A09",
+                  "content": "Fully steerable",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "PfonW",
+                  "name": "s3sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 540,
+                  "content": "Agent skills allow you to customize agent behavior based on your unique data and business processes. Graphene follows the open standard skill format.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "FIsKJ",
+              "name": "Skills Examples",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "xBqsf",
+                  "name": "Carousel State A",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "kHmt6",
+                      "name": "Toggle",
+                      "width": 760,
+                      "gap": 16,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "nRVUb",
+                          "name": "stateAOpt1",
+                          "fill": "#0C0A09",
+                          "content": "Analytical patterns",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "rnetv",
+                          "name": "stateAOpt2",
+                          "fill": "#A8A29E",
+                          "content": "Business domains",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "mxKrx",
+                      "name": "Underline Row",
+                      "width": 760,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "ejfB4",
+                          "name": "Active Underline",
+                          "fill": "#0C0A09",
+                          "width": 132,
+                          "height": 2
+                        }
+                      ]
+                    },
+                    {
+                      "id": "1dScO",
+                      "type": "ref",
+                      "ref": "69r4N",
+                      "name": "Skill 1 - Cohort Analysis",
+                      "width": 760,
+                      "descendants": {
+                        "EaVOv": {
+                          "height": 44
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "bZAqX",
+          "name": "Semantic Layer Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 48,
+          "padding": [
+            84,
+            40
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "1XsFi",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "HwRKT",
+                  "name": "s4title",
+                  "fill": "#0C0A09",
+                  "content": "The semantic layer, reimagined",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "1LXJw",
+                  "name": "s4sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 560,
+                  "content": "Graphene is powered by GSQL, a data modeling and query language designed for agents. Agents perform better with GSQL than both regular SQL and traditional BI APIs.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 18,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "B4efK",
+                  "name": "Semantic Link Wrap",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "blbjT",
+                      "name": "semanticTxt",
+                      "fill": "#7A726A",
+                      "content": "Read more ->",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "ib0RG",
+                      "name": "semanticLine",
+                      "fill": "#57534E",
+                      "width": 103,
+                      "height": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "CLhNE",
+              "name": "SQL Comparison",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "81tdW",
+                  "name": "Cards Row",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 20,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "oJD9I",
+                      "name": "Left Card",
+                      "width": 760,
+                      "layout": "vertical",
+                      "gap": 24,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "Qf4tP",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "GSQL Model",
+                          "width": 760,
+                          "height": "fit_content",
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 0,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "GSQL Model",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "width": 704,
+                              "fontSize": "$code_font_size",
+                              "content": "table orders (\n  id BIGINT -- Primary key\n  user_id BIGINT\n  created_at DATETIME\n  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'\n  amount FLOAT -- Amount paid by customer\n  cost FLOAT -- Cost of materials\n\n  join one users on user_id = users.id\n\n  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')\n  revenue: sum(case when revenue_recognized then amount else 0 end)\n  cogs: sum(case when revenue_recognized then cost else 0 end)\n  profit: revenue - cogs\n  profit_margin: profit / revenue\n)\n\ntable users (\n  id BIGINT -- Primary key\n  email VARCHAR\n  country_code VARCHAR\n)"
+                            }
+                          }
+                        },
+                        {
+                          "id": "OGFXf",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "GSQL Query",
+                          "width": 760,
+                          "height": "fit_content",
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 526,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "GSQL Query",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "width": 704,
+                              "fontSize": "$code_font_size",
+                              "content": "select users.country_code, -- Join is implied via your model\n  profit_margin -- Invoke modeled measures \nfrom orders "
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "s2uIZ",
+                      "name": "Arrow Column",
+                      "width": 760,
+                      "height": 36,
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "D5pLk",
+                          "name": "arrowIcon",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "arrow-down",
+                          "iconFontFamily": "lucide",
+                          "fill": "#A8A29E"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Npfe2",
+                      "name": "Right Card",
+                      "width": 760,
+                      "height": 664,
+                      "layout": "vertical",
+                      "gap": 12,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "indL9",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "Compiled SQL",
+                          "width": 760,
+                          "height": "fit_content",
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "Compiled SQL",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "content": "select users.country_code, \n  (sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then amount \n    else 0 end\n  ) \n  - \n  sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then cost \n    else 0 end\n  )) \n  / \n  sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then amount \n    else 0 end\n  ) as profit_margin\nfrom orders \nleft join users on orders.user_id = users.id \ngroup by 1 \norder by 2 desc",
+                              "width": 704,
+                              "fontSize": "$code_font_size"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "MknRk",
+          "name": "CTA Section",
+          "width": "fill_container",
+          "fill": "#0C0A09",
+          "layout": "vertical",
+          "gap": 32,
+          "padding": [
+            100,
+            40
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "limEs",
+              "name": "ctaTitle",
+              "fill": "#FAFAF9",
+              "content": "Try it on your data",
+              "lineHeight": 0.95,
+              "fontFamily": "Instrument Serif",
+              "fontSize": 44,
+              "fontWeight": "normal",
+              "letterSpacing": -1
+            },
+            {
+              "type": "text",
+              "id": "epp2q",
+              "name": "ctaSub",
+              "fill": "#A8A29E",
+              "textGrowth": "fixed-width",
+              "width": 480,
+              "content": "Graphene is currently in a closed access beta. \nWe work closely with our early customers to solve \nreal-world problems.",
+              "lineHeight": 1.6,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 17,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "oKUzn",
+              "name": "CTA Button",
+              "fill": "#FAFAF9",
+              "cornerRadius": 8,
+              "padding": [
+                14,
+                36
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "50ket",
+                  "name": "ctaBtnText",
+                  "fill": "#0C0A09",
+                  "content": "Join the waitlist",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "06tQb",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 72,
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "top": 1
+            },
+            "fill": "#E7E5E4"
+          },
+          "padding": [
+            0,
+            40
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "rIVkl",
+              "name": "footerLeft",
+              "fill": "#A8A29E",
+              "content": "© 2026 Graphene Systems, Inc.",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "gIDQC",
+              "name": "Footer Links",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Gm5AS",
+                  "name": "footerLink1",
+                  "fill": "#A8A29E",
+                  "content": "About",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "lOSFT",
+                  "name": "footerLink2",
+                  "fill": "#A8A29E",
+                  "content": "GitHub",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "RAtRd",
+      "x": 8600,
+      "y": 1,
+      "name": "Graphene Landing Page - Mobile",
+      "clip": true,
+      "width": 480,
+      "fill": "#FAFAF9",
+      "layout": "vertical",
+      "children": [
+        {
+          "type": "frame",
+          "id": "EWnqt",
+          "name": "Header",
+          "width": "fill_container",
+          "height": 64,
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "bottom": 1
+            },
+            "fill": "#E7E5E420"
+          },
+          "padding": [
+            0,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "oc3pD",
+              "name": "Logo Group",
+              "gap": 10,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "WvOKm",
+                  "name": "Logo",
+                  "metadata": {
+                    "type": "unsplash",
+                    "username": "kellysikkema",
+                    "link": "https://unsplash.com/@kellysikkema",
+                    "author": "Kelly Sikkema"
+                  },
+                  "width": 28,
+                  "height": 28,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Google Drive/Shared drives/Graphene/Brand/logo_transparent.png",
+                    "mode": "stretch"
+                  }
+                },
+                {
+                  "type": "text",
+                  "id": "kmnBX",
+                  "name": "logoText",
+                  "fill": "#0C0A09",
+                  "content": "Graphene",
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": 18,
+                  "fontWeight": "700",
+                  "letterSpacing": -0.5
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "bMkam",
+              "name": "Nav Right",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "DOISZ",
+                  "name": "Waitlist Button",
+                  "fill": "#0C0A09",
+                  "cornerRadius": 8,
+                  "padding": [
+                    8,
+                    14
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "lESBc",
+                      "name": "waitlistText",
+                      "fill": "#FAFAF9",
+                      "content": "Join waitlist",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "500"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "614F3",
+          "name": "Hero Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 20,
+          "padding": [
+            64,
+            24,
+            52,
+            24
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "hbhDM",
+              "name": "Headline",
+              "layout": "vertical",
+              "gap": 2,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "eufTD",
+                  "name": "headPart1",
+                  "fill": "#0C0A09",
+                  "content": "BI built for ",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "500",
+                  "letterSpacing": -1.1
+                },
+                {
+                  "type": "text",
+                  "id": "HBfbU",
+                  "name": "headPart2",
+                  "fill": "#0C0A09",
+                  "content": "agents",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 48,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.1,
+                  "fontStyle": "italic"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "iTDUZ",
+              "name": "subheadline",
+              "fill": "#57534E",
+              "textGrowth": "fixed-width",
+              "width": 389,
+              "content": "With Graphene, agents do the busy work of querying and visualizing data so you can ask 10x more questions.",
+              "lineHeight": 1.45,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 16,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "qNam7",
+              "name": "Hero Visuals",
+              "width": "fill_container",
+              "height": 575,
+              "layout": "none",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "4LKEJ",
+                  "x": 49.5,
+                  "y": 12,
+                  "name": "Slack Agent Mock PNG",
+                  "clip": true,
+                  "width": 333,
+                  "height": 551,
+                  "fill": {
+                    "type": "image",
+                    "enabled": true,
+                    "url": "/Users/kevinmarr/Documents/slack_agent_mock.png",
+                    "mode": "fit"
+                  },
+                  "cornerRadius": 10,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#D8D8D8"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#00000018",
+                    "offset": {
+                      "x": 0,
+                      "y": 2
+                    },
+                    "blur": 12
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "XRxyi",
+          "name": "Rooted in Code Section",
+          "width": "fill_container",
+          "height": 1315,
+          "layout": "vertical",
+          "gap": 40,
+          "padding": [
+            72,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "scy7n",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "Pc1u2",
+                  "name": "s2title",
+                  "fill": "#0C0A09",
+                  "content": "Rooted in code",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 38,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "209zQ",
+                  "name": "s2sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 420,
+                  "content": "Everything is backed by code and CLIs, which agents do best with. Lives in your repo. Open source.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "Z7toZ",
+                  "name": "Rooted Link Wrap",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "Mpp56",
+                      "name": "rootedTxt",
+                      "fill": "#7A726A",
+                      "content": "See example project ->",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "p4AHN",
+                      "name": "rootedLine",
+                      "fill": "#57534E",
+                      "width": 176,
+                      "height": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "mB0lt",
+              "name": "Code Visuals",
+              "width": "fill_container",
+              "height": 994,
+              "layout": "none",
+              "children": [
+                {
+                  "id": "xnfs3",
+                  "type": "ref",
+                  "ref": "69r4N",
+                  "name": "Code Panel",
+                  "width": 420,
+                  "height": "fit_content",
+                  "x": 20,
+                  "y": 294,
+                  "descendants": {
+                    "EaVOv": {
+                      "height": 44
+                    },
+                    "V2U5E": {
+                      "content": "flight-analytics-dashboard.md",
+                      "fill": "#847b73"
+                    },
+                    "FBW20": {
+                      "content": "# Flight Analytics Dashboard\n\nA comprehensive dashboard showcasing flight data metrics from 2000-2005.\n\n## Key Metrics\n\n<Row>\n  <BigValue data=flights value=count(*) title=\"Total Flights\" fmt=num0 />\n  <BigValue data=flights value=sum(miles_flown) title=\"Total Miles Flown\" fmt=num0m />\n  <BigValue data=flights value=on_time_departure_rate title=\"On-Time Departure Rate\" fmt=pct1 />\n  <BigValue data=flights value=on_time_arrival_rate title=\"On-Time Arrival Rate\" fmt=pct1 />\n</Row>\n\n```sql weekly_trends\nselect \n  date_trunc('week', dep_time) as week,\n  cancellation_rate,\n  diversion_rate,\n  avg(dep_delay) as avg_dep_delay,\n  avg(arr_delay) as avg_arr_delay,\n  on_time_departure_rate,\n  on_time_arrival_rate,\n  count(*) as flight_count,\n  avg(distance) as avg_distance\nfrom flights\ngroup by 1\norder by 1 asc\n```",
+                      "width": 1400,
+                      "fontSize": "$code_font_size_mobile"
+                    }
+                  }
+                },
+                {
+                  "type": "frame",
+                  "id": "BRohQ",
+                  "x": 20,
+                  "y": 0,
+                  "name": "Dashboard Panel",
+                  "clip": true,
+                  "width": 420,
+                  "height": 262,
+                  "fill": "#F5F5F4",
+                  "cornerRadius": 12,
+                  "stroke": {
+                    "align": "inside",
+                    "thickness": 1,
+                    "fill": "#E7E5E4"
+                  },
+                  "effect": {
+                    "type": "shadow",
+                    "shadowType": "outer",
+                    "color": "#0000000D",
+                    "offset": {
+                      "x": 0,
+                      "y": 4
+                    },
+                    "blur": 24
+                  },
+                  "layout": "none",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "QPne7",
+                      "x": 0,
+                      "y": 0,
+                      "name": "dashCopy",
+                      "clip": true,
+                      "width": 420,
+                      "height": 262,
+                      "fill": "#FFFFFF",
+                      "layout": "none",
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "jMc9N",
+                          "x": 0,
+                          "y": 0,
+                          "fill": {
+                            "type": "image",
+                            "enabled": true,
+                            "url": "Screenshot 2026-02-14 at 10.45.39 AM.png",
+                            "mode": "fill"
+                          },
+                          "width": 420,
+                          "height": 262
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "4RYQb",
+          "name": "Fully Steerable Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 40,
+          "padding": [
+            72,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "zDLsf",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "gbtTn",
+                  "name": "s3title",
+                  "fill": "#0C0A09",
+                  "content": "Fully steerable",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 38,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "SycCN",
+                  "name": "s3sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 420,
+                  "content": "Agent skills allow you to customize agent behavior based on your unique data and business processes. Graphene follows the open standard skill format.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "WoM6T",
+              "name": "Skills Examples",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 20,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "Xj8ve",
+                  "name": "Carousel State A",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 10,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "hHOuM",
+                      "name": "Toggle",
+                      "width": 420,
+                      "gap": 12,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "lo03F",
+                          "name": "stateAOpt1",
+                          "fill": "#0C0A09",
+                          "content": "Analytical patterns",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "jqtMN",
+                          "name": "stateAOpt2",
+                          "fill": "#A8A29E",
+                          "content": "Business domains",
+                          "fontFamily": "Inter",
+                          "fontSize": 14,
+                          "fontWeight": "500"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "n15Ng",
+                      "name": "Underline Row",
+                      "width": 420,
+                      "padding": [
+                        0,
+                        4
+                      ],
+                      "children": [
+                        {
+                          "type": "rectangle",
+                          "id": "qBJ2g",
+                          "name": "Active Underline",
+                          "fill": "#0C0A09",
+                          "width": 132,
+                          "height": 2
+                        }
+                      ]
+                    },
+                    {
+                      "id": "CkJzR",
+                      "type": "ref",
+                      "ref": "69r4N",
+                      "name": "Skill 1 - Cohort Analysis",
+                      "width": 420,
+                      "descendants": {
+                        "EaVOv": {
+                          "height": 44
+                        },
+                        "FBW20": {
+                          "width": 1400,
+                          "fontSize": "$code_font_size_mobile"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "uTl8R",
+          "name": "Semantic Layer Section",
+          "width": "fill_container",
+          "layout": "vertical",
+          "gap": 40,
+          "padding": [
+            72,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "Z5Qgp",
+              "name": "Section Header",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "oZ1dY",
+                  "name": "s4title",
+                  "fill": "#0C0A09",
+                  "content": "The semantic layer, reimagined",
+                  "lineHeight": 0.95,
+                  "fontFamily": "Instrument Serif",
+                  "fontSize": 38,
+                  "fontWeight": "normal",
+                  "letterSpacing": -1.5
+                },
+                {
+                  "type": "text",
+                  "id": "mdme4",
+                  "name": "s4sub",
+                  "fill": "#57534E",
+                  "textGrowth": "fixed-width",
+                  "width": 420,
+                  "content": "Graphene is powered by GSQL, a data modeling and query language designed for agents. Agents perform better with GSQL than both regular SQL and traditional BI APIs.",
+                  "lineHeight": 1.5,
+                  "textAlign": "center",
+                  "fontFamily": "Inter",
+                  "fontSize": 16,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "frame",
+                  "id": "MY2G9",
+                  "name": "Semantic Link Wrap",
+                  "layout": "vertical",
+                  "gap": 2,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "B5S91",
+                      "name": "semanticTxt",
+                      "fill": "#7A726A",
+                      "content": "Read more ->",
+                      "fontFamily": "Inter",
+                      "fontSize": 16,
+                      "fontWeight": "500",
+                      "fontStyle": "italic"
+                    },
+                    {
+                      "type": "rectangle",
+                      "id": "ppFH7",
+                      "name": "semanticLine",
+                      "fill": "#57534E",
+                      "width": 103,
+                      "height": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "deBKM",
+              "name": "SQL Comparison",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 16,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "JhEQp",
+                  "name": "Cards Row",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 20,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "9Q3Nq",
+                      "name": "Left Card",
+                      "width": 420,
+                      "layout": "vertical",
+                      "gap": 24,
+                      "children": [
+                        {
+                          "id": "Hply8",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "GSQL Model",
+                          "width": 420,
+                          "height": "fit_content",
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 0,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "GSQL Model",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "width": 1400,
+                              "fontSize": "$code_font_size_mobile",
+                              "content": "table orders (\n  id BIGINT -- Primary key\n  user_id BIGINT\n  created_at DATETIME\n  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'\n  amount FLOAT -- Amount paid by customer\n  cost FLOAT -- Cost of materials\n\n  join one users on user_id = users.id\n\n  revenue_recognized: status in ('Processing', 'Shipped', 'Complete')\n  revenue: sum(case when revenue_recognized then amount else 0 end)\n  cogs: sum(case when revenue_recognized then cost else 0 end)\n  profit: revenue - cogs\n  profit_margin: profit / revenue\n)\n\ntable users (\n  id BIGINT -- Primary key\n  email VARCHAR\n  country_code VARCHAR\n)"
+                            }
+                          }
+                        },
+                        {
+                          "id": "4G3MW",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "GSQL Query",
+                          "width": 420,
+                          "height": "fit_content",
+                          "flipX": false,
+                          "flipY": false,
+                          "x": 0,
+                          "y": 592,
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "GSQL Query",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "width": 1400,
+                              "fontSize": "$code_font_size_mobile",
+                              "content": "select users.country_code, -- Join is implied via your model\n  profit_margin -- Invoke modeled measures \nfrom orders "
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "VGw7c",
+                      "name": "Arrow Column",
+                      "width": 460,
+                      "height": 28,
+                      "layout": "vertical",
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon_font",
+                          "id": "dkLox",
+                          "name": "arrowIcon",
+                          "width": 20,
+                          "height": 20,
+                          "iconFontName": "arrow-down",
+                          "iconFontFamily": "lucide",
+                          "fill": "#A8A29E"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HOG9a",
+                      "name": "Right Card",
+                      "width": 420,
+                      "children": [
+                        {
+                          "id": "nalux",
+                          "type": "ref",
+                          "ref": "69r4N",
+                          "name": "Compiled SQL",
+                          "width": 420,
+                          "height": "fit_content",
+                          "descendants": {
+                            "EaVOv": {
+                              "height": 44
+                            },
+                            "V2U5E": {
+                              "content": "Compiled SQL",
+                              "fill": "#3A3632"
+                            },
+                            "FBW20": {
+                              "content": "select users.country_code, \n  (sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then amount \n    else 0 end\n  ) \n  - \n  sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then cost \n    else 0 end\n  )) \n  / \n  sum(\n    case when status in ('Processing', 'Shipped', 'Complete') \n    then amount \n    else 0 end\n  ) as profit_margin\nfrom orders \nleft join users on orders.user_id = users.id \ngroup by 1 \norder by 2 desc",
+                              "width": 1400,
+                              "fontSize": "$code_font_size_mobile"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "ODqhD",
+          "name": "CTA Section",
+          "width": "fill_container",
+          "fill": "#0C0A09",
+          "layout": "vertical",
+          "gap": 24,
+          "padding": [
+            84,
+            24
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "3rT4C",
+              "name": "ctaTitle",
+              "fill": "#FAFAF9",
+              "content": "Try it on your data",
+              "lineHeight": 0.95,
+              "fontFamily": "Instrument Serif",
+              "fontSize": 36,
+              "fontWeight": "normal",
+              "letterSpacing": -1
+            },
+            {
+              "type": "text",
+              "id": "bnZIO",
+              "name": "ctaSub",
+              "fill": "#A8A29E",
+              "textGrowth": "fixed-width",
+              "width": 320,
+              "content": "Graphene is currently in a closed access beta. We work closely with our early customers to solve real-world problems.",
+              "lineHeight": 1.6,
+              "textAlign": "center",
+              "fontFamily": "Inter",
+              "fontSize": 15,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "ubbvZ",
+              "name": "CTA Button",
+              "fill": "#FAFAF9",
+              "cornerRadius": 8,
+              "padding": [
+                14,
+                36
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "2J8wC",
+                  "name": "ctaBtnText",
+                  "fill": "#0C0A09",
+                  "content": "Join the waitlist",
+                  "fontFamily": "Inter",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "q83aG",
+          "name": "Footer",
+          "width": "fill_container",
+          "height": 64,
+          "stroke": {
+            "align": "inside",
+            "thickness": {
+              "top": 1
+            },
+            "fill": "#E7E5E4"
+          },
+          "padding": [
+            0,
+            24
+          ],
+          "justifyContent": "space_between",
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "text",
+              "id": "Zo6zW",
+              "name": "footerLeft",
+              "fill": "#A8A29E",
+              "content": "© 2026 Graphene Systems, Inc.",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "normal"
+            },
+            {
+              "type": "frame",
+              "id": "X8zpo",
+              "name": "Footer Links",
+              "gap": 24,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "CxoAU",
+                  "name": "footerLink1",
+                  "fill": "#A8A29E",
+                  "content": "About",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "text",
+                  "id": "doRkJ",
+                  "name": "footerLink2",
+                  "fill": "#A8A29E",
+                  "content": "GitHub",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "zgrU3",
+      "x": 9280,
+      "y": 20,
+      "name": "Code Components",
+      "width": 1400,
+      "fill": "#F7F6F3",
+      "stroke": {
+        "align": "inside",
+        "thickness": 1,
+        "fill": "#DFDDD8"
+      },
+      "layout": "vertical",
+      "gap": 40,
+      "padding": 40,
+      "children": [
+        {
+          "type": "frame",
+          "id": "69r4N",
+          "name": "Component / Code Block / Window v2",
+          "reusable": true,
+          "clip": true,
+          "width": 853,
+          "fill": "#F1F0ED",
+          "cornerRadius": 12,
+          "stroke": {
+            "align": "inside",
+            "thickness": 1,
+            "fill": "#DFDDD8"
+          },
+          "effect": {
+            "type": "shadow",
+            "shadowType": "outer",
+            "color": "#0000000D",
+            "offset": {
+              "x": 0,
+              "y": 4
+            },
+            "blur": 24
+          },
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "EaVOv",
+              "name": "Label Bar",
+              "width": "fill_container",
+              "height": 44,
+              "stroke": {
+                "align": "inside",
+                "thickness": {
+                  "bottom": 1
+                },
+                "fill": "#DFDDD8"
+              },
+              "padding": [
+                0,
+                "$code_bar_pad_x"
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "V2U5E",
+                  "name": "barText",
+                  "fill": "#847b73",
+                  "content": "cohort-analysis/SKILL.md",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": "$code_label_font_size",
+                  "fontWeight": "600",
+                  "letterSpacing": 1
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "PFZ5Z",
+              "name": "Code",
+              "width": "fill_container",
+              "layout": "vertical",
+              "gap": 2,
+              "padding": [
+                "$code_pad_y",
+                "$code_pad_x"
+              ],
+              "children": [
+                {
+                  "type": "text",
+                  "id": "FBW20",
+                  "name": "codeText",
+                  "fill": "$code_text_color",
+                  "textGrowth": "fixed-width",
+                  "width": "fill_container",
+                  "content": "---\nname: cohort-analysis\ndescription: Performs cohort analysis for customer behavior patterns over time. Use when analyzing retention, LTV, or other metrics by customer cohorts, or when the user asks about cohorts, retention curves, or customer lifecycle patterns.\n---\n\n# Cohort Analysis\n\nUsers expect cohort analysis to look a certain way. This guide walks through it.\n\n## Query Pattern\n\nAlways group by two dimensions:\n1. **Cohort period**, e.g., the month a user's subscription starts\n2. **Elapsed time units**, e.g., the number of months that have elapsed since the subscription started\n\nThen aggregate the target metric(s). Filter to the last 12 months if not specified otherwise.\n\n## Visualization Options\n\n### Option 1: Multi-Series Line Chart\n...",
+                  "lineHeight": "$code_line_height",
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": "$code_font_size",
+                  "fontWeight": "normal"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "code_bar_height": {
+      "type": "number",
+      "value": 44
+    },
+    "code_bar_pad_x": {
+      "type": "number",
+      "value": 28
+    },
+    "code_font_size": {
+      "type": "number",
+      "value": 12
+    },
+    "code_font_size_mobile": {
+      "type": "number",
+      "value": 14
+    },
+    "code_label_font_size": {
+      "type": "number",
+      "value": 12
+    },
+    "code_line_height": {
+      "type": "number",
+      "value": 1.55
+    },
+    "code_pad_x": {
+      "type": "number",
+      "value": 28
+    },
+    "code_pad_y": {
+      "type": "number",
+      "value": 20
+    },
+    "code_text_color": {
+      "type": "color",
+      "value": "#3A3632"
+    }
+  }
+}
