@@ -32,7 +32,7 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
     // Load up all gsql files into a graphene workspace
     let gsqlFiles = await db.query.files.findMany({where: and(eq(files.repoId, repo.id), eq(files.extension, 'gsql'))})
     clearWorkspace()
-    setConfig({dialect: connInfo.kind, namespace: connInfo.namespace ?? undefined, root: '/dev/null'})
+    setConfig({dialect: connInfo.kind, defaultNamespace: connInfo.namespace ?? undefined, root: '/dev/null'})
     gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))
     let queries = analyze(body.gsql, 'gsql')
 
