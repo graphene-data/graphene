@@ -9,10 +9,10 @@ const { label, code, class: className } = Astro.props;
 ---
 
 <div class:list={["rounded-xl border border-border-dark bg-code-bg shadow-[0_4px_24px_rgba(0,0,0,0.05)] overflow-hidden", className]}>
-  <div class="h-11 flex items-center px-7 border-b border-border-dark">
+  <div class="h-11 flex items-center px-7 border-b border-border-dark shrink-0">
     <span class="font-mono text-xs font-semibold text-code-label">{label}</span>
   </div>
-  <div class="px-7 py-5">
+  <div class="px-7 py-5 overflow-y-auto flex-1">
     <pre class="font-mono text-xs font-normal text-code-text leading-[1.55] whitespace-pre-wrap m-0">{code}</pre>
   </div>
 </div>

@@ -75,11 +75,13 @@ We use Salesforce to manage our sales operations. The most important tables are 
         </button>
       </div>
 
-      <div id="carousel-panel-0">
-        <CodeBlock label={skill1Label} code={skill1Code} />
-      </div>
-      <div id="carousel-panel-1" class="hidden">
-        <CodeBlock label={skill2Label} code={skill2Code} />
+      <div class="h-[580px] max-w-[720px] w-full mx-auto relative">
+        <div id="carousel-panel-0" class="absolute inset-0 transition-opacity duration-500 opacity-100">
+          <CodeBlock label={skill1Label} code={skill1Code} class="h-[580px] w-full" />
+        </div>
+        <div id="carousel-panel-1" class="absolute inset-0 transition-opacity duration-500 opacity-0">
+          <CodeBlock label={skill2Label} code={skill2Code} class="h-[580px] w-full" />
+        </div>
       </div>
     </div>
   </div>
@@ -114,9 +116,17 @@ We use Salesforce to manage our sales operations. The most important tables are 
       }
     });
 
-    // Update panels
+    // Update panels with fade animation
     panels.forEach((panel, i) => {
-      panel!.classList.toggle('hidden', i !== index);
+      if (i === index) {
+        panel!.classList.remove('opacity-0');
+        panel!.classList.add('opacity-100');
+        panel!.style.pointerEvents = 'auto';
+      } else {
+        panel!.classList.remove('opacity-100');
+        panel!.classList.add('opacity-0');
+        panel!.style.pointerEvents = 'none';
+      }
     });
 
     // Reset all underlines, animate active one
