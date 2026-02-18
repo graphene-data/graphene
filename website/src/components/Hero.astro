@@ -13,18 +13,20 @@ import webMock from '../assets/web_agent_mock.png';
   </p>
 </section>
 
-<div class="relative max-w-[1312px] mx-auto px-[52px]">
-  <div class="relative w-full aspect-[1312/584] rounded-xl overflow-hidden">
-    <img src={heroBg.src} alt="" class="absolute inset-0 w-full h-full object-cover" />
-    <img
-      src={slackMock.src}
-      alt="Graphene Slack agent"
-      class="absolute top-[61px] left-[103px] w-[284px] h-[470px] rounded-[10px] border border-[#D8D8D8] shadow-[0_2px_12px_rgba(0,0,0,0.094)] object-cover"
-    />
-    <img
-      src={webMock.src}
-      alt="Graphene web agent"
-      class="absolute top-[61px] left-[411px] w-[797px] h-[470px] rounded-[10px] border border-[#D8D8D8] shadow-[0_4px_20px_rgba(0,0,0,0.082)] object-cover"
-    />
+<div class="relative w-full h-[600px] overflow-hidden">
+  <img src={heroBg.src} alt="" class="absolute inset-0 w-full h-full object-cover" />
+  <div class="absolute inset-0 flex items-center justify-center">
+    <div class="relative w-[1105px] h-[470px]">
+      <img
+        src={slackMock.src}
+        alt="Graphene Slack agent"
+        class="absolute left-0 w-[284px] h-[470px] rounded-[10px] border border-[#D8D8D8] shadow-[0_2px_12px_rgba(0,0,0,0.094)] object-cover"
+      />
+      <img
+        src={webMock.src}
+        alt="Graphene web agent"
+        class="absolute right-0 w-[797px] h-[470px] rounded-[10px] border border-[#D8D8D8] shadow-[0_4px_20px_rgba(0,0,0,0.082)] object-cover"
+      />
+    </div>
   </div>
 </div>
