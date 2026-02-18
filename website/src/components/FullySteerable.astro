@@ -4,52 +4,25 @@ import CodeBlock from './CodeBlock.astro';
 const skill1Label = 'cohort-analysis/SKILL.md';
 const skill1Code = `---
 name: cohort-analysis
-description: How to build cohort analysis and retention reports in gsql, including defining cohorts, calculating period offsets, and displaying retention matrices.
+description: Performs cohort analysis for customer behavior patterns over time. Use when analyzing retention, LTV, or other metrics by customer cohorts, or when the user asks about cohorts, retention curves, or customer lifecycle patterns.
 ---
 
-# Cohort Analysis in gsql
+# Cohort Analysis
 
-Cohort analysis groups users by a shared characteristic (usually their sign-up or first-purchase date) and tracks their behavior over subsequent time periods. This is commonly used for retention analysis.
+Users expect cohort analysis to look a certain way. This guide walks through it.
 
-## Defining a cohort
+## Query Pattern
 
-Use \`datetrunc()\` on the user's first activity date to define their cohort:
+Always group by two dimensions:
+1. **Cohort period**, e.g., the month a user's subscription starts
+2. **Elapsed time units**, e.g., the number of months that have elapsed since the subscription started
 
-\`\`\`gsql
-table users (
-  id INT
-  created_at TIMESTAMP
-  cohort_month: datetrunc('month', created_at)
-)
-\`\`\`
+Then aggregate the target metric(s). Filter to the last 12 months if not specified otherwise.
 
-## Calculating period offset
+## Visualization Options
 
-For events tied to users, compute how many periods have elapsed since the cohort date:
-
-\`\`\`gsql
-table orders (
-  user_id INT
-  order_date TIMESTAMP
-  join one users on user_id = users.id
-
-  order_month: datetrunc('month', order_date)
-  months_since_signup: datediff('month', user.cohort_month, order_month)
-)
-\`\`\`
-
-## Building a retention query
-
-Count distinct users per cohort per period:
-
-\`\`\`gsql cohort_retention
-from orders
-where months_since_signup >= 0 and months_since_signup <= 12
-select
-  user.cohort_month,
-  months_since_signup,
-  count(distinct user_id) as active_users
-\`\`\``;
+### Option 1: Multi-Series Line Chart
+...`;
 
 const skill2Label = 'about-sales-team/SKILL.md';
 const skill2Code = `---
@@ -72,18 +45,13 @@ We use Salesforce to manage our sales operations. The most important tables are 
 * **Expansion:** Upsell or cross-sell to an existing account.
 * **Renewal:** Continuation of an existing contract.
 
-### Pipeline Stages
-1. Prospecting
-2. Qualification
-3. Proposal
-4. Negotiation
-5. Closed Won / Closed Lost
+### Business Sizes
+* **SMB:** <100 employees.
+* **Mid-Market:** 101 - 1,000 employees.
+* **Enterprise:** >1,000 employees.
 
-### Key Metrics
-- **Win Rate:** Closed Won / (Closed Won + Closed Lost)
-- **Average Deal Size:** sum(amount) / count(distinct id) where stage = 'Closed Won'
-- **Sales Cycle Length:** avg(datediff('day', created_date, close_date))
-- **Pipeline Coverage:** Open pipeline amount / Quota`;
+## Glossary of terms
+...`;
 ---
 
 <section class="mt-[150px]">
