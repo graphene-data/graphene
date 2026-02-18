@@ -25,9 +25,9 @@ import webMock from '../assets/web_agent_mock.png';
 
 <!-- Tablet/Desktop hero: Full layout with background -->
 <div class="hidden sm:block relative w-full overflow-hidden">
-  <!-- Background image container with aspect ratio -->
-  <div class="relative w-full" style="padding-bottom: 50%"> <!-- 2:1 aspect ratio -->
-    <img src={heroBg.src} alt="" class="absolute inset-0 w-full h-full object-cover" />
+  <!-- Background image container with aspect ratio and max for large screens -->
+  <div class="relative w-full h-[400px] sm:h-[450px] lg:h-[550px] xl:h-[600px]">
+    <img src={heroBg.src} alt="" class="absolute inset-0 w-full h-full object-cover object-top" />
 
     <!-- Screenshots container -->
     <div class="absolute inset-0 flex items-center justify-center px-4 sm:px-8 lg:px-12">
