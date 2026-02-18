@@ -26,7 +26,9 @@ let flags = args.filter(a => a.startsWith('--'))
 let positional = args.slice(1).filter(a => !a.startsWith('--'))
 
 switch (command) {
+  case 'status': await statusWorktree(flags.includes('--full')); break
   case 'start': await startWorktree(positional[0]); break
+  case 'fetch': await fetchWorktree(); break
   case 'pull': await pullWorktree(); break
   case 'commit': await commitWorktree(); break
   case 'push': await pushWorktree(); break
@@ -40,7 +42,9 @@ Usage: wt <command>
 
 Commands:
 ls                      List all paired worktrees
+status [--full]         Show PR commits and changed files for co and core
 start <name>            Create a new paired worktree beside main
+fetch                   Pull latest from remote, but don't update current branch
 pull                    Pull down latest changes from main for both repos
 push                    Push changes: core first (with PR), then cloud (with submodule bump)
 up                      Start the dev container for this worktree
@@ -63,8 +67,12 @@ const HOST_COMMANDS: Record<string, (args: any) => Promise<{ ok: boolean, data?:
     let result = await $`zx ${mainWtScript} commit`.nothrow()
     return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
   },
+  'fetch': async () => {
+    let result = await $`node ${mainWtScript} fetch`.nothrow()
+    return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
+  },
   'pull': async () => {
-    let result = await $`zx ${mainWtScript} pull`.nothrow()
+    let result = await $`node ${mainWtScript} pull`.nothrow()
     return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
   },
   'push': async () => {
@@ -105,6 +113,7 @@ async function startWorktree (name: string) {
   await $`ln -s dev/opencode.jsonc ${treePath}/opencode.jsonc`
   await $`ln -s ../dev/skills ${treePath}/.opencode/skills`
   await $`ln -s ../dev/agents ${treePath}/.opencode/agents`
+  await $`ln -s ../dev/commands ${treePath}/.opencode/commands`
 
   // hard-link so that when mounted in a container we can still access it
   await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
@@ -202,6 +211,43 @@ async function commitWorktree () {
   if (await repoDirty()) await runCommitTool(currentWorktree)
 }
 
+async function statusWorktree (full = false) {
+  if (fs.existsSync('/.dockerenv')) {
+    await $`host fetch`
+  } else {
+    await fetchWorktree()
+  }
+
+  let repos = [
+    {label: 'co', path: currentWorktree},
+    // {label: 'core', path: `${currentWorktree}/core`},
+  ] as const
+
+  let details = [] as {label: 'co' | 'core', branch: string, commits: string, status: string}[]
+  for (let repo of repos) {
+    let branch = (await $`git -C ${repo.path} rev-parse --abbrev-ref HEAD`).stdout.trim()
+    let commits = (await $`git -C ${repo.path} log origin/main..HEAD ${full ? '--stat' : '--oneline'}`.nothrow()).stdout.trim()
+    commits = ''
+    let statusRaw = (await $`git -C ${repo.path} status --porcelain`).stdout.trim()
+    let status = statusRaw.split('\n').filter(line => line && !(repo.label === 'co' && line.match(/^.. core$/))).join('\n')
+    details.push({label: repo.label, branch, commits, status})
+  }
+
+  console.log(chalk.bold(`Worktree status: ${currentName}`))
+  console.log('')
+  for (let repo of details) {
+    console.log(chalk.cyan(`${repo.label} commits (${repo.branch}):`))
+    console.log(repo.commits || '(none)')
+    console.log('')
+  }
+
+  for (let repo of details) {
+    console.log(chalk.cyan(`${repo.label} status (${repo.branch}):`))
+    console.log(repo.status || chalk.green('(clean)'))
+    console.log('')
+  }
+}
+
 async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
   let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
   let label = subdir || 'co'
@@ -243,6 +289,11 @@ async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
   }
 
   return true
+}
+
+async function fetchWorktree() {
+  await $`git -C ${currentWorktree} fetch origin`
+  await $`git -C ${currentWorktree}/core fetch origin`
 }
 
 async function pullWorktree (): Promise<boolean> {
