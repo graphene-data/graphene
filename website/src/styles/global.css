@@ -17,3 +17,23 @@
   --font-logo: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 }
+
+/* Subtle noise texture for background */
+body {
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/noise.webp');
+  background-repeat: repeat;
+  background-size: 180px;
+  opacity: 0.035;
+  pointer-events: none;
+  z-index: -1;
+}
