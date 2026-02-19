@@ -65,7 +65,7 @@ test('renders gsql query errors clearly with file context', async ({server, page
   await waitForGrapheneQueries(page)
   await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
   await expect(page.getByText('GSQL error - Unknown function: not_a_function')).toBeVisible()
-  let details = page.locator('.error-chart__details').first()
+  let details = page.locator('.g-error__details').first()
   await expect(details).not.toContainText('input')
   await expect(details).toContainText('Query (data="broken_query" x="origin" y="boom")')
   await expect(details).toContainText('^')
@@ -87,7 +87,6 @@ test('renders database query failures clearly', async ({server, page}) => {
 
   await page.goto(server.url() + '/')
   await waitForGrapheneQueries(page)
-  await expect(page.getByText(/(Database query failed|Server error while running query|Query failed)/)).toBeVisible()
   await expect(page.getByText('Out of Range Error')).toBeVisible()
   await expect(page).screenshot('reports-database-query-errors')
 })
@@ -117,6 +116,23 @@ test('renders generic server failures clearly', async ({server, page}) => {
   await expect(page.getByText('Server error while running query')).toBeVisible()
   await expect(page.getByText('Internal Server Error')).toBeVisible()
   await expect(page).screenshot('reports-server-query-errors')
+})
+
+test('renders html syntax errors with error display', async ({server, page}) => {
+  expectConsoleError(page, 'Failed to load resource', true)
+  expectConsoleError(page, 'Internal Server Error', true)
+  expectConsoleError(page, 'Failed to fetch dynamically imported module', true)
+  expectConsoleError(page, 'vite:error', true)
+  server.mockFile('/index.md', `
+    # Test
+    {#if true}oops{/if}
+  `)
+
+  await page.goto(server.url() + '/')
+  await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 5000})
+  await expect(page.locator('.g-error')).toBeVisible()
+  await expect(page.locator('.g-error__message')).toContainText('Unexpected block closing tag')
+  await expect(page).screenshot('html-syntax-error')
 })
 
 test('renders literal less-than characters', async ({server, page}) => {

@@ -114,7 +114,7 @@ async function runNode (n: QueryNode) {
         return [`${name}="${val}"`]
       })
       let idStr = `Query (data="${n.source}" ` + fieldIds.join(' ') + ')'
-      n.errors.forEach(e => (e as any).id = idStr)
+      n.errors.forEach(e => (e as any).queryId = idStr)
       n.callback({errors: n.errors})
     }
   } catch (e) {

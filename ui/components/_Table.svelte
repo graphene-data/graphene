@@ -5,7 +5,7 @@
   import getColumnSummary from '../component-utilities/getColumnSummary.js'
   import {convertColumnToDate} from '../component-utilities/dateParsing.js'
   import checkInputs from '../component-utilities/checkInputs.js'
-  import ErrorChart from './ErrorChart.svelte'
+  import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import TableHeader from './TableHeader.svelte'
   import TableRow from './TableRow.svelte'
   import TableGroupRow from './TableGroupRow.svelte'
@@ -176,7 +176,7 @@
       }
     } catch (thrown) {
       let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
-      logError(thrown, {id: 'DataTable'})
+      logError(thrown, {queryId: 'DataTable'})
       resultError = message
       if (strictBuild) throw thrown
     }
@@ -481,7 +481,9 @@
     {/if}
   </div>
 {:else}
-  <ErrorChart title="Data Table" error={error ?? emptyMessage ?? 'Unable to render table'} />
+  <div style="min-height:200px;width:100%;display:grid;align-content:center;padding:8px;box-sizing:border-box">
+    <ErrorDisplay error={error ?? emptyMessage ?? 'Unable to render table'} />
+  </div>
 {/if}
 
 <style>
