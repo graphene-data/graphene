@@ -2,7 +2,7 @@
   import {errorProvider} from './telemetry.ts'
   import navFiles from 'virtual:nav'
   import NavSidebar from './NavSidebar.svelte'
-  import PageError from './PageError.svelte'
+  import ErrorDisplay from './ErrorDisplay.svelte'
 
   // Nav sidebar with HMR support for the virtual file list
   let navData = $state(navFiles)
@@ -33,8 +33,13 @@
 <nav id="nav"><NavSidebar files={navData} /></nav>
 <main id="content">
   {#if compileError}
-    <PageError error={compileError} />
+    <h1 class="page-error-heading">Error loading page</h1>
+    <ErrorDisplay error={compileError} />
   {:else if Page}
     <Page />
   {/if}
 </main>
+
+<style>
+  .page-error-heading { margin-top: 0; }
+</style>

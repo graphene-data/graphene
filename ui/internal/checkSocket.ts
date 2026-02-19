@@ -40,7 +40,7 @@ function connect () {
     if (type !== 'check') return
 
     await waitForQueriesToFinish()
-    let errors = getErrors().map((e: any) => ({type: e.type, message: e.message, id: e.id, file: e.file, line: e.loc?.line, frame: e.frame, from: e.from, to: e.to}))
+    let errors = getErrors().map((e: any) => ({type: e.type, message: e.message, queryId: e.queryId, file: e.file, line: e.loc?.line, frame: e.frame, from: e.from, to: e.to}))
     let stillLoading = isLoading()
     let screenshot = chart ? captureChart(chart) : await takeScreenshot()
     socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors, stillLoading, screenshot}))

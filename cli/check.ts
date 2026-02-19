@@ -111,8 +111,8 @@ export async function check (options: CheckOptions): Promise<boolean> {
       for (let frameLine of e.frame.split('\n')) log('  ' + frameLine)
     } else if (e.file && e.from) {
       printDiagnostics([e as Diagnostic], log)
-    } else if (e.id) {
-      log(`${e.id}: ${e.message}`)
+    } else if (e.queryId) {
+      log(`${e.queryId}: ${e.message}`)
     } else {
       log(e.message)
     }
