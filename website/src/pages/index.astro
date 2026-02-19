@@ -1,22 +1,384 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
-import Hero from '../components/Hero.astro';
-import RootedInCode from '../components/RootedInCode.astro';
-import FullySteerable from '../components/FullySteerable.astro';
-import SemanticLayer from '../components/SemanticLayer.astro';
+import CodeBlock from '../components/CodeBlock.astro';
 import CallToAction from '../components/CallToAction.astro';
 import Footer from '../components/Footer.astro';
+import heroBg from '../assets/hero-background.jpg';
+import slackMock from '../assets/slack_agent_mock.png';
+import webMock from '../assets/web_agent_mock.png';
+import dashboardImg from '../assets/dashboard_screenshot.png';
+
+// RootedInCode content
+const rootedCode = `# Flight Analytics Dashboard
+
+A comprehensive dashboard showcasing flight data metrics from 2000-2005.
+
+## Key Metrics
+
+<Row>
+  <BigValue data=flights value=count(*) title="Total Flights" fmt=num0 />
+  <BigValue data=flights value=sum(miles_flown) title="Total Miles Flown" fmt=num0m />
+  <BigValue data=flights value=on_time_departure_rate title="On-Time Departure Rate" fmt=pct1 />
+  <BigValue data=flights value=on_time_arrival_rate title="On-Time Arrival Rate" fmt=pct1 />
+</Row>
+
+\`\`\`sql weekly_trends
+select
+  date_trunc('week', dep_time) as week,
+  count(*) as flight_count,
+  avg(distance) as avg_distance,
+  cancellation_rate
+from flights
+group by 1
+order by 1 asc
+\`\`\`
+...`;
+
+// FullySteerable content
+const skill1Label = 'cohort-analysis/SKILL.md';
+const skill1Code = `---
+name: cohort-analysis
+description: Performs cohort analysis for customer behavior patterns over time. Use when analyzing retention, LTV, or other metrics by customer cohorts, or when the user asks about cohorts, retention curves, or customer lifecycle patterns.
+---
+
+# Cohort Analysis
+
+Users expect cohort analysis to look a certain way. This guide walks through it.
+
+## Query Pattern
+
+Always group by two dimensions:
+1. **Cohort period**, e.g., the month a user's subscription starts
+2. **Elapsed time units**, e.g., the number of months that have elapsed since the subscription started
+
+Then aggregate the target metric(s). Filter to the last 12 months if not specified otherwise.
+
+## Visualization Options
+
+### Option 1: Multi-Series Line Chart
+...`;
+
+const skill2Label = 'about-sales-team/SKILL.md';
+const skill2Code = `---
+name: about-sales-team
+description: How to perform analytics for sales and GTM-related areas
+---
+
+# Sales
+
+## Overview
+
+The sales team is broken down into sub-teams for inbound sales, outbound sales, and enterprise sales. The Enterprise Sales owns all accounts at the enterprise level (>1,000 employees) and includes both the inbound and outbound directions for this level.
+
+We use Salesforce to manage our sales operations. The most important tables are \`dim_salesforce_opportunities\` and \`dim_salesforce_accounts\`.
+
+## Key Concepts
+
+### Opportunity Types
+* **New Business:** First-time purchase by a new account.
+* **Expansion:** Upsell or cross-sell to an existing account.
+* **Renewal:** Continuation of an existing contract.
+
+### Business Sizes
+* **SMB:** <100 employees.
+* **Mid-Market:** 101 - 1,000 employees.
+* **Enterprise:** >1,000 employees.
+
+## Glossary of terms
+...`;
+
+// SemanticLayer content
+const gsqlModel = `table orders (
+  id BIGINT -- Primary key
+  user_id BIGINT
+  created_at DATETIME
+  status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Returned'
+  amount FLOAT -- Amount paid by customer
+  cost FLOAT -- Cost of materials
+
+  join one users on user_id = users.id
+
+  revenue: sum(case when status <> 'Returned' then amount else 0 end)
+  cogs: sum(case when status <> 'Returned' then cost else 0 end)
+  profit: revenue - cogs
+  profit_margin: profit / revenue
+)
+
+table users (
+  id BIGINT -- Primary key
+  email VARCHAR
+  country_code VARCHAR
+)`;
+
+const gsqlQuery = `select users.country_code,  -- Join is implied via the model
+  profit_margin,            -- Invoke modeled measures
+  avg(amount) as aov
+from orders`;
+
+const compiledSql = `select users.country_code,
+  (
+    sum(case when status <> 'Returned' then amount else 0 end)
+    - sum(case when status <> 'Returned' then cost else 0 end)
+  )
+  / sum(case when status <> 'Returned' then amount else 0 end)
+    as profit_margin,
+  avg(amount) as aov
+from orders
+left join users on orders.user_id = users.id
+group by 1`;
 ---
 
 <Layout>
   <Header />
   <main class="flex-1">
-    <Hero />
-    <RootedInCode />
-    <FullySteerable />
-    <SemanticLayer />
+    <!-- Hero Section -->
+    <section class="flex flex-col items-center pt-12 sm:pt-20 lg:pt-[100px] pb-8 lg:pb-[40px] gap-6 lg:gap-8 max-w-[1312px] mx-auto px-4 sm:px-8 lg:px-[52px]">
+      <h1 class="font-serif text-[60px] sm:text-[60px] lg:text-[80px] text-primary-dark tracking-[-1.5px] sm:tracking-[-1.5px] lg:tracking-[-2px] leading-[0.95] text-center">
+        <span class="sm:inline">BI built for</span><br class="sm:hidden" />
+        <em class="sm:inline">agents</em>
+      </h1>
+      <p class="font-sans text-base sm:text-lg lg:text-xl text-body text-center leading-[1.5] max-w-[600px]">
+        With Graphene, agents do the busy work of querying and visualizing data so you can ask 10x more questions.
+      </p>
+    </section>
+
+    <!-- Mobile hero: Just Slack mock -->
+    <div class="sm:hidden flex justify-center px-4">
+      <img
+        src={slackMock.src}
+        alt="Graphene Slack agent"
+        class="w-full max-w-[320px] h-auto rounded-[10px] border border-[#D8D8D8] shadow-[0_2px_12px_rgba(0,0,0,0.094)]"
+      />
+    </div>
+
+    <!-- Tablet/Desktop hero: Full layout with background -->
+    <div class="hidden sm:block relative w-full overflow-hidden">
+      <div class="relative w-full h-[400px] sm:h-[450px] lg:h-[550px] xl:h-[600px]">
+        <img src={heroBg.src} alt="" class="absolute inset-0 w-full h-full object-cover object-top" />
+
+        <div class="absolute inset-0 flex items-center justify-center px-4 sm:px-8 lg:px-12">
+          <div class="relative w-full max-w-[1105px] flex gap-4">
+            <div class="relative w-[25.7%]">
+              <img
+                src={slackMock.src}
+                alt="Graphene Slack agent"
+                class="w-full h-auto rounded-[8px] lg:rounded-[10px] border border-[#D8D8D8] shadow-[0_2px_12px_rgba(0,0,0,0.094)]"
+              />
+            </div>
+
+            <div class="flex-1"></div>
+
+            <div class="relative w-[72.1%]">
+              <img
+                src={webMock.src}
+                alt="Graphene web agent"
+                class="w-full h-auto rounded-[8px] lg:rounded-[10px] border border-[#D8D8D8] shadow-[0_4px_20px_rgba(0,0,0,0.082)]"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rooted in Code Section -->
+    <section class="mt-20 sm:mt-[100px] lg:mt-[150px]">
+      <div class="max-w-[1312px] mx-auto px-4 sm:px-8 lg:px-[52px] flex flex-col gap-8 lg:gap-12">
+        <div class="flex flex-col gap-4 items-center text-center">
+          <h2 class="font-serif text-[32px] sm:text-[40px] lg:text-[48px] text-primary-dark tracking-[-1px] sm:tracking-[-1.25px] lg:tracking-[-1.5px] leading-[1]">Rooted in code</h2>
+          <p class="text-base sm:text-[17px] lg:text-lg text-body leading-[1.6] max-w-[700px]">
+            Models, dashboards, queries, and other tools are all backed by code and CLIs, which agents do best with. Lives in your repo. Open source.
+          </p>
+          <a href="https://github.com/graphene-data/example-flights" target="_blank" rel="noopener" class="text-sm sm:text-[15px] lg:text-base italic font-medium text-muted underline underline-offset-4 hover:text-primary-dark transition-colors">
+            See example project →
+          </a>
+        </div>
+
+        <!-- Desktop layout - XL screens (1280px+) -->
+        <div class="hidden xl:block relative h-[620px]">
+          <div class="flex items-start justify-center">
+            <div class="relative w-[1172px] flex items-center">
+              <CodeBlock label="flight-analytics-dashboard.md" code={rootedCode} class="relative w-[480px] shrink-0 z-10" language="markdown" />
+              <div class="absolute left-[412px] top-1/2 -translate-y-1/2 w-[760px] h-[478px] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] overflow-hidden bg-[#F5F5F4] border border-[#E7E5E4] z-20">
+                <div class="bg-white h-full overflow-hidden">
+                  <img src={dashboardImg.src} alt="Flight Analytics Dashboard" class="w-full h-full object-cover object-top" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Medium Desktop layout - LG screens (1024px-1279px) -->
+        <div class="hidden lg:block xl:hidden relative h-[620px]">
+          <div class="flex items-start justify-center">
+            <div class="relative w-full max-w-[944px] flex items-center px-8">
+              <CodeBlock label="flight-analytics-dashboard.md" code={rootedCode} class="relative w-[440px] shrink-0 z-10" language="markdown" />
+              <div class="absolute left-[372px] top-1/2 -translate-y-1/2 w-[504px] h-[317px] rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] overflow-hidden bg-[#F5F5F4] border border-[#E7E5E4] z-20">
+                <div class="bg-white h-full overflow-hidden">
+                  <img src={dashboardImg.src} alt="Flight Analytics Dashboard" class="w-full h-full object-cover object-top" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile/Tablet layout -->
+        <div class="lg:hidden flex flex-col gap-6">
+          <CodeBlock label="flight-analytics-dashboard.md" code={rootedCode} class="w-full" language="markdown" />
+          <div class="w-full rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] overflow-hidden bg-[#F5F5F4] border border-[#E7E5E4]">
+            <div class="bg-white h-full overflow-hidden">
+              <img src={dashboardImg.src} alt="Flight Analytics Dashboard" class="w-full h-auto object-cover" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Fully Steerable Section -->
+    <section class="mt-20 sm:mt-[100px] lg:mt-[150px]">
+      <div class="max-w-[1312px] mx-auto px-4 sm:px-8 lg:px-[52px] flex flex-col gap-8 lg:gap-12">
+        <div class="flex flex-col gap-4 items-center text-center">
+          <h2 class="font-serif text-[32px] sm:text-[40px] lg:text-[48px] text-primary-dark tracking-[-1px] sm:tracking-[-1.25px] lg:tracking-[-1.5px] leading-[1]">Fully steerable</h2>
+          <p class="text-base sm:text-[17px] lg:text-lg text-body leading-[1.6] max-w-[700px]">
+            Agent skills allow you to customize agent behavior based on your unique data and business processes. Graphene follows the <a href="https://agentskills.io/home" target="_blank" rel="noopener" class="underline underline-offset-4">open standard skill format</a>.
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-6 items-center">
+          <div class="flex gap-8 relative">
+            <button id="tab-0" class="text-sm font-medium text-primary-dark cursor-pointer bg-transparent border-none p-0 pb-2 relative" data-tab="0">
+              Analytical patterns
+              <span class="absolute bottom-0 left-0 h-0.5 bg-primary-dark" id="underline-0" style="width: 0%"></span>
+            </button>
+            <button id="tab-1" class="text-sm font-medium text-muted cursor-pointer bg-transparent border-none p-0 pb-2 relative" data-tab="1">
+              Business domains
+              <span class="absolute bottom-0 left-0 h-0.5 bg-primary-dark" id="underline-1" style="width: 0%"></span>
+            </button>
+          </div>
+
+          <div class="h-[580px] max-w-[720px] w-full mx-auto relative">
+            <div id="carousel-panel-0" class="absolute inset-0 transition-opacity duration-500 opacity-100">
+              <CodeBlock label={skill1Label} code={skill1Code} class="h-[580px] w-full" language="markdown" />
+            </div>
+            <div id="carousel-panel-1" class="absolute inset-0 transition-opacity duration-500 opacity-0">
+              <CodeBlock label={skill2Label} code={skill2Code} class="h-[580px] w-full" language="markdown" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Semantic Layer Section -->
+    <section class="mt-20 sm:mt-[100px] lg:mt-[150px]">
+      <div class="max-w-[1312px] mx-auto px-4 sm:px-8 lg:px-[52px] flex flex-col gap-8 lg:gap-12">
+        <div class="flex flex-col gap-4 items-center text-center">
+          <h2 class="font-serif text-[32px] sm:text-[40px] lg:text-[48px] text-primary-dark tracking-[-1px] sm:tracking-[-1.25px] lg:tracking-[-1.5px] leading-[1]">The semantic layer, reimagined</h2>
+          <p class="text-base sm:text-[17px] lg:text-lg text-body leading-[1.6] max-w-[700px]">
+              Introducing GSQL: a data modeling and query language designed for agents. Agents perform better with GSQL than both regular SQL and traditional BI APIs.
+          </p>
+          <a href="https://www.linkedin.com/pulse/semantic-layers-agents-can-we-do-better-than-english-kevin-marr-5z9gc" target="_blank" rel="noopener" class="text-sm sm:text-[15px] lg:text-base italic font-medium text-muted underline underline-offset-4 hover:text-primary-dark transition-colors">
+            Read more →
+          </a>
+        </div>
+
+        <!-- Desktop layout -->
+        <div class="hidden lg:flex items-center gap-6">
+          <div class="flex flex-col gap-6 shrink-0">
+            <CodeBlock label="GSQL Model" code={gsqlModel} language="sql" />
+            <CodeBlock label="GSQL Query" code={gsqlQuery} language="sql" />
+          </div>
+
+          <div class="flex items-center justify-center w-5 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted">
+              <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+            </svg>
+          </div>
+
+          <CodeBlock label="Compiled SQL" code={compiledSql} class="flex-1" language="sql" />
+        </div>
+
+        <!-- Mobile/Tablet layout -->
+        <div class="lg:hidden flex flex-col gap-6">
+          <CodeBlock label="GSQL Model" code={gsqlModel} language="sql" />
+          <CodeBlock label="GSQL Query" code={gsqlQuery} language="sql" />
+          <div class="flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted rotate-90">
+              <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
+            </svg>
+          </div>
+          <CodeBlock label="Compiled SQL" code={compiledSql} language="sql" />
+        </div>
+      </div>
+    </section>
+
     <CallToAction />
   </main>
   <Footer />
 </Layout>
+
+<style>
+  @keyframes progress {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
+  .underline-active {
+    animation: progress 10s linear forwards;
+  }
+</style>
+
+<script>
+  const tabs = [document.getElementById('tab-0'), document.getElementById('tab-1')];
+  const panels = [document.getElementById('carousel-panel-0'), document.getElementById('carousel-panel-1')];
+  const underlines = [document.getElementById('underline-0'), document.getElementById('underline-1')];
+  let activeTab = 0;
+  let timer: ReturnType<typeof setTimeout>;
+
+  function switchTo(index: number) {
+    // Update tab text styles
+    tabs.forEach((tab, i) => {
+      if (i === index) {
+        tab!.classList.remove('text-muted');
+        tab!.classList.add('text-primary-dark');
+      } else {
+        tab!.classList.remove('text-primary-dark');
+        tab!.classList.add('text-muted');
+      }
+    });
+
+    // Update panels with fade animation
+    panels.forEach((panel, i) => {
+      if (i === index) {
+        panel!.classList.remove('opacity-0');
+        panel!.classList.add('opacity-100');
+        panel!.style.pointerEvents = 'auto';
+      } else {
+        panel!.classList.remove('opacity-100');
+        panel!.classList.add('opacity-0');
+        panel!.style.pointerEvents = 'none';
+      }
+    });
+
+    // Reset all underlines, animate active one
+    underlines.forEach((ul, i) => {
+      ul!.classList.remove('underline-active');
+      ul!.style.width = '0%';
+    });
+    // Force reflow to restart animation
+    void underlines[index]!.offsetWidth;
+    underlines[index]!.classList.add('underline-active');
+
+    activeTab = index;
+
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      switchTo((activeTab + 1) % 2);
+    }, 10000);
+  }
+
+  tabs.forEach((tab, i) => {
+    tab!.addEventListener('click', () => switchTo(i));
+  });
+
+  // Start auto-cycling
+  switchTo(0);
+</script>
