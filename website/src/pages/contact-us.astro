@@ -1,0 +1,236 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Join the waitlist • Graphene">
+  <Header />
+  <main class="flex-1 max-w-[600px] mx-auto px-6 sm:px-8 py-12 sm:py-20 lg:py-[100px]">
+    <div id="form-container">
+      <h1 class="font-serif text-[40px] sm:text-[48px] text-primary-dark tracking-[-1.25px] sm:tracking-[-1.5px] leading-[1] mb-3">
+        Join the waitlist
+      </h1>
+      <p class="text-base sm:text-[17px] text-body leading-[1.6] mb-8">
+        Graphene is currently in a closed access beta. We work closely with our early customers to solve real-world problems.
+      </p>
+
+      <form id="waitlist-form" class="flex flex-col gap-6">
+        <!-- First Name -->
+        <div class="flex flex-col gap-2">
+          <label for="first-name" class="text-[15px] font-medium text-primary-dark">
+            First name <span class="text-red-600">*</span>
+          </label>
+          <input
+            type="text"
+            id="first-name"
+            name="first-name"
+            required
+            class="px-4 py-2.5 border border-border rounded-lg text-base text-primary-dark bg-bg focus:outline-none focus:ring-2 focus:ring-primary-dark focus:border-transparent"
+          />
+        </div>
+
+        <!-- Last Name -->
+        <div class="flex flex-col gap-2">
+          <label for="last-name" class="text-[15px] font-medium text-primary-dark">
+            Last name <span class="text-red-600">*</span>
+          </label>
+          <input
+            type="text"
+            id="last-name"
+            name="last-name"
+            required
+            class="px-4 py-2.5 border border-border rounded-lg text-base text-primary-dark bg-bg focus:outline-none focus:ring-2 focus:ring-primary-dark focus:border-transparent"
+          />
+        </div>
+
+        <!-- Work Email -->
+        <div class="flex flex-col gap-2">
+          <label for="email" class="text-[15px] font-medium text-primary-dark">
+            Work email <span class="text-red-600">*</span>
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            required
+            class="px-4 py-2.5 border border-border rounded-lg text-base text-primary-dark bg-bg focus:outline-none focus:ring-2 focus:ring-primary-dark focus:border-transparent"
+          />
+          <span id="email-error" class="text-sm text-red-600 hidden">Please enter a valid email address.</span>
+        </div>
+
+        <!-- Company Name -->
+        <div class="flex flex-col gap-2">
+          <label for="company" class="text-[15px] font-medium text-primary-dark">
+            Company name <span class="text-red-600">*</span>
+          </label>
+          <input
+            type="text"
+            id="company"
+            name="company"
+            required
+            class="px-4 py-2.5 border border-border rounded-lg text-base text-primary-dark bg-bg focus:outline-none focus:ring-2 focus:ring-primary-dark focus:border-transparent"
+          />
+        </div>
+
+        <!-- Why interested -->
+        <div class="flex flex-col gap-2">
+          <label for="why-interested" class="text-[15px] font-medium text-primary-dark">
+            Why are you interested in Graphene?
+          </label>
+          <textarea
+            id="why-interested"
+            name="why-interested"
+            rows="4"
+            class="px-4 py-2.5 border border-border rounded-lg text-base text-primary-dark bg-bg focus:outline-none focus:ring-2 focus:ring-primary-dark focus:border-transparent resize-none"
+          ></textarea>
+        </div>
+
+        <!-- Error message -->
+        <div id="error-message" class="text-sm text-red-600 hidden"></div>
+
+        <!-- Submit button -->
+        <button
+          type="submit"
+          id="submit-button"
+          class="bg-primary-dark text-bg text-sm font-medium rounded-lg px-6 py-2.5 hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Join the waitlist
+        </button>
+      </form>
+    </div>
+
+    <!-- Success message (hidden by default) -->
+    <div id="success-message" class="hidden flex flex-col items-center text-center gap-6">
+      <!-- Checkmark circle -->
+      <div class="w-16 h-16 sm:w-20 sm:h-20 bg-primary-dark rounded-full flex items-center justify-center">
+        <svg class="w-8 h-8 sm:w-10 sm:h-10 text-bg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <p class="text-base sm:text-[17px] text-primary-dark leading-[1.6] font-semibold">
+          Thanks for your interest in Graphene.
+        </p>
+        <p class="text-base sm:text-[17px] text-body leading-[1.6]">
+          We will reach out soon.
+        </p>
+      </div>
+    </div>
+  </main>
+  <Footer />
+</Layout>
+
+<script>
+  const form = document.getElementById('waitlist-form') as HTMLFormElement;
+  const submitButton = document.getElementById('submit-button') as HTMLButtonElement;
+  const emailInput = document.getElementById('email') as HTMLInputElement;
+  const emailError = document.getElementById('email-error') as HTMLSpanElement;
+  const errorMessage = document.getElementById('error-message') as HTMLDivElement;
+  const formContainer = document.getElementById('form-container') as HTMLDivElement;
+  const successMessage = document.getElementById('success-message') as HTMLDivElement;
+
+  // Email validation regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  // Validate email on blur
+  emailInput?.addEventListener('blur', () => {
+    if (emailInput.value && !emailRegex.test(emailInput.value)) {
+      emailError.classList.remove('hidden');
+      emailInput.classList.add('border-red-600');
+    } else {
+      emailError.classList.add('hidden');
+      emailInput.classList.remove('border-red-600');
+    }
+  });
+
+  // Clear error on input
+  emailInput?.addEventListener('input', () => {
+    emailError.classList.add('hidden');
+    emailInput.classList.remove('border-red-600');
+    errorMessage.classList.add('hidden');
+  });
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    // Validate email
+    if (!emailRegex.test(emailInput.value)) {
+      emailError.classList.remove('hidden');
+      emailInput.classList.add('border-red-600');
+      return;
+    }
+
+    // Disable submit button
+    submitButton.disabled = true;
+    submitButton.textContent = 'Submitting...';
+    errorMessage.classList.add('hidden');
+
+    // Get form data
+    const firstName = (document.getElementById('first-name') as HTMLInputElement).value;
+    const lastName = (document.getElementById('last-name') as HTMLInputElement).value;
+    const email = emailInput.value;
+    const company = (document.getElementById('company') as HTMLInputElement).value;
+    const whyInterested = (document.getElementById('why-interested') as HTMLTextAreaElement).value;
+
+    // Generate timestamp in UTC
+    const timestamp = new Date().toLocaleString('en-US', {
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false
+    });
+
+    // Prepare data for Sheet Monkey - keys must match column names exactly
+    const formData = {
+      'Timestamp': timestamp,
+      'Email Address': email,
+      'Name': `${firstName} ${lastName}`,
+      'Company': company,
+      'Why are you interested in Graphene?': whyInterested || ''
+    };
+
+    try {
+      // Submit to Sheet Monkey with 30s timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+      const response = await fetch('https://api.sheetmonkey.io/form/hpmTY1HjBVaUHZRYBaVV64', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error('Submission failed');
+      }
+
+      // Show success message
+      formContainer.classList.add('hidden');
+      successMessage.classList.remove('hidden');
+
+    } catch (error: any) {
+      // Re-enable submit button
+      submitButton.disabled = false;
+      submitButton.textContent = 'Join the waitlist';
+
+      // Show appropriate error message
+      if (error.name === 'AbortError') {
+        errorMessage.textContent = 'Timed out submitting form. Please try again later.';
+      } else {
+        errorMessage.textContent = 'Error submitting form. Please contact support@graphenedata.com.';
+      }
+      errorMessage.classList.remove('hidden');
+    }
+  });
+</script>
