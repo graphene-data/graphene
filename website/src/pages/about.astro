@@ -2,13 +2,121 @@
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import dylanHeadshot from '../assets/dylan-scott-headshot.jpeg';
+import grantHeadshot from '../assets/grant-marvin-headshot.jpeg';
+import kevinHeadshot from '../assets/kevin-marr-headshot.jpeg';
 ---
 
 <Layout>
   <Header />
-  <main class="max-w-[1312px] mx-auto px-16 py-[100px]">
-    <h1 class="font-serif text-[48px] text-primary-dark tracking-[-1.5px] leading-[1]">About</h1>
-    <p class="text-lg text-body leading-[1.6] mt-4">Coming soon.</p>
+  <main class="max-w-[736px] mx-auto px-6 sm:px-8 lg:px-8 py-12 sm:py-20 lg:py-[100px]">
+    <!-- Main content from current website -->
+    <section class="flex flex-col gap-6 text-base sm:text-[17px] text-body leading-[1.6]">
+      <p class="font-semibold text-primary-dark">
+        We're building BI for the AI era.
+      </p>
+
+      <div class="flex flex-col gap-4">
+        <p>
+          Today's business intelligence tools:
+        </p>
+        <ul class="flex flex-col gap-4 ml-6">
+          <li>
+            <strong class="font-semibold text-primary-dark">Have clunky dev workflows.</strong> It's painful coordinating changes through dbt, semantic models, and dashboards. Simple changes can induce hours of manual fixes downstream.
+          </li>
+          <li>
+            <strong class="font-semibold text-primary-dark">Aren't keeping up in AI.</strong> Cursor and Claude Code are lightyears ahead of the best data agents. Software engineers are enjoying massive productivity gains. What about data analysts?
+          </li>
+          <li>
+            <strong class="font-semibold text-primary-dark">Are messy.</strong> Semantic models grow uncontrollably into a mess of duplicate logic and outdated one-offs. Usability declines for both humans and agents. Garbage in, garbage out.
+          </li>
+          <li>
+            <strong class="font-semibold text-primary-dark">Are hard to use.</strong> "Self serve" interfaces are still intimidating to average people. Configuring dashboards and visualizations takes an extraordinary amount of clicks. More friction = less insights.
+          </li>
+        </ul>
+      </div>
+
+      <div class="flex flex-col gap-6">
+        <p class="text-base sm:text-[17px] text-body leading-[1.6]">
+          We believe that the AI era presents an opportunity to completely rethink how software is built. A modern BI solution should have the following traits:
+        </p>
+        <ul class="flex flex-col gap-4 ml-6 text-base sm:text-[17px] text-body leading-[1.6]">
+          <li>
+            <strong class="font-semibold text-primary-dark">Lives in your repo.</strong> Your semantic model and dashboards should be backed by code in the same repo where you already do other data work. This means that changes can percolate along the stack in a single commit. Dependencies are easily traceable, and dev stages move in lockstep.
+          </li>
+          <li>
+            <strong class="font-semibold text-primary-dark">Compatible with state-of-the-art agents.</strong> Data professionals should be able to leverage the best coding agents for automating data work. All data actions should be available as CLIs so that agents can learn, reason, and iterate.
+          </li>
+          <li>
+            <strong class="font-semibold text-primary-dark">A semantic layer that stays healthy over time.</strong> The semantic layer should have zero redundancy with your dbt code and should be constantly maintained and documented by background agents.
+          </li>
+          <li>
+            <strong class="font-semibold text-primary-dark">Agentic dashboard creation for self-service.</strong> Building dashboards should be as easy as simply speaking. And the data logic should be governed by the semantic model so that the AI stays on the rails.
+          </li>
+        </ul>
+      </div>
+
+      <p>
+        This is Graphene.
+      </p>
+    </section>
+
+    <!-- About Us section -->
+    <section class="mt-16 sm:mt-20 lg:mt-32 flex flex-col gap-8">
+      <h2 class="font-serif text-[32px] sm:text-[40px] text-primary-dark tracking-[-1px] sm:tracking-[-1.25px] leading-[1]">
+        About us
+      </h2>
+
+      <p class="text-base sm:text-[17px] text-body leading-[1.6]">
+        We're a team of experienced builders behind products from Looker, Hex, Superhuman, Palantir, Meraki, and Google. We love data.
+      </p>
+
+      <!-- Team members -->
+      <div class="flex flex-wrap gap-12 sm:gap-16 mt-4">
+        <!-- Dylan Scott -->
+        <div class="flex flex-col items-start gap-3">
+          <img
+            src={dylanHeadshot.src}
+            alt="Dylan Scott"
+            class="w-24 h-24 sm:w-32 sm:h-32 rounded-lg object-cover"
+          />
+          <div>
+            <h3 class="text-[17px] sm:text-[18px] font-medium text-primary-dark">Dylan Scott</h3>
+            <p class="text-[15px] sm:text-base text-muted">Founding Engineer</p>
+          </div>
+        </div>
+
+        <!-- Grant Marvin -->
+        <div class="flex flex-col items-start gap-3">
+          <img
+            src={grantHeadshot.src}
+            alt="Grant Marvin"
+            class="w-24 h-24 sm:w-32 sm:h-32 rounded-lg object-cover"
+          />
+          <div>
+            <h3 class="text-[17px] sm:text-[18px] font-medium text-primary-dark">Grant Marvin</h3>
+            <p class="text-[15px] sm:text-base text-muted">Co-Founder & CTO</p>
+          </div>
+        </div>
+
+        <!-- Kevin Marr -->
+        <div class="flex flex-col items-start gap-3">
+          <img
+            src={kevinHeadshot.src}
+            alt="Kevin Marr"
+            class="w-24 h-24 sm:w-32 sm:h-32 rounded-lg object-cover"
+          />
+          <div>
+            <h3 class="text-[17px] sm:text-[18px] font-medium text-primary-dark">Kevin Marr</h3>
+            <p class="text-[15px] sm:text-base text-muted">Co-Founder & CEO</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-[15px] sm:text-base text-body mt-4">
+        Graphene is venture-backed and based in San Francisco, California.
+      </p>
+    </section>
   </main>
   <Footer />
 </Layout>
