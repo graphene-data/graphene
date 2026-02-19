@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onDestroy, onMount, type Snippet} from 'svelte'
-  import ErrorChart from './ErrorChart.svelte'
+  import ErrorDisplay from '../internal/ErrorDisplay.svelte'
 
   interface Props {
     data: string | {rows?: any[]}
@@ -34,7 +34,9 @@
 </script>
 
 {#if errors}
-  <ErrorChart title="Error" error={errors[0]} />
+  <div style="min-height:{height}px;width:100%;display:grid;align-content:center;padding:8px;box-sizing:border-box">
+    <ErrorDisplay error={errors[0]} />
+  </div>
 {:else if !loaded}
   <div class='ql-skeleton' style={`height:${height}px`} role="status" aria-live="polite">
     <span class="ql-skeleton__pulse"></span>

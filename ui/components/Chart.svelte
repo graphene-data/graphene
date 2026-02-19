@@ -12,7 +12,7 @@
   import {standardizeDateColumn} from '../component-utilities/dateParsing.js'
   import {formatAxisValue, formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import formatTitle from '../component-utilities/formatTitle.js'
-  import ErrorChart from './ErrorChart.svelte'
+  import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import checkInputs from '../component-utilities/checkInputs.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
@@ -951,7 +951,7 @@
       let setTextRed = '\x1b[31m%s\x1b[0m'
       console.error(setTextRed, `Error in ${chartType}: ${e.message}`)
 
-      // Make an "id" for the chart so its clear to users/agents exactly which caused an error.
+      // Build a queryId so it's clear to users/agents exactly which chart caused the error.
       let fieldStr = Object.entries(chartContext || {})
         .filter(([_, val]) => {
           if (Array.isArray(val)) return val.length > 0
@@ -959,8 +959,8 @@
           return Boolean(val)
         })
         .map(([name, val]) => `${name}="${Array.isArray(val) ? val.join(', ') : val}"`)
-      let id = `${title || chartType} (${fieldStr.join(' ')})`
-      logError(e, {id})
+      let queryId = `${title || chartType} (${fieldStr.join(' ')})`
+      logError(e, {queryId})
 
       chartProps.update((d) => {
         return {...d, error}
@@ -985,5 +985,7 @@
     seriesColors={$seriesColorsResolved}
   />
 {:else}
-  <ErrorChart error={$chartProps.error} title={chartType} />
+  <div style="min-height:200px;width:100%;display:grid;align-content:center;padding:8px;box-sizing:border-box">
+    <ErrorDisplay error={$chartProps.error} />
+  </div>
 {/if}
