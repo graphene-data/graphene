@@ -34,6 +34,7 @@ Graphene provides CLIs that allow users (and coding agents) to run queries and l
 /core/ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
 /core/vscode - an extension that provides syntax highlighting and diagnostics on queries.
 /cloud - Graphene's optional, paid hosted service.
+/cloud/terraform - hosted infrastructure. Read the `infra` skill when working with this.
 
 # Tech stack
 Graphene is mostly written in typescript. We parse gsql with Lezer, then render it to dialect-specific SQL.
@@ -61,6 +62,65 @@ UI tests should always take snapshots each time they run. Be sure to add a snaps
 * `/core` is a submodule, so to do git operations there you'll want to `git -C core status`
 * Always use `pnpm add` rather than editing package.json directly to ensure we get the latest version of new dependencies.
 * We use node-24 which has type stripping by default, so you should never need `ts-node` or `tsx` to run things.
-* Avoid running `graphene dev` to test things. You should be able to set up just about any scenario in our automated tests.
-* If you notice the user modifying code between your edits, don't undo their changes. It's probably a nudge towards what you should be doing, but if it seems problematic or doesn't make sense, ask rather than just changing it back.
+* Avoid running `graphene dev` to test things. You should be able to set up any scenario in our automated tests.
 * Don't make infra changes directly via the `aws` cli. Make changes to the terraform config and deploy that.
+* You're pair-programming with another senior engineer. If you notice that edits were made to a file you're working on, is was probably your partner. Don't undo those changes, try to follow their direction. If they don't make sense or seem wrong, pause and say so.
+
+# Code style
+Our primary stylistic goal is "high-level readability". We want to easily skim a file or function and get a sense of what it does. We care less about the tactical details of how individual lines of code work. There are a few concrete guidelines we usually follow in service of this:
+
+### Start simple
+Your first pass at an implementation should usually be the simplest thing that solves the problem in front of you. We can always add complexity later as needed.
+If you need to add complexity to work around an issue, that's a great time for a comment to explain why the additional code is needed.
+If you later realize the solution has grown too complex or convoluted, clean it up!
+
+### Avoid indirection
+When it's easy to inline a bit of code, prefer that over making tons of small functions. This is also true for files, avoid creating tons of files/folders that will have very little in them.
+
+### Vertically compact
+It's easier to read 2-3 wide lines than 10 narrow ones. When in doubt, try and follow the formatting of surrounding code.
+Where possible, prefer early returns and avoid excessive indentation, which makes the flow harder to follow.
+
+function good () {
+  let ast = parseQuery(rawSql, {dialect: 'bigquery', functions: {...bqFunctions, hll}})
+  let rows = executeQuery(ast).filter(x => !!x).map(rawRow => new RowStruct(rawRow, {engine: 'bigquery'}))
+  return {rows}
+}
+
+function bad () {
+  let ast = parseQuery(
+    rawSql,
+    {
+      dialect: 'bigquery',
+      functions: {
+        ...bqFunctions,
+        hll
+    }
+  })
+  let rows = executeQuery(ast)
+    .filter(x => {
+      return !!x
+    })
+    .map(rawRow => {
+      return new RowStruct(
+        rawRow,
+        {
+          engine: 'bigquery'
+        }
+      )
+    })
+  return {
+    rows
+  }
+}
+
+### Only use meaningful comments
+Most functions should have a comment describing what they do.
+Long methods can ideally be organized into logical sections, and it's often worth a comment to help us understand the overall flow.
+Comments are also key when there is code whose purpose isn't obvious from first reading it.
+Avoid comments that say something obvious from reading the code. For example: `processElem(e) // process element`
+
+### Avoid try/catch and excessive guards 99% of the time
+Lots of try/catch or null-checking code makes the overall flow harder to read.
+We almost never add try/catch unless we can do something meaningful. Logging the error doesn't count as meaningful, that would happen anyway as it bubbled up.
+Similarly, you don't need to check for nulls in cases where you never expect a value to be null. It's fine for unexpected nulls to implicitly throw errors.

@@ -31,6 +31,10 @@ Before starting work:
 
 You should always work against staging, but feel free to make changes to it via terraform, and use the aws cli as needed.
 
+## AWS CLI
+
+You have access to the aws cli authenticated against the staging environment. You're free to run commands, but you should almost always make changes via terraform so we can keep our infra reproducible.
+
 ## Database Access
 
 You can run queries against the staging database like so:
