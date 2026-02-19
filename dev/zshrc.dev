@@ -45,6 +45,7 @@ alias p="pnpm"
 alias ta="p test"
 tt() { pnpm run test-one "$@"; }
 
-alias wtu="host pull"
-alias wtp="host push"
-alias wtc="host commit"
+alias wt="node $(graphene_root)/dev/workTrees.ts"
+alias wtu="wt pull"
+alias wtp="wt push"
+alias wtc="wt commit"

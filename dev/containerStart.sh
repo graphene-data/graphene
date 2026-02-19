@@ -17,5 +17,6 @@ aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
 
 opencode upgrade
 
+pnpm install
 (cd cloud && pnpm --force install)
 (cd core && pnpm --force install)
