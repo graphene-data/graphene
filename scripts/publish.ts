@@ -21,16 +21,25 @@ await $`(cd vscode && npx vsce verify-pat)`
 await $`(cd vscode && npx ovsx verify-pat)`
 await $`(cd cli && pnpm whoami)`
 
-let branch = (await $`git rev-parse --abbrev-ref HEAD`).stdout.trim()
-if (branch !== 'main') throw new Error('Publishing must run on main')
+// let branch = (await $`git rev-parse --abbrev-ref HEAD`).stdout.trim()
+// if (branch !== 'main') throw new Error('Publishing must run on main')
 
 let status = (await $`git status --porcelain`).stdout.trim()
+status = status.replace('M CHANGELOG.md', '').trim() // changelog updates are expected, and will be committed
 if (status.length > 0) throw new Error('Working tree must be clean before publishing')
 
 await $`git fetch origin main --quiet`
 let tracking = (await $`git status -sb`).stdout.split('\n')[0]
 if (tracking.includes('behind')) {
   if (!(await confirm('Repo is behind origin/main. Continue anyway? (y/N) '))) process.exit(1)
+}
+
+let currentVersion = JSON.parse(await fs.readFile('cli/package.json', 'utf8')).version
+let nextVersion = bumpVersion(currentVersion, bumpLevel)
+let changelog = await fs.readFile('CHANGELOG.md', 'utf8')
+let hasNextSection = new RegExp(`^##\\s+${escapeRegex(nextVersion)}\\b`, 'm').test(changelog)
+if (!hasNextSection) {
+  throw new Error(`Missing CHANGELOG section for ${nextVersion}. Hey you should go run this change log command before publishing.`)
 }
 
 // tests
@@ -58,12 +67,22 @@ const version = JSON.parse(await fs.readFile('cli/package.json', 'utf8')).versio
 await $`git add -A .`
 await $`git commit -m ${`Release v${version}`}`
 await $`git tag v${version}`
-
-await $`git push origin main`
 await $`git push origin v${version}`
-
+await $`git push`
+console.log("Version pushed. Don't forget to create a PR for this change")
 
 async function confirm (prompt: string) {
   let answer = (await question(prompt)).trim().toLowerCase()
   return answer === 'y' || answer === 'yes'
+}
+
+function bumpVersion (version: string, bumpLevel: string) {
+  let [major, minor, patch] = version.split('.').map(x => Number(x))
+  if (bumpLevel === 'major') return `${major + 1}.0.0`
+  if (bumpLevel === 'minor') return `${major}.${minor + 1}.0`
+  return `${major}.${minor}.${patch + 1}`
+}
+
+function escapeRegex (text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
