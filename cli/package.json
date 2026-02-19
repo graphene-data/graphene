@@ -3,7 +3,7 @@
   "main": "bin.js",
   "type": "module",
   "author": "Graphene Systems Inc",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "license": "Elastic-2.0",
   "engines": {
     "node": ">=20"
