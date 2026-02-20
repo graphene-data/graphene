@@ -275,8 +275,10 @@ async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
 
 async function fetchWorktree() {
   if (IN_CONTAINER) return hostCommand('fetch')
-  await $`git -C ${currentWorktree} fetch origin`
-  await $`git -C ${currentWorktree}/core fetch origin`
+  await Promise.all([
+    $`git -C ${currentWorktree} fetch origin`,
+    $`git -C ${currentWorktree}/core fetch origin`,
+  ])
   console.log('Up to date')
 }
 
