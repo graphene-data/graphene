@@ -1,0 +1,43 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Page Not Found • Graphene">
+  <Header />
+
+  <main class="flex-1 flex items-center justify-center px-4 sm:px-8 lg:px-12 py-20">
+    <div class="text-center max-w-[900px]">
+      <!-- Large 404 -->
+      <h1 class="font-serif text-[80px] sm:text-[100px] lg:text-[120px] xl:text-[140px] text-primary-dark tracking-[-2px] sm:tracking-[-3px] lg:tracking-[-4px] leading-[0.9] mb-8">
+        404
+      </h1>
+
+      <!-- Description -->
+      <p class="text-base sm:text-[17px] lg:text-lg text-body leading-[1.6] max-w-[320px] sm:max-w-[450px] lg:max-w-[600px] mx-auto px-6 sm:px-0">
+        The page you're looking for doesn't exist or has been moved.
+      </p>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>
+
+<style>
+  /* Optional: Add a subtle animation to the 404 text */
+  h1 {
+    animation: fadeInUp 0.5s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>
