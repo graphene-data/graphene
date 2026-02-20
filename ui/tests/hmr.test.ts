@@ -1,5 +1,5 @@
 import {test, expect} from './fixtures.ts'
-import {expectConsoleError} from './browserConsole.ts'
+import {expectConsoleError} from './logWatcher.ts'
 
 test('valid → invalid → valid via HMR', async ({server, page}) => {
   expectConsoleError(page, 'Failed to load resource', true)
