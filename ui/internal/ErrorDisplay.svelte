@@ -53,12 +53,13 @@
 
     // Svelte/Vite embeds the absolute file path in the message ("file:line:col message")
     // and at the start of the frame. Strip both to avoid duplication with fileLine.
-    if (e.file && message.startsWith(e.file)) {
+    // Only strip absolute paths — relative basenames like "flights.md" are intentional.
+    if (e.file && e.file.startsWith('/') && message.startsWith(e.file)) {
       message = message.slice(e.file.length).replace(/^:\d+:\d+\s+/, '')
     }
     let frame = e.frame
-    if (frame && e.file) {
-      // Strip leading lines that are just the file path (with optional :line suffix)
+    if (frame && e.file && e.file.startsWith('/')) {
+      // Strip leading lines that are just the absolute file path (with optional :line suffix)
       let lines = frame.split('\n')
       while (lines.length && (lines[0] === e.file || lines[0].startsWith(e.file + ':'))) lines.shift()
       // Strip leftover column pointer line (just spaces and ^)
