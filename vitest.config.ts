@@ -1,6 +1,7 @@
 import {defineConfig} from 'vitest/config'
 import dotenv from 'dotenv'
 import path from 'path'
+import {isExpectedLine, unexpectedLineError} from './ui/tests/logWatcher.ts'
 
 dotenv.config({path: path.resolve(import.meta.dirname, '..', '.env'), quiet: true})
 
@@ -14,9 +15,8 @@ export default defineConfig({
     outputFile: 'node_modules/.testResults.json',
     slowTestThreshold: 5_000,
     onConsoleLog (log, type) {
-      if (log.startsWith('Server running at http://')) return false
-      if (log.startsWith('manually calling optimizeDeps is deprecated.')) return false
-      throw new Error(`Unexpected ${type || 'console'} output during tests: ${log}`)
+      if (isExpectedLine(log, [x => x.startsWith('Server running at http://'), x => x.startsWith('manually calling optimizeDeps is deprecated.')])) return false
+      throw unexpectedLineError(type, log)
     },
     projects: [
       {

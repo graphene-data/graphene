@@ -7,7 +7,7 @@ import net from 'net'
 import {type Config, config, setConfig} from '../../lang/config.ts'
 import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
 import {serve2, svelteWarnings, clearSvelteWarnings} from '../../cli/serve2.ts'
-import {assertConsoleErrors, trackerBrowserConsole} from './browserConsole.ts'
+import {assertConsoleErrors, trackBrowserConsole} from './logWatcher.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 
 export {expect}
@@ -49,7 +49,7 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
   page: async ({browser}, use) => {
     let context = await browser.newContext()
     let page = await context.newPage()
-    trackerBrowserConsole(page)
+    trackBrowserConsole(page)
     clearSvelteWarnings()
 
     onTestFinished(() => {
