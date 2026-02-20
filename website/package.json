@@ -14,5 +14,8 @@
     "astro": "^5.17.1",
     "prismjs": "^1.30.0",
     "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "webp-converter": "^2.3.3"
   }
 }

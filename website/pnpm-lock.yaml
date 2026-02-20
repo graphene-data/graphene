@@ -23,6 +23,10 @@ importers:
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
+    devDependencies:
+      webp-converter:
+        specifier: ^2.3.3
+        version: 2.3.3
 
 packages:
 
@@ -1741,6 +1745,10 @@ packages:
       uploadthing:
         optional: true
 
+  uuid@8.3.2:
+    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
+    hasBin: true
+
   vfile-location@5.0.3:
     resolution: {integrity: sha512-5yXvWDEgqeiYiBe1lbxYF7UMAIm/IcopxMHrMQDq3nvKcjPKIhZklUKL+AE7J7uApI4kwe2snsK+eI6UTj9EHg==}
 
@@ -1800,6 +1808,9 @@ packages:
 
   web-namespaces@2.0.1:
     resolution: {integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==}
+
+  webp-converter@2.3.3:
+    resolution: {integrity: sha512-2p4XvPCIQ/CbUztEFA9vdkILVrRTdMtMxFpQTxlnPc3qx14MV5wnpVvK7m6pG70QdeL+Ser0+Tp843ONwh8VbQ==}
 
   which-pm-runs@1.1.0:
     resolution: {integrity: sha512-n1brCuqClxfFfq/Rb0ICg9giSZqCS+pLtccdag6C2HyufBrh3fBOiy9nb6ggRMvWOVH5GrdJskj5iGTZNxd7SA==}
@@ -3694,6 +3705,8 @@ snapshots:
       ofetch: 1.5.1
       ufo: 1.6.3
 
+  uuid@8.3.2: {}
+
   vfile-location@5.0.3:
     dependencies:
       '@types/unist': 3.0.3
@@ -3727,6 +3740,10 @@ snapshots:
       vite: 6.4.1(jiti@2.6.1)(lightningcss@1.30.2)
 
   web-namespaces@2.0.1: {}
+
+  webp-converter@2.3.3:
+    dependencies:
+      uuid: 8.3.2
 
   which-pm-runs@1.1.0: {}
 
