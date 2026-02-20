@@ -21,7 +21,11 @@ const extendedExpect = baseExpect.extend({
     let testFile = path.basename(testPath)
 
     // Wait for fonts to load to ensure consistent rendering across environments
-    await (page as Page).evaluate(() => document.fonts.ready)
+    await (page as Page).evaluate(async () => {
+      await document.fonts.ready
+      await window.$GRAPHENE.waitForQueries?.()
+      await new Promise(r => requestAnimationFrame(r))
+    })
 
     let snapshotPath = path.resolve(snapshotDir, testFile, snapshotName + '.png')
     let expectedBuffer = await fs.readFile(snapshotPath).catch(() => null)
