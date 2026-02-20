@@ -1,0 +1,10 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://graphenedata.com/sitemap.xml
+
+# Disallow crawling of document downloads
+Disallow: /graphene-msa.docx
+Disallow: /graphene-dpa.docx

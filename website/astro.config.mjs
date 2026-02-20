@@ -22,6 +22,7 @@ const devPort = Number.isFinite(graphenePort) ? graphenePort + 2 : fallbackDevPo
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://graphenedata.com',
   server: {
     port: devPort,
   },

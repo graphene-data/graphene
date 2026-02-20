@@ -3,9 +3,17 @@ import '../styles/global.css';
 
 interface Props {
 	title?: string;
+	description?: string;
+	ogImage?: string;
 }
 
-const { title = "BI built for agents • Graphene" } = Astro.props;
+const {
+	title = "BI built for agents • Graphene",
+	description = "With Graphene, agents do the busy work of querying and visualizing data so you can ask 10x more questions. BI built for the AI era.",
+	ogImage = "/og-image.png"
+} = Astro.props;
+
+const canonicalURL = new URL(Astro.url.pathname, Astro.site || "https://graphenedata.com");
 ---
 
 <!doctype html>
@@ -13,14 +21,37 @@ const { title = "BI built for agents • Graphene" } = Astro.props;
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+		<!-- SEO -->
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<link rel="canonical" href={canonicalURL} />
+
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonicalURL} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:image" content={new URL(ogImage, Astro.site || "https://graphenedata.com")} />
+
+		<!-- Twitter -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:url" content={canonicalURL} />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={new URL(ogImage, Astro.site || "https://graphenedata.com")} />
+
+		<!-- Favicons -->
 		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 		<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
 		<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
 		<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 		<link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
 		<link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
+
 		<meta name="generator" content={Astro.generator} />
-		<title>{title}</title>
+
+		<!-- Fonts -->
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 		<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet" />
