@@ -2,6 +2,7 @@
   import {onDestroy, mount, unmount} from 'svelte'
   import {go} from '../router.ts'
   import NavSidebar from '../../../core/ui/internal/NavSidebar.svelte'
+  import ErrorDisplay from '../../../core/ui/internal/ErrorDisplay.svelte'
 
   let {slug}: {slug: string} = $props()
 
@@ -125,16 +126,8 @@
 
 <main>
   {#if loading}<p class="muted">Loading…</p>
-  {:else if error?.kind === 'compile'}
-    <section class="compile-error" role="alert" aria-live="polite">
-      <p class="compile-error__eyebrow">Compilation failed</p>
-      <h2 class="compile-error__title">We could not build this page</h2>
-      <p class="compile-error__body">{error.message}</p>
-      {#if error.file}
-        <code class="compile-error__file">{error.file}</code>
-      {/if}
-    </section>
-  {:else if error}<p class="alert">{error.message}</p>
+  {:else if error}
+    <ErrorDisplay error={{message: error.message, file: error.file}} />
   {/if}
   <div bind:this={container} class:hidden={loading || error}></div>
 </main>
@@ -142,64 +135,5 @@
 <style>
   .muted {
     color: rgba(255, 255, 255, 0.65);
-  }
-
-  .alert {
-    padding: 12px 16px;
-    border-radius: 8px;
-    background: rgba(255, 83, 83, 0.12);
-    border: 1px solid rgba(255, 83, 83, 0.35);
-  }
-
-  .compile-error {
-    margin: 20px 0;
-    padding: 18px 20px;
-    border-radius: 14px;
-    border: 1px solid #e8c4b8;
-    background: linear-gradient(145deg, #fef0ea, #fef6ee);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  }
-
-  .compile-error__eyebrow {
-    margin: 0;
-    color: #b35c3a;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  .compile-error__title {
-    margin: 6px 0 10px;
-    font-size: 23px;
-    line-height: 1.2;
-    color: #3d1e0f;
-  }
-
-  .compile-error__body {
-    margin: 0;
-    color: #5c3a2a;
-  }
-
-  .compile-error__file {
-    display: inline-block;
-    margin-top: 12px;
-    padding: 6px 10px;
-    border-radius: 8px;
-    border: 1px solid #d4a898;
-    background: #f5ddd3;
-    color: #6b3522;
-    font-size: 13px;
-  }
-
-  @media (max-width: 640px) {
-    .compile-error {
-      padding: 14px 16px;
-      border-radius: 12px;
-    }
-
-    .compile-error__title {
-      font-size: 20px;
-    }
   }
 </style>

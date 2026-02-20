@@ -46,10 +46,9 @@ describe('duckdb', () => {
     ))
 
     await page.goto(cloud.url)
-    await expect(page.locator('.compile-error')).toBeVisible()
-    await expect(page.locator('.compile-error__title')).toHaveText('We could not build this page')
-    await expect(page.locator('.compile-error__body')).toHaveText('flights.md failed to compile.')
-    await expect(page.locator('.compile-error__file')).toHaveText('flights.md')
+    await expect(page.locator('.g-error')).toBeVisible()
+    await expect(page.locator('.g-error__message')).toHaveText('flights.md failed to compile.')
+    await expect(page.locator('.g-error__details')).toContainText('flights.md')
     await expect(page).screenshot('flights-compile-error')
   })
 })
