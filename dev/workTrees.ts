@@ -209,8 +209,8 @@ async function statusWorktree (full = false) {
   await fetchWorktree()
 
   let repos = [
-    {label: 'co', path: currentWorktree},
     {label: 'core', path: `${currentWorktree}/core`},
+    {label: 'co', path: currentWorktree},
   ] as const
 
   let details = [] as {label: 'co' | 'core', branch: string, commits: string, status: string}[]
@@ -223,10 +223,8 @@ async function statusWorktree (full = false) {
   }
 
   for (let repo of details) {
-    console.log(chalk.cyan(`${repo.label} commits: `) + (repo.commits ? '' : chalk.dim('none')))
-    console.log(repo.commits + (repo.commits ? '\n' : ''))
-    console.log(chalk.cyan(`${repo.label} status: `) + (repo.status ? '' : chalk.dim('clean')))
-    console.log(repo.status + (repo.status ? '\n' : ''))
+    console.log(repo.commits ? chalk.cyan(`${repo.label} commits:\n${repo.commits}`) : chalk.dim(`${repo.label} commits: none`))
+    if (repo.status) console.log(chalk.yellow(`${repo.label} status:\n${repo.status}`))
   }
 }
 
