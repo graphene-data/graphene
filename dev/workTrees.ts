@@ -324,8 +324,6 @@ async function pushWorktree() {
     await $`git -C ${currentWorktree}/core push -f -u origin ${currentName}`
     let url = await ensurePR(`${currentWorktree}/core`, currentName)
     console.log('core PR: ' + url)
-
-    if (cloudHasCommits) return console.log('Once merged, run `wt push` again to push cloud')
   }
 
   if (await repoDirty()) return commitWorktree()
