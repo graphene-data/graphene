@@ -6,23 +6,18 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "lint": "eslint . && tsc",
+    "lint": "oxlint -c oxlint.config.ts --type-check .",
     "test": "vitest run",
     "test-one": "node scripts/turboTest.js",
     "check-examples": "pnpm -C examples/flights graphene check && pnpm -C examples/ecomm graphene check && pnpm -C examples/snowflake graphene check"
   },
   "devDependencies": {
-    "@eslint/compat": "^1.4.1",
-    "@eslint/js": "^9.39.2",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^22.19.7",
     "dotenv": "^17.2.3",
-    "eslint": "^9.39.2",
-    "eslint-plugin-prefer-let": "^4.0.1",
-    "eslint-plugin-svelte": "^3.14.0",
-    "globals": "^16.5.0",
+    "eslint-plugin-prefer-let": "^4.1.0",
+    "oxlint": "^1.50.0",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.54.0",
     "vitest": "4.0.15",
     "zx": "^8.8.5"
   },

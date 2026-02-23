@@ -24,9 +24,6 @@ Graphene is mostly written in typescript. We parse gsql with Lezer, analyze it f
 
 For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 5, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
 
-# Process
-NEVER run `pnpm install` or `pnpm add`. If the env seems broken, summarize what seems wrong and let the user fix it. If you need to add dependencies, explain what you'd like to add and why.
-
 # Testing
 `pnpm lint` to run both eslint and tsc
 `pnpm test` to run all tests. `pnpm test [cli|lang|ui]` to run all the tests for a section of the codebase. Uses vitest v4 under the hood, if you want to pass other options.
