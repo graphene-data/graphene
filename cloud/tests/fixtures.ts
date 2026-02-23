@@ -1,4 +1,4 @@
-import {test as base, onTestFinished} from 'vitest'
+import {test as base} from 'vitest'
 import {chromium, type Browser, type Page} from 'playwright'
 import {playwrightExpect as expect} from '../../core/ui/tests/matchers.ts'
 import {startDevServer} from '../server/dev.ts'
@@ -6,7 +6,7 @@ import {setupPglite} from '../server/db.ts'
 import net from 'net'
 import dotenv from 'dotenv'
 import path from 'path'
-import {assertConsoleErrors, trackerBrowserConsole, expectConsoleError, stopTrackingConsole} from '../../core/ui/tests/browserConsole.ts'
+import {trackBrowserConsole, expectConsoleError, onServerLog} from '../../core/ui/tests/logWatcher.ts'
 
 dotenv.config({path: path.resolve(import.meta.dirname, '../../.env'), quiet: true})
 
@@ -38,7 +38,9 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   // cloud starts BEFORE page so it tears down AFTER page - this ensures the server is still running during assertions
   cloud: async ({realAuth, project}, use) => {
     let port = realAuth ? 3121 : await getAvailablePort()
-    let handle = await startDevServer({realAuth, port, project})
+    // custom logger allows us to fail if the server logs an error we don't expect
+    let logger = {level: 'warn', stream: {write: (line: string) => onServerLog(line.trimEnd())}}
+    let handle = await startDevServer({realAuth, port, project, logger})
     try {
       await use({url: handle.url})
     } finally {
@@ -50,11 +52,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   page: async ({browser, cloud: _cloud}, use) => {
     let context = await browser.newContext({deviceScaleFactor: 2})
     let page = await context.newPage()
-    trackerBrowserConsole(page)
-    onTestFinished(() => {
-      assertConsoleErrors(page)
-      stopTrackingConsole(page)
-    })
+    trackBrowserConsole(page)
     await use(page)
     if (process.env.GRAPHENE_DEBUG) await new Promise(() => { })
     await context.close()

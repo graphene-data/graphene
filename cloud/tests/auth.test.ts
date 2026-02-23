@@ -15,8 +15,8 @@ describe('auth', () => {
   test('login flow', async ({page, cloud}) => {
     // should redirect to /login, since we're not authed
     await page.goto(cloud.url)
-    expectConsoleError(page, /the server responded with a status of 401/)
-    expectConsoleError(page, /Authentication required/)
+    expectConsoleError(/the server responded with a status of 401/)
+    expectConsoleError(/Authentication required/)
 
     await expect(page.locator('#stytch-login')).toContainText('Sign up or log in')
     await expect(page).screenshot('auth-login-form')
@@ -37,7 +37,7 @@ describe('auth', () => {
   })
 
   test('shows an error for invalid credentials', async ({page, cloud}) => {
-    expectConsoleError(page, 'Failed to load resource')
+    expectConsoleError('Failed to load resource')
     await page.goto(cloud.url + '/login')
     let loginShell = page.locator('#stytch-login')
     await expect(loginShell).toContainText('Sign up or log in')
@@ -55,7 +55,7 @@ describe('auth', () => {
   // Skip: Stytch IDP/connected apps feature needs to be configured in test project
   test('cli pkce login works', async ({page, cloud}) => {
     setConfig({root: 'test', host: cloud.url})
-    expectConsoleError(page, /Failed to load resource.*127.0.0.1.*favicon.ico/, true)
+    expectConsoleError(/Failed to load resource.*127.0.0.1.*favicon.ico/)
 
     await loginPkce(async url => {
       await page.goto(url)

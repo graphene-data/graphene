@@ -5,6 +5,8 @@ import {getDb} from '../server/db.ts'
 import {files} from '../schema.ts'
 import {repoId} from '../server/dev.ts'
 
+const compileErrorServerLog = /"name":"CompileError".*"code":"block_unclosed"/
+
 describe('duckdb', () => {
   test('renders the flights overview page', async ({page, cloud}) => {
     await page.goto(cloud.url)
@@ -23,8 +25,8 @@ describe('duckdb', () => {
 
   test('navigates to another page via sidebar', async ({page, cloud}) => {
     // Expect warnings from navigating away from page with charts
-    expectConsoleError(page, /was created with unknown prop/, true)
-    expectConsoleError(page, /ECharts.*has been disposed/, true)
+    expectConsoleError(/was created with unknown prop/)
+    expectConsoleError(/ECharts.*has been disposed/)
     await page.goto(cloud.url)
     await page.locator('nav').locator('a', {hasText: 'Delays'}).click()
     await expect(page).toHaveURL(/\/delays$/)
@@ -32,7 +34,8 @@ describe('duckdb', () => {
   })
 
   test('shows a styled compile error for broken markdown pages', async ({page, cloud}) => {
-    expectConsoleError(page, /Failed to load resource/, true)
+    expectConsoleError(compileErrorServerLog)
+    expectConsoleError(/Failed to load resource/)
 
     await getDb().update(files).set({
       content: '# Broken\n\n{#if true}\nThis block never closes.',

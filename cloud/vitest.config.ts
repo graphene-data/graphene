@@ -11,7 +11,8 @@ export default defineConfig({
     reporters: ['default', 'json'],
     outputFile: 'node_modules/.testResults.json',
     onConsoleLog (log) {
-      if (log.includes('Pulling schema from database...')) return false
+      // silence some expected logs that aren't helpful in tests
+      if (log.startsWith('Pulling schema from database...')) return false
     },
     fileParallelism: false,
   },

@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url'
 import middie from '@fastify/middie'
 import {createServer as createViteServer} from 'vite'
 import {migrate} from 'drizzle-orm/postgres-js/migrator'
+import type {FastifyLoggerOptions} from 'fastify'
 import {createServer} from './server.ts'
 import {getDb, resetDb, setupPglite} from './db.ts'
 import * as schema from '../schema.ts'
@@ -20,6 +21,7 @@ interface DevArgs {
   realAuth: boolean
   port?: number
   project?: string // 'flights' (default), 'ecomm', or a path to a custom repo
+  logger?: FastifyLoggerOptions
 }
 
 interface DevServerHandle {
@@ -27,10 +29,10 @@ interface DevServerHandle {
   close: () => Promise<void>
 }
 
-export async function startDevServer ({realAuth, port, project = 'flights'}: DevArgs): Promise<DevServerHandle> {
+export async function startDevServer ({realAuth, port, project = 'flights', logger}: DevArgs): Promise<DevServerHandle> {
   port = port || Number(process.env.GRAPHENE_PORT) + 1 || 4000
 
-  let fastify = createServer(false)
+  let fastify = createServer(false, logger)
   await fastify.register(middie, {hook: 'onRequest'})
 
   setAuthOverride(realAuth ? null : {userId, orgId, slug: ''})

@@ -3,6 +3,7 @@ import cookie from '@fastify/cookie'
 import staticPlugin from '@fastify/static'
 import {fileURLToPath} from 'url'
 import path from 'path'
+import type {type FastifyLoggerOptions} from 'fastify'
 
 import {type AuthContext, authTokenExchange} from './auth.ts'
 import {listNavFiles, renderPage, renderDynamic} from './pages.ts'
@@ -11,8 +12,8 @@ import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, git
 import {agentTest, testRenderMd} from './agent/testEndpoint.ts'
 
 
-export function createServer (serveStatic: boolean) {
-  let app = fastify({logger: {level: 'warn'}})
+export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
+  let app = fastify({logger})
   app.register(cookie, {})
 
   app.decorateRequest('auth', null as unknown as AuthContext)
