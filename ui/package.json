@@ -4,7 +4,6 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "lint": "eslint --fix .",
     "test": "vitest run ui --root ..",
     "test-one": "node ../scripts/turboTest.js"
   },

@@ -5,7 +5,7 @@
   "scripts": {
     "test": "vitest run lang --root ..",
     "test-one": "node ../scripts/turboTest.js",
-    "generate": "lezer-generator lang.grammar -o parser.js && eslint --fix parser.js"
+    "generate": "lezer-generator lang.grammar -o parser.js && oxlint -c ../oxlint.config.ts --fix parser.js"
   },
   "dependencies": {
     "@lezer/common": "^1.2.3",
