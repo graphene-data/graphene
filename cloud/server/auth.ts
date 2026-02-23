@@ -53,7 +53,7 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
 
   if (!req.auth) {
     reply.code(401).send({error: 'Authentication required'})
-    throw new Error('Unauthorized')
+    return
   }
 
   // Skip subdomain validation for agent auth in dev (Lambda accesses via ngrok tunnel)
@@ -71,7 +71,7 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
 
     if (org.slug !== subdomain && !['app', 'login'].includes(subdomain)) {
       reply.code(403).send({error: 'Incorrect subdomain', correctDomain: `${org?.slug}${base}`})
-      throw new Error('Unauthorized')
+      return
     }
   }
 }

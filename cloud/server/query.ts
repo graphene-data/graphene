@@ -1,6 +1,5 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import {and, eq} from 'drizzle-orm'
-import {auth} from './auth.ts'
 import {getDb} from './db.ts'
 import {decryptSecret} from './secrets.ts'
 import {connections, files, repos, type Connection} from '../schema.ts'
@@ -15,7 +14,6 @@ interface QueryBody {
 }
 
 export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
   let body = req.body as QueryBody
   let db = getDb()
 

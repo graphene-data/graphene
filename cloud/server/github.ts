@@ -3,7 +3,6 @@ import {and, eq} from 'drizzle-orm'
 import crypto from 'node:crypto'
 import {App} from '@octokit/app'
 import {Octokit} from '@octokit/rest'
-import {auth} from './auth.ts'
 import {getDb} from './db.ts'
 import {vcsInstallations, repos, files} from '../schema.ts'
 import {DOMAIN, PROD} from './consts.ts'
@@ -26,8 +25,7 @@ async function getInstallationOctokit (installationId: string): Promise<Octokit>
 }
 
 // Redirect to GitHub App installation with nonce in state
-export async function githubInstall (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
+export function githubInstall (req: FastifyRequest, reply: FastifyReply) {
   let appSlug = process.env.GITHUB_APP_SLUG
   if (!appSlug) return reply.code(500).send({error: 'GitHub App not configured'})
 
@@ -49,8 +47,6 @@ export async function githubInstall (req: FastifyRequest, reply: FastifyReply) {
 // GitHub redirects here after app installation (Setup URL)
 // It gives us back the `state` param, and we use that to validate the request, then connect the gh install to this graphene org.
 export async function githubSetup (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
-
   let query = req.query as {installation_id?: string; setup_action?: string; state?: string}
 
   if (!query.installation_id || !query.state) {
@@ -70,7 +66,6 @@ export async function githubSetup (req: FastifyRequest, reply: FastifyReply) {
 
 // List repos accessible to the GitHub installation for this org
 export async function listAvailableRepos (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
   let db = getDb()
 
   let installation = await db.select().from(vcsInstallations)
@@ -100,7 +95,6 @@ export async function listAvailableRepos (req: FastifyRequest, reply: FastifyRep
 
 // Add a repo from GitHub to this org
 export async function addRepo (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
   let db = getDb()
 
   let body = req.body as {vcsRepoId: string; slug: string; folder?: string}
@@ -135,7 +129,6 @@ export async function addRepo (req: FastifyRequest, reply: FastifyReply) {
 
 // Remove a repo
 export async function removeRepo (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
   let db = getDb()
 
   let params = req.params as {id?: string}

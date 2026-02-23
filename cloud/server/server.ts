@@ -1,11 +1,9 @@
-import fastify from 'fastify'
+import fastify, {type FastifyLoggerOptions} from 'fastify'
 import cookie from '@fastify/cookie'
 import staticPlugin from '@fastify/static'
 import {fileURLToPath} from 'url'
 import path from 'path'
-import type {type FastifyLoggerOptions} from 'fastify'
-
-import {type AuthContext, authTokenExchange} from './auth.ts'
+import {type AuthContext, auth, authTokenExchange} from './auth.ts'
 import {listNavFiles, renderPage, renderDynamic} from './pages.ts'
 import {proxyQuery} from './query.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
@@ -17,6 +15,13 @@ export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions
   app.register(cookie, {})
 
   app.decorateRequest('auth', null as unknown as AuthContext)
+  app.addHook('preHandler', async (req, reply) => {
+    let route = req.routeOptions.url
+    if (!route || !route.startsWith('/_api')) return
+    if (route === '/_api/github/webhook') return
+    if (route === '/_api/oauth2/token') return
+    await auth(req, reply)
+  })
 
   app.get('/_api/nav/:repoSlug', listNavFiles)
   app.get('/_api/pages/*', renderPage)

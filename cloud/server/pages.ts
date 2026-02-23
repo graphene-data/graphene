@@ -6,12 +6,10 @@ import {compile as svelteCompile} from 'svelte/compiler'
 import {files, repos} from '../schema.ts'
 import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
 import {PROD} from './consts.ts'
-import {auth} from './auth.ts'
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
 export async function listNavFiles (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
   let db = getDb()
 
   let repoSlug = (req.params as any)['repoSlug']
@@ -35,7 +33,6 @@ export async function listNavFiles (req: FastifyRequest, reply: FastifyReply) {
 }
 
 export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
   let db = getDb()
 
   let segments = (req.params as any)['*'].split('/')
@@ -120,7 +117,6 @@ function rewriteSvelteImports (code: string, repoId: string, inline = false) {
 }
 
 export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
-  await auth(req, reply)
   let query = req.query as {md?: string; repoId?: string}
   let markdown = Buffer.from(query.md || '', 'base64').toString('utf-8')
   let code = await compileMd(markdown, 'dynamic.md', query.repoId || '', true)

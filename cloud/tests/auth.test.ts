@@ -32,8 +32,13 @@ describe('auth', () => {
 
   test('prevents unauthorized requests', async ({page, cloud}) => {
     await page.goto(cloud.url + '/login')
-    let response = await page.request.get(`${cloud.url}/_api/pages/index`)
-    expect(response.status()).toBe(401)
+    let pageRes = await page.request.get(`${cloud.url}/_api/pages/index`)
+    expect(pageRes.status()).toBe(401)
+
+    let queryRes = await page.request.post(`${cloud.url}/_api/query`, {
+      data: {repoId: 'testrepo', sql: 'select 1'},
+    })
+    expect(queryRes.status()).toBe(401)
   })
 
   test('shows an error for invalid credentials', async ({page, cloud}) => {
