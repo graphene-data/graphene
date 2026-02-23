@@ -282,7 +282,7 @@ async function fetchWorktree() {
 
 async function pullWorktree (): Promise<boolean> {
   let success = true
-  for (let subdir of [undefined, 'core'] as const) {
+  for (let subdir of ['core', undefined] as const) {
     success = success && await rebaseRepo(subdir, 'origin/main')
   }
   return success
