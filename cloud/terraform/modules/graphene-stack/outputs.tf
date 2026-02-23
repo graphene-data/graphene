@@ -36,6 +36,16 @@ output "ecs_service_arn" {
   value       = aws_ecs_express_gateway_service.cloud.service_arn
 }
 
+output "website_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for website"
+  value       = aws_cloudfront_distribution.website.id
+}
+
+output "website_cloudfront_domain_name" {
+  description = "CloudFront domain name for website"
+  value       = aws_cloudfront_distribution.website.domain_name
+}
+
 # Secrets Manager Outputs
 output "stytch_secret_arn" {
   description = "ARN of the Stytch secret"

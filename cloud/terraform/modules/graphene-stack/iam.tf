@@ -104,6 +104,31 @@ resource "aws_iam_role_policy" "ci_deploy_ecr" {
         Resource = "${aws_s3_bucket.lambda_deployments.arn}/*"
       },
       {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.website.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${aws_s3_bucket.website.arn}/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetDistribution",
+          "cloudfront:ListDistributions"
+        ]
+        Resource = "*"
+      },
+      {
         Effect   = "Allow"
         Action   = ["lambda:UpdateFunctionCode", "lambda:GetFunction"]
         Resource = aws_lambda_function.screenshot.arn

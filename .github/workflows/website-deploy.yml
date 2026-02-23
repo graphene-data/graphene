@@ -1,0 +1,33 @@
+name: Website Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "website/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-website:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          lfs: true
+
+      - uses: ./.github/actions/setup
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::772069004272:role/ci-deploy
+          aws-region: us-east-1
+
+      - name: Deploy website
+        run: ./website/scripts/deploy.sh production

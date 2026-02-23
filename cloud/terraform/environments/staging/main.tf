@@ -200,7 +200,12 @@ module "graphene" {
 
   # TODO: Update with staging account ID
   aws_account_id = "025223626139"
+  environment    = "staging"
   domain_name    = "graphene-staging.com"
+  website_domain_names = [
+    "www.graphene-staging.com",
+    "graphene-staging.com"
+  ]
 
   # Stytch configuration - these values come from the Stytch dashboard
   # for the staging workspace's production project
@@ -279,6 +284,14 @@ output "ecs_service_url" {
 
 output "ci_deploy_role_arn" {
   value = module.graphene.ci_deploy_role_arn
+}
+
+output "website_cloudfront_distribution_id" {
+  value = module.graphene.website_cloudfront_distribution_id
+}
+
+output "website_cloudfront_domain_name" {
+  value = module.graphene.website_cloudfront_domain_name
 }
 
 output "stytch_project_slug" {

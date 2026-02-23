@@ -167,7 +167,12 @@ module "graphene" {
   source = "../../modules/graphene-stack"
 
   aws_account_id = "772069004272"
+  environment    = "production"
   domain_name    = "graphenedata.com"
+  website_domain_names = [
+    "www.graphenedata.com",
+    "graphenedata.com"
+  ]
 
   # Stytch configuration
   stytch_project_id = "project-live-6ce1d97b-eb01-42b7-a849-223d1a431224"
@@ -259,4 +264,12 @@ output "ecs_service_url" {
 
 output "ci_deploy_role_arn" {
   value = module.graphene.ci_deploy_role_arn
+}
+
+output "website_cloudfront_distribution_id" {
+  value = module.graphene.website_cloudfront_distribution_id
+}
+
+output "website_cloudfront_domain_name" {
+  value = module.graphene.website_cloudfront_domain_name
 }

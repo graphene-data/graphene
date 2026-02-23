@@ -10,6 +10,11 @@ variable "aws_account_id" {
   type        = string
 }
 
+variable "environment" {
+  description = "Environment name (staging or production)"
+  type        = string
+}
+
 # Stytch's provider doesn't give you the project_id or domain, so we have to copy/paste them here
 variable "stytch_project_id" {
   description = "Stytch project ID"
@@ -75,6 +80,11 @@ variable "enable_optin_region_guardduty" {
 variable "domain_name" {
   description = "Primary domain name for the environment (e.g., graphenedata.com, graphene-staging.com)"
   type        = string
+}
+
+variable "website_domain_names" {
+  description = "Custom domains for static website hosting (e.g., [\"www.graphenedata.com\", \"graphenedata.com\"])"
+  type        = list(string)
 }
 
 variable "configure_alb_extras" {
