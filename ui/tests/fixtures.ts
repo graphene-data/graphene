@@ -7,7 +7,7 @@ import net from 'net'
 import {type Config, config, setConfig} from '../../lang/config.ts'
 import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
 import {serve2, svelteWarnings, clearSvelteWarnings} from '../../cli/serve2.ts'
-import {assertConsoleErrors, trackBrowserConsole} from './logWatcher.ts'
+import {trackBrowserConsole} from './logWatcher.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 
 export {expect}
@@ -53,7 +53,6 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
     clearSvelteWarnings()
 
     onTestFinished(() => {
-      assertConsoleErrors(page)
       if (svelteWarnings.length) {
         let formatted = svelteWarnings.map(w => `  - [${w.code}] ${w.message} (${w.filename})`).join('\n')
         throw new Error(`Unexpected Svelte warnings:\n${formatted}`)

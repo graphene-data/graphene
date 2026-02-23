@@ -35,7 +35,7 @@ test('check defaults to analyzing the whole workspace', async () => {
 })
 
 test('check with mdFile reports analysis errors', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource', true)
+  expectConsoleError('Failed to load resource')
   server.mockFile('/other.md', `
     \`\`\`sql error_query
     from flights select wtfmate() as explode
@@ -60,7 +60,7 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
 })
 
 test('cli check command reports runtime query errors', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource')
+  expectConsoleError('Failed to load resource')
   server.mockFile('/index.md', `
     # Runtime Cast Error Page
     \`\`\`sql runtime_error_query
@@ -79,8 +79,8 @@ test('cli check command reports runtime query errors', async ({server, page}) =>
 })
 
 test('check reports runtime chart configuration errors', async ({server, page}) => {
-  expectConsoleError(page, 'Error in Bar Chart')
-  expectConsoleError(page, /ECharts.*has been disposed/, true)
+  expectConsoleError('Error in Bar Chart')
+  expectConsoleError(/ECharts.*has been disposed/)
   server.mockFile('/index.md', `
     # Runtime Chart Config Error
     \`\`\`sql chart_data
@@ -117,9 +117,9 @@ test('check table configuration errors', async ({server, page}) => {
 })
 
 test('check reports html compilation errors', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource')
-  expectConsoleError(page, 'Internal Server Error', true)
-  expectConsoleError(page, 'Failed to fetch dynamically imported module', true)
+  expectConsoleError('Failed to load resource')
+  expectConsoleError('Internal Server Error')
+  expectConsoleError('Failed to fetch dynamically imported module')
   server.mockFile('/index.md', `
     # Test
     {#if true}oops{/if}

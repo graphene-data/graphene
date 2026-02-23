@@ -2,10 +2,10 @@ import {test, expect} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
 test('valid → invalid → valid via HMR', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource', true)
-  expectConsoleError(page, 'Internal Server Error', true)
-  expectConsoleError(page, 'Failed to fetch dynamically imported module', true)
-  expectConsoleError(page, 'vite:error', true)
+  expectConsoleError('Failed to load resource')
+  expectConsoleError('Internal Server Error')
+  expectConsoleError('Failed to fetch dynamically imported module')
+  expectConsoleError('vite:error')
   server.mockFile('/index.md', '# Working Page')
 
   await page.goto(server.url())
@@ -21,10 +21,10 @@ test('valid → invalid → valid via HMR', async ({server, page}) => {
 })
 
 test('load broken page, fix via HMR', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource', true)
-  expectConsoleError(page, 'Internal Server Error', true)
-  expectConsoleError(page, 'Failed to fetch dynamically imported module', true)
-  expectConsoleError(page, 'vite:error', true)
+  expectConsoleError('Failed to load resource')
+  expectConsoleError('Internal Server Error')
+  expectConsoleError('Failed to fetch dynamically imported module')
+  expectConsoleError('vite:error')
   server.mockFile('/index.md', '# Broken\n{#if true}oops{/if}')
 
   await page.goto(server.url())
@@ -56,10 +56,10 @@ test('editing unrelated md does not reload current page', async ({server, page})
 })
 
 test('editing unrelated md does not reload broken page', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource', true)
-  expectConsoleError(page, 'Internal Server Error', true)
-  expectConsoleError(page, 'Failed to fetch dynamically imported module', true)
-  expectConsoleError(page, 'vite:error', true)
+  expectConsoleError('Failed to load resource')
+  expectConsoleError('Internal Server Error')
+  expectConsoleError('Failed to fetch dynamically imported module')
+  expectConsoleError('vite:error')
   server.mockFile('/index.md', '# Broken\n{#if true}oops{/if}')
   server.mockFile('/other.md', '# Other Page')
 

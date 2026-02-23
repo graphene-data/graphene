@@ -23,7 +23,7 @@ const extendedExpect = baseExpect.extend({
     // Wait for fonts to load to ensure consistent rendering across environments
     await (page as Page).evaluate(async () => {
       await document.fonts.ready
-      await window.$GRAPHENE.waitForQueries?.()
+      await (window as any).$GRAPHENE?.waitForQueries?.()
       await new Promise(r => requestAnimationFrame(r))
     })
 
