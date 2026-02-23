@@ -49,7 +49,7 @@ test('allows collapsing and expanding folders', async ({server, page}) => {
 
 
 test('renders gsql query errors clearly with file context', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource')
+  expectConsoleError('Failed to load resource')
   server.mockFile('/index.md', `
     # Broken Dashboard
 
@@ -74,7 +74,7 @@ test('renders gsql query errors clearly with file context', async ({server, page
 })
 
 test('renders database query failures clearly', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource')
+  expectConsoleError('Failed to load resource')
   server.mockFile('/index.md', `
     # Database Failure
 
@@ -92,7 +92,7 @@ test('renders database query failures clearly', async ({server, page}) => {
 })
 
 test('renders generic server failures clearly', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource')
+  expectConsoleError('Failed to load resource')
   server.mockFile('/index.md', `
     # Server Failure
 
@@ -119,10 +119,10 @@ test('renders generic server failures clearly', async ({server, page}) => {
 })
 
 test('renders html syntax errors with error display', async ({server, page}) => {
-  expectConsoleError(page, 'Failed to load resource', true)
-  expectConsoleError(page, 'Internal Server Error', true)
-  expectConsoleError(page, 'Failed to fetch dynamically imported module', true)
-  expectConsoleError(page, 'vite:error', true)
+  expectConsoleError('Failed to load resource')
+  expectConsoleError('Internal Server Error')
+  expectConsoleError('Failed to fetch dynamically imported module')
+  expectConsoleError('vite:error')
   server.mockFile('/index.md', `
     # Test
     {#if true}oops{/if}
