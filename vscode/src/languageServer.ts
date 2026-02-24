@@ -22,9 +22,11 @@ let initialLoad: Promise<void> | undefined
 connection.onInitialize(params => {
   let dirs = params.workspaceFolders?.map(f => f.uri) || []
   console.log('started Graphene server', dirs)
-  let root = dirs[0].replace('file://', '')
-  loadConfig(root)
-  initialLoad = dirs[0] ? loadWorkspace(root, true) : Promise.resolve()
+  if (dirs[0]) {
+    let root = dirs[0].replace('file://', '')
+    loadConfig(root)
+    initialLoad = loadWorkspace(root, true)
+  }
 
   return {
     capabilities: {
