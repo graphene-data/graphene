@@ -135,7 +135,7 @@ async function upWorktree(name:string) {
   // Build our image against main, since it shouldn't change for any worktree
   // We could skip this step if the image already exists, but this seems pretty fast, and catches dockerfile changes
   console.log('Building Docker image...')
-  await $`docker build -f ${root}/main/dev/Dockerfile.dev -t graphene-dev ${root}/main`
+  await $`docker build -f ${currentWorktree}/dev/Dockerfile.dev -t graphene-dev ${root}/main`
 
   console.log('Starting container...')
   // We mount main/.git at its absolute host path (for the superproject .git file which uses an absolute gitdir)
@@ -154,7 +154,7 @@ async function upWorktree(name:string) {
     tail -f /dev/null`
 
   console.log('Running containerStart.sh...')
-  await $`docker exec ${containerName} bash -lc "dev/containerStart.sh"`
+  await $`docker exec ${containerName} bash -lc "dev/containerStart.sh"`.stdio('inherit')
 
   console.log(`Container '${containerName}' is running`)
 }
