@@ -51,10 +51,9 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site || "https://graphene
 
 		<meta name="generator" content={Astro.generator} />
 
-		<!-- Fonts -->
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet" />
+		<!-- Preload critical fonts to avoid FOUT -->
+		<link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/instrument-serif-latin.woff2" as="font" type="font/woff2" crossorigin />
 	</head>
 	<body class="bg-bg text-primary-dark font-sans antialiased min-h-screen flex flex-col">
 		<slot />
