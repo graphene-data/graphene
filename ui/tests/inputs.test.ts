@@ -75,8 +75,13 @@ test('dropdown multi-select supports select-all and clear', async ({server, page
   let menu = page.getByRole('listbox')
   await expect(menu).toBeVisible()
 
+  let optionLabels = await menu.locator('[role="option"] .dropdown-option-label').allTextContents()
+  let sortedOptionLabels = [...optionLabels].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}))
+  expect(optionLabels).toEqual(sortedOptionLabels)
+
   await page.getByRole('button', {name: 'Select all'}).click()
   await expect(trigger).toContainText('selected')
+  await expect(page.locator('.dropdown-option.is-selected .checkbox-checkmark').first()).toHaveCSS('stroke', 'rgb(255, 255, 255)')
   await expect(menu).screenshot('dropdown-multi-select-all')
 
   await page.getByRole('button', {name: 'Clear selection'}).click()
