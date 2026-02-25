@@ -14,6 +14,8 @@
     seriesColors?: any
     connectGroup?: string
     xAxisLabelOverflow?: 'truncate' | 'break'
+    showAllXAxisLabels?: boolean
+    swapXY?: boolean
     chartTitle?: string
     onclick?: (params: any) => void
   }
@@ -23,7 +25,8 @@
   let {
     config, height = '240px', width = '100%', data, queryID = undefined, renderer = undefined,
     echartsOptions = undefined, seriesOptions = undefined, seriesColors = undefined,
-    connectGroup = undefined, xAxisLabelOverflow = undefined, chartTitle = undefined, onclick = undefined,
+    connectGroup = undefined, xAxisLabelOverflow = undefined, showAllXAxisLabels = undefined,
+    swapXY = undefined, chartTitle = undefined, onclick = undefined,
   }: Props = $props()
 
   const isBrowser = typeof window !== 'undefined'
@@ -53,6 +56,8 @@
         renderer,
         connectGroup,
         xAxisLabelOverflow,
+        showAllXAxisLabels,
+        swapXY,
         seriesColors,
         theme: $activeAppearance,
       }}

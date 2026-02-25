@@ -105,6 +105,7 @@
   let seriesColorsResolved = $derived(resolveColorsObject(seriesColors))
 
   let reqCols
+  let showAllXAxisLabelsResolved = $state(false)
 
   let xAxisLabelOverflow = $derived(xLabelWrap_bool ? 'break' : 'truncate')
 
@@ -336,6 +337,7 @@
         // if user has set showXAxisLabels, convert to boolean
         showAllXAxisLabelsLocal = showAllXAxisLabelsLocal === 'true' || showAllXAxisLabelsLocal === true
       }
+      showAllXAxisLabelsResolved = showAllXAxisLabelsLocal
 
       // Throw error if attempting to plot value or time on horizontal x-axis:
       if (swapXY_bool && xTypeLocal !== 'category') {
@@ -982,6 +984,8 @@
     {seriesOptions}
     {connectGroup}
     {xAxisLabelOverflow}
+    showAllXAxisLabels={showAllXAxisLabelsResolved}
+    swapXY={swapXY_bool}
     seriesColors={$seriesColorsResolved}
   />
 {:else}
