@@ -176,12 +176,12 @@ test('dropdown boolean-string attributes handle defaults and footer actions', as
   `)
 
   let noDefaultTrigger = page.getByRole('combobox', {name: 'No Default Carrier'})
-  await expect(noDefaultTrigger).toContainText('AA')
+  await expect(noDefaultTrigger).toContainText('Choose a carrier')
   await expect(page.locator('label[for="dropdown-carrier_no_default"] + .input-description')).toHaveText('Pick exactly one carrier')
   await expect(page.locator('#dropdown-carrier_no_default').locator('xpath=ancestor::div[contains(@class, "input-block")]')).not.toHaveClass(/hide-print/)
 
   await noDefaultTrigger.click()
-  await expect(page.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'false')
   await expect(page.getByRole('listbox')).screenshot('dropdown-no-default-boolean-string')
   await page.keyboard.press('Escape')
 

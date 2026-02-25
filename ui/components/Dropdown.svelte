@@ -338,7 +338,7 @@
       if (multi && selectAllDefault) {
         nextSelection = opts.map(o => o.value)
       } else if (!touched) {
-        if (defaults.length) {
+        if (defaults.length && !hasNoDefault) {
           nextSelection = defaults.filter(val => valueMap.has(optionKey(val)))
         } else if (!multi && !hasNoDefault) {
           nextSelection = selection.length ? nextSelection : []
