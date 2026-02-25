@@ -11,6 +11,7 @@ import * as schema from '../schema.ts'
 import {setAuthOverride} from './auth.ts'
 import {encryptSecret} from './secrets.ts'
 import {TEST} from './consts.ts'
+import {agentTest, testRenderMd} from './agent/testEndpoint.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 export const orgId = 'organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d'
@@ -34,6 +35,9 @@ export async function startDevServer ({realAuth, port, project = 'flights', logg
 
   let fastify = createServer(false, logger)
   await fastify.register(middie, {hook: 'onRequest'})
+
+  fastify.get('/_api/agent/test', agentTest)
+  fastify.get('/_api/agent/test-render', testRenderMd)
 
   setAuthOverride(realAuth ? null : {userId, orgId, slug: ''})
   process.env.VITE_STYTCH_USE_MOCK = realAuth ? '' : 'true'

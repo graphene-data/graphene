@@ -7,7 +7,6 @@ import {type AuthContext, auth, authTokenExchange} from './auth.ts'
 import {listNavFiles, renderPage, renderDynamic} from './pages.ts'
 import {proxyQuery} from './query.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
-import {agentTest, testRenderMd} from './agent/testEndpoint.ts'
 
 
 export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
@@ -23,6 +22,8 @@ export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions
     await auth(req, reply)
   })
 
+  app.get('/_health', () => ({ok: true}))
+
   app.get('/_api/nav/:repoSlug', listNavFiles)
   app.get('/_api/pages/*', renderPage)
   app.get('/_api/dynamic', renderDynamic)
@@ -37,9 +38,6 @@ export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions
   app.delete('/_api/repos/:id', removeRepo)
   app.post('/_api/github/webhook', githubWebhook)
 
-  app.get('/_api/agent/test', agentTest)
-  app.get('/_api/agent/test-render', testRenderMd)
-
   if (serveStatic) {
     let root = path.resolve(fileURLToPath(import.meta.url), '../../dist')
     app.register(staticPlugin, {root, wildcard: false})
@@ -49,10 +47,7 @@ export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions
   return app
 }
 
-let runServer = import.meta.url === `file://${process.argv[1]}`
-export const server = createServer(runServer)
-
-if (runServer) {
-  await server.listen({port: 3000, host: process.env.HOST ?? '0.0.0.0'})
+if (import.meta.url === `file://${process.argv[1]}`) {
+  createServer(true).listen({port: 3000, host: process.env.HOST ?? '0.0.0.0'})
   console.log('Listening on :3000')
 }
