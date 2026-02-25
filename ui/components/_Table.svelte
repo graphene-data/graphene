@@ -428,6 +428,7 @@
                   fontColor={$subtotalFontColorStore}
                   groupBy={groupBy}
                   groupType={groupType}
+                  rowNumbers={effectiveRowNumbers}
                   {orderedColumns}
                   compact={compactBool}
                 />
