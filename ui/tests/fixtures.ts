@@ -37,6 +37,10 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
         headless: !process.env.GRAPHENE_DEBUG,
         args: [
           '--font-render-hinting=none', // Consistent font rendering across platforms
+          '--disable-font-subpixel-positioning', // Avoid tiny per-glyph edge drift across OS builds
+          '--disable-lcd-text', // Use grayscale AA instead of subpixel AA for more stable screenshots
+          '--force-color-profile=srgb',
+          '--lang=en-US',
           ...(process.env.GRAPHENE_DEBUG ? ['--auto-open-devtools-for-tabs'] : []),
         ],
       })
@@ -47,7 +51,14 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
   ],
 
   page: async ({browser}, use) => {
-    let context = await browser.newContext()
+    let context = await browser.newContext({
+      viewport: {width: 1280, height: 720},
+      deviceScaleFactor: 1,
+      locale: 'en-US',
+      timezoneId: 'UTC',
+      colorScheme: 'light',
+      reducedMotion: 'reduce',
+    })
     let page = await context.newPage()
     trackBrowserConsole(page)
     clearSvelteWarnings()

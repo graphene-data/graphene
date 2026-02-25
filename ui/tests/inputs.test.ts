@@ -30,12 +30,13 @@ async function startParamTracking (page: any) {
   })
 }
 
-function lastParamUpdate (page: any): Promise<{name: string, value: unknown} | null> {
-  return page.evaluate(() => {
+function lastParamUpdate (page: any, name?: string): Promise<{name: string, value: unknown} | null> {
+  return page.evaluate((paramName) => {
     let updates = (window as any).__paramUpdates as Array<{name: string, value: unknown}> | undefined
+    if (paramName) updates = updates?.filter((update) => update.name === paramName)
     if (!updates?.length) return null
     return updates[updates.length - 1]
-  })
+  }, name)
 }
 
 function allParamUpdates (page: any): Promise<Array<{name: string, value: unknown}>> {
@@ -58,7 +59,7 @@ test('dropdown single-select supports open, select, and close behaviors', async 
   await expect(trigger).toContainText('AA')
   await expect(menu).toBeHidden()
   await expect(trigger).toHaveAttribute('aria-expanded', 'false')
-  expect(await lastParamUpdate(page)).toEqual({name: 'carrier', value: 'AA'})
+  expect(await lastParamUpdate(page, 'carrier')).toEqual({name: 'carrier', value: 'AA'})
 
   await trigger.click()
   await expect(menu).toBeVisible()
@@ -87,7 +88,7 @@ test('dropdown multi-select supports select-all and clear', async ({server, page
   await page.getByRole('button', {name: 'Clear selection'}).click()
   await expect(trigger).toContainText('Pick carriers')
   await expect(page.getByRole('button', {name: 'Clear selection'})).toBeDisabled()
-  expect(await lastParamUpdate(page)).toEqual({name: 'carrier_multi', value: null})
+  expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: null})
 })
 
 test('dropdown search filters options and shows empty state', async ({server, page}) => {
@@ -126,7 +127,7 @@ test('dropdown keyboard navigation selects active option', async ({server, page}
   await menu.press('Enter')
   await expect(trigger).not.toContainText('Select option')
   await expect(menu).toBeHidden()
-  let update = await lastParamUpdate(page)
+  let update = await lastParamUpdate(page, 'carrier_keys')
   expect(update?.name).toBe('carrier_keys')
 })
 
@@ -221,7 +222,7 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   await manualTrigger.click()
   await page.getByRole('option', {name: 'United'}).click()
   await expect(manualTrigger).toContainText('United')
-  expect(await lastParamUpdate(page)).toEqual({name: 'manual_carrier', value: 'UA'})
+  await expect.poll(async () => await lastParamUpdate(page, 'manual_carrier')).toEqual({name: 'manual_carrier', value: 'UA'})
 
   let mappedTrigger = page.getByRole('combobox', {name: 'Label Field Carrier'})
   await mappedTrigger.click()
@@ -269,7 +270,7 @@ test('text input updates params and date range applies preset', async ({mount, p
 
   await startParamTracking(page)
   await textInput.fill('delta')
-  expect(await lastParamUpdate(page)).toEqual({name: 'search_text', value: 'delta'})
+  expect(await lastParamUpdate(page, 'search_text')).toEqual({name: 'search_text', value: 'delta'})
   await expect(page.locator('#component-test')).screenshot('text-input-basic')
 
   await mount('components/DateRange.svelte', {

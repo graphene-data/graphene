@@ -247,7 +247,7 @@ test('line chart markers and step', async ({mount, chart}) => {
   await expect(chart.el).screenshot('line-chart-markers-step')
 })
 
-test('line chart wraps x labels when requested', async ({mount, chart, page}) => {
+test('line chart wraps x labels when requested', async ({mount, chart}) => {
   let data = longCategorySeriesData()
   await mount('components/LineChart.svelte', {
     data,
@@ -258,7 +258,6 @@ test('line chart wraps x labels when requested', async ({mount, chart, page}) =>
     xLabelWrap: true,
   })
 
-  await page.waitForTimeout(150)
   let axisLabel = await chart.config((c) => (Array.isArray(c.xAxis) ? c.xAxis[0] : c.xAxis).axisLabel)
   let axisType = await chart.config((c) => (Array.isArray(c.xAxis) ? c.xAxis[0] : c.xAxis).type)
   expect(axisType).toBe('category')
