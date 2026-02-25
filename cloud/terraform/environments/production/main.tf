@@ -193,9 +193,7 @@ module "graphene" {
   # Feature flags
   enable_delve_auditor = true
 
-  # ACM/LB configuration - attach wildcard cert to the ALB
-  # NOTE: The listener rule's host-header condition must be updated manually in AWS console
-  # to include custom domains (*.graphenedata.com, graphenedata.com)
+  # ACM/LB configuration
   configure_alb_extras = true
 
   providers = {

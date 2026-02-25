@@ -272,19 +272,10 @@ resource "aws_wafv2_web_acl" "main" {
   }
 }
 
-# Look up the ALB created by ECS Express Mode (tagged with AmazonECSManaged=true)
-# Only look this up if we're configuring ALB extras (requires ECS Express service to exist first)
-data "aws_lb" "ecs_express" {
-  count = var.configure_alb_extras ? 1 : 0
-  tags = {
-    AmazonECSManaged = "true"
-  }
-}
-
-# Associate WAF with ECS Express Mode ALB
+# Associate WAF with ECS ALB
 resource "aws_wafv2_web_acl_association" "alb" {
   count        = var.configure_alb_extras ? 1 : 0
-  resource_arn = data.aws_lb.ecs_express[0].arn
+  resource_arn = aws_lb.cloud.arn
   web_acl_arn  = aws_wafv2_web_acl.main.arn
 }
 

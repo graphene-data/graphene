@@ -88,7 +88,7 @@ variable "website_domain_names" {
 }
 
 variable "configure_alb_extras" {
-  description = "Whether to configure ALB extras (certificate, listener rules, WAF). Requires ECS Express service to exist first."
+  description = "Whether to configure ALB extras (certificate and WAF attachment)."
   type        = bool
   default     = true
 }

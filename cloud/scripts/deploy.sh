@@ -35,30 +35,26 @@ ENVIRONMENT="${ENVIRONMENT:-staging}"
 
 REGION="us-east-1"
 CLUSTER="graphene-prod"
-SERVICE="graphene-cloud"
+SERVICE="graphene-cloud-v3"
 
 case "$ENVIRONMENT" in
   staging)    ACCOUNT="025223626139"; URL="https://graphene-staging.com"; VITE_STYTCH_PUBLIC_TOKEN="public-token-live-f2a46176-0127-4b0e-aa72-9843a4337482" ;;
-  production) ACCOUNT="772069004272"; URL="https://graphenedata.com" ;;
+  production) ACCOUNT="772069004272"; URL="https://graphenedata.com" ; VITE_STYTCH_PUBLIC_TOKEN="public-token-live-725d49b9-4d63-48f6-9678-eda554a3202b" ;;
 esac
 
 ECR_REPO="${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/graphene/cloud"
 
 echo "Deploying to $ENVIRONMENT (skip-build: $SKIP_BUILD)"
 
-# --- Load staging credentials ---
+# --- Load AWS credentials/env ---
 
-if [ "$ENVIRONMENT" = "staging" ]; then
-  unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE 2>/dev/null || true
-  [ -f "$REPO_ROOT/.env" ] || { echo "Error: .env file required for staging" >&2; exit 1; }
-  set -a; source "$REPO_ROOT/.env"; set +a
-fi
+cloud_setup_infra_env "$ENVIRONMENT"
 
 # --- Build and push ---
 
 if [ "$SKIP_BUILD" = false ]; then
   echo "=== Building Vite frontend ==="
-  # (cd "$REPO_ROOT/cloud" && VITE_STYTCH_PUBLIC_TOKEN=$VITE_STYTCH_PUBLIC_TOKEN pnpm build)
+  (cd "$REPO_ROOT/cloud" && VITE_STYTCH_PUBLIC_TOKEN=$VITE_STYTCH_PUBLIC_TOKEN pnpm build)
 
   echo "=== Building Docker image ==="
   docker build --platform linux/amd64 -f $REPO_ROOT/cloud/server/Dockerfile -t "${ECR_REPO}:latest" "$REPO_ROOT"
@@ -82,9 +78,10 @@ fi
 
 echo "=== Updating ECS service ==="
 
-aws ecs update-express-gateway-service \
-  --service-arn "arn:aws:ecs:${REGION}:${ACCOUNT}:service/${CLUSTER}/${SERVICE}" \
-  --primary-container image="${ECR_REPO}:latest" \
+aws ecs update-service \
+  --cluster "$CLUSTER" \
+  --service "$SERVICE" \
+  --force-new-deployment \
   --region "$REGION"
 
 echo "=== Waiting for deployment ==="

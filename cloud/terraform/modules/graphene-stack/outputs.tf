@@ -20,20 +20,20 @@ output "delve_auditor_role_arn" {
   value       = var.enable_delve_auditor ? aws_iam_role.delve_auditor[0].arn : null
 }
 
-# ECS Express Mode Outputs
+# ECS Service Outputs
 output "ecs_service_url" {
-  description = "URL of the ECS Express service (for testing before DNS switch)"
-  value       = "https://${aws_ecs_express_gateway_service.cloud.ingress_paths[0].endpoint}"
+  description = "URL of the ECS service ALB endpoint"
+  value       = "https://${aws_lb.cloud.dns_name}"
 }
 
 output "ecs_alb_endpoint" {
   description = "ALB endpoint - point your external DNS here"
-  value       = aws_ecs_express_gateway_service.cloud.ingress_paths[0].endpoint
+  value       = aws_lb.cloud.dns_name
 }
 
 output "ecs_service_arn" {
-  description = "ARN of the ECS Express service"
-  value       = aws_ecs_express_gateway_service.cloud.service_arn
+  description = "ARN of the ECS service"
+  value       = aws_ecs_service.cloud.id
 }
 
 output "website_cloudfront_distribution_id" {

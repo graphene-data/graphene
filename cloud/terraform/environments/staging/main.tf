@@ -228,9 +228,7 @@ module "graphene" {
   enable_delve_auditor          = false
   enable_optin_region_guardduty = false
 
-  # ACM/LB configuration - attach wildcard cert to the ALB
-  # NOTE: The listener rule's host-header condition must be updated manually in AWS console
-  # to include custom domains (*.graphene-staging.com, graphene-staging.com)
+  # ACM/LB configuration
   configure_alb_extras = true
 
   providers = {

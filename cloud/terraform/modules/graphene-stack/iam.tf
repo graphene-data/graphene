@@ -19,8 +19,13 @@ resource "aws_iam_role" "ci_deploy" {
       Principal = { Federated = aws_iam_openid_connect_provider.github.arn }
       Action    = "sts:AssumeRoleWithWebIdentity"
       Condition = {
-        StringEquals = { "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com" }
-        StringLike   = { "token.actions.githubusercontent.com:sub" = "repo:graphene-data/cloud:*" }
+        StringEquals = {
+          "token.actions.githubusercontent.com:aud"        = "sts.amazonaws.com"
+          "token.actions.githubusercontent.com:repository" = "graphene-data/co"
+        }
+        StringLike = {
+          "token.actions.githubusercontent.com:sub" = "repo:graphene-data/co:*"
+        }
       }
     }]
   })
@@ -55,16 +60,18 @@ resource "aws_iam_role_policy" "ci_deploy_ecr" {
       {
         Effect = "Allow"
         Action = [
-          "ecs:UpdateExpressGatewayService",
-          "ecs:DescribeExpressGatewayService"
+          "ecs:UpdateService",
+          "ecs:DescribeServices",
+          "ecs:DescribeClusters",
+          "ecs:RegisterTaskDefinition"
         ]
-        Resource = aws_ecs_express_gateway_service.cloud.service_arn
+        Resource = "*"
       },
       {
         Effect = "Allow"
         Action = [
-          "ecs:DescribeServices",
-          "ecs:DescribeClusters"
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups"
         ]
         Resource = "*"
       },
@@ -129,9 +136,16 @@ resource "aws_iam_role_policy" "ci_deploy_ecr" {
         Resource = "*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["lambda:UpdateFunctionCode", "lambda:GetFunction"]
-        Resource = aws_lambda_function.screenshot.arn
+        Effect = "Allow"
+        Action = [
+          "lambda:UpdateFunctionCode",
+          "lambda:GetFunction",
+          "lambda:GetFunctionConfiguration"
+        ]
+        Resource = [
+          aws_lambda_function.screenshot.arn,
+          "${aws_lambda_function.screenshot.arn}:*"
+        ]
       }
     ]
   })
@@ -166,6 +180,7 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
         Effect = "Allow"
         Action = ["secretsmanager:GetSecretValue"]
         Resource = [
+          aws_secretsmanager_secret.agent_token_secret.arn,
           aws_secretsmanager_secret.stytch_secret.arn,
           aws_secretsmanager_secret.database_url.arn,
           aws_secretsmanager_secret.github_webhook_secret.arn,
@@ -191,45 +206,6 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
     ]
   })
 }
-
-# ECS Infrastructure Role - used by ECS Express Mode to create and manage the AWS resources it provisions:
-# ALB, target groups, security groups, auto-scaling policies, and ACM certificates.
-resource "aws_iam_role" "ecs_infrastructure" {
-  name = "ecs-infrastructure-role"
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "ecs.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_infrastructure" {
-  role       = aws_iam_role.ecs_infrastructure.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSInfrastructureRoleforExpressGatewayServices"
-}
-
-# Additional permissions for CloudWatch Logs (not included in the managed policy)
-resource "aws_iam_role_policy" "ecs_infrastructure_logs" {
-  name = "cloudwatch-logs"
-  role = aws_iam_role.ecs_infrastructure.id
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "logs:DescribeLogGroups",
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ]
-      Resource = "*"
-    }]
-  })
-}
-
 
 # Delve Auditor Role - allows Delve to audit AWS resources
 resource "aws_iam_role" "delve_auditor" {
