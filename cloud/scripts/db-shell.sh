@@ -21,6 +21,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/aws-env.sh"
 
 ENVIRONMENT="${1:-staging}"
 COMMAND="${2:-}"
@@ -35,22 +36,8 @@ if [ "$ENVIRONMENT" != "staging" ] && [ "$ENVIRONMENT" != "production" ]; then
   exit 1
 fi
 
-# Clear any existing AWS credentials to avoid conflicts
-unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE 2>/dev/null || true
-
 # Set up AWS credentials based on environment
-if [ "$ENVIRONMENT" = "staging" ]; then
-  if [ -f "$SCRIPT_DIR/../../.env" ]; then
-    set -a
-    source "$SCRIPT_DIR/../../.env"
-    set +a
-  else
-    echo "Error: .env file not found at repo root (required for staging credentials)" >&2
-    exit 1
-  fi
-elif [ "$ENVIRONMENT" = "production" ]; then
-  eval "$(aws configure export-credentials --format env)"
-fi
+cloud_setup_infra_env "$ENVIRONMENT"
 
 # Configuration
 CLUSTER="graphene-prod"

@@ -10,7 +10,9 @@
 #
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/aws-env.sh"
+REPO_ROOT="$CLOUD_REPO_ROOT"
 
 # --- Parse arguments ---
 

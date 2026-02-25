@@ -8,7 +8,8 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# shellcheck source=/dev/null
+source "$SCRIPT_DIR/aws-env.sh"
 TF_DIR="$SCRIPT_DIR/../terraform"
 
 if [ -z "$1" ] || [ -z "$2" ]; then
@@ -26,23 +27,8 @@ if [ ! -d "$TF_DIR/environments/$ENV" ]; then
   exit 1
 fi
 
-# Set up AWS credentials based on environment
-if [ "$ENV" = "staging" ]; then
-  if [ -f "$REPO_ROOT/.env" ]; then
-    set -a
-    source "$REPO_ROOT/.env"
-    set +a
-    # Map .env variables to Terraform variables
-    export TF_VAR_stytch_workspace_key_id="$STYTCH_TERRAFORM_KEY_ID"
-    export TF_VAR_stytch_workspace_key_secret="$STYTCH_TERRAFORM_KEY_SECRET"
-  else
-    echo "Error: .env file not found at repo root (required for staging credentials)"
-    exit 1
-  fi
-elif [ "$ENV" = "production" ]; then
-  # Load credentials from AWS CLI (requires 'aws configure' or AWS_PROFILE to be set up)
-  eval "$(aws configure export-credentials --format env)"
-fi
+cloud_setup_infra_env "$ENV"
+cloud_export_tf_stytch_vars
 
 cd "$TF_DIR/environments/$ENV"
 terraform "$@"
