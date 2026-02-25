@@ -234,6 +234,13 @@
       seriesLabelFmt,
     )
 
+    if (y2Count > 0 && ['line', 'bar', 'scatter'].includes(y2SeriesType)) {
+      seriesConfig = seriesConfig.map((seriesEntry: any) => {
+        if (seriesEntry.yAxisIndex !== 1) return seriesEntry
+        return {...seriesEntry, type: y2SeriesType, stack: undefined}
+      })
+    }
+
     config.update((d: any) => {
       // Guard against incomplete config state
       if (!d.series) d.series = []
@@ -332,16 +339,6 @@
             d.yAxis[0] = {...d.yAxis[0]}
           }
           d.xAxis = {...d.xAxis, ...chartOverrides.xAxis}
-          if (y2Count > 0 && d.yAxis[1]) {
-            if (['line', 'bar', 'scatter'].includes(y2SeriesType) && d.series) {
-              for (let i = 0; i < y2Count; i++) {
-                if (d.series[yCount + i]) {
-                  d.series[yCount + i].type = y2SeriesType
-                  d.series[yCount + i].stack = undefined
-                }
-              }
-            }
-          }
         }
         return d
       })
