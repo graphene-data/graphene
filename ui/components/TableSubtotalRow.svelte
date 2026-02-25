@@ -3,6 +3,7 @@
   import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import TableCell from './TableCell.svelte'
+  import {toBoolean} from '../component-utilities/convert'
 
   interface Props {
     groupName?: string
@@ -11,6 +12,7 @@
     rowColor?: string
     groupBy?: string
     groupType?: 'accordion' | 'section'
+    rowNumbers?: boolean | string
     fontColor?: string
     orderedColumns?: any[]
     compact?: boolean | string
@@ -18,11 +20,17 @@
 
   let {
     groupName = undefined, currentGroupData = [], columnSummary = [], rowColor = undefined,
-    groupBy = undefined, groupType = undefined, fontColor = undefined, orderedColumns = [], compact = undefined,
+    groupBy = undefined, groupType = undefined, rowNumbers: rowNumbersProp = undefined,
+    fontColor = undefined, orderedColumns = [], compact = undefined,
   }: Props = $props()
+
+  let rowNumbers = $derived(toBoolean(rowNumbersProp) ?? false)
 </script>
 
 <tr class="subtotal-row" style:background-color={rowColor} style:color={fontColor}>
+  {#if rowNumbers && groupType !== 'section'}
+    <TableCell class="index" {compact}></TableCell>
+  {/if}
   {#each orderedColumns as column (column.id)}
     {@const summary = safeExtractColumn(column, columnSummary)}
     {@const baseFormat = column.fmt ? getFormatObjectFromString(column.fmt, summary.format?.valueType) : summary.format}
