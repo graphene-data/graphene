@@ -111,8 +111,8 @@ async function startWorktree (name: string) {
   // hard-link so that when mounted in a container we can still access it
   await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 
-  await $`zed ${treePath}`
   await upWorktree(name)
+  await $`zed ${treePath}`
 
   console.log(`Worktree '${name}' is ready at ${treePath}`)
 }
