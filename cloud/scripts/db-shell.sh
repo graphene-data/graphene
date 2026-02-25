@@ -45,10 +45,50 @@ TASK_DEFINITION="graphene-db-ops"
 CONTAINER_NAME="db-ops"
 REGION="${AWS_REGION:-us-east-1}"
 
-case "$ENVIRONMENT" in
-  staging)    ACCOUNT="025223626139" ;;
-  production) ACCOUNT="772069004272" ;;
-esac
+# Run migrations as a one-off task to avoid ECS Exec agent dependencies in CI.
+if [ "$COMMAND" = "--migrate" ]; then
+  echo "Running migrations..."
+
+  SUBNETS=$(aws ec2 describe-subnets --filters "Name=default-for-az,Values=true" \
+    --query 'Subnets[0:2].SubnetId' --output text --region "$REGION" | tr '\t' ',')
+  SG=$(aws ec2 describe-security-groups --filters "Name=group-name,Values=graphene-ecs-sg" \
+    --query 'SecurityGroups[0].GroupId' --output text --region "$REGION")
+
+  TASK_ARN=$(aws ecs run-task \
+    --cluster "$CLUSTER" \
+    --task-definition "$TASK_DEFINITION" \
+    --launch-type FARGATE \
+    --network-configuration "awsvpcConfiguration={subnets=[$SUBNETS],securityGroups=[$SG],assignPublicIp=ENABLED}" \
+    --overrides '{"containerOverrides":[{"name":"db-ops","command":["node","server/migrate.ts"]}]}' \
+    --region "$REGION" \
+    --query 'tasks[0].taskArn' \
+    --output text)
+
+  aws ecs wait tasks-stopped --cluster "$CLUSTER" --tasks "$TASK_ARN" --region "$REGION"
+
+  EXIT_CODE=$(aws ecs describe-tasks \
+    --cluster "$CLUSTER" \
+    --tasks "$TASK_ARN" \
+    --region "$REGION" \
+    --query 'tasks[0].containers[?name==`db-ops`].exitCode' \
+    --output text)
+
+  if [ "$EXIT_CODE" = "0" ]; then
+    echo "Migrations complete"
+    exit 0
+  fi
+
+  STOPPED_REASON=$(aws ecs describe-tasks \
+    --cluster "$CLUSTER" \
+    --tasks "$TASK_ARN" \
+    --region "$REGION" \
+    --query 'tasks[0].stoppedReason' \
+    --output text)
+
+  echo "Migration task failed with exit code: $EXIT_CODE"
+  echo "Stopped reason: $STOPPED_REASON"
+  exit 1
+fi
 
 # Get the current image digest from ECR (what :latest points to)
 EXPECTED_DIGEST=$(aws ecr describe-images \
@@ -109,7 +149,7 @@ if [ "$TASK_ARN" = "None" ] || [ -z "$TASK_ARN" ]; then
   echo "Waiting for execute command agent..."
   for i in {1..60}; do
     AGENT_STATUS=$(aws ecs describe-tasks --cluster "$CLUSTER" --tasks "$TASK_ARN" \
-      --query "tasks[0].containers[?name==\`$CONTAINER_NAME\`].managedAgents[?name==\`ExecuteCommandAgent\`].lastStatus" \
+      --query "tasks[0].containers[?name==\`$CONTAINER_NAME\`].managedAgents[].lastStatus" \
       --output text --region "$REGION" 2>/dev/null || echo "PENDING")
     if [ "$AGENT_STATUS" = "RUNNING" ]; then
       break
@@ -137,21 +177,14 @@ if [ -z "$COMMAND" ]; then
     --interactive \
     --region "$REGION" \
     --command 'sh -c "psql \$DATABASE_URL"'
-elif [ "$COMMAND" = "--migrate" ]; then
-  # Run migrations
-  echo "Running migrations..."
-  exec aws ecs execute-command \
-    --cluster "$CLUSTER" \
-    --task "$TASK_ARN" \
-    --container "$CONTAINER_NAME" \
-    --region "$REGION" \
-    --command "node server/migrate.ts"
 else
   # Run SQL query
+  ESCAPED_COMMAND=${COMMAND//\'/\'\\\'\'}
   exec aws ecs execute-command \
     --cluster "$CLUSTER" \
     --task "$TASK_ARN" \
     --container "$CONTAINER_NAME" \
+    --interactive \
     --region "$REGION" \
-    --command "psql \$DATABASE_URL -c '$COMMAND'"
+    --command "sh -c \"psql \\\$DATABASE_URL -v ON_ERROR_STOP=1 -P pager=off -c '$ESCAPED_COMMAND'\""
 fi

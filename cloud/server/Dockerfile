@@ -5,6 +5,7 @@ WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
 
 COPY core/package.json core/pnpm-lock.yaml core/pnpm-workspace.yaml ./core/
 COPY core/lang/package.json ./core/lang/
