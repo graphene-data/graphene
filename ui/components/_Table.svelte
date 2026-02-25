@@ -290,8 +290,7 @@
     }
   })
 
-  const handleToggle = (event: CustomEvent<{groupName: string}>) => {
-    let {groupName} = event.detail
+  const handleToggle = ({groupName}: {groupName: string}) => {
     groupToggleStates = {...groupToggleStates, [groupName]: !groupToggleStates[groupName]}
   }
 
@@ -397,7 +396,7 @@
                 rowNumbers={effectiveRowNumbers}
                 rowColor={$accordionRowColorStore}
                 subtotals={subtotalsBool}
-                ontoggle={handleToggle}
+                onToggle={handleToggle}
                 {orderedColumns}
                 compact={compactBool}
               />

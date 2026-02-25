@@ -174,6 +174,14 @@ test('accordion grouping with subtotals renders and collapses predictably', asyn
   await expect(table.locator('tr.group-row')).toHaveCount(3)
   await expect(table.locator('tr.subtotal-row')).toHaveCount(3)
   await expect(table.locator('tr.subtotal-row').first().locator('td')).toHaveCount(4)
+
+  await table.locator('tr.group-row').first().click()
+  await expect(table.locator('tr.table-row')).toHaveCount(3)
+  await expect(table.locator('tr.subtotal-row')).toHaveCount(2)
+
+  await table.locator('tr.group-row').first().click()
+  await expect(table.locator('tr.table-row')).toHaveCount(6)
+  await expect(table.locator('tr.subtotal-row')).toHaveCount(3)
   await expect(page.locator('.table-container')).screenshot('group-accordion-subtotals-open')
 
   await mount('components/Table.svelte', {
