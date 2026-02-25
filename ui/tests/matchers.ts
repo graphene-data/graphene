@@ -30,7 +30,7 @@ const extendedExpect = baseExpect.extend({
     let snapshotPath = path.resolve(snapshotDir, testFile, snapshotName + '.png')
     let expectedBuffer = await fs.readFile(snapshotPath).catch(() => null)
 
-    let opts = {animations: 'disabled', caret: 'hide', scale: 'css', locator, maxDiffPixelRatio: 0.01, timeout: 5_000} as any
+    let opts = {animations: 'disabled', caret: 'hide', scale: 'css', locator, maxDiffPixelRatio: 0, maxDiffPixels: 0, timeout: 5_000} as any
     if (expectedBuffer) opts.expected = expectedBuffer
     let result = await (page as any)._expectScreenshot(opts)
 
