@@ -26,6 +26,10 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "/tmp/aw
 RUN (cd /tmp && unzip /tmp/awscliv2.zip)
 RUN /tmp/aws/install
 
+# AWS Session Manager plugin (required for ecs execute-command)
+RUN curl -fsSL "https://s3.amazonaws.com/session-manager-downloads/plugin/latest/ubuntu_arm64/session-manager-plugin.deb" -o "/tmp/session-manager-plugin.deb"
+RUN dpkg -i /tmp/session-manager-plugin.deb
+
 # Mount pnpm store to a shared volume so containers can share the actual package contents
 ENV PNPM_HOME="/pnpm"
 ENV PNPM_STORE_DIR="/pnpm/store"
