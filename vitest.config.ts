@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     globals: true,
     testTimeout: process.env.GRAPHENE_DEBUG ? 0 : 10_000,
-    maxWorkers: 4, // more than this, I start getting timeouts on the first test
+    maxWorkers: process.env.CI ? 1 : 4, // as this gets higher, the first test in each worker takes longer until it exceeds the timeout
     environment: 'node',
     reporters: ['default', 'json'],
     outputFile: 'node_modules/.testResults.json',
