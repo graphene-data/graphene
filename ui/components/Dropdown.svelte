@@ -80,7 +80,7 @@
       let key = optionKey(opt.value)
       if (!map.has(key)) map.set(key, opt)
     }
-    return Array.from(map.values())
+    return Array.from(map.values()).sort((a, b) => String(a.label ?? a.value ?? '').localeCompare(String(b.label ?? b.value ?? ''), undefined, {numeric: true}))
   }
 
   let multi = $derived(toBoolean(multiple))
@@ -496,7 +496,7 @@
                         class={`checkbox-border${isOptionSelected(opt) ? ' is-filled' : ''}`}
                       />
                       {#if isOptionSelected(opt)}
-                        <path d="M4 8l2.5 2.5L12 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M4 8l2.5 2.5L12 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" class="checkbox-checkmark" />
                       {/if}
                     </svg>
                   {:else}
@@ -720,6 +720,9 @@
   .checkbox-border.is-filled {
     fill: #2563eb;
     stroke: #2563eb;
+  }
+  .dropdown-option.is-selected .checkbox-checkmark {
+    stroke: #ffffff;
   }
   .checkmark {
     opacity: 0;
