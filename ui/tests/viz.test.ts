@@ -367,11 +367,13 @@ test('bar chart applies secondary axis colors and assignment', async ({mount, ch
   let config = await chart.config((c) => ({
     seriesCount: c.series?.length,
     y2AxisIndex: c.series?.[1]?.yAxisIndex,
+    y2SeriesType: c.series?.[1]?.type,
     primaryAxisColor: c.yAxis?.[0]?.axisLabel?.color,
     secondaryAxisColor: c.yAxis?.[1]?.axisLabel?.color,
   }))
   expect(config?.seriesCount).toBe(2)
   expect(config?.y2AxisIndex).toBe(1)
+  expect(config?.y2SeriesType).toBe('line')
   expect(config?.primaryAxisColor).toBe('tomato')
   expect(config?.secondaryAxisColor).toBe('steelblue')
   await expect(chart.el).screenshot('bar-chart-secondary-axis-line')
