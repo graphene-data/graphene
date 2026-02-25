@@ -29,8 +29,16 @@
     return {message: String(raw)}
   }
 
+  function normalizePath (path: string) {
+    return path.replace(/\\/g, '/').replace(/^file:\/\//, '')
+  }
+
+  function looksAbsolutePath (path: string) {
+    return path.startsWith('/') || /^[A-Za-z]:\//.test(path)
+  }
+
   // "/foo/bar/baz.md" → "baz.md"
-  function basename (path: string) { return path.split('/').pop() || path }
+  function basename (path: string) { return normalizePath(path).split('/').pop() || path }
 
   // Classify query errors by type for a more descriptive message prefix.
   function classifyError (e: ErrorLike) {
@@ -50,18 +58,36 @@
     let pointer = Number.isFinite(column) ? `${' '.repeat(Math.max(0, (column || 1) - 1))}^` : ''
     let file = e.file && e.file !== 'input' ? basename(e.file) : undefined
     let fileLine = file ? `${file}${line ? `:${line}` : ''}` : undefined
+    let absoluteFilePath = e.file ? normalizePath(e.file) : undefined
 
     // Svelte/Vite embeds the absolute file path in the message ("file:line:col message")
-    // and at the start of the frame. Strip both to avoid duplication with fileLine.
-    // Only strip absolute paths — relative basenames like "flights.md" are intentional.
-    if (e.file && e.file.startsWith('/') && message.startsWith(e.file)) {
-      message = message.slice(e.file.length).replace(/^:\d+:\d+\s+/, '')
+    // and at the start of the frame. Strip absolute paths so screenshots stay stable.
+    if (absoluteFilePath && looksAbsolutePath(absoluteFilePath)) {
+      let escapedPath = absoluteFilePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      message = message.replace(new RegExp(escapedPath, 'g'), file || basename(absoluteFilePath))
+      if (message.startsWith(file || '')) message = message.replace(/^([^\s]+):\d+:\d+\s+/, '')
     }
+
     let frame = e.frame
-    if (frame && e.file && e.file.startsWith('/')) {
-      // Strip leading lines that are just the absolute file path (with optional :line suffix)
+    if (frame && absoluteFilePath && looksAbsolutePath(absoluteFilePath)) {
+      let escapedPath = absoluteFilePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      frame = frame.replace(new RegExp(escapedPath, 'g'), file || basename(absoluteFilePath))
+
+      // Strip leading lines that are just file paths (with optional :line suffix)
       let lines = frame.split('\n')
-      while (lines.length && (lines[0] === e.file || lines[0].startsWith(e.file + ':'))) lines.shift()
+      while (lines.length) {
+        let candidate = normalizePath(lines[0].trim())
+        if (candidate === absoluteFilePath || candidate.startsWith(absoluteFilePath + ':')) {
+          lines.shift()
+          continue
+        }
+        if (looksAbsolutePath(candidate)) {
+          lines.shift()
+          continue
+        }
+        break
+      }
+
       // Strip leftover column pointer line (just spaces and ^)
       if (lines.length && /^ +\^$/.test(lines[0])) lines.shift()
       frame = lines.join('\n')
