@@ -252,7 +252,12 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   let mappedTrigger = page.getByRole('combobox', {name: 'Label Field Carrier'})
   await mappedTrigger.click()
   await expect(page.getByRole('option', {name: 'AA carrier'})).toBeVisible()
-  await expect(page.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
+  let mappedMenu = page.getByRole('listbox')
+  await mappedMenu.evaluate(node => {
+    node.style.minWidth = '220px'
+    node.style.width = '220px'
+  })
+  await expect(mappedMenu).screenshot('dropdown-manual-and-label-field')
 })
 
 test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, page}) => {
