@@ -236,6 +236,7 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   `)
   await page.goto(server.url() + '/')
   await waitForGrapheneQueries(page)
+  await normalizeInputSnapshotStyles(page)
 
   let manualTrigger = page.getByRole('combobox', {name: 'Manual Carrier'})
   await expect(manualTrigger).toContainText('Pick manual')
