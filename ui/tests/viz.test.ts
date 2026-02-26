@@ -1,6 +1,6 @@
 import {expect, test} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
-import {singleDim, timeseries, timeseriesGrouped, timeseriesWithDateSeries} from './testData.ts'
+import {singleDim, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
 test.beforeEach(async ({page}) => {
   await page.setViewportSize({width: 680, height: 400})
