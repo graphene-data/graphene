@@ -36,6 +36,7 @@ description: Describes how to use Graphene, our framework for data analysis and 
 
 ${await readFile(path.resolve(__dirname, '../docs/base.md'), 'utf8')}
 ${await readFile(path.resolve(__dirname, '../docs/cli.md'), 'utf8')}
+${await readFile(path.resolve(__dirname, '../docs/best-pactices.md'), 'utf8')}
 `)
 
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
