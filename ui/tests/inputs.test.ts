@@ -17,6 +17,7 @@ async function loadDropdownPage (server: {mockFile: (path: string, content: stri
   await page.goto(server.url() + '/')
   await waitForGrapheneQueries(page)
   await normalizeInputSnapshotStyles(page)
+  await normalizeInputSnapshotStyles(page)
 }
 
 async function normalizeInputSnapshotStyles (page: any) {
@@ -296,6 +297,7 @@ test('text input updates params and date range applies preset', async ({mount, p
   await startParamTracking(page)
   await textInput.fill('delta')
   expect(await lastParamUpdate(page, 'search_text')).toEqual({name: 'search_text', value: 'delta'})
+  await textInput.blur()
   await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('text-input-basic')
 

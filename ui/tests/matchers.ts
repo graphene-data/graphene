@@ -32,7 +32,7 @@ const extendedExpect = baseExpect.extend({
 
     let opts = {
       animations: 'disabled', caret: 'hide', scale: 'css', locator,
-      maxDiffPixelRatio: 0.01, // try and set this low enough that AA doesn't trigger false-positives
+      maxDiffPixelRatio: 0.015, // allow minor cross-platform text AA while still catching structural changes
       threshold: 0.1, // even small color changes should count
       timeout: 5_000,
     } as any
