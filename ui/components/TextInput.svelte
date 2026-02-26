@@ -91,5 +91,7 @@
     border-radius: 6px;
     border: 1px solid rgba(107, 114, 128, 0.4);
     font-size: 14px;
+    font-family: var(--ui-font-family);
+    font-synthesis: none;
   }
 </style>
