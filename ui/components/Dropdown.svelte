@@ -645,7 +645,8 @@
     padding: 6px 10px;
     font-size: 13px;
     font-family: "Inter", var(--ui-font-family, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif);
-    line-height: 1.2;
+    line-height: 16px;
+    min-height: 32px;
     background: #f9fafb;
     color: inherit;
     box-sizing: border-box;
