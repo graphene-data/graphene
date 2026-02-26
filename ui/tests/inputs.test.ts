@@ -16,29 +16,16 @@ async function loadDropdownPage (server: {mockFile: (path: string, content: stri
   `)
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await normalizeInputSnapshotStyles(page)
-  await normalizeInputSnapshotStyles(page)
 }
 
-async function normalizeInputSnapshotStyles (page: any) {
-  await page.addStyleTag({content: `
-    @font-face {
-      font-family: "Inter Test";
-      src: url('/inter-latin.woff2') format('woff2');
-      font-weight: 100 900;
-      font-style: normal;
-      font-display: block;
-    }
-    .dropdown, .date-input, .preset-select, .text-input, .dropdown-trigger, .dropdown-option, .dropdown-search-input, .dropdown-footer-action {
-      font-family: "Inter Test", sans-serif !important;
-      font-synthesis: none;
-    }
-    .dropdown { width: 220px; }
-    .dropdown-trigger { width: 220px; min-width: 220px; }
-    .dropdown-menu { min-width: 220px !important; }
-    .dropdown-option { line-height: 18px; }
-    .dropdown-search-input { line-height: 16px; }
-  `})
+async function lockOpenDropdownWidth (page: any, width = 220) {
+  await page.evaluate((lockedWidth) => {
+    let menu = document.querySelector('.dropdown-menu[role="listbox"]') as HTMLElement | null
+    if (!menu) return
+    let px = `${lockedWidth}px`
+    menu.style.width = px
+    menu.style.minWidth = px
+  }, width)
 }
 
 async function startParamTracking (page: any) {
@@ -76,6 +63,7 @@ test('dropdown single-select supports open, select, and close behaviors', async 
   let menu = page.getByRole('listbox')
   await expect(menu).toBeVisible()
   await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-single-open')
 
   await page.getByRole('option', {name: 'AA'}).click()
@@ -107,6 +95,7 @@ test('dropdown multi-select supports select-all and clear', async ({server, page
   await expect(trigger).toContainText('selected')
   await expect(page.locator('.dropdown-option.is-selected .checkbox-checkmark').first()).toHaveCSS('stroke', 'rgb(255, 255, 255)')
   await expect(menu.locator('.dropdown-option.is-selected')).toHaveCount(optionLabels.length)
+  await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-multi-select-all')
 
   await page.getByRole('button', {name: 'Clear selection'}).click()
@@ -126,11 +115,13 @@ test('dropdown search filters options and shows empty state', async ({server, pa
   await expect.poll(async () => await menu.locator('[role="option"]').count()).toBeGreaterThan(0)
   let filteredOptions = await menu.locator('[role="option"]').allTextContents()
   expect(filteredOptions.every(text => text.includes('AA'))).toBe(true)
+  await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-search-filtered')
 
   await search.fill('zzz')
   await expect(menu.getByText('No results found')).toBeVisible()
   await expect(page.getByRole('option')).toHaveCount(0)
+  await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-search-empty')
 })
 
@@ -165,6 +156,7 @@ test('dropdown defaultValue and disabled state render correctly', async ({server
   await expect(defaultTrigger).toContainText('AA')
   await defaultTrigger.click()
   await expect(page.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'true')
+  await lockOpenDropdownWidth(page)
   await expect(page.getByRole('listbox')).screenshot('dropdown-default-value')
   await page.keyboard.press('Escape')
 
@@ -207,6 +199,7 @@ test('dropdown boolean-string attributes handle defaults and footer actions', as
 
   await noDefaultTrigger.click()
   await expect(page.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'false')
+  await lockOpenDropdownWidth(page)
   await expect(page.getByRole('listbox')).screenshot('dropdown-no-default-boolean-string')
   await page.keyboard.press('Escape')
 
@@ -215,6 +208,7 @@ test('dropdown boolean-string attributes handle defaults and footer actions', as
   await allTrigger.click()
   await expect(page.getByRole('button', {name: 'Select all'})).toHaveCount(0)
   await expect(page.getByRole('button', {name: 'Clear selection'})).toBeEnabled()
+  await lockOpenDropdownWidth(page)
   await expect(page.getByRole('listbox')).screenshot('dropdown-select-all-default-disable-button')
 })
 
@@ -236,7 +230,6 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   `)
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await normalizeInputSnapshotStyles(page)
 
   let manualTrigger = page.getByRole('combobox', {name: 'Manual Carrier'})
   await expect(manualTrigger).toContainText('Pick manual')
@@ -252,12 +245,8 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   let mappedTrigger = page.getByRole('combobox', {name: 'Label Field Carrier'})
   await mappedTrigger.click()
   await expect(page.getByRole('option', {name: 'AA carrier'})).toBeVisible()
-  let mappedMenu = page.getByRole('listbox')
-  await mappedMenu.evaluate(node => {
-    node.style.minWidth = '220px'
-    node.style.width = '220px'
-  })
-  await expect(mappedMenu).screenshot('dropdown-manual-and-label-field')
+  await lockOpenDropdownWidth(page)
+  await expect(page.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
 })
 
 test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, page}) => {
@@ -271,7 +260,6 @@ test('text input and date range render label, description, placeholder, and prin
   await expect(textInput).toHaveAttribute('placeholder', 'Type to search')
   await expect(page.locator('#component-test .input-description')).toHaveText('Filter rows by keyword')
   await expect(page.locator('#component-test .input-block')).not.toHaveClass(/hide-print/)
-  await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('text-input-label-description-print')
 
   await mount('components/DateRange.svelte', {
@@ -291,7 +279,6 @@ test('text input and date range render label, description, placeholder, and prin
   await expect(page.locator('#daterange-period-start')).toHaveValue('2024-01-01')
   await expect(page.locator('#daterange-period-end')).toHaveValue('2024-02-01')
   await expect(page.locator('.preset-select')).toHaveValue('Last Month')
-  await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('date-range-label-description-default-preset')
 })
 
@@ -304,7 +291,6 @@ test('text input updates params and date range applies preset', async ({mount, p
   await textInput.fill('delta')
   expect(await lastParamUpdate(page, 'search_text')).toEqual({name: 'search_text', value: 'delta'})
   await textInput.blur()
-  await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('text-input-basic')
 
   await mount('components/DateRange.svelte', {
@@ -326,6 +312,5 @@ test('text input updates params and date range applies preset', async ({mount, p
   await page.locator('.preset-select').selectOption('Last 7 Days')
   await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-25')
   await expect(page.locator('#daterange-window-end')).toHaveValue('2024-02-01')
-  await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('date-range-preset')
 })
