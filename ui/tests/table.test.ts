@@ -1,11 +1,11 @@
-import {expect, test, waitForGrapheneQueries} from './fixtures.ts'
+import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 import {groupedDataForSection, tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData.ts'
 
 const tableSelector = '[data-testid="DataTable-no-id"] table'
 
 test('renders table data', async ({mount, page}) => {
   await mount('components/Table.svelte', {data: timeseriesGrouped(), title: 'Sales'})
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
   let table = page.locator('[data-testid="DataTable-no-id"] table')
   await expect(table).toBeVisible()
   // Use explicit td selector like other table tests since getByRole('cell') can match th elements
@@ -113,7 +113,7 @@ test('colorBreakpoints work when all column values are identical', async ({serve
 test('groupType=section renders correct rowSpan for first row of each group', async ({mount, page}) => {
   // expect(1).toBe(2)
   await mount('components/Table.svelte', {data: groupedDataForSection(), groupBy: 'time_horizon', groupType: 'section'})
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
   let table = page.locator('[data-testid="DataTable-no-id"] table')
   await expect(table).toBeVisible()
 
@@ -141,7 +141,7 @@ test('row numbers stay stable across sort and pagination states', async ({mount,
     rowNumbers: true,
     sort: 'value desc',
   })
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
 
   let table = page.locator(tableSelector)
   await expect(table).toBeVisible()
@@ -167,7 +167,7 @@ test('accordion grouping with subtotals renders and collapses predictably', asyn
     subtotals: true,
     rowNumbers: true,
   })
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
 
   let table = page.locator(tableSelector)
   await expect(table).toBeVisible()
@@ -192,7 +192,7 @@ test('accordion grouping with subtotals renders and collapses predictably', asyn
     rowNumbers: true,
     groupsOpen: false,
   })
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
   await expect(table.locator('tr.group-row')).toHaveCount(3)
   await expect(table.locator('tr.table-row')).toHaveCount(0)
   await expect(table.locator('tr.subtotal-row')).toHaveCount(0)
@@ -256,7 +256,7 @@ test('section groups respect groupNamePosition and subtotal styles', async ({mou
     subtotalRowColor: '#ecfeff',
     subtotalFontColor: '#0c4a6e',
   })
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
 
   let table = page.locator(tableSelector)
   await expect(table).toBeVisible()
@@ -272,7 +272,7 @@ test('total row renders for ungrouped tables', async ({mount, page}) => {
     totalRow: true,
     rows: 'all',
   })
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
 
   let table = page.locator(tableSelector)
   await expect(table.locator('tr.total-row')).toBeVisible()
@@ -293,7 +293,7 @@ test('row-level link behavior opens external destinations and hides link column'
   ]
 
   await mount('components/Table.svelte', {data: {rows}, link: 'url', rowNumbers: true, rows: 'all'})
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
 
   let table = page.locator(tableSelector)
   await expect(table).toBeVisible()

@@ -1,4 +1,4 @@
-import {test, expect, waitForGrapheneQueries} from './fixtures.ts'
+import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {spawn} from 'node:child_process'
 import {fileURLToPath} from 'node:url'
 import * as fsp from 'node:fs/promises'
@@ -92,7 +92,7 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
     expectSuccess('npm run graphene serve --bg', serveResult)
 
     await page.goto(`http://localhost:${port}/`)
-    await waitForGrapheneQueries(page)
+    await waitForGrapheneLoad(page)
     await page.waitForTimeout(500)
 
     let topDelta = await page.evaluate(() => {

@@ -1,4 +1,4 @@
-import {test, expect, waitForGrapheneQueries} from './fixtures.ts'
+import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
 test('loads markdown files', async ({server, page}) => {
@@ -62,7 +62,7 @@ test('renders gsql query errors clearly with file context', async ({server, page
     <BarChart data="broken_query" x="origin" y="boom" />
   `)
   await page.goto(server.url() + '/')
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
   await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
   await expect(page.getByText('GSQL error - Unknown function: not_a_function')).toBeVisible()
   let details = page.locator('.g-error__details').first()
@@ -86,7 +86,7 @@ test('renders database query failures clearly', async ({server, page}) => {
   `)
 
   await page.goto(server.url() + '/')
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
   await expect(page.getByText('Out of Range Error')).toBeVisible()
   await expect(page).screenshot('reports-database-query-errors')
 })
@@ -112,7 +112,7 @@ test('renders generic server failures clearly', async ({server, page}) => {
   })
 
   await page.goto(server.url() + '/')
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
   await expect(page.getByText('Server error while running query')).toBeVisible()
   await expect(page.getByText('Internal Server Error')).toBeVisible()
   await expect(page).screenshot('reports-server-query-errors')

@@ -165,7 +165,7 @@ function translateData (data: any, node: QueryNode) {
   return {rows}
 }
 
-export const isLoading = () => !!queries.find(q => q.loading)
+const isQueryLoading = () => !!queries.find(q => q.loading)
 
 errorProvider('queryEngine', () => {
   let unique = {}
@@ -174,14 +174,6 @@ errorProvider('queryEngine', () => {
   })
   return Object.values(unique) as Error[]
 })
-
-async function waitForQueries (timeout = 20_000) {
-  let end = performance.now() + timeout
-  while (isLoading() && performance.now() < end) {
-    await new Promise(resolve => setTimeout(resolve, 25))
-  }
-  return !isLoading()
-}
 
 function evidenceType (type: string | undefined) {
   if (type === 'string') return 'string'
@@ -197,6 +189,6 @@ Object.assign(window.$GRAPHENE, {
   updateParam,
   query,
   unsubscribe,
-  waitForQueries,
+  isQueryLoading,
   queryResults,
 })
