@@ -21,10 +21,22 @@ async function loadDropdownPage (server: {mockFile: (path: string, content: stri
 
 async function normalizeInputSnapshotStyles (page: any) {
   await page.addStyleTag({content: `
-    .dropdown, .date-input, .preset-select, .text-input { font-synthesis: none; }
+    @font-face {
+      font-family: "Inter Test";
+      src: url('/inter-latin.woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: block;
+    }
+    .dropdown, .date-input, .preset-select, .text-input, .dropdown-trigger, .dropdown-option, .dropdown-search-input, .dropdown-footer-action {
+      font-family: "Inter Test", sans-serif !important;
+      font-synthesis: none;
+    }
+    .dropdown { width: 220px; }
+    .dropdown-trigger { width: 220px; min-width: 220px; }
+    .dropdown-menu { min-width: 220px !important; }
     .dropdown-option { line-height: 18px; }
     .dropdown-search-input { line-height: 16px; }
-    .dropdown, .dropdown-menu { min-width: 220px; }
   `})
 }
 
