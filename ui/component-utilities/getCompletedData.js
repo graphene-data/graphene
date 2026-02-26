@@ -108,7 +108,17 @@ export default function getCompletedData (_data, x, y, series, nullsZero = false
 
     output.push(tidy(value, ...tidyFuncs))
   }
-  if (xIsDate) return output.flat().map((r) => ({...r, [x]: new Date(r[x])}))
+  if (xIsDate) {
+    let converted = output.flat().map((r) => ({...r, [x]: new Date(r[x])}))
+    if (Array.isArray(_data?._evidenceColumnTypes)) {
+      converted._evidenceColumnTypes = _data._evidenceColumnTypes
+    }
+    return converted
+  }
 
-  return output.flat()
+  let flattened = output.flat()
+  if (Array.isArray(_data?._evidenceColumnTypes)) {
+    flattened._evidenceColumnTypes = _data._evidenceColumnTypes
+  }
+  return flattened
 }

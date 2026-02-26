@@ -1,9 +1,10 @@
-import {tidy, groupBy, sum, mutateWithSummary, mutate, rate, rename} from '@tidyjs/tidy'
+import {groupBy, sum, mutateWithSummary, mutate, rate, rename} from '@tidyjs/tidy'
+import {tidyWithTypes} from './tidyWithTypes.js'
 
 export default function getStackPercentages (data, groupCol, valueCol) {
   let pctData
   if (typeof valueCol !== 'object') {
-    pctData = tidy(
+    pctData = tidyWithTypes(
       data,
       groupBy(groupCol, mutateWithSummary({xTotal: sum(valueCol)})),
       mutate({percentOfX: rate(valueCol, 'xTotal')}),
@@ -12,7 +13,7 @@ export default function getStackPercentages (data, groupCol, valueCol) {
       }),
     )
   } else {
-    pctData = tidy(
+    pctData = tidyWithTypes(
       data,
       mutate({
         valueSum: 0,
@@ -26,10 +27,10 @@ export default function getStackPercentages (data, groupCol, valueCol) {
       }
     }
 
-    pctData = tidy(pctData, groupBy(groupCol, mutateWithSummary({xTotal: sum('valueSum')})))
+    pctData = tidyWithTypes(pctData, groupBy(groupCol, mutateWithSummary({xTotal: sum('valueSum')})))
 
     for (let i = 0; i < valueCol.length; i++) {
-      pctData = tidy(
+      pctData = tidyWithTypes(
         pctData,
         mutate({percentOfX: rate(valueCol[i], 'xTotal')}),
         rename({

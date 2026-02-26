@@ -394,7 +394,7 @@
       // Get format codes for axes
       // ---------------------------------------------------------------------------------------
       if (xFmt) {
-        xFormat = getFormatObjectFromString(xFmt, columnSummary[xLocal].format?.valueType)
+        xFormat = getFormatObjectFromString(xFmt, columnSummary[xLocal].type)
       } else {
         xFormat = columnSummary[xLocal].format
       }
@@ -402,18 +402,18 @@
       if (yLocal.length === 0) {
         yFormat = 'str'
       } else {
-        if (yFmt) yFormat = getFormatObjectFromString(yFmt, columnSummary[yLocal[0]].format?.valueType)
+        if (yFmt) yFormat = getFormatObjectFromString(yFmt, columnSummary[yLocal[0]].type)
         else yFormat = columnSummary[yLocal[0]].format
       }
 
       if (y2Local.length) {
-        if (y2Fmt) y2Format = getFormatObjectFromString(y2Fmt, columnSummary[y2Local[0]].format?.valueType)
+        if (y2Fmt) y2Format = getFormatObjectFromString(y2Fmt, columnSummary[y2Local[0]].type)
         else y2Format = columnSummary[y2Local[0]].format
       }
 
       if (size) {
         if (sizeFmt) {
-          sizeFormat = getFormatObjectFromString(sizeFmt, columnSummary[size].format?.valueType)
+          sizeFormat = getFormatObjectFromString(sizeFmt, columnSummary[size].type)
         } else {
           sizeFormat = columnSummary[size].format
         }

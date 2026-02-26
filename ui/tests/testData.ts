@@ -53,6 +53,22 @@ export function timeseriesWithDateSeries (): TableRows {
   return {rows}
 }
 
+export function yearlyCounts (): TableRows {
+  let rows = [
+    {year: 2000, flights: 90},
+    {year: 2001, flights: 80},
+    {year: 2002, flights: 75},
+    {year: 2003, flights: 95},
+    {year: 2004, flights: 110},
+    {year: 2005, flights: 120},
+  ] as any
+  rows._evidenceColumnTypes = [
+    {name: 'year', evidenceType: 'number'},
+    {name: 'flights', evidenceType: 'number'},
+  ]
+  return {rows}
+}
+
 export function tableDataWithDates (): TableRows {
   let rows = [
     {month: '2021-03-01', sales: 50},
