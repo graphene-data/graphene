@@ -1,4 +1,4 @@
-## CLI
+# CLI
 
 The main command in Graphene is `check`. It takes several options:
 
