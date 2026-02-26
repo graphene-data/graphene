@@ -323,6 +323,8 @@
     border: 1px solid rgba(107, 114, 128, 0.4);
     font-size: 14px;
     min-width: 150px;
+    font-family: var(--ui-font-family);
+    font-synthesis: none;
   }
   .preset-select {
     max-width: 220px;
@@ -330,5 +332,7 @@
     border-radius: 6px;
     border: 1px solid rgba(107, 114, 128, 0.4);
     font-size: 13px;
+    font-family: var(--ui-font-family);
+    font-synthesis: none;
   }
 </style>

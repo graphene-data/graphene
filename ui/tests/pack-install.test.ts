@@ -115,7 +115,7 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
     let screenshot = await fsp.readFile(screenshotPath)
     expect(screenshot.length).toBeGreaterThan(20_000)
 
-    await page.setContent(`<style>body{margin:0;background:white}</style><img id="shot" src="data:image/png;base64,${screenshot.toString('base64')}" />`)
+    await page.setContent(`<img id="shot" src="data:image/png;base64,${screenshot.toString('base64')}" />`)
     await expect(page.locator('#shot')).screenshot('packaged-cli-check-index')
   } finally {
     await run('npm', ['run', 'graphene', '--', 'stop'], projectDir, childEnv)
