@@ -91,5 +91,11 @@
     border-radius: 6px;
     border: 1px solid rgba(107, 114, 128, 0.4);
     font-size: 14px;
+    font-family: "Inter", var(--ui-font-family, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif);
+    line-height: 1.2;
+    min-height: 34px;
+    box-sizing: border-box;
+    appearance: none;
+    -webkit-appearance: none;
   }
 </style>
