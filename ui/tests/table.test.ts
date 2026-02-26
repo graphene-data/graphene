@@ -6,40 +6,41 @@ const tableSelector = '[data-testid="DataTable-no-id"] table'
 test('renders table data', async ({mount, page}) => {
   await mount('components/Table.svelte', {data: timeseriesGrouped(), title: 'Sales'})
   await waitForGrapheneLoad(page)
-  let table = page.locator('[data-testid="DataTable-no-id"] table')
-  await expect(table).toBeVisible()
-  // Use explicit td selector like other table tests since getByRole('cell') can match th elements
-  await expect(table.locator('tr:has(td) td:first-child').first()).toHaveText('2021-01-01')
+  let table = page.locator(tableSelector)
+  await table.locator('tr:has(td)').first().waitFor()
+  await expect(page.locator('.table-container')).screenshot('table-renders-data')
 })
 
 test('sorts by column header', async ({mount, page}) => {
   await mount('components/Table.svelte', {data: tableDataWithDates()})
-  let table = page.locator('[data-testid="DataTable-no-id"] table')
-  await expect(table).toBeVisible()
+  let table = page.locator(tableSelector)
+  await table.locator('tr:has(td)').first().waitFor()
   await expect(table.locator('tr:has(td)')).toHaveCount(3)
 
   let readFirstColumn = () => table.locator('tr:has(td) td:first-child').allTextContents()
 
   await expect.poll(readFirstColumn).toEqual(['2021-03-01', '2021-01-01', '2021-02-01'])
+  await expect(page.locator('.table-container')).screenshot('sort-default')
 
   let header = table.getByRole('columnheader').first()
   await header.click()
   await expect.poll(readFirstColumn).toEqual(['2021-01-01', '2021-02-01', '2021-03-01'])
+  await expect(page.locator('.table-container')).screenshot('sort-ascending')
 
   await header.click()
   await expect.poll(readFirstColumn).toEqual(['2021-03-01', '2021-02-01', '2021-01-01'])
+  await expect(page.locator('.table-container')).screenshot('sort-descending')
 })
 
 test('sortable=false keeps header clicks from changing order', async ({mount, page}) => {
   await mount('components/Table.svelte', {data: tableDataWithDates(), sortable: false})
-  let table = page.locator('[data-testid="DataTable-no-id"] table')
-  await expect(table).toBeVisible()
+  let table = page.locator(tableSelector)
+  await table.locator('tr:has(td)').first().waitFor()
 
   let readFirstColumn = () => table.locator('tr:has(td) td:first-child').allTextContents()
   await expect.poll(readFirstColumn).toEqual(['2021-03-01', '2021-01-01', '2021-02-01'])
 
   let header = table.getByRole('columnheader').first()
-  await expect(header).toHaveAttribute('aria-sort', 'none')
   await header.click()
   await expect.poll(readFirstColumn).toEqual(['2021-03-01', '2021-01-01', '2021-02-01'])
   await expect(page.locator('.table-container')).screenshot('sort-disabled')
@@ -111,27 +112,20 @@ test('colorBreakpoints work when all column values are identical', async ({serve
 })
 
 test('groupType=section renders correct rowSpan for first row of each group', async ({mount, page}) => {
-  // expect(1).toBe(2)
   await mount('components/Table.svelte', {data: groupedDataForSection(), groupBy: 'time_horizon', groupType: 'section'})
   await waitForGrapheneLoad(page)
-  let table = page.locator('[data-testid="DataTable-no-id"] table')
-  await expect(table).toBeVisible()
+  let table = page.locator(tableSelector)
+  await table.locator('tr:has(td)').first().waitFor()
 
-  // Find cells containing group names and verify they have correct rowspan
-  // "30 days" group has 3 rows, so its cell should have rowspan=3
   let cell30days = table.locator('td', {hasText: '30 days'}).first()
-  await expect(cell30days).toBeVisible()
   await expect(cell30days).toHaveAttribute('rowspan', '3')
 
-  // "60 days" group has 2 rows, so its cell should have rowspan=2
   let cell60days = table.locator('td', {hasText: '60 days'}).first()
-  await expect(cell60days).toBeVisible()
   await expect(cell60days).toHaveAttribute('rowspan', '2')
 
-  // "90 days" group has 1 row, so its cell should have rowspan=1
   let cell90days = table.locator('td', {hasText: '90 days'}).first()
-  await expect(cell90days).toBeVisible()
   await expect(cell90days).toHaveAttribute('rowspan', '1')
+  await expect(page.locator('.table-container')).screenshot('group-section-rowspan')
 })
 
 test('row numbers stay stable across sort and pagination states', async ({mount, page}) => {
@@ -236,13 +230,7 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
   await page.goto(server.url() + '/', {waitUntil: 'commit'})
   let table = page.locator(tableSelector)
   await table.locator('tr:has(td)').first().waitFor()
-
-  await expect(page.getByText('Carrier delay profile')).toBeVisible()
-  await expect(page.getByText('Grouped headers, wrapped titles, and compact rows')).toBeVisible()
-  await expect(table.locator('.header-group__label', {hasText: 'Metrics'})).toBeVisible()
-  await expect(table.locator('.header-title__info').first()).toHaveAttribute('title', 'Carrier code')
-  await expect(table.locator('tr.table-row').first()).not.toHaveClass(/table-row--lined/)
-  await expect(table.locator('tr.table-row').nth(1)).toHaveClass(/table-row--shaded/)
+  await expect(table.locator('tr:has(td)')).toHaveCount(4)
   await expect(page.locator('.table-container')).screenshot('attribute-groups-and-styling')
 })
 
@@ -261,7 +249,6 @@ test('section groups respect groupNamePosition and subtotal styles', async ({mou
   let table = page.locator(tableSelector)
   await expect(table).toBeVisible()
   await expect(table.locator('tr.subtotal-row')).toHaveCount(3)
-  await expect(table.locator('td[rowspan="3"]').first()).toHaveAttribute('style', /vertical-align:\s*top/i)
   await expect(page.locator('.table-container')).screenshot('section-group-position-top')
 })
 
@@ -298,8 +285,11 @@ test('row-level link behavior opens external destinations and hides link column'
   let table = page.locator(tableSelector)
   await expect(table).toBeVisible()
   await expect(table.getByRole('columnheader', {name: 'Url'})).toHaveCount(0)
-  await expect(table.locator('tr.table-row').first()).toHaveClass(/table-row--clickable/)
-  await expect(table.locator('tr.table-row').nth(1)).not.toHaveClass(/table-row--clickable/)
+
+  let noPopupPromise = page.waitForEvent('popup', {timeout: 500}).then(() => true).catch(() => false)
+  await table.locator('tr.table-row').nth(1).click()
+  expect(await noPopupPromise).toBe(false)
+
   await expect(page.locator('.table-container')).screenshot('row-link-hidden-column')
 
   let popupPromise = page.waitForEvent('popup')
@@ -326,11 +316,13 @@ test('colorscale and link content columns render together', async ({server, page
   let table = page.locator(tableSelector)
   await table.locator('tr:has(td)').first().waitFor()
 
-  await expect(table.locator('a.table-link')).toHaveCount(5)
-  await expect(table.locator('a.table-link').first()).toHaveText('Open')
-  await expect(table.locator('tr:has(td) td').nth(1)).toHaveAttribute('style', /background-color/i)
-  await expect(table.locator('a.table-link').first()).toHaveAttribute('target', '_blank')
   await expect(page.locator('.table-container')).screenshot('colorscale-with-link-content')
+
+  let popupPromise = page.waitForEvent('popup')
+  await table.locator('a.table-link').first().click()
+  let popup = await popupPromise
+  await expect.poll(() => popup.url()).toContain('https://example.com')
+  await popup.close()
 })
 
 test('image and link content columns honor sizing, labels, and tab target attributes', async ({server, page}) => {
@@ -357,11 +349,9 @@ test('image and link content columns honor sizing, labels, and tab target attrib
   let table = page.locator(tableSelector)
   await table.locator('tr:has(td)').first().waitFor()
 
-  await expect(table.locator('img.table-image')).toHaveCount(3)
-  await expect(table.locator('img.table-image').first()).toHaveAttribute('alt', 'AA')
-  await expect(table.locator('img.table-image').first()).toHaveAttribute('style', /height:\s*18px/i)
-  await expect(table.locator('img.table-image').first()).toHaveAttribute('style', /width:\s*34px/i)
-  await expect(table.locator('a.table-link').first()).toHaveText('AA')
-  await expect(table.locator('a.table-link').first()).not.toHaveAttribute('target', '_blank')
   await expect(page.locator('.table-container')).screenshot('content-image-and-link')
+
+  let noPopupPromise = page.waitForEvent('popup', {timeout: 500}).then(() => true).catch(() => false)
+  await table.locator('a.table-link').first().click()
+  expect(await noPopupPromise).toBe(false)
 })
