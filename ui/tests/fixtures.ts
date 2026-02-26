@@ -165,7 +165,11 @@ export const test = base.extend<{ browser: Browser, page: Page, server: ServerFi
     let readConfig: ChartConfigFn = async (selector) => {
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
-      await waitForChartsToRender(page)
+      await page.waitForFunction(() => {
+        let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
+        return charts && Object.keys(charts).length > 0
+      })
+      await waitForGrapheneLoad(page)
       return await page.evaluate((source) => {
         let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__') as any])[0] as any
         let option = chart.getModel().getOption()
@@ -223,50 +227,7 @@ declare global {
   }
 }
 
-export async function waitForGrapheneQueries (page: Page, timeout = 20_000) {
+export async function waitForGrapheneLoad (page: Page, timeout = 20_000) {
   await page.waitForFunction(() => Boolean(window.$GRAPHENE), null, {timeout})
-  await page.evaluate((ms) => window.$GRAPHENE.waitForQueries?.(ms), timeout)
-}
-
-export async function waitForChartsToRender (page: Page, timeout = 5_000) {
-  await page.waitForFunction(() => {
-    let charts = window[Symbol.for('__evidence-chart-window-debug__') as unknown as keyof Window]
-    return charts && Object.keys(charts).length > 0
-  }, {timeout})
-
-  await page.evaluate((ms) => {
-    return new Promise<void>((resolve, reject) => {
-      let pendingKey = Symbol.for('graphene.pendingCharts')
-      let eventName = 'graphene:pendingChartsChanged'
-      let timer = 0
-
-      let isIdle = () => {
-        let pending = (window as any)[pendingKey] as Set<number> | undefined
-        return !pending || pending.size === 0
-      }
-
-      let cleanup = () => {
-        if (timer) window.clearTimeout(timer)
-        window.removeEventListener(eventName, onPendingChanged)
-      }
-
-      let onPendingChanged = () => {
-        if (!isIdle()) return
-        cleanup()
-        resolve()
-      }
-
-      window.addEventListener(eventName, onPendingChanged)
-      if (isIdle()) {
-        cleanup()
-        resolve()
-        return
-      }
-
-      timer = window.setTimeout(() => {
-        cleanup()
-        reject(new Error('Timed out waiting for charts to finish rendering'))
-      }, ms)
-    })
-  }, timeout)
+  await page.evaluate((ms) => window.$GRAPHENE.waitForLoad?.(ms), timeout)
 }

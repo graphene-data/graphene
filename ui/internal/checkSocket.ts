@@ -2,7 +2,6 @@
 // Listens for check requests, waits for queries to finish, captures screenshots, and reports errors.
 
 import {getErrors} from './telemetry.ts'
-import {isLoading} from './queryEngine.ts'
 
 let socket: WebSocket | null = null
 connect()
@@ -22,13 +21,6 @@ async function takeScreenshot () {
   return canvas?.toDataURL('image/png')
 }
 
-async function waitForQueriesToFinish () {
-  let startTime = Date.now()
-  while (isLoading() && Date.now() - startTime < 20_000) {
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-}
-
 function connect () {
   let wsUrl = `ws://${window.location.host}/_api/ws`
   socket = new WebSocket(wsUrl)
@@ -39,10 +31,9 @@ function connect () {
     let {type, requestId, chart} = JSON.parse(event.data)
     if (type !== 'check') return
 
-    await waitForQueriesToFinish()
+    let finished = await window.$GRAPHENE.waitForLoad(20_000)
     let errors = getErrors().map((e: any) => ({type: e.type, message: e.message, queryId: e.queryId, file: e.file, line: e.loc?.line, frame: e.frame, from: e.from, to: e.to}))
-    let stillLoading = isLoading()
     let screenshot = chart ? captureChart(chart) : await takeScreenshot()
-    socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors, stillLoading, screenshot}))
+    socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors, stillLoading: !finished, screenshot}))
   }
 }

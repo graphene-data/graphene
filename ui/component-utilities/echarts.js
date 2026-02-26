@@ -12,37 +12,12 @@ import * as chartWindowDebug from './chartWindowDebug'
  */
 
 const ANIMATION_DURATION = 0
-const pendingChartsKey = Symbol.for('graphene.pendingCharts')
-const pendingChartsChangedEvent = 'graphene:pendingChartsChanged'
-
-/** @returns {Set<number> | null} */
-const getPendingCharts = () => {
-  if (typeof window === 'undefined') return null
-  window[pendingChartsKey] ??= new Set()
-  return window[pendingChartsKey]
-}
-
-const notifyPendingChartsChanged = () => {
-  if (typeof window === 'undefined') return
-  let pending = getPendingCharts()
-  window.dispatchEvent(new CustomEvent(pendingChartsChangedEvent, {detail: {count: pending?.size ?? 0}}))
-}
 
 /** @param {number} chartId */
-const markChartPending = (chartId) => {
-  let pending = getPendingCharts()
-  if (!pending) return
-  pending.add(chartId)
-  notifyPendingChartsChanged()
-}
+const markChartPending = (chartId) => window.$GRAPHENE?.renderStart?.(`chart:${chartId}`)
 
 /** @param {number} chartId */
-const markChartFinished = (chartId) => {
-  let pending = getPendingCharts()
-  if (!pending) return
-  pending.delete(chartId)
-  notifyPendingChartsChanged()
-}
+const markChartFinished = (chartId) => window.$GRAPHENE?.renderComplete?.(`chart:${chartId}`)
 
 /** @param {HTMLElement} node */
 /** @param {EChartsActionOptions} options */
