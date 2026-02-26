@@ -1,4 +1,4 @@
-import {expect, test, waitForGrapheneQueries} from './fixtures.ts'
+import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 
 test.beforeEach(async ({page}) => {
   await page.setViewportSize({width: 900, height: 620})
@@ -15,7 +15,7 @@ async function loadDropdownPage (server: {mockFile: (path: string, content: stri
     ${componentMarkup}
   `)
   await page.goto(server.url() + '/')
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
   await normalizeInputSnapshotStyles(page)
   await normalizeInputSnapshotStyles(page)
 }
@@ -235,7 +235,7 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
     <Dropdown name="label_field_carrier" data="dropdown_option_labels" value="code" labelField="pretty" title="Label Field Carrier" />
   `)
   await page.goto(server.url() + '/')
-  await waitForGrapheneQueries(page)
+  await waitForGrapheneLoad(page)
   await normalizeInputSnapshotStyles(page)
 
   let manualTrigger = page.getByRole('combobox', {name: 'Manual Carrier'})

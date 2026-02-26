@@ -1,4 +1,5 @@
 import './internal/telemetry.ts'
+import './internal/queryEngine.ts'
 import './internal/checkSocket.ts'
 import './app.css'
 import {mount} from 'svelte'
@@ -35,6 +36,30 @@ import TableTotalRow from './components/TableTotalRow.svelte'
 import TextInput from './components/TextInput.svelte'
 
 window.$GRAPHENE = window.$GRAPHENE || {}
+
+let nextRenderId = 0
+let pendingRenders = new Set()
+
+window.$GRAPHENE.renderStart = (id) => {
+  let renderId = id == null ? `render:${++nextRenderId}` : String(id)
+  pendingRenders.add(renderId)
+  return renderId
+}
+
+window.$GRAPHENE.renderComplete = (id) => {
+  if (id == null) return
+  pendingRenders.delete(String(id))
+}
+
+window.$GRAPHENE.waitForLoad = async (timeout = 20_000) => {
+  let g = window.$GRAPHENE
+  let end = Date.now() + timeout
+  while (Date.now() < end) {
+    if (!g.isQueryLoading() && pendingRenders.size == 0) return true
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+  return false
+}
 
 window.$GRAPHENE.components = {
   Area,
