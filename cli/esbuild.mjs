@@ -1,7 +1,7 @@
 import {build} from 'esbuild'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {cp, rm} from 'node:fs/promises'
+import {cp, readFile, rm, writeFile} from 'node:fs/promises'
 import pkg from './package.json' with {type: 'json'}
 
 const __filename = fileURLToPath(import.meta.url)
@@ -28,7 +28,16 @@ await build({ // cli build
   plugins: [makeAllPackagesExternalPlugin],
 })
 
-await cp(path.resolve(__dirname, '../docs'), path.resolve(__dirname, 'dist/docs'), {recursive: true})
+await writeFile(path.resolve(__dirname, 'dist/SKILL.md'), `
+---
+name: Graphene
+description: Describes how to use Graphene, our framework for data analysis and modeling.
+---
+
+${await readFile(path.resolve(__dirname, '../docs/base.md'), 'utf8')}
+${await readFile(path.resolve(__dirname, '../docs/cli.md'), 'utf8')}
+`)
+
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
 await rm(path.resolve(__dirname, 'dist/ui/node_modules'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))
