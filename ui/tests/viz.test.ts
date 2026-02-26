@@ -1,5 +1,5 @@
 import {expect, test} from './fixtures.ts'
-import {singleDim, timeseries, timeseriesGrouped, timeseriesWithDateSeries} from './testData.ts'
+import {singleDim, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
 test.beforeEach(async ({page}) => {
   await page.setViewportSize({width: 680, height: 400})
@@ -23,6 +23,19 @@ test('area chart', async ({mount, chart}) => {
 test('stacked area chart', async ({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', series: 'category', type: 'stacked'})
   await expect(chart.el).screenshot('stacked-area-chart')
+})
+
+test('stacked100 keeps time axis when x values are dates', async ({mount, chart}) => {
+  await mount('components/AreaChart.svelte', {
+    data: timeseriesGrouped(),
+    x: 'month',
+    y: 'sales_usd0k',
+    series: 'category',
+    type: 'stacked100',
+  })
+  let axisType = await chart.config((c) => (Array.isArray(c.xAxis) ? c.xAxis[0] : c.xAxis).type)
+  expect(axisType).toBe('time')
+  await expect(chart.el).screenshot('stacked100-date-axis-order')
 })
 
 test('line chart timeseries', async ({mount, page, chart}) => {
@@ -139,6 +152,21 @@ test('line chart seriesLabelFmt formats date series names', async ({mount, chart
   let names = await chart.config((c) => (c.series ?? []).map((s: any) => s.name).sort())
   expect(names).toEqual(['2021-01', '2021-04', '2021-07'])
   await expect(chart.el).screenshot('line-chart-series-label-fmt')
+})
+
+test('numeric year xFmt=yyyy keeps year labels', async ({mount, chart}) => {
+  await mount('components/BarChart.svelte', {
+    data: yearlyCounts(),
+    x: 'year',
+    y: 'flights',
+    xFmt: 'yyyy',
+  })
+  let axisLabel = await chart.config((c) => {
+    let xAxis = Array.isArray(c.xAxis) ? c.xAxis[0] : c.xAxis
+    return xAxis.axisLabel.formatter(2000)
+  })
+  expect(axisLabel).toBe('2000')
+  await expect(chart.el).screenshot('bar-chart-numeric-year-xfmt')
 })
 
 test('bar chart accepts comma-separated multi y', async ({mount, chart}) => {
