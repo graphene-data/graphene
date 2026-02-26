@@ -49,6 +49,7 @@
   let triggerEl: HTMLButtonElement | null = $state(null)
   let menuEl: HTMLDivElement | null = $state(null)
   let searchInput: HTMLInputElement | null = $state(null)
+  let triggerWidth = $state(0)
 
   const registerOption = (opt: Option) => {
     manualOptions = [...manualOptions, opt]
@@ -167,8 +168,18 @@
     if (searchInput) searchInput.focus()
   }
 
+  function updateTriggerWidth () {
+    if (!triggerEl) {
+      if (triggerWidth !== 0) triggerWidth = 0
+      return
+    }
+    let width = Math.round(triggerEl.getBoundingClientRect().width)
+    if (width !== triggerWidth) triggerWidth = width
+  }
+
   function openMenu (focusSearch = true) {
     if (isDisabled) return
+    updateTriggerWidth()
     isOpen = true
     if (focusSearch) focusSearchInput()
   }
@@ -290,6 +301,7 @@
     setupQuery()
     if (typeof document !== 'undefined') {
       document.addEventListener('pointerdown', handlePointerDown)
+      window.addEventListener('resize', updateTriggerWidth)
     }
     return () => {
       mounted = false
@@ -300,11 +312,18 @@
       if (typeof document !== 'undefined') {
         document.removeEventListener('pointerdown', handlePointerDown)
       }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', updateTriggerWidth)
+      }
     }
   })
 
   $effect(() => {
     setupQuery()
+  })
+
+  $effect(() => {
+    if (triggerEl) updateTriggerWidth()
   })
 
   function syncSelection (fromUser: boolean) {
@@ -432,6 +451,7 @@
         role="listbox"
         tabindex="0"
         aria-multiselectable={multi}
+        style={`min-width: ${Math.max(triggerWidth, 220)}px`}
         onkeydown={handleMenuKeydown}
       >
         <div class="dropdown-search">
@@ -545,7 +565,6 @@
   .dropdown {
     position: relative;
     display: inline-block;
-    width: 220px;
   }
   .dropdown.is-disabled {
     opacity: 0.6;
@@ -556,7 +575,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    width: 100%;
+    min-width: 200px;
     min-height: 36px;
     padding: 0 12px;
     border-radius: 8px;
@@ -564,11 +583,7 @@
     background: #ffffff;
     color: #1f2937;
     font-size: 14px;
-    font-family: "Inter", var(--ui-font-family, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif);
-    line-height: 1.2;
-    box-sizing: border-box;
-    appearance: none;
-    -webkit-appearance: none;
+    font-family: var(--ui-font-family);
     cursor: pointer;
     transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
   }
@@ -623,7 +638,6 @@
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
-    width: 100%;
     z-index: 40;
     background: #ffffff;
     color: #1f2937;
@@ -644,14 +658,9 @@
     border: 1px solid #d1d5db;
     padding: 6px 10px;
     font-size: 13px;
-    font-family: "Inter", var(--ui-font-family, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif);
-    line-height: 16px;
-    min-height: 32px;
     background: #f9fafb;
     color: inherit;
     box-sizing: border-box;
-    appearance: none;
-    -webkit-appearance: none;
   }
   .dropdown-search-input:focus {
     outline: none;
@@ -674,7 +683,6 @@
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
-    line-height: 1.2;
     transition: background 100ms ease, color 100ms ease;
     color: #1f2937;
   }
@@ -740,7 +748,6 @@
     background: none;
     color: #2563eb;
     font-size: 13px;
-    font-family: "Inter", var(--ui-font-family, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif);
     cursor: pointer;
     padding: 4px 0;
   }
