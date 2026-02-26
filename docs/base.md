@@ -1,25 +1,7 @@
 Graphene is a framework for doing data analysis and BI as code. Schema definitions and semantic models are in `.gsql` files, dashboards in `.md`.
 
-## GSQL
-
-GSQL extends ANSI SQL with a few key features.
-- `table` statements define existing tables, adding dimensions, measures, and joins
-- `table X as (select ...)` defines a table as the result of a query
-- `extend` adds dimensions, measures, and joins to an existing table, usually used with `table X as (select ...)`
-- Implicit joins: `from orders select status, user.name` will automatically join users on to orders per the model-defined join
-- Measure expansion: `from users select id, orders.revenue` automatically expands to `select users.id, sum(orders.amount) ...`
-  - NEVER `sum(revenue)` or `group by revenue`
-  - OK: `floor(revenue)`, `revenue / cost`
-  - Tell measures and dimensions apart by whether the expression is aggregate or scalar
-- `group by all` is implied when aggregates exist, and does not need to be put in GSQL
-- Special functions: 
-  - `pXX(column)` - computes the XXth percentile (e.g., p50, p975, p9999)
-
-Unsupported:
-- Window functions
-- Set operations (`union`, etc.)
-
-Example model:
+# GSQL
+GSQL extends ANSI SQL with dimensions, measures, and join relationships. Declare them in `table` statements:
 
 ```sql
 table orders (
@@ -39,28 +21,46 @@ table users (
 )
 ```
 
-## Dashboards
+Other statements:
+- `table X as (select ...)` defines a table as the result of a query
+- `extend` adds dimensions, measures, and joins to an existing table, usually used with `table X as (select ...)`
 
+## Using semantics in queries
+
+**Implicit joins**
+`from orders select status, user.name` will automatically join users on to orders per the model-defined join
+
+**Dimension and measure expansion**
+Dimensions and measures are like macros that expand inline when GSQL compiles to database SQL. For example, `from users select id, orders.revenue` automatically expands to `select users.id, sum(orders.amount) ...`
+- NEVER(!): `sum(revenue)` or `group by revenue` because `revenue` is already an agg expression
+- OK: `floor(revenue)`, `revenue / cost` 
+- OK: `sum(case when is_complete then 1 else 0 end)` or `group by is_complete` (because `is_complete` is a dimension, not a measure)
+
+**Special features**
+- `group by all` is implied when aggregates exist, and does not need to be put in GSQL
+- Agg function `pXX(column)` computes the XXth percentile (e.g., p50, p975, p9999)
+
+**Unsupported**
+- Window functions
+- Set operations (`union`, etc.)
+
+# Dashboards
 Graphene dashboards extend Markdown with the following:
 - GSQL queries in code fences
 - Visualization components reference query names
-
-Example:
 
 ````md
 ```sql monthly_sales
 select date_trunc(created_at, month) as month, revenue from orders
 ```
-
 <LineChart data="monthly_sales" x="month" y="revenue" />
 <BigValue data="monthly_sales" value="revenue" />
 ````
 
-`data` can be a query name or a table name. Attributes accept columns, expressions, or GSQL.
+`data` can be a query name or a table name. Attributes that accept columns also accept GSQL expressions.
 
 ## Components
-
-Visualization components:
+**Visualizations**
 - BarChart: data, x, y, y2, series, title, subtitle, xFmt, yFmt, y2Fmt, colorPalette, type, swapXY, labels, labelFmt, sort, legend, yMin, yMax
 - LineChart: data, x, y, y2, series, title, subtitle, xFmt, yFmt, colorPalette, labels, sort, legend, handleMissing, markers, markerShape, lineType, lineWidth
 - AreaChart: data, x, y, series, title, subtitle, xFmt, yFmt, colorPalette, type, labels, sort, legend, handleMissing, fillOpacity, line
@@ -69,15 +69,14 @@ Visualization components:
 - Table: data, rows, title, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
   - Column (sub-component of Table): id, title, fmt, align, wrap, contentType, totalAgg, redNegatives
 
-Input components:
+**Inputs**
 - Dropdown: name, data, value, label, defaultValue, multiple, title
 - TextInput: name, title, placeholder
 
-Other components:
+**Other components**
 - Row: no attributes (layout container, distributes children horizontally)
 
-### Component attributes
-
+## Component attributes
 - series: column whose values become separate lines/bars (series=country plots one line per country)
 - type: stacked (default), grouped, stacked100
 - y2: secondary y-axis, y2SeriesType sets its chart type (line/bar/scatter)
@@ -102,14 +101,11 @@ Other components:
   - sparkline/sparkarea/sparkbar: mini chart from array. sparkX, sparkY, sparkColor
 - totalAgg: sum (default), mean, weightedMean, median, min, max, count, countDistinct
 
-### Tying input components to SQL
-
+## Tying input components to SQL
 Inject input values into queries by referring to their `name` attribute as $name. 
 
-Example:
 ````md
 <Dropdown name=status .../>
-
 ```sql my_query
 select ...
 where status = $status
@@ -117,7 +113,6 @@ where status = $status
 ````
 
 ## Formatting
-
 `fmt` attributes accept Excel custom format codes or built-in Graphene formats:
 - Numbers: num, num0-num4, num0k, num0m, num0b (etc.), id, fract, mult, mult0-mult2, sci
 - Currency: usd, usd0-usd2, usd0k, usd0m, usd0b (etc.), (also eur, gbp, etc.)
@@ -125,9 +120,8 @@ where status = $status
 - Dates: shortdate, longdate, fulldate, mdy, dmy, hms, ddd, dddd, mmm, mmmm, yyyy
 - Excel: "$#,##0.00", "0.0%", "m/d/yy" (etc.)
 
-## Best practices
-
-Start simple - Get basic query working, then add complexity
-Use check often - Catches syntax errors and shows visual output
-Leverage models - Use modeled joins, dimensions, and measures rather than raw SQL
-Don't format in SQL - Rely on `fmt` instead. Do not multiply percentages by 100.
+# Best practices
+- Start simple - Get basic query working, then add complexity
+- Use check often - Catches syntax errors and shows visual output
+- Leverage models - Use modeled joins, dimensions, and measures rather than raw SQL
+- Don't format in SQL - Rely on `fmt` instead. Do not multiply percentages by 100.
