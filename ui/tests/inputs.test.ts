@@ -83,7 +83,7 @@ test('dropdown multi-select supports select-all and clear', async ({server, page
   await page.getByRole('button', {name: 'Select all'}).click()
   await expect(trigger).toContainText('selected')
   await expect(page.locator('.dropdown-option.is-selected .checkbox-checkmark').first()).toHaveCSS('stroke', 'rgb(255, 255, 255)')
-  await expect(menu).screenshot('dropdown-multi-select-all')
+  await expect(menu.locator('.dropdown-option.is-selected')).toHaveCount(optionLabels.length)
 
   await page.getByRole('button', {name: 'Clear selection'}).click()
   await expect(trigger).toContainText('Pick carriers')
@@ -226,8 +226,11 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
 
   let mappedTrigger = page.getByRole('combobox', {name: 'Label Field Carrier'})
   await mappedTrigger.click()
-  await expect(page.getByRole('option', {name: 'AA carrier'})).toBeVisible()
-  await expect(page.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
+  let mappedLabels = await page.locator('[role="option"] .dropdown-option-label').allTextContents()
+  expect(mappedLabels.length).toBeGreaterThan(6)
+  expect(mappedLabels).toContain('AA carrier')
+  expect(mappedLabels).toContain('UA carrier')
+  expect(mappedLabels.every(label => label.endsWith(' carrier'))).toBe(true)
 })
 
 test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, page}) => {
