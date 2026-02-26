@@ -57,6 +57,7 @@ select date_trunc(created_at, month) as month, revenue from orders
 <BigValue data="monthly_sales" value="revenue" />
 ````
 
+Queries can be referenced by other queries in the `from` or `join` to form DAGs of data transformations within the dashboard.
 `data` can be a query name or a table name. Attributes that accept columns also accept GSQL expressions.
 
 ## Components
