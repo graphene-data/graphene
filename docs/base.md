@@ -26,7 +26,6 @@ Other statements:
 - `extend` adds dimensions, measures, and joins to an existing table, usually used with `table X as (select ...)`
 
 ## Using semantics in queries
-
 **Implicit joins**
 `from orders select status, user.name` will automatically join users on to orders per the model-defined join
 
