@@ -63,7 +63,8 @@ export function getFormatObjectFromString (formatString, valueType = undefined) 
   )
   let newFormat = {}
   if (matchingFormat) {
-    return matchingFormat
+    if (!valueType || matchingFormat.valueType === valueType) return matchingFormat
+    return {...matchingFormat, valueType}
   } else {
     newFormat = {
       formatTag: 'custom',
@@ -198,6 +199,8 @@ function applyFormatting (
         } catch (error) {
           console.warn(`Unexpected error applying auto formatting. Error=${error}`)
         }
+      } else if (columnFormat.valueType === 'number' && typeof typedValue === 'number' && isYearOnlyFormat(formattingCode)) {
+        result = formatNumericYear(typedValue, formattingCode)
       } else {
         result = ssf.format(formattingCode, typedValue)
       }
@@ -210,6 +213,20 @@ function applyFormatting (
   }
   return result
 }
+
+function isYearOnlyFormat (formattingCode) {
+  return typeof formattingCode === 'string' && /^y{2,4}$/i.test(formattingCode.trim())
+}
+
+function formatNumericYear (value, formattingCode) {
+  let year = String(Math.trunc(value))
+  let width = formattingCode.trim().length
+  if (width === 2) {
+    return year.slice(-2).padStart(2, '0')
+  }
+  return year.padStart(width, '0')
+}
+
 function getEffectiveFormattingCode (columnFormat, formattingContext = VALUE_FORMATTING_CONTEXT) {
   if (typeof columnFormat === 'string') {
     // This should only be used by end users, not by components.

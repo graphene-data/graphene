@@ -1,4 +1,5 @@
-import {tidy, replaceNully} from '@tidyjs/tidy'
+import {replaceNully} from '@tidyjs/tidy'
+import {tidyWithTypes} from './tidyWithTypes.js'
 
 export default function replaceNulls (data, columns) {
   let colObj = {}
@@ -9,6 +10,6 @@ export default function replaceNulls (data, columns) {
   } else {
     colObj[columns] = 0
   }
-  data = tidy(data, replaceNully(colObj))
+  data = tidyWithTypes(data, replaceNully(colObj))
   return data
 }
