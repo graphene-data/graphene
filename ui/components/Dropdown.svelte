@@ -673,6 +673,7 @@
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
+    line-height: 1.2;
     transition: background 100ms ease, color 100ms ease;
     color: #1f2937;
   }
