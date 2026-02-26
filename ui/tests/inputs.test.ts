@@ -16,6 +16,16 @@ async function loadDropdownPage (server: {mockFile: (path: string, content: stri
   `)
   await page.goto(server.url() + '/')
   await waitForGrapheneQueries(page)
+  await normalizeInputSnapshotStyles(page)
+}
+
+async function normalizeInputSnapshotStyles (page: any) {
+  await page.addStyleTag({content: `
+    .dropdown, .date-input, .preset-select, .text-input { font-synthesis: none; }
+    .dropdown-option { line-height: 18px; }
+    .dropdown-search-input { line-height: 16px; }
+    .dropdown, .dropdown-menu { min-width: 220px; }
+  `})
 }
 
 async function startParamTracking (page: any) {
@@ -84,6 +94,7 @@ test('dropdown multi-select supports select-all and clear', async ({server, page
   await expect(trigger).toContainText('selected')
   await expect(page.locator('.dropdown-option.is-selected .checkbox-checkmark').first()).toHaveCSS('stroke', 'rgb(255, 255, 255)')
   await expect(menu.locator('.dropdown-option.is-selected')).toHaveCount(optionLabels.length)
+  await expect(menu).screenshot('dropdown-multi-select-all')
 
   await page.getByRole('button', {name: 'Clear selection'}).click()
   await expect(trigger).toContainText('Pick carriers')
@@ -226,11 +237,8 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
 
   let mappedTrigger = page.getByRole('combobox', {name: 'Label Field Carrier'})
   await mappedTrigger.click()
-  let mappedLabels = await page.locator('[role="option"] .dropdown-option-label').allTextContents()
-  expect(mappedLabels.length).toBeGreaterThan(6)
-  expect(mappedLabels).toContain('AA carrier')
-  expect(mappedLabels).toContain('UA carrier')
-  expect(mappedLabels.every(label => label.endsWith(' carrier'))).toBe(true)
+  await expect(page.getByRole('option', {name: 'AA carrier'})).toBeVisible()
+  await expect(page.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
 })
 
 test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, page}) => {
@@ -244,6 +252,7 @@ test('text input and date range render label, description, placeholder, and prin
   await expect(textInput).toHaveAttribute('placeholder', 'Type to search')
   await expect(page.locator('#component-test .input-description')).toHaveText('Filter rows by keyword')
   await expect(page.locator('#component-test .input-block')).not.toHaveClass(/hide-print/)
+  await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('text-input-label-description-print')
 
   await mount('components/DateRange.svelte', {
@@ -263,6 +272,7 @@ test('text input and date range render label, description, placeholder, and prin
   await expect(page.locator('#daterange-period-start')).toHaveValue('2024-01-01')
   await expect(page.locator('#daterange-period-end')).toHaveValue('2024-02-01')
   await expect(page.locator('.preset-select')).toHaveValue('Last Month')
+  await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('date-range-label-description-default-preset')
 })
 
@@ -274,6 +284,7 @@ test('text input updates params and date range applies preset', async ({mount, p
   await startParamTracking(page)
   await textInput.fill('delta')
   expect(await lastParamUpdate(page, 'search_text')).toEqual({name: 'search_text', value: 'delta'})
+  await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('text-input-basic')
 
   await mount('components/DateRange.svelte', {
@@ -295,5 +306,6 @@ test('text input updates params and date range applies preset', async ({mount, p
   await page.locator('.preset-select').selectOption('Last 7 Days')
   await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-25')
   await expect(page.locator('#daterange-window-end')).toHaveValue('2024-02-01')
+  await normalizeInputSnapshotStyles(page)
   await expect(page.locator('#component-test')).screenshot('date-range-preset')
 })
