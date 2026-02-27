@@ -43,7 +43,7 @@ ${await readFile(path.resolve(__dirname, '../docs/best-practices.md'), 'utf8')}
 # Reference documentation
 Consult the reference documentation for more detailed information on using Graphene.
 
-${(await readdir(path.resolve(__dirname, '../docs/references'))).map(f => `references/${f}`).join('\n')}
+${(await readdir(path.resolve(__dirname, '../docs/references'))).map(f => `- references/${f}`).join('\n')}
 `)
 await cp(path.resolve(__dirname, '../docs/references'), path.resolve(skillDir, 'references'), {recursive: true})
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
