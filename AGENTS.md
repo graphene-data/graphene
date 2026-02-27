@@ -47,6 +47,7 @@ All UI tests should capture a screenshot. Don't add programmatic assertions arou
 * Avoid running `graphene dev` to test things. You should be able to set up any scenario in our automated tests.
 * Don't make infra changes directly via the `aws` cli. Make changes to the terraform config and deploy that.
 * You're pair-programming with another senior engineer. If you notice that edits were made to a file you're working on, is was probably your partner. Don't undo those changes, try to follow their direction. If they don't make sense or seem wrong, pause and say so.
+* For each change, add exactly one migration file in `cloud/migrations` (avoid shipping multi-file migration chains for one feature). Give the migrations useful names.
 
 # Code style
 Our primary stylistic goal is "high-level readability". We want to easily skim a file or function and get a sense of what it does. We care less about the tactical details of how individual lines of code work. There are a few concrete guidelines we usually follow in service of this:

@@ -3,6 +3,8 @@ dictionaries = ["en_us"]
 words = [
   "Graphene",
   "Graphene's",
+  "graphene",
+  "graphene's",
   "subagent",
   "subagents",
 ]

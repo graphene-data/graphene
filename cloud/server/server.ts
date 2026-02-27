@@ -1,23 +1,27 @@
 import fastify, {type FastifyLoggerOptions} from 'fastify'
 import cookie from '@fastify/cookie'
 import staticPlugin from '@fastify/static'
+import rawBody from 'fastify-raw-body'
 import {fileURLToPath} from 'url'
 import path from 'path'
 import {type AuthContext, auth, authTokenExchange} from './auth.ts'
 import {listNavFiles, renderPage, renderDynamic} from './pages.ts'
 import {proxyQuery} from './query.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
+import {slackEvents, slackInstall, slackOauthCallback, slackStatus} from './slack.ts'
 
 
 export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
   let app = fastify({logger})
   app.register(cookie, {})
+  app.register(rawBody, {global: false, runFirst: true, encoding: 'utf8'})
 
   app.decorateRequest('auth', null as unknown as AuthContext)
   app.addHook('preHandler', async (req, reply) => {
     let route = req.routeOptions.url
     if (!route || !route.startsWith('/_api')) return
     if (route === '/_api/github/webhook') return
+    if (route === '/_api/slack/events') return
     if (route === '/_api/oauth2/token') return
     await auth(req, reply)
   })
@@ -29,6 +33,10 @@ export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions
   app.get('/_api/dynamic', renderDynamic)
   app.post('/_api/query', proxyQuery)
   app.post('/_api/oauth2/token', authTokenExchange)
+  app.get('/_api/slack/install', slackInstall)
+  app.get('/_api/slack/status', slackStatus)
+  app.get('/_api/slack/oauth/callback', slackOauthCallback)
+  app.post('/_api/slack/events', {config: {rawBody: true}}, slackEvents)
 
   // GitHub App integration
   app.get('/_api/github/install', githubInstall)

@@ -2,16 +2,12 @@ import type {FastifyReply, FastifyRequest} from 'fastify'
 import {runAgent} from './agent.ts'
 import {orgId, repoId} from '../dev.ts'
 import {renderMd} from './runMd.ts'
-import {PROD} from '../consts.ts'
 
 export async function agentTest (req: FastifyRequest, reply: FastifyReply) {
   let q = (req.query as any).q as string
   if (!q) {
     return reply.code(400).send({error: 'Missing q parameter'})
   }
-
-  // Get the port from the request
-  let port = (req.server.addresses()[0] as any)?.port || 4000
 
   // Set up streaming response
   reply.raw.writeHead(200, {
@@ -51,7 +47,6 @@ export async function agentTest (req: FastifyRequest, reply: FastifyReply) {
       prompt: q,
       repoId,
       orgId,
-      port,
       onMessage: (msg) => {
         if (msg.type === 'assistant' && msg.message?.content) {
           for (let block of msg.message.content) {
@@ -128,9 +123,7 @@ ${resultHtml}
 }
 
 /** Test endpoint for renderMd in isolation */
-export async function testRenderMd (req: FastifyRequest, reply: FastifyReply) {
-  let port = (req.server.addresses()[0] as any)?.port || 4000
-
+export async function testRenderMd (_req: FastifyRequest, reply: FastifyReply) {
   // Simple test markdown with a chart
   let markdown = `
 \`\`\`gsql test_data
@@ -140,19 +133,9 @@ from flights select carriers.name as carrier_name, count(*) as flight_count
 <BarChart data="test_data" x="carrier_name" y="flight_count" />
 `
 
-  // Start ngrok tunnel if in dev mode
-  let tunnelUrl: string | undefined
-  let _closeTunnel: (() => Promise<void>) | undefined
+  let tunnelUrl = (globalThis as any).__GRAPHENE_DEV_NGROK_URL as string | undefined
 
   try {
-    if (!PROD) {
-      let ngrok = await import('@ngrok/ngrok')
-      let listener = await ngrok.forward({addr: port, authtoken_from_env: true})
-      tunnelUrl = listener.url() ?? undefined
-      _closeTunnel = () => listener.close()
-      console.log(`ngrok tunnel for renderMd test: ${tunnelUrl}`)
-    }
-
     let result = await renderMd(markdown, repoId, tunnelUrl)
     console.log(result)
 
@@ -197,11 +180,6 @@ ${screenshotHtml}
   <pre>${escapeHtml(err.stack || err.message || String(err))}</pre>
 </body>
 </html>`)
-  } finally {
-    // if (closeTunnel) {
-    //   await closeTunnel()
-    //   console.log('ngrok tunnel closed')
-    // }
   }
 }
 

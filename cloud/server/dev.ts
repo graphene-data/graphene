@@ -17,12 +17,15 @@ let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 export const orgId = 'organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d'
 export const userId = 'member-test-9c9e5d97-3b98-4f27-85bd-fb496e29d724'
 export const repoId = 'testrepo'
+export const teamId = 'T096DPPTGEM'
+let devNgrokUrl: string | undefined
 
 interface DevArgs {
   realAuth: boolean
   port?: number
   project?: string // 'flights' (default), 'ecomm', or a path to a custom repo
   logger?: FastifyLoggerOptions
+  ngrok?: boolean
 }
 
 interface DevServerHandle {
@@ -30,7 +33,7 @@ interface DevServerHandle {
   close: () => Promise<void>
 }
 
-export async function startDevServer ({realAuth, port, project = 'flights', logger}: DevArgs): Promise<DevServerHandle> {
+export async function startDevServer ({realAuth, port, project = 'flights', logger, ngrok}: DevArgs): Promise<DevServerHandle> {
   port = port || Number(process.env.GRAPHENE_PORT) + 1 || 4000
 
   let fastify = createServer(false, logger)
@@ -52,6 +55,7 @@ export async function startDevServer ({realAuth, port, project = 'flights', logg
   process.env.GITHUB_APP_ID = '2484649'
   process.env.GITHUB_APP_CLIENT_ID = 'Iv23liKKZeEBautjO5bE'
   process.env.VITE_GITHUB_APP_SLUG = 'graphene-data-dev'
+  process.env.SLACK_STATE_SECRET = 'graphene-dev-slack-state-secret'
 
   let vite = await createViteServer({
     root: path.join(rootDir, 'frontend'),
@@ -65,17 +69,28 @@ export async function startDevServer ({realAuth, port, project = 'flights', logg
     else vite.middlewares(req, res, next)
   })
 
+  fastify.get('/_api/dev/ngrok-url', (_req, reply) => {
+    if (!devNgrokUrl) return reply.code(404).send({error: 'No dev ngrok tunnel is active'})
+    return {url: devNgrokUrl}
+  })
+
   await seedDatabase(project)
 
   await fastify.listen({port, host: '0.0.0.0'})
   let url = `http://localhost:${port}`
+  let ngrokTunnel = ngrok ? await startNgrokTunnel(port) : undefined
+  devNgrokUrl = ngrokTunnel?.url
+  ;(globalThis as any).__GRAPHENE_DEV_NGROK_URL = ngrokTunnel?.url ?? `http://localhost:${port}`
   if (!TEST) {
     console.log(`Cloud dev server running at ${url}`)
+    if (ngrokTunnel) console.log(`Cloud dev server ngrok URL: ${ngrokTunnel.url}`)
   }
 
   return {
     url,
     async close () {
+      ;(globalThis as any).__GRAPHENE_DEV_NGROK_URL = undefined
+      await ngrokTunnel?.close()
       vite.ws.close()
       fastify.server.closeAllConnections()
       await fastify.close()
@@ -92,7 +107,8 @@ export async function seedDatabase (project = 'flights') {
   await migrate(db, {migrationsFolder: path.join(rootDir, 'migrations')})
 
   await db.insert(schema.orgs).values({id: orgId, slug: 'dev', name: 'Graphene Dev'})
-  await db.insert(schema.users).values({orgId, id: userId, email: 'dev@graphenedata.com', role: 'admin' as const})
+  await db.insert(schema.users).values({ orgId, id: userId, email: 'dev@graphenedata.com', role: 'admin' as const })
+  await db.insert(schema.slackInstallations).values({orgId, teamId, teamName: 'Graphene', oauthToken: await encryptSecret(process.env.SLACK_BOT_TOKEN || '')})
 
   let projectRoot: string
   if (project === 'flights') {
@@ -134,7 +150,21 @@ export async function seedDatabase (project = 'flights') {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  let project = process.argv[2] || 'flights'
+  let args = process.argv.slice(2)
+  let useNgrok = args.includes('--ngrok')
+  let project = args.find(a => a !== '--ngrok') || 'flights'
   await setupPglite(5454) // fixed port for dev server
-  await startDevServer({realAuth: true, project})
+  await startDevServer({realAuth: true, project, ngrok: useNgrok})
+}
+
+async function startNgrokTunnel (port: number) {
+  let ngrok = await import('@ngrok/ngrok')
+  let listener = await ngrok.forward({
+    addr: port,
+    authtoken_from_env: true,
+    ...(process.env.NGROK_DOMAIN ? {domain: process.env.NGROK_DOMAIN} : {}),
+  })
+  let url = listener.url()
+  if (!url) throw new Error('ngrok did not return a tunnel URL')
+  return {url, close: () => listener.close()}
 }

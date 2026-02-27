@@ -40,6 +40,19 @@ export const vcsInstallations = pgTable('vcs_installations', {
   byOrg: uniqueIndex('vcs_installations_org_idx').on(table.orgId, table.id),
 }))
 
+export const slackInstallations = pgTable('slack_installations', {
+  teamId: text('teamId').notNull(),
+  teamName: text('teamName').notNull().default(''),
+  enterpriseId: text('enterpriseId').notNull().default(''),
+  orgId: text('orgId').notNull().references(() => orgs.id, {onDelete: 'cascade'}),
+  oauthToken: text('oauthToken').notNull(),
+  installedByUserId: text('installedByUserId'),
+  updatedAt: timestamp('updatedAt', {mode: 'date'}).$defaultFn(() => new Date()),
+}, (table) => ({
+  byWorkspace: uniqueIndex('slack_installations_workspace_idx').on(table.teamId, table.enterpriseId),
+  byOrg: uniqueIndex('slack_installations_org_idx').on(table.orgId),
+}))
+
 export const repos = pgTable('repos', {
   id: text('id').primaryKey().$defaultFn(() => ulid()),
   orgId: text('orgId').notNull().references(() => orgs.id, {onDelete: 'cascade'}),
@@ -75,5 +88,6 @@ export type Org = typeof orgs.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Connection = typeof connections.$inferSelect;
 export type VcsInstallation = typeof vcsInstallations.$inferSelect;
+export type SlackInstallation = typeof slackInstallations.$inferSelect;
 export type Repo = typeof repos.$inferSelect;
 export type File = typeof files.$inferSelect;

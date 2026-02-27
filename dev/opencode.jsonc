@@ -4,4 +4,7 @@
   "permission": {
     "*": "allow",
   },
+  "experimental": {
+    "disable_paste_summary": true,
+  },
 }

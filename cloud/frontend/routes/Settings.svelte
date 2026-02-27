@@ -1,9 +1,11 @@
 <script lang="ts">
   import {route, go} from '../router.ts'
   import Repos from './Repos.svelte'
+  import SlackSettings from './SlackSettings.svelte'
 
   let pages = [
     {path: '/settings/repos', label: 'Repositories'},
+    {path: '/settings/slack', label: 'Slack'},
   ]
 </script>
 
@@ -24,8 +26,10 @@
     </nav>
   </aside>
   <section class="content">
-    {#if $route === '/settings/repos'}
+    {#if $route === '/settings' || $route === '/settings/repos'}
       <Repos />
+    {:else if $route === '/settings/slack'}
+      <SlackSettings />
     {/if}
   </section>
 </main>

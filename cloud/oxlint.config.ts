@@ -1,8 +1,10 @@
 import {defineConfig} from 'oxlint'
 import {sharedConfig} from '../core/oxlint.config.ts'
 
+let base = sharedConfig as any
+
 export default defineConfig({
-  ...sharedConfig,
+  ...base,
   ignorePatterns: [
     'node_modules',
     'tests/results',
@@ -18,6 +20,6 @@ export default defineConfig({
         node: true,
       },
     },
-    ...(sharedConfig.overrides || []),
+    ...(base.overrides || []),
   ],
 })
