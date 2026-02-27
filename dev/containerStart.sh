@@ -4,6 +4,8 @@ set -a
 source .env
 set +a
 
+export PATH="/pnpm:$PATH"
+
 # Make the `host` command available for container-to-host IPC
 ln -sf "$(pwd)/dev/host" /usr/local/bin/host
 ln -sf "$(pwd)/dev/zshrc.dev" /root/.zshrc
@@ -23,7 +25,7 @@ if [ -n "$gh_token" ]; then
   printf '%s' "$gh_token" | gh auth login --hostname github.com --with-token
 fi
 
-opencode upgrade
+pnpm add -g --allow-build=koffi --allow-build=opencode-ai --allow-build=protobufjs opencode-ai @mariozechner/pi-coding-agent @anthropic-ai/claude-code
 
 pnpm install
 (cd cloud && pnpm install)

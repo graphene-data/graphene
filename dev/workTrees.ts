@@ -154,7 +154,11 @@ async function upWorktree(name:string) {
     tail -f /dev/null`
 
   console.log('Running containerStart.sh...')
-  await $`docker exec ${containerName} bash -lc "dev/containerStart.sh"`.stdio('inherit')
+  let child = spawn('docker', ['exec', '-it', containerName, 'bash', '-lc', 'dev/containerStart.sh'], {stdio: 'inherit'})
+  await new Promise((resolve, reject) => {
+    child.on('exit', (code:any) => code === 0 ? resolve(undefined) : reject())
+    child.on('error', reject)
+  })
 
   console.log(`Container '${containerName}' is running`)
 }
@@ -367,8 +371,7 @@ async function execWorktree (args: string[]) {
   let port = await startHostIPC()
   args = args.length > 0 ? ['zsh', '-lc', ...args] : ['zsh']
   let child = spawn('docker', ['exec', '-it', '-e', `HOST_IPC_PORT=${port}`, `graphene-${currentName}`, ...args], {stdio: 'inherit'})
-
-  child.on('exit', (code) => process.exit(code ?? 0))
+  child.on('exit', (code:any) => process.exit(code ?? 0))
 }
 
 async function doneWorktree (force = false) {
