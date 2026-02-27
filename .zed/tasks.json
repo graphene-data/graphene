@@ -1,0 +1,11 @@
+[
+  {
+    "label": "Worktree commit",
+    "command": "node",
+    "args": ["dev/workTrees.ts", "commit"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "reveal": "never",
+    "hide": "always",
+    "use_new_terminal": false,
+  },
+]
