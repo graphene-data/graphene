@@ -78,7 +78,6 @@ describe.skipIf(!hasSnowflakeAuth)('snowflake', () => {
 
   // Snowflake has a 3-level hierarchy: DATABASE.SCHEMA.TABLE
   // The example is configured with namespace "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02"
-  let snowflakeNamespace = 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02'
 
   it('lists available databases', async () => {
     let res = await runCli(['schema'], snowflakeDir)
@@ -87,28 +86,27 @@ describe.skipIf(!hasSnowflakeAuth)('snowflake', () => {
     expect(databases.length).toBeGreaterThan(0)
   })
 
+  it('lists schemas when given a database name', async () => {
+    let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA'], snowflakeDir)
+    expectCliSuccess(res, 'schema list schemas (snowflake)')
+    let schemas = parseSchemaOutput(res.stdout)
+    expect(schemas.length).toBeGreaterThan(0)
+    expect(schemas).toContain('V02')
+  })
+
   it('lists tables in the configured namespace', async () => {
-    let res = await runCli(['schema', snowflakeNamespace], snowflakeDir)
+    let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02'], snowflakeDir)
     expectCliSuccess(res, 'schema list tables (snowflake)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables.length).toBeGreaterThan(0)
   })
 
   it('describes a table from the namespace', async () => {
-    // First get a table name from the namespace
-    let listRes = await runCli(['schema', snowflakeNamespace], snowflakeDir)
-    expectCliSuccess(listRes, 'schema list for describe')
-    let tables = parseSchemaOutput(listRes.stdout)
-    if (tables.length === 0) throw new Error('No tables found in snowflake namespace')
-
-    // Tables are returned as SCHEMA.TABLE, need full path DATABASE.SCHEMA.TABLE
-    let tableName = tables[0]
-    let fullTablePath = `FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.${tableName}`
-    let res = await runCli(['schema', fullTablePath], snowflakeDir)
+    let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02.MENUS'], snowflakeDir)
     expectCliSuccess(res, 'schema describe table (snowflake)')
     let output = res.stdout.toLowerCase()
-    expect(output).toContain('table ')
-    expect(output).toContain('(')
+    expect(output).toContain('table food__beverage_establishment__menu_data.v02.menus (')
+    expect(output).toContain('menu_id')
   })
 })
 

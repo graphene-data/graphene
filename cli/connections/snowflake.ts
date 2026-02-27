@@ -90,6 +90,16 @@ export class SnowflakeConnection implements QueryConnection {
     return res.rows.map(row => String(row['name'] || ''))
   }
 
+  async listSchemas (database: string): Promise<string[]> {
+    let res = await this.runQuery(`
+      select schema_name as "schema_name"
+      from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.SCHEMATA
+      where schema_name != 'INFORMATION_SCHEMA'
+      order by schema_name
+    `)
+    return res.rows.map(row => String(row['schema_name']))
+  }
+
   async listTables (dataset: string): Promise<string[]> {
     let parts = dataset.split('.')
     let database = parts.shift() || ''

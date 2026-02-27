@@ -65,6 +65,12 @@ program.command('schema')
     // figure out if you're wanting to list tables in a schema/dataset
     let dsToList: string | null = null
     let parts = tableArg ? tableArg.split('.') : []
+
+    if (tableArg && connection.listSchemas && parts.length == 1 && datasets.includes(tableArg)) {
+      let schemas = await connection.listSchemas(tableArg)
+      return console.log(`Schemas in ${tableArg}:\n${schemas.join('\n')}`)
+    }
+
     if (datasets.includes(tableArg)) dsToList = tableArg // you gave the name of a dataset
     else if (!tableArg && config.defaultNamespace) dsToList = config.defaultNamespace // default namespace configured
     else if (!tableArg && datasets.length == 1) dsToList = datasets[0] // only one dataset, and no args
