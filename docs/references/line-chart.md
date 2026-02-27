@@ -70,7 +70,7 @@ Here's an example:
 | y2LabelFmt | Format to use for value labels for series on the y2 axis. Overrides any other formats ([see available formats](#value-formatting)) | false | Excel-style format, built-in format name | - |
 | showAllLabels | Allow all labels to appear on chart, including overlapping labels | false | `true`, `false` | `false` |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
-| rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
+| rightPadding | Number representing the padding (whitespace) on the right side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
 
 ## Axes

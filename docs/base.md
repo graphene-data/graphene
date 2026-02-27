@@ -26,20 +26,20 @@ Other statements:
 - `extend` adds dimensions, measures, and joins to an existing table, usually used with `table X as (select ...)`
 
 ## Using semantics in queries
-**Implicit joins**
+### Implicit joins
 `from orders select status, user.name` will automatically join users on to orders per the model-defined join
 
-**Dimension and measure expansion**
+### Dimension and measure expansion
 Dimensions and measures are like macros that expand inline when GSQL compiles to database SQL. For example, `from users select id, orders.revenue` automatically expands to `select users.id, sum(orders.amount) ...`
 - NEVER(!): `sum(revenue)` or `group by revenue` because `revenue` is already an agg expression
 - OK: `floor(revenue)`, `revenue / cost` 
 - OK: `sum(case when is_complete then 1 else 0 end)` or `group by is_complete` (because `is_complete` is a dimension, not a measure)
 
-**Special features**
+### Special features
 - `group by all` is implied when aggregates exist, and does not need to be put in GSQL
 - Agg function `pXX(column)` computes the XXth percentile (e.g., p50, p975, p9999)
 
-**Unsupported**
+### Unsupported
 - Window functions
 - Set operations (`union`, etc.)
 
@@ -60,7 +60,7 @@ Queries can be referenced by other queries in the `from` or `join` to form DAGs 
 `data` can be a query name or a table name. Attributes that accept columns also accept GSQL expressions.
 
 ## Components
-**Visualizations**
+### Visualizations
 - BarChart: data, x, y, y2, series, title, subtitle, xFmt, yFmt, y2Fmt, colorPalette, type, swapXY, labels, labelFmt, sort, legend, yMin, yMax
 - LineChart: data, x, y, y2, series, title, subtitle, xFmt, yFmt, colorPalette, labels, sort, legend, handleMissing, markers, markerShape, lineType, lineWidth
 - AreaChart: data, x, y, series, title, subtitle, xFmt, yFmt, colorPalette, type, labels, sort, legend, handleMissing, fillOpacity, line
@@ -69,16 +69,16 @@ Queries can be referenced by other queries in the `from` or `join` to form DAGs 
 - Table: data, rows, title, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
   - Column (sub-component of Table): id, title, fmt, align, wrap, contentType, totalAgg, redNegatives
 
-**Inputs**
+### Inputs
 - Dropdown: name, data, value, label, defaultValue, multiple, title
 - TextInput: name, title, placeholder
 
-**Other components**
+### Other components
 - Row: no attributes (layout container, distributes children horizontally)
 
 ## Component attributes
 - series: column whose values become separate lines/bars (series=country plots one line per country)
-- type: stacked (default), grouped, stacked100
+- type: stacked (default), grouped (BarChart only), stacked100
 - y2: secondary y-axis, y2SeriesType sets its chart type (line/bar/scatter)
 - swapXY: horizontal bars
 - handleMissing: gap (default), connect, zero

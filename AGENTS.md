@@ -1,6 +1,6 @@
 Graphene is data framework that allows you to define everything in code.
 
-Dashboards and reports can be built in mdx with components like <BarChart>. Queries and semantic models are written in a language we call gsql, which is mostly like sql with some special features like symmetric aggregates, synthetic columns for code reuse, and automatic join traversal. If you need to know more about Graphene's features, read @docs/graphene.md.
+Dashboards and reports can be built in mdx with components like <BarChart>. Queries and semantic models are written in a language we call gsql, which is mostly like sql with some special features like symmetric aggregates, synthetic columns for code reuse, and automatic join traversal. If you need to know more about Graphene's features, read @docs/base.md.
 
 # Repo structure
 * /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.

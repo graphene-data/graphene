@@ -3,16 +3,16 @@
 The main command in Graphene is `check`. It takes several options:
 
 ```bash
-npm exec graphene check # Check syntax for entire project
-npm exec graphene check [mdPath] # Check specific markdown file, run queries, and take a screenshot
-npm exec graphene check [mdPath] -c [chartTitle] # Check, run, and get a screenshot for one specific chart
+graphene check # Check syntax for entire project
+graphene check [mdPath] # Check specific markdown file, run queries, and take a screenshot
+graphene check [mdPath] -c [chartTitle] # Check, run, and get a screenshot for one specific chart
 ```
 
-Use the appropriate package manager if this project doesn't use npm.
+Invoke via your project's package manager (e.g. `pnpm graphene check`, `npm exec graphene check`).
 
 Other commands:
 
 ```bash
-npm exec graphene run "[GSQL]" # Run GSQL directly, without creating a .md file
-npm exec graphene compile "[GSQL]" # Show the compiled, dialect-specific SQL
+graphene run "[GSQL]" # Run GSQL directly, without creating a .md file
+graphene compile "[GSQL]" # Show the compiled, dialect-specific SQL
 ```

@@ -54,7 +54,7 @@ Here's an example:
 | colorPalette | List of custom colors to use for the chart | false | list of color strings (CSS name, hexademical, RGB, HSL) e.g. `"#cf0d06, #eb5752, #e88a87"` | built-in color palette |
 | seriesOrder | Apply a specific order to the series in a multi-series chart. | false | list of series names in the order they should be used in the chart e.g. `"Canada, US"` | default order implied by the data |
 | leftPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
-| rightPadding | Number representing the padding (whitespace) on the left side of the chart. Useful to avoid labels getting cut off | false | number | - |
+| rightPadding | Number representing the padding (whitespace) on the right side of the chart. Useful to avoid labels getting cut off | false | number | - |
 | xLabelWrap | Whether to wrap x-axis labels when there is not enough space. Default behaviour is to truncate the labels. | false | `true`, `false` | `false` |
 
 ## Value Labels
