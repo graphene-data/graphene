@@ -1,9 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "anthropic/claude-opus-4-6",
-  "tui": {
-    "scroll_speed": 2,
-  },
   "permission": {
     "*": "allow",
   },

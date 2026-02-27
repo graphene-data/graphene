@@ -24,11 +24,9 @@ from flights select carrier.name, sum(dep_delay) as total_delay where refund_eli
 <BarChart data=most_delayed x=carrier_name y=total_delay />
 --- end of report.md example file
 
-Graphene provides CLIs that allow users (and coding agents) to run queries and locally develop dashboards. We also have a proprietary hosted service that allows customers to connect their warehouse and Graphene project repo, and we'll take care of hosting it for them.
-
 ## Repo overview
 /core - Graphene's open-source core library. Lives in a separate repo and is submoduled here
-/core/cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
+/core/cli - Graphene's cli that can check and run queries, as well as run a local dev server for viewing dashboards.
 /core/examples - a series of example datasets and graphene code. `flights` is the go-to as it's local, fast, and doesn't require auth.
 /core/lang - language server that can parse gsql, generate diagnostics, and transform to dialect-specific SQL.
 /core/ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
@@ -36,27 +34,11 @@ Graphene provides CLIs that allow users (and coding agents) to run queries and l
 /cloud - Graphene's optional, paid hosted service.
 /cloud/terraform - hosted infrastructure. Read the `infra` skill when working with this.
 
-# Tech stack
-Graphene is mostly written in typescript. We parse gsql with Lezer, then render it to dialect-specific SQL.
-
-For local development, the cli starts a vite server to host your md files and execute queries. The UI is mostly written in Svelte 4, and markdown files are translated to svelte components with `mdsvex`. Our charting components are from Evidence, which itself wraps echarts.
-
-The cloud service is run on AWS and configured with terraform. The server uses Drizzle and Fastify, with Stytch for authentication.
-
-# Task note
-It's important for each task to work on to keep some high-level notes on the work you did and why, in a file called task.md. That file should have these sections:
-* goal - what we're trying to accomplish on this task
-* current status - where we're currently at
-* remaining tasks - anything outstanding that still needs to be done
-* commit message - that summarizes the change
-* musings - this is a section for others to add to. You can safely ignore anything in there, and you should never change it.
-* log - high-level running log of what has happened on this task. Should be as concise as possible to just remind us of the key points. Each time the user gives feedback, that should be summarized into the log.
-
 # Testing
 Our tests are run with vitest. Use `pnpm test` in either cloud or core to run the tests for either.
 You can run a single test with `pnpm test -t "part of test name"`
 Lint+typecheck with `pnpm lint` in either cloud or core.
-UI tests should always take snapshots each time they run. Be sure to add a snapshot for new ui tests you add, and you can view any snapshot to make sure that ui renders the way you expect. When a screenshot is sufficient to verify visual behavior (colors, layout, rendering), prefer it over programmatic assertions — it's simpler and easier to maintain.
+All UI tests should capture a screenshot. Don't add programmatic assertions around rendered html, the screenshot will cover that.
 
 ## Workflow
 * `/core` is a submodule, so to do git operations there you'll want to `git -C core status`
@@ -72,7 +54,11 @@ Our primary stylistic goal is "high-level readability". We want to easily skim a
 ### Start simple
 Your first pass at an implementation should usually be the simplest thing that solves the problem in front of you. We can always add complexity later as needed.
 If you need to add complexity to work around an issue, that's a great time for a comment to explain why the additional code is needed.
-If you later realize the solution has grown too complex or convoluted, clean it up!
+If you later realize the solution has grown too complex or convoluted, clean it up.
+THIS IS THE GOLDEN RULE! Always be thinking if you can simplify the implementation. If you come across code that seems needlessly complex, offer to clean it up.
+
+### Don't take shortcuts
+If something isn't working, don't do a hacky thing just to get the tests to pass. Take the time to fully understand why some bit of code isn't working, and fix it properly. If the proper fix seems large or not backwards-compatible, you can stop to discuss it.
 
 ### Avoid indirection
 When it's easy to inline a bit of code, prefer that over making tons of small functions. This is also true for files, avoid creating tons of files/folders that will have very little in them.
