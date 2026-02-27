@@ -1,7 +1,7 @@
 import {build} from 'esbuild'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {cp, mkdir, readFile, rm, writeFile} from 'node:fs/promises'
+import {cp, mkdir, readdir, readFile, rm, writeFile} from 'node:fs/promises'
 import pkg from './package.json' with {type: 'json'}
 
 const __filename = fileURLToPath(import.meta.url)
@@ -40,7 +40,10 @@ description: How to use Graphene, our framework for data modeling, analysis, and
 ${await readFile(path.resolve(__dirname, '../docs/base.md'), 'utf8')}
 ${await readFile(path.resolve(__dirname, '../docs/cli.md'), 'utf8')}
 ${await readFile(path.resolve(__dirname, '../docs/best-practices.md'), 'utf8')}
-${await readFile(path.resolve(__dirname, '../docs/reference-index.md'), 'utf8')}
+# Reference documentation
+Consult the reference documentation for more detailed information on using Graphene.
+
+${(await readdir(path.resolve(__dirname, '../docs/references'))).map(f => `references/${f}`).join('\n')}
 `)
 await cp(path.resolve(__dirname, '../docs/references'), path.resolve(skillDir, 'references'), {recursive: true})
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
