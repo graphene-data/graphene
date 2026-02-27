@@ -39,7 +39,10 @@ export function trackBrowserConsole (page: Page) {
     if (msg.type() !== 'warning' && msg.type() !== 'error') return
     let text = msg.text()
     if (isExpected(text)) return
-    throw new Error(`Unexpected log ${text}`)
+
+    let location = msg.location()
+    let locationText = location.url ? ` (${location.url}:${location.lineNumber}:${location.columnNumber})` : ''
+    throw new Error(`Unexpected log ${text}${locationText}`)
   })
   page.on('pageerror', err => {
     let text = String(err?.message || err)
