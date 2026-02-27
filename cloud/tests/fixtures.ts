@@ -28,6 +28,10 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
       headless: !process.env.GRAPHENE_DEBUG,
       args: [
         '--font-render-hinting=none', // Consistent font rendering across platforms
+        '--disable-font-subpixel-positioning', // Avoid tiny per-glyph edge drift across OS builds
+        '--disable-lcd-text', // Use grayscale AA instead of subpixel AA for more stable screenshots
+        '--force-color-profile=srgb',
+        '--lang=en-US',
         ...(process.env.GRAPHENE_DEBUG ? ['--auto-open-devtools-for-tabs'] : []),
       ],
     })
@@ -50,7 +54,14 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
 
   // page depends on cloud so it sets up after and tears down before (server still running during teardown)
   page: async ({browser, cloud: _cloud}, use) => {
-    let context = await browser.newContext({deviceScaleFactor: 2})
+    let context = await browser.newContext({
+      viewport: {width: 1280, height: 720},
+      deviceScaleFactor: 2,
+      locale: 'en-US',
+      timezoneId: 'UTC',
+      colorScheme: 'light',
+      reducedMotion: 'reduce',
+    })
     let page = await context.newPage()
     trackBrowserConsole(page)
     await use(page)
