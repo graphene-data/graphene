@@ -174,9 +174,14 @@ baseExpression {
   Param
 }
 
-// Interval: supports `interval '1 day'` or `interval 1 day`
+// Interval: supports `interval '1 day'`, `interval 1 day`, or `interval field_name day`
 IntervalExpression {
-  Kw<"interval"> (String | Number IntervalUnit)
+  Kw<"interval"> (String | intervalQuantity IntervalUnit)
+}
+
+intervalQuantity[@isGroup=Expression] {
+  Number |
+  Ref
 }
 
 IntervalUnit {
