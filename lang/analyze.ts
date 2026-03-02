@@ -601,10 +601,13 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
         if (!parsed) return diag(stringNode, 'Could not parse interval', {sql: 'NULL', type: 'error'})
         return {sql: `INTERVAL ${parsed.quantity} ${parsed.unit}`, type: 'interval'}
       }
-      let num = txt(node.getChild('Number')!)
+      let quantityNode = node.getChild('Number') || node.getChild('Ref')
+      if (!quantityNode) return diag(node, 'Interval requires a quantity before the unit', {sql: 'NULL', type: 'error'})
+      let quantity = analyzeExpr(quantityNode, scope)
+      checkTypes(quantity, ['number'], quantityNode)
       let unit = parseIntervalUnit(txt(node.getChild('IntervalUnit')!).toLowerCase())
       if (!unit) return diag(node, 'Invalid interval unit', {sql: 'NULL', type: 'error'})
-      return {sql: `INTERVAL ${num} ${unit}`, type: 'interval'}
+      return {sql: `INTERVAL ${quantity.sql} ${unit}`, type: 'interval', isAgg: quantity.isAgg}
     }
 
     case 'DateExpression':
