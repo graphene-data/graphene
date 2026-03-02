@@ -713,6 +713,11 @@ describe('lang', () => {
       .toRenderSql('select users."created_at" + INTERVAL 5 minute as "shifted" from users as users')
   })
 
+  it('supports interval keyword with numeric field quantity', () => {
+    expect('from users select created_at - interval age minute as shifted')
+      .toRenderSql('select users."created_at" - INTERVAL users."age" minute as "shifted" from users as users')
+  })
+
   it('supports date keyword', () => {
     expect('from users select date \'2024-01-01\' as d')
       .toRenderSql('select DATE \'2024-01-01\' as "d" from users as users')
@@ -743,6 +748,11 @@ describe('lang', () => {
   it('diagnoses invalid interval unit', () => {
     expect('from users select created_at + interval 5 moons')
       .toHaveDiagnostic(/Invalid interval unit/i)
+  })
+
+  it('diagnoses non-numeric interval quantities', () => {
+    expect('from users select created_at + interval name minute')
+      .toHaveDiagnostic(/Expected number, got string/i)
   })
 
   it.skip('errors when aggregates are nested', () => {
