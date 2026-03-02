@@ -137,6 +137,48 @@ resource "aws_secretsmanager_secret_version" "github_app_private_key" {
   }
 }
 
+resource "aws_secretsmanager_secret" "slack_client_id" {
+  name        = "SLACK_CLIENT_ID"
+  description = "Slack OAuth client ID"
+}
+
+resource "aws_secretsmanager_secret_version" "slack_client_id" {
+  secret_id     = aws_secretsmanager_secret.slack_client_id.id
+  secret_string = "placeholder" # Managed manually in AWS console after initial deployment
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_secretsmanager_secret" "slack_client_secret" {
+  name        = "SLACK_CLIENT_SECRET"
+  description = "Slack OAuth client secret"
+}
+
+resource "aws_secretsmanager_secret_version" "slack_client_secret" {
+  secret_id     = aws_secretsmanager_secret.slack_client_secret.id
+  secret_string = "placeholder" # Managed manually in AWS console after initial deployment
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
+resource "aws_secretsmanager_secret" "slack_signing_secret" {
+  name        = "SLACK_SIGNING_SECRET"
+  description = "Slack signing secret for request verification"
+}
+
+resource "aws_secretsmanager_secret_version" "slack_signing_secret" {
+  secret_id     = aws_secretsmanager_secret.slack_signing_secret.id
+  secret_string = "placeholder" # Managed manually in AWS console after initial deployment
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
 # Agent token secret - auto-generated for signing agent JWTs
 resource "random_password" "agent_token_secret" {
   length  = 64

@@ -169,6 +169,9 @@ resource "aws_ecs_task_definition" "cloud" {
       { name = "GITHUB_APP_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.github_app_client_secret.arn },
       { name = "GITHUB_APP_PRIVATE_KEY", valueFrom = aws_secretsmanager_secret.github_app_private_key.arn },
       { name = "GITHUB_APP_WEBHOOK_SECRET", valueFrom = aws_secretsmanager_secret.github_webhook_secret.arn },
+      { name = "SLACK_CLIENT_ID", valueFrom = aws_secretsmanager_secret.slack_client_id.arn },
+      { name = "SLACK_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.slack_client_secret.arn },
+      { name = "SLACK_SIGNING_SECRET", valueFrom = aws_secretsmanager_secret.slack_signing_secret.arn },
       { name = "STYTCH_SECRET", valueFrom = aws_secretsmanager_secret.stytch_secret.arn }
     ]
     logConfiguration = {
