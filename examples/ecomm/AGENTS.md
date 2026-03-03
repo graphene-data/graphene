@@ -1,5 +1,5 @@
 # RULES
-- Graphene contains languages and tools you may not already know.
+- Graphene contains languages and tools that you do not already know.
 - Before writing code in this directory, you MUST read `@../../docs/base.md` **in its entirety**.
 - You MUST also read relevant reference docs in `@../../docs/references/*.md` before implementing or editing related functionality.
 - Treat reference docs as required context, not optional reading.
