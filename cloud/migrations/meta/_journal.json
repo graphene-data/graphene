@@ -15,6 +15,13 @@
       "when": 1771596794927,
       "tag": "0001_add_slack_installations",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772483100000,
+      "tag": "0002_add_agent_sessions",
+      "breakpoints": true
     }
   ]
 }

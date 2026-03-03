@@ -1,6 +1,6 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import crypto from 'node:crypto'
-import {desc, eq} from 'drizzle-orm'
+import {and, desc, eq} from 'drizzle-orm'
 import SlackOauth from '@slack/oauth'
 import {WebClient, type WebAPICallResult, type ConversationsRepliesResponse, type OauthV2AccessResponse} from '@slack/web-api'
 import type {AppMentionEvent, SlackEvent} from '@slack/types'
@@ -9,7 +9,7 @@ import {auth} from './auth.ts'
 import {PROD, TEST} from './consts.ts'
 import {getDb} from './db.ts'
 import {decryptSecret, encryptSecret} from './secrets.ts'
-import {repos, type SlackInstallation, slackInstallations} from '../schema.ts'
+import {agentSessions, repos, type SlackInstallation, slackInstallations} from '../schema.ts'
 
 const slackClientId = process.env.SLACK_CLIENT_ID || ''
 const slackClientSecret = process.env.SLACK_CLIENT_SECRET || ''
@@ -117,7 +117,8 @@ export async function slackEvents (req: FastifyRequest, reply: FastifyReply) {
 
 // Resolves installation + repo for a workspace mention, then posts an agent answer.
 async function handleAppMention (install: SlackInstallation, mention: AppMentionEvent) {
-  let repo = await getDb().select({id: repos.id}).from(repos)
+  let db = getDb()
+  let repo = await db.select({id: repos.id}).from(repos)
     .where(eq(repos.orgId, install.orgId))
     .orderBy(desc(repos.updatedAt))
     .then(rows => rows[0])
@@ -125,16 +126,61 @@ async function handleAppMention (install: SlackInstallation, mention: AppMention
 
   // load all the messages in the tread that mentions Graphene.
   let threadTs = mention.thread_ts || mention.ts
+
+  let session = await findOrCreateSlackSession({ orgId: install.orgId, repoId: repo.id, channel: mention.channel, threadTs })
+
+  let lastSentMessgeId = session.messages.map(m => m.messageId).filter(x => !!x).at(-1)
   let response = await slackApi<ConversationsRepliesResponse>('conversations.replies', { channel: mention.channel, ts: threadTs, limit: 50 }, install)
   let threadMessages = (response.messages || [])
-    .filter(m => m.text && (!m.ts || m.ts <= mention.ts))
+    .filter(m => !lastSentMessgeId || !m.ts || m.ts > lastSentMessgeId) // if resuming a session, exclude messages we already gave to the agent
+    .filter(m => m.text && (!m.ts || m.ts < mention.ts)) // only include messages before the mention
     .map(m => `user:${m.user || m.bot_id || 'unknown'}: ${m.text}`)
 
   let prompt = `Latest mention: ${mention.text}`
   if (threadMessages.length) prompt += `\nThread context:\n${threadMessages.join('\n')}`
 
-  let result = await runAgent({ prompt, repoId: repo.id, orgId: install.orgId })
+  session.messages.push({
+    role: 'user',
+    content: [{type: 'text', text: prompt}],
+    type: 'user',
+    source: 'slack',
+    messageId: mention.ts,
+    text: prompt,
+    createdAt: new Date().toISOString(),
+  })
+  await db.update(agentSessions)
+    .set({messages: session.messages, updatedAt: new Date()})
+    .where(eq(agentSessions.id, session.id))
+
+  let result = await runAgent(session)
   await slackApi('chat.postMessage', {channel: mention.channel, text: result.text, ...(threadTs ? {thread_ts: threadTs} : {})}, install)
+}
+
+/** Find the existing Slack thread session, or create a new one. */
+async function findOrCreateSlackSession ({orgId, repoId, channel, threadTs}: {orgId: string, repoId: string, channel: string, threadTs: string}) {
+  let db = getDb()
+  let existing = await db.select()
+    .from(agentSessions)
+    .where(and(
+      eq(agentSessions.orgId, orgId),
+      eq(agentSessions.slackChannel, channel),
+      eq(agentSessions.slackThreadTs, threadTs),
+    ))
+    .then(rows => rows[0])
+
+  if (existing) return existing
+
+  let created = await db.insert(agentSessions).values({
+    orgId,
+    repoId,
+    slackChannel: channel,
+    slackThreadTs: threadTs,
+    messages: [],
+    updatedAt: new Date(),
+  }).returning().then(rows => rows[0])
+
+  if (!created) throw new Error('Failed to create agent session')
+  return created
 }
 
 // Exchanges a Slack OAuth code for install credentials via Slack Web API.

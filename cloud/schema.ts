@@ -1,4 +1,4 @@
-import {index, pgTable, text, timestamp, uniqueIndex} from 'drizzle-orm/pg-core'
+import {index, jsonb, pgTable, text, timestamp, uniqueIndex} from 'drizzle-orm/pg-core'
 import {ulid} from 'ulid'
 
 export const orgs = pgTable('orgs', {
@@ -84,6 +84,19 @@ export const files = pgTable('files', {
   byPath: uniqueIndex('files_repo_path_idx').on(table.repoId, table.path),
 }))
 
+export const agentSessions = pgTable('agent_sessions', {
+  id: text('id').primaryKey().$defaultFn(() => ulid()),
+  orgId: text('orgId').notNull().references(() => orgs.id, {onDelete: 'cascade'}),
+  repoId: text('repoId').references(() => repos.id, {onDelete: 'set null'}),
+  slackChannel: text('slackChannel'),
+  slackThreadTs: text('slackThreadTs'),
+  messages: jsonb('messages').$type<Record<string, any>[]>().notNull().default([]),
+  updatedAt: timestamp('updatedAt', {mode: 'date'}).$defaultFn(() => new Date()),
+}, (table) => ({
+  orgIdx: index('agent_sessions_org_idx').on(table.orgId),
+  slackThreadIdx: uniqueIndex('agent_sessions_slack_thread_idx').on(table.orgId, table.slackChannel, table.slackThreadTs),
+}))
+
 export type Org = typeof orgs.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type Connection = typeof connections.$inferSelect;
@@ -91,3 +104,4 @@ export type VcsInstallation = typeof vcsInstallations.$inferSelect;
 export type SlackInstallation = typeof slackInstallations.$inferSelect;
 export type Repo = typeof repos.$inferSelect;
 export type File = typeof files.$inferSelect;
+export type AgentSession = typeof agentSessions.$inferSelect;

@@ -1,6 +1,7 @@
 import {test as base} from 'vitest'
 import crypto from 'node:crypto'
 import {chromium, type Browser, type Page} from 'playwright'
+import type {ModelMessage} from 'ai'
 import {playwrightExpect as expect} from '../../core/ui/tests/matchers.ts'
 import {mockSlackApi} from '../server/slack.ts'
 import {mockAgent as setAgentMock} from '../server/agent/agent.ts'
@@ -33,8 +34,8 @@ interface SlackFixture {
 
 interface MockLLMFixture {
   setResponse: (text: string) => void
-  mock: (handler: (args: {prompt: string; repoId: string; orgId: string; systemPrompt: string}) => Promise<string> | string) => void
-  getRequests: () => {prompt: string; repoId: string; orgId: string; systemPrompt: string}[]
+  mock: (handler: (args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<string> | string) => void
+  getRequests: () => {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}[]
 }
 
 export const test = base.extend<{browser: Browser, page: Page, cloud: {url: string}, slack: SlackFixture, mockLLM: MockLLMFixture} & CloudOptions>({
@@ -90,9 +91,9 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
 
   // eslint-disable-next-line no-empty-pattern
   mockLLM: async ({}, use) => {
-    let requests: {prompt: string; repoId: string; orgId: string; systemPrompt: string}[] = []
+    let requests: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}[] = []
     let responseText = 'Agent response from test'
-    let handler: ((args: {prompt: string; repoId: string; orgId: string; systemPrompt: string}) => Promise<string> | string) | null = null
+    let handler: ((args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<string> | string) | null = null
 
     setAgentMock(async (args) => {
       requests.push(args)

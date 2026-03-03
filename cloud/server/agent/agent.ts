@@ -1,33 +1,22 @@
-import {generateText, stepCountIs} from 'ai'
+import {generateText, stepCountIs, type ModelMessage} from 'ai'
 import {anthropic} from '@ai-sdk/anthropic'
 import {readFileSync} from 'fs'
 import {fileURLToPath} from 'url'
 import path from 'path'
+import {eq} from 'drizzle-orm'
 import {listDirTool, readFileTool, searchTool, renderMdTool} from './tools.ts'
 import {PROD} from '../consts.ts'
+import {getDb} from '../db.ts'
+import {agentSessions, type AgentSession} from '../../schema.ts'
 
 // Read Graphene documentation at module load time
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let grapheneDocs = readFileSync(path.resolve(__dirname, '../../../core/docs/base.md'), 'utf-8')
 
-interface AgentMessage {
-  type: 'system' | 'assistant' | 'user'
-  message?: {content: any[]}
-  cwd?: string
-  uuid?: string
-}
-
-type MessageCallback = (msg: AgentMessage) => void
-
-interface RunAgentOptions {
-  prompt: string
-  repoId: string
-  orgId: string
-  onMessage?: MessageCallback
-}
+type StepCallback = (event: any) => void
 
 interface AgentMockArgs {
-  prompt: string
+  messages: ModelMessage[]
   repoId: string
   orgId: string
   systemPrompt: string
@@ -39,76 +28,39 @@ export function mockAgent (handler: ((args: AgentMockArgs) => string | Promise<s
   agentMock = handler
 }
 
-export async function runAgent ({prompt, repoId, orgId: _orgId, onMessage}: RunAgentOptions) {
+export async function runAgent (session: AgentSession, onStep?: StepCallback) {
+  if (!session.repoId) throw new Error('Agent session must include repoId')
+  session.messages ||= []
   let systemPrompt = buildSystemPrompt()
-  if (agentMock) {
-    return {text: await agentMock({prompt, repoId, orgId: _orgId, systemPrompt}), steps: []} as any
-  }
-  onMessage ||= () => { }
+  let modelMessages = session.messages.map((x: any) => ({role: x.role, content: x.content})) as ModelMessage[]
 
-  let stepCounter = 0
+  if (agentMock) {
+    let text = await agentMock({messages: modelMessages, repoId: session.repoId, orgId: session.orgId, systemPrompt})
+    return {text, steps: []} as any
+  }
+
   let result = await generateText({
     model: anthropic('claude-sonnet-4-20250514'),
     system: systemPrompt,
-    prompt,
+    messages: modelMessages,
     tools: {
-      listDir: listDirTool(repoId),
-      readFile: readFileTool(repoId),
-      search: searchTool(repoId),
-      renderMd: renderMdTool(repoId, !PROD ? getDevTunnelUrl() : undefined),
+      listDir: listDirTool(session.repoId),
+      readFile: readFileTool(session.repoId),
+      search: searchTool(session.repoId),
+      renderMd: renderMdTool(session.repoId, !PROD ? getDevTunnelUrl() : undefined),
     },
     stopWhen: stepCountIs(30),
     onStepFinish: (step) => {
-      stepCounter++
-      let stepId = `step-${stepCounter}`
-
-      // Convert AI SDK step format to frontend expected format
-      let assistantContent: any[] = []
-
-      // Add text if present
-      if (step.text) {
-        assistantContent.push({type: 'text', text: step.text, id: `${stepId}-text`})
+      for (let message of step.response.messages) {
+        session.messages.push({...message, createdAt: new Date().toISOString()})
       }
-
-      // Add tool calls
-      if (step.toolCalls && step.toolCalls.length > 0) {
-        for (let tc of step.toolCalls) {
-          assistantContent.push({
-            type: 'tool_use',
-            id: tc.toolCallId,
-            name: tc.toolName,
-            input: tc.input,
-          })
-        }
-      }
-
-      if (assistantContent.length > 0) {
-        onMessage({type: 'assistant', uuid: stepId, message: {content: assistantContent}})
-      }
-
-      // Add tool results
-      if (step.toolResults && step.toolResults.length > 0) {
-        let userContent: any[] = []
-        for (let tr of step.toolResults) {
-          userContent.push({
-            type: 'tool_result',
-            tool_use_id: tr.toolCallId,
-            content: typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output),
-          })
-        }
-        onMessage({type: 'user', uuid: `${stepId}-result`, message: {content: userContent}})
-      }
+      onStep?.(step)
     },
   })
 
-  // Send final text if not already sent in last step
-  if (result.text && !result.steps?.length) {
-    onMessage({
-      type: 'assistant',
-      uuid: 'final',
-      message: {content: [{type: 'text', text: result.text, id: 'final-text'}]},
-    })
-  }
+  await getDb().update(agentSessions)
+    .set({messages: session.messages, updatedAt: new Date()})
+    .where(eq(agentSessions.id, session.id))
 
   return result
 }

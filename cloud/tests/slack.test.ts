@@ -81,7 +81,8 @@ test('routes app mention to cloud agent and replies in thread', async ({slack, m
 
   let llmCalls = mockLLM.getRequests()
   expect(llmCalls).toHaveLength(1)
-  expect(llmCalls[0]?.prompt).toContain('<@U999> hello graphene')
+  let messageLog = JSON.stringify(llmCalls[0]?.messages || [])
+  expect(messageLog).toContain('<@U999> hello graphene')
   expect(llmCalls[0]?.systemPrompt).toContain('Graphene is a framework for doing data analysis')
 
   let firstCall = calls[1]
@@ -113,8 +114,27 @@ test('includes thread context when mention is in a thread', async ({slack, mockL
   expect(response.statusCode).toBe(200)
 
   let llmCalls = mockLLM.getRequests()
-  let promptLog = llmCalls[0]?.prompt || ''
+  let promptLog = JSON.stringify(llmCalls[0]?.messages || [])
   expect(promptLog).toContain('Latest mention: <@U999> run it')
   expect(promptLog).toContain('user:U1: What are our top delayed carriers?')
   expect(promptLog).toContain('user:U2: Focus on last month please.')
+})
+
+test('stores and reuses one agent session per slack thread', async ({slack, mockLLM}) => {
+  mockLLM.setResponse('Session reply')
+
+  await slack.simulateUserMessage('first mention', {ts: '1710000000.123456'})
+  await slack.simulateUserMessage('second mention', {ts: '1710000001.000001', threadTs: '1710000000.123456'})
+
+  let db = getDb()
+  let sessions = await db.select().from(schema.agentSessions)
+  expect(sessions).toHaveLength(1)
+
+  let session = sessions[0]!
+  expect(session.slackChannel).toBe('C123')
+  expect(session.slackThreadTs).toBe('1710000000.123456')
+
+  let messages = (session.messages || []) as any[]
+  let userMessages = messages.filter(m => m.type === 'user' && m.source === 'slack')
+  expect(userMessages.map(m => m.messageId)).toEqual(['1710000000.123456', '1710000001.000001'])
 })

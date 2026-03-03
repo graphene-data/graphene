@@ -1,9 +1,8 @@
 import path from 'node:path'
 import dotenv from 'dotenv'
-import {WebClient} from '@slack/web-api'
 
 // This script deploys the Slack Graphene app manifest.
-// It exchanges a refresh token for an app-config access token on each run.
+// It expects an app-config access token in env.
 
 type Mode = 'validate' | 'create' | 'update'
 type Environment = 'local' | 'staging' | 'prod'
@@ -125,19 +124,4 @@ async function slackManifestRequest (method: string, body: Record<string, unknow
   if (!payload.ok) throw new Error(`Slack API ${method} error: ${payload.error ?? 'unknown error'}`)
 
   return payload
-}
-
-async function getAppConfigAccessToken () {
-  let refreshToken = process.env.SLACK_APP_CONFIG_REFRESH_TOKEN
-  if (!refreshToken) throw new Error('Missing SLACK_APP_CONFIG_REFRESH_TOKEN')
-
-  let payload = await new WebClient().tooling.tokens.rotate({
-    refresh_token: refreshToken,
-  }) as {ok?: boolean; error?: string; token?: string}
-
-  if (!payload.ok || !payload.token) {
-    throw new Error(`Slack token exchange error: ${payload.error ?? 'missing token'}`)
-  }
-
-  return payload.token
 }

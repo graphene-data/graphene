@@ -146,8 +146,8 @@ export async function removeRepo (req: FastifyRequest, reply: FastifyReply) {
 }
 
 // Handle GitHub webhook events
-// You can test this in dev by loading up the smee page configured in @dev.ts, and then making a small change to the test repo.
-// Smee will let you re-deliver that webhook as much as you need while testing.
+// You can test this in dev by starting `server/dev.ts --ngrok`, setting the printed webhook URL in the GitHub app,
+// and then making a small change to the test repo.
 export async function githubWebhook (req: FastifyRequest, reply: FastifyReply) {
   let signature = req.headers['x-hub-signature-256'] as string
   let event = req.headers['x-github-event'] as string

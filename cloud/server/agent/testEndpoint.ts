@@ -1,7 +1,9 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
 import {runAgent} from './agent.ts'
+import {getDb} from '../db.ts'
 import {orgId, repoId} from '../dev.ts'
 import {renderMd} from './runMd.ts'
+import {agentSessions} from '../../schema.ts'
 
 export async function agentTest (req: FastifyRequest, reply: FastifyReply) {
   let q = (req.query as any).q as string
@@ -43,75 +45,73 @@ export async function agentTest (req: FastifyRequest, reply: FastifyReply) {
   let pendingToolCalls = new Map<string, {name: string, input: string}>()
 
   try {
-    await runAgent({
-      prompt: q,
-      repoId,
-      orgId,
-      onMessage: (msg) => {
-        if (msg.type === 'assistant' && msg.message?.content) {
-          for (let block of msg.message.content) {
-            if (block.type === 'text' && block.text) {
-              reply.raw.write(`<div class="thinking">${escapeHtml(block.text)}</div>\n`)
-            }
-            if (block.type === 'tool_use') {
-              // Store the tool call info for when we get the result
-              let inputStr = typeof block.input === 'string' ? block.input : JSON.stringify(block.input, null, 2)
-              pendingToolCalls.set(block.id, {name: block.name, input: inputStr})
-            }
-          }
+    let session = await getDb().insert(agentSessions).values({orgId, repoId, messages: []}).returning().then(rows => rows[0])
+    if (!session) throw new Error('Could not create test agent session')
+    session.messages.push({
+      role: 'user',
+      content: [{type: 'text', text: q}],
+      type: 'user',
+      text: q,
+      createdAt: new Date().toISOString(),
+    })
+
+    await runAgent(session, (step) => {
+
+      if (step.text) {
+        reply.raw.write(`<div class="thinking">${escapeHtml(step.text)}</div>\n`)
+      }
+
+      if (step.toolCalls?.length) {
+        for (let tc of step.toolCalls) {
+          let inputStr = typeof tc.input === 'string' ? tc.input : JSON.stringify(tc.input, null, 2)
+          pendingToolCalls.set(tc.toolCallId, {name: tc.toolName, input: inputStr})
         }
+      }
 
-        if (msg.type === 'user' && msg.message?.content) {
-          for (let block of msg.message.content) {
-            if (block.type !== 'tool_result') continue
+      if (step.toolResults?.length) {
+        for (let tr of step.toolResults) {
+          let block = {
+            type: 'tool_result',
+            tool_use_id: tr.toolCallId,
+            content: typeof tr.output === 'string' ? tr.output : JSON.stringify(tr.output),
+          }
+          if (block.type !== 'tool_result') continue
 
-            let toolCall = pendingToolCalls.get(block.tool_use_id)
-            pendingToolCalls.delete(block.tool_use_id)
+          let toolCall = pendingToolCalls.get(block.tool_use_id)
+          pendingToolCalls.delete(block.tool_use_id)
 
-            let toolName = toolCall?.name || 'unknown'
-            let toolInput = toolCall?.input || ''
+          let toolName = toolCall?.name || 'unknown'
+          let toolInput = toolCall?.input || ''
 
-            // Parse the result
-            let result: any
-            try {
-              result = JSON.parse(block.content)
-            } catch {
-              result = {output: block.content}
-            }
+          let result: any
+          try {
+            result = JSON.parse(block.content)
+          } catch {
+            result = {output: block.content}
+          }
 
-            // Build the result HTML
-            let resultHtml = ''
+          let resultHtml = ''
+          if (result.screenshot) {
+            resultHtml += `<img src="data:image/png;base64,${result.screenshot}" alt="Rendered visualization" />\n`
+          }
 
-            // Check for screenshot - show it prominently
-            if (result.screenshot) {
-              resultHtml += `<img src="data:image/png;base64,${result.screenshot}" alt="Rendered visualization" />\n`
-            }
+          let displayResult = {...result}
+          delete displayResult.screenshot
+          if (Object.keys(displayResult).length > 0) {
+            let resultStr = toolName === 'readFile' && displayResult.content ? formatReadFileResult(displayResult) : JSON.stringify(displayResult, null, 2)
+            resultHtml += `<div class="label">Result:</div><pre>${escapeHtml(resultStr)}</pre>\n`
+          }
 
-            // Show other result data (excluding screenshot)
-            let displayResult = {...result}
-            delete displayResult.screenshot
-            if (Object.keys(displayResult).length > 0) {
-              let resultStr = toolName === 'readFile' && displayResult.content
-                ? formatReadFileResult(displayResult)
-                : JSON.stringify(displayResult, null, 2)
-              resultHtml += `<div class="label">Result:</div><pre>${escapeHtml(resultStr)}</pre>\n`
-            }
-
-            // For renderMd, show the markdown input with real newlines
-            let displayInput = toolName === 'renderMd'
-              ? formatRenderMdInput(toolInput)
-              : toolInput
-
-            // Write the complete tool call with input and result inside details
-            reply.raw.write(`<details class="tool-call">
+          let displayInput = toolName === 'renderMd' ? formatRenderMdInput(toolInput) : toolInput
+          reply.raw.write(`<details class="tool-call">
 <summary>${escapeHtml(toolName)}()</summary>
 <div class="label">Input:</div>
 <pre>${escapeHtml(displayInput)}</pre>
 ${resultHtml}
 </details>\n`)
-          }
         }
-      },
+      }
+
     })
 
     reply.raw.write('<p><strong>Done</strong></p>\n')
