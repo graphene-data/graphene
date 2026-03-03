@@ -10,14 +10,14 @@ type Environment = 'local' | 'staging' | 'prod'
 
 const baseUrls: Record<Environment, string> = {
   local: 'https://interruptedly-dauntless-cherrie.ngrok-free.dev',
-  staging: '',
-  prod: '',
+  staging: 'https://app.graphene-staging.com',
+  prod: 'https://app.graphenedata.com',
 }
 
 const appIds: Record<Environment, string> = {
   local: 'A0AFJNR00CF',
-  staging: '',
-  prod: '',
+  staging: 'A0AJ0RR96F8',
+  prod: 'A0AHMEDED9D',
 }
 
 dotenv.config({path: path.resolve(import.meta.dirname, '../../.env')})
@@ -28,7 +28,8 @@ if (!mode || !environment || !['validate', 'create', 'update'].includes(mode) ||
   throw new Error('Usage: node scripts/deploySlack.ts <local|staging|prod> <validate|create|update>')
 }
 
-let appConfigToken = await getAppConfigAccessToken()
+let appConfigToken = process.env.SLACK_APP_CONFIG_TOKEN || ''
+if (!appConfigToken) throw new Error('Missing slack app config token')
 
 let baseUrl = baseUrls[environment]
 if (!baseUrl) throw new Error(`Missing base URL for ${environment} in scripts/deploySlack.ts`)
