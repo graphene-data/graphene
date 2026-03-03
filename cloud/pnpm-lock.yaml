@@ -134,9 +134,6 @@ importers:
       playwright:
         specifier: ^1.58.0
         version: 1.58.0
-      smee-client:
-        specifier: ^5.0.0
-        version: 5.0.0
       svelte-check:
         specifier: ^4.2.1
         version: 4.3.4(picomatch@4.0.3)(svelte@5.53.3)(typescript@5.9.3)
@@ -2000,10 +1997,6 @@ packages:
     resolution: {integrity: sha512-Vo1ab+QXPzZ4tCa8SwIHJFaSzy4R6SHf7BY79rFBDf0idraZWAkYrDjDj8uWaSm3S2TK+hJ7/t1CEmZ7jXw+pg==}
     engines: {node: '>=18.0.0'}
 
-  eventsource@4.1.0:
-    resolution: {integrity: sha512-2GuF51iuHX6A9xdTccMTsNb7VO0lHZihApxhvQzJB5A03DvHDd2FQepodbMaztPBmBcE/ox7o2gqaxGhYB9LhQ==}
-    engines: {node: '>=20.0.0'}
-
   expect-type@1.2.2:
     resolution: {integrity: sha512-JhFGDVJ7tmDJItKhYgJCGLOWjuK9vPxiXoUFLwLDc99NlmklilbiQJwoctZtt13+xMw91MCk/REan6MWHqDjyA==}
     engines: {node: '>=12.0.0'}
@@ -2492,11 +2485,6 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
-  smee-client@5.0.0:
-    resolution: {integrity: sha512-OYL8xPr1Tc0iqGohTGqHO/qEvUrPktK0a2Qcb0Uuj+j4KLnH5bsOhOlmpnmdh4zgzL3OwTfodcmkg5fVgiMUHw==}
-    engines: {node: ^20.18 || >= 22}
-    hasBin: true
-
   sonic-boom@4.2.0:
     resolution: {integrity: sha512-INb7TM37/mAcsGmc9hyyI6+QR3rR1zVRu36B0NeGXKnOOLiZOfER5SA+N7X7k3yUYRzLWafduTDvJAfDswwEww==}
 
@@ -2600,10 +2588,6 @@ packages:
   undici@6.23.0:
     resolution: {integrity: sha512-VfQPToRA5FZs/qJxLIinmU59u0r7LXqoJkCzinq3ckNJp3vKEh7jTWN589YQ5+aoAC/TGRLyJLCPKcLQbM8r9g==}
     engines: {node: '>=18.17'}
-
-  undici@7.18.2:
-    resolution: {integrity: sha512-y+8YjDFzWdQlSE9N5nzKMT3g4a5UBX1HKowfdXh0uvAnTaqqwqB92Jt4UXBAeKekDs5IaDKyJFR4X1gYVCgXcw==}
-    engines: {node: '>=20.18.1'}
 
   unist-util-is@4.1.0:
     resolution: {integrity: sha512-ZOQSsnce92GrxSqlnEEseX0gi7GH9zTJZ0p9dtu87WRb/37mMPO2Ilx1s/t9vBHrFhbgweUwb+t7cIn5dxPhZg==}
@@ -4724,10 +4708,6 @@ snapshots:
 
   eventsource-parser@3.0.6: {}
 
-  eventsource@4.1.0:
-    dependencies:
-      eventsource-parser: 3.0.6
-
   expect-type@1.2.2: {}
 
   fast-content-type-parse@3.0.0: {}
@@ -5263,11 +5243,6 @@ snapshots:
 
   siginfo@2.0.0: {}
 
-  smee-client@5.0.0:
-    dependencies:
-      eventsource: 4.1.0
-      undici: 7.18.2
-
   sonic-boom@4.2.0:
     dependencies:
       atomic-sleep: 1.0.0
@@ -5363,8 +5338,6 @@ snapshots:
   undici-types@6.21.0: {}
 
   undici@6.23.0: {}
-
-  undici@7.18.2: {}
 
   unist-util-is@4.1.0: {}
 

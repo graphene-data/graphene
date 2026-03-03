@@ -45,11 +45,6 @@ export async function startDevServer ({realAuth, port, project = 'flights', logg
   setAuthOverride(realAuth ? null : {userId, orgId, slug: ''})
   process.env.VITE_STYTCH_USE_MOCK = realAuth ? '' : 'true'
 
-  if (!TEST) {
-    let {SmeeClient} = await import('smee-client')
-    let smee = new SmeeClient({source: 'https://smee.io/MkHzlt6xKj6dh9Sm', target: `http://localhost:${port}/_api/github/webhook`})
-    smee.start()
-  }
   process.env.GITHUB_APP_SLUG = 'graphene-data-dev'
   process.env.GITHUB_APP_WEBHOOK_SECRET = 'devsecret'
   process.env.GITHUB_APP_ID = '2484649'
