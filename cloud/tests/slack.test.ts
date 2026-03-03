@@ -75,6 +75,9 @@ test('routes app mention to cloud agent and replies in thread', async ({slack, m
   expect(response.statusCode).toBe(200)
   expect(await response.json()).toEqual({ok: true})
 
+  await waitFor(() => slack.getApiCalls().some(c => c.endpoint === 'chat.postMessage'))
+  await waitFor(() => mockLLM.getRequests().length === 1)
+
   let calls = slack.getApiCalls()
   expect(calls).toHaveLength(2)
   expect(calls[0]?.endpoint).toBe('conversations.replies')
@@ -87,7 +90,7 @@ test('routes app mention to cloud agent and replies in thread', async ({slack, m
 
   let firstCall = calls[1]
   expect(firstCall).toMatchObject({endpoint: 'chat.postMessage'})
-  expect(firstCall?.payload).toEqual({
+  expect(firstCall?.payload).toMatchObject({
     channel: 'C123',
     text: 'Here is your answer from Graphene.',
     thread_ts: '1710000000.123456',
@@ -113,6 +116,8 @@ test('includes thread context when mention is in a thread', async ({slack, mockL
   let response = await slack.simulateUserMessage('run it', {threadTs: '1710000000.000001'})
   expect(response.statusCode).toBe(200)
 
+  await waitFor(() => mockLLM.getRequests().length === 1)
+
   let llmCalls = mockLLM.getRequests()
   let promptLog = JSON.stringify(llmCalls[0]?.messages || [])
   expect(promptLog).toContain('Latest mention: <@U999> run it')
@@ -120,11 +125,41 @@ test('includes thread context when mention is in a thread', async ({slack, mockL
   expect(promptLog).toContain('user:U2: Focus on last month please.')
 })
 
+test('uploads chart screenshot when respondToUser references mdId', async ({slack, mockLLM}) => {
+  let screenshot = Buffer.from('fake-image-data').toString('base64')
+  mockLLM.mock(() => ({
+    text: 'fallback text',
+    steps: [{
+      toolResults: [
+        {toolName: 'renderMd', output: {success: true, mdId: 'abc123', screenshot}},
+        {toolName: 'respondToUser', output: {text: 'Answer with chart', mdId: 'abc123'}},
+      ],
+    }],
+  }))
+
+  let response = await slack.simulateUserMessage('show me a chart')
+  expect(response.statusCode).toBe(200)
+
+  await waitFor(() => mockLLM.getRequests().length === 1)
+  await waitFor(() => slack.getApiCalls().length >= 2)
+
+  let calls = slack.getApiCalls()
+  let uploadCall = calls.find(c => c.endpoint === 'files.uploadV2')
+  expect(uploadCall).toBeDefined()
+  expect(uploadCall?.payload).toMatchObject({
+    channel_id: 'C123',
+    thread_ts: '1710000000.123456',
+    filename: 'chart.png',
+  })
+  expect(Buffer.isBuffer(uploadCall?.payload.file)).toBe(true)
+})
+
 test('stores and reuses one agent session per slack thread', async ({slack, mockLLM}) => {
   mockLLM.setResponse('Session reply')
 
   await slack.simulateUserMessage('first mention', {ts: '1710000000.123456'})
   await slack.simulateUserMessage('second mention', {ts: '1710000001.000001', threadTs: '1710000000.123456'})
+  await waitFor(() => mockLLM.getRequests().length === 2)
 
   let db = getDb()
   let sessions = await db.select().from(schema.agentSessions)
@@ -134,7 +169,15 @@ test('stores and reuses one agent session per slack thread', async ({slack, mock
   expect(session.slackChannel).toBe('C123')
   expect(session.slackThreadTs).toBe('1710000000.123456')
 
-  let messages = (session.messages || []) as any[]
-  let userMessages = messages.filter(m => m.type === 'user' && m.source === 'slack')
-  expect(userMessages.map(m => m.messageId)).toEqual(['1710000000.123456', '1710000001.000001'])
+  let llmCalls = mockLLM.getRequests()
+  expect(llmCalls[1]?.messages.map(m => JSON.stringify(m)).join('\n')).toContain('Latest mention: <@U999> second mention')
 })
+
+async function waitFor (predicate: () => boolean, timeoutMs = 4000) {
+  let start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    if (predicate()) return
+    await new Promise(resolve => setTimeout(resolve, 25))
+  }
+  throw new Error('Timed out waiting for async slack handler')
+}

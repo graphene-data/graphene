@@ -34,7 +34,7 @@ interface SlackFixture {
 
 interface MockLLMFixture {
   setResponse: (text: string) => void
-  mock: (handler: (args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<string> | string) => void
+  mock: (handler: (args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<any> | any) => void
   getRequests: () => {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}[]
 }
 
@@ -93,7 +93,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   mockLLM: async ({}, use) => {
     let requests: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}[] = []
     let responseText = 'Agent response from test'
-    let handler: ((args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<string> | string) | null = null
+    let handler: ((args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<any> | any) | null = null
 
     setAgentMock(async (args) => {
       requests.push(args)

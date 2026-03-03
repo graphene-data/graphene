@@ -10,6 +10,7 @@ import {PROD, TEST} from './consts.ts'
 import {getDb} from './db.ts'
 import {decryptSecret, encryptSecret} from './secrets.ts'
 import {agentSessions, repos, type SlackInstallation, slackInstallations} from '../schema.ts'
+import { type StepResult } from 'ai'
 
 const slackClientId = process.env.SLACK_CLIENT_ID || ''
 const slackClientSecret = process.env.SLACK_CLIENT_SECRET || ''
@@ -20,7 +21,7 @@ let slackMock: ((endpoint: string, body: any) => any | Promise<any>) | null = nu
 let slackStateStore: InstanceType<typeof ClearStateStore> | null = null
 let slackWebClient = new WebClient()
 
-let slackScopes = ['app_mentions:read', 'chat:write', 'channels:history', 'im:history', 'files:write', 'users:read']
+let slackScopes = ['app_mentions:read', 'chat:write', 'channels:history', 'im:history', 'files:write', 'users:read', 'reactions:write']
 
 export function mockSlackApi (handler: ((endpoint: string, body: any) => any | Promise<any>) | null) {
   slackMock = handler
@@ -108,11 +109,14 @@ export async function slackEvents (req: FastifyRequest, reply: FastifyReply) {
     .then(rows => rows[0])
   if (!install) throw new Error('Got slackEvent for unknown team')
 
-  let event = body.event as SlackEvent
-  if (event.type == 'app_mention') await handleAppMention(install, event as AppMentionEvent)
-  else console.warn('Unexpected event', event.type)
+  reply.code(200).send({ok: true}) // send response immediately so slack doesn't retry
 
-  return reply.code(200).send({ok: true})
+  let event = body.event as SlackEvent
+  if (event.type == 'app_mention') {
+    await handleAppMention(install, event as AppMentionEvent)
+  } else {
+    console.warn('Unexpected event', event.type)
+  }
 }
 
 // Resolves installation + repo for a workspace mention, then posts an agent answer.
@@ -124,11 +128,12 @@ async function handleAppMention (install: SlackInstallation, mention: AppMention
     .then(rows => rows[0])
   if (!repo) throw new Error('No repo for slackbot to use')
 
-  // load all the messages in the tread that mentions Graphene.
   let threadTs = mention.thread_ts || mention.ts
+  // await slackApi('reactions.add', {channel: mention.channel, timestamp: mention.ts, name: 'eyes'}, install)
 
   let session = await findOrCreateSlackSession({ orgId: install.orgId, repoId: repo.id, channel: mention.channel, threadTs })
 
+  // load all the messages in the tread that mentions Graphene.
   let lastSentMessgeId = session.messages.map(m => m.messageId).filter(x => !!x).at(-1)
   let response = await slackApi<ConversationsRepliesResponse>('conversations.replies', { channel: mention.channel, ts: threadTs, limit: 50 }, install)
   let threadMessages = (response.messages || [])
@@ -136,24 +141,28 @@ async function handleAppMention (install: SlackInstallation, mention: AppMention
     .filter(m => m.text && (!m.ts || m.ts < mention.ts)) // only include messages before the mention
     .map(m => `user:${m.user || m.bot_id || 'unknown'}: ${m.text}`)
 
+  // If this is a thread, add all the messages in the thread to the prompt.
   let prompt = `Latest mention: ${mention.text}`
   if (threadMessages.length) prompt += `\nThread context:\n${threadMessages.join('\n')}`
 
-  session.messages.push({
-    role: 'user',
-    content: [{type: 'text', text: prompt}],
-    type: 'user',
-    source: 'slack',
-    messageId: mention.ts,
-    text: prompt,
-    createdAt: new Date().toISOString(),
-  })
-  await db.update(agentSessions)
-    .set({messages: session.messages, updatedAt: new Date()})
-    .where(eq(agentSessions.id, session.id))
-
+  session.messages.push({role: 'user', content: [{type: 'text', text: prompt}]})
   let result = await runAgent(session)
-  await slackApi('chat.postMessage', {channel: mention.channel, text: result.text, ...(threadTs ? {thread_ts: threadTs} : {})}, install)
+
+  // look at the agent result and pull out runMd/respondToUser calls
+  let toolResults = (result.steps || []).flatMap((s: StepResult<any>) => s.toolResults || []) as {toolName?: string, output?: any}[]
+  let respondToUser = toolResults.find(tr => tr.toolName === 'respondToUser')
+  let mdId = respondToUser?.output?.mdId
+  let runMd = toolResults.find(tr => tr.toolName === 'renderMd' && tr.output?.mdId === mdId)
+  let screenshot = runMd?.output.screenshot
+  let text = respondToUser?.output?.text || result.text
+
+  if (screenshot) {
+    let file = Buffer.from(screenshot, 'base64')
+    await slackApi('files.uploadV2', {channel_id: mention.channel, thread_ts: threadTs, filename: `chart.png`, file, initial_comment: text}, install)
+  } else {
+    await slackApi('chat.postMessage', {channel: mention.channel, text, thread_ts: threadTs}, install)
+  }
+  // // await slackApi('reactions.remove', {channel: mention.channel, timestamp: mention.ts, name: 'eyes'}, install)
 }
 
 /** Find the existing Slack thread session, or create a new one. */

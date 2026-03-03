@@ -129,15 +129,18 @@ export function renderMdTool (repoId: string, baseUrl?: string) {
     },
     // Convert results to multi-modal content for the model.
     // If there are query errors, skip the screenshot and just return the errors so the agent can fix them.
-    toModelOutput ({output}: {output: {success: boolean, screenshot?: string, queryData?: Record<string, {rows: any[]}>, errors?: {message: string, id?: string}[], error?: string}}) {
+    toModelOutput ({output}: {output: {success: boolean, mdId?: string, screenshot?: string, queryData?: Record<string, {rows: any[]}>, errors?: {message: string, id?: string}[], error?: string}}) {
       if (output.success && output.errors?.length) {
         let errText = output.errors.map(e => e.id ? `${e.id}: ${e.message}` : e.message).join('\n')
-        return {type: 'content' as const, value: [{type: 'text' as const, text: `Query errors:\n${errText}`}]}
+        let mdIdText = output.mdId ? `Rendered markdown id: ${output.mdId}\n` : ''
+        return {type: 'content' as const, value: [{type: 'text' as const, text: `${mdIdText}Query errors:\n${errText}`}]}
       }
       if (output.success && output.screenshot) {
-        let content: any[] = [
+        let content: any[] = []
+        if (output.mdId) content.push({type: 'text' as const, text: `Rendered markdown id: ${output.mdId}`})
+        content.push(
           {type: 'media' as const, data: output.screenshot, mediaType: 'image/png' as const},
-        ]
+        )
         if (output.queryData && Object.keys(output.queryData).length > 0) {
           let dataSummary = Object.entries(output.queryData).map(([name, {rows}]) => {
             let header = rows.length > 0 ? Object.keys(rows[0]).join(' | ') : '(no columns)'
@@ -152,4 +155,15 @@ export function renderMdTool (repoId: string, baseUrl?: string) {
       return {type: 'json' as const, value: output}
     },
   } as any)
+}
+
+export function respondToUserTool () {
+  return tool({
+    description: 'Finalize your response to the user. Call this exactly once when you are done. Include mdId to attach the matching renderMd screenshot in Slack.',
+    inputSchema: z.object({
+      text: z.string().describe('Final user-facing response text'),
+      mdId: z.string().optional().describe('Optional markdown render id from renderMd output to attach its screenshot'),
+    }),
+    execute: ({text, mdId}) => ({text, mdId}),
+  })
 }

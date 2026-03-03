@@ -1,4 +1,5 @@
 import {LambdaClient, InvokeCommand} from '@aws-sdk/client-lambda'
+import crypto from 'node:crypto'
 import {eq} from 'drizzle-orm'
 import {getDb} from '../db.ts'
 import {repos, orgs} from '../../schema.ts'
@@ -9,6 +10,7 @@ let lambda = new LambdaClient({region: process.env.AWS_REGION || 'us-east-1'})
 
 export interface RenderResult {
   success: boolean
+  mdId?: string
   screenshot?: string
   queryData?: Record<string, {rows: any[], fields?: {name: string, type?: string}[]}>
   errors?: {message: string, id?: string}[]
@@ -17,12 +19,13 @@ export interface RenderResult {
 
 /** Render markdown to an image via the screenshot Lambda */
 export async function renderMd (markdown: string, repoId: string, baseUrlOverride?: string): Promise<RenderResult> {
+  let mdId = crypto.createHash('sha256').update(markdown).digest('hex')
   let db = getDb()
   let repo = await db.select({orgId: repos.orgId}).from(repos).where(eq(repos.id, repoId)).then(rows => rows[0])
-  if (!repo) return {success: false, error: 'Repo not found'}
+  if (!repo) return {success: false, mdId, error: 'Repo not found'}
 
   let org = await db.select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, repo.orgId)).then(rows => rows[0])
-  if (!org) return {success: false, error: 'Org not found'}
+  if (!org) return {success: false, mdId, error: 'Org not found'}
 
   let token = generateAgentToken(repo.orgId)
   let baseUrl = baseUrlOverride || `https://${org.slug}.${DOMAIN}`
@@ -38,8 +41,8 @@ export async function renderMd (markdown: string, repoId: string, baseUrlOverrid
 
   if (response.FunctionError || !payload) {
     let msg = payload.errorMessage || payload || 'Unknown'
-    return {success: false, error: `Lambda error: ${msg}`}
+    return {success: false, mdId, error: `Lambda error: ${msg}`}
   }
 
-  return payload
+  return {...payload, mdId}
 }
