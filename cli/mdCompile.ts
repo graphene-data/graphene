@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import type {Plugin} from 'unified'
 import {visit} from 'unist-util-visit'
 import sanitizeHtml from 'sanitize-html'
 
@@ -26,6 +27,27 @@ export function escapeAngles () {
       if (!node.value || typeof node.value !== 'string') return
       if (!node.value.includes('<')) return
       node.value = node.value.replace(/</g, '&lt;')
+    })
+  }
+}
+
+// remark can split one html block into adjacent html nodes when self-closing tags are involved.
+// Merge those sibling html nodes so downstream rehype/sanitize work on the full block.
+export function mergeAdjacentHtml () {
+  return function transformer (tree: any) {
+    visit(tree, (parent: any) => {
+      if (!Array.isArray(parent?.children)) return
+
+      for (let i = 0; i < parent.children.length; i++) {
+        if (parent.children[i]?.type !== 'html') continue
+
+        let j = i
+        while (j + 1 < parent.children.length && parent.children[j + 1]?.type === 'html') j++
+        if (j == i) continue
+
+        let value = parent.children.slice(i, j + 1).map((node: any) => node.value || '').join('\n')
+        parent.children.splice(i, j - i + 1, {type: 'html', value})
+      }
     })
   }
 }
@@ -93,3 +115,6 @@ export function componentNames () {
   cachedComponentNames = files.map(f => path.basename(f, '.svelte')).filter(f => !f.startsWith('_'))
   return cachedComponentNames || []
 }
+
+export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles, mergeAdjacentHtml];
+export const rehypePlugins: Array<Plugin> = [sanitizeMarkdown];
