@@ -101,12 +101,8 @@ describe('lang', () => {
 
   it('uppercases identifiers for snowflake queries', () => {
     setConfig({dialect: 'snowflake', root: ''})
-    // Column references should be uppercase (to match Snowflake's case-insensitive identifiers),
-    // but aliases are lowercase (quoted) so result sets have the expected original casing.
-    // Note: uppercasing happens in core.ts via uppercaseTable() for table names, but column
-    // names in expressions still use original case. Using case-insensitive comparison for now.
     expect('from users select id, orders.amount as amt order by amt desc')
-      .toRenderSql('SELECT USERS."id" as "id", orders."amount" as "amt" from USERS as USERS LEFT JOIN ORDERS as orders ON orders."user_id"=USERS."id" ORDER BY 2 desc NULLS LAST')
+      .toRenderSql('SELECT users."ID" as "id", orders."AMOUNT" as "amt" FROM USERS as users LEFT JOIN ORDERS as orders ON orders."USER_ID"=users."ID" ORDER BY 2 desc NULLS LAST')
   })
 
   it('applies defaultNamespace to unqualified table paths', () => {

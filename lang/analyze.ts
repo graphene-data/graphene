@@ -145,7 +145,7 @@ function expandColumns (table: Table | null, alias: string, query: Query, scope:
       let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables})
       query.fields.push({name: outName, sql: expr.sql, type: expr.type, metadata: col.metadata})
     } else {
-      query.fields.push({name: outName, sql: `${alias}.${quote(col.name)}`, type: col.type, metadata: col.metadata})
+      query.fields.push({name: outName, sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, metadata: col.metadata})
     }
   }
 }
@@ -409,7 +409,7 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
       NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field: col, table})
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${quote(col.name)}`, type: col.type}
+      if (!col.exprNode) return {sql: `${alias}.${quoteColumn(col.name)}`, type: col.type}
 
       // Computed column: analyze its expression in the matched table's scope
       if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
@@ -672,7 +672,7 @@ function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
 
   // If we're analyzing an ON clause, any path nodes must point at the source or target table
   if (scope.joinTarget) {
-    let pointsAtSource = !!scope.table && (name == scope.alias)
+    let pointsAtSource = !!scope.table && name == scope.alias
     let pointsAtTarget = name == scope.joinTarget.alias || name == scope.joinTarget.name
     if (!pointsAtSource && !pointsAtTarget) return diag(pathNodes[0], 'Joins must point at either the source or target table', null)
 
@@ -823,5 +823,11 @@ function convertDataType (dataType: string): FieldType | null {
 // Quote an identifier for the current dialect
 function quote (name: string): string {
   if (config.dialect === 'bigquery') return `\`${name}\``
+  return `"${name}"`
+}
+
+function quoteColumn (name: string): string {
+  if (config.dialect === 'bigquery') return `\`${name}\``
+  if (config.dialect === 'snowflake') return `"${name.toUpperCase()}"`
   return `"${name}"`
 }
