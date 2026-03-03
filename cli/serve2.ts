@@ -1,8 +1,7 @@
-import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql} from '../lang/core.ts'
+import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql, getFiles} from '../lang/core.ts'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import fs from 'fs-extra'
-import {glob} from 'glob'
 import crypto from 'crypto'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {type IncomingMessage, type ServerResponse} from 'http'
@@ -232,8 +231,9 @@ const updateWorkspacePlugin = {
   configureServer: (s: ViteDevServer) => {
     let refresh = async () => {
       clearWorkspace()
-      workspaceLoadPromise = loadWorkspace(config.root, false)
-      mdFiles = await glob('**/*.md', {cwd: config.root, ignore: ['node_modules/**']})
+      workspaceLoadPromise = loadWorkspace(config.root, true)
+      await workspaceLoadPromise
+      mdFiles = getFiles().filter(f => f.path.endsWith('.md')).map(f => f.path)
       mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))
       if (process.env.NODE_ENV == 'test') {
         mdFiles.push(...Object.keys(mockFileMap))
