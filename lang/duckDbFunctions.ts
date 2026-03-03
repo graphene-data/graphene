@@ -1876,7 +1876,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/timestamp#date_truncpart-timestamp`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'timestamp', type: 'date|timestamp'},
+      {name: 'timestamp', type: ['date', 'timestamp']},
     ],
     returns: 'timestamp',
     sqlTemplate: 'DATE_TRUNC(${part}, ${timestamp})',
