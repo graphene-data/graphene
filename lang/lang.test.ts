@@ -1,9 +1,12 @@
 /// <reference types="vitest/globals" />
 import {setConfig} from './config.ts'
-import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile} from './core.ts'
+import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile, loadWorkspace, getFile} from './core.ts'
 import {prepareEcommerceTables} from './testHelpers.ts'
 import {expect} from 'vitest'
 import {trimIndentation} from './util.ts'
+import {mkdtemp, mkdir, writeFile, rm} from 'node:fs/promises'
+import os from 'node:os'
+import path from 'node:path'
 
 const testTables = `
   table users (
@@ -115,6 +118,28 @@ describe('lang', () => {
     setConfig({root: '', defaultNamespace: 'analytics'})
     updateFile('table raw.users (id int)', 'namespaced.gsql')
     expect('from raw.users select id').toRenderSql('select users."id" as "id" from raw.users as users')
+  })
+
+  it('ignores workspace files matched by ignoredFiles globs', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-workspace-ignore-'))
+
+    try {
+      await writeFile(path.join(root, 'models.gsql'), 'table users (id int)')
+      await mkdir(path.join(root, 'nested'), {recursive: true})
+      await writeFile(path.join(root, 'nested', 'agents.md'), '# hidden nav page')
+      await mkdir(path.join(root, 'dist'), {recursive: true})
+      await writeFile(path.join(root, 'dist', 'ignored.gsql'), 'table hidden (id int)')
+
+      clearWorkspace()
+      setConfig({root, ignoredFiles: ['**/agents.md', 'dist/**']})
+      await loadWorkspace(root, true)
+
+      expect(getFile('models.gsql')).toBeDefined()
+      expect(getFile('nested/agents.md')).toBeUndefined()
+      expect(getFile('dist/ignored.gsql')).toBeUndefined()
+    } finally {
+      await rm(root, {recursive: true, force: true})
+    }
   })
 
   // Skipped: this test has issues with join chain resolution that are unrelated to uppercase handling
