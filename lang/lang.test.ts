@@ -250,6 +250,27 @@ describe('lang', () => {
       .toReturnRows([2, 40], [1, 30])
   })
 
+  it('preserves parentheses in expressions for correct operator precedence', async () => {
+    expect('from users select (age + age) / (age + age) as result')
+      .toRenderSql('select (users."age"+users."age")/(users."age"+users."age") as "result" from users as users')
+    await expect('from users select (1 + 2) / (1 + 2) as result limit 1')
+      .toReturnRows([1])
+  })
+
+  it('preserves parentheses in measure composition', () => {
+    updateFile(`table orders (
+      id int, user_id int, amount int, status text
+      join one users on users.id = user_id
+      join many order_items on order_items.order_id = id
+      total_revenue: sum(amount)
+      avg_order_value: sum(amount) / count()
+      completed: status = 'completed'
+      rate: (total_revenue + avg_order_value) / (total_revenue + avg_order_value)
+    )`, 'models.gsql')
+    expect('from orders select rate')
+      .toRenderSql('select (((sum(orders."amount"))+(sum(orders."amount")/count(1)))/((sum(orders."amount"))+(sum(orders."amount")/count(1)))) as "rate" from orders as orders')
+  })
+
   it('supports percentile aggregates via pXX shorthand', async () => {
     await expect('from orders select p10(amount) as min_amt, p50(amount) as median_amt, p999(amount) as max_amt')
       .toReturnRows([24, 40, 40])
