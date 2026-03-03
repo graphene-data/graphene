@@ -987,6 +987,11 @@ describe('lang', () => {
     expect('from flights select is_cancelled_or_diverted').toHaveNoErrors()
   })
 
+  it('preserves parenthetical arithmetic precedence', async () => {
+    expect('select (1 + 2) / (1 + 2)').toRenderSql('SELECT (1+2)/(1+2) as "col_0"')
+    await expect('select (1 + 2) / (1 + 2)').toReturnRows([1])
+  })
+
   it('supports parens on RHS of comparison', () => {
     updateFile(`
       table t (

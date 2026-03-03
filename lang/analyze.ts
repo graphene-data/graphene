@@ -422,8 +422,10 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
     case 'FunctionCall':
       return analyzeFunction(node, scope, analyzeExpr)
 
-    case 'Parenthetical':
-      return analyzeExpr(node.getChild('Expression')!, scope)
+    case 'Parenthetical': {
+      let inner = analyzeExpr(node.getChild('Expression')!, scope)
+      return {...inner, sql: `(${inner.sql})`}
+    }
 
     case 'Count': {
       let inner = node.getChild('Expression')
