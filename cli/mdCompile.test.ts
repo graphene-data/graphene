@@ -1,6 +1,6 @@
 /// <reference types="vitest/globals" />
 import {compile} from 'mdsvex'
-import {escapeAngles, extractQueries, sanitizeMarkdown} from './mdCompile.ts'
+import {escapeAngles, extractQueries, mergeAdjacentHtml, sanitizeMarkdown} from './mdCompile.ts'
 
 describe('markdown sanitization', () => {
   it('keeps wrapper components intact across blank lines', async () => {
@@ -13,7 +13,7 @@ describe('markdown sanitization', () => {
 `
 
     let out = await compile(src, {
-      remarkPlugins: [extractQueries, escapeAngles],
+      remarkPlugins: [extractQueries, escapeAngles, mergeAdjacentHtml],
       rehypePlugins: [sanitizeMarkdown],
     })
     if (!out) throw new Error('Expected mdsvex compile output')

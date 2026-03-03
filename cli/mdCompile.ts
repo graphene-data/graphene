@@ -30,6 +30,27 @@ export function escapeAngles () {
   }
 }
 
+// remark can split one html block into adjacent html nodes when self-closing tags are involved.
+// Merge those sibling html nodes so downstream rehype/sanitize work on the full block.
+export function mergeAdjacentHtml () {
+  return function transformer (tree: any) {
+    visit(tree, (parent: any) => {
+      if (!Array.isArray(parent?.children)) return
+
+      for (let i = 0; i < parent.children.length; i++) {
+        if (parent.children[i]?.type !== 'html') continue
+
+        let j = i
+        while (j + 1 < parent.children.length && parent.children[j + 1]?.type === 'html') j++
+        if (j == i) continue
+
+        let value = parent.children.slice(i, j + 1).map((node: any) => node.value || '').join('\n')
+        parent.children.splice(i, j - i + 1, {type: 'html', value})
+      }
+    })
+  }
+}
+
 // Restrict allowed components in markdown files to avoid xss issues.
 // This uses sanitize-html rather than rehype-sanitize because the latter had lots of issues with preserving tag casing,
 // as well as allowing all attributes on our allowlisted components.
