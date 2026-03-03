@@ -69,13 +69,8 @@ export function analyze (contents?: string, contentType?: 'gsql' | 'md'): Query[
 
 export function toSql (query: Query, params: Record<string, any> = {}): string {
   query = structuredClone(query)
-  if (config.dialect == 'snowflake') uppercaseQuery(query)
   fillInParams(query, params)
   return query.sql
-}
-
-function uppercaseQuery (query: Query) {
-  query.sql = query.sql.replace(/"([^"]+)"/g, (_, name) => `"${name.toUpperCase()}"`)
 }
 
 export function getHover (path: string, line: number, col: number): string {
