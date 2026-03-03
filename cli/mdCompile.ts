@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import type {Plugin} from 'unified'
 import {visit} from 'unist-util-visit'
 import sanitizeHtml from 'sanitize-html'
 
@@ -114,3 +115,6 @@ export function componentNames () {
   cachedComponentNames = files.map(f => path.basename(f, '.svelte')).filter(f => !f.startsWith('_'))
   return cachedComponentNames || []
 }
+
+export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles, mergeAdjacentHtml];
+export const rehypePlugins: Array<Plugin> = [sanitizeMarkdown];

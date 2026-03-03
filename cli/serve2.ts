@@ -10,7 +10,7 @@ import {mdsvex} from 'mdsvex'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import {runQuery} from './connections/index.ts'
-import {escapeAngles, extractQueries, injectComponentImports, mergeAdjacentHtml, sanitizeMarkdown} from './mdCompile.ts'
+import {injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {checkVitePlugin} from './check.ts'
 import {mockFileMap} from './mockFiles.ts'
 
@@ -53,8 +53,8 @@ async function createConfig (): Promise<InlineConfig> {
           vitePreprocess(),
           mdsvex({
             extensions: ['.md'],
-            remarkPlugins: [extractQueries, escapeAngles, mergeAdjacentHtml],
-            rehypePlugins: [sanitizeMarkdown],
+            remarkPlugins,
+            rehypePlugins,
           }) as any,
           injectComponentImports(),
         ],
