@@ -20,6 +20,7 @@ function parseArgType (typeStr: string): {type: FieldType | 'sql native', rawTyp
   let base = typeStr.replace(/[?.]/g, '')
   if (base === 'kw') return [{type: 'sql native', rawType: 'kw'}]
   if (base === 'T' || base === 'any') return [{type: 'string'}, {type: 'number'}, {type: 'boolean'}, {type: 'date'}, {type: 'timestamp'}, {type: 'json'}]
+  if (base.includes('|')) return base.split('|').map(t => ({type: t.trim() as FieldType}))
   return [{type: base as FieldType}]
 }
 

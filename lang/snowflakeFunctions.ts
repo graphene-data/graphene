@@ -2198,7 +2198,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/date_trunc`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'date_expr', type: 'timestamp'},
+      {name: 'date_expr', type: 'date|timestamp'},
     ],
     returns: 'timestamp',
     sqlTemplate: 'DATE_TRUNC(${part}, ${date_expr})',

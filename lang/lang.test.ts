@@ -684,6 +684,14 @@ describe('lang', () => {
     updateFile('table events (event_date date)', 'events.gsql')
     expect('from events select date_trunc(event_date, month)')
       .toRenderSql('select date_trunc(events.`event_date`,month) as `col_0` from `events` as events')
+
+    setConfig({root: ''}) // duckdb (default)
+    expect('from events select date_trunc(\'month\', event_date)')
+      .toRenderSql('select date_trunc(\'month\',events."event_date") as "col_0" from events as events')
+
+    setConfig({dialect: 'snowflake', root: ''})
+    expect('from events select date_trunc(\'month\', event_date)')
+      .toRenderSql(`select DATE_TRUNC('month',EVENTS."EVENT_DATE") as "COL_0" from EVENTS as EVENTS`)
   })
 
   it('supports extract expressions', () => {
