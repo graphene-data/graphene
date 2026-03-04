@@ -1629,7 +1629,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     `),
     url: `${sf}/add_months`,
     args: [
-      {name: 'date_expr', type: 'date'},
+      {name: 'date_expr', type: ['date', 'timestamp']},
       {name: 'num_months', type: 'number'},
     ],
     returns: 'date',
@@ -1659,7 +1659,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/date_part`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'date_expr', type: 'timestamp'},
+      {name: 'date_expr', type: ['date', 'timestamp']},
     ],
     returns: 'number',
   },
@@ -1674,7 +1674,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     args: [
       {name: 'part', type: 'string'},
       {name: 'value', type: 'number'},
-      {name: 'date_expr', type: 'timestamp'},
+      {name: 'date_expr', type: ['date', 'timestamp']},
     ],
     returns: 'timestamp',
   },
@@ -1688,8 +1688,8 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/datediff`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'date_expr1', type: 'timestamp'},
-      {name: 'date_expr2', type: 'timestamp'},
+      {name: 'date_expr1', type: ['date', 'timestamp']},
+      {name: 'date_expr2', type: ['date', 'timestamp']},
     ],
     returns: 'number',
   },
@@ -1701,7 +1701,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the three-letter day-of-week name from the specified date or timestamp.
     `),
     url: `${sf}/dayname`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'string',
   },
   {
@@ -1713,7 +1713,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     `),
     url: `${sf}/last_day`,
     args: [
-      {name: 'date_expr', type: 'date'},
+      {name: 'date_expr', type: ['date', 'timestamp']},
       {name: 'date_part', type: 'string?'},
     ],
     returns: 'date',
@@ -1726,7 +1726,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the three-letter month name from the specified date or timestamp.
     `),
     url: `${sf}/monthname`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'string',
   },
   {
@@ -1738,8 +1738,8 @@ export const snowflakeFunctions: FunctionDef[] = [
     `),
     url: `${sf}/months_between`,
     args: [
-      {name: 'date_expr1', type: 'date'},
-      {name: 'date_expr2', type: 'date'},
+      {name: 'date_expr1', type: ['date', 'timestamp']},
+      {name: 'date_expr2', type: ['date', 'timestamp']},
     ],
     returns: 'number',
   },
@@ -1752,7 +1752,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     `),
     url: `${sf}/next_day`,
     args: [
-      {name: 'date_expr', type: 'date'},
+      {name: 'date_expr', type: ['date', 'timestamp']},
       {name: 'dow_string', type: 'string'},
     ],
     returns: 'date',
@@ -1766,7 +1766,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     `),
     url: `${sf}/previous_day`,
     args: [
-      {name: 'date_expr', type: 'date'},
+      {name: 'date_expr', type: ['date', 'timestamp']},
       {name: 'dow_string', type: 'string'},
     ],
     returns: 'date',
@@ -1796,7 +1796,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     `),
     url: `${sf}/time_slice`,
     args: [
-      {name: 'date_or_time_expr', type: 'timestamp'},
+      {name: 'date_or_time_expr', type: ['date', 'timestamp']},
       {name: 'slice_length', type: 'number'},
       {name: 'date_or_time_part', type: 'string'},
     ],
@@ -1846,7 +1846,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the year from a date or timestamp. Equivalent to DATE_PART('year', ...).
     `),
     url: `${sf}/year`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1857,7 +1857,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the month from a date or timestamp. Equivalent to DATE_PART('month', ...).
     `),
     url: `${sf}/year`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1869,7 +1869,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the day of month from a date or timestamp. Equivalent to DATE_PART('day', ...).
     `),
     url: `${sf}/year`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1880,7 +1880,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the day of the week from a date or timestamp.
     `),
     url: `${sf}/year`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1891,7 +1891,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the day of the year from a date or timestamp.
     `),
     url: `${sf}/year`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1903,7 +1903,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the week of the year from a date or timestamp.
     `),
     url: `${sf}/year`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1914,7 +1914,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the quarter from a date or timestamp (1-4).
     `),
     url: `${sf}/year`,
-    args: [{name: 'date_expr', type: 'date'}],
+    args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1925,7 +1925,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the hour (0-23) from a time or timestamp.
     `),
     url: `${sf}/hour-minute-second`,
-    args: [{name: 'time_expr', type: 'timestamp'}],
+    args: [{name: 'time_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1936,7 +1936,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the minute (0-59) from a time or timestamp.
     `),
     url: `${sf}/hour-minute-second`,
-    args: [{name: 'time_expr', type: 'timestamp'}],
+    args: [{name: 'time_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
   {
@@ -1947,7 +1947,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       Extracts the second (0-59) from a time or timestamp.
     `),
     url: `${sf}/hour-minute-second`,
-    args: [{name: 'time_expr', type: 'timestamp'}],
+    args: [{name: 'time_expr', type: ['date', 'timestamp']}],
     returns: 'number',
   },
 

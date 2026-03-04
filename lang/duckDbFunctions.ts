@@ -1572,8 +1572,8 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_diffpart-startdate-enddate`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'startdate', type: 'date'},
-      {name: 'enddate', type: 'date'},
+      {name: 'startdate', type: ['date', 'timestamp']},
+      {name: 'enddate', type: ['date', 'timestamp']},
     ],
     returns: 'number',
   },
@@ -1587,7 +1587,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_partpart-date`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'date', type: 'date'},
+      {name: 'date', type: ['date', 'timestamp']},
     ],
     returns: 'number',
   },
@@ -1601,8 +1601,8 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_subpart-startdate-enddate`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'startdate', type: 'date'},
-      {name: 'enddate', type: 'date'},
+      {name: 'startdate', type: ['date', 'timestamp']},
+      {name: 'enddate', type: ['date', 'timestamp']},
     ],
     returns: 'number',
   },
