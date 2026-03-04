@@ -1,9 +1,9 @@
-import fs from 'fs-extra'
 import path from 'path'
 import {analyze, config, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
 import {printDiagnostics} from './printer.ts'
 import {readFileSync} from 'node:fs'
 import {mockFileMap} from './mockFiles.ts'
+import {normalizeFile} from './normalizeFile.ts'
 
 interface CheckOptions {
   fileArg?: string
@@ -12,7 +12,7 @@ interface CheckOptions {
 
 export async function check (options: CheckOptions): Promise<boolean> {
   let log = options.log || console.log
-  let targetFile = options.fileArg && normalizeGrapheneFile(options.fileArg)
+  let targetFile = options.fileArg && normalizeFile(options.fileArg)
 
   if (options.fileArg && !targetFile) {
     log(`Couldn't find ${options.fileArg}`)
@@ -37,22 +37,4 @@ export async function check (options: CheckOptions): Promise<boolean> {
 
   log('No errors found 💎')
   return true
-}
-
-function normalizeGrapheneFile (file: string): string | null {
-  let clean = file.trim()
-  if (!clean) return null
-
-  let hasExt = /\.[^.\\/]+$/.test(clean)
-  let candidates = hasExt ? [clean] : [clean + '.md', clean + '.gsql']
-  for (let candidate of candidates) {
-    if (!candidate.endsWith('.md') && !candidate.endsWith('.gsql')) continue
-    if (process.env.NODE_ENV == 'test' && mockFileMap[candidate]) return candidate
-    let absolute = [
-      path.resolve(process.cwd(), candidate),
-      path.resolve(config.root, candidate),
-    ].find(p => fs.existsSync(p))
-    if (absolute) return path.relative(config.root, absolute)
-  }
-  return null
 }

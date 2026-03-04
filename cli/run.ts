@@ -15,6 +15,7 @@ import {styleText} from 'node:util'
 import {pollFor} from '../lang/util.ts'
 import {FILE_MAP} from '../lang/analyze.ts'
 import {runQuery} from './connections/index.ts'
+import {normalizeFile} from './normalizeFile.ts'
 
 export interface RunMdFileOptions {
   mdArg: string
@@ -27,7 +28,7 @@ let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}>
 
 export async function runMdFile (options: RunMdFileOptions): Promise<boolean> {
   let log = options.log || console.log
-  let mdFile = normalizeMdFile(options.mdArg)
+  let mdFile = normalizeFile(options.mdArg)
   if (!mdFile) {
     log(`Couldn't find ${options.mdArg}`)
     return false
@@ -177,22 +178,6 @@ async function sendCheckRequest ({host, pageUrl, chart}) {
     if (err.name === 'AbortError') return {checkError: 'timeout'}
     return {checkError: 'no_server'}
   }
-}
-
-function normalizeMdFile (mdFile: string): string | null {
-  let clean = mdFile.trim()
-  if (!clean) return null
-  if (!clean.endsWith('.md')) clean = clean + '.md'
-
-  if (process.env.NODE_ENV == 'test' && mockFileMap[clean]) return clean
-
-  let absolute = [
-    path.resolve(process.cwd(), clean),
-    path.resolve(config.root, clean),
-  ].find(p => fs.existsSync(p)) || null
-
-  if (!absolute) return null
-  return path.relative(config.root, absolute)
 }
 
 export async function proxyCheckRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
