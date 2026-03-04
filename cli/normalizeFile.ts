@@ -3,7 +3,7 @@ import path from 'path'
 import {config} from '../lang/core.ts'
 import {mockFileMap} from './mockFiles.ts'
 
-export function normalizeFile (file: string): string | null {
+export function normalizeFile(file: string): string | null {
   let clean = file.trim()
   if (!clean) return null
 

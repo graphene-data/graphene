@@ -1,7 +1,7 @@
 import {mutate} from '@tidyjs/tidy'
 import {tidyWithTypes} from './tidyWithTypes.js'
 
-export function standardizeDateString (date) {
+export function standardizeDateString(date) {
   if (date && typeof date === 'string') {
     // Parses an individual string into a JS date object
 
@@ -31,7 +31,7 @@ export function standardizeDateString (date) {
   return date
 }
 
-export function convertColumnToDate (data, column) {
+export function convertColumnToDate(data, column) {
   // Replaces a date column's string values with JS date objects, using the standardizeDateString function
 
   let converted = tidyWithTypes(
@@ -48,7 +48,7 @@ export function convertColumnToDate (data, column) {
   return converted
 }
 
-export function standardizeDateColumn (data, column) {
+export function standardizeDateColumn(data, column) {
   // Replaces a date column's string values with standardized date strings, using the standardizeDateString function
   // Used in Chart.svelte, where using Date objects leads to errors
 

@@ -67,7 +67,7 @@
     refreshQuery()
   })
 
-  function refreshQuery () {
+  function refreshQuery() {
     if (!mounted) return
     let key = data && dates ? `${data}::${dates}` : ''
     if (key === queryKey) return
@@ -102,7 +102,7 @@
     }
   }
 
-  function normalizeInput (value: string | Date | null | undefined): string | null {
+  function normalizeInput(value: string | Date | null | undefined): string | null {
     if (value === null || value === undefined) return null
     if (value instanceof Date) return formatDate(value)
     let parsed = new Date(value)
@@ -110,46 +110,46 @@
     return formatDate(parsed)
   }
 
-  function formatDate (value: Date): string {
+  function formatDate(value: Date): string {
     let year = value.getFullYear()
     let month = String(value.getMonth() + 1).padStart(2, '0')
     let day = String(value.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
   }
 
-  function addDays (value: Date, days: number): Date {
+  function addDays(value: Date, days: number): Date {
     let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
     copy.setDate(copy.getDate() + days)
     return copy
   }
 
-  function addDaysString (value: string, days: number): string {
+  function addDaysString(value: string, days: number): string {
     let parsed = new Date(value)
     if (Number.isNaN(parsed.getTime())) return value
     return formatDate(addDays(parsed, days))
   }
 
-  function startOfMonth (value: Date): Date {
+  function startOfMonth(value: Date): Date {
     return new Date(value.getFullYear(), value.getMonth(), 1)
   }
 
-  function startOfYear (value: Date): Date {
+  function startOfYear(value: Date): Date {
     return new Date(value.getFullYear(), 0, 1)
   }
 
-  function addMonths (value: Date, months: number): Date {
+  function addMonths(value: Date, months: number): Date {
     let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
     copy.setMonth(copy.getMonth() + months)
     return copy
   }
 
-  function addYears (value: Date, years: number): Date {
+  function addYears(value: Date, years: number): Date {
     let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
     copy.setFullYear(copy.getFullYear() + years)
     return copy
   }
 
-  function setRange (startValue: string | null, endValue: string | null, preset: string, markTouched: boolean) {
+  function setRange(startValue: string | null, endValue: string | null, preset: string, markTouched: boolean) {
     currentStart = startValue
     currentEnd = endValue
     currentPreset = preset
@@ -157,22 +157,22 @@
     updateParams()
   }
 
-  function updateParams () {
+  function updateParams() {
     window.$GRAPHENE.updateParam(`${name}_start`, currentStart)
     window.$GRAPHENE.updateParam(`${name}_end`, currentEnd)
   }
 
-  function onStartChange (event: Event) {
+  function onStartChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
     setRange(value, currentEnd, '', true)
   }
 
-  function onEndChange (event: Event) {
+  function onEndChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
     setRange(currentStart, value, '', true)
   }
 
-  function applyPreset (preset: string, markTouched = true) {
+  function applyPreset(preset: string, markTouched = true) {
     let baseEnd = (() => {
       if (currentEnd) return new Date(currentEnd)
       if (domainEnd) return new Date(domainEnd)
@@ -186,7 +186,7 @@
     setRange(startVal, endVal, preset, markTouched)
   }
 
-  function computePresetRange (preset: string, baseEndInclusive: Date): {start: Date | null; end: Date | null} | null {
+  function computePresetRange(preset: string, baseEndInclusive: Date): {start: Date | null; end: Date | null} | null {
     let label = preset.trim()
     let today = new Date()
     let endExclusive = addDays(baseEndInclusive, 1)
@@ -254,7 +254,7 @@
     return null
   }
 
-  function onPresetChange (event: Event) {
+  function onPresetChange(event: Event) {
     let value = (event.currentTarget as HTMLSelectElement).value
     if (!value) {
       currentPreset = ''

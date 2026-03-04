@@ -94,7 +94,7 @@
       // Multi Series
       try {
         computedData = getCompletedData(computedData, x, resolvedY, resolvedSeries)
-      } catch (error) {
+      } catch(error) {
         globalThis.console?.warn('Failed to complete data', {error})
         computedData = []
       }
@@ -104,7 +104,7 @@
     if (handleMissing === 'zero') {
       try {
         computedData = getCompletedData(computedData, x, resolvedY, resolvedSeries, true)
-      } catch (error) {
+      } catch(error) {
         globalThis.console?.warn('Failed to complete data', {error})
         computedData = []
       }

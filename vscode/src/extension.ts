@@ -5,7 +5,7 @@ import {LanguageClient, type LanguageClientOptions, type ServerOptions, State, T
 let client: LanguageClient
 let showedErrorToast = false
 
-export function activate (context: vscode.ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
   let module = context.asAbsolutePath(path.join('dist', 'server.js'))
 
   let serverOptions: ServerOptions = {
@@ -35,7 +35,7 @@ export function activate (context: vscode.ExtensionContext) {
   })
 }
 
-export function deactivate () {
+export function deactivate() {
   if (client?.state === State.Running) {
     client?.stop()
   }

@@ -1,6 +1,6 @@
 type TableRows = {rows: any}
 
-export function singleDim (): TableRows {
+export function singleDim(): TableRows {
   let result: Record<string, number> = {}
   ordersByCategory.forEach((row: any) => {
     result[row.category] = (result[row.category] || 0) + row.sales_usd0k
@@ -13,7 +13,7 @@ export function singleDim (): TableRows {
   return {rows}
 }
 
-export function timeseries (): TableRows {
+export function timeseries(): TableRows {
   let result: Record<string, number> = {}
   ordersByCategory.forEach((row: any) => {
     result[row.month] = (result[row.month] || 0) + row.sales_usd0k
@@ -26,7 +26,7 @@ export function timeseries (): TableRows {
   return {rows}
 }
 
-export function timeseriesGrouped (): TableRows {
+export function timeseriesGrouped(): TableRows {
   let rows = ordersByCategory.map((row: any) => ({...row, month: new Date(row.month)})) as any
   rows._evidenceColumnTypes = [
     {name: 'month', evidenceType: 'date'},
@@ -36,7 +36,7 @@ export function timeseriesGrouped (): TableRows {
   return {rows}
 }
 
-export function timeseriesWithDateSeries (): TableRows {
+export function timeseriesWithDateSeries(): TableRows {
   let rows = [
     {quarter: '2021-01-01', category: 'Widgets', sales: 100},
     {quarter: '2021-01-01', category: 'Gadgets', sales: 200},
@@ -53,7 +53,7 @@ export function timeseriesWithDateSeries (): TableRows {
   return {rows}
 }
 
-export function yearlyCounts (): TableRows {
+export function yearlyCounts(): TableRows {
   let rows = [
     {year: 2000, flights: 90},
     {year: 2001, flights: 80},
@@ -69,7 +69,7 @@ export function yearlyCounts (): TableRows {
   return {rows}
 }
 
-export function tableDataWithDates (): TableRows {
+export function tableDataWithDates(): TableRows {
   let rows = [
     {month: '2021-03-01', sales: 50},
     {month: '2021-01-01', sales: 75},
@@ -82,7 +82,7 @@ export function tableDataWithDates (): TableRows {
   return {rows}
 }
 
-export function tableDataForPagination (count = 15): TableRows {
+export function tableDataForPagination(count = 15): TableRows {
   let rows = Array.from({length: count}, (_, index) => ({
     item: `Row ${index + 1}`,
     value: index + 1,
@@ -94,7 +94,7 @@ export function tableDataForPagination (count = 15): TableRows {
   return {rows}
 }
 
-export function groupedDataForSection (): TableRows {
+export function groupedDataForSection(): TableRows {
   let rows = [
     {time_horizon: '30 days', sku: 'SKU-A', units: 100},
     {time_horizon: '30 days', sku: 'SKU-B', units: 80},

@@ -7,7 +7,7 @@ import {tidy, summarize, min, max, median, mean, n, nDistinct, sum} from '@tidyj
  * @param {boolean} [isNumeric]
  * @returns {{ min?: number, max?: number, median?: number, mean?: number, count?: number, countDistinct?: number, sum?: number, maxDecimals: number, unitType: string }}
  */
-export function getColumnUnitSummary (data, columnName, isNumeric = true) {
+export function getColumnUnitSummary(data, columnName, isNumeric = true) {
   let seriesExtents = tidy(
     data,
     isNumeric
@@ -45,7 +45,7 @@ export function getColumnUnitSummary (data, columnName, isNumeric = true) {
  * @param {string} column
  * @returns {[number?, number?]}
  */
-export function getColumnExtentsLegacy (data, column) {
+export function getColumnExtentsLegacy(data, column) {
   let domainData = tidy(data, summarize({min: min(column), max: max(column)}))[0]
   return [domainData.min, domainData.max]
 }
@@ -55,7 +55,7 @@ export function getColumnExtentsLegacy (data, column) {
  * @param {number[]} series
  * @returns {{ maxDecimals: number, unitType: string }}
  */
-function summarizeUnits (series) {
+function summarizeUnits(series) {
   if (series === undefined || series === null || series.length === 0) {
     return {
       maxDecimals: 0,

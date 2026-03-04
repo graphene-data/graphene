@@ -58,7 +58,7 @@
 
     try {
       return chroma.scale(column.colorScale).domain(domain)
-    } catch (error) {
+    } catch(error) {
       console.warn('Unable to build color scale for column', column.id, error)
       return undefined
     }

@@ -7,12 +7,12 @@ import type {Locator, Page} from 'playwright'
 // Snapshot directory - must be set via setSnapshotDir() in a setupFiles script
 let snapshotDir: string | undefined
 
-export function setSnapshotDir (dir: string) {
+export function setSnapshotDir(dir: string) {
   snapshotDir = dir
 }
 
 const extendedExpect = baseExpect.extend({
-  async screenshot (subject: Page | Locator, snapshotName: string) {
+  async screenshot(subject: Page | Locator, snapshotName: string) {
     if (!snapshotDir) throw new Error('Snapshot directory not configured. Call setSnapshotDir() in a setup file.')
     if (process.env.GRAPHENE_DEBUG) return {message: () => '', pass: true} // don't check screenshots when debugging (browser might not be the same size)
     let page = subject.constructor.name === 'Page' ? subject : (subject as Locator).page()
@@ -21,7 +21,7 @@ const extendedExpect = baseExpect.extend({
     let testFile = path.basename(testPath)
 
     // Wait for fonts to load to ensure consistent rendering across environments
-    await (page as Page).evaluate(async () => {
+    await (page as Page).evaluate(async() => {
       await document.fonts.ready
       await (window as any).$GRAPHENE?.waitForLoad?.()
       await new Promise(r => requestAnimationFrame(r))
@@ -61,7 +61,7 @@ const extendedExpect = baseExpect.extend({
   },
 })
 
-async function writeBuffer (filePath: string, data: Buffer) {
+async function writeBuffer(filePath: string, data: Buffer) {
   await fs.mkdir(path.dirname(filePath), {recursive: true})
   await fs.writeFile(filePath, data)
 }

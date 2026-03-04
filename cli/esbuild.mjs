@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename)
 
 let makeAllPackagesExternalPlugin = {
   name: 'make-all-packages-external',
-  setup (build) {
+  setup(build) {
     let filter = /^[^./]|^\.[^./]|^\.\.[^/]/ // Must not start with "/" or "./" or "../"
     build.onResolve({filter}, args => ({path: args.path, external: true}))
   },

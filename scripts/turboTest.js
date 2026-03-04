@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const WORKSPACE_ROOT = path.resolve(__dirname, '..')
 const searchString = process.argv[2]
 
-async function loadResults () {
+async function loadResults() {
   // Check both cwd and core workspace for test results
   let locations = [
     {resultsPath: path.join(process.cwd(), 'node_modules/.testResults.json'), root: process.cwd()},
@@ -22,7 +22,7 @@ async function loadResults () {
     try {
       let raw = await readFile(resultsPath, 'utf8')
       return {results: JSON.parse(raw), root}
-    } catch (error) {
+    } catch(error) {
       if (error?.code === 'ENOENT') continue
       throw error
     }
@@ -30,7 +30,7 @@ async function loadResults () {
   return {results: null, root: WORKSPACE_ROOT}
 }
 
-function selectFailedTest (results) {
+function selectFailedTest(results) {
   for (let suite of results?.testResults || []) {
     if (suite.status !== 'failed') continue
     for (let test of suite.assertionResults || []) {
@@ -40,7 +40,7 @@ function selectFailedTest (results) {
   }
 }
 
-function searchForTests (search) {
+function searchForTests(search) {
   try {
     let output = execSync(
       `grep -rn --include="*.test.ts" -E "(it|test)\\(.*${search}" .`,
@@ -54,7 +54,7 @@ function searchForTests (search) {
       }
     }
     return matches
-  } catch (error) {
+  } catch(error) {
     if (error.status === 1) return [] // grep found nothing
     throw error
   }

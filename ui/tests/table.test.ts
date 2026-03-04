@@ -3,7 +3,7 @@ import {groupedDataForSection, tableDataForPagination, tableDataWithDates, times
 
 const tableSelector = '[data-testid="DataTable-no-id"] table'
 
-test('renders table data', async ({mount, page}) => {
+test('renders table data', async({mount, page}) => {
   await mount('components/Table.svelte', {data: timeseriesGrouped(), title: 'Sales'})
   await waitForGrapheneLoad(page)
   let table = page.locator(tableSelector)
@@ -11,7 +11,7 @@ test('renders table data', async ({mount, page}) => {
   await expect(page.locator('.table-container')).screenshot('table-renders-data')
 })
 
-test('sorts by column header', async ({mount, page}) => {
+test('sorts by column header', async({mount, page}) => {
   await mount('components/Table.svelte', {data: tableDataWithDates()})
   let table = page.locator(tableSelector)
   await table.locator('tr:has(td)').first().waitFor()
@@ -32,7 +32,7 @@ test('sorts by column header', async ({mount, page}) => {
   await expect(page.locator('.table-container')).screenshot('sort-descending')
 })
 
-test('sortable=false keeps header clicks from changing order', async ({mount, page}) => {
+test('sortable=false keeps header clicks from changing order', async({mount, page}) => {
   await mount('components/Table.svelte', {data: tableDataWithDates(), sortable: false})
   let table = page.locator(tableSelector)
   await table.locator('tr:has(td)').first().waitFor()
@@ -46,7 +46,7 @@ test('sortable=false keeps header clicks from changing order', async ({mount, pa
   await expect(page.locator('.table-container')).screenshot('sort-disabled')
 })
 
-test('paginates rows', async ({mount, page}) => {
+test('paginates rows', async({mount, page}) => {
   await mount('components/Table.svelte', {data: tableDataForPagination(12), rows: 5})
   let table = page.locator('[data-testid="DataTable-no-id"] table')
   await expect(table).toBeVisible()
@@ -71,7 +71,7 @@ test('paginates rows', async ({mount, page}) => {
   await expect(page.locator('.table-container')).screenshot('pagination-first-last')
 })
 
-test('colorscale with colorBreakpoints applies correct background colors', async ({server, page}) => {
+test('colorscale with colorBreakpoints applies correct background colors', async({server, page}) => {
   // Three columns with different value ranges against the same 0-1 breakpoints.
   // High column should be green, low column should be red — verify via screenshot.
   server.mockFile('/index.md', `
@@ -92,7 +92,7 @@ test('colorscale with colorBreakpoints applies correct background colors', async
   await expect(page.locator('.table-container')).screenshot('colorscale-breakpoints')
 })
 
-test('colorBreakpoints work when all column values are identical', async ({server, page}) => {
+test('colorBreakpoints work when all column values are identical', async({server, page}) => {
   // Edge case: all rows have the same value (columnMin === columnMax).
   // Breakpoints define the domain, so val=1.0 should map to green end of 0/0.5/1 scale.
   server.mockFile('/index.md', `
@@ -111,7 +111,7 @@ test('colorBreakpoints work when all column values are identical', async ({serve
   await expect(page.locator('.table-container')).screenshot('colorscale-breakpoints-uniform')
 })
 
-test('groupType=section renders correct rowSpan for first row of each group', async ({mount, page}) => {
+test('groupType=section renders correct rowSpan for first row of each group', async({mount, page}) => {
   await mount('components/Table.svelte', {data: groupedDataForSection(), groupBy: 'time_horizon', groupType: 'section'})
   await waitForGrapheneLoad(page)
   let table = page.locator(tableSelector)
@@ -128,7 +128,7 @@ test('groupType=section renders correct rowSpan for first row of each group', as
   await expect(page.locator('.table-container')).screenshot('group-section-rowspan')
 })
 
-test('row numbers stay stable across sort and pagination states', async ({mount, page}) => {
+test('row numbers stay stable across sort and pagination states', async({mount, page}) => {
   await mount('components/Table.svelte', {
     data: tableDataForPagination(12),
     rows: 5,
@@ -153,7 +153,7 @@ test('row numbers stay stable across sort and pagination states', async ({mount,
   await expect(page.locator('.table-container')).screenshot('row-numbers-sort-asc-page-2')
 })
 
-test('accordion grouping with subtotals renders and collapses predictably', async ({mount, page}) => {
+test('accordion grouping with subtotals renders and collapses predictably', async({mount, page}) => {
   await mount('components/Table.svelte', {
     data: groupedDataForSection(),
     groupBy: 'time_horizon',
@@ -193,7 +193,7 @@ test('accordion grouping with subtotals renders and collapses predictably', asyn
   await expect(page.locator('.table-container')).screenshot('group-accordion-subtotals-collapsed')
 })
 
-test('table attributes render grouped headers, wrapped titles, and row styling options', async ({server, page}) => {
+test('table attributes render grouped headers, wrapped titles, and row styling options', async({server, page}) => {
   server.mockFile('/index.md', `
     \`\`\`sql table_style_data
     from flights
@@ -234,7 +234,7 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
   await expect(page.locator('.table-container')).screenshot('attribute-groups-and-styling')
 })
 
-test('section groups respect groupNamePosition and subtotal styles', async ({mount, page}) => {
+test('section groups respect groupNamePosition and subtotal styles', async({mount, page}) => {
   await mount('components/Table.svelte', {
     data: groupedDataForSection(),
     groupBy: 'time_horizon',
@@ -252,7 +252,7 @@ test('section groups respect groupNamePosition and subtotal styles', async ({mou
   await expect(page.locator('.table-container')).screenshot('section-group-position-top')
 })
 
-test('total row renders for ungrouped tables', async ({mount, page}) => {
+test('total row renders for ungrouped tables', async({mount, page}) => {
   await mount('components/Table.svelte', {
     data: tableDataForPagination(4),
     rowNumbers: true,
@@ -267,7 +267,7 @@ test('total row renders for ungrouped tables', async ({mount, page}) => {
   await expect(page.locator('.table-container')).screenshot('total-row-basic')
 })
 
-test('row-level link behavior opens external destinations and hides link column', async ({mount, page}) => {
+test('row-level link behavior opens external destinations and hides link column', async({mount, page}) => {
   let rows = [
     {name: 'Alpha', value: 12, url: 'https://example.com/alpha'},
     {name: 'Beta', value: 8, url: null},
@@ -299,7 +299,7 @@ test('row-level link behavior opens external destinations and hides link column'
   await popup.close()
 })
 
-test('colorscale and link content columns render together', async ({server, page}) => {
+test('colorscale and link content columns render together', async({server, page}) => {
   server.mockFile('/index.md', `
     \`\`\`sql style_table
     from flights select carrier, count(*) / 30000.0 as retention, 'https://example.com' as details_url group by carrier order by carrier limit 5
@@ -325,7 +325,7 @@ test('colorscale and link content columns render together', async ({server, page
   await popup.close()
 })
 
-test('image and link content columns honor sizing, labels, and tab target attributes', async ({server, page}) => {
+test('image and link content columns honor sizing, labels, and tab target attributes', async({server, page}) => {
   server.mockFile('/index.md', `
     \`\`\`sql media_table
     from flights

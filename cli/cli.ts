@@ -30,7 +30,7 @@ loadConfig(process.cwd(), envFiles => {
 program.command('compile')
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
-  .action(async (input: string | undefined) => {
+  .action(async(input: string | undefined) => {
     await loadWorkspace(process.cwd(), false)
     let sql = await readInput(input)
     let queries = analyze(sql)
@@ -43,7 +43,7 @@ program.command('run')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitle>', 'Title of a specific chart to capture')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
-  .action(async (input: string | undefined, options: {chart?: string, query?: string}) => {
+  .action(async(input: string | undefined, options: {chart?: string, query?: string}) => {
     if (options.chart && options.query) {
       console.error('Cannot use --chart and --query together')
       process.exit(1)
@@ -79,7 +79,7 @@ program.command('run')
 program.command('schema')
   .description('Inspect database tables or describe a table')
   .argument('[schema | table]', 'Optional schema or table name to describe')
-  .action(async (tableArg: string) => {
+  .action(async(tableArg: string) => {
     let connection = await getConnection()
     let datasets = await connection.listDatasets()
 
@@ -119,7 +119,7 @@ program.command('schema')
 program.command('serve')
   .description('Run the local server')
   .option('--bg', 'Run the server in the background')
-  .action(async (options: {bg?: boolean}) => {
+  .action(async(options: {bg?: boolean}) => {
     await stopGrapheneIfRunning()
     if (options.bg) {
       await runServeInBackground()
@@ -132,19 +132,19 @@ program.command('serve')
 
 program.command('stop')
   .description('Stop the local server')
-  .action(async () => { await stopGrapheneIfRunning() })
+  .action(async() => { await stopGrapheneIfRunning() })
 
 program.command('check')
   .description('Check the project for diagnostics')
   .argument('[file]', 'Optional markdown or gsql file to check')
-  .action(async (fileArg: string | undefined) => {
+  .action(async(fileArg: string | undefined) => {
     let res = await check({fileArg})
     process.exit(res ? 0 : 1) // import to call `exit`, bc if we started the server in the background, just returning won't actually exit the process.
   })
 
 program.command('login')
   .description('Log in to Graphene Cloud')
-  .action(async () => {
+  .action(async() => {
     await loginPkce()
     console.log('Successfully logged in')
     process.exit(0)
@@ -152,7 +152,7 @@ program.command('login')
 
 program.parse(process.argv)
 
-async function readInput (arg): Promise<string> {
+async function readInput(arg): Promise<string> {
   if (!arg || arg === '-') {
     return await new Promise<string>((resolve) => {
       let data = ''
@@ -171,13 +171,13 @@ async function readInput (arg): Promise<string> {
   return arg
 }
 
-function getExistingPath (arg: string | undefined): string | null {
+function getExistingPath(arg: string | undefined): string | null {
   if (!arg || arg === '-') return null
   let absolutePath = path.resolve(arg)
   return fs.existsSync(absolutePath) ? absolutePath : null
 }
 
-function validQuery (queries: Query[]): boolean {
+function validQuery(queries: Query[]): boolean {
   if (getDiagnostics().length) {
     printDiagnostics(getDiagnostics())
     process.exit(1)

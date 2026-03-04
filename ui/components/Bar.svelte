@@ -130,7 +130,7 @@
         }
 
         let sortOrder = stackedData.map((d: any) => d[x])
-        computedData = [...computedData].sort(function (a: any, b: any) {
+        computedData = [...computedData].sort(function(a: any, b: any) {
           return sortOrder.indexOf(a[x]) - sortOrder.indexOf(b[x])
         })
       }
@@ -188,7 +188,7 @@
       stack: resolvedStackName,
       label: {
         show: labelsBool && seriesLabelsBool,
-        formatter: function (params: any) {
+        formatter: function(params: any) {
           return params.value[swapXY ? 0 : 1] === 0
             ? ''
             : formatValue(
@@ -274,7 +274,7 @@
           label: {
             show: true,
             position: swapXY ? 'right' : 'top',
-            formatter: function (params: any) {
+            formatter: function(params: any) {
               let sum = 0
               seriesConfig.forEach((s: any) => {
                 sum += s.data[params.dataIndex][swapXY ? 0 : 1]

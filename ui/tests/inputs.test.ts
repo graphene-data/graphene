@@ -1,10 +1,10 @@
 import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 
-test.beforeEach(async ({page}) => {
+test.beforeEach(async({page}) => {
   await page.setViewportSize({width: 900, height: 620})
 })
 
-async function loadDropdownPage (server: {mockFile: (path: string, content: string) => void, url: () => string}, page: any, componentMarkup: string) {
+async function loadDropdownPage(server: {mockFile: (path: string, content: string) => void, url: () => string}, page: any, componentMarkup: string) {
   server.mockFile('/index.md', `
     # Input Playground
 
@@ -18,7 +18,7 @@ async function loadDropdownPage (server: {mockFile: (path: string, content: stri
   await waitForGrapheneLoad(page)
 }
 
-async function lockOpenDropdownWidth (page: any, width = 220) {
+async function lockOpenDropdownWidth(page: any, width = 220) {
   await page.evaluate((lockedWidth) => {
     let menu = document.querySelector('.dropdown-menu[role="listbox"]') as HTMLElement | null
     if (!menu) return
@@ -28,7 +28,7 @@ async function lockOpenDropdownWidth (page: any, width = 220) {
   }, width)
 }
 
-async function startParamTracking (page: any) {
+async function startParamTracking(page: any) {
   await page.evaluate(() => {
     let w = window as any
     w.__paramUpdates = []
@@ -40,7 +40,7 @@ async function startParamTracking (page: any) {
   })
 }
 
-function lastParamUpdate (page: any, name?: string): Promise<{name: string, value: unknown} | null> {
+function lastParamUpdate(page: any, name?: string): Promise<{name: string, value: unknown} | null> {
   return page.evaluate((paramName) => {
     let updates = (window as any).__paramUpdates as Array<{name: string, value: unknown}> | undefined
     if (paramName) updates = updates?.filter((update) => update.name === paramName)
@@ -49,11 +49,11 @@ function lastParamUpdate (page: any, name?: string): Promise<{name: string, valu
   }, name)
 }
 
-function allParamUpdates (page: any): Promise<Array<{name: string, value: unknown}>> {
+function allParamUpdates(page: any): Promise<Array<{name: string, value: unknown}>> {
   return page.evaluate(() => (window as any).__paramUpdates ?? [])
 }
 
-test('dropdown single-select supports open, select, and close behaviors', async ({server, page}) => {
+test('dropdown single-select supports open, select, and close behaviors', async({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier" data="dropdown_options" value="code" label="label" title="Carrier" />')
   let trigger = page.getByRole('combobox', {name: 'Carrier'})
   await expect(trigger).toBeVisible()
@@ -78,7 +78,7 @@ test('dropdown single-select supports open, select, and close behaviors', async 
   await expect(menu).toBeHidden()
 })
 
-test('dropdown multi-select supports select-all and clear', async ({server, page}) => {
+test('dropdown multi-select supports select-all and clear', async({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier_multi" data="dropdown_options" value="code" label="label" title="Carriers" multiple=true placeholder="Pick carriers" />')
   let trigger = page.getByRole('combobox', {name: 'Carriers'})
 
@@ -103,7 +103,7 @@ test('dropdown multi-select supports select-all and clear', async ({server, page
   expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: null})
 })
 
-test('dropdown search filters options and shows empty state', async ({server, page}) => {
+test('dropdown search filters options and shows empty state', async({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier_search" data="dropdown_options" value="code" label="label" title="Carrier Search" />')
   let trigger = page.getByRole('combobox', {name: 'Carrier Search'})
 
@@ -111,7 +111,7 @@ test('dropdown search filters options and shows empty state', async ({server, pa
   let menu = page.getByRole('listbox')
   let search = menu.getByPlaceholder('Carrier Search')
   await search.fill('AA')
-  await expect.poll(async () => await menu.locator('[role="option"]').count()).toBeGreaterThan(0)
+  await expect.poll(async() => await menu.locator('[role="option"]').count()).toBeGreaterThan(0)
   let filteredOptions = await menu.locator('[role="option"]').allTextContents()
   expect(filteredOptions.every(text => text.includes('AA'))).toBe(true)
   await lockOpenDropdownWidth(page)
@@ -124,7 +124,7 @@ test('dropdown search filters options and shows empty state', async ({server, pa
   await expect(menu).screenshot('dropdown-search-empty')
 })
 
-test('dropdown keyboard navigation selects active option', async ({server, page}) => {
+test('dropdown keyboard navigation selects active option', async({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier_keys" data="dropdown_options" value="code" label="label" title="Keyboard Carrier" />')
   let trigger = page.getByRole('combobox', {name: 'Keyboard Carrier'})
 
@@ -145,7 +145,7 @@ test('dropdown keyboard navigation selects active option', async ({server, page}
   expect(update?.name).toBe('carrier_keys')
 })
 
-test('dropdown defaultValue and disabled state render correctly', async ({server, page}) => {
+test('dropdown defaultValue and disabled state render correctly', async({server, page}) => {
   await loadDropdownPage(server, page, `
     <Dropdown name="carrier_default" data="dropdown_options" value="code" label="label" title="Default Carrier" defaultValue="AA" />
     <Dropdown name="carrier_disabled" data="dropdown_options" value="code" label="label" title="Disabled Carrier" disabled=true defaultValue="AS" />
@@ -165,7 +165,7 @@ test('dropdown defaultValue and disabled state render correctly', async ({server
   await expect(disabledTrigger).screenshot('dropdown-disabled')
 })
 
-test('dropdown boolean-string attributes handle defaults and footer actions', async ({server, page}) => {
+test('dropdown boolean-string attributes handle defaults and footer actions', async({server, page}) => {
   await loadDropdownPage(server, page, `
     <Dropdown
       name="carrier_no_default"
@@ -211,7 +211,7 @@ test('dropdown boolean-string attributes handle defaults and footer actions', as
   await expect(page.getByRole('listbox')).screenshot('dropdown-select-all-default-disable-button')
 })
 
-test('dropdown supports manual options and labelField mapping', async ({server, page}) => {
+test('dropdown supports manual options and labelField mapping', async({server, page}) => {
   server.mockFile('/index.md', `
     # Input Playground
 
@@ -239,7 +239,7 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   await manualTrigger.click()
   await page.getByRole('option', {name: 'United'}).click()
   await expect(manualTrigger).toContainText('United')
-  await expect.poll(async () => await lastParamUpdate(page, 'manual_carrier')).toEqual({name: 'manual_carrier', value: 'UA'})
+  await expect.poll(async() => await lastParamUpdate(page, 'manual_carrier')).toEqual({name: 'manual_carrier', value: 'UA'})
 
   let mappedTrigger = page.getByRole('combobox', {name: 'Label Field Carrier'})
   await mappedTrigger.click()
@@ -248,7 +248,7 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   await expect(page.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
 })
 
-test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, page}) => {
+test('text input and date range render label, description, placeholder, and print visibility attrs', async({mount, page}) => {
   await mount('components/TextInput.svelte', {
     name: 'search_label',
     label: 'Search Label',
@@ -281,7 +281,7 @@ test('text input and date range render label, description, placeholder, and prin
   await expect(page.locator('#component-test')).screenshot('date-range-label-description-default-preset')
 })
 
-test('text input updates params and date range applies preset', async ({mount, page}) => {
+test('text input updates params and date range applies preset', async({mount, page}) => {
   await mount('components/TextInput.svelte', {name: 'search_text', title: 'Search Text', defaultValue: 'alpha', placeholder: 'Type here'})
   let textInput = page.getByLabel('Search Text')
   await expect(textInput).toHaveValue('alpha')

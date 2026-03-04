@@ -9,16 +9,16 @@ let expected: Matcher[] = []
 let unexpected: string[] = []
 
 // Registers an expected console error for the current test.
-export function expectConsoleError (matcher: Matcher) {
+export function expectConsoleError(matcher: Matcher) {
   expected.push(matcher)
 }
 
-export function resetExpectedLogs () {
+export function resetExpectedLogs() {
   expected = []
   unexpected = []
 }
 
-function isExpected (log: string): boolean {
+function isExpected(log: string): boolean {
   for (let ex of expected) {
     if (typeof ex == 'string' && log.includes(ex)) return true
     if (ex instanceof RegExp && log.match(ex)) return true
@@ -27,14 +27,14 @@ function isExpected (log: string): boolean {
 }
 
 // Handles Vitest console output and fails fast on unexpected lines.
-export function onServerLog (log: string) {
+export function onServerLog(log: string) {
   if (isExpected(log)) return false
   console.log(log)
   unexpected.push(log)
 }
 
 // Starts tracking warning/error browser console output for a page.
-export function trackBrowserConsole (page: Page) {
+export function trackBrowserConsole(page: Page) {
   page.on('console', msg => {
     if (msg.type() !== 'warning' && msg.type() !== 'error') return
     let text = msg.text()
@@ -51,6 +51,6 @@ export function trackBrowserConsole (page: Page) {
   })
 }
 
-export function assertOnlyExpectedLogs () {
+export function assertOnlyExpectedLogs() {
   expect(unexpected).toEqual([])
 }

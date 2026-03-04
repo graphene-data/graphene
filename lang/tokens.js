@@ -120,7 +120,7 @@ const keywords = {
   unbounded: unbounded,
 }
 
-export function specializeIdentifier (value) {
+export function specializeIdentifier(value) {
   let lower = value.toLowerCase()
   return keywords[lower] || -1
 }

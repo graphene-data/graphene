@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename)
 
 const aliasPlugin = {
   name: 'alias-lang-analyze',
-  setup (b) {
+  setup(b) {
     b.onResolve({filter: /^@graphene\/lang$/}, _args => {
       return {path: path.resolve(__dirname, '../lang/core.ts')}
     })

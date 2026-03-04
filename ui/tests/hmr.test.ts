@@ -1,7 +1,7 @@
 import {test, expect} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
-test('valid → invalid → valid via HMR', async ({server, page}) => {
+test('valid → invalid → valid via HMR', async({server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
@@ -20,7 +20,7 @@ test('valid → invalid → valid via HMR', async ({server, page}) => {
   await expect(page.getByRole('heading', {name: 'Fixed Page'})).toBeVisible({timeout: 5000})
 })
 
-test('load broken page, fix via HMR', async ({server, page}) => {
+test('load broken page, fix via HMR', async({server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
@@ -35,7 +35,7 @@ test('load broken page, fix via HMR', async ({server, page}) => {
   await expect(page.getByRole('heading', {name: 'Now Working'})).toBeVisible({timeout: 5000})
 })
 
-test('editing unrelated md does not reload current page', async ({server, page}) => {
+test('editing unrelated md does not reload current page', async({server, page}) => {
   server.mockFile('/index.md', '# Main Page')
   server.mockFile('/other.md', '# Other Page')
 
@@ -55,7 +55,7 @@ test('editing unrelated md does not reload current page', async ({server, page})
   await expect(page.getByRole('heading', {name: 'Main Page'})).toBeVisible()
 })
 
-test('editing unrelated md does not reload broken page', async ({server, page}) => {
+test('editing unrelated md does not reload broken page', async({server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')

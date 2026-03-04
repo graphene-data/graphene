@@ -174,7 +174,7 @@
           resultColumnSummary = [...resultColumnSummary.slice(0, linkIndex), ...resultColumnSummary.slice(linkIndex + 1)]
         }
       }
-    } catch (thrown) {
+    } catch(thrown) {
       let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
       logError(thrown, {queryId: 'DataTable'})
       resultError = message

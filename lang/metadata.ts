@@ -8,7 +8,7 @@ import {getFile} from './util.ts'
 // - Description lines use plain `-- text` and are concatenated (space-separated).
 // - Key-value metadata lines use `--# key=value` and populate metadata[key] = value.
 // - If the node is not the first token on its line, ignore leading comments (prevents one comment from applying to multiple fields on the same line).
-export function extractLeadingMetadata (node: SyntaxNode): Record<string, string> {
+export function extractLeadingMetadata(node: SyntaxNode): Record<string, string> {
   // 1) Locate the raw file text and find the end of the line immediately above the node
   let src = getFile(node).contents
   if (!src) return {}
