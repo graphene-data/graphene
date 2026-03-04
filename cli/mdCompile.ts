@@ -116,5 +116,5 @@ export function componentNames () {
   return cachedComponentNames || []
 }
 
-export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles, mergeAdjacentHtml];
-export const rehypePlugins: Array<Plugin> = [sanitizeMarkdown];
+export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles, mergeAdjacentHtml]
+export const rehypePlugins: Array<Plugin> = [sanitizeMarkdown]

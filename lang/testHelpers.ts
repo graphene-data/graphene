@@ -88,7 +88,7 @@ if (process.env.GRAPHENE_DEBUG) {
 }
 
 vitestExpect.extend({
-  toRenderSql (received: string, expectedSql: string, opts: { preserveCase?: boolean } = {}) {
+  toRenderSql (received: string, expectedSql: string, opts: {preserveCase?: boolean} = {}) {
     let content = trimIndentation(received)
     let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
     let errors = getDiagnostics().filter(d => d.severity === 'error')
