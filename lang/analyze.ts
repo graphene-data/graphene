@@ -818,7 +818,7 @@ function convertDataType (dataType: string): FieldType | null {
       return 'boolean'
     case 'DATE':
       return 'date'
-    case 'DATETIME': case 'TIME': case 'TIMESTAMP': case 'TIMESTAMP_NTZ':
+    case 'DATETIME': case 'TIME': case 'TIMESTAMP': case 'TIMESTAMP_NTZ': case 'TIMESTAMP_TZ': case 'TIMESTAMP_LTZ':
       return 'timestamp'
     default:
       return null
