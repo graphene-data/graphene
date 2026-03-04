@@ -5,6 +5,7 @@ import pluginJs from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import svelte from 'eslint-plugin-svelte'
 import pluginPreferLet from 'eslint-plugin-prefer-let'
+import stylistic from '@stylistic/eslint-plugin'
 import * as zxGlobals from 'zx'
 
 /** @type {import('eslint').Linter.Config[]} */
@@ -13,6 +14,7 @@ export default [
   ...tseslint.configs.recommended,
   ...svelte.configs.recommended,
   includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url))),
+  {ignores: ['lang/parser.js']},
   {
     files: ['scripts/**/*.js'],
     languageOptions: {
@@ -45,6 +47,7 @@ export default [
     plugins: {svelte},
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', varsIgnorePattern: '^_'}],
       'svelte/no-immutable-reactive-statements': 'off',
       'svelte/no-reactive-reassign': 'off',
       'svelte/require-event-dispatcher-types': 'off',
@@ -54,36 +57,37 @@ export default [
   {
     files: ['**/*.{js,mjs,cjs,ts,svelte}'],
     languageOptions: {globals: globals.browser},
-    plugins: {'prefer-let': pluginPreferLet},
+    plugins: {'prefer-let': pluginPreferLet, '@stylistic': stylistic},
     rules: {
-      'indent': ['error', 2, {SwitchCase: 1}],
-      'quotes': ['error', 'single', {avoidEscape: true}],
-      'semi': ['error', 'never'],
+      '@stylistic/indent': ['error', 2, {SwitchCase: 1}],
+      '@stylistic/quotes': ['error', 'single', {avoidEscape: true}],
+      '@stylistic/semi': ['error', 'never'],
       // 'curly': ['error', 'multi', 'consistent'],
       'prefer-promise-reject-errors': ['error'],
       'require-await': ['error'],
-      'array-bracket-spacing': ['error', 'never'],
-      'block-spacing': ['error', 'always'],
+      '@stylistic/array-bracket-spacing': ['error', 'never'],
+      '@stylistic/block-spacing': ['error', 'always'],
       // 'brace-style': ['error', '1tbs', {allowSingleLine: true}], // mostly good, but I sometimes want newlines/comments above else-if statements
-      'comma-dangle': ['error', 'always-multiline'],
-      'comma-spacing': ['error'],
-      'eol-last': ['error', 'always'],
-      'func-call-spacing': ['error', 'never'],
+      '@stylistic/comma-dangle': ['error', 'always-multiline'],
+      '@stylistic/comma-spacing': ['error'],
+      '@stylistic/eol-last': ['error', 'always'],
+      '@stylistic/function-call-spacing': ['error', 'never'],
       // 'function-call-argument-newline': ['error', 'never'],
       // 'function-paren-newline': ['error', 'never'],
-      'keyword-spacing': ['error'],
+      '@stylistic/keyword-spacing': ['error'],
       'max-depth': ['error', 4],
       'no-nested-ternary': ['error'],
-      'no-tabs': ['error'],
-      'no-trailing-spaces': ['error'],
-      'no-whitespace-before-property': ['error'],
+      'no-useless-assignment': 'off',
+      '@stylistic/no-tabs': ['error'],
+      '@stylistic/no-trailing-spaces': ['error'],
+      '@stylistic/no-whitespace-before-property': ['error'],
       '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', varsIgnorePattern: '^_'}],
       '@typescript-eslint/consistent-type-imports': ['error', {prefer: 'type-imports', fixStyle: 'inline-type-imports'}],
-      'padded-blocks': ['error', 'never'],
-      'space-before-function-paren': ['error', 'always'],
-      'space-in-parens': ['error', 'never'],
-      'object-curly-spacing': ['error', 'never'],
-      'space-infix-ops': ['error'],
+      '@stylistic/padded-blocks': ['error', 'never'],
+      '@stylistic/space-before-function-paren': ['error', 'always'],
+      '@stylistic/space-in-parens': ['error', 'never'],
+      '@stylistic/object-curly-spacing': ['error', 'never'],
+      '@stylistic/space-infix-ops': ['error'],
       'no-duplicate-imports': ['error'],
       'no-var': ['error'],
       'prefer-const': 'off',

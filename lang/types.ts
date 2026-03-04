@@ -33,7 +33,7 @@ export interface Scope {
   table?: Table
   alias: string  // current alias for this table context (e.g., "users", "orders", "users_orders")
   otherTables?: Table[]  // CTEs and other tables visible for name resolution
-  joinTarget?: { name: string, table: Table, alias: string } // When analyzing a join's ON clause, tells us about the target table/alias.
+  joinTarget?: {name: string, table: Table, alias: string} // When analyzing a join's ON clause, tells us about the target table/alias.
 }
 
 export type JoinType = 'left' | 'right' | 'full' | 'inner' | 'cross'
@@ -83,10 +83,10 @@ interface TableBase {
   metadata?: Record<string, string>
   syntaxNode?: SyntaxNode
 }
-export interface PhysicalTable extends TableBase { type: 'table' }
-export interface ViewTable extends TableBase { type: 'view', query: Query }
-export interface CteTable extends TableBase { type: 'cte', query: Query }
-export interface SubqueryTable extends TableBase { type: 'subquery', query: Query }
+export interface PhysicalTable extends TableBase {type: 'table'}
+export interface ViewTable extends TableBase {type: 'view', query: Query}
+export interface CteTable extends TableBase {type: 'cte', query: Query}
+export interface SubqueryTable extends TableBase {type: 'subquery', query: Query}
 export type Table = PhysicalTable | ViewTable | CteTable | SubqueryTable
 
 export interface Position {

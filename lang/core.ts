@@ -19,7 +19,7 @@ export function getFiles () { return Object.values(FILE_MAP) }
 export function getDiagnostics () { return diagnostics }
 
 // Loads and parses all gsql files within a directory
-export async function loadWorkspace(dir: string, includeMd: boolean) {
+export async function loadWorkspace (dir: string, includeMd: boolean) {
   let ignore = ['node_modules/**', '**/.*/**', ...config.ignoredFiles]
   let files = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore, follow: false})
   for await (let file of files) {

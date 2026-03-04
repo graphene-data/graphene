@@ -53,7 +53,7 @@ program.command('run')
     if (inputPath && inputPath.endsWith('.md')) {
       let res = options.query
         ? await runNamedQueryFromMd(inputPath, options.query)
-        : await runMdFile({ mdArg: inputPath, chart: options.chart })
+        : await runMdFile({mdArg: inputPath, chart: options.chart})
       process.exit(res ? 0 : 1)
     }
 
