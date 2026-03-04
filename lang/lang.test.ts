@@ -253,6 +253,17 @@ describe('lang', () => {
       .toReturnRows([1])
   })
 
+  it('supports || string concatenation', async () => {
+    expect("from users select name || ' suffix' as result")
+      .toRenderSql(`select users."name"||' suffix' as "result" from users as users`)
+    await expect("from users select name || '!' as result limit 1")
+      .toReturnRows(['Alice!'])
+  })
+
+  it('reports type errors for || with non-string operands', () => {
+    expect('from users select age || name as result').toHaveDiagnostic('Expected string, got number')
+  })
+
   it('preserves parentheses in measure composition', () => {
     updateFile(`table orders (
       id int, user_id int, amount int, status text
