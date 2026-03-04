@@ -2,14 +2,15 @@
 
 import {Command} from 'commander'
 import {printDiagnostics, printTable} from './printer.ts'
-import {analyze, getDiagnostics, loadWorkspace, toSql, type Query, updateFile} from '../lang/core.ts'
+import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import fs from 'fs-extra'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import dotenv from 'dotenv'
 import {config, loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
-import {check, runMdFile} from './check.ts'
+import {check} from './check.ts'
+import {runMdFile, runNamedQueryFromMd} from './run.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {loginPkce} from './auth.ts'
 
@@ -174,37 +175,6 @@ function getExistingPath (arg: string | undefined): string | null {
   if (!arg || arg === '-') return null
   let absolutePath = path.resolve(arg)
   return fs.existsSync(absolutePath) ? absolutePath : null
-}
-
-async function runNamedQueryFromMd (mdAbsolutePath: string, queryName: string): Promise<boolean> {
-  await loadWorkspace(process.cwd(), false)
-  let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
-  let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
-
-  updateFile(mdContents, mdRelativePath)
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
-    return false
-  }
-
-  let runQueryFence = [
-    mdContents,
-    '',
-    '```sql',
-    `from ${queryName} select *`,
-    '```',
-  ].join('\n')
-  let queries = analyze(runQueryFence, 'md')
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
-    return false
-  }
-
-  let sql = toSql(queries[queries.length - 1])
-  let res = await runQuery(sql)
-  printTable(res.rows)
-  return true
 }
 
 function validQuery (queries: Query[]): boolean {

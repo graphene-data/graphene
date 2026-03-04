@@ -1,6 +1,7 @@
 import {test, expect} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
-import {check, runMdFile} from '../../cli/check.ts'
+import {check} from '../../cli/check.ts'
+import {runMdFile} from '../../cli/run.ts'
 import {updateFile} from '../../lang/core.ts'
 import stripAnsi from 'strip-ansi'
 import {trimIndentation} from '../../lang/util.ts'

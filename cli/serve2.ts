@@ -10,7 +10,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {runQuery} from './connections/index.ts'
 import {injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
-import {checkVitePlugin} from './check.ts'
+import {checkVitePlugin} from './run.ts'
 import {mockFileMap} from './mockFiles.ts'
 
 // Collect Svelte compiler warnings for test assertions
