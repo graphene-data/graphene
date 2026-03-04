@@ -97,11 +97,11 @@ export const agentSessions = pgTable('agent_sessions', {
   slackThreadIdx: uniqueIndex('agent_sessions_slack_thread_idx').on(table.orgId, table.slackChannel, table.slackThreadTs),
 }))
 
-export type Org = typeof orgs.$inferSelect;
-export type User = typeof users.$inferSelect;
-export type Connection = typeof connections.$inferSelect;
-export type VcsInstallation = typeof vcsInstallations.$inferSelect;
-export type SlackInstallation = typeof slackInstallations.$inferSelect;
-export type Repo = typeof repos.$inferSelect;
-export type File = typeof files.$inferSelect;
-export type AgentSession = typeof agentSessions.$inferSelect;
+export type Org = typeof orgs.$inferSelect
+export type User = typeof users.$inferSelect
+export type Connection = typeof connections.$inferSelect
+export type VcsInstallation = typeof vcsInstallations.$inferSelect
+export type SlackInstallation = typeof slackInstallations.$inferSelect
+export type Repo = typeof repos.$inferSelect
+export type File = typeof files.$inferSelect
+export type AgentSession = typeof agentSessions.$inferSelect

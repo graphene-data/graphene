@@ -56,7 +56,6 @@ export async function agentTest (req: FastifyRequest, reply: FastifyReply) {
     })
 
     await runAgent(session, (step) => {
-
       if (step.text) {
         reply.raw.write(`<div class="thinking">${escapeHtml(step.text)}</div>\n`)
       }
@@ -111,7 +110,6 @@ ${resultHtml}
 </details>\n`)
         }
       }
-
     })
 
     reply.raw.write('<p><strong>Done</strong></p>\n')

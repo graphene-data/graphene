@@ -131,11 +131,11 @@ async function handleAppMention (install: SlackInstallation, mention: AppMention
   let threadTs = mention.thread_ts || mention.ts
   // await slackApi('reactions.add', {channel: mention.channel, timestamp: mention.ts, name: 'eyes'}, install)
 
-  let session = await findOrCreateSlackSession({ orgId: install.orgId, repoId: repo.id, channel: mention.channel, threadTs })
+  let session = await findOrCreateSlackSession({orgId: install.orgId, repoId: repo.id, channel: mention.channel, threadTs})
 
   // load all the messages in the tread that mentions Graphene.
   let lastSentMessgeId = session.messages.map(m => m.messageId).filter(x => !!x).at(-1)
-  let response = await slackApi<ConversationsRepliesResponse>('conversations.replies', { channel: mention.channel, ts: threadTs, limit: 50 }, install)
+  let response = await slackApi<ConversationsRepliesResponse>('conversations.replies', {channel: mention.channel, ts: threadTs, limit: 50}, install)
   let threadMessages = (response.messages || [])
     .filter(m => !lastSentMessgeId || !m.ts || m.ts > lastSentMessgeId) // if resuming a session, exclude messages we already gave to the agent
     .filter(m => m.text && (!m.ts || m.ts < mention.ts)) // only include messages before the mention

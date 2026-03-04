@@ -102,7 +102,7 @@ export async function seedDatabase (project = 'flights') {
   await migrate(db, {migrationsFolder: path.join(rootDir, 'migrations')})
 
   await db.insert(schema.orgs).values({id: orgId, slug: 'dev', name: 'Graphene Dev'})
-  await db.insert(schema.users).values({ orgId, id: userId, email: 'dev@graphenedata.com', role: 'admin' as const })
+  await db.insert(schema.users).values({orgId, id: userId, email: 'dev@graphenedata.com', role: 'admin' as const})
   await db.insert(schema.slackInstallations).values({orgId, teamId, teamName: 'Graphene', oauthToken: await encryptSecret(process.env.SLACK_BOT_TOKEN || '')})
 
   let projectRoot: string
