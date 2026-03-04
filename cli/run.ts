@@ -59,7 +59,7 @@ export async function runMdFile (options: RunMdFileOptions): Promise<boolean> {
     await runServeInBackground()
   }
 
-  let resp = await sendCheckRequest({host, pageUrl, chart: options.chart})
+  let resp = await sendRunRequest({host, pageUrl, chart: options.chart})
 
   if (resp.checkError == 'no_server') {
     log('Failed to start Graphene server')
@@ -70,7 +70,7 @@ export async function runMdFile (options: RunMdFileOptions): Promise<boolean> {
     log(`Opening page ${host}${pageUrl}`)
     openInBrowser(host + pageUrl)
     await new Promise(resolve => setTimeout(resolve, 500))
-    resp = await sendCheckRequest({host, pageUrl, chart: options.chart})
+    resp = await sendRunRequest({host, pageUrl, chart: options.chart})
   }
 
   if (resp.checkError == 'no_tab') {
@@ -151,7 +151,7 @@ export async function runNamedQueryFromMd (mdAbsolutePath: string, queryName: st
   return true
 }
 
-async function sendCheckRequest ({host, pageUrl, chart}) {
+async function sendRunRequest ({host, pageUrl, chart}) {
   let abort = new AbortController()
   let timeout = setTimeout(() => abort.abort(), 30_000)
   let browserHost = host.replace('127.0.0.1', 'localhost')
@@ -180,7 +180,7 @@ async function sendCheckRequest ({host, pageUrl, chart}) {
   }
 }
 
-export async function proxyCheckRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
+export async function proxyRunRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
   let {pageUrl, chart} = JSON.parse(Buffer.concat(chunks).toString())
@@ -199,7 +199,7 @@ export async function proxyCheckRequest (req: IncomingMessage, res: ServerRespon
   pendingRequests[id] = {response: res}
 }
 
-export function checkVitePlugin (): PluginOption {
+export function runVitePlugin (): PluginOption {
   return {
     name: 'graphene-check-plugin',
     configureServer (server: ViteDevServer) {
@@ -231,7 +231,7 @@ export function checkVitePlugin (): PluginOption {
 
       server.middlewares.use(async (req, res, next) => {
         let [pathName] = (req.url || '').split('?')
-        if (pathName === '/_api/check') await proxyCheckRequest(req, res)
+        if (pathName === '/_api/check') await proxyRunRequest(req, res)
         else next()
       })
     },
