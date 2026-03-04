@@ -42,6 +42,7 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 ### Unsupported
 - Window functions
 - Set operations (`union`, etc.)
+- Semi-structured data types (`VARIANT`, `OBJECT`, `ARRAY`)
 
 # Dashboards
 Graphene dashboards extend Markdown with the following:
