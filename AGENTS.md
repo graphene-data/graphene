@@ -44,6 +44,7 @@ When it's easy to inline a bit of code, prefer that over making tons of small fu
 ### Vertically compact
 It's easier to read 2-3 wide lines than 10 narrow ones. When in doubt, try and follow the formatting of surrounding code.
 
+```
 function good () {
   let ast = parseQuery(rawSql, {dialect: 'bigquery', functions: {...bqFunctions, hll}})
   let rows = executeQuery(ast).filter(x => !!x).map(rawRow => new RowStruct(rawRow, {engine: 'bigquery'}))
@@ -76,10 +77,12 @@ function bad () {
     rows
   }
 }
+```
 
 ### Avoid indentation
 Where possible, prefer early returns and avoid excessive indentation, which makes the flow harder to follow.
 
+```
 function good (elems) {
   if (elems.length == 0) return []
   for (let e of elems) {
@@ -97,6 +100,7 @@ function bad () {
     }
   }
 }
+```
 
 ### Only use meaningful comments
 Most functions should have a comment describing what they do.
