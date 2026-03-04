@@ -12,7 +12,7 @@ const styleText = (style: string, text: string) => {
   }
 }
 
-function offsetToLineCol (src: string, offset: number): {line: number; col: number; lineStart: number; lineText: string} {
+function offsetToLineCol(src: string, offset: number): {line: number; col: number; lineStart: number; lineText: string} {
   let lines = src.split(/\r?\n/)
   let acc = 0
   for (let i = 0; i < lines.length; i++) {
@@ -27,7 +27,7 @@ function offsetToLineCol (src: string, offset: number): {line: number; col: numb
   return {line: 1, col: 0, lineStart: 0, lineText: lines[0] || ''}
 }
 
-export function printDiagnostics (diags: Diagnostic[], log?: any) {
+export function printDiagnostics(diags: Diagnostic[], log?: any) {
   log ||= console.log
   let parts: string[] = []
   for (let d of diags) {
@@ -44,7 +44,7 @@ export function printDiagnostics (diags: Diagnostic[], log?: any) {
   if (parts.length) log(parts.join('\n'))
 }
 
-export function printTable (rows: any[]) {
+export function printTable(rows: any[]) {
   if (!rows || rows.length === 0) {
     console.log(chalk.yellow('No results returned'))
     return

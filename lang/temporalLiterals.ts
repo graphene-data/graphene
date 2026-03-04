@@ -8,7 +8,7 @@ export type TemporalLiteral = {
   type: Extract<FieldType, 'date' | 'timestamp'>
 }
 
-export function parseTemporalLiteral (value: string, expected: string): TemporalLiteral | null {
+export function parseTemporalLiteral(value: string, expected: string): TemporalLiteral | null {
   let raw = (value ?? '').trim()
   if (!raw) return null
 
@@ -91,7 +91,7 @@ export interface IntervalLiteral {
   unit: TimestampUnit
 }
 
-export function parseIntervalLiteral (value: string): IntervalLiteral | null {
+export function parseIntervalLiteral(value: string): IntervalLiteral | null {
   let raw = (value ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
   if (!raw) return null
   let match = raw.match(/^(-?\d+(?:\.\d+)?)\s+([a-z]+)$/)
@@ -103,11 +103,11 @@ export function parseIntervalLiteral (value: string): IntervalLiteral | null {
   return {quantity, unit}
 }
 
-export function parseIntervalUnit (value: string): TimestampUnit | null {
+export function parseIntervalUnit(value: string): TimestampUnit | null {
   return INTERVAL_UNITS[value.toLowerCase()] || null
 }
 
-function buildResult (
+function buildResult(
   year: number,
   month: number,
   day: number,
@@ -127,17 +127,17 @@ function buildResult (
   }
 }
 
-function inRange (value: number, min: number, max: number) {
+function inRange(value: number, min: number, max: number) {
   return Number.isInteger(value) && value >= min && value <= max
 }
 
-function isValidDate (year: number, month: number, day: number) {
+function isValidDate(year: number, month: number, day: number) {
   if (!inRange(month, 1, 12)) return false
   if (!inRange(day, 1, 31)) return false
   let date = new Date(Date.UTC(year, month - 1, day))
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
 }
 
-function pad (value: number) {
+function pad(value: number) {
   return value.toString().padStart(2, '0')
 }

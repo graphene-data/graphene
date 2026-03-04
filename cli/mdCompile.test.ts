@@ -3,7 +3,7 @@ import {compile} from 'mdsvex'
 import {remarkPlugins, rehypePlugins} from './mdCompile.ts'
 
 describe('markdown sanitization', () => {
-  it('keeps wrapper components intact across blank lines', async () => {
+  it('keeps wrapper components intact across blank lines', async() => {
     let src = `
 <Row>
   <BarChart data="x" y="a" />

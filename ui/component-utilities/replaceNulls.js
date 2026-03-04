@@ -1,7 +1,7 @@
 import {replaceNully} from '@tidyjs/tidy'
 import {tidyWithTypes} from './tidyWithTypes.js'
 
-export default function replaceNulls (data, columns) {
+export default function replaceNulls(data, columns) {
   let colObj = {}
   if (typeof columns === 'object') {
     for (let i = 0; i < columns.length; i++) {

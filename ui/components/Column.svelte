@@ -111,7 +111,7 @@
         if (strictBuild) throw new Error(error)
         console.warn(error)
       }
-    } catch (error) {
+    } catch(error) {
       if (strictBuild) throw error
     }
 

@@ -13,7 +13,7 @@ import {findInterval, vectorSeq} from './helpers/getCompletedData.helpers.js'
  * @param {boolean} [fillX=false] - A flag indicating whether the x-axis values should be filled (based on the found interval distance).
  * @return {Record<string, unknown>[]} An array containing the filled data objects.
  */
-export default function getCompletedData (_data, x, y, series, nullsZero = false, fillX = false) {
+export default function getCompletedData(_data, x, y, series, nullsZero = false, fillX = false) {
   let xIsDate = false
   let data = _data
     .map((d) =>

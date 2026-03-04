@@ -24,7 +24,7 @@ export interface Cred {
 const cfgDir = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config')
 const credsPath = path.join(cfgDir, 'graphene', 'credentials.json')
 
-async function readStore (): Promise<any> {
+async function readStore(): Promise<any> {
   try {
     let txt = await fs.readFile(credsPath, 'utf8')
     return JSON.parse(txt) || {}
@@ -33,12 +33,12 @@ async function readStore (): Promise<any> {
   }
 }
 
-async function readEntry (): Promise<Cred | null> {
+async function readEntry(): Promise<Cred | null> {
   let store = await readStore()
   return store[config.root]
 }
 
-async function updateEntry (cred: Cred) {
+async function updateEntry(cred: Cred) {
   let store = await readStore()
   cred.refresh_token ||= store[config.root]?.refresh_token
   cred.expires_at = Date.now() + cred.expires_in
@@ -51,7 +51,7 @@ async function updateEntry (cred: Cred) {
   }
 }
 
-export function openInBrowser (url: string) {
+export function openInBrowser(url: string) {
   try {
     let plat = process.platform
     let cmd = 'xdg-open'
@@ -65,17 +65,17 @@ export function openInBrowser (url: string) {
 }
 
 // PKCE login flow (Authorization Code with loopback)
-function base64url (buf: ArrayBuffer | Uint8Array): string {
+function base64url(buf: ArrayBuffer | Uint8Array): string {
   let b64 = Buffer.from(buf as any).toString('base64')
   return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
-function randomBytes (len = 32): Uint8Array {
+function randomBytes(len = 32): Uint8Array {
   return crypto.getRandomValues(new Uint8Array(len))
 }
 
 // Temporary local server that listens for the callback url after at the end of oauth.
-async function startLoopback () {
+async function startLoopback() {
   let server = http.createServer()
   await new Promise<void>(r => server.listen(0, '127.0.0.1', () => r()))
   let addr = server.address()
@@ -97,7 +97,7 @@ async function startLoopback () {
   return {url: redirectBase, waitForCode, close: () => server.close()}
 }
 
-export async function loginPkce (opener?: (url: string) => Promise<void>) {
+export async function loginPkce(opener?: (url: string) => Promise<void>) {
   let verifier = base64url(randomBytes(48))
   let data = new TextEncoder().encode(verifier)
   let digest = await crypto.subtle.digest('SHA-256', data)
@@ -140,7 +140,7 @@ export async function loginPkce (opener?: (url: string) => Promise<void>) {
   await updateEntry(tokenResp)
 }
 
-async function refreshAccessToken () {
+async function refreshAccessToken() {
   let refresh_token = (await readEntry())?.refresh_token
   let res = await fetch(new URL('/_api/oauth2/token', config.host).toString(), {
     method: 'POST',
@@ -153,7 +153,7 @@ async function refreshAccessToken () {
 }
 
 // Makes a request to your Graphene cloud server with credentials stored from `graphene login`
-export async function authenticatedFetch (pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
+export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
   let entry = await readEntry()
   if (!entry) throw new Error('Not logged in; run `graphene login`')
 

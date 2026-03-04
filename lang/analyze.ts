@@ -26,7 +26,7 @@ let analysisStack = new Set<Column>() // Track computed columns being analyzed t
 let NODE_ENTITY_MAP = new NodeWeakMap<any>() // Points syntax nodes back to entities for ide hover tips
 
 // Creates tables without analyzing them.
-export function findTables (fi: FileInfo) {
+export function findTables(fi: FileInfo) {
   let tn = fi.tree!.topNode
   fi.tables = []
   let nodes = tn.getChildren('TableStatement').concat(tn.getChildren('ViewStatement'))
@@ -53,7 +53,7 @@ export function findTables (fi: FileInfo) {
 }
 
 // `extend` blocks add columns and joins to existing tables
-export function applyExtends (fi: FileInfo) {
+export function applyExtends(fi: FileInfo) {
   fi.tree!.topNode.getChildren('ExtendStatement').forEach(node => {
     let target = lookupTable(node.getChild('Ref')!)
     if (!target) return
@@ -62,7 +62,7 @@ export function applyExtends (fi: FileInfo) {
   })
 }
 
-function addColumn (table: Table, node: SyntaxNode) {
+function addColumn(table: Table, node: SyntaxNode) {
   let name = txt(node.getChild('ColumnName'))
   let type = convertDataType(txt(node.getChild('DataType')))
   if (!type) return diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
@@ -71,7 +71,7 @@ function addColumn (table: Table, node: SyntaxNode) {
   table.columns.push(col)
 }
 
-function addJoin (table: Table, node: SyntaxNode) {
+function addJoin(table: Table, node: SyntaxNode) {
   let aliasNode = node.getChild('Alias') || node.getChild('Ref')!.getChildren('Identifier').pop()
   let alias = txt(aliasNode)
 
@@ -88,21 +88,21 @@ function addJoin (table: Table, node: SyntaxNode) {
   table.joins.push(join)
 }
 
-function addComputedColumn (table: Table, node: SyntaxNode) {
+function addComputedColumn(table: Table, node: SyntaxNode) {
   let name = txt(node.getChild('Alias'))
   let col: Column = {name, type: 'string', exprNode: node.getChild('Expression')!, metadata: extractLeadingMetadata(node)}
   if (getField(name, table)) return diag(node, `Table already has a field called "${name}"`)
   table.columns.push(col)
 }
 
-function getField (name: string, table: Table) {
+function getField(name: string, table: Table) {
   return table.columns.find(c => c.name == name) || table.joins.find(j => j.alias == name)
 }
 
 // Analyze a view's underlying query to determine its output columns.
 // Converts a PhysicalTable with a QueryStatement into a ViewTable with a query.
 // Returns true if the table is (or was already) a successfully analyzed view.
-function analyzeView (table: Table) {
+function analyzeView(table: Table) {
   if (table.type != 'view') return
   if (table.query) return // already analyzed
   let query = analyzeQuery(table.syntaxNode!.getChild('QueryStatement')!)
@@ -112,7 +112,7 @@ function analyzeView (table: Table) {
 }
 
 // Analyze everything in a table - used for full project analysis (e.g., `check` command)
-export function analyzeTableFully (table: Table) {
+export function analyzeTableFully(table: Table) {
   if (table.type == 'view') analyzeView(table)
   let scope: Scope = {table, alias: table.name}
   table.columns.forEach(c => {
@@ -126,7 +126,7 @@ export function analyzeTableFully (table: Table) {
 // Expand non-aggregate columns into query fields.
 // When table is provided, expands that single table's columns.
 // When table is null, expands all root-visible query tables (base + ad-hoc joins).
-function expandColumns (table: Table | null, alias: string, query: Query, scope: Scope, namePrefix = '') {
+function expandColumns(table: Table | null, alias: string, query: Query, scope: Scope, namePrefix = '') {
   if (!table) {
     let baseJoin = query.joins.find(j => j.source == 'from')
     if (!baseJoin?.table) return
@@ -151,7 +151,7 @@ function expandColumns (table: Table | null, alias: string, query: Query, scope:
 }
 
 // Main query analysis - analyzes and returns a Query with computed SQL
-export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
+export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
   let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: [], isAggregate: false}
   let ctes = new Map<string, CteTable>()
   let scope: Scope = {query, alias: '', otherTables: outerCtes || []}
@@ -307,13 +307,13 @@ export function analyzeQuery (queryNode: SyntaxNode, outerCtes?: Table[]): Query
 
 // Assemble query parts into final SQL
 // Format a table path for the current dialect
-function formatTablePath (path: string): string {
+function formatTablePath(path: string): string {
   if (config.dialect === 'bigquery') return `\`${path}\``
   if (config.dialect === 'snowflake') return path.toUpperCase()
   return path
 }
 
-function buildSql (query: Query, cteMap: Map<string, CteTable>): string {
+function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
   let ctes: string[] = [...cteMap.values()].map(c => `${quote(c.name)} as ( ${c.query.sql} )`)
   let selectParts = query.fields.map(f => `${f.sql} as ${quote(f.name)}`)
   let baseJoin = query.joins.find(j => j.source == 'from')
@@ -321,7 +321,7 @@ function buildSql (query: Query, cteMap: Map<string, CteTable>): string {
   // No FROM clause (e.g. `select 1`)
   if (!baseJoin?.table) return `SELECT ${selectParts.join(', ')}`
 
-  function renderTableRef (table: Table): string {
+  function renderTableRef(table: Table): string {
     if (table.type === 'view') {
       if (!ctes.some(c => c.startsWith(quote(table.name) + ' '))) {
         ctes.push(`${quote(table.name)} as ( ${table.query.sql} )`)
@@ -359,7 +359,7 @@ function buildSql (query: Query, cteMap: Map<string, CteTable>): string {
 }
 
 // Analyze an expression node and return SQL + type info
-export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
+export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
   if (node.type.isError) return diag(node, 'Invalid expression', {sql: 'NULL', type: 'error'})
 
   switch (node.name) {
@@ -641,7 +641,7 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
   }
 }
 
-function analyzeDateArithmetic (op: '+' | '-', left: Expr, right: Expr, node: SyntaxNode): Expr {
+function analyzeDateArithmetic(op: '+' | '-', left: Expr, right: Expr, node: SyntaxNode): Expr {
   // date - date = interval
   if ((left.type == 'date' || left.type == 'timestamp') && (right.type == 'date' || right.type == 'timestamp')) {
     if (op != '-') return diag(node, 'Can only subtract dates', {sql: 'NULL', type: 'error'})
@@ -669,7 +669,7 @@ function analyzeDateArithmetic (op: '+' | '-', left: Expr, right: Expr, node: Sy
   return diag(node, 'Invalid date arithmetic', {sql: 'NULL', type: 'error'})
 }
 
-function coerceToTemporal (expr: Expr, targetType: 'date' | 'timestamp', node: SyntaxNode): Expr {
+function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: SyntaxNode): Expr {
   // Extract the string literal value (remove quotes)
   let match = expr.sql.match(/^'(.+)'$/)
   if (!match) return expr
@@ -678,7 +678,7 @@ function coerceToTemporal (expr: Expr, targetType: 'date' | 'timestamp', node: S
   return {sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
 }
 
-function renderOverClause (overClause: SyntaxNode, scope: Scope): string {
+function renderOverClause(overClause: SyntaxNode, scope: Scope): string {
   let spec = overClause.getChild('WindowSpec')
   if (!spec) return ''
   let parts: string[] = []
@@ -705,7 +705,7 @@ function renderOverClause (overClause: SyntaxNode, scope: Scope): string {
   return parts.join(' ')
 }
 
-function renderWindowFrame (frame: SyntaxNode, scope: Scope): string {
+function renderWindowFrame(frame: SyntaxNode, scope: Scope): string {
   let mode = txt(frame.getChildren('Kw')[0]).toUpperCase()
   let between = frame.getChild('WindowFrameBetween')
   if (between) {
@@ -716,7 +716,7 @@ function renderWindowFrame (frame: SyntaxNode, scope: Scope): string {
   return `${mode} ${renderWindowBound(start, scope)}`
 }
 
-function renderWindowBound (bound: SyntaxNode, scope: Scope): string {
+function renderWindowBound(bound: SyntaxNode, scope: Scope): string {
   let kws = bound.getChildren('Kw').map(k => txt(k).toLowerCase())
   if (kws.includes('unbounded')) {
     return `UNBOUNDED ${kws.includes('following') ? 'FOLLOWING' : 'PRECEDING'}`
@@ -727,7 +727,7 @@ function renderWindowBound (bound: SyntaxNode, scope: Scope): string {
 }
 
 // Traverse a join path (like `tableA.tableB.`), returning a new scope pointing to the target table. Adds implied joins to the query as it goes
-function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
+function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
   let part = pathNodes[0]
   let name = txt(part)
 
@@ -795,7 +795,7 @@ function followJoins (pathNodes: SyntaxNode[], scope: Scope): Scope | null {
 }
 
 // Find a table by Ref node, failing if it doesn't exist
-function lookupTable (node: SyntaxNode, scope?: Scope): Table | undefined {
+function lookupTable(node: SyntaxNode, scope?: Scope): Table | undefined {
   let name = txt(node)
   let table: Table | undefined
 
@@ -815,7 +815,7 @@ function lookupTable (node: SyntaxNode, scope?: Scope): Table | undefined {
   return table
 }
 
-function inferName (exprNode: SyntaxNode, scope: Scope): string {
+function inferName(exprNode: SyntaxNode, scope: Scope): string {
   if (exprNode.name == 'Ref') {
     return exprNode.getChildren('Identifier').map(i => txt(i)).join('_')
   }
@@ -823,7 +823,7 @@ function inferName (exprNode: SyntaxNode, scope: Scope): string {
 }
 
 // TODO: do we still need this?
-function unpackAnds (node: SyntaxNode, scope: Scope): Expr[] {
+function unpackAnds(node: SyntaxNode, scope: Scope): Expr[] {
   if (node.name == 'BinaryExpression') {
     let op = txt(node.firstChild?.nextSibling).toLowerCase()
     if (op == 'and') {
@@ -833,21 +833,21 @@ function unpackAnds (node: SyntaxNode, scope: Scope): Expr[] {
   return [analyzeExpr(node, scope)]
 }
 
-export function clearWorkspace () {
+export function clearWorkspace() {
   Object.keys(FILE_MAP).forEach(k => delete FILE_MAP[k])
   diagnostics = []
 }
 
-export function clearDiagnostics () { diagnostics = [] }
-export function getNodeEntity (node: SyntaxNode) { return NODE_ENTITY_MAP.get(node) }
+export function clearDiagnostics() { diagnostics = [] }
+export function getNodeEntity(node: SyntaxNode) { return NODE_ENTITY_MAP.get(node) }
 
-export function recordSyntaxErrors (fi: FileInfo) {
+export function recordSyntaxErrors(fi: FileInfo) {
   fi.tree!.topNode.cursor().iterate(n => {
     if (n.type.isError) diag(n.node, 'Syntax error')
   })
 }
 
-export function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
+export function diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
   let file = getFile(node)
   let from = getPosition(node.from, file)
   let to = getPosition(node.to, file)
@@ -855,7 +855,7 @@ export function diag<T> (node: SyntaxNode | SyntaxNodeRef, message: string, defa
   return defaultReturn as T
 }
 
-export function checkTypes (expr: Expr, expected: FieldType[], node: SyntaxNode) {
+export function checkTypes(expr: Expr, expected: FieldType[], node: SyntaxNode) {
   if (expr.type == 'error' || expr.type == 'null') return
   if (expected.includes(expr.type)) return
   diag(node, `Expected ${expected.join(' or ')}, got ${expr.type}`)
@@ -865,7 +865,7 @@ export function checkTypes (expr: Expr, expected: FieldType[], node: SyntaxNode)
 // On the one hand, it often makes type checking easier, since it normalizes things that can be implicitly cast to match,
 // and gives simpler types to the frontend.
 // On the other, it obscures the actual types in cases where they might be relevant, like function signature matching.
-function convertDataType (dataType: string): FieldType | null {
+function convertDataType(dataType: string): FieldType | null {
   switch (dataType.toUpperCase()) {
     case 'INT': case 'INT64': case 'NUMBER': case 'INTEGER': case 'NUMERIC': case 'FLOAT': case 'FLOAT64':
     case 'DECIMAL': case 'DOUBLE': case 'BIGINT': case 'SMALLINT': case 'TINYINT': case 'BYTEINT': case 'BIGDECIMAL':
@@ -884,12 +884,12 @@ function convertDataType (dataType: string): FieldType | null {
 }
 
 // Quote an identifier for the current dialect
-function quote (name: string): string {
+function quote(name: string): string {
   if (config.dialect === 'bigquery') return `\`${name}\``
   return `"${name}"`
 }
 
-function quoteColumn (name: string): string {
+function quoteColumn(name: string): string {
   if (config.dialect === 'bigquery') return `\`${name}\``
   if (config.dialect === 'snowflake') return `"${name.toUpperCase()}"`
   return `"${name}"`

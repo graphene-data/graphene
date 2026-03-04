@@ -7,7 +7,7 @@ import {config} from '../lang/config.ts'
 
 const execAsync = promisify(exec)
 
-export async function runServeInBackground (): Promise<void> {
+export async function runServeInBackground(): Promise<void> {
   let grapheneCache = getGrapheneCache(config.root)
   let logFile = path.join(grapheneCache, 'serve.log')
   await fs.ensureDir(grapheneCache)
@@ -44,17 +44,17 @@ export async function runServeInBackground (): Promise<void> {
   })
 }
 
-export function getGrapheneCache (root: string): string {
+export function getGrapheneCache(root: string): string {
   return path.join(root, 'node_modules', '.graphene')
 }
 
-function sendSignal (pid: number, signal: NodeJS.Signals): boolean {
+function sendSignal(pid: number, signal: NodeJS.Signals): boolean {
   let pids = process.platform === 'win32' ? [pid] : [pid, -pid]
 
   for (let target of pids) {
     try {
       process.kill(target, signal)
-    } catch (err) {
+    } catch(err) {
       let code = (err as NodeJS.ErrnoException).code
       if (code === 'ESRCH' || code === 'EINVAL') continue
       return false
@@ -63,7 +63,7 @@ function sendSignal (pid: number, signal: NodeJS.Signals): boolean {
   return true
 }
 
-export async function stopGrapheneIfRunning (): Promise<void> {
+export async function stopGrapheneIfRunning(): Promise<void> {
   let port = Number(process.env.GRAPHENE_PORT) || 4000
   let pid = await getPidOnPort(port)
   if (!pid) return
@@ -85,12 +85,12 @@ export async function stopGrapheneIfRunning (): Promise<void> {
   }
 }
 
-export async function isServerRunning (portOverride?: number): Promise<boolean> {
+export async function isServerRunning(portOverride?: number): Promise<boolean> {
   let port = portOverride || Number(process.env.GRAPHENE_PORT) || 4000
   return !!(await getPidOnPort(port))
 }
 
-async function getPidOnPort (port: number): Promise<number | undefined> {
+async function getPidOnPort(port: number): Promise<number | undefined> {
   try {
     if (process.platform === 'win32') {
       let {stdout} = await execAsync(`netstat -ano | findstr :${port}`)
@@ -117,7 +117,7 @@ async function getPidOnPort (port: number): Promise<number | undefined> {
         child.on('error', () => resolve(undefined))
       })
     }
-  } catch (e:any) {
+  } catch(e:any) {
     console.warn('Failed to check for server:', e.message)
     return undefined
   }

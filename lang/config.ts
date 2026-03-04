@@ -35,7 +35,7 @@ export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> &
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
-export function setConfig (cfg: ConfigInput) {
+export function setConfig(cfg: ConfigInput) {
   if (cfg.namespace && !cfg.defaultNamespace) cfg.defaultNamespace = cfg.namespace
   let dialect = cfg.dialect || 'duckdb'
   if (cfg.bigquery) dialect = 'bigquery'
@@ -50,7 +50,7 @@ export function setConfig (cfg: ConfigInput) {
 }
 
 // Read graphene config out of package.json
-export function loadConfig (dir:string, envLoader?: (envFiles: string[] | string) => void) {
+export function loadConfig(dir:string, envLoader?: (envFiles: string[] | string) => void) {
   if (config.root) return
 
   let packageJsonObject = {} as any

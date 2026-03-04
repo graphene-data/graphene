@@ -3,11 +3,11 @@ import {parseTemporalLiteral} from './temporalLiterals.ts'
 
 // Fill in parameter values in a query's SQL strings
 // Params look like $paramName in the SQL
-export function fillInParams (query: Query, params: Record<string, any>) {
+export function fillInParams(query: Query, params: Record<string, any>) {
   query.sql = replaceParams(query.sql, params)
 }
 
-function replaceParams (sql: string, params: Record<string, any>): string {
+function replaceParams(sql: string, params: Record<string, any>): string {
   // Alternation: match single-quoted strings (including escaped '') first, then $params.
   // When we match a quoted string the capture group is undefined, so we return it unchanged.
   return sql.replace(/'(?:[^']|'')*'|\$(\w+)/g, (match, name) => {

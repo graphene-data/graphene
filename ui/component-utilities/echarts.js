@@ -208,7 +208,7 @@ const echartsAction = (node, options) => {
     updateLabelWidths()
   }
 
-  void (async () => {
+  void (async() => {
     if (document?.fonts?.ready) await document.fonts.ready
     if (destroyed || chart) return
     initChart()
@@ -224,11 +224,11 @@ const echartsAction = (node, options) => {
   window[Symbol.for('chart renders')] ??= 0
   window[Symbol.for('chart renders')]++
   return {
-    update (options) {
+    update(options) {
       window[Symbol.for('chart renders')]++
       updateChart(options)
     },
-    destroy () {
+    destroy() {
       destroyed = true
       if (!chart) return
       if (resizeObserver) {

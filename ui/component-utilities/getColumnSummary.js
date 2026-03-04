@@ -25,7 +25,7 @@ const EvidenceType = {
  * @param {T} returnType
  * @returns {T extends 'object' ? Record<string, ColumnSummary> : (ColumnSummary & { id: string })[]}
  */
-export default function getColumnSummary (data, returnType = 'object') {
+export default function getColumnSummary(data, returnType = 'object') {
   /** @type {Record<string, ColumnSummary>} */
   let columnSummary = {}
 

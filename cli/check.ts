@@ -10,7 +10,7 @@ interface CheckOptions {
   log?: (...args: any[]) => void
 }
 
-export async function check (options: CheckOptions): Promise<boolean> {
+export async function check(options: CheckOptions): Promise<boolean> {
   let log = options.log || console.log
   let targetFile = options.fileArg && normalizeFile(options.fileArg)
 

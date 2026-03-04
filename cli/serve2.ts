@@ -16,11 +16,11 @@ import {mockFileMap} from './mockFiles.ts'
 // Collect Svelte compiler warnings for test assertions
 export type SvelteWarning = {code: string, message: string, filename?: string}
 export const svelteWarnings: SvelteWarning[] = []
-export function clearSvelteWarnings () { svelteWarnings.length = 0 }
+export function clearSvelteWarnings() { svelteWarnings.length = 0 }
 
 let uiRoot: string
 
-export async function serve2 (): Promise<ViteDevServer> {
+export async function serve2(): Promise<ViteDevServer> {
   let server = await createServer(await createConfig())
   // I originally added this to avoid the page refreshing immediately on load.
   // We def don't want to run it in tests, because its not safe to do in parallel.
@@ -32,7 +32,7 @@ export async function serve2 (): Promise<ViteDevServer> {
   return server
 }
 
-async function createConfig (): Promise<InlineConfig> {
+async function createConfig(): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = Number(process.env.GRAPHENE_PORT) || 4000
   await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
@@ -57,7 +57,7 @@ async function createConfig (): Promise<InlineConfig> {
           }) as any,
           injectComponentImports(),
         ],
-        onwarn (warning, defaultHandler) {
+        onwarn(warning, defaultHandler) {
           if (process.env.NODE_ENV === 'test') {
             svelteWarnings.push({code: warning.code, message: warning.message, filename: warning.filename})
           }
@@ -108,7 +108,7 @@ async function createConfig (): Promise<InlineConfig> {
   }
 }
 
-async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
+async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
   let {gsql, params, hashes} = JSON.parse(Buffer.concat(chunks).toString())
@@ -141,7 +141,7 @@ async function handleQuery (req: IncomingMessage, res: ServerResponse<IncomingMe
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
 
-async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMessage>) {
+async function handlePage(server: ViteDevServer, res: ServerResponse<IncomingMessage>) {
   res.setHeader('Content-Type', 'text/html')
 
   // Use a .html URL for transformIndexHtml so Vite doesn't run the svelte plugin on our HTML template.
@@ -163,7 +163,7 @@ async function handlePage (server: ViteDevServer, res: ServerResponse<IncomingMe
 }
 
 // Runs vite's pre-bundling of dependencies. Used by tests to do this once, instead of for each worker.
-export async function prepareDeps () {
+export async function prepareDeps() {
   let cfg = await resolveConfig(await createConfig(), 'serve')
   await optimizeDeps(cfg, true)
 }
@@ -171,14 +171,14 @@ export async function prepareDeps () {
 // Svelte forces optimizeDeps whenever its own metadata has changed.
 // For tests, we already optimizeDeps before any tests start up, so we don't need this, and it causes problems
 // if multiple workers are all trying to optimizeDeps at the same time (vite isn't exactly concurrency-safe).
-function fixSvelteDepsInTests () {
+function fixSvelteDepsInTests() {
   let viteConfig: any
 
-  function configResolved (cfg:any) { viteConfig = cfg }
+  function configResolved(cfg:any) { viteConfig = cfg }
 
   // This must run AFTER Svelte's buildStart which sets force=true based on metadata changes.
   // Using enforce:'post' and sequential:true ensures we run last and can override.
-  function buildStart () {
+  function buildStart() {
     if (process.env.NODE_ENV != 'test') return
     viteConfig.optimizeDeps.force = false
   }
@@ -191,10 +191,10 @@ function fixSvelteDepsInTests () {
 // unanalyzed modules, so fixing the file produces no HMR update and the page stays broken.
 // We detect this and send a full-reload instead, since the module was never successfully loaded
 // and can't be hot-swapped.
-function fixHmrForFailedModules () {
+function fixHmrForFailedModules() {
   return {
     name: 'fix-hmr-for-failed-modules',
-    hotUpdate (this: any, {modules}: {modules: any[]}) {
+    hotUpdate(this: any, {modules}: {modules: any[]}) {
       // When a module's last transform failed, its transformResult is null. Vite's normal HMR can't
       // hot-swap a module that has no valid transform — either because it was never analyzed
       // (isSelfAccepting === undefined) or because it was previously working but is now broken.
@@ -215,10 +215,10 @@ let workspaceLoadPromise: Promise<void> | undefined
 let mdFiles: string[] = []
 const updateWorkspacePlugin = {
   name: 'updateWorkspace',
-  resolveId (id: string) {
+  resolveId(id: string) {
     if (id == 'virtual:nav') return '\0virtual:nav'
   },
-  load (id: string) {
+  load(id: string) {
     if (id != '\0virtual:nav') return
     let allFiles = [...mdFiles]
     if (process.env.NODE_ENV == 'test') {
@@ -229,7 +229,7 @@ const updateWorkspacePlugin = {
     return `export default ${JSON.stringify(allFiles)}`
   },
   configureServer: (s: ViteDevServer) => {
-    let refresh = async () => {
+    let refresh = async() => {
       clearWorkspace()
       workspaceLoadPromise = loadWorkspace(config.root, true)
       await workspaceLoadPromise
@@ -253,7 +253,7 @@ const updateWorkspacePlugin = {
 const handleRequestPlugin = {
   name: 'handleRequest',
   configureServer: (s: ViteDevServer) => {
-    s.middlewares.use(async function handleRequest (req, res, next) {
+    s.middlewares.use(async function handleRequest(req, res, next) {
       try {
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
@@ -268,7 +268,7 @@ const handleRequestPlugin = {
         } else {
           next()
         }
-      } catch (err: any) {
+      } catch(err: any) {
         if (process.env.NODE_ENV != 'test') console.error(err) // ignore in tests because they're noisy, and any unexpected errors should be captured by browserConsole.
         res.statusCode = 500
         res.end(JSON.stringify([{message: err.message, stack: err.stack}]))
@@ -277,10 +277,10 @@ const handleRequestPlugin = {
   },
 }
 
-function mockFilesForTests () {
+function mockFilesForTests() {
   if (process.env.NODE_ENV !== 'test') return null
 
-  function toMockKey (id: string) {
+  function toMockKey(id: string) {
     // Handle both absolute paths (/wt/.../index.md) and root-relative paths (/index.md)
     return id.replace(config.root + '/', '').replace(/^\//, '')
   }
@@ -288,13 +288,13 @@ function mockFilesForTests () {
   return {
     name: 'mock-files-for-tests',
     enforce: 'pre' as const,
-    resolveId (id: any) {
+    resolveId(id: any) {
       if (!mockFileMap[toMockKey(id)]) return
       // Always resolve to the absolute path so the module graph key matches
       // what updateMockFile emits via server.watcher (needed for HMR to work).
       return path.join(config.root, toMockKey(id)) + '?mock'
     },
-    load (id: any) {
+    load(id: any) {
       if (!id.endsWith('?mock')) return null
       return mockFileMap[toMockKey(id.replace(/\?mock$/, ''))]
     },

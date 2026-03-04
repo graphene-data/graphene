@@ -224,7 +224,7 @@
 
       // If no y column(s) supplied, assume all number columns other than x are the y columns:
       if (!ySet) {
-        uColNames = columnNames.filter(function (col) {
+        uColNames = columnNames.filter(function(col) {
           return ![xLocal, series, size].includes(col)
         })
 
@@ -572,7 +572,7 @@
             show: yAxisLabels_bool,
             hideOverlap: true,
             showMaxLabel: true,
-            formatter: function (value) {
+            formatter: function(value) {
               return formatAxisValue(value, yFormat, yUnitSummary)
             },
             margin: 4,
@@ -602,7 +602,7 @@
           tooltip: {
             show: true,
             position: 'inside',
-            formatter (p) {
+            formatter(p) {
               if (p.isTruncated()) {
                 return p.name
               }
@@ -624,7 +624,7 @@
             formatter:
               xTypeLocal === 'time' || xTypeLocal === 'category'
                 ? false
-                : function (value) {
+                : function(value) {
                   return formatAxisValue(value, xFormat, xUnitSummary)
                 },
             margin: 6,
@@ -692,7 +692,7 @@
             show: yAxisLabels_bool,
             hideOverlap: true,
             margin: 4,
-            formatter: function (value) {
+            formatter: function(value) {
               return formatAxisValue(value, yFormat, yUnitSummary)
             },
             color: primaryAxisColor,
@@ -732,7 +732,7 @@
             show: y2AxisLabels_bool,
             hideOverlap: true,
             margin: 4,
-            formatter: function (value) {
+            formatter: function(value) {
               return formatAxisValue(value, y2Format, y2UnitSummary)
             },
             color: secondaryAxisColor,
@@ -848,7 +848,7 @@
           trigger: 'axis',
           show: true,
           // formatter function is overridden in ScatterPlot, BubbleChart, and Histogram
-          formatter: function (params) {
+          formatter: function(params) {
             let output
             let xVal
             let yVal
@@ -947,7 +947,7 @@
       config.update(() => {
         return chartConfig
       })
-    } catch (e) {
+    } catch(e) {
       // svelte-ignore non_reactive_update
       error = e.message
       let setTextRed = '\x1b[31m%s\x1b[0m'

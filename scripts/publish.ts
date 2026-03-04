@@ -71,18 +71,18 @@ await $`git push origin v${version}`
 await $`git push`
 console.log("Version pushed. Don't forget to create a PR for this change")
 
-async function confirm (prompt: string) {
+async function confirm(prompt: string) {
   let answer = (await question(prompt)).trim().toLowerCase()
   return answer === 'y' || answer === 'yes'
 }
 
-function bumpVersion (version: string, bumpLevel: string) {
+function bumpVersion(version: string, bumpLevel: string) {
   let [major, minor, patch] = version.split('.').map(x => Number(x))
   if (bumpLevel === 'major') return `${major + 1}.0.0`
   if (bumpLevel === 'minor') return `${major}.${minor + 1}.0`
   return `${major}.${minor}.${patch + 1}`
 }
 
-function escapeRegex (text: string) {
+function escapeRegex(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

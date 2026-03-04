@@ -53,7 +53,7 @@ const ECOMM_SETUP = `
     (501, 2, '2024-01-12', 50);
 `
 
-function codeFrame (source: string, from: number, to: number): string {
+function codeFrame(source: string, from: number, to: number): string {
   let lineStart = source.lastIndexOf('\n', Math.max(0, from - 1)) + 1
   let lineEnd = source.indexOf('\n', to)
   let end = lineEnd === -1 ? source.length : lineEnd
@@ -64,7 +64,7 @@ function codeFrame (source: string, from: number, to: number): string {
   return `${lineText}\n${marker}`
 }
 
-function formatDiagnostics (source: string, diagnostics: Diagnostic[]): string {
+function formatDiagnostics(source: string, diagnostics: Diagnostic[]): string {
   if (!diagnostics.length) return ''
   return diagnostics.map((d, i) => {
     let frame = codeFrame(source, d.from.offset, d.to.offset)
@@ -74,7 +74,7 @@ function formatDiagnostics (source: string, diagnostics: Diagnostic[]): string {
 
 let conn: DuckDBConnection
 
-export async function prepareEcommerceTables () {
+export async function prepareEcommerceTables() {
   let db = await DuckDBInstance.create(':memory:')
   conn = await db.connect()
   await conn.run(ECOMM_SETUP)
@@ -82,13 +82,13 @@ export async function prepareEcommerceTables () {
 
 // small delay to allow debugger to attach, since vitest doesn't support --inspect-wait
 if (process.env.GRAPHENE_DEBUG) {
-  beforeAll(async () => {
+  beforeAll(async() => {
     await new Promise((resolve) => setTimeout(resolve, 1000))
   })
 }
 
 vitestExpect.extend({
-  toRenderSql (received: string, expectedSql: string, opts: {preserveCase?: boolean} = {}) {
+  toRenderSql(received: string, expectedSql: string, opts: {preserveCase?: boolean} = {}) {
     let content = trimIndentation(received)
     let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
     let errors = getDiagnostics().filter(d => d.severity === 'error')
@@ -100,7 +100,7 @@ vitestExpect.extend({
       }
     }
 
-    function normalizeSql (s: string) {
+    function normalizeSql(s: string) {
       if (!opts.preserveCase) s = s.toLowerCase()
       return s.replace(/[\s\n]+/g, ' ').replace(/\s+$/, '')
     }
@@ -117,7 +117,7 @@ vitestExpect.extend({
     }
   },
 
-  async toReturnRows (received: string, ...expectedRows: unknown[][]) {
+  async toReturnRows(received: string, ...expectedRows: unknown[][]) {
     let content = trimIndentation(received)
     let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
     let errors = getDiagnostics().filter(d => d.severity === 'error')
@@ -145,7 +145,7 @@ vitestExpect.extend({
         actual: actualRows,
         expected: expectedRows,
       }
-    } catch (err: any) {
+    } catch(err: any) {
       return {
         pass: false,
         message: () => `Execution failed: ${err?.message || String(err)}\nSQL: ${sql}`,
@@ -153,7 +153,7 @@ vitestExpect.extend({
     }
   },
 
-  toHaveDiagnostic (received: string, pattern: RegExp | string) {
+  toHaveDiagnostic(received: string, pattern: RegExp | string) {
     let content = trimIndentation(received)
     analyze(content, content.includes('```') ? 'md' : 'gsql')
 
@@ -171,7 +171,7 @@ vitestExpect.extend({
     }
   },
 
-  toHaveNoErrors (received: string) {
+  toHaveNoErrors(received: string) {
     let content = trimIndentation(received)
     analyze(content, content.includes('```') ? 'md' : 'gsql')
 

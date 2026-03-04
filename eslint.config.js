@@ -1,11 +1,11 @@
 import {includeIgnoreFile} from '@eslint/compat'
-import {fileURLToPath} from 'node:url'
-import globals from 'globals'
 import pluginJs from '@eslint/js'
-import tseslint from 'typescript-eslint'
-import svelte from 'eslint-plugin-svelte'
-import pluginPreferLet from 'eslint-plugin-prefer-let'
 import stylistic from '@stylistic/eslint-plugin'
+import pluginPreferLet from 'eslint-plugin-prefer-let'
+import svelte from 'eslint-plugin-svelte'
+import globals from 'globals'
+import {fileURLToPath} from 'node:url'
+import tseslint from 'typescript-eslint'
 import * as zxGlobals from 'zx'
 
 /** @type {import('eslint').Linter.Config[]} */
@@ -27,8 +27,8 @@ export default [
       },
     },
     rules: {
-      'no-console':           'off',  // allow console in scripts
-      'no-unused-expressions':'off',  // permit `$\`…\`` template tags
+      'no-console': 'off', // allow console in scripts
+      'no-unused-expressions': 'off', // permit `$\`…\`` template tags
     },
   },
   {
@@ -84,7 +84,7 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', varsIgnorePattern: '^_'}],
       '@typescript-eslint/consistent-type-imports': ['error', {prefer: 'type-imports', fixStyle: 'inline-type-imports'}],
       '@stylistic/padded-blocks': ['error', 'never'],
-      '@stylistic/space-before-function-paren': ['error', 'always'],
+      '@stylistic/space-before-function-paren': ['error', 'never'],
       '@stylistic/space-in-parens': ['error', 'never'],
       '@stylistic/object-curly-spacing': ['error', 'never'],
       '@stylistic/space-infix-ops': ['error'],

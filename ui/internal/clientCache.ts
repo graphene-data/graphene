@@ -5,12 +5,12 @@
 const TTL_MS = 1000 * 60 * 60 * 2
 
 let cache: Cache | null = null
-async function getCache () {
+async function getCache() {
   cache ||= await caches.open('graphene-data')
   return cache
 }
 
-export async function getHashes () {
+export async function getHashes() {
   let store = await getCache()
   let keys = await store.keys()
   return keys.map(k => {
@@ -24,13 +24,13 @@ export async function getHashes () {
   }).filter(h => !!h)
 }
 
-export async function cacheRead (hash: string): Promise<any | null> {
+export async function cacheRead(hash: string): Promise<any | null> {
   let store = await getCache()
   let resp = await store.match(`https://graphene-cache/${hash}`, {ignoreSearch: true})
   return await resp?.clone().json()
 }
 
-export async function cacheWrite (hash: string, response:Response) {
+export async function cacheWrite(hash: string, response:Response) {
   if (!hash) return
   let store = await getCache()
 

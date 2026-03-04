@@ -2,31 +2,31 @@ import {expect, test} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 import {singleDim, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
-test.beforeEach(async ({page}) => {
+test.beforeEach(async({page}) => {
   await page.setViewportSize({width: 680, height: 400})
 })
 
-test('bar chart', async ({mount, chart}) => {
+test('bar chart', async({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(chart.el).screenshot('bar-chart')
 })
 
-test('horizontal bar chart', async ({mount, chart}) => {
+test('horizontal bar chart', async({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: singleDim(), x: 'category', y: 'value', swapXY: true})
   await expect(chart.el).screenshot('horizontal-bar-chart')
 })
 
-test('area chart', async ({mount, chart}) => {
+test('area chart', async({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(chart.el).screenshot('area-chart')
 })
 
-test('stacked area chart', async ({mount, chart}) => {
+test('stacked area chart', async({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', series: 'category', type: 'stacked'})
   await expect(chart.el).screenshot('stacked-area-chart')
 })
 
-test('stacked100 keeps time axis when x values are dates', async ({mount, chart}) => {
+test('stacked100 keeps time axis when x values are dates', async({mount, chart}) => {
   await mount('components/AreaChart.svelte', {
     data: timeseriesGrouped(),
     x: 'month',
@@ -39,7 +39,7 @@ test('stacked100 keeps time axis when x values are dates', async ({mount, chart}
   await expect(chart.el).screenshot('stacked100-date-axis-order')
 })
 
-test('line chart timeseries', async ({mount, page, chart}) => {
+test('line chart timeseries', async({mount, page, chart}) => {
   await mount('components/LineChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(page.locator('canvas')).toBeVisible()
   let axisType = await chart.config(c => c.xAxis[0].type)
@@ -47,19 +47,19 @@ test('line chart timeseries', async ({mount, page, chart}) => {
   await expect(chart.el).screenshot('line-chart-timeseries')
 })
 
-test('pie chart', async ({mount, chart}) => {
+test('pie chart', async({mount, chart}) => {
   await mount('components/PieChart.svelte', {data: singleDim(), category: 'category', value: 'value'})
   await expect(chart.el).screenshot('pie-chart')
 })
 
-test('big value', async ({mount, page, chart}) => {
+test('big value', async({mount, page, chart}) => {
   await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', fmt: 'num0', title: 'Sales'})
   await expect(page.getByText('Sales')).toBeVisible()
   await expect(page.getByText('611,113')).toBeVisible()
   await expect(chart.el).screenshot('big-value')
 })
 
-test('chart uses css named colors from comma-separated palette', async ({mount, chart}) => {
+test('chart uses css named colors from comma-separated palette', async({mount, chart}) => {
   await mount('components/LineChart.svelte', {
     data: timeseriesGrouped(),
     x: 'month',
@@ -72,7 +72,7 @@ test('chart uses css named colors from comma-separated palette', async ({mount, 
   expect(colors).toEqual(['red', 'SteelBlue', '#00ff00'])
 })
 
-test('chart accepts json string palette', async ({mount, chart}) => {
+test('chart accepts json string palette', async({mount, chart}) => {
   await mount('components/LineChart.svelte', {
     data: timeseriesGrouped(),
     x: 'month',
@@ -85,7 +85,7 @@ test('chart accepts json string palette', async ({mount, chart}) => {
   expect(colors).toEqual(['#123456', 'LightPink', 'hsl(120, 100%, 50%)'])
 })
 
-test('series colors accepts json string input', async ({mount, chart}) => {
+test('series colors accepts json string input', async({mount, chart}) => {
   await mount('components/LineChart.svelte', {
     data: timeseriesGrouped(),
     x: 'month',
@@ -105,7 +105,7 @@ test('series colors accepts json string input', async ({mount, chart}) => {
   expect(colors).toContain('#123456')
 })
 
-test('bar chart y-axis uses integer ticks for integer data', async ({mount, chart}) => {
+test('bar chart y-axis uses integer ticks for integer data', async({mount, chart}) => {
   // there was a regression where we'd try to render fractional ticks (0, 0.25, 0.5, 0.75, 1), but they got rounded
   let rows = [{category: 'A', count: 1}, {category: 'B', count: 1}, {category: 'C', count: 1}] as any
   rows._evidenceColumnTypes = [{name: 'category', evidenceType: 'string'}, {name: 'count', evidenceType: 'number'}]
@@ -115,7 +115,7 @@ test('bar chart y-axis uses integer ticks for integer data', async ({mount, char
   await expect(chart.el).screenshot('bar-chart-integer-ticks')
 })
 
-test('line chart dual axis shows both y-axis labels', async ({mount, chart}) => {
+test('line chart dual axis shows both y-axis labels', async({mount, chart}) => {
   let data = timeseries() as any
   let rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k * 0.1}))
   rows._evidenceColumnTypes = [
@@ -142,7 +142,7 @@ test('line chart dual axis shows both y-axis labels', async ({mount, chart}) => 
   await expect(chart.el).screenshot('line-chart-dual-axis')
 })
 
-test('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
+test('line chart seriesLabelFmt formats date series names', async({mount, chart}) => {
   await mount('components/LineChart.svelte', {
     data: timeseriesWithDateSeries(),
     x: 'category',
@@ -155,7 +155,7 @@ test('line chart seriesLabelFmt formats date series names', async ({mount, chart
   await expect(chart.el).screenshot('line-chart-series-label-fmt')
 })
 
-test('numeric year xFmt=yyyy keeps year labels', async ({mount, chart}) => {
+test('numeric year xFmt=yyyy keeps year labels', async({mount, chart}) => {
   await mount('components/BarChart.svelte', {
     data: yearlyCounts(),
     x: 'year',
@@ -170,7 +170,7 @@ test('numeric year xFmt=yyyy keeps year labels', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-numeric-year-xfmt')
 })
 
-test('bar chart accepts comma-separated multi y', async ({mount, chart}) => {
+test('bar chart accepts comma-separated multi y', async({mount, chart}) => {
   let data = timeseries() as any
   // augment dataset with a second numeric column while preserving metadata
   let rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k * 0.5}))
@@ -187,7 +187,7 @@ test('bar chart accepts comma-separated multi y', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-multi-y')
 })
 
-test('bar chart grouped labels', async ({mount, chart}) => {
+test('bar chart grouped labels', async({mount, chart}) => {
   await mount('components/BarChart.svelte', {
     data: timeseriesGrouped(),
     x: 'month',
@@ -210,7 +210,7 @@ test('bar chart grouped labels', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-grouped-labels')
 })
 
-test('bar chart invalid horizontal timeseries renders error state', async ({mount, page}) => {
+test('bar chart invalid horizontal timeseries renders error state', async({mount, page}) => {
   expectConsoleError('Error in Bar Chart')
 
   await mount('components/BarChart.svelte', {
@@ -225,7 +225,7 @@ test('bar chart invalid horizontal timeseries renders error state', async ({moun
   await expect(page.locator('#component-test')).screenshot('bar-chart-horizontal-timeseries-error')
 })
 
-test('line chart markers and step', async ({mount, chart}) => {
+test('line chart markers and step', async({mount, chart}) => {
   await mount('components/LineChart.svelte', {
     data: timeseries(),
     x: 'month',
@@ -247,7 +247,7 @@ test('line chart markers and step', async ({mount, chart}) => {
   await expect(chart.el).screenshot('line-chart-markers-step')
 })
 
-test('line chart wraps x labels when requested', async ({mount, chart}) => {
+test('line chart wraps x labels when requested', async({mount, chart}) => {
   let data = longCategorySeriesData()
   await mount('components/LineChart.svelte', {
     data,
@@ -268,7 +268,7 @@ test('line chart wraps x labels when requested', async ({mount, chart}) => {
   await expect(chart.el).screenshot('line-chart-wrapped-x-labels')
 })
 
-test('line chart applies axis controls and padding attributes', async ({mount, chart}) => {
+test('line chart applies axis controls and padding attributes', async({mount, chart}) => {
   await mount('components/LineChart.svelte', {
     data: timeseries(),
     x: 'month',
@@ -305,7 +305,7 @@ test('line chart applies axis controls and padding attributes', async ({mount, c
   await expect(chart.el).screenshot('line-chart-axis-controls')
 })
 
-test('area chart stacked100', async ({mount, chart}) => {
+test('area chart stacked100', async({mount, chart}) => {
   await mount('components/AreaChart.svelte', {
     data: timeseriesGrouped(),
     x: 'month',
@@ -323,7 +323,7 @@ test('area chart stacked100', async ({mount, chart}) => {
   await expect(chart.el).screenshot('area-chart-stacked100')
 })
 
-test('area chart supports stepped markers and hidden line', async ({mount, chart}) => {
+test('area chart supports stepped markers and hidden line', async({mount, chart}) => {
   await mount('components/AreaChart.svelte', {
     data: areaMissingData(),
     x: 'month',
@@ -347,7 +347,7 @@ test('area chart supports stepped markers and hidden line', async ({mount, chart
   await expect(chart.el).screenshot('area-chart-stepped-markers-no-line')
 })
 
-test('bar chart applies secondary axis colors and assignment', async ({mount, chart}) => {
+test('bar chart applies secondary axis colors and assignment', async({mount, chart}) => {
   let data = timeseries() as any
   let rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k * 0.15}))
   rows._evidenceColumnTypes = [...data.rows._evidenceColumnTypes, {name: 'profit_usd0k', evidenceType: 'number'}]
@@ -378,7 +378,7 @@ test('bar chart applies secondary axis colors and assignment', async ({mount, ch
   await expect(chart.el).screenshot('bar-chart-secondary-axis-line')
 })
 
-test('line chart applies series options to each rendered series', async ({mount, chart}) => {
+test('line chart applies series options to each rendered series', async({mount, chart}) => {
   await mount('components/LineChart.svelte', {
     data: timeseriesGrouped(),
     x: 'month',
@@ -393,7 +393,7 @@ test('line chart applies series options to each rendered series', async ({mount,
   await expect(chart.el).screenshot('line-chart-series-options-smooth')
 })
 
-test('pie chart with series options', async ({mount, chart}) => {
+test('pie chart with series options', async({mount, chart}) => {
   await mount('components/PieChart.svelte', {
     data: singleDim(),
     category: 'category',
@@ -415,7 +415,7 @@ test('pie chart with series options', async ({mount, chart}) => {
   await expect(chart.el).screenshot('pie-chart-labeled')
 })
 
-test('big value percent formatting', async ({mount, page}) => {
+test('big value percent formatting', async({mount, page}) => {
   await mount('components/BigValue.svelte', {
     data: percentData(),
     value: 'ratio',
@@ -430,7 +430,7 @@ test('big value percent formatting', async ({mount, page}) => {
   await expect(page.locator('#component-test')).screenshot('big-value-percent')
 })
 
-test('big value null renders em dash', async ({mount, page}) => {
+test('big value null renders em dash', async({mount, page}) => {
   await mount('components/BigValue.svelte', {
     data: nullValueData(),
     value: 'value',
@@ -442,7 +442,7 @@ test('big value null renders em dash', async ({mount, page}) => {
   await expect(page.locator('#component-test')).screenshot('big-value-null')
 })
 
-test('echarts primitive honors dimensions and metadata attributes', async ({mount, page}) => {
+test('echarts primitive honors dimensions and metadata attributes', async({mount, page}) => {
   await mount('components/ECharts.svelte', {
     config: {
       xAxis: {type: 'category', data: ['A', 'B', 'C']},
@@ -465,7 +465,7 @@ test('echarts primitive honors dimensions and metadata attributes', async ({moun
   await expect(page.locator('#component-test')).screenshot('echarts-standalone')
 })
 
-test('echarts primitive supports svg renderer', async ({mount, page}) => {
+test('echarts primitive supports svg renderer', async({mount, page}) => {
   await mount('components/ECharts.svelte', {
     config: {
       xAxis: {type: 'category', data: ['A', 'B', 'C']},
@@ -484,7 +484,7 @@ test('echarts primitive supports svg renderer', async ({mount, page}) => {
   await expect(page.locator('#component-test')).screenshot('echarts-svg-renderer')
 })
 
-function longCategorySeriesData () {
+function longCategorySeriesData() {
   let rows = [
     {label: 'A very long category label for January', value: 11},
     {label: 'A very long category label for February', value: 19},
@@ -498,19 +498,19 @@ function longCategorySeriesData () {
   return {rows}
 }
 
-function percentData () {
+function percentData() {
   let rows = [{ratio: 0.314}] as any
   rows._evidenceColumnTypes = [{name: 'ratio', evidenceType: 'number'}]
   return {rows}
 }
 
-function nullValueData () {
+function nullValueData() {
   let rows = [{value: null}] as any
   rows._evidenceColumnTypes = [{name: 'value', evidenceType: 'number'}]
   return {rows}
 }
 
-function areaMissingData () {
+function areaMissingData() {
   let rows = [
     {month: 'Jan', sales: 12},
     {month: 'Feb', sales: null},

@@ -16,7 +16,7 @@ interface RunResult {
 
 const shouldRunPackInstallTest = !!process.env.CI || process.env.GRAPHENE_PACK_TEST === '1'
 
-function run (command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<RunResult> {
+function run(command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<RunResult> {
   return new Promise((resolve) => {
     let child = spawn(command, args, {cwd, env})
     let stdout = ''
@@ -27,12 +27,12 @@ function run (command: string, args: string[], cwd: string, env: NodeJS.ProcessE
   })
 }
 
-function expectSuccess (step: string, result: RunResult) {
+function expectSuccess(step: string, result: RunResult) {
   if (result.code === 0) return
   throw new Error(`[pack-install.test] ${step} failed (code ${result.code})\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
 }
 
-async function getAvailablePort (): Promise<number> {
+async function getAvailablePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
     let srv = net.createServer()
     srv.unref()
@@ -44,21 +44,21 @@ async function getAvailablePort (): Promise<number> {
   })
 }
 
-function parseTarballPath (result: RunResult, cwd: string) {
+function parseTarballPath(result: RunResult, cwd: string) {
   let matches = Array.from((result.stdout + result.stderr).matchAll(/([^\s]+\.tgz)/g), m => m[1])
   let tarball = matches.at(-1)
   if (!tarball) throw new Error('Could not find packed .tgz path in pnpm pack output')
   return path.isAbsolute(tarball) ? tarball : path.resolve(cwd, tarball)
 }
 
-function parseScreenshotPath (output: string, cwd: string) {
+function parseScreenshotPath(output: string, cwd: string) {
   let match = output.match(/Screenshot saved to\s+(.+\.png)/)
   if (!match) throw new Error(`Could not find screenshot path in output:\n${output}`)
   let screenshotPath = match[1].trim()
   return path.isAbsolute(screenshotPath) ? screenshotPath : path.resolve(cwd, screenshotPath)
 }
 
-test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user project', {timeout: 300_000}, async ({page}) => {
+test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user project', {timeout: 300_000}, async({page}) => {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
   let cliDir = path.join(coreDir, 'cli')

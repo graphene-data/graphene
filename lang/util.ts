@@ -1,7 +1,7 @@
 import type {FileInfo} from './types.ts'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 
-function markdownOffset (offset: number, file: FileInfo) {
+function markdownOffset(offset: number, file: FileInfo) {
   let map = file.virtualToMarkdownOffset
   if (!map || map.length === 0) return offset
   if (offset <= 0) return map[0] ?? 0
@@ -9,7 +9,7 @@ function markdownOffset (offset: number, file: FileInfo) {
   return map[offset]
 }
 
-function virtualOffset (offset: number, file: FileInfo) {
+function virtualOffset(offset: number, file: FileInfo) {
   let map = file.virtualToMarkdownOffset
   if (!map || map.length === 0) return offset
   if (offset <= map[0]) return 0
@@ -25,7 +25,7 @@ function virtualOffset (offset: number, file: FileInfo) {
   return low
 }
 
-export function getPosition (offset: number, file: FileInfo) {
+export function getPosition(offset: number, file: FileInfo) {
   let mdOffset = markdownOffset(offset, file)
   let lines = file.contents.split(/\r?\n/)
   let acc = 0
@@ -41,7 +41,7 @@ export function getPosition (offset: number, file: FileInfo) {
   return {offset: mdOffset, line: 1, col: 0}
 }
 
-export function getOffset (line: number, col: number, file: FileInfo) {
+export function getOffset(line: number, col: number, file: FileInfo) {
   let lines = file.contents.split(/\r?\n/)
   let acc = 0
   for (let i = 0; i < line; i++) {
@@ -51,25 +51,25 @@ export function getOffset (line: number, col: number, file: FileInfo) {
   return acc + col
 }
 
-export function getFile (node: SyntaxNode | SyntaxNodeRef): FileInfo {
+export function getFile(node: SyntaxNode | SyntaxNodeRef): FileInfo {
   if (node.node) node = node.node
   let top: SyntaxNode = node as SyntaxNode
   while (top.parent) top = top.parent
   return top!.tree!.fileInfo
 }
 
-export function txt (node: SyntaxNode | null | undefined) {
+export function txt(node: SyntaxNode | null | undefined) {
   if (!node) return ''
   let file = getFile(node)
   let source = file.virtualContents ?? file.contents
   return source.substring(node.from, node.to) || ''
 }
 
-export function compact<T> (obj: T): T {
+export function compact<T>(obj: T): T {
   return Object.fromEntries(Object.entries(obj as any).filter(([_, v]) => v !== undefined)) as T
 }
 
-export function trimIndentation (str: string) {
+export function trimIndentation(str: string) {
   let lines = str.trim().split('\n')
   let indent = lines.slice(1)
     .filter(l => l.trim() !== '')
@@ -83,7 +83,7 @@ export function trimIndentation (str: string) {
   }).join('\n')
 }
 
-export async function pollFor<T> (fn: () => T, timeoutMs: number, interval?: number): Promise<T | null> {
+export async function pollFor<T>(fn: () => T, timeoutMs: number, interval?: number): Promise<T | null> {
   let end = Date.now() + timeoutMs
   while (Date.now() < end) {
     let res = fn()
