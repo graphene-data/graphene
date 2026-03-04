@@ -22,6 +22,10 @@
     "zx": "^8.8.5"
   },
   "pnpm": {
+    "overrides": {
+      "rollup": ">=4.59.0",
+      "fast-xml-parser": ">=5.3.8"
+    },
     "ignoredBuiltDependencies": [
       "@sveltejs/kit",
       "keytar"

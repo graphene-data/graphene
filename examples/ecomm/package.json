@@ -15,7 +15,7 @@
   "type": "module",
   "dependencies": {
     "@graphenedata/cli": "workspace:*",
-    "svelte": "5.53.3"
+    "svelte": "5.53.7"
   },
   "graphene": {
     "defaultNamespace": "bigquery-public-data.thelook_ecommerce",
