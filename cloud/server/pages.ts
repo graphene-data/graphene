@@ -4,7 +4,7 @@ import {getDb} from './db.ts'
 import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
 import {files, repos} from '../schema.ts'
-import {componentNames, escapeAngles, extractQueries, sanitizeMarkdown} from '../../core/cli/mdCompile.ts'
+import {componentNames, rehypePlugins, remarkPlugins} from '../../core/cli/mdCompile.ts'
 import {PROD} from './consts.ts'
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
@@ -65,8 +65,8 @@ async function compileMd (markdown:string, filename:string, repoId:string, inlin
   let svelteSource = await mdsvexCompile(markdown, {
     filename,
     extensions: ['.md'],
-    remarkPlugins: [extractQueries, escapeAngles],
-    rehypePlugins: [sanitizeMarkdown],
+    remarkPlugins,
+    rehypePlugins,
   })
   if (!svelteSource) throw new Error('Failed to compile')
 
