@@ -27,7 +27,9 @@ Other statements:
 
 ## Using semantics in queries
 ### Implicit joins
-`from orders select status, user.name` will automatically join users on to orders per the model-defined join
+- `from orders select status, user.name` will automatically join users on to orders per the model-defined join
+- Use multiple dot operators to traverse multi-hop joins e.g. `from orders select status, order_items.inventory_items.avg_days_in_inventory -- orders -> order_items -> inventory_items
+- Normal ANSI joins (`inner join`, `left join`, etc.) supported in `select` as well, if the join you need is not already modeled
 
 ### Dimension and measure expansion
 Dimensions and measures are like macros that expand inline when GSQL compiles to database SQL. For example, `from users select id, orders.revenue` automatically expands to `select users.id, sum(orders.amount) ...`
