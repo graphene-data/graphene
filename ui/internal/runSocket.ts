@@ -1,5 +1,5 @@
-// WebSocket connection for the `graphene check` command.
-// Listens for check requests, waits for queries to finish, captures screenshots, and reports errors.
+// WebSocket connection for the `graphene run` command.
+// Listens for run requests, waits for queries to finish, captures screenshots, and reports errors.
 
 import {getErrors} from './telemetry.ts'
 
