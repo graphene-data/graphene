@@ -1,6 +1,6 @@
 import './internal/telemetry.ts'
 import './internal/queryEngine.ts'
-import './internal/checkSocket.ts'
+import './internal/runSocket.ts'
 import './app.css'
 import {mount} from 'svelte'
 import LocalApp from './internal/LocalApp.svelte'
