@@ -24,7 +24,14 @@ function parseArgType (typeStr: string): {type: FieldType | 'sql native', rawTyp
 }
 
 function getArgInfo (arg: ArgDef): {name: string, type: string} {
-  return Array.isArray(arg) ? {name: arg[0], type: arg[1]} : arg
+  let [name, type] = Array.isArray(arg) ? [arg[0], arg[1]] : [arg.name, arg.type]
+  return {name, type: Array.isArray(type) ? type[0] : type}
+}
+
+function parseArgTypes (arg: ArgDef): {type: FieldType | 'sql native', rawType?: string}[] {
+  let type = Array.isArray(arg) ? arg[1] : arg.type
+  if (Array.isArray(type)) return type.map(t => ({type: t as FieldType}))
+  return parseArgType(type)
 }
 
 // Convert a FunctionDef into one or more Overloads (optional args expand into multiple overloads)
@@ -43,7 +50,7 @@ function convertDef (def: FunctionDef): Overload[] {
   return argSets.map(args => ({
     params: args.map(a => {
       let {name, type} = getArgInfo(a)
-      return {name, allowedTypes: parseArgType(type), isVariadic: type.endsWith('...')}
+      return {name, allowedTypes: parseArgTypes(a), isVariadic: type.endsWith('...')}
     }),
     returnType: {type: returnType, expressionType},
     sqlName: def.sqlName,

@@ -13,8 +13,8 @@ export type SQLType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | '
 //   'T...'       - variadic generic
 //   'kw'         - SQL keyword (not a string value, passed through as-is)
 export type ArgDef =
-  | [name: string, type: string]
-  | {name: string; type: string; description?: string}
+  | [name: string, type: string | string[]]
+  | {name: string; type: string | string[]; description?: string}
 
 // A single function signature (for functions with multiple overloads)
 export interface FunctionOverload {
