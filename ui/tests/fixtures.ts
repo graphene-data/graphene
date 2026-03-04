@@ -32,7 +32,7 @@ export interface ServerFixture {
 export const test = base.extend<{browser: Browser, page: Page, server: ServerFixture, mount: MountFn, chart: ChartFixture}>({
   browser: [
     // eslint-disable-next-line no-empty-pattern
-    async ({}, use) => {
+    async({}, use) => {
       let b = await chromium.launch({
         headless: !process.env.GRAPHENE_DEBUG,
         args: [
@@ -50,7 +50,7 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
     {scope: 'worker'},
   ],
 
-  page: async ({browser}, use) => {
+  page: async({browser}, use) => {
     let context = await browser.newContext({
       viewport: {width: 1280, height: 720},
       deviceScaleFactor: 1,
@@ -77,14 +77,14 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
   // This boots up our cli server on a unique port for e2e tests.
   server: [
     // eslint-disable-next-line no-empty-pattern
-    async ({}, use: (fixture: ServerFixture) => Promise<void>) => {
+    async({}, use: (fixture: ServerFixture) => Promise<void>) => {
       let port = await getAvailablePort()
       let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
       process.env.GRAPHENE_PORT = String(port)
       setConfig({port, root: viteRoot})
       let server = await serve2()
 
-      function cleanup () {
+      function cleanup() {
         clearWorkspace()
         Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
 
@@ -119,8 +119,8 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
     {scope: 'worker'} as any,
   ],
 
-  mount: async ({page, server}: {page: Page, server: ServerFixture}, use) => {
-    let mountFn = async (componentPath: string, props: any) => {
+  mount: async({page, server}: {page: Page, server: ServerFixture}, use) => {
+    let mountFn = async(componentPath: string, props: any) => {
       await page.goto(`${server.url()}/__ct`)
 
       // evidence depends on the object being set on an array, but wont serialize when playwright sends it to the frontend, so unpack it here
@@ -161,8 +161,8 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
     await expect(page.locator('#component-test > :not(dialog)').first()).toBeVisible()
   },
 
-  chart: async ({page}, use) => {
-    let readConfig: ChartConfigFn = async (selector) => {
+  chart: async({page}, use) => {
+    let readConfig: ChartConfigFn = async(selector) => {
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
       await page.waitForFunction(() => {
@@ -176,7 +176,7 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
         try {
           let fn = new Function('config', `return (${source})(config)`)
           return fn(option)
-        } catch (error) {
+        } catch(error) {
           console.error('chartConfig selector error', error)
           return null
         }
@@ -193,7 +193,7 @@ test.beforeEach(() => {
   clearWorkspace()
 })
 
-async function getAvailablePort (): Promise<number> {
+async function getAvailablePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
     let srv = net.createServer()
     srv.unref()
@@ -205,7 +205,7 @@ async function getAvailablePort (): Promise<number> {
   })
 }
 
-function trimIndentation (str:string) {
+function trimIndentation(str:string) {
   let lines = str.split('\n')
   let firstContentLine = lines[1] // Skip the first line (assumed to be empty) and find indentation of second line
   if (!firstContentLine) return str
@@ -227,7 +227,7 @@ declare global {
   }
 }
 
-export async function waitForGrapheneLoad (page: Page, timeout = 20_000) {
+export async function waitForGrapheneLoad(page: Page, timeout = 20_000) {
   await page.waitForFunction(() => Boolean(window.$GRAPHENE), null, {timeout})
   await page.evaluate((ms) => window.$GRAPHENE.waitForLoad?.(ms), timeout)
 }

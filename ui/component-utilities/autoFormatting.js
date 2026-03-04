@@ -248,7 +248,7 @@ export const fallbackFormat = (typedValue) => {
  * @param {number} referenceValue
  * @returns {string} the number format code for the given reference value
  */
-export function computeNumberAutoFormatCode (
+export function computeNumberAutoFormatCode(
   referenceValue,
   maxDisplayDecimals = 7,
   significantDigits = AUTO_FORMAT_MEDIAN_PRECISION,
@@ -277,7 +277,7 @@ export function computeNumberAutoFormatCode (
  * @param {number | undefined} value
  * @returns {string} the appropriate unit (B, M, k or '') for the given value
  */
-function getAutoColumnUnit (value) {
+function getAutoColumnUnit(value) {
   let absoluteValue = Math.abs(value)
   if (absoluteValue >= 5000000000000) {
     return 'T'
@@ -292,7 +292,7 @@ function getAutoColumnUnit (value) {
   }
 }
 
-function base10Exponent (value) {
+function base10Exponent(value) {
   if (value === 0) {
     return 0
   } else {

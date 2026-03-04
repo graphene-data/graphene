@@ -6,13 +6,13 @@ import {getErrors} from './telemetry.ts'
 let socket: WebSocket | null = null
 connect()
 
-function captureChart (chartTitle: string) {
+function captureChart(chartTitle: string) {
   let escaped = window.CSS.escape(chartTitle)
   let canvas = document.querySelector(`[data-chart-title="${escaped}"] canvas`) as HTMLCanvasElement | null
   return canvas?.toDataURL('image/png')
 }
 
-async function takeScreenshot () {
+async function takeScreenshot() {
   if (!(window as any).html2canvas) {
     let html2canvas = await import('@graphenedata/html2canvas')
     ;(window as any).html2canvas = html2canvas.default
@@ -21,13 +21,13 @@ async function takeScreenshot () {
   return canvas?.toDataURL('image/png')
 }
 
-function connect () {
+function connect() {
   let wsUrl = `ws://${window.location.host}/_api/ws`
   socket = new WebSocket(wsUrl)
   socket.onclose = () => setTimeout(connect, 2000)
   socket.onopen = () => socket!.send(JSON.stringify({type: 'register', url: window.location.href}))
 
-  socket.onmessage = async (event) => {
+  socket.onmessage = async(event) => {
     let {type, requestId, chart} = JSON.parse(event.data)
     if (type !== 'check') return
 

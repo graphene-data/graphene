@@ -24,11 +24,11 @@ export class SnowflakeConnection implements QueryConnection {
   private ready: Promise<void>
   private connection!: snowflake.Connection
 
-  constructor (opts: SnowflakeOptions) {
+  constructor(opts: SnowflakeOptions) {
     this.ready = this.initialize(opts || {})
   }
 
-  async initialize (opts: SnowflakeOptions) {
+  async initialize(opts: SnowflakeOptions) {
     let privateKeyPath = opts.privateKeyPath || config.snowflake?.privateKeyPath
 
     let authOptions: any = {}
@@ -55,7 +55,7 @@ export class SnowflakeConnection implements QueryConnection {
     })
   }
 
-  async runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {
+  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
     await this.ready
     return await new Promise<QueryResult>((resolve, reject) => {
       let rows: any[] = []
@@ -71,7 +71,7 @@ export class SnowflakeConnection implements QueryConnection {
 
           let stream = statement.streamRows()
           stream.on('error', err => reject(err))
-          stream.on('readable', function (this: any, row) {
+          stream.on('readable', function(this: any, row) {
             while ((row = this.read()) !== null) {
               rows.push(row)
             }
@@ -85,12 +85,12 @@ export class SnowflakeConnection implements QueryConnection {
     })
   }
 
-  async listDatasets (): Promise<string[]> {
+  async listDatasets(): Promise<string[]> {
     let res = await this.runQuery('show databases')
     return res.rows.map(row => String(row['name'] || ''))
   }
 
-  async listSchemas (database: string): Promise<string[]> {
+  async listSchemas(database: string): Promise<string[]> {
     let res = await this.runQuery(`
       select schema_name as "schema_name"
       from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.SCHEMATA
@@ -100,7 +100,7 @@ export class SnowflakeConnection implements QueryConnection {
     return res.rows.map(row => String(row['schema_name']))
   }
 
-  async listTables (dataset: string): Promise<string[]> {
+  async listTables(dataset: string): Promise<string[]> {
     let parts = dataset.split('.')
     let database = parts.shift() || ''
     let schema = parts.join('.')
@@ -114,7 +114,7 @@ export class SnowflakeConnection implements QueryConnection {
     return res.rows.map(row => `${row['table_schema']}.${row['table_name']}`)
   }
 
-  async describeTable (target: string): Promise<SchemaColumn[]> {
+  async describeTable(target: string): Promise<SchemaColumn[]> {
     let parts = target.split('.')
     let database = parts.shift() || ''
     let table = parts.pop() || ''
@@ -132,7 +132,7 @@ export class SnowflakeConnection implements QueryConnection {
   }
 }
 
-function snowflakeIdent (value: string) {
+function snowflakeIdent(value: string) {
   if (!value) throw new Error('Snowflake identifiers cannot be empty')
   return `"${value.replace(/"/g, '""')}"`
 }

@@ -4,7 +4,7 @@ import {fileURLToPath} from 'url'
 import path from 'path'
 import {setConfig} from '../../lang/config.ts'
 
-export default async function setup (project: TestProject) {
+export default async function setup(project: TestProject) {
   let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
   setConfig({root: viteRoot})
 

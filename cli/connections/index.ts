@@ -6,7 +6,7 @@ import {type QueryResult, type QueryConnection, type QueryParams} from './types.
 // Reads credentials from environment variables and passes them to the connection constructors.
 // The connection classes themselves have no env-reading logic — this keeps the cloud server
 // from accidentally picking up local env vars instead of database-stored credentials.
-export async function getConnection (): Promise<QueryConnection> {
+export async function getConnection(): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
     let mod = await import('./bigQuery.ts')
     let options: any = {}
@@ -34,7 +34,7 @@ export async function getConnection (): Promise<QueryConnection> {
   }
 }
 
-export async function runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {
+export async function runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
   if (config.host) {
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',

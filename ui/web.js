@@ -51,7 +51,7 @@ window.$GRAPHENE.renderComplete = (id) => {
   pendingRenders.delete(String(id))
 }
 
-window.$GRAPHENE.waitForLoad = async (timeout = 20_000) => {
+window.$GRAPHENE.waitForLoad = async(timeout = 20_000) => {
   let g = window.$GRAPHENE
   let end = Date.now() + timeout
   while (Date.now() < end) {

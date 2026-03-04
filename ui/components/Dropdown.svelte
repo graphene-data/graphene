@@ -104,7 +104,7 @@
     if (isOpen) activeIndex = ensureActiveIndex(activeIndex, filteredOptions)
   })
 
-  function setupQuery () {
+  function setupQuery() {
     if (!mounted) return
     let key = data ? `${data}::${value}::${resolvedLabelField || ''}` : ''
     if (key === queryKey) return
@@ -142,7 +142,7 @@
     closeMenu(false)
   }
 
-  function filterOptions (opts: Option[], term: string): Option[] {
+  function filterOptions(opts: Option[], term: string): Option[] {
     let trimmed = term.trim().toLowerCase()
     if (!trimmed) return opts
     return opts.filter(opt => {
@@ -151,24 +151,24 @@
     })
   }
 
-  function ensureActiveIndex (current: number, opts: Option[]): number {
+  function ensureActiveIndex(current: number, opts: Option[]): number {
     if (!opts.length) return -1
     if (current >= 0 && current < opts.length) return current
     let selectedIdx = opts.findIndex(opt => isOptionSelected(opt))
     return selectedIdx >= 0 ? selectedIdx : 0
   }
 
-  function isOptionSelected (opt: Option): boolean {
+  function isOptionSelected(opt: Option): boolean {
     let key = optionKey(opt.value)
     return selection.some(val => optionKey(val) === key)
   }
 
-  async function focusSearchInput () {
+  async function focusSearchInput() {
     await tick()
     if (searchInput) searchInput.focus()
   }
 
-  function updateTriggerWidth () {
+  function updateTriggerWidth() {
     if (!triggerEl) {
       if (triggerWidth !== 0) triggerWidth = 0
       return
@@ -177,14 +177,14 @@
     if (width !== triggerWidth) triggerWidth = width
   }
 
-  function openMenu (focusSearch = true) {
+  function openMenu(focusSearch = true) {
     if (isDisabled) return
     updateTriggerWidth()
     isOpen = true
     if (focusSearch) focusSearchInput()
   }
 
-  function closeMenu (focusTrigger: boolean) {
+  function closeMenu(focusTrigger: boolean) {
     if (!isOpen) return
     isOpen = false
     activeIndex = -1
@@ -192,7 +192,7 @@
     if (focusTrigger) triggerEl?.focus()
   }
 
-  function toggleMenu () {
+  function toggleMenu() {
     if (isDisabled) return
     if (isOpen) {
       closeMenu(false)
@@ -201,7 +201,7 @@
     }
   }
 
-  function moveActive (delta: number) {
+  function moveActive(delta: number) {
     if (!filteredOptions.length) {
       activeIndex = -1
       return
@@ -215,12 +215,12 @@
     activeIndex = next
   }
 
-  function selectActiveOption () {
+  function selectActiveOption() {
     if (!filteredOptions.length || activeIndex < 0 || activeIndex >= filteredOptions.length) return
     handleOptionSelect(filteredOptions[activeIndex], true)
   }
 
-  function handleTriggerKeydown (event: KeyboardEvent) {
+  function handleTriggerKeydown(event: KeyboardEvent) {
     if (event.defaultPrevented) return
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp' || event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
@@ -236,7 +236,7 @@
     }
   }
 
-  function handleMenuKeydown (event: KeyboardEvent) {
+  function handleMenuKeydown(event: KeyboardEvent) {
     if (event.key === 'ArrowDown') {
       event.preventDefault()
       moveActive(1)
@@ -260,14 +260,14 @@
     }
   }
 
-  function handleOptionKeydown (event: KeyboardEvent, opt: Option) {
+  function handleOptionKeydown(event: KeyboardEvent, opt: Option) {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       handleOptionSelect(opt, true)
     }
   }
 
-  function handleOptionSelect (opt: Option, fromKeyboard: boolean) {
+  function handleOptionSelect(opt: Option, fromKeyboard: boolean) {
     let key = optionKey(opt.value)
     if (multi) {
       let exists = selection.some(val => optionKey(val) === key)
@@ -283,7 +283,7 @@
     }
   }
 
-  function scrollActiveIntoView () {
+  function scrollActiveIntoView() {
     if (!isOpen || activeIndex < 0) return
     let optionEl = menuEl?.querySelector<HTMLElement>(`[data-index="${activeIndex}"]`)
     optionEl?.scrollIntoView({block: 'nearest'})
@@ -326,7 +326,7 @@
     if (triggerEl) updateTriggerWidth()
   })
 
-  function syncSelection (fromUser: boolean) {
+  function syncSelection(fromUser: boolean) {
     let opts = availableOptions
     if (!opts.length) {
       if (selection.length) updateInputPayload(selection)
@@ -348,7 +348,7 @@
     setSelection(nextSelection, fromUser)
   }
 
-  function setSelection (values: any[], fromUser: boolean) {
+  function setSelection(values: any[], fromUser: boolean) {
     let keys = values.map(optionKey)
     let existingKeys = selection.map(optionKey)
     let changed = keys.length !== existingKeys.length || keys.some((k, idx) => k !== existingKeys[idx])
@@ -361,34 +361,34 @@
     updateInputPayload(selection)
   }
 
-  function updateInputPayload (values: any[]) {
+  function updateInputPayload(values: any[]) {
     let paramValue = values.length ? values[0] : null
     window.$GRAPHENE.updateParam(name, paramValue)
   }
 
-  function selectAll () {
+  function selectAll() {
     if (!multi) return
     setSelection(availableOptions.map(opt => opt.value), true)
   }
 
-  function clearSelection () {
+  function clearSelection() {
     setSelection([], true)
   }
 
   let elementId = $derived(`dropdown-${name}`)
   let menuId = $derived(`${elementId}-menu`)
 
-  function getContainerClass () {
+  function getContainerClass() {
     if (!hidePrint) return 'input-block'
     return 'input-block hide-print'
   }
 
-  function getDropdownClass () {
+  function getDropdownClass() {
     if (!isDisabled) return 'dropdown'
     return 'dropdown is-disabled'
   }
 
-  function getOptionClass (opt: Option, idx: number) {
+  function getOptionClass(opt: Option, idx: number) {
     let classes = 'dropdown-option'
     if (isOptionSelected(opt)) classes += ' is-selected'
     if (activeIndex === idx) classes += ' is-active'

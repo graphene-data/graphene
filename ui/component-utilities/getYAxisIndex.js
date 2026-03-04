@@ -1,6 +1,6 @@
 // Helper function for multi-series tooltips:
 // Returns the yAxisIndex for a series since we can't currently access that in ECharts' params
-export default function getYAxisIndex (componentIndex, yCount, y2Count) {
+export default function getYAxisIndex(componentIndex, yCount, y2Count) {
   let totalPatternCount = yCount + y2Count
 
   // Find the position of the index in the repeating sequence

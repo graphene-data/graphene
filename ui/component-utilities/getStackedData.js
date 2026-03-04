@@ -1,7 +1,7 @@
 import {groupBy, summarizeAt, sum} from '@tidyjs/tidy'
 import {tidyWithTypes} from './tidyWithTypes.js'
 
-export default function getStackedData (data, groupCol, valueCol) {
+export default function getStackedData(data, groupCol, valueCol) {
   let stackedData = tidyWithTypes(data, groupBy(groupCol, [summarizeAt(valueCol, sum)]))
 
   // If multiple y columns, iterate through data and add stack total column for sorting:

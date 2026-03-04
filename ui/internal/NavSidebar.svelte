@@ -18,7 +18,7 @@
   let normalizedCurrent = $derived(deriveCurrentFile(currentFile, normalizedFiles, baseRoute))
   let currentRoute = $derived(normalizedCurrent ? pathToRoute(normalizedCurrent) : '/')
 
-  function deriveCurrentFile (_currentFile, _normalizedFiles, _baseRoute) {
+  function deriveCurrentFile(_currentFile, _normalizedFiles, _baseRoute) {
     let fromProp = normalizeFilePath(currentFile)
     let route = getLocationRoute()
     if (route && normalizedFiles) {
@@ -28,11 +28,11 @@
     return fromProp
   }
 
-  function normalizeFilePath (filePath) {
+  function normalizeFilePath(filePath) {
     return (filePath || '').replace(/^\.\//, '').replace(/\\/g, '/')
   }
 
-  function getLocationRoute () {
+  function getLocationRoute() {
     if (typeof window === 'undefined') return null
     let route = window.location.pathname || '/'
     route = route.replace(/\/+$/, '') || '/'
@@ -56,7 +56,7 @@
     }
   })
 
-  function toggleFolder (path) {
+  function toggleFolder(path) {
     if (!path) return
     let next = new SvelteSet(openFolders)
     if (next.has(path)) next.delete(path)
@@ -64,22 +64,22 @@
     openFolders = next
   }
 
-  function handleFolderRowKey (event, path) {
+  function handleFolderRowKey(event, path) {
     if (event.key !== 'Enter' && event.key !== ' ') return
     event.preventDefault()
     toggleFolder(path)
   }
 
-  function isOpen (path, openSet = openFolders) {
+  function isOpen(path, openSet = openFolders) {
     if (!path) return true
     return openSet.has(path)
   }
 
-  function isVisible (node, openSet = openFolders) {
+  function isVisible(node, openSet = openFolders) {
     return node.ancestors.every((path) => isOpen(path, openSet))
   }
 
-  function buildTree (paths) {
+  function buildTree(paths) {
     let root = []
     let folderMap = new SvelteMap()
 
@@ -131,7 +131,7 @@
     return sortNodes(root)
   }
 
-  function sortNodes (nodes) {
+  function sortNodes(nodes) {
     return nodes
       .map((node) => {
         if (node.type === 'folder' && node.children?.length) {
@@ -147,7 +147,7 @@
       })
   }
 
-  function flattenTree (nodes, depth = 0, ancestors = []) {
+  function flattenTree(nodes, depth = 0, ancestors = []) {
     let list = []
     for (let node of nodes) {
       if (node.type === 'folder') {
@@ -163,12 +163,12 @@
     return list
   }
 
-  function createDefaultOpenFolders (_treeNodes, currentPath) {
+  function createDefaultOpenFolders(_treeNodes, currentPath) {
     let next = new SvelteSet()
     return mergeAncestorFolders(next, currentPath)
   }
 
-  function mergeAncestorFolders (openSet, filePath) {
+  function mergeAncestorFolders(openSet, filePath) {
     if (!filePath) return new SvelteSet(openSet)
     let parts = filePath.split('/')
     parts.pop()
@@ -181,7 +181,7 @@
     return next
   }
 
-  function formatLabel (value, type) {
+  function formatLabel(value, type) {
     let cleaned = type === 'file' ? value.replace(/\.md$/, '') : value
     if (cleaned.toLowerCase() === 'index') return 'Home'
     return cleaned
@@ -191,14 +191,14 @@
       .join(' ')
   }
 
-  function pathToRoute (path) {
+  function pathToRoute(path) {
     let clean = path.replace(/\.md$/, '')
     let prefix = baseRoute ? '/' + baseRoute : ''
     if (!clean || clean === 'index') return prefix || '/'
     return prefix + '/' + clean
   }
 
-  function handleLinkClick (event, href) {
+  function handleLinkClick(event, href) {
     if (!onNavigate) return
     if (href.startsWith('http') || href.startsWith('//')) return
     event.preventDefault()

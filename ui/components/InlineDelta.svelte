@@ -96,7 +96,7 @@
     if (numericValue === null) return '–'
     try {
       return formatValue(numericValue, resolvedFormat, columnUnitSummary)
-    } catch (error) {
+    } catch(error) {
       console.error('Failed to format delta value', error)
       return String(numericValue)
     }

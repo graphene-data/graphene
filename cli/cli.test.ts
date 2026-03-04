@@ -19,12 +19,12 @@ const TEST_PORT = 4163
 process.env.GRAPHENE_PORT = '4163'
 process.env.NODE_ENV = 'test'
 
-function ensureFlightsDatabaseExists () {
+function ensureFlightsDatabaseExists() {
   let dbPath = path.resolve(flightDir, 'flights.duckdb')
   if (!fs.existsSync(dbPath)) throw new Error('flights.duckdb not found. Run `pnpm run setup` in examples/flights')
 }
 
-function runCli (args: string[], cwd?: string): Promise<RunResult> {
+function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise((resolve) => {
     let cliEntry = path.resolve(dir, 'cli.ts')
     let child = spawn('node', [cliEntry, ...args], {cwd, env: process.env})
@@ -35,24 +35,24 @@ function runCli (args: string[], cwd?: string): Promise<RunResult> {
   })
 }
 
-function logCliFailure (step: string, res: RunResult) {
+function logCliFailure(step: string, res: RunResult) {
   console.error(`[cli.test] ${step} failed (code ${res.code})\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`)
 }
 
-function expectCliSuccess (res: RunResult, step: string) {
+function expectCliSuccess(res: RunResult, step: string) {
   if (res.code !== 0) logCliFailure(step, res)
   expect(res.code).toBe(0)
 }
 
 describe('cli compile', () => {
-  it('compiles a basic query (happy path)', async () => {
+  it('compiles a basic query (happy path)', async() => {
     let res = await runCli(['compile', 'from flights select carrier'], flightDir)
     expectCliSuccess(res, 'compile basic query')
     expect(res.stdout.toLowerCase()).toContain('from flights')
     expect(res.stdout.toLowerCase()).toContain('select')
   })
 
-  it('errors on invalid function (error path)', async () => {
+  it('errors on invalid function (error path)', async() => {
     let res = await runCli(['compile', 'from flights select not_a_function()'], flightDir)
     expect(res.code).not.toBe(0)
     expect((res.stdout + res.stderr).toLowerCase()).toContain('unknown function')
@@ -60,10 +60,10 @@ describe('cli compile', () => {
 })
 
 describe('cli serve (background)', () => {
-  beforeEach(async () => { await stopGrapheneIfRunning() })
-  afterEach(async () => { await stopGrapheneIfRunning() })
+  beforeEach(async() => { await stopGrapheneIfRunning() })
+  afterEach(async() => { await stopGrapheneIfRunning() })
 
-  it('starts the server in the background and restarts cleanly', async () => {
+  it('starts the server in the background and restarts cleanly', async() => {
     let first = await runCli(['serve', '--bg'], flightDir)
     expectCliSuccess(first, 'serve start')
     expect(first.stdout).toContain('Server running at')
@@ -85,13 +85,13 @@ describe('cli serve (background)', () => {
 describe('cli run', () => {
   beforeAll(ensureFlightsDatabaseExists)
 
-  it('runs a query against flights.duckdb (happy path)', async () => {
+  it('runs a query against flights.duckdb (happy path)', async() => {
     let res = await runCli(['run', 'from flights select count() as total'], flightDir)
     expectCliSuccess(res, 'run query')
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
-  it('shows an error when no .duckdb is present (error path)', async () => {
+  it('shows an error when no .duckdb is present (error path)', async() => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-'))
     let input = [
       'table t (a int)',
@@ -102,13 +102,13 @@ describe('cli run', () => {
     expect(res.stderr.toLowerCase()).toContain('no .duckdb file found')
   })
 
-  it('runs a named query from a markdown file', async () => {
+  it('runs a named query from a markdown file', async() => {
     let res = await runCli(['run', 'index.md', '--query', 'weekly_trends'], flightDir)
     expectCliSuccess(res, 'run markdown query')
     expect(res.stdout.toLowerCase()).toContain('week')
   })
 
-  it('rejects passing a gsql file path', async () => {
+  it('rejects passing a gsql file path', async() => {
     let res = await runCli(['run', 'tables/flights.gsql'], flightDir)
     expect(res.code).toBe(1)
     expect((res.stdout + res.stderr).toLowerCase()).toContain('running .gsql files is no longer supported')
@@ -116,7 +116,7 @@ describe('cli run', () => {
 })
 
 describe('cli check', () => {
-  it('checks a single gsql file', async () => {
+  it('checks a single gsql file', async() => {
     let res = await runCli(['check', 'tables/flights.gsql'], flightDir)
     expectCliSuccess(res, 'check gsql file')
     expect(res.stdout).toContain('No errors found')
