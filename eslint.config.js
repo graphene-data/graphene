@@ -59,7 +59,6 @@ export default [
     languageOptions: {globals: globals.browser},
     plugins: {'prefer-let': pluginPreferLet, '@stylistic': stylistic},
     rules: {
-      '@stylistic/indent': ['error', 2, {SwitchCase: 1}],
       '@stylistic/quotes': ['error', 'single', {avoidEscape: true}],
       '@stylistic/semi': ['error', 'never'],
       // 'curly': ['error', 'multi', 'consistent'],
@@ -84,7 +83,6 @@ export default [
       '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', varsIgnorePattern: '^_'}],
       '@typescript-eslint/consistent-type-imports': ['error', {prefer: 'type-imports', fixStyle: 'inline-type-imports'}],
       '@stylistic/padded-blocks': ['error', 'never'],
-      '@stylistic/space-before-function-paren': ['error', 'never'],
       '@stylistic/space-in-parens': ['error', 'never'],
       '@stylistic/object-curly-spacing': ['error', 'never'],
       '@stylistic/space-infix-ops': ['error'],
