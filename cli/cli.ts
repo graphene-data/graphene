@@ -2,14 +2,14 @@
 
 import {Command} from 'commander'
 import {printDiagnostics, printTable} from './printer.ts'
-import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import {analyze, getDiagnostics, loadWorkspace, toSql, type Query, updateFile} from '../lang/core.ts'
 import fs from 'fs-extra'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import dotenv from 'dotenv'
 import {config, loadConfig} from '../lang/config.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
-import {check} from './check.ts'
+import {check, runMdFile} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {loginPkce} from './auth.ts'
 
@@ -38,9 +38,34 @@ program.command('compile')
   })
 
 program.command('run')
-  .description('Run a query against your database')
+  .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
-  .action(async (input: string | undefined) => {
+  .option('-c, --chart <chartTitle>', 'Title of a specific chart to capture')
+  .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
+  .action(async (input: string | undefined, options: {chart?: string, query?: string}) => {
+    if (options.chart && options.query) {
+      console.error('Cannot use --chart and --query together')
+      process.exit(1)
+    }
+
+    let inputPath = getExistingPath(input)
+    if (inputPath && inputPath.endsWith('.md')) {
+      let res = options.query
+        ? await runNamedQueryFromMd(inputPath, options.query)
+        : await runMdFile({ mdArg: inputPath, chart: options.chart })
+      process.exit(res ? 0 : 1)
+    }
+
+    if (options.chart || options.query) {
+      console.error('--chart and --query can only be used with a markdown file path')
+      process.exit(1)
+    }
+
+    if (inputPath && inputPath.endsWith('.gsql')) {
+      console.error('Running .gsql files is no longer supported. Pass inline GSQL or use a markdown file path with --query.')
+      process.exit(1)
+    }
+
     await loadWorkspace(process.cwd(), false)
     let gsql = await readInput(input)
     let queries = analyze(gsql)
@@ -109,11 +134,10 @@ program.command('stop')
   .action(async () => { await stopGrapheneIfRunning() })
 
 program.command('check')
-  .description('Check the project for errors, optionally capturing a page screenshot')
-  .argument('[mdFile]', 'Markdown file to check (e.g., index.md)')
-  .option('-c, --chart <chartTitle>', 'Title of a specific chart to capture')
-  .action(async (mdArg: string | undefined, options: {chart?: string}) => {
-    let res = await check({mdArg, chart: options.chart})
+  .description('Check the project for diagnostics')
+  .argument('[file]', 'Optional markdown or gsql file to check')
+  .action(async (fileArg: string | undefined) => {
+    let res = await check({fileArg})
     process.exit(res ? 0 : 1) // import to call `exit`, bc if we started the server in the background, just returning won't actually exit the process.
   })
 
@@ -144,6 +168,43 @@ async function readInput (arg): Promise<string> {
   }
 
   return arg
+}
+
+function getExistingPath (arg: string | undefined): string | null {
+  if (!arg || arg === '-') return null
+  let absolutePath = path.resolve(arg)
+  return fs.existsSync(absolutePath) ? absolutePath : null
+}
+
+async function runNamedQueryFromMd (mdAbsolutePath: string, queryName: string): Promise<boolean> {
+  await loadWorkspace(process.cwd(), false)
+  let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
+  let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
+
+  updateFile(mdContents, mdRelativePath)
+  analyze()
+  if (getDiagnostics().length > 0) {
+    printDiagnostics(getDiagnostics())
+    return false
+  }
+
+  let runQueryFence = [
+    mdContents,
+    '',
+    '```sql',
+    `from ${queryName} select *`,
+    '```',
+  ].join('\n')
+  let queries = analyze(runQueryFence, 'md')
+  if (getDiagnostics().length > 0) {
+    printDiagnostics(getDiagnostics())
+    return false
+  }
+
+  let sql = toSql(queries[queries.length - 1])
+  let res = await runQuery(sql)
+  printTable(res.rows)
+  return true
 }
 
 function validQuery (queries: Query[]): boolean {

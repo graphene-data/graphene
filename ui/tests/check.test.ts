@@ -1,6 +1,6 @@
 import {test, expect} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
-import {check} from '../../cli/check.ts'
+import {check, runMdFile} from '../../cli/check.ts'
 import {updateFile} from '../../lang/core.ts'
 import stripAnsi from 'strip-ansi'
 import {trimIndentation} from '../../lang/util.ts'
@@ -59,7 +59,7 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
   `.trim())
 })
 
-test('cli check command reports runtime query errors', async ({server, page}) => {
+test('cli run with md file reports runtime query errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile('/index.md', `
     # Runtime Cast Error Page
@@ -70,7 +70,7 @@ test('cli check command reports runtime query errors', async ({server, page}) =>
   `)
 
   await page.goto(server.url())
-  await check({mdArg: 'index.md', log})
+  await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(trimIndentation(`
     Runtime errors in index.md:
     Query (data="runtime_error_query" x="origin" y="explode"): Out of Range Error: cannot take square root of a negative number
@@ -78,7 +78,7 @@ test('cli check command reports runtime query errors', async ({server, page}) =>
   `))
 })
 
-test('check reports runtime chart configuration errors', async ({server, page}) => {
+test('cli run with md file reports runtime chart configuration errors', async ({server, page}) => {
   expectConsoleError('Error in Bar Chart')
   expectConsoleError(/ECharts.*has been disposed/)
   server.mockFile('/index.md', `
@@ -90,7 +90,7 @@ test('check reports runtime chart configuration errors', async ({server, page}) 
   `)
 
   await page.goto(server.url())
-  await check({mdArg: 'index.md', log})
+  await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(trimIndentation(`
     Runtime errors in index.md:
     Runtime Chart Config Error (data="chart_data" x="carrier" y="worst_delay"): Log axis cannot display values less than or equal to zero
@@ -98,7 +98,7 @@ test('check reports runtime chart configuration errors', async ({server, page}) 
 `))
 })
 
-test('check table configuration errors', async ({server, page}) => {
+test('cli run with md file reports table configuration errors', async ({server, page}) => {
   server.mockFile('/index.md', `
     # Runtime Table Config Error
     \`\`\`sql table_data
@@ -108,7 +108,7 @@ test('check table configuration errors', async ({server, page}) => {
   `)
 
   await page.goto(server.url())
-  await check({mdArg: 'index.md', log})
+  await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(trimIndentation(`
     Runtime errors in index.md:
     DataTable: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
@@ -116,7 +116,7 @@ test('check table configuration errors', async ({server, page}) => {
 `))
 })
 
-test('check reports html compilation errors', async ({server, page}) => {
+test('cli run with md file reports html compilation errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
@@ -126,7 +126,7 @@ test('check reports html compilation errors', async ({server, page}) => {
   `)
 
   await page.goto(server.url())
-  let result = await check({mdArg: 'index.md', log})
+  let result = await runMdFile({mdArg: 'index.md', log})
   expect(result).toBe(false)
   let output = outputLines()
   expect(output).toContain('Runtime errors in index.md:')
@@ -135,7 +135,7 @@ test('check reports html compilation errors', async ({server, page}) => {
   expect(output).toContain('^')
 })
 
-test('cli check with --chart captures a single chart screenshot', async ({server, page}) => {
+test('cli run with --chart captures a single chart screenshot', async ({server, page}) => {
   server.mockFile('/index.md', `
     # Chart Screenshot
     \`\`\`sql chart_data
@@ -145,7 +145,7 @@ test('cli check with --chart captures a single chart screenshot', async ({server
   `)
 
   await page.goto(server.url())
-  await check({mdArg: 'index.md', chart: 'Carrier Distance', log})
+  await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
   expect(outputLines()).toEqual(trimIndentation(`
     No errors found 💎
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png

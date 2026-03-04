@@ -16,7 +16,13 @@ import {pollFor} from '../lang/util.ts'
 import {FILE_MAP} from '../lang/analyze.ts'
 
 interface CheckOptions {
+  fileArg?: string
   mdArg?: string
+  log?: (...args: any[]) => void
+}
+
+interface RunMdFileOptions {
+  mdArg: string
   chart?: string
   log?: (...args: any[]) => void
 }
@@ -26,21 +32,21 @@ let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}>
 
 export async function check (options: CheckOptions): Promise<boolean> {
   let log = options.log || console.log
-  let mdFile = options.mdArg && normalizeMdFile(options.mdArg)
+  let fileArg = options.fileArg || options.mdArg
+  let targetFile = fileArg && normalizeGrapheneFile(fileArg)
 
-  if (options.mdArg && !mdFile) {
-    log(`Couldn't find ${options.mdArg}`)
+  if (fileArg && !targetFile) {
+    log(`Couldn't find ${fileArg}`)
     return false
   }
 
-  // if there's no file arg, check all md files. If there is a file arg, just load that file.
-  await loadWorkspace(config.root, !mdFile)
-  if (mdFile) {
-    if (process.env.NODE_ENV == 'test' && mockFileMap[mdFile]) {
-      updateFile(mockFileMap[mdFile], mdFile)
+  await loadWorkspace(config.root, !targetFile)
+  if (targetFile) {
+    if (process.env.NODE_ENV == 'test' && mockFileMap[targetFile]) {
+      updateFile(mockFileMap[targetFile], targetFile)
     } else {
-      let content = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
-      updateFile(content, mdFile)
+      let content = readFileSync(path.resolve(config.root, targetFile), 'utf-8')
+      updateFile(content, targetFile)
     }
   }
 
@@ -50,19 +56,35 @@ export async function check (options: CheckOptions): Promise<boolean> {
     return false
   }
 
+  log('No errors found 💎')
+  return true
+}
+
+export async function runMdFile (options: RunMdFileOptions): Promise<boolean> {
+  let log = options.log || console.log
+  let mdFile = normalizeMdFile(options.mdArg)
   if (!mdFile) {
-    log('No errors found 💎')
-    return true
+    log(`Couldn't find ${options.mdArg}`)
+    return false
   }
 
-  // in tests, both `check` and the vite server are in the same process, so end up sharing the workspace.
-  // Because of that, we need to clear out the md file we loaded into the workspace (which the usually server never loads).
-  // Otherwise, you'll get `some_table already defined` errors.
-  if (process.env.NODE_ENV == 'test' && mdFile) {
-    delete FILE_MAP[mdFile]
+  await loadWorkspace(config.root, false)
+  if (process.env.NODE_ENV == 'test' && mockFileMap[mdFile]) {
+    updateFile(mockFileMap[mdFile], mdFile)
+  } else {
+    let content = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
+    updateFile(content, mdFile)
   }
 
-  // Remove .md extension if provided and ensure it's just the filename
+  analyze()
+  if (getDiagnostics().length > 0) {
+    printDiagnostics(getDiagnostics(), log)
+    return false
+  }
+
+  // in tests, both the vite server and this method can share workspace state.
+  if (process.env.NODE_ENV == 'test') delete FILE_MAP[mdFile]
+
   let host = `http://localhost:${config.port}`
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
   if (pageUrl === '/index') pageUrl = '/'
@@ -162,6 +184,24 @@ async function sendCheckRequest ({host, pageUrl, chart}) {
     if (err.name === 'AbortError') return {checkError: 'timeout'}
     return {checkError: 'no_server'}
   }
+}
+
+function normalizeGrapheneFile (file: string): string | null {
+  let clean = file.trim()
+  if (!clean) return null
+
+  let hasExt = /\.[^.\\/]+$/.test(clean)
+  let candidates = hasExt ? [clean] : [clean + '.md', clean + '.gsql']
+  for (let candidate of candidates) {
+    if (!candidate.endsWith('.md') && !candidate.endsWith('.gsql')) continue
+    if (process.env.NODE_ENV == 'test' && mockFileMap[candidate]) return candidate
+    let absolute = [
+      path.resolve(process.cwd(), candidate),
+      path.resolve(config.root, candidate),
+    ].find(p => fs.existsSync(p))
+    if (absolute) return path.relative(config.root, absolute)
+  }
+  return null
 }
 
 function normalizeMdFile (mdFile: string): string | null {
