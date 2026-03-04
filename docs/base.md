@@ -49,11 +49,11 @@ Graphene dashboards extend Markdown with the following:
 - Visualization components reference query names
 
 ````md
-```sql monthly_sales
-select date_trunc(created_at, month) as month, revenue from orders
+```sql sales_by_category
+select category, revenue from orders
 ```
-<LineChart data="monthly_sales" x="month" y="revenue" />
-<BigValue data="monthly_sales" value="revenue" />
+<BarChart data="sales_by_category" x="category" y="revenue" />
+<BigValue data="sales_by_category" value="revenue" />
 ````
 
 Queries can be referenced by other queries in the `from` or `join` to form DAGs of data transformations within the dashboard.

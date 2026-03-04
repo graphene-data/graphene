@@ -252,9 +252,9 @@ You can see that invoking a stored expression is like using a macro: the definit
 The macro concept is important to understand when invoking stored expressions that are **aggregative** (ie. contain agg functions), which can also be called "measures." Here's an example.
 
 ```sql
--- Profit by month
+-- Profit by status
 select
-  date_trunc(created_at, month) as month,
+  status,
   profit
 from orders
 group by 1
@@ -265,7 +265,7 @@ Note that, while `profit` looks like a column here, it is _not_ a column. That's
 
 ```sql
 select
-  date_trunc(created_at, month) as month,
+  status,
   sum(case when revenue_recognized then amount else 0 end) - sum(case when revenue_recognized then cost else 0 end) as profit -- Profit is defined as revenue - cogs, which respectively expands out to these two filtered sums
 from orders
 group by 1
@@ -342,9 +342,9 @@ table user_facts as (
 For example, if we have a `table X as` statement that creates a daily summary of orders:
 
 ```sql
-table daily_orders as (
+table regional_orders as (
   select
-    date_trunc(created_at, day) as day,
+    region,
     count(*) as num_orders,
     sum(amount) as total_revenue
   from orders
@@ -355,8 +355,8 @@ table daily_orders as (
 We can extend this table to add measures or joins:
 
 ```sql
-extend daily_orders (
-  join one calendar on day = calendar.date
+extend regional_orders (
+  join one regions on region = regions.name
 
   avg_order_value: total_revenue / num_orders
 )
