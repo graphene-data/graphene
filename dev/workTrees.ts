@@ -124,7 +124,12 @@ async function upWorktree(name:string) {
   let treePath = `${root}/${name}`
   let port = readGraphenePort(name)
   if (!port) throw new Error('Couldnt determine ports for worktree')
+
   let envFile = `${root}/devcontainer.env`
+  let envArgs = [];
+  if (fs.existsSync(envFile)) {
+    envArgs.push(`--env-file ${envFile}`)
+  }
 
   await downWorktree(name) // stop container if running
 
@@ -141,7 +146,7 @@ async function upWorktree(name:string) {
   // We mount main/.git at its absolute host path (for the superproject .git file which uses an absolute gitdir)
   // AND at /main/.git (for the core submodule .git file which uses a relative gitdir like ../../main/.git/...)
   await $`docker run -d --name ${containerName} \
-    --env-file ${envFile} \
+    ${envArgs} \
     -p ${port}:${port} -p ${port + 1}:${port + 1} -p ${port + 2}:${port + 2} \
     --workdir /${name} \
     --mount type=bind,source=${treePath},target=/${name} \
