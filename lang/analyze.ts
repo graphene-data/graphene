@@ -470,9 +470,14 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
         checkTypes(left, ['string'], node.firstChild!)
         checkTypes(right, ['string'], node.lastChild!)
       }
+      if (op == '||') {
+        checkTypes(left, ['string'], node.firstChild!)
+        checkTypes(right, ['string'], node.lastChild!)
+      }
 
       let resultType = left.type
       if (['and', 'or', '<', '<=', '>', '>=', '=', '!=', '<>', 'like', 'ilike'].includes(op)) resultType = 'boolean'
+      if (op == '||') resultType = 'string'
       if (op == '<>') op = '!='
 
       // ILIKE handling for BigQuery

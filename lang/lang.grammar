@@ -213,7 +213,7 @@ ComparisonOp {
   Kw<"like"> | Kw<"not"> Kw<"like">
 }
 
-AddOp { "+" | "-" }
+AddOp { "+" | "-" | "||" }
 MulOp { "*" | "/" | "%" }
 
 UnaryOperator {
@@ -343,7 +343,7 @@ Alias { Identifier }
   Param { "$" (@asciiLetter | @digit | "_")+ }
   Number { @digit+ ("." @digit+)? }
   String { "'" ![']* "'" | '"' !["]* '"' }
-  "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">=" "::"
+  "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">=" "::" "||"
 
   @precedence { comment, "-" }
   @precedence { comment, "*" }
