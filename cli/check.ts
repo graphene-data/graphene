@@ -7,17 +7,15 @@ import {mockFileMap} from './mockFiles.ts'
 
 interface CheckOptions {
   fileArg?: string
-  mdArg?: string
   log?: (...args: any[]) => void
 }
 
 export async function check (options: CheckOptions): Promise<boolean> {
   let log = options.log || console.log
-  let fileArg = options.fileArg || options.mdArg
-  let targetFile = fileArg && normalizeGrapheneFile(fileArg)
+  let targetFile = options.fileArg && normalizeGrapheneFile(options.fileArg)
 
-  if (fileArg && !targetFile) {
-    log(`Couldn't find ${fileArg}`)
+  if (options.fileArg && !targetFile) {
+    log(`Couldn't find ${options.fileArg}`)
     return false
   }
 

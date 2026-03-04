@@ -52,7 +52,7 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
   `)
 
   await page.goto(server.url() + '/mock')
-  await check({mdArg: 'mock.md', log})
+  await check({fileArg: 'mock.md', log})
   expect(outputLines()).toEqual(`
     ERROR: mock.md line 3: Unknown function: not_a_function
    | from flights select not_a_function() as explode
