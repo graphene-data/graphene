@@ -12,7 +12,7 @@ const styleText = (style: string, text: string) => {
   }
 }
 
-function offsetToLineCol (src: string, offset: number): { line: number; col: number; lineStart: number; lineText: string } {
+function offsetToLineCol (src: string, offset: number): {line: number; col: number; lineStart: number; lineText: string} {
   let lines = src.split(/\r?\n/)
   let acc = 0
   for (let i = 0; i < lines.length; i++) {

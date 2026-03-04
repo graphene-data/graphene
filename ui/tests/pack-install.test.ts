@@ -108,10 +108,16 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
     let checkResult = await run('npm', ['run', 'graphene', '--', 'check', 'index.md'], projectDir, childEnv)
     expectSuccess('npm run graphene check index.md', checkResult)
 
-    let output = stripAnsi(checkResult.stdout + checkResult.stderr)
-    expect(output).toContain('No errors found')
+    let checkOutput = stripAnsi(checkResult.stdout + checkResult.stderr)
+    expect(checkOutput).toContain('No errors found')
 
-    let screenshotPath = parseScreenshotPath(output, projectDir)
+    let runResult = await run('npm', ['run', 'graphene', '--', 'run', 'index.md'], projectDir, childEnv)
+    expectSuccess('npm run graphene run index.md', checkResult)
+
+    let runOutput = stripAnsi(runResult.stdout + runResult.stderr)
+    expect(checkOutput).toContain('No errors found')
+
+    let screenshotPath = parseScreenshotPath(runOutput, projectDir)
     let screenshot = await fsp.readFile(screenshotPath)
     expect(screenshot.length).toBeGreaterThan(20_000)
 

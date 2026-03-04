@@ -29,7 +29,7 @@ export interface ServerFixture {
   updateMockFile: (path: string, content: string) => void
 }
 
-export const test = base.extend<{ browser: Browser, page: Page, server: ServerFixture, mount: MountFn, chart: ChartFixture }>({
+export const test = base.extend<{browser: Browser, page: Page, server: ServerFixture, mount: MountFn, chart: ChartFixture}>({
   browser: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {

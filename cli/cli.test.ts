@@ -101,5 +101,24 @@ describe('cli run', () => {
     expect(res.code).toBe(1)
     expect(res.stderr.toLowerCase()).toContain('no .duckdb file found')
   })
+
+  it('runs a named query from a markdown file', async () => {
+    let res = await runCli(['run', 'index.md', '--query', 'weekly_trends'], flightDir)
+    expectCliSuccess(res, 'run markdown query')
+    expect(res.stdout.toLowerCase()).toContain('week')
+  })
+
+  it('rejects passing a gsql file path', async () => {
+    let res = await runCli(['run', 'tables/flights.gsql'], flightDir)
+    expect(res.code).toBe(1)
+    expect((res.stdout + res.stderr).toLowerCase()).toContain('running .gsql files is no longer supported')
+  })
 })
 
+describe('cli check', () => {
+  it('checks a single gsql file', async () => {
+    let res = await runCli(['check', 'tables/flights.gsql'], flightDir)
+    expectCliSuccess(res, 'check gsql file')
+    expect(res.stdout).toContain('No errors found')
+  })
+})

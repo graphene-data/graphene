@@ -1,18 +1,30 @@
 # CLI
 
-The main command in Graphene is `check`. It takes several options:
+`graphene check` is a diagnostics command.
 
 ```bash
-graphene check # Check syntax for entire project
-graphene check [mdPath] # Check specific markdown file, run queries, and take a screenshot
-graphene check [mdPath] -c [chartTitle] # Check, run, and get a screenshot for one specific chart
+graphene check # Check diagnostics across all .gsql files in the project
+graphene check path/to/file.gsql # Check diagnostics for one specific gsql file
+graphene check path/to/page.md # Check diagnostics for one specific markdown file
 ```
 
-Invoke via your project's package manager (e.g. `pnpm graphene check`, `npm exec graphene check`).
+`graphene run` supports both query execution and markdown page runs.
+
+```bash
+graphene run "from flights select count() as total" # Run inline GSQL and print results
+graphene run - # Read GSQL from stdin and print results
+
+graphene run path/to/page.md # Run the page and save a full-page screenshot
+graphene run path/to/page.md -c "Chart Title" # Run the page and screenshot one chart by title
+graphene run path/to/page.md -q query_name # Run a named query/table from the markdown context and print results
+```
+
+`-q/--query` can target anything usable in a chart `data` prop (for example, a gsql table or a named code-fenced query in the markdown file).
+
+Invoke via your project's package manager (e.g. `pnpm graphene check`, `npm exec graphene run`).
 
 Other commands:
 
 ```bash
-graphene run "[GSQL]" # Run GSQL directly, without creating a .md file
 graphene compile "[GSQL]" # Show the compiled, dialect-specific SQL
 ```

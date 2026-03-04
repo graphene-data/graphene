@@ -12,7 +12,7 @@ describe('markdown sanitization', () => {
 </Row>
 `
 
-    let out = await compile(src, { remarkPlugins, rehypePlugins })
+    let out = await compile(src, {remarkPlugins, rehypePlugins})
     if (!out) throw new Error('Expected mdsvex compile output')
     let code = String(out.code)
 

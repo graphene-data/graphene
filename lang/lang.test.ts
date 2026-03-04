@@ -255,7 +255,7 @@ describe('lang', () => {
 
   it('supports || string concatenation', async () => {
     expect("from users select name || ' suffix' as result")
-      .toRenderSql(`select users."name"||' suffix' as "result" from users as users`)
+      .toRenderSql('select users."name"||\' suffix\' as "result" from users as users')
     await expect("from users select name || '!' as result limit 1")
       .toReturnRows(['Alice!'])
   })
@@ -719,7 +719,7 @@ describe('lang', () => {
 
     setConfig({dialect: 'snowflake', root: ''})
     expect('from events select date_trunc(\'month\', event_date)')
-      .toRenderSql(`select DATE_TRUNC('month',EVENTS."EVENT_DATE") as "COL_0" from EVENTS as EVENTS`)
+      .toRenderSql('select DATE_TRUNC(\'month\',EVENTS."EVENT_DATE") as "COL_0" from EVENTS as EVENTS')
   })
 
   it('supports extract expressions', () => {
