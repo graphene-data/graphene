@@ -422,6 +422,16 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
     case 'FunctionCall':
       return analyzeFunction(node, scope, analyzeExpr)
 
+    case 'WindowExpression': {
+      let baseNode = node.getChild('FunctionCall') || node.getChild('Count')
+      if (!baseNode) return diag(node, 'Window expressions require a function call', {sql: 'NULL', type: 'error'})
+      let base = analyzeExpr(baseNode, scope)
+      if (base.type == 'error') return base
+      if (!base.canWindow) return diag(baseNode, 'Only aggregate or window functions can use OVER', {sql: 'NULL', type: 'error'})
+      let over = renderOverClause(node.getChild('OverClause')!, scope)
+      return {sql: `${base.sql} OVER (${over})`, type: base.type, isAgg: false}
+    }
+
     case 'Parenthetical': {
       let inner = analyzeExpr(node.getChild('Expression')!, scope)
       return {sql: `(${inner.sql})`, type: inner.type, isAgg: inner.isAgg}
@@ -431,9 +441,9 @@ export function analyzeExpr (node: SyntaxNode, scope: Scope): Expr {
       let inner = node.getChild('Expression')
       if (inner) {
         let e = analyzeExpr(inner, scope)
-        return {sql: `count(distinct ${e.sql})`, type: 'number', isAgg: true}
+        return {sql: `count(distinct ${e.sql})`, type: 'number', isAgg: true, canWindow: true}
       }
-      return {sql: 'count(1)', type: 'number', isAgg: true}
+      return {sql: 'count(1)', type: 'number', isAgg: true, canWindow: true}
     }
 
     case 'BinaryExpression':
@@ -666,6 +676,54 @@ function coerceToTemporal (expr: Expr, targetType: 'date' | 'timestamp', node: S
   let parsed = parseTemporalLiteral(match[1], targetType)
   if (!parsed) { diag(node, `Cannot parse as ${targetType}: ${expr.sql}`); return expr }
   return {sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
+}
+
+function renderOverClause (overClause: SyntaxNode, scope: Scope): string {
+  let spec = overClause.getChild('WindowSpec')
+  if (!spec) return ''
+  let parts: string[] = []
+
+  let partition = spec.getChild('WindowPartitionClause')
+  if (partition) {
+    let exprs = partition.getChildren('Expression').map(e => analyzeExpr(e, scope).sql)
+    parts.push(`PARTITION BY ${exprs.join(', ')}`)
+  }
+
+  let orderBy = spec.getChild('WindowOrderByClause')
+  if (orderBy) {
+    let items = orderBy.getChildren('WindowOrderItem').map(item => {
+      let expr = analyzeExpr(item.getChild('Expression')!, scope).sql
+      let desc = txt(item.getChild('Kw')).toLowerCase() == 'desc'
+      return `${expr} ${desc ? 'DESC' : 'ASC'}`
+    })
+    parts.push(`ORDER BY ${items.join(', ')}`)
+  }
+
+  let frame = spec.getChild('WindowFrameClause')
+  if (frame) parts.push(renderWindowFrame(frame, scope))
+
+  return parts.join(' ')
+}
+
+function renderWindowFrame (frame: SyntaxNode, scope: Scope): string {
+  let mode = txt(frame.getChildren('Kw')[0]).toUpperCase()
+  let between = frame.getChild('WindowFrameBetween')
+  if (between) {
+    let bounds = between.getChildren('WindowFrameBound').map(b => renderWindowBound(b, scope))
+    return `${mode} BETWEEN ${bounds[0]} AND ${bounds[1]}`
+  }
+  let start = frame.getChild('WindowFrameStart')!.getChild('WindowFrameBound')!
+  return `${mode} ${renderWindowBound(start, scope)}`
+}
+
+function renderWindowBound (bound: SyntaxNode, scope: Scope): string {
+  let kws = bound.getChildren('Kw').map(k => txt(k).toLowerCase())
+  if (kws.includes('unbounded')) {
+    return `UNBOUNDED ${kws.includes('following') ? 'FOLLOWING' : 'PRECEDING'}`
+  }
+  if (kws.includes('current')) return 'CURRENT ROW'
+  let expr = analyzeExpr(bound.getChild('Expression')!, scope).sql
+  return `${expr} ${kws.includes('following') ? 'FOLLOWING' : 'PRECEDING'}`
 }
 
 // Traverse a join path (like `tableA.tableB.`), returning a new scope pointing to the target table. Adds implied joins to the query as it goes

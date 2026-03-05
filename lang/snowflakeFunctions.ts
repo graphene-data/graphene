@@ -14,6 +14,110 @@ const trim = trimIndentation
 
 export const snowflakeFunctions: FunctionDef[] = [
   // ============================================================================
+  // Window Functions
+  // https://docs.snowflake.com/en/sql-reference/functions-window
+  // ============================================================================
+  {
+    name: 'row_number',
+    description: trim('ROW_NUMBER() returns a unique row number for each row within the window partition.'),
+    url: `${sf}/row_number`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'rank',
+    description: trim('RANK() returns the rank of the current row with gaps for ties.'),
+    url: `${sf}/rank`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'dense_rank',
+    description: trim('DENSE_RANK() returns the rank of the current row without gaps.'),
+    url: `${sf}/dense_rank`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'ntile',
+    description: trim('NTILE(constant_value) divides rows into buckets and returns the bucket number.'),
+    url: `${sf}/ntile`,
+    args: [{name: 'constant_value', type: 'number'}],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'lag',
+    description: trim('LAG(expr, offset, default) accesses data from a previous row in the window.'),
+    url: `${sf}/lag`,
+    args: [
+      {name: 'expr', type: 'T'},
+      {name: 'offset', type: 'number?'},
+      {name: 'default', type: 'T?'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'lead',
+    description: trim('LEAD(expr, offset, default) accesses data from a following row in the window.'),
+    url: `${sf}/lead`,
+    args: [
+      {name: 'expr', type: 'T'},
+      {name: 'offset', type: 'number?'},
+      {name: 'default', type: 'T?'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'first_value',
+    description: trim('FIRST_VALUE(expr) returns the first value in the window frame.'),
+    url: `${sf}/first_value`,
+    args: [{name: 'expr', type: 'T'}],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'last_value',
+    description: trim('LAST_VALUE(expr) returns the last value in the window frame.'),
+    url: `${sf}/last_value`,
+    args: [{name: 'expr', type: 'T'}],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'nth_value',
+    description: trim('NTH_VALUE(expr, n) returns the nth value in the window frame.'),
+    url: `${sf}/nth_value`,
+    args: [
+      {name: 'expr', type: 'T'},
+      {name: 'n', type: 'number'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'percent_rank',
+    description: trim('PERCENT_RANK() returns the relative rank of the current row.'),
+    url: `${sf}/percent_rank`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'cume_dist',
+    description: trim('CUME_DIST() returns the cumulative distribution value for the current row.'),
+    url: `${sf}/cume_dist`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+
+  // ============================================================================
   // Aggregate Functions
   // https://docs.snowflake.com/en/sql-reference/functions-aggregation
   // ============================================================================

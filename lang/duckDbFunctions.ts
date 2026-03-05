@@ -14,6 +14,110 @@ const trim = trimIndentation
 
 export const duckDbFunctions: FunctionDef[] = [
   // ============================================================================
+  // Window Functions
+  // https://duckdb.org/docs/stable/sql/functions/window_functions.html
+  // ============================================================================
+  {
+    name: 'row_number',
+    description: trim('row_number() returns the current row number within the window partition.'),
+    url: `${duck}/window_functions.html#row_number`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'rank',
+    description: trim('rank() returns the rank of the current row with gaps for ties.'),
+    url: `${duck}/window_functions.html#rank`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'dense_rank',
+    description: trim('dense_rank() returns the rank of the current row without gaps.'),
+    url: `${duck}/window_functions.html#dense_rank`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'ntile',
+    description: trim('ntile(num_buckets) returns the bucket number for the current row.'),
+    url: `${duck}/window_functions.html#ntilenum_buckets-order-by-ordering`,
+    args: [{name: 'num_buckets', type: 'number'}],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'lag',
+    description: trim('lag(expr, offset, default) returns a prior row value within the window partition.'),
+    url: `${duck}/window_functions.html#lagexpr-offset-default-order-by-ordering-ignore-nulls`,
+    args: [
+      {name: 'expr', type: 'T'},
+      {name: 'offset', type: 'number?'},
+      {name: 'default', type: 'T?'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'lead',
+    description: trim('lead(expr, offset, default) returns a following row value within the window partition.'),
+    url: `${duck}/window_functions.html#leadexpr-offset-default-order-by-ordering-ignore-nulls`,
+    args: [
+      {name: 'expr', type: 'T'},
+      {name: 'offset', type: 'number?'},
+      {name: 'default', type: 'T?'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'first_value',
+    description: trim('first_value(expr) returns the first value in the window frame.'),
+    url: `${duck}/window_functions.html#first_valueexpr-order-by-ordering-ignore-nulls`,
+    args: [{name: 'expr', type: 'T'}],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'last_value',
+    description: trim('last_value(expr) returns the last value in the window frame.'),
+    url: `${duck}/window_functions.html#last_valueexpr-order-by-ordering-ignore-nulls`,
+    args: [{name: 'expr', type: 'T'}],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'nth_value',
+    description: trim('nth_value(expr, nth) returns the nth value in the window frame.'),
+    url: `${duck}/window_functions.html#nth_valueexpr-nth-order-by-ordering-ignore-nulls`,
+    args: [
+      {name: 'expr', type: 'T'},
+      {name: 'nth', type: 'number'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'percent_rank',
+    description: trim('percent_rank() returns the relative rank of the current row.'),
+    url: `${duck}/window_functions.html#percent_rank-order-by-ordering`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'cume_dist',
+    description: trim('cume_dist() returns the cumulative distribution value for the current row.'),
+    url: `${duck}/window_functions.html#cume_dist-order-by-ordering`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+
+  // ============================================================================
   // Aggregate Functions
   // https://duckdb.org/docs/stable/sql/functions/aggregates.html
   // ============================================================================

@@ -13,6 +13,7 @@ export interface Expr {
   sql: string        // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
   type: FieldType    // result type for validation
   isAgg?: boolean    // true if contains an aggregate function
+  canWindow?: boolean // true if expression can be used with an OVER clause
 }
 
 // A field in a query's SELECT clause

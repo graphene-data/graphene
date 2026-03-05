@@ -11,7 +11,7 @@ import type {FunctionDef, ArgDef} from './functionTypes.ts'
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
 interface Overload {
   params: {name: string, allowedTypes: {type: FieldType | 'sql native', rawType?: string}[], isVariadic?: boolean}[]
-  returnType: {type: FieldType | 'generic', expressionType?: 'aggregate' | 'scalar'}
+  returnType: {type: FieldType | 'generic', expressionType?: 'aggregate' | 'scalar' | 'window'}
   sqlName?: string
 }
 
@@ -36,7 +36,9 @@ function parseArgTypes (arg: ArgDef): {type: FieldType | 'sql native', rawType?:
 
 // Convert a FunctionDef into one or more Overloads (optional args expand into multiple overloads)
 function convertDef (def: FunctionDef): Overload[] {
-  let expressionType = def.aggregate ? 'aggregate' as const : 'scalar' as const
+  let expressionType: 'aggregate' | 'window' | 'scalar' = 'scalar'
+  if (def.aggregate) expressionType = 'aggregate'
+  else if (def.window) expressionType = 'window'
   let returnType = def.returns === 'T' ? 'generic' as const : def.returns as FieldType
 
   let argSets: ArgDef[][] = [def.args]
@@ -136,9 +138,10 @@ export function analyzeFunction (node: SyntaxNode, scope: Scope, analyzeExpr: An
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || 'string'
 
   let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
+  let canWindow = overload.returnType.expressionType == 'aggregate' || overload.returnType.expressionType == 'window'
   let fnName = overload.sqlName || name
   let sql = `${fnName}(${args.map(a => a.sql).join(',')})`
-  return {sql, type: returnType, isAgg}
+  return {sql, type: returnType, isAgg, canWindow}
 }
 
 function analyzePercentile (node: SyntaxNode, args: Expr[], digits: string): Expr {
