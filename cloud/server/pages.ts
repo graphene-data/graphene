@@ -143,3 +143,10 @@ export async function renderDynamic(req: FastifyRequest, reply: FastifyReply) {
 
   reply.type('text/html').send(html)
 }
+
+export async function renderDynamicModule (req: FastifyRequest, reply: FastifyReply) {
+  let query = req.query as {md?: string; repoId?: string}
+  let markdown = Buffer.from(query.md || '', 'base64').toString('utf-8')
+  let code = await compileMd(markdown, 'dynamic.md', query.repoId || '', false)
+  reply.type('text/javascript').send(code)
+}

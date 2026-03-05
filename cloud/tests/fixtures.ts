@@ -131,6 +131,9 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
       if (endpoint === 'conversations.replies') {
         return Promise.resolve({ok: true, messages: [{user: 'U999', ts: payload.ts, text: '<@U999> hello graphene'}]})
       }
+      if (endpoint === 'users.info') {
+        return Promise.resolve({ok: true, user: {id: payload.user, profile: {display_name: `user-${payload.user}`}}})
+      }
       return Promise.resolve({ok: true})
     })
 

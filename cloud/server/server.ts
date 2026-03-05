@@ -5,7 +5,8 @@ import rawBody from 'fastify-raw-body'
 import {fileURLToPath} from 'url'
 import path from 'path'
 import {type AuthContext, auth, authTokenExchange} from './auth.ts'
-import {listNavFiles, renderPage, renderDynamic} from './pages.ts'
+import {listNavFiles, renderPage, renderDynamic, renderDynamicModule} from './pages.ts'
+import {getChatSession} from './chats.ts'
 import {proxyQuery} from './query.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
 import {slackEvents, slackInstall, slackOauthCallback, slackStatus} from './slack.ts'
@@ -29,8 +30,10 @@ export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions 
   app.get('/_health', () => ({ok: true}))
 
   app.get('/_api/nav/:repoSlug', listNavFiles)
+  app.get('/_api/chats/:id', getChatSession)
   app.get('/_api/pages/*', renderPage)
   app.get('/_api/dynamic', renderDynamic)
+  app.get('/_api/dynamic/module', renderDynamicModule)
   app.post('/_api/query', proxyQuery)
   app.post('/_api/oauth2/token', authTokenExchange)
   app.get('/_api/slack/install', slackInstall)

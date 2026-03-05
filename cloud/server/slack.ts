@@ -139,10 +139,14 @@ async function handleAppMention(install: SlackInstallation, mention: AppMentionE
   let threadMessages = (response.messages || [])
     .filter(m => !lastSentMessgeId || !m.ts || m.ts > lastSentMessgeId) // if resuming a session, exclude messages we already gave to the agent
     .filter(m => m.text && (!m.ts || m.ts < mention.ts)) // only include messages before the mention
-    .map(m => `user:${m.user || m.bot_id || 'unknown'}: ${m.text}`)
+    .map(m => `<@${m.user || m.bot_id}>: ${m.text}`)
+
+  // replace names in the messages and mentions
+  threadMessages = await replaceUserIdsWithNames(threadMessages, install)
+  let [latestMention = mention.text || ''] = await replaceUserIdsWithNames([mention.text || ''], install)
 
   // If this is a thread, add all the messages in the thread to the prompt.
-  let prompt = `Latest mention: ${mention.text}`
+  let prompt = `Latest mention: ${latestMention}`
   if (threadMessages.length) prompt += `\nThread context:\n${threadMessages.join('\n')}`
 
   session.messages.push({role: 'user', content: [{type: 'text', text: prompt}]})
@@ -215,6 +219,26 @@ export async function slackApi<T = {ok: boolean; error?: string}>(method: string
   let payload = await new WebClient(authToken).apiCall(method, params) as WebAPICallResult
   if (!payload.ok) throw new Error(`Slack API error: ${payload.error ?? 'unknown error'}`)
   return payload as T
+}
+
+/** Replace user IDs with names in message lines. */
+async function replaceUserIdsWithNames(messages: string[], installation: SlackInstallation) {
+  let mentionRegex = /<@([A-Z0-9]+)(?:\|[^>]+)?>/g
+  let map: Record<string, string> = {}
+  for (let msg of messages) {
+    msg.matchAll(mentionRegex).forEach(m => map[m[1]] = '')
+  }
+
+  // make requests to look up all the user ids we found
+  await Promise.allSettled(Object.keys(map).map(async (userId) => {
+    let resp = await slackApi<any>('users.info', {user: userId}, installation)
+    map[userId] = resp?.user?.profile?.display_name || resp.user?.profile?.real_name || resp.user?.real_name || resp.user?.name || ''
+  }))
+
+  // replace all instances in the messages
+  return messages.map(message => message.replace(mentionRegex, (_, userId: string) => {
+    return map[userId] ? `@${map[userId]}` : `@${userId}`
+  }))
 }
 
 // Lazily initializes the OAuth state store used to prevent CSRF/replay on installs.

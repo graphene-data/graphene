@@ -23,6 +23,41 @@ let graphene = window.$GRAPHENE ?? {} as typeof window.$GRAPHENE
 graphene.components = {...(graphene.components ?? {}), ...components} as any
 graphene.svelte = svelteInternal
 graphene.mount = mount
+
+let nextRenderId = 0
+let pendingRenders = new Set<string>()
+
+graphene.renderStart = (id?: string | number) => {
+  let renderId = id == null ? `render:${++nextRenderId}` : String(id)
+  pendingRenders.add(renderId)
+  return renderId
+}
+
+graphene.renderComplete = (id?: string | number) => {
+  if (id == null) return
+  pendingRenders.delete(String(id))
+}
+
+graphene.waitForLoad = async (timeout = 20_000) => {
+  let end = Date.now() + timeout
+  let idleStart = 0
+
+  // Let newly mounted components enqueue their first query/render work.
+  await new Promise(resolve => setTimeout(resolve, 150))
+
+  while (Date.now() < end) {
+    let isQueryLoading = typeof graphene.isQueryLoading === 'function' ? !!graphene.isQueryLoading() : false
+    let isBusy = isQueryLoading || pendingRenders.size > 0
+    if (isBusy) idleStart = 0
+    else {
+      if (!idleStart) idleStart = Date.now()
+      if (Date.now() - idleStart >= 200) return true
+    }
+    await new Promise(resolve => setTimeout(resolve, 50))
+  }
+  return false
+}
+
 window.$GRAPHENE = graphene
 
 // Lazy load App only when needed (avoids Stytch initialization for dynamic renders)

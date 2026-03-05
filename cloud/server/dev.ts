@@ -12,6 +12,7 @@ import {setAuthOverride} from './auth.ts'
 import {encryptSecret} from './secrets.ts'
 import {TEST} from './consts.ts'
 import {agentTest, testRenderMd} from './agent/testEndpoint.ts'
+import {flightsAgentSessionMessages} from '../tests/mockLLM.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 export const orgId = 'organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d'
@@ -112,6 +113,14 @@ export async function seedDatabase(project = 'flights') {
     if (!fs.existsSync(dbPath)) throw new Error(`Expected DuckDB database at ${dbPath}`)
     await db.insert(schema.connections).values({orgId, label: 'duckdb', kind: 'duckdb', configJson: await encryptSecret(JSON.stringify({dbPath}))})
     await db.insert(schema.repos).values({id: repoId, slug: 'flights', orgId, url: 'https://github.com/graphene-data/examples/${repoSlug}'})
+    await db.insert(schema.agentSessions).values({
+      orgId,
+      repoId,
+      slackChannel: 'C123',
+      slackThreadTs: '1710000000.123456',
+      messages: flightsAgentSessionMessages,
+      updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+    })
   } else if (project === 'ecomm') {
     projectRoot = path.resolve(rootDir, '../core/examples/ecomm')
     let configJson = process.env.GOOGLE_CREDENTIALS_CONTENT

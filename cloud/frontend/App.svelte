@@ -3,6 +3,7 @@
   import Login from './routes/Login.svelte'
   import PageView from './routes/PageView.svelte'
   import Settings from './routes/Settings.svelte'
+  import ChatPreview from './routes/ChatPreview.svelte'
   import {route, go} from './router.ts'
 
   $effect(() => {
@@ -17,5 +18,6 @@
 {#if $route === '/login'}<main><Login /></main>
 {:else if $route === '/authenticate'}<main><Login mode="authenticate" /></main>
 {:else if $route.startsWith('/settings')}<Settings />
+{:else if $route.startsWith('/chats')}<ChatPreview chatId={$route.split('/')[2] || 'latest'} />
 {:else}<PageView slug={$route} />
 {/if}

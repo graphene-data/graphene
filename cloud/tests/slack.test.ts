@@ -23,7 +23,7 @@ test('responds to url verification challenge', async({slack}) => {
   expect(slack.getApiCalls()).toEqual([])
 })
 
-test('creates workspace mapping via oauth callback', async({slack, cloud}) => {
+test('creates workspace mapping via oauth callback', async ({slack, cloud}) => {
   mockSlackApi((endpoint) => {
     if (endpoint === 'oauth.v2.access') {
       return {
@@ -79,18 +79,19 @@ test('routes app mention to cloud agent and replies in thread', async({slack, mo
   await waitFor(() => mockLLM.getRequests().length === 1)
 
   let calls = slack.getApiCalls()
-  expect(calls).toHaveLength(2)
+  expect(calls).toHaveLength(3)
   expect(calls[0]?.endpoint).toBe('conversations.replies')
+  expect(calls[1]).toMatchObject({endpoint: 'users.info', payload: {user: 'U999'}})
 
   let llmCalls = mockLLM.getRequests()
   expect(llmCalls).toHaveLength(1)
   let messageLog = JSON.stringify(llmCalls[0]?.messages || [])
-  expect(messageLog).toContain('<@U999> hello graphene')
+  expect(messageLog).toContain('@user-U999 hello graphene')
   expect(llmCalls[0]?.systemPrompt).toContain('Graphene is a framework for doing data analysis')
 
-  let firstCall = calls[1]
-  expect(firstCall).toMatchObject({endpoint: 'chat.postMessage'})
-  expect(firstCall?.payload).toMatchObject({
+  let postCall = calls[2]
+  expect(postCall).toMatchObject({endpoint: 'chat.postMessage'})
+  expect(postCall?.payload).toMatchObject({
     channel: 'C123',
     text: 'Here is your answer from Graphene.',
     thread_ts: '1710000000.123456',
@@ -100,7 +101,7 @@ test('routes app mention to cloud agent and replies in thread', async({slack, mo
 test('includes thread context when mention is in a thread', async({slack, mockLLM}) => {
   mockLLM.setResponse('Thread-aware answer')
 
-  mockSlackApi((endpoint) => {
+  mockSlackApi((endpoint, payload) => {
     if (endpoint === 'conversations.replies') {
       return {
         ok: true,
@@ -108,6 +109,12 @@ test('includes thread context when mention is in a thread', async({slack, mockLL
           {user: 'U1', text: 'What are our top delayed carriers?'},
           {user: 'U2', text: 'Focus on last month please.'},
         ],
+      }
+    }
+    if (endpoint === 'users.info') {
+      return {
+        ok: true,
+        user: {profile: {display_name: payload.user === 'U999' ? 'mention-user' : `thread-user-${payload.user}`}},
       }
     }
     return {ok: true}
@@ -120,9 +127,9 @@ test('includes thread context when mention is in a thread', async({slack, mockLL
 
   let llmCalls = mockLLM.getRequests()
   let promptLog = JSON.stringify(llmCalls[0]?.messages || [])
-  expect(promptLog).toContain('Latest mention: <@U999> run it')
-  expect(promptLog).toContain('user:U1: What are our top delayed carriers?')
-  expect(promptLog).toContain('user:U2: Focus on last month please.')
+  expect(promptLog).toContain('Latest mention: @mention-user run it')
+  expect(promptLog).toContain('@thread-user-U1: What are our top delayed carriers?')
+  expect(promptLog).toContain('@thread-user-U2: Focus on last month please.')
 })
 
 test('uploads chart screenshot when respondToUser references mdId', async({slack, mockLLM}) => {
@@ -170,7 +177,7 @@ test('stores and reuses one agent session per slack thread', async({slack, mockL
   expect(session.slackThreadTs).toBe('1710000000.123456')
 
   let llmCalls = mockLLM.getRequests()
-  expect(llmCalls[1]?.messages.map(m => JSON.stringify(m)).join('\n')).toContain('Latest mention: <@U999> second mention')
+  expect(llmCalls[1]?.messages.map(m => JSON.stringify(m)).join('\n')).toContain('Latest mention: @user-U999 second mention')
 })
 
 async function waitFor(predicate: () => boolean, timeoutMs = 4000) {
