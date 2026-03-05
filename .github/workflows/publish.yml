@@ -1,0 +1,119 @@
+name: Publish
+
+# This publishes new package versions to npm and the vscode marketplaces when we detect that a [release]
+# commit has been merged to main. I chose to run this on push instead of on pull_request close to make it a bit
+# safer, but it means our logic to detect publishes is a little more complex.
+# In a nutshell, we need the commit to have [release] in the message, and then we check if there is a tag already for
+# the version in cli/package.json.
+# The publish runs on the exact sha in the PR, _not_ whatever is on main, ensuring we don't inadvertantly publish changes.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  detect:
+    if: startsWith(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      should_release: ${{ steps.detect.outputs.should_release }}
+      pr_number: ${{ steps.detect.outputs.pr_number }}
+    steps:
+      - name: Detect release commit and merged PR
+        id: detect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            let mergeSha = context.payload.after
+            let commit = await github.graphql(`
+              query($owner: String!, $repo: String!, $oid: GitObjectID!) {
+                repository(owner: $owner, name: $repo) {
+                  object(oid: $oid) {
+                    ... on Commit {
+                      associatedPullRequests(first: 20) {
+                        nodes {
+                          number
+                          merged
+                          baseRefName
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `, {owner: context.repo.owner, repo: context.repo.repo, oid: mergeSha})
+
+            let prs = commit.repository.object?.associatedPullRequests?.nodes || []
+            let pr = prs.find(x => x.merged && x.baseRefName === 'main')
+            if (!pr) throw new Error('Missing PR')
+
+            core.setOutput('pr_number', String(pr.number))
+            let pkg = await github.rest.repos.getContent({owner: context.repo.owner, repo: context.repo.repo, path: 'cli/package.json', ref: `refs/pull/${pr.number}/head`})
+
+            if (Array.isArray(pkg.data) || pkg.data.type !== 'file' || !pkg.data.content) {
+              throw new Error('Could not read cli/package.json from PR head commit')
+            }
+
+            let raw = Buffer.from(pkg.data.content, 'base64').toString('utf8')
+            let version = JSON.parse(raw).version
+            if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
+              throw new Error(`Invalid version in cli/package.json: ${version}`)
+            }
+
+            let tagName = `v${version}`
+            let tagExists = true
+            try {
+              await github.rest.git.getRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `tags/${tagName}`,
+              })
+            } catch (err) {
+              if (err.status === 404) tagExists = false
+              else throw err
+            }
+
+            let shouldRelease = !tagExists
+            // core.info(`changed files: ${changed.join(', ')}`)
+            core.info(`merged PR: #${pr.number}`)
+            core.info(`cli version: ${version}`)
+            core.info(`tag ${tagName} exists: ${tagExists}`)
+            core.info(`should release: ${shouldRelease}`)
+            core.setOutput('should_release', shouldRelease ? 'true' : 'false')
+
+  publish:
+    needs: [detect]
+    if: needs.detect.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    environment: publish
+    permissions:
+      id-token: write
+      contents: write
+    steps:
+      - name: Checkout merged PR head
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ needs.detect.outputs.pr_number }}/head
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish release
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/publish.ts
