@@ -65,6 +65,12 @@ function unsubscribe(callback: ResultHandler) {
   queries = queries.filter(q => q.callback !== callback)
 }
 
+function resetQueryEngine() {
+  params = {}
+  queries = []
+  queryResults = {}
+}
+
 async function runNode(n: QueryNode) {
   if (!n.callback) throw new Error('running node nobody is listening to')
   n.callback({}) // notify that the query is loading
@@ -196,6 +202,7 @@ Object.assign(window.$GRAPHENE, {
   updateParam,
   query,
   unsubscribe,
+  resetQueryEngine,
   isQueryLoading,
   queryResults,
 })
