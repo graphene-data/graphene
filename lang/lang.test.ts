@@ -264,6 +264,34 @@ describe('lang', () => {
     expect('from users select age || name as result').toHaveDiagnostic('Expected string, got number')
   })
 
+  it('supports window expressions with partition, order, and frame clauses', () => {
+    expect(`
+      from orders
+      select
+        user_id,
+        sum(amount) over (
+          partition by user_id
+          order by id
+          rows between 1 preceding and current row
+        ) as running_total
+    `).toRenderSql('select orders."user_id" as "user_id", sum(orders."amount") OVER (PARTITION BY orders."user_id" ORDER BY orders."id" ASC ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) as "running_total" from orders as orders')
+  })
+
+  it('supports window-only functions with over', () => {
+    expect('from users select row_number() over (order by id) as rn')
+      .toRenderSql('select row_number() OVER (ORDER BY users."id" ASC) as "rn" from users as users')
+  })
+
+  it('supports empty over clause', () => {
+    expect('from users select row_number() over () as rn')
+      .toRenderSql('select row_number() OVER () as "rn" from users as users')
+  })
+
+  it('rejects over on scalar functions', () => {
+    expect('from users select lower(name) over () as bad_window')
+      .toHaveDiagnostic(/only aggregate or window functions can use over/i)
+  })
+
   it('preserves parentheses in measure composition', () => {
     updateFile(`table orders (
       id int, user_id int, amount int, status text

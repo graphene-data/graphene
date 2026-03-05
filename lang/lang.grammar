@@ -287,9 +287,55 @@ NullTestExpression[@isGroup=Expression] {
 
 computedPrimary {
   literal |
+  WindowExpression |
   FunctionCall |
   Ref |
   Count
+}
+
+WindowExpression[@isGroup=Expression] {
+  (FunctionCall | Count) OverClause
+}
+
+OverClause {
+  Kw<"over"> "(" ")" |
+  Kw<"over"> "(" WindowSpec ")"
+}
+
+WindowSpec {
+  WindowPartitionClause WindowOrderByClause? WindowFrameClause? |
+  WindowOrderByClause WindowFrameClause? |
+  WindowFrameClause
+}
+
+WindowPartitionClause {
+  Kw<"partition"> Kw<"by"> expression ("," expression)* ","?
+}
+
+WindowOrderByClause {
+  Kw<"order"> Kw<"by"> WindowOrderItem ("," WindowOrderItem)* ","?
+}
+
+WindowOrderItem {
+  expression (Kw<"asc"> | Kw<"desc">)?
+}
+
+WindowFrameClause {
+  (Kw<"rows"> | Kw<"range">) (WindowFrameBetween | WindowFrameStart)
+}
+
+WindowFrameStart {
+  WindowFrameBound
+}
+
+WindowFrameBetween {
+  Kw<"between"> WindowFrameBound Kw<"and"> WindowFrameBound
+}
+
+WindowFrameBound {
+  Kw<"unbounded"> (Kw<"preceding"> | Kw<"following">) |
+  Kw<"current"> Kw<"row"> |
+  expression (Kw<"preceding"> | Kw<"following">)
 }
 
 Parenthetical {
