@@ -337,6 +337,48 @@ describe('lang', () => {
       .toReturnRows([24, 40, 40])
   })
 
+  it('supports pXX over empty window', () => {
+    expect('from orders select id, p50(amount) over () as p50_all order by id')
+      .toRenderSql('select orders."id" as "id", quantile_cont(orders."amount", 0.5) OVER () as "p50_all" from orders as orders order by 1 asc nulls last')
+  })
+
+  it('supports pXX over partition windows', () => {
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id')
+      .toRenderSql('select orders."id" as "id", quantile_cont(orders."amount", 0.5) OVER (PARTITION BY orders."user_id") as "p50_by_user" from orders as orders order by 1 asc nulls last')
+  })
+
+  it('does not treat windowed pXX as query aggregates', () => {
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user')
+      .toRenderSql('select orders."id" as "id", quantile_cont(orders."amount", 0.5) OVER (PARTITION BY orders."user_id") as "p50_by_user" from orders as orders')
+  })
+
+  it('rejects pXX window ordering in v1', () => {
+    expect('from orders select p50(amount) over (order by id) as bad')
+      .toHaveDiagnostic(/pxx window form currently supports partition by only/i)
+  })
+
+  it('rejects pXX window frame clauses in v1', () => {
+    expect('from orders select p50(amount) over (partition by user_id rows between 1 preceding and current row) as bad')
+      .toHaveDiagnostic(/pxx window form currently supports partition by only/i)
+  })
+
+  it('executes partitioned pXX windows correctly in duckdb', async () => {
+    await expect(`
+      from orders
+      select
+        id,
+        user_id,
+        p50(amount) over (partition by user_id) as p50_by_user
+      order by id
+    `).toReturnRows([100, 1, 30], [101, 1, 30], [102, 2, 40])
+  })
+
+  it('keeps pXX guardrails with windows', () => {
+    expect('from orders select p0(amount) over (partition by user_id)').toHaveDiagnostic(/p0 is not allowed/i)
+    expect('from orders select p100(amount) over (partition by user_id)').toHaveDiagnostic(/p100 is not allowed/i)
+    expect('from orders select p50(status) over (partition by user_id)').toHaveDiagnostic(/Expected number, got string/i)
+  })
+
   it.skip('handles complex joins with measures', () => {
     expect('from products select name, category, total_sold where popular_item')
       .toRenderSql('select products."name" as "name", products."category" as "category", (sum(orders."amount")) as "total_sold" from products as products left join orders as orders on orders."product_id"=products."id" group by 1, 2 having sum(orders."amount")>1000 order by 3 desc nulls last')
@@ -747,6 +789,24 @@ describe('lang', () => {
       .toRenderSql('select timestamp_diff(users.`created_at`,users.`created_at`,day) as `col_0` from `users` as users')
   })
 
+  it('renders BigQuery pXX windows via PERCENTILE_CONT', () => {
+    setConfig({root: '', bigquery: {}})
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id')
+      .toRenderSql('select orders.`id` as `id`, PERCENTILE_CONT(orders.`amount`, 0.5) OVER (PARTITION BY orders.`user_id`) as `p50_by_user` from `orders` as orders order by 1 asc nulls last')
+  })
+
+  it('keeps existing BigQuery non-window pXX behavior', () => {
+    setConfig({root: '', bigquery: {}})
+    expect('from orders select p50(amount) as p50')
+      .toRenderSql('select approx_quantiles(orders.`amount`, 100)[OFFSET(50)] as `p50` from `orders` as orders')
+  })
+
+  it('keeps BigQuery pXX limits for windows', () => {
+    setConfig({root: '', bigquery: {}})
+    expect('from orders select p999(amount) over (partition by user_id)')
+      .toHaveDiagnostic(/BigQuery only supports up to p99/i)
+  })
+
   it('treats date part keywords as literals only when allowed', () => {
     setConfig({root: '', bigquery: {}})
     updateFile('table calendar (created_at timestamp, day text, week text)', 'calendar.gsql')
@@ -1110,6 +1170,12 @@ describe('lang', () => {
     setConfig({dialect: 'snowflake', root: ''})
     expect('from orders select sum(amount) over (order by id rows between unbounded preceding and current row) as running_amount')
       .toRenderSql('SELECT sum(orders."AMOUNT") OVER (ORDER BY orders."ID" ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as "running_amount" FROM ORDERS as orders')
+  })
+
+  it('renders Snowflake pXX partition windows', () => {
+    setConfig({dialect: 'snowflake', root: ''})
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id')
+      .toRenderSql('SELECT orders."ID" as "id", PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY orders."AMOUNT") OVER (PARTITION BY orders."USER_ID") as "p50_by_user" FROM ORDERS as orders ORDER BY 1 asc NULLS LAST', {preserveCase: true})
   })
 
   it('supports cast() expressions', () => {
