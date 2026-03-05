@@ -292,6 +292,32 @@ describe('lang', () => {
       .toHaveDiagnostic(/only aggregate or window functions can use over/i)
   })
 
+  it('does not treat windowed aggregates as query aggregates', () => {
+    expect('from orders select id, sum(amount) over (order by id) as running_amount')
+      .toRenderSql('select orders."id" as "id", sum(orders."amount") OVER (ORDER BY orders."id" ASC) as "running_amount" from orders as orders')
+  })
+
+  it('supports count(*) over partitioning', () => {
+    expect('from orders select id, count(*) over (partition by user_id) as flights_per_user')
+      .toRenderSql('select orders."id" as "id", count(1) OVER (PARTITION BY orders."user_id") as "flights_per_user" from orders as orders')
+  })
+
+  it('supports range frame with unbounded following', () => {
+    expect('from orders select id, sum(amount) over (order by id range between current row and unbounded following) as tail_sum')
+      .toRenderSql('select orders."id" as "id", sum(orders."amount") OVER (ORDER BY orders."id" ASC RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) as "tail_sum" from orders as orders')
+  })
+
+  it('executes lag window functions correctly', async () => {
+    await expect(`
+      from orders
+      select
+        id,
+        amount,
+        lag(amount, 1, 0) over (order by id) as prev_amount
+      order by 1
+    `).toReturnRows([100, 20, 0], [101, 40, 20], [102, 40, 40])
+  })
+
   it('preserves parentheses in measure composition', () => {
     updateFile(`table orders (
       id int, user_id int, amount int, status text
@@ -1072,6 +1098,18 @@ describe('lang', () => {
     setConfig({root: '', bigquery: {}})
     expect('from users select floor(age) as floored_age')
       .toRenderSql('select floor(users.`age`) as `floored_age` from `users` as users')
+  })
+
+  it('renders window order expressions with BigQuery quoting', () => {
+    setConfig({root: '', bigquery: {}})
+    expect('from orders select row_number() over (order by amount desc) as rn')
+      .toRenderSql('select row_number() OVER (ORDER BY orders.`amount` DESC) as `rn` from `orders` as orders')
+  })
+
+  it('renders window frames in Snowflake with uppercase identifiers', () => {
+    setConfig({dialect: 'snowflake', root: ''})
+    expect('from orders select sum(amount) over (order by id rows between unbounded preceding and current row) as running_amount')
+      .toRenderSql('SELECT sum(orders."AMOUNT") OVER (ORDER BY orders."ID" ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as "running_amount" FROM ORDERS as orders')
   })
 
   it('supports cast() expressions', () => {
