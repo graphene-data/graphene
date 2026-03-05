@@ -42,7 +42,6 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 - Agg function `pXX(column)` computes the XXth percentile (e.g., p50, p975, p9999)
 
 ### Unsupported
-- Window functions
 - Set operations (`union`, etc.)
 
 # Dashboards
