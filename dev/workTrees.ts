@@ -8,6 +8,7 @@ import fs from 'fs'
 import net, { type AddressInfo } from 'net'
 import {resolve} from 'path'
 import {spawn} from 'child_process'
+import {createHash} from 'crypto'
 
 const BASE_PORT = 4003
 const PORT_INCREMENT = 3
@@ -93,7 +94,8 @@ async function startWorktree (name: string) {
   await $`git -C ${treePath} branch --unset-upstream` // so that `git push` creates the correct branch on github
 
   // Init submodules. They start detached, create a branch so we can commit/push changes
-  await $`git -C ${treePath} submodule update --init --recursive`
+  let coreReference = resolve(root, 'main/core')
+  await $`git -C ${treePath} submodule update --init --recursive --reference ${coreReference}`
   await $`git -C ${treePath}/core checkout -b ${name}`
 
   // Assign unique ports to the worktree, and write it to .env along with copying main's .env
@@ -126,9 +128,9 @@ async function upWorktree(name:string) {
   if (!port) throw new Error('Couldnt determine ports for worktree')
 
   let envFile = `${root}/devcontainer.env`
-  let envArgs = [];
+  let envArgs: string[] = []
   if (fs.existsSync(envFile)) {
-    envArgs.push(`--env-file ${envFile}`)
+    envArgs.push('--env-file', envFile)
   }
 
   await downWorktree(name) // stop container if running
@@ -137,10 +139,16 @@ async function upWorktree(name:string) {
   fs.mkdirSync(`${root}/.opencode`, {recursive: true})
   fs.mkdirSync(`${root}/.pi`, {recursive: true})
 
-  // Build our image against main, since it shouldn't change for any worktree
-  // We could skip this step if the image already exists, but this seems pretty fast, and catches dockerfile changes
-  console.log('Building Docker image...')
-  await $`docker build -f ${currentWorktree}/dev/Dockerfile.dev -t graphene-dev ${root}/main`
+  // Build the dev image only when the Dockerfile changes.
+  let dockerfilePath = `${currentWorktree}/dev/Dockerfile.dev`
+  let dockerfileHash = createHash('sha256').update(fs.readFileSync(dockerfilePath)).digest('hex')
+  let imageHash = (await $`docker image inspect graphene-dev --format '{{index .Config.Labels "graphene.dev.dockerfile-hash"}}'`.nothrow()).stdout.trim()
+  if (imageHash === dockerfileHash) {
+    console.log('Using cached Docker image')
+  } else {
+    console.log(imageHash ? 'Dockerfile changed; rebuilding Docker image...' : 'Building Docker image...')
+    await $`docker build -f ${dockerfilePath} --label graphene.dev.dockerfile-hash=${dockerfileHash} -t graphene-dev ${root}/main`
+  }
 
   console.log('Starting container...')
   // We mount main/.git at its absolute host path (for the superproject .git file which uses an absolute gitdir)
@@ -150,7 +158,7 @@ async function upWorktree(name:string) {
     -p ${port}:${port} -p ${port + 1}:${port + 1} -p ${port + 2}:${port + 2} \
     --workdir /${name} \
     --mount type=bind,source=${treePath},target=/${name} \
-    --mount type=volume,source=pnpm-store,target=/pnpm/store \
+    --mount type=volume,source=pnpm-home,target=/pnpm \
     --mount type=bind,source=${root}/main/.git,target=${root}/main/.git \
     --mount type=bind,source=${root}/main/.git,target=/main/.git \
     --mount type=bind,source=${root}/.opencode,target=/root/.local/share/opencode \
@@ -195,9 +203,10 @@ async function hasWipCommits (subdir?: string): Promise<boolean> {
 // Check if branch has commits not yet on origin/main, using git cherry to compare by patch content.
 // This handles rebase-merge where commit SHAs change but the patch content is the same.
 // Returns true if there are local commits that haven't been merged.
-async function hasUnmergedCommits (subdir?: string): Promise<boolean> {
+async function hasUnmergedCommits (subdir: string | undefined, shouldFetch: boolean): Promise<boolean>
+async function hasUnmergedCommits (subdir?: string, shouldFetch = true): Promise<boolean> {
   let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
-  await $`git -C ${path} fetch origin`
+  if (shouldFetch) await $`git -C ${path} fetch origin`
   // git cherry outputs: '-' for commits with equivalent patches on upstream, '+' for unique commits
   let cherryOutput = (await $`git -C ${path} cherry origin/main`.nothrow()).stdout.trim()
   return cherryOutput.split('\n').some(line => line.startsWith('+ '))
@@ -324,11 +333,11 @@ async function pushWorktree() {
   if (await repoDirty('core')) return commitWorktree()
   if (await hasWipCommits('core')) return console.error('Core has WIP commits that must be squashed')
 
-  let cloudHasCommits = await hasUnmergedCommits()
+  let cloudHasCommits = await hasUnmergedCommits(undefined, false)
 
   // If there are commits on core, we're going to wait until they're fully merged before pushing cloud.
   // This ensures we never merge something to cloud without having the submodule point at the correct commit.
-  if (await hasUnmergedCommits('core')) {
+  if (await hasUnmergedCommits('core', false)) {
     console.log('Pushing core...')
     await $`git -C ${currentWorktree}/core push -f -u origin ${currentName}`
     let url = await ensurePR(`${currentWorktree}/core`, currentName)
@@ -391,8 +400,12 @@ async function doneWorktree (force = false) {
 
   if (!force) {
     if (await repoDirty('core') || await repoDirty()) throw new Error('Repos have uncommitted changes')
-    if (await hasUnmergedCommits('core')) return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
-    if (await hasUnmergedCommits()) return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
+    await Promise.all([
+      $`git -C ${currentWorktree}/core fetch origin`,
+      $`git -C ${currentWorktree} fetch origin`,
+    ])
+    if (await hasUnmergedCommits('core', false)) return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
+    if (await hasUnmergedCommits(undefined, false)) return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
   }
 
   console.log('Archiving worktree ' + currentName)
@@ -418,6 +431,7 @@ async function hostCommand (command: string, commandArgs: Record<string, any> = 
   console.log(res.data.trim())
   if (!res.ok) throw new Error(`${command} failed`)
 }
+
 
 function getTreeNames (): string[] {
   return fs.readdirSync(root, {withFileTypes: true})

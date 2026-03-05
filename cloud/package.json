@@ -67,6 +67,9 @@
     "vitest": "4.0.15"
   },
   "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
     "packageExtensions": {
       "@fastify/cookie": {
         "dependencies": {

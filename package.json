@@ -3,5 +3,12 @@
   "private": true,
   "dependencies": {
     "zx": "^8.8.4"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "koffi",
+      "opencode-ai",
+      "protobufjs"
+    ]
   }
 }

@@ -36,6 +36,7 @@ ENV PNPM_STORE_DIR="/pnpm/store"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN pnpm config set store-dir /pnpm/store
+RUN pnpm config set update-notifier false
 
 RUN npx -y playwright@1.58.0 install chromium --with-deps
 RUN apt-get install -y git git-lfs lsof zsh

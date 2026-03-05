@@ -25,8 +25,20 @@ if [ -n "$gh_token" ]; then
   printf '%s' "$gh_token" | gh auth login --hostname github.com --with-token
 fi
 
-pnpm add -g --allow-build=koffi --allow-build=opencode-ai --allow-build=protobufjs opencode-ai @mariozechner/pi-coding-agent @anthropic-ai/claude-code
+# Use the latest version of coding agents, but try to make this fast if they're already in the cache
+agent_tools=(opencode-ai @mariozechner/pi-coding-agent @anthropic-ai/claude-code)
+installed_tools_json="$(pnpm list -g --depth 0 --json)"
+for tool in ${agent_tools}; do
+  installed_version="$(printf '%s' "$installed_tools_json" | node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => { let pkg = process.argv[1]; let rows = JSON.parse(input); let deps = {...(rows[0]?.dependencies || {}), ...(rows[0]?.devDependencies || {})}; process.stdout.write(deps[pkg]?.version || "") })' "$tool")"
+  latest_version="$(pnpm view "$tool" version 2>/dev/null || true)"
+  if [ -z "$latest_version" ] || [ "$installed_version" = "$latest_version" ]; then
+    continue
+  fi
+  echo "Updating $tool ($installed_version -> $latest_version)"
+  pnpm add -g --prefer-offline --allow-build=koffi --allow-build=opencode-ai --allow-build=protobufjs "$tool@$latest_version"
+done
 
-pnpm install
-(cd cloud && pnpm install)
-(cd core && pnpm install)
+# install packages
+pnpm install --prefer-offline
+(cd cloud && pnpm install --prefer-offline)
+(cd core && pnpm install --prefer-offline)
