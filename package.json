@@ -18,10 +18,13 @@
     "eslint-plugin-prefer-let": "^4.1.0",
     "oxlint": "^1.50.0",
     "typescript": "^5.9.3",
-    "vitest": "4.0.15",
+    "vitest": "4.0.18",
     "zx": "^8.8.5"
   },
   "pnpm": {
+    "overrides": {
+      "rollup": ">=4.59.0"
+    },
     "ignoredBuiltDependencies": [
       "@sveltejs/kit",
       "keytar"

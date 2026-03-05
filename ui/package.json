@@ -23,7 +23,7 @@
     "fs-extra": "11.2.0",
     "playwright": "1.58.0",
     "strip-ansi": "^7.1.2",
-    "svelte": "5.53.3"
+    "svelte": "5.53.7"
   },
   "author": "",
   "license": "ISC"
