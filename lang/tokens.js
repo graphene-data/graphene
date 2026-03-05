@@ -48,6 +48,15 @@ import {
   many,
   extend,
   _with,
+  over,
+  partition,
+  rows,
+  range,
+  preceding,
+  following,
+  current,
+  row,
+  unbounded,
 } from './parser.terms.js'
 
 // Map of lowercase keywords to their token IDs
@@ -100,6 +109,15 @@ const keywords = {
   many: many,
   extend: extend,
   with: _with,
+  over: over,
+  partition: partition,
+  rows: rows,
+  range: range,
+  preceding: preceding,
+  following: following,
+  current: current,
+  row: row,
+  unbounded: unbounded,
 }
 
 export function specializeIdentifier (value) {

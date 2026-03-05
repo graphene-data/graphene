@@ -14,6 +14,110 @@ const trim = trimIndentation
 
 export const bigQueryFunctions: FunctionDef[] = [
   // ============================================================================
+  // Window Functions
+  // https://cloud.google.com/bigquery/docs/reference/standard-sql/window-functions
+  // ============================================================================
+  {
+    name: 'row_number',
+    description: trim('ROW_NUMBER() returns the sequential row number (1-based) of each row within a window.'),
+    url: `${bq}/numbering_functions#row_number`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'rank',
+    description: trim('RANK() returns the rank of each row within a window, with gaps for ties.'),
+    url: `${bq}/numbering_functions#rank`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'dense_rank',
+    description: trim('DENSE_RANK() returns the rank of each row within a window, without gaps.'),
+    url: `${bq}/numbering_functions#dense_rank`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'ntile',
+    description: trim('NTILE(constant_integer_expression) returns the bucket number for each row in a window.'),
+    url: `${bq}/numbering_functions#ntile`,
+    args: [{name: 'constant_integer_expression', type: 'number'}],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'lag',
+    description: trim('LAG(value_expression, offset, default_expression) returns data from a previous row in a window.'),
+    url: `${bq}/navigation_functions#lag`,
+    args: [
+      {name: 'value_expression', type: 'T'},
+      {name: 'offset', type: 'number?'},
+      {name: 'default_expression', type: 'T?'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'lead',
+    description: trim('LEAD(value_expression, offset, default_expression) returns data from a following row in a window.'),
+    url: `${bq}/navigation_functions#lead`,
+    args: [
+      {name: 'value_expression', type: 'T'},
+      {name: 'offset', type: 'number?'},
+      {name: 'default_expression', type: 'T?'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'first_value',
+    description: trim('FIRST_VALUE(value_expression) returns the first value in the current window frame.'),
+    url: `${bq}/navigation_functions#first_value`,
+    args: [{name: 'value_expression', type: 'T'}],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'last_value',
+    description: trim('LAST_VALUE(value_expression) returns the last value in the current window frame.'),
+    url: `${bq}/navigation_functions#last_value`,
+    args: [{name: 'value_expression', type: 'T'}],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'nth_value',
+    description: trim('NTH_VALUE(value_expression, constant_integer_expression) returns the nth value in the frame.'),
+    url: `${bq}/navigation_functions#nth_value`,
+    args: [
+      {name: 'value_expression', type: 'T'},
+      {name: 'constant_integer_expression', type: 'number'},
+    ],
+    returns: 'T',
+    window: true,
+  },
+  {
+    name: 'percent_rank',
+    description: trim('PERCENT_RANK() returns the percentile rank of each row in the partition.'),
+    url: `${bq}/numbering_functions#percent_rank`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+  {
+    name: 'cume_dist',
+    description: trim('CUME_DIST() returns the cumulative distribution value for each row in the partition.'),
+    url: `${bq}/numbering_functions#cume_dist`,
+    args: [],
+    returns: 'number',
+    window: true,
+  },
+
+  // ============================================================================
   // Aggregate Functions
   // https://cloud.google.com/bigquery/docs/reference/standard-sql/aggregate_functions
   // ============================================================================
