@@ -18,9 +18,9 @@ This should all be run in `core/`
 2. **Build changelog entries from commits since last tag:**
    ```bash
    git tag --sort=-version:refname | head -1
-   git log <tag>..HEAD --oneline --shortstat
+   git log <tag>..HEAD --shortstat
    ```
-   - Skip commits with no user-facing impact (docs/tests/internal refactors only).
+   - Skip commits with no user-facing impact (tests/internal refactors only).
    - For large commits, use a subagent to classify changelog impact.
 
 3. **Determine the next version:**
@@ -30,6 +30,7 @@ This should all be run in `core/`
    - Insert `## <next version>` at the top.
    - Add subsections `Breaking changes`, `Added`, `Fixed`.
    - Add concise bullets with commit shas where helpful.
+   - Include commits you're medium or high confidence in.
 
 5. **Bump versions:**
    Determine next version number. 
@@ -39,14 +40,16 @@ This should all be run in `core/`
    (cd vscode && pnpm version "<next_version>" --no-git-tag-version)
    ```
 
-6. **Create commit and push:**
+6. **Stage changes:**
    ```bash
    git add CHANGELOG.md package.json cli/package.json vscode/package.json
-   git commit -m "[release] v<next_version>"
-   node ../dev/workTrees.ts push
+   printf "[release] v<next_version>\n" > "$(git rev-parse --git-dir)/COMMIT_EDITMSG"
    ```
 
-7. **Report back:**
-   - New version number.
-   - Commit sha.
-   - Any commits where changelog handling was unclear.
+7. **Report back unsure commmits:**
+   If there are commits you're not sure about, for each one give:
+   - sha
+   - the line you would have added to the changelog
+   - commit message
+   - 1 sentence on why you think it should or should not be included
+   Err on the side of caution. It's better for us to discuss a commit whose significance you aren't sure about than to omit a breaking change from the log.
