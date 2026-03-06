@@ -1,3 +1,30 @@
+## 0.0.15
+
+### Breaking changes
+
+- Renamed `check` to `run`, and have it print out data in addition to capturing a screenshot (`32f6e97`).
+- Moved docs file from `docs/graphene.md` to `skills/graphene/SKILL.md` (`e04c1d6`).
+
+### Added
+
+- Added window function support (`f1c8367`).
+- Added `||` string concatenation operator support in gsql (`55fc01a`).
+- Added referencing columns in interval expressions (`ef7e6aa`).
+
+- Added support for additional Snowflake timestamp types (`cc8c39d`).
+
+### Fixed
+
+- Fixed snowflake schema listing in the CLI (`d18d6e4`).
+- Fixed SQL compilation stripping parenthetical expressions (`c509742`).
+- Fixed date/time function typing to accept both timestamps and dates (`a129adc`).
+- Fixed Snowflake case-handling edge cases (`8fde193`).
+- Fixed gsql error diagnostics to use relative file paths (`d1ba2bf`, `ade2bb0`).
+- Fixed language server crash on IDE open when no workspace is present (`0e175ee`).
+- Fixed a remark/rehype pipeline bug for self-closing tags (`81e3c78`).
+- Fixed tidy transformations dropping inferred type information (`0bd7cd1`).
+- Improved UI consistency and behavior across dropdowns, inputs, accordions, and chart labeling (`3277eaa`, `3928f25`, `a0eb906`, `e6187cb`, `cba0d99`, `ea1d314`, `f3446dd`, `b361f23`, `b60b4ae`).
+
 ## 0.0.14
 
 ### Breaking changes
