@@ -37,6 +37,11 @@
       "duckdb",
       "esbuild",
       "svelte-preprocess"
-    ]
+    ],
+    "overrides": {
+      "rollup": ">=4.59.0",
+      "fast-xml-parser": ">=5.3.8",
+      "@tootallnate/once": ">=3.0.1"
+    }
   }
 }
