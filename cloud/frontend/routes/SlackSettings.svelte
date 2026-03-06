@@ -12,7 +12,7 @@
   let slackConnected = $state(false)
   let slackTeamName = $state('')
 
-  onMount(async () => {
+  onMount(async() => {
     try {
       let slackRes = await fetch('/_api/slack/status')
       if (!slackRes.ok) throw new Error('Failed to fetch Slack status')
@@ -20,14 +20,14 @@
       let slackData = await slackRes.json() as SlackStatus
       slackConnected = !!slackData.connected
       slackTeamName = slackData.teamName || slackData.teamId || ''
-    } catch (e: any) {
+    } catch(e: any) {
       error = e.message
     } finally {
       loading = false
     }
   })
 
-  function connectSlack () {
+  function connectSlack() {
     window.location.href = '/_api/slack/install'
   }
 </script>

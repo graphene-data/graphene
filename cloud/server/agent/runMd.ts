@@ -18,7 +18,7 @@ export interface RenderResult {
 }
 
 /** Render markdown to an image via the screenshot Lambda */
-export async function renderMd (markdown: string, repoId: string, baseUrlOverride?: string): Promise<RenderResult> {
+export async function renderMd(markdown: string, repoId: string, baseUrlOverride?: string): Promise<RenderResult> {
   let mdId = crypto.createHash('sha256').update(markdown).digest('hex')
   let db = getDb()
   let repo = await db.select({orgId: repos.orgId}).from(repos).where(eq(repos.id, repoId)).then(rows => rows[0])

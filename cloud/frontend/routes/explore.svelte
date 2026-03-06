@@ -7,13 +7,13 @@
   let content = $state(undefined)
   let promptField
 
-  async function updateContent (fileName) {
+  async function updateContent(fileName) {
     if (!fileName) return
     let mod = await import(/* @vite-ignore */ `${fileName}?import`)
     content = mod.default
   }
 
-  async function startPrompt (promptText) {
+  async function startPrompt(promptText) {
     if (!promptText.trim()) return
     messages = []
 
@@ -52,7 +52,7 @@
     updateContent(lastWrite?.message.content[0].input.file_path.replace(base, ''))
   }
 
-  function submitPrompt () {
+  function submitPrompt() {
     let trimmed = prompt.trim()
     if (!trimmed) return
     startPrompt(trimmed)
@@ -60,20 +60,20 @@
     autosizePrompt()
   }
 
-  function handleKeyDown (event) {
+  function handleKeyDown(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault()
       submitPrompt()
     }
   }
 
-  function autosizePrompt () {
+  function autosizePrompt() {
     if (!promptField) return
     promptField.style.height = 'auto'
     promptField.style.height = `${promptField.scrollHeight}px`
   }
 
-  function handlePromptInput () {
+  function handlePromptInput() {
     autosizePrompt()
   }
 

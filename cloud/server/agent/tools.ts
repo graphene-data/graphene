@@ -10,13 +10,13 @@ import {renderMd} from './runMd.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../../..')
 
-export function listDirTool (repoId: string) {
+export function listDirTool(repoId: string) {
   return tool({
     description: 'List files and directories at a path in the repository',
     inputSchema: z.object({
       path: z.string().describe('Directory path to list (use "" for root)'),
     }),
-    execute: async ({path}) => {
+    execute: async({path}) => {
       let prefix = path ? `${path}/` : ''
       let allFiles = await (getDb())
         .select({path: files.path, extension: files.extension})
@@ -44,13 +44,13 @@ export function listDirTool (repoId: string) {
   })
 }
 
-export function readFileTool (repoId: string) {
+export function readFileTool(repoId: string) {
   return tool({
     description: 'Read the contents of a file',
     inputSchema: z.object({
       path: z.string().describe('File path to read (without extension)'),
     }),
-    execute: async ({path: filePath}) => {
+    execute: async({path: filePath}) => {
       // Special case: docs/graphene.md is a core documentation file
       if (filePath.endsWith('docs/graphene.md') || filePath.endsWith('docs/graphene')) {
         let docsPath = path.resolve(rootDir, '../core/docs/graphene.md')
@@ -74,13 +74,13 @@ export function readFileTool (repoId: string) {
   })
 }
 
-export function searchTool (repoId: string) {
+export function searchTool(repoId: string) {
   return tool({
     description: 'Search for files containing a string in their path or content',
     inputSchema: z.object({
       query: z.string().describe('Search query string'),
     }),
-    execute: async ({query}) => {
+    execute: async({query}) => {
       let pattern = `%${query}%`
       let results = await (getDb())
         .select({path: files.path, extension: files.extension, content: files.content})
@@ -100,7 +100,7 @@ export function searchTool (repoId: string) {
   })
 }
 
-function extractPreview (content: string, query: string, contextChars = 100): string {
+function extractPreview(content: string, query: string, contextChars = 100): string {
   let lowerContent = content.toLowerCase()
   let lowerQuery = query.toLowerCase()
   let index = lowerContent.indexOf(lowerQuery)
@@ -117,19 +117,19 @@ function extractPreview (content: string, query: string, contextChars = 100): st
   return preview
 }
 
-export function renderMdTool (repoId: string, baseUrl?: string) {
+export function renderMdTool(repoId: string, baseUrl?: string) {
   // Using 'as any' because toModelOutput is a runtime feature not yet in TypeScript types
   return tool({
     description: 'Render markdown containing a chart to an image. Returns a screenshot and the underlying tabular data. Use this when the user wants to see a visualization.',
     inputSchema: z.object({
       markdown: z.string().describe('Markdown content with graphene chart blocks to render'),
     }),
-    execute: async ({markdown}) => {
+    execute: async({markdown}) => {
       return await renderMd(markdown, repoId, baseUrl)
     },
     // Convert results to multi-modal content for the model.
     // If there are query errors, skip the screenshot and just return the errors so the agent can fix them.
-    toModelOutput ({output}: {output: {success: boolean, mdId?: string, screenshot?: string, queryData?: Record<string, {rows: any[]}>, errors?: {message: string, id?: string}[], error?: string}}) {
+    toModelOutput({output}: {output: {success: boolean, mdId?: string, screenshot?: string, queryData?: Record<string, {rows: any[]}>, errors?: {message: string, id?: string}[], error?: string}}) {
       if (output.success && output.errors?.length) {
         let errText = output.errors.map(e => e.id ? `${e.id}: ${e.message}` : e.message).join('\n')
         let mdIdText = output.mdId ? `Rendered markdown id: ${output.mdId}\n` : ''
@@ -157,7 +157,7 @@ export function renderMdTool (repoId: string, baseUrl?: string) {
   } as any)
 }
 
-export function respondToUserTool () {
+export function respondToUserTool() {
   return tool({
     description: 'Finalize your response to the user. Call this exactly once when you are done. Include mdId to attach the matching renderMd screenshot in Slack.',
     inputSchema: z.object({

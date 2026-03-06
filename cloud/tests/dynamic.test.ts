@@ -3,7 +3,7 @@ import {describe} from 'vitest'
 import jwt from 'jsonwebtoken'
 import {orgId, repoId} from '../server/dev.ts'
 
-function createToken () {
+function createToken() {
   let secret = process.env.AGENT_TOKEN_SECRET || 'dev-secret-key'
   return jwt.sign({orgId}, secret, {expiresIn: '5m'})
 }
@@ -11,7 +11,7 @@ function createToken () {
 describe('dynamic endpoint', () => {
   test.scoped({realAuth: true})
 
-  test('renders bar chart with cookie auth', {timeout: 20000}, async ({browser, cloud}) => {
+  test('renders bar chart with cookie auth', {timeout: 20000}, async({browser, cloud}) => {
     let context = await browser.newContext({deviceScaleFactor: 2})
     let page = await context.newPage()
 

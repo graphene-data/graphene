@@ -23,37 +23,37 @@
   let slug = $state('')
   let folder = $state('')
 
-  onMount(async () => {
+  onMount(async() => {
     try {
       let res = await fetch('/_api/github/repos')
       if (!res.ok) throw new Error('Failed to fetch repos')
       let data = await res.json()
       availableRepos = data.repos
       hasInstallation = data.hasInstallation
-    } catch (e: any) {
+    } catch(e: any) {
       error = e.message
     } finally {
       loading = false
     }
   })
 
-  function connectGitHub () {
+  function connectGitHub() {
     window.location.href = '/_api/github/install'
   }
 
-  function selectRepo (repo: AvailableRepo) {
+  function selectRepo(repo: AvailableRepo) {
     selectedRepo = repo
     slug = repo.name
     folder = ''
   }
 
-  function cancelSelection () {
+  function cancelSelection() {
     selectedRepo = null
     slug = ''
     folder = ''
   }
 
-  async function addRepo () {
+  async function addRepo() {
     if (!selectedRepo) return
     adding = true
     error = ''
@@ -80,14 +80,14 @@
       selectedRepo = null
       slug = ''
       folder = ''
-    } catch (e: any) {
+    } catch(e: any) {
       error = e.message
     } finally {
       adding = false
     }
   }
 
-  async function removeRepo (repo: AvailableRepo) {
+  async function removeRepo(repo: AvailableRepo) {
     if (!repo.repoId) return
     removing = repo.id
     error = ''
@@ -103,7 +103,7 @@
       availableRepos = availableRepos.map(r =>
         r.id === repo.id ? {...r, added: false, repoId: null} : r,
       )
-    } catch (e: any) {
+    } catch(e: any) {
       error = e.message
     } finally {
       removing = null

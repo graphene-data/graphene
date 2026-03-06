@@ -5,7 +5,7 @@ import * as schema from '../schema.ts'
 import {eq} from 'drizzle-orm'
 import {orgId} from '../server/dev.ts'
 
-test('rejects events with missing signature headers', async ({cloud}) => {
+test('rejects events with missing signature headers', async({cloud}) => {
   let response = await fetch(`${cloud.url}/_api/slack/events`, {
     method: 'POST',
     headers: {'content-type': 'application/json'},
@@ -16,14 +16,14 @@ test('rejects events with missing signature headers', async ({cloud}) => {
   expect(await response.json()).toEqual({error: 'Invalid Slack signature'})
 })
 
-test('responds to url verification challenge', async ({slack}) => {
+test('responds to url verification challenge', async({slack}) => {
   let response = await slack.simulateWebhook({type: 'url_verification', challenge: 'abc123'})
   expect(response.statusCode).toBe(200)
   expect(await response.json()).toEqual({challenge: 'abc123'})
   expect(slack.getApiCalls()).toEqual([])
 })
 
-test('creates workspace mapping via oauth callback', async ({slack, cloud}) => {
+test('creates workspace mapping via oauth callback', async({slack, cloud}) => {
   mockSlackApi((endpoint) => {
     if (endpoint === 'oauth.v2.access') {
       return {
@@ -67,7 +67,7 @@ test('creates workspace mapping via oauth callback', async ({slack, cloud}) => {
   expect(await statusResponse.json()).toEqual({connected: true, teamId: 'T123', teamName: 'Graphene QA'})
 })
 
-test('routes app mention to cloud agent and replies in thread', async ({slack, mockLLM}) => {
+test('routes app mention to cloud agent and replies in thread', async({slack, mockLLM}) => {
   mockLLM.setResponse('Here is your answer from Graphene.')
 
   let response = await slack.simulateUserMessage('hello graphene')
@@ -97,7 +97,7 @@ test('routes app mention to cloud agent and replies in thread', async ({slack, m
   })
 })
 
-test('includes thread context when mention is in a thread', async ({slack, mockLLM}) => {
+test('includes thread context when mention is in a thread', async({slack, mockLLM}) => {
   mockLLM.setResponse('Thread-aware answer')
 
   mockSlackApi((endpoint) => {
@@ -125,7 +125,7 @@ test('includes thread context when mention is in a thread', async ({slack, mockL
   expect(promptLog).toContain('user:U2: Focus on last month please.')
 })
 
-test('uploads chart screenshot when respondToUser references mdId', async ({slack, mockLLM}) => {
+test('uploads chart screenshot when respondToUser references mdId', async({slack, mockLLM}) => {
   let screenshot = Buffer.from('fake-image-data').toString('base64')
   mockLLM.mock(() => ({
     text: 'fallback text',
@@ -154,7 +154,7 @@ test('uploads chart screenshot when respondToUser references mdId', async ({slac
   expect(Buffer.isBuffer(uploadCall?.payload.file)).toBe(true)
 })
 
-test('stores and reuses one agent session per slack thread', async ({slack, mockLLM}) => {
+test('stores and reuses one agent session per slack thread', async({slack, mockLLM}) => {
   mockLLM.setResponse('Session reply')
 
   await slack.simulateUserMessage('first mention', {ts: '1710000000.123456'})
@@ -173,7 +173,7 @@ test('stores and reuses one agent session per slack thread', async ({slack, mock
   expect(llmCalls[1]?.messages.map(m => JSON.stringify(m)).join('\n')).toContain('Latest mention: <@U999> second mention')
 })
 
-async function waitFor (predicate: () => boolean, timeoutMs = 4000) {
+async function waitFor(predicate: () => boolean, timeoutMs = 4000) {
   let start = Date.now()
   while (Date.now() - start < timeoutMs) {
     if (predicate()) return

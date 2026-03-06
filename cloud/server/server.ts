@@ -11,13 +11,13 @@ import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, git
 import {slackEvents, slackInstall, slackOauthCallback, slackStatus} from './slack.ts'
 
 
-export function createServer (serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
+export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
   let app = fastify({logger})
   app.register(cookie, {})
   app.register(rawBody, {global: false, runFirst: true, encoding: 'utf8'})
 
   app.decorateRequest('auth', null as unknown as AuthContext)
-  app.addHook('preHandler', async (req, reply) => {
+  app.addHook('preHandler', async(req, reply) => {
     let route = req.routeOptions.url
     if (!route || !route.startsWith('/_api')) return
     if (route === '/_api/github/webhook') return

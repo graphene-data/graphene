@@ -10,17 +10,17 @@ import {DOMAIN, PROD, TEST} from './consts.ts'
 export type {AuthContext}
 
 let authOverride: AuthContext | null = null
-export function setAuthOverride (auth: AuthContext | null) {
+export function setAuthOverride(auth: AuthContext | null) {
   if (!TEST) return
   authOverride = auth
 }
 
 // Generate a short-lived JWT for the agent to authenticate with the dynamic endpoint.
-export function generateAgentToken (orgId: string): string {
+export function generateAgentToken(orgId: string): string {
   return jwt.sign({orgId}, getAgentTokenSecret(), {expiresIn: '5m'})
 }
 
-export async function auth (req: FastifyRequest, reply: FastifyReply) {
+export async function auth(req: FastifyRequest, reply: FastifyReply) {
   (req as any).auth = null
   let isAgentAuth = false
 
@@ -78,7 +78,7 @@ export async function auth (req: FastifyRequest, reply: FastifyReply) {
 
 let stytchClient: B2BClient | undefined
 
-function getStytch (): B2BClient {
+function getStytch(): B2BClient {
   stytchClient ||= new B2BClient({
     project_id: process.env.STYTCH_PROJECT_ID ?? '',
     secret: process.env.STYTCH_SECRET ?? '',
@@ -87,7 +87,7 @@ function getStytch (): B2BClient {
   return stytchClient
 }
 
-function getAgentTokenSecret () {
+function getAgentTokenSecret() {
   let secret = process.env.AGENT_TOKEN_SECRET
   if (!secret && PROD) {
     throw new Error('AGENT_TOKEN_SECRET must be set in production')
@@ -95,7 +95,7 @@ function getAgentTokenSecret () {
   return secret || 'dev-secret-key'
 }
 
-export async function authTokenExchange (req: FastifyRequest, reply: FastifyReply) {
+export async function authTokenExchange(req: FastifyRequest, reply: FastifyReply) {
   let res = await fetch(`${process.env.STYTCH_DOMAIN}/v1/oauth2/token`, {
     method: 'POST',
     headers: {'content-type': 'application/x-www-form-urlencoded'},

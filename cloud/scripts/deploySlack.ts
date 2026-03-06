@@ -59,7 +59,7 @@ interface SlackResponse {
   app_id?: string
 }
 
-function buildManifest (environment: Environment, baseUrl: string) {
+function buildManifest(environment: Environment, baseUrl: string) {
   let appName = process.env.SLACK_APP_NAME || (environment === 'prod' ? 'Graphene' : `Graphene (${environment})`)
   return {
     _metadata: {
@@ -108,7 +108,7 @@ function buildManifest (environment: Environment, baseUrl: string) {
   }
 }
 
-async function slackManifestRequest (method: string, body: Record<string, unknown>, token: string) {
+async function slackManifestRequest(method: string, body: Record<string, unknown>, token: string) {
   let response = await fetch(`https://slack.com/api/${method}`, {
     method: 'POST',
     headers: {

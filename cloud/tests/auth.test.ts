@@ -12,7 +12,7 @@ const TEST_PASSWORD = 'graphenedata'
 describe('auth', () => {
   test.scoped({realAuth: true})
 
-  test('login flow', async ({page, cloud}) => {
+  test('login flow', async({page, cloud}) => {
     // should redirect to /login, since we're not authed
     await page.goto(cloud.url)
     expectConsoleError(/the server responded with a status of 401/)
@@ -30,7 +30,7 @@ describe('auth', () => {
     await expect(page.locator('h1', {hasText: 'Flight Analytics Dashboard'})).toBeVisible()
   })
 
-  test('prevents unauthorized requests', async ({page, cloud}) => {
+  test('prevents unauthorized requests', async({page, cloud}) => {
     await page.goto(cloud.url + '/login')
     let pageRes = await page.request.get(`${cloud.url}/_api/pages/index`)
     expect(pageRes.status()).toBe(401)
@@ -41,7 +41,7 @@ describe('auth', () => {
     expect(queryRes.status()).toBe(401)
   })
 
-  test('shows an error for invalid credentials', async ({page, cloud}) => {
+  test('shows an error for invalid credentials', async({page, cloud}) => {
     expectConsoleError('Failed to load resource')
     await page.goto(cloud.url + '/login')
     let loginShell = page.locator('#stytch-login')
@@ -58,7 +58,7 @@ describe('auth', () => {
   })
 
   // Skip: Stytch IDP/connected apps feature needs to be configured in test project
-  test('cli pkce login works', async ({page, cloud}) => {
+  test('cli pkce login works', async({page, cloud}) => {
     setConfig({root: 'test', host: cloud.url})
     expectConsoleError(/Failed to load resource.*127.0.0.1.*favicon.ico/)
 
@@ -86,7 +86,7 @@ describe('auth', () => {
   // })
 })
 
-test('validates subdomains', async ({page, cloud}) => {
+test('validates subdomains', async({page, cloud}) => {
   await (getDb()).update(orgs).set({slug: 'dev'})
 
   let r1 = await page.request.get(`${cloud.url}/_api/pages/flights/index`, {

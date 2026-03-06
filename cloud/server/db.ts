@@ -19,7 +19,7 @@ let PGlite: any
 let PGLiteSocketServer: any
 
 /** Call once in test fixtures to load pglite classes (avoids dynamic import in getDb) */
-export async function setupPglite (port: number) {
+export async function setupPglite(port: number) {
   let pglite = await import('@electric-sql/pglite')
   let socket = await import('@electric-sql/pglite-socket')
   PGlite = pglite.PGlite
@@ -27,7 +27,7 @@ export async function setupPglite (port: number) {
   pglitePort = port
 }
 
-export function getDb (): CloudDatabase {
+export function getDb(): CloudDatabase {
   if (dbInstance) return dbInstance
 
   if (PROD) {
@@ -54,7 +54,7 @@ export function getDb (): CloudDatabase {
   return dbInstance
 }
 
-export async function resetDb (): Promise<void> {
+export async function resetDb(): Promise<void> {
   if (PROD) throw new Error('Cannot reset db in prod')
 
   if (!TEST) {

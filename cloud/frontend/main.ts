@@ -26,7 +26,7 @@ graphene.mount = mount
 window.$GRAPHENE = graphene
 
 // Lazy load App only when needed (avoids Stytch initialization for dynamic renders)
-export async function mountApp (target: HTMLElement) {
+export async function mountApp(target: HTMLElement) {
   let {default: App} = await import('./App.svelte')
   mount(App, {target})
 }

@@ -29,29 +29,29 @@
     if (repoSlug) fetchNavFiles(repoSlug)
   })
 
-  function toMarkdownFile (target: string) {
+  function toMarkdownFile(target: string) {
     let segments = target.split('/').filter(Boolean)
     let pageSegments = segments.length > 1 ? segments.slice(1) : segments
     let filePath = pageSegments.join('/') || 'index'
     return `${filePath}.md`
   }
 
-  function isCompileFailure (value: unknown): value is CompileFailure {
+  function isCompileFailure(value: unknown): value is CompileFailure {
     return !!value && typeof value === 'object' && (value as CompileFailure).kind === 'compile'
   }
 
-  async function fetchNavFiles (slug: string) {
+  async function fetchNavFiles(slug: string) {
     try {
       let res = await fetch(`/_api/nav/${slug}`)
       if (res.ok) navFiles = await res.json()
       else navFiles = []
-    } catch (e) {
+    } catch(e) {
       console.error('Failed to fetch nav files:', e)
       navFiles = []
     }
   }
 
-  const loadPage = async (target: string) => {
+  const loadPage = async(target: string) => {
     loading = true
     error = null
     if (instance) unmount(instance)
@@ -85,7 +85,7 @@
       let blob = new Blob([code], {type: 'text/javascript'})
       let mod = await import(/* @vite-ignore */ URL.createObjectURL(blob))
       instance = mount(mod.default, {target: container})
-    } catch (cause) {
+    } catch(cause) {
       if (isCompileFailure(cause)) {
         error = {
           kind: 'compile',

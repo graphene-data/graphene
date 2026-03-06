@@ -33,7 +33,7 @@ interface DevServerHandle {
   close: () => Promise<void>
 }
 
-export async function startDevServer ({realAuth, port, project = 'flights', logger, ngrok}: DevArgs): Promise<DevServerHandle> {
+export async function startDevServer({realAuth, port, project = 'flights', logger, ngrok}: DevArgs): Promise<DevServerHandle> {
   port = port || Number(process.env.GRAPHENE_PORT) + 1 || 4000
 
   let fastify = createServer(false, logger)
@@ -83,7 +83,7 @@ export async function startDevServer ({realAuth, port, project = 'flights', logg
 
   return {
     url,
-    async close () {
+    async close() {
       ;(globalThis as any).__GRAPHENE_DEV_NGROK_URL = undefined
       await ngrokTunnel?.close()
       vite.ws.close()
@@ -94,7 +94,7 @@ export async function startDevServer ({realAuth, port, project = 'flights', logg
   }
 }
 
-export async function seedDatabase (project = 'flights') {
+export async function seedDatabase(project = 'flights') {
   await resetDb() // reset db instance (tests need fresh in-memory db, dev needs fresh pglite)
   let db = getDb()
 
@@ -152,7 +152,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   await startDevServer({realAuth: true, project, ngrok: useNgrok})
 }
 
-async function startNgrokTunnel (port: number) {
+async function startNgrokTunnel(port: number) {
   let ngrok = await import('@ngrok/ngrok')
   let listener = await ngrok.forward({
     addr: port,

@@ -2,7 +2,7 @@ import {writable} from 'svelte/store'
 import {StytchB2BUIClient, AuthFlowType, StytchEventType, type MemberSession} from '@stytch/vanilla-js/b2b'
 
 // Determine the base domain for cookies and redirects based on current hostname
-function getBaseDomain (): string {
+function getBaseDomain(): string {
   if (import.meta.env.DEV) return window.location.host
   if (window.location.hostname.endsWith('.graphene-staging.com')) return 'graphene-staging.com'
   return 'graphenedata.com'
@@ -15,7 +15,7 @@ export const loginUrl = import.meta.env.DEV
 
 let _client: StytchB2BUIClient | null = null
 
-export function authClient () {
+export function authClient() {
   if (_client) return _client
   if (import.meta.env.MODE == 'test' && import.meta.env.VITE_STYTCH_USE_MOCK) {
     _client = new MockClient() as StytchB2BUIClient
@@ -32,7 +32,7 @@ export function authClient () {
 
 class MockClient {
   session = {
-    getSync () {
+    getSync() {
       return {}
     },
   }

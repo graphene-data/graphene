@@ -43,7 +43,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   project: 'flights',
 
   // eslint-disable-next-line no-empty-pattern
-  browser: async ({}, use) => {
+  browser: async({}, use) => {
     let b = await chromium.launch({
       headless: !process.env.GRAPHENE_DEBUG,
       args: [
@@ -60,7 +60,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   },
 
   // cloud starts BEFORE page so it tears down AFTER page - this ensures the server is still running during assertions
-  cloud: async ({realAuth, project}, use) => {
+  cloud: async({realAuth, project}, use) => {
     let port = realAuth ? 3121 : await getAvailablePort()
     // custom logger allows us to fail if the server logs an error we don't expect
     let logger = {level: 'warn', stream: {write: (line: string) => onServerLog(line.trimEnd())}}
@@ -73,7 +73,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   },
 
   // page depends on cloud so it sets up after and tears down before (server still running during teardown)
-  page: async ({browser, cloud: _cloud}, use) => {
+  page: async({browser, cloud: _cloud}, use) => {
     let context = await browser.newContext({
       viewport: {width: 1280, height: 720},
       deviceScaleFactor: 2,
@@ -90,26 +90,26 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   },
 
   // eslint-disable-next-line no-empty-pattern
-  mockLLM: async ({}, use) => {
+  mockLLM: async({}, use) => {
     let requests: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}[] = []
     let responseText = 'Agent response from test'
     let handler: ((args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<any> | any) | null = null
 
-    setAgentMock(async (args) => {
+    setAgentMock(async(args) => {
       requests.push(args)
       if (handler) return await handler(args)
       return responseText
     })
 
     await use({
-      setResponse (text: string) {
+      setResponse(text: string) {
         responseText = text
         handler = null
       },
-      mock (nextHandler) {
+      mock(nextHandler) {
         handler = nextHandler
       },
-      getRequests () {
+      getRequests() {
         return requests
       },
     })
@@ -118,7 +118,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   },
 
   // Slack fixture for simulating inbound events and inspecting outbound API calls
-  slack: async ({cloud, mockLLM: _mockLLM}, use) => {
+  slack: async({cloud, mockLLM: _mockLLM}, use) => {
     void _mockLLM
     let apiCalls: {endpoint: string, payload: any}[] = []
     setAuthOverride({userId, orgId, slug: ''})
@@ -135,7 +135,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
     })
 
     let slack: SlackFixture = {
-      async simulateWebhook (payload: any) {
+      async simulateWebhook(payload: any) {
         let rawBody = JSON.stringify(payload)
         let timestamp = String(Math.floor(Date.now() / 1000))
         let signingSecret = process.env.SLACK_SIGNING_SECRET || ''
@@ -152,7 +152,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
         return {statusCode: response.status, json: () => response.json()}
       },
 
-      async simulateUserMessage (text: string, options:any = {}) {
+      async simulateUserMessage(text: string, options:any = {}) {
         return await slack.simulateWebhook({
           type: 'event_callback',
           team_id: options.teamId || teamId,
@@ -160,7 +160,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
         })
       },
 
-      async simulateInstallRedirect () {
+      async simulateInstallRedirect() {
         let response = await fetch(`${cloud.url}/_api/slack/install`, {redirect: 'manual'})
         return {
           statusCode: response.status,
@@ -168,7 +168,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
         }
       },
 
-      async simulateOauthCallback ({code, state}) {
+      async simulateOauthCallback({code, state}) {
         let response = await fetch(`${cloud.url}/_api/slack/oauth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`, {
           redirect: 'manual',
         })
@@ -179,7 +179,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
         }
       },
 
-      getApiCalls () {
+      getApiCalls() {
         return apiCalls
       },
     }
@@ -192,7 +192,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
 
 export {expect, expectConsoleError}
 
-async function getAvailablePort (): Promise<number> {
+async function getAvailablePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
     let srv = net.createServer()
     srv.unref()

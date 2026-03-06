@@ -5,7 +5,7 @@ import {orgId, repoId} from '../dev.ts'
 import {renderMd} from './runMd.ts'
 import {agentSessions} from '../../schema.ts'
 
-export async function agentTest (req: FastifyRequest, reply: FastifyReply) {
+export async function agentTest(req: FastifyRequest, reply: FastifyReply) {
   let q = (req.query as any).q as string
   if (!q) {
     return reply.code(400).send({error: 'Missing q parameter'})
@@ -113,7 +113,7 @@ ${resultHtml}
     })
 
     reply.raw.write('<p><strong>Done</strong></p>\n')
-  } catch (err: any) {
+  } catch(err: any) {
     reply.raw.write(`<div class="error">Error: ${escapeHtml(err.message || String(err))}</div>\n`)
   }
 
@@ -121,7 +121,7 @@ ${resultHtml}
 }
 
 /** Test endpoint for renderMd in isolation */
-export async function testRenderMd (_req: FastifyRequest, reply: FastifyReply) {
+export async function testRenderMd(_req: FastifyRequest, reply: FastifyReply) {
   // Simple test markdown with a chart
   let markdown = `
 \`\`\`gsql test_data
@@ -169,7 +169,7 @@ ${screenshotHtml}
 </html>`
 
     reply.type('text/html').send(html)
-  } catch (err: any) {
+  } catch(err: any) {
     reply.type('text/html').send(`<!DOCTYPE html>
 <html>
 <head><title>renderMd Test Error</title></head>
@@ -182,12 +182,12 @@ ${screenshotHtml}
 }
 
 /** Format readFile result so the file content displays with real newlines */
-function formatReadFileResult (result: {content: string}): string {
+function formatReadFileResult(result: {content: string}): string {
   return result.content
 }
 
 /** Format renderMd input so the markdown displays with real newlines */
-function formatRenderMdInput (inputStr: string): string {
+function formatRenderMdInput(inputStr: string): string {
   try {
     let parsed = JSON.parse(inputStr)
     if (parsed.markdown) return parsed.markdown
@@ -195,7 +195,7 @@ function formatRenderMdInput (inputStr: string): string {
   return inputStr
 }
 
-function escapeHtml (str: string): string {
+function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

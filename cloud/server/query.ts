@@ -13,7 +13,7 @@ interface QueryBody {
   repoId: string
 }
 
-export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
+export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
   let body = req.body as QueryBody
   let db = getDb()
 
@@ -54,7 +54,7 @@ export async function proxyQuery (req: FastifyRequest, reply: FastifyReply) {
   reply.send({rows: queryResults.rows, fields, sql})
 }
 
-async function getConnection (connInfo: Connection) {
+async function getConnection(connInfo: Connection) {
   let cfg = JSON.parse(await decryptSecret(connInfo.configJson))
 
   if (connInfo.kind == 'bigquery') {

@@ -2,7 +2,7 @@ import chromium from '@sparticuz/chromium'
 import {chromium as playwright} from 'playwright-core'
 
 // Lambda handler - takes a URL and optional token, returns a screenshot
-export async function handler (event) {
+export async function handler(event) {
   if (!event.url) {
     return {success: false, error: 'Missing required field: url'}
   }
@@ -83,7 +83,7 @@ export async function handler (event) {
     if (httpError) errors = [{message: httpError}]
 
     return {success: true, screenshot: screenshot.toString('base64'), queryData, errors, timings, pageErrors}
-  } catch (err) {
+  } catch(err) {
     let error = err instanceof Error ? err.message : String(err)
     return {success: false, error, timings}
   } finally {

@@ -9,7 +9,7 @@ import {PROD} from './consts.ts'
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
-export async function listNavFiles (req: FastifyRequest, reply: FastifyReply) {
+export async function listNavFiles(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
   let repoSlug = (req.params as any)['repoSlug']
@@ -32,7 +32,7 @@ export async function listNavFiles (req: FastifyRequest, reply: FastifyReply) {
   reply.send(paths)
 }
 
-export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
+export async function renderPage(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
   let segments = (req.params as any)['*'].split('/')
@@ -61,7 +61,7 @@ export async function renderPage (req: FastifyRequest, reply: FastifyReply) {
   reply.type('text/javascript').send(code)
 }
 
-async function compileMd (markdown:string, filename:string, repoId:string, inline?:boolean): Promise<string> {
+async function compileMd(markdown:string, filename:string, repoId:string, inline?:boolean): Promise<string> {
   let svelteSource = await mdsvexCompile(markdown, {
     filename,
     extensions: ['.md'],
@@ -78,7 +78,7 @@ async function compileMd (markdown:string, filename:string, repoId:string, inlin
 // The generated Svelte component is going to import a bunch of Svelte internals and visualization components.
 // Because we're doing this at runtime and we don't have a bundler, we need to figure out a way to make these imports work.
 // For now just do the simple thing and rewrite them to import from a global that we set in main.ts
-function rewriteSvelteImports (code: string, repoId: string, inline = false) {
+function rewriteSvelteImports(code: string, repoId: string, inline = false) {
   // Svelte 5 uses 'svelte/internal/client' with namespace import
   let runtimeImportPattern = /import\s*\*\s*as\s*(\$)\s*from\s*["']svelte\/internal\/client["'];?\s*/m
   let runtimeMatch = code.match(runtimeImportPattern)
@@ -116,7 +116,7 @@ function rewriteSvelteImports (code: string, repoId: string, inline = false) {
   return code
 }
 
-export async function renderDynamic (req: FastifyRequest, reply: FastifyReply) {
+export async function renderDynamic(req: FastifyRequest, reply: FastifyReply) {
   let query = req.query as {md?: string; repoId?: string}
   let markdown = Buffer.from(query.md || '', 'base64').toString('utf-8')
   let code = await compileMd(markdown, 'dynamic.md', query.repoId || '', true)

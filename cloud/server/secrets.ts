@@ -5,12 +5,12 @@ import {PROD} from './consts.ts'
 const KMS_KEY_ALIAS = 'alias/graphene-secrets'
 
 let kmsClient: KMSClient | null = null
-function getKmsClient (): KMSClient {
+function getKmsClient(): KMSClient {
   if (!kmsClient) kmsClient = new KMSClient({})
   return kmsClient
 }
 
-export async function encryptSecret (plaintext: string): Promise<string> {
+export async function encryptSecret(plaintext: string): Promise<string> {
   if (!PROD || process.env.ENCRYPTION_SECRET) {
     let key = crypto.createHash('sha256').update(process.env.ENCRYPTION_SECRET || 'devsecret').digest()
     let iv = crypto.randomBytes(12)
@@ -23,7 +23,7 @@ export async function encryptSecret (plaintext: string): Promise<string> {
   return 'kms:' + Buffer.from(result.CiphertextBlob).toString('base64')
 }
 
-export async function decryptSecret (ciphertext: string): Promise<string> {
+export async function decryptSecret(ciphertext: string): Promise<string> {
   if (ciphertext.startsWith('kms:')) {
     if (!PROD) throw new Error('KMS ciphertext can only be decrypted in production')
     let result = await getKmsClient().send(new DecryptCommand({CiphertextBlob: Buffer.from(ciphertext.slice(4), 'base64')}))

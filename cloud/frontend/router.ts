@@ -19,7 +19,7 @@ export const route = readable<string>(getPathname(), (set) => {
   }
 })
 
-export function go (url: string) {
+export function go(url: string) {
   if (!url) return
   let next = url.startsWith('/') ? url : `/${url}`
   if (window.location.pathname === next) return

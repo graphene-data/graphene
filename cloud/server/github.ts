@@ -8,7 +8,7 @@ import {vcsInstallations, repos, files} from '../schema.ts'
 import {DOMAIN, PROD} from './consts.ts'
 
 let app: App | null = null
-function getGitHubApp () {
+function getGitHubApp() {
   if (app) return app
   let appId = process.env.GITHUB_APP_ID
   let clientId = process.env.GITHUB_APP_CLIENT_ID
@@ -19,13 +19,13 @@ function getGitHubApp () {
   return app
 }
 
-async function getInstallationOctokit (installationId: string): Promise<Octokit> {
+async function getInstallationOctokit(installationId: string): Promise<Octokit> {
   let ghApp = getGitHubApp()
   return await ghApp.getInstallationOctokit(Number(installationId)) as unknown as Octokit
 }
 
 // Redirect to GitHub App installation with nonce in state
-export function githubInstall (req: FastifyRequest, reply: FastifyReply) {
+export function githubInstall(req: FastifyRequest, reply: FastifyReply) {
   let appSlug = process.env.GITHUB_APP_SLUG
   if (!appSlug) return reply.code(500).send({error: 'GitHub App not configured'})
 
@@ -46,7 +46,7 @@ export function githubInstall (req: FastifyRequest, reply: FastifyReply) {
 
 // GitHub redirects here after app installation (Setup URL)
 // It gives us back the `state` param, and we use that to validate the request, then connect the gh install to this graphene org.
-export async function githubSetup (req: FastifyRequest, reply: FastifyReply) {
+export async function githubSetup(req: FastifyRequest, reply: FastifyReply) {
   let query = req.query as {installation_id?: string; setup_action?: string; state?: string}
 
   if (!query.installation_id || !query.state) {
@@ -65,7 +65,7 @@ export async function githubSetup (req: FastifyRequest, reply: FastifyReply) {
 }
 
 // List repos accessible to the GitHub installation for this org
-export async function listAvailableRepos (req: FastifyRequest, reply: FastifyReply) {
+export async function listAvailableRepos(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
   let installation = await db.select().from(vcsInstallations)
@@ -94,7 +94,7 @@ export async function listAvailableRepos (req: FastifyRequest, reply: FastifyRep
 }
 
 // Add a repo from GitHub to this org
-export async function addRepo (req: FastifyRequest, reply: FastifyReply) {
+export async function addRepo(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
   let body = req.body as {vcsRepoId: string; slug: string; folder?: string}
@@ -128,7 +128,7 @@ export async function addRepo (req: FastifyRequest, reply: FastifyReply) {
 }
 
 // Remove a repo
-export async function removeRepo (req: FastifyRequest, reply: FastifyReply) {
+export async function removeRepo(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
   let params = req.params as {id?: string}
@@ -148,7 +148,7 @@ export async function removeRepo (req: FastifyRequest, reply: FastifyReply) {
 // Handle GitHub webhook events
 // You can test this in dev by starting `server/dev.ts --ngrok`, setting the printed webhook URL in the GitHub app,
 // and then making a small change to the test repo.
-export async function githubWebhook (req: FastifyRequest, reply: FastifyReply) {
+export async function githubWebhook(req: FastifyRequest, reply: FastifyReply) {
   let signature = req.headers['x-hub-signature-256'] as string
   let event = req.headers['x-github-event'] as string
   let body = JSON.stringify(req.body)
@@ -175,7 +175,7 @@ export async function githubWebhook (req: FastifyRequest, reply: FastifyReply) {
   reply.send({ok: true})
 }
 
-function verifyWebhookSignature (payload: string, signature: string): boolean {
+function verifyWebhookSignature(payload: string, signature: string): boolean {
   let secret = process.env.GITHUB_APP_WEBHOOK_SECRET
   if (!secret) return false
   let expected = 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex')
@@ -187,7 +187,7 @@ function verifyWebhookSignature (payload: string, signature: string): boolean {
 }
 
 // Full sync of all .md and .gsql files from a repo
-export async function fullSyncRepo (repoId: string) {
+export async function fullSyncRepo(repoId: string) {
   let db = getDb()
   let gRepo = await db.select().from(repos).where(eq(repos.id, repoId)).then(rows => rows[0])
   if (!gRepo || !gRepo.url || !gRepo.vcsInstallationId) throw new Error('Missing repo or VCS config')
@@ -255,7 +255,7 @@ export async function fullSyncRepo (repoId: string) {
 
 // Parse owner and repo name from a GitHub URL
 // e.g., "https://github.com/graphene-data/example-ecommerce.git" → {owner: "graphene-data", repo: "example-ecommerce"}
-function parseGitHubUrl (url: string): {owner: string; repo: string} {
+function parseGitHubUrl(url: string): {owner: string; repo: string} {
   let match = url.match(/github\.com\/([^/]+)\/([^/.]+)/)
   if (!match) throw new Error('Couldnt parse github url')
   return {owner: match[1], repo: match[2]}

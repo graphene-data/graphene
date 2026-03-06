@@ -30,11 +30,11 @@ export interface AgentRunResult {
 
 let agentMock: ((args: AgentMockArgs) => AgentRunResult | string | Promise<AgentRunResult | string>) | null = null
 
-export function mockAgent (handler: ((args: AgentMockArgs) => AgentRunResult | string | Promise<AgentRunResult | string>) | null) {
+export function mockAgent(handler: ((args: AgentMockArgs) => AgentRunResult | string | Promise<AgentRunResult | string>) | null) {
   agentMock = handler
 }
 
-export async function runAgent (session: AgentSession, onStep?: StepCallback) {
+export async function runAgent(session: AgentSession, onStep?: StepCallback) {
   if (!session.repoId) throw new Error('Agent session must include repoId')
   session.messages ||= []
   let systemPrompt = buildSystemPrompt()
@@ -76,7 +76,7 @@ export async function runAgent (session: AgentSession, onStep?: StepCallback) {
   return result
 }
 
-function cleanMessages (messages: any[]) {
+function cleanMessages(messages: any[]) {
   // Keep message metadata, but strip binary/media payloads to keep session storage small.
   return structuredClone(messages).map(m => {
     let content = (Array.isArray(m.content) ? m.content : [{type: 'text', text: m.content}]) as any[]
@@ -88,11 +88,11 @@ function cleanMessages (messages: any[]) {
   })
 }
 
-function getDevTunnelUrl () {
+function getDevTunnelUrl() {
   return (globalThis as any).__GRAPHENE_DEV_NGROK_URL as string | undefined
 }
 
-function buildSystemPrompt (): string {
+function buildSystemPrompt(): string {
   let today = new Date().toLocaleDateString('en-US', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})
   let base = `
     You are a data analyst assistant that answers questions using Graphene.

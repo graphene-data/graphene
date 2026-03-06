@@ -10,7 +10,7 @@ import {PROD, TEST} from './consts.ts'
 import {getDb} from './db.ts'
 import {decryptSecret, encryptSecret} from './secrets.ts'
 import {agentSessions, repos, type SlackInstallation, slackInstallations} from '../schema.ts'
-import { type StepResult } from 'ai'
+import {type StepResult} from 'ai'
 
 const slackClientId = process.env.SLACK_CLIENT_ID || ''
 const slackClientSecret = process.env.SLACK_CLIENT_SECRET || ''
@@ -23,12 +23,12 @@ let slackWebClient = new WebClient()
 
 let slackScopes = ['app_mentions:read', 'chat:write', 'channels:history', 'im:history', 'files:write', 'users:read', 'reactions:write']
 
-export function mockSlackApi (handler: ((endpoint: string, body: any) => any | Promise<any>) | null) {
+export function mockSlackApi(handler: ((endpoint: string, body: any) => any | Promise<any>) | null) {
   slackMock = handler
 }
 
 // Returns whether the current Graphene org has a Slack workspace connected.
-export async function slackStatus (req: FastifyRequest, reply: FastifyReply) {
+export async function slackStatus(req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
   let installation = await getDb().select({teamId: slackInstallations.teamId, teamName: slackInstallations.teamName})
     .from(slackInstallations)
@@ -40,7 +40,7 @@ export async function slackStatus (req: FastifyRequest, reply: FastifyReply) {
 }
 
 // Starts Slack OAuth for the authenticated org and embeds orgId in OAuth state metadata.
-export async function slackInstall (req: FastifyRequest, reply: FastifyReply) {
+export async function slackInstall(req: FastifyRequest, reply: FastifyReply) {
   await auth(req, reply)
   let state = await getSlackStateStore().generateStateParam({
     scopes: slackScopes,
@@ -57,7 +57,7 @@ export async function slackInstall (req: FastifyRequest, reply: FastifyReply) {
 }
 
 // Handles Slack OAuth callback and upserts workspace->org installation credentials.
-export async function slackOauthCallback (req: FastifyRequest, reply: FastifyReply) {
+export async function slackOauthCallback(req: FastifyRequest, reply: FastifyReply) {
   let query = req.query as {code?: string; state?: string; error?: string}
   if (query.error) return reply.code(400).send({error: `Slack OAuth failed: ${query.error}`})
   if (!query.code || !query.state) return reply.code(400).send({error: 'Missing code or state'})
@@ -94,7 +94,7 @@ export async function slackOauthCallback (req: FastifyRequest, reply: FastifyRep
 }
 
 // Entry point for Slack Events API requests; verifies signature before routing.
-export async function slackEvents (req: FastifyRequest, reply: FastifyReply) {
+export async function slackEvents(req: FastifyRequest, reply: FastifyReply) {
   if (!verifySlackRequest(req)) return reply.code(401).send({error: 'Invalid Slack signature'})
   let body = req.body as any
 
@@ -120,7 +120,7 @@ export async function slackEvents (req: FastifyRequest, reply: FastifyReply) {
 }
 
 // Resolves installation + repo for a workspace mention, then posts an agent answer.
-async function handleAppMention (install: SlackInstallation, mention: AppMentionEvent) {
+async function handleAppMention(install: SlackInstallation, mention: AppMentionEvent) {
   let db = getDb()
   let repo = await db.select({id: repos.id}).from(repos)
     .where(eq(repos.orgId, install.orgId))
@@ -158,7 +158,7 @@ async function handleAppMention (install: SlackInstallation, mention: AppMention
 
   if (screenshot) {
     let file = Buffer.from(screenshot, 'base64')
-    await slackApi('files.uploadV2', {channel_id: mention.channel, thread_ts: threadTs, filename: `chart.png`, file, initial_comment: text}, install)
+    await slackApi('files.uploadV2', {channel_id: mention.channel, thread_ts: threadTs, filename: 'chart.png', file, initial_comment: text}, install)
   } else {
     await slackApi('chat.postMessage', {channel: mention.channel, text, thread_ts: threadTs}, install)
   }
@@ -166,7 +166,7 @@ async function handleAppMention (install: SlackInstallation, mention: AppMention
 }
 
 /** Find the existing Slack thread session, or create a new one. */
-async function findOrCreateSlackSession ({orgId, repoId, channel, threadTs}: {orgId: string, repoId: string, channel: string, threadTs: string}) {
+async function findOrCreateSlackSession({orgId, repoId, channel, threadTs}: {orgId: string, repoId: string, channel: string, threadTs: string}) {
   let db = getDb()
   let existing = await db.select()
     .from(agentSessions)
@@ -193,7 +193,7 @@ async function findOrCreateSlackSession ({orgId, repoId, channel, threadTs}: {or
 }
 
 // Exchanges a Slack OAuth code for install credentials via Slack Web API.
-async function exchangeSlackOauthCode (code: string, redirectUri: string): Promise<OauthV2AccessResponse> {
+async function exchangeSlackOauthCode(code: string, redirectUri: string): Promise<OauthV2AccessResponse> {
   if (process.env.NODE_ENV === 'test' && slackMock) {
     return await slackMock('oauth.v2.access', {client_id: slackClientId, client_secret: slackClientSecret, code, redirect_uri: redirectUri})
   }
@@ -204,7 +204,7 @@ async function exchangeSlackOauthCode (code: string, redirectUri: string): Promi
 }
 
 // Shared wrapper for Slack API calls with test interception and token handling.
-export async function slackApi<T = {ok: boolean; error?: string}> (method: string, params: any, installation?: SlackInstallation): Promise<T> {
+export async function slackApi<T = {ok: boolean; error?: string}>(method: string, params: any, installation?: SlackInstallation): Promise<T> {
   if (process.env.NODE_ENV === 'test' && slackMock) {
     return await slackMock(method, params)
   }
@@ -218,7 +218,7 @@ export async function slackApi<T = {ok: boolean; error?: string}> (method: strin
 }
 
 // Lazily initializes the OAuth state store used to prevent CSRF/replay on installs.
-function getSlackStateStore () {
+function getSlackStateStore() {
   if (slackStateStore) return slackStateStore
   let secret = process.env.SLACK_STATE_SECRET
   if (!secret) throw new Error('Missing SLACK_STATE_SECRET')
@@ -227,7 +227,7 @@ function getSlackStateStore () {
 }
 
 // Computes OAuth callback URL from explicit env override or request host headers.
-function getSlackRedirectUri (req: FastifyRequest) {
+function getSlackRedirectUri(req: FastifyRequest) {
   if (process.env.SLACK_REDIRECT_URI) return process.env.SLACK_REDIRECT_URI
   let forwardedProto = req.headers['x-forwarded-proto']
   let proto = (Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto) || (PROD ? 'https' : 'http')
@@ -238,7 +238,7 @@ function getSlackRedirectUri (req: FastifyRequest) {
 }
 
 // Verifies Slack request signatures using raw body + timestamp (5 minute skew window).
-function verifySlackRequest (req: FastifyRequest) {
+function verifySlackRequest(req: FastifyRequest) {
   let signingSecret = process.env.SLACK_SIGNING_SECRET
   if (!signingSecret) throw new Error('Missing SLACK_SIGNING_SECRET')
 
