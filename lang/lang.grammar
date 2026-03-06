@@ -118,6 +118,7 @@ JoinType {
 }
 
 ComputedDef {
+  tableComputedExpression Kw<"as"> Alias |
   Alias ":" expression
 }
 
@@ -132,28 +133,37 @@ JoinCondition[@isGroup=Expression, @name=BinaryExpression] {
   Ref "=" Ref
 }
 
-// Precedence ladder for expression parsing.
+// We use a parameterized precedence ladder to avoid duplication between 'expression' (which can start with anything)
+// and 'computedExpression' (which cannot start with a parenthesis, to avoid ambiguity with the 'name: expr' syntax).
 expression[@isGroup=Expression] {
-  orTier
+  orTier<baseExpression | parenExpression>
+}
+
+// In table blocks, `interval <ref> <unit> as <alias>` collides with `interval <type>` column defs.
+// Keep `expr as alias` syntax, but use a table-specific expression that only allows
+// interval string/numeric quantities here. Field-based interval quantities still work in
+// normal expressions and in `alias: expression` table defs.
+tableComputedExpression[@isGroup=Expression] {
+  orTier<tableBaseExpression>
 }
 
 // Expression precedence ladder: each tier either parses its own operator or falls through to the next tighter tier.
 // This lets us handle precedence at the parsing layer.
-orTier { OrExpression | andTier }
-andTier { AndExpression | compareTier }
-compareTier { BetweenExpression | InExpression | NullTestExpression | ComparisonExpression | addTier }
-addTier { AddExpression | multiplyTier }
-multiplyTier { MultiplyExpression | unaryTier }
-unaryTier { UnaryExpression | castTier }
-castTier { TypeCastExpression | baseExpression | parenExpression }
+orTier<T> { OrExpression<T> | andTier<T> }
+andTier<T> { AndExpression<T> | compareTier<T> }
+compareTier<T> { BetweenExpression<T> | InExpression<T> | NullTestExpression<T> | ComparisonExpression<T> | addTier<T> }
+addTier<T> { AddExpression<T> | multiplyTier<T> }
+multiplyTier<T> { MultiplyExpression<T> | unaryTier<T> }
+unaryTier<T> { UnaryExpression<T> | castTier<T> }
+castTier<T> { TypeCastExpression<T> | T }
 
 // Casting: supports both CAST(x AS type) and x::type syntaxes
 CastExpression {
   Kw<"cast"> "(" expression Kw<"as"> CastType ")"
 }
 
-TypeCastExpression[@isGroup=Expression] {
-  (baseExpression | parenExpression) !cast "::" CastType
+TypeCastExpression[@isGroup=Expression]<T> {
+  castTier<T> !cast "::" CastType
 }
 
 // Allow temporal keywords as cast targets (date, timestamp, interval are valid SQL types)
@@ -174,9 +184,25 @@ baseExpression {
   Param
 }
 
+tableBaseExpression {
+  CaseExpression |
+  ExistsExpression |
+  computedPrimary |
+  ExtractExpression |
+  CastExpression |
+  IntervalExpressionNoRef |
+  DateExpression |
+  TimestampExpression |
+  Param
+}
+
 // Interval: supports `interval '1 day'`, `interval 1 day`, or `interval field_name day`
 IntervalExpression {
   Kw<"interval"> (String | intervalQuantity IntervalUnit)
+}
+
+IntervalExpressionNoRef {
+  Kw<"interval"> (String | Number IntervalUnit)
 }
 
 intervalQuantity[@isGroup=Expression] {
@@ -204,8 +230,8 @@ parenExpression {
   SubqueryExpression
 }
 
-UnaryExpression[@isGroup=Expression] {
-  UnaryOperator !unary unaryTier
+UnaryExpression[@isGroup=Expression]<T> {
+  UnaryOperator !unary unaryTier<T>
 }
 
 ComparisonOp {
@@ -251,38 +277,38 @@ InValueList {
   binary @cut
 }
 
-OrExpression[@isGroup=Expression] {
-  orTier !or Kw<"or"> andTier
+OrExpression[@isGroup=Expression]<T> {
+  orTier<T> !or Kw<"or"> andTier<T>
 }
 
-AndExpression[@isGroup=Expression] {
-  andTier !and Kw<"and"> compareTier
+AndExpression[@isGroup=Expression]<T> {
+  andTier<T> !and Kw<"and"> compareTier<T>
 }
 
-ComparisonExpression[@isGroup=Expression] {
-  addTier !compare ComparisonOp addTier
+ComparisonExpression[@isGroup=Expression]<T> {
+  addTier<T> !compare ComparisonOp addTier<T>
 }
 
-AddExpression[@isGroup=Expression] {
-  addTier !add AddOp multiplyTier
+AddExpression[@isGroup=Expression]<T> {
+  addTier<T> !add AddOp multiplyTier<T>
 }
 
-MultiplyExpression[@isGroup=Expression] {
-  multiplyTier !multiply MulOp unaryTier
+MultiplyExpression[@isGroup=Expression]<T> {
+  multiplyTier<T> !multiply MulOp unaryTier<T>
 }
 
-InExpression[@isGroup=Expression] {
-  addTier !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
-  addTier !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
+InExpression[@isGroup=Expression]<T> {
+  addTier<T> !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
+  addTier<T> !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
 }
 
-BetweenExpression[@isGroup=Expression] {
-  addTier !compare Kw<"between"> addTier Kw<"and"> addTier |
-  addTier !compare Kw<"not"> Kw<"between"> addTier Kw<"and"> addTier
+BetweenExpression[@isGroup=Expression]<T> {
+  addTier<T> !compare Kw<"between"> addTier<T> Kw<"and"> addTier<T> |
+  addTier<T> !compare Kw<"not"> Kw<"between"> addTier<T> Kw<"and"> addTier<T>
 }
 
-NullTestExpression[@isGroup=Expression] {
-  addTier !compare Kw<"is"> Kw<"not">? Kw<"null">
+NullTestExpression[@isGroup=Expression]<T> {
+  addTier<T> !compare Kw<"is"> Kw<"not">? Kw<"null">
 }
 
 computedPrimary {
