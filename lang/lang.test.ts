@@ -183,7 +183,7 @@ describe('lang', () => {
 
   it('excludes aggregates from wildcard expansion', () => {
     // especially if those aggs are indirectly an agg agg expression
-    expect('table t (amount int, weird_avg: sum(amount) / count()) from t select *')
+    expect('table t (amount int, sum(amount) / count() as weird_avg) from t select *')
       .toRenderSql('select t."amount" as "amount" from t as t')
   })
 
@@ -417,7 +417,7 @@ describe('lang', () => {
   it('extends derived tables with additional measures', async() => {
     updateFile(`${testTables}
       table user_facts as (from users select id, total_orders)
-      extend user_facts (repeat_buyer: total_orders > 1)
+      extend user_facts (total_orders > 1 as repeat_buyer)
     `, 'models.gsql')
 
     await expect('from user_facts select id, total_orders, repeat_buyer order by id')
@@ -889,7 +889,7 @@ describe('lang', () => {
   })
 
   it('allows measures to refer to themselves', () => {
-    expect('table t (oid int, total_oids: count(distinct t.oid))').toHaveNoErrors()
+    expect('table t (oid int, count(distinct t.oid) as total_oids)').toHaveNoErrors()
   })
 
   it('replaces parameters in filter conditions', () => {
@@ -1036,7 +1036,7 @@ describe('lang', () => {
       table alpha (
         id int
         join many beta on beta.alpha_id = id
-        avg_num: avg(beta.num)
+        avg(beta.num) as avg_num
       )
 
       table beta (
@@ -1051,13 +1051,13 @@ describe('lang', () => {
     // expect('from beta select alpha.avg_num').toRenderSql('')
   })
 
-  it('supports colon computed column syntax', () => {
+  it('supports legacy computed column syntax (expr as alias)', () => {
     updateFile(`
       table users (
         id int,
         name text,
         age int,
-        is_adult: age >= 18
+        age >= 18 as is_adult
       )
     `, 'models.gsql')
 
