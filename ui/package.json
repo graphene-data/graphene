@@ -11,7 +11,7 @@
     "@graphenedata/html2canvas": "^1.4.1",
     "@tidyjs/tidy": "^2.5.2",
     "chroma-js": "2.4.2",
-    "dompurify": "^3.2.7",
+    "dompurify": "^3.3.2",
     "echarts": "^5.5.0",
     "marked": "^16.3.0",
     "ssf": "^0.11.2"
@@ -23,7 +23,7 @@
     "fs-extra": "11.2.0",
     "playwright": "1.58.0",
     "strip-ansi": "^7.1.2",
-    "svelte": "5.53.3"
+    "svelte": "5.53.7"
   },
   "author": "",
   "license": "ISC"

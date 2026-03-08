@@ -47,7 +47,7 @@
     "sanitize-html": "^2.17.0",
     "snowflake-sdk": "^2.3.4",
     "ssf": "^0.11.2",
-    "svelte": "5.53.3",
+    "svelte": "5.53.7",
     "unified": "^11.0.5",
     "unist-util-visit": "4.1.2",
     "vite": "7.3.1",
@@ -59,7 +59,7 @@
     "@types/sanitize-html": "^2.16.0",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.27.2",
-    "vitest": "4.0.15",
+    "vitest": "4.0.18",
     "vscode-languageserver-types": "^3.17.0"
   },
   "scripts": {
