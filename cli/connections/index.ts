@@ -1,4 +1,5 @@
 import {readFileSync} from 'fs'
+
 import {config} from '../../lang/config.ts'
 import {authenticatedFetch} from '../auth.ts'
 import {type QueryResult, type QueryConnection, type QueryParams} from './types.ts'
@@ -10,10 +11,12 @@ export async function getConnection(): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
     let mod = await import('./bigQuery.ts')
     let options: any = {}
-    if (process.env.GOOGLE_CREDENTIALS_CONTENT) { // the actual json as an env var
+    if (process.env.GOOGLE_CREDENTIALS_CONTENT) {
+      // the actual json as an env var
       let parsed = JSON.parse(process.env.GOOGLE_CREDENTIALS_CONTENT)
       options = {projectId: parsed.project_id, credentials: parsed}
-    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) { // env var is the path of a json cred file
+    } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      // env var is the path of a json cred file
       let parsed = JSON.parse(readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, {encoding: 'utf-8'}))
       options = {projectId: parsed.project_id}
     }

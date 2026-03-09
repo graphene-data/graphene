@@ -1,14 +1,16 @@
-
-@font-face { /* latin-ext */
+@font-face {
+  /* latin-ext */
   font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
   src: url(/inter-latin-ext.woff2) format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-@font-face { /* latin */
+@font-face {
+  /* latin */
   font-family: 'Inter';
   font-style: normal;
   font-weight: 100 900;
@@ -22,15 +24,11 @@
   --header-height: 3.5rem;
 
   /* Font stacks */
-  --monospace-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-  "Liberation Mono", "Courier New", monospace;
-  --ui-font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-  Roboto, "Noto Sans", "Helvetica Neue", Arial, "Apple Color Emoji",
-  "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
-  --ui-font-family-compact: Inter, ui-sans-serif, system-ui, -apple-system,
-  "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial,
-  "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-  "Noto Color Emoji", sans-serif;
+  --monospace-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --ui-font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
+  --ui-font-family-compact:
+    Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
 
   /* Palette (kept for compatibility with existing variables) */
   --blue-50: #eff6ff;
@@ -115,7 +113,7 @@ body {
   display: flex;
   margin: 0;
   min-height: 100vh;
-  font-family: "Inter", var(--ui-font-family);
+  font-family: 'Inter', var(--ui-font-family);
   font-synthesis: none;
   line-height: 1.7;
   color: var(--base-heading);
@@ -135,7 +133,11 @@ main {
 }
 
 /* Default border color */
-*, *::before, *::after, ::backdrop, ::file-selector-button {
+*,
+*::before,
+*::after,
+::backdrop,
+::file-selector-button {
   border-color: var(--base-300);
 }
 
@@ -160,8 +162,13 @@ main {
 }
 
 /* Hidden scrollbar */
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 .chart {
   margin: 1rem 0;
@@ -184,8 +191,8 @@ select {
 }
 
 /* Markdown content */
- .markdown {
-  font-family: "Inter", var(--ui-font-family);
+.markdown {
+  font-family: 'Inter', var(--ui-font-family);
   font-size: 1rem;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
@@ -205,7 +212,9 @@ article a {
   color: var(--primary);
   text-decoration: underline;
   text-decoration-color: transparent;
-  transition: color 200ms ease, text-decoration-color 200ms ease;
+  transition:
+    color 200ms ease,
+    text-decoration-color 200ms ease;
 }
 article a:hover {
   text-decoration-color: var(--primary);
@@ -220,12 +229,22 @@ ol {
 }
 
 /* Lists */
-ol { list-style: decimal; padding-inline-start: 1.5rem; }
-ul { list-style: disc; padding-inline-start: 1.5rem; }
+ol {
+  list-style: decimal;
+  padding-inline-start: 1.5rem;
+}
+ul {
+  list-style: disc;
+  padding-inline-start: 1.5rem;
+}
 
 /* Second-level lists */
-ul ul { list-style: circle; }
-ol ol { list-style: lower-alpha; }
+ul ul {
+  list-style: circle;
+}
+ol ol {
+  list-style: lower-alpha;
+}
 
 /* Any second-level list spacing */
 ul ul,
@@ -237,14 +256,20 @@ ol ol {
 }
 
 /* Third-level lists */
-ul ul ul { list-style: square; }
-ol ol ol { list-style: lower-roman; }
+ul ul ul {
+  list-style: square;
+}
+ol ol ol {
+  list-style: lower-roman;
+}
 
 li {
   list-style: inherit;
   text-align: -webkit-match-parent;
 }
-li + li { margin-top: 0.25rem; }
+li + li {
+  margin-top: 0.25rem;
+}
 
 /* Headings */
 h1,
@@ -256,7 +281,7 @@ h6 {
   scroll-margin-top: var(--header-height);
   break-inside: avoid;
   color: var(--base-heading);
-  font-family: "Inter", var(--ui-font-family);
+  font-family: 'Inter', var(--ui-font-family);
   font-optical-sizing: auto;
   font-weight: 100;
   font-style: normal;
@@ -292,9 +317,23 @@ h3 {
   font-weight: 600;
 }
 
-h4 { margin-top: 1rem; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
-h5 { margin-top: 1rem; font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
-h6 { margin-top: 1rem; font-size: 0.75rem; line-height: 1rem; }
+h4 {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+}
+h5 {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+}
+h6 {
+  margin-top: 1rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
 
 hr {
   height: 1px;
@@ -319,7 +358,9 @@ code {
   padding-bottom: 0.125rem;
 }
 
-form code { font-size: unset; }
+form code {
+  font-size: unset;
+}
 
 blockquote {
   background-color: var(--base-200);
@@ -330,13 +371,27 @@ blockquote {
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
 }
-blockquote > blockquote { margin: 0; }
-blockquote > :first-child { margin-top: 0; }
-blockquote > :last-child { margin-bottom: 0; }
-blockquote * { color: var(--base-content-muted); }
+blockquote > blockquote {
+  margin: 0;
+}
+blockquote > :first-child {
+  margin-top: 0;
+}
+blockquote > :last-child {
+  margin-bottom: 0;
+}
+blockquote * {
+  color: var(--base-content-muted);
+}
 
 /* Ensure size and color are maintained for bold, italic, strikethrough, links inside markdown */
-strong, em, del, a { font-size: 1em; color: inherit; }
+strong,
+em,
+del,
+a {
+  font-size: 1em;
+  color: inherit;
+}
 
 /*table {
   min-width: 100%;

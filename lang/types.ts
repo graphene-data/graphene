@@ -10,31 +10,31 @@ export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' |
 
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {
-  sql: string        // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
-  type: FieldType    // result type for validation
-  isAgg?: boolean    // true if contains an aggregate function
+  sql: string // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
+  type: FieldType // result type for validation
+  isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
 }
 
 // A field in a query's SELECT clause
 export interface QueryField extends Expr {
-  name: string                 // output column name
+  name: string // output column name
   metadata?: Record<string, string>
 }
 
 // A filter (WHERE or HAVING)
 export interface Filter {
   sql: string
-  isAgg?: boolean  // if true, goes in HAVING; otherwise WHERE
+  isAgg?: boolean // if true, goes in HAVING; otherwise WHERE
 }
 
 // Context for analyzing expressions - table/alias change as we traverse joins, but query is shared
 export interface Scope {
-  query?: Query  // null when analyzing table definitions (not in a query context)
+  query?: Query // null when analyzing table definitions (not in a query context)
   table?: Table
-  alias: string  // current alias for this table context (e.g., "users", "orders", "users_orders")
-  otherTables?: Table[]  // CTEs and other tables visible for name resolution
-  joinTarget?: {name: string, table: Table, alias: string} // When analyzing a join's ON clause, tells us about the target table/alias.
+  alias: string // current alias for this table context (e.g., "users", "orders", "users_orders")
+  otherTables?: Table[] // CTEs and other tables visible for name resolution
+  joinTarget?: {name: string; table: Table; alias: string} // When analyzing a join's ON clause, tells us about the target table/alias.
 }
 
 export type JoinType = 'left' | 'right' | 'full' | 'inner' | 'cross'
@@ -56,22 +56,22 @@ export interface QueryJoin {
 
 // A fully analyzed query
 export interface Query {
-  sql: string                  // the complete SQL string
-  fields: QueryField[]         // SELECT columns
-  joins: QueryJoin[]           // JOINs needed for this query
-  filters: Filter[]            // WHERE/HAVING conditions
-  groupBy: number[]            // indices into fields for GROUP BY (1-indexed)
-  orderBy: {idx: number, desc: boolean}[]  // ORDER BY (1-indexed field indices)
+  sql: string // the complete SQL string
+  fields: QueryField[] // SELECT columns
+  joins: QueryJoin[] // JOINs needed for this query
+  filters: Filter[] // WHERE/HAVING conditions
+  groupBy: number[] // indices into fields for GROUP BY (1-indexed)
+  orderBy: {idx: number; desc: boolean}[] // ORDER BY (1-indexed field indices)
   limit?: number
-  isAggregate: boolean         // true if this query has any aggregation
+  isAggregate: boolean // true if this query has any aggregation
 }
 
 // A column definition (from table schema or computed)
 export interface Column {
   name: string
   type: FieldType
-  isAgg?: boolean              // for computed columns that are aggregates
-  exprNode?: SyntaxNode        // for computed columns, the expression AST node (analyzed lazily in query context)
+  isAgg?: boolean // for computed columns that are aggregates
+  exprNode?: SyntaxNode // for computed columns, the expression AST node (analyzed lazily in query context)
   metadata?: Record<string, string>
 }
 
@@ -84,10 +84,21 @@ interface TableBase {
   metadata?: Record<string, string>
   syntaxNode?: SyntaxNode
 }
-export interface PhysicalTable extends TableBase {type: 'table'}
-export interface ViewTable extends TableBase {type: 'view', query: Query}
-export interface CteTable extends TableBase {type: 'cte', query: Query}
-export interface SubqueryTable extends TableBase {type: 'subquery', query: Query}
+export interface PhysicalTable extends TableBase {
+  type: 'table'
+}
+export interface ViewTable extends TableBase {
+  type: 'view'
+  query: Query
+}
+export interface CteTable extends TableBase {
+  type: 'cte'
+  query: Query
+}
+export interface SubqueryTable extends TableBase {
+  type: 'subquery'
+  query: Query
+}
 export type Table = PhysicalTable | ViewTable | CteTable | SubqueryTable
 
 export interface Position {

@@ -1,5 +1,6 @@
 import {createPrivateKey} from 'node:crypto'
 import snowflake from 'snowflake-sdk'
+
 import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
 
@@ -40,18 +41,18 @@ export class SnowflakeConnection implements QueryConnection {
     }
 
     // default is info, which is kinda chatty on success. TRACE is super useful for debugging though
-    snowflake.configure({logLevel: opts.logLevel as any || 'WARN', logFilePath: '/dev/null'})
+    snowflake.configure({logLevel: (opts.logLevel as any) || 'WARN', logFilePath: '/dev/null'})
 
     this.connection = snowflake.createConnection({
       ...opts,
-      ...config.snowflake || {},
+      ...(config.snowflake || {}),
       ...authOptions,
       authenticator: 'SNOWFLAKE_JWT',
       application: 'Graphene',
     })
 
     await new Promise((resolve, reject) => {
-      this.connection.connect((err, conn) => err ? reject(err) : resolve(conn))
+      this.connection.connect((err, conn) => (err ? reject(err) : resolve(conn)))
     })
   }
 
@@ -71,7 +72,7 @@ export class SnowflakeConnection implements QueryConnection {
 
           let stream = statement.streamRows()
           stream.on('error', err => reject(err))
-          stream.on('readable', function(this: any, row) {
+          stream.on('readable', function (this: any, row) {
             while ((row = this.read()) !== null) {
               rows.push(row)
             }
@@ -105,12 +106,15 @@ export class SnowflakeConnection implements QueryConnection {
     let database = parts.shift() || ''
     let schema = parts.join('.')
 
-    let res = await this.runQuery(`
+    let res = await this.runQuery(
+      `
       select table_schema as "table_schema", table_name as "table_name"
       from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.TABLES
       where table_type in ('BASE TABLE', 'VIEW') and table_schema = ?
       order by table_name
-    `, [schema])
+    `,
+      [schema],
+    )
     return res.rows.map(row => `${row['table_schema']}.${row['table_name']}`)
   }
 
@@ -120,12 +124,15 @@ export class SnowflakeConnection implements QueryConnection {
     let table = parts.pop() || ''
     let schema = parts.join('.')
 
-    let res = await this.runQuery(`
+    let res = await this.runQuery(
+      `
       select column_name as "column_name", data_type as "data_type", ordinal_position as ordinal_position
       from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.COLUMNS
       where upper(table_schema) = upper(?) and upper(table_name) = upper(?)
       order by ordinal_position
-    `, [schema, table])
+    `,
+      [schema, table],
+    )
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })

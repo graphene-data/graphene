@@ -15,15 +15,10 @@ const AUTO_FORMAT_MEDIAN_PRECISION = 3
 const IMPLICIT_COLUMN_AUTO_FORMATS = [
   {
     name: 'year',
-    description:
-      'When lowerCase(columnName)="year" with the column having numeric values will result in no formatting',
+    description: 'When lowerCase(columnName)="year" with the column having numeric values will result in no formatting',
     matchingFunction: (columnName, evidenceTypeDescriptor, columnUnitSummary) => {
       if (columnName && evidenceTypeDescriptor) {
-        return (
-          'year' === columnName.toLowerCase() &&
-          (evidenceTypeDescriptor?.evidenceType === 'number' ||
-            columnUnitSummary?.unitType === 'number')
-        ) //TODO use evidence type constant
+        return 'year' === columnName.toLowerCase() && (evidenceTypeDescriptor?.evidenceType === 'number' || columnUnitSummary?.unitType === 'number') //TODO use evidence type constant
       }
       return false
     },
@@ -39,15 +34,10 @@ const IMPLICIT_COLUMN_AUTO_FORMATS = [
   },
   {
     name: 'id',
-    description:
-      'When lowerCase(columnName)="id" with the column having numeric values, then values will have no formatting',
+    description: 'When lowerCase(columnName)="id" with the column having numeric values, then values will have no formatting',
     matchingFunction: (columnName, evidenceTypeDescriptor, columnUnitSummary) => {
       if (columnName && evidenceTypeDescriptor) {
-        return (
-          'id' === columnName.toLowerCase() &&
-          (evidenceTypeDescriptor?.evidenceType === 'number' ||
-            columnUnitSummary?.unitType === 'number')
-        )
+        return 'id' === columnName.toLowerCase() && (evidenceTypeDescriptor?.evidenceType === 'number' || columnUnitSummary?.unitType === 'number')
       }
       return false
     },
@@ -56,7 +46,7 @@ const IMPLICIT_COLUMN_AUTO_FORMATS = [
       valueType: 'number',
       exampleInput: 93120121,
       _autoFormat: {
-        autoFormatFunction: (typedValue) => {
+        autoFormatFunction: typedValue => {
           if (typedValue !== null && typedValue !== undefined && !isNaN(typedValue)) {
             return typedValue.toLocaleString('fullwide', {
               useGrouping: false,
@@ -73,9 +63,7 @@ const IMPLICIT_COLUMN_AUTO_FORMATS = [
     description: 'Formatting for Default Date',
     matchingFunction: (columnName, evidenceTypeDescriptor, columnUnitSummary) => {
       if (evidenceTypeDescriptor) {
-        return (
-          evidenceTypeDescriptor?.evidenceType === 'date' || columnUnitSummary?.unitType === 'date'
-        )
+        return evidenceTypeDescriptor?.evidenceType === 'date' || columnUnitSummary?.unitType === 'date'
       }
       return false
     },
@@ -177,9 +165,7 @@ export const generateImplicitNumberFormat = (columnUnitSummary, maxDisplayDecima
 }
 
 export const findImplicitAutoFormat = (columnName, evidenceTypeDescriptor, columnUnitSummary) => {
-  let matched = IMPLICIT_COLUMN_AUTO_FORMATS.find((implicitFormat) =>
-    implicitFormat.matchingFunction(columnName, evidenceTypeDescriptor, columnUnitSummary),
-  )
+  let matched = IMPLICIT_COLUMN_AUTO_FORMATS.find(implicitFormat => implicitFormat.matchingFunction(columnName, evidenceTypeDescriptor, columnUnitSummary))
   if (matched) {
     return matched.format
   } else {
@@ -230,7 +216,7 @@ export const autoFormat = (typedValue, columnFormat, columnUnitSummary = undefin
  * @param {*} typedValue a value of type number|date|string
  * @returns the formatted value
  */
-export const fallbackFormat = (typedValue) => {
+export const fallbackFormat = typedValue => {
   if (typeof typedValue === 'number') {
     return typedValue.toLocaleString(undefined, {
       minimumFractionDigits: 0,
@@ -248,21 +234,14 @@ export const fallbackFormat = (typedValue) => {
  * @param {number} referenceValue
  * @returns {string} the number format code for the given reference value
  */
-export function computeNumberAutoFormatCode(
-  referenceValue,
-  maxDisplayDecimals = 7,
-  significantDigits = AUTO_FORMAT_MEDIAN_PRECISION,
-) {
+export function computeNumberAutoFormatCode(referenceValue, maxDisplayDecimals = 7, significantDigits = AUTO_FORMAT_MEDIAN_PRECISION) {
   let formatCodeBuilder = '#,##0'
 
   let referenceValueLeadingDigitExponent = base10Exponent(referenceValue)
   let displayDecimals = 0
 
   if (referenceValueLeadingDigitExponent - significantDigits < 0) {
-    displayDecimals = Math.min(
-      Math.max(Math.abs(referenceValueLeadingDigitExponent - significantDigits + 1), 0),
-      maxDisplayDecimals,
-    )
+    displayDecimals = Math.min(Math.max(Math.abs(referenceValueLeadingDigitExponent - significantDigits + 1), 0), maxDisplayDecimals)
   }
 
   if (displayDecimals > 0) {

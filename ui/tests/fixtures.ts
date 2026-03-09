@@ -1,14 +1,15 @@
-import {test as base, onTestFinished} from 'vitest'
 import {type Page, chromium, type Browser} from '@playwright/test'
-import {playwrightExpect as expect} from './matchers.ts'
+import net from 'net'
 import path from 'path'
 import {fileURLToPath} from 'url'
-import net from 'net'
+import {test as base, onTestFinished} from 'vitest'
+
+import {mockFileMap} from '../../cli/mockFiles.ts'
+import {serve2, svelteWarnings, clearSvelteWarnings} from '../../cli/serve2.ts'
 import {type Config, config, setConfig} from '../../lang/config.ts'
 import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
-import {serve2, svelteWarnings, clearSvelteWarnings} from '../../cli/serve2.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
-import {mockFileMap} from '../../cli/mockFiles.ts'
+import {playwrightExpect as expect} from './matchers.ts'
 
 export {expect}
 
@@ -29,10 +30,10 @@ export interface ServerFixture {
   updateMockFile: (path: string, content: string) => void
 }
 
-export const test = base.extend<{browser: Browser, page: Page, server: ServerFixture, mount: MountFn, chart: ChartFixture}>({
+export const test = base.extend<{browser: Browser; page: Page; server: ServerFixture; mount: MountFn; chart: ChartFixture}>({
   browser: [
     // eslint-disable-next-line no-empty-pattern
-    async({}, use) => {
+    async ({}, use) => {
       let b = await chromium.launch({
         headless: !process.env.GRAPHENE_DEBUG,
         args: [
@@ -50,7 +51,7 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
     {scope: 'worker'},
   ],
 
-  page: async({browser}, use) => {
+  page: async ({browser}, use) => {
     let context = await browser.newContext({
       viewport: {width: 1280, height: 720},
       deviceScaleFactor: 1,
@@ -70,14 +71,14 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
       }
     })
     await use(page)
-    if (process.env.GRAPHENE_DEBUG) await new Promise(() => { })
+    if (process.env.GRAPHENE_DEBUG) await new Promise(() => {})
     await context.close()
   },
 
   // This boots up our cli server on a unique port for e2e tests.
   server: [
     // eslint-disable-next-line no-empty-pattern
-    async({}, use: (fixture: ServerFixture) => Promise<void>) => {
+    async ({}, use: (fixture: ServerFixture) => Promise<void>) => {
       let port = await getAvailablePort()
       let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
       process.env.GRAPHENE_PORT = String(port)
@@ -86,14 +87,17 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
 
       function cleanup() {
         clearWorkspace()
-        Object.keys(mockFileMap).forEach((key) => delete mockFileMap[key])
+        Object.keys(mockFileMap).forEach(key => delete mockFileMap[key])
 
         // Vite caches our mocked files, so we need to clear them out after each test.
         // Vite 7 has separate module graphs for server.moduleGraph and environments.client — invalidate both.
         for (let graph of [server.moduleGraph, server.environments.client.moduleGraph] as any[]) {
           let keys: string[] = Array.from(graph?.idToModuleMap?.keys() || [])
           let mockKeys = keys.filter(k => k.endsWith('?mock') || k == '\0virtual:nav')
-          mockKeys.forEach(k => { let m = graph.getModuleById(k); if (m) graph.invalidateModule(m) })
+          mockKeys.forEach(k => {
+            let m = graph.getModuleById(k)
+            if (m) graph.invalidateModule(m)
+          })
         }
       }
 
@@ -119,8 +123,8 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
     {scope: 'worker'} as any,
   ],
 
-  mount: async({page, server}: {page: Page, server: ServerFixture}, use) => {
-    let mountFn = async(componentPath: string, props: any) => {
+  mount: async ({page, server}: {page: Page; server: ServerFixture}, use) => {
+    let mountFn = async (componentPath: string, props: any) => {
       await page.goto(`${server.url()}/__ct`)
 
       // evidence depends on the object being set on an array, but wont serialize when playwright sends it to the frontend, so unpack it here
@@ -143,7 +147,9 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
 
       // Dynamic import of both svelte and component together - this ensures Vite
       // transforms the imports and we get the same module instances
-      await page.addScriptTag({type: 'module', content: `
+      await page.addScriptTag({
+        type: 'module',
+        content: `
         // Import svelte via dynamic import so Vite can resolve it properly
         const svelte = await import('/node_modules/.vite/deps/svelte.js')
         const {default: Component} = await import(${JSON.stringify(browserPath)})
@@ -154,15 +160,16 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
         document.getElementById('content').appendChild(el)
 
         window.__inst = svelte.mount(Component, {target: el, props: window.__props})
-      `})
+      `,
+      })
     }
 
     await use(mountFn)
     await expect(page.locator('#component-test > :not(dialog)').first()).toBeVisible()
   },
 
-  chart: async({page}, use) => {
-    let readConfig: ChartConfigFn = async(selector) => {
+  chart: async ({page}, use) => {
+    let readConfig: ChartConfigFn = async selector => {
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
       await page.waitForFunction(() => {
@@ -170,13 +177,13 @@ export const test = base.extend<{browser: Browser, page: Page, server: ServerFix
         return charts && Object.keys(charts).length > 0
       })
       await waitForGrapheneLoad(page)
-      return await page.evaluate((source) => {
+      return await page.evaluate(source => {
         let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__') as any])[0] as any
         let option = chart.getModel().getOption()
         try {
           let fn = new Function('config', `return (${source})(config)`)
           return fn(option)
-        } catch(error) {
+        } catch (error) {
           console.error('chartConfig selector error', error)
           return null
         }
@@ -205,7 +212,7 @@ async function getAvailablePort(): Promise<number> {
   })
 }
 
-function trimIndentation(str:string) {
+function trimIndentation(str: string) {
   let lines = str.split('\n')
   let firstContentLine = lines[1] // Skip the first line (assumed to be empty) and find indentation of second line
   if (!firstContentLine) return str
@@ -213,11 +220,13 @@ function trimIndentation(str:string) {
   let indentMatch = firstContentLine.match(/^(\s*)/)
   let indentAmount = indentMatch ? indentMatch[1].length : 0
 
-  return lines.map((line, index) => {
-    if (index === 0) return line // Keep first line as-is
-    if (line.trim() === '') return '' // Remove all whitespace from blank lines
-    return line.slice(indentAmount) // Remove the indent amount from other lines
-  }).join('\n')
+  return lines
+    .map((line, index) => {
+      if (index === 0) return line // Keep first line as-is
+      if (line.trim() === '') return '' // Remove all whitespace from blank lines
+      return line.slice(indentAmount) // Remove the indent amount from other lines
+    })
+    .join('\n')
 }
 
 declare global {
@@ -229,5 +238,5 @@ declare global {
 
 export async function waitForGrapheneLoad(page: Page, timeout = 20_000) {
   await page.waitForFunction(() => Boolean(window.$GRAPHENE), null, {timeout})
-  await page.evaluate((ms) => window.$GRAPHENE.waitForLoad?.(ms), timeout)
+  await page.evaluate(ms => window.$GRAPHENE.waitForLoad?.(ms), timeout)
 }

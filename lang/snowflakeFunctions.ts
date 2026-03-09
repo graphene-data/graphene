@@ -5,6 +5,7 @@
 // https://docs.snowflake.com/en/sql-reference/functions/
 
 import type {FunctionDef} from './functionTypes.ts'
+
 import {trimIndentation} from './util.ts'
 
 const sf = 'https://docs.snowflake.com/en/sql-reference/functions'
@@ -757,7 +758,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Computes the inverse tangent (arc tangent) of the ratio of its two arguments.
     `),
     url: `${sf}/atan2`,
-    args: [['y', 'number'], ['x', 'number']],
+    args: [
+      ['y', 'number'],
+      ['x', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -790,7 +794,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns values from input_expr rounded to the nearest equal or larger integer, or to the nearest equal or larger value with the specified number of places after the decimal point.
     `),
     url: `${sf}/ceil`,
-    args: [['x', 'number'], ['scale', 'number?']],
+    args: [
+      ['x', 'number'],
+      ['scale', 'number?'],
+    ],
     returns: 'number',
   },
   {
@@ -845,7 +852,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Performs division like the division operator (/), but returns 0 when the divisor is 0 (rather than reporting an error).
     `),
     url: `${sf}/div0`,
-    args: [['dividend', 'number'], ['divisor', 'number']],
+    args: [
+      ['dividend', 'number'],
+      ['divisor', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -856,7 +866,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Performs division like the division operator (/), but returns NULL when the divisor is 0 or NULL (rather than reporting an error).
     `),
     url: `${sf}/div0null`,
-    args: [['dividend', 'number'], ['divisor', 'number']],
+    args: [
+      ['dividend', 'number'],
+      ['divisor', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -889,7 +902,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns values from input_expr rounded to the nearest equal or smaller integer, or to the nearest equal or smaller value with the specified number of places after the decimal point.
     `),
     url: `${sf}/floor`,
-    args: [['x', 'number'], ['scale', 'number?']],
+    args: [
+      ['x', 'number'],
+      ['scale', 'number?'],
+    ],
     returns: 'number',
   },
   {
@@ -911,7 +927,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns the logarithm of a numeric expression.
     `),
     url: `${sf}/log`,
-    args: [['base', 'number'], ['x', 'number']],
+    args: [
+      ['base', 'number'],
+      ['x', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -922,7 +941,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns the remainder of expr1 divided by expr2.
     `),
     url: `${sf}/mod`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -945,7 +967,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns x raised to the power of y.
     `),
     url: `${sf}/pow`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -956,7 +981,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns x raised to the power of y. Alias for POW.
     `),
     url: `${sf}/pow`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -989,7 +1017,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns rounded values for input_expr.
     `),
     url: `${sf}/round`,
-    args: [['x', 'number'], ['scale', 'number?']],
+    args: [
+      ['x', 'number'],
+      ['scale', 'number?'],
+    ],
     returns: 'number',
   },
   {
@@ -1078,7 +1109,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Rounds the input expression down to the nearest (or equal) integer closer to zero, or to the nearest equal or smaller value with the specified number of places after the decimal point.
     `),
     url: `${sf}/trunc`,
-    args: [['x', 'number'], ['scale', 'number?']],
+    args: [
+      ['x', 'number'],
+      ['scale', 'number?'],
+    ],
     returns: 'number',
   },
   {
@@ -1170,7 +1204,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns true if expr1 contains expr2. Both expressions must be text or binary expressions.
     `),
     url: `${sf}/contains`,
-    args: [['string', 'string'], ['search_string', 'string']],
+    args: [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1196,7 +1233,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns TRUE if expr1 ends with expr2. Both expressions must be text or binary expressions.
     `),
     url: `${sf}/endswith`,
-    args: [['string', 'string'], ['suffix', 'string']],
+    args: [
+      ['string', 'string'],
+      ['suffix', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1237,7 +1277,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns a leftmost substring of its input.
     `),
     url: `${sf}/left`,
-    args: [['string', 'string'], ['length', 'number']],
+    args: [
+      ['string', 'string'],
+      ['length', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1342,7 +1385,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Builds a string by repeating the input for the specified number of times.
     `),
     url: `${sf}/repeat`,
-    args: [['input', 'string'], ['n', 'number']],
+    args: [
+      ['input', 'string'],
+      ['n', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1379,7 +1425,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns a rightmost substring of its input.
     `),
     url: `${sf}/right`,
-    args: [['string', 'string'], ['length', 'number']],
+    args: [
+      ['string', 'string'],
+      ['length', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1441,7 +1490,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Splits a given string with a given separator and returns the result in an array of strings.
     `),
     url: `${sf}/split`,
-    args: [['string', 'string'], ['delimiter', 'string']],
+    args: [
+      ['string', 'string'],
+      ['delimiter', 'string'],
+    ],
     returns: 'array',
   },
   {
@@ -1467,7 +1519,10 @@ export const snowflakeFunctions: FunctionDef[] = [
       Returns TRUE if expr1 starts with expr2. Both expressions must be text or binary expressions.
     `),
     url: `${sf}/startswith`,
-    args: [['string', 'string'], ['prefix', 'string']],
+    args: [
+      ['string', 'string'],
+      ['prefix', 'string'],
+    ],
     returns: 'boolean',
   },
   {

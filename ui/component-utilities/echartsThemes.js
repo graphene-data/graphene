@@ -1,7 +1,7 @@
 import {themes} from '../internal/theme'
 
 /** @param {'light' | 'dark'} mode */
-const createTheme = (mode) => {
+const createTheme = mode => {
   let axisBaselineColor = themes[mode].colors['base-content-muted']
   let axisTickColor = themes[mode].colors['base-content-muted']
   let axisLabelColor = themes[mode].colors['base-content-muted']
@@ -131,17 +131,7 @@ const createTheme = (mode) => {
       symbolSize: 0,
       symbol: 'circle',
       smooth: false,
-      color: [
-        '#923d59',
-        '#488f96',
-        '#518eca',
-        '#b3a9a0',
-        '#ffc857',
-        '#495867',
-        '#bfdbf7',
-        '#bc4749',
-        '#eeebd0',
-      ],
+      color: ['#923d59', '#488f96', '#518eca', '#b3a9a0', '#ffc857', '#495867', '#bfdbf7', '#bc4749', '#eeebd0'],
       label: {
         color: '#f2f2f2',
       },

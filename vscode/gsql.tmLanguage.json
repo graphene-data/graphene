@@ -3,18 +3,18 @@
   "name": "Graphene SQL",
   "scopeName": "source.graphene-sql",
   "patterns": [
-    { "include": "#comments" },
-    { "include": "#strings" },
-    { "include": "#quoted-identifiers" },
-    { "include": "#numbers" },
-    { "include": "#graphene-declarations" },
-    { "include": "#types" },
-    { "include": "#keywords" },
-    { "include": "#functions" },
-    { "include": "#operators" },
-    { "include": "#member-access" },
-    { "include": "#parameters" },
-    { "include": "#punctuation" }
+    {"include": "#comments"},
+    {"include": "#strings"},
+    {"include": "#quoted-identifiers"},
+    {"include": "#numbers"},
+    {"include": "#graphene-declarations"},
+    {"include": "#types"},
+    {"include": "#keywords"},
+    {"include": "#functions"},
+    {"include": "#operators"},
+    {"include": "#member-access"},
+    {"include": "#parameters"},
+    {"include": "#punctuation"}
   ],
   "repository": {
     "comments": {
@@ -40,17 +40,13 @@
           "name": "string.quoted.single.gsql",
           "begin": "'",
           "end": "'",
-          "patterns": [
-            { "name": "constant.character.escape.gsql", "match": "''" }
-          ]
+          "patterns": [{"name": "constant.character.escape.gsql", "match": "''"}]
         },
         {
           "name": "string.quoted.backtick.gsql",
           "begin": "`",
           "end": "`",
-          "patterns": [
-            { "name": "constant.character.escape.gsql", "match": "``" }
-          ]
+          "patterns": [{"name": "constant.character.escape.gsql", "match": "``"}]
         }
       ]
     },
@@ -60,9 +56,7 @@
           "name": "string.quoted.double.identifier.gsql",
           "begin": "\"",
           "end": "\"",
-          "patterns": [
-            { "name": "constant.character.escape.gsql", "match": "\"\"" }
-          ]
+          "patterns": [{"name": "constant.character.escape.gsql", "match": "\"\""}]
         }
       ]
     },
@@ -80,38 +74,38 @@
           "name": "meta.declaration.table.graphene.gsql",
           "begin": "(?i)\\btable\\s+([A-Za-z_][A-Za-z0-9_$]*)\\s*\\(",
           "beginCaptures": {
-            "0": { "name": "keyword.declaration.table.gsql" },
-            "1": { "name": "entity.name.table.gsql" }
+            "0": {"name": "keyword.declaration.table.gsql"},
+            "1": {"name": "entity.name.table.gsql"}
           },
           "end": "\\)",
           "patterns": [
-            { "include": "#comments" },
-            { "include": "#strings" },
-            { "include": "#quoted-identifiers" },
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
             {
               "match": "([A-Za-z_][A-Za-z0-9_$]*)\\s*:(?!:)",
               "captures": {
-                "1": { "name": "entity.name.tag.graphene.gsql" }
+                "1": {"name": "entity.name.tag.graphene.gsql"}
               }
             },
-            { "include": "#types" },
-            { "include": "#keywords" },
-            { "include": "#functions" },
-            { "include": "#operators" },
+            {"include": "#types"},
+            {"include": "#keywords"},
+            {"include": "#functions"},
+            {"include": "#operators"},
             {
               "name": "meta.graphene.measure.entry.gsql",
               "match": "(?i)\\bmeasure\\s+([A-Za-z_][A-Za-z0-9_$]*)",
               "captures": {
-                "0": { "name": "keyword.other.measure.graphene.gsql" },
-                "1": { "name": "entity.name.measure.graphene.gsql" }
+                "0": {"name": "keyword.other.measure.graphene.gsql"},
+                "1": {"name": "entity.name.measure.graphene.gsql"}
               }
             },
             {
               "name": "meta.graphene.join-one.entry.gsql",
               "match": "(?i)\\b(join\\s+(?:one|many))\\s+([A-Za-z_][A-Za-z0-9_$]*)",
               "captures": {
-                "1": { "name": "keyword.other.join.graphene.gsql" },
-                "2": { "name": "entity.name.table.gsql" }
+                "1": {"name": "keyword.other.join.graphene.gsql"},
+                "2": {"name": "entity.name.table.gsql"}
               }
             }
           ]
@@ -164,17 +158,17 @@
           "name": "entity.name.function.gsql",
           "match": "(?i)\\b([A-Za-z_][A-Za-z0-9_$]*)\\s*\\(",
           "captures": {
-            "1": { "name": "entity.name.function.gsql" }
+            "1": {"name": "entity.name.function.gsql"}
           }
         }
       ]
     },
     "operators": {
       "patterns": [
-        { "name": "keyword.operator.arithmetic.gsql", "match": "[+\\-*/%]" },
-        { "name": "keyword.operator.comparison.gsql", "match": "=|<>|!=|<=|>=|<|>" },
-        { "name": "keyword.operator.logical.gsql", "match": "(?i)\\b(NOT|AND|OR|XOR)\\b|\\|\\||&&|!" },
-        { "name": "keyword.operator.concatenation.gsql", "match": "\\|\\|" }
+        {"name": "keyword.operator.arithmetic.gsql", "match": "[+\\-*/%]"},
+        {"name": "keyword.operator.comparison.gsql", "match": "=|<>|!=|<=|>=|<|>"},
+        {"name": "keyword.operator.logical.gsql", "match": "(?i)\\b(NOT|AND|OR|XOR)\\b|\\|\\||&&|!"},
+        {"name": "keyword.operator.concatenation.gsql", "match": "\\|\\|"}
       ]
     },
     "member-access": {
@@ -187,17 +181,17 @@
     },
     "parameters": {
       "patterns": [
-        { "name": "variable.parameter.gsql", "match": ":[A-Za-z_][A-Za-z0-9_]*" },
-        { "name": "variable.parameter.gsql", "match": "@[_A-Za-z][_A-Za-z0-9]*" },
-        { "name": "variable.parameter.positional.gsql", "match": "\\?" }
+        {"name": "variable.parameter.gsql", "match": ":[A-Za-z_][A-Za-z0-9_]*"},
+        {"name": "variable.parameter.gsql", "match": "@[_A-Za-z][_A-Za-z0-9]*"},
+        {"name": "variable.parameter.positional.gsql", "match": "\\?"}
       ]
     },
     "punctuation": {
       "patterns": [
-        { "name": "punctuation.separator.comma.gsql", "match": "," },
-        { "name": "punctuation.terminator.statement.gsql", "match": ";" },
-        { "name": "punctuation.section.parens.begin.gsql", "match": "\\(" },
-        { "name": "punctuation.section.parens.end.gsql", "match": "\\)" }
+        {"name": "punctuation.separator.comma.gsql", "match": ","},
+        {"name": "punctuation.terminator.statement.gsql", "match": ";"},
+        {"name": "punctuation.section.parens.begin.gsql", "match": "\\("},
+        {"name": "punctuation.section.parens.end.gsql", "match": "\\)"}
       ]
     }
   }

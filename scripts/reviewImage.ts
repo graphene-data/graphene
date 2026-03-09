@@ -1,6 +1,6 @@
+import dotenv from 'dotenv'
 import {readFile} from 'fs/promises'
 import path, {extname} from 'path'
-import dotenv from 'dotenv'
 import {fileURLToPath} from 'url'
 
 dotenv.config({path: path.join(fileURLToPath(import.meta.url), '../../.env'), quiet: true})
@@ -9,9 +9,7 @@ const args = process.argv.slice(2)
 const [prompt, ...flagArgs] = args
 
 if (!prompt) {
-  console.error(
-    'Usage: node scripts/reviewImage.ts "<prompt>" --<label>=<image-path> [--role=<qa|designer|...>]',
-  )
+  console.error('Usage: node scripts/reviewImage.ts "<prompt>" --<label>=<image-path> [--role=<qa|designer|...>]')
   process.exit(1)
 }
 
@@ -64,8 +62,7 @@ const rolePrompts: Record<string, string> = {
   designer: 'You are a senior product designer assessing visual quality, hierarchy, and brand consistency. Offer critiques that help designers understand how to refine the experience.',
 }
 
-const defaultSystemPrompt =
-  "You are a meticulous visual reviewer with an eye for detail and keen design sense. Describe exactly what you see and call out anything relevant to the user's prompt."
+const defaultSystemPrompt = "You are a meticulous visual reviewer with an eye for detail and keen design sense. Describe exactly what you see and call out anything relevant to the user's prompt."
 
 const systemPrompt = roleName && rolePrompts[roleName] ? rolePrompts[roleName] : defaultSystemPrompt
 

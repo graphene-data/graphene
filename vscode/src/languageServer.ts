@@ -1,20 +1,13 @@
+import {readFile} from 'node:fs/promises'
+import path from 'node:path'
+import {TextDocument} from 'vscode-languageserver-textdocument'
 /* --------------------------------------------------------------------------------------------
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License. See License.txt in the project root for license information.
  * ------------------------------------------------------------------------------------------ */
-import {
-  createConnection,
-  TextDocuments,
-  type Diagnostic,
-  DiagnosticSeverity,
-  ProposedFeatures,
-  TextDocumentSyncKind,
-} from 'vscode-languageserver/node'
+import {createConnection, TextDocuments, type Diagnostic, DiagnosticSeverity, ProposedFeatures, TextDocumentSyncKind} from 'vscode-languageserver/node'
 
-import {TextDocument} from 'vscode-languageserver-textdocument'
-import {readFile} from 'node:fs/promises'
 import {loadWorkspace, updateFile, analyze, getDiagnostics, getFiles, getHover, loadConfig, config} from '../../lang/core.ts'
-import path from 'node:path'
 
 const connection = createConnection(ProposedFeatures.all)
 let initialLoad: Promise<void> | undefined
@@ -48,10 +41,12 @@ documents.listen(connection)
 
 // onDidChangeWatchedFiles listens for file changes, even if they happend outside the editor
 connection.onDidChangeWatchedFiles(async change => {
-  await Promise.all(change.changes.map(async c => {
-    let contents = await readFile(toPath(c.uri), 'utf-8')
-    updateFile(contents, toPath(c.uri))
-  }))
+  await Promise.all(
+    change.changes.map(async c => {
+      let contents = await readFile(toPath(c.uri), 'utf-8')
+      updateFile(contents, toPath(c.uri))
+    }),
+  )
   debouncedAnalyze()
 })
 
@@ -66,8 +61,8 @@ async function analyzeNow() {
   try {
     analyze()
     perFileVscodeDiagnostics().forEach(d => connection.sendDiagnostics(d))
-  } catch(err) {
-    let message = (err instanceof Error ? (err.stack || err.message) : String(err))
+  } catch (err) {
+    let message = err instanceof Error ? err.stack || err.message : String(err)
     connection.console.error(`Analyze failed: ${message}`)
     connection.sendNotification('graphene/analyzeError', {message})
   }
@@ -91,17 +86,19 @@ async function analyzeNow() {
 function perFileVscodeDiagnostics() {
   let diags = getDiagnostics()
   return getFiles().map(f => {
-    let diagnostics: Diagnostic[] = diags.filter(d => d.file == f.path).map(d => {
-      return {
-        range: {
-          start: {line: d.from.line, character: d.from.col},
-          end: {line: d.to.line, character: d.to.col},
-        },
-        severity: d.severity === 'error' ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
-        message: d.message,
-        source: 'graphene',
-      }
-    })
+    let diagnostics: Diagnostic[] = diags
+      .filter(d => d.file == f.path)
+      .map(d => {
+        return {
+          range: {
+            start: {line: d.from.line, character: d.from.col},
+            end: {line: d.to.line, character: d.to.col},
+          },
+          severity: d.severity === 'error' ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+          message: d.message,
+          source: 'graphene',
+        }
+      })
 
     return {uri: `file://${path.resolve(config.root, f.path)}`, diagnostics}
   })

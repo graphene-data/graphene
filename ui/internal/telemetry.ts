@@ -6,11 +6,11 @@ window.$GRAPHENE.getErrors = getErrors
 let staticErrors: Error[] = []
 let errorProviders: Record<string, ErrorProvider> = {}
 
-window.addEventListener('error', (event) => {
+window.addEventListener('error', event => {
   if ((event.error?.message || '').match(/Failed to fetch dynamically imported module.*\.md\?import/)) return
   staticErrors.push(event.error)
 })
-window.addEventListener('unhandledrejection', (event) => {
+window.addEventListener('unhandledrejection', event => {
   staticErrors.push(event.reason)
 })
 
@@ -20,7 +20,7 @@ export function logError(e: Error | string, ctx?: any) {
   staticErrors.push(e)
 }
 
-export function errorProvider(key:string, fn: ErrorProvider) {
+export function errorProvider(key: string, fn: ErrorProvider) {
   errorProviders[key] = fn
 }
 

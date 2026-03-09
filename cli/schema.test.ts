@@ -1,8 +1,8 @@
 /// <reference types="vitest/globals" />
 import {spawn} from 'node:child_process'
-import {expect} from 'vitest'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import {expect} from 'vitest'
 
 interface RunResult {
   code: number
@@ -24,13 +24,18 @@ function ensureFlightsDatabaseExists() {
 }
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     let cliEntry = path.resolve(dir, 'cli.ts')
     let child = spawn('node', [cliEntry, ...args], {cwd, env: process.env})
-    let stdout = '', stderr = ''
-    child.stdout.on('data', (d) => { stdout += d.toString() })
-    child.stderr.on('data', (d) => { stderr += d.toString() })
-    child.on('close', (code) => resolve({code: code ?? 0, stdout, stderr}))
+    let stdout = '',
+      stderr = ''
+    child.stdout.on('data', d => {
+      stdout += d.toString()
+    })
+    child.stderr.on('data', d => {
+      stderr += d.toString()
+    })
+    child.on('close', code => resolve({code: code ?? 0, stdout, stderr}))
   })
 }
 
@@ -44,7 +49,9 @@ function expectCliSuccess(res: RunResult, step: string) {
 }
 
 function parseSchemaOutput(stdout: string): string[] {
-  return stdout.trim().split(/\r?\n/)
+  return stdout
+    .trim()
+    .split(/\r?\n/)
     .map(line => line.trim())
     .filter(line => line && !line.endsWith(':')) // filter out headers like "Datasets available:"
 }
@@ -52,7 +59,7 @@ function parseSchemaOutput(stdout: string): string[] {
 describe('duckdb', () => {
   beforeAll(ensureFlightsDatabaseExists)
 
-  it('lists available tables when no argument is provided', async() => {
+  it('lists available tables when no argument is provided', async () => {
     let res = await runCli(['schema'], flightDir)
     expectCliSuccess(res, 'schema list tables')
     let lines = res.stdout.trim().split(/\r?\n/).filter(Boolean)
@@ -61,7 +68,7 @@ describe('duckdb', () => {
     expect(normalized.some(line => line === 'flights')).toBe(true)
   })
 
-  it('describes the requested table columns', async() => {
+  it('describes the requested table columns', async () => {
     let res = await runCli(['schema', 'flights'], flightDir)
     expectCliSuccess(res, 'schema describe table')
     let output = res.stdout.toLowerCase()
@@ -79,14 +86,14 @@ describe.skipIf(!hasSnowflakeAuth)('snowflake', () => {
   // Snowflake has a 3-level hierarchy: DATABASE.SCHEMA.TABLE
   // The example is configured with namespace "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02"
 
-  it('lists available databases', async() => {
+  it('lists available databases', async () => {
     let res = await runCli(['schema'], snowflakeDir)
     expectCliSuccess(res, 'schema list databases (snowflake)')
     let databases = parseSchemaOutput(res.stdout)
     expect(databases.length).toBeGreaterThan(0)
   })
 
-  it('lists schemas when given a database name', async() => {
+  it('lists schemas when given a database name', async () => {
     let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA'], snowflakeDir)
     expectCliSuccess(res, 'schema list schemas (snowflake)')
     let schemas = parseSchemaOutput(res.stdout)
@@ -94,14 +101,14 @@ describe.skipIf(!hasSnowflakeAuth)('snowflake', () => {
     expect(schemas).toContain('V02')
   })
 
-  it('lists tables in the configured namespace', async() => {
+  it('lists tables in the configured namespace', async () => {
     let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02'], snowflakeDir)
     expectCliSuccess(res, 'schema list tables (snowflake)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables.length).toBeGreaterThan(0)
   })
 
-  it('describes a table from the namespace', async() => {
+  it('describes a table from the namespace', async () => {
     let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02.MENUS'], snowflakeDir)
     expectCliSuccess(res, 'schema describe table (snowflake)')
     let output = res.stdout.toLowerCase()
@@ -115,14 +122,14 @@ describe.skipIf(!hasBigQueryAuth)('bigquery', () => {
     console.warn('⚠️  Skipping BigQuery schema tests: GOOGLE_APPLICATION_CREDENTIALS not set')
   }
 
-  it('lists available tables in the configured namespace', async() => {
+  it('lists available tables in the configured namespace', async () => {
     let res = await runCli(['schema'], ecommDir)
     expectCliSuccess(res, 'schema list tables (bigquery)')
     let lines = res.stdout.trim().split(/\r?\n/).filter(Boolean)
     expect(lines.length).toBeGreaterThan(0)
   })
 
-  it('describes a table from the namespace', async() => {
+  it('describes a table from the namespace', async () => {
     // First get a table name from the list
     let listRes = await runCli(['schema'], ecommDir)
     expectCliSuccess(listRes, 'schema list for describe')

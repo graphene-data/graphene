@@ -3,7 +3,6 @@ import './internal/queryEngine.ts'
 import './internal/runSocket.ts'
 import './app.css'
 import {mount} from 'svelte'
-import LocalApp from './internal/LocalApp.svelte'
 
 import Area from './components/Area.svelte'
 import AreaChart from './components/AreaChart.svelte'
@@ -16,7 +15,6 @@ import DateRange from './components/DateRange.svelte'
 import Dropdown from './components/Dropdown.svelte'
 import DropdownOption from './components/DropdownOption.svelte'
 import ECharts from './components/ECharts.svelte'
-import ErrorChart from './internal/ErrorDisplay.svelte'
 import GrapheneQuery from './components/GrapheneQuery.svelte'
 import InlineDelta from './components/InlineDelta.svelte'
 import Line from './components/Line.svelte'
@@ -34,24 +32,26 @@ import TableRow from './components/TableRow.svelte'
 import TableSubtotalRow from './components/TableSubtotalRow.svelte'
 import TableTotalRow from './components/TableTotalRow.svelte'
 import TextInput from './components/TextInput.svelte'
+import ErrorChart from './internal/ErrorDisplay.svelte'
+import LocalApp from './internal/LocalApp.svelte'
 
 window.$GRAPHENE = window.$GRAPHENE || {}
 
 let nextRenderId = 0
 let pendingRenders = new Set()
 
-window.$GRAPHENE.renderStart = (id) => {
+window.$GRAPHENE.renderStart = id => {
   let renderId = id == null ? `render:${++nextRenderId}` : String(id)
   pendingRenders.add(renderId)
   return renderId
 }
 
-window.$GRAPHENE.renderComplete = (id) => {
+window.$GRAPHENE.renderComplete = id => {
   if (id == null) return
   pendingRenders.delete(String(id))
 }
 
-window.$GRAPHENE.waitForLoad = async(timeout = 20_000) => {
+window.$GRAPHENE.waitForLoad = async (timeout = 20_000) => {
   let g = window.$GRAPHENE
   let end = Date.now() + timeout
   while (Date.now() < end) {

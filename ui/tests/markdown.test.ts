@@ -1,8 +1,10 @@
 import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
-test('loads markdown files', async({server, page}) => {
-  server.mockFile('/index.md', `
+test('loads markdown files', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
     # Flight Delay Analysis
 
     \`\`\`gsql delays
@@ -10,7 +12,8 @@ test('loads markdown files', async({server, page}) => {
     \`\`\`
 
     <BarChart data="delays" x="carrier" y="delay" />
-  `)
+  `,
+  )
   await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
   let nav = page.getByRole('navigation')
@@ -21,7 +24,7 @@ test('loads markdown files', async({server, page}) => {
   await expect(page).screenshot('loads-markdown-files')
 })
 
-test('expands nav for nested files', async({server, page}) => {
+test('expands nav for nested files', async ({server, page}) => {
   server.mockFile('/other/index.md', '# Other Folder')
   server.mockFile('/other/more.md', 'Hi there!')
   await page.goto(server.url() + '/other/more')
@@ -32,7 +35,7 @@ test('expands nav for nested files', async({server, page}) => {
   await expect(nav.getByRole('link', {name: 'More'})).toHaveAttribute('aria-current', 'page')
 })
 
-test('allows collapsing and expanding folders', async({server, page}) => {
+test('allows collapsing and expanding folders', async ({server, page}) => {
   server.mockFile('/other/index.md', '# Other Folder')
   server.mockFile('/other/more.md', 'More page content')
   await page.goto(server.url() + '/other/more')
@@ -47,10 +50,11 @@ test('allows collapsing and expanding folders', async({server, page}) => {
   await expect(nav.getByRole('link', {name: 'More'})).toBeVisible()
 })
 
-
-test('renders gsql query errors clearly with file context', async({server, page}) => {
+test('renders gsql query errors clearly with file context', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
-  server.mockFile('/index.md', `
+  server.mockFile(
+    '/index.md',
+    `
     # Broken Dashboard
 
     This view intentionally triggers an error.
@@ -60,7 +64,8 @@ test('renders gsql query errors clearly with file context', async({server, page}
     \`\`\`
 
     <BarChart data="broken_query" x="origin" y="boom" />
-  `)
+  `,
+  )
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
   await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
@@ -73,9 +78,11 @@ test('renders gsql query errors clearly with file context', async({server, page}
   await expect(page).screenshot('reports-analysis-query-errors')
 })
 
-test('renders database query failures clearly', async({server, page}) => {
+test('renders database query failures clearly', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
-  server.mockFile('/index.md', `
+  server.mockFile(
+    '/index.md',
+    `
     # Database Failure
 
     \`\`\`sql broken_query
@@ -83,7 +90,8 @@ test('renders database query failures clearly', async({server, page}) => {
     \`\`\`
 
     <BarChart data="broken_query" x="origin" y="boom" />
-  `)
+  `,
+  )
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
@@ -91,9 +99,11 @@ test('renders database query failures clearly', async({server, page}) => {
   await expect(page).screenshot('reports-database-query-errors')
 })
 
-test('renders generic server failures clearly', async({server, page}) => {
+test('renders generic server failures clearly', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
-  server.mockFile('/index.md', `
+  server.mockFile(
+    '/index.md',
+    `
     # Server Failure
 
     \`\`\`sql broken_query
@@ -101,9 +111,10 @@ test('renders generic server failures clearly', async({server, page}) => {
     \`\`\`
 
     <BarChart data="broken_query" x="origin" y="dep_delay" />
-  `)
+  `,
+  )
 
-  await page.route('**/_api/query', async(route) => {
+  await page.route('**/_api/query', async route => {
     await route.fulfill({
       status: 500,
       contentType: 'application/json',
@@ -118,15 +129,18 @@ test('renders generic server failures clearly', async({server, page}) => {
   await expect(page).screenshot('reports-server-query-errors')
 })
 
-test('renders html syntax errors with error display', async({server, page}) => {
+test('renders html syntax errors with error display', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
   expectConsoleError('vite:error')
-  server.mockFile('/index.md', `
+  server.mockFile(
+    '/index.md',
+    `
     # Test
     {#if true}oops{/if}
-  `)
+  `,
+  )
 
   await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 5000})
@@ -135,24 +149,30 @@ test('renders html syntax errors with error display', async({server, page}) => {
   await expect(page).screenshot('html-syntax-error')
 })
 
-test('renders literal less-than characters', async({server, page}) => {
-  server.mockFile('/index.md', `
+test('renders literal less-than characters', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
     # Comparison
     Profit is 1 < 2 and losses are 0 < 1.
-  `)
+  `,
+  )
 
   await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
   await expect(page.locator('main')).toHaveText(/1 < 2/)
 })
 
-test('sanitizes unsafe html', async({server, page}) => {
-  server.mockFile('/index.md', `
+test('sanitizes unsafe html', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
     # Sanitized
     <script>window.__MD_SCRIPT__ = true</script>
     <button id="danger" onclick="window.__MD_CLICK__ = true">Danger</button>
     <iframe id="embed" src="javascript:alert('boom')"></iframe>
-  `)
+  `,
+  )
 
   await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Sanitized'})).toBeVisible()

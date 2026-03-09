@@ -1,10 +1,11 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
-import {type Table, type Query, type QueryJoin, type Column, type FieldType, type FileInfo, type Diagnostic, type Expr, type CteTable, type JoinType, type Scope} from './types.ts'
-import {txt, getFile, getPosition} from './util.ts'
-import {extractLeadingMetadata} from './metadata.ts'
+
 import {config} from './config.ts'
 import {analyzeFunction} from './functions.ts'
+import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
+import {type Table, type Query, type QueryJoin, type Column, type FieldType, type FileInfo, type Diagnostic, type Expr, type CteTable, type JoinType, type Scope} from './types.ts'
+import {txt, getFile, getPosition} from './util.ts'
 
 // Analyze is the heart of gsql processing. It works in 2 phases:
 // 1. walk the parse tree looking for tables, views, and extend blocks.
@@ -18,7 +19,6 @@ import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './t
 //
 // NB that while the first step of collecting tables can be used between runs, analysis kinda can't since the alias for a given
 // join could change from query to query.
-
 
 export let FILE_MAP: Record<string, FileInfo> = {} // All the files in the workspace and their tables/queries
 export let diagnostics: Diagnostic[] = [] // Tracks errors/warnings
@@ -41,7 +41,7 @@ export function findTables(fi: FileInfo) {
 
     let hasNamespace = name.includes('.')
     let tablePath = !hasNamespace && config.defaultNamespace ? `${config.defaultNamespace}.${name}` : name
-    let type = syntaxNode.getChild('QueryStatement') ? 'view' : 'table' as const
+    let type = syntaxNode.getChild('QueryStatement') ? 'view' : ('table' as const)
     let table = {name, type, tablePath, columns: [], joins: [], metadata: extractLeadingMetadata(syntaxNode), syntaxNode} as Table
 
     syntaxNode.getChildren('ColumnDef').forEach(cn => addColumn(table, cn))
@@ -120,7 +120,7 @@ export function analyzeTableFully(table: Table) {
     let expr = analyzeExpr(c.exprNode, scope)
     c.isAgg = expr.isAgg
   })
-  table.joins.forEach(j => j.table = lookupTable(j.targetNode!))
+  table.joins.forEach(j => (j.table = lookupTable(j.targetNode!)))
 }
 
 // Expand non-aggregate columns into query fields.
@@ -217,7 +217,10 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
   // SELECT clause
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
-  let isSelectDistinct = !!queryNode.getChild('SelectClause')?.getChildren('Kw').find(n => txt(n).toLowerCase() == 'distinct')
+  let isSelectDistinct = !!queryNode
+    .getChild('SelectClause')
+    ?.getChildren('Kw')
+    .find(n => txt(n).toLowerCase() == 'distinct')
   isAgg ||= isSelectDistinct
 
   for (let s of selects) {
@@ -254,7 +257,10 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   isAgg ||= groupBys.length > 0
   for (let g of groupBys) {
     let expr = analyzeExpr(g.getChild('Expression')!, scope)
-    if (expr.isAgg) { diag(g, 'Cannot group by aggregate expressions'); continue }
+    if (expr.isAgg) {
+      diag(g, 'Cannot group by aggregate expressions')
+      continue
+    }
     let name = g.getChild('Alias') ? txt(g.getChild('Alias')) : inferName(g.getChild('Expression')!, scope)
     if (!query.fields.find(f => f.name == name)) {
       query.fields.unshift({name, sql: expr.sql, type: expr.type})
@@ -263,11 +269,11 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
   // ORDER BY
   let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
-  let orderBy: {idx: number, desc: boolean}[] = []
+  let orderBy: {idx: number; desc: boolean}[] = []
   for (let o of orderBys) {
     let fieldRef = txt(o.getChild('Identifier')) || txt(o.getChild('Number'))
     let desc = txt(o.getChild('Kw')).toLowerCase() == 'desc'
-    let idx = Number(fieldRef) || (query.fields.findIndex(f => f.name == fieldRef) + 1)
+    let idx = Number(fieldRef) || query.fields.findIndex(f => f.name == fieldRef) + 1
     if (idx > 0) orderBy.push({idx, desc})
     else if (fieldRef && isNaN(Number(fieldRef))) diag(o, `Unknown field in ORDER BY: ${fieldRef}`)
   }
@@ -285,7 +291,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   }
 
   // Compute GROUP BY indices (non-aggregate fields, 1-indexed)
-  let groupByIndices = query.fields.map((f, i) => f.isAgg ? 0 : i + 1).filter(i => i > 0)
+  let groupByIndices = query.fields.map((f, i) => (f.isAgg ? 0 : i + 1)).filter(i => i > 0)
 
   // Default ORDER BY for aggregate queries
   if (orderBy.length == 0 && isAgg && groupByIndices.length > 0) {
@@ -293,7 +299,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     if (firstAggIdx >= 0) {
       orderBy.push({idx: firstAggIdx + 1, desc: true})
     } else {
-      orderBy.push({idx: 1, desc: false})  // SELECT DISTINCT
+      orderBy.push({idx: 1, desc: false}) // SELECT DISTINCT
     }
   }
 
@@ -333,13 +339,16 @@ function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
   }
 
   let fromTable = renderTableRef(baseJoin.table)
-  let joinClauses = query.joins.filter(j => j.source != 'from').map(j => {
-    if (!j.table || !j.joinType) return ''
-    let tablePath = renderTableRef(j.table)
-    let keyword = j.joinType.toUpperCase() + ' JOIN'
-    if (j.joinType == 'cross') return `${keyword} ${tablePath} as ${j.alias}`
-    return `${keyword} ${tablePath} as ${j.alias} ON ${j.onClause}`
-  }).filter(Boolean)
+  let joinClauses = query.joins
+    .filter(j => j.source != 'from')
+    .map(j => {
+      if (!j.table || !j.joinType) return ''
+      let tablePath = renderTableRef(j.table)
+      let keyword = j.joinType.toUpperCase() + ' JOIN'
+      if (j.joinType == 'cross') return `${keyword} ${tablePath} as ${j.alias}`
+      return `${keyword} ${tablePath} as ${j.alias} ON ${j.onClause}`
+    })
+    .filter(Boolean)
 
   let whereFilters = query.filters.filter(f => !f.isAgg).map(f => f.sql)
   let havingFilters = query.filters.filter(f => f.isAgg).map(f => f.sql)
@@ -363,11 +372,16 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
   if (node.type.isError) return diag(node, 'Invalid expression', {sql: 'NULL', type: 'error'})
 
   switch (node.name) {
-    case 'Number': return {sql: txt(node), type: 'number'}
-    case 'Boolean': return {sql: txt(node).toLowerCase(), type: 'boolean'}
-    case 'Null': return {sql: 'NULL', type: 'null'}
-    case 'String': return {sql: `'${txt(node).slice(1, -1).replace(/'/g, "''")}'`, type: 'string'}
-    case 'Param': return {sql: txt(node), type: 'string'}  // $param - type inferred later
+    case 'Number':
+      return {sql: txt(node), type: 'number'}
+    case 'Boolean':
+      return {sql: txt(node).toLowerCase(), type: 'boolean'}
+    case 'Null':
+      return {sql: 'NULL', type: 'null'}
+    case 'String':
+      return {sql: `'${txt(node).slice(1, -1).replace(/'/g, "''")}'`, type: 'string'}
+    case 'Param':
+      return {sql: txt(node), type: 'string'} // $param - type inferred later
 
     case 'Ref': {
       let pathNodes = node.getChildren('Identifier')
@@ -388,7 +402,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // Otherwise, search all tables either in FROM or explicitly JOINed (but not implicitly joined).
       let possibleJoins = targetScope.table
         ? [{table: targetScope.table, alias: targetScope.alias}]
-        : (scope.query?.joins.filter(j => j.source != 'implicit' && j.table).map(j => ({table: j.table!, alias: j.alias})) || [])
+        : scope.query?.joins.filter(j => j.source != 'implicit' && j.table).map(j => ({table: j.table!, alias: j.alias})) || []
 
       // Expect just one of the possibleJoins to have the named column. Otherwise, it's an error.
       let matches = possibleJoins.filter(j => j.table.columns.some(c => c.name == fieldName))
@@ -429,9 +443,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       if (isPercentile && !isPercentileWindowSpecSupported(node.getChild('OverClause')!)) {
         return diag(node.getChild('OverClause')!, 'pXX window form currently supports PARTITION BY only', {sql: 'NULL', type: 'error'})
       }
-      let base = baseNode.name == 'FunctionCall'
-        ? analyzeFunction(baseNode, scope, analyzeExpr, {isWindow: true})
-        : analyzeExpr(baseNode, scope)
+      let base = baseNode.name == 'FunctionCall' ? analyzeFunction(baseNode, scope, analyzeExpr, {isWindow: true}) : analyzeExpr(baseNode, scope)
       if (base.type == 'error') return base
       if (!base.canWindow) return diag(baseNode, 'Only aggregate or window functions can use OVER', {sql: 'NULL', type: 'error'})
       let over = renderOverClause(node.getChild('OverClause')!, scope)
@@ -530,7 +542,11 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let parts = ['CASE']
       let isAgg = false
       let caseValue = node.getChild('Expression')
-      if (caseValue) { let e = analyzeExpr(caseValue, scope); parts.push(e.sql); isAgg ||= !!e.isAgg }
+      if (caseValue) {
+        let e = analyzeExpr(caseValue, scope)
+        parts.push(e.sql)
+        isAgg ||= !!e.isAgg
+      }
 
       let resultType: FieldType = 'string'
       for (let w of node.getChildren('WhenClause')) {
@@ -578,7 +594,10 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
     }
 
     case 'BetweenExpression': {
-      let not = !!node.getChildren('Kw').map(n => txt(n).toLowerCase()).find(k => k == 'not')
+      let not = !!node
+        .getChildren('Kw')
+        .map(n => txt(n).toLowerCase())
+        .find(k => k == 'not')
       let [eNode, lowNode, highNode] = node.getChildren('Expression')
       let [e, low, high] = [eNode, lowNode, highNode].map(n => analyzeExpr(n, scope))
 
@@ -613,7 +632,9 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let extractInner = node.getChild('Expression')!
       let e = analyzeExpr(extractInner, scope)
       checkTypes(e, ['date', 'timestamp'], extractInner)
-      let unit = txt(node.getChild('ExtractUnit')!).replace(/^['"]|['"]$/g, '').toLowerCase()
+      let unit = txt(node.getChild('ExtractUnit')!)
+        .replace(/^['"]|['"]$/g, '')
+        .toLowerCase()
       return {sql: `EXTRACT(${unit} FROM ${e.sql})`, type: 'number', isAgg: e.isAgg}
     }
 
@@ -680,7 +701,10 @@ function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: Sy
   let match = expr.sql.match(/^'(.+)'$/)
   if (!match) return expr
   let parsed = parseTemporalLiteral(match[1], targetType)
-  if (!parsed) { diag(node, `Cannot parse as ${targetType}: ${expr.sql}`); return expr }
+  if (!parsed) {
+    diag(node, `Cannot parse as ${targetType}: ${expr.sql}`)
+    return expr
+  }
   return {sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
 }
 
@@ -837,7 +861,10 @@ function lookupTable(node: SyntaxNode, scope?: Scope): Table | undefined {
 
 function inferName(exprNode: SyntaxNode, scope: Scope): string {
   if (exprNode.name == 'Ref') {
-    return exprNode.getChildren('Identifier').map(i => txt(i)).join('_')
+    return exprNode
+      .getChildren('Identifier')
+      .map(i => txt(i))
+      .join('_')
   }
   return `col_${scope.query?.fields.length || 0}`
 }
@@ -858,8 +885,12 @@ export function clearWorkspace() {
   diagnostics = []
 }
 
-export function clearDiagnostics() { diagnostics = [] }
-export function getNodeEntity(node: SyntaxNode) { return NODE_ENTITY_MAP.get(node) }
+export function clearDiagnostics() {
+  diagnostics = []
+}
+export function getNodeEntity(node: SyntaxNode) {
+  return NODE_ENTITY_MAP.get(node)
+}
 
 export function recordSyntaxErrors(fi: FileInfo) {
   fi.tree!.topNode.cursor().iterate(n => {
@@ -887,16 +918,38 @@ export function checkTypes(expr: Expr, expected: FieldType[], node: SyntaxNode) 
 // On the other, it obscures the actual types in cases where they might be relevant, like function signature matching.
 function convertDataType(dataType: string): FieldType | null {
   switch (dataType.toUpperCase()) {
-    case 'INT': case 'INT64': case 'NUMBER': case 'INTEGER': case 'NUMERIC': case 'FLOAT': case 'FLOAT64':
-    case 'DECIMAL': case 'DOUBLE': case 'BIGINT': case 'SMALLINT': case 'TINYINT': case 'BYTEINT': case 'BIGDECIMAL':
+    case 'INT':
+    case 'INT64':
+    case 'NUMBER':
+    case 'INTEGER':
+    case 'NUMERIC':
+    case 'FLOAT':
+    case 'FLOAT64':
+    case 'DECIMAL':
+    case 'DOUBLE':
+    case 'BIGINT':
+    case 'SMALLINT':
+    case 'TINYINT':
+    case 'BYTEINT':
+    case 'BIGDECIMAL':
       return 'number'
-    case 'VARIANT': case 'TEXT': case 'STRING': case 'VARCHAR': case 'GEOGRAPHY':
+    case 'VARIANT':
+    case 'TEXT':
+    case 'STRING':
+    case 'VARCHAR':
+    case 'GEOGRAPHY':
       return 'string'
-    case 'BOOL': case 'BOOLEAN':
+    case 'BOOL':
+    case 'BOOLEAN':
       return 'boolean'
     case 'DATE':
       return 'date'
-    case 'DATETIME': case 'TIME': case 'TIMESTAMP': case 'TIMESTAMP_NTZ': case 'TIMESTAMP_TZ': case 'TIMESTAMP_LTZ':
+    case 'DATETIME':
+    case 'TIME':
+    case 'TIMESTAMP':
+    case 'TIMESTAMP_NTZ':
+    case 'TIMESTAMP_TZ':
+    case 'TIMESTAMP_LTZ':
       return 'timestamp'
     default:
       return null

@@ -30,14 +30,14 @@ interface QueryNode {
 let runPending: Promise<void> | null = null
 let params = {} as Record<string, any>
 let queries = [] as QueryNode[]
-let queryResults = {} as Record<string, {rows: any[], fields?: Field[]}>
+let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 
 function registerQuery(name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
   queries.push({name, contents, loading: false, fields: new Map(), errors: []})
 }
 
-const getRoutePath = () => typeof window === 'undefined' ? '/' : (window.location.pathname || '/')
+const getRoutePath = () => (typeof window === 'undefined' ? '/' : window.location.pathname || '/')
 
 function updateParam(name: string, value: any) {
   params[name] = value
@@ -49,7 +49,7 @@ function query(source: string, fields: Record<string, string | string[]>, callba
   let map = new Map(Object.entries(fields))
   let exprs: string[] = []
   if (map.size > 0) {
-    map.forEach((value) => {
+    map.forEach(value => {
       if (Array.isArray(value)) exprs.push(...value)
       else exprs.push(value)
     })
@@ -73,10 +73,7 @@ async function runNode(n: QueryNode) {
 
   let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
-  let gsql = [
-    ...tables.map(q => `table ${q.name} as (${q.contents})`),
-    n.contents,
-  ].join('\n')
+  let gsql = [...tables.map(q => `table ${q.name} as (${q.contents})`), n.contents].join('\n')
 
   try {
     let response = await fetch('/_api/query', {
@@ -86,19 +83,22 @@ async function runNode(n: QueryNode) {
     })
     let hash = response.headers.get('ETag') || ''
 
-    if (response.status == 304) { // cache hit. Read it out and use that
+    if (response.status == 304) {
+      // cache hit. Read it out and use that
       let body = await cacheRead(hash)
       let result = translateData(body, n)
       if (n.source) queryResults[n.source] = {rows: result.rows, fields: body.fields}
       n.callback(result)
-    } else if (response.ok) { // cache miss. write it to the cache, and return the data
+    } else if (response.ok) {
+      // cache miss. write it to the cache, and return the data
       cacheWrite(hash, response.clone()) // clone allows us to write the raw response into the cache
       let body = await response.json()
       let fields = body.fields // grab before translateData mutates
       let result = translateData(body, n) // nb that translateData modifies in place for performance
       if (n.source) queryResults[n.source] = {rows: result.rows, fields}
       n.callback(result)
-    } else { // request failed. Record it
+    } else {
+      // request failed. Record it
       let isJson = response.headers.get('Content-Type') === 'application/json'
       let body = isJson ? await response.json() : await response.text()
       n.errors = Array.isArray(body) ? body : [{message: body}]
@@ -114,10 +114,10 @@ async function runNode(n: QueryNode) {
         return [`${name}="${val}"`]
       })
       let idStr = `Query (data="${n.source}" ` + fieldIds.join(' ') + ')'
-      n.errors.forEach(e => (e as any).queryId = idStr)
+      n.errors.forEach(e => ((e as any).queryId = idStr))
       n.callback({errors: n.errors})
     }
-  } catch(e) {
+  } catch (e) {
     n.errors = [e as Error]
   } finally {
     n.loading = false
@@ -126,14 +126,18 @@ async function runNode(n: QueryNode) {
 
 function runAll() {
   if (runPending) return runPending
-  runPending = Promise.resolve().then(_runAll).finally(() => runPending = null)
+  runPending = Promise.resolve()
+    .then(_runAll)
+    .finally(() => (runPending = null))
 }
 
 async function _runAll() {
-  await Promise.all(queries.map(async n => {
-    if (!n.callback) return
-    await runNode(n)
-  }))
+  await Promise.all(
+    queries.map(async n => {
+      if (!n.callback) return
+      await runNode(n)
+    }),
+  )
 }
 
 function translateData(data: any, node: QueryNode) {
@@ -141,7 +145,7 @@ function translateData(data: any, node: QueryNode) {
   rows.dataLoaded = true // evidence components need this to be set
   rows._evidenceColumnTypes = []
   let requestFields: string[] = []
-  node.fields.forEach((value) => {
+  node.fields.forEach(value => {
     if (Array.isArray(value)) requestFields.push(...value)
     else requestFields.push(value)
   })
@@ -169,9 +173,12 @@ const isQueryLoading = () => !!queries.find(q => q.loading)
 
 errorProvider('queryEngine', () => {
   let unique = {}
-  queries.flatMap(q => q.errors).filter(q => !!q).forEach(e => {
-    unique[e.message + String((e as any).from?.lineText)] = e
-  })
+  queries
+    .flatMap(q => q.errors)
+    .filter(q => !!q)
+    .forEach(e => {
+      unique[e.message + String((e as any).from?.lineText)] = e
+    })
   return Object.values(unique) as Error[]
 })
 
@@ -179,7 +186,7 @@ function evidenceType(type: string | undefined) {
   if (type === 'string') return 'string'
   if (type === 'number') return 'number'
   if (type === 'boolean') return 'boolean'
-  if (type ===  'date' || type === 'timestamp') return 'date'
+  if (type === 'date' || type === 'timestamp') return 'date'
   console.warn('Unsupported evidence type ' + type)
   return 'string'
 }
