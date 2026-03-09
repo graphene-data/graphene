@@ -28,6 +28,8 @@ jobs:
         with:
           script: |
             let mergeSha = context.payload.after
+            // GitHub can take a few seconds after push-to-main to link merge commits back to their PR.
+            await new Promise(resolve => setTimeout(resolve, 10_000))
             let commit = await github.graphql(`
               query($owner: String!, $repo: String!, $oid: GitObjectID!) {
                 repository(owner: $owner, name: $repo) {
@@ -36,8 +38,6 @@ jobs:
                       associatedPullRequests(first: 20) {
                         nodes {
                           number
-                          merged
-                          baseRefName
                         }
                       }
                     }
@@ -47,7 +47,7 @@ jobs:
             `, {owner: context.repo.owner, repo: context.repo.repo, oid: mergeSha})
 
             let prs = commit.repository.object?.associatedPullRequests?.nodes || []
-            let pr = prs.find(x => x.merged && x.baseRefName === 'main')
+            let pr = prs[0]
             if (!pr) throw new Error('Missing PR')
 
             core.setOutput('pr_number', String(pr.number))
