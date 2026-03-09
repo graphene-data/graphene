@@ -1,9 +1,9 @@
+import type {Plugin} from 'unified'
+
 import fs from 'fs'
 import path from 'path'
-import type {Plugin} from 'unified'
-import {visit} from 'unist-util-visit'
 import sanitizeHtml from 'sanitize-html'
-
+import {visit} from 'unist-util-visit'
 
 export function extractQueries() {
   function escapeHtml(str: string) {
@@ -45,7 +45,10 @@ export function mergeAdjacentHtml() {
         while (j + 1 < parent.children.length && parent.children[j + 1]?.type === 'html') j++
         if (j == i) continue
 
-        let value = parent.children.slice(i, j + 1).map((node: any) => node.value || '').join('\n')
+        let value = parent.children
+          .slice(i, j + 1)
+          .map((node: any) => node.value || '')
+          .join('\n')
         parent.children.splice(i, j - i + 1, {type: 'html', value})
       }
     })
@@ -68,10 +71,7 @@ export function sanitizeMarkdown() {
 
       let sanitized = sanitizeHtml(expanded, {
         ...sanitizeHtml.defaults,
-        allowedTags: [
-          ...sanitizeHtml.defaults.allowedTags,
-          ...componentNames(),
-        ],
+        allowedTags: [...sanitizeHtml.defaults.allowedTags, ...componentNames()],
         allowedAttributes: {
           ...sanitizeHtml.defaults.allowedAttributes,
           ...Object.fromEntries(componentNames().map(n => [n, ['*']])),
@@ -92,7 +92,7 @@ export function injectComponentImports() {
   let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`
 
   return {
-    markup: ({content, filename}: {content: string, filename: string}) => {
+    markup: ({content, filename}: {content: string; filename: string}) => {
       if (!filename.endsWith('.md')) return // only auto-import components for md files
       if (content.includes('<script>')) {
         content = content.replace('<script>', `<script>\n${imp}`)

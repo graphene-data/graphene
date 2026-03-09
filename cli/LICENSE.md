@@ -5,7 +5,7 @@ default throughout the repository is a license under the Elastic License 2.0,
 unless a file header or a license file in a subdirectory specifies another
 license.
 
---------------------------------------------------------------------------------
+---
 
 Elastic License 2.0
 
@@ -72,10 +72,10 @@ to terminate automatically and permanently.
 
 ## No Liability
 
-*As far as the law allows, the software comes as is, without any warranty or
+_As far as the law allows, the software comes as is, without any warranty or
 condition, and the licensor will not be liable to you for any damages arising
 out of these terms or the use or nature of the software, under any kind of
-legal claim.*
+legal claim._
 
 ## Definitions
 

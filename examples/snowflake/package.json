@@ -1,6 +1,7 @@
 {
   "name": "snowflake-example",
   "version": "0.0.1",
+  "type": "module",
   "scripts": {
     "graphene": "node ../../cli/cli.ts",
     "dev": "npm run graphene serve",
@@ -8,13 +9,12 @@
     "run": "npm run graphene run",
     "serve": "npm run dev"
   },
-  "engines": {
-    "node": ">=24.0.0"
-  },
-  "type": "module",
   "dependencies": {
     "@graphenedata/cli": "workspace:*",
     "svelte": "5.53.7"
+  },
+  "engines": {
+    "node": ">=24.0.0"
   },
   "graphene": {
     "dialect": "snowflake",
@@ -23,6 +23,10 @@
       "account": "adarjvr-ve40413",
       "username": "demouser"
     },
-    "envFile": [".env", "../../.env", "../../../.env"]
+    "envFile": [
+      ".env",
+      "../../.env",
+      "../../../.env"
+    ]
   }
 }

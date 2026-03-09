@@ -1,6 +1,7 @@
+import {expect} from 'vitest'
+
 /// <reference types="vitest/globals" />
 import {analyze, getHover, clearWorkspace} from './core.ts'
-import {expect} from 'vitest'
 
 describe('hover', () => {
   beforeEach(() => {

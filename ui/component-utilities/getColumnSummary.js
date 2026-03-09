@@ -1,6 +1,6 @@
-import {getColumnUnitSummary} from './getColumnExtents.js'
 import {lookupColumnFormat} from './formatting.js'
 import formatTitle from './formatTitle.js'
+import {getColumnUnitSummary} from './getColumnExtents.js'
 
 const EvidenceType = {
   BOOLEAN: 'boolean',
@@ -32,17 +32,12 @@ export default function getColumnSummary(data, returnType = 'object') {
   let types = Array.isArray(data?._evidenceColumnTypes) ? data._evidenceColumnTypes : []
 
   for (let colName of Object.keys(data[0])) {
-    let evidenceColumnType = types.find(
-      (item) => item.name?.toLowerCase() === colName?.toLowerCase(),
-    ) ?? {
+    let evidenceColumnType = types.find(item => item.name?.toLowerCase() === colName?.toLowerCase()) ?? {
       name: colName,
       evidenceType: EvidenceType.STRING,
     }
     let type = evidenceColumnType.evidenceType
-    let columnUnitSummary =
-      evidenceColumnType.evidenceType === EvidenceType.NUMBER
-        ? getColumnUnitSummary(data, colName, true)
-        : getColumnUnitSummary(data, colName, false)
+    let columnUnitSummary = evidenceColumnType.evidenceType === EvidenceType.NUMBER ? getColumnUnitSummary(data, colName, true) : getColumnUnitSummary(data, colName, false)
 
     if (evidenceColumnType.evidenceType !== EvidenceType.NUMBER) {
       columnUnitSummary.maxDecimals = 0

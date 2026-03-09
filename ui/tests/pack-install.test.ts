@@ -1,12 +1,13 @@
-import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {spawn} from 'node:child_process'
-import {fileURLToPath} from 'node:url'
-import * as fsp from 'node:fs/promises'
 import * as fs from 'node:fs'
+import * as fsp from 'node:fs/promises'
+import * as net from 'node:net'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import * as net from 'node:net'
+import {fileURLToPath} from 'node:url'
 import stripAnsi from 'strip-ansi'
+
+import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 
 interface RunResult {
   code: number
@@ -17,12 +18,16 @@ interface RunResult {
 const shouldRunPackInstallTest = !!process.env.CI || process.env.GRAPHENE_PACK_TEST === '1'
 
 function run(command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<RunResult> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     let child = spawn(command, args, {cwd, env})
     let stdout = ''
     let stderr = ''
-    child.stdout.on('data', data => { stdout += data.toString() })
-    child.stderr.on('data', data => { stderr += data.toString() })
+    child.stdout.on('data', data => {
+      stdout += data.toString()
+    })
+    child.stderr.on('data', data => {
+      stderr += data.toString()
+    })
     child.on('close', code => resolve({code: code ?? 0, stdout, stderr}))
   })
 }
@@ -58,7 +63,7 @@ function parseScreenshotPath(output: string, cwd: string) {
   return path.isAbsolute(screenshotPath) ? screenshotPath : path.resolve(cwd, screenshotPath)
 }
 
-test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user project', {timeout: 300_000}, async({page}) => {
+test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user project', {timeout: 300_000}, async ({page}) => {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
   let cliDir = path.join(coreDir, 'cli')

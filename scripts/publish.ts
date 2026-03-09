@@ -68,7 +68,10 @@ function getChangelogSection(changelog: string, version: string) {
   if (start === -1) throw new Error(`Missing changelog section for ${version}`)
 
   let end = lines.findIndex((line, idx) => idx > start && /^##\s+/.test(line))
-  let section = lines.slice(start + 1, end === -1 ? undefined : end).join('\n').trim()
+  let section = lines
+    .slice(start + 1, end === -1 ? undefined : end)
+    .join('\n')
+    .trim()
   if (!section) throw new Error(`Changelog section for ${version} is empty`)
 
   return `## ${version}\n\n${section}`

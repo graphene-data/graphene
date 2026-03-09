@@ -18,18 +18,7 @@ type ThemeStores = {
 
 const THEME_CONTEXT = Symbol('GrapheneThemeStores')
 
-const DEFAULT_PALETTE = [
-  '#4C78A8',
-  '#F58518',
-  '#E45756',
-  '#72B7B2',
-  '#54A24B',
-  '#EECA3B',
-  '#B279A2',
-  '#FF9DA6',
-  '#9D755D',
-  '#BAB0AC',
-]
+const DEFAULT_PALETTE = ['#4C78A8', '#F58518', '#E45756', '#72B7B2', '#54A24B', '#EECA3B', '#B279A2', '#FF9DA6', '#9D755D', '#BAB0AC']
 
 const DEFAULT_THEME: Theme = {
   colors: {
@@ -119,7 +108,10 @@ export const resolveColorPalette = (input: unknown): Readable<string[] | undefin
       }
     }
     if (key.includes(',')) {
-      let values = key.split(',').map(part => normalizeColor(part)).filter(Boolean) as string[]
+      let values = key
+        .split(',')
+        .map(part => normalizeColor(part))
+        .filter(Boolean) as string[]
       return readable(values.length ? values : DEFAULT_PALETTE)
     }
     let normalized = normalizeColor(key)

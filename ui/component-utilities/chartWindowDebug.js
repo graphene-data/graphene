@@ -14,7 +14,7 @@ export const set = (key, value) => {
 /**
  * @param {string} key
  */
-export const unset = (key) => {
+export const unset = key => {
   if (!isBrowser) return
   if (!window[s]) window[s] = {}
   delete window[s][key]

@@ -1,8 +1,9 @@
+import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, DuckDBDecimalValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 import {promises as fs} from 'fs'
 import path from 'path'
+
 import {config} from '../../lang/config.ts'
 import {type QueryResult, type QueryConnection, type SchemaColumn, type QueryParams} from './types.ts'
-import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, DuckDBDecimalValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 
 interface DuckDbOptions {
   path?: string
@@ -37,9 +38,7 @@ export class DuckDBConnection implements QueryConnection {
 
   async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
     await this.ready
-    let reader = params
-      ? await this.connection!.runAndReadAll(sql, params as any)
-      : await this.connection!.runAndReadAll(sql)
+    let reader = params ? await this.connection!.runAndReadAll(sql, params as any) : await this.connection!.runAndReadAll(sql)
     let rows = reader.getRowObjects().map(record => {
       let out: Record<string, unknown> = {}
       for (let [k, v] of Object.entries(record)) {
@@ -75,9 +74,7 @@ export class DuckDBConnection implements QueryConnection {
     let parts = target.split('.')
     let table = parts.pop() || ''
     let schema = parts[0]
-    let schemaFilter = schema
-      ? 'lower(table_schema) = lower($2)'
-      : "table_schema not in ('information_schema', 'pg_catalog')"
+    let schemaFilter = schema ? 'lower(table_schema) = lower($2)' : "table_schema not in ('information_schema', 'pg_catalog')"
     let sql = `
       select column_name as column_name, data_type as data_type, ordinal_position as ordinal_position
       from information_schema.columns

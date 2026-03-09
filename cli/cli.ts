@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 
 import {Command} from 'commander'
-import {printDiagnostics, printTable} from './printer.ts'
-import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import dotenv from 'dotenv'
 import fs from 'fs-extra'
 import path from 'path'
 import {fileURLToPath} from 'url'
-import dotenv from 'dotenv'
+
 import {config, loadConfig} from '../lang/config.ts'
+import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
-import {runMdFile, runNamedQueryFromMd} from './run.ts'
 import {getConnection, runQuery} from './connections/index.ts'
-import {loginPkce} from './auth.ts'
+import {printDiagnostics, printTable} from './printer.ts'
+import {runMdFile, runNamedQueryFromMd} from './run.ts'
 
 const program = new Command()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -27,10 +28,11 @@ loadConfig(process.cwd(), envFiles => {
   dotenv.config({quiet: true, path: envFiles || '.env'})
 })
 
-program.command('compile')
+program
+  .command('compile')
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
-  .action(async(input: string | undefined) => {
+  .action(async (input: string | undefined) => {
     await loadWorkspace(process.cwd(), false)
     let sql = await readInput(input)
     let queries = analyze(sql)
@@ -38,12 +40,13 @@ program.command('compile')
     console.log(toSql(queries[0]))
   })
 
-program.command('run')
+program
+  .command('run')
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitle>', 'Title of a specific chart to capture')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
-  .action(async(input: string | undefined, options: {chart?: string, query?: string}) => {
+  .action(async (input: string | undefined, options: {chart?: string; query?: string}) => {
     if (options.chart && options.query) {
       console.error('Cannot use --chart and --query together')
       process.exit(1)
@@ -51,9 +54,7 @@ program.command('run')
 
     let inputPath = getExistingPath(input)
     if (inputPath && inputPath.endsWith('.md')) {
-      let res = options.query
-        ? await runNamedQueryFromMd(inputPath, options.query)
-        : await runMdFile({mdArg: inputPath, chart: options.chart})
+      let res = options.query ? await runNamedQueryFromMd(inputPath, options.query) : await runMdFile({mdArg: inputPath, chart: options.chart})
       process.exit(res ? 0 : 1)
     }
 
@@ -76,10 +77,11 @@ program.command('run')
     printTable(res.rows)
   })
 
-program.command('schema')
+program
+  .command('schema')
   .description('Inspect database tables or describe a table')
   .argument('[schema | table]', 'Optional schema or table name to describe')
-  .action(async(tableArg: string) => {
+  .action(async (tableArg: string) => {
     let connection = await getConnection()
     let datasets = await connection.listDatasets()
 
@@ -97,9 +99,12 @@ program.command('schema')
       return console.log(`Schemas in ${tableArg}:\n${schemas.join('\n')}`)
     }
 
-    if (datasets.includes(tableArg)) dsToList = tableArg // you gave the name of a dataset
-    else if (!tableArg && config.defaultNamespace) dsToList = config.defaultNamespace // default namespace configured
-    else if (!tableArg && datasets.length == 1) dsToList = datasets[0] // only one dataset, and no args
+    if (datasets.includes(tableArg))
+      dsToList = tableArg // you gave the name of a dataset
+    else if (!tableArg && config.defaultNamespace)
+      dsToList = config.defaultNamespace // default namespace configured
+    else if (!tableArg && datasets.length == 1)
+      dsToList = datasets[0] // only one dataset, and no args
     else if (!tableArg && config.dialect == 'duckdb') dsToList = '<default>'
     else if (tableArg && config.dialect == 'snowflake' && parts.length == 2) dsToList = tableArg
 
@@ -116,10 +121,11 @@ program.command('schema')
     console.log(')')
   })
 
-program.command('serve')
+program
+  .command('serve')
   .description('Run the local server')
   .option('--bg', 'Run the server in the background')
-  .action(async(options: {bg?: boolean}) => {
+  .action(async (options: {bg?: boolean}) => {
     await stopGrapheneIfRunning()
     if (options.bg) {
       await runServeInBackground()
@@ -130,21 +136,26 @@ program.command('serve')
     }
   })
 
-program.command('stop')
+program
+  .command('stop')
   .description('Stop the local server')
-  .action(async() => { await stopGrapheneIfRunning() })
+  .action(async () => {
+    await stopGrapheneIfRunning()
+  })
 
-program.command('check')
+program
+  .command('check')
   .description('Check the project for diagnostics')
   .argument('[file]', 'Optional markdown or gsql file to check')
-  .action(async(fileArg: string | undefined) => {
+  .action(async (fileArg: string | undefined) => {
     let res = await check({fileArg})
     process.exit(res ? 0 : 1) // import to call `exit`, bc if we started the server in the background, just returning won't actually exit the process.
   })
 
-program.command('login')
+program
+  .command('login')
   .description('Log in to Graphene Cloud')
-  .action(async() => {
+  .action(async () => {
     await loginPkce()
     console.log('Successfully logged in')
     process.exit(0)
@@ -154,10 +165,10 @@ program.parse(process.argv)
 
 async function readInput(arg): Promise<string> {
   if (!arg || arg === '-') {
-    return await new Promise<string>((resolve) => {
+    return await new Promise<string>(resolve => {
       let data = ''
       process.stdin.setEncoding('utf-8')
-      process.stdin.on('data', (chunk) => (data += chunk))
+      process.stdin.on('data', chunk => (data += chunk))
       process.stdin.on('end', () => resolve(data))
       process.stdin.resume()
     })

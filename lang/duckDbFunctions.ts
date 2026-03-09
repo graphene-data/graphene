@@ -5,6 +5,7 @@
 // https://duckdb.org/docs/stable/sql/functions/
 
 import type {FunctionDef} from './functionTypes.ts'
+
 import {trimIndentation} from './util.ts'
 
 const duck = 'https://duckdb.org/docs/stable/sql/functions'
@@ -824,7 +825,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Computes the inverse tangent of (y, x).
     `),
     url: `${duck}/numeric#atan2y-x`,
-    args: [['y', 'number'], ['x', 'number']],
+    args: [
+      ['y', 'number'],
+      ['x', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -967,7 +971,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Computes the greatest common divisor of x and y.
     `),
     url: `${duck}/numeric#gcdx-y`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -1022,7 +1029,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Computes the least common multiple of x and y.
     `),
     url: `${duck}/numeric#lcmx-y`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -1110,7 +1120,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Computes x to the power of y.
     `),
     url: `${duck}/numeric#powx-y`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -1121,7 +1134,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Alias of pow. Computes x to the power of y.
     `),
     url: `${duck}/numeric#powerx-y`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -1154,7 +1170,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Round to s decimal places. Values s < 0 are allowed.
     `),
     url: `${duck}/numeric#roundv-numeric-s-integer`,
-    args: [['v', 'number'], ['s', 'number?']],
+    args: [
+      ['v', 'number'],
+      ['s', 'number?'],
+    ],
     returns: 'number',
   },
   {
@@ -1242,7 +1261,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Bitwise XOR.
     `),
     url: `${duck}/numeric#xorx-y`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
 
@@ -1306,7 +1328,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Returns true if search_string is found within string.
     `),
     url: `${duck}/text#containsstring-search_string`,
-    args: [['string', 'string'], ['search_string', 'string']],
+    args: [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1317,7 +1342,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Returns true if string ends with search_string.
     `),
     url: `${duck}/text#suffixstring-search_string`,
-    args: [['string', 'string'], ['search_string', 'string']],
+    args: [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1342,7 +1370,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Returns location of first occurrence of search_string in string, counting from 1. Returns 0 if no match found.
     `),
     url: `${duck}/text#instrstring-search_string`,
-    args: [['string', 'string'], ['search_string', 'string']],
+    args: [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
     returns: 'number',
   },
   {
@@ -1353,7 +1384,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the left-most count characters.
     `),
     url: `${duck}/text#leftstring-count`,
-    args: [['string', 'string'], ['count', 'number']],
+    args: [
+      ['string', 'string'],
+      ['count', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1386,7 +1420,11 @@ export const duckDbFunctions: FunctionDef[] = [
       Pads the string with the character on the left until it has count characters. Truncates the string on the right if it has more than count characters.
     `),
     url: `${duck}/text#lpadstring-count-character`,
-    args: [['string', 'string'], ['count', 'number'], ['character', 'string']],
+    args: [
+      ['string', 'string'],
+      ['count', 'number'],
+      ['character', 'string'],
+    ],
     returns: 'string',
   },
   {
@@ -1397,7 +1435,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Removes any occurrences of any of the characters from the left side of the string.
     `),
     url: `${duck}/text#ltrimstring-characters`,
-    args: [['string', 'string'], ['characters', 'string?']],
+    args: [
+      ['string', 'string'],
+      ['characters', 'string?'],
+    ],
     returns: 'string',
   },
   {
@@ -1448,7 +1489,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Returns true if string contains the regex, false otherwise.
     `),
     url: `${duck}/text#regexp_matchesstring-regex-options`,
-    args: [['string', 'string'], ['regex', 'string']],
+    args: [
+      ['string', 'string'],
+      ['regex', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1459,7 +1503,11 @@ export const duckDbFunctions: FunctionDef[] = [
       If string contains the regex, replaces the matching part with replacement.
     `),
     url: `${duck}/text#regexp_replacestring-regex-replacement-options`,
-    args: [['string', 'string'], ['regex', 'string'], ['replacement', 'string']],
+    args: [
+      ['string', 'string'],
+      ['regex', 'string'],
+      ['replacement', 'string'],
+    ],
     returns: 'string',
   },
   {
@@ -1470,7 +1518,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Repeats the string count number of times.
     `),
     url: `${duck}/text#repeatstring-count`,
-    args: [['string', 'string'], ['count', 'number']],
+    args: [
+      ['string', 'string'],
+      ['count', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1481,7 +1532,11 @@ export const duckDbFunctions: FunctionDef[] = [
       Replaces any occurrences of the source with target in string.
     `),
     url: `${duck}/text#replacestring-source-target`,
-    args: [['string', 'string'], ['source', 'string'], ['target', 'string']],
+    args: [
+      ['string', 'string'],
+      ['source', 'string'],
+      ['target', 'string'],
+    ],
     returns: 'string',
   },
   {
@@ -1503,7 +1558,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Extract the right-most count characters.
     `),
     url: `${duck}/text#rightstring-count`,
-    args: [['string', 'string'], ['count', 'number']],
+    args: [
+      ['string', 'string'],
+      ['count', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1514,7 +1572,11 @@ export const duckDbFunctions: FunctionDef[] = [
       Pads the string with the character on the right until it has count characters. Truncates the string on the right if it has more than count characters.
     `),
     url: `${duck}/text#rpadstring-count-character`,
-    args: [['string', 'string'], ['count', 'number'], ['character', 'string']],
+    args: [
+      ['string', 'string'],
+      ['count', 'number'],
+      ['character', 'string'],
+    ],
     returns: 'string',
   },
   {
@@ -1525,7 +1587,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Removes any occurrences of any of the characters from the right side of the string.
     `),
     url: `${duck}/text#rtrimstring-characters`,
-    args: [['string', 'string'], ['characters', 'string?']],
+    args: [
+      ['string', 'string'],
+      ['characters', 'string?'],
+    ],
     returns: 'string',
   },
   {
@@ -1536,7 +1601,11 @@ export const duckDbFunctions: FunctionDef[] = [
       Splits the string along the separator and returns the data at the (1-based) index of the list.
     `),
     url: `${duck}/text#split_partstring-separator-index`,
-    args: [['string', 'string'], ['separator', 'string'], ['index', 'number']],
+    args: [
+      ['string', 'string'],
+      ['separator', 'string'],
+      ['index', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1547,7 +1616,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Returns true if string begins with search_string.
     `),
     url: `${duck}/text#starts_withstring-search_string`,
-    args: [['string', 'string'], ['search_string', 'string']],
+    args: [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1558,7 +1630,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Splits the string along the separator.
     `),
     url: `${duck}/text#string_splitstring-separator`,
-    args: [['string', 'string'], ['separator', 'string']],
+    args: [
+      ['string', 'string'],
+      ['separator', 'string'],
+    ],
     returns: 'array',
   },
   {
@@ -1591,7 +1666,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Alias for instr.
     `),
     url: `${duck}/text#instrstring-search_string`,
-    args: [['string', 'string'], ['search_string', 'string']],
+    args: [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
     returns: 'number',
   },
   {
@@ -1602,7 +1680,11 @@ export const duckDbFunctions: FunctionDef[] = [
       Alias for substring.
     `),
     url: `${duck}/text#substringstring-start-length`,
-    args: [['string', 'string'], ['start', 'number'], ['length', 'number?']],
+    args: [
+      ['string', 'string'],
+      ['start', 'number'],
+      ['length', 'number?'],
+    ],
     returns: 'string',
   },
   {
@@ -1613,7 +1695,11 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts substring starting from character start. If optional argument length is set, extracts a substring of length characters instead.
     `),
     url: `${duck}/text#substringstring-start-length`,
-    args: [['string', 'string'], ['start', 'number'], ['length', 'number?']],
+    args: [
+      ['string', 'string'],
+      ['start', 'number'],
+      ['length', 'number?'],
+    ],
     returns: 'string',
   },
   {
@@ -1624,7 +1710,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Removes any occurrences of any of the characters from either side of the string.
     `),
     url: `${duck}/text#trimstring-characters`,
-    args: [['string', 'string'], ['characters', 'string?']],
+    args: [
+      ['string', 'string'],
+      ['characters', 'string?'],
+    ],
     returns: 'string',
   },
   {
@@ -1663,7 +1752,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Add the interval to the date and return a DATETIME value.
     `),
     url: `${duck}/date#date_adddate-interval`,
-    args: [['date', 'date'], ['interval', 'interval']],
+    args: [
+      ['date', 'date'],
+      ['interval', 'interval'],
+    ],
     returns: 'timestamp',
   },
   {
@@ -1740,7 +1832,11 @@ export const duckDbFunctions: FunctionDef[] = [
       The date for the given parts.
     `),
     url: `${duck}/date#make_dateyear-month-day`,
-    args: [['year', 'number'], ['month', 'number'], ['day', 'number']],
+    args: [
+      ['year', 'number'],
+      ['month', 'number'],
+      ['day', 'number'],
+    ],
     returns: 'date',
   },
   {
@@ -1762,7 +1858,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Converts a timestamp to a string according to the format string.
     `),
     url: `${duck}/date#strftimedate-format`,
-    args: [['timestamp', 'timestamp'], ['format', 'string']],
+    args: [
+      ['timestamp', 'timestamp'],
+      ['format', 'string'],
+    ],
     returns: 'string',
   },
   {
@@ -1790,7 +1889,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Subtract arguments, resulting in the time difference between the two timestamps.
     `),
     url: `${duck}/timestamp#agetimestamp-timestamp`,
-    args: [['timestamp1', 'timestamp'], ['timestamp2', 'timestamp?']],
+    args: [
+      ['timestamp1', 'timestamp'],
+      ['timestamp2', 'timestamp?'],
+    ],
     returns: 'interval',
   },
   {
@@ -1885,7 +1987,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Converts the string text to timestamp according to the format string.
     `),
     url: `${duck}/timestamp#strptimetext-format`,
-    args: [['text', 'string'], ['format', 'string']],
+    args: [
+      ['text', 'string'],
+      ['format', 'string'],
+    ],
     returns: 'timestamp',
   },
   {
@@ -1896,7 +2001,10 @@ export const duckDbFunctions: FunctionDef[] = [
       Truncate timestamp to a grid of width bucket_width.
     `),
     url: `${duck}/timestamp#time_bucketbucket_width-timestamp-offset`,
-    args: [['bucket_width', 'interval'], ['timestamp', 'timestamp']],
+    args: [
+      ['bucket_width', 'interval'],
+      ['timestamp', 'timestamp'],
+    ],
     returns: 'timestamp',
   },
 

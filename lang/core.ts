@@ -1,22 +1,32 @@
-import {readFile} from 'node:fs/promises'
 import {glob} from 'glob'
-import {FILE_MAP, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors, analyzeTableFully, applyExtends} from './analyze.ts'
-import {type Query} from './types.ts'
-import {fillInParams} from './params.ts'
-import {getOffset} from './util.ts'
-import {config, loadConfig} from './config.ts'
+import {readFile} from 'node:fs/promises'
 import path from 'node:path'
-import {parser} from './parser.js'
-import {parseMarkdown} from './markdown.ts'
 
+import {FILE_MAP, analyzeQuery, findTables, clearWorkspace, diagnostics, clearDiagnostics, getNodeEntity, recordSyntaxErrors, analyzeTableFully, applyExtends} from './analyze.ts'
+import {config, loadConfig} from './config.ts'
+import {parseMarkdown} from './markdown.ts'
+import {fillInParams} from './params.ts'
+import {parser} from './parser.js'
+import {type Query} from './types.ts'
+import {getOffset} from './util.ts'
 
 export {clearWorkspace}
 export {config, loadConfig}
 export type {Query, Table, Diagnostic} from './types.ts'
-export function getTable(name: string) { return Object.values(FILE_MAP).flatMap(f => f.tables).find(t => t.name == name) }
-export function getFile(name: string) { return FILE_MAP[name] }
-export function getFiles() { return Object.values(FILE_MAP) }
-export function getDiagnostics() { return diagnostics }
+export function getTable(name: string) {
+  return Object.values(FILE_MAP)
+    .flatMap(f => f.tables)
+    .find(t => t.name == name)
+}
+export function getFile(name: string) {
+  return FILE_MAP[name]
+}
+export function getFiles() {
+  return Object.values(FILE_MAP)
+}
+export function getDiagnostics() {
+  return diagnostics
+}
 
 // Loads and parses all gsql files within a directory
 export async function loadWorkspace(dir: string, includeMd: boolean) {
@@ -26,7 +36,7 @@ export async function loadWorkspace(dir: string, includeMd: boolean) {
     try {
       let contents = await readFile(path.join(dir, file), 'utf-8')
       updateFile(contents, file)
-    } catch(e: any) {
+    } catch (e: any) {
       console.error('Failed to read file', file, e.message)
     }
   }
@@ -63,7 +73,9 @@ export function analyze(contents?: string, contentType?: 'gsql' | 'md'): Query[]
     return fi.queries
   }
 
-  Object.values(FILE_MAP).flatMap(f => f.tables).forEach(analyzeTableFully)
+  Object.values(FILE_MAP)
+    .flatMap(f => f.tables)
+    .forEach(analyzeTableFully)
   return []
 }
 

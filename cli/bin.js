@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import {fileURLToPath} from 'url'
-import {dirname, join} from 'path'
 import {existsSync} from 'fs'
+import {dirname, join} from 'path'
+import {fileURLToPath} from 'url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const devCli = join(__dirname, 'cli.ts')

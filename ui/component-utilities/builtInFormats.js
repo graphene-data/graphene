@@ -1,5 +1,6 @@
-import {AUTO_FORMAT_CODE, applyColumnUnits, generateImplicitNumberFormat} from './autoFormatting'
 import ssf from 'ssf'
+
+import {AUTO_FORMAT_CODE, applyColumnUnits, generateImplicitNumberFormat} from './autoFormatting'
 
 export const SUPPORTED_CURRENCIES = [
   {
@@ -145,9 +146,9 @@ const DERIVED_CURRENCY_FORMATS = [
   },
 ]
 
-const CURRENCY_FORMATS = SUPPORTED_CURRENCIES.map((currency) => {
+const CURRENCY_FORMATS = SUPPORTED_CURRENCIES.map(currency => {
   let derivedFormats = []
-  DERIVED_CURRENCY_FORMATS.forEach((derivedFormat) => {
+  DERIVED_CURRENCY_FORMATS.forEach(derivedFormat => {
     let next = {
       formatTag: currency.primaryCode + derivedFormat.derivedSuffix,
       parentFormat: currency.primaryCode,
@@ -156,9 +157,7 @@ const CURRENCY_FORMATS = SUPPORTED_CURRENCIES.map((currency) => {
       exampleInput: derivedFormat.exampleInput,
       titleTagReplacement: ` (${currency.currencySymbol})`,
     }
-    let symbolInFormatCode = currency.escapeCurrencySymbol
-      ? `"${currency.currencySymbol}"`
-      : currency.currencySymbol
+    let symbolInFormatCode = currency.escapeCurrencySymbol ? `"${currency.currencySymbol}"` : currency.currencySymbol
     if (derivedFormat.auto || AUTO_FORMAT_CODE === derivedFormat.formatCode) {
       next.formatCode = AUTO_FORMAT_CODE
       //TODO This should be fixed so that 1)the format is NOT recomputed for each value, 2)remove some of magic is done to make it look good.

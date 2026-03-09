@@ -1,9 +1,10 @@
 import ssf from 'ssf'
 import {getContext} from 'svelte'
-import {CUSTOM_FORMATTING_SETTINGS_CONTEXT_KEY} from './globalContexts'
+
 import {findImplicitAutoFormat, autoFormat, fallbackFormat, isAutoFormat} from './autoFormatting'
 import {BUILT_IN_FORMATS} from './builtInFormats'
 import {standardizeDateString} from './dateParsing'
+import {CUSTOM_FORMATTING_SETTINGS_CONTEXT_KEY} from './globalContexts'
 
 const AXIS_FORMATTING_CONTEXT = 'axis'
 const VALUE_FORMATTING_CONTEXT = 'value'
@@ -29,19 +30,13 @@ export const lookupColumnFormat = (columnName, columnEvidenceType, columnUnitSum
 
   if (potentialFormatTag) {
     let customFormats = getCustomFormats()
-    let matchingFormat = [...BUILT_IN_FORMATS, ...customFormats].find(
-      (format) => format.formatTag?.toLowerCase() === potentialFormatTag?.toLowerCase?.(),
-    )
+    let matchingFormat = [...BUILT_IN_FORMATS, ...customFormats].find(format => format.formatTag?.toLowerCase() === potentialFormatTag?.toLowerCase?.())
     if (matchingFormat) {
       return matchingFormat
     }
   }
 
-  let matchingImplicitAutoFormat = findImplicitAutoFormat(
-    columnName,
-    columnEvidenceType,
-    columnUnitSummary,
-  )
+  let matchingImplicitAutoFormat = findImplicitAutoFormat(columnName, columnEvidenceType, columnUnitSummary)
   if (matchingImplicitAutoFormat) {
     return matchingImplicitAutoFormat
   }
@@ -58,9 +53,7 @@ export const lookupColumnFormat = (columnName, columnEvidenceType, columnUnitSum
 export function getFormatObjectFromString(formatString, valueType = undefined) {
   let potentialFormatTag = formatString
   let customFormats = getCustomFormats()
-  let matchingFormat = [...BUILT_IN_FORMATS, ...customFormats].find(
-    (format) => format.formatTag?.toLowerCase() === potentialFormatTag?.toLowerCase?.(),
-  )
+  let matchingFormat = [...BUILT_IN_FORMATS, ...customFormats].find(format => format.formatTag?.toLowerCase() === potentialFormatTag?.toLowerCase?.())
   let newFormat = {}
   if (matchingFormat) {
     if (!valueType || matchingFormat.valueType === valueType) return matchingFormat
@@ -80,11 +73,9 @@ export function getFormatObjectFromString(formatString, valueType = undefined) {
 export const formatValue = (value, columnFormat = undefined, columnUnitSummary = undefined) => {
   try {
     return applyFormatting(value, columnFormat, columnUnitSummary, VALUE_FORMATTING_CONTEXT)
-  } catch(error) {
+  } catch (error) {
     //fallback to default
-    console.warn(
-      `Unexpected error calling applyFormatting(${value}, ${columnFormat}, ${VALUE_FORMATTING_CONTEXT}, ${columnUnitSummary}). Error=${error}`,
-    )
+    console.warn(`Unexpected error calling applyFormatting(${value}, ${columnFormat}, ${VALUE_FORMATTING_CONTEXT}, ${columnUnitSummary}). Error=${error}`)
     return value
   }
 }
@@ -101,9 +92,7 @@ export const formatAxisValue = (value, columnFormat = undefined, columnUnitSumma
 export const applyTitleTagReplacement = (columnName, columnFormatSettings) => {
   let result = columnName
   if (columnName && columnFormatSettings?.formatTag) {
-    let lastIndexOfTag = columnName
-      .toLowerCase()
-      .lastIndexOf(`_${columnFormatSettings.formatTag.toLowerCase()}`)
+    let lastIndexOfTag = columnName.toLowerCase().lastIndexOf(`_${columnFormatSettings.formatTag.toLowerCase()}`)
     let titleTagReplacement = ''
     if (lastIndexOfTag > 0) {
       //explicitly ignore columns starting with _, hence >0 instead of => 0
@@ -116,7 +105,7 @@ export const applyTitleTagReplacement = (columnName, columnFormatSettings) => {
   return result
 }
 
-export const defaultExample = (valueType) => {
+export const defaultExample = valueType => {
   switch (valueType) {
     case 'number':
       return 1234
@@ -127,10 +116,9 @@ export const defaultExample = (valueType) => {
   }
 }
 
-export const formatExample = (format) => {
+export const formatExample = format => {
   let normalizedUserInput = format.userInput?.trim()
-  let preFormattedValue =
-    normalizedUserInput || format.exampleInput || defaultExample(format.valueType)
+  let preFormattedValue = normalizedUserInput || format.exampleInput || defaultExample(format.valueType)
 
   if (preFormattedValue) {
     try {
@@ -145,12 +133,7 @@ export const formatExample = (format) => {
           unitType: 'number',
         }
       }
-      return applyFormatting(
-        preFormattedValue,
-        format,
-        columnUnitSummary,
-        VALUE_FORMATTING_CONTEXT,
-      )
+      return applyFormatting(preFormattedValue, format, columnUnitSummary, VALUE_FORMATTING_CONTEXT)
     } catch {
       //return default value
     }
@@ -158,12 +141,7 @@ export const formatExample = (format) => {
   return ''
 }
 
-function applyFormatting(
-  value,
-  columnFormat = undefined,
-  columnUnitSummary = undefined,
-  formattingContext = VALUE_FORMATTING_CONTEXT,
-) {
+function applyFormatting(value, columnFormat = undefined, columnUnitSummary = undefined, formattingContext = VALUE_FORMATTING_CONTEXT) {
   if (value === undefined || value === null) {
     return '-'
   }
@@ -181,11 +159,7 @@ function applyFormatting(
           // as local time
           // similar in behavior to standardizeDateString
           typedValue = new Date(value.toISOString().slice(0, -1))
-        } else if (
-          columnFormat.valueType === 'number' &&
-          typeof value !== 'number' &&
-          !Number.isNaN(value)
-        ) {
+        } else if (columnFormat.valueType === 'number' && typeof value !== 'number' && !Number.isNaN(value)) {
           typedValue = Number(value)
         } else {
           typedValue = value
@@ -196,7 +170,7 @@ function applyFormatting(
       if (isAutoFormat(columnFormat, formattingCode)) {
         try {
           result = autoFormat(typedValue, columnFormat, columnUnitSummary)
-        } catch(error) {
+        } catch (error) {
           console.warn(`Unexpected error applying auto formatting. Error=${error}`)
         }
       } else if (columnFormat.valueType === 'number' && typeof typedValue === 'number' && isYearOnlyFormat(formattingCode)) {
@@ -204,7 +178,7 @@ function applyFormatting(
       } else {
         result = ssf.format(formattingCode, typedValue)
       }
-    } catch(error) {
+    } catch (error) {
       console.warn(`Unexpected error applying formatting ${error}`)
     }
   }

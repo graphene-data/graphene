@@ -6,7 +6,7 @@ export const strictBuild = false
 export {configKey, propKey}
 
 export const getConfigContext = () => getContext(configKey)
-export const setConfigContext = (v) => setContext(configKey, v)
+export const setConfigContext = v => setContext(configKey, v)
 
 export const getPropContext = () => getContext(propKey)
-export const setPropContext = (v) => setContext(propKey, v)
+export const setPropContext = v => setContext(propKey, v)

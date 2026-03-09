@@ -13,15 +13,17 @@ async function getCache() {
 export async function getHashes() {
   let store = await getCache()
   let keys = await store.keys()
-  return keys.map(k => {
-    let url = new URL(k.url)
-    let expires = Number(url.searchParams.get('expires') || 0)
-    if (expires < Date.now()) {
-      store.delete(k)
-      return null
-    }
-    return url.pathname.replace(/^\//, '')
-  }).filter(h => !!h)
+  return keys
+    .map(k => {
+      let url = new URL(k.url)
+      let expires = Number(url.searchParams.get('expires') || 0)
+      if (expires < Date.now()) {
+        store.delete(k)
+        return null
+      }
+      return url.pathname.replace(/^\//, '')
+    })
+    .filter(h => !!h)
 }
 
 export async function cacheRead(hash: string): Promise<any | null> {
@@ -30,7 +32,7 @@ export async function cacheRead(hash: string): Promise<any | null> {
   return await resp?.clone().json()
 }
 
-export async function cacheWrite(hash: string, response:Response) {
+export async function cacheWrite(hash: string, response: Response) {
   if (!hash) return
   let store = await getCache()
 

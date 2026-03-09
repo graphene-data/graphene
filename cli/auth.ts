@@ -1,24 +1,23 @@
-import fs from 'node:fs/promises'
-import path from 'path'
-import os from 'os'
 import {spawn} from 'child_process'
 import http from 'http'
+import fs from 'node:fs/promises'
+import os from 'os'
+import path from 'path'
+
 import {config} from '../lang/config.ts'
 
-export const AUTH_CLIENT_ID = process.env.AUTH_CLIENT_ID ||
-  (process.env.NODE_ENV == 'test' ?
-    'connected-app-test-1e207553-009e-4382-9bc1-27aceac2a7a0' :
-    'connected-app-live-8264d0af-df18-4021-af96-157482d17856')
+export const AUTH_CLIENT_ID =
+  process.env.AUTH_CLIENT_ID || (process.env.NODE_ENV == 'test' ? 'connected-app-test-1e207553-009e-4382-9bc1-27aceac2a7a0' : 'connected-app-live-8264d0af-df18-4021-af96-157482d17856')
 
 export const AUTH_SCOPES = 'offline_access'
 
 export interface Cred {
-  access_token: string;
-  refresh_token?: string;
-  token_type: string;
-  scope?: string;
-  expires_in: number; // oauth gives us this
-  expires_at: number; // we also store this, so we can see if it the token has expired
+  access_token: string
+  refresh_token?: string
+  token_type: string
+  scope?: string
+  expires_in: number // oauth gives us this
+  expires_at: number // we also store this, so we can see if it the token has expired
 }
 
 const cfgDir = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config')
@@ -47,7 +46,7 @@ async function updateEntry(cred: Cred) {
   await fs.mkdir(path.dirname(credsPath), {recursive: true, mode: 0o700})
   await fs.writeFile(credsPath, JSON.stringify(store, null, 2) + '\n', {mode: 0o600})
   if (process.platform !== 'win32') {
-    await fs.chmod(credsPath, 0o600).catch(() => { })
+    await fs.chmod(credsPath, 0o600).catch(() => {})
   }
 }
 
@@ -82,10 +81,14 @@ async function startLoopback() {
   if (!addr || typeof addr !== 'object') throw new Error('Couldnt start oauth callback server')
   let redirectBase = `http://127.0.0.1:${addr.port}`
 
-  let waitForCode = new Promise <{code: string, state: string}>(resolve => {
+  let waitForCode = new Promise<{code: string; state: string}>(resolve => {
     server.on('request', (req, res) => {
       let url = new URL(req.url || '/', redirectBase)
-      if (url.pathname !== '/callback') { res.statusCode = 404; res.end('Not Found'); return }
+      if (url.pathname !== '/callback') {
+        res.statusCode = 404
+        res.end('Not Found')
+        return
+      }
       let code = url.searchParams.get('code') || ''
       let state = url.searchParams.get('state') || ''
       res.statusCode = 200
@@ -110,7 +113,9 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
   // Build authorize URL (merge with provided URL if present)
   let authorizeUrl = new URL(`${config.host}/authenticate`)
   authorizeUrl.search = new URLSearchParams({
-    redirect_uri, code_challenge, state,
+    redirect_uri,
+    code_challenge,
+    state,
     client_id: AUTH_CLIENT_ID,
     response_type: 'code',
     code_challenge_method: 'S256',

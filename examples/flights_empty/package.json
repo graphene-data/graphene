@@ -1,6 +1,7 @@
 {
   "name": "example-flights-empty",
   "version": "0.0.1",
+  "type": "module",
   "scripts": {
     "setup": "curl -L 'https://drive.google.com/uc?export=download&id=1qlio3d1W8k6bs9Z6-7U7vwnbuAYGZzZK' -o flights.duckdb",
     "graphene": "node ../../cli/cli.ts",
@@ -8,16 +9,19 @@
     "compile": "npm run graphene compile",
     "run": "npm run graphene run"
   },
-  "engines": {
-    "npm": ">=7.0.0",
-    "node": ">=24.0.0"
-  },
-  "type": "module",
   "dependencies": {
     "@graphenedata/cli": "workspace:*"
   },
+  "engines": {
+    "node": ">=24.0.0",
+    "npm": ">=7.0.0"
+  },
   "graphene": {
     "dialect": "duckdb",
-    "envFile": [".env", "../../.env", "../../../.env"]
+    "envFile": [
+      ".env",
+      "../../.env",
+      "../../../.env"
+    ]
   }
 }

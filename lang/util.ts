@@ -1,5 +1,6 @@
-import type {FileInfo} from './types.ts'
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
+
+import type {FileInfo} from './types.ts'
 
 function markdownOffset(offset: number, file: FileInfo) {
   let map = file.virtualToMarkdownOffset
@@ -71,16 +72,19 @@ export function compact<T>(obj: T): T {
 
 export function trimIndentation(str: string) {
   let lines = str.trim().split('\n')
-  let indent = lines.slice(1)
+  let indent = lines
+    .slice(1)
     .filter(l => l.trim() !== '')
     .map(l => l.match(/^\s*/)![0].length)
 
   let toRemove = Math.min(...indent)
-  return lines.map((line, index) => {
-    if (index == 0) return line
-    if (line.trim() === '') return ''
-    return line.slice(toRemove)
-  }).join('\n')
+  return lines
+    .map((line, index) => {
+      if (index == 0) return line
+      if (line.trim() === '') return ''
+      return line.slice(toRemove)
+    })
+    .join('\n')
 }
 
 export async function pollFor<T>(fn: () => T, timeoutMs: number, interval?: number): Promise<T | null> {

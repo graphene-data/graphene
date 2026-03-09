@@ -1,6 +1,7 @@
 import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
-import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
+
 import {config} from '../../lang/config.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
 
 // BigQuery identifiers can contain letters, numbers, underscores, and hyphens
 function validateBigQueryIdent(ident: string) {

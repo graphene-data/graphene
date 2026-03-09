@@ -1,5 +1,6 @@
-import {parser} from './parser.js'
 import type {FileInfo} from './types.ts'
+
+import {parser} from './parser.js'
 
 // This parser turns Graphene md files into the equivalent gsql, and then parses that gsql.
 // Code fences are turned in to table definitions, while Component calls are turned into queries.
@@ -16,7 +17,7 @@ import type {FileInfo} from './types.ts'
 // Only components with a `data` attribute get turned into queries, and only attributes in a static list are fields to select.
 
 const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'series', 'value', 'category'] as const
-type ComponentAttributeKey = typeof COMPONENT_ATTRIBUTE_KEYS[number]
+type ComponentAttributeKey = (typeof COMPONENT_ATTRIBUTE_KEYS)[number]
 
 const GSQL_FENCE = /^([ \t]*)(`{3,})g?sql[^\n]*\n([\s\S]*?)^\1\2[ \t]*$/gim
 const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+(?:[^>"']|"[^"]*"|'[^']*')*\/>/g
@@ -135,12 +136,16 @@ export function parseMarkdown(fi: FileInfo) {
       }
 
       let lastAttr = previousAttr
-      let selectEnd = lastAttr ? lastAttr.start + lastAttr.value.length : (data.start + data.value.length)
-      let resetPoint = (lastAttr ? lastAttr.start + lastAttr.value.length - 1 : data.start + data.value.length - 1)
-      appendMapped(';\n', (i: number) => {
-        if (i === 0) return selectEnd
-        return component.end
-      }, {reset: resetPoint})
+      let selectEnd = lastAttr ? lastAttr.start + lastAttr.value.length : data.start + data.value.length
+      let resetPoint = lastAttr ? lastAttr.start + lastAttr.value.length - 1 : data.start + data.value.length - 1
+      appendMapped(
+        ';\n',
+        (i: number) => {
+          if (i === 0) return selectEnd
+          return component.end
+        },
+        {reset: resetPoint},
+      )
     }
     cursor = component.end
   }

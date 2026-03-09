@@ -1,8 +1,9 @@
 import {spawn, exec} from 'child_process'
-import {promisify} from 'util'
-import {fileURLToPath} from 'url'
 import fs from 'fs-extra'
 import path from 'path'
+import {fileURLToPath} from 'url'
+import {promisify} from 'util'
+
 import {config} from '../lang/config.ts'
 
 const execAsync = promisify(exec)
@@ -27,9 +28,10 @@ export async function runServeInBackground(): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     let buffer = ''
     fs.watchFile(logFile, {interval: 200}, (curr, prev) => {
-      if (curr.size > prev.size) { // File has grown, read the new data
+      if (curr.size > prev.size) {
+        // File has grown, read the new data
         let stream = fs.createReadStream(logFile, {start: 0, end: curr.size - 1})
-        stream.on('data', (d) => {
+        stream.on('data', d => {
           process.stdout.write(d)
           buffer = (buffer + d.toString()).slice(-200)
           if (buffer.includes('Server running at http://localhost:')) resolve()
@@ -54,7 +56,7 @@ function sendSignal(pid: number, signal: NodeJS.Signals): boolean {
   for (let target of pids) {
     try {
       process.kill(target, signal)
-    } catch(err) {
+    } catch (err) {
       let code = (err as NodeJS.ErrnoException).code
       if (code === 'ESRCH' || code === 'EINVAL') continue
       return false
@@ -105,11 +107,11 @@ async function getPidOnPort(port: number): Promise<number | undefined> {
         }
       }
     } else {
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         let child = spawn('lsof', ['-i', `:${port}`, '-t', '-sTCP:LISTEN'])
         let stdout = ''
-        child.stdout.on('data', d => stdout += d.toString())
-        child.on('close', (code) => {
+        child.stdout.on('data', d => (stdout += d.toString()))
+        child.on('close', code => {
           if (code !== 0) return resolve(undefined)
           let pid = parseInt(stdout.trim(), 10)
           resolve(isNaN(pid) ? undefined : pid)
@@ -117,7 +119,7 @@ async function getPidOnPort(port: number): Promise<number | undefined> {
         child.on('error', () => resolve(undefined))
       })
     }
-  } catch(e:any) {
+  } catch (e: any) {
     console.warn('Failed to check for server:', e.message)
     return undefined
   }
