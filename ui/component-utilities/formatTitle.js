@@ -8,7 +8,7 @@ export default function formatTitle(column, columnFormat) {
   let lowercase = ['of', 'the', 'and', 'in', 'on']
   // Set name to proper casing:
   function toTitleCase(str) {
-    return str.replace(/\S*/g, function(txt) {
+    return str.replace(/\S*/g, function (txt) {
       if (!acronyms.includes(txt) && !lowercase.includes(txt)) {
         return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
       } else if (acronyms.includes(txt)) {

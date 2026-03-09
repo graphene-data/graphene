@@ -1,8 +1,10 @@
 {
   "name": "@graphenedata/ui",
-  "main": "web.js",
-  "type": "module",
   "private": true,
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "web.js",
   "scripts": {
     "test": "vitest run ui --root ..",
     "test-one": "node ../scripts/turboTest.js"
@@ -24,7 +26,5 @@
     "playwright": "1.58.0",
     "strip-ansi": "^7.1.2",
     "svelte": "5.53.7"
-  },
-  "author": "",
-  "license": "ISC"
+  }
 }

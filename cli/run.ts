@@ -1,21 +1,21 @@
 import fs from 'fs-extra'
+import {type IncomingMessage, type ServerResponse} from 'http'
+import {readFileSync} from 'node:fs'
+import {styleText} from 'node:util'
 import os from 'os'
 import path from 'path'
-import {type IncomingMessage, type ServerResponse} from 'http'
-import {WebSocketServer, type WebSocket} from 'ws'
 import {type PluginOption, type ViteDevServer} from 'vite'
+import {WebSocketServer, type WebSocket} from 'ws'
 
-import {analyze, config, type Diagnostic, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
-import {printDiagnostics, printTable} from './printer.ts'
-import {readFileSync} from 'node:fs'
-import {mockFileMap} from './mockFiles.ts'
-import {isServerRunning, runServeInBackground} from './background.ts'
-import {openInBrowser} from './auth.ts'
-import {styleText} from 'node:util'
-import {pollFor} from '../lang/util.ts'
 import {FILE_MAP} from '../lang/analyze.ts'
+import {analyze, config, type Diagnostic, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
+import {pollFor} from '../lang/util.ts'
+import {openInBrowser} from './auth.ts'
+import {isServerRunning, runServeInBackground} from './background.ts'
 import {runQuery} from './connections/index.ts'
+import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
+import {printDiagnostics, printTable} from './printer.ts'
 
 export interface RunMdFileOptions {
   mdArg: string
@@ -23,7 +23,7 @@ export interface RunMdFileOptions {
   log?: (...args: any[]) => void
 }
 
-let browserConnections: {url: string, socket: WebSocket}[] = []
+let browserConnections: {url: string; socket: WebSocket}[] = []
 let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {}
 
 export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
@@ -132,13 +132,7 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
     return false
   }
 
-  let runQueryFence = [
-    mdContents,
-    '',
-    '```sql',
-    `from ${queryName} select *`,
-    '```',
-  ].join('\n')
+  let runQueryFence = [mdContents, '', '```sql', `from ${queryName} select *`, '```'].join('\n')
   let queries = analyze(runQueryFence, 'md')
   if (getDiagnostics().length > 0) {
     printDiagnostics(getDiagnostics())
@@ -173,7 +167,7 @@ async function sendRunRequest({host, pageUrl, chart}) {
     }
 
     return body
-  } catch(err: any) {
+  } catch (err: any) {
     clearTimeout(timeout)
     if (err.name === 'AbortError') return {checkError: 'timeout'}
     return {checkError: 'no_server'}
@@ -229,7 +223,7 @@ export function runVitePlugin(): PluginOption {
 
       server.httpServer?.on('close', () => wss.close())
 
-      server.middlewares.use(async(req, res, next) => {
+      server.middlewares.use(async (req, res, next) => {
         let [pathName] = (req.url || '').split('?')
         if (pathName === '/_api/check') await proxyRunRequest(req, res)
         else next()

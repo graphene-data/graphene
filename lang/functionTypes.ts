@@ -12,9 +12,7 @@ export type SQLType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | '
 //   'T?'         - optional generic
 //   'T...'       - variadic generic
 //   'kw'         - SQL keyword (not a string value, passed through as-is)
-export type ArgDef =
-  | [name: string, type: string | string[]]
-  | {name: string; type: string | string[]; description?: string}
+export type ArgDef = [name: string, type: string | string[]] | {name: string; type: string | string[]; description?: string}
 
 // A single function signature (for functions with multiple overloads)
 export interface FunctionOverload {
@@ -24,10 +22,10 @@ export interface FunctionOverload {
 
 export interface FunctionDef {
   name: string
-  description: string  // Full description from docs (include Definitions, Description, Details sections)
+  description: string // Full description from docs (include Definitions, Description, Details sections)
   url: string
   args: ArgDef[]
-  returns: string  // Can be SQLType, 'T' for generic, etc.
+  returns: string // Can be SQLType, 'T' for generic, etc.
   aggregate?: boolean
   window?: boolean
   // For functions where the SQL name differs from the gsql name (e.g., local_timestamp -> LOCALTIMESTAMP)

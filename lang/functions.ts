@@ -1,34 +1,36 @@
 import {type SyntaxNode} from '@lezer/common'
-import {config} from './config.ts'
-import {txt} from './util.ts'
-import {type Expr, type FieldType, type Scope} from './types.ts'
+
+import type {FunctionDef, ArgDef} from './functionTypes.ts'
+
 import {diag, checkTypes} from './analyze.ts'
 import {bigQueryFunctions} from './bigQueryFunctions.ts'
+import {config} from './config.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
-import type {FunctionDef, ArgDef} from './functionTypes.ts'
+import {type Expr, type FieldType, type Scope} from './types.ts'
+import {txt} from './util.ts'
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
 interface Overload {
-  params: {name: string, allowedTypes: {type: FieldType | 'sql native', rawType?: string}[], isVariadic?: boolean}[]
-  returnType: {type: FieldType | 'generic', expressionType?: 'aggregate' | 'scalar' | 'window'}
+  params: {name: string; allowedTypes: {type: FieldType | 'sql native'; rawType?: string}[]; isVariadic?: boolean}[]
+  returnType: {type: FieldType | 'generic'; expressionType?: 'aggregate' | 'scalar' | 'window'}
   sqlName?: string
 }
 
 // Convert a FunctionDef arg type string (e.g. 'number', 'T', 'string...', 'kw') to allowedTypes
-function parseArgType(typeStr: string): {type: FieldType | 'sql native', rawType?: string}[] {
+function parseArgType(typeStr: string): {type: FieldType | 'sql native'; rawType?: string}[] {
   let base = typeStr.replace(/[?.]/g, '')
   if (base === 'kw') return [{type: 'sql native', rawType: 'kw'}]
   if (base === 'T' || base === 'any') return [{type: 'string'}, {type: 'number'}, {type: 'boolean'}, {type: 'date'}, {type: 'timestamp'}, {type: 'json'}]
   return [{type: base as FieldType}]
 }
 
-function getArgInfo(arg: ArgDef): {name: string, type: string} {
+function getArgInfo(arg: ArgDef): {name: string; type: string} {
   let [name, type] = Array.isArray(arg) ? [arg[0], arg[1]] : [arg.name, arg.type]
   return {name, type: Array.isArray(type) ? type[0] : type}
 }
 
-function parseArgTypes(arg: ArgDef): {type: FieldType | 'sql native', rawType?: string}[] {
+function parseArgTypes(arg: ArgDef): {type: FieldType | 'sql native'; rawType?: string}[] {
   let type = Array.isArray(arg) ? arg[1] : arg.type
   if (Array.isArray(type)) return type.map(t => ({type: t as FieldType}))
   return parseArgType(type)
@@ -39,7 +41,7 @@ function convertDef(def: FunctionDef): Overload[] {
   let expressionType: 'aggregate' | 'window' | 'scalar' = 'scalar'
   if (def.aggregate) expressionType = 'aggregate'
   else if (def.window) expressionType = 'window'
-  let returnType = def.returns === 'T' ? 'generic' as const : def.returns as FieldType
+  let returnType = def.returns === 'T' ? ('generic' as const) : (def.returns as FieldType)
 
   let argSets: ArgDef[][] = [def.args]
   // If any args are optional (type ends with '?'), expand into multiple overloads

@@ -1,8 +1,9 @@
+import type {Locator, Page} from 'playwright'
+
 import {expect as baseExpect} from '@playwright/test'
-import {expect as vitestExpect} from 'vitest'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import type {Locator, Page} from 'playwright'
+import {expect as vitestExpect} from 'vitest'
 
 // Snapshot directory - must be set via setSnapshotDir() in a setupFiles script
 let snapshotDir: string | undefined
@@ -21,7 +22,7 @@ const extendedExpect = baseExpect.extend({
     let testFile = path.basename(testPath)
 
     // Wait for fonts to load to ensure consistent rendering across environments
-    await (page as Page).evaluate(async() => {
+    await (page as Page).evaluate(async () => {
       await document.fonts.ready
       await (window as any).$GRAPHENE?.waitForLoad?.()
       await new Promise(r => requestAnimationFrame(r))
@@ -31,7 +32,10 @@ const extendedExpect = baseExpect.extend({
     let expectedBuffer = await fs.readFile(snapshotPath).catch(() => null)
 
     let opts = {
-      animations: 'disabled', caret: 'hide', scale: 'css', locator,
+      animations: 'disabled',
+      caret: 'hide',
+      scale: 'css',
+      locator,
       maxDiffPixelRatio: 0.02, // allow minor cross-platform text AA while still catching structural changes
       threshold: 0.1, // even small color changes should count
       timeout: 5_000,

@@ -19,7 +19,7 @@ A comprehensive dashboard showcasing flight data metrics from 2000-2005.
 </Row>
 
 ```sql weekly_trends
-select 
+select
   date_trunc('week', dep_time) as week,
   cancellation_rate,
   diversion_rate,
@@ -56,7 +56,7 @@ order by 1 asc
 ## Carrier Comparison
 
 ```sql carrier_performance
-select 
+select
   carriers.name as carrier_name,
   count(*) as flight_count,
   on_time_departure_rate,
@@ -66,7 +66,7 @@ select
   cancellation_rate,
   avg(dep_delay) as avg_departure_delay,
   avg(arr_delay) as avg_arrival_delay
-from flights 
+from flights
 group by 1
 order by 2 desc
 ```

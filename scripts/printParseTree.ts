@@ -3,6 +3,7 @@
 
 // @ts-expect-error - imports from lang workspace
 import type {TreeCursor} from '@lezer/common'
+
 import {readFile} from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'

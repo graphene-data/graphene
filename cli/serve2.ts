@@ -1,22 +1,25 @@
-import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql, getFiles} from '../lang/core.ts'
-import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
-import fs from 'fs-extra'
 import crypto from 'crypto'
+import fs from 'fs-extra'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {type IncomingMessage, type ServerResponse} from 'http'
 import {mdsvex} from 'mdsvex'
 import path from 'path'
 import {fileURLToPath} from 'url'
+import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
+
+import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql, getFiles} from '../lang/core.ts'
 import {runQuery} from './connections/index.ts'
 import {injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
-import {runVitePlugin} from './run.ts'
 import {mockFileMap} from './mockFiles.ts'
+import {runVitePlugin} from './run.ts'
 
 // Collect Svelte compiler warnings for test assertions
-export type SvelteWarning = {code: string, message: string, filename?: string}
+export type SvelteWarning = {code: string; message: string; filename?: string}
 export const svelteWarnings: SvelteWarning[] = []
-export function clearSvelteWarnings() { svelteWarnings.length = 0 }
+export function clearSvelteWarnings() {
+  svelteWarnings.length = 0
+}
 
 let uiRoot: string
 
@@ -145,7 +148,9 @@ async function handlePage(server: ViteDevServer, res: ServerResponse<IncomingMes
   res.setHeader('Content-Type', 'text/html')
 
   // Use a .html URL for transformIndexHtml so Vite doesn't run the svelte plugin on our HTML template.
-  let html = await server.transformIndexHtml('/index.html', `<!doctype html>
+  let html = await server.transformIndexHtml(
+    '/index.html',
+    `<!doctype html>
   <html lang="en">
     <head>
       <meta charset="UTF-8" />
@@ -158,7 +163,8 @@ async function handlePage(server: ViteDevServer, res: ServerResponse<IncomingMes
         import 'graphene'
       </script>
     </body>
-  </html>`)
+  </html>`,
+  )
   return res.end(html)
 }
 
@@ -174,7 +180,9 @@ export async function prepareDeps() {
 function fixSvelteDepsInTests() {
   let viteConfig: any
 
-  function configResolved(cfg:any) { viteConfig = cfg }
+  function configResolved(cfg: any) {
+    viteConfig = cfg
+  }
 
   // This must run AFTER Svelte's buildStart which sets force=true based on metadata changes.
   // Using enforce:'post' and sequential:true ensures we run last and can override.
@@ -229,11 +237,13 @@ const updateWorkspacePlugin = {
     return `export default ${JSON.stringify(allFiles)}`
   },
   configureServer: (s: ViteDevServer) => {
-    let refresh = async() => {
+    let refresh = async () => {
       clearWorkspace()
       workspaceLoadPromise = loadWorkspace(config.root, true)
       await workspaceLoadPromise
-      mdFiles = getFiles().filter(f => f.path.endsWith('.md')).map(f => f.path)
+      mdFiles = getFiles()
+        .filter(f => f.path.endsWith('.md'))
+        .map(f => f.path)
       mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))
       if (process.env.NODE_ENV == 'test') {
         mdFiles.push(...Object.keys(mockFileMap))
@@ -263,12 +273,12 @@ const handleRequestPlugin = {
         let relativeMdPath = pathName.replace(/^\//, '') + '.md'
         let mdPath = path.join(config.root, relativeMdPath)
 
-        if (mockFileMap[relativeMdPath] || await fs.exists(mdPath)) {
+        if (mockFileMap[relativeMdPath] || (await fs.exists(mdPath))) {
           await handlePage(s, res)
         } else {
           next()
         }
-      } catch(err: any) {
+      } catch (err: any) {
         if (process.env.NODE_ENV != 'test') console.error(err) // ignore in tests because they're noisy, and any unexpected errors should be captured by browserConsole.
         res.statusCode = 500
         res.end(JSON.stringify([{message: err.message, stack: err.stack}]))

@@ -4,11 +4,13 @@ notes: This example uses [theLook eCommerce](https://console.cloud.google.com/ma
 ---
 
 # KPI Summary
+
 [Product Explorer](product-explorer) | [Returns investigation](returns-investigation)
 
 ```sql kpis_by_day
 from order_items select date_trunc(created_at, day) as day, revenue, gross_profit, gross_margin_pct, units_sold as units
 ```
+
 <Row>
   <LineChart data="kpis_by_day" title="Revenue by Day" x="day" y="revenue" />
   <LineChart data="kpis_by_day" title="Gross Profit by Day" x="day" y="gross_profit" />

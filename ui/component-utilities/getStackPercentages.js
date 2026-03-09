@@ -1,4 +1,5 @@
 import {groupBy, sum, mutateWithSummary, mutate, rate, rename} from '@tidyjs/tidy'
+
 import {tidyWithTypes} from './tidyWithTypes.js'
 
 export default function getStackPercentages(data, groupCol, valueCol) {

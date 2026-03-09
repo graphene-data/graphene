@@ -100,12 +100,12 @@ export function findInterval(arr) {
   }
 
   // Sort array ascending
-  arr.sort(function(a, b) {
+  arr.sort(function (a, b) {
     return a - b
   })
 
   // 1. Multiply array by 100
-  arr = arr.map(function(x) {
+  arr = arr.map(function (x) {
     return x * 100000000
   })
 

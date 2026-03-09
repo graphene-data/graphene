@@ -1,6 +1,7 @@
-import {toSql, analyze, getDiagnostics, type Diagnostic} from './core.ts'
-import {expect as vitestExpect} from 'vitest'
 import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
+import {expect as vitestExpect} from 'vitest'
+
+import {toSql, analyze, getDiagnostics, type Diagnostic} from './core.ts'
 import {trimIndentation} from './util.ts'
 
 const ECOMM_SETUP = `
@@ -66,10 +67,12 @@ function codeFrame(source: string, from: number, to: number): string {
 
 function formatDiagnostics(source: string, diagnostics: Diagnostic[]): string {
   if (!diagnostics.length) return ''
-  return diagnostics.map((d, i) => {
-    let frame = codeFrame(source, d.from.offset, d.to.offset)
-    return `#${i + 1}: ${d.message}\n${frame}`
-  }).join('\n\n')
+  return diagnostics
+    .map((d, i) => {
+      let frame = codeFrame(source, d.from.offset, d.to.offset)
+      return `#${i + 1}: ${d.message}\n${frame}`
+    })
+    .join('\n\n')
 }
 
 let conn: DuckDBConnection
@@ -82,8 +85,8 @@ export async function prepareEcommerceTables() {
 
 // small delay to allow debugger to attach, since vitest doesn't support --inspect-wait
 if (process.env.GRAPHENE_DEBUG) {
-  beforeAll(async() => {
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  beforeAll(async () => {
+    await new Promise(resolve => setTimeout(resolve, 1000))
   })
 }
 
@@ -109,9 +112,7 @@ vitestExpect.extend({
     let pass = normalizeSql(sql) === normalizeSql(expectedSql)
     return {
       pass,
-      message: () => pass
-        ? 'expected SQL not to match (but it did)'
-        : 'Rendered SQL did not match.',
+      message: () => (pass ? 'expected SQL not to match (but it did)' : 'Rendered SQL did not match.'),
       actual: normalizeSql(sql),
       expected: normalizeSql(expectedSql),
     }
@@ -133,19 +134,17 @@ vitestExpect.extend({
     try {
       let reader = await conn.runAndReadAll(sql)
       let actualRows: any[][] = reader.getRowObjects().map(r => {
-        return Object.keys(r).map(k => typeof r[k] === 'bigint' ? Number(r[k]) : r[k])
+        return Object.keys(r).map(k => (typeof r[k] === 'bigint' ? Number(r[k]) : r[k]))
       })
 
       let pass = JSON.stringify(actualRows) === JSON.stringify(expectedRows)
       return {
         pass,
-        message: () => pass
-          ? 'expected rows not to match (but they did)'
-          : `Rows did not match.\nActual: ${JSON.stringify(actualRows)}\nExpected: ${JSON.stringify(expectedRows)}`,
+        message: () => (pass ? 'expected rows not to match (but they did)' : `Rows did not match.\nActual: ${JSON.stringify(actualRows)}\nExpected: ${JSON.stringify(expectedRows)}`),
         actual: actualRows,
         expected: expectedRows,
       }
-    } catch(err: any) {
+    } catch (err: any) {
       return {
         pass: false,
         message: () => `Execution failed: ${err?.message || String(err)}\nSQL: ${sql}`,
@@ -165,9 +164,10 @@ vitestExpect.extend({
     let pass = !!match
     return {
       pass,
-      message: () => pass
-        ? `Expected no diagnostic matching ${regex}, but found one:\n${formatDiagnostics(content, [match!])}`
-        : `Expected a diagnostic matching ${regex}, but found ${diagnostics.length}.\n\n${formatDiagnostics(content, diagnostics) || 'No diagnostics.'}`,
+      message: () =>
+        pass
+          ? `Expected no diagnostic matching ${regex}, but found one:\n${formatDiagnostics(content, [match!])}`
+          : `Expected a diagnostic matching ${regex}, but found ${diagnostics.length}.\n\n${formatDiagnostics(content, diagnostics) || 'No diagnostics.'}`,
     }
   },
 
@@ -178,9 +178,7 @@ vitestExpect.extend({
     let errors = getDiagnostics().filter(d => d.severity === 'error')
     return {
       pass: errors.length === 0,
-      message: () => errors.length === 0
-        ? 'No errors found.'
-        : `Expected no errors, but found ${errors.length}.\n\n${formatDiagnostics(content, errors)}`,
+      message: () => (errors.length === 0 ? 'No errors found.' : `Expected no errors, but found ${errors.length}.\n\n${formatDiagnostics(content, errors)}`),
     }
   },
 })
@@ -188,16 +186,16 @@ vitestExpect.extend({
 // Vitest type augmentation
 declare module 'vitest' {
   interface Assertion {
-    toRenderSql (expectedSql: string, opts?: {preserveCase: boolean}): void
-    toReturnRows (...rows: unknown[][]): Promise<void>
-    toHaveDiagnostic (pattern: RegExp | string): void
-    toHaveNoErrors (): void
+    toRenderSql(expectedSql: string, opts?: {preserveCase: boolean}): void
+    toReturnRows(...rows: unknown[][]): Promise<void>
+    toHaveDiagnostic(pattern: RegExp | string): void
+    toHaveNoErrors(): void
   }
 
   interface AsymmetricMatchersContaining {
-    toRenderSql (expectedSql: string, opts?: {preserveCase: boolean}): void
-    toReturnRows (...rows: unknown[][]): Promise<void>
-    toHaveDiagnostic (pattern: RegExp | string): void
-    toHaveNoErrors (): void
+    toRenderSql(expectedSql: string, opts?: {preserveCase: boolean}): void
+    toReturnRows(...rows: unknown[][]): Promise<void>
+    toHaveDiagnostic(pattern: RegExp | string): void
+    toHaveNoErrors(): void
   }
 }

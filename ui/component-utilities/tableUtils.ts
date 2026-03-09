@@ -16,9 +16,7 @@ type ColumnLike = ColumnOption & Partial<ColumnSummary>
 export const safeExtractColumn = <T extends ColumnLike>(column: T, columnSummary: ColumnSummary[]): ColumnSummary => {
   let foundCols = columnSummary.filter(d => d.id === column.id)
   if (!foundCols.length) {
-    let error = column.id === undefined
-      ? new Error('please add an "id" property to all the <Column ... />')
-      : new Error(`column with id: "${column.id}" not found`)
+    let error = column.id === undefined ? new Error('please add an "id" property to all the <Column ... />') : new Error(`column with id: "${column.id}" not found`)
     if (strictBuild) throw error
     console.warn(error.message)
     return {id: column.id ?? ''}
@@ -56,21 +54,12 @@ export const median = (data: Record<string, unknown>[], column: string): number 
   return values.length % 2 !== 0 ? values[mid] : (values[mid - 1] + values[mid]) / 2
 }
 
-export const aggregateColumn = (
-  data: Record<string, unknown>[],
-  columnName: string,
-  aggType: string | undefined,
-  columnType?: string,
-  weightColumnName?: string | null,
-): number | string | null => {
+export const aggregateColumn = (data: Record<string, unknown>[], columnName: string, aggType: string | undefined, columnType?: string, weightColumnName?: string | null): number | string | null => {
   if (!data || !data.length) return null
 
   if (!aggType && columnType === 'number') aggType = 'sum'
 
-  if (
-    columnType !== 'number' &&
-    ['sum', 'min', 'max', 'mean', 'weightedMean', 'median', undefined].includes(aggType as any)
-  ) {
+  if (columnType !== 'number' && ['sum', 'min', 'max', 'mean', 'weightedMean', 'median', undefined].includes(aggType as any)) {
     return '-'
   }
 
@@ -87,9 +76,7 @@ export const aggregateColumn = (
     case 'max':
       return Math.max(...columnValues)
     case 'mean':
-      return columnValues.length
-        ? columnValues.reduce((sum, val) => sum + Number(val), 0) / columnValues.length
-        : '-'
+      return columnValues.length ? columnValues.reduce((sum, val) => sum + Number(val), 0) / columnValues.length : '-'
     case 'count':
       return data.length
     case 'countDistinct':

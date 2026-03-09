@@ -1,4 +1,5 @@
 import {groupBy, summarizeAt, sum} from '@tidyjs/tidy'
+
 import {tidyWithTypes} from './tidyWithTypes.js'
 
 export default function getStackedData(data, groupCol, valueCol) {

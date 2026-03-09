@@ -5,6 +5,7 @@
 // https://cloud.google.com/bigquery/docs/reference/standard-sql/
 
 import type {FunctionDef} from './functionTypes.ts'
+
 import {trimIndentation} from './util.ts'
 
 const bq = 'https://cloud.google.com/bigquery/docs/reference/standard-sql'
@@ -547,7 +548,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: FLOAT64
     `),
     url: `${bq}/mathematical_functions#atan2`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -701,7 +705,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: The larger of the two argument types.
     `),
     url: `${bq}/mathematical_functions#div`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -813,7 +820,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: FLOAT64
     `),
     url: `${bq}/mathematical_functions#log`,
-    args: [['x', 'number'], ['y', 'number?']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number?'],
+    ],
     returns: 'number',
   },
   {
@@ -841,7 +851,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: The larger of the two argument types.
     `),
     url: `${bq}/mathematical_functions#mod`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -855,7 +868,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: FLOAT64
     `),
     url: `${bq}/mathematical_functions#pow`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -869,7 +885,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: FLOAT64
     `),
     url: `${bq}/mathematical_functions#power`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -897,7 +916,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: If X is FLOAT64, returns FLOAT64. Otherwise returns NUMERIC or BIGNUMERIC.
     `),
     url: `${bq}/mathematical_functions#round`,
-    args: [['x', 'number'], ['n', 'number?']],
+    args: [
+      ['x', 'number'],
+      ['n', 'number?'],
+    ],
     returns: 'number',
   },
   {
@@ -911,7 +933,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: Same as input types
     `),
     url: `${bq}/mathematical_functions#safe_add`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -925,7 +950,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: FLOAT64 for integer inputs, or same as input for other types.
     `),
     url: `${bq}/mathematical_functions#safe_divide`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -939,7 +967,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: Same as input types
     `),
     url: `${bq}/mathematical_functions#safe_multiply`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -967,7 +998,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: Same as input types
     `),
     url: `${bq}/mathematical_functions#safe_subtract`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
   },
   {
@@ -1093,7 +1127,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: If X is FLOAT64, returns FLOAT64. Otherwise returns NUMERIC or BIGNUMERIC.
     `),
     url: `${bq}/mathematical_functions#trunc`,
-    args: [['x', 'number'], ['n', 'number?']],
+    args: [
+      ['x', 'number'],
+      ['n', 'number?'],
+    ],
     returns: 'number',
   },
 
@@ -1206,7 +1243,11 @@ export const bigQueryFunctions: FunctionDef[] = [
     args: [
       {name: 'expression', type: 'any', description: 'The data to search over. The expression can be a column or table reference.'},
       {name: 'search_value_literal', type: 'string', description: 'The value to search for. It must be a STRING literal or a STRING constant expression.'},
-      {name: 'json_scope', type: 'string?', description: "A named argument with a STRING value. Takes 'JSON_VALUES' (default), 'JSON_KEYS', or 'JSON_KEYS_AND_VALUES' to indicate the scope of JSON data to be searched."},
+      {
+        name: 'json_scope',
+        type: 'string?',
+        description: "A named argument with a STRING value. Takes 'JSON_VALUES' (default), 'JSON_KEYS', or 'JSON_KEYS_AND_VALUES' to indicate the scope of JSON data to be searched.",
+      },
     ],
     returns: 'boolean',
   },
@@ -1221,7 +1262,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: BOOL
     `),
     url: `${bq}/string_functions#ends_with`,
-    args: [['value', 'string'], ['suffix', 'string']],
+    args: [
+      ['value', 'string'],
+      ['suffix', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1235,7 +1279,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING
     `),
     url: `${bq}/string_functions#format`,
-    args: [['format_string', 'string'], ['values', 'any...']],
+    args: [
+      ['format_string', 'string'],
+      ['values', 'any...'],
+    ],
     returns: 'string',
   },
   {
@@ -1295,7 +1342,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING or BYTES
     `),
     url: `${bq}/string_functions#left`,
-    args: [['value', 'string'], ['length', 'number']],
+    args: [
+      ['value', 'string'],
+      ['length', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1379,7 +1429,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: BOOL
     `),
     url: `${bq}/string_functions#regexp_contains`,
-    args: [['value', 'string'], ['regexp', 'string']],
+    args: [
+      ['value', 'string'],
+      ['regexp', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1414,7 +1467,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: ARRAY<STRING>
     `),
     url: `${bq}/string_functions#regexp_extract_all`,
-    args: [['value', 'string'], ['regexp', 'string']],
+    args: [
+      ['value', 'string'],
+      ['regexp', 'string'],
+    ],
     returns: 'array',
   },
   {
@@ -1449,7 +1505,11 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING or BYTES
     `),
     url: `${bq}/string_functions#regexp_replace`,
-    args: [['value', 'string'], ['regexp', 'string'], ['replacement', 'string']],
+    args: [
+      ['value', 'string'],
+      ['regexp', 'string'],
+      ['replacement', 'string'],
+    ],
     returns: 'string',
   },
   {
@@ -1465,7 +1525,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING or BYTES
     `),
     url: `${bq}/string_functions#repeat`,
-    args: [['original_value', 'string'], ['repetitions', 'number']],
+    args: [
+      ['original_value', 'string'],
+      ['repetitions', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1479,7 +1542,11 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING or BYTES
     `),
     url: `${bq}/string_functions#replace`,
-    args: [['original_value', 'string'], ['from_expression', 'string'], ['to_expression', 'string']],
+    args: [
+      ['original_value', 'string'],
+      ['from_expression', 'string'],
+      ['to_expression', 'string'],
+    ],
     returns: 'string',
   },
   {
@@ -1507,7 +1574,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING or BYTES
     `),
     url: `${bq}/string_functions#right`,
-    args: [['value', 'string'], ['length', 'number']],
+    args: [
+      ['value', 'string'],
+      ['length', 'number'],
+    ],
     returns: 'string',
   },
   {
@@ -1539,7 +1609,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING or BYTES
     `),
     url: `${bq}/string_functions#rtrim`,
-    args: [['value', 'string'], ['characters', 'string?']],
+    args: [
+      ['value', 'string'],
+      ['characters', 'string?'],
+    ],
     returns: 'string',
   },
   {
@@ -1586,7 +1659,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: BOOL
     `),
     url: `${bq}/string_functions#starts_with`,
-    args: [['value', 'string'], ['prefix', 'string']],
+    args: [
+      ['value', 'string'],
+      ['prefix', 'string'],
+    ],
     returns: 'boolean',
   },
   {
@@ -1600,7 +1676,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: INT64
     `),
     url: `${bq}/string_functions#strpos`,
-    args: [['value', 'string'], ['subvalue', 'string']],
+    args: [
+      ['value', 'string'],
+      ['subvalue', 'string'],
+    ],
     returns: 'number',
   },
   {
@@ -1638,7 +1717,11 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING or BYTES
     `),
     url: `${bq}/string_functions#substring`,
-    args: [['value', 'string'], ['position', 'number'], ['length', 'number?']],
+    args: [
+      ['value', 'string'],
+      ['position', 'number'],
+      ['length', 'number?'],
+    ],
     returns: 'string',
   },
   {
@@ -1652,7 +1735,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: STRING or BYTES
     `),
     url: `${bq}/string_functions#trim`,
-    args: [['value', 'string'], ['cutset', 'string?']],
+    args: [
+      ['value', 'string'],
+      ['cutset', 'string?'],
+    ],
     returns: 'string',
   },
   {
@@ -1714,7 +1800,11 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: Supertype of true_result and else_result.
     `),
     url: `${bq}/conditional_expressions#if`,
-    args: [['condition', 'boolean'], ['true_value', 'T'], ['false_value', 'T']],
+    args: [
+      ['condition', 'boolean'],
+      ['true_value', 'T'],
+      ['false_value', 'T'],
+    ],
     returns: 'T',
   },
   {
@@ -1729,7 +1819,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: Supertype of expr and null_result.
     `),
     url: `${bq}/conditional_expressions#ifnull`,
-    args: [['value', 'T'], ['default_value', 'T']],
+    args: [
+      ['value', 'T'],
+      ['default_value', 'T'],
+    ],
     returns: 'T',
   },
   {
@@ -1744,7 +1837,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: Supertype of expr1 and expr2.
     `),
     url: `${bq}/conditional_expressions#nullif`,
-    args: [['value1', 'T'], ['value2', 'T']],
+    args: [
+      ['value1', 'T'],
+      ['value2', 'T'],
+    ],
     returns: 'T',
   },
 
@@ -2138,7 +2234,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     `),
     url: `${bq}/time_functions#current_time`,
     args: [{name: 'time_zone', type: 'string?', description: 'The time zone to use. Defaults to UTC.'}],
-    returns: 'timestamp',  // Graphene treats TIME as timestamp
+    returns: 'timestamp', // Graphene treats TIME as timestamp
   },
   {
     name: 'time',
@@ -3174,7 +3270,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: FLOAT64
     `),
     url: `${bq}/statistical_aggregate_functions#corr`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
     aggregate: true,
   },
@@ -3188,7 +3287,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: FLOAT64
     `),
     url: `${bq}/statistical_aggregate_functions#covar_pop`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
     aggregate: true,
   },
@@ -3202,7 +3304,10 @@ export const bigQueryFunctions: FunctionDef[] = [
       Returned Data Types: FLOAT64
     `),
     url: `${bq}/statistical_aggregate_functions#covar_samp`,
-    args: [['x', 'number'], ['y', 'number']],
+    args: [
+      ['x', 'number'],
+      ['y', 'number'],
+    ],
     returns: 'number',
     aggregate: true,
   },

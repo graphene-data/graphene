@@ -27,9 +27,9 @@ export interface Config {
 }
 
 export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> & {
-  dialect?: Config['dialect'],
-  ignoredFiles?: Config['ignoredFiles'],
-  envFile?: string | string[],
+  dialect?: Config['dialect']
+  ignoredFiles?: Config['ignoredFiles']
+  envFile?: string | string[]
   namespace?: string
 }
 
@@ -41,7 +41,7 @@ export function setConfig(cfg: ConfigInput) {
   if (cfg.bigquery) dialect = 'bigquery'
   else if (cfg.snowflake) dialect = 'snowflake'
   else if (cfg.duckdb) dialect = 'duckdb'
-  Object.keys(config).forEach((key) => delete config[key])
+  Object.keys(config).forEach(key => delete config[key])
   Object.assign(config, cfg)
   config.dialect = dialect
   config.root ||= process.cwd()
@@ -50,7 +50,7 @@ export function setConfig(cfg: ConfigInput) {
 }
 
 // Read graphene config out of package.json
-export function loadConfig(dir:string, envLoader?: (envFiles: string[] | string) => void) {
+export function loadConfig(dir: string, envLoader?: (envFiles: string[] | string) => void) {
   if (config.root) return
 
   let packageJsonObject = {} as any

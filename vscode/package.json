@@ -1,23 +1,33 @@
 {
   "name": "graphene-data-vscode",
-  "private": true,
   "displayName": "Graphene VSCode Language Support",
-  "publisher": "graphene-data",
-  "description": "",
   "version": "0.0.15",
-  "type": "commonjs",
-  "repository": {},
-  "engines": {
-    "vscode": "^1.84.0"
-  },
+  "private": true,
+  "description": "",
   "categories": [
     "Programming Languages"
   ],
+  "repository": {},
+  "publisher": "graphene-data",
+  "type": "commonjs",
   "main": "./dist/extension.js",
-  "activationEvents": [
-    "onStartupFinished",
-    "onLanguage:graphene-sql"
-  ],
+  "scripts": {
+    "build": "node ./esbuild.mjs",
+    "vscode:prepublish": "pnpm run build",
+    "package": "rm -f -- *.vsix && npx vsce package --no-dependencies",
+    "publish-extension": "npx vsce publish && npx ovsx publish",
+    "install-cursor": "pnpm run package && cursor --install-extension *.vsix",
+    "install-vscode": "pnpm run package && code --install-extension *.vsix"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.84.0",
+    "esbuild": "^0.27.2"
+  },
   "contributes": {
     "languages": [
       {
@@ -40,21 +50,11 @@
       }
     ]
   },
-  "scripts": {
-    "build": "node ./esbuild.mjs",
-    "vscode:prepublish": "pnpm run build",
-    "package": "rm -f -- *.vsix && npx vsce package --no-dependencies",
-    "publish-extension": "npx vsce publish && npx ovsx publish",
-    "install-cursor": "pnpm run package && cursor --install-extension *.vsix",
-    "install-vscode": "pnpm run package && code --install-extension *.vsix"
-  },
-  "dependencies": {
-    "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.11"
-  },
-  "devDependencies": {
-    "@types/vscode": "^1.84.0",
-    "esbuild": "^0.27.2"
+  "activationEvents": [
+    "onLanguage:graphene-sql",
+    "onStartupFinished"
+  ],
+  "engines": {
+    "vscode": "^1.84.0"
   }
 }

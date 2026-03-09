@@ -1,11 +1,8 @@
 {
   "name": "graphene",
-  "private": true,
   "version": "0.0.15",
+  "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=24.0.0"
-  },
   "scripts": {
     "lint": "eslint . && tsc",
     "test": "vitest run",
@@ -23,10 +20,14 @@
     "eslint-plugin-prefer-let": "^4.0.1",
     "eslint-plugin-svelte": "^3.14.0",
     "globals": "^16.5.0",
+    "oxfmt": "^0.36.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
     "vitest": "4.0.18",
     "zx": "^8.8.5"
+  },
+  "engines": {
+    "node": ">=24.0.0"
   },
   "pnpm": {
     "ignoredBuiltDependencies": [

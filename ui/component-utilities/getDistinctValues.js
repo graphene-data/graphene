@@ -10,6 +10,6 @@
  * @returns {any[]} An array containing distinct values from the specified column of the dataset.
  */
 export default function getDistinctValues(data, column) {
-  let set = new Set(data.map((val) => val[column]))
+  let set = new Set(data.map(val => val[column]))
   return Array.from(set)
 }

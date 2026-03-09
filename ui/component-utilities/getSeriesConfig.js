@@ -1,5 +1,5 @@
-import getDistinctValues from './getDistinctValues.js'
 import {fmt} from './formatting.js'
+import getDistinctValues from './getDistinctValues.js'
 
 export default function getSeriesConfig(
   data,
@@ -65,7 +65,7 @@ export default function getSeriesConfig(
     function addValuesToArray(value, source) {
       if (!isUndefined(value)) {
         if (Array.isArray(value)) {
-          value.forEach((item) => array.push([item, source]))
+          value.forEach(item => array.push([item, source]))
         } else {
           array.push([value, source])
         }
@@ -86,23 +86,23 @@ export default function getSeriesConfig(
 
     for (i = 0; i < seriesDistinct.length; i++) {
       // Filter for specific series:
-      filteredData = data.filter((d) => d[series] === seriesDistinct[i])
+      filteredData = data.filter(d => d[series] === seriesDistinct[i])
 
       if (swapXY) {
-        seriesData = filteredData.map((d) => [d[yList[0][0]], xMismatch ? d[x].toString() : d[x]])
+        seriesData = filteredData.map(d => [d[yList[0][0]], xMismatch ? d[x].toString() : d[x]])
       } else {
-        seriesData = filteredData.map((d) => [xMismatch ? d[x].toString() : d[x], d[yList[0][0]]])
+        seriesData = filteredData.map(d => [xMismatch ? d[x].toString() : d[x], d[yList[0][0]]])
       }
 
       // Append size column if supplied (for bubble chart):
       if (size) {
-        let sizeData = filteredData.map((d) => d[size])
+        let sizeData = filteredData.map(d => d[size])
         seriesData.forEach((item, index) => item.push(sizeData[index]))
       }
 
       // Append tooltip label if supplied:
       if (tooltipTitle) {
-        let tooltipData = filteredData.map((d) => d[tooltipTitle])
+        let tooltipData = filteredData.map(d => d[tooltipTitle])
         seriesData.forEach((item, index) => item.push(tooltipData[index]))
       }
 
@@ -122,30 +122,24 @@ export default function getSeriesConfig(
     seriesDistinct = getDistinctValues(data, series)
     for (i = 0; i < seriesDistinct.length; i++) {
       // Filter for specific series:
-      filteredData = data.filter((d) => d[series] === seriesDistinct[i])
+      filteredData = data.filter(d => d[series] === seriesDistinct[i])
 
       for (j = 0; j < yList.length; j++) {
         if (swapXY) {
-          seriesData = filteredData.map((d) => [
-            d[yList[j][0]],
-            xMismatch ? d[x].toString() : d[x],
-          ])
+          seriesData = filteredData.map(d => [d[yList[j][0]], xMismatch ? d[x].toString() : d[x]])
         } else {
-          seriesData = filteredData.map((d) => [
-            xMismatch ? d[x].toString() : d[x],
-            d[yList[j][0]],
-          ])
+          seriesData = filteredData.map(d => [xMismatch ? d[x].toString() : d[x], d[yList[j][0]]])
         }
 
         // Append size column if supplied (for bubble chart):
         if (size) {
-          let sizeData = filteredData.map((d) => d[size])
+          let sizeData = filteredData.map(d => d[size])
           seriesData.forEach((item, index) => item.push(sizeData[index]))
         }
 
         // Append tooltip label if supplied:
         if (tooltipTitle) {
-          let tooltipData = filteredData.map((d) => d[tooltipTitle])
+          let tooltipData = filteredData.map(d => d[tooltipTitle])
           seriesData.forEach((item, index) => item.push(tooltipData[index]))
         }
 
@@ -165,20 +159,20 @@ export default function getSeriesConfig(
   if (series == null && yList.length > 1) {
     for (i = 0; i < yList.length; i++) {
       if (swapXY) {
-        seriesData = data.map((d) => [d[yList[i][0]], xMismatch ? d[x].toString() : d[x]])
+        seriesData = data.map(d => [d[yList[i][0]], xMismatch ? d[x].toString() : d[x]])
       } else {
-        seriesData = data.map((d) => [xMismatch ? d[x].toString() : d[x], d[yList[i][0]]])
+        seriesData = data.map(d => [xMismatch ? d[x].toString() : d[x], d[yList[i][0]]])
       }
 
       // Append size column if supplied (for bubble chart):
       if (size) {
-        let sizeData = data.map((d) => d[size])
+        let sizeData = data.map(d => d[size])
         seriesData.forEach((item, index) => item.push(sizeData[index]))
       }
 
       // Append tooltip label if supplied:
       if (tooltipTitle) {
-        let tooltipData = data.map((d) => d[tooltipTitle])
+        let tooltipData = data.map(d => d[tooltipTitle])
         seriesData.forEach((item, index) => item.push(tooltipData[index]))
       }
 
@@ -195,20 +189,20 @@ export default function getSeriesConfig(
   // 4) Single y column without series column
   if (series == null && yList.length === 1) {
     if (swapXY) {
-      seriesData = data.map((d) => [d[yList[0][0]], xMismatch ? d[x].toString() : d[x]])
+      seriesData = data.map(d => [d[yList[0][0]], xMismatch ? d[x].toString() : d[x]])
     } else {
-      seriesData = data.map((d) => [xMismatch ? d[x].toString() : d[x], d[yList[0][0]]])
+      seriesData = data.map(d => [xMismatch ? d[x].toString() : d[x], d[yList[0][0]]])
     }
 
     // Append size column if supplied (for bubble chart):
     if (size) {
-      let sizeData = data.map((d) => d[size])
+      let sizeData = data.map(d => d[size])
       seriesData.forEach((item, index) => item.push(sizeData[index]))
     }
 
     // Append tooltip label if supplied:
     if (tooltipTitle) {
-      let tooltipData = data.map((d) => d[tooltipTitle])
+      let tooltipData = data.map(d => d[tooltipTitle])
       seriesData.forEach((item, index) => item.push(tooltipData[index]))
     }
 
@@ -228,7 +222,7 @@ export default function getSeriesConfig(
   // format series config:
   if (seriesLabelFmt) {
     let seriesType = series ? columnSummary[series]?.type : undefined
-    seriesConfig.forEach((item) => {
+    seriesConfig.forEach(item => {
       item.name = fmt(item.name, seriesLabelFmt, seriesType)
     })
   }

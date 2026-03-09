@@ -1,7 +1,8 @@
-import {type TestProject} from 'vitest/node'
-import {prepareDeps} from '../../cli/serve2.ts'
-import {fileURLToPath} from 'url'
 import path from 'path'
+import {fileURLToPath} from 'url'
+import {type TestProject} from 'vitest/node'
+
+import {prepareDeps} from '../../cli/serve2.ts'
 import {setConfig} from '../../lang/config.ts'
 
 export default async function setup(project: TestProject) {

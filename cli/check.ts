@@ -1,9 +1,10 @@
-import path from 'path'
-import {analyze, config, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
-import {printDiagnostics} from './printer.ts'
 import {readFileSync} from 'node:fs'
+import path from 'path'
+
+import {analyze, config, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
+import {printDiagnostics} from './printer.ts'
 
 interface CheckOptions {
   fileArg?: string

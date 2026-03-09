@@ -1,4 +1,5 @@
 import {tidy, complete} from '@tidyjs/tidy'
+
 import getDistinctValues from './getDistinctValues'
 import {findInterval, vectorSeq} from './helpers/getCompletedData.helpers.js'
 
@@ -16,12 +17,12 @@ import {findInterval, vectorSeq} from './helpers/getCompletedData.helpers.js'
 export default function getCompletedData(_data, x, y, series, nullsZero = false, fillX = false) {
   let xIsDate = false
   let data = _data
-    .map((d) =>
+    .map(d =>
       Object.assign({}, d, {
         [x]: d[x] instanceof Date ? ((xIsDate = true), d[x].toISOString()) : d[x],
       }),
     )
-    .filter((d) => d[x] !== undefined && d[x] !== null)
+    .filter(d => d[x] !== undefined && d[x] !== null)
   let groups = Array.from(data).reduce((a, v) => {
     if (v[x] instanceof Date) {
       v[x] = v[x].toISOString()
@@ -44,15 +45,12 @@ export default function getCompletedData(_data, x, y, series, nullsZero = false,
   /** @type {Array<number | string>} */
   let xDistinct
 
-  let exampleX =
-    data.find((item) => item && item[x] !== null && item[x] !== undefined)?.[x] ?? null
+  let exampleX = data.find(item => item && item[x] !== null && item[x] !== undefined)?.[x] ?? null
   // const exampleX = data[0]?.[x];
   switch (typeof exampleX) {
     case 'object':
       if (exampleX === null) {
-        throw new Error(
-          `Column '${x}' is entirely null. Column must contain at least one non-null value.`,
-        )
+        throw new Error(`Column '${x}' is entirely null. Column must contain at least one non-null value.`)
       } else {
         throw new Error('Unexpected object property, expected string, date, or number')
       }
@@ -109,7 +107,7 @@ export default function getCompletedData(_data, x, y, series, nullsZero = false,
     output.push(tidy(value, ...tidyFuncs))
   }
   if (xIsDate) {
-    let converted = output.flat().map((r) => ({...r, [x]: new Date(r[x])}))
+    let converted = output.flat().map(r => ({...r, [x]: new Date(r[x])}))
     if (Array.isArray(_data?._evidenceColumnTypes)) {
       converted._evidenceColumnTypes = _data._evidenceColumnTypes
     }

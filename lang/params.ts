@@ -1,4 +1,5 @@
 import type {Query} from './types.ts'
+
 import {parseTemporalLiteral} from './temporalLiterals.ts'
 
 // Fill in parameter values in a query's SQL strings
@@ -28,10 +29,12 @@ function replaceParams(sql: string, params: Record<string, any>): string {
     if (typeof value === 'boolean') return value ? 'true' : 'false'
     if (Array.isArray(value)) {
       // For IN clauses with array params
-      return value.map(v => {
-        if (typeof v === 'string') return `'${v.replace(/'/g, "''")}'`
-        return String(v)
-      }).join(',')
+      return value
+        .map(v => {
+          if (typeof v === 'string') return `'${v.replace(/'/g, "''")}'`
+          return String(v)
+        })
+        .join(',')
     }
     throw new Error(`Unsupported param type for $${name}: ${typeof value}`)
   })

@@ -22,7 +22,7 @@ async function loadResults() {
     try {
       let raw = await readFile(resultsPath, 'utf8')
       return {results: JSON.parse(raw), root}
-    } catch(error) {
+    } catch (error) {
       if (error?.code === 'ENOENT') continue
       throw error
     }
@@ -42,10 +42,7 @@ function selectFailedTest(results) {
 
 function searchForTests(search) {
   try {
-    let output = execSync(
-      `grep -rn --include="*.test.ts" -E "(it|test)\\(.*${search}" .`,
-      {encoding: 'utf8', cwd: WORKSPACE_ROOT},
-    )
+    let output = execSync(`grep -rn --include="*.test.ts" -E "(it|test)\\(.*${search}" .`, {encoding: 'utf8', cwd: WORKSPACE_ROOT})
     let matches = []
     for (let line of output.trim().split('\n')) {
       let match = line.match(/^(.+?):(\d+):.*(it|test)\(['"`](.+?)['"`]/)
@@ -54,7 +51,7 @@ function searchForTests(search) {
       }
     }
     return matches
-  } catch(error) {
+  } catch (error) {
     if (error.status === 1) return [] // grep found nothing
     throw error
   }

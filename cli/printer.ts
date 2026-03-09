@@ -1,6 +1,7 @@
-import {styleText as nodeStyleText} from 'node:util'
-import Table from 'cli-table3'
 import chalk from 'chalk'
+import Table from 'cli-table3'
+import {styleText as nodeStyleText} from 'node:util'
+
 import {type Diagnostic, getFile} from '../lang/core.ts'
 // import {logTree} from './logTree.ts'
 
@@ -51,10 +52,10 @@ export function printTable(rows: any[]) {
   }
 
   let headers = Object.keys(rows[0])
-  let table = new Table({head: headers.map((h) => chalk.blue(h))})
+  let table = new Table({head: headers.map(h => chalk.blue(h))})
   let MAX_DISPLAY_ROWS = 200
   let displayRows = rows.slice(0, MAX_DISPLAY_ROWS)
-  displayRows.forEach((row) => table.push(headers.map((h) => row[h]?.toString() || '')))
+  displayRows.forEach(row => table.push(headers.map(h => row[h]?.toString() || '')))
   console.log(table.toString())
   if (rows.length > MAX_DISPLAY_ROWS) {
     console.log(chalk.yellow(`Displayed first ${MAX_DISPLAY_ROWS} rows (of ${rows.length} total).`))

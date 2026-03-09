@@ -27,7 +27,7 @@ function connect() {
   socket.onclose = () => setTimeout(connect, 2000)
   socket.onopen = () => socket!.send(JSON.stringify({type: 'register', url: window.location.href}))
 
-  socket.onmessage = async(event) => {
+  socket.onmessage = async event => {
     let {type, requestId, chart} = JSON.parse(event.data)
     if (type !== 'check') return
 

@@ -6,18 +6,9 @@ export default function checkInputs(data, reqCols, optCols) {
   if (data === undefined) {
     throw Error('No data provided')
   } else if (typeof data !== 'object') {
-    throw Error(
-      "'" +
-        data +
-        "'" +
-        ' is not a recognized query result. Data should be provided in the format: data = {' +
-        data.replace('data.', '') +
-        '}',
-    )
+    throw Error("'" + data + "'" + ' is not a recognized query result. Data should be provided in the format: data = {' + data.replace('data.', '') + '}')
   } else if (data[0] === undefined || data.length === 0) {
-    throw Error(
-      'Dataset is empty: query ran successfully, but no data was returned from the database',
-    )
+    throw Error('Dataset is empty: query ran successfully, but no data was returned from the database')
   }
 
   // Check if data warehouse returned an error
@@ -35,9 +26,7 @@ export default function checkInputs(data, reqCols, optCols) {
       if (reqCols[i] == null) {
         throw Error(`Missing required column(s): ${reqCols[i]} not found in data set.`)
       } else if (reqCols[i] == '') {
-        throw Error(
-          'Missing required column(s): A Empty string was provided for one of your props.',
-        )
+        throw Error('Missing required column(s): A Empty string was provided for one of your props.')
       }
     }
 
@@ -77,7 +66,7 @@ export default function checkInputs(data, reqCols, optCols) {
       }
     }
 
-    if (optCols != undefined && optCols.some((col) => col != null)) {
+    if (optCols != undefined && optCols.some(col => col != null)) {
       for (let i = 0; i < optCols.length; i++) {
         currentCol = optCols[i]
         if (currentCol == null) continue

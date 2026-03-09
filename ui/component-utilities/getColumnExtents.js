@@ -12,19 +12,19 @@ export function getColumnUnitSummary(data, columnName, isNumeric = true) {
     data,
     isNumeric
       ? summarize({
-        count: n(columnName),
-        countDistinct: nDistinct(columnName),
-        min: min(columnName),
-        max: max(columnName),
-        median: median(columnName),
-        mean: mean(columnName),
-        sum: sum(columnName),
-      })
+          count: n(columnName),
+          countDistinct: nDistinct(columnName),
+          min: min(columnName),
+          max: max(columnName),
+          median: median(columnName),
+          mean: mean(columnName),
+          sum: sum(columnName),
+        })
       : summarize({count: n(columnName), countDistinct: nDistinct(columnName)}),
   )[0]
 
   // TODO try to use summarize spec in tidy
-  let {maxDecimals, unitType} = summarizeUnits(data.map((row) => row[columnName]))
+  let {maxDecimals, unitType} = summarizeUnits(data.map(row => row[columnName]))
 
   return {
     min: seriesExtents.min,

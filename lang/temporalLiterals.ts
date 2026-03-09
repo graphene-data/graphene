@@ -107,16 +107,7 @@ export function parseIntervalUnit(value: string): TimestampUnit | null {
   return INTERVAL_UNITS[value.toLowerCase()] || null
 }
 
-function buildResult(
-  year: number,
-  month: number,
-  day: number,
-  hour: number,
-  minute: number,
-  second: number,
-  timeframe: TemporalLiteral['timeframe'],
-  expected: string,
-): TemporalLiteral {
+function buildResult(year: number, month: number, day: number, hour: number, minute: number, second: number, timeframe: TemporalLiteral['timeframe'], expected: string): TemporalLiteral {
   if (expected === 'date') {
     return {literal: `${pad(year)}-${pad(month)}-${pad(day)}`, timeframe, type: 'date'}
   }

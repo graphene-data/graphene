@@ -1,4 +1,5 @@
 import type {SyntaxNode} from '@lezer/common'
+
 import {getFile} from './util.ts'
 
 // Extract metadata from comments that appear directly above a syntax node.
@@ -18,7 +19,7 @@ export function extractLeadingMetadata(node: SyntaxNode): Record<string, string>
 
   // If there is any non-whitespace before the node on the same line, it is not the first token → don't attach leading comments
   let beforeOnLine = src.slice(currentLineStart, pos)
-  let isFirstTokenOnLine = !(/[^\s]/.test(beforeOnLine))
+  let isFirstTokenOnLine = !/[^\s]/.test(beforeOnLine)
 
   // 2) Walk upward line-by-line collecting contiguous leading comment lines
   let commentLines: string[] = []
@@ -77,10 +78,12 @@ export function extractLeadingMetadata(node: SyntaxNode): Record<string, string>
 
         // Extract inline #key=value pairs and remove them from description
         let inlineKv = /#([A-Za-z0-9_-]+)=([^\s#]+)/g
-        let cleaned = trailingText.replace(inlineKv, (_m, k, v) => {
-          if (k) metadata[k] = String(v)
-          return ''
-        }).trim()
+        let cleaned = trailingText
+          .replace(inlineKv, (_m, k, v) => {
+            if (k) metadata[k] = String(v)
+            return ''
+          })
+          .trim()
         if (cleaned) descriptionLines.push(cleaned)
       }
     }

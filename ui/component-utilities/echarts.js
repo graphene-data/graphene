@@ -1,6 +1,7 @@
 import {registerTheme, init, connect} from 'echarts/dist/echarts.esm.js'
-import {evidenceThemeDark, evidenceThemeLight} from './echartsThemes'
+
 import * as chartWindowDebug from './chartWindowDebug'
+import {evidenceThemeDark, evidenceThemeLight} from './echartsThemes'
 
 /**
  * @typedef {import("echarts").EChartsOption & {
@@ -14,10 +15,10 @@ import * as chartWindowDebug from './chartWindowDebug'
 const ANIMATION_DURATION = 0
 
 /** @param {number} chartId */
-const markChartPending = (chartId) => window.$GRAPHENE?.renderStart?.(`chart:${chartId}`)
+const markChartPending = chartId => window.$GRAPHENE?.renderStart?.(`chart:${chartId}`)
 
 /** @param {number} chartId */
-const markChartFinished = (chartId) => window.$GRAPHENE?.renderComplete?.(`chart:${chartId}`)
+const markChartFinished = chartId => window.$GRAPHENE?.renderComplete?.(`chart:${chartId}`)
 
 /** @param {HTMLElement} node */
 /** @param {EChartsActionOptions} options */
@@ -40,7 +41,7 @@ const echartsAction = (node, options) => {
       renderer: useSvg ? 'svg' : (options.renderer ?? 'canvas'),
     })
     chart.on('finished', () => markChartFinished(chart.id))
-    chart.on('click', (params) => options.onclick?.(params))
+    chart.on('click', params => options.onclick?.(params))
     chartWindowDebug.set(chart.id, chart)
 
     // If connectGroup supplied, connect chart to other charts matching that connectGroup
@@ -64,7 +65,7 @@ const echartsAction = (node, options) => {
       if (!prevOption) return
       let newOption = {...prevOption}
       for (let seriesName of Object.keys(options.seriesColors)) {
-        let matchingSeriesIndex = prevOption.series.findIndex((s) => s.name === seriesName)
+        let matchingSeriesIndex = prevOption.series.findIndex(s => s.name === seriesName)
         if (matchingSeriesIndex !== -1) {
           newOption.series[matchingSeriesIndex] = {
             ...newOption.series[matchingSeriesIndex],
@@ -92,19 +93,12 @@ const echartsAction = (node, options) => {
   let applySeriesOptions = () => {
     let tempSeries = []
     if (options.seriesOptions) {
-      let reference_index = options.config.series.reduce(
-        (acc, {evidenceSeriesType}, reference_index) => {
-          if (
-            evidenceSeriesType === 'reference_line' ||
-            evidenceSeriesType === 'reference_area' ||
-            evidenceSeriesType === 'reference_point'
-          ) {
-            acc.push(reference_index)
-          }
-          return acc
-        },
-        [],
-      )
+      let reference_index = options.config.series.reduce((acc, {evidenceSeriesType}, reference_index) => {
+        if (evidenceSeriesType === 'reference_line' || evidenceSeriesType === 'reference_area' || evidenceSeriesType === 'reference_point') {
+          acc.push(reference_index)
+        }
+        return acc
+      }, [])
 
       for (let i = 0; i < options.config.series.length; i++) {
         if (reference_index.includes(i)) {
@@ -166,7 +160,7 @@ const echartsAction = (node, options) => {
       // Note: this isn't a standard option, but right now this is the easiest way to pass something to the action.
       // We don't want to have multiple resize observers if we can avoid it, and this is all due for a cleanup anyways
       // Get all the possible x values
-      let distinctXValues = new Set(prevOption.series.flatMap((s) => s.data?.map((d) => d[0])))
+      let distinctXValues = new Set(prevOption.series.flatMap(s => s.data?.map(d => d[0])))
       let modConst = 4 / 5
       let clientWidth = node?.clientWidth ?? 0
 
@@ -191,7 +185,7 @@ const echartsAction = (node, options) => {
   }
 
   /** @param {EChartsActionOptions} newOptions */
-  let updateChart = (newOptions) => {
+  let updateChart = newOptions => {
     let themeChanged = newOptions.theme !== options.theme
     options = newOptions
     if (!chart) return
@@ -208,7 +202,7 @@ const echartsAction = (node, options) => {
     updateLabelWidths()
   }
 
-  void (async() => {
+  void (async () => {
     if (document?.fonts?.ready) await document.fonts.ready
     if (destroyed || chart) return
     initChart()

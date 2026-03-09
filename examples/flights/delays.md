@@ -33,6 +33,7 @@ from flights select
 where carrier = $carrier
 group by 1
 ```
+
 <Row>
   <BigValue data=carrier_summary value=flights fmt=num0 title="Flights analyzed" emptySet=pass />
   <BigValue data=carrier_summary value=avg_departure_delay_minutes fmt=num1 title="Avg departure delay (min)" emptySet=pass />
