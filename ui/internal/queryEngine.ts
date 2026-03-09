@@ -105,7 +105,8 @@ async function runNode(n: QueryNode) {
       n.callback(result)
     } else {
       // request failed. Record it
-      let isJson = response.headers.get('Content-Type') === 'application/json'
+      let contentType = response.headers.get('Content-Type') || ''
+      let isJson = contentType.includes('application/json')
       let body = isJson ? await response.json() : await response.text()
       n.errors = Array.isArray(body) ? body : [{message: body}]
 
