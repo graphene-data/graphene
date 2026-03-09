@@ -237,6 +237,9 @@ declare global {
 }
 
 export async function waitForGrapheneLoad(page: Page, timeout = 20_000) {
-  await page.waitForFunction(() => Boolean(window.$GRAPHENE), null, {timeout})
-  await page.evaluate(ms => window.$GRAPHENE.waitForLoad?.(ms), timeout)
+  await page.waitForFunction(() => Boolean((window as any).$GRAPHENE), null, {timeout})
+  await page.evaluate(ms => {
+    let graphene = (window as any).$GRAPHENE
+    return typeof graphene?.waitForLoad === 'function' ? graphene.waitForLoad(ms) : null
+  }, timeout)
 }

@@ -769,12 +769,12 @@
 
       titleFontSize = 15
       subtitleFontSize = 13
-      titleBoxPadding = 6 * hasSubtitle
+      titleBoxPadding = 2 * 2 * Math.max(hasTitle, hasSubtitle)
 
       titleBoxHeight =
         hasTitle * titleFontSize +
         hasSubtitle * subtitleFontSize +
-        titleBoxPadding * Math.max(hasTitle, hasSubtitle)
+        titleBoxPadding
 
       chartAreaPaddingTop = 10
       chartAreaPaddingBottom = 10
@@ -839,6 +839,8 @@
       chartConfig = {
         title: {
           text: title,
+          // having some padding above is important, as some OSs will clip the top of the canvas
+          top: titleBoxPadding,
           subtext: subtitle,
           subtextStyle: {
             width: '100%',
