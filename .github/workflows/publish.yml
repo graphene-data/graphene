@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
     outputs:
       should_release: ${{ steps.detect.outputs.should_release }}
       pr_number: ${{ steps.detect.outputs.pr_number }}
