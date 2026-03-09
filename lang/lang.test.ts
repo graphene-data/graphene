@@ -362,7 +362,7 @@ describe('lang', () => {
       .toHaveDiagnostic(/pxx window form currently supports partition by only/i)
   })
 
-  it('executes partitioned pXX windows correctly in duckdb', async () => {
+  it('executes partitioned pXX windows correctly in duckdb', async() => {
     await expect(`
       from orders
       select

@@ -684,13 +684,13 @@ function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: Sy
   return {sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
 }
 
-function isPercentileFunctionCall (node: SyntaxNode): boolean {
+function isPercentileFunctionCall(node: SyntaxNode): boolean {
   if (node.name != 'FunctionCall') return false
   let name = txt(node.getChild('Identifier')).toLowerCase()
   return /^p\d+$/.test(name)
 }
 
-function isPercentileWindowSpecSupported (overClause: SyntaxNode): boolean {
+function isPercentileWindowSpecSupported(overClause: SyntaxNode): boolean {
   let spec = overClause.getChild('WindowSpec')
   if (!spec) return true
   if (spec.getChild('WindowOrderByClause')) return false
