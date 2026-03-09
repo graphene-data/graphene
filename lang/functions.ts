@@ -90,7 +90,7 @@ function findOverloads(name: string, dialect: string): Overload[] {
 
 type AnalyzeExprFn = (node: SyntaxNode, scope: Scope) => Expr
 
-export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn): Expr {
+export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn, opts: {isWindow?: boolean} = {}): Expr {
   let name = txt(node.getChild('Identifier')).toLowerCase()
   let argNodes = node.getChildren('Expression')
 
@@ -99,7 +99,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   if (percentileMatch) {
     let args = argNodes.map(n => analyzeExpr(n, scope))
     if (args[0]) checkTypes(args[0], ['number'], argNodes[0])
-    return analyzePercentile(node, args, percentileMatch[1])
+    return analyzePercentile(node, args, percentileMatch[1], opts)
   }
 
   // Find matching overload
@@ -144,7 +144,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   return {sql, type: returnType, isAgg, canWindow}
 }
 
-function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string): Expr {
+function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, opts: {isWindow?: boolean} = {}): Expr {
   let frac = Number(`0.${digits}`)
   if (Number(digits) == 100) return diag(node, 'p100 is not allowed', {sql: 'NULL', type: 'error'})
   if (Number(digits) == 0) return diag(node, 'p0 is not allowed', {sql: 'NULL', type: 'error'})
@@ -157,7 +157,11 @@ function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string): Expr
       sql = `quantile_cont(${inner}, ${frac})`
       break
     case 'bigquery':
-      sql = `approx_quantiles(${inner}, 100)[OFFSET(${Math.round(frac * 100)})]`
+      if (opts.isWindow) {
+        sql = `PERCENTILE_CONT(${inner}, ${frac})`
+      } else {
+        sql = `approx_quantiles(${inner}, 100)[OFFSET(${Math.round(frac * 100)})]`
+      }
       break
     case 'snowflake':
       sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`
@@ -165,5 +169,5 @@ function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string): Expr
     default:
       return diag(node, `Percentile not supported for ${config.dialect}`, {sql: 'NULL', type: 'error'})
   }
-  return {sql, type: 'number', isAgg: true}
+  return {sql, type: 'number', isAgg: true, canWindow: true}
 }
