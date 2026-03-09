@@ -425,7 +425,13 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
     case 'WindowExpression': {
       let baseNode = node.getChild('FunctionCall') || node.getChild('Count')
       if (!baseNode) return diag(node, 'Window expressions require a function call', {sql: 'NULL', type: 'error'})
-      let base = analyzeExpr(baseNode, scope)
+      let isPercentile = isPercentileFunctionCall(baseNode)
+      if (isPercentile && !isPercentileWindowSpecSupported(node.getChild('OverClause')!)) {
+        return diag(node.getChild('OverClause')!, 'pXX window form currently supports PARTITION BY only', {sql: 'NULL', type: 'error'})
+      }
+      let base = baseNode.name == 'FunctionCall'
+        ? analyzeFunction(baseNode, scope, analyzeExpr, {isWindow: true})
+        : analyzeExpr(baseNode, scope)
       if (base.type == 'error') return base
       if (!base.canWindow) return diag(baseNode, 'Only aggregate or window functions can use OVER', {sql: 'NULL', type: 'error'})
       let over = renderOverClause(node.getChild('OverClause')!, scope)
@@ -676,6 +682,20 @@ function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: Sy
   let parsed = parseTemporalLiteral(match[1], targetType)
   if (!parsed) { diag(node, `Cannot parse as ${targetType}: ${expr.sql}`); return expr }
   return {sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
+}
+
+function isPercentileFunctionCall(node: SyntaxNode): boolean {
+  if (node.name != 'FunctionCall') return false
+  let name = txt(node.getChild('Identifier')).toLowerCase()
+  return /^p\d+$/.test(name)
+}
+
+function isPercentileWindowSpecSupported(overClause: SyntaxNode): boolean {
+  let spec = overClause.getChild('WindowSpec')
+  if (!spec) return true
+  if (spec.getChild('WindowOrderByClause')) return false
+  if (spec.getChild('WindowFrameClause')) return false
+  return true
 }
 
 function renderOverClause(overClause: SyntaxNode, scope: Scope): string {
