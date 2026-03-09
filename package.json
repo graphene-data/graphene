@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint . && tsc",
+    "lint": "eslint . && oxfmt --check && tsc",
+    "lint:fix": "eslint . --fix && oxfmt",
     "test": "vitest run",
     "test-one": "node scripts/turboTest.js",
     "check-examples": "pnpm -C examples/flights graphene check && pnpm -C examples/ecomm graphene check && pnpm -C examples/snowflake graphene check"
