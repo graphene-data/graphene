@@ -1,7 +1,7 @@
 import getDistinctValues from './getDistinctValues.js'
 import {fmt} from './formatting.js'
 
-export default function getSeriesConfig (
+export default function getSeriesConfig(
   data,
   x,
   y,
@@ -17,7 +17,7 @@ export default function getSeriesConfig (
   y2 = undefined,
   seriesLabelFmt = undefined,
 ) {
-  function generateTempConfig (seriesData, seriesName, yAxisIndex, baseConfig) {
+  function generateTempConfig(seriesData, seriesName, yAxisIndex, baseConfig) {
     let tempConfig = {
       name: seriesName,
       data: seriesData,
@@ -51,18 +51,18 @@ export default function getSeriesConfig (
 
   // colname, yAxisIndex
 
-  function combineVariables (variable1, variable2) {
+  function combineVariables(variable1, variable2) {
     // Returns an array of arrays, where each individual array is [column_name, yAxisIndex], where yAxisIndex is 0 for y and 1 for y2.
     // E.g., [ ['sales', 0 ], ['gross_profit', 1]] - sales on primary axis, gross profit on secondary
     let array = []
 
     // Helper function to check if a value is undefined
-    function isUndefined (value) {
+    function isUndefined(value) {
       return typeof value === 'undefined'
     }
 
     // Helper function to add non-undefined values to the array with source indicator
-    function addValuesToArray (value, source) {
+    function addValuesToArray(value, source) {
       if (!isUndefined(value)) {
         if (Array.isArray(value)) {
           value.forEach((item) => array.push([item, source]))

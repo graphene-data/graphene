@@ -7,12 +7,12 @@ import stripAnsi from 'strip-ansi'
 import {trimIndentation} from '../../lang/util.ts'
 
 let logs = ''
-function log (...args: any[]) {
+function log(...args: any[]) {
   // console.log(...args) // useful for debugging, but pollutes test outputs
   logs += args.map(a => String(a)).join(' ') + '\n'
 }
 
-function outputLines () {
+function outputLines() {
   let normalized = logs.replace(/graphene-screenshot-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.png/g, 'graphene-screenshot-<timestamp>.png')
   normalized = normalized.replace(/Screenshot saved to[^\n]*graphene-screenshot-<timestamp>\.png/g, 'Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png')
   return stripAnsi(normalized.trim())
@@ -20,7 +20,7 @@ function outputLines () {
 
 test.beforeEach(() => { logs = '' })
 
-test('check defaults to analyzing the whole workspace', async () => {
+test('check defaults to analyzing the whole workspace', async() => {
   updateFile(`
     table tmp_bad as (
       from flights select not_a_function()
@@ -35,7 +35,7 @@ test('check defaults to analyzing the whole workspace', async () => {
   `.trim())
 })
 
-test('check with mdFile reports analysis errors', async ({server, page}) => {
+test('check with mdFile reports analysis errors', async({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile('/other.md', `
     \`\`\`sql error_query
@@ -60,7 +60,7 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
   `.trim())
 })
 
-test('cli run with md file reports runtime query errors', async ({server, page}) => {
+test('cli run with md file reports runtime query errors', async({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile('/index.md', `
     # Runtime Cast Error Page
@@ -79,7 +79,7 @@ test('cli run with md file reports runtime query errors', async ({server, page})
   `))
 })
 
-test('cli run with md file reports runtime chart configuration errors', async ({server, page}) => {
+test('cli run with md file reports runtime chart configuration errors', async({server, page}) => {
   expectConsoleError('Error in Bar Chart')
   expectConsoleError(/ECharts.*has been disposed/)
   server.mockFile('/index.md', `
@@ -99,7 +99,7 @@ test('cli run with md file reports runtime chart configuration errors', async ({
 `))
 })
 
-test('cli run with md file reports table configuration errors', async ({server, page}) => {
+test('cli run with md file reports table configuration errors', async({server, page}) => {
   server.mockFile('/index.md', `
     # Runtime Table Config Error
     \`\`\`sql table_data
@@ -117,7 +117,7 @@ test('cli run with md file reports table configuration errors', async ({server, 
 `))
 })
 
-test('cli run with md file reports html compilation errors', async ({server, page}) => {
+test('cli run with md file reports html compilation errors', async({server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
@@ -136,7 +136,7 @@ test('cli run with md file reports html compilation errors', async ({server, pag
   expect(output).toContain('^')
 })
 
-test('cli run with --chart captures a single chart screenshot', async ({server, page}) => {
+test('cli run with --chart captures a single chart screenshot', async({server, page}) => {
   server.mockFile('/index.md', `
     # Chart Screenshot
     \`\`\`sql chart_data

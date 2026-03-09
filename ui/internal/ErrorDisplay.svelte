@@ -22,26 +22,26 @@
 
   let {error: raw}: Props = $props()
 
-  function normalize (raw: unknown): ErrorLike {
+  function normalize(raw: unknown): ErrorLike {
     if (typeof raw === 'string') return {message: raw}
     if (raw instanceof globalThis.Error) return {message: raw.message}
     if (raw && typeof raw === 'object') return raw as ErrorLike
     return {message: String(raw)}
   }
 
-  function normalizePath (path: string) {
+  function normalizePath(path: string) {
     return path.replace(/\\/g, '/').replace(/^file:\/\//, '')
   }
 
-  function looksAbsolutePath (path: string) {
+  function looksAbsolutePath(path: string) {
     return path.startsWith('/') || /^[A-Za-z]:\//.test(path)
   }
 
   // "/foo/bar/baz.md" → "baz.md"
-  function basename (path: string) { return normalizePath(path).split('/').pop() || path }
+  function basename(path: string) { return normalizePath(path).split('/').pop() || path }
 
   // Classify query errors by type for a more descriptive message prefix.
-  function classifyError (e: ErrorLike) {
+  function classifyError(e: ErrorLike) {
     if (e.type === 'analysis' || e.from || e.loc || e.codeFrame || e.frame) return `GSQL error - ${e.message || 'Unknown query error'}`
     if (e.type === 'database') return e.message ? `Database query failed: ${e.message}` : 'Database query failed'
     if (e.type === 'server') return e.message ? `Server error while running query: ${e.message}` : 'Server error while running query'

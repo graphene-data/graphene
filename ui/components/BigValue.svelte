@@ -11,7 +11,7 @@
 
   let {data, value = undefined, fmt = undefined, title = undefined, subtitle = undefined}: Props = $props()
 
-  function formatValue (input: any) {
+  function formatValue(input: any) {
     if (input === null || input === undefined) return '—'
     if (!fmt) return String(input)
 

@@ -43,7 +43,7 @@ interface AttrMatch {
   start: number
 }
 
-export function parseMarkdown (fi: FileInfo) {
+export function parseMarkdown(fi: FileInfo) {
   let source = fi.contents
   let fences = collectFences(source)
   let components = collectComponents(source, fences)
@@ -153,7 +153,7 @@ export function parseMarkdown (fi: FileInfo) {
   return parser.parse(doc)
 }
 
-function collectFences (source: string): FenceMatch[] {
+function collectFences(source: string): FenceMatch[] {
   let matches: FenceMatch[] = []
   GSQL_FENCE.lastIndex = 0
   let match: RegExpExecArray | null
@@ -171,7 +171,7 @@ function collectFences (source: string): FenceMatch[] {
   return matches
 }
 
-function collectComponents (source: string, fences: FenceMatch[]): ComponentMatch[] {
+function collectComponents(source: string, fences: FenceMatch[]): ComponentMatch[] {
   let matches: ComponentMatch[] = []
   COMPONENT_TAG.lastIndex = 0
   let match: RegExpExecArray | null
@@ -189,13 +189,13 @@ function collectComponents (source: string, fences: FenceMatch[]): ComponentMatc
   return matches
 }
 
-function extractFenceName (header: string): string | undefined {
+function extractFenceName(header: string): string | undefined {
   let parts = header.trim().split(/\s+/)
   if (parts.length > 1) return parts[1]
   return undefined
 }
 
-function extractAttributes (fragment: string, baseStart: number): Record<string, AttrMatch> {
+function extractAttributes(fragment: string, baseStart: number): Record<string, AttrMatch> {
   let attrs: Record<string, AttrMatch> = {}
   ATTRIBUTE.lastIndex = 0
   let match: RegExpExecArray | null
@@ -208,10 +208,10 @@ function extractAttributes (fragment: string, baseStart: number): Record<string,
   return attrs
 }
 
-function isInsideFence (offset: number, fences: FenceMatch[]) {
+function isInsideFence(offset: number, fences: FenceMatch[]) {
   return fences.some(f => offset >= f.start && offset < f.end)
 }
 
-function isFence (event: FenceMatch | ComponentMatch): event is FenceMatch {
+function isFence(event: FenceMatch | ComponentMatch): event is FenceMatch {
   return (event as FenceMatch).content !== undefined
 }

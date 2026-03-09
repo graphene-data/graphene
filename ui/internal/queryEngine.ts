@@ -32,19 +32,19 @@ let params = {} as Record<string, any>
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[], fields?: Field[]}>
 
-function registerQuery (name: string, contents: string) {
+function registerQuery(name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
   queries.push({name, contents, loading: false, fields: new Map(), errors: []})
 }
 
 const getRoutePath = () => typeof window === 'undefined' ? '/' : (window.location.pathname || '/')
 
-function updateParam (name: string, value: any) {
+function updateParam(name: string, value: any) {
   params[name] = value
   runAll() // for now, do the easy thing and reload it all
 }
 
-function query (source: string, fields: Record<string, string | string[]>, callback: ResultHandler) {
+function query(source: string, fields: Record<string, string | string[]>, callback: ResultHandler) {
   // using Map here because it preserves the order in which we add fields to the select, which we use when we get the result.
   let map = new Map(Object.entries(fields))
   let exprs: string[] = []
@@ -61,11 +61,11 @@ function query (source: string, fields: Record<string, string | string[]>, callb
   runAll()
 }
 
-function unsubscribe (callback: ResultHandler) {
+function unsubscribe(callback: ResultHandler) {
   queries = queries.filter(q => q.callback !== callback)
 }
 
-async function runNode (n: QueryNode) {
+async function runNode(n: QueryNode) {
   if (!n.callback) throw new Error('running node nobody is listening to')
   n.callback({}) // notify that the query is loading
   n.loading = true
@@ -117,26 +117,26 @@ async function runNode (n: QueryNode) {
       n.errors.forEach(e => (e as any).queryId = idStr)
       n.callback({errors: n.errors})
     }
-  } catch (e) {
+  } catch(e) {
     n.errors = [e as Error]
   } finally {
     n.loading = false
   }
 }
 
-function runAll () {
+function runAll() {
   if (runPending) return runPending
   runPending = Promise.resolve().then(_runAll).finally(() => runPending = null)
 }
 
-async function _runAll () {
+async function _runAll() {
   await Promise.all(queries.map(async n => {
     if (!n.callback) return
     await runNode(n)
   }))
 }
 
-function translateData (data: any, node: QueryNode) {
+function translateData(data: any, node: QueryNode) {
   let rows = data.rows || []
   rows.dataLoaded = true // evidence components need this to be set
   rows._evidenceColumnTypes = []
@@ -175,7 +175,7 @@ errorProvider('queryEngine', () => {
   return Object.values(unique) as Error[]
 })
 
-function evidenceType (type: string | undefined) {
+function evidenceType(type: string | undefined) {
   if (type === 'string') return 'string'
   if (type === 'number') return 'number'
   if (type === 'boolean') return 'boolean'

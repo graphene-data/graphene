@@ -23,7 +23,7 @@ const contents = await readFile(inputPath, 'utf-8')
 const tree = parser.parse(contents)
 const cursor = tree.cursor()
 
-function printNode (cursor: TreeCursor, source: string, indent = ''): void {
+function printNode(cursor: TreeCursor, source: string, indent = ''): void {
   let name = cursor.type.name
   let text = source.slice(cursor.from, cursor.to).replace(/\s+/g, ' ').trim()
   let preview = text.length > 80 ? `${text.slice(0, 77)}…` : text

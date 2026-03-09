@@ -26,7 +26,7 @@ export interface RunMdFileOptions {
 let browserConnections: {url: string, socket: WebSocket}[] = []
 let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {}
 
-export async function runMdFile (options: RunMdFileOptions): Promise<boolean> {
+export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   let log = options.log || console.log
   let mdFile = normalizeFile(options.mdArg)
   if (!mdFile) {
@@ -120,7 +120,7 @@ export async function runMdFile (options: RunMdFileOptions): Promise<boolean> {
   return errors.length == 0
 }
 
-export async function runNamedQueryFromMd (mdAbsolutePath: string, queryName: string): Promise<boolean> {
+export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string): Promise<boolean> {
   await loadWorkspace(process.cwd(), false)
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
@@ -151,7 +151,7 @@ export async function runNamedQueryFromMd (mdAbsolutePath: string, queryName: st
   return true
 }
 
-async function sendRunRequest ({host, pageUrl, chart}) {
+async function sendRunRequest({host, pageUrl, chart}) {
   let abort = new AbortController()
   let timeout = setTimeout(() => abort.abort(), 30_000)
   let browserHost = host.replace('127.0.0.1', 'localhost')
@@ -173,14 +173,14 @@ async function sendRunRequest ({host, pageUrl, chart}) {
     }
 
     return body
-  } catch (err: any) {
+  } catch(err: any) {
     clearTimeout(timeout)
     if (err.name === 'AbortError') return {checkError: 'timeout'}
     return {checkError: 'no_server'}
   }
 }
 
-export async function proxyRunRequest (req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
+export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
   let {pageUrl, chart} = JSON.parse(Buffer.concat(chunks).toString())
@@ -199,10 +199,10 @@ export async function proxyRunRequest (req: IncomingMessage, res: ServerResponse
   pendingRequests[id] = {response: res}
 }
 
-export function runVitePlugin (): PluginOption {
+export function runVitePlugin(): PluginOption {
   return {
     name: 'graphene-check-plugin',
-    configureServer (server: ViteDevServer) {
+    configureServer(server: ViteDevServer) {
       let wss = new WebSocketServer({noServer: true})
 
       server.httpServer?.on('upgrade', (req, socket, head) => {
@@ -229,7 +229,7 @@ export function runVitePlugin (): PluginOption {
 
       server.httpServer?.on('close', () => wss.close())
 
-      server.middlewares.use(async (req, res, next) => {
+      server.middlewares.use(async(req, res, next) => {
         let [pathName] = (req.url || '').split('?')
         if (pathName === '/_api/check') await proxyRunRequest(req, res)
         else next()

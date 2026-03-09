@@ -61,7 +61,7 @@ const testTables = `
 `
 
 describe('lang', () => {
-  beforeAll(async () => {
+  beforeAll(async() => {
     await prepareEcommerceTables()
   })
 
@@ -72,7 +72,7 @@ describe('lang', () => {
   })
 
 
-  it('imports all keywords as tokens', async () => {
+  it('imports all keywords as tokens', async() => {
     // Every keyword used via Kw<"..."> in the grammar must be in the specializeIdentifier keyword map in tokens.js.
     // Without this, those keywords would only parse in lowercase (the inline spec_Identifier table is exact-match).
     // We have a test because it's easy to add keywords and forget to add them to tokens, causing the parsing to break if you use the uppercase version of a keyword
@@ -85,14 +85,14 @@ describe('lang', () => {
     expect(missing, 'Keywords in grammar but missing from tokens.js specializeIdentifier').toEqual([])
   })
 
-  it('handles basic select query', async () => {
+  it('handles basic select query', async() => {
     expect('from users select id, name where id = 1')
       .toRenderSql('SELECT users."id" as "id", users."name" as "name" from users as users WHERE users."id"=1')
     await expect('from users select id, name where id = 1')
       .toReturnRows([1, 'Alice'])
   })
 
-  it('handles select 1 without from', async () => {
+  it('handles select 1 without from', async() => {
     expect('select 1')
       .toRenderSql('SELECT 1 as "col_0"')
     await expect('select 1')
@@ -116,7 +116,7 @@ describe('lang', () => {
     expect('from raw.users select id').toRenderSql('select users."id" as "id" from raw.users as users')
   })
 
-  it('ignores workspace files matched by ignoredFiles globs', async () => {
+  it('ignores workspace files matched by ignoredFiles globs', async() => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-workspace-ignore-'))
 
     try {
@@ -183,7 +183,7 @@ describe('lang', () => {
 
   it('excludes aggregates from wildcard expansion', () => {
     // especially if those aggs are indirectly an agg agg expression
-    expect('table t (amount int, weird_avg: sum(amount) / count()) from t select *')
+    expect('table t (amount int, sum(amount) / count() as weird_avg) from t select *')
       .toRenderSql('select t."amount" as "amount" from t as t')
   })
 
@@ -230,7 +230,7 @@ describe('lang', () => {
       .toRenderSql('with "active_users" as ( select users."id" as "id", users."name" as "name" from users as users ) select active_users."name" as "active_users_name" from orders as orders inner join active_users as active_users on active_users."id"=orders."user_id"')
   })
 
-  it('expands measures', async () => {
+  it('expands measures', async() => {
     expect('from users select name, total_orders')
       .toRenderSql('select users."name" as "name", (count(distinct orders."id")) as "total_orders" from users as users left join orders as orders on orders."user_id"=users."id" group by 1 order by 2 desc nulls last')
 
@@ -238,7 +238,7 @@ describe('lang', () => {
       .toReturnRows(['Alice', 2], ['Bob', 1])
   })
 
-  it('handles expressions with aggregates', async () => {
+  it('handles expressions with aggregates', async() => {
     expect('from orders select user_id, avg_order_value')
       .toRenderSql('select orders."user_id" as "user_id", (sum(orders."amount")/count(1)) as "avg_order_value" from orders as orders group by 1 order by 2 desc nulls last')
 
@@ -246,14 +246,14 @@ describe('lang', () => {
       .toReturnRows([2, 40], [1, 30])
   })
 
-  it('preserves parentheses in expressions for correct operator precedence', async () => {
+  it('preserves parentheses in expressions for correct operator precedence', async() => {
     expect('from users select (age + age) / (age + age) as result')
       .toRenderSql('select (users."age"+users."age")/(users."age"+users."age") as "result" from users as users')
     await expect('from users select (1 + 2) / (1 + 2) as result limit 1')
       .toReturnRows([1])
   })
 
-  it('supports || string concatenation', async () => {
+  it('supports || string concatenation', async() => {
     expect("from users select name || ' suffix' as result")
       .toRenderSql('select users."name"||\' suffix\' as "result" from users as users')
     await expect("from users select name || '!' as result limit 1")
@@ -307,7 +307,7 @@ describe('lang', () => {
       .toRenderSql('select orders."id" as "id", sum(orders."amount") OVER (ORDER BY orders."id" ASC RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) as "tail_sum" from orders as orders')
   })
 
-  it('executes lag window functions correctly', async () => {
+  it('executes lag window functions correctly', async() => {
     await expect(`
       from orders
       select
@@ -332,7 +332,7 @@ describe('lang', () => {
       .toRenderSql('select (((sum(orders."amount"))+(sum(orders."amount")/count(1)))/((sum(orders."amount"))+(sum(orders."amount")/count(1)))) as "rate" from orders as orders')
   })
 
-  it('supports percentile aggregates via pXX shorthand', async () => {
+  it('supports percentile aggregates via pXX shorthand', async() => {
     await expect('from orders select p10(amount) as min_amt, p50(amount) as median_amt, p999(amount) as max_amt')
       .toReturnRows([24, 40, 40])
   })
@@ -399,7 +399,7 @@ describe('lang', () => {
   // Skipped: computed columns accessed through joins are not fully expanded yet.
   // The view's computed column (orders.total_revenue) needs to be expanded when rendering
   // the CTE, but currently we treat it as a regular column reference.
-  it.skip('supports "table as" (aka view) queries', async () => {
+  it.skip('supports "table as" (aka view) queries', async() => {
     updateFile(`
       table users (
         id int
@@ -456,17 +456,17 @@ describe('lang', () => {
       .toRenderSql('select users."id" as "id", orders."id" as "orders_id" from dataset.users as users left join dataset.orders as orders on users."id"=orders."user_id"')
   })
 
-  it('extends derived tables with additional measures', async () => {
+  it('extends derived tables with additional measures', async() => {
     updateFile(`${testTables}
       table user_facts as (from users select id, total_orders)
-      extend user_facts (repeat_buyer: total_orders > 1)
+      extend user_facts (total_orders > 1 as repeat_buyer)
     `, 'models.gsql')
 
     await expect('from user_facts select id, total_orders, repeat_buyer order by id')
       .toReturnRows([1, 2, true], [2, 1, false])
   })
 
-  it('emits CTE for views referenced through joins', async () => {
+  it('emits CTE for views referenced through joins', async() => {
     updateFile(`${testTables}
       table order_stats as (from orders select user_id, sum(amount) as total_spent)
       extend users (join one order_stats on order_stats.user_id = id)
@@ -509,17 +509,17 @@ describe('lang', () => {
       .toRenderSql('select users."name" as "name", users."email" as "email" from users as users group by 2,1 order by 2 asc, 1 asc nulls last')
   })
 
-  it('supports having clause with aggregate', async () => {
+  it('supports having clause with aggregate', async() => {
     await expect('from users select name, sum(payments.amount) as amt group by name having amt > 50')
       .toReturnRows(['Alice', 100])
   })
 
-  it('supports post-agg filters without the need for "having"', async () => {
+  it('supports post-agg filters without the need for "having"', async() => {
     await expect('from users select name, sum(payments.amount) as amt where amt > 50 group by name')
       .toReturnRows(['Alice', 100])
   })
 
-  it('supports order by with direction', async () => {
+  it('supports order by with direction', async() => {
     await expect('from users select name, total_orders order by total_orders desc')
       .toReturnRows(['Alice', 2], ['Bob', 1])
   })
@@ -534,7 +534,7 @@ describe('lang', () => {
       .toHaveDiagnostic(/Unknown field in ORDER BY: nonexistent/i)
   })
 
-  it('supports limit clause', async () => {
+  it('supports limit clause', async() => {
     await expect('from users select name order by name asc limit 1')
       .toReturnRows(['Alice'])
   })
@@ -949,7 +949,7 @@ describe('lang', () => {
   })
 
   it('allows measures to refer to themselves', () => {
-    expect('table t (oid int, total_oids: count(distinct t.oid))').toHaveNoErrors()
+    expect('table t (oid int, count(distinct t.oid) as total_oids)').toHaveNoErrors()
   })
 
   it('replaces parameters in filter conditions', () => {
@@ -1096,7 +1096,7 @@ describe('lang', () => {
       table alpha (
         id int
         join many beta on beta.alpha_id = id
-        avg_num: avg(beta.num)
+        avg(beta.num) as avg_num
       )
 
       table beta (
@@ -1111,13 +1111,13 @@ describe('lang', () => {
     // expect('from beta select alpha.avg_num').toRenderSql('')
   })
 
-  it('supports colon computed column syntax', () => {
+  it('supports legacy computed column syntax (expr as alias)', () => {
     updateFile(`
       table users (
         id int,
         name text,
         age int,
-        is_adult: age >= 18
+        age >= 18 as is_adult
       )
     `, 'models.gsql')
 
@@ -1285,7 +1285,7 @@ describe('lang', () => {
       .toRenderSql('select users."id" as "id" from users as users where users."age">(select avg(users."age") as "col_0" from users as users)')
   })
 
-  it('supports CTEs', async () => {
+  it('supports CTEs', async() => {
     let q = `with
       high_value as (from orders where amount >= 40 select id, user_id, amount),
       hv_users as (from high_value select user_id)

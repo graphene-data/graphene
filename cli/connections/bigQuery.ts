@@ -3,7 +3,7 @@ import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryPar
 import {config} from '../../lang/config.ts'
 
 // BigQuery identifiers can contain letters, numbers, underscores, and hyphens
-function validateBigQueryIdent (ident: string) {
+function validateBigQueryIdent(ident: string) {
   if (!/^[\w.-]+$/.test(ident)) throw new Error(`Invalid BigQuery identifier: ${ident}`)
 }
 
@@ -12,7 +12,7 @@ export class BigQueryConnection implements QueryConnection {
   private readonly projectId: string
   private readonly defaultNamespace?: string
 
-  constructor (options: BigQueryOptions = {}) {
+  constructor(options: BigQueryOptions = {}) {
     options.projectId ||= config.bigquery?.projectId
     if (!options.projectId) throw new Error('projectId must be set in config or provided in service account credentials')
     this.projectId = options.projectId
@@ -20,7 +20,7 @@ export class BigQueryConnection implements QueryConnection {
     this.defaultNamespace = config.defaultNamespace
   }
 
-  async runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {
+  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
     let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params})
     let [rows] = await job.getQueryResults({maxResults: 10000})
     let metadata = job.metadata || (await job.getMetadata())[0]
@@ -36,12 +36,12 @@ export class BigQueryConnection implements QueryConnection {
     return {rows, totalRows}
   }
 
-  async listDatasets (): Promise<string[]> {
+  async listDatasets(): Promise<string[]> {
     let [datasets] = await this.client.getDatasets()
     return datasets.map(d => d.id || d.metadata.datasetReference?.datasetId)
   }
 
-  async listTables (dataset?: string): Promise<string[]> {
+  async listTables(dataset?: string): Promise<string[]> {
     if (!dataset) throw new Error('BigQuery requires a dataset')
     validateBigQueryIdent(dataset)
 
@@ -52,7 +52,7 @@ export class BigQueryConnection implements QueryConnection {
     return res.rows.map(r => `${dataset}.${r['table_name']}`)
   }
 
-  async describeTable (target: string): Promise<SchemaColumn[]> {
+  async describeTable(target: string): Promise<SchemaColumn[]> {
     let parts = target.split('.')
     let table = parts.pop() || ''
     let dataset = parts.join('.') || this.defaultNamespace

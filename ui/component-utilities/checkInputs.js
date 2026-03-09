@@ -1,4 +1,4 @@
-export default function checkInputs (data, reqCols, optCols) {
+export default function checkInputs(data, reqCols, optCols) {
   // reqCols is an array of columns to check in the dataset
   let columns = []
 

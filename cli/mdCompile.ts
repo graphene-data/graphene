@@ -5,12 +5,12 @@ import {visit} from 'unist-util-visit'
 import sanitizeHtml from 'sanitize-html'
 
 
-export function extractQueries () {
-  function escapeHtml (str: string) {
+export function extractQueries() {
+  function escapeHtml(str: string) {
     return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   }
 
-  return function transformer (tree: any) {
+  return function transformer(tree: any) {
     visit(tree, 'code', (node, index, parent) => {
       if (index === null) return
       let name = typeof node.meta === 'string' ? node.meta : ''
@@ -21,8 +21,8 @@ export function extractQueries () {
 }
 
 // remark will leave less-than and greater-than unescaped, which breaks svelte and prevents the page from loading.
-export function escapeAngles () {
-  return function transformer (tree: any) {
+export function escapeAngles() {
+  return function transformer(tree: any) {
     visit(tree, 'text', (node: any) => {
       if (!node.value || typeof node.value !== 'string') return
       if (!node.value.includes('<')) return
@@ -33,8 +33,8 @@ export function escapeAngles () {
 
 // remark can split one html block into adjacent html nodes when self-closing tags are involved.
 // Merge those sibling html nodes so downstream rehype/sanitize work on the full block.
-export function mergeAdjacentHtml () {
-  return function transformer (tree: any) {
+export function mergeAdjacentHtml() {
+  return function transformer(tree: any) {
     visit(tree, (parent: any) => {
       if (!Array.isArray(parent?.children)) return
 
@@ -55,8 +55,8 @@ export function mergeAdjacentHtml () {
 // Restrict allowed components in markdown files to avoid xss issues.
 // This uses sanitize-html rather than rehype-sanitize because the latter had lots of issues with preserving tag casing,
 // as well as allowing all attributes on our allowlisted components.
-export function sanitizeMarkdown () {
-  return function transformer (tree: any) {
+export function sanitizeMarkdown() {
+  return function transformer(tree: any) {
     visit(tree, 'raw', (node: any) => {
       if (typeof node.value !== 'string') return
 
@@ -88,7 +88,7 @@ export function sanitizeMarkdown () {
 }
 
 // We don't want users to have to manually import components in their md files, so we auto-import them.
-export function injectComponentImports () {
+export function injectComponentImports() {
   let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`
 
   return {
@@ -108,7 +108,7 @@ export function injectComponentImports () {
 
 // List out the component names from ui/components
 let cachedComponentNames: string[] | null = null
-export function componentNames () {
+export function componentNames() {
   if (cachedComponentNames) return cachedComponentNames
 
   let files = fs.readdirSync(path.join(import.meta.dirname, '../ui/components'))

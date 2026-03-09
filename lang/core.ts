@@ -13,26 +13,26 @@ import {parseMarkdown} from './markdown.ts'
 export {clearWorkspace}
 export {config, loadConfig}
 export type {Query, Table, Diagnostic} from './types.ts'
-export function getTable (name: string) { return Object.values(FILE_MAP).flatMap(f => f.tables).find(t => t.name == name) }
-export function getFile (name: string) { return FILE_MAP[name] }
-export function getFiles () { return Object.values(FILE_MAP) }
-export function getDiagnostics () { return diagnostics }
+export function getTable(name: string) { return Object.values(FILE_MAP).flatMap(f => f.tables).find(t => t.name == name) }
+export function getFile(name: string) { return FILE_MAP[name] }
+export function getFiles() { return Object.values(FILE_MAP) }
+export function getDiagnostics() { return diagnostics }
 
 // Loads and parses all gsql files within a directory
-export async function loadWorkspace (dir: string, includeMd: boolean) {
+export async function loadWorkspace(dir: string, includeMd: boolean) {
   let ignore = ['node_modules/**', '**/.*/**', ...config.ignoredFiles]
   let files = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore, follow: false})
   for await (let file of files) {
     try {
       let contents = await readFile(path.join(dir, file), 'utf-8')
       updateFile(contents, file)
-    } catch (e: any) {
+    } catch(e: any) {
       console.error('Failed to read file', file, e.message)
     }
   }
 }
 
-export function updateFile (contents: string, path: string) {
+export function updateFile(contents: string, path: string) {
   FILE_MAP[path] ||= {path, contents, tree: null, tables: [], queries: []}
   FILE_MAP[path].contents = contents
   FILE_MAP[path].tree = null
@@ -40,7 +40,7 @@ export function updateFile (contents: string, path: string) {
 }
 
 // Analyze all files in the workspace. If content is provided, it's added as a virtual 'input' file and its queries are returned.
-export function analyze (contents?: string, contentType?: 'gsql' | 'md'): Query[] {
+export function analyze(contents?: string, contentType?: 'gsql' | 'md'): Query[] {
   clearDiagnostics()
 
   delete FILE_MAP['input']
@@ -67,13 +67,13 @@ export function analyze (contents?: string, contentType?: 'gsql' | 'md'): Query[
   return []
 }
 
-export function toSql (query: Query, params: Record<string, any> = {}): string {
+export function toSql(query: Query, params: Record<string, any> = {}): string {
   query = structuredClone(query)
   fillInParams(query, params)
   return query.sql
 }
 
-export function getHover (path: string, line: number, col: number): string {
+export function getHover(path: string, line: number, col: number): string {
   let fi = FILE_MAP[path]
   let offset = getOffset(line, col, fi)
 

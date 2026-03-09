@@ -29,19 +29,19 @@
     pushValue(value)
   })
 
-  function sanitize (input: string): string {
+  function sanitize(input: string): string {
     if (allowUnsafe) return input
     return input.replace(/'/g, "''")
   }
 
-  function pushValue (input: string) {
+  function pushValue(input: string) {
     let trimmed = input ?? ''
     let _safe = sanitize(trimmed)
     let paramValue = trimmed === '' ? null : trimmed
     window.$GRAPHENE.updateParam(name, paramValue)
   }
 
-  function onInput (event: Event) {
+  function onInput(event: Event) {
     value = (event.currentTarget as HTMLInputElement).value
     pushValue(value)
   }

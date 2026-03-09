@@ -16,26 +16,26 @@ interface Overload {
 }
 
 // Convert a FunctionDef arg type string (e.g. 'number', 'T', 'string...', 'kw') to allowedTypes
-function parseArgType (typeStr: string): {type: FieldType | 'sql native', rawType?: string}[] {
+function parseArgType(typeStr: string): {type: FieldType | 'sql native', rawType?: string}[] {
   let base = typeStr.replace(/[?.]/g, '')
   if (base === 'kw') return [{type: 'sql native', rawType: 'kw'}]
   if (base === 'T' || base === 'any') return [{type: 'string'}, {type: 'number'}, {type: 'boolean'}, {type: 'date'}, {type: 'timestamp'}, {type: 'json'}]
   return [{type: base as FieldType}]
 }
 
-function getArgInfo (arg: ArgDef): {name: string, type: string} {
+function getArgInfo(arg: ArgDef): {name: string, type: string} {
   let [name, type] = Array.isArray(arg) ? [arg[0], arg[1]] : [arg.name, arg.type]
   return {name, type: Array.isArray(type) ? type[0] : type}
 }
 
-function parseArgTypes (arg: ArgDef): {type: FieldType | 'sql native', rawType?: string}[] {
+function parseArgTypes(arg: ArgDef): {type: FieldType | 'sql native', rawType?: string}[] {
   let type = Array.isArray(arg) ? arg[1] : arg.type
   if (Array.isArray(type)) return type.map(t => ({type: t as FieldType}))
   return parseArgType(type)
 }
 
 // Convert a FunctionDef into one or more Overloads (optional args expand into multiple overloads)
-function convertDef (def: FunctionDef): Overload[] {
+function convertDef(def: FunctionDef): Overload[] {
   let expressionType: 'aggregate' | 'window' | 'scalar' = 'scalar'
   if (def.aggregate) expressionType = 'aggregate'
   else if (def.window) expressionType = 'window'
@@ -60,7 +60,7 @@ function convertDef (def: FunctionDef): Overload[] {
 }
 
 // Build a name -> Overload[] map from a FunctionDef array
-function buildMap (defs: FunctionDef[]): Record<string, Overload[]> {
+function buildMap(defs: FunctionDef[]): Record<string, Overload[]> {
   let map: Record<string, Overload[]> = {}
   for (let def of defs) {
     let overloads = convertDef(def)
@@ -79,7 +79,7 @@ let dialectMaps: Record<string, Record<string, Overload[]>> = {
   snowflake: buildMap(snowflakeFunctions),
 }
 
-function findOverloads (name: string, dialect: string): Overload[] {
+function findOverloads(name: string, dialect: string): Overload[] {
   let map = dialectMaps[dialect] || dialectMaps['duckdb']
   return map[name.toLowerCase()] || []
 }
@@ -90,7 +90,7 @@ function findOverloads (name: string, dialect: string): Overload[] {
 
 type AnalyzeExprFn = (node: SyntaxNode, scope: Scope) => Expr
 
-export function analyzeFunction (node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn, opts: {isWindow?: boolean} = {}): Expr {
+export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn, opts: {isWindow?: boolean} = {}): Expr {
   let name = txt(node.getChild('Identifier')).toLowerCase()
   let argNodes = node.getChildren('Expression')
 
@@ -144,7 +144,7 @@ export function analyzeFunction (node: SyntaxNode, scope: Scope, analyzeExpr: An
   return {sql, type: returnType, isAgg, canWindow}
 }
 
-function analyzePercentile (node: SyntaxNode, args: Expr[], digits: string, opts: {isWindow?: boolean} = {}): Expr {
+function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, opts: {isWindow?: boolean} = {}): Expr {
   let frac = Number(`0.${digits}`)
   if (Number(digits) == 100) return diag(node, 'p100 is not allowed', {sql: 'NULL', type: 'error'})
   if (Number(digits) == 0) return diag(node, 'p0 is not allowed', {sql: 'NULL', type: 'error'})

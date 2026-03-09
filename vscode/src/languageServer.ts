@@ -56,17 +56,17 @@ connection.onDidChangeWatchedFiles(async change => {
 })
 
 let handle: NodeJS.Timeout | undefined
-function debouncedAnalyze () {
+function debouncedAnalyze() {
   if (handle) clearTimeout(handle)
   handle = setTimeout(analyzeNow, 200)
 }
 
-async function analyzeNow () {
+async function analyzeNow() {
   await initialLoad
   try {
     analyze()
     perFileVscodeDiagnostics().forEach(d => connection.sendDiagnostics(d))
-  } catch (err) {
+  } catch(err) {
     let message = (err instanceof Error ? (err.stack || err.message) : String(err))
     connection.console.error(`Analyze failed: ${message}`)
     connection.sendNotification('graphene/analyzeError', {message})
@@ -88,7 +88,7 @@ async function analyzeNow () {
 // })
 
 // Group diagnostics by file, and translate them to VSCode's format.
-function perFileVscodeDiagnostics () {
+function perFileVscodeDiagnostics() {
   let diags = getDiagnostics()
   return getFiles().map(f => {
     let diagnostics: Diagnostic[] = diags.filter(d => d.file == f.path).map(d => {
@@ -107,7 +107,7 @@ function perFileVscodeDiagnostics () {
   })
 }
 
-function toPath (uri: string) {
+function toPath(uri: string) {
   let abs = decodeURIComponent(uri.replace('file://', ''))
   // In graphene, paths should be relative to the root
   return path.relative(config.root, abs)

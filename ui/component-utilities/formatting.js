@@ -55,7 +55,7 @@ export const lookupColumnFormat = (columnName, columnEvidenceType, columnUnitSum
  * @param {'number' | 'date' | 'boolean' | 'string'} [valueType] optional - a string representing the data type within the column that will be formatted ('number', 'date', 'boolean', or 'string)
  * @returns a format object based on the formatString matching a built-in or custom format name, or a new custom format object containing an Excel-style format code
  */
-export function getFormatObjectFromString (formatString, valueType = undefined) {
+export function getFormatObjectFromString(formatString, valueType = undefined) {
   let potentialFormatTag = formatString
   let customFormats = getCustomFormats()
   let matchingFormat = [...BUILT_IN_FORMATS, ...customFormats].find(
@@ -80,7 +80,7 @@ export function getFormatObjectFromString (formatString, valueType = undefined) 
 export const formatValue = (value, columnFormat = undefined, columnUnitSummary = undefined) => {
   try {
     return applyFormatting(value, columnFormat, columnUnitSummary, VALUE_FORMATTING_CONTEXT)
-  } catch (error) {
+  } catch(error) {
     //fallback to default
     console.warn(
       `Unexpected error calling applyFormatting(${value}, ${columnFormat}, ${VALUE_FORMATTING_CONTEXT}, ${columnUnitSummary}). Error=${error}`,
@@ -158,7 +158,7 @@ export const formatExample = (format) => {
   return ''
 }
 
-function applyFormatting (
+function applyFormatting(
   value,
   columnFormat = undefined,
   columnUnitSummary = undefined,
@@ -196,7 +196,7 @@ function applyFormatting (
       if (isAutoFormat(columnFormat, formattingCode)) {
         try {
           result = autoFormat(typedValue, columnFormat, columnUnitSummary)
-        } catch (error) {
+        } catch(error) {
           console.warn(`Unexpected error applying auto formatting. Error=${error}`)
         }
       } else if (columnFormat.valueType === 'number' && typeof typedValue === 'number' && isYearOnlyFormat(formattingCode)) {
@@ -204,7 +204,7 @@ function applyFormatting (
       } else {
         result = ssf.format(formattingCode, typedValue)
       }
-    } catch (error) {
+    } catch(error) {
       console.warn(`Unexpected error applying formatting ${error}`)
     }
   }
@@ -214,11 +214,11 @@ function applyFormatting (
   return result
 }
 
-function isYearOnlyFormat (formattingCode) {
+function isYearOnlyFormat(formattingCode) {
   return typeof formattingCode === 'string' && /^y{2,4}$/i.test(formattingCode.trim())
 }
 
-function formatNumericYear (value, formattingCode) {
+function formatNumericYear(value, formattingCode) {
   let year = String(Math.trunc(value))
   let width = formattingCode.trim().length
   if (width === 2) {
@@ -227,7 +227,7 @@ function formatNumericYear (value, formattingCode) {
   return year.padStart(width, '0')
 }
 
-function getEffectiveFormattingCode (columnFormat, formattingContext = VALUE_FORMATTING_CONTEXT) {
+function getEffectiveFormattingCode(columnFormat, formattingContext = VALUE_FORMATTING_CONTEXT) {
   if (typeof columnFormat === 'string') {
     // This should only be used by end users, not by components.
     return columnFormat
@@ -243,7 +243,7 @@ function getEffectiveFormattingCode (columnFormat, formattingContext = VALUE_FOR
  * Extracts a possible format tag from a column name based on the column name pattern
  * @returns "column_${formatTag}" will return ${formatTag} or undefined if the columnName doesn't match the pattern
  */
-function maybeExtractFormatTag (columnName) {
+function maybeExtractFormatTag(columnName) {
   let normalizedColName = columnName.toLowerCase()
   let lastUnderScoreIndex = normalizedColName.lastIndexOf('_')
 
@@ -261,7 +261,7 @@ function maybeExtractFormatTag (columnName) {
  * @param {'number' | 'date' | 'boolean' | 'string'} [valueType] the known column type
  * @returns a formatted value
  */
-export function fmt (value, format, valueType = undefined) {
+export function fmt(value, format, valueType = undefined) {
   let formatObj = getFormatObjectFromString(format, valueType)
   return formatValue(value, formatObj)
 }

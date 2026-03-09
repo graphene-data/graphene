@@ -13,12 +13,12 @@ export class DuckDBConnection implements QueryConnection {
   ready: Promise<void>
   connection: InnerConnection | null = null
 
-  constructor (options?: DuckDbOptions) {
+  constructor(options?: DuckDbOptions) {
     this.options = options || {}
     this.ready = this.initialize()
   }
 
-  private async initialize () {
+  private async initialize() {
     let dbPath = this.options.path
     if (!dbPath) {
       let files = await fs.readdir(config.root)
@@ -35,7 +35,7 @@ export class DuckDBConnection implements QueryConnection {
     await this.connection.run('use graphene_cli;')
   }
 
-  async runQuery (sql: string, params?: QueryParams): Promise<QueryResult> {
+  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
     await this.ready
     let reader = params
       ? await this.connection!.runAndReadAll(sql, params as any)
@@ -56,11 +56,11 @@ export class DuckDBConnection implements QueryConnection {
     return {rows}
   }
 
-  async listDatasets (): Promise<string[]> {
+  async listDatasets(): Promise<string[]> {
     return await Promise.resolve([])
   }
 
-  async listTables (): Promise<string[]> {
+  async listTables(): Promise<string[]> {
     let sql = `
       select table_schema as table_schema, table_name as table_name
       from information_schema.tables
@@ -71,7 +71,7 @@ export class DuckDBConnection implements QueryConnection {
     return res.rows.map(row => String(row['table_name']))
   }
 
-  async describeTable (target: string): Promise<SchemaColumn[]> {
+  async describeTable(target: string): Promise<SchemaColumn[]> {
     let parts = target.split('.')
     let table = parts.pop() || ''
     let schema = parts[0]

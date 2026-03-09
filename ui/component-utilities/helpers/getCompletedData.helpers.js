@@ -4,7 +4,7 @@
  * @param {Array<number>} arr - The array from which differences need to be found.
  * @return {Array<number>} An array containing the differences between consecutive elements.
  */
-export function getDiffs (arr) {
+export function getDiffs(arr) {
   let diffs = []
   for (let i = 1; i < arr.length; i++) diffs.push(arr[i] - arr[i - 1])
   return diffs
@@ -17,7 +17,7 @@ export function getDiffs (arr) {
  * @param {number} b - The second number to find gcd.
  * @return {number} The greatest common divisor of the input numbers a and b.
  */
-export function gcd (a, b) {
+export function gcd(a, b) {
   // Treat non-numeric types as 0
   if (typeof a !== 'number' || isNaN(a)) a = 0
   if (typeof b !== 'number' || isNaN(b)) b = 0
@@ -42,7 +42,7 @@ export function gcd (a, b) {
  * @param {Function} [valueof] - An optional function that defines how to obtain the measuring value.
  * @return {Array} An array containing the minimum and maximum of numbers, respectively.
  */
-export function extent (values, valueof) {
+export function extent(values, valueof) {
   if (!Array.isArray(values)) throw new TypeError('Cannot calculate extent of non-array value.')
   let min
   let max
@@ -75,7 +75,7 @@ export function extent (values, valueof) {
  * @param {number} period - The incremental value for each step in the sequence.
  * @return {Array<number>} An array containing the sequenced numbers.
  */
-export function vectorSeq (values, period) {
+export function vectorSeq(values, period) {
   let [min, max] = extent(values)
 
   let sequence = []
@@ -94,18 +94,18 @@ export function vectorSeq (values, period) {
  * @param {Array<number>} arr - An array containing numbers from which interval is calculated.
  * @return {number|undefined} The interval between numbers in the sorted array, or undefined if the array has only one element.
  */
-export function findInterval (arr) {
+export function findInterval(arr) {
   if (arr.length <= 1) {
     return
   }
 
   // Sort array ascending
-  arr.sort(function (a, b) {
+  arr.sort(function(a, b) {
     return a - b
   })
 
   // 1. Multiply array by 100
-  arr = arr.map(function (x) {
+  arr = arr.map(function(x) {
     return x * 100000000
   })
 
