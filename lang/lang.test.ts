@@ -933,6 +933,21 @@ describe('lang', () => {
     table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Measure mixes fanout localities/i)
   })
 
+  it('allows a mixed-fanout measure after aggregating each grain into one-to-one tables', () => {
+    expect(`
+      table orders_agg (id int, user_id int, amount int)
+      table payments_agg (id int, user_id int, amount int)
+      table order_totals as (from orders_agg select user_id, sum(amount) as order_total)
+      table payment_totals as (from payments_agg select user_id, sum(amount) as payment_total)
+      table t (
+        id int
+        join one order_totals on order_totals.user_id = id
+        join one payment_totals on payment_totals.user_id = id
+        weird: order_totals.order_total / payment_totals.payment_total
+      )
+    `).toHaveNoErrors()
+  })
+
   it('allows join expressions to refer to the alias', () => {
     expect('table t (oid int, join one users as usr on usr.id = oid); from t select usr.name').toRenderSql('select usr."name" as "usr_name" from t as t left join users as usr on usr."id"=t."oid"')
   })
@@ -1243,12 +1258,42 @@ describe('lang', () => {
     expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
   })
 
+  it('allows the base and fanout grain query after separating the aggregates', () => {
+    expect(`
+      with user_stats as (from users select name, avg(age) as avg_age),
+      order_stats as (from users select name, sum(orders.amount) as total_amount)
+      from user_stats
+      left join order_stats on order_stats.name = user_stats.name
+      select user_stats.name, avg_age, total_amount
+    `).toHaveNoErrors()
+  })
+
   it('rejects aggregate queries that mix sibling fanout grains', () => {
     expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
   })
 
+  it('allows the sibling fanout query after aggregating each branch separately', () => {
+    expect(`
+      with order_stats as (from users select name, sum(orders.amount) as order_amount),
+      payment_stats as (from users select name, sum(payments.amount) as payment_amount)
+      from order_stats
+      left join payment_stats on payment_stats.name = order_stats.name
+      select order_stats.name, order_amount, payment_amount
+    `).toHaveNoErrors()
+  })
+
   it('rejects aggregate queries that mix ancestor and descendant fanout grains', () => {
     expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  })
+
+  it('allows the ancestor and descendant query after aggregating each grain separately', () => {
+    expect(`
+      with order_stats as (from users select name, sum(orders.amount) as order_amount),
+      item_stats as (from users select name, sum(orders.order_items.quantity) as item_quantity)
+      from order_stats
+      left join item_stats on item_stats.name = order_stats.name
+      select order_stats.name, order_amount, item_quantity
+    `).toHaveNoErrors()
   })
 
   it('rejects aggregate query dimensions that depend on join many', () => {
@@ -1274,6 +1319,24 @@ describe('lang', () => {
       join payments on payments.user_id = users.id
       select name, sum(orders.amount), sum(payments.amount)
     `).toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  })
+
+  it('allows the explicit-join fanout query after aggregating each branch separately', () => {
+    expect(`
+      with order_stats as (
+        from users
+        join orders on orders.user_id = users.id
+        select name, sum(orders.amount) as order_amount
+      ),
+      payment_stats as (
+        from users
+        join payments on payments.user_id = users.id
+        select name, sum(payments.amount) as payment_amount
+      )
+      from order_stats
+      left join payment_stats on payment_stats.name = order_stats.name
+      select order_stats.name, order_amount, payment_amount
+    `).toHaveNoErrors()
   })
 
   it('falls back conservatively when explicit joins are more complex than simple equality predicates', () => {
