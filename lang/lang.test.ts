@@ -1263,6 +1263,10 @@ describe('lang', () => {
     expect('from orders join users on users.id = orders.user_id select users.name, sum(amount)').toHaveNoErrors()
   })
 
+  it('matches explicit joins structurally when equality operands are reversed', () => {
+    expect('from orders join users on orders.user_id = users.id select users.name, sum(amount)').toHaveNoErrors()
+  })
+
   it('applies fanout protection to explicit joins too', () => {
     expect(`
       from users
@@ -1270,6 +1274,14 @@ describe('lang', () => {
       join payments on payments.user_id = users.id
       select name, sum(orders.amount), sum(payments.amount)
     `).toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  })
+
+  it('falls back conservatively when explicit joins are more complex than simple equality predicates', () => {
+    expect(`
+      from orders
+      join users on (users.id = orders.user_id and users.name is not null)
+      select users.name, sum(amount)
+    `).toHaveDiagnostic(/Non-aggregate expressions in aggregate queries cannot depend on a `join many` path/i)
   })
 
   it('allows weighted semantics when the joined rowset is materialized first', () => {

@@ -3,6 +3,7 @@ import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import {config} from './config.ts'
 import {extendFanoutPath, formatFanoutPath, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths} from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
+import {inferAdHocJoinLocality} from './joins.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
 import {type Table, type Query, type QueryJoin, type Column, type FieldType, type FileInfo, type Diagnostic, type Expr, type CteTable, type JoinType, type Scope} from './types.ts'
@@ -36,10 +37,6 @@ function joinExprs(exprs: Expr[], sql: string, type: FieldType, isAgg?: boolean)
     fanoutSensitivePaths: mergeSensitiveFanouts(...exprs.map(expr => expr.fanoutSensitivePaths)),
     fanoutConflict: rowFanout.conflict || exprs.some(expr => expr.fanoutConflict),
   }
-}
-
-function normalizeSql(sql: string): string {
-  return sql.toLowerCase().replace(/\s+/g, '')
 }
 
 function formatFanoutPaths(paths: string[][]) {
@@ -263,17 +260,17 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
     // Now that we have all the bits, construct the join for it.
     if (query.joins.find(j => j.alias == alias)) return diag(tablePrimary, `Query already has table called "${alias}"`)
-    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, localityPath: []}
+    let onExpr = sourceNode.getChild('Expression') || undefined
+    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, localityPath: [], onExpr}
     query.joins.push(qj)
     NODE_ENTITY_MAP.set(tablePrimary, {entityType: 'table', table})
 
     // If this is a JOIN, analyze the ON expr
     // It's important we do this _after_ adding the join to the query, since analyzing the expression looks at the query
-    let onExpr = sourceNode.getChild('Expression') || undefined
     if (joinType == 'cross' && onExpr) return diag(sourceNode, 'CROSS JOIN cannot have an ON clause')
     if (isJoin && !onExpr && joinType != 'cross') return diag(sourceNode, `${joinType!.toUpperCase()} JOIN requires an ON clause`)
     qj.onClause = onExpr && analyzeExpr(onExpr, {query, alias: '', otherTables: scope.otherTables}).sql
-    if (qj.source == 'ad-hoc') inferAdHocJoinLocality(qj, query, scope)
+    if (qj.source == 'ad-hoc') inferAdHocJoinLocality(qj, query, scope, lookupTable)
   }
 
   // SELECT clause
@@ -883,43 +880,6 @@ function renderWindowBound(bound: SyntaxNode, scope: Scope): string {
   if (kws.includes('current')) return 'CURRENT ROW'
   let expr = analyzeExpr(bound.getChild('Expression')!, scope).sql
   return `${expr} ${kws.includes('following') ? 'FOLLOWING' : 'PRECEDING'}`
-}
-
-function inferAdHocJoinLocality(join: QueryJoin, query: Query, scope: Scope) {
-  if (!join.table || !join.onClause) {
-    join.localityPath = [join.alias]
-    return
-  }
-
-  let candidates: {cardinality: 'one' | 'many'; localityPath: string[]}[] = []
-  for (let source of query.joins.filter(qj => qj != join && qj.table)) {
-    for (let modeled of source.table!.joins) {
-      modeled.table = lookupTable(modeled.targetNode!)
-      if (!modeled.table || modeled.table.name != join.table.name) continue
-
-      let joinTarget = {name: modeled.alias, table: join.table, alias: join.alias}
-      let onClause = analyzeExpr(modeled.onExpr!, {
-        query,
-        table: source.table!,
-        alias: source.alias,
-        localityPath: source.localityPath,
-        otherTables: scope.otherTables,
-        joinTarget,
-      }).sql
-      if (normalizeSql(onClause) != normalizeSql(join.onClause)) continue
-
-      let localityPath = modeled.cardinality == 'many' ? extendFanoutPath(source.localityPath, join.alias) : extendFanoutPath(source.localityPath)
-      candidates.push({cardinality: modeled.cardinality!, localityPath})
-    }
-  }
-
-  if (candidates.length != 1) {
-    join.localityPath = [join.alias]
-    return
-  }
-
-  join.cardinality = candidates[0].cardinality
-  join.localityPath = candidates[0].localityPath
 }
 
 // Traverse a join path (like `tableA.tableB.`), returning a new scope pointing to the target table. Adds implied joins to the query as it goes
