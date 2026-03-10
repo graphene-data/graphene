@@ -9,11 +9,13 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/*.test.ts'],
     setupFiles: ['tests/setup.ts'],
+    globalSetup: ['tests/globalSetup.ts'],
     reporters: ['default', 'json'],
     outputFile: 'node_modules/.testResults.json',
     onConsoleLog(log) {
       // silence some expected logs that aren't helpful in tests
       if (log.startsWith('Pulling schema from database...')) return false
+      if (log.startsWith('manually calling optimizeDeps is deprecated.')) return false
     },
     fileParallelism: false,
   },

@@ -2,7 +2,7 @@ import fs, {globSync} from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import middie from '@fastify/middie'
-import {createServer as createViteServer} from 'vite'
+import {createServer as createViteServer, optimizeDeps, resolveConfig} from 'vite'
 import {migrate} from 'drizzle-orm/postgres-js/migrator'
 import type {FastifyLoggerOptions} from 'fastify'
 import {createServer} from './server.ts'
@@ -12,6 +12,7 @@ import {setAuthOverride} from './auth.ts'
 import {encryptSecret} from './secrets.ts'
 import {TEST} from './consts.ts'
 import {agentTest, testRenderMd} from './agent/testEndpoint.ts'
+import {createFrontendViteConfig} from '../frontend/vite.config.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 export const orgId = 'organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d'
@@ -142,6 +143,11 @@ export async function seedDatabase(project = 'flights') {
     let content = fs.readFileSync(path.join(projectRoot, filePath), 'utf-8')
     await db.insert(schema.files).values({repoId, path: relative, extension, content})
   }
+}
+
+export async function prepareFrontendDeps() {
+  let config = await resolveConfig(createFrontendViteConfig(), 'serve', 'test')
+  await optimizeDeps(config, true)
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
