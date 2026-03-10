@@ -3,7 +3,6 @@ import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import {config} from './config.ts'
 import {extendFanoutPath, formatFanoutPaths, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths} from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
-import {inferAdHocJoinLocality} from './joins.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
 import {type Table, type Query, type QueryJoin, type Column, type FieldType, type FileInfo, type Diagnostic, type Expr, type CteTable, type JoinType, type Scope} from './types.ts'
@@ -218,7 +217,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     // Now that we have all the bits, construct the join for it.
     if (query.joins.find(j => j.alias == alias)) return diag(tablePrimary, `Query already has table called "${alias}"`)
     let onExpr = sourceNode.getChild('Expression') || undefined
-    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, localityPath: [], onExpr}
+    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, localityPath: isJoin ? [alias] : [], onExpr}
     query.joins.push(qj)
     NODE_ENTITY_MAP.set(tablePrimary, {entityType: 'table', table})
 
@@ -227,7 +226,6 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     if (joinType == 'cross' && onExpr) return diag(sourceNode, 'CROSS JOIN cannot have an ON clause')
     if (isJoin && !onExpr && joinType != 'cross') return diag(sourceNode, `${joinType!.toUpperCase()} JOIN requires an ON clause`)
     qj.onClause = onExpr && analyzeExpr(onExpr, {query, alias: '', otherTables: scope.otherTables}).sql
-    if (qj.source == 'ad-hoc') inferAdHocJoinLocality(qj, query, scope, lookupTable)
   }
 
   // SELECT clause

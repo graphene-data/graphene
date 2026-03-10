@@ -1304,14 +1304,6 @@ describe('lang', () => {
     expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveNoErrors()
   })
 
-  it('allows an explicit join that matches a join_one relationship', () => {
-    expect('from orders join users on users.id = orders.user_id select users.name, sum(amount)').toHaveNoErrors()
-  })
-
-  it('matches explicit joins structurally when equality operands are reversed', () => {
-    expect('from orders join users on orders.user_id = users.id select users.name, sum(amount)').toHaveNoErrors()
-  })
-
   it('applies fanout protection to explicit joins too', () => {
     expect(`
       from users
