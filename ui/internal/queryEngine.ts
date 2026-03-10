@@ -147,7 +147,7 @@ async function _runAll() {
   )
 }
 
-function translateData(data: any, node: QueryNode) {
+export function translateData(data: any, node: QueryNode) {
   let rows = data.rows || []
   rows.dataLoaded = true // evidence components need this to be set
   rows._evidenceColumnTypes = []
@@ -159,14 +159,33 @@ function translateData(data: any, node: QueryNode) {
 
   data.fields.forEach((field, index) => {
     let name = field.name
+    let requested = requestFields[index]
 
     // server gives names like `col_1` to unnamed expressions but we translate it back into the original expression like `avg(price)`
     if (field.name.match(/col_\d+/)) {
-      name = requestFields[index]
+      name = requested
       rows.forEach(r => {
         r[name] = r[field.name]
         delete r[field.name]
       })
+    }
+
+    // Snowflake may return unquoted identifiers uppercased in row objects. If the requested
+    // field is a simple identifier and only differs by case, remap row keys back to requested case.
+    let isSimpleIdentifier = typeof requested == 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(requested)
+    if (isSimpleIdentifier && rows.length > 0) {
+      let current = name
+      if (rows[0][current] === undefined) {
+        let matched = Object.keys(rows[0]).find(k => k.toLowerCase() == requested.toLowerCase())
+        if (matched) current = matched
+      }
+      if (current != requested && rows[0][current] !== undefined) {
+        name = requested
+        rows.forEach(r => {
+          r[name] = r[current]
+          delete r[current]
+        })
+      }
     }
 
     // map graphene types down to the ones evidence expects
@@ -198,12 +217,14 @@ function evidenceType(type: string | undefined) {
   return 'string'
 }
 
-Object.assign(window.$GRAPHENE, {
-  registerQuery,
-  updateParam,
-  query,
-  unsubscribe,
-  resetQueryEngine,
-  isQueryLoading,
-  queryResults,
-})
+if (typeof window !== 'undefined') {
+  Object.assign(window.$GRAPHENE, {
+    registerQuery,
+    updateParam,
+    query,
+    unsubscribe,
+    resetQueryEngine,
+    isQueryLoading,
+    queryResults,
+  })
+}
