@@ -145,7 +145,7 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
       let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables})
       query.fields.push({name: outName, sql: expr.sql, type: expr.type, metadata: col.metadata})
     } else {
-      query.fields.push({name: outName, sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, metadata: col.metadata})
+      query.fields.push({name: outName, sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata})
     }
   }
 }
@@ -325,8 +325,8 @@ function formatTablePath(path: string): string {
 }
 
 function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
-  let ctes: string[] = [...cteMap.values()].map(c => `${quote(c.name)} as ( ${c.query.sql} )`)
-  let selectParts = query.fields.map(f => `${f.sql} as ${quote(f.name)}`)
+  let ctes: string[] = [...cteMap.values()].map(c => `${c.name} as ( ${c.query.sql} )`)
+  let selectParts = query.fields.map(f => `${f.sql} as ${f.name}`)
   let baseJoin = query.joins.find(j => j.source == 'from')
 
   // No FROM clause (e.g. `select 1`)
@@ -334,10 +334,10 @@ function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
 
   function renderTableRef(table: Table): string {
     if (table.type === 'view') {
-      if (!ctes.some(c => c.startsWith(quote(table.name) + ' '))) {
-        ctes.push(`${quote(table.name)} as ( ${table.query.sql} )`)
+      if (!ctes.some(c => c.startsWith(table.name + ' '))) {
+        ctes.push(`${table.name} as ( ${table.query.sql} )`)
       }
-      return quote(table.name)
+      return table.name
     }
     if (table.type === 'subquery') return `( ${table.query.sql} )`
     return formatTablePath(table.tablePath)
@@ -397,7 +397,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // Check output fields first (for referencing aliases in HAVING)
       if (scope.query && pathNodes.length == 0) {
         let outField = scope.query.fields.find(f => f.name == fieldName)
-        if (outField) return {sql: outField.isAgg ? quote(fieldName) : outField.sql, type: outField.type, isAgg: outField.isAgg}
+        if (outField) return {sql: outField.isAgg ? fieldName : outField.sql, type: outField.type, isAgg: outField.isAgg}
       }
 
       // Follow any dot path (e.g., `users.orders` in `users.orders.amount`), then find the field
@@ -429,7 +429,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field: col, table})
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${quoteColumn(col.name)}`, type: col.type}
+      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type}
 
       // Computed column: analyze its expression in the matched table's scope
       if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
@@ -960,16 +960,4 @@ function convertDataType(dataType: string): FieldType | null {
     default:
       return null
   }
-}
-
-// Quote an identifier for the current dialect
-function quote(name: string): string {
-  if (config.dialect === 'bigquery') return `\`${name}\``
-  return `"${name}"`
-}
-
-function quoteColumn(name: string): string {
-  if (config.dialect === 'bigquery') return `\`${name}\``
-  if (config.dialect === 'snowflake') return `"${name.toUpperCase()}"`
-  return `"${name}"`
 }
