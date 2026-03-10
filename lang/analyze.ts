@@ -1,6 +1,7 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import {config} from './config.ts'
+import {extendFanoutPath, formatFanoutPath, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths} from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
@@ -24,6 +25,53 @@ export let FILE_MAP: Record<string, FileInfo> = {} // All the files in the works
 export let diagnostics: Diagnostic[] = [] // Tracks errors/warnings
 let analysisStack = new Set<Column>() // Track computed columns being analyzed to detect cycles
 let NODE_ENTITY_MAP = new NodeWeakMap<any>() // Points syntax nodes back to entities for ide hover tips
+
+function joinExprs(exprs: Expr[], sql: string, type: FieldType, isAgg?: boolean): Expr {
+  let rowFanout = mergeFanoutPaths(exprs.map(expr => expr.fanoutPath))
+  return {
+    sql,
+    type,
+    isAgg,
+    fanoutPath: isAgg ? undefined : rowFanout.path,
+    fanoutSensitivePaths: mergeSensitiveFanouts(...exprs.map(expr => expr.fanoutSensitivePaths)),
+    fanoutConflict: rowFanout.conflict || exprs.some(expr => expr.fanoutConflict),
+  }
+}
+
+function normalizeSql(sql: string): string {
+  return sql.toLowerCase().replace(/\s+/g, '')
+}
+
+function formatFanoutPaths(paths: string[][]) {
+  return uniqueFanoutPaths(paths).map(formatFanoutPath).join(', ')
+}
+
+function validateStoredExpr(node: SyntaxNode, expr: Expr) {
+  if (expr.fanoutConflict) diag(node, 'Expression mixes incompatible `join many` paths')
+  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) diag(node, 'Fields that refer to a `join many` should aggregate')
+  let paths = uniqueFanoutPaths(expr.fanoutSensitivePaths || [])
+  if (paths.length > 1) {
+    diag(node, `Measure mixes fanout localities (${formatFanoutPaths(paths)}). Aggregate each grain in a subquery/CTE first`)
+  }
+}
+
+function validateAggregateQueryExpr(node: SyntaxNode, expr: Expr) {
+  if (expr.fanoutConflict) diag(node, 'Expression mixes incompatible `join many` paths')
+  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) {
+    diag(node, 'Non-aggregate expressions in aggregate queries cannot depend on a `join many` path')
+  }
+}
+
+function validateAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
+  let paths = uniqueFanoutPaths(exprs.flatMap(entry => entry.expr.fanoutSensitivePaths || []))
+  if (paths.length <= 1) return
+  let message = `Aggregate query mixes fanout localities (${formatFanoutPaths(paths)}). Aggregate each grain in a subquery/CTE first`
+  for (let entry of exprs) {
+    let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+    if (entryPaths.length == 0) continue
+    diag(entry.node, message)
+  }
+}
 
 // Creates tables without analyzing them.
 export function findTables(fi: FileInfo) {
@@ -114,11 +162,14 @@ function analyzeView(table: Table) {
 // Analyze everything in a table - used for full project analysis (e.g., `check` command)
 export function analyzeTableFully(table: Table) {
   if (table.type == 'view') analyzeView(table)
-  let scope: Scope = {table, alias: table.name}
+  let scope: Scope = {table, alias: table.name, localityPath: []}
   table.columns.forEach(c => {
     if (!c.exprNode) return
     let expr = analyzeExpr(c.exprNode, scope)
     c.isAgg = expr.isAgg
+    c.fanoutPath = expr.fanoutPath
+    c.fanoutSensitivePaths = expr.fanoutSensitivePaths
+    validateStoredExpr(c.exprNode, expr)
   })
   table.joins.forEach(j => (j.table = lookupTable(j.targetNode!)))
 }
@@ -140,12 +191,20 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
     let outName = namePrefix ? `${namePrefix}_${col.name}` : col.name
     if (col.exprNode) {
       // Determine if aggregate (without query context to avoid side-effect diagnostics), then skip measures
-      if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {table, alias}).isAgg
+      if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {table, alias, localityPath: scope.localityPath}).isAgg
       if (col.isAgg) continue
-      let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables})
-      query.fields.push({name: outName, sql: expr.sql, type: expr.type, metadata: col.metadata})
+      let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables, localityPath: scope.localityPath})
+      query.fields.push({
+        name: outName,
+        sql: expr.sql,
+        type: expr.type,
+        metadata: col.metadata,
+        fanoutPath: expr.fanoutPath,
+        fanoutSensitivePaths: expr.fanoutSensitivePaths,
+        fanoutConflict: expr.fanoutConflict,
+      })
     } else {
-      query.fields.push({name: outName, sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, metadata: col.metadata})
+      query.fields.push({name: outName, sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, metadata: col.metadata, fanoutPath: scope.localityPath})
     }
   }
 }
@@ -154,8 +213,9 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
 export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
   let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: [], isAggregate: false}
   let ctes = new Map<string, CteTable>()
-  let scope: Scope = {query, alias: '', otherTables: outerCtes || []}
+  let scope: Scope = {query, alias: '', localityPath: [], otherTables: outerCtes || []}
   let isAgg = false
+  let fanoutExprs: {node: SyntaxNode; expr: Expr}[] = []
 
   // WITH clause - analyze each CTE. Store them on Scope, as they're accessible to later CTEs, and valid tables for the query to from/join
   let withClauses = queryNode.getChild('WithClause')?.getChildren('CteDef') || []
@@ -203,7 +263,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
     // Now that we have all the bits, construct the join for it.
     if (query.joins.find(j => j.alias == alias)) return diag(tablePrimary, `Query already has table called "${alias}"`)
-    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType}
+    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, localityPath: []}
     query.joins.push(qj)
     NODE_ENTITY_MAP.set(tablePrimary, {entityType: 'table', table})
 
@@ -213,6 +273,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     if (joinType == 'cross' && onExpr) return diag(sourceNode, 'CROSS JOIN cannot have an ON clause')
     if (isJoin && !onExpr && joinType != 'cross') return diag(sourceNode, `${joinType!.toUpperCase()} JOIN requires an ON clause`)
     qj.onClause = onExpr && analyzeExpr(onExpr, {query, alias: '', otherTables: scope.otherTables}).sql
+    if (qj.source == 'ad-hoc') inferAdHocJoinLocality(qj, query, scope)
   }
 
   // SELECT clause
@@ -238,7 +299,17 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
       let expr = analyzeExpr(s.getChild('Expression')!, scope)
       let name = s.getChild('Alias') ? txt(s.getChild('Alias')) : inferName(s.getChild('Expression')!, scope)
       isAgg ||= !!expr.isAgg
-      query.fields.push({name, sql: expr.sql, type: expr.type, isAgg: expr.isAgg})
+      query.fields.push({
+        name,
+        sql: expr.sql,
+        type: expr.type,
+        isAgg: expr.isAgg,
+        fanoutPath: expr.fanoutPath,
+        fanoutSensitivePaths: expr.fanoutSensitivePaths,
+        fanoutConflict: expr.fanoutConflict,
+        fanoutSafeAgg: expr.fanoutSafeAgg,
+      })
+      fanoutExprs.push({node: s.getChild('Expression')!, expr})
     }
   }
 
@@ -249,6 +320,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     if (!node) continue
     for (let expr of unpackAnds(node, scope)) {
       query.filters.push({sql: expr.sql, isAgg: expr.isAgg})
+      fanoutExprs.push({node, expr})
     }
   }
 
@@ -263,8 +335,9 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     }
     let name = g.getChild('Alias') ? txt(g.getChild('Alias')) : inferName(g.getChild('Expression')!, scope)
     if (!query.fields.find(f => f.name == name)) {
-      query.fields.unshift({name, sql: expr.sql, type: expr.type})
+      query.fields.unshift({name, sql: expr.sql, type: expr.type, fanoutPath: expr.fanoutPath, fanoutSensitivePaths: expr.fanoutSensitivePaths, fanoutConflict: expr.fanoutConflict})
     }
+    fanoutExprs.push({node: g.getChild('Expression')!, expr})
   }
 
   // ORDER BY
@@ -307,6 +380,10 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   query.orderBy = orderBy
   query.limit = limit
   query.isAggregate = isAgg
+  if (isAgg) {
+    fanoutExprs.forEach(({node, expr}) => validateAggregateQueryExpr(node, expr))
+    validateAggregateQueryFanout(fanoutExprs.filter(entry => entry.expr.isAgg))
+  }
   query.sql = buildSql(query, ctes)
   return query
 }
@@ -391,7 +468,17 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // Check output fields first (for referencing aliases in HAVING)
       if (scope.query && pathNodes.length == 0) {
         let outField = scope.query.fields.find(f => f.name == fieldName)
-        if (outField) return {sql: outField.isAgg ? quote(fieldName) : outField.sql, type: outField.type, isAgg: outField.isAgg}
+        if (outField) {
+          return {
+            sql: outField.isAgg ? quote(fieldName) : outField.sql,
+            type: outField.type,
+            isAgg: outField.isAgg,
+            fanoutPath: outField.fanoutPath,
+            fanoutSensitivePaths: outField.fanoutSensitivePaths,
+            fanoutConflict: outField.fanoutConflict,
+            fanoutSafeAgg: outField.fanoutSafeAgg,
+          }
+        }
       }
 
       // Follow any dot path (e.g., `users.orders` in `users.orders.amount`), then find the field
@@ -401,8 +488,8 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // Build the list of tables to search: if followJoins landed on a specific table, just that one.
       // Otherwise, search all tables either in FROM or explicitly JOINed (but not implicitly joined).
       let possibleJoins = targetScope.table
-        ? [{table: targetScope.table, alias: targetScope.alias}]
-        : scope.query?.joins.filter(j => j.source != 'implicit' && j.table).map(j => ({table: j.table!, alias: j.alias})) || []
+        ? [{table: targetScope.table, alias: targetScope.alias, localityPath: targetScope.localityPath}]
+        : scope.query?.joins.filter(j => j.source != 'implicit' && j.table).map(j => ({table: j.table!, alias: j.alias, localityPath: j.localityPath})) || []
 
       // Expect just one of the possibleJoins to have the named column. Otherwise, it's an error.
       let matches = possibleJoins.filter(j => j.table.columns.some(c => c.name == fieldName))
@@ -423,14 +510,22 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field: col, table})
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${quoteColumn(col.name)}`, type: col.type}
+      if (!col.exprNode) return {sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, fanoutPath: matches[0].localityPath}
 
       // Computed column: analyze its expression in the matched table's scope
       if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
       analysisStack.add(col)
-      let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables})
+      let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables, localityPath: matches[0].localityPath})
       analysisStack.delete(col)
-      return {sql: `(${expr.sql})`, type: expr.type, isAgg: expr.isAgg}
+      return {
+        sql: `(${expr.sql})`,
+        type: expr.type,
+        isAgg: expr.isAgg,
+        fanoutPath: expr.fanoutPath,
+        fanoutSensitivePaths: expr.fanoutSensitivePaths,
+        fanoutConflict: expr.fanoutConflict,
+        fanoutSafeAgg: expr.fanoutSafeAgg,
+      }
     }
 
     case 'FunctionCall':
@@ -452,16 +547,30 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
 
     case 'Parenthetical': {
       let inner = analyzeExpr(node.getChild('Expression')!, scope)
-      return {sql: `(${inner.sql})`, type: inner.type, isAgg: inner.isAgg}
+      return {...inner, sql: `(${inner.sql})`}
     }
 
     case 'Count': {
       let inner = node.getChild('Expression')
       if (inner) {
         let e = analyzeExpr(inner, scope)
-        return {sql: `count(distinct ${e.sql})`, type: 'number', isAgg: true, canWindow: true}
+        return {
+          sql: `count(distinct ${e.sql})`,
+          type: 'number',
+          isAgg: true,
+          canWindow: true,
+          fanoutSensitivePaths: mergeSensitiveFanouts(e.fanoutSensitivePaths),
+          fanoutConflict: e.fanoutConflict,
+          fanoutSafeAgg: true,
+        }
       }
-      return {sql: 'count(1)', type: 'number', isAgg: true, canWindow: true}
+      return {
+        sql: 'count(1)',
+        type: 'number',
+        isAgg: true,
+        canWindow: true,
+        fanoutSensitivePaths: [extendFanoutPath(scope.localityPath)],
+      }
     }
 
     case 'BinaryExpression':
@@ -520,32 +629,34 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         sql = `${left.sql}${op}${right.sql}`
       }
 
-      return {sql, type: resultType, isAgg: left.isAgg || right.isAgg}
+      return joinExprs([left, right], sql, resultType, left.isAgg || right.isAgg)
     }
 
     case 'UnaryExpression': {
       let op = txt(node.firstChild).toLowerCase()
       let child = analyzeExpr(node.lastChild!, scope)
-      if (op == 'not') return {sql: `NOT (${child.sql})`, type: 'boolean', isAgg: child.isAgg}
-      if (op == '-') return {sql: `-(${child.sql})`, type: child.type, isAgg: child.isAgg}
-      if (op == '+') return {sql: `(${child.sql})`, type: child.type, isAgg: child.isAgg}
+      if (op == 'not') return {...child, sql: `NOT (${child.sql})`, type: 'boolean'}
+      if (op == '-') return {...child, sql: `-(${child.sql})`}
+      if (op == '+') return {...child, sql: `(${child.sql})`}
       return diag(node, `Unknown unary operator: ${op}`, {sql: 'NULL', type: 'error'})
     }
 
     case 'NullTestExpression': {
       let isNot = !!node.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not')
       let e = analyzeExpr(node.firstChild!, scope)
-      return {sql: `${e.sql} IS ${isNot ? 'NOT ' : ''}NULL`, type: 'boolean', isAgg: e.isAgg}
+      return {...e, sql: `${e.sql} IS ${isNot ? 'NOT ' : ''}NULL`, type: 'boolean'}
     }
 
     case 'CaseExpression': {
       let parts = ['CASE']
       let isAgg = false
+      let fanoutExprs: Expr[] = []
       let caseValue = node.getChild('Expression')
       if (caseValue) {
         let e = analyzeExpr(caseValue, scope)
         parts.push(e.sql)
         isAgg ||= !!e.isAgg
+        fanoutExprs.push(e)
       }
 
       let resultType: FieldType = 'string'
@@ -555,6 +666,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         let then = analyzeExpr(exprs[1], scope)
         resultType = then.type
         isAgg ||= !!when.isAgg || !!then.isAgg
+        fanoutExprs.push(when, then)
         parts.push(`WHEN (${when.sql}) THEN ${then.sql}`)
       }
 
@@ -563,9 +675,10 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         let elseExpr = analyzeExpr(elseClause.getChild('Expression')!, scope)
         parts.push(`ELSE ${elseExpr.sql}`)
         isAgg ||= !!elseExpr.isAgg
+        fanoutExprs.push(elseExpr)
       }
       parts.push('END')
-      return {sql: parts.join(' '), type: resultType, isAgg: isAgg || undefined}
+      return joinExprs(fanoutExprs, parts.join(' '), resultType, isAgg || undefined)
     }
 
     case 'InExpression': {
@@ -577,7 +690,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         let subquery = analyzeQuery(subqueryNode, scope.otherTables)
         if (!subquery) return {sql: 'NULL', type: 'error'}
         if (subquery.fields.length != 1) return diag(subqueryNode, 'Subquery in IN must return exactly one column', {sql: 'NULL', type: 'error'})
-        return {sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${subquery.sql})`, type: 'boolean', isAgg: e.isAgg}
+        return {...e, sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${subquery.sql})`, type: 'boolean'}
       }
       if (!valueList) {
         return diag(node, 'IN expression must provide either values or a subquery', {sql: 'NULL', type: 'error'})
@@ -590,7 +703,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         }
         return val.sql
       })
-      return {sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: 'boolean', isAgg: e.isAgg}
+      return {...e, sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: 'boolean'}
     }
 
     case 'BetweenExpression': {
@@ -607,7 +720,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       }
 
       let sql = `${e.sql} ${not ? 'NOT BETWEEN' : 'BETWEEN'} ${low.sql} AND ${high.sql}`
-      return {sql, type: 'boolean', isAgg: e.isAgg || low.isAgg || high.isAgg}
+      return joinExprs([e, low, high], sql, 'boolean', e.isAgg || low.isAgg || high.isAgg)
     }
 
     case 'SubqueryExpression': {
@@ -625,7 +738,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let targetType = txt(typeNode).toUpperCase()
       let resultType = convertDataType(targetType)
       if (!resultType) return diag(typeNode, `Unsupported cast type: ${targetType.toLowerCase()}`, {sql: 'NULL', type: 'error'})
-      return {sql: `CAST(${e.sql} AS ${targetType})`, type: resultType, isAgg: e.isAgg}
+      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: resultType}
     }
 
     case 'ExtractExpression': {
@@ -635,7 +748,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let unit = txt(node.getChild('ExtractUnit')!)
         .replace(/^['"]|['"]$/g, '')
         .toLowerCase()
-      return {sql: `EXTRACT(${unit} FROM ${e.sql})`, type: 'number', isAgg: e.isAgg}
+      return {...e, sql: `EXTRACT(${unit} FROM ${e.sql})`, type: 'number'}
     }
 
     case 'IntervalExpression': {
@@ -651,7 +764,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       checkTypes(quantity, ['number'], quantityNode)
       let unit = parseIntervalUnit(txt(node.getChild('IntervalUnit')!).toLowerCase())
       if (!unit) return diag(node, 'Invalid interval unit', {sql: 'NULL', type: 'error'})
-      return {sql: `INTERVAL ${quantity.sql} ${unit}`, type: 'interval', isAgg: quantity.isAgg}
+      return {...quantity, sql: `INTERVAL ${quantity.sql} ${unit}`, type: 'interval'}
     }
 
     case 'DateExpression':
@@ -669,28 +782,30 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
 }
 
 function analyzeDateArithmetic(op: '+' | '-', left: Expr, right: Expr, node: SyntaxNode): Expr {
+  let merged = joinExprs([left, right], '', 'number', left.isAgg || right.isAgg)
+
   // date - date = interval
   if ((left.type == 'date' || left.type == 'timestamp') && (right.type == 'date' || right.type == 'timestamp')) {
     if (op != '-') return diag(node, 'Can only subtract dates', {sql: 'NULL', type: 'error'})
     let unit = left.type == 'timestamp' ? 'SECOND' : 'DAY'
     if (config.dialect == 'bigquery') {
-      return {sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: 'number'}
+      return {...merged, sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: 'number'}
     }
     if (config.dialect == 'snowflake') {
-      return {sql: `TIMESTAMPDIFF(${unit}, ${right.sql}, ${left.sql})`, type: 'number'}
+      return {...merged, sql: `TIMESTAMPDIFF(${unit}, ${right.sql}, ${left.sql})`, type: 'number'}
     }
-    return {sql: `DATE_DIFF('${unit.toLowerCase()}', ${right.sql}, ${left.sql})`, type: 'number'}
+    return {...merged, sql: `DATE_DIFF('${unit.toLowerCase()}', ${right.sql}, ${left.sql})`, type: 'number'}
   }
 
   // date +/- interval
   if ((left.type == 'date' || left.type == 'timestamp') && right.type == 'interval') {
-    return {sql: `${left.sql} ${op} ${right.sql}`, type: left.type}
+    return {...merged, sql: `${left.sql} ${op} ${right.sql}`, type: left.type}
   }
 
   // interval + date (normalize to date + interval)
   if (left.type == 'interval' && (right.type == 'date' || right.type == 'timestamp')) {
     if (op == '-') return diag(node, 'Cannot subtract date from interval', {sql: 'NULL', type: 'error'})
-    return {sql: `${right.sql} + ${left.sql}`, type: right.type}
+    return {...merged, sql: `${right.sql} + ${left.sql}`, type: right.type}
   }
 
   return diag(node, 'Invalid date arithmetic', {sql: 'NULL', type: 'error'})
@@ -705,7 +820,7 @@ function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: Sy
     diag(node, `Cannot parse as ${targetType}: ${expr.sql}`)
     return expr
   }
-  return {sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
+  return {...expr, sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
 }
 
 function isPercentileFunctionCall(node: SyntaxNode): boolean {
@@ -770,6 +885,43 @@ function renderWindowBound(bound: SyntaxNode, scope: Scope): string {
   return `${expr} ${kws.includes('following') ? 'FOLLOWING' : 'PRECEDING'}`
 }
 
+function inferAdHocJoinLocality(join: QueryJoin, query: Query, scope: Scope) {
+  if (!join.table || !join.onClause) {
+    join.localityPath = [join.alias]
+    return
+  }
+
+  let candidates: {cardinality: 'one' | 'many'; localityPath: string[]}[] = []
+  for (let source of query.joins.filter(qj => qj != join && qj.table)) {
+    for (let modeled of source.table!.joins) {
+      modeled.table = lookupTable(modeled.targetNode!)
+      if (!modeled.table || modeled.table.name != join.table.name) continue
+
+      let joinTarget = {name: modeled.alias, table: join.table, alias: join.alias}
+      let onClause = analyzeExpr(modeled.onExpr!, {
+        query,
+        table: source.table!,
+        alias: source.alias,
+        localityPath: source.localityPath,
+        otherTables: scope.otherTables,
+        joinTarget,
+      }).sql
+      if (normalizeSql(onClause) != normalizeSql(join.onClause)) continue
+
+      let localityPath = modeled.cardinality == 'many' ? extendFanoutPath(source.localityPath, join.alias) : extendFanoutPath(source.localityPath)
+      candidates.push({cardinality: modeled.cardinality!, localityPath})
+    }
+  }
+
+  if (candidates.length != 1) {
+    join.localityPath = [join.alias]
+    return
+  }
+
+  join.cardinality = candidates[0].cardinality
+  join.localityPath = candidates[0].localityPath
+}
+
 // Traverse a join path (like `tableA.tableB.`), returning a new scope pointing to the target table. Adds implied joins to the query as it goes
 function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
   let part = pathNodes[0]
@@ -786,7 +938,8 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     let table = pointsAtTarget ? scope.joinTarget.table : scope.table!
     let alias = pointsAtTarget ? scope.joinTarget.alias : scope.alias
     NODE_ENTITY_MAP.set(pathNodes[0], {entityType: 'table', table})
-    return {query: scope.query, table, alias, otherTables: scope.otherTables}
+    let localityPath = pointsAtTarget ? scope.localityPath : scope.localityPath
+    return {query: scope.query, table, alias, localityPath, otherTables: scope.otherTables}
   }
 
   // If scope is at the root of the table (ie scope.table == null), then the first part of the path could point at
@@ -797,14 +950,14 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     let existing = scope.query!.joins.find(j => j.alias == name)
     if (existing) {
       NODE_ENTITY_MAP.set(part, {entityType: 'table', table: existing.table})
-      scope = {...scope, table: existing.table!, alias: existing.alias}
+      scope = {...scope, table: existing.table!, alias: existing.alias, localityPath: existing.localityPath}
       pathNodes.shift() // remove, since we're updating scope
     } else {
       // otherwise, this might be referring to a join _on_ one of those FROM/JOIN tables
       let matches = scope.query!.joins.filter(j => j.table!.joins.some(jj => jj.alias == name))
       if (matches.length > 1) return diag(part, `"${name}" matches multiple possible joins in this query`, null)
       if (matches.length == 0) return diag(part, `Could not find "${name}" on query`, null)
-      scope = {...scope, table: matches[0].table!, alias: matches[0].alias}
+      scope = {...scope, table: matches[0].table!, alias: matches[0].alias, localityPath: matches[0].localityPath}
     }
   }
 
@@ -825,14 +978,15 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     // Construct a new implied join and attache it to the query
     let fromAlias = scope.query?.joins.find(j => j.source == 'from')?.alias
     let newAlias = alias == fromAlias ? name : `${alias}_${name}`
+    let localityPath = next.cardinality == 'many' ? extendFanoutPath(scope.localityPath, name) : extendFanoutPath(scope.localityPath)
     if (scope.query && !scope.query.joins.find(j => j.alias == newAlias)) {
       let joinTarget = {name: next.alias, table: next.table, alias: newAlias}
-      let onClause = analyzeExpr(next.onExpr!, {table, alias, joinTarget}).sql
-      scope.query.joins.push({alias: newAlias, targetTable: next.targetTable, table: next.table, source: 'implicit', cardinality: next.cardinality, joinType: 'left', onClause})
+      let onClause = analyzeExpr(next.onExpr!, {table, alias, localityPath: scope.localityPath, joinTarget}).sql
+      scope.query.joins.push({alias: newAlias, targetTable: next.targetTable, table: next.table, source: 'implicit', cardinality: next.cardinality, localityPath, joinType: 'left', onClause})
     }
 
     NODE_ENTITY_MAP.set(part, {entityType: 'table', table: next.table})
-    scope = {...scope, table: next.table, alias: newAlias}
+    scope = {...scope, table: next.table, alias: newAlias, localityPath}
   }
 
   return scope

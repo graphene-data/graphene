@@ -1,5 +1,7 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
 
+import type {FanoutPath} from './fanout.ts'
+
 declare module '@lezer/common' {
   interface Tree {
     fileInfo: FileInfo
@@ -14,6 +16,10 @@ export interface Expr {
   type: FieldType // result type for validation
   isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
+  fanoutPath?: FanoutPath // effective row locality for scalar expressions
+  fanoutSensitivePaths?: FanoutPath[] // fanout-sensitive aggregate localities contained in this expression
+  fanoutConflict?: boolean // true if the expression mixes incomparable row localities
+  fanoutSafeAgg?: boolean // true if this aggregate is duplicate-insensitive
 }
 
 // A field in a query's SELECT clause
@@ -33,6 +39,7 @@ export interface Scope {
   query?: Query // null when analyzing table definitions (not in a query context)
   table?: Table
   alias: string // current alias for this table context (e.g., "users", "orders", "users_orders")
+  localityPath?: FanoutPath
   otherTables?: Table[] // CTEs and other tables visible for name resolution
   joinTarget?: {name: string; table: Table; alias: string} // When analyzing a join's ON clause, tells us about the target table/alias.
 }
@@ -48,6 +55,7 @@ export interface QueryJoin {
   table?: Table
   targetTable?: string
   cardinality?: 'one' | 'many'
+  localityPath?: FanoutPath
   joinType?: JoinType
   onClause?: string
   onExpr?: SyntaxNode
@@ -72,6 +80,8 @@ export interface Column {
   type: FieldType
   isAgg?: boolean // for computed columns that are aggregates
   exprNode?: SyntaxNode // for computed columns, the expression AST node (analyzed lazily in query context)
+  fanoutPath?: FanoutPath
+  fanoutSensitivePaths?: FanoutPath[]
   metadata?: Record<string, string>
 }
 

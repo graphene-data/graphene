@@ -141,6 +141,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     args: [{name: 'expression', type: 'T'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'array_agg',
@@ -299,6 +300,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     args: [{name: 'expression', type: 'boolean'}],
     returns: 'boolean',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'logical_or',
@@ -314,6 +316,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     args: [{name: 'expression', type: 'boolean'}],
     returns: 'boolean',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'max',
@@ -333,6 +336,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     args: [{name: 'expression', type: 'T', description: 'Any orderable data type except for ARRAY.'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'max_by',
@@ -378,6 +382,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     args: [{name: 'expression', type: 'T', description: 'Any orderable data type except for ARRAY.'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'min_by',

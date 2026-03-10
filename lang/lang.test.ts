@@ -914,12 +914,23 @@ describe('lang', () => {
     expect('from users select name, sum(total_orders)').toHaveDiagnostic(/Aggregates cannot be nested/i)
   })
 
-  it.skip('errors if you have a non-agg measure that uses a join_many', () => {
+  it('errors if you have a non-agg measure that uses a join_many', () => {
     expect(`table t (
       uid int
       join many users on users.id = uid
-      users.age as user_age
+      user_age: users.age
     )`).toHaveDiagnostic(/Fields that refer to a `join many` should aggregate/i)
+  })
+
+  it('errors if a measure mixes fanout localities', () => {
+    expect(`table t (
+      id int
+      join many orders on orders.user_id = id
+      join many payments on payments.user_id = id
+      weird: sum(orders.amount) / sum(payments.amount)
+    )
+    table orders (id int, user_id int, amount int)
+    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Measure mixes fanout localities/i)
   })
 
   it('allows join expressions to refer to the alias', () => {
@@ -1226,6 +1237,51 @@ describe('lang', () => {
 
     expect('from customers select name, sum(purchases.amount)').toHaveNoErrors()
     expect('from purchases select customers.name, sum(amount)').toHaveNoErrors()
+  })
+
+  it('rejects aggregate queries that mix base and fanout grains', () => {
+    expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  })
+
+  it('rejects aggregate queries that mix sibling fanout grains', () => {
+    expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  })
+
+  it('rejects aggregate queries that mix ancestor and descendant fanout grains', () => {
+    expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  })
+
+  it('rejects aggregate query dimensions that depend on join many', () => {
+    expect('from users select orders.status, sum(orders.amount)').toHaveDiagnostic(/Non-aggregate expressions in aggregate queries cannot depend on a `join many` path/i)
+  })
+
+  it('allows distinct-safe counts to mix with a fanout grain', () => {
+    expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveNoErrors()
+  })
+
+  it('allows an explicit join that matches a join_one relationship', () => {
+    expect('from orders join users on users.id = orders.user_id select users.name, sum(amount)').toHaveNoErrors()
+  })
+
+  it('applies fanout protection to explicit joins too', () => {
+    expect(`
+      from users
+      join orders on orders.user_id = users.id
+      join payments on payments.user_id = users.id
+      select name, sum(orders.amount), sum(payments.amount)
+    `).toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  })
+
+  it('allows weighted semantics when the joined rowset is materialized first', () => {
+    expect(`
+      with joined as (
+        from users
+        join orders on orders.user_id = users.id
+        join order_items on order_items.order_id = orders.id
+        select name, age, quantity
+      )
+      from joined select name, avg(age), sum(quantity)
+    `).toHaveNoErrors()
   })
 
   it('handles computed columns with chained joins', () => {
