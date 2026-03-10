@@ -1,7 +1,8 @@
 import type {SyntaxNode} from '@lezer/common'
 
-import {extendFanoutPath} from './fanout.ts'
 import type {Query, QueryJoin, Scope, Table} from './types.ts'
+
+import {extendFanoutPath} from './fanout.ts'
 import {txt} from './util.ts'
 
 // Ad-hoc query joins do not carry modeled cardinality, but the fanout checker needs one.

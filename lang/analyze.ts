@@ -1,7 +1,7 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import {config} from './config.ts'
-import {extendFanoutPath, formatFanoutPath, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths} from './fanout.ts'
+import {extendFanoutPath, formatFanoutPaths, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths} from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
 import {inferAdHocJoinLocality} from './joins.ts'
 import {extractLeadingMetadata} from './metadata.ts'
@@ -26,49 +26,6 @@ export let FILE_MAP: Record<string, FileInfo> = {} // All the files in the works
 export let diagnostics: Diagnostic[] = [] // Tracks errors/warnings
 let analysisStack = new Set<Column>() // Track computed columns being analyzed to detect cycles
 let NODE_ENTITY_MAP = new NodeWeakMap<any>() // Points syntax nodes back to entities for ide hover tips
-
-function joinExprs(exprs: Expr[], sql: string, type: FieldType, isAgg?: boolean): Expr {
-  let rowFanout = mergeFanoutPaths(exprs.map(expr => expr.fanoutPath))
-  return {
-    sql,
-    type,
-    isAgg,
-    fanoutPath: isAgg ? undefined : rowFanout.path,
-    fanoutSensitivePaths: mergeSensitiveFanouts(...exprs.map(expr => expr.fanoutSensitivePaths)),
-    fanoutConflict: rowFanout.conflict || exprs.some(expr => expr.fanoutConflict),
-  }
-}
-
-function formatFanoutPaths(paths: string[][]) {
-  return uniqueFanoutPaths(paths).map(formatFanoutPath).join(', ')
-}
-
-function validateStoredExpr(node: SyntaxNode, expr: Expr) {
-  if (expr.fanoutConflict) diag(node, 'Expression mixes incompatible `join many` paths')
-  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) diag(node, 'Fields that refer to a `join many` should aggregate')
-  let paths = uniqueFanoutPaths(expr.fanoutSensitivePaths || [])
-  if (paths.length > 1) {
-    diag(node, `Measure mixes fanout localities (${formatFanoutPaths(paths)}). Aggregate each grain in a subquery/CTE first`)
-  }
-}
-
-function validateAggregateQueryExpr(node: SyntaxNode, expr: Expr) {
-  if (expr.fanoutConflict) diag(node, 'Expression mixes incompatible `join many` paths')
-  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) {
-    diag(node, 'Non-aggregate expressions in aggregate queries cannot depend on a `join many` path')
-  }
-}
-
-function validateAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
-  let paths = uniqueFanoutPaths(exprs.flatMap(entry => entry.expr.fanoutSensitivePaths || []))
-  if (paths.length <= 1) return
-  let message = `Aggregate query mixes fanout localities (${formatFanoutPaths(paths)}). Aggregate each grain in a subquery/CTE first`
-  for (let entry of exprs) {
-    let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
-    if (entryPaths.length == 0) continue
-    diag(entry.node, message)
-  }
-}
 
 // Creates tables without analyzing them.
 export function findTables(fi: FileInfo) {
@@ -166,7 +123,7 @@ export function analyzeTableFully(table: Table) {
     c.isAgg = expr.isAgg
     c.fanoutPath = expr.fanoutPath
     c.fanoutSensitivePaths = expr.fanoutSensitivePaths
-    validateStoredExpr(c.exprNode, expr)
+    analyzeComputedFieldExpr(c.exprNode, expr)
   })
   table.joins.forEach(j => (j.table = lookupTable(j.targetNode!)))
 }
@@ -378,8 +335,8 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   query.limit = limit
   query.isAggregate = isAgg
   if (isAgg) {
-    fanoutExprs.forEach(({node, expr}) => validateAggregateQueryExpr(node, expr))
-    validateAggregateQueryFanout(fanoutExprs.filter(entry => entry.expr.isAgg))
+    fanoutExprs.forEach(({node, expr}) => analyzeAggregateQueryExpr(node, expr))
+    analyzeAggregateQueryFanout(fanoutExprs.filter(entry => entry.expr.isAgg))
   }
   query.sql = buildSql(query, ctes)
   return query
@@ -626,7 +583,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         sql = `${left.sql}${op}${right.sql}`
       }
 
-      return joinExprs([left, right], sql, resultType, left.isAgg || right.isAgg)
+      return mergeExprAnalysis([left, right], sql, resultType, left.isAgg || right.isAgg)
     }
 
     case 'UnaryExpression': {
@@ -675,7 +632,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         fanoutExprs.push(elseExpr)
       }
       parts.push('END')
-      return joinExprs(fanoutExprs, parts.join(' '), resultType, isAgg || undefined)
+      return mergeExprAnalysis(fanoutExprs, parts.join(' '), resultType, isAgg || undefined)
     }
 
     case 'InExpression': {
@@ -717,7 +674,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       }
 
       let sql = `${e.sql} ${not ? 'NOT BETWEEN' : 'BETWEEN'} ${low.sql} AND ${high.sql}`
-      return joinExprs([e, low, high], sql, 'boolean', e.isAgg || low.isAgg || high.isAgg)
+      return mergeExprAnalysis([e, low, high], sql, 'boolean', e.isAgg || low.isAgg || high.isAgg)
     }
 
     case 'SubqueryExpression': {
@@ -779,7 +736,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
 }
 
 function analyzeDateArithmetic(op: '+' | '-', left: Expr, right: Expr, node: SyntaxNode): Expr {
-  let merged = joinExprs([left, right], '', 'number', left.isAgg || right.isAgg)
+  let merged = mergeExprAnalysis([left, right], '', 'number', left.isAgg || right.isAgg)
 
   // date - date = interval
   if ((left.type == 'date' || left.type == 'timestamp') && (right.type == 'date' || right.type == 'timestamp')) {
@@ -950,6 +907,45 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
   }
 
   return scope
+}
+
+function mergeExprAnalysis(exprs: Expr[], sql: string, type: FieldType, isAgg?: boolean): Expr {
+  let rowFanout = mergeFanoutPaths(exprs.map(expr => expr.fanoutPath))
+  return {
+    sql,
+    type,
+    isAgg,
+    fanoutPath: isAgg ? undefined : rowFanout.path,
+    fanoutSensitivePaths: mergeSensitiveFanouts(...exprs.map(expr => expr.fanoutSensitivePaths)),
+    fanoutConflict: rowFanout.conflict || exprs.some(expr => expr.fanoutConflict),
+  }
+}
+
+function analyzeComputedFieldExpr(node: SyntaxNode, expr: Expr) {
+  if (expr.fanoutConflict) diag(node, 'Expression mixes incompatible `join many` paths')
+  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) diag(node, 'Fields that refer to a `join many` should aggregate')
+  let paths = uniqueFanoutPaths(expr.fanoutSensitivePaths || [])
+  if (paths.length > 1) {
+    diag(node, `Measure mixes fanout localities (${formatFanoutPaths(paths)}). Aggregate each grain in a subquery/CTE first`)
+  }
+}
+
+function analyzeAggregateQueryExpr(node: SyntaxNode, expr: Expr) {
+  if (expr.fanoutConflict) diag(node, 'Expression mixes incompatible `join many` paths')
+  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) {
+    diag(node, 'Non-aggregate expressions in aggregate queries cannot depend on a `join many` path')
+  }
+}
+
+function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
+  let paths = uniqueFanoutPaths(exprs.flatMap(entry => entry.expr.fanoutSensitivePaths || []))
+  if (paths.length <= 1) return
+  let message = `Aggregate query mixes fanout localities (${formatFanoutPaths(paths)}). Aggregate each grain in a subquery/CTE first`
+  for (let entry of exprs) {
+    let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+    if (entryPaths.length == 0) continue
+    diag(entry.node, message)
+  }
 }
 
 // Find a table by Ref node, failing if it doesn't exist

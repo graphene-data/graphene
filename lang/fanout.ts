@@ -17,6 +17,10 @@ export function formatFanoutPath(path: FanoutPath | undefined): string {
   return isBaseFanoutPath(path) ? 'base' : path!.join('.')
 }
 
+export function formatFanoutPaths(paths: string[][]) {
+  return uniqueFanoutPaths(paths).map(formatFanoutPath).join(', ')
+}
+
 export function mergeFanoutPaths(paths: (FanoutPath | undefined)[]): {path?: FanoutPath; conflict?: boolean} {
   let merged: FanoutPath | undefined
   for (let path of paths) {
