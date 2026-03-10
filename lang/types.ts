@@ -16,10 +16,9 @@ export interface Expr {
   type: FieldType // result type for validation
   isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
-  fanoutPath?: FanoutPath // effective row locality for scalar expressions
-  fanoutSensitivePaths?: FanoutPath[] // fanout-sensitive aggregate localities contained in this expression
-  fanoutConflict?: boolean // true if the expression mixes incomparable row localities
-  fanoutSafeAgg?: boolean // true if this aggregate is duplicate-insensitive
+  fanoutPath?: FanoutPath // grain implied by this scalar expression, relative to the base table
+  fanoutSensitivePaths?: FanoutPath[] // aggregate grains in this expression that are sensitive to row duplication
+  fanoutConflict?: boolean // true if the expression mixes incompatible grains
 }
 
 // A field in a query's SELECT clause

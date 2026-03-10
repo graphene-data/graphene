@@ -1,7 +1,7 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import {config} from './config.ts'
-import {extendFanoutPath, formatFanoutPaths, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths} from './fanout.ts'
+import {extendFanoutPath, formatGrains, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths} from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
@@ -924,7 +924,7 @@ function analyzeComputedFieldExpr(node: SyntaxNode, expr: Expr) {
   if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) diag(node, 'Fields that refer to a `join many` should aggregate')
   let paths = uniqueFanoutPaths(expr.fanoutSensitivePaths || [])
   if (paths.length > 1) {
-    diag(node, `Measure mixes fanout localities (${formatFanoutPaths(paths)}). Aggregate each grain in a subquery/CTE first`)
+    diag(node, `Measure uses multiple grains (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`)
   }
 }
 
@@ -938,7 +938,7 @@ function analyzeAggregateQueryExpr(node: SyntaxNode, expr: Expr) {
 function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   let paths = uniqueFanoutPaths(exprs.flatMap(entry => entry.expr.fanoutSensitivePaths || []))
   if (paths.length <= 1) return
-  let message = `Aggregate query mixes fanout localities (${formatFanoutPaths(paths)}). Aggregate each grain in a subquery/CTE first`
+  let message = `Aggregate query uses multiple grains (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`
   for (let entry of exprs) {
     let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
     if (entryPaths.length == 0) continue

@@ -17,7 +17,7 @@ export function formatFanoutPath(path: FanoutPath | undefined): string {
   return isBaseFanoutPath(path) ? 'base' : path!.join('.')
 }
 
-export function formatFanoutPaths(paths: string[][]) {
+export function formatGrains(paths: FanoutPath[]) {
   return uniqueFanoutPaths(paths).map(formatFanoutPath).join(', ')
 }
 

@@ -922,7 +922,7 @@ describe('lang', () => {
     )`).toHaveDiagnostic(/Fields that refer to a `join many` should aggregate/i)
   })
 
-  it('errors if a measure mixes fanout localities', () => {
+  it('errors if a measure uses multiple grains', () => {
     expect(`table t (
       id int
       join many orders on orders.user_id = id
@@ -930,7 +930,7 @@ describe('lang', () => {
       weird: sum(orders.amount) / sum(payments.amount)
     )
     table orders (id int, user_id int, amount int)
-    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Measure mixes fanout localities/i)
+    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Measure uses multiple grains/i)
   })
 
   it('allows a mixed-fanout measure after aggregating each grain into one-to-one tables', () => {
@@ -1254,8 +1254,8 @@ describe('lang', () => {
     expect('from purchases select customers.name, sum(amount)').toHaveNoErrors()
   })
 
-  it('rejects aggregate queries that mix base and fanout grains', () => {
-    expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  it('rejects aggregate queries that mix base and joined grains', () => {
+    expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate query uses multiple grains/i)
   })
 
   it('allows the base and fanout grain query after separating the aggregates', () => {
@@ -1268,8 +1268,8 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('rejects aggregate queries that mix sibling fanout grains', () => {
-    expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  it('rejects aggregate queries that mix sibling grains', () => {
+    expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Aggregate query uses multiple grains/i)
   })
 
   it('allows the sibling fanout query after aggregating each branch separately', () => {
@@ -1282,8 +1282,8 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('rejects aggregate queries that mix ancestor and descendant fanout grains', () => {
-    expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+  it('rejects aggregate queries that mix ancestor and descendant grains', () => {
+    expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate query uses multiple grains/i)
   })
 
   it('allows the ancestor and descendant query after aggregating each grain separately', () => {
@@ -1310,7 +1310,7 @@ describe('lang', () => {
       join orders on orders.user_id = users.id
       join payments on payments.user_id = users.id
       select name, sum(orders.amount), sum(payments.amount)
-    `).toHaveDiagnostic(/Aggregate query mixes fanout localities/i)
+    `).toHaveDiagnostic(/Aggregate query uses multiple grains/i)
   })
 
   it('allows the explicit-join fanout query after aggregating each branch separately', () => {
