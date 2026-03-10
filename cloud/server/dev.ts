@@ -12,7 +12,6 @@ import {setAuthOverride} from './auth.ts'
 import {encryptSecret} from './secrets.ts'
 import {TEST} from './consts.ts'
 import {agentTest, testRenderMd} from './agent/testEndpoint.ts'
-import {createFrontendViteConfig} from '../frontend/vite.config.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 export const orgId = 'organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d'
@@ -146,7 +145,10 @@ export async function seedDatabase(project = 'flights') {
 }
 
 export async function prepareFrontendDeps() {
-  let config = await resolveConfig(createFrontendViteConfig(), 'serve', 'test')
+  let config = await resolveConfig({
+    root: path.join(rootDir, 'frontend'),
+    configFile: path.join(rootDir, 'frontend/vite.config.ts'),
+  }, 'serve', 'test')
   await optimizeDeps(config, true)
 }
 

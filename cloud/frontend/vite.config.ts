@@ -5,6 +5,7 @@ import {defineConfig} from 'vite'
 
 const frontendDir = __dirname
 const repoRoot = path.resolve(frontendDir, '..', '..')
+const isTest = process.env.NODE_ENV == 'test'
 
 export function createFrontendViteConfig() {
   return {
@@ -24,25 +25,36 @@ export function createFrontendViteConfig() {
       outDir: path.join(frontendDir, '../dist'),
       emptyOutDir: true,
     },
+    // In tests, we don't want to optimize, as test workers would conflict on the dep cache dir
     optimizeDeps: {
-      exclude: ['svelte'],
+      noDiscovery: isTest,
+      force: false,
+      include: isTest ? [
+        'svelte',
+        'svelte/internal/client',
+        'svelte/internal/disclose-version',
+      ] : undefined,
+      exclude: isTest ? [] : ['svelte'],
     },
   }
 }
 
 export default defineConfig(createFrontendViteConfig())
 
+// Svelte tries to force optimization on startup, but we really don't want this to happen
+// for tests, since workers would conflict with each other. This hackily undoes the svelte plugins
+// forced dep optimization.
 function fixSvelteDepsInTests() {
   let viteConfig: any
-  let isTest = false
+  let isTestMode = false
 
   function configResolved(cfg: any) {
     viteConfig = cfg
-    isTest = cfg.mode == 'test' || !!process.env.VITEST || process.env.NODE_ENV == 'test'
+    isTestMode = cfg.mode == 'test' || process.env.NODE_ENV == 'test'
   }
 
   function buildStart() {
-    if (!isTest) return
+    if (!isTestMode) return
     viteConfig.optimizeDeps.force = false
   }
 

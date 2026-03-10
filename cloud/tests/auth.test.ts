@@ -26,7 +26,7 @@ describe('auth', () => {
     await loginShell.locator('input[name="password"], input[type="password"]').first().fill(TEST_PASSWORD)
     await loginShell.getByRole('button', {name: /continue/i}).click()
 
-    await expect(page).toHaveURL(`${cloud.url}/flights`)
+    await expect(page).toHaveURL(`${cloud.url}/flights`) // timeouts here imply the stytch auth took too long
     await expect(page.locator('h1', {hasText: 'Flight Analytics Dashboard'})).toBeVisible()
   })
 
