@@ -8,6 +8,7 @@ import {fileURLToPath} from 'node:url'
 import stripAnsi from 'strip-ansi'
 
 import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
+import {expectConsoleError} from './logWatcher.ts'
 
 interface RunResult {
   code: number
@@ -117,10 +118,10 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
     expect(checkOutput).toContain('No errors found')
 
     let runResult = await run('npm', ['run', 'graphene', '--', 'run', 'index.md'], projectDir, childEnv)
-    expectSuccess('npm run graphene run index.md', checkResult)
+    expectSuccess('npm run graphene run index.md', runResult)
 
     let runOutput = stripAnsi(runResult.stdout + runResult.stderr)
-    expect(checkOutput).toContain('No errors found')
+    expect(runOutput).toContain('No errors found')
 
     let screenshotPath = parseScreenshotPath(runOutput, projectDir)
     let screenshot = await fsp.readFile(screenshotPath)
@@ -129,6 +130,7 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
     await page.setContent(`<img id="shot" src="data:image/png;base64,${screenshot.toString('base64')}" />`)
     await expect(page.locator('#shot')).screenshot('packaged-cli-check-index')
   } finally {
+    expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
     await run('npm', ['run', 'graphene', '--', 'stop'], projectDir, childEnv)
     await fsp.rm(tempRoot, {recursive: true, force: true})
   }
