@@ -120,7 +120,7 @@
         },
         {
           "name": "keyword.other.graphene.gsql",
-          "match": "(?i)\\b(join\\s+one|join\\s+many|measure)\\b"
+          "match": "(?i)\\b(join\\s+one|join\\s+many)\\b"
         }
       ]
     },
