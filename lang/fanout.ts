@@ -1,3 +1,18 @@
+// Fanout analysis tracks the implied grain of an expression using join-path metadata.
+//
+// A `FanoutPath` is the sequence of `join many` edges taken from the current base table
+// to reach the rows an expression depends on. Examples:
+// - `[]` means the base table grain.
+// - `['orders']` means one row per order relative to the base table.
+// - `['orders', 'order_items']` means one row per order item.
+//
+// Expression analysis uses these helpers in two ways:
+// - `fanoutPath` on an expression tracks the single row-grain that scalar logic is currently
+//   operating at. If two scalar subexpressions come from incomparable `join many` branches,
+//   that is a conflict.
+// - `fanoutSensitivePaths` tracks the grains of aggregate expressions that are sensitive to
+//   row duplication. If one query/measure accumulates more than one such path, we diagnose it
+//   and ask the user to aggregate each grain explicitly in a subquery/CTE first.
 export type FanoutPath = string[]
 
 export function extendFanoutPath(path: FanoutPath | undefined, segment?: string | null): FanoutPath {
