@@ -149,7 +149,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   let fanoutSensitivePaths = mergeSensitiveFanouts(...args.map(a => a.fanoutSensitivePaths))
   let fanoutSafeAgg = overload.returnType.expressionType == 'aggregate' && overload.fanoutSafe
   if (overload.returnType.expressionType == 'aggregate' && !fanoutSafeAgg) {
-    fanoutSensitivePaths = mergeSensitiveFanouts(fanoutSensitivePaths, [fanout.path || extendFanoutPath(scope.localityPath)])
+    fanoutSensitivePaths = mergeSensitiveFanouts(fanoutSensitivePaths, [fanout.path || extendFanoutPath(scope.fanoutPath)])
   }
   let fnName = overload.sqlName || name
   let sql = `${fnName}(${args.map(a => a.sql).join(',')})`
@@ -194,7 +194,7 @@ function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope
     type: 'number',
     isAgg: true,
     canWindow: true,
-    fanoutSensitivePaths: [args[0]?.fanoutPath || extendFanoutPath(opts.isWindow ? undefined : scope.localityPath)],
+    fanoutSensitivePaths: [args[0]?.fanoutPath || extendFanoutPath(opts.isWindow ? undefined : scope.fanoutPath)],
     fanoutConflict: args.some(a => a.fanoutConflict),
   }
 }

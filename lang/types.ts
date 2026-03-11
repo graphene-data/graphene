@@ -38,7 +38,7 @@ export interface Scope {
   query?: Query // null when analyzing table definitions (not in a query context)
   table?: Table
   alias: string // current alias for this table context (e.g., "users", "orders", "users_orders")
-  localityPath?: FanoutPath
+  fanoutPath?: FanoutPath
   otherTables?: Table[] // CTEs and other tables visible for name resolution
   joinTarget?: {name: string; table: Table; alias: string} // When analyzing a join's ON clause, tells us about the target table/alias.
 }
@@ -54,7 +54,7 @@ export interface QueryJoin {
   table?: Table
   targetTable?: string
   cardinality?: 'one' | 'many'
-  localityPath?: FanoutPath
+  fanoutPath?: FanoutPath
   joinType?: JoinType
   onClause?: string
   onExpr?: SyntaxNode

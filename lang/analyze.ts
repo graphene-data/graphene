@@ -115,7 +115,7 @@ function analyzeView(table: Table) {
 // Analyze everything in a table - used for full project analysis (e.g., `check` command)
 export function analyzeTableFully(table: Table) {
   if (table.type == 'view') analyzeView(table)
-  let scope: Scope = {table, alias: table.name, localityPath: []}
+  let scope: Scope = {table, alias: table.name, fanoutPath: []}
   table.columns.forEach(c => {
     if (!c.exprNode) return
     let expr = analyzeExpr(c.exprNode, scope)
@@ -142,9 +142,9 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
     let outName = namePrefix ? `${namePrefix}_${col.name}` : col.name
     if (col.exprNode) {
       // Determine if aggregate (without query context to avoid side-effect diagnostics), then skip measures
-      if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {table, alias, localityPath: scope.localityPath}).isAgg
+      if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {table, alias, fanoutPath: scope.fanoutPath}).isAgg
       if (col.isAgg) continue
-      let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables, localityPath: scope.localityPath})
+      let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables, fanoutPath: scope.fanoutPath})
       query.fields.push({
         name: outName,
         sql: expr.sql,
@@ -155,7 +155,7 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         fanoutConflict: expr.fanoutConflict,
       })
     } else {
-      query.fields.push({name: outName, sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, metadata: col.metadata, fanoutPath: scope.localityPath})
+      query.fields.push({name: outName, sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, metadata: col.metadata, fanoutPath: scope.fanoutPath})
     }
   }
 }
@@ -164,7 +164,7 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
 export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
   let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: [], isAggregate: false}
   let ctes = new Map<string, CteTable>()
-  let scope: Scope = {query, alias: '', localityPath: [], otherTables: outerCtes || []}
+  let scope: Scope = {query, alias: '', fanoutPath: [], otherTables: outerCtes || []}
   let isAgg = false
   let fanoutExprs: {node: SyntaxNode; expr: Expr}[] = []
 
@@ -215,7 +215,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     // Now that we have all the bits, construct the join for it.
     if (query.joins.find(j => j.alias == alias)) return diag(tablePrimary, `Query already has table called "${alias}"`)
     let onExpr = sourceNode.getChild('Expression') || undefined
-    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, localityPath: isJoin ? [alias] : [], onExpr}
+    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, fanoutPath: isJoin ? [alias] : [], onExpr}
     query.joins.push(qj)
     NODE_ENTITY_MAP.set(tablePrimary, {entityType: 'table', table})
 
@@ -436,8 +436,8 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // Build the list of tables to search: if followJoins landed on a specific table, just that one.
       // Otherwise, search all tables either in FROM or explicitly JOINed (but not implicitly joined).
       let possibleJoins = targetScope.table
-        ? [{table: targetScope.table, alias: targetScope.alias, localityPath: targetScope.localityPath}]
-        : scope.query?.joins.filter(j => j.source != 'implicit' && j.table).map(j => ({table: j.table!, alias: j.alias, localityPath: j.localityPath})) || []
+        ? [{table: targetScope.table, alias: targetScope.alias, fanoutPath: targetScope.fanoutPath}]
+        : scope.query?.joins.filter(j => j.source != 'implicit' && j.table).map(j => ({table: j.table!, alias: j.alias, fanoutPath: j.fanoutPath})) || []
 
       // Expect just one of the possibleJoins to have the named column. Otherwise, it's an error.
       let matches = possibleJoins.filter(j => j.table.columns.some(c => c.name == fieldName))
@@ -458,12 +458,12 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field: col, table})
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, fanoutPath: matches[0].localityPath}
+      if (!col.exprNode) return {sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, fanoutPath: matches[0].fanoutPath}
 
       // Computed column: analyze its expression in the matched table's scope
       if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
       analysisStack.add(col)
-      let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables, localityPath: matches[0].localityPath})
+      let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables, fanoutPath: matches[0].fanoutPath})
       analysisStack.delete(col)
       return {
         sql: `(${expr.sql})`,
@@ -515,7 +515,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         type: 'number',
         isAgg: true,
         canWindow: true,
-        fanoutSensitivePaths: [extendFanoutPath(scope.localityPath)],
+        fanoutSensitivePaths: [extendFanoutPath(scope.fanoutPath)],
       }
     }
 
@@ -847,8 +847,7 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     let table = pointsAtTarget ? scope.joinTarget.table : scope.table!
     let alias = pointsAtTarget ? scope.joinTarget.alias : scope.alias
     NODE_ENTITY_MAP.set(pathNodes[0], {entityType: 'table', table})
-    let localityPath = pointsAtTarget ? scope.localityPath : scope.localityPath
-    return {query: scope.query, table, alias, localityPath, otherTables: scope.otherTables}
+    return {query: scope.query, table, alias, fanoutPath: scope.fanoutPath, otherTables: scope.otherTables}
   }
 
   // If scope is at the root of the table (ie scope.table == null), then the first part of the path could point at
@@ -859,14 +858,14 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     let existing = scope.query!.joins.find(j => j.alias == name)
     if (existing) {
       NODE_ENTITY_MAP.set(part, {entityType: 'table', table: existing.table})
-      scope = {...scope, table: existing.table!, alias: existing.alias, localityPath: existing.localityPath}
+      scope = {...scope, table: existing.table!, alias: existing.alias, fanoutPath: existing.fanoutPath}
       pathNodes.shift() // remove, since we're updating scope
     } else {
       // otherwise, this might be referring to a join _on_ one of those FROM/JOIN tables
       let matches = scope.query!.joins.filter(j => j.table!.joins.some(jj => jj.alias == name))
       if (matches.length > 1) return diag(part, `"${name}" matches multiple possible joins in this query`, null)
       if (matches.length == 0) return diag(part, `Could not find "${name}" on query`, null)
-      scope = {...scope, table: matches[0].table!, alias: matches[0].alias, localityPath: matches[0].localityPath}
+      scope = {...scope, table: matches[0].table!, alias: matches[0].alias, fanoutPath: matches[0].fanoutPath}
     }
   }
 
@@ -887,15 +886,15 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     // Construct a new implied join and attache it to the query
     let fromAlias = scope.query?.joins.find(j => j.source == 'from')?.alias
     let newAlias = alias == fromAlias ? name : `${alias}_${name}`
-    let localityPath = next.cardinality == 'many' ? extendFanoutPath(scope.localityPath, name) : extendFanoutPath(scope.localityPath)
+    let fanoutPath = next.cardinality == 'many' ? extendFanoutPath(scope.fanoutPath, name) : extendFanoutPath(scope.fanoutPath)
     if (scope.query && !scope.query.joins.find(j => j.alias == newAlias)) {
       let joinTarget = {name: next.alias, table: next.table, alias: newAlias}
-      let onClause = analyzeExpr(next.onExpr!, {table, alias, localityPath: scope.localityPath, joinTarget}).sql
-      scope.query.joins.push({alias: newAlias, targetTable: next.targetTable, table: next.table, source: 'implicit', cardinality: next.cardinality, localityPath, joinType: 'left', onClause})
+      let onClause = analyzeExpr(next.onExpr!, {table, alias, fanoutPath: scope.fanoutPath, joinTarget}).sql
+      scope.query.joins.push({alias: newAlias, targetTable: next.targetTable, table: next.table, source: 'implicit', cardinality: next.cardinality, fanoutPath, joinType: 'left', onClause})
     }
 
     NODE_ENTITY_MAP.set(part, {entityType: 'table', table: next.table})
-    scope = {...scope, table: next.table, alias: newAlias, localityPath}
+    scope = {...scope, table: next.table, alias: newAlias, fanoutPath}
   }
 
   return scope
