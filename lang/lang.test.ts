@@ -948,6 +948,21 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
+  it('errors when an aggregate-query expression mixes incompatible join-many branches', () => {
+    expect('from users select name, orders.amount + payments.amount, count(id)').toHaveDiagnostic(/Expression mixes incompatible `join many` paths/i)
+  })
+
+  it('errors when a computed field mixes incompatible join-many branches', () => {
+    expect(`table t (
+      id int
+      join many orders on orders.user_id = id
+      join many payments on payments.user_id = id
+      bad_expr: orders.amount + payments.amount
+    )
+    table orders (id int, user_id int, amount int)
+    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Expression mixes incompatible `join many` paths/i)
+  })
+
   it('allows join expressions to refer to the alias', () => {
     expect('table t (oid int, join one users as usr on usr.id = oid); from t select usr.name').toRenderSql('select usr."name" as "usr_name" from t as t left join users as usr on usr."id"=t."oid"')
   })
