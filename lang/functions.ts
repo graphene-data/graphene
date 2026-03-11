@@ -161,7 +161,6 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
     fanoutPath: isAgg ? undefined : fanout.path,
     fanoutSensitivePaths,
     fanoutConflict,
-    fanoutSafeAgg,
   }
 }
 

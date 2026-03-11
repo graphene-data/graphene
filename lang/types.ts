@@ -79,8 +79,6 @@ export interface Column {
   type: FieldType
   isAgg?: boolean // for computed columns that are aggregates
   exprNode?: SyntaxNode // for computed columns, the expression AST node (analyzed lazily in query context)
-  fanoutPath?: FanoutPath
-  fanoutSensitivePaths?: FanoutPath[]
   metadata?: Record<string, string>
 }
 

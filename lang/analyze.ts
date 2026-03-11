@@ -120,8 +120,6 @@ export function analyzeTableFully(table: Table) {
     if (!c.exprNode) return
     let expr = analyzeExpr(c.exprNode, scope)
     c.isAgg = expr.isAgg
-    c.fanoutPath = expr.fanoutPath
-    c.fanoutSensitivePaths = expr.fanoutSensitivePaths
     analyzeComputedFieldExpr(c.exprNode, expr)
   })
   table.joins.forEach(j => (j.table = lookupTable(j.targetNode!)))
@@ -259,7 +257,6 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
         fanoutPath: expr.fanoutPath,
         fanoutSensitivePaths: expr.fanoutSensitivePaths,
         fanoutConflict: expr.fanoutConflict,
-        fanoutSafeAgg: expr.fanoutSafeAgg,
       })
       fanoutExprs.push({node: s.getChild('Expression')!, expr})
     }
@@ -428,7 +425,6 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
             fanoutPath: outField.fanoutPath,
             fanoutSensitivePaths: outField.fanoutSensitivePaths,
             fanoutConflict: outField.fanoutConflict,
-            fanoutSafeAgg: outField.fanoutSafeAgg,
           }
         }
       }
@@ -476,7 +472,6 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         fanoutPath: expr.fanoutPath,
         fanoutSensitivePaths: expr.fanoutSensitivePaths,
         fanoutConflict: expr.fanoutConflict,
-        fanoutSafeAgg: expr.fanoutSafeAgg,
       }
     }
 
@@ -513,7 +508,6 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
           canWindow: true,
           fanoutSensitivePaths: mergeSensitiveFanouts(e.fanoutSensitivePaths),
           fanoutConflict: e.fanoutConflict,
-          fanoutSafeAgg: true,
         }
       }
       return {
