@@ -9,6 +9,7 @@ export PATH="/pnpm:$PATH"
 # Make the `host` command available for container-to-host IPC
 ln -sf "$(pwd)/dev/host" /usr/local/bin/host
 ln -sf "$(pwd)/dev/zshrc.dev" /root/.zshrc
+ln -sf "$(pwd)/dev/zshenv.dev" /root/.zshenv
 
 # Wire up xdg-open to open URLs on the host machine's browser via the IPC bridge.
 # This container has no desktop environment, so xdg-open would fail otherwise.

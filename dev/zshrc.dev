@@ -1,7 +1,5 @@
 setopt HIST_IGNORE_ALL_DUPS
 
-export PATH="/root/.opencode/bin:$PATH"
-
 autoload -Uz add-zsh-hook vcs_info
 setopt prompt_subst
 add-zsh-hook precmd vcs_info
@@ -14,38 +12,3 @@ zstyle ':vcs_info:git*' unstagedstr '*'
 zstyle ':vcs_info:git*' stagedstr '+'
 
 PROMPT='%(?.%F{2}⏺.%F{1}⏺)%f %1~ # '
-
-graphene_root() {
-  local root super
-  root="$(git rev-parse --show-toplevel 2>/dev/null)"
-  super="$(git rev-parse --show-superproject-working-tree 2>/dev/null)"
-
-  if [[ -n "$super" ]]; then
-    print -r -- "$super"
-  else
-    print -r -- "$root"
-  fi
-}
-
-cdd() { cd "$(graphene_root)"; }
-cdo() { cd "$(graphene_root)/cloud"; }
-cdr() { cd "$(graphene_root)/core"; }
-cdl() { cd "$(graphene_root)/core/lang"; }
-cdc() { cd "$(graphene_root)/core/cli"; }
-cdf() { cd "$(graphene_root)/core/examples/flights"; }
-cde() { cd "$(graphene_root)/core/examples/ecomm"; }
-cdu() { cd "$(graphene_root)/core/ui"; }
-
-bp()  { (cd "$(graphene_root)/core/lang" && npm run generate); }
-gp()  { node $(graphene_root)/core/cli/cli.ts "$@"; }
-gpi() { node --inspect-wait $(graphene_root)/core/cli/cli.ts "$@"; }
-goi() { node --inspect-wait $(graphene_root)/cloud/server/dev.ts; }
-
-alias p="pnpm"
-alias ta="p test"
-tt() { pnpm run test-one "$@"; }
-
-alias wt="node $(graphene_root)/dev/workTrees.ts"
-alias wtu="wt pull"
-alias wtp="wt push"
-alias wtc="wt commit"

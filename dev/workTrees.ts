@@ -110,6 +110,11 @@ async function startWorktree (name: string) {
   await $`ln -s ../dev/agents ${treePath}/.opencode/agents`
   await $`ln -s ../dev/commands ${treePath}/.opencode/commands`
 
+  await $`mkdir ${treePath}/.pi`
+  await $`ln -s dev/pi.json ${treePath}/.pi/settings.json`
+  await $`ln -s ../dev/skills ${treePath}/.pi/skills`
+  await $`ln -s ../dev/commands ${treePath}/.pi/commands`
+
   // hard-link so that when mounted in a container we can still access it
   await $`ln ${root}/main/core/examples/flights/flights.duckdb ${treePath}/core/examples/flights/flights.duckdb`
 
