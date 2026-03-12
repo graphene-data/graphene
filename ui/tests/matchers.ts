@@ -36,8 +36,8 @@ const extendedExpect = baseExpect.extend({
       caret: 'hide',
       scale: 'css',
       locator,
-      maxDiffPixelRatio: 0.02, // allow minor cross-platform text AA while still catching structural changes
-      threshold: 0.1, // even small color changes should count
+      maxDiffPixelRatio: 0, // strict: no differing pixels allowed
+      threshold: 0, // strict per-pixel color matching
       timeout: 5_000,
     } as any
     if (expectedBuffer) opts.expected = expectedBuffer
@@ -58,7 +58,10 @@ const extendedExpect = baseExpect.extend({
         return {message: () => `Screenshot ${snapshotName} does not match expected`, pass: false}
       }
     } else {
-      if (result.actual) await writeBuffer(snapshotPath, result.actual)
+      if (result.actual) {
+        console.log('Updated screenshot ', snapshotPath)
+        await writeBuffer(snapshotPath, result.actual)
+      }
     }
 
     return {message: () => 'Screenshot ' + snapshotName + ' matches', pass: true}
