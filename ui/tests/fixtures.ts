@@ -41,8 +41,6 @@ export const test = base.extend<{browser: Browser; page: Page; server: ServerFix
           '--disable-font-subpixel-positioning', // Avoid tiny per-glyph edge drift across OS builds
           '--disable-lcd-text', // Use grayscale AA instead of subpixel AA for more stable screenshots
           '--force-color-profile=srgb',
-          '--disable-gpu', // Prefer software rendering for more deterministic pixels in CI/local
-          '--use-gl=swiftshader', // Keep GL backend consistent across Linux environments
           '--lang=en-US',
           ...(process.env.GRAPHENE_DEBUG ? ['--auto-open-devtools-for-tabs'] : []),
         ],
