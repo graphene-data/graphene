@@ -528,8 +528,11 @@ describe('lang', () => {
     expect('from users select name as n group by n').toRenderSql('select users."name" as "n" from users as users group by 1 order by 1 asc nulls last')
   })
 
-  it.skip('group by positional number', () => {
-    expect('from users select name, email group by 2, 1').toRenderSql('select users."name" as "name", users."email" as "email" from users as users group by 2,1 order by 2 asc, 1 asc nulls last')
+  it('group by positional number', async () => {
+    expect('from users select name, email, avg(age) group by 2, 1').toRenderSql(
+      'select users."name" as "name", users."email" as "email", avg(users."age") as "col_2" from users as users group by 2,1 order by 3 desc nulls last',
+    )
+    await expect('from users select name, email, avg(age) group by 2, 1').toReturnRows(['Bob', 'bob@example.com', 40], ['Alice', 'alice@example.com', 30])
   })
 
   it('supports having clause with aggregate', async () => {

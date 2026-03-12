@@ -152,10 +152,9 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
 
 // Main query analysis - analyzes and returns a Query with computed SQL
 export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
-  let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: [], isAggregate: false}
+  let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: []}
   let ctes = new Map<string, CteTable>()
   let scope: Scope = {query, alias: '', otherTables: outerCtes || []}
-  let isAgg = false
 
   // WITH clause - analyze each CTE. Store them on Scope, as they're accessible to later CTEs, and valid tables for the query to from/join
   let withClauses = queryNode.getChild('WithClause')?.getChildren('CteDef') || []
@@ -217,11 +216,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
   // SELECT clause
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
-  let isSelectDistinct = !!queryNode
-    .getChild('SelectClause')
-    ?.getChildren('Kw')
-    .find(n => txt(n).toLowerCase() == 'distinct')
-  isAgg ||= isSelectDistinct
+  let isDistinct = !!txt(queryNode.getChild('SelectClause')).toLowerCase().startsWith('select distinct')
 
   for (let s of selects) {
     if (s.getChild('Wildcard')) {
@@ -237,7 +232,6 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     } else {
       let expr = analyzeExpr(s.getChild('Expression')!, scope)
       let name = s.getChild('Alias') ? txt(s.getChild('Alias')) : inferName(s.getChild('Expression')!, scope)
-      isAgg ||= !!expr.isAgg
       query.fields.push({name, sql: expr.sql, type: expr.type, isAgg: expr.isAgg})
     }
   }
@@ -254,17 +248,34 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
   // GROUP BY - adds fields if not already selected
   let groupBys = queryNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
-  isAgg ||= groupBys.length > 0
   for (let g of groupBys) {
-    let expr = analyzeExpr(g.getChild('Expression')!, scope)
-    if (expr.isAgg) {
-      diag(g, 'Cannot group by aggregate expressions')
-      continue
+    let exprNode = g.getChild('Expression')!
+    let alias = txt(g.getChild('Alias'))
+
+    // Positional GROUP BY (e.g. `group by 2, 1`) references the current SELECT list.
+    if (exprNode.name == 'Number' && !alias) {
+      let f = query.fields[Number(txt(exprNode)) - 1]
+      if (!f) diag(g, 'No field at index ' + txt(exprNode))
+      query.groupBy.push(f?.name)
+    } else {
+      // Otherwise, we can assume this is an expression (possibly with an alias)
+      // If that expression is already in the selected fields, it's just a reference.
+      let expr = analyzeExpr(exprNode, scope)
+      if (expr.isAgg) diag(g, 'Cannot group by aggregate expressions')
+      let name = g.getChild('Alias') ? txt(g.getChild('Alias')) : inferName(exprNode, scope)
+      query.groupBy.push(name)
+
+      // If it's not in there, add it to the select.
+      if (!query.fields.find(f => f.name == name)) {
+        query.fields.unshift({name, sql: expr.sql, type: expr.type})
+      }
     }
-    let name = g.getChild('Alias') ? txt(g.getChild('Alias')) : inferName(g.getChild('Expression')!, scope)
-    if (!query.fields.find(f => f.name == name)) {
-      query.fields.unshift({name, sql: expr.sql, type: expr.type})
-    }
+  }
+
+  // If there are agg fields but no groupBy, automatically group by all non-agg fields
+  let nonAggFields = query.fields.filter(f => !f.isAgg)
+  if (query.groupBy.length == 0 && (isDistinct || nonAggFields.length < query.fields.length)) {
+    query.groupBy = nonAggFields.map(f => f.name)
   }
 
   // ORDER BY
@@ -290,11 +301,8 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     expandColumns(hasAdHoc ? null : baseJoin.table, baseJoin.alias, query, scope)
   }
 
-  // Compute GROUP BY indices (non-aggregate fields, 1-indexed)
-  let groupByIndices = query.fields.map((f, i) => (f.isAgg ? 0 : i + 1)).filter(i => i > 0)
-
   // Default ORDER BY for aggregate queries
-  if (orderBy.length == 0 && isAgg && groupByIndices.length > 0) {
+  if (orderBy.length == 0 && query.groupBy.length > 0) {
     let firstAggIdx = query.fields.findIndex(f => f.isAgg)
     if (firstAggIdx >= 0) {
       orderBy.push({idx: firstAggIdx + 1, desc: true})
@@ -302,11 +310,8 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
       orderBy.push({idx: 1, desc: false}) // SELECT DISTINCT
     }
   }
-
-  query.groupBy = isAgg ? groupByIndices : []
   query.orderBy = orderBy
   query.limit = limit
-  query.isAggregate = isAgg
   query.sql = buildSql(query, ctes)
   return query
 }
@@ -352,11 +357,12 @@ function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
 
   let whereFilters = query.filters.filter(f => !f.isAgg).map(f => f.sql)
   let havingFilters = query.filters.filter(f => f.isAgg).map(f => f.sql)
+  let groupByIndices = query.groupBy.map(g => query.fields.findIndex(f => f.name == g) + 1)
 
   let sql = `SELECT ${selectParts.join(', ')} FROM ${fromTable} as ${baseJoin.alias}`
   if (joinClauses.length) sql += ' ' + joinClauses.join(' ')
   if (whereFilters.length) sql += ` WHERE ${whereFilters.join(' AND ')}`
-  if (query.groupBy.length) sql += ` GROUP BY ${query.groupBy.join(',')}`
+  if (groupByIndices.length) sql += ` GROUP BY ${groupByIndices.join(',')}`
   if (havingFilters.length) sql += ` HAVING ${havingFilters.join(' AND ')}`
   if (query.orderBy.length) {
     let parts = query.orderBy.map(o => `${o.idx} ${o.desc ? 'desc' : 'asc'} NULLS LAST`)
