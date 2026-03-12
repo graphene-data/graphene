@@ -89,6 +89,15 @@
               }
             },
             {"include": "#types"},
+            {
+              "name": "meta.graphene.join-one.entry.gsql",
+              "match": "(?i)\\b(join)\\s+(one|many)\\s+([A-Za-z_][A-Za-z0-9_$]*)",
+              "captures": {
+                "1": {"name": "keyword.control.gsql"},
+                "2": {"name": "keyword.control.gsql"},
+                "3": {"name": "entity.name.table.gsql"}
+              }
+            },
             {"include": "#keywords"},
             {"include": "#functions"},
             {"include": "#operators"},
@@ -98,14 +107,6 @@
               "captures": {
                 "0": {"name": "keyword.other.measure.graphene.gsql"},
                 "1": {"name": "entity.name.measure.graphene.gsql"}
-              }
-            },
-            {
-              "name": "meta.graphene.join-one.entry.gsql",
-              "match": "(?i)\\b(join\\s+(?:one|many))\\s+([A-Za-z_][A-Za-z0-9_$]*)",
-              "captures": {
-                "1": {"name": "keyword.other.join.graphene.gsql"},
-                "2": {"name": "entity.name.table.gsql"}
               }
             }
           ]

@@ -93,4 +93,23 @@ table users (
     expect(findToken(lines[2], 'sum').scopes).toContain('meta.declaration.table.graphene.gsql')
     expect(findToken(lines[3], 'active').scopes).toContain('meta.declaration.table.graphene.gsql')
   })
+
+  it('highlights join declarations with the same control-keyword scope as on', async () => {
+    let lines = await tokenize(
+      `
+table users (
+  id int
+  join one orders on orders.user_id = id
+  join many payments on payments.user_id = id
+)
+`.trim(),
+    )
+
+    expect(findToken(lines[2], 'join').scopes).toContain('keyword.control.gsql')
+    expect(findToken(lines[2], 'one').scopes).toContain('keyword.control.gsql')
+    expect(findToken(lines[2], 'on').scopes).toContain('keyword.control.gsql')
+    expect(findToken(lines[3], 'join').scopes).toContain('keyword.control.gsql')
+    expect(findToken(lines[3], 'many').scopes).toContain('keyword.control.gsql')
+    expect(findToken(lines[3], 'on').scopes).toContain('keyword.control.gsql')
+  })
 })
