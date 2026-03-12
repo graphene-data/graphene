@@ -128,15 +128,24 @@
       "patterns": [
         {
           "name": "storage.type.gsql",
-          "match": "(?i)\\b(DOUBLE\\s+PRECISION|CHAR\\s+VARYING)\\b"
+          "begin": "(?i)\\b(DOUBLE\\s+PRECISION|CHAR\\s+VARYING|VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b\\s*\\(",
+          "beginCaptures": {
+            "1": {"name": "storage.type.gsql"}
+          },
+          "end": "\\)",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#functions"},
+            {"include": "#operators"},
+            {"include": "#punctuation"}
+          ]
         },
         {
           "name": "storage.type.gsql",
-          "match": "(?i)\\b(VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b"
-        },
-        {
-          "name": "storage.type.gsql",
-          "match": "(?i)\\b(VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b\\s*\\(\\s*\\d+(?:\\s*,\\s*\\d+)?\\s*\\)"
+          "match": "(?i)\\b(DOUBLE\\s+PRECISION|CHAR\\s+VARYING|VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b"
         },
         {
           "name": "storage.type.gsql",
@@ -147,19 +156,67 @@
     "functions": {
       "patterns": [
         {
-          "name": "support.function.aggregate.gsql",
-          "match": "(?i)\\b(COUNT|SUM|AVG|MIN|MAX|ARRAY_AGG|STRING_AGG)\\s*\\("
+          "name": "meta.function-call.aggregate.gsql",
+          "begin": "(?i)\\b(COUNT|SUM|AVG|MIN|MAX|ARRAY_AGG|STRING_AGG)\\b\\s*\\(",
+          "beginCaptures": {
+            "1": {"name": "support.function.aggregate.gsql"}
+          },
+          "end": "\\)",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#types"},
+            {"include": "#keywords"},
+            {"include": "#functions"},
+            {"include": "#operators"},
+            {"include": "#member-access"},
+            {"include": "#parameters"},
+            {"include": "#punctuation"}
+          ]
         },
         {
-          "name": "support.function.scalar.gsql",
-          "match": "(?i)\\b(COALESCE|NULLIF|IFNULL|GREATEST|LEAST|ABS|ROUND|CEIL|CEILING|FLOOR|POWER|EXP|LN|LOG|LOG10|SQRT|MOD|SUBSTR|SUBSTRING|LEFT|RIGHT|POSITION|CHAR_LENGTH|CHARACTER_LENGTH|LENGTH|LOWER|UPPER|INITCAP|TRIM|RTRIM|LTRIM|TO_CHAR|TO_DATE|TO_TIMESTAMP|NOW|CURRENT_DATE|CURRENT_TIME|CURRENT_TIMESTAMP)\\s*\\("
+          "name": "meta.function-call.scalar.gsql",
+          "begin": "(?i)\\b(COALESCE|NULLIF|IFNULL|GREATEST|LEAST|ABS|ROUND|CEIL|CEILING|FLOOR|POWER|EXP|LN|LOG|LOG10|SQRT|MOD|SUBSTR|SUBSTRING|LEFT|RIGHT|POSITION|CHAR_LENGTH|CHARACTER_LENGTH|LENGTH|LOWER|UPPER|INITCAP|TRIM|RTRIM|LTRIM|TO_CHAR|TO_DATE|TO_TIMESTAMP|NOW|CURRENT_DATE|CURRENT_TIME|CURRENT_TIMESTAMP)\\b\\s*\\(",
+          "beginCaptures": {
+            "1": {"name": "support.function.scalar.gsql"}
+          },
+          "end": "\\)",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#types"},
+            {"include": "#keywords"},
+            {"include": "#functions"},
+            {"include": "#operators"},
+            {"include": "#member-access"},
+            {"include": "#parameters"},
+            {"include": "#punctuation"}
+          ]
         },
         {
-          "name": "entity.name.function.gsql",
-          "match": "(?i)\\b([A-Za-z_][A-Za-z0-9_$]*)\\s*\\(",
-          "captures": {
+          "name": "meta.function-call.gsql",
+          "begin": "(?i)\\b([A-Za-z_][A-Za-z0-9_$]*)\\b\\s*\\(",
+          "beginCaptures": {
             "1": {"name": "entity.name.function.gsql"}
-          }
+          },
+          "end": "\\)",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#types"},
+            {"include": "#keywords"},
+            {"include": "#functions"},
+            {"include": "#operators"},
+            {"include": "#member-access"},
+            {"include": "#parameters"},
+            {"include": "#punctuation"}
+          ]
         }
       ]
     },
