@@ -91,15 +91,7 @@
             {"include": "#types"},
             {"include": "#keywords"},
             {"include": "#functions"},
-            {"include": "#operators"},
-            {
-              "name": "meta.graphene.measure.entry.gsql",
-              "match": "(?i)\\bmeasure\\s+([A-Za-z_][A-Za-z0-9_$]*)",
-              "captures": {
-                "0": {"name": "keyword.other.measure.graphene.gsql"},
-                "1": {"name": "entity.name.measure.graphene.gsql"}
-              }
-            }
+            {"include": "#operators"}
           ]
         }
       ]
