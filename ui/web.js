@@ -55,7 +55,12 @@ window.$GRAPHENE.waitForLoad = async (timeout = 20_000) => {
   let g = window.$GRAPHENE
   let end = Date.now() + timeout
   while (Date.now() < end) {
-    if (!g.isQueryLoading() && pendingRenders.size == 0) return true
+    if (!g.isQueryLoading() && pendingRenders.size == 0) {
+      if (document.fonts?.ready) await document.fonts.ready
+      await new Promise(resolve => setTimeout(resolve, 300))
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      if (!g.isQueryLoading() && pendingRenders.size == 0) return true
+    }
     await new Promise(resolve => setTimeout(resolve, 100))
   }
   return false
