@@ -26,7 +26,9 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.84.0",
-    "esbuild": "^0.27.2"
+    "esbuild": "^0.27.2",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.3.2"
   },
   "contributes": {
     "languages": [
