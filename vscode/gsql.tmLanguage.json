@@ -89,15 +89,6 @@
               }
             },
             {"include": "#types"},
-            {
-              "name": "meta.graphene.join-one.entry.gsql",
-              "match": "(?i)\\b(join)\\s+(one|many)\\s+([A-Za-z_][A-Za-z0-9_$]*)",
-              "captures": {
-                "1": {"name": "keyword.control.gsql"},
-                "2": {"name": "keyword.control.gsql"},
-                "3": {"name": "entity.name.table.gsql"}
-              }
-            },
             {"include": "#keywords"},
             {"include": "#functions"},
             {"include": "#operators"},
@@ -117,11 +108,7 @@
       "patterns": [
         {
           "name": "keyword.control.gsql",
-          "match": "(?i)\\b(SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|ALTER|DROP|TRUNCATE|REPLACE|VIEW|TABLE|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|UNIQUE|NOT|NULL|DEFAULT|CHECK|AND|OR|XOR|CASE|WHEN|THEN|ELSE|END|AS|ON|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|NATURAL|USING|DISTINCT|ALL|UNION|EXCEPT|INTERSECT|WITH|RECURSIVE|OVER|PARTITION|RANGE|ROWS|BETWEEN|UNBOUNDED|PRECEDING|FOLLOWING|CURRENT|ROW|LIKE|ILIKE|SIMILAR|IN|IS|TRUE|FALSE|UNKNOWN|ESCAPE|ROLLUP|CUBE|FILTER|WITHIN|GROUP|QUALIFY|TOP)\\b"
-        },
-        {
-          "name": "keyword.other.graphene.gsql",
-          "match": "(?i)\\b(join\\s+one|join\\s+many)\\b"
+          "match": "(?i)\\b(SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|ALTER|DROP|TRUNCATE|REPLACE|VIEW|TABLE|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|UNIQUE|NOT|NULL|DEFAULT|CHECK|AND|OR|XOR|CASE|WHEN|THEN|ELSE|END|AS|ON|JOIN\\s+ONE|JOIN\\s+MANY|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|NATURAL|USING|DISTINCT|ALL|UNION|EXCEPT|INTERSECT|WITH|RECURSIVE|OVER|PARTITION|RANGE|ROWS|BETWEEN|UNBOUNDED|PRECEDING|FOLLOWING|CURRENT|ROW|LIKE|ILIKE|SIMILAR|IN|IS|TRUE|FALSE|UNKNOWN|ESCAPE|ROLLUP|CUBE|FILTER|WITHIN|GROUP|QUALIFY|TOP)\\b"
         }
       ]
     },
