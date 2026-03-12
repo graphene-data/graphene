@@ -127,8 +127,14 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
     let screenshot = await fsp.readFile(screenshotPath)
     expect(screenshot.length).toBeGreaterThan(20_000)
 
-    await page.setContent(`<img id="shot" src="data:image/png;base64,${screenshot.toString('base64')}" />`)
-    await expect(page.locator('#shot')).screenshot('packaged-cli-check-index')
+    await page.setContent(`
+      <style>
+        #crop { width: 1200px; height: 320px; overflow: hidden; }
+        #shot { display: block; }
+      </style>
+      <div id="crop"><img id="shot" src="data:image/png;base64,${screenshot.toString('base64')}" /></div>
+    `)
+    await expect(page.locator('#crop')).screenshot('packaged-cli-check-index')
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
     await run('npm', ['run', 'graphene', '--', 'stop'], projectDir, childEnv)
