@@ -36,7 +36,7 @@ const extendedExpect = baseExpect.extend({
       caret: 'hide',
       scale: 'css',
       locator,
-      maxDiffPixelRatio: 0, // strict: no differing pixels allowed
+      maxDiffPixelRatio: 0.01, // allow small cross-OS rasterization differences
       threshold: 0, // strict per-pixel color matching
       timeout: 5_000,
     } as any
