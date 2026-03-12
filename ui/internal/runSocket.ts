@@ -21,6 +21,13 @@ async function takeScreenshot() {
   return canvas?.toDataURL('image/png')
 }
 
+async function waitForStableFrame() {
+  // Ensure web fonts and chart resize/debounce work have settled before html2canvas rasterizes text.
+  if (document.fonts?.ready) await document.fonts.ready
+  await new Promise(r => setTimeout(r, 300))
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+}
+
 function connect() {
   let wsUrl = `ws://${window.location.host}/_api/ws`
   socket = new WebSocket(wsUrl)
@@ -32,6 +39,7 @@ function connect() {
     if (type !== 'check') return
 
     let finished = await window.$GRAPHENE.waitForLoad(20_000)
+    await waitForStableFrame()
     let errors = getErrors().map((e: any) => ({type: e.type, message: e.message, queryId: e.queryId, file: e.file, line: e.loc?.line, frame: e.frame, from: e.from, to: e.to}))
     let screenshot = chart ? captureChart(chart) : await takeScreenshot()
     socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors, stillLoading: !finished, screenshot}))
