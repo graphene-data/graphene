@@ -37,6 +37,11 @@ REGION="us-east-1"
 CLUSTER="graphene-prod"
 SERVICE="graphene-cloud-v3"
 
+# --- Load AWS credentials/env ---
+
+cloud_setup_infra_env "$ENVIRONMENT"
+
+# Set deploy-time config after loading .env so local env vars can't override the target token.
 case "$ENVIRONMENT" in
   staging)    ACCOUNT="025223626139"; URL="https://graphene-staging.com"; VITE_STYTCH_PUBLIC_TOKEN="public-token-live-f2a46176-0127-4b0e-aa72-9843a4337482" ;;
   production) ACCOUNT="772069004272"; URL="https://graphenedata.com" ; VITE_STYTCH_PUBLIC_TOKEN="public-token-live-725d49b9-4d63-48f6-9678-eda554a3202b" ;;
@@ -45,10 +50,6 @@ esac
 ECR_REPO="${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/graphene/cloud"
 
 echo "Deploying to $ENVIRONMENT (skip-build: $SKIP_BUILD)"
-
-# --- Load AWS credentials/env ---
-
-cloud_setup_infra_env "$ENVIRONMENT"
 
 # --- Build and push ---
 
