@@ -39,18 +39,19 @@ export class BigQueryConnection implements QueryConnection {
 
   async listDatasets(): Promise<string[]> {
     let [datasets] = await this.client.getDatasets()
-    return datasets.map(d => d.id || d.metadata.datasetReference?.datasetId)
+    return datasets.map(d => String(d.id || d.metadata.datasetReference?.datasetId || '').toLowerCase())
   }
 
   async listTables(dataset?: string): Promise<string[]> {
     if (!dataset) throw new Error('BigQuery requires a dataset')
     validateBigQueryIdent(dataset)
 
+    let resolvedDataset = await this.resolveDatasetName(dataset)
     let res = await this.runQuery(`select table_name as table_name
-      from \`${dataset}.INFORMATION_SCHEMA.TABLES\`
+      from \`${resolvedDataset}.INFORMATION_SCHEMA.TABLES\`
       where table_type in ('BASE TABLE', 'VIEW') order by table_name`)
 
-    return res.rows.map(r => `${dataset}.${r['table_name']}`)
+    return res.rows.map(r => `${resolvedDataset.toLowerCase()}.${String(r['table_name']).toLowerCase()}`)
   }
 
   async describeTable(target: string): Promise<SchemaColumn[]> {
@@ -59,15 +60,21 @@ export class BigQueryConnection implements QueryConnection {
     let dataset = parts.join('.') || this.defaultNamespace
     if (!dataset) throw new Error('No dataset specified and no default namespace configured')
     validateBigQueryIdent(dataset)
+    let resolvedDataset = await this.resolveDatasetName(dataset)
     let sql = `
       select column_name as column_name, data_type as data_type, ordinal_position as ordinal_position
-      from \`${dataset}.INFORMATION_SCHEMA.COLUMNS\`
+      from \`${resolvedDataset}.INFORMATION_SCHEMA.COLUMNS\`
       where lower(table_name) = lower(@table)
       order by ordinal_position
     `.trim()
     let res = await this.runQuery(sql, {table})
     return res.rows.map(row => {
-      return {name: String(row['column_name']), dataType: String(row['data_type'])}
+      return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })
+  }
+
+  async resolveDatasetName(name: string): Promise<string> {
+    let datasets = await this.listDatasets()
+    return datasets.find(ds => ds.toLowerCase() == name.toLowerCase()) || name
   }
 }

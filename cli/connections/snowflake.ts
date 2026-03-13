@@ -92,35 +92,36 @@ export class SnowflakeConnection implements QueryConnection {
   }
 
   async listSchemas(database: string): Promise<string[]> {
+    let resolvedDatabase = await this.resolveDatabaseName(database)
     let res = await this.runQuery(`
       select schema_name as "schema_name"
-      from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.SCHEMATA
+      from ${snowflakeIdent(resolvedDatabase)}.INFORMATION_SCHEMA.SCHEMATA
       where schema_name != 'INFORMATION_SCHEMA'
       order by schema_name
     `)
-    return res.rows.map(row => String(row['schema_name']))
+    return res.rows.map(row => String(row['schema_name']).toLowerCase())
   }
 
   async listTables(dataset: string): Promise<string[]> {
     let parts = dataset.split('.')
-    let database = parts.shift() || ''
+    let database = await this.resolveDatabaseName(parts.shift() || '')
     let schema = parts.join('.')
 
     let res = await this.runQuery(
       `
       select table_schema as "table_schema", table_name as "table_name"
       from ${snowflakeIdent(database)}.INFORMATION_SCHEMA.TABLES
-      where table_type in ('BASE TABLE', 'VIEW') and table_schema = ?
+      where table_type in ('BASE TABLE', 'VIEW') and upper(table_schema) = upper(?)
       order by table_name
     `,
       [schema],
     )
-    return res.rows.map(row => `${row['table_schema']}.${row['table_name']}`)
+    return res.rows.map(row => `${String(row['table_schema']).toLowerCase()}.${String(row['table_name']).toLowerCase()}`)
   }
 
   async describeTable(target: string): Promise<SchemaColumn[]> {
     let parts = target.split('.')
-    let database = parts.shift() || ''
+    let database = await this.resolveDatabaseName(parts.shift() || '')
     let table = parts.pop() || ''
     let schema = parts.join('.')
 
@@ -136,6 +137,11 @@ export class SnowflakeConnection implements QueryConnection {
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })
+  }
+
+  async resolveDatabaseName(name: string): Promise<string> {
+    let databases = await this.listDatasets()
+    return databases.find(db => db.toLowerCase() == name.toLowerCase()) || name
   }
 }
 
