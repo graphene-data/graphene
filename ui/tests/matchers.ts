@@ -45,25 +45,23 @@ const extendedExpect = baseExpect.extend({
 
     if (!result) throw new Error('Playwright did not return screenshot result')
 
-    // Default behavior keeps existing local auto-update, but suites can opt into CI-style matching via GRAPHENE_SCREENSHOT_MATCH=1.
-    let updateSnapshots = process.env.GRAPHENE_UPDATE_SCREENSHOTS === '1' || (!process.env.CI && process.env.GRAPHENE_SCREENSHOT_MATCH !== '1')
-    if (!expectedBuffer || result.diff) {
-      let resultsDir = path.resolve(snapshotDir, '..', 'results', testFile)
-      if (result.actual) await writeBuffer(path.join(resultsDir, snapshotName + '-actual.png'), result.actual)
-      if (result.previous) await writeBuffer(path.join(resultsDir, snapshotName + '-expected.png'), result.previous)
-      if (result.diff) await writeBuffer(path.join(resultsDir, snapshotName + '-diff.png'), result.diff)
-
-      if (updateSnapshots) {
-        if (result.actual) await writeBuffer(snapshotPath, result.actual)
-      } else {
-        if (!expectedBuffer) {
-          return {message: () => `Screenshot ${snapshotName} does not exist. Run with GRAPHENE_UPDATE_SCREENSHOTS=1 to create it.`, pass: false}
-        }
+    // In CI, fail if screenshots don't match and save diffs. Locally, update the snapshot.
+    if (process.env.CI) {
+      if (!expectedBuffer) {
+        return {message: () => `Screenshot ${snapshotName} does not exist. Run tests locally to create it.`, pass: false}
+      }
+      if (result.diff) {
+        let resultsDir = path.resolve(snapshotDir, '..', 'results', testFile)
+        if (result.actual) await writeBuffer(path.join(resultsDir, snapshotName + '-actual.png'), result.actual)
+        if (result.previous) await writeBuffer(path.join(resultsDir, snapshotName + '-expected.png'), result.previous)
+        await writeBuffer(path.join(resultsDir, snapshotName + '-diff.png'), result.diff)
         return {message: () => `Screenshot ${snapshotName} does not match expected`, pass: false}
       }
+    } else {
+      if (result.actual) await writeBuffer(snapshotPath, result.actual)
     }
 
-    return {message: () => (updateSnapshots ? `Screenshot ${snapshotName} updated` : `Screenshot ${snapshotName} matches`), pass: true}
+    return {message: () => 'Screenshot ' + snapshotName + ' matches', pass: true}
   },
 })
 
