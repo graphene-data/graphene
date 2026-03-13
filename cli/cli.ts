@@ -84,6 +84,7 @@ program
   .action(async (tableArg: string) => {
     let connection = await getConnection()
     let datasets = await connection.listDatasets()
+    let matchedDataset = tableArg ? findCaseInsensitive(datasets, tableArg) : null
 
     // if there's no arg and more than one dataset, just list the datasets
     if (!tableArg && datasets.length > 1) {
@@ -94,19 +95,22 @@ program
     let dsToList: string | null = null
     let parts = tableArg ? tableArg.split('.') : []
 
-    if (tableArg && connection.listSchemas && parts.length == 1 && datasets.includes(tableArg)) {
-      let schemas = await connection.listSchemas(tableArg)
-      return console.log(`Schemas in ${tableArg}:\n${schemas.join('\n')}`)
+    if (tableArg && connection.listSchemas && parts.length == 1 && matchedDataset) {
+      let schemas = await connection.listSchemas(matchedDataset)
+      return console.log(`Schemas in ${matchedDataset}:\n${schemas.join('\n')}`)
     }
 
-    if (datasets.includes(tableArg))
-      dsToList = tableArg // you gave the name of a dataset
+    if (matchedDataset)
+      dsToList = matchedDataset // you gave the name of a dataset
     else if (!tableArg && config.defaultNamespace)
       dsToList = config.defaultNamespace // default namespace configured
     else if (!tableArg && datasets.length == 1)
       dsToList = datasets[0] // only one dataset, and no args
     else if (!tableArg && config.dialect == 'duckdb') dsToList = '<default>'
-    else if (tableArg && config.dialect == 'snowflake' && parts.length == 2) dsToList = tableArg
+    else if (tableArg && config.dialect == 'snowflake' && parts.length == 2) {
+      let db = findCaseInsensitive(datasets, parts[0]) || parts[0]
+      dsToList = `${db}.${parts.slice(1).join('.')}`
+    }
 
     if (dsToList) {
       let tables = await connection.listTables(dsToList)
@@ -115,8 +119,9 @@ program
 
     // otherwise, assume you're wanting to see tables
     let cols = await connection.describeTable(tableArg)
-    if (!cols.length) return console.log(`Table ${tableArg} not found`)
-    console.log(`table ${tableArg} (`)
+    let tableLabel = config.dialect == 'snowflake' ? String(tableArg || '').toLowerCase() : tableArg
+    if (!cols.length) return console.log(`Table ${tableLabel} not found`)
+    console.log(`table ${tableLabel} (`)
     cols.forEach(col => console.log(`  ${col.name} ${col.dataType}`))
     console.log(')')
   })
@@ -198,4 +203,8 @@ function validQuery(queries: Query[]): boolean {
     process.exit(1)
   }
   return true
+}
+
+function findCaseInsensitive(values: string[], needle: string): string | null {
+  return values.find(value => value.toLowerCase() == needle.toLowerCase()) || null
 }

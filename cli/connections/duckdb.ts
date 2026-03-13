@@ -67,7 +67,7 @@ export class DuckDBConnection implements QueryConnection {
       order by table_schema, table_name
     `.trim()
     let res = await this.runQuery(sql)
-    return res.rows.map(row => String(row['table_name']))
+    return res.rows.map(row => String(row['table_name']).toLowerCase())
   }
 
   async describeTable(target: string): Promise<SchemaColumn[]> {
@@ -84,7 +84,7 @@ export class DuckDBConnection implements QueryConnection {
     let params = schema ? [table, schema] : [table]
     let res = await this.runQuery(sql, params)
     return res.rows.map(row => {
-      return {name: String(row['column_name']), dataType: String(row['data_type'])}
+      return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })
   }
 }
