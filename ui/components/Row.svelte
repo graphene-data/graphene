@@ -10,5 +10,6 @@
   /* Ensure styles apply to slotted children (not scoped) */
   div > :global(*) {
     flex: 1 1 0;
+    min-width: 0; /* avoids some rendering instability */
   }
 </style>
