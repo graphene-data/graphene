@@ -196,6 +196,9 @@ module "graphene" {
   # ACM/LB configuration
   configure_alb_extras = true
 
+  # Allow direct KMS encryption for manual connection onboarding
+  secrets_kms_user_arns = ["arn:aws:iam::772069004272:user/grant"]
+
   providers = {
     aws                = aws
     aws.us_east_2      = aws.us_east_2

@@ -93,7 +93,11 @@ variable "configure_alb_extras" {
   default     = true
 }
 
-
+variable "secrets_kms_user_arns" {
+  description = "Additional IAM principals allowed to directly encrypt/decrypt user connection secrets"
+  type        = list(string)
+  default     = []
+}
 
 # Stytch SDK Configuration
 variable "stytch_sdk_domains" {

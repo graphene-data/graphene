@@ -17,7 +17,7 @@ resource "aws_kms_key" "secrets" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
+    Statement = concat([
       {
         Sid    = "AllowKeyManagement"
         Effect = "Allow"
@@ -56,7 +56,20 @@ resource "aws_kms_key" "secrets" {
         ]
         Resource = "*"
       }
-    ]
+      ],
+      # Additional users who can encrypt secrets. We use this to manually set up connections
+      # for users in the database or to do forced key rotation.
+      # NB that this only allows encryption, never decryption
+      length(var.secrets_kms_user_arns) > 0 ? [{
+        Sid    = "AllowConfiguredUserUsage"
+        Effect = "Allow"
+        Principal = {
+          AWS = var.secrets_kms_user_arns
+        }
+        Action   = ["kms:Encrypt"]
+        Resource = "*"
+      }] : []
+    )
   })
 }
 
