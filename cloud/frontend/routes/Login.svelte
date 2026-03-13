@@ -67,6 +67,13 @@
     max-width: 420px;
   }
 
+  /* Force our app font so Stytch UI renders the same across local/CI OS font stacks. */
+  :global(#stytch-login),
+  :global(#stytch-login *) {
+    font-family: 'Inter', var(--ui-font-family) !important;
+    font-synthesis: none;
+  }
+
   :global(#stytch-login [data-testid='stytch-footer']),
   :global(#stytch-login [class*='powered-by']),
   :global(#stytch-login a[href*='stytch.com']) {

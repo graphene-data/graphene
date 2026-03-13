@@ -39,6 +39,7 @@ Our tests are run with vitest. Use `pnpm test` in either cloud or core to run th
 You can run a single test with `pnpm test -t "part of test name"`
 Lint+typecheck with `pnpm lint` in either cloud or core.
 All UI tests should capture a screenshot. Don't add programmatic assertions around rendered html, the screenshot will cover that.
+For screenshot tests, local runs intentionally update snapshots by default so engineers can quickly see visual impact while iterating. CI is the strict screenshot comparison gate.
 
 ## Workflow
 * `/core` is a submodule, so to do git operations there you'll want to `git -C core status`
