@@ -91,23 +91,7 @@
             {"include": "#types"},
             {"include": "#keywords"},
             {"include": "#functions"},
-            {"include": "#operators"},
-            {
-              "name": "meta.graphene.measure.entry.gsql",
-              "match": "(?i)\\bmeasure\\s+([A-Za-z_][A-Za-z0-9_$]*)",
-              "captures": {
-                "0": {"name": "keyword.other.measure.graphene.gsql"},
-                "1": {"name": "entity.name.measure.graphene.gsql"}
-              }
-            },
-            {
-              "name": "meta.graphene.join-one.entry.gsql",
-              "match": "(?i)\\b(join\\s+(?:one|many))\\s+([A-Za-z_][A-Za-z0-9_$]*)",
-              "captures": {
-                "1": {"name": "keyword.other.join.graphene.gsql"},
-                "2": {"name": "entity.name.table.gsql"}
-              }
-            }
+            {"include": "#operators"}
           ]
         }
       ]
@@ -116,11 +100,7 @@
       "patterns": [
         {
           "name": "keyword.control.gsql",
-          "match": "(?i)\\b(SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|ALTER|DROP|TRUNCATE|REPLACE|VIEW|TABLE|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|UNIQUE|NOT|NULL|DEFAULT|CHECK|AND|OR|XOR|CASE|WHEN|THEN|ELSE|END|AS|ON|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|NATURAL|USING|DISTINCT|ALL|UNION|EXCEPT|INTERSECT|WITH|RECURSIVE|OVER|PARTITION|RANGE|ROWS|BETWEEN|UNBOUNDED|PRECEDING|FOLLOWING|CURRENT|ROW|LIKE|ILIKE|SIMILAR|IN|IS|TRUE|FALSE|UNKNOWN|ESCAPE|ROLLUP|CUBE|FILTER|WITHIN|GROUP|QUALIFY|TOP)\\b"
-        },
-        {
-          "name": "keyword.other.graphene.gsql",
-          "match": "(?i)\\b(join\\s+one|join\\s+many|measure)\\b"
+          "match": "(?i)\\b(SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|ALTER|DROP|TRUNCATE|REPLACE|VIEW|TABLE|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|UNIQUE|NOT|NULL|DEFAULT|CHECK|AND|OR|XOR|CASE|WHEN|THEN|ELSE|END|AS|ON|JOIN\\s+ONE|JOIN\\s+MANY|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|NATURAL|USING|DISTINCT|ALL|UNION|EXCEPT|INTERSECT|WITH|RECURSIVE|OVER|PARTITION|RANGE|ROWS|BETWEEN|UNBOUNDED|PRECEDING|FOLLOWING|CURRENT|ROW|LIKE|ILIKE|SIMILAR|IN|IS|TRUE|FALSE|UNKNOWN|ESCAPE|ROLLUP|CUBE|FILTER|WITHIN|GROUP|QUALIFY|TOP)\\b"
         }
       ]
     },
@@ -128,38 +108,95 @@
       "patterns": [
         {
           "name": "storage.type.gsql",
-          "match": "(?i)\\b(DOUBLE\\s+PRECISION|CHAR\\s+VARYING)\\b"
+          "begin": "(?i)\\b(DOUBLE\\s+PRECISION|CHAR\\s+VARYING|VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b\\s*\\(",
+          "beginCaptures": {
+            "1": {"name": "storage.type.gsql"}
+          },
+          "end": "\\)",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#functions"},
+            {"include": "#operators"},
+            {"include": "#punctuation"}
+          ]
         },
         {
           "name": "storage.type.gsql",
-          "match": "(?i)\\b(VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b"
+          "match": "(?i)\\b(DOUBLE\\s+PRECISION|CHAR\\s+VARYING|VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b"
         },
         {
           "name": "storage.type.gsql",
-          "match": "(?i)\\b(VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b\\s*\\(\\s*\\d+(?:\\s*,\\s*\\d+)?\\s*\\)"
-        },
-        {
-          "name": "storage.type.gsql",
-          "match": "(?i)\\b(INT|INTEGER|SMALLINT|BIGINT|TINYINT|FLOAT|DOUBLE|REAL|BOOLEAN|BOOL|DATE|TIME|TIMESTAMP|TIMESTAMP_NTZ|TIMESTAMP_TZ|TIMESTAMP_LTZ|TIMESTAMPTZ|TEXT|BLOB|JSON|UUID|SERIAL|BIGSERIAL|MONEY|STRING|NUMBER|VARBINARY|BINARY)\\b"
+          "match": "(?i)\\b(INT|INTEGER|SMALLINT|BIGINT|TINYINT|FLOAT|DOUBLE|REAL|BOOLEAN|BOOL|DATE|TIME|TIMESTAMP|TIMESTAMP_NTZ|TIMESTAMP_TZ|TIMESTAMP_LTZ|TIMESTAMPTZ|TEXT|BLOB|JSON|UUID|SERIAL|BIGSERIAL|MONEY|STRING|NUMBER|VARBINARY|BINARY|INTERVAL)\\b"
         }
       ]
     },
     "functions": {
       "patterns": [
         {
-          "name": "support.function.aggregate.gsql",
-          "match": "(?i)\\b(COUNT|SUM|AVG|MIN|MAX|ARRAY_AGG|STRING_AGG)\\s*\\("
+          "name": "meta.function-call.aggregate.gsql",
+          "begin": "(?i)\\b(COUNT|SUM|AVG|MIN|MAX|ARRAY_AGG|STRING_AGG)\\b\\s*\\(",
+          "beginCaptures": {
+            "1": {"name": "support.function.aggregate.gsql"}
+          },
+          "end": "\\)",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#types"},
+            {"include": "#keywords"},
+            {"include": "#functions"},
+            {"include": "#operators"},
+            {"include": "#member-access"},
+            {"include": "#parameters"},
+            {"include": "#punctuation"}
+          ]
         },
         {
-          "name": "support.function.scalar.gsql",
-          "match": "(?i)\\b(COALESCE|NULLIF|IFNULL|GREATEST|LEAST|ABS|ROUND|CEIL|CEILING|FLOOR|POWER|EXP|LN|LOG|LOG10|SQRT|MOD|SUBSTR|SUBSTRING|LEFT|RIGHT|POSITION|CHAR_LENGTH|CHARACTER_LENGTH|LENGTH|LOWER|UPPER|INITCAP|TRIM|RTRIM|LTRIM|TO_CHAR|TO_DATE|TO_TIMESTAMP|NOW|CURRENT_DATE|CURRENT_TIME|CURRENT_TIMESTAMP)\\s*\\("
+          "name": "meta.function-call.scalar.gsql",
+          "begin": "(?i)\\b(COALESCE|NULLIF|IFNULL|GREATEST|LEAST|ABS|ROUND|CEIL|CEILING|FLOOR|POWER|EXP|LN|LOG|LOG10|SQRT|MOD|SUBSTR|SUBSTRING|LEFT|RIGHT|POSITION|CHAR_LENGTH|CHARACTER_LENGTH|LENGTH|LOWER|UPPER|INITCAP|TRIM|RTRIM|LTRIM|TO_CHAR|TO_DATE|TO_TIMESTAMP|NOW|CURRENT_DATE|CURRENT_TIME|CURRENT_TIMESTAMP)\\b\\s*\\(",
+          "beginCaptures": {
+            "1": {"name": "support.function.scalar.gsql"}
+          },
+          "end": "\\)",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#types"},
+            {"include": "#keywords"},
+            {"include": "#functions"},
+            {"include": "#operators"},
+            {"include": "#member-access"},
+            {"include": "#parameters"},
+            {"include": "#punctuation"}
+          ]
         },
         {
-          "name": "entity.name.function.gsql",
-          "match": "(?i)\\b([A-Za-z_][A-Za-z0-9_$]*)\\s*\\(",
-          "captures": {
+          "name": "meta.function-call.gsql",
+          "begin": "(?i)\\b([A-Za-z_][A-Za-z0-9_$]*)\\b\\s*\\(",
+          "beginCaptures": {
             "1": {"name": "entity.name.function.gsql"}
-          }
+          },
+          "end": "\\)",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#types"},
+            {"include": "#keywords"},
+            {"include": "#functions"},
+            {"include": "#operators"},
+            {"include": "#member-access"},
+            {"include": "#parameters"},
+            {"include": "#punctuation"}
+          ]
         }
       ]
     },

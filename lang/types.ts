@@ -67,10 +67,9 @@ export interface Query {
   fields: QueryField[] // SELECT columns
   joins: QueryJoin[] // JOINs needed for this query
   filters: Filter[] // WHERE/HAVING conditions
-  groupBy: number[] // indices into fields for GROUP BY (1-indexed)
+  groupBy: string[] // field names for GROUP BY
   orderBy: {idx: number; desc: boolean}[] // ORDER BY (1-indexed field indices)
   limit?: number
-  isAggregate: boolean // true if this query has any aggregation
 }
 
 // A column definition (from table schema or computed)

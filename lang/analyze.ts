@@ -155,14 +155,14 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         fanoutConflict: expr.fanoutConflict,
       })
     } else {
-      query.fields.push({name: outName, sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, metadata: col.metadata, fanoutPath: scope.fanoutPath})
+      query.fields.push({name: outName, sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata, fanoutPath: scope.fanoutPath})
     }
   }
 }
 
 // Main query analysis - analyzes and returns a Query with computed SQL
 export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
-  let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: [], isAggregate: false}
+  let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: []}
   let ctes = new Map<string, CteTable>()
   let scope: Scope = {query, alias: '', fanoutPath: [], otherTables: outerCtes || []}
   let isAgg = false
@@ -228,11 +228,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
   // SELECT clause
   let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
-  let isSelectDistinct = !!queryNode
-    .getChild('SelectClause')
-    ?.getChildren('Kw')
-    .find(n => txt(n).toLowerCase() == 'distinct')
-  isAgg ||= isSelectDistinct
+  let isDistinct = !!txt(queryNode.getChild('SelectClause')).toLowerCase().startsWith('select distinct')
 
   for (let s of selects) {
     if (s.getChild('Wildcard')) {
@@ -275,18 +271,35 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
   // GROUP BY - adds fields if not already selected
   let groupBys = queryNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
-  isAgg ||= groupBys.length > 0
   for (let g of groupBys) {
-    let expr = analyzeExpr(g.getChild('Expression')!, scope)
-    if (expr.isAgg) {
-      diag(g, 'Cannot group by aggregate expressions')
-      continue
+    let exprNode = g.getChild('Expression')!
+    let alias = txt(g.getChild('Alias'))
+
+    // Positional GROUP BY (e.g. `group by 2, 1`) references the current SELECT list.
+    if (exprNode.name == 'Number' && !alias) {
+      let f = query.fields[Number(txt(exprNode)) - 1]
+      if (!f) diag(g, 'No field at index ' + txt(exprNode))
+      query.groupBy.push(f?.name)
+    } else {
+      // Otherwise, we can assume this is an expression (possibly with an alias)
+      // If that expression is already in the selected fields, it's just a reference.
+      let expr = analyzeExpr(exprNode, scope)
+      if (expr.isAgg) diag(g, 'Cannot group by aggregate expressions')
+      let name = g.getChild('Alias') ? txt(g.getChild('Alias')) : inferName(exprNode, scope)
+      query.groupBy.push(name)
+
+      // If it's not in there, add it to the select.
+      if (!query.fields.find(f => f.name == name)) {
+        query.fields.unshift({name, sql: expr.sql, type: expr.type, fanoutPath: expr.fanoutPath, fanoutSensitivePaths: expr.fanoutSensitivePaths, fanoutConflict: expr.fanoutConflict})
+      }
+      fanoutExprs.push({node: g.getChild('Expression')!, expr})
     }
-    let name = g.getChild('Alias') ? txt(g.getChild('Alias')) : inferName(g.getChild('Expression')!, scope)
-    if (!query.fields.find(f => f.name == name)) {
-      query.fields.unshift({name, sql: expr.sql, type: expr.type, fanoutPath: expr.fanoutPath, fanoutSensitivePaths: expr.fanoutSensitivePaths, fanoutConflict: expr.fanoutConflict})
-    }
-    fanoutExprs.push({node: g.getChild('Expression')!, expr})
+  }
+
+  // If there are agg fields but no groupBy, automatically group by all non-agg fields
+  let nonAggFields = query.fields.filter(f => !f.isAgg)
+  if (query.groupBy.length == 0 && (isDistinct || nonAggFields.length < query.fields.length)) {
+    query.groupBy = nonAggFields.map(f => f.name)
   }
 
   // ORDER BY
@@ -312,11 +325,8 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     expandColumns(hasAdHoc ? null : baseJoin.table, baseJoin.alias, query, scope)
   }
 
-  // Compute GROUP BY indices (non-aggregate fields, 1-indexed)
-  let groupByIndices = query.fields.map((f, i) => (f.isAgg ? 0 : i + 1)).filter(i => i > 0)
-
   // Default ORDER BY for aggregate queries
-  if (orderBy.length == 0 && isAgg && groupByIndices.length > 0) {
+  if (orderBy.length == 0 && query.groupBy.length > 0) {
     let firstAggIdx = query.fields.findIndex(f => f.isAgg)
     if (firstAggIdx >= 0) {
       orderBy.push({idx: firstAggIdx + 1, desc: true})
@@ -324,11 +334,8 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
       orderBy.push({idx: 1, desc: false}) // SELECT DISTINCT
     }
   }
-
-  query.groupBy = isAgg ? groupByIndices : []
   query.orderBy = orderBy
   query.limit = limit
-  query.isAggregate = isAgg
   if (isAgg) {
     fanoutExprs.forEach(({node, expr}) => analyzeAggregateQueryExpr(node, expr))
     analyzeAggregateQueryFanout(fanoutExprs.filter(entry => entry.expr.isAgg))
@@ -346,8 +353,8 @@ function formatTablePath(path: string): string {
 }
 
 function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
-  let ctes: string[] = [...cteMap.values()].map(c => `${quote(c.name)} as ( ${c.query.sql} )`)
-  let selectParts = query.fields.map(f => `${f.sql} as ${quote(f.name)}`)
+  let ctes: string[] = [...cteMap.values()].map(c => `${c.name} as ( ${c.query.sql} )`)
+  let selectParts = query.fields.map(f => `${f.sql} as ${f.name}`)
   let baseJoin = query.joins.find(j => j.source == 'from')
 
   // No FROM clause (e.g. `select 1`)
@@ -355,10 +362,10 @@ function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
 
   function renderTableRef(table: Table): string {
     if (table.type === 'view') {
-      if (!ctes.some(c => c.startsWith(quote(table.name) + ' '))) {
-        ctes.push(`${quote(table.name)} as ( ${table.query.sql} )`)
+      if (!ctes.some(c => c.startsWith(table.name + ' '))) {
+        ctes.push(`${table.name} as ( ${table.query.sql} )`)
       }
-      return quote(table.name)
+      return table.name
     }
     if (table.type === 'subquery') return `( ${table.query.sql} )`
     return formatTablePath(table.tablePath)
@@ -378,11 +385,12 @@ function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
 
   let whereFilters = query.filters.filter(f => !f.isAgg).map(f => f.sql)
   let havingFilters = query.filters.filter(f => f.isAgg).map(f => f.sql)
+  let groupByIndices = query.groupBy.map(g => query.fields.findIndex(f => f.name == g) + 1)
 
   let sql = `SELECT ${selectParts.join(', ')} FROM ${fromTable} as ${baseJoin.alias}`
   if (joinClauses.length) sql += ' ' + joinClauses.join(' ')
   if (whereFilters.length) sql += ` WHERE ${whereFilters.join(' AND ')}`
-  if (query.groupBy.length) sql += ` GROUP BY ${query.groupBy.join(',')}`
+  if (groupByIndices.length) sql += ` GROUP BY ${groupByIndices.join(',')}`
   if (havingFilters.length) sql += ` HAVING ${havingFilters.join(' AND ')}`
   if (query.orderBy.length) {
     let parts = query.orderBy.map(o => `${o.idx} ${o.desc ? 'desc' : 'asc'} NULLS LAST`)
@@ -419,7 +427,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         let outField = scope.query.fields.find(f => f.name == fieldName)
         if (outField) {
           return {
-            sql: outField.isAgg ? quote(fieldName) : outField.sql,
+            sql: outField.isAgg ? fieldName : outField.sql,
             type: outField.type,
             isAgg: outField.isAgg,
             fanoutPath: outField.fanoutPath,
@@ -458,7 +466,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field: col, table})
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${quoteColumn(col.name)}`, type: col.type, fanoutPath: matches[0].fanoutPath}
+      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanoutPath: matches[0].fanoutPath}
 
       // Computed column: analyze its expression in the matched table's scope
       if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
@@ -1055,16 +1063,4 @@ function convertDataType(dataType: string): FieldType | null {
     default:
       return null
   }
-}
-
-// Quote an identifier for the current dialect
-function quote(name: string): string {
-  if (config.dialect === 'bigquery') return `\`${name}\``
-  return `"${name}"`
-}
-
-function quoteColumn(name: string): string {
-  if (config.dialect === 'bigquery') return `\`${name}\``
-  if (config.dialect === 'snowflake') return `"${name.toUpperCase()}"`
-  return `"${name}"`
 }
