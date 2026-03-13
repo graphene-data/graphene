@@ -161,24 +161,137 @@ test('uploads chart screenshot when respondToUser references mdId', async({slack
   expect(Buffer.isBuffer(uploadCall?.payload.file)).toBe(true)
 })
 
-test('stores and reuses one agent session per slack thread', async({slack, mockLLM}) => {
+test('resumes a slack thread by carrying forward prior prompt and adding only new thread context', async({slack, mockLLM}) => {
   mockLLM.setResponse('Session reply')
 
-  await slack.simulateUserMessage('first mention', {ts: '1710000000.123456'})
-  await slack.simulateUserMessage('second mention', {ts: '1710000001.000001', threadTs: '1710000000.123456'})
+  let threadTs = '1717000000.000001'
+  let firstMentionTs = '1717000002.000003'
+  let secondMentionTs = '1717000004.000005'
+  let replyCalls = 0
+
+  mockSlackApi((endpoint, payload) => {
+    if (endpoint === 'conversations.replies') {
+      replyCalls += 1
+      if (replyCalls === 1) {
+        return {
+          ok: true,
+          messages: [
+            {user: 'U1', ts: '1717000000.500001', text: 'Message 1 from thread'},
+            {user: 'U2', ts: '1717000001.500002', text: 'Message 2 from thread'},
+            {user: 'U999', ts: firstMentionTs, text: '<@U999> Message 3 mentions graphene'},
+          ],
+        }
+      }
+
+      return {
+        ok: true,
+        messages: [
+          {user: 'U1', ts: '1717000000.500001', text: 'Message 1 from thread'},
+          {user: 'U2', ts: '1717000001.500002', text: 'Message 2 from thread'},
+          {user: 'U999', ts: firstMentionTs, text: '<@U999> Message 3 mentions graphene'},
+          {user: 'U3', ts: '1717000003.500004', text: 'Message 4 followup context'},
+          {user: 'U999', ts: secondMentionTs, text: '<@U999> Message 5 mentions graphene again'},
+        ],
+      }
+    }
+
+    if (endpoint === 'users.info') {
+      return {ok: true, user: {profile: {display_name: `thread-user-${payload.user}`}}}
+    }
+
+    return {ok: true}
+  })
+
+  await slack.simulateUserMessage('Message 3 mentions graphene', {channel: 'C-RESUME', ts: firstMentionTs, threadTs})
+  await waitFor(() => mockLLM.getRequests().length === 1)
+
+  let firstPrompts = getPromptTexts(mockLLM.getRequests()[0]?.messages || [])
+  expect(firstPrompts).toEqual([
+    'Latest mention: @thread-user-U999 Message 3 mentions graphene\nThread context:\n@thread-user-U1: Message 1 from thread\n@thread-user-U2: Message 2 from thread',
+  ])
+
+  await slack.simulateUserMessage('Message 5 mentions graphene again', {channel: 'C-RESUME', ts: secondMentionTs, threadTs})
   await waitFor(() => mockLLM.getRequests().length === 2)
 
-  let db = getDb()
-  let sessions = await db.select().from(schema.agentSessions)
-  expect(sessions).toHaveLength(1)
+  let secondPrompts = getPromptTexts(mockLLM.getRequests()[1]?.messages || [])
 
-  let session = sessions[0]!
-  expect(session.slackChannel).toBe('C123')
-  expect(session.slackThreadTs).toBe('1710000000.123456')
-
-  let llmCalls = mockLLM.getRequests()
-  expect(llmCalls[1]?.messages.map(m => JSON.stringify(m)).join('\n')).toContain('Latest mention: @user-U999 second mention')
+  // Request should keep the prior prompt (messages 1,2,3) and append a new prompt with only 4,5.
+  expect(secondPrompts).toEqual([
+    'Latest mention: @thread-user-U999 Message 3 mentions graphene\nThread context:\n@thread-user-U1: Message 1 from thread\n@thread-user-U2: Message 2 from thread',
+    'Latest mention: @thread-user-U999 Message 5 mentions graphene again\nThread context:\n@thread-user-U3: Message 4 followup context',
+  ])
 })
+
+test('stores the last processed mention timestamp on the slack session', async({slack, mockLLM}) => {
+  mockLLM.setResponse('Session reply')
+
+  await slack.simulateUserMessage('first mention', {
+    channel: 'C-LAST-TS',
+    ts: '1715000001.000001',
+    threadTs: '1715000000.000001',
+  })
+  await waitFor(() => mockLLM.getRequests().length === 1)
+
+  let db = getDb()
+  let session = await db.select().from(schema.agentSessions)
+    .where(eq(schema.agentSessions.slackChannel, 'C-LAST-TS'))
+    .then(rows => rows[0])
+
+  expect(session).toBeDefined()
+  expect(session!.lastSlackThreadTs).toBe('1715000001.000001')
+})
+
+test('only includes thread messages newer than the last processed mention', async({slack, mockLLM}) => {
+  mockLLM.setResponse('Session reply')
+
+  let replyCalls = 0
+  mockSlackApi((endpoint, payload) => {
+    if (endpoint === 'conversations.replies') {
+      replyCalls += 1
+      if (replyCalls === 1) {
+        return {
+          ok: true,
+          messages: [{user: 'U1', ts: '1716000000.500000', text: '<@U1> old context'}],
+        }
+      }
+      return {
+        ok: true,
+        messages: [
+          {user: 'U1', ts: '1716000000.500000', text: '<@U1> old context'},
+          {user: 'U2', ts: '1716000001.500000', text: '<@U2> new context'},
+        ],
+      }
+    }
+    if (endpoint === 'users.info') {
+      return {ok: true, user: {profile: {display_name: `user-${payload.user}`}}}
+    }
+    return {ok: true}
+  })
+
+  await slack.simulateUserMessage('first mention', {
+    channel: 'C-FILTER-TS',
+    ts: '1716000001.000001',
+    threadTs: '1716000000.000001',
+  })
+  await waitFor(() => mockLLM.getRequests().length === 1)
+
+  await slack.simulateUserMessage('second mention', {
+    channel: 'C-FILTER-TS',
+    ts: '1716000002.000001',
+    threadTs: '1716000000.000001',
+  })
+  await waitFor(() => mockLLM.getRequests().length === 2)
+
+  let secondPrompts = getPromptTexts(mockLLM.getRequests()[1]?.messages || [])
+  expect(secondPrompts).toEqual([
+    'Latest mention: @user-U999 first mention\nThread context:\n@user-U1: @user-U1 old context',
+    'Latest mention: @user-U999 second mention\nThread context:\n@user-U2: @user-U2 new context',
+  ])
+})
+
+function getPromptTexts(messages: any[]) {
+  return messages.map(msg => Array.isArray(msg.content) ? msg.content.map((c: any) => c.text).join('') : String(msg.content))
+}
 
 async function waitFor(predicate: () => boolean, timeoutMs = 4000) {
   let start = Date.now()

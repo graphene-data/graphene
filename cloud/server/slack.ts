@@ -133,12 +133,11 @@ async function handleAppMention(install: SlackInstallation, mention: AppMentionE
 
   let session = await findOrCreateSlackSession({orgId: install.orgId, repoId: repo.id, channel: mention.channel, threadTs})
 
-  // load all the messages in the tread that mentions Graphene.
-  let lastSentMessgeId = session.messages.map(m => m.messageId).filter(x => !!x).at(-1)
+  // Load messages from this thread and only keep the new context since the last mention we processed.
   let response = await slackApi<ConversationsRepliesResponse>('conversations.replies', {channel: mention.channel, ts: threadTs, limit: 50}, install)
   let threadMessages = (response.messages || [])
-    .filter(m => !lastSentMessgeId || !m.ts || m.ts > lastSentMessgeId) // if resuming a session, exclude messages we already gave to the agent
-    .filter(m => m.text && (!m.ts || m.ts < mention.ts)) // only include messages before the mention
+    .filter(m => m.text && (!m.ts || m.ts < mention.ts))
+    .filter(m => !session.lastSlackThreadTs || !m.ts || m.ts > session.lastSlackThreadTs)
     .map(m => `<@${m.user || m.bot_id}>: ${m.text}`)
 
   // replace names in the messages and mentions
@@ -166,6 +165,10 @@ async function handleAppMention(install: SlackInstallation, mention: AppMentionE
   } else {
     await slackApi('chat.postMessage', {channel: mention.channel, text, thread_ts: threadTs}, install)
   }
+
+  await db.update(agentSessions)
+    .set({lastSlackThreadTs: mention.ts, updatedAt: new Date()})
+    .where(eq(agentSessions.id, session.id))
   // // await slackApi('reactions.remove', {channel: mention.channel, timestamp: mention.ts, name: 'eyes'}, install)
 }
 

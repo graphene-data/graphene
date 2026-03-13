@@ -43,6 +43,9 @@ export async function runAgent(session: AgentSession, onStep?: StepCallback) {
 
   if (agentMock) {
     let mocked = await agentMock({messages: modelMessages, repoId: session.repoId, orgId: session.orgId, systemPrompt})
+    await getDb().update(agentSessions)
+      .set({messages: session.messages, updatedAt: new Date()})
+      .where(eq(agentSessions.id, session.id))
     if (typeof mocked === 'string') return {text: mocked, steps: []}
     return {...mocked, steps: mocked.steps || []}
   }

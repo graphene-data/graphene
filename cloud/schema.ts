@@ -90,6 +90,7 @@ export const agentSessions = pgTable('agent_sessions', {
   repoId: text('repoId').references(() => repos.id, {onDelete: 'set null'}),
   slackChannel: text('slackChannel'),
   slackThreadTs: text('slackThreadTs'),
+  lastSlackThreadTs: text('lastSlackThreadTs'),
   messages: jsonb('messages').$type<Record<string, any>[]>().notNull().default([]),
   updatedAt: timestamp('updatedAt', {mode: 'date'}).$defaultFn(() => new Date()),
 }, (table) => ({
