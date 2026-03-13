@@ -29,7 +29,8 @@ export async function handler(event) {
     mark('launch')
 
     let context = await browser.newContext({
-      viewport: {width: 1280, height: 720},
+      viewport: {width: 720, height: 720},
+      deviceScaleFactor: 2,
       userAgent: 'GrapheneScreenshot/1.0',  // Non-browser UA to bypass ngrok warning page
     })
 
@@ -67,7 +68,15 @@ export async function handler(event) {
     if (!httpError) await page.waitForLoadState('networkidle')
     mark('networkIdle')
 
-    let element = event.selector ? await page.$(event.selector) : null
+    // Dynamic markdown can schedule follow-up query runs after mount; wait for Graphene's own idle signal.
+    if (!httpError) {
+      await page.evaluate(async () => {
+        if (window.$GRAPHENE?.waitForLoad) await window.$GRAPHENE.waitForLoad(20000)
+      })
+    }
+    mark('grapheneIdle')
+
+    let element = await page.$('.run-md-screenshot') || await page.$('main#content')
     let screenshot = element
       ? await element.screenshot({type: 'png', animations: 'disabled'})
       : await page.screenshot({type: 'png', animations: 'disabled', fullPage: true})

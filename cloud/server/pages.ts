@@ -130,7 +130,7 @@ export async function renderDynamic(req: FastifyRequest, reply: FastifyReply) {
       <title>Graphene Dynamic</title>
     </head>
     <body>
-      <main id="content"></main>
+      <main id="content" class="run-md-screenshot"></main>
       <script type="module">
         await import('/main.ts')
         let target = document.getElementById('content')

@@ -1,1 +1,10 @@
 @import "../../core/ui/app.css";
+
+/* Dynamic runMd captures mount into <main>, so override core flex sizing to keep screenshots content-sized. */
+.run-md-screenshot {
+  flex: 1 0 auto;
+  align-self: flex-start;
+  min-width: auto;
+  padding: 12px 24px;
+  background: white;
+}

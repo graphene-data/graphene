@@ -24,6 +24,7 @@ export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions 
     if (route === '/_api/github/webhook') return
     if (route === '/_api/slack/events') return
     if (route === '/_api/oauth2/token') return
+    if (route === '/_api/dev/ngrok-url') return
     await auth(req, reply)
   })
 

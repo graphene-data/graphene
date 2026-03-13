@@ -34,7 +34,7 @@ export async function renderMd(markdown: string, repoId: string, baseUrlOverride
 
   let response = await lambda.send(new InvokeCommand({
     FunctionName: 'graphene-screenshot',
-    Payload: JSON.stringify({url, token, selector: 'canvas'}),
+    Payload: JSON.stringify({url, token}),
   }))
 
   let payload = response.Payload && JSON.parse(Buffer.from(response.Payload).toString())
