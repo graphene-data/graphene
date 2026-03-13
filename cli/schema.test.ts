@@ -98,18 +98,19 @@ describe.skipIf(!hasSnowflakeAuth)('snowflake', () => {
     expectCliSuccess(res, 'schema list schemas (snowflake)')
     let schemas = parseSchemaOutput(res.stdout)
     expect(schemas.length).toBeGreaterThan(0)
-    expect(schemas).toContain('V02')
+    expect(schemas).toContain('v02')
   })
 
-  it('lists tables in the configured namespace', async () => {
-    let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02'], snowflakeDir)
+  it('lists tables in the configured namespace using case-insensitive input', async () => {
+    let res = await runCli(['schema', 'food__beverage_establishment__menu_data.v02'], snowflakeDir)
     expectCliSuccess(res, 'schema list tables (snowflake)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables.length).toBeGreaterThan(0)
+    expect(tables.every(table => table == table.toLowerCase())).toBe(true)
   })
 
-  it('describes a table from the namespace', async () => {
-    let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02.MENUS'], snowflakeDir)
+  it('describes a table from the namespace using case-insensitive input', async () => {
+    let res = await runCli(['schema', 'food__beverage_establishment__menu_data.v02.menus'], snowflakeDir)
     expectCliSuccess(res, 'schema describe table (snowflake)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table food__beverage_establishment__menu_data.v02.menus (')
