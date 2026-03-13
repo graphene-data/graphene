@@ -43,10 +43,10 @@ resource "aws_kms_key" "secrets" {
         Resource = "*"
       },
       {
-        Sid    = "AllowECSExecutionRoleUsage"
+        Sid    = "AllowECSRoleUsage"
         Effect = "Allow"
         Principal = {
-          AWS = aws_iam_role.ecs_execution.arn
+          AWS = [aws_iam_role.ecs_execution.arn, aws_iam_role.ecs_task.arn]
         }
         Action = [
           "kms:Encrypt",

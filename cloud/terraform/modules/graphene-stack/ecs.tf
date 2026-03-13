@@ -280,6 +280,20 @@ resource "aws_iam_role_policy" "ecs_task_exec" {
   })
 }
 
+resource "aws_iam_role_policy" "ecs_task_kms_secrets" {
+  name = "ecs-task-kms-secrets"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["kms:Encrypt", "kms:Decrypt", "kms:DescribeKey"]
+      Resource = aws_kms_key.secrets.arn
+    }]
+  })
+}
+
 # =============================================================================
 # DB Ops Task - on-demand task for db-shell and migrations
 # =============================================================================
