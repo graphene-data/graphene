@@ -24,7 +24,6 @@ connection.onInitialize(params => {
   return {
     capabilities: {
       textDocumentSync: TextDocumentSyncKind.Incremental,
-      completionProvider: {resolveProvider: false},
       hoverProvider: true,
       // diagnosticProvider: {interFileDependencies: true, workspaceDiagnostics: true},
     },
