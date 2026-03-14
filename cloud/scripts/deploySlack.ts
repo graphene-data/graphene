@@ -1,8 +1,6 @@
-import path from 'node:path'
-import dotenv from 'dotenv'
-
 // This script deploys the Slack Graphene app manifest.
-// It expects an app-config access token in env.
+// Usage: `SLACK_APP_CONFIG_TOKEN=<token> node cloud/scripts/deploySlack.ts <local|staging|prod> <validate|update>`
+// You'll need to generate a config token at https://api.slack.com/apps. They last 12h
 
 type Mode = 'validate' | 'create' | 'update'
 type Environment = 'local' | 'staging' | 'prod'
@@ -18,8 +16,6 @@ const appIds: Record<Environment, string> = {
   staging: 'A0AJ0RR96F8',
   prod: 'A0AHMEDED9D',
 }
-
-dotenv.config({path: path.resolve(import.meta.dirname, '../../.env')})
 
 let environment = process.argv[2] as Environment | undefined
 let mode = process.argv[3] as Mode | undefined
@@ -87,6 +83,7 @@ function buildManifest(environment: Environment, baseUrl: string) {
           'im:history',
           'files:write',
           'users:read',
+          'reactions:write',
         ],
       },
     },
