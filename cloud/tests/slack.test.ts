@@ -79,9 +79,10 @@ test('routes app mention to cloud agent and replies in thread', async({slack, mo
   await waitFor(() => mockLLM.getRequests().length === 1)
 
   let calls = slack.getApiCalls()
-  expect(calls).toHaveLength(3)
-  expect(calls[0]?.endpoint).toBe('conversations.replies')
-  expect(calls[1]).toMatchObject({endpoint: 'users.info', payload: {user: 'U999'}})
+  expect(calls).toHaveLength(5)
+  expect(calls[0]).toMatchObject({endpoint: 'reactions.add', payload: {channel: 'C123', timestamp: '1710000000.123456', name: 'thought_balloon'}})
+  expect(calls[1]?.endpoint).toBe('conversations.replies')
+  expect(calls[2]).toMatchObject({endpoint: 'users.info', payload: {user: 'U999'}})
 
   let llmCalls = mockLLM.getRequests()
   expect(llmCalls).toHaveLength(1)
@@ -89,13 +90,30 @@ test('routes app mention to cloud agent and replies in thread', async({slack, mo
   expect(messageLog).toContain('@user-U999 hello graphene')
   expect(llmCalls[0]?.systemPrompt).toContain('Graphene is a framework for doing data analysis')
 
-  let postCall = calls[2]
+  let postCall = calls[3]
   expect(postCall).toMatchObject({endpoint: 'chat.postMessage'})
   expect(postCall?.payload).toMatchObject({
     channel: 'C123',
     text: 'Here is your answer from Graphene.',
     thread_ts: '1710000000.123456',
   })
+  expect(calls[4]).toMatchObject({endpoint: 'reactions.remove', payload: {channel: 'C123', timestamp: '1710000000.123456', name: 'thought_balloon'}})
+})
+
+test('adds thought_balloon reaction while processing and removes it when done', async({slack, mockLLM}) => {
+  mockLLM.setResponse('done')
+
+  let response = await slack.simulateUserMessage('react pls', {channel: 'C-REACTION', ts: '1711111111.111111'})
+  expect(response.statusCode).toBe(200)
+
+  await waitFor(() => slack.getApiCalls().some(c => c.endpoint === 'reactions.remove'))
+
+  let endpoints = slack.getApiCalls().map(call => call.endpoint)
+  expect(endpoints[0]).toBe('reactions.add')
+  expect(endpoints[endpoints.length - 1]).toBe('reactions.remove')
+
+  expect(slack.getApiCalls()[0]?.payload).toMatchObject({channel: 'C-REACTION', timestamp: '1711111111.111111', name: 'thought_balloon'})
+  expect(slack.getApiCalls()[slack.getApiCalls().length - 1]?.payload).toMatchObject({channel: 'C-REACTION', timestamp: '1711111111.111111', name: 'thought_balloon'})
 })
 
 test('includes thread context when mention is in a thread', async({slack, mockLLM}) => {
@@ -134,15 +152,16 @@ test('includes thread context when mention is in a thread', async({slack, mockLL
 
 test('uploads chart screenshot when respondToUser references mdId', async({slack, mockLLM}) => {
   let screenshot = Buffer.from('fake-image-data').toString('base64')
-  mockLLM.mock(() => ({
-    text: 'fallback text',
-    steps: [{
-      toolResults: [
-        {toolName: 'renderMd', output: {success: true, mdId: 'abc123', screenshot}},
-        {toolName: 'respondToUser', output: {text: 'Answer with chart', mdId: 'abc123'}},
-      ],
-    }],
-  }))
+  mockLLM.mock(({messages}) => {
+    let prior = messages as any[]
+    return [
+      ...prior,
+      {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'render-1', toolName: 'renderMd', input: {markdown: '# chart'}}]},
+      {role: 'user', content: [{type: 'tool-result', toolCallId: 'render-1', toolName: 'renderMd', output: {success: true, mdId: 'abc123', screenshot}}]},
+      {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'respond-1', toolName: 'respondToUser', input: {text: 'Answer with chart', mdId: 'abc123'}}]},
+      {role: 'user', content: [{type: 'tool-result', toolCallId: 'respond-1', toolName: 'respondToUser', output: {text: 'Answer with chart', mdId: 'abc123'}}]},
+    ]
+  })
 
   let response = await slack.simulateUserMessage('show me a chart')
   expect(response.statusCode).toBe(200)
@@ -290,7 +309,9 @@ test('only includes thread messages newer than the last processed mention', asyn
 })
 
 function getPromptTexts(messages: any[]) {
-  return messages.map(msg => Array.isArray(msg.content) ? msg.content.map((c: any) => c.text).join('') : String(msg.content))
+  return messages
+    .map(msg => Array.isArray(msg.content) ? msg.content.map((c: any) => c.text || '').join('') : String(msg.content || ''))
+    .filter(Boolean)
 }
 
 async function waitFor(predicate: () => boolean, timeoutMs = 4000) {

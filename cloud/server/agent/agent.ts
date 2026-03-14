@@ -15,22 +15,9 @@ let grapheneDocs = readFileSync(path.resolve(__dirname, '../../../core/docs/base
 
 type StepCallback = (event: any) => void
 
-interface AgentMockArgs {
-  messages: ModelMessage[]
-  repoId: string
-  orgId: string
-  systemPrompt: string
-}
+let agentMock: ((session: AgentSession, systemPrompt: string) => Promise<Record<string, any>[]> | Record<string, any>[]) | null = null
 
-export interface AgentRunResult {
-  text: string
-  steps?: any[]
-  [key: string]: any
-}
-
-let agentMock: ((args: AgentMockArgs) => AgentRunResult | string | Promise<AgentRunResult | string>) | null = null
-
-export function mockAgent(handler: ((args: AgentMockArgs) => AgentRunResult | string | Promise<AgentRunResult | string>) | null) {
+export function mockAgent(handler: ((session: AgentSession, systemPrompt: string) => Promise<Record<string, any>[]> | Record<string, any>[]) | null) {
   agentMock = handler
 }
 
@@ -38,57 +25,97 @@ export async function runAgent(session: AgentSession, onStep?: StepCallback) {
   if (!session.repoId) throw new Error('Agent session must include repoId')
   session.messages ||= []
   let systemPrompt = buildSystemPrompt()
+
+  // Run the model once. If it forgets respondToUser, prompt it one more time and fail hard if it still doesn't comply.
+  let startIdx = session.messages.length
+  await runModel(session, systemPrompt, onStep)
+
+  // If the model didn't call respondToUser, ask it to
+  let resp = session.messages.find((m, idx) => idx > startIdx && isToolResult(m, 'respondToUser'))
+  if (!resp) {
+    let text = 'You ended your turn without calling respondToUser. Call respondToUser now with your final user-facing answer (and mdId if available). Do not call any other tools.'
+    session.messages.push({role: 'user', content: [{type: 'text', text}]})
+    await runModel(session, systemPrompt, onStep)
+  }
+  // persist here, so even if we error, we can see the session
+  await getDb().update(agentSessions)
+    .set({messages: session.messages, updatedAt: new Date()})
+    .where(eq(agentSessions.id, session.id))
+
+
+  // if it _still_ didn't call respondToUser, error
+  resp = session.messages.find((m, idx) => idx > startIdx && isToolResult(m, 'respondToUser'))
+  if (!resp) throw new Error('Model failed to call respondToUser')
+}
+
+async function runModel(session: AgentSession, systemPrompt: string, onStep?: StepCallback) {
   let modelMessages = session.messages.map((x: any) => ({role: x.role, content: x.content})) as ModelMessage[]
-  let persistedMessageCount = modelMessages.length
 
   if (agentMock) {
-    let mocked = await agentMock({messages: modelMessages, repoId: session.repoId, orgId: session.orgId, systemPrompt})
-    await getDb().update(agentSessions)
-      .set({messages: session.messages, updatedAt: new Date()})
-      .where(eq(agentSessions.id, session.id))
-    if (typeof mocked === 'string') return {text: mocked, steps: []}
-    return {...mocked, steps: mocked.steps || []}
+    session.messages = await agentMock(session, systemPrompt)
+    return
   }
 
-  let result = await generateText({
+  let persistedMessageCount = modelMessages.length
+  await generateText({
     model: anthropic('claude-sonnet-4-20250514'),
     system: systemPrompt,
     messages: modelMessages,
     tools: {
-      listDir: listDirTool(session.repoId),
-      readFile: readFileTool(session.repoId),
-      search: searchTool(session.repoId),
-      renderMd: renderMdTool(session.repoId, !PROD ? getDevTunnelUrl() : undefined),
+      listDir: listDirTool(session.repoId!),
+      readFile: readFileTool(session.repoId!),
+      search: searchTool(session.repoId!),
+      renderMd: renderMdTool(session.repoId!, !PROD ? getDevTunnelUrl() : undefined),
       respondToUser: respondToUserTool(),
     },
     stopWhen: stepCountIs(30),
     onStepFinish: (step) => {
       let responseMessages = step.response?.messages || []
       let stepMessages = cleanMessages(responseMessages.slice(persistedMessageCount))
-      if (stepMessages.length) session.messages.push(...stepMessages)
+      session.messages.push(...stepMessages)
       persistedMessageCount = responseMessages.length
-      console.dir(stepMessages, {depth: null})
+      // console.dir(stepMessages, {depth: null})
       onStep?.(step)
     },
   })
+}
 
-  await getDb().update(agentSessions)
-    .set({messages: session.messages, updatedAt: new Date()})
-    .where(eq(agentSessions.id, session.id))
-
-  return result
+export function isToolResult(message: any, toolName?: string) {
+  let content = Array.isArray(message?.content) ? message.content : []
+  return content.some((chunk: any) => {
+    let isResult = chunk?.type === 'tool-result' || chunk?.type === 'tool_result'
+    if (!isResult) return false
+    if (!toolName) return true
+    return chunk.toolName === toolName || chunk.tool_name === toolName || chunk.name === toolName
+  })
 }
 
 function cleanMessages(messages: any[]) {
   // Keep message metadata, but strip binary/media payloads to keep session storage small.
-  return structuredClone(messages).map(m => {
-    let content = (Array.isArray(m.content) ? m.content : [{type: 'text', text: m.content}]) as any[]
-    for (let ct of content) {
-      if (ct.output?.type == 'content') ct.output.value = ct.output.value.filter(v => v.type != 'media')
+  let cloned = structuredClone(messages)
+  let toolNamesById = new Map<string, string>()
+
+  for (let message of cloned) {
+    let content = (Array.isArray(message.content) ? message.content : [{type: 'text', text: message.content}]) as any[]
+    for (let chunk of content) {
+      if ((chunk?.type === 'tool-call' || chunk?.type === 'tool_use') && chunk.toolCallId && chunk.toolName) {
+        toolNamesById.set(chunk.toolCallId, chunk.toolName)
+      }
     }
-    m.content = content
-    return m
-  })
+    message.content = content
+  }
+
+  for (let message of cloned) {
+    for (let chunk of message.content as any[]) {
+      if (chunk?.output?.type == 'content') chunk.output.value = chunk.output.value.filter((v: any) => v.type != 'media')
+      if ((chunk?.type === 'tool-result' || chunk?.type === 'tool_result') && !chunk.toolName && chunk.toolCallId) {
+        let toolName = toolNamesById.get(chunk.toolCallId)
+        if (toolName) chunk.toolName = toolName
+      }
+    }
+  }
+
+  return cloned
 }
 
 function getDevTunnelUrl() {

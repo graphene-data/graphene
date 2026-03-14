@@ -4,13 +4,12 @@ import {and, desc, eq} from 'drizzle-orm'
 import SlackOauth from '@slack/oauth'
 import {WebClient, type WebAPICallResult, type ConversationsRepliesResponse, type OauthV2AccessResponse} from '@slack/web-api'
 import type {AppMentionEvent, SlackEvent} from '@slack/types'
-import {runAgent} from './agent/agent.ts'
+import {isToolResult, runAgent} from './agent/agent.ts'
 import {auth} from './auth.ts'
 import {PROD, TEST} from './consts.ts'
 import {getDb} from './db.ts'
 import {decryptSecret, encryptSecret} from './secrets.ts'
 import {agentSessions, repos, type SlackInstallation, slackInstallations} from '../schema.ts'
-import {type StepResult} from 'ai'
 
 const slackClientId = process.env.SLACK_CLIENT_ID || ''
 const slackClientSecret = process.env.SLACK_CLIENT_SECRET || ''
@@ -129,47 +128,49 @@ async function handleAppMention(install: SlackInstallation, mention: AppMentionE
   if (!repo) throw new Error('No repo for slackbot to use')
 
   let threadTs = mention.thread_ts || mention.ts
-  // await slackApi('reactions.add', {channel: mention.channel, timestamp: mention.ts, name: 'eyes'}, install)
+  await slackApi('reactions.add', {channel: mention.channel, timestamp: mention.ts, name: 'thought_balloon'}, install)
 
-  let session = await findOrCreateSlackSession({orgId: install.orgId, repoId: repo.id, channel: mention.channel, threadTs})
+  try {
+    let session = await findOrCreateSlackSession({orgId: install.orgId, repoId: repo.id, channel: mention.channel, threadTs})
 
-  // Load messages from this thread and only keep the new context since the last mention we processed.
-  let response = await slackApi<ConversationsRepliesResponse>('conversations.replies', {channel: mention.channel, ts: threadTs, limit: 50}, install)
-  let threadMessages = (response.messages || [])
-    .filter(m => m.text && (!m.ts || m.ts < mention.ts))
-    .filter(m => !session.lastSlackThreadTs || !m.ts || m.ts > session.lastSlackThreadTs)
-    .map(m => `<@${m.user || m.bot_id}>: ${m.text}`)
+    // Load messages from this thread and only keep the new context since the last mention we processed.
+    let response = await slackApi<ConversationsRepliesResponse>('conversations.replies', {channel: mention.channel, ts: threadTs, limit: 50}, install)
+    let threadMessages = (response.messages || [])
+      .filter(m => m.text && (!m.ts || m.ts < mention.ts))
+      .filter(m => !session.lastSlackThreadTs || !m.ts || m.ts > session.lastSlackThreadTs)
+      .map(m => `<@${m.user || m.bot_id}>: ${m.text}`)
 
-  // replace names in the messages and mentions
-  threadMessages = await replaceUserIdsWithNames(threadMessages, install)
-  let [latestMention = mention.text || ''] = await replaceUserIdsWithNames([mention.text || ''], install)
+    // replace names in the messages and mentions
+    threadMessages = await replaceUserIdsWithNames(threadMessages, install)
+    let [latestMention = mention.text || ''] = await replaceUserIdsWithNames([mention.text || ''], install)
 
-  // If this is a thread, add all the messages in the thread to the prompt.
-  let prompt = `Latest mention: ${latestMention}`
-  if (threadMessages.length) prompt += `\nThread context:\n${threadMessages.join('\n')}`
+    // If this is a thread, add all the messages in the thread to the prompt.
+    let prompt = `Latest mention: ${latestMention}`
+    if (threadMessages.length) prompt += `\nThread context:\n${threadMessages.join('\n')}`
 
-  session.messages.push({role: 'user', content: [{type: 'text', text: prompt}]})
-  let result = await runAgent(session)
+    session.messages.push({role: 'user', content: [{type: 'text', text: prompt}]})
+    await runAgent(session)
 
-  // look at the agent result and pull out runMd/respondToUser calls
-  let toolResults = (result.steps || []).flatMap((s: StepResult<any>) => s.toolResults || []) as {toolName?: string, output?: any}[]
-  let respondToUser = toolResults.find(tr => tr.toolName === 'respondToUser')
-  let mdId = respondToUser?.output?.mdId
-  let runMd = toolResults.find(tr => tr.toolName === 'renderMd' && tr.output?.mdId === mdId)
-  let screenshot = runMd?.output.screenshot
-  let text = respondToUser?.output?.text || result.text
+    let respondToUser = latestToolResult(session.messages || [], 'respondToUser')
+    let mdId = respondToUser?.output?.mdId
+    let runMd = mdId ? latestToolResult(session.messages || [], 'renderMd', tr => tr.output?.mdId === mdId) : undefined
+    let screenshot = runMd?.output?.screenshot
+    let text = respondToUser?.output?.text
+    if (!text) throw new Error('Agent did not produce respondToUser output')
 
-  if (screenshot) {
-    let file = Buffer.from(screenshot, 'base64')
-    await slackApi('files.uploadV2', {channel_id: mention.channel, thread_ts: threadTs, filename: 'chart.png', file, initial_comment: text}, install)
-  } else {
-    await slackApi('chat.postMessage', {channel: mention.channel, text, thread_ts: threadTs}, install)
+    if (screenshot) {
+      let file = Buffer.from(screenshot, 'base64')
+      await slackApi('files.uploadV2', {channel_id: mention.channel, thread_ts: threadTs, filename: 'chart.png', file, initial_comment: text}, install)
+    } else {
+      await slackApi('chat.postMessage', {channel: mention.channel, text, thread_ts: threadTs}, install)
+    }
+
+    await db.update(agentSessions)
+      .set({lastSlackThreadTs: mention.ts, updatedAt: new Date()})
+      .where(eq(agentSessions.id, session.id))
+  } finally {
+    await slackApi('reactions.remove', {channel: mention.channel, timestamp: mention.ts, name: 'thought_balloon'}, install)
   }
-
-  await db.update(agentSessions)
-    .set({lastSlackThreadTs: mention.ts, updatedAt: new Date()})
-    .where(eq(agentSessions.id, session.id))
-  // // await slackApi('reactions.remove', {channel: mention.channel, timestamp: mention.ts, name: 'eyes'}, install)
 }
 
 /** Find the existing Slack thread session, or create a new one. */
@@ -222,6 +223,19 @@ export async function slackApi<T = {ok: boolean; error?: string}>(method: string
   let payload = await new WebClient(authToken).apiCall(method, params) as WebAPICallResult
   if (!payload.ok) throw new Error(`Slack API error: ${payload.error ?? 'unknown error'}`)
   return payload as T
+}
+
+function latestToolResult(messages: Record<string, any>[], toolName: string, predicate?: (chunk: any) => boolean) {
+  let match = (chunk: any) => {
+    let isResult = chunk?.type === 'tool-result' || chunk?.type === 'tool_result'
+    let name = chunk?.toolName || chunk?.tool_name || chunk?.name
+    if (!isResult || name !== toolName) return false
+    return predicate ? predicate(chunk) : true
+  }
+
+  let message = messages.findLast(m => isToolResult(m, toolName) && (Array.isArray(m.content) ? m.content.some(match) : false))
+  if (!message || !Array.isArray(message.content)) return undefined
+  return message.content.find(match)
 }
 
 /** Replace user IDs with names in message lines. */
