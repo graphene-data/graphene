@@ -1,7 +1,19 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import {config} from './config.ts'
-import {aggregateFanoutMessage, extendFanoutPath, fanoutMessage, fanoutPathKey, isBaseFanoutPath, isChasmTrap, isPrefix, mergeFanoutPaths, mergeSensitiveFanouts, multiGrainMessage, uniqueFanoutPaths} from './fanout.ts'
+import {
+  aggregateFanoutMessage,
+  extendFanoutPath,
+  fanoutMessage,
+  fanoutPathKey,
+  isBaseFanoutPath,
+  isChasmTrap,
+  isPrefix,
+  mergeFanoutPaths,
+  mergeSensitiveFanouts,
+  multiGrainMessage,
+  uniqueFanoutPaths,
+} from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
@@ -966,8 +978,8 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   }
   if (paths.length == 2 && joinedPaths.length == 2) {
     let [pathA, pathB] = joinedPaths
-    let ancestor = isPrefix(pathA, pathB) ? pathA : (isPrefix(pathB, pathA) ? pathB : undefined)
-    let descendant = ancestor == pathA ? pathB : (ancestor == pathB ? pathA : undefined)
+    let ancestor = isPrefix(pathA, pathB) ? pathA : isPrefix(pathB, pathA) ? pathB : undefined
+    let descendant = ancestor == pathA ? pathB : ancestor == pathB ? pathA : undefined
     if (ancestor && descendant) {
       let ancestorKey = fanoutPathKey(ancestor)
       let descendantKey = fanoutPathKey(descendant)
