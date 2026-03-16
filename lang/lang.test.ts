@@ -900,7 +900,7 @@ describe('lang', () => {
     expect('from users select name, sum(total_orders)').toHaveDiagnostic(/Aggregates cannot be nested/i)
   })
 
-  it('errors if you have a non-agg measure that uses a join_many', () => {
+  it('errors if you have a non-agg alias used with a join_many', () => {
     expect(`table t (
       uid int
       join many users on users.id = uid
@@ -1273,6 +1273,7 @@ describe('lang', () => {
 
   it('rejects aggregate queries that mix sibling grains', () => {
     expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
+    expect('from users select orders.status, sum(orders.amount)').toHaveDiagnostic(/Expression is fanned out by join to table `orders`; aggregate queries cannot group by it directly/i)
   })
 
   it('allows the sibling fanout query after aggregating each branch separately', () => {
@@ -1290,9 +1291,7 @@ describe('lang', () => {
   })
 
   it('falls back to a generic diagnostic when a base-grain aggregate mixes with ancestor and descendant grains', () => {
-    expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
-      /Aggregate query uses multiple grains \(base, orders, orders\.order_items\)/i,
-    )
+    expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate query uses multiple grains \(base, orders, orders\.order_items\)/i)
   })
 
   it('allows the ancestor and descendant query after aggregating each grain separately', () => {
@@ -1303,10 +1302,6 @@ describe('lang', () => {
       left join item_stats on item_stats.name = order_stats.name
       select order_stats.name, order_amount, item_quantity
     `).toHaveNoErrors()
-  })
-
-  it('rejects aggregate query dimensions that depend on join many', () => {
-    expect('from users select orders.status, sum(orders.amount)').toHaveDiagnostic(/Expression is fanned out by join to table `orders`; aggregate queries cannot group by it directly/i)
   })
 
   it('allows distinct-safe counts to mix with a fanout grain', () => {
