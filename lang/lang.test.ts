@@ -1273,7 +1273,6 @@ describe('lang', () => {
 
   it('rejects aggregate queries that mix sibling grains', () => {
     expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
-    expect('from users select orders.status, sum(orders.amount)').toHaveDiagnostic(/Expression is fanned out by join to table `orders`; aggregate queries cannot group by it directly/i)
   })
 
   it('allows the sibling fanout query after aggregating each branch separately', () => {
@@ -1284,6 +1283,16 @@ describe('lang', () => {
       left join payment_stats on payment_stats.name = order_stats.name
       select order_stats.name, order_amount, payment_amount
     `).toHaveNoErrors()
+  })
+
+  it('allows aggregate query dimensions when they match the aggregate grain', () => {
+    expect('from users select orders.status, sum(orders.amount)').toHaveNoErrors()
+  })
+
+  it('rejects aggregate query dimensions whose grain does not match the aggregates', () => {
+    expect('from users select orders.status, avg(age)').toHaveDiagnostic(
+      /Expression is fanned out by join to table `orders`; aggregate queries cannot group by it directly/i,
+    )
   })
 
   it('reports a fanout diagnostic when an aggregate query mixes ancestor and descendant grains', () => {
