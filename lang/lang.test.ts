@@ -1308,16 +1308,20 @@ describe('lang', () => {
     expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveNoErrors()
   })
 
-  it('applies fanout protection to explicit joins too', () => {
+  it('does not apply fanout protection to explicit joins', () => {
     expect(`
       from users
       join orders on orders.user_id = users.id
       join payments on payments.user_id = users.id
       select name, sum(orders.amount), sum(payments.amount)
-    `).toHaveDiagnostic(/Join graph creates a chasm trap/i)
-  })
+    `).toHaveNoErrors()
 
-  it('allows the explicit-join fanout query after aggregating each branch separately', () => {
+    expect(`
+      from orders
+      join users on (users.id = orders.user_id and users.name is not null)
+      select users.name, sum(amount)
+    `).toHaveNoErrors()
+
     expect(`
       with order_stats as (
         from users
@@ -1335,12 +1339,12 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('falls back conservatively when explicit joins are more complex than simple equality predicates', () => {
+  it('allows base-grain aggregates to be weighted by explicit joins', () => {
     expect(`
-      from orders
-      join users on (users.id = orders.user_id and users.name is not null)
-      select users.name, sum(amount)
-    `).toHaveDiagnostic(/Expression is fanned out by join to table `users`; aggregate queries cannot group by it directly/i)
+      from users
+      join orders on orders.user_id = users.id
+      select name, avg(age), sum(orders.amount)
+    `).toHaveNoErrors()
   })
 
   it('allows weighted semantics when the joined rowset is materialized first', () => {

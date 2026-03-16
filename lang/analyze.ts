@@ -215,7 +215,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     // Now that we have all the bits, construct the join for it.
     if (query.joins.find(j => j.alias == alias)) return diag(tablePrimary, `Query already has table called "${alias}"`)
     let onExpr = sourceNode.getChild('Expression') || undefined
-    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, fanoutPath: isJoin ? [alias] : [], onExpr}
+    let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, fanoutPath: [], onExpr}
     query.joins.push(qj)
     NODE_ENTITY_MAP.set(tablePrimary, {entityType: 'table', table})
 
