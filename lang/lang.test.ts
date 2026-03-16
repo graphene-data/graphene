@@ -1319,6 +1319,10 @@ describe('lang', () => {
     expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveNoErrors()
   })
 
+  it('reports fanout when count(*) mixes with a fanout grain', () => {
+    expect('from users select name, count(*), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate expression `count\(\*\)` is fanned out by join to table `order_items`/i)
+  })
+
   it('does not apply fanout protection to explicit joins', () => {
     expect(`
       from users
