@@ -192,6 +192,20 @@ resource "aws_secretsmanager_secret_version" "slack_signing_secret" {
   }
 }
 
+resource "aws_secretsmanager_secret" "anthropic_api_key" {
+  name        = "ANTHROPIC_API_KEY"
+  description = "Anthropic API key for the agent"
+}
+
+resource "aws_secretsmanager_secret_version" "anthropic_api_key" {
+  secret_id     = aws_secretsmanager_secret.anthropic_api_key.id
+  secret_string = "placeholder" # Managed manually in AWS console after initial deployment
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
+}
+
 # Agent token secret - auto-generated for signing agent JWTs
 resource "random_password" "agent_token_secret" {
   length  = 64

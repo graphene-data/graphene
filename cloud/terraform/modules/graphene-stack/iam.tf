@@ -188,7 +188,8 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
           aws_secretsmanager_secret.github_app_private_key.arn,
           aws_secretsmanager_secret.slack_client_id.arn,
           aws_secretsmanager_secret.slack_client_secret.arn,
-          aws_secretsmanager_secret.slack_signing_secret.arn
+          aws_secretsmanager_secret.slack_signing_secret.arn,
+          aws_secretsmanager_secret.anthropic_api_key.arn
         ]
       },
       {

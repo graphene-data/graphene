@@ -172,6 +172,7 @@ resource "aws_ecs_task_definition" "cloud" {
       { name = "SLACK_CLIENT_ID", valueFrom = aws_secretsmanager_secret.slack_client_id.arn },
       { name = "SLACK_CLIENT_SECRET", valueFrom = aws_secretsmanager_secret.slack_client_secret.arn },
       { name = "SLACK_SIGNING_SECRET", valueFrom = aws_secretsmanager_secret.slack_signing_secret.arn },
+      { name = "ANTHROPIC_API_KEY", valueFrom = aws_secretsmanager_secret.anthropic_api_key.arn },
       { name = "STYTCH_SECRET", valueFrom = aws_secretsmanager_secret.stytch_secret.arn }
     ]
     logConfiguration = {
