@@ -978,8 +978,15 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   }
   if (paths.length == 2 && joinedPaths.length == 2) {
     let [pathA, pathB] = joinedPaths
-    let ancestor = isPrefix(pathA, pathB) ? pathA : isPrefix(pathB, pathA) ? pathB : undefined
-    let descendant = ancestor == pathA ? pathB : ancestor == pathB ? pathA : undefined
+    let ancestor: typeof pathA | undefined
+    let descendant: typeof pathA | undefined
+    if (isPrefix(pathA, pathB)) {
+      ancestor = pathA
+      descendant = pathB
+    } else if (isPrefix(pathB, pathA)) {
+      ancestor = pathB
+      descendant = pathA
+    }
     if (ancestor && descendant) {
       let ancestorKey = fanoutPathKey(ancestor)
       let descendantKey = fanoutPathKey(descendant)
