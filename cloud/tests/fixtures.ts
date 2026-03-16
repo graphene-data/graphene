@@ -2,7 +2,6 @@ import {test as base} from 'vitest'
 import crypto from 'node:crypto'
 import {chromium, type Browser, type Page} from 'playwright'
 import type {ModelMessage} from 'ai'
-import type {AgentSession} from '../schema.ts'
 import {playwrightExpect as expect} from '../../core/ui/tests/matchers.ts'
 import {mockSlackApi} from '../server/slack.ts'
 import {mockAgent as setAgentMock} from '../server/agent/agent.ts'
@@ -35,8 +34,8 @@ interface SlackFixture {
 
 interface MockLLMFixture {
   setResponse: (text: string) => void
-  mock: (handler: (args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<Record<string, any>[]> | Record<string, any>[]) => void
-  getRequests: () => {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}[]
+  mock: (handler: (args: {messages: ModelMessage[]; systemPrompt: string}) => Promise<Record<string, any>[]> | Record<string, any>[]) => void
+  getRequests: () => {messages: ModelMessage[]; systemPrompt: string}[]
 }
 
 export const test = base.extend<{browser: Browser, page: Page, cloud: {url: string}, slack: SlackFixture, mockLLM: MockLLMFixture} & CloudOptions>({
@@ -92,20 +91,19 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
 
   // eslint-disable-next-line no-empty-pattern
   mockLLM: async({}, use) => {
-    let requests: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}[] = []
+    let requests: {messages: ModelMessage[]; systemPrompt: string}[] = []
     let responseText = 'Agent response from test'
-    let handler: ((args: {messages: ModelMessage[]; repoId: string; orgId: string; systemPrompt: string}) => Promise<Record<string, any>[]> | Record<string, any>[]) | null = null
+    let handler: ((args: {messages: ModelMessage[]; systemPrompt: string}) => Promise<Record<string, any>[]> | Record<string, any>[]) | null = null
 
-    setAgentMock(async(session, systemPrompt) => {
+    setAgentMock(async(config) => {
       let args = {
-        messages: (session.messages || []).map((x: any) => ({role: x.role, content: x.content})) as ModelMessage[],
-        repoId: session.repoId || '',
-        orgId: session.orgId,
-        systemPrompt,
+        messages: (config.messages || []).map((x: any) => ({role: x.role, content: x.content})) as ModelMessage[],
+        systemPrompt: config.system || '',
       }
       requests.push(args)
-      if (handler) return await handler(args)
-      return appendRespondToUser(session, responseText)
+
+      let mockMessages = handler ? await handler(args) : appendRespondToUser(config.messages || [], responseText)
+      return {response: {messages: mockMessages}}
     })
 
     await use({
@@ -202,9 +200,8 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
 
 export {expect, expectConsoleError}
 
-function appendRespondToUser(session: AgentSession, text: string) {
+function appendRespondToUser(_messages: ModelMessage[], text: string) {
   return [
-    ...(session.messages || []),
     {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'mock-respond', toolName: 'respondToUser', input: {text}}]},
     {role: 'user', content: [{type: 'tool-result', toolCallId: 'mock-respond', toolName: 'respondToUser', output: {text}}]},
   ]

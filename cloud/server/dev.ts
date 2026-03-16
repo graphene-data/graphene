@@ -51,7 +51,6 @@ export async function startDevServer({realAuth, port, project = 'flights', logge
   process.env.GITHUB_APP_ID = '2484649'
   process.env.GITHUB_APP_CLIENT_ID = 'Iv23liKKZeEBautjO5bE'
   process.env.VITE_GITHUB_APP_SLUG = 'graphene-data-dev'
-  process.env.SLACK_STATE_SECRET = 'graphene-dev-slack-state-secret'
 
   let vite = await createViteServer({
     root: path.join(rootDir, 'frontend'),

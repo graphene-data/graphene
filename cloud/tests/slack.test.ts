@@ -152,12 +152,21 @@ test('includes thread context when mention is in a thread', async({slack, mockLL
 
 test('uploads chart screenshot when respondToUser references mdId', async({slack, mockLLM}) => {
   let screenshot = Buffer.from('fake-image-data').toString('base64')
-  mockLLM.mock(({messages}) => {
-    let prior = messages as any[]
+  mockLLM.mock(() => {
     return [
-      ...prior,
       {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'render-1', toolName: 'renderMd', input: {markdown: '# chart'}}]},
-      {role: 'user', content: [{type: 'tool-result', toolCallId: 'render-1', toolName: 'renderMd', output: {success: true, mdId: 'abc123', screenshot}}]},
+      {role: 'user', content: [{
+        type: 'tool-result',
+        toolCallId: 'render-1',
+        toolName: 'renderMd',
+        output: {
+          type: 'content',
+          value: [
+            {type: 'text', text: 'Rendered markdown id: abc123'},
+            {type: 'media', data: screenshot, mediaType: 'image/png'},
+          ],
+        },
+      }]},
       {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'respond-1', toolName: 'respondToUser', input: {text: 'Answer with chart', mdId: 'abc123'}}]},
       {role: 'user', content: [{type: 'tool-result', toolCallId: 'respond-1', toolName: 'respondToUser', output: {text: 'Answer with chart', mdId: 'abc123'}}]},
     ]

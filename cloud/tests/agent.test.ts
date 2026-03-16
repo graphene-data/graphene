@@ -8,19 +8,27 @@ import {orgId} from '../server/dev.ts'
 test('retries once when model finishes without calling respondToUser', async({cloud, mockLLM}) => {
   void cloud
   mockLLM.mock(({messages}) => {
-    let prior = messages as any[]
     if (messages.some(m => JSON.stringify(m.content).includes('without calling respondToUser'))) {
       return [
-        ...prior,
         {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'respond-1', toolName: 'respondToUser', input: {text: 'Final response', mdId: 'md-1'}}]},
         {role: 'user', content: [{type: 'tool-result', toolCallId: 'respond-1', toolName: 'respondToUser', output: {text: 'Final response', mdId: 'md-1'}}]},
       ]
     }
 
     return [
-      ...prior,
       {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'render-1', toolName: 'renderMd', input: {markdown: '# chart'}}]},
-      {role: 'user', content: [{type: 'tool-result', toolCallId: 'render-1', toolName: 'renderMd', output: {success: true, mdId: 'md-1', screenshot: 'abc'}}]},
+      {role: 'user', content: [{
+        type: 'tool-result',
+        toolCallId: 'render-1',
+        toolName: 'renderMd',
+        output: {
+          type: 'content',
+          value: [
+            {type: 'text', text: 'Rendered markdown id: md-1'},
+            {type: 'media', data: 'abc', mediaType: 'image/png'},
+          ],
+        },
+      }]},
     ]
   })
 
@@ -41,12 +49,10 @@ test('retries once when model finishes without calling respondToUser', async({cl
 
 test('throws when model still does not call respondToUser after follow-up', async({cloud, mockLLM}) => {
   void cloud
-  mockLLM.mock(({messages}) => {
-    let prior = messages as any[]
+  mockLLM.mock(() => {
     return [
-      ...prior,
       {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'render-1', toolName: 'renderMd', input: {markdown: '# chart'}}]},
-      {role: 'user', content: [{type: 'tool-result', toolCallId: 'render-1', toolName: 'renderMd', output: {success: true, mdId: 'md-1'}}]},
+      {role: 'user', content: [{type: 'tool-result', toolCallId: 'render-1', toolName: 'renderMd', output: {type: 'json', value: {success: true, mdId: 'md-1'}}}]},
     ]
   })
 

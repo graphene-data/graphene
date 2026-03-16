@@ -25,7 +25,17 @@ export const flightsAgentSessionMessages: Record<string, any>[] = [
   },
   {
     role: 'user',
-    content: [{type: 'tool-result', toolCallId: 'tool-render-1', output: {success: true, mdId: 'md-delay-1'}}],
+    content: [{
+      type: 'tool-result',
+      toolCallId: 'tool-render-1',
+      output: {
+        type: 'content',
+        value: [
+          {type: 'text', text: 'Rendered markdown id: md-delay-1'},
+          {type: 'media', data: 'screenshot-1', mediaType: 'image/png'},
+        ],
+      },
+    }],
   },
   {
     role: 'assistant',
@@ -61,7 +71,17 @@ export const flightsAgentSessionMessages: Record<string, any>[] = [
   },
   {
     role: 'user',
-    content: [{type: 'tool-result', toolCallId: 'tool-render-3', output: {success: true, mdId: 'md-delay-2'}}],
+    content: [{
+      type: 'tool-result',
+      toolCallId: 'tool-render-3',
+      output: {
+        type: 'content',
+        value: [
+          {type: 'text', text: 'Rendered markdown id: md-delay-2'},
+          {type: 'media', data: 'screenshot-2', mediaType: 'image/png'},
+        ],
+      },
+    }],
   },
   {
     role: 'assistant',

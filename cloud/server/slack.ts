@@ -4,9 +4,9 @@ import {and, desc, eq} from 'drizzle-orm'
 import SlackOauth from '@slack/oauth'
 import {WebClient, type WebAPICallResult, type ConversationsRepliesResponse, type OauthV2AccessResponse} from '@slack/web-api'
 import type {AppMentionEvent, SlackEvent} from '@slack/types'
-import {isToolResult, runAgent} from './agent/agent.ts'
+import {runAgent} from './agent/agent.ts'
 import {auth} from './auth.ts'
-import {PROD, TEST} from './consts.ts'
+import {DEV, DOMAIN, TEST} from './consts.ts'
 import {getDb} from './db.ts'
 import {decryptSecret, encryptSecret} from './secrets.ts'
 import {agentSessions, repos, type SlackInstallation, slackInstallations} from '../schema.ts'
@@ -129,6 +129,7 @@ async function handleAppMention(install: SlackInstallation, mention: AppMentionE
 
   let threadTs = mention.thread_ts || mention.ts
   await slackApi('reactions.add', {channel: mention.channel, timestamp: mention.ts, name: 'thought_balloon'}, install)
+    .catch(e => console.warn(e)) // errors here aren't fatal, but interesting
 
   try {
     let session = await findOrCreateSlackSession({orgId: install.orgId, repoId: repo.id, channel: mention.channel, threadTs})
@@ -144,19 +145,13 @@ async function handleAppMention(install: SlackInstallation, mention: AppMentionE
     threadMessages = await replaceUserIdsWithNames(threadMessages, install)
     let [latestMention = mention.text || ''] = await replaceUserIdsWithNames([mention.text || ''], install)
 
+    // Create LLM messages that have the slack messages, including the mention we're processing.
     // If this is a thread, add all the messages in the thread to the prompt.
     let prompt = `Latest mention: ${latestMention}`
     if (threadMessages.length) prompt += `\nThread context:\n${threadMessages.join('\n')}`
-
     session.messages.push({role: 'user', content: [{type: 'text', text: prompt}]})
-    await runAgent(session)
 
-    let respondToUser = latestToolResult(session.messages || [], 'respondToUser')
-    let mdId = respondToUser?.output?.mdId
-    let runMd = mdId ? latestToolResult(session.messages || [], 'renderMd', tr => tr.output?.mdId === mdId) : undefined
-    let screenshot = runMd?.output?.screenshot
-    let text = respondToUser?.output?.text
-    if (!text) throw new Error('Agent did not produce respondToUser output')
+    let {text, screenshot} = await runAgent(session)
 
     if (screenshot) {
       let file = Buffer.from(screenshot, 'base64')
@@ -225,19 +220,6 @@ export async function slackApi<T = {ok: boolean; error?: string}>(method: string
   return payload as T
 }
 
-function latestToolResult(messages: Record<string, any>[], toolName: string, predicate?: (chunk: any) => boolean) {
-  let match = (chunk: any) => {
-    let isResult = chunk?.type === 'tool-result' || chunk?.type === 'tool_result'
-    let name = chunk?.toolName || chunk?.tool_name || chunk?.name
-    if (!isResult || name !== toolName) return false
-    return predicate ? predicate(chunk) : true
-  }
-
-  let message = messages.findLast(m => isToolResult(m, toolName) && (Array.isArray(m.content) ? m.content.some(match) : false))
-  if (!message || !Array.isArray(message.content)) return undefined
-  return message.content.find(match)
-}
-
 /** Replace user IDs with names in message lines. */
 async function replaceUserIdsWithNames(messages: string[], installation: SlackInstallation) {
   let mentionRegex = /<@([A-Z0-9]+)(?:\|[^>]+)?>/g
@@ -261,21 +243,17 @@ async function replaceUserIdsWithNames(messages: string[], installation: SlackIn
 // Lazily initializes the OAuth state store used to prevent CSRF/replay on installs.
 function getSlackStateStore() {
   if (slackStateStore) return slackStateStore
-  let secret = process.env.SLACK_STATE_SECRET
-  if (!secret) throw new Error('Missing SLACK_STATE_SECRET')
+  let secret = process.env.SLACK_SIGNING_SECRET
+  if (!secret) throw new Error('Missing SLACK_SIGNING_SECRET')
   slackStateStore = new ClearStateStore(secret, 60 * 15)
   return slackStateStore
 }
 
 // Computes OAuth callback URL from explicit env override or request host headers.
 function getSlackRedirectUri(req: FastifyRequest) {
-  if (process.env.SLACK_REDIRECT_URI) return process.env.SLACK_REDIRECT_URI
-  let forwardedProto = req.headers['x-forwarded-proto']
-  let proto = (Array.isArray(forwardedProto) ? forwardedProto[0] : forwardedProto) || (PROD ? 'https' : 'http')
-  let forwardedHost = req.headers['x-forwarded-host']
-  let host = (Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost) || req.headers.host
-  if (!host) throw new Error('Missing host header for Slack OAuth redirect URI')
-  return `${proto}://${host}/_api/slack/oauth/callback`
+  if (TEST) return `http://${req.headers.host}/_api/slack/oauth/callback`
+  if (DEV) return `${(globalThis as any).__GRAPHENE_DEV_NGROK_URL || req.headers.host}/_api/slack/oauth/callback`
+  return `https://app.${DOMAIN}/_api/slack/oauth/callback`
 }
 
 // Verifies Slack request signatures using raw body + timestamp (5 minute skew window).

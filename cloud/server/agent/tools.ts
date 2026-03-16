@@ -7,6 +7,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {renderMd} from './runMd.ts'
+import {PROD} from '../consts.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../../..')
 
@@ -117,7 +118,9 @@ function extractPreview(content: string, query: string, contextChars = 100): str
   return preview
 }
 
-export function renderMdTool(repoId: string, baseUrl?: string) {
+export function renderMdTool(repoId: string) {
+  let baseUrl = !PROD ? (globalThis as any).__GRAPHENE_DEV_NGROK_URL as string : undefined
+
   // Using 'as any' because toModelOutput is a runtime feature not yet in TypeScript types
   return tool({
     description: 'Render markdown containing a chart to an image. Returns a screenshot and the underlying tabular data. Use this when the user wants to see a visualization.',
