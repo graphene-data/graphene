@@ -36,6 +36,18 @@ export function formatGrains(paths: FanoutPath[]) {
   return uniqueFanoutPaths(paths).map(formatFanoutPath).join(', ')
 }
 
+export function describeFanoutTarget(path: FanoutPath | undefined): string {
+  return path?.[path.length - 1] || 'base table'
+}
+
+export function fanoutMessage(path: FanoutPath | undefined, suffix: string): string {
+  return `Expression is fanned out by join to table \`${describeFanoutTarget(path)}\`; ${suffix}`
+}
+
+export function aggregateFanoutMessage(label: string, path: FanoutPath | undefined): string {
+  return `Aggregate expression \`${label}\` is fanned out by join to table \`${describeFanoutTarget(path)}\``
+}
+
 export function mergeFanoutPaths(paths: (FanoutPath | undefined)[]): {path?: FanoutPath; conflict?: boolean} {
   let merged: FanoutPath | undefined
   for (let path of paths) {
@@ -70,7 +82,22 @@ export function mergeSensitiveFanouts(...paths: (FanoutPath[] | undefined)[]): F
   return uniqueFanoutPaths(paths.flatMap(path => path || []))
 }
 
-function isPrefix(prefix: FanoutPath, path: FanoutPath): boolean {
+export function isPrefix(prefix: FanoutPath, path: FanoutPath): boolean {
   if (prefix.length > path.length) return false
   return prefix.every((part, i) => part == path[i])
+}
+
+export function isChasmTrap(paths: FanoutPath[]): boolean {
+  if (paths.length <= 1 || paths.some(path => path.length == 0)) return false
+  for (let i = 0; i < paths.length; i++) {
+    for (let j = i + 1; j < paths.length; j++) {
+      if (isPrefix(paths[i], paths[j]) || isPrefix(paths[j], paths[i])) return false
+    }
+  }
+  return true
+}
+
+export function multiGrainMessage(subject: string, paths: FanoutPath[]): string {
+  if (isChasmTrap(paths)) return `Join graph creates a chasm trap (${formatGrains(paths)}). Aggregate each path in a subquery/CTE first`
+  return `${subject} uses multiple grains (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`
 }
