@@ -1257,8 +1257,8 @@ describe('lang', () => {
     expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
   })
 
-  it('falls back to a generic diagnostic when a base-grain aggregate mixes with multiple joined grains', () => {
-    expect('from users select name, avg(age), sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Aggregate query uses multiple grains \(base, orders, payments\)/i)
+  it('reports a chasm trap when a base-grain aggregate also mixes sibling joined grains', () => {
+    expect('from users select name, avg(age), sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows the base and fanout grain query after separating the aggregates', () => {
@@ -1286,12 +1286,16 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('rejects aggregate queries that mix ancestor and descendant grains', () => {
-    expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate query uses multiple grains/i)
+  it('reports a fanout diagnostic when an aggregate query mixes ancestor and descendant grains', () => {
+    expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
+      /Aggregate expression `sum\(orders\.amount\)` is fanned out by join to table `order_items`/i,
+    )
   })
 
   it('falls back to a generic diagnostic when a base-grain aggregate mixes with ancestor and descendant grains', () => {
-    expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate query uses multiple grains \(base, orders, orders\.order_items\)/i)
+    expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
+      /One or more aggregate expressions fanned out by join graph \(base, orders, orders\.order_items\)/i,
+    )
   })
 
   it('allows the ancestor and descendant query after aggregating each grain separately', () => {

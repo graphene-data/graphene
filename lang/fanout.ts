@@ -99,5 +99,5 @@ export function isChasmTrap(paths: FanoutPath[]): boolean {
 
 export function multiGrainMessage(subject: string, paths: FanoutPath[]): string {
   if (isChasmTrap(paths)) return `Join graph creates a chasm trap (${formatGrains(paths)}). Aggregate each path in a subquery/CTE first`
-  return `${subject} uses multiple grains (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`
+  return `One or more aggregate expressions fanned out by join graph (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`
 }

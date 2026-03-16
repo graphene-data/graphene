@@ -1,7 +1,7 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import {config} from './config.ts'
-import {aggregateFanoutMessage, extendFanoutPath, fanoutMessage, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, multiGrainMessage, uniqueFanoutPaths} from './fanout.ts'
+import {aggregateFanoutMessage, extendFanoutPath, fanoutMessage, fanoutPathKey, isBaseFanoutPath, isChasmTrap, isPrefix, mergeFanoutPaths, mergeSensitiveFanouts, multiGrainMessage, uniqueFanoutPaths} from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
@@ -940,6 +940,15 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   let paths = uniqueFanoutPaths(exprs.flatMap(entry => entry.expr.fanoutSensitivePaths || []))
   if (paths.length <= 1) return
   let joinedPaths = paths.filter(path => !isBaseFanoutPath(path))
+  if (joinedPaths.length > 1 && isChasmTrap(joinedPaths)) {
+    let message = multiGrainMessage('Aggregate query', joinedPaths)
+    for (let entry of exprs) {
+      let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+      if (entryPaths.length == 0) continue
+      diag(entry.node, message)
+    }
+    return
+  }
   if (paths.length == 2 && joinedPaths.length == 1) {
     for (let entry of exprs) {
       let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
@@ -947,6 +956,21 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
       diag(entry.node, aggregateFanoutMessage(txt(entry.node), joinedPaths[0]))
     }
     return
+  }
+  if (paths.length == 2 && joinedPaths.length == 2) {
+    let [pathA, pathB] = joinedPaths
+    let ancestor = isPrefix(pathA, pathB) ? pathA : (isPrefix(pathB, pathA) ? pathB : undefined)
+    let descendant = ancestor == pathA ? pathB : (ancestor == pathB ? pathA : undefined)
+    if (ancestor && descendant) {
+      let ancestorKey = fanoutPathKey(ancestor)
+      let descendantKey = fanoutPathKey(descendant)
+      for (let entry of exprs) {
+        let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+        if (!entryPaths.some(path => fanoutPathKey(path) == ancestorKey) || entryPaths.some(path => fanoutPathKey(path) == descendantKey)) continue
+        diag(entry.node, aggregateFanoutMessage(txt(entry.node), descendant))
+      }
+      return
+    }
   }
   let message = multiGrainMessage('Aggregate query', paths)
   for (let entry of exprs) {
