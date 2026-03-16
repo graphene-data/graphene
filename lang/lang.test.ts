@@ -1254,7 +1254,7 @@ describe('lang', () => {
   })
 
   it('rejects aggregate queries that mix base and joined grains', () => {
-    expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate query uses multiple grains/i)
+    expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
   })
 
   it('allows the base and fanout grain query after separating the aggregates', () => {

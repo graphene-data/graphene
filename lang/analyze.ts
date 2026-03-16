@@ -928,6 +928,10 @@ function fanoutMessage(path: FanoutPath | undefined, suffix: string): string {
   return `Expression is fanned out by join to table \`${describeFanoutTarget(path)}\`; ${suffix}`
 }
 
+function aggregateFanoutMessage(node: SyntaxNode, path: FanoutPath | undefined): string {
+  return `Aggregate expression \`${txt(node)}\` is fanned out by join to table \`${describeFanoutTarget(path)}\``
+}
+
 function isPrefix(prefix: FanoutPath, path: FanoutPath): boolean {
   if (prefix.length > path.length) return false
   return prefix.every((part, i) => part == path[i])
@@ -967,6 +971,15 @@ function analyzeAggregateQueryExpr(node: SyntaxNode, expr: Expr) {
 function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   let paths = uniqueFanoutPaths(exprs.flatMap(entry => entry.expr.fanoutSensitivePaths || []))
   if (paths.length <= 1) return
+  let joinedPaths = paths.filter(path => !isBaseFanoutPath(path))
+  if (paths.length == 2 && joinedPaths.length == 1) {
+    for (let entry of exprs) {
+      let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+      if (!entryPaths.some(path => isBaseFanoutPath(path))) continue
+      diag(entry.node, aggregateFanoutMessage(entry.node, joinedPaths[0]))
+    }
+    return
+  }
   let message = multiGrainMessage('Aggregate query', paths)
   for (let entry of exprs) {
     let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
