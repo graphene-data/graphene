@@ -954,6 +954,14 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
     if (entry.expr.isAgg || isBaseFanoutPath(entry.expr.fanoutPath)) continue
     let exprPathKey = fanoutPathKey(entry.expr.fanoutPath)
     if (pathKeys.size == 1 && pathKeys.has(exprPathKey)) continue
+    if (paths.length == 1 && isBaseFanoutPath(paths[0])) {
+      for (let aggEntry of aggExprs) {
+        let entryPaths = uniqueFanoutPaths(aggEntry.expr.fanoutSensitivePaths || [])
+        if (!entryPaths.some(path => isBaseFanoutPath(path))) continue
+        diag(aggEntry.node, aggregateFanoutMessage(txt(aggEntry.node), entry.expr.fanoutPath))
+      }
+      continue
+    }
     let targetPath = paths.length == 1 && isPrefix(entry.expr.fanoutPath!, paths[0]) ? paths[0] : entry.expr.fanoutPath
     diag(entry.node, fanoutMessage(targetPath, 'aggregate queries cannot group by it directly'))
   }

@@ -1290,7 +1290,7 @@ describe('lang', () => {
   })
 
   it('rejects aggregate query dimensions whose grain does not match the aggregates', () => {
-    expect('from users select orders.status, avg(age)').toHaveDiagnostic(/Expression is fanned out by join to table `orders`; aggregate queries cannot group by it directly/i)
+    expect('from users select orders.status, avg(age)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
   })
 
   it('reports a fanout diagnostic when an aggregate query mixes ancestor and descendant grains', () => {
