@@ -1257,6 +1257,10 @@ describe('lang', () => {
     expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
   })
 
+  it('falls back to a generic diagnostic when a base-grain aggregate mixes with multiple joined grains', () => {
+    expect('from users select name, avg(age), sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Aggregate query uses multiple grains \(base, orders, payments\)/i)
+  })
+
   it('allows the base and fanout grain query after separating the aggregates', () => {
     expect(`
       with user_stats as (from users select name, avg(age) as avg_age),
@@ -1283,6 +1287,12 @@ describe('lang', () => {
 
   it('rejects aggregate queries that mix ancestor and descendant grains', () => {
     expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate query uses multiple grains/i)
+  })
+
+  it('falls back to a generic diagnostic when a base-grain aggregate mixes with ancestor and descendant grains', () => {
+    expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
+      /Aggregate query uses multiple grains \(base, orders, orders\.order_items\)/i,
+    )
   })
 
   it('allows the ancestor and descendant query after aggregating each grain separately', () => {
