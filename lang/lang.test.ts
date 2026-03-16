@@ -905,7 +905,7 @@ describe('lang', () => {
       uid int
       join many users on users.id = uid
       user_age: users.age
-    )`).toHaveDiagnostic(/Fields that refer to a `join many` should aggregate/i)
+    )`).toHaveDiagnostic(/Expression is fanned out by join to table `users`; aggregate it first/i)
   })
 
   it('errors if a measure uses multiple grains', () => {
@@ -916,7 +916,7 @@ describe('lang', () => {
       weird: sum(orders.amount) / sum(payments.amount)
     )
     table orders (id int, user_id int, amount int)
-    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Measure uses multiple grains/i)
+    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows a mixed-fanout measure after aggregating each grain into one-to-one tables', () => {
@@ -935,7 +935,7 @@ describe('lang', () => {
   })
 
   it('errors when an aggregate-query expression mixes incompatible join-many branches', () => {
-    expect('from users select name, orders.amount + payments.amount, count(id)').toHaveDiagnostic(/Expression mixes incompatible `join many` paths/i)
+    expect('from users select name, orders.amount + payments.amount, count(id)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('errors when a computed field mixes incompatible join-many branches', () => {
@@ -946,7 +946,7 @@ describe('lang', () => {
       bad_expr: orders.amount + payments.amount
     )
     table orders (id int, user_id int, amount int)
-    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Expression mixes incompatible `join many` paths/i)
+    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows join expressions to refer to the alias', () => {
@@ -1268,7 +1268,7 @@ describe('lang', () => {
   })
 
   it('rejects aggregate queries that mix sibling grains', () => {
-    expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Aggregate query uses multiple grains/i)
+    expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows the sibling fanout query after aggregating each branch separately', () => {
@@ -1296,7 +1296,7 @@ describe('lang', () => {
   })
 
   it('rejects aggregate query dimensions that depend on join many', () => {
-    expect('from users select orders.status, sum(orders.amount)').toHaveDiagnostic(/Non-aggregate expressions in aggregate queries cannot depend on a `join many` path/i)
+    expect('from users select orders.status, sum(orders.amount)').toHaveDiagnostic(/Expression is fanned out by join to table `orders`; aggregate queries cannot group by it directly/i)
   })
 
   it('allows distinct-safe counts to mix with a fanout grain', () => {
@@ -1309,7 +1309,7 @@ describe('lang', () => {
       join orders on orders.user_id = users.id
       join payments on payments.user_id = users.id
       select name, sum(orders.amount), sum(payments.amount)
-    `).toHaveDiagnostic(/Aggregate query uses multiple grains/i)
+    `).toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows the explicit-join fanout query after aggregating each branch separately', () => {
@@ -1335,7 +1335,7 @@ describe('lang', () => {
       from orders
       join users on (users.id = orders.user_id and users.name is not null)
       select users.name, sum(amount)
-    `).toHaveDiagnostic(/Non-aggregate expressions in aggregate queries cannot depend on a `join many` path/i)
+    `).toHaveDiagnostic(/Expression is fanned out by join to table `users`; aggregate queries cannot group by it directly/i)
   })
 
   it('allows weighted semantics when the joined rowset is materialized first', () => {

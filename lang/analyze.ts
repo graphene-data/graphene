@@ -1,7 +1,7 @@
 import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import {config} from './config.ts'
-import {extendFanoutPath, formatGrains, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths} from './fanout.ts'
+import {extendFanoutPath, formatGrains, isBaseFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, uniqueFanoutPaths, type FanoutPath} from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit} from './temporalLiterals.ts'
@@ -920,26 +920,54 @@ function mergeExprAnalysis(exprs: Expr[], sql: string, type: FieldType, isAgg?: 
   }
 }
 
+function describeFanoutTarget(path: FanoutPath | undefined): string {
+  return path?.[path.length - 1] || 'base table'
+}
+
+function fanoutMessage(path: FanoutPath | undefined, suffix: string): string {
+  return `Expression is fanned out by join to table \`${describeFanoutTarget(path)}\`; ${suffix}`
+}
+
+function isPrefix(prefix: FanoutPath, path: FanoutPath): boolean {
+  if (prefix.length > path.length) return false
+  return prefix.every((part, i) => part == path[i])
+}
+
+function isChasmTrap(paths: FanoutPath[]): boolean {
+  if (paths.length <= 1 || paths.some(path => path.length == 0)) return false
+  for (let i = 0; i < paths.length; i++) {
+    for (let j = i + 1; j < paths.length; j++) {
+      if (isPrefix(paths[i], paths[j]) || isPrefix(paths[j], paths[i])) return false
+    }
+  }
+  return true
+}
+
+function multiGrainMessage(subject: string, paths: FanoutPath[]): string {
+  if (isChasmTrap(paths)) return `Join graph creates a chasm trap (${formatGrains(paths)}). Aggregate each path in a subquery/CTE first`
+  return `${subject} uses multiple grains (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`
+}
+
 function analyzeComputedFieldExpr(node: SyntaxNode, expr: Expr) {
-  if (expr.fanoutConflict) diag(node, 'Expression mixes incompatible `join many` paths')
-  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) diag(node, 'Fields that refer to a `join many` should aggregate')
+  if (expr.fanoutConflict) diag(node, 'Join graph creates a chasm trap')
+  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) diag(node, fanoutMessage(expr.fanoutPath, 'aggregate it first'))
   let paths = uniqueFanoutPaths(expr.fanoutSensitivePaths || [])
   if (paths.length > 1) {
-    diag(node, `Measure uses multiple grains (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`)
+    diag(node, multiGrainMessage('Measure', paths))
   }
 }
 
 function analyzeAggregateQueryExpr(node: SyntaxNode, expr: Expr) {
-  if (expr.fanoutConflict) diag(node, 'Expression mixes incompatible `join many` paths')
+  if (expr.fanoutConflict) diag(node, 'Join graph creates a chasm trap')
   if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) {
-    diag(node, 'Non-aggregate expressions in aggregate queries cannot depend on a `join many` path')
+    diag(node, fanoutMessage(expr.fanoutPath, 'aggregate queries cannot group by it directly'))
   }
 }
 
 function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   let paths = uniqueFanoutPaths(exprs.flatMap(entry => entry.expr.fanoutSensitivePaths || []))
   if (paths.length <= 1) return
-  let message = `Aggregate query uses multiple grains (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`
+  let message = multiGrainMessage('Aggregate query', paths)
   for (let entry of exprs) {
     let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
     if (entryPaths.length == 0) continue
