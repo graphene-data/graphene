@@ -27,7 +27,7 @@ if [ -n "$gh_token" ]; then
 fi
 
 # Use the latest version of coding agents, but try to make this fast if they're already in the cache
-agent_tools=(opencode-ai @mariozechner/pi-coding-agent @anthropic-ai/claude-code)
+agent_tools=(opencode-ai @mariozechner/pi-coding-agent @anthropic-ai/claude-code @openai/codex)
 installed_tools_json="$(pnpm list -g --depth 0 --json)"
 for tool in ${agent_tools}; do
   installed_version="$(printf '%s' "$installed_tools_json" | node -e 'let input = ""; process.stdin.on("data", chunk => input += chunk); process.stdin.on("end", () => { let pkg = process.argv[1]; let rows = JSON.parse(input); let deps = {...(rows[0]?.dependencies || {}), ...(rows[0]?.devDependencies || {})}; process.stdout.write(deps[pkg]?.version || "") })' "$tool")"
