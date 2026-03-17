@@ -976,15 +976,28 @@ function analyzeAggregateQueryExpr(node: SyntaxNode, expr: Expr) {
   if (expr.fanout?.conflict) diag(node, 'Join graph creates a chasm trap')
 }
 
+// Aggregate-query fanout diagnostics have to look at the query as a whole: first ensure
+// any non-aggregate dimensions stay at the same grain as the aggregates, then classify the
+// aggregate grains into the more specific cases we can explain clearly (chasm trap, a base
+// aggregate fanned out by one join, an ancestor aggregate fanned out by a descendant join,
+// or the generic join-graph fanout fallback).
 function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   let aggExprs = exprs.filter(entry => entry.expr.isAgg)
   let paths = uniqueFanoutPaths(aggExprs.flatMap(entry => entry.expr.fanout?.sensitivePaths || []))
   if (paths.length == 0) return
+
   let pathKeys = new Set(paths.map(path => fanoutPathKey(path)))
+
+  // Non-aggregate dimensions are allowed only when they stay at the same grain
+  // as every aggregate in the query. Otherwise, either the dimension is fanning
+  // out a base-grain aggregate or it is grouping by the wrong join-many path.
   for (let entry of exprs) {
     if (entry.expr.isAgg || isBaseFanoutPath(entry.expr.fanout?.path)) continue
+
     let exprPathKey = fanoutPathKey(entry.expr.fanout?.path)
     if (pathKeys.size == 1 && pathKeys.has(exprPathKey)) continue
+
+    // A join-many dimension can fan out an aggregate that otherwise lives at base grain.
     if (paths.length == 1 && isBaseFanoutPath(paths[0])) {
       for (let aggEntry of aggExprs) {
         let entryPaths = uniqueFanoutPaths(aggEntry.expr.fanout?.sensitivePaths || [])
@@ -993,11 +1006,16 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
       }
       continue
     }
+
     let targetPath = paths.length == 1 && isPrefix(entry.expr.fanout!.path!, paths[0]) ? paths[0] : entry.expr.fanout?.path
     diag(entry.node, fanoutMessage(targetPath, 'aggregate queries cannot group by it directly'))
   }
+
   if (paths.length <= 1) return
+
   let joinedPaths = paths.filter(path => !isBaseFanoutPath(path))
+
+  // Sibling join-many branches produce a classic chasm trap.
   if (joinedPaths.length > 1 && isChasmTrap(joinedPaths)) {
     let message = multiGrainMessage(joinedPaths)
     for (let entry of aggExprs) {
@@ -1007,6 +1025,8 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
     }
     return
   }
+
+  // One base-grain aggregate plus one joined grain means the base aggregate is fanned out.
   if (paths.length == 2 && joinedPaths.length == 1) {
     for (let entry of aggExprs) {
       let entryPaths = uniqueFanoutPaths(entry.expr.fanout?.sensitivePaths || [])
@@ -1015,10 +1035,13 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
     }
     return
   }
+
+  // Ancestor/descendant join-many paths mean the shallower aggregate is fanned out by the deeper join.
   if (paths.length == 2 && joinedPaths.length == 2) {
     let [pathA, pathB] = joinedPaths
     let ancestor: typeof pathA | undefined
     let descendant: typeof pathA | undefined
+
     if (isPrefix(pathA, pathB)) {
       ancestor = pathA
       descendant = pathB
@@ -1026,9 +1049,11 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
       ancestor = pathB
       descendant = pathA
     }
+
     if (ancestor && descendant) {
       let ancestorKey = fanoutPathKey(ancestor)
       let descendantKey = fanoutPathKey(descendant)
+
       for (let entry of aggExprs) {
         let entryPaths = uniqueFanoutPaths(entry.expr.fanout?.sensitivePaths || [])
         if (!entryPaths.some(path => fanoutPathKey(path) == ancestorKey) || entryPaths.some(path => fanoutPathKey(path) == descendantKey)) continue
@@ -1037,6 +1062,8 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
       return
     }
   }
+
+  // Anything more complex falls back to the generic join-graph fanout diagnostic.
   let message = multiGrainMessage(paths)
   for (let entry of aggExprs) {
     let entryPaths = uniqueFanoutPaths(entry.expr.fanout?.sensitivePaths || [])
