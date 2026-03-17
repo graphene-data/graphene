@@ -1,6 +1,6 @@
 import type {Query} from './types.ts'
 
-import {parseTemporalLiteral} from './temporalLiterals.ts'
+import {parseTemporalLiteral} from './temporal.ts'
 
 // Fill in parameter values in a query's SQL strings
 // Params look like $paramName in the SQL

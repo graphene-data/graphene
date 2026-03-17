@@ -1,5 +1,7 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
 
+import type {TimestampUnit} from './temporal.ts'
+
 declare module '@lezer/common' {
   interface Tree {
     fileInfo: FileInfo
@@ -14,6 +16,7 @@ export interface Expr {
   type: FieldType // result type for validation
   isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
+  interval?: IntervalExpr
 }
 
 // A field in a query's SELECT clause
@@ -26,6 +29,14 @@ export interface QueryField extends Expr {
 export interface Filter {
   sql: string
   isAgg?: boolean // if true, goes in HAVING; otherwise WHERE
+}
+
+// Interval lowering metadata carried on interval-typed expressions, so later analysis
+// can rewrite them into the dialect-specific syntax each warehouse expects.
+export interface IntervalExpr {
+  quantitySql: string
+  unit: TimestampUnit
+  form: 'constant' | 'dynamic' | 'scaled'
 }
 
 // Context for analyzing expressions - table/alias change as we traverse joins, but query is shared
