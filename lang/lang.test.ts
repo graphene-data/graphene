@@ -929,7 +929,7 @@ describe('lang', () => {
     expect('from users select name, sum(total_orders)').toHaveDiagnostic(/Aggregates cannot be nested/i)
   })
 
-  it('errors if you have a non-agg alias used with a join_many', () => {
+  it('rejects computed fields fanned out by a join many', () => {
     expect(`table t (
       uid int
       join many users on users.id = uid
@@ -937,7 +937,7 @@ describe('lang', () => {
     )`).toHaveDiagnostic(/Expression is fanned out by join to table `users`; aggregate it first/i)
   })
 
-  it('errors if a measure uses multiple grains', () => {
+  it('reports a chasm trap when a measure mixes sibling join many grains', () => {
     expect(`table t (
       id int
       join many orders on orders.user_id = id
@@ -948,7 +948,7 @@ describe('lang', () => {
     table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
-  it('allows a mixed-fanout measure after aggregating each grain into one-to-one tables', () => {
+  it('allows a measure after each fanout grain is aggregated separately', () => {
     expect(`
       table orders_agg (id int, user_id int, amount int)
       table payments_agg (id int, user_id int, amount int)
@@ -963,11 +963,11 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('errors when an aggregate-query expression mixes incompatible join-many branches', () => {
+  it('reports a chasm trap when an aggregate query expression mixes sibling join many branches', () => {
     expect('from users select name, orders.amount + payments.amount, count(id)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
-  it('errors when a computed field mixes incompatible join-many branches', () => {
+  it('reports a chasm trap when a computed field mixes sibling join many branches', () => {
     expect(`table t (
       id int
       join many orders on orders.user_id = id
@@ -1258,7 +1258,7 @@ describe('lang', () => {
     ); from test select id`).toRenderSql('select test.id as id from test as test')
   })
 
-  it('single join_many aggregate is fine, join_one is fine', () => {
+  it('allows a single join many aggregate and a join one aggregate', () => {
     clearWorkspace()
     setConfig({root: ''})
     updateFile(
@@ -1282,11 +1282,11 @@ describe('lang', () => {
     expect('from purchases select customers.name, sum(amount)').toHaveNoErrors()
   })
 
-  it('rejects aggregate queries that mix base and joined grains', () => {
+  it('reports fanout when an aggregate query mixes base and joined grains', () => {
     expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
   })
 
-  it('reports a chasm trap when a base-grain aggregate also mixes sibling joined grains', () => {
+  it('reports a chasm trap when a base-grain aggregate is combined with sibling join many aggregates', () => {
     expect('from users select name, avg(age), sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
@@ -1300,7 +1300,7 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('rejects aggregate queries that mix sibling grains', () => {
+  it('reports a chasm trap when an aggregate query mixes sibling join many grains', () => {
     expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
@@ -1328,7 +1328,7 @@ describe('lang', () => {
     )
   })
 
-  it('falls back to a generic diagnostic when a base-grain aggregate mixes with ancestor and descendant grains', () => {
+  it('reports join-graph fanout when a base-grain aggregate mixes with ancestor and descendant grains', () => {
     expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
       /One or more aggregate expressions fanned out by join graph \(base, orders, orders\.order_items\)/i,
     )
@@ -1344,7 +1344,7 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('allows distinct-safe counts to mix with a fanout grain', () => {
+  it('treats count(id) as distinct-safe when it mixes with a fanout grain', () => {
     expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveNoErrors()
   })
 
