@@ -867,16 +867,12 @@ describe('lang', () => {
   })
 
   it('supports multiplied literal intervals in date arithmetic', () => {
-    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql(
-      'select users.created_at - (users.age * (interval 1 minute)) as shifted from users as users',
-    )
+    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql('select users.created_at - (users.age * (interval 1 minute)) as shifted from users as users')
   })
 
   it('supports multiplied literal intervals in computed columns', () => {
     updateFile('table flights (dep_time timestamp, dep_delay int, scheduled_dep_time: dep_time - (dep_delay * interval 1 minute))', 'flights.gsql')
-    expect('from flights select scheduled_dep_time').toRenderSql(
-      'select (flights.dep_time - (flights.dep_delay * (interval 1 minute))) as scheduled_dep_time from flights as flights',
-    )
+    expect('from flights select scheduled_dep_time').toRenderSql('select (flights.dep_time - (flights.dep_delay * (interval 1 minute))) as scheduled_dep_time from flights as flights')
   })
 
   it('diagnoses multiplied dynamic intervals', () => {
@@ -889,22 +885,14 @@ describe('lang', () => {
 
   it('renders dynamic intervals for BigQuery', () => {
     setConfig({root: '', bigquery: {}})
-    expect('from users select created_at - interval age minute as shifted').toRenderSql(
-      'select users.created_at - interval users.age minute as shifted from `users` as users',
-    )
-    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql(
-      'select users.created_at - interval users.age minute as shifted from `users` as users',
-    )
+    expect('from users select created_at - interval age minute as shifted').toRenderSql('select users.created_at - interval users.age minute as shifted from `users` as users')
+    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql('select users.created_at - interval users.age minute as shifted from `users` as users')
   })
 
   it('renders dynamic intervals for Snowflake via DATEADD', () => {
     setConfig({dialect: 'snowflake', root: ''})
-    expect('from users select created_at - interval age minute as shifted').toRenderSql(
-      'SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users',
-    )
-    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql(
-      'SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users',
-    )
+    expect('from users select created_at - interval age minute as shifted').toRenderSql('SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users')
+    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql('SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users')
   })
 
   it('supports date keyword', () => {
