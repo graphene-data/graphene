@@ -929,12 +929,53 @@ describe('lang', () => {
     expect('from users select name, sum(total_orders)').toHaveDiagnostic(/Aggregates cannot be nested/i)
   })
 
-  it.skip('errors if you have a non-agg measure that uses a join_many', () => {
+  it('rejects computed fields fanned out by a join many', () => {
     expect(`table t (
       uid int
       join many users on users.id = uid
-      users.age as user_age
-    )`).toHaveDiagnostic(/Fields that refer to a `join many` should aggregate/i)
+      user_age: users.age
+    )`).toHaveDiagnostic(/Expression is fanned out by join to table `users`; aggregate it first/i)
+  })
+
+  it('reports a chasm trap when a measure mixes sibling join many grains', () => {
+    expect(`table t (
+      id int
+      join many orders on orders.user_id = id
+      join many payments on payments.user_id = id
+      weird: sum(orders.amount) / sum(payments.amount)
+    )
+    table orders (id int, user_id int, amount int)
+    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Join graph creates a chasm trap/i)
+  })
+
+  it('allows a measure after each fanout grain is aggregated separately', () => {
+    expect(`
+      table orders_agg (id int, user_id int, amount int)
+      table payments_agg (id int, user_id int, amount int)
+      table order_totals as (from orders_agg select user_id, sum(amount) as order_total)
+      table payment_totals as (from payments_agg select user_id, sum(amount) as payment_total)
+      table t (
+        id int
+        join one order_totals on order_totals.user_id = id
+        join one payment_totals on payment_totals.user_id = id
+        weird: order_totals.order_total / payment_totals.payment_total
+      )
+    `).toHaveNoErrors()
+  })
+
+  it('reports a chasm trap when an aggregate query expression mixes sibling join many branches', () => {
+    expect('from users select name, orders.amount + payments.amount, count(id)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
+  })
+
+  it('reports a chasm trap when a computed field mixes sibling join many branches', () => {
+    expect(`table t (
+      id int
+      join many orders on orders.user_id = id
+      join many payments on payments.user_id = id
+      bad_expr: orders.amount + payments.amount
+    )
+    table orders (id int, user_id int, amount int)
+    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows join expressions to refer to the alias', () => {
@@ -1217,7 +1258,7 @@ describe('lang', () => {
     ); from test select id`).toRenderSql('select test.id as id from test as test')
   })
 
-  it('single join_many aggregate is fine, join_one is fine', () => {
+  it('allows a single join many aggregate and a join one aggregate', () => {
     clearWorkspace()
     setConfig({root: ''})
     updateFile(
@@ -1239,6 +1280,127 @@ describe('lang', () => {
 
     expect('from customers select name, sum(purchases.amount)').toHaveNoErrors()
     expect('from purchases select customers.name, sum(amount)').toHaveNoErrors()
+  })
+
+  it('reports fanout when an aggregate query mixes base and joined grains', () => {
+    expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
+  })
+
+  it('reports a chasm trap when a base-grain aggregate is combined with sibling join many aggregates', () => {
+    expect('from users select name, avg(age), sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
+  })
+
+  it('allows the base and fanout grain query after separating the aggregates', () => {
+    expect(`
+      with user_stats as (from users select name, avg(age) as avg_age),
+      order_stats as (from users select name, sum(orders.amount) as total_amount)
+      from user_stats
+      left join order_stats on order_stats.name = user_stats.name
+      select user_stats.name, avg_age, total_amount
+    `).toHaveNoErrors()
+  })
+
+  it('reports a chasm trap when an aggregate query mixes sibling join many grains', () => {
+    expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
+  })
+
+  it('allows the sibling fanout query after aggregating each branch separately', () => {
+    expect(`
+      with order_stats as (from users select name, sum(orders.amount) as order_amount),
+      payment_stats as (from users select name, sum(payments.amount) as payment_amount)
+      from order_stats
+      left join payment_stats on payment_stats.name = order_stats.name
+      select order_stats.name, order_amount, payment_amount
+    `).toHaveNoErrors()
+  })
+
+  it('allows aggregate query dimensions when they match the aggregate grain', () => {
+    expect('from users select orders.status, sum(orders.amount)').toHaveNoErrors()
+  })
+
+  it('rejects aggregate query dimensions whose grain does not match the aggregates', () => {
+    expect('from users select orders.status, avg(age)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
+  })
+
+  it('reports a fanout diagnostic when an aggregate query mixes ancestor and descendant grains', () => {
+    expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
+      /Aggregate expression `sum\(orders\.amount\)` is fanned out by join to table `order_items`/i,
+    )
+  })
+
+  it('reports join-graph fanout when a base-grain aggregate mixes with ancestor and descendant grains', () => {
+    expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
+      /One or more aggregate expressions fanned out by join graph \(base, orders, orders\.order_items\)/i,
+    )
+  })
+
+  it('allows the ancestor and descendant query after aggregating each grain separately', () => {
+    expect(`
+      with order_stats as (from users select name, sum(orders.amount) as order_amount),
+      item_stats as (from users select name, sum(orders.order_items.quantity) as item_quantity)
+      from order_stats
+      left join item_stats on item_stats.name = order_stats.name
+      select order_stats.name, order_amount, item_quantity
+    `).toHaveNoErrors()
+  })
+
+  it('treats count(id) as distinct-safe when it mixes with a fanout grain', () => {
+    expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveNoErrors()
+  })
+
+  it('reports fanout when count(*) mixes with a fanout grain', () => {
+    expect('from users select name, count(*), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate expression `count\(\*\)` is fanned out by join to table `order_items`/i)
+  })
+
+  it('does not apply fanout protection to explicit joins', () => {
+    expect(`
+      from users
+      join orders on orders.user_id = users.id
+      join payments on payments.user_id = users.id
+      select name, sum(orders.amount), sum(payments.amount)
+    `).toHaveNoErrors()
+
+    expect(`
+      from orders
+      join users on (users.id = orders.user_id and users.name is not null)
+      select users.name, sum(amount)
+    `).toHaveNoErrors()
+
+    expect(`
+      with order_stats as (
+        from users
+        join orders on orders.user_id = users.id
+        select name, sum(orders.amount) as order_amount
+      ),
+      payment_stats as (
+        from users
+        join payments on payments.user_id = users.id
+        select name, sum(payments.amount) as payment_amount
+      )
+      from order_stats
+      left join payment_stats on payment_stats.name = order_stats.name
+      select order_stats.name, order_amount, payment_amount
+    `).toHaveNoErrors()
+  })
+
+  it('allows base-grain aggregates to be weighted by explicit joins', () => {
+    expect(`
+      from users
+      join orders on orders.user_id = users.id
+      select name, avg(age), sum(orders.amount)
+    `).toHaveNoErrors()
+  })
+
+  it('allows weighted semantics when the joined rowset is materialized first', () => {
+    expect(`
+      with joined as (
+        from users
+        join orders on orders.user_id = users.id
+        join order_items on order_items.order_id = orders.id
+        select name, age, quantity
+      )
+      from joined select name, avg(age), sum(quantity)
+    `).toHaveNoErrors()
   })
 
   it('handles computed columns with chained joins', () => {

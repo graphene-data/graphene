@@ -1,5 +1,6 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
 
+import type {ExprFanout, FanoutPath} from './fanout.ts'
 import type {TimestampUnit} from './temporal.ts'
 
 declare module '@lezer/common' {
@@ -17,6 +18,7 @@ export interface Expr {
   isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
   interval?: IntervalExpr
+  fanout?: ExprFanout
 }
 
 // A field in a query's SELECT clause
@@ -44,6 +46,7 @@ export interface Scope {
   query?: Query // null when analyzing table definitions (not in a query context)
   table?: Table
   alias: string // current alias for this table context (e.g., "users", "orders", "users_orders")
+  fanoutPath?: FanoutPath
   otherTables?: Table[] // CTEs and other tables visible for name resolution
   joinTarget?: {name: string; table: Table; alias: string} // When analyzing a join's ON clause, tells us about the target table/alias.
 }
@@ -59,6 +62,7 @@ export interface QueryJoin {
   table?: Table
   targetTable?: string
   cardinality?: 'one' | 'many'
+  fanoutPath?: FanoutPath
   joinType?: JoinType
   onClause?: string
   onExpr?: SyntaxNode
