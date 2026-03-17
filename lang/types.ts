@@ -1,6 +1,6 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
 
-import type {FanoutPath} from './fanout.ts'
+import type {ExprFanout, FanoutPath} from './fanout.ts'
 import type {TimestampUnit} from './temporal.ts'
 
 declare module '@lezer/common' {
@@ -18,9 +18,7 @@ export interface Expr {
   isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
   interval?: IntervalExpr
-  fanoutPath?: FanoutPath // grain implied by this scalar expression, relative to the base table
-  fanoutSensitivePaths?: FanoutPath[] // aggregate grains in this expression that are sensitive to row duplication
-  fanoutConflict?: boolean // true if the expression mixes incompatible grains
+  fanout?: ExprFanout
 }
 
 // A field in a query's SELECT clause

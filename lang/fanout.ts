@@ -1,23 +1,26 @@
-// Fanout analysis tracks the implied grain of an expression using join-path metadata.
-//
-// A `FanoutPath` is the sequence of `join many` edges taken from the current base table
-// to reach the rows an expression depends on. Examples:
-// - `[]` means the base table grain.
-// - `['orders']` means one row per order relative to the base table.
-// - `['orders', 'order_items']` means one row per order item.
-//
-// Expression analysis uses these helpers in two ways:
-// - `fanoutPath` on an expression tracks the single row-grain that scalar logic is currently
-//   operating at. If two scalar subexpressions come from incomparable `join many` branches,
-//   that is a conflict.
-// - `fanoutSensitivePaths` tracks the grains of aggregate expressions that are sensitive to
-//   row duplication. If one query/measure accumulates more than one such path, we diagnose it
-//   and ask the user to aggregate each grain explicitly in a subquery/CTE first.
+// Fanout analysis models expression grain in terms of `join many` paths from the base table.
+// For example, `[]` is the base grain, `['orders']` is one row per order, and
+// `['orders', 'order_items']` is one row per order item.
 export type FanoutPath = string[]
+
+// Fanout metadata carried on an analyzed expression.
+export interface ExprFanout {
+  path?: FanoutPath // the single row-grain this scalar expression depends on.
+  sensitivePaths?: FanoutPath[] // aggregate grains in this expression that are sensitive to row duplication.
+  conflict?: boolean // true when scalar subexpressions mix incompatible `join many` branches.
+}
 
 export function extendFanoutPath(path: FanoutPath | undefined, segment?: string | null): FanoutPath {
   if (!segment) return [...(path || [])]
   return [...(path || []), segment]
+}
+
+// Normalize empty fanout objects away so "missing" continues to mean "no fanout metadata".
+export function normalizeExprFanout(exprFanout: ExprFanout): ExprFanout | undefined {
+  if (exprFanout.sensitivePaths?.length == 0) delete exprFanout.sensitivePaths
+  if (!exprFanout.conflict) delete exprFanout.conflict
+  if (exprFanout.path == null && !exprFanout.sensitivePaths && !exprFanout.conflict) return
+  return exprFanout
 }
 
 export function isBaseFanoutPath(path: FanoutPath | undefined): boolean {
@@ -97,7 +100,7 @@ export function isChasmTrap(paths: FanoutPath[]): boolean {
   return true
 }
 
-export function multiGrainMessage(subject: string, paths: FanoutPath[]): string {
+export function multiGrainMessage(paths: FanoutPath[]): string {
   if (isChasmTrap(paths)) return `Join graph creates a chasm trap (${formatGrains(paths)}). Aggregate each path in a subquery/CTE first`
   return `One or more aggregate expressions fanned out by join graph (${formatGrains(paths)}). Aggregate each grain in a subquery/CTE first`
 }

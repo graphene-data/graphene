@@ -6,7 +6,7 @@ import {diag, checkTypes} from './analyze.ts'
 import {bigQueryFunctions} from './bigQueryFunctions.ts'
 import {config} from './config.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
-import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts} from './fanout.ts'
+import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {type Expr, type FieldType, type Scope} from './types.ts'
 import {txt} from './util.ts'
@@ -144,9 +144,9 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
 
   let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
   let canWindow = overload.returnType.expressionType == 'aggregate' || overload.returnType.expressionType == 'window'
-  let fanout = mergeFanoutPaths(args.map(a => a.fanoutPath))
-  let fanoutConflict = fanout.conflict || args.some(a => a.fanoutConflict)
-  let fanoutSensitivePaths = mergeSensitiveFanouts(...args.map(a => a.fanoutSensitivePaths))
+  let fanout = mergeFanoutPaths(args.map(a => a.fanout?.path))
+  let fanoutConflict = fanout.conflict || args.some(a => a.fanout?.conflict)
+  let fanoutSensitivePaths = mergeSensitiveFanouts(...args.map(a => a.fanout?.sensitivePaths))
   let fanoutSafeAgg = overload.returnType.expressionType == 'aggregate' && overload.fanoutSafe
   if (overload.returnType.expressionType == 'aggregate' && !fanoutSafeAgg) {
     fanoutSensitivePaths = mergeSensitiveFanouts(fanoutSensitivePaths, [fanout.path || extendFanoutPath(scope.fanoutPath)])
@@ -158,9 +158,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
     type: returnType,
     isAgg,
     canWindow,
-    fanoutPath: isAgg ? undefined : fanout.path,
-    fanoutSensitivePaths,
-    fanoutConflict,
+    fanout: normalizeExprFanout({path: isAgg ? undefined : fanout.path, sensitivePaths: fanoutSensitivePaths, conflict: fanoutConflict}),
   }
 }
 
@@ -194,7 +192,9 @@ function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope
     type: 'number',
     isAgg: true,
     canWindow: true,
-    fanoutSensitivePaths: [args[0]?.fanoutPath || extendFanoutPath(opts.isWindow ? undefined : scope.fanoutPath)],
-    fanoutConflict: args.some(a => a.fanoutConflict),
+    fanout: normalizeExprFanout({
+      sensitivePaths: [args[0]?.fanout?.path || extendFanoutPath(opts.isWindow ? undefined : scope.fanoutPath)],
+      conflict: args.some(a => a.fanout?.conflict),
+    }),
   }
 }

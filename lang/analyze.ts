@@ -3,6 +3,7 @@ import {NodeWeakMap, type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 import {config} from './config.ts'
 import {
   aggregateFanoutMessage,
+  normalizeExprFanout,
   extendFanoutPath,
   fanoutMessage,
   fanoutPathKey,
@@ -163,12 +164,10 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         sql: expr.sql,
         type: expr.type,
         metadata: col.metadata,
-        fanoutPath: expr.fanoutPath,
-        fanoutSensitivePaths: expr.fanoutSensitivePaths,
-        fanoutConflict: expr.fanoutConflict,
+        fanout: expr.fanout,
       })
     } else {
-      query.fields.push({name: outName, sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata, fanoutPath: scope.fanoutPath})
+      query.fields.push({name: outName, sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata, fanout: normalizeExprFanout({path: scope.fanoutPath})})
     }
   }
 }
@@ -264,9 +263,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
         sql: expr.sql,
         type: expr.type,
         isAgg: expr.isAgg,
-        fanoutPath: expr.fanoutPath,
-        fanoutSensitivePaths: expr.fanoutSensitivePaths,
-        fanoutConflict: expr.fanoutConflict,
+        fanout: expr.fanout,
       })
       fanoutExprs.push({node: s.getChild('Expression')!, expr})
     }
@@ -304,7 +301,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
       // If it's not in there, add it to the select.
       if (!query.fields.find(f => f.name == name)) {
-        query.fields.unshift({name, sql: expr.sql, type: expr.type, fanoutPath: expr.fanoutPath, fanoutSensitivePaths: expr.fanoutSensitivePaths, fanoutConflict: expr.fanoutConflict})
+        query.fields.unshift({name, sql: expr.sql, type: expr.type, fanout: expr.fanout})
       }
       fanoutExprs.push({node: g.getChild('Expression')!, expr})
     }
@@ -444,9 +441,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
             sql: outField.isAgg ? fieldName : outField.sql,
             type: outField.type,
             isAgg: outField.isAgg,
-            fanoutPath: outField.fanoutPath,
-            fanoutSensitivePaths: outField.fanoutSensitivePaths,
-            fanoutConflict: outField.fanoutConflict,
+            fanout: outField.fanout,
           }
         }
       }
@@ -480,7 +475,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field: col, table})
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanoutPath: matches[0].fanoutPath}
+      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
 
       // Computed column: analyze its expression in the matched table's scope
       if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
@@ -491,9 +486,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         sql: `(${expr.sql})`,
         type: expr.type,
         isAgg: expr.isAgg,
-        fanoutPath: expr.fanoutPath,
-        fanoutSensitivePaths: expr.fanoutSensitivePaths,
-        fanoutConflict: expr.fanoutConflict,
+        fanout: expr.fanout,
       }
     }
 
@@ -528,8 +521,10 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
           type: 'number',
           isAgg: true,
           canWindow: true,
-          fanoutSensitivePaths: mergeSensitiveFanouts(e.fanoutSensitivePaths),
-          fanoutConflict: e.fanoutConflict,
+          fanout: normalizeExprFanout({
+            sensitivePaths: mergeSensitiveFanouts(e.fanout?.sensitivePaths),
+            conflict: e.fanout?.conflict,
+          }),
         }
       }
       return {
@@ -537,7 +532,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         type: 'number',
         isAgg: true,
         canWindow: true,
-        fanoutSensitivePaths: [extendFanoutPath(scope.fanoutPath)],
+        fanout: normalizeExprFanout({sensitivePaths: [extendFanoutPath(scope.fanoutPath)]}),
       }
     }
 
@@ -955,56 +950,58 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
 }
 
 function mergeExprAnalysis(exprs: Expr[], sql: string, type: FieldType, isAgg?: boolean): Expr {
-  let rowFanout = mergeFanoutPaths(exprs.map(expr => expr.fanoutPath))
+  let rowFanout = mergeFanoutPaths(exprs.map(expr => expr.fanout?.path))
   return {
     sql,
     type,
     isAgg,
-    fanoutPath: isAgg ? undefined : rowFanout.path,
-    fanoutSensitivePaths: mergeSensitiveFanouts(...exprs.map(expr => expr.fanoutSensitivePaths)),
-    fanoutConflict: rowFanout.conflict || exprs.some(expr => expr.fanoutConflict),
+    fanout: normalizeExprFanout({
+      path: isAgg ? undefined : rowFanout.path,
+      sensitivePaths: mergeSensitiveFanouts(...exprs.map(expr => expr.fanout?.sensitivePaths)),
+      conflict: rowFanout.conflict || exprs.some(expr => expr.fanout?.conflict),
+    }),
   }
 }
 
 function analyzeComputedFieldExpr(node: SyntaxNode, expr: Expr) {
-  if (expr.fanoutConflict) diag(node, 'Join graph creates a chasm trap')
-  if (!expr.isAgg && !isBaseFanoutPath(expr.fanoutPath)) diag(node, fanoutMessage(expr.fanoutPath, 'aggregate it first'))
-  let paths = uniqueFanoutPaths(expr.fanoutSensitivePaths || [])
+  if (expr.fanout?.conflict) diag(node, 'Join graph creates a chasm trap')
+  if (!expr.isAgg && !isBaseFanoutPath(expr.fanout?.path)) diag(node, fanoutMessage(expr.fanout?.path, 'aggregate it first'))
+  let paths = uniqueFanoutPaths(expr.fanout?.sensitivePaths || [])
   if (paths.length > 1) {
-    diag(node, multiGrainMessage('Measure', paths))
+    diag(node, multiGrainMessage(paths))
   }
 }
 
 function analyzeAggregateQueryExpr(node: SyntaxNode, expr: Expr) {
-  if (expr.fanoutConflict) diag(node, 'Join graph creates a chasm trap')
+  if (expr.fanout?.conflict) diag(node, 'Join graph creates a chasm trap')
 }
 
 function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   let aggExprs = exprs.filter(entry => entry.expr.isAgg)
-  let paths = uniqueFanoutPaths(aggExprs.flatMap(entry => entry.expr.fanoutSensitivePaths || []))
+  let paths = uniqueFanoutPaths(aggExprs.flatMap(entry => entry.expr.fanout?.sensitivePaths || []))
   if (paths.length == 0) return
   let pathKeys = new Set(paths.map(path => fanoutPathKey(path)))
   for (let entry of exprs) {
-    if (entry.expr.isAgg || isBaseFanoutPath(entry.expr.fanoutPath)) continue
-    let exprPathKey = fanoutPathKey(entry.expr.fanoutPath)
+    if (entry.expr.isAgg || isBaseFanoutPath(entry.expr.fanout?.path)) continue
+    let exprPathKey = fanoutPathKey(entry.expr.fanout?.path)
     if (pathKeys.size == 1 && pathKeys.has(exprPathKey)) continue
     if (paths.length == 1 && isBaseFanoutPath(paths[0])) {
       for (let aggEntry of aggExprs) {
-        let entryPaths = uniqueFanoutPaths(aggEntry.expr.fanoutSensitivePaths || [])
+        let entryPaths = uniqueFanoutPaths(aggEntry.expr.fanout?.sensitivePaths || [])
         if (!entryPaths.some(path => isBaseFanoutPath(path))) continue
-        diag(aggEntry.node, aggregateFanoutMessage(txt(aggEntry.node), entry.expr.fanoutPath))
+        diag(aggEntry.node, aggregateFanoutMessage(txt(aggEntry.node), entry.expr.fanout?.path))
       }
       continue
     }
-    let targetPath = paths.length == 1 && isPrefix(entry.expr.fanoutPath!, paths[0]) ? paths[0] : entry.expr.fanoutPath
+    let targetPath = paths.length == 1 && isPrefix(entry.expr.fanout!.path!, paths[0]) ? paths[0] : entry.expr.fanout?.path
     diag(entry.node, fanoutMessage(targetPath, 'aggregate queries cannot group by it directly'))
   }
   if (paths.length <= 1) return
   let joinedPaths = paths.filter(path => !isBaseFanoutPath(path))
   if (joinedPaths.length > 1 && isChasmTrap(joinedPaths)) {
-    let message = multiGrainMessage('Aggregate query', joinedPaths)
+    let message = multiGrainMessage(joinedPaths)
     for (let entry of aggExprs) {
-      let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+      let entryPaths = uniqueFanoutPaths(entry.expr.fanout?.sensitivePaths || [])
       if (entryPaths.length == 0) continue
       diag(entry.node, message)
     }
@@ -1012,7 +1009,7 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
   }
   if (paths.length == 2 && joinedPaths.length == 1) {
     for (let entry of aggExprs) {
-      let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+      let entryPaths = uniqueFanoutPaths(entry.expr.fanout?.sensitivePaths || [])
       if (!entryPaths.some(path => isBaseFanoutPath(path))) continue
       diag(entry.node, aggregateFanoutMessage(txt(entry.node), joinedPaths[0]))
     }
@@ -1033,16 +1030,16 @@ function analyzeAggregateQueryFanout(exprs: {node: SyntaxNode; expr: Expr}[]) {
       let ancestorKey = fanoutPathKey(ancestor)
       let descendantKey = fanoutPathKey(descendant)
       for (let entry of aggExprs) {
-        let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+        let entryPaths = uniqueFanoutPaths(entry.expr.fanout?.sensitivePaths || [])
         if (!entryPaths.some(path => fanoutPathKey(path) == ancestorKey) || entryPaths.some(path => fanoutPathKey(path) == descendantKey)) continue
         diag(entry.node, aggregateFanoutMessage(txt(entry.node), descendant))
       }
       return
     }
   }
-  let message = multiGrainMessage('Aggregate query', paths)
+  let message = multiGrainMessage(paths)
   for (let entry of aggExprs) {
-    let entryPaths = uniqueFanoutPaths(entry.expr.fanoutSensitivePaths || [])
+    let entryPaths = uniqueFanoutPaths(entry.expr.fanout?.sensitivePaths || [])
     if (entryPaths.length == 0) continue
     diag(entry.node, message)
   }
