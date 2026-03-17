@@ -1,6 +1,6 @@
 import type {FieldType} from './types.ts'
 
-type TimestampUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year'
+export type TimestampUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year'
 
 export type TemporalLiteral = {
   literal: string

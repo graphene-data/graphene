@@ -1,5 +1,7 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
 
+import type {TimestampUnit} from './temporalLiterals.ts'
+
 declare module '@lezer/common' {
   interface Tree {
     fileInfo: FileInfo
@@ -14,6 +16,13 @@ export interface Expr {
   type: FieldType // result type for validation
   isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
+  interval?: {
+    quantitySql: string
+    unit: TimestampUnit
+    kind: 'simple' | 'scaled'
+    canScale: boolean
+    isConstant: boolean
+  }
 }
 
 // A field in a query's SELECT clause

@@ -143,6 +143,7 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
       if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {table, alias}).isAgg
       if (col.isAgg) continue
       let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables})
+      if (expr.type == 'interval' && expr.interval?.kind == 'scaled') diag(col.exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
       query.fields.push({name: outName, sql: expr.sql, type: expr.type, metadata: col.metadata})
     } else {
       query.fields.push({name: outName, sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata})
@@ -231,6 +232,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
       expandColumns(targetScope.table, targetScope.alias, query, targetScope)
     } else {
       let expr = analyzeExpr(s.getChild('Expression')!, scope)
+      if (expr.type == 'interval' && expr.interval?.kind == 'scaled') diag(s.getChild('Expression')!, 'Multiplied intervals are only supported inside date/time arithmetic')
       let name = s.getChild('Alias') ? txt(s.getChild('Alias')) : inferName(s.getChild('Expression')!, scope)
       query.fields.push({name, sql: expr.sql, type: expr.type, isAgg: expr.isAgg})
     }
@@ -458,7 +460,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
 
     case 'Parenthetical': {
       let inner = analyzeExpr(node.getChild('Expression')!, scope)
-      return {sql: `(${inner.sql})`, type: inner.type, isAgg: inner.isAgg}
+      return {sql: `(${inner.sql})`, type: inner.type, isAgg: inner.isAgg, interval: inner.interval}
     }
 
     case 'Count': {
@@ -496,6 +498,10 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       }
 
       // Type checking for operators
+      if (op == '*') {
+        let multiplied = analyzeIntervalMultiplication(left, right, node)
+        if (multiplied) return multiplied
+      }
       if (op == '*' || op == '/' || op == '%') {
         checkTypes(left, ['number'], node.firstChild!)
         checkTypes(right, ['number'], node.lastChild!)
@@ -533,8 +539,8 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let op = txt(node.firstChild).toLowerCase()
       let child = analyzeExpr(node.lastChild!, scope)
       if (op == 'not') return {sql: `NOT (${child.sql})`, type: 'boolean', isAgg: child.isAgg}
-      if (op == '-') return {sql: `-(${child.sql})`, type: child.type, isAgg: child.isAgg}
-      if (op == '+') return {sql: `(${child.sql})`, type: child.type, isAgg: child.isAgg}
+      if (op == '-') return {sql: `-(${child.sql})`, type: child.type, isAgg: child.isAgg, interval: child.interval}
+      if (op == '+') return {sql: `(${child.sql})`, type: child.type, isAgg: child.isAgg, interval: child.interval}
       return diag(node, `Unknown unary operator: ${op}`, {sql: 'NULL', type: 'error'})
     }
 
@@ -649,7 +655,11 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       if (stringNode) {
         let parsed = parseIntervalLiteral(txt(stringNode).slice(1, -1))
         if (!parsed) return diag(stringNode, 'Could not parse interval', {sql: 'NULL', type: 'error'})
-        return {sql: `INTERVAL ${parsed.quantity} ${parsed.unit}`, type: 'interval'}
+        return {
+          sql: `interval ${parsed.quantity} ${parsed.unit}`,
+          type: 'interval',
+          interval: {quantitySql: String(parsed.quantity), unit: parsed.unit, kind: 'simple', canScale: true, isConstant: true},
+        }
       }
       let quantityNode = node.getChild('Number') || node.getChild('Ref')
       if (!quantityNode) return diag(node, 'Interval requires a quantity before the unit', {sql: 'NULL', type: 'error'})
@@ -657,7 +667,12 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       checkTypes(quantity, ['number'], quantityNode)
       let unit = parseIntervalUnit(txt(node.getChild('IntervalUnit')!).toLowerCase())
       if (!unit) return diag(node, 'Invalid interval unit', {sql: 'NULL', type: 'error'})
-      return {sql: `INTERVAL ${quantity.sql} ${unit}`, type: 'interval', isAgg: quantity.isAgg}
+      return {
+        sql: `interval ${quantity.sql} ${unit}`,
+        type: 'interval',
+        isAgg: quantity.isAgg,
+        interval: {quantitySql: quantity.sql, unit, kind: 'simple', canScale: quantityNode.name == 'Number', isConstant: quantityNode.name == 'Number'},
+      }
     }
 
     case 'DateExpression':
@@ -690,16 +705,53 @@ function analyzeDateArithmetic(op: '+' | '-', left: Expr, right: Expr, node: Syn
 
   // date +/- interval
   if ((left.type == 'date' || left.type == 'timestamp') && right.type == 'interval') {
-    return {sql: `${left.sql} ${op} ${right.sql}`, type: left.type}
+    if (!right.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
+    return {sql: renderTemporalArithmetic(left.sql, left.type, op, right.interval.quantitySql, right.interval.unit, right.interval), type: left.type, isAgg: left.isAgg || right.isAgg}
   }
 
   // interval + date (normalize to date + interval)
   if (left.type == 'interval' && (right.type == 'date' || right.type == 'timestamp')) {
     if (op == '-') return diag(node, 'Cannot subtract date from interval', {sql: 'NULL', type: 'error'})
-    return {sql: `${right.sql} + ${left.sql}`, type: right.type}
+    if (!left.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
+    return {sql: renderTemporalArithmetic(right.sql, right.type, '+', left.interval.quantitySql, left.interval.unit, left.interval), type: right.type, isAgg: left.isAgg || right.isAgg}
   }
 
   return diag(node, 'Invalid date arithmetic', {sql: 'NULL', type: 'error'})
+}
+
+function analyzeIntervalMultiplication(left: Expr, right: Expr, node: SyntaxNode): Expr | null {
+  if (left.type == 'number' && right.type == 'interval') return scaleInterval(left, right, node.lastChild!)
+  if (left.type == 'interval' && right.type == 'number') return scaleInterval(right, left, node.firstChild!)
+  return null
+}
+
+function scaleInterval(multiplier: Expr, intervalExpr: Expr, node: SyntaxNode): Expr {
+  if (!intervalExpr.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
+  if (!intervalExpr.interval.canScale) return diag(node, 'Only literal intervals can be multiplied', {sql: 'NULL', type: 'error'})
+  let quantitySql = intervalExpr.interval.quantitySql == '1' ? multiplier.sql : `${multiplier.sql}*${intervalExpr.interval.quantitySql}`
+  return {
+    sql: renderStandaloneInterval(quantitySql, intervalExpr.interval.unit),
+    type: 'interval',
+    isAgg: multiplier.isAgg || intervalExpr.isAgg,
+    interval: {quantitySql, unit: intervalExpr.interval.unit, kind: 'scaled', canScale: false, isConstant: intervalExpr.interval.isConstant && quantitySql == intervalExpr.interval.quantitySql},
+  }
+}
+
+function renderTemporalArithmetic(leftSql: string, leftType: 'date' | 'timestamp', op: '+' | '-', quantitySql: string, unit: string, intervalExpr?: Expr['interval']) {
+  if (config.dialect == 'snowflake') {
+    let signedQuantity = op == '+' ? quantitySql : `-(${quantitySql})`
+    let fnName = leftType == 'date' ? 'DATEADD' : 'TIMESTAMPADD'
+    return `${fnName}(${unit}, ${signedQuantity}, ${leftSql})`
+  }
+  return `${leftSql} ${op} ${renderStandaloneInterval(quantitySql, unit, intervalExpr)}`
+}
+
+function renderStandaloneInterval(quantitySql: string, unit: string, intervalExpr?: Expr['interval']) {
+  if (config.dialect == 'duckdb') {
+    if (intervalExpr?.kind == 'simple' && intervalExpr.isConstant) return `interval ${quantitySql} ${unit}`
+    return `(${quantitySql} * (interval 1 ${unit}))`
+  }
+  return `interval ${quantitySql} ${unit}`
 }
 
 function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: SyntaxNode): Expr {
