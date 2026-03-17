@@ -136,6 +136,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     args: [{name: 'expr', type: 'T'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'array_agg',
@@ -259,6 +260,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     args: [{name: 'expr', type: 'T'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'max_by',
@@ -298,6 +300,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     args: [{name: 'expr', type: 'T'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'min_by',
@@ -461,6 +464,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     args: [{name: 'expr', type: 'boolean'}],
     returns: 'boolean',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'boolor_agg',
@@ -473,6 +477,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     args: [{name: 'expr', type: 'boolean'}],
     returns: 'boolean',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'boolxor_agg',

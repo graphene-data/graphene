@@ -27,6 +27,7 @@ export interface FunctionDef {
   args: ArgDef[]
   returns: string // Can be SQLType, 'T' for generic, etc.
   aggregate?: boolean
+  fanoutSafe?: boolean
   window?: boolean
   // For functions where the SQL name differs from the gsql name (e.g., local_timestamp -> LOCALTIMESTAMP)
   sqlName?: string

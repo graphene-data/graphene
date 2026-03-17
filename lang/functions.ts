@@ -6,6 +6,7 @@ import {diag, checkTypes} from './analyze.ts'
 import {bigQueryFunctions} from './bigQueryFunctions.ts'
 import {config} from './config.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
+import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {type Expr, type FieldType, type Scope} from './types.ts'
 import {txt} from './util.ts'
@@ -14,6 +15,7 @@ import {txt} from './util.ts'
 interface Overload {
   params: {name: string; allowedTypes: {type: FieldType | 'sql native'; rawType?: string}[]; isVariadic?: boolean}[]
   returnType: {type: FieldType | 'generic'; expressionType?: 'aggregate' | 'scalar' | 'window'}
+  fanoutSafe?: boolean
   sqlName?: string
 }
 
@@ -57,6 +59,7 @@ function convertDef(def: FunctionDef): Overload[] {
       return {name, allowedTypes: parseArgTypes(a), isVariadic: type.endsWith('...')}
     }),
     returnType: {type: returnType, expressionType},
+    fanoutSafe: def.fanoutSafe,
     sqlName: def.sqlName,
   }))
 }
@@ -101,7 +104,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   if (percentileMatch) {
     let args = argNodes.map(n => analyzeExpr(n, scope))
     if (args[0]) checkTypes(args[0], ['number'], argNodes[0])
-    return analyzePercentile(node, args, percentileMatch[1], opts)
+    return analyzePercentile(node, args, percentileMatch[1], scope, opts)
   }
 
   // Find matching overload
@@ -141,12 +144,25 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
 
   let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
   let canWindow = overload.returnType.expressionType == 'aggregate' || overload.returnType.expressionType == 'window'
+  let fanout = mergeFanoutPaths(args.map(a => a.fanout?.path))
+  let fanoutConflict = fanout.conflict || args.some(a => a.fanout?.conflict)
+  let fanoutSensitivePaths = mergeSensitiveFanouts(...args.map(a => a.fanout?.sensitivePaths))
+  let fanoutSafeAgg = overload.returnType.expressionType == 'aggregate' && overload.fanoutSafe
+  if (overload.returnType.expressionType == 'aggregate' && !fanoutSafeAgg) {
+    fanoutSensitivePaths = mergeSensitiveFanouts(fanoutSensitivePaths, [fanout.path || extendFanoutPath(scope.fanoutPath)])
+  }
   let fnName = overload.sqlName || name
   let sql = `${fnName}(${args.map(a => a.sql).join(',')})`
-  return {sql, type: returnType, isAgg, canWindow}
+  return {
+    sql,
+    type: returnType,
+    isAgg,
+    canWindow,
+    fanout: normalizeExprFanout({path: isAgg ? undefined : fanout.path, sensitivePaths: fanoutSensitivePaths, conflict: fanoutConflict}),
+  }
 }
 
-function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, opts: {isWindow?: boolean} = {}): Expr {
+function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
   let frac = Number(`0.${digits}`)
   if (Number(digits) == 100) return diag(node, 'p100 is not allowed', {sql: 'NULL', type: 'error'})
   if (Number(digits) == 0) return diag(node, 'p0 is not allowed', {sql: 'NULL', type: 'error'})
@@ -171,5 +187,14 @@ function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, opts:
     default:
       return diag(node, `Percentile not supported for ${config.dialect}`, {sql: 'NULL', type: 'error'})
   }
-  return {sql, type: 'number', isAgg: true, canWindow: true}
+  return {
+    sql,
+    type: 'number',
+    isAgg: true,
+    canWindow: true,
+    fanout: normalizeExprFanout({
+      sensitivePaths: [args[0]?.fanout?.path || extendFanoutPath(opts.isWindow ? undefined : scope.fanoutPath)],
+      conflict: args.some(a => a.fanout?.conflict),
+    }),
+  }
 }

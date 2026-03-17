@@ -134,6 +134,7 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'arg', type: 'T'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'arg_max',
@@ -224,6 +225,7 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'arg', type: 'boolean'}],
     returns: 'boolean',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'bool_or',
@@ -236,6 +238,7 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'arg', type: 'boolean'}],
     returns: 'boolean',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'count',
@@ -296,6 +299,7 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'arg', type: 'T'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'min',
@@ -308,6 +312,7 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'arg', type: 'T'}],
     returns: 'T',
     aggregate: true,
+    fanoutSafe: true,
   },
   {
     name: 'product',
