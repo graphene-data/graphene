@@ -1,4 +1,4 @@
-import type {FieldType} from './types.ts'
+import {type FieldType, type Expr} from './types.ts'
 
 export type TimestampUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year'
 
@@ -131,4 +131,21 @@ function isValidDate(year: number, month: number, day: number) {
 
 function pad(value: number) {
   return value.toString().padStart(2, '0')
+}
+
+export function renderTemporalArithmetic(dialect: string, leftSql: string, leftType: 'date' | 'timestamp', op: '+' | '-', intervalExpr: NonNullable<Expr['interval']>) {
+  if (dialect == 'snowflake') {
+    let signedQuantity = op == '+' ? intervalExpr.quantitySql : `-(${intervalExpr.quantitySql})`
+    let fnName = leftType == 'date' ? 'DATEADD' : 'TIMESTAMPADD'
+    return `${fnName}(${intervalExpr.unit}, ${signedQuantity}, ${leftSql})`
+  }
+  return `${leftSql} ${op} ${renderStandaloneInterval(dialect, intervalExpr)}`
+}
+
+export function renderStandaloneInterval(dialect: string, intervalExpr: NonNullable<Expr['interval']>) {
+  if (dialect == 'duckdb') {
+    if (intervalExpr.form == 'constant') return `interval ${intervalExpr.quantitySql} ${intervalExpr.unit}`
+    return `(${intervalExpr.quantitySql} * (interval 1 ${intervalExpr.unit}))`
+  }
+  return `interval ${intervalExpr.quantitySql} ${intervalExpr.unit}`
 }
