@@ -30,7 +30,10 @@ export async function renderMd(markdown: string, repoId: string, baseUrlOverride
   let token = generateAgentToken(repo.orgId)
   let baseUrl = baseUrlOverride || `https://${org.slug}.${DOMAIN}`
   let md = Buffer.from(markdown).toString('base64')
-  let url = `${baseUrl}/_api/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(repoId)}`
+  let url = `${baseUrl}/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(repoId)}`
+
+  // Log the render URL so we can debug screenshot failures in staging logs.
+  console.log('[renderMd] invoking screenshot lambda', {repoId, mdId, url})
 
   let response = await lambda.send(new InvokeCommand({
     FunctionName: 'graphene-screenshot',

@@ -4,19 +4,26 @@
   import PageView from './routes/PageView.svelte'
   import Settings from './routes/Settings.svelte'
   import ChatPreview from './routes/ChatPreview.svelte'
+  import DynamicView from './routes/DynamicView.svelte'
   import {route, go} from './router.ts'
 
   $effect(() => {
-    if (!$session) {
-      let next = encodeURIComponent(`${window.location.pathname || '/'}${window.location.search || ''}`)
-      next = next != '%2F' ? `?next=${next}` : ''
-      if ($route !== '/login') go(`/login${next}`)
-    }
+    let isLoginRoute = $route === '/login'
+    let isDynamicRoute = $route === '/dynamic'
+    let hasAgentToken = document.cookie.includes('graphene_agent_token=')
+
+    if ($session || isLoginRoute) return
+    if (isDynamicRoute && hasAgentToken) return
+
+    let next = encodeURIComponent(`${window.location.pathname || '/'}${window.location.search || ''}`)
+    next = next != '%2F' ? `?next=${next}` : ''
+    go(`/login${next}`)
   })
 </script>
 
 {#if $route === '/login'}<main><Login /></main>
 {:else if $route === '/authenticate'}<main><Login mode="authenticate" /></main>
+{:else if $route === '/dynamic'}<DynamicView />
 {:else if $route.startsWith('/settings')}<Settings />
 {:else if $route.startsWith('/chats')}<ChatPreview chatId={$route.split('/')[2] || 'latest'} />
 {:else}<PageView slug={$route} />

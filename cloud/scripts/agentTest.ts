@@ -73,7 +73,7 @@ async function runRenderMd() {
   let baseUrl = await getDevTunnelUrl()
   let token = generateAgentToken(devOrgId)
   let md = Buffer.from(markdown).toString('base64')
-  let url = `${baseUrl}/_api/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(devRepoId)}`
+  let url = `${baseUrl}/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(devRepoId)}`
 
   let lambda = new LambdaClient({region: process.env.AWS_REGION || 'us-east-1'})
   let response = await lambda.send(new InvokeCommand({
@@ -103,7 +103,7 @@ async function runRenderMd() {
 
 function runDynamic() {
   let md = Buffer.from(markdown).toString('base64')
-  let url = `${localBaseUrl}/_api/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(devRepoId)}`
+  let url = `${localBaseUrl}/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(devRepoId)}`
   openUrl(url)
   console.log(url)
 }

@@ -35,7 +35,7 @@ from flights select carrier, avg(dep_delay) as avg_delay order by avg_delay desc
 <BarChart data=delays x=carrier y=avg_delay />
 `
     let md = Buffer.from(markdown).toString('base64')
-    let url = `${cloud.url}/_api/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(repoId)}`
+    let url = `${cloud.url}/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(repoId)}`
 
     await page.goto(url)
 

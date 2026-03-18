@@ -46,7 +46,6 @@ export async function renderPage(req: FastifyRequest, reply: FastifyReply) {
     return reply.code(404).send({error: 'Repo not found'})
   }
 
-
   let path = segments.slice(1).join('/') || 'index'
   let page = await db.select().from(files).where(
     and(
@@ -61,7 +60,7 @@ export async function renderPage(req: FastifyRequest, reply: FastifyReply) {
   reply.type('text/javascript').send(code)
 }
 
-async function compileMd(markdown:string, filename:string, repoId:string, inline?:boolean): Promise<string> {
+async function compileMd(markdown: string, filename: string, repoId: string): Promise<string> {
   let svelteSource = await mdsvexCompile(markdown, {
     filename,
     extensions: ['.md'],
@@ -71,15 +70,13 @@ async function compileMd(markdown:string, filename:string, repoId:string, inline
   if (!svelteSource) throw new Error('Failed to compile')
 
   let compiled = svelteCompile(svelteSource.code, {generate: 'client', dev: !PROD})
-  let componentCode = rewriteSvelteImports(compiled.js.code, repoId, inline)
+  let componentCode = rewriteSvelteImports(compiled.js.code, repoId)
   return componentCode
 }
 
-// The generated Svelte component is going to import a bunch of Svelte internals and visualization components.
-// Because we're doing this at runtime and we don't have a bundler, we need to figure out a way to make these imports work.
-// For now just do the simple thing and rewrite them to import from a global that we set in main.ts
-function rewriteSvelteImports(code: string, repoId: string, inline = false) {
-  // Svelte 5 uses 'svelte/internal/client' with namespace import
+// The generated Svelte component imports Svelte internals and visualization components.
+// Because we're compiling at runtime without a bundler, rewrite those imports to the frontend runtime globals.
+function rewriteSvelteImports(code: string, repoId: string) {
   let runtimeImportPattern = /import\s*\*\s*as\s*(\$)\s*from\s*["']svelte\/internal\/client["'];?\s*/m
   let runtimeMatch = code.match(runtimeImportPattern)
   if (!runtimeMatch) throw new Error('Couldnt find expected imports in generated svelte')
@@ -94,59 +91,17 @@ function rewriteSvelteImports(code: string, repoId: string, inline = false) {
 
   code = code.replace(runtimeImportPattern, `${prelude}`)
 
-  // Remove version disclosure imports (Svelte 5)
   code = code.replace(/import\s+["']svelte\/internal\/disclose-version["'];?\s*/m, '')
-  // Remove legacy flags import (Svelte 5)
   code = code.replace(/import\s+["']svelte\/internal\/flags\/legacy["'];?\s*/m, '')
-  // Remove filename metadata lines (pattern like: ComponentName[$.FILENAME] = 'filename';)
-  // This line tries to set a property on the component before it's defined
   code = code.replace(/\w+\[\$\.FILENAME\]\s*=\s*['"][^'"]*['"];?\s*/gm, '')
-
-  if (inline) {
-    // For inline use: Convert 'export default function ComponentName' to 'const Component = function ComponentName'
-    // This allows the component to be used inline without ES module exports
-    code = code.replace(/export\s+default\s+function\s+(\w+)/m, 'const Component = function $1')
-  }
-  // Keep 'export default' for dynamic import via blob URL (non-inline case)
-
-  // Handle the case where add_locations references the FILENAME
-  // Replace ComponentName[$.FILENAME] with a simple string in add_locations calls
   code = code.replace(/(\w+)\[\$\.FILENAME\]/g, '"dynamic.md"')
 
   return code
 }
 
-export async function renderDynamic(req: FastifyRequest, reply: FastifyReply) {
+export async function renderDynamicModule(req: FastifyRequest, reply: FastifyReply) {
   let query = req.query as {md?: string; repoId?: string}
   let markdown = Buffer.from(query.md || '', 'base64').toString('utf-8')
-  let code = await compileMd(markdown, 'dynamic.md', query.repoId || '', true)
-
-  // Return HTML page that loads the frontend and mounts the component
-  let html = `<!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Graphene Dynamic</title>
-    </head>
-    <body>
-      <main id="content" class="run-md-screenshot"></main>
-      <script type="module">
-        await import('/main.ts')
-        let target = document.getElementById('content')
-        ${code}
-        window.$GRAPHENE.mount(Component, {target})
-      </script>
-    </body>
-    </html>
-  `
-
-  reply.type('text/html').send(html)
-}
-
-export async function renderDynamicModule (req: FastifyRequest, reply: FastifyReply) {
-  let query = req.query as {md?: string; repoId?: string}
-  let markdown = Buffer.from(query.md || '', 'base64').toString('utf-8')
-  let code = await compileMd(markdown, 'dynamic.md', query.repoId || '', false)
+  let code = await compileMd(markdown, 'dynamic.md', query.repoId || '')
   reply.type('text/javascript').send(code)
 }
