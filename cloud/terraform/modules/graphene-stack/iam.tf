@@ -201,6 +201,55 @@ resource "aws_iam_role_policy" "ecs_execution_secrets" {
         Effect   = "Allow"
         Action   = ["kms:Encrypt", "kms:Decrypt"]
         Resource = aws_kms_key.secrets.arn
+      }
+    ]
+  })
+}
+
+# ECS Task Role - used by running containers for AWS API calls
+resource "aws_iam_role" "ecs_task" {
+  name = "ecs-task-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+# Keep task-role permissions in a single inline policy for easier auditing.
+resource "aws_iam_role_policy" "ecs_task" {
+  name = "ecs-task-policy"
+  role = aws_iam_role.ecs_task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "${aws_cloudwatch_log_group.ecs_exec.arn}:*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["kms:Encrypt", "kms:Decrypt", "kms:DescribeKey"]
+        Resource = aws_kms_key.secrets.arn
       },
       {
         Effect   = "Allow"

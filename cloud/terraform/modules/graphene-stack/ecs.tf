@@ -238,63 +238,6 @@ resource "aws_cloudwatch_log_group" "ecs_exec" {
   retention_in_days = 90
 }
 
-# ECS Task Role - used by running containers for AWS API calls
-resource "aws_iam_role" "ecs_task" {
-  name = "ecs-task-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "ecs-tasks.amazonaws.com" }
-      Action    = "sts:AssumeRole"
-    }]
-  })
-}
-
-resource "aws_iam_role_policy" "ecs_task_exec" {
-  name = "ecs-exec-ssm"
-  role = aws_iam_role.ecs_task.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ssmmessages:CreateControlChannel",
-          "ssmmessages:CreateDataChannel",
-          "ssmmessages:OpenControlChannel",
-          "ssmmessages:OpenDataChannel"
-        ]
-        Resource = "*"
-      },
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "${aws_cloudwatch_log_group.ecs_exec.arn}:*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy" "ecs_task_kms_secrets" {
-  name = "ecs-task-kms-secrets"
-  role = aws_iam_role.ecs_task.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Effect   = "Allow"
-      Action   = ["kms:Encrypt", "kms:Decrypt", "kms:DescribeKey"]
-      Resource = aws_kms_key.secrets.arn
-    }]
-  })
-}
-
 # =============================================================================
 # DB Ops Task - on-demand task for db-shell and migrations
 # =============================================================================
