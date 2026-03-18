@@ -433,17 +433,12 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let fieldNode = pathNodes.pop()!
       let fieldName = txt(fieldNode)
 
-      // Check output fields first (for referencing aliases in HAVING)
-      if (scope.query && pathNodes.length == 0) {
+      // Check output fields first when we're at the query root (e.g. HAVING/post-agg filters).
+      // Don't do this while resolving table expressions, or we can accidentally bind to sibling
+      // SELECT aliases instead of the table's computed columns.
+      if (scope.query && !scope.table && pathNodes.length == 0) {
         let outField = scope.query.fields.find(f => f.name == fieldName)
-        if (outField) {
-          return {
-            sql: outField.isAgg ? fieldName : outField.sql,
-            type: outField.type,
-            isAgg: outField.isAgg,
-            fanout: outField.fanout,
-          }
-        }
+        if (outField) return {sql: outField.sql, type: outField.type, isAgg: outField.isAgg, fanout: outField.fanout}
       }
 
       // Follow any dot path (e.g., `users.orders` in `users.orders.amount`), then find the field

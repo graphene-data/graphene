@@ -238,6 +238,21 @@ describe('lang', () => {
     await expect('from users select name, total_orders').toReturnRows(['Alice', 2], ['Bob', 1])
   })
 
+  it('ignores output fields when analyzing computed columns', () => {
+    updateFile(
+      `table sales (
+        amount int
+        cost int
+        revenue: sum(amount)
+        cogs: sum(cost)
+        gross_profit: revenue - cogs
+      )`,
+      'sales.gsql',
+    )
+
+    expect('from sales select revenue, gross_profit').toRenderSql('select (sum(sales.amount)) as revenue, ((sum(sales.amount))-(sum(sales.cost))) as gross_profit from sales as sales')
+  })
+
   it('handles expressions with aggregates', async () => {
     expect('from orders select user_id, avg_order_value').toRenderSql(
       'select orders.user_id as user_id, (sum(orders.amount)/count(1)) as avg_order_value from orders as orders group by 1 order by 2 desc nulls last',
