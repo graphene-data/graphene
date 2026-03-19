@@ -15,4 +15,5 @@ vscode/*.vsix
 vscode/LICENSE.md
 
 CLAUDE.md
+.claude
 .env
