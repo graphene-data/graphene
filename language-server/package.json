@@ -1,0 +1,13 @@
+{
+  "name": "graphene-language-server",
+  "displayName": "Graphene LSP Server",
+  "version": "0.0.15",
+  "type": "module",
+  "dependencies": {
+    "@volar/language-core": "^2.4.28",
+    "@volar/language-server": "^2.4.28",
+    "@volar/language-service": "^2.4.28",
+    "vscode-languageserver-protocol": "^3.17.5",
+    "vscode-uri": "^3.1.0"
+  }
+}

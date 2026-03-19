@@ -49,6 +49,10 @@ export function updateFile(contents: string, path: string) {
   return FILE_MAP[path]
 }
 
+export function deleteFile(path: string) {
+  delete FILE_MAP[path]
+}
+
 // Analyze all files in the workspace. If content is provided, it's added as a virtual 'input' file and its queries are returned.
 export function analyze(contents?: string, contentType?: 'gsql' | 'md'): Query[] {
   clearDiagnostics()

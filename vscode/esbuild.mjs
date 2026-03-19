@@ -28,7 +28,7 @@ await build({
 })
 
 await build({
-  entryPoints: [path.resolve(__dirname, 'src/languageServer.ts')],
+  entryPoints: [path.resolve(__dirname, '../language-server/src/index.ts')],
   outfile: path.resolve(__dirname, 'dist/server.js'),
   bundle: true,
   platform: 'node',
