@@ -1,8 +1,9 @@
 import {drizzle, type PostgresJsDatabase} from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
-import path from 'path'
 import fs from 'fs'
+import path from 'path'
+import postgres from 'postgres'
 import {fileURLToPath} from 'url'
+
 import * as schema from '../schema.ts'
 import {PROD, TEST} from './consts.ts'
 

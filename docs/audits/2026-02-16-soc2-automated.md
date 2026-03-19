@@ -111,16 +111,16 @@ Evidence was collected from repository artifacts only. Runtime settings, GitHub 
    - Vulnerability scan cadence conflict:
      - `docs/policy/Risk Assessment and Treatment Policy.md:73`
      - `docs/policy/Information Security Policy.md:92`
-    - Incident reporting channel mismatch:
-      - `docs/policy/Incident Response Policy.md:17`
-      - `docs/policy/Information Security Policy.md:127`
+   - Incident reporting channel mismatch:
+     - `docs/policy/Incident Response Policy.md:17`
+     - `docs/policy/Information Security Policy.md:127`
    - Why this is an issue: Contradictory policy instructions create execution ambiguity during incidents and access events, when consistency matters most. Auditors treat unresolved conflicts as a sign that controls may not operate reliably.
 
 2. Policy language is frequently non-mandatory ("should"/"may") in critical controls.
    - Evidence examples:
      - `docs/policy/Network Security Policy.md:13`
-      - `docs/policy/Business Continuity and Disaster Recovery.md:23`
-      - `docs/policy/Information Security Policy.md:46`
+     - `docs/policy/Business Continuity and Disaster Recovery.md:23`
+     - `docs/policy/Information Security Policy.md:46`
    - Why this is an issue: Non-mandatory wording weakens enforceability because teams can claim compliance while skipping implementation. For SOC2/HIPAA audits, mandatory controls must be clearly stated so testing criteria are objective.
 
 3. HIPAA breach/privacy policy details have implementation quality gaps.
@@ -128,8 +128,8 @@ Evidence was collected from repository artifacts only. Runtime settings, GitHub 
      - `docs/policy/Breach Notification Policy.md:46`
    - Substitute notice language appears incorrect/incomplete:
      - `docs/policy/Breach Notification Policy.md:42`
-    - Privacy Rule workflow detail is thin for individual rights operationalization:
-      - `docs/policy/HIPAA Internal Privacy Policy.md:29`
+   - Privacy Rule workflow detail is thin for individual rights operationalization:
+     - `docs/policy/HIPAA Internal Privacy Policy.md:29`
    - Why this is an issue: HIPAA requires precise operational handling for breach notice and privacy rights, not only high-level intent. Missing or incorrect details can cause statutory timeline misses or incomplete notifications.
 
 4. DB transport encryption enforcement is not explicit in IaC/app config.

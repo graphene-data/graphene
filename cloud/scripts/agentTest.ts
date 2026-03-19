@@ -1,9 +1,10 @@
+import {LambdaClient, InvokeCommand} from '@aws-sdk/client-lambda'
+import {spawn} from 'node:child_process'
 import crypto from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import {spawn} from 'node:child_process'
 import {fileURLToPath} from 'node:url'
-import {LambdaClient, InvokeCommand} from '@aws-sdk/client-lambda'
+
 import {generateAgentToken} from '../server/auth.ts'
 
 const localBaseUrl = 'http://localhost:4016'
@@ -76,23 +77,27 @@ async function runRenderMd() {
   let url = `${baseUrl}/dynamic?md=${encodeURIComponent(md)}&repoId=${encodeURIComponent(devRepoId)}`
 
   let lambda = new LambdaClient({region: process.env.AWS_REGION || 'us-east-1'})
-  let response = await lambda.send(new InvokeCommand({
-    FunctionName: screenshotLambda,
-    Payload: JSON.stringify({url, token}),
-  }))
+  let response = await lambda.send(
+    new InvokeCommand({
+      FunctionName: screenshotLambda,
+      Payload: JSON.stringify({url, token}),
+    }),
+  )
   let payload = response.Payload && JSON.parse(Buffer.from(response.Payload).toString())
 
   let renderErrors = Array.isArray(payload?.errors) ? payload.errors : []
   let pageErrors = Array.isArray(payload?.pageErrors) ? payload.pageErrors : []
   let rows = payload?.queryData?.flights_by_carrier?.rows
   if (response.FunctionError || !payload?.success || !payload?.screenshot || renderErrors.length || pageErrors.length || !Array.isArray(rows) || rows.length === 0) {
-    throw new Error(JSON.stringify({
-      error: payload?.error || payload?.errorMessage || 'renderMd invocation failed',
-      renderErrors,
-      pageErrors,
-      hasScreenshot: !!payload?.screenshot,
-      rowCount: Array.isArray(rows) ? rows.length : 0,
-    }))
+    throw new Error(
+      JSON.stringify({
+        error: payload?.error || payload?.errorMessage || 'renderMd invocation failed',
+        renderErrors,
+        pageErrors,
+        hasScreenshot: !!payload?.screenshot,
+        rowCount: Array.isArray(rows) ? rows.length : 0,
+      }),
+    )
   }
 
   let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
@@ -111,7 +116,7 @@ function runDynamic() {
 async function getDevTunnelUrl() {
   let response = await fetch(`${localBaseUrl}/_api/dev/ngrok-url`)
   if (!response.ok) throw new Error(`Could not load ngrok URL from ${localBaseUrl}. Is cloud dev server running with --ngrok?`)
-  let body = await response.json() as {url?: string}
+  let body = (await response.json()) as {url?: string}
   if (!body.url) throw new Error('Dev ngrok URL response missing url')
   return body.url
 }

@@ -2,21 +2,22 @@
 
 // eslint-disable-next-line svelte/no-svelte-internal
 import type internal from 'svelte/internal'
+
 import {type SvelteComponent} from 'svelte'
 
-declare module '@stytch/vanilla-js/b2b';
+declare module '@stytch/vanilla-js/b2b'
 
 declare global {
   interface GrapheneGlobal {
-    components?: Record<string, SvelteComponent>;
-    svelte?: typeof internal;
-    [key: string]: unknown;
+    components?: Record<string, SvelteComponent>
+    svelte?: typeof internal
+    [key: string]: unknown
   }
 }
 
 declare global {
   interface Window {
-    $GRAPHENE: any;
+    $GRAPHENE: any
   }
 }
 

@@ -1,7 +1,11 @@
 {
-  "type": "module",
   "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "oxfmt --check"
+  },
   "dependencies": {
+    "oxfmt": "^0.36.0",
     "zx": "^8.8.4"
   },
   "pnpm": {

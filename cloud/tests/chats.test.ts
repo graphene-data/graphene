@@ -1,4 +1,5 @@
 import {describe} from 'vitest'
+
 import {waitForGrapheneLoad} from '../../core/ui/tests/fixtures.ts'
 import {test, expectConsoleError} from './fixtures.ts'
 

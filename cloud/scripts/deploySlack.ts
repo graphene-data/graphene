@@ -72,28 +72,15 @@ function buildManifest(environment: Environment, baseUrl: string) {
       },
     },
     oauth_config: {
-      redirect_urls: [
-        `${baseUrl}/_api/slack/oauth/callback`,
-      ],
+      redirect_urls: [`${baseUrl}/_api/slack/oauth/callback`],
       scopes: {
-        bot: [
-          'app_mentions:read',
-          'chat:write',
-          'channels:history',
-          'im:history',
-          'files:write',
-          'users:read',
-          'reactions:write',
-        ],
+        bot: ['app_mentions:read', 'chat:write', 'channels:history', 'im:history', 'files:write', 'users:read', 'reactions:write'],
       },
     },
     settings: {
       event_subscriptions: {
         request_url: `${baseUrl}/_api/slack/events`,
-        bot_events: [
-          'app_mention',
-          'message.im',
-        ],
+        bot_events: ['app_mention', 'message.im'],
       },
       interactivity: {
         is_enabled: false,
@@ -117,7 +104,7 @@ async function slackManifestRequest(method: string, body: Record<string, unknown
 
   if (!response.ok) throw new Error(`Slack API ${method} failed with status ${response.status}`)
 
-  let payload = await response.json() as SlackResponse
+  let payload = (await response.json()) as SlackResponse
   if (!payload.ok) throw new Error(`Slack API ${method} error: ${payload.error ?? 'unknown error'}`)
 
   return payload

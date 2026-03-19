@@ -13,7 +13,8 @@ Credentials for AWS and Stytch are stored in .env.
 
 ## Deploying
 
-Use `cloud/scripts/deploy.sh staging --skip-build` to build and deploy to staging. 
+Use `cloud/scripts/deploy.sh staging --skip-build` to build and deploy to staging.
+
 1. Runs database migrations
 2. Updates the ECS service
 3. Waits for deployment to complete
@@ -25,6 +26,7 @@ Docker is not available in this environment. If you need a new image built and p
 Use `cloud/scripts/tf.sh staging <command>` in place of `terraform <command>` - it loads credentials for you.
 
 Before starting work:
+
 1. Run `tf.sh staging init -reconfigure` to sync S3 state locally
 2. Run `tf.sh staging plan` to check for unexpected changes
 3. If the plan shows changes you didn't make, **stop and notify the user** - someone else may have made changes
@@ -44,5 +46,6 @@ You can run queries against the staging database like so:
 ```
 
 Other db-shell.sh options:
+
 - `./cloud/scripts/db-shell.sh staging` - interactive psql shell
 - `./cloud/scripts/db-shell.sh staging --migrate` - run database migrations

@@ -1,11 +1,12 @@
-import {test, expect} from './fixtures.ts'
-import {getDb} from '../server/db.ts'
-import {runAgent} from '../server/agent/agent.ts'
-import {agentSessions, repos} from '../schema.ts'
 import {eq} from 'drizzle-orm'
-import {orgId} from '../server/dev.ts'
 
-test('retries once when model finishes without calling respondToUser', async({cloud, mockLLM}) => {
+import {agentSessions, repos} from '../schema.ts'
+import {runAgent} from '../server/agent/agent.ts'
+import {getDb} from '../server/db.ts'
+import {orgId} from '../server/dev.ts'
+import {test, expect} from './fixtures.ts'
+
+test('retries once when model finishes without calling respondToUser', async ({cloud, mockLLM}) => {
   void cloud
   mockLLM.mock(({messages}) => {
     if (messages.some(m => JSON.stringify(m.content).includes('without calling respondToUser'))) {
@@ -17,18 +18,23 @@ test('retries once when model finishes without calling respondToUser', async({cl
 
     return [
       {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'render-1', toolName: 'renderMd', input: {markdown: '# chart'}}]},
-      {role: 'user', content: [{
-        type: 'tool-result',
-        toolCallId: 'render-1',
-        toolName: 'renderMd',
-        output: {
-          type: 'content',
-          value: [
-            {type: 'text', text: 'Rendered markdown id: md-1'},
-            {type: 'media', data: 'abc', mediaType: 'image/png'},
-          ],
-        },
-      }]},
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'render-1',
+            toolName: 'renderMd',
+            output: {
+              type: 'content',
+              value: [
+                {type: 'text', text: 'Rendered markdown id: md-1'},
+                {type: 'media', data: 'abc', mediaType: 'image/png'},
+              ],
+            },
+          },
+        ],
+      },
     ]
   })
 
@@ -41,13 +47,13 @@ test('retries once when model finishes without calling respondToUser', async({cl
   let followUpPrompt = JSON.stringify(mockLLM.getRequests()[1]?.messages || [])
   expect(followUpPrompt).toContain('without calling respondToUser')
   let toolNames = (session.messages || [])
-    .flatMap((message: any) => Array.isArray(message.content) ? message.content : [])
+    .flatMap((message: any) => (Array.isArray(message.content) ? message.content : []))
     .filter((chunk: any) => chunk.type === 'tool-result')
     .map((chunk: any) => chunk.toolName)
   expect(toolNames).toEqual(['renderMd', 'respondToUser'])
 })
 
-test('throws when model still does not call respondToUser after follow-up', async({cloud, mockLLM}) => {
+test('throws when model still does not call respondToUser after follow-up', async ({cloud, mockLLM}) => {
   void cloud
   mockLLM.mock(() => {
     return [
@@ -65,10 +71,15 @@ test('throws when model still does not call respondToUser after follow-up', asyn
 
 async function createSession() {
   let db = getDb()
-  let repo = await db.select({id: repos.id}).from(repos).where(eq(repos.orgId, orgId)).then(rows => rows[0])
+  let repo = await db
+    .select({id: repos.id})
+    .from(repos)
+    .where(eq(repos.orgId, orgId))
+    .then(rows => rows[0])
   if (!repo) throw new Error('Expected seeded repo')
 
-  let session = await db.insert(agentSessions)
+  let session = await db
+    .insert(agentSessions)
     .values({orgId, repoId: repo.id, messages: []})
     .returning()
     .then(rows => rows[0])

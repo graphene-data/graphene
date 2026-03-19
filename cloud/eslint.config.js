@@ -1,5 +1,6 @@
-import coreLint from '../core/eslint.config.js'
 import globals from 'globals'
+
+import coreLint from '../core/eslint.config.js'
 
 export default [
   ...coreLint,

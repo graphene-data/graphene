@@ -82,7 +82,7 @@ INSERT INTO users (id, email, "orgId", role) VALUES (
   console.error(`  Org Name: ${orgName}`)
   console.error(`  Admin: ${adminEmail} (${stytchMemberId})`)
   console.error('\nSQL has been output above. Run it via db-shell to complete setup.')
-} catch(err: any) {
+} catch (err: any) {
   console.error('\nError during onboarding:', err.message || err)
   process.exit(1)
 }

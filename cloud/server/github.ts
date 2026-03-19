@@ -1,11 +1,13 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
-import {and, eq} from 'drizzle-orm'
-import crypto from 'node:crypto'
+
 import {App} from '@octokit/app'
 import {Octokit} from '@octokit/rest'
-import {getDb} from './db.ts'
+import {and, eq} from 'drizzle-orm'
+import crypto from 'node:crypto'
+
 import {vcsInstallations, repos, files} from '../schema.ts'
 import {DOMAIN, PROD} from './consts.ts'
+import {getDb} from './db.ts'
 
 let app: App | null = null
 function getGitHubApp() {
@@ -21,7 +23,7 @@ function getGitHubApp() {
 
 async function getInstallationOctokit(installationId: string): Promise<Octokit> {
   let ghApp = getGitHubApp()
-  return await ghApp.getInstallationOctokit(Number(installationId)) as unknown as Octokit
+  return (await ghApp.getInstallationOctokit(Number(installationId))) as unknown as Octokit
 }
 
 // Redirect to GitHub App installation with nonce in state
@@ -60,7 +62,7 @@ export async function githubSetup(req: FastifyRequest, reply: FastifyReply) {
   }
 
   reply.clearCookie('github_install_state', {path: '/'}) // clear so the cookie cant be reused
-  await (getDb()).insert(vcsInstallations).values({orgId, type: 'github', id: query.installation_id})
+  await getDb().insert(vcsInstallations).values({orgId, type: 'github', id: query.installation_id})
   reply.redirect(PROD ? `https://${req.auth.slug}.${DOMAIN}/settings/repos` : '/settings/repos')
 }
 
@@ -68,16 +70,22 @@ export async function githubSetup(req: FastifyRequest, reply: FastifyReply) {
 export async function listAvailableRepos(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
-  let installation = await db.select().from(vcsInstallations)
-    .where(and(eq(vcsInstallations.orgId, req.auth.orgId), eq(vcsInstallations.type, 'github'))).then(rows => rows[0])
+  let installation = await db
+    .select()
+    .from(vcsInstallations)
+    .where(and(eq(vcsInstallations.orgId, req.auth.orgId), eq(vcsInstallations.type, 'github')))
+    .then(rows => rows[0])
   if (!installation) return reply.send({repos: [], hasInstallation: false})
 
   let octokit = await getInstallationOctokit(installation.id)
   let {data} = await octokit.rest.apps.listReposAccessibleToInstallation({per_page: 100})
 
   // Get already-added repos to mark them
-  let addedRepos = await db.select({id: repos.id, vcsRepoId: repos.vcsRepoId}).from(repos)
-    .where(eq(repos.vcsInstallationId, installation.id)).then(rows => rows)
+  let addedRepos = await db
+    .select({id: repos.id, vcsRepoId: repos.vcsRepoId})
+    .from(repos)
+    .where(eq(repos.vcsInstallationId, installation.id))
+    .then(rows => rows)
   let addedMap = new Map(addedRepos.map(r => [r.vcsRepoId, r.id]))
 
   let available = data.repositories.map(r => ({
@@ -87,7 +95,7 @@ export async function listAvailableRepos(req: FastifyRequest, reply: FastifyRepl
     url: r.clone_url,
     defaultBranch: r.default_branch,
     added: addedMap.has(String(r.id)),
-    repoId: addedMap.get(String(r.id)) ?? null,  // internal repo ID for removal
+    repoId: addedMap.get(String(r.id)) ?? null, // internal repo ID for removal
   }))
 
   reply.send({repos: available, hasInstallation: true})
@@ -102,8 +110,11 @@ export async function addRepo(req: FastifyRequest, reply: FastifyReply) {
     return reply.code(400).send({error: 'Missing vcsRepoId or slug'})
   }
 
-  let installation = await db.select().from(vcsInstallations)
-    .where(and(eq(vcsInstallations.orgId, req.auth.orgId), eq(vcsInstallations.type, 'github'))).then(rows => rows[0])
+  let installation = await db
+    .select()
+    .from(vcsInstallations)
+    .where(and(eq(vcsInstallations.orgId, req.auth.orgId), eq(vcsInstallations.type, 'github')))
+    .then(rows => rows[0])
   if (!installation) return reply.code(400).send({error: 'No GitHub installation'})
 
   // Get repo details from GitHub
@@ -113,15 +124,18 @@ export async function addRepo(req: FastifyRequest, reply: FastifyReply) {
   if (!ghRepo) return reply.code(400).send({error: 'Repo not accessible'})
 
   // Create the repo record
-  let directory = body.folder?.replace(/^\/|\/$/g, '') || null  // trim leading/trailing slashes
-  let [repo] = await db.insert(repos).values({
-    orgId: req.auth.orgId,
-    slug: body.slug,
-    url: ghRepo.clone_url,
-    directory,
-    vcsInstallationId: installation.id,
-    vcsRepoId: body.vcsRepoId,
-  }).returning()
+  let directory = body.folder?.replace(/^\/|\/$/g, '') || null // trim leading/trailing slashes
+  let [repo] = await db
+    .insert(repos)
+    .values({
+      orgId: req.auth.orgId,
+      slug: body.slug,
+      url: ghRepo.clone_url,
+      directory,
+      vcsInstallationId: installation.id,
+      vcsRepoId: body.vcsRepoId,
+    })
+    .returning()
 
   await fullSyncRepo(repo.id)
   reply.send({repo})
@@ -135,8 +149,11 @@ export async function removeRepo(req: FastifyRequest, reply: FastifyReply) {
   if (!params.id) return reply.code(400).send({error: 'Missing repo id'})
 
   // Verify repo belongs to this org
-  let repo = await db.select().from(repos)
-    .where(and(eq(repos.id, params.id), eq(repos.orgId, req.auth.orgId))).then(rows => rows[0])
+  let repo = await db
+    .select()
+    .from(repos)
+    .where(and(eq(repos.id, params.id), eq(repos.orgId, req.auth.orgId)))
+    .then(rows => rows[0])
   if (!repo) return reply.code(404).send({error: 'Repo not found'})
 
   // Delete repo (files cascade due to FK)
@@ -165,7 +182,11 @@ export async function githubWebhook(req: FastifyRequest, reply: FastifyReply) {
 
     // Only sync pushes to the default branch for repos we've added
     if (ref === `refs/heads/${defaultBranch}`) {
-      let repo = await (getDb()).select().from(repos).where(eq(repos.vcsRepoId, String(payload.repository?.id))).then(rows => rows[0])
+      let repo = await getDb()
+        .select()
+        .from(repos)
+        .where(eq(repos.vcsRepoId, String(payload.repository?.id)))
+        .then(rows => rows[0])
       if (repo) {
         await fullSyncRepo(repo.id)
       }
@@ -189,12 +210,16 @@ function verifyWebhookSignature(payload: string, signature: string): boolean {
 // Full sync of all .md and .gsql files from a repo
 export async function fullSyncRepo(repoId: string) {
   let db = getDb()
-  let gRepo = await db.select().from(repos).where(eq(repos.id, repoId)).then(rows => rows[0])
+  let gRepo = await db
+    .select()
+    .from(repos)
+    .where(eq(repos.id, repoId))
+    .then(rows => rows[0])
   if (!gRepo || !gRepo.url || !gRepo.vcsInstallationId) throw new Error('Missing repo or VCS config')
 
   let {owner, repo} = parseGitHubUrl(gRepo.url)
   let octokit = await getInstallationOctokit(gRepo.vcsInstallationId)
-  let directory = gRepo.directory  // optional subfolder to sync from
+  let directory = gRepo.directory // optional subfolder to sync from
 
   // Get repo details for default branch
   let {data: ghRepo} = await octokit.rest.repos.get({owner, repo})
@@ -224,7 +249,8 @@ export async function fullSyncRepo(repoId: string) {
       let path = file.path.replace(/\.(md|gsql)$/, '')
       if (directory) path = path.slice(directory.length + 1)
 
-      await db.insert(files)
+      await db
+        .insert(files)
         .values({repoId: gRepo.id, path, extension, content})
         .onConflictDoUpdate({
           target: [files.repoId, files.path],
@@ -234,23 +260,32 @@ export async function fullSyncRepo(repoId: string) {
   }
 
   // Delete files that no longer exist in the repo
-  let existingPaths = new Set(syncableFiles.map(f => {
-    let path = f.path?.replace(/\.(md|gsql)$/, '') ?? ''
-    if (directory) path = path.slice(directory.length + 1)
-    return path
-  }))
-  let dbFiles = await db.select({path: files.path}).from(files).where(eq(files.repoId, gRepo.id)).then(rows => rows)
+  let existingPaths = new Set(
+    syncableFiles.map(f => {
+      let path = f.path?.replace(/\.(md|gsql)$/, '') ?? ''
+      if (directory) path = path.slice(directory.length + 1)
+      return path
+    }),
+  )
+  let dbFiles = await db
+    .select({path: files.path})
+    .from(files)
+    .where(eq(files.repoId, gRepo.id))
+    .then(rows => rows)
   for (let dbFile of dbFiles) {
     if (!existingPaths.has(dbFile.path)) {
       await db.delete(files).where(and(eq(files.repoId, gRepo.id), eq(files.path, dbFile.path)))
     }
   }
 
-  await db.update(repos).set({
-    lastSyncedAt: new Date(),
-    lastSyncCommit: refData.object.sha,
-    syncResult: 'success',
-  }).where(eq(repos.id, gRepo.id))
+  await db
+    .update(repos)
+    .set({
+      lastSyncedAt: new Date(),
+      lastSyncCommit: refData.object.sha,
+      syncResult: 'success',
+    })
+    .where(eq(repos.id, gRepo.id))
 }
 
 // Parse owner and repo name from a GitHub URL

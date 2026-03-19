@@ -1,4 +1,4 @@
-import { $, cd, chalk } from 'zx'
+import {$, cd, chalk} from 'zx'
 
 let raw = await $`opencode run --command review-fresh-context --format=json`
 let lines = raw.stdout.trim().split('\n')

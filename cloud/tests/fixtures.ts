@@ -1,17 +1,19 @@
-import {test as base} from 'vitest'
-import crypto from 'node:crypto'
-import {chromium, type Browser, type Page} from 'playwright'
 import type {ModelMessage} from 'ai'
+
+import dotenv from 'dotenv'
+import net from 'net'
+import crypto from 'node:crypto'
+import path from 'path'
+import {chromium, type Browser, type Page} from 'playwright'
+import {test as base} from 'vitest'
+
+import {trackBrowserConsole, expectConsoleError, onServerLog} from '../../core/ui/tests/logWatcher.ts'
 import {playwrightExpect as expect} from '../../core/ui/tests/matchers.ts'
-import {mockSlackApi} from '../server/slack.ts'
 import {mockAgent as setAgentMock} from '../server/agent/agent.ts'
-import {startDevServer, orgId, userId, teamId} from '../server/dev.ts'
 import {setAuthOverride} from '../server/auth.ts'
 import {setupPglite} from '../server/db.ts'
-import net from 'net'
-import dotenv from 'dotenv'
-import path from 'path'
-import {trackBrowserConsole, expectConsoleError, onServerLog} from '../../core/ui/tests/logWatcher.ts'
+import {startDevServer, orgId, userId, teamId} from '../server/dev.ts'
+import {mockSlackApi} from '../server/slack.ts'
 
 dotenv.config({path: path.resolve(import.meta.dirname, '../../.env'), quiet: true})
 process.env.SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || 'test-signing-secret'
@@ -25,11 +27,11 @@ interface CloudOptions {
 }
 
 interface SlackFixture {
-  simulateWebhook: (payload: any) => Promise<{statusCode: number, json: () => Promise<any>}>
-  simulateUserMessage: (text: string, options?: {teamId?: string, channel?: string, ts?: string, threadTs?: string}) => Promise<{statusCode: number, json: () => Promise<any>}>
-  simulateInstallRedirect: () => Promise<{statusCode: number, location: string | null}>
-  simulateOauthCallback: (params: {code: string, state: string}) => Promise<{statusCode: number, location: string | null, json: () => Promise<any>}>
-  getApiCalls: () => {endpoint: string, payload: any}[]
+  simulateWebhook: (payload: any) => Promise<{statusCode: number; json: () => Promise<any>}>
+  simulateUserMessage: (text: string, options?: {teamId?: string; channel?: string; ts?: string; threadTs?: string}) => Promise<{statusCode: number; json: () => Promise<any>}>
+  simulateInstallRedirect: () => Promise<{statusCode: number; location: string | null}>
+  simulateOauthCallback: (params: {code: string; state: string}) => Promise<{statusCode: number; location: string | null; json: () => Promise<any>}>
+  getApiCalls: () => {endpoint: string; payload: any}[]
 }
 
 interface MockLLMFixture {
@@ -38,12 +40,12 @@ interface MockLLMFixture {
   getRequests: () => {messages: ModelMessage[]; systemPrompt: string}[]
 }
 
-export const test = base.extend<{browser: Browser, page: Page, cloud: {url: string}, slack: SlackFixture, mockLLM: MockLLMFixture} & CloudOptions>({
+export const test = base.extend<{browser: Browser; page: Page; cloud: {url: string}; slack: SlackFixture; mockLLM: MockLLMFixture} & CloudOptions>({
   realAuth: false,
   project: 'flights',
 
   // eslint-disable-next-line no-empty-pattern
-  browser: async({}, use) => {
+  browser: async ({}, use) => {
     let b = await chromium.launch({
       headless: !process.env.GRAPHENE_DEBUG,
       args: [
@@ -60,7 +62,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   },
 
   // cloud starts BEFORE page so it tears down AFTER page - this ensures the server is still running during assertions
-  cloud: async({realAuth, project}, use) => {
+  cloud: async ({realAuth, project}, use) => {
     let port = realAuth ? 3121 : await getAvailablePort()
     // custom logger allows us to fail if the server logs an error we don't expect
     let logger = {level: 'warn', stream: {write: (line: string) => onServerLog(line.trimEnd())}}
@@ -73,7 +75,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   },
 
   // page depends on cloud so it sets up after and tears down before (server still running during teardown)
-  page: async({browser, cloud: _cloud}, use) => {
+  page: async ({browser, cloud: _cloud}, use) => {
     let context = await browser.newContext({
       viewport: {width: 1280, height: 720},
       deviceScaleFactor: 2,
@@ -85,17 +87,17 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
     let page = await context.newPage()
     trackBrowserConsole(page)
     await use(page)
-    if (process.env.GRAPHENE_DEBUG) await new Promise(() => { })
+    if (process.env.GRAPHENE_DEBUG) await new Promise(() => {})
     await context.close()
   },
 
   // eslint-disable-next-line no-empty-pattern
-  mockLLM: async({}, use) => {
+  mockLLM: async ({}, use) => {
     let requests: {messages: ModelMessage[]; systemPrompt: string}[] = []
     let responseText = 'Agent response from test'
     let handler: ((args: {messages: ModelMessage[]; systemPrompt: string}) => Promise<Record<string, any>[]> | Record<string, any>[]) | null = null
 
-    setAgentMock(async(config) => {
+    setAgentMock(async config => {
       let args = {
         messages: (config.messages || []).map((x: any) => ({role: x.role, content: x.content})) as ModelMessage[],
         systemPrompt: config.system || '',
@@ -123,9 +125,9 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
   },
 
   // Slack fixture for simulating inbound events and inspecting outbound API calls
-  slack: async({cloud, mockLLM: _mockLLM}, use) => {
+  slack: async ({cloud, mockLLM: _mockLLM}, use) => {
     void _mockLLM
-    let apiCalls: {endpoint: string, payload: any}[] = []
+    let apiCalls: {endpoint: string; payload: any}[] = []
     setAuthOverride({userId, orgId, slug: ''})
     process.env.SLACK_CLIENT_ID = 'test-client-id'
     process.env.SLACK_CLIENT_SECRET = 'test-client-secret'
@@ -160,7 +162,7 @@ export const test = base.extend<{browser: Browser, page: Page, cloud: {url: stri
         return {statusCode: response.status, json: () => response.json()}
       },
 
-      async simulateUserMessage(text: string, options:any = {}) {
+      async simulateUserMessage(text: string, options: any = {}) {
         return await slack.simulateWebhook({
           type: 'event_callback',
           team_id: options.teamId || teamId,

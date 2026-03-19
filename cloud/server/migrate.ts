@@ -1,9 +1,10 @@
 // Standalone migration script that runs drizzle migrations
 // Used by the ECS migration task in CI/CD
 
+import {migrate} from 'drizzle-orm/postgres-js/migrator'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {migrate} from 'drizzle-orm/postgres-js/migrator'
+
 import {getDb} from './db.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')

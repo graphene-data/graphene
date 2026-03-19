@@ -1,5 +1,6 @@
-import crypto from 'node:crypto'
 import {KMSClient, EncryptCommand, DecryptCommand} from '@aws-sdk/client-kms'
+import crypto from 'node:crypto'
+
 import {PROD} from './consts.ts'
 
 const KMS_KEY_ALIAS = 'alias/graphene-secrets'
@@ -12,7 +13,10 @@ function getKmsClient(): KMSClient {
 
 export async function encryptSecret(plaintext: string): Promise<string> {
   if (!PROD || process.env.ENCRYPTION_SECRET) {
-    let key = crypto.createHash('sha256').update(process.env.ENCRYPTION_SECRET || 'devsecret').digest()
+    let key = crypto
+      .createHash('sha256')
+      .update(process.env.ENCRYPTION_SECRET || 'devsecret')
+      .digest()
     let iv = crypto.randomBytes(12)
     let cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
     let encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
@@ -31,7 +35,10 @@ export async function decryptSecret(ciphertext: string): Promise<string> {
     return Buffer.from(result.Plaintext).toString('utf-8')
   }
   if (ciphertext.startsWith('aes:')) {
-    let key = crypto.createHash('sha256').update(process.env.ENCRYPTION_SECRET || 'devsecret').digest()
+    let key = crypto
+      .createHash('sha256')
+      .update(process.env.ENCRYPTION_SECRET || 'devsecret')
+      .digest()
     let data = Buffer.from(ciphertext.slice(4), 'base64')
     let iv = data.subarray(0, 12)
     let decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)

@@ -24,6 +24,7 @@ IMPORTANT: DO NOT make any changes to the code, or run commands that would have 
 ## What to Look For
 
 **Bugs** - Your primary focus.
+
 - Logic errors, off-by-one mistakes, incorrect conditionals
 - If-else guards: missing guards, incorrect branching, unreachable code paths
 - Edge cases: null/empty/undefined inputs, error conditions, race conditions
@@ -31,11 +32,13 @@ IMPORTANT: DO NOT make any changes to the code, or run commands that would have 
 - Broken error handling that swallows failures, throws unexpectedly or returns error types that are not caught.
 
 **Structure** - Does the code fit the codebase?
+
 - Does it follow existing patterns and conventions?
 - Are there established abstractions it should use but doesn't?
 - Excessive nesting that could be flattened with early returns or extraction
 
 **Performance** - Only flag if obviously problematic.
+
 - O(n²) on unbounded data, N+1 queries, blocking I/O on hot paths
 
 ---
@@ -51,7 +54,7 @@ IMPORTANT: DO NOT make any changes to the code, or run commands that would have 
 
 **Don't be a zealot about style.** When checking code against conventions:
 
-- Verify the code is *actually* in violation. Don't complain about else statements if early returns are already being used correctly.
+- Verify the code is _actually_ in violation. Don't complain about else statements if early returns are already being used correctly.
 - Some "violations" are acceptable when they're the simplest option.
 - Excessive nesting is a legitimate concern regardless of other style choices.
 - Don't flag style preferences as issues unless they clearly violate established project conventions.

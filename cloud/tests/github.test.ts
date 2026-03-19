@@ -1,13 +1,14 @@
-import {test, expect} from './fixtures.ts'
-import {getDb} from '../server/db.ts'
-import {setAuthOverride} from '../server/auth.ts'
-import * as schema from '../schema.ts'
 import {eq} from 'drizzle-orm'
+
+import * as schema from '../schema.ts'
+import {setAuthOverride} from '../server/auth.ts'
+import {getDb} from '../server/db.ts'
 import {orgId, userId} from '../server/dev.ts'
+import {test, expect} from './fixtures.ts'
 
 const INSTALLATION_ID = '101959947'
 
-test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 15_000}, async({page, cloud}) => {
+test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 15_000}, async ({page, cloud}) => {
   setAuthOverride({userId, orgId, slug: ''})
 
   // Step 1: Go to Settings/Repos and click "Connect GitHub"
@@ -30,12 +31,15 @@ test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 
   let nonce = stateMatch![1]
 
   // Step 2: Simulate GitHub redirecting back after user completes installation
-  await page.context().addCookies([{ // The cookie was set by the server, so we reconstruct it with the same nonce
-    name: 'github_install_state',
-    value: JSON.stringify({nonce, orgId}),
-    domain: new URL(cloud.url).hostname,
-    path: '/',
-  }])
+  await page.context().addCookies([
+    {
+      // The cookie was set by the server, so we reconstruct it with the same nonce
+      name: 'github_install_state',
+      value: JSON.stringify({nonce, orgId}),
+      domain: new URL(cloud.url).hostname,
+      path: '/',
+    },
+  ])
 
   await page.goto(cloud.url + `/_api/github/setup?installation_id=${INSTALLATION_ID}&state=${nonce}`) // Navigate to the setup URL (simulating GitHub's redirect back)
   await expect(page).toHaveURL(/\/settings\/repos/) // Should redirect to /settings/repos
@@ -56,12 +60,20 @@ test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 
 
   // Step 4: Verify sync happened in DB
   let db = getDb()
-  let repo = await db.select().from(schema.repos).where(eq(schema.repos.slug, 'ecomm')).then(rows => rows[0])
+  let repo = await db
+    .select()
+    .from(schema.repos)
+    .where(eq(schema.repos.slug, 'ecomm'))
+    .then(rows => rows[0])
   expect(repo).toBeDefined()
   expect(repo!.syncResult).toBe('success')
   expect(repo!.lastSyncedAt).toBeDefined()
 
-  let syncedFiles = await db.select().from(schema.files).where(eq(schema.files.repoId, repo!.id)).then(rows => rows) // Check expected files were synced (index.md and models.gsql)
+  let syncedFiles = await db
+    .select()
+    .from(schema.files)
+    .where(eq(schema.files.repoId, repo!.id))
+    .then(rows => rows) // Check expected files were synced (index.md and models.gsql)
   expect(syncedFiles).toHaveLength(2)
 
   let paths = syncedFiles.map(f => f.path).sort()
@@ -75,9 +87,17 @@ test('full GitHub integration flow: install, add repo, sync, remove', {timeout: 
   await expect(repoItem.locator('.add-btn')).toBeVisible() // Should show Add button again
   await expect(page).screenshot('05-repos-removed')
 
-  let deletedRepo = await db.select().from(schema.repos).where(eq(schema.repos.slug, 'ecomm')).then(rows => rows[0])
+  let deletedRepo = await db
+    .select()
+    .from(schema.repos)
+    .where(eq(schema.repos.slug, 'ecomm'))
+    .then(rows => rows[0])
   expect(deletedRepo).toBeUndefined() // Verify repo is deleted from DB
 
-  let remainingFiles = await db.select().from(schema.files).where(eq(schema.files.repoId, repo!.id)).then(rows => rows)
+  let remainingFiles = await db
+    .select()
+    .from(schema.files)
+    .where(eq(schema.files.repoId, repo!.id))
+    .then(rows => rows)
   expect(remainingFiles).toHaveLength(0) // Files should also be deleted (cascade)
 })

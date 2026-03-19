@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Self-hosted fonts — eliminates FOUT from Google Fonts network round-trips */
 @font-face {
@@ -38,21 +38,21 @@
 }
 
 @theme {
-  --color-primary-dark: #0C0A09;
-  --color-body: #57534E;
-  --color-muted: #A8A29E;
-  --color-tertiary: #7A726A;
-  --color-bg: #FAFAF9;
-  --color-code-bg: #F1F0ED;
-  --color-code-text: #3A3632;
-  --color-code-label: #847B73;
-  --color-border: #E7E5E4;
-  --color-border-dark: #DFDDD8;
+  --color-primary-dark: #0c0a09;
+  --color-body: #57534e;
+  --color-muted: #a8a29e;
+  --color-tertiary: #7a726a;
+  --color-bg: #fafaf9;
+  --color-code-bg: #f1f0ed;
+  --color-code-text: #3a3632;
+  --color-code-label: #847b73;
+  --color-border: #e7e5e4;
+  --color-border-dark: #dfddd8;
 
-  --font-serif: "Instrument Serif", serif;
-  --font-sans: "Inter", sans-serif;
-  --font-logo: "Space Grotesk", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-serif: 'Instrument Serif', serif;
+  --font-sans: 'Inter', sans-serif;
+  --font-logo: 'Space Grotesk', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 /* Subtle noise texture for background */

@@ -6,8 +6,8 @@ tools:
   bash: true
 permissions:
   bash:
-    "grep": allow
-    "git *": allow
+    'grep': allow
+    'git *': allow
   webfetch: ask
 ---
 

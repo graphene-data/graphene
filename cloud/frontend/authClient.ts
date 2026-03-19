@@ -1,5 +1,5 @@
-import {writable} from 'svelte/store'
 import {StytchB2BUIClient, AuthFlowType, StytchEventType, type MemberSession} from '@stytch/vanilla-js/b2b'
+import {writable} from 'svelte/store'
 
 // Determine the base domain for cookies and redirects based on current hostname
 function getBaseDomain(): string {
@@ -9,9 +9,7 @@ function getBaseDomain(): string {
 }
 
 export const baseDomain = getBaseDomain()
-export const loginUrl = import.meta.env.DEV
-  ? `${window.location.origin}/login`
-  : `https://login.${baseDomain}/login`
+export const loginUrl = import.meta.env.DEV ? `${window.location.origin}/login` : `https://login.${baseDomain}/login`
 
 let _client: StytchB2BUIClient | null = null
 
@@ -38,8 +36,6 @@ class MockClient {
   }
 }
 
-export const session = writable<MemberSession | null>(
-  authClient().session.getSync() || null,
-)
+export const session = writable<MemberSession | null>(authClient().session.getSync() || null)
 
 export {AuthFlowType, StytchEventType}

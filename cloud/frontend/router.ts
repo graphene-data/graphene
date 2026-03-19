@@ -6,7 +6,7 @@ const getPathname = () => {
 
 let setPathname: ((value: string) => void) | null = null
 
-export const route = readable<string>(getPathname(), (set) => {
+export const route = readable<string>(getPathname(), set => {
   if (typeof window === 'undefined') return
   setPathname = set
 

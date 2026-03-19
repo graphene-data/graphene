@@ -1,6 +1,5 @@
-import path from 'node:path'
-
 import {svelte} from '@sveltejs/vite-plugin-svelte'
+import path from 'node:path'
 import {defineConfig} from 'vite'
 
 const frontendDir = __dirname
@@ -29,11 +28,7 @@ export function createFrontendViteConfig() {
     optimizeDeps: {
       noDiscovery: isTest,
       force: false,
-      include: isTest ? [
-        'svelte',
-        'svelte/internal/client',
-        'svelte/internal/disclose-version',
-      ] : undefined,
+      include: isTest ? ['svelte', 'svelte/internal/client', 'svelte/internal/disclose-version'] : undefined,
       exclude: isTest ? [] : ['svelte'],
     },
   }

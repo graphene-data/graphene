@@ -1,11 +1,13 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
+
 import {and, eq, or} from 'drizzle-orm'
-import {getDb} from './db.ts'
 import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
-import {files, repos} from '../schema.ts'
+
 import {componentNames, rehypePlugins, remarkPlugins} from '../../core/cli/mdCompile.ts'
+import {files, repos} from '../schema.ts'
 import {PROD} from './consts.ts'
+import {getDb} from './db.ts'
 
 const defaultIgnoredFiles = ['agents.md', 'claude.md']
 
@@ -13,22 +15,20 @@ export async function listNavFiles(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
   let repoSlug = (req.params as any)['repoSlug']
-  let repo = await db.select({id: repos.id}).from(repos).where(and(
-    eq(repos.orgId, req.auth.orgId),
-    eq(repos.slug, repoSlug),
-  )).then(rows => rows[0])
+  let repo = await db
+    .select({id: repos.id})
+    .from(repos)
+    .where(and(eq(repos.orgId, req.auth.orgId), eq(repos.slug, repoSlug)))
+    .then(rows => rows[0])
   if (!repo) return reply.send([])
 
-  let pages = await db.select({path: files.path}).from(files).where(
-    and(
-      eq(files.repoId, repo.id),
-      eq(files.extension, 'md'),
-    ),
-  ).then(rows => rows)
+  let pages = await db
+    .select({path: files.path})
+    .from(files)
+    .where(and(eq(files.repoId, repo.id), eq(files.extension, 'md')))
+    .then(rows => rows)
 
-  let paths = pages
-    .map(p => `${p.path}.md`)
-    .filter(p => !defaultIgnoredFiles.includes(p.split('/').pop()?.toLowerCase() || ''))
+  let paths = pages.map(p => `${p.path}.md`).filter(p => !defaultIgnoredFiles.includes(p.split('/').pop()?.toLowerCase() || ''))
   reply.send(paths)
 }
 
@@ -36,7 +36,11 @@ export async function renderPage(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
   let segments = (req.params as any)['*'].split('/')
-  let orgRepos = await db.select({id: repos.id, slug: repos.slug}).from(repos).where(eq(repos.orgId, req.auth.orgId)).then(rows => rows)
+  let orgRepos = await db
+    .select({id: repos.id, slug: repos.slug})
+    .from(repos)
+    .where(eq(repos.orgId, req.auth.orgId))
+    .then(rows => rows)
 
   let repo = orgRepos.find(r => r.slug == segments[0])
   if (!repo) {
@@ -47,13 +51,11 @@ export async function renderPage(req: FastifyRequest, reply: FastifyReply) {
   }
 
   let path = segments.slice(1).join('/') || 'index'
-  let page = await db.select().from(files).where(
-    and(
-      eq(files.repoId, repo.id),
-      eq(files.extension, 'md'),
-      or(eq(files.path, path), eq(files.path, path + '/index')),
-    ),
-  ).then(rows => rows[0])
+  let page = await db
+    .select()
+    .from(files)
+    .where(and(eq(files.repoId, repo.id), eq(files.extension, 'md'), or(eq(files.path, path), eq(files.path, path + '/index'))))
+    .then(rows => rows[0])
   if (!page) return reply.code(404).send({error: 'Page not found'})
 
   let code = await compileMd(page.content, `${page.path}.md`, repo.id)

@@ -10,66 +10,68 @@ This skill helps you update Graphene's SQL function definitions to match the fun
 ## Documentation Sources
 
 ### BigQuery
+
 Base URL: https://cloud.google.com/bigquery/docs/reference/standard-sql/
 
-| Category | Doc Path | Description |
-|----------|----------|-------------|
-| Aggregate | aggregate_functions | SUM, COUNT, AVG, etc. |
-| Approx Aggregate | approximate_aggregate_functions | APPROX_COUNT_DISTINCT, etc. |
-| Mathematical | mathematical_functions | ABS, ROUND, SQRT, etc. |
-| String | string_functions | CONCAT, SUBSTR, LOWER, etc. |
-| Date | date_functions | DATE_ADD, DATE_DIFF, etc. |
-| Datetime | datetime_functions | DATETIME_ADD, etc. |
-| Timestamp | timestamp_functions | TIMESTAMP_DIFF, etc. |
-| Time | time_functions | TIME_ADD, etc. |
-| Interval | interval_functions | MAKE_INTERVAL, JUSTIFY_DAYS, etc. |
-| JSON | json_functions | JSON_EXTRACT, JSON_VALUE, etc. |
-| Array | array_functions | ARRAY_LENGTH, ARRAY_CONCAT, etc. |
-| Geography | geography_functions | ST_DISTANCE, etc. |
-| Hash | hash_functions | MD5, SHA256, etc. |
-| Conditional | conditional_expressions | IF, COALESCE, NULLIF |
-| Statistical | statistical_aggregate_functions | STDDEV, CORR, etc. |
-| Bit | bit_functions | BIT_COUNT |
-| Conversion | conversion_functions | PARSE_NUMERIC, etc. |
-| Utility | utility-functions | GENERATE_UUID, TYPEOF |
-| Debugging | debugging_functions | ERROR |
+| Category         | Doc Path                        | Description                       |
+| ---------------- | ------------------------------- | --------------------------------- |
+| Aggregate        | aggregate_functions             | SUM, COUNT, AVG, etc.             |
+| Approx Aggregate | approximate_aggregate_functions | APPROX_COUNT_DISTINCT, etc.       |
+| Mathematical     | mathematical_functions          | ABS, ROUND, SQRT, etc.            |
+| String           | string_functions                | CONCAT, SUBSTR, LOWER, etc.       |
+| Date             | date_functions                  | DATE_ADD, DATE_DIFF, etc.         |
+| Datetime         | datetime_functions              | DATETIME_ADD, etc.                |
+| Timestamp        | timestamp_functions             | TIMESTAMP_DIFF, etc.              |
+| Time             | time_functions                  | TIME_ADD, etc.                    |
+| Interval         | interval_functions              | MAKE_INTERVAL, JUSTIFY_DAYS, etc. |
+| JSON             | json_functions                  | JSON_EXTRACT, JSON_VALUE, etc.    |
+| Array            | array_functions                 | ARRAY_LENGTH, ARRAY_CONCAT, etc.  |
+| Geography        | geography_functions             | ST_DISTANCE, etc.                 |
+| Hash             | hash_functions                  | MD5, SHA256, etc.                 |
+| Conditional      | conditional_expressions         | IF, COALESCE, NULLIF              |
+| Statistical      | statistical_aggregate_functions | STDDEV, CORR, etc.                |
+| Bit              | bit_functions                   | BIT_COUNT                         |
+| Conversion       | conversion_functions            | PARSE_NUMERIC, etc.               |
+| Utility          | utility-functions               | GENERATE_UUID, TYPEOF             |
+| Debugging        | debugging_functions             | ERROR                             |
 
 ### DuckDB
+
 Base URL: https://duckdb.org/docs/stable/sql/functions/
 
-| Category | Doc Path | Description |
-|----------|----------|-------------|
-| Aggregate | aggregates.html | SUM, COUNT, AVG, list, string_agg, etc. |
-| Numeric | numeric.html | ABS, ROUND, SQRT, SIN, etc. |
-| Text | text.html | CONCAT, SUBSTR, LOWER, etc. |
-| Date | date.html | DATE_ADD, DATE_DIFF, etc. |
-| Timestamp | timestamp.html | AGE, EPOCH, MAKE_TIMESTAMP, etc. |
-| Time | time.html | TIME functions |
-| Interval | interval.html | INTERVAL functions |
-| List | list.html | Array/List functions |
-| Pattern Matching | pattern_matching.html | LIKE, GLOB, etc. |
-| Regular Expressions | regular_expressions.html | REGEXP_*, etc. |
+| Category            | Doc Path                 | Description                             |
+| ------------------- | ------------------------ | --------------------------------------- |
+| Aggregate           | aggregates.html          | SUM, COUNT, AVG, list, string_agg, etc. |
+| Numeric             | numeric.html             | ABS, ROUND, SQRT, SIN, etc.             |
+| Text                | text.html                | CONCAT, SUBSTR, LOWER, etc.             |
+| Date                | date.html                | DATE_ADD, DATE_DIFF, etc.               |
+| Timestamp           | timestamp.html           | AGE, EPOCH, MAKE_TIMESTAMP, etc.        |
+| Time                | time.html                | TIME functions                          |
+| Interval            | interval.html            | INTERVAL functions                      |
+| List                | list.html                | Array/List functions                    |
+| Pattern Matching    | pattern_matching.html    | LIKE, GLOB, etc.                        |
+| Regular Expressions | regular_expressions.html | REGEXP\_\*, etc.                        |
 
 ### Snowflake
+
 Base URL: https://docs.snowflake.com/en/sql-reference/functions/
 
 Functions are organized alphabetically. Key categories:
+
 - Aggregate Functions
-- String & Binary Functions  
+- String & Binary Functions
 - Numeric Functions
 - Date & Time Functions
 - Conditional Expression Functions
 
 ## File Locations
 
-| File | Purpose |
-|------|---------|
-| `core/lang/functionTypes.ts` | Type definitions for FunctionDef |
+| File                             | Purpose                                        |
+| -------------------------------- | ---------------------------------------------- |
+| `core/lang/functionTypes.ts`     | Type definitions for FunctionDef               |
 | `core/lang/bigQueryFunctions.ts` | BigQuery function definitions (~200 functions) |
-| `core/lang/duckDbFunctions.ts` | DuckDB function definitions (~130 functions) |
-| `core/lang/functionDefs.ts` | Converts FunctionDef to Malloy blueprints |
-
-
+| `core/lang/duckDbFunctions.ts`   | DuckDB function definitions (~130 functions)   |
+| `core/lang/functionDefs.ts`      | Converts FunctionDef to Malloy blueprints      |
 
 ## Function Definition Format
 
@@ -109,6 +111,7 @@ const trim = trimIndentation
 ### The `description` Field
 
 **IMPORTANT**: The `description` field contains ALL documentation text from the BigQuery docs page:
+
 - Function signature/syntax
 - Description text
 - Definitions of arguments
@@ -132,25 +135,25 @@ Use object format when the BigQuery docs provide a specific description for that
 
 ### Type Conventions
 
-| Pattern | Meaning | Notes |
-|---------|---------|-------|
-| `'number'` | Required number | INT64, FLOAT64, NUMERIC |
-| `'number?'` | Optional number | |
-| `'string...'` | Variadic strings | |
-| `'T'` | Generic type | Inferred from usage |
-| `'T?'` | Optional generic | |
-| `'T...'` | Variadic generic | |
-| `'any'` | Any input type | **Cannot be used for returns** |
-| `'array'` | Array type | |
-| `'boolean'` | Boolean | |
-| `'date'` | Date | |
-| `'datetime'` | Datetime | |
-| `'time'` | Time | |
-| `'timestamp'` | Timestamp | |
-| `'interval'` | Interval | |
-| `'json'` | JSON | |
-| `'bytes'` | Bytes/binary | |
-| `'never'` | Never returns | For ERROR function |
+| Pattern       | Meaning          | Notes                          |
+| ------------- | ---------------- | ------------------------------ |
+| `'number'`    | Required number  | INT64, FLOAT64, NUMERIC        |
+| `'number?'`   | Optional number  |                                |
+| `'string...'` | Variadic strings |                                |
+| `'T'`         | Generic type     | Inferred from usage            |
+| `'T?'`        | Optional generic |                                |
+| `'T...'`      | Variadic generic |                                |
+| `'any'`       | Any input type   | **Cannot be used for returns** |
+| `'array'`     | Array type       |                                |
+| `'boolean'`   | Boolean          |                                |
+| `'date'`      | Date             |                                |
+| `'datetime'`  | Datetime         |                                |
+| `'time'`      | Time             |                                |
+| `'timestamp'` | Timestamp        |                                |
+| `'interval'`  | Interval         |                                |
+| `'json'`      | JSON             |                                |
+| `'bytes'`     | Bytes/binary     |                                |
+| `'never'`     | Never returns    | For ERROR function             |
 
 **Note**: `'any'` cannot be used as a return type - Malloy doesn't support it. Use a specific type or generic `'T'`.
 
@@ -159,6 +162,7 @@ Use object format when the BigQuery docs provide a specific description for that
 ### SQL Keywords (not functions)
 
 Some SQL constructs are keywords, not functions, and should NOT be added:
+
 - `CAST(x AS type)` - SQL keyword
 - `SAFE_CAST(x AS type)` - SQL keyword
 - `EXTRACT(part FROM date)` - Uses special syntax with FROM keyword
@@ -166,6 +170,7 @@ Some SQL constructs are keywords, not functions, and should NOT be added:
 ### Manual Overrides
 
 Some functions need manual overrides in `functionDefs.ts` because they use:
+
 - **sql_native keywords**: Like `DATE_TRUNC(date, WEEK)` where WEEK is a keyword
 - **Multiple overloads**: With significantly different signatures
 - **Custom SQL templates**: Where the generated SQL differs from `FUNC(args)`
@@ -175,11 +180,13 @@ These are defined in `BIGQUERY_MANUAL_OVERRIDES` in functionDefs.ts.
 ## Workflow for Adding Functions
 
 ### 1. Fetch the docs
+
 ```
 WebFetch: https://cloud.google.com/bigquery/docs/reference/standard-sql/{category}_functions
 ```
 
 ### 2. For each function, extract:
+
 - Function signature (the syntax line)
 - Description paragraph
 - Definitions section (if present)
@@ -227,6 +234,7 @@ pnpm test --project lang  # Run lang tests
 ### 5. If tests fail with "Cannot return any type"
 
 Change the return type from `'any'` to a specific type:
+
 - For JSON functions: use `'json'`
 - For generic functions: use `'T'`
 - For functions returning the input type: use `'T'` with generic args

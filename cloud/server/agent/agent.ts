@@ -1,12 +1,13 @@
-import {generateText, stepCountIs} from 'ai'
 import {anthropic} from '@ai-sdk/anthropic'
-import {readFileSync} from 'fs'
-import {fileURLToPath} from 'url'
-import path from 'path'
+import {generateText, stepCountIs} from 'ai'
 import {eq} from 'drizzle-orm'
-import {listDirTool, readFileTool, searchTool, renderMdTool, respondToUserTool} from './tools.ts'
-import {getDb} from '../db.ts'
+import {readFileSync} from 'fs'
+import path from 'path'
+import {fileURLToPath} from 'url'
+
 import {agentSessions, type AgentSession} from '../../schema.ts'
+import {getDb} from '../db.ts'
+import {listDirTool, readFileTool, searchTool, renderMdTool, respondToUserTool} from './tools.ts'
 
 // Read Graphene documentation at module load time
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -18,7 +19,7 @@ export function mockAgent(handler: ((config: any) => Promise<any>) | null) {
   agentMock = handler
 }
 
-export async function runAgent(session: AgentSession): Promise<{text: string, screenshot?: string}> {
+export async function runAgent(session: AgentSession): Promise<{text: string; screenshot?: string}> {
   if (!session.repoId) throw new Error('Agent session must include repoId')
   let messages = session.messages || []
   let startIdx = messages.length
@@ -51,7 +52,8 @@ export async function runAgent(session: AgentSession): Promise<{text: string, sc
   }
 
   // persist here, so even if we error, we can see the session
-  await getDb().update(agentSessions)
+  await getDb()
+    .update(agentSessions)
     .set({messages: cleanMessages(messages), updatedAt: new Date()})
     .where(eq(agentSessions.id, session.id))
 

@@ -1,11 +1,12 @@
-import {test, expect} from './fixtures.ts'
-import {getDb} from '../server/db.ts'
-import {mockSlackApi} from '../server/slack.ts'
-import * as schema from '../schema.ts'
 import {eq} from 'drizzle-orm'
-import {orgId} from '../server/dev.ts'
 
-test('rejects events with missing signature headers', async({cloud}) => {
+import * as schema from '../schema.ts'
+import {getDb} from '../server/db.ts'
+import {orgId} from '../server/dev.ts'
+import {mockSlackApi} from '../server/slack.ts'
+import {test, expect} from './fixtures.ts'
+
+test('rejects events with missing signature headers', async ({cloud}) => {
   let response = await fetch(`${cloud.url}/_api/slack/events`, {
     method: 'POST',
     headers: {'content-type': 'application/json'},
@@ -16,7 +17,7 @@ test('rejects events with missing signature headers', async({cloud}) => {
   expect(await response.json()).toEqual({error: 'Invalid Slack signature'})
 })
 
-test('responds to url verification challenge', async({slack}) => {
+test('responds to url verification challenge', async ({slack}) => {
   let response = await slack.simulateWebhook({type: 'url_verification', challenge: 'abc123'})
   expect(response.statusCode).toBe(200)
   expect(await response.json()).toEqual({challenge: 'abc123'})
@@ -24,7 +25,7 @@ test('responds to url verification challenge', async({slack}) => {
 })
 
 test('creates workspace mapping via oauth callback', async ({slack, cloud}) => {
-  mockSlackApi((endpoint) => {
+  mockSlackApi(endpoint => {
     if (endpoint === 'oauth.v2.access') {
       return {
         ok: true,
@@ -53,7 +54,9 @@ test('creates workspace mapping via oauth callback', async ({slack, cloud}) => {
   expect(callback.location).toBe('/settings/repos')
 
   let db = getDb()
-  let installation = await db.select().from(schema.slackInstallations)
+  let installation = await db
+    .select()
+    .from(schema.slackInstallations)
     .where(eq(schema.slackInstallations.teamId, 'T123'))
     .then(rows => rows[0])
 
@@ -67,7 +70,7 @@ test('creates workspace mapping via oauth callback', async ({slack, cloud}) => {
   expect(await statusResponse.json()).toEqual({connected: true, teamId: 'T123', teamName: 'Graphene QA'})
 })
 
-test('routes app mention to cloud agent and replies in thread', async({slack, mockLLM}) => {
+test('routes app mention to cloud agent and replies in thread', async ({slack, mockLLM}) => {
   mockLLM.setResponse('Here is your answer from Graphene.')
 
   let response = await slack.simulateUserMessage('hello graphene')
@@ -100,7 +103,7 @@ test('routes app mention to cloud agent and replies in thread', async({slack, mo
   expect(calls[4]).toMatchObject({endpoint: 'reactions.remove', payload: {channel: 'C123', timestamp: '1710000000.123456', name: 'thought_balloon'}})
 })
 
-test('adds thought_balloon reaction while processing and removes it when done', async({slack, mockLLM}) => {
+test('adds thought_balloon reaction while processing and removes it when done', async ({slack, mockLLM}) => {
   mockLLM.setResponse('done')
 
   let response = await slack.simulateUserMessage('react pls', {channel: 'C-REACTION', ts: '1711111111.111111'})
@@ -116,7 +119,7 @@ test('adds thought_balloon reaction while processing and removes it when done', 
   expect(slack.getApiCalls()[slack.getApiCalls().length - 1]?.payload).toMatchObject({channel: 'C-REACTION', timestamp: '1711111111.111111', name: 'thought_balloon'})
 })
 
-test('includes thread context when mention is in a thread', async({slack, mockLLM}) => {
+test('includes thread context when mention is in a thread', async ({slack, mockLLM}) => {
   mockLLM.setResponse('Thread-aware answer')
 
   mockSlackApi((endpoint, payload) => {
@@ -150,23 +153,28 @@ test('includes thread context when mention is in a thread', async({slack, mockLL
   expect(promptLog).toContain('@thread-user-U2: Focus on last month please.')
 })
 
-test('uploads chart screenshot when respondToUser references mdId', async({slack, mockLLM}) => {
+test('uploads chart screenshot when respondToUser references mdId', async ({slack, mockLLM}) => {
   let screenshot = Buffer.from('fake-image-data').toString('base64')
   mockLLM.mock(() => {
     return [
       {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'render-1', toolName: 'renderMd', input: {markdown: '# chart'}}]},
-      {role: 'user', content: [{
-        type: 'tool-result',
-        toolCallId: 'render-1',
-        toolName: 'renderMd',
-        output: {
-          type: 'content',
-          value: [
-            {type: 'text', text: 'Rendered markdown id: abc123'},
-            {type: 'media', data: screenshot, mediaType: 'image/png'},
-          ],
-        },
-      }]},
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: 'render-1',
+            toolName: 'renderMd',
+            output: {
+              type: 'content',
+              value: [
+                {type: 'text', text: 'Rendered markdown id: abc123'},
+                {type: 'media', data: screenshot, mediaType: 'image/png'},
+              ],
+            },
+          },
+        ],
+      },
       {role: 'assistant', content: [{type: 'tool-call', toolCallId: 'respond-1', toolName: 'respondToUser', input: {text: 'Answer with chart', mdId: 'abc123'}}]},
       {role: 'user', content: [{type: 'tool-result', toolCallId: 'respond-1', toolName: 'respondToUser', output: {text: 'Answer with chart', mdId: 'abc123'}}]},
     ]
@@ -189,7 +197,7 @@ test('uploads chart screenshot when respondToUser references mdId', async({slack
   expect(Buffer.isBuffer(uploadCall?.payload.file)).toBe(true)
 })
 
-test('resumes a slack thread by carrying forward prior prompt and adding only new thread context', async({slack, mockLLM}) => {
+test('resumes a slack thread by carrying forward prior prompt and adding only new thread context', async ({slack, mockLLM}) => {
   mockLLM.setResponse('Session reply')
 
   let threadTs = '1717000000.000001'
@@ -234,9 +242,7 @@ test('resumes a slack thread by carrying forward prior prompt and adding only ne
   await waitFor(() => mockLLM.getRequests().length === 1)
 
   let firstPrompts = getPromptTexts(mockLLM.getRequests()[0]?.messages || [])
-  expect(firstPrompts).toEqual([
-    'Latest mention: @thread-user-U999 Message 3 mentions graphene\nThread context:\n@thread-user-U1: Message 1 from thread\n@thread-user-U2: Message 2 from thread',
-  ])
+  expect(firstPrompts).toEqual(['Latest mention: @thread-user-U999 Message 3 mentions graphene\nThread context:\n@thread-user-U1: Message 1 from thread\n@thread-user-U2: Message 2 from thread'])
 
   await slack.simulateUserMessage('Message 5 mentions graphene again', {channel: 'C-RESUME', ts: secondMentionTs, threadTs})
   await waitFor(() => mockLLM.getRequests().length === 2)
@@ -250,7 +256,7 @@ test('resumes a slack thread by carrying forward prior prompt and adding only ne
   ])
 })
 
-test('stores the last processed mention timestamp on the slack session', async({slack, mockLLM}) => {
+test('stores the last processed mention timestamp on the slack session', async ({slack, mockLLM}) => {
   mockLLM.setResponse('Session reply')
 
   await slack.simulateUserMessage('first mention', {
@@ -261,7 +267,9 @@ test('stores the last processed mention timestamp on the slack session', async({
   await waitFor(() => mockLLM.getRequests().length === 1)
 
   let db = getDb()
-  let session = await db.select().from(schema.agentSessions)
+  let session = await db
+    .select()
+    .from(schema.agentSessions)
     .where(eq(schema.agentSessions.slackChannel, 'C-LAST-TS'))
     .then(rows => rows[0])
 
@@ -269,7 +277,7 @@ test('stores the last processed mention timestamp on the slack session', async({
   expect(session!.lastSlackThreadTs).toBe('1715000001.000001')
 })
 
-test('only includes thread messages newer than the last processed mention', async({slack, mockLLM}) => {
+test('only includes thread messages newer than the last processed mention', async ({slack, mockLLM}) => {
   mockLLM.setResponse('Session reply')
 
   let replyCalls = 0
@@ -318,9 +326,7 @@ test('only includes thread messages newer than the last processed mention', asyn
 })
 
 function getPromptTexts(messages: any[]) {
-  return messages
-    .map(msg => Array.isArray(msg.content) ? msg.content.map((c: any) => c.text || '').join('') : String(msg.content || ''))
-    .filter(Boolean)
+  return messages.map(msg => (Array.isArray(msg.content) ? msg.content.map((c: any) => c.text || '').join('') : String(msg.content || ''))).filter(Boolean)
 }
 
 async function waitFor(predicate: () => boolean, timeoutMs = 4000) {

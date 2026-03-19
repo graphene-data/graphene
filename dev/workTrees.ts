@@ -3,12 +3,12 @@
 // Worktrees is the script we use to manage local development. Besides handling git worktrees,
 // it can push/pull from main, and manages containers to execute code/agents safely.
 
-import { $, chalk, argv, cd, quote } from 'zx'
-import fs from 'fs'
-import net, { type AddressInfo } from 'net'
-import {resolve} from 'path'
 import {spawn} from 'child_process'
 import {createHash} from 'crypto'
+import fs from 'fs'
+import net, {type AddressInfo} from 'net'
+import {resolve} from 'path'
+import {$, chalk, argv, cd, quote} from 'zx'
 
 const BASE_PORT = 4003
 const PORT_INCREMENT = 3
@@ -23,16 +23,36 @@ let currentName = currentWorktree.split('/').pop() || ''
 let IN_CONTAINER = fs.existsSync('/.dockerenv')
 
 switch (argv._[0]) {
-  case 'status': await statusWorktree(!!argv.full); break
-  case 'start': await startWorktree(argv._[1]); break
-  case 'fetch': await fetchWorktree(); break
-  case 'pull': await pullWorktree(); break
-  case 'commit': await commitWorktree(); break
-  case 'push': await pushWorktree(); break
-  case 'up': await upWorktree(currentName); break
-  case 'down': await downWorktree(currentName); break
-  case 'exec': await execWorktree(argv._.slice(1)); break
-  case 'done': await doneWorktree(!!argv.force); break
+  case 'status':
+    await statusWorktree(!!argv.full)
+    break
+  case 'start':
+    await startWorktree(argv._[1])
+    break
+  case 'fetch':
+    await fetchWorktree()
+    break
+  case 'pull':
+    await pullWorktree()
+    break
+  case 'commit':
+    await commitWorktree()
+    break
+  case 'push':
+    await pushWorktree()
+    break
+  case 'up':
+    await upWorktree(currentName)
+    break
+  case 'down':
+    await downWorktree(currentName)
+    break
+  case 'exec':
+    await execWorktree(argv._.slice(1))
+    break
+  case 'done':
+    await doneWorktree(!!argv.force)
+    break
   default:
     console.log(`
 Usage: wt <command>
@@ -52,17 +72,17 @@ done [--force]          Archive both worktrees, or force-drop current worktree
 }
 
 // Host commands that the container can invoke via the `host` CLI. Each handler receives an args object and returns a response.
-const HOST_COMMANDS: Record<string, (args: any) => Promise<{ ok: boolean, data?: any, error?: string }>> = {
+const HOST_COMMANDS: Record<string, (args: any) => Promise<{ok: boolean; data?: any; error?: string}>> = {
   'open-browser': async ({url}) => {
     if (!url) return {ok: false, error: 'missing --url'}
     await $`open ${url}`
     return {ok: true}
   },
-  'commit': async () => await runMainWorktreeScript('commit'),
-  'fetch': async () => await runMainWorktreeScript('fetch'),
-  'status': async ({full}) => await runMainWorktreeScript('status', full ? ['--full'] : []),
-  'pull': async () => await runMainWorktreeScript('pull'),
-  'push': async () => {
+  commit: async () => await runMainWorktreeScript('commit'),
+  fetch: async () => await runMainWorktreeScript('fetch'),
+  status: async ({full}) => await runMainWorktreeScript('status', full ? ['--full'] : []),
+  pull: async () => await runMainWorktreeScript('pull'),
+  push: async () => {
     // Refuse to push if the branch modifies .github in any way (prevents CI tampering from agents)
     let ghDiff = (await $`git -C ${currentWorktree} diff origin/main --name-only -- .github`.nothrow()).stdout.trim()
     let ghDiffCore = (await $`git -C ${currentWorktree}/core diff origin/main --name-only -- .github`.nothrow()).stdout.trim()
@@ -80,7 +100,7 @@ async function runMainWorktreeScript(command: string, args: string[] = []) {
   return {ok: result.exitCode === 0, data: result.stdout + result.stderr}
 }
 
-async function startWorktree (name: string) {
+async function startWorktree(name: string) {
   if (!name) throw new Error('Please provide a name for the worktree')
   if (name === 'main') throw new Error('Cannot create a worktree named "main"')
 
@@ -125,7 +145,7 @@ async function startWorktree (name: string) {
 }
 
 // Start up a container for this worktree
-async function upWorktree(name:string) {
+async function upWorktree(name: string) {
   if (!name) throw new Error('Not in a worktree')
   let containerName = `graphene-${name}`
   let treePath = `${root}/${name}`
@@ -174,7 +194,7 @@ async function upWorktree(name:string) {
   console.log('Running containerStart.sh...')
   let child = spawn('docker', ['exec', '-it', containerName, 'bash', '-lc', 'dev/containerStart.sh'], {stdio: 'inherit'})
   await new Promise((resolve, reject) => {
-    child.on('exit', (code:any) => code === 0 ? resolve(undefined) : reject())
+    child.on('exit', (code: any) => (code === 0 ? resolve(undefined) : reject()))
     child.on('error', reject)
   })
 
@@ -185,7 +205,7 @@ async function downWorktree(name: string) {
   await $`docker rm -f graphene-${name}`.quiet().nothrow() // Stop existing container if running
 }
 
-async function repoDirty (subdir?: string): Promise<boolean> {
+async function repoDirty(subdir?: string): Promise<boolean> {
   let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
   let exclude = subdir ? [] : ['core']
   let status = (await $`git -C ${path} status --porcelain`).stdout.trim()
@@ -197,7 +217,7 @@ async function repoDirty (subdir?: string): Promise<boolean> {
   return lines.length > 0
 }
 
-async function hasWipCommits (subdir?: string): Promise<boolean> {
+async function hasWipCommits(subdir?: string): Promise<boolean> {
   // Check if any commits on the branch (not on origin/main) start with WIP
   let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
   let log = (await $`git -C ${path} log origin/main..HEAD --format=%s`).stdout.trim()
@@ -208,8 +228,8 @@ async function hasWipCommits (subdir?: string): Promise<boolean> {
 // Check if branch has commits not yet on origin/main, using git cherry to compare by patch content.
 // This handles rebase-merge where commit SHAs change but the patch content is the same.
 // Returns true if there are local commits that haven't been merged.
-async function hasUnmergedCommits (subdir: string | undefined, shouldFetch: boolean): Promise<boolean>
-async function hasUnmergedCommits (subdir?: string, shouldFetch = true): Promise<boolean> {
+async function hasUnmergedCommits(subdir: string | undefined, shouldFetch: boolean): Promise<boolean>
+async function hasUnmergedCommits(subdir?: string, shouldFetch = true): Promise<boolean> {
   let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
   if (shouldFetch) await $`git -C ${path} fetch origin`
   // git cherry outputs: '-' for commits with equivalent patches on upstream, '+' for unique commits
@@ -217,18 +237,18 @@ async function hasUnmergedCommits (subdir?: string, shouldFetch = true): Promise
   return cherryOutput.split('\n').some(line => line.startsWith('+ '))
 }
 
-function runCommitTool (cwd: string) {
+function runCommitTool(cwd: string) {
   let script = `cd ${quote(cwd)} && ${COMMIT_TOOL}`
   return $`sh -lc ${script}`
 }
 
-async function commitWorktree () {
+async function commitWorktree() {
   if (IN_CONTAINER) return hostCommand('commit')
   if (await repoDirty('core')) await runCommitTool(`${currentWorktree}/core`)
   if (await repoDirty()) await runCommitTool(currentWorktree)
 }
 
-async function statusWorktree (full = false) {
+async function statusWorktree(full = false) {
   await fetchWorktree()
 
   let repos = [
@@ -236,12 +256,15 @@ async function statusWorktree (full = false) {
     {label: 'co', path: currentWorktree},
   ] as const
 
-  let details = [] as {label: 'co' | 'core', branch: string, commits: string, status: string}[]
+  let details = [] as {label: 'co' | 'core'; branch: string; commits: string; status: string}[]
   for (let repo of repos) {
     let branch = (await $`git -C ${repo.path} rev-parse --abbrev-ref HEAD`).stdout.trim()
     let commits = (await $`git -C ${repo.path} log origin/main..HEAD ${full ? '--stat' : '--oneline'}`.nothrow()).stdout.trim()
     let statusRaw = (await $`git -C ${repo.path} status --porcelain`).stdout.trim()
-    let status = statusRaw.split('\n').filter(line => line && !(repo.label === 'co' && line.match(/^.. core$/))).join('\n')
+    let status = statusRaw
+      .split('\n')
+      .filter(line => line && !(repo.label === 'co' && line.match(/^.. core$/)))
+      .join('\n')
     details.push({label: repo.label, branch, commits, status})
   }
 
@@ -251,7 +274,7 @@ async function statusWorktree (full = false) {
   }
 }
 
-async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
+async function rebaseRepo(subdir?: string, onto?: string): Promise<boolean> {
   let path = subdir ? `${currentWorktree}/${subdir}` : currentWorktree
   let label = subdir || 'co'
 
@@ -296,23 +319,20 @@ async function rebaseRepo (subdir?: string, onto?: string): Promise<boolean> {
 
 async function fetchWorktree() {
   if (IN_CONTAINER) return hostCommand('fetch')
-  await Promise.all([
-    $`git -C ${currentWorktree} fetch origin`,
-    $`git -C ${currentWorktree}/core fetch origin`,
-  ])
+  await Promise.all([$`git -C ${currentWorktree} fetch origin`, $`git -C ${currentWorktree}/core fetch origin`])
   console.log('Up to date')
 }
 
-async function pullWorktree (): Promise<boolean> {
+async function pullWorktree(): Promise<boolean> {
   let success = true
   for (let subdir of ['core', undefined] as const) {
-    success = success && await rebaseRepo(subdir, 'origin/main')
+    success = success && (await rebaseRepo(subdir, 'origin/main'))
   }
   return success
 }
 
 // Ensure a PR exists for the given branch. If one already exists, return its URL without modifying it.
-async function ensurePR (repoPath: string, branch: string): Promise<string> {
+async function ensurePR(repoPath: string, branch: string): Promise<string> {
   // Check if a PR already exists for this branch
   let existing = (await $`gh pr list --repo ${getGhRepo(repoPath)} --head ${branch} --json url --jq .[0].url`.nothrow()).stdout.trim()
   if (existing) return existing
@@ -327,14 +347,14 @@ async function ensurePR (repoPath: string, branch: string): Promise<string> {
 }
 
 // Get the GitHub owner/repo slug from git remote
-function getGhRepo (repoPath: string): string {
+function getGhRepo(repoPath: string): string {
   // We know our remotes are git@github.com:org/repo.git - just hardcode based on path
   return repoPath.endsWith('/core') || repoPath.endsWith('/core/') ? 'graphene-data/graphene' : 'graphene-data/co'
 }
 
 async function pushWorktree() {
   if (IN_CONTAINER) return hostCommand('push')
-  if (!await pullWorktree()) return console.error('Pull failed. Resolve before pushing')
+  if (!(await pullWorktree())) return console.error('Pull failed. Resolve before pushing')
   if (await repoDirty('core')) return commitWorktree()
   if (await hasWipCommits('core')) return console.error('Core has WIP commits that must be squashed')
 
@@ -352,7 +372,6 @@ async function pushWorktree() {
   if (await repoDirty()) return commitWorktree()
   if (await hasWipCommits()) return console.error('co has WIP commits that must be squashed')
 
-
   if (cloudHasCommits) {
     console.log('Pushing cloud...')
     await $`git -C ${currentWorktree} push -f -u origin ${currentName}`
@@ -366,7 +385,7 @@ async function pushWorktree() {
 
 // Start a simple server that allows containers to execute HOST_COMMANDS
 // Protocol: client sends newline-delimited JSON, server responds with the same.
-function startHostIPC (): Promise<number> {
+function startHostIPC(): Promise<number> {
   return new Promise(resolve => {
     let server = net.createServer({allowHalfOpen: true}, conn => {
       let buf = ''
@@ -377,7 +396,9 @@ function startHostIPC (): Promise<number> {
         let handler = HOST_COMMANDS[command]
         let respond = (res: object) => conn.end(JSON.stringify(res) + '\n')
         if (!handler) return respond({ok: false, error: `unknown command: ${command}`})
-        handler(args || {}).then(respond).catch((e: any) => respond({ok: false, error: e.message}))
+        handler(args || {})
+          .then(respond)
+          .catch((e: any) => respond({ok: false, error: e.message}))
       })
     })
     server.listen(0, '127.0.0.1', () => resolve((server.address() as AddressInfo).port))
@@ -386,7 +407,7 @@ function startHostIPC (): Promise<number> {
 
 // Run a command in the container. If no command is specified, open a shell.
 // Starts a per-session TCP server so the container can send commands back to the host.
-async function execWorktree (args: string[]) {
+async function execWorktree(args: string[]) {
   let port = await startHostIPC()
   if (args.length > 0) {
     // Run commands in an interactive shell so user aliases/PATH setup from .zshrc are available.
@@ -397,18 +418,15 @@ async function execWorktree (args: string[]) {
     args = ['zsh']
   }
   let child = spawn('docker', ['exec', '-it', '-e', `HOST_IPC_PORT=${port}`, `graphene-${currentName}`, ...args], {stdio: 'inherit'})
-  child.on('exit', (code:any) => process.exit(code ?? 0))
+  child.on('exit', (code: any) => process.exit(code ?? 0))
 }
 
-async function doneWorktree (force = false) {
+async function doneWorktree(force = false) {
   if (currentName === 'main') throw new Error('Cannot mark main as done')
 
   if (!force) {
-    if (await repoDirty('core') || await repoDirty()) throw new Error('Repos have uncommitted changes')
-    await Promise.all([
-      $`git -C ${currentWorktree}/core fetch origin`,
-      $`git -C ${currentWorktree} fetch origin`,
-    ])
+    if ((await repoDirty('core')) || (await repoDirty())) throw new Error('Repos have uncommitted changes')
+    await Promise.all([$`git -C ${currentWorktree}/core fetch origin`, $`git -C ${currentWorktree} fetch origin`])
     if (await hasUnmergedCommits('core', false)) return console.error(`core branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
     if (await hasUnmergedCommits(undefined, false)) return console.error(`cloud branch '${currentName}' has not been merged into main. Merge it before running 'wt done'.`)
   }
@@ -420,26 +438,26 @@ async function doneWorktree (force = false) {
 }
 
 // Send a named command to the host to be run on our behalf
-async function hostCommand (command: string, commandArgs: Record<string, any> = {}): Promise<any> {
+async function hostCommand(command: string, commandArgs: Record<string, any> = {}): Promise<any> {
   let port = parseInt(process.env.HOST_IPC_PORT || '', 10)
   if (!port) return {ok: false, error: 'HOST_IPC_PORT is not set'}
 
-  let res:any = await new Promise((resolve, reject) => {
+  let res: any = await new Promise((resolve, reject) => {
     let request = JSON.stringify({command, args: commandArgs}) + '\n'
     let socket = net.createConnection(port, 'host.docker.internal', () => socket.end(request))
 
     let data = ''
-    socket.on('data', (chunk:string) => data += chunk)
+    socket.on('data', (chunk: string) => (data += chunk))
     socket.on('end', () => resolve(JSON.parse(data)))
-    socket.on('error', (err:Error) => reject(err))
+    socket.on('error', (err: Error) => reject(err))
   })
   console.log(res.data.trim())
   if (!res.ok) throw new Error(`${command} failed`)
 }
 
-
-function getTreeNames (): string[] {
-  return fs.readdirSync(root, {withFileTypes: true})
+function getTreeNames(): string[] {
+  return fs
+    .readdirSync(root, {withFileTypes: true})
     .filter(entry => entry.isDirectory() && entry.name !== 'main' && !entry.name.startsWith('.'))
     .map(entry => entry.name)
     .sort()
@@ -454,7 +472,7 @@ function readGraphenePort(treeName: string): number | null {
   return parseInt(match[1], 10)
 }
 
-function getNextPort (): number {
+function getNextPort(): number {
   let used = getTreeNames().map(readGraphenePort)
   let port = BASE_PORT
   while (used.includes(port)) {

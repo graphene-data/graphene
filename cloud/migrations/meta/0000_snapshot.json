@@ -79,12 +79,8 @@
           "name": "connections_orgId_orgs_id_fk",
           "tableFrom": "connections",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "orgId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["orgId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -185,12 +181,8 @@
           "name": "files_repoId_repos_id_fk",
           "tableFrom": "files",
           "tableTo": "repos",
-          "columnsFrom": [
-            "repoId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["repoId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -368,12 +360,8 @@
           "name": "repos_orgId_orgs_id_fk",
           "tableFrom": "repos",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "orgId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["orgId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -442,12 +430,8 @@
           "name": "users_orgId_orgs_id_fk",
           "tableFrom": "users",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "orgId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["orgId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -521,12 +505,8 @@
           "name": "vcs_installations_orgId_orgs_id_fk",
           "tableFrom": "vcs_installations",
           "tableTo": "orgs",
-          "columnsFrom": [
-            "orgId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["orgId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

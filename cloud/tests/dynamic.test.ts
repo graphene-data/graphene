@@ -1,7 +1,8 @@
-import {test, expect} from './fixtures.ts'
-import {describe} from 'vitest'
 import jwt from 'jsonwebtoken'
+import {describe} from 'vitest'
+
 import {orgId, repoId} from '../server/dev.ts'
+import {test, expect} from './fixtures.ts'
 
 function createToken() {
   let secret = process.env.AGENT_TOKEN_SECRET || 'dev-secret-key'
@@ -11,7 +12,7 @@ function createToken() {
 describe('dynamic endpoint', () => {
   test.scoped({realAuth: true})
 
-  test('renders bar chart with cookie auth', {timeout: 20000}, async({browser, cloud}) => {
+  test('renders bar chart with cookie auth', {timeout: 20000}, async ({browser, cloud}) => {
     let context = await browser.newContext({deviceScaleFactor: 2})
     let page = await context.newPage()
 
@@ -19,12 +20,14 @@ describe('dynamic endpoint', () => {
     let urlObj = new URL(cloud.url)
 
     // Set the agent token cookie (like Lambda does)
-    await context.addCookies([{
-      name: 'graphene_agent_token',
-      value: token,
-      domain: urlObj.hostname,
-      path: '/',
-    }])
+    await context.addCookies([
+      {
+        name: 'graphene_agent_token',
+        value: token,
+        domain: urlObj.hostname,
+        path: '/',
+      },
+    ])
 
     let markdown = `# Flight Delays
 

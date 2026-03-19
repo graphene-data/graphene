@@ -1,17 +1,19 @@
+import type {FastifyLoggerOptions} from 'fastify'
+
+import middie from '@fastify/middie'
+import {migrate} from 'drizzle-orm/postgres-js/migrator'
 import fs, {globSync} from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import middie from '@fastify/middie'
 import {createServer as createViteServer, optimizeDeps, resolveConfig} from 'vite'
-import {migrate} from 'drizzle-orm/postgres-js/migrator'
-import type {FastifyLoggerOptions} from 'fastify'
-import {createServer} from './server.ts'
-import {getDb, resetDb, setupPglite} from './db.ts'
+
 import * as schema from '../schema.ts'
-import {setAuthOverride} from './auth.ts'
-import {encryptSecret} from './secrets.ts'
-import {TEST} from './consts.ts'
 import {flightsAgentSessionMessages} from '../tests/mockLLM.ts'
+import {setAuthOverride} from './auth.ts'
+import {TEST} from './consts.ts'
+import {getDb, resetDb, setupPglite} from './db.ts'
+import {encryptSecret} from './secrets.ts'
+import {createServer} from './server.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../..')
 export const orgId = 'organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d'
@@ -149,10 +151,14 @@ export async function seedDatabase(project = 'flights') {
 }
 
 export async function prepareFrontendDeps() {
-  let config = await resolveConfig({
-    root: path.join(rootDir, 'frontend'),
-    configFile: path.join(rootDir, 'frontend/vite.config.ts'),
-  }, 'serve', 'test')
+  let config = await resolveConfig(
+    {
+      root: path.join(rootDir, 'frontend'),
+      configFile: path.join(rootDir, 'frontend/vite.config.ts'),
+    },
+    'serve',
+    'test',
+  )
   await optimizeDeps(config, true)
 }
 

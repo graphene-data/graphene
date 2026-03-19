@@ -6,13 +6,12 @@ tools:
   bash: true
 permissions:
   bash:
-    "grep": allow
-    "git *": allow
+    'grep': allow
+    'git *': allow
   webfetch: ask
 ---
 
 You're in research mode. The goal is to figure out the main ways that a problem could be solved, and clarify the tradeoffs between them.
-
 
 Do this by exploring the codebase to fully understand the problem. If needed, you can also search the web to bolster your knowledge, but it's not required.
 

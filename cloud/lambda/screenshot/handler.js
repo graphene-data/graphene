@@ -13,7 +13,7 @@ export async function handler(event) {
 
   let timings = {}
   let last = Date.now()
-  let mark = (key) => {
+  let mark = key => {
     let now = Date.now()
     timings[key] = now - last
     last = now
@@ -31,17 +31,19 @@ export async function handler(event) {
     let context = await browser.newContext({
       viewport: {width: 720, height: 720},
       deviceScaleFactor: 2,
-      userAgent: 'GrapheneScreenshot/1.0',  // Non-browser UA to bypass ngrok warning page
+      userAgent: 'GrapheneScreenshot/1.0', // Non-browser UA to bypass ngrok warning page
     })
 
     // Set agent token as cookie if provided (for authenticating query requests)
     if (event.token) {
-      await context.addCookies([{
-        name: 'graphene_agent_token',
-        value: event.token,
-        domain: cookieDomain,
-        path: '/',
-      }])
+      await context.addCookies([
+        {
+          name: 'graphene_agent_token',
+          value: event.token,
+          domain: cookieDomain,
+          path: '/',
+        },
+      ])
     }
 
     let page = await context.newPage()
@@ -62,9 +64,19 @@ export async function handler(event) {
     mark('navigation')
 
     // If the page loaded successfully, wait for async queries to finish
-    let httpError = response && !response.ok()
-      ? await response.text().catch(() => '').then(b => { try { return JSON.parse(b).message || b } catch { return b } })
-      : null
+    let httpError =
+      response && !response.ok()
+        ? await response
+            .text()
+            .catch(() => '')
+            .then(b => {
+              try {
+                return JSON.parse(b).message || b
+              } catch {
+                return b
+              }
+            })
+        : null
     if (!httpError) await page.waitForLoadState('networkidle')
     mark('networkIdle')
 
@@ -76,10 +88,8 @@ export async function handler(event) {
     }
     mark('grapheneIdle')
 
-    let element = await page.$('.run-md-screenshot') || await page.$('main#content')
-    let screenshot = element
-      ? await element.screenshot({type: 'png', animations: 'disabled'})
-      : await page.screenshot({type: 'png', animations: 'disabled', fullPage: true})
+    let element = (await page.$('.run-md-screenshot')) || (await page.$('main#content'))
+    let screenshot = element ? await element.screenshot({type: 'png', animations: 'disabled'}) : await page.screenshot({type: 'png', animations: 'disabled', fullPage: true})
     mark('screenshot')
 
     // Extract query results and errors from the page (will be empty if page failed to load)
@@ -92,7 +102,7 @@ export async function handler(event) {
     if (httpError) errors = [{message: httpError}]
 
     return {success: true, screenshot: screenshot.toString('base64'), queryData, errors, timings, pageErrors}
-  } catch(err) {
+  } catch (err) {
     let error = err instanceof Error ? err.message : String(err)
     return {success: false, error, timings}
   } finally {

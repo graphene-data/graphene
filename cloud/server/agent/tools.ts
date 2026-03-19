@@ -1,13 +1,14 @@
 import {tool} from 'ai'
-import {z} from 'zod'
 import {eq, like, or, and} from 'drizzle-orm'
-import {getDb} from '../db.ts'
-import {files} from '../../schema.ts'
 import fs from 'node:fs'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import {renderMd} from './runMd.ts'
+import {z} from 'zod'
+
+import {files} from '../../schema.ts'
 import {PROD} from '../consts.ts'
+import {getDb} from '../db.ts'
+import {renderMd} from './runMd.ts'
 
 let rootDir = path.resolve(fileURLToPath(import.meta.url), '../../..')
 
@@ -17,9 +18,9 @@ export function listDirTool(repoId: string) {
     inputSchema: z.object({
       path: z.string().describe('Directory path to list (use "" for root)'),
     }),
-    execute: async({path}) => {
+    execute: async ({path}) => {
       let prefix = path ? `${path}/` : ''
-      let allFiles = await (getDb())
+      let allFiles = await getDb()
         .select({path: files.path, extension: files.extension})
         .from(files)
         .where(eq(files.repoId, repoId))
@@ -51,7 +52,7 @@ export function readFileTool(repoId: string) {
     inputSchema: z.object({
       path: z.string().describe('File path to read (without extension)'),
     }),
-    execute: async({path: filePath}) => {
+    execute: async ({path: filePath}) => {
       // Special case: docs/graphene.md is a core documentation file
       if (filePath.endsWith('docs/graphene.md') || filePath.endsWith('docs/graphene')) {
         let docsPath = path.resolve(rootDir, '../core/docs/graphene.md')
@@ -63,7 +64,7 @@ export function readFileTool(repoId: string) {
       // Remove extension if provided
       let cleanPath = filePath.replace(/\.(md|gsql)$/, '')
 
-      let file = await (getDb())
+      let file = await getDb()
         .select({content: files.content, extension: files.extension})
         .from(files)
         .where(and(eq(files.repoId, repoId), eq(files.path, cleanPath)))
@@ -81,15 +82,12 @@ export function searchTool(repoId: string) {
     inputSchema: z.object({
       query: z.string().describe('Search query string'),
     }),
-    execute: async({query}) => {
+    execute: async ({query}) => {
       let pattern = `%${query}%`
-      let results = await (getDb())
+      let results = await getDb()
         .select({path: files.path, extension: files.extension, content: files.content})
         .from(files)
-        .where(and(
-          eq(files.repoId, repoId),
-          or(like(files.path, pattern), like(files.content, pattern)),
-        ))
+        .where(and(eq(files.repoId, repoId), or(like(files.path, pattern), like(files.content, pattern))))
         .limit(20)
         .then(rows => rows)
 
@@ -119,7 +117,7 @@ function extractPreview(content: string, query: string, contextChars = 100): str
 }
 
 export function renderMdTool(repoId: string) {
-  let baseUrl = !PROD ? (globalThis as any).__GRAPHENE_DEV_NGROK_URL as string : undefined
+  let baseUrl = !PROD ? ((globalThis as any).__GRAPHENE_DEV_NGROK_URL as string) : undefined
 
   // Using 'as any' because toModelOutput is a runtime feature not yet in TypeScript types
   return tool({
@@ -127,30 +125,30 @@ export function renderMdTool(repoId: string) {
     inputSchema: z.object({
       markdown: z.string().describe('Markdown content with graphene chart blocks to render'),
     }),
-    execute: async({markdown}) => {
+    execute: async ({markdown}) => {
       return await renderMd(markdown, repoId, baseUrl)
     },
     // Convert results to multi-modal content for the model.
     // If there are query errors, skip the screenshot and just return the errors so the agent can fix them.
-    toModelOutput({output}: {output: {success: boolean, mdId?: string, screenshot?: string, queryData?: Record<string, {rows: any[]}>, errors?: {message: string, id?: string}[], error?: string}}) {
+    toModelOutput({output}: {output: {success: boolean; mdId?: string; screenshot?: string; queryData?: Record<string, {rows: any[]}>; errors?: {message: string; id?: string}[]; error?: string}}) {
       if (output.success && output.errors?.length) {
-        let errText = output.errors.map(e => e.id ? `${e.id}: ${e.message}` : e.message).join('\n')
+        let errText = output.errors.map(e => (e.id ? `${e.id}: ${e.message}` : e.message)).join('\n')
         let mdIdText = output.mdId ? `Rendered markdown id: ${output.mdId}\n` : ''
         return {type: 'content' as const, value: [{type: 'text' as const, text: `${mdIdText}Query errors:\n${errText}`}]}
       }
       if (output.success && output.screenshot) {
         let content: any[] = []
         if (output.mdId) content.push({type: 'text' as const, text: `Rendered markdown id: ${output.mdId}`})
-        content.push(
-          {type: 'media' as const, data: output.screenshot, mediaType: 'image/png' as const},
-        )
+        content.push({type: 'media' as const, data: output.screenshot, mediaType: 'image/png' as const})
         if (output.queryData && Object.keys(output.queryData).length > 0) {
-          let dataSummary = Object.entries(output.queryData).map(([name, {rows}]) => {
-            let header = rows.length > 0 ? Object.keys(rows[0]).join(' | ') : '(no columns)'
-            let dataRows = rows.slice(0, 50).map(r => Object.values(r).join(' | '))
-            let truncated = rows.length > 50 ? `\n... (${rows.length - 50} more rows)` : ''
-            return `Query "${name}" (${rows.length} rows):\n${header}\n${dataRows.join('\n')}${truncated}`
-          }).join('\n\n')
+          let dataSummary = Object.entries(output.queryData)
+            .map(([name, {rows}]) => {
+              let header = rows.length > 0 ? Object.keys(rows[0]).join(' | ') : '(no columns)'
+              let dataRows = rows.slice(0, 50).map(r => Object.values(r).join(' | '))
+              let truncated = rows.length > 50 ? `\n... (${rows.length - 50} more rows)` : ''
+              return `Query "${name}" (${rows.length} rows):\n${header}\n${dataRows.join('\n')}${truncated}`
+            })
+            .join('\n\n')
           content.push({type: 'text' as const, text: `Underlying data:\n\n${dataSummary}`})
         }
         return {type: 'content' as const, value: content}

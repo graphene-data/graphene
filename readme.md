@@ -1,6 +1,3 @@
-
-
-
 # Publishing Graphene
 
 To publish, have your agent run the `/publish` command. This will create a diff that updates the changelog and bumps the version. If it looks good, push it to a PR.
@@ -8,6 +5,7 @@ To publish, have your agent run the `/publish` command. This will create a diff 
 When the PR is merged, a tag and release are automatically created.
 
 ## Test out new package manually before deloying
+
 Not required, but can be helpful if you've make big structural changes.
 
 1. From `core/cli` run `npm pack` (not pnpm). This will make a tgz of the package.

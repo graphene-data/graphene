@@ -1,11 +1,14 @@
 import type {FastifyReply, FastifyRequest} from 'fastify'
+
 import {eq} from 'drizzle-orm'
-import {B2BClient} from 'stytch'
 import jwt from 'jsonwebtoken'
+import {B2BClient} from 'stytch'
+
 import type {AuthContext} from './types.js'
-import {getDb} from './db.ts'
+
 import {orgs} from '../schema.ts'
 import {DOMAIN, PROD, TEST} from './consts.ts'
+import {getDb} from './db.ts'
 
 export type {AuthContext}
 
@@ -21,7 +24,7 @@ export function generateAgentToken(orgId: string): string {
 }
 
 export async function auth(req: FastifyRequest, reply: FastifyReply) {
-  (req as any).auth = null
+  ;(req as any).auth = null
   let isAgentAuth = false
 
   if (TEST && authOverride) {
@@ -65,7 +68,11 @@ export async function auth(req: FastifyRequest, reply: FastifyReply) {
     let base = '.localhost'
     if (PROD) base = '.' + DOMAIN
     let subdomain = host.replace(base, '')
-    let org = await (getDb()).select({slug: orgs.slug}).from(orgs).where(eq(orgs.id, req.auth.orgId)).then(rows => rows[0])
+    let org = await getDb()
+      .select({slug: orgs.slug})
+      .from(orgs)
+      .where(eq(orgs.id, req.auth.orgId))
+      .then(rows => rows[0])
     if (!org) throw new Error('Missing org for logged in user')
     req.auth.slug = org.slug
 
