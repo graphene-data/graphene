@@ -20,12 +20,10 @@
     "install-vscode": "pnpm run package && code --install-extension *.vsix"
   },
   "dependencies": {
-    "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.11"
+    "vscode-languageclient": "^9.0.1"
   },
   "devDependencies": {
-    "@types/vscode": "^1.84.0",
+    "@types/vscode": "^1.110.0",
     "esbuild": "^0.27.2",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"
@@ -57,6 +55,6 @@
     "onStartupFinished"
   ],
   "engines": {
-    "vscode": "^1.84.0"
+    "vscode": "^1.110.0"
   }
 }
