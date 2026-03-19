@@ -1,4 +1,4 @@
-import {createServer} from '@volar/language-server/node.js'
+import {type createServer} from '@volar/language-server/node.js'
 import {type LanguageServicePlugin, type LanguageServicePluginInstance} from '@volar/language-service'
 import {relative as relativePath} from 'node:path'
 import {

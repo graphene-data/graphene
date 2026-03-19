@@ -1,7 +1,8 @@
 #!/usr/bin/env node
+import {argv} from 'node:process'
 
-if (process.argv.includes('--version')) {
-  const {
+if (argv.includes('--version')) {
+  let {
     default: {version},
   } = await import('../package.json', {
     with: {type: 'json'},

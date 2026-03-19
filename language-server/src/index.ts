@@ -11,7 +11,7 @@ connection.onInitialize(params => {
   return server.initialize(params, createSimpleProject([]), [createGrapheneService(server)])
 })
 
-connection.onInitialized(async () => {
+connection.onInitialized(() => {
   server.initialized()
 })
 connection.onShutdown(server.shutdown)
