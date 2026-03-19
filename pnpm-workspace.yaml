@@ -3,5 +3,6 @@ packages:
   - cli
   - ui
   - agent
+  - language-server
   - vscode
   - examples/*
