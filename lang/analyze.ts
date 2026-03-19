@@ -187,7 +187,12 @@ export function analyzeTableFully(table: Table) {
     c.isAgg = expr.isAgg
     analyzeComputedFieldExpr(c.exprNode, expr)
   })
-  table.joins.forEach(j => (j.table = lookupTable(j.targetNode!)))
+  table.joins.forEach(j => {
+    j.table = lookupTable(j.targetNode!)
+    if (!j.table || !j.onExpr) return
+    let joinTarget = {name: j.alias, table: j.table, alias: j.alias}
+    analyzeExpr(j.onExpr, {table, alias: table.name, fanoutPath: [], joinTarget})
+  })
 }
 
 // Expand non-aggregate columns into query fields.

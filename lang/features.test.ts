@@ -90,6 +90,31 @@ from active_users select display_name`)
     })
   })
 
+  it('returns definitions for join condition references', () => {
+    analyze(`table users (id int, name text)
+table orders (
+  id int,
+  user_id int,
+  join one users on users.id = user_id
+)`)
+
+    expect(simple(getDefinition('input', 4, 11))).toEqual({
+      file: 'input',
+      from: [0, 6],
+      to: [0, 11],
+    })
+    expect(simple(getDefinition('input', 4, 26))).toEqual({
+      file: 'input',
+      from: [0, 13],
+      to: [0, 15],
+    })
+    expect(simple(getDefinition('input', 4, 31))).toEqual({
+      file: 'input',
+      from: [3, 2],
+      to: [3, 9],
+    })
+  })
+
   it('maps markdown table definitions back to the fence header', () => {
     analyze(
       `\`\`\`gsql users

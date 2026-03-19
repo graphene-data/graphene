@@ -681,6 +681,16 @@ describe('lang', () => {
     expect('from orders select users.does_not_exist').toHaveDiagnostic(/unknown field "does_not_exist" on users/i)
   })
 
+  it('reports diagnostics for unknown columns in table join conditions', () => {
+    expect(`
+      table users (id int)
+      table orders (
+        user_id int,
+        join one users on users.does_not_exist = user_id
+      )
+    `).toHaveDiagnostic(/unknown field "does_not_exist" on users/i)
+  })
+
   it('reports not being able to find a join on a query', () => {
     expect(`
       table t (oid int, join one users as usr on usr.id = oid);
