@@ -25,6 +25,7 @@ export interface Expr {
 export interface QueryField extends Expr {
   name: string // output column name
   metadata?: Record<string, string>
+  definitionLocation?: Location // where this field is defined when materialized into a view
 }
 
 // A filter (WHERE or HAVING)
@@ -87,6 +88,8 @@ export interface Column {
   isAgg?: boolean // for computed columns that are aggregates
   exprNode?: SyntaxNode // for computed columns, the expression AST node (analyzed lazily in query context)
   metadata?: Record<string, string>
+  symbolId?: string
+  location?: Location
 }
 
 // A table definition - discriminated union so views guarantee a query
@@ -97,6 +100,8 @@ interface TableBase {
   joins: QueryJoin[]
   metadata?: Record<string, string>
   syntaxNode?: SyntaxNode
+  symbolId?: string
+  location?: Location
 }
 export interface PhysicalTable extends TableBase {
   type: 'table'
@@ -129,12 +134,40 @@ export interface Diagnostic {
   severity: 'error' | 'warn'
 }
 
+export interface Location {
+  file: string
+  from: Position
+  to: Position
+}
+
+export type NavigationSymbolKind = 'table' | 'column'
+
+export interface NavigationSymbol {
+  id: string
+  kind: NavigationSymbolKind
+  name: string
+  location: Location
+  tableId?: string
+}
+
+export interface NavigationReference {
+  kind: NavigationSymbolKind
+  location: Location
+  targetId: string
+}
+
+export interface FileNavigation {
+  symbols: NavigationSymbol[]
+  references: NavigationReference[]
+}
+
 export interface FileInfo {
   path: string
   contents: string
   tree: Tree | null
   tables: Table[]
   queries: Query[]
+  navigation: FileNavigation
   virtualContents?: string
   virtualToMarkdownOffset?: number[]
 }

@@ -18,7 +18,21 @@ import {
 import {analyzeFunction} from './functions.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval} from './temporal.ts'
-import {type Table, type Query, type QueryJoin, type Column, type FieldType, type FileInfo, type Diagnostic, type Expr, type CteTable, type JoinType, type Scope} from './types.ts'
+import {
+  type Table,
+  type Query,
+  type QueryJoin,
+  type Column,
+  type FieldType,
+  type FileInfo,
+  type Diagnostic,
+  type Expr,
+  type CteTable,
+  type JoinType,
+  type Scope,
+  type Location,
+  type NavigationSymbolKind,
+} from './types.ts'
 import {txt, getFile, getPosition} from './util.ts'
 
 // Analyze is the heart of gsql processing. It works in 2 phases:
@@ -39,24 +53,50 @@ export let diagnostics: Diagnostic[] = [] // Tracks errors/warnings
 let analysisStack = new Set<Column>() // Track computed columns being analyzed to detect cycles
 let NODE_ENTITY_MAP = new NodeWeakMap<any>() // Points syntax nodes back to entities for ide hover tips
 
+function locationForNode(node: SyntaxNode): Location {
+  let file = getFile(node)
+  return {file: file.path, from: getPosition(node.from, file), to: getPosition(node.to, file)}
+}
+
+function symbolId(kind: NavigationSymbolKind, location: Location, scopeKey = '') {
+  let suffix = scopeKey ? `:${scopeKey}` : ''
+  return `${kind}:${location.file}:${location.from.offset}:${location.to.offset}${suffix}`
+}
+
+function addSymbol(kind: NavigationSymbolKind, node: SyntaxNode, name: string, opts: {tableId?: string; scopeKey?: string} = {}) {
+  let file = getFile(node)
+  let location = locationForNode(node)
+  let id = symbolId(kind, location, opts.scopeKey)
+  file.navigation.symbols.push({id, kind, name, location, tableId: opts.tableId})
+  return {symbolId: id, location}
+}
+
+function addReference(kind: NavigationSymbolKind, node: SyntaxNode, targetId?: string) {
+  if (!targetId) return
+  let file = getFile(node)
+  file.navigation.references.push({kind, targetId, location: locationForNode(node)})
+}
+
 // Creates tables without analyzing them.
 export function findTables(fi: FileInfo) {
   let tn = fi.tree!.topNode
   fi.tables = []
   let nodes = tn.getChildren('TableStatement').concat(tn.getChildren('ViewStatement'))
   for (let syntaxNode of nodes) {
-    let name = txt(syntaxNode.getChild('Ref'))
+    let refNode = syntaxNode.getChild('Ref')!
+    let name = txt(refNode)
 
     let existing = Object.values(FILE_MAP).find(f => {
       if (f.path.endsWith('.md') && f.path != fi.path) return
       return f.tables.find(t => t.name == name)
     })
-    if (existing) diag(syntaxNode.getChild('Ref')!, `Table "${name}" is already defined`)
+    if (existing) diag(refNode, `Table "${name}" is already defined`)
 
     let hasNamespace = name.includes('.')
     let tablePath = !hasNamespace && config.defaultNamespace ? `${config.defaultNamespace}.${name}` : name
     let type = syntaxNode.getChild('QueryStatement') ? 'view' : ('table' as const)
     let table = {name, type, tablePath, columns: [], joins: [], metadata: extractLeadingMetadata(syntaxNode), syntaxNode} as Table
+    Object.assign(table, addSymbol('table', refNode, name))
 
     syntaxNode.getChildren('ColumnDef').forEach(cn => addColumn(table, cn))
     syntaxNode.getChildren('JoinDef').forEach(jn => addJoin(table, jn))
@@ -77,10 +117,12 @@ export function applyExtends(fi: FileInfo) {
 }
 
 function addColumn(table: Table, node: SyntaxNode) {
-  let name = txt(node.getChild('ColumnName'))
+  let nameNode = node.getChild('ColumnName')!
+  let name = txt(nameNode)
   let type = convertDataType(txt(node.getChild('DataType')))
   if (!type) return diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
   let col: Column = {name, type, metadata: extractLeadingMetadata(node)}
+  Object.assign(col, addSymbol('column', nameNode, name, {tableId: table.symbolId}))
   if (getField(name, table)) return diag(node, `Table already has a field called "${name}"`)
   table.columns.push(col)
 }
@@ -103,8 +145,10 @@ function addJoin(table: Table, node: SyntaxNode) {
 }
 
 function addComputedColumn(table: Table, node: SyntaxNode) {
-  let name = txt(node.getChild('Alias'))
+  let nameNode = node.getChild('Alias')!
+  let name = txt(nameNode)
   let col: Column = {name, type: 'string', exprNode: node.getChild('Expression')!, metadata: extractLeadingMetadata(node)}
+  Object.assign(col, addSymbol('column', nameNode, name, {tableId: table.symbolId}))
   if (getField(name, table)) return diag(node, `Table already has a field called "${name}"`)
   table.columns.push(col)
 }
@@ -120,7 +164,15 @@ function analyzeView(table: Table) {
   if (table.type != 'view') return
   if (table.query) return // already analyzed
   let query = analyzeQuery(table.syntaxNode!.getChild('QueryStatement')!)
-  let viewCols = query?.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column) || []
+  let viewCols =
+    query?.fields.map(f => {
+      let col = {name: f.name, type: f.type, metadata: f.metadata, location: f.definitionLocation} as Column
+      if (f.definitionLocation) {
+        col.symbolId = symbolId('column', f.definitionLocation, `${table.symbolId}:${f.name}`)
+        getFile(table.syntaxNode!).navigation.symbols.push({id: col.symbolId, kind: 'column', name: col.name, location: f.definitionLocation, tableId: table.symbolId})
+      }
+      return col
+    }) || []
   table.columns.push(...viewCols)
   table.query = query!
 }
@@ -165,9 +217,17 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         type: expr.type,
         metadata: col.metadata,
         fanout: expr.fanout,
+        definitionLocation: col.location,
       })
     } else {
-      query.fields.push({name: outName, sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata, fanout: normalizeExprFanout({path: scope.fanoutPath})})
+      query.fields.push({
+        name: outName,
+        sql: `${alias}.${col.name}`,
+        type: col.type,
+        metadata: col.metadata,
+        fanout: normalizeExprFanout({path: scope.fanoutPath}),
+        definitionLocation: col.location,
+      })
     }
   }
 }
@@ -254,9 +314,11 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
       if (!targetScope.table) continue
       expandColumns(targetScope.table, targetScope.alias, query, targetScope)
     } else {
-      let expr = analyzeExpr(s.getChild('Expression')!, scope)
-      if (expr.type == 'interval' && expr.interval?.form == 'scaled') diag(s.getChild('Expression')!, 'Multiplied intervals are only supported inside date/time arithmetic')
-      let name = s.getChild('Alias') ? txt(s.getChild('Alias')) : inferName(s.getChild('Expression')!, scope)
+      let exprNode = s.getChild('Expression')!
+      let aliasNode = s.getChild('Alias')
+      let expr = analyzeExpr(exprNode, scope)
+      if (expr.type == 'interval' && expr.interval?.form == 'scaled') diag(exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
+      let name = aliasNode ? txt(aliasNode) : inferName(exprNode, scope)
       isAgg ||= !!expr.isAgg
       query.fields.push({
         name,
@@ -264,8 +326,9 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
         type: expr.type,
         isAgg: expr.isAgg,
         fanout: expr.fanout,
+        definitionLocation: locationForNode(aliasNode || exprNode),
       })
-      fanoutExprs.push({node: s.getChild('Expression')!, expr})
+      fanoutExprs.push({node: exprNode, expr})
     }
   }
 
@@ -301,7 +364,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
       // If it's not in there, add it to the select.
       if (!query.fields.find(f => f.name == name)) {
-        query.fields.unshift({name, sql: expr.sql, type: expr.type, fanout: expr.fanout})
+        query.fields.unshift({name, sql: expr.sql, type: expr.type, fanout: expr.fanout, definitionLocation: locationForNode(g.getChild('Alias') || exprNode)})
       }
       fanoutExprs.push({node: g.getChild('Expression')!, expr})
     }
@@ -468,6 +531,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let {table, alias} = matches[0]
       let col = table.columns.find(c => c.name == fieldName)!
       NODE_ENTITY_MAP.set(fieldNode, {entityType: 'field', field: col, table})
+      addReference('column', fieldNode, col.symbolId)
 
       // Simple case: this is just a regular column on a table
       if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
@@ -891,6 +955,7 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     let table = pointsAtTarget ? scope.joinTarget.table : scope.table!
     let alias = pointsAtTarget ? scope.joinTarget.alias : scope.alias
     NODE_ENTITY_MAP.set(pathNodes[0], {entityType: 'table', table})
+    addReference('table', pathNodes[0], table.symbolId)
     return {query: scope.query, table, alias, fanoutPath: scope.fanoutPath, otherTables: scope.otherTables}
   }
 
@@ -902,6 +967,7 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     let existing = scope.query!.joins.find(j => j.alias == name)
     if (existing) {
       NODE_ENTITY_MAP.set(part, {entityType: 'table', table: existing.table})
+      addReference('table', part, existing.table?.symbolId)
       scope = {...scope, table: existing.table!, alias: existing.alias, fanoutPath: existing.fanoutPath}
       pathNodes.shift() // remove, since we're updating scope
     } else {
@@ -938,6 +1004,7 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     }
 
     NODE_ENTITY_MAP.set(part, {entityType: 'table', table: next.table})
+    addReference('table', part, next.table.symbolId)
     scope = {...scope, table: next.table, alias: newAlias, fanoutPath}
   }
 
@@ -1085,6 +1152,7 @@ function lookupTable(node: SyntaxNode, scope?: Scope): Table | undefined {
   }
   if (!table) return diag(node, `Unknown table "${name}"`)
   analyzeView(table)
+  addReference('table', node, table.symbolId)
   return table
 }
 
