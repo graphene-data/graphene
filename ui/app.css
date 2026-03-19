@@ -139,8 +139,26 @@ nav {
 main {
   flex: 1;
   min-width: 0;
+  max-width: 1200px;
+  margin: 0 auto;
   padding: 20px 48px 80px;
+  display: grid;
+  grid-template-columns: 1fr min(660px, 100%) 1fr;
 }
+
+/* Prose and standalone charts sit in the centered 660px column */
+main > * { grid-column: 2; }
+
+/* Row containers, high-cardinality standalone charts, and raw HTML block elements span full width */
+main > .row,
+main > [data-chart-size="large"],
+main > [data-raw] { grid-column: 1 / -1; }
+
+/* Low-cardinality charts are narrower than the prose column, centered */
+main > [data-chart-size="small"] { justify-self: center; width: min(480px, 100%); }
+
+/* Standalone tables use their natural column width, not the full grid cell */
+main > .table-container { justify-self: center; }
 
 /* Default border color */
 *,

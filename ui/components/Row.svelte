@@ -1,4 +1,9 @@
-<div><slot></slot></div>
+<script>
+  import {setContext} from 'svelte'
+  setContext('insideContainer', true)
+</script>
+
+<div class="row"><slot></slot></div>
 
 <style>
   div {

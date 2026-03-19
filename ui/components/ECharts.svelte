@@ -17,6 +17,7 @@
     showAllXAxisLabels?: boolean
     swapXY?: boolean
     chartTitle?: string
+    chartSize?: 'small' | 'medium' | 'large'
     onclick?: (params: any) => void
   }
 
@@ -26,7 +27,7 @@
     config, height = '240px', width = '100%', data, queryID = undefined, renderer = undefined,
     echartsOptions = undefined, seriesOptions = undefined, seriesColors = undefined,
     connectGroup = undefined, xAxisLabelOverflow = undefined, showAllXAxisLabels = undefined,
-    swapXY = undefined, chartTitle = undefined, onclick = undefined,
+    swapXY = undefined, chartTitle = undefined, chartSize = undefined, onclick = undefined,
   }: Props = $props()
 
   const isBrowser = typeof window !== 'undefined'
@@ -38,7 +39,7 @@
   }
 </script>
 
-<div class="echarts-container">
+<div class="echarts-container" data-chart-size={chartSize}>
   {#if !isBrowser}
     <div class="echarts-loading" style={`height:${toDimension(height, '240px')}`}>Loading…</div>
   {:else}

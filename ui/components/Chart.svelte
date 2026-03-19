@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {setContext, type Snippet} from 'svelte'
+  import {setContext, getContext, type Snippet} from 'svelte'
   import {type Writable, writable, get} from 'svelte/store'
   import {propKey, configKey} from '../component-utilities/chartContext.js'
   import ECharts from './ECharts.svelte'
@@ -516,7 +516,7 @@
           throw Error('chartAreaHeight must be a positive number')
         }
       } else {
-        chartAreaHeightLocal = 220
+        chartAreaHeightLocal = chartSize === 'large' ? 360 : chartSize === 'medium' ? 280 : 220
       }
 
       // Compute yType locally
@@ -971,6 +971,12 @@
       })
     }
   })
+
+  // Drive standalone chart sizing from x-axis cardinality. Inside a <Row> or <Column>, the
+  // container controls sizing so we pass 'medium' (no height scaling, no width CSS override).
+  const insideContainer = getContext('insideContainer')
+  let xCardinality = $derived(Array.isArray(data) && x ? getDistinctCount(data, x) : null)
+  let chartSize = $derived(insideContainer || xCardinality == null ? 'medium' : xCardinality < 10 ? 'small' : xCardinality < 80 ? 'medium' : 'large')
 </script>
 
 {#if !$chartProps.error}
@@ -989,6 +995,7 @@
     showAllXAxisLabels={showAllXAxisLabelsResolved}
     swapXY={swapXY_bool}
     seriesColors={$seriesColorsResolved}
+    {chartSize}
   />
 {:else}
   <div style="min-height:200px;width:100%;display:grid;align-content:center;padding:8px;box-sizing:border-box">

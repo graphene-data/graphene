@@ -74,6 +74,7 @@ export function sanitizeMarkdown() {
         allowedTags: [...sanitizeHtml.defaults.allowedTags, ...componentNames()],
         allowedAttributes: {
           ...sanitizeHtml.defaults.allowedAttributes,
+          '*': [...(sanitizeHtml.defaults.allowedAttributes['*'] || []), 'data-raw'],
           ...Object.fromEntries(componentNames().map(n => [n, ['*']])),
         },
         parser: {
@@ -116,5 +117,17 @@ export function componentNames() {
   return cachedComponentNames || []
 }
 
-export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles, mergeAdjacentHtml]
+// Adds data-raw to standard HTML block elements written directly in markdown (not generated from
+// markdown syntax). CSS uses this to give raw HTML elements dashboard-width alignment, while
+// markdown-generated elements stay in the narrow prose column.
+export function markRawHtmlBlocks() {
+  let blockTags = /^<(h[1-6]|p|ul|ol|blockquote|pre|hr|table)([\s>\/])/gmi
+  return function transformer(tree: any) {
+    visit(tree, 'html', (node: any) => {
+      node.value = node.value.replace(blockTags, '<$1 data-raw$2')
+    })
+  }
+}
+
+export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles, mergeAdjacentHtml, markRawHtmlBlocks]
 export const rehypePlugins: Array<Plugin> = [sanitizeMarkdown]
