@@ -14,10 +14,13 @@
 
     if ($session || isLoginRoute) return
     if (isDynamicRoute && hasAgentToken) return
+    let {pathname, search} = window.location
 
-    let next = encodeURIComponent(`${window.location.pathname || '/'}${window.location.search || ''}`)
-    next = next != '%2F' ? `?next=${next}` : ''
-    go(`/login${next}`)
+    if (pathname != '/' || search) {
+      go(`/login?next=${encodeURIComponent(pathname + search)}`)
+    } else {
+      go('/login')
+    }
   })
 </script>
 
