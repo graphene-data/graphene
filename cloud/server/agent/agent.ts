@@ -12,9 +12,9 @@ import {agentSessions, type AgentSession} from '../../schema.ts'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 let grapheneDocs = readFileSync(path.resolve(__dirname, '../../../core/docs/base.md'), 'utf-8')
 
-let agentMock: (config) => Promise<any> | null = null
+let agentMock: ((config: any) => Promise<any>) | null = null
 
-export function mockAgent(handler) {
+export function mockAgent(handler: ((config: any) => Promise<any>) | null) {
   agentMock = handler
 }
 
@@ -35,7 +35,7 @@ export async function runAgent(session: AgentSession): Promise<{text: string, sc
       respondToUser: respondToUserTool(),
     },
     stopWhen: stepCountIs(50),
-    onStepFinish: step => console.dir(step.content, {depth: null}),
+    onStepFinish: (step: any) => console.dir(step.content, {depth: null}),
   }
 
   let runResult = await runModel({...config, messages})
