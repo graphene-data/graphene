@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
-  import {getPageInputs, initOnce} from '../internal/pageInputs.svelte.ts'
+  import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
     name: string
@@ -29,7 +29,7 @@
   let queryKey = ''
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let pageInputs = getPageInputs()
-  let field = initOnce(() => pageInputs.dateRange(name))
+  let field = captureInitial(() => pageInputs.dateRange(name))
 
   let domainStart: string | null = $state(null)
   let domainEnd: string | null = $state(null)
