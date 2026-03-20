@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Font Showcase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,300;1,8..60,400;1,8..60,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Geist:wght@300;400;500;600;700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;1,14..32,400&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f5f4f0;
+    color: #1a1a1a;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: 'Source Serif 4', Georgia, serif;
+  }
+
+  /* ─── Page header ─────────────────────────────────────────── */
+  .page-header {
+    background: #1a1a1a;
+    color: #f5f4f0;
+    padding: 40px 56px 36px;
+    border-bottom: 3px solid #c8a96e;
+  }
+  .page-header-eyebrow {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #c8a96e;
+    margin-bottom: 12px;
+  }
+  .page-header h1 {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-optical-sizing: auto;
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    color: #f5f4f0;
+    margin-bottom: 12px;
+  }
+  .page-header p {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 14px;
+    color: #999;
+    line-height: 1.5;
+  }
+
+  /* ─── Layout ──────────────────────────────────────────────── */
+  .content { padding: 48px 56px; max-width: 1400px; }
+
+  .section-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #999;
+    padding: 40px 0 16px;
+    border-top: 1px solid #ddd;
+    margin-top: 8px;
+  }
+  .section-label:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+    gap: 2px;
+    background: #ddd;
+    border: 1px solid #ddd;
+  }
+
+  .card {
+    background: #fff;
+    padding: 32px 36px;
+  }
+  .card-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #bbb;
+    margin-bottom: 20px;
+  }
+  .divider { height: 1px; background: #f0f0ee; margin: 16px 0; }
+  .note {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 12px;
+    color: #aaa;
+    line-height: 1.5;
+    font-style: italic;
+  }
+
+  /* ─── Featured pairing mock dashboard ────────────────────── */
+  .featured {
+    background: #fff;
+    border: 1px solid #ddd;
+    margin-bottom: 2px;
+  }
+  .featured-header {
+    padding: 28px 36px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+  .featured-eyebrow {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #c8a96e;
+  }
+  .featured-title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-optical-sizing: auto;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: #111;
+    line-height: 1.2;
+  }
+  .featured-subtitle {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+  }
+  .featured-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+  }
+  .featured-col {
+    padding: 24px 36px;
+    border-right: 1px solid #eee;
+  }
+  .featured-col:last-child { border-right: none; }
+
+  .chart-title {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 16px;
+  }
+
+  /* Fake sparkline */
+  .sparkline { display: flex; align-items: flex-end; gap: 4px; height: 64px; margin-bottom: 12px; }
+  .bar {
+    flex: 1;
+    background: #d4e4f5;
+    border-radius: 2px 2px 0 0;
+    transition: background 0.2s;
+  }
+  .bar.active { background: #2563eb; }
+  .bar:hover { background: #93c5fd; }
+
+  .chart-label-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 10px;
+    color: #bbb;
+  }
+
+  .big-number {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-optical-sizing: auto;
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #111;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .big-number-label {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 12px;
+  }
+  .delta {
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: #16a34a;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: #f0fdf4;
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+
+  .prose-sample {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-optical-sizing: auto;
+    font-size: 15px;
+    line-height: 1.7;
+    color: #333;
+  }
+  .prose-sample em { font-style: italic; }
+  .prose-sample strong { font-weight: 600; }
+
+  /* ─── Generic sample styles ───────────────────────────────── */
+  .sample-heading  { font-size: 22px; font-weight: 600; line-height: 1.2; letter-spacing: -0.015em; color: #111; margin-bottom: 6px; }
+  .sample-sub      { font-size: 13px; font-weight: 500; color: #888; margin-bottom: 14px; }
+  .sample-body     { font-size: 15px; line-height: 1.65; color: #333; margin-bottom: 14px; }
+  .sample-small    { font-size: 12px; color: #888; line-height: 1.5; }
+  .tag { display: inline-block; font-family: 'Source Sans 3', sans-serif; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 3px; background: #f0f0ee; color: #555; margin-right: 6px; }
+
+  /* per-font overrides */
+  .inter *         { font-family: 'Inter', sans-serif; font-feature-settings: 'cv01', 'cv02', 'ss01', 'liga', 'calt'; }
+  .geist *         { font-family: 'Geist', sans-serif; }
+  .jakarta *       { font-family: 'Plus Jakarta Sans', sans-serif; }
+  .dmsans *        { font-family: 'DM Sans', sans-serif; }
+  .instrument *    { font-family: 'Instrument Sans', sans-serif; }
+  .outfit *        { font-family: 'Outfit', sans-serif; }
+  .lora *          { font-family: 'Lora', serif; }
+  .sourceserif *   { font-family: 'Source Serif 4', serif; font-optical-sizing: auto; }
+  .merriweather *  { font-family: 'Merriweather', serif; }
+  .georgia *       { font-family: 'Georgia', serif; }
+  .merriweather .sample-heading { font-size: 20px; }
+  .merriweather .sample-body    { font-size: 14px; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-header-eyebrow">Graphene · Typography</div>
+  <h1>Font Showcase</h1>
+  <p>Source Serif 4 + Source Sans 3 as the primary pairing, with alternates below.</p>
+</div>
+
+<div class="content">
+
+  <div class="section-label">Featured pairing — Source Serif 4 + Source Sans 3</div>
+
+  <!-- Mock dashboard in the proposed pairing -->
+  <div class="featured">
+    <div class="featured-header">
+      <div>
+        <div class="featured-eyebrow">Revenue · Q1 2026</div>
+        <div class="featured-title">North America Sales Overview</div>
+        <div class="featured-subtitle">Updated 2 hours ago · Data through March 18</div>
+      </div>
+    </div>
+    <div class="featured-body">
+
+      <div class="featured-col">
+        <div class="chart-title">Monthly Revenue</div>
+        <div class="sparkline">
+          <div class="bar" style="height:35%"></div>
+          <div class="bar" style="height:48%"></div>
+          <div class="bar" style="height:42%"></div>
+          <div class="bar" style="height:60%"></div>
+          <div class="bar" style="height:55%"></div>
+          <div class="bar" style="height:72%"></div>
+          <div class="bar" style="height:68%"></div>
+          <div class="bar" style="height:80%"></div>
+          <div class="bar" style="height:74%"></div>
+          <div class="bar" style="height:88%"></div>
+          <div class="bar" style="height:92%"></div>
+          <div class="bar active" style="height:100%"></div>
+        </div>
+        <div class="chart-label-row">
+          <span>Apr</span><span>Jun</span><span>Aug</span><span>Oct</span><span>Dec</span><span>Mar</span>
+        </div>
+      </div>
+
+      <div class="featured-col">
+        <div class="chart-title">Key Metrics</div>
+        <div class="big-number">$4.2M</div>
+        <div class="big-number-label">Total revenue, Mar 2026</div>
+        <span class="delta">↑ 18.4% YoY</span>
+        <div style="margin-top: 20px;">
+          <div class="big-number" style="font-size:24px;">1,847</div>
+          <div class="big-number-label">Active accounts</div>
+        </div>
+      </div>
+
+      <div class="featured-col">
+        <div class="chart-title">Analyst Note</div>
+        <p class="prose-sample">
+          Growth accelerated in Q1, driven by <strong>enterprise expansion</strong> in the Pacific Northwest.
+          Churn remained flat at 1.2%, while average contract value rose <em>23% year-over-year</em> —
+          the highest since 2021.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="section-label">Sans-serif — UI &amp; Dashboard alternates</div>
+
+  <div class="grid">
+
+    <div class="card inter">
+      <div class="card-label">Inter — with font features (cv01, cv02, ss01)</div>
+      <div class="sample-heading">Revenue by Region</div>
+      <div class="sample-sub">Q1 2026 · Updated 2 hours ago</div>
+      <div class="sample-body">Total revenue grew 18% year-over-year, driven by strong performance in APAC and continued expansion across enterprise accounts.</div>
+      <div style="margin-bottom:14px"><span class="tag">Dashboard</span><span class="tag">Finance</span><span class="tag">Q1</span></div>
+      <div class="divider"></div>
+      <div class="note">Neutral, highly legible, already self-hosted · 1234567890</div>
+    </div>
+
+    <div class="card geist">
+      <div class="card-label">Geist — Vercel's typeface</div>
+      <div class="sample-heading">Revenue by Region</div>
+      <div class="sample-sub">Q1 2026 · Updated 2 hours ago</div>
+      <div class="sample-body">Total revenue grew 18% year-over-year, driven by strong performance in APAC and continued expansion across enterprise accounts.</div>
+      <div style="margin-bottom:14px"><span class="tag">Dashboard</span><span class="tag">Finance</span><span class="tag">Q1</span></div>
+      <div class="divider"></div>
+      <div class="note">Geometric, very clean at small sizes · 1234567890</div>
+    </div>
+
+    <div class="card jakarta">
+      <div class="card-label">Plus Jakarta Sans</div>
+      <div class="sample-heading">Revenue by Region</div>
+      <div class="sample-sub">Q1 2026 · Updated 2 hours ago</div>
+      <div class="sample-body">Total revenue grew 18% year-over-year, driven by strong performance in APAC and continued expansion across enterprise accounts.</div>
+      <div style="margin-bottom:14px"><span class="tag">Dashboard</span><span class="tag">Finance</span><span class="tag">Q1</span></div>
+      <div class="divider"></div>
+      <div class="note">Friendly and approachable, good optical size range · 1234567890</div>
+    </div>
+
+    <div class="card dmsans">
+      <div class="card-label">DM Sans</div>
+      <div class="sample-heading">Revenue by Region</div>
+      <div class="sample-sub">Q1 2026 · Updated 2 hours ago</div>
+      <div class="sample-body">Total revenue grew 18% year-over-year, driven by strong performance in APAC and continued expansion across enterprise accounts.</div>
+      <div style="margin-bottom:14px"><span class="tag">Dashboard</span><span class="tag">Finance</span><span class="tag">Q1</span></div>
+      <div class="divider"></div>
+      <div class="note">Low contrast strokes, great for data-heavy UIs · 1234567890</div>
+    </div>
+
+    <div class="card instrument">
+      <div class="card-label">Instrument Sans</div>
+      <div class="sample-heading">Revenue by Region</div>
+      <div class="sample-sub">Q1 2026 · Updated 2 hours ago</div>
+      <div class="sample-body">Total revenue grew 18% year-over-year, driven by strong performance in APAC and continued expansion across enterprise accounts.</div>
+      <div style="margin-bottom:14px"><span class="tag">Dashboard</span><span class="tag">Finance</span><span class="tag">Q1</span></div>
+      <div class="divider"></div>
+      <div class="note">Slightly literary feel — a good middle ground · 1234567890</div>
+    </div>
+
+    <div class="card outfit">
+      <div class="card-label">Outfit</div>
+      <div class="sample-heading">Revenue by Region</div>
+      <div class="sample-sub">Q1 2026 · Updated 2 hours ago</div>
+      <div class="sample-body">Total revenue grew 18% year-over-year, driven by strong performance in APAC and continued expansion across enterprise accounts.</div>
+      <div style="margin-bottom:14px"><span class="tag">Dashboard</span><span class="tag">Finance</span><span class="tag">Q1</span></div>
+      <div class="divider"></div>
+      <div class="note">Rounded, modern, very readable at display sizes · 1234567890</div>
+    </div>
+
+  </div>
+
+  <div class="section-label">Serif — prose &amp; report body alternates</div>
+
+  <div class="grid">
+
+    <div class="card sourceserif">
+      <div class="card-label">Source Serif 4 — current pick</div>
+      <div class="sample-heading">The State of Cloud Spending</div>
+      <div class="sample-sub">Annual infrastructure report, 2026</div>
+      <div class="sample-body">Organizations that invested in observability tooling saw a 23% reduction in incident resolution time. The shift toward FinOps practices <em>accelerated</em> in the second half of the year.</div>
+      <div class="divider"></div>
+      <div class="note">Optical size axis — crisp at both display and body · 1234567890</div>
+    </div>
+
+    <div class="card lora">
+      <div class="card-label">Lora — calligraphic serif</div>
+      <div class="sample-heading">The State of Cloud Spending</div>
+      <div class="sample-sub">Annual infrastructure report, 2026</div>
+      <div class="sample-body">Organizations that invested in observability tooling saw a 23% reduction in incident resolution time. The shift toward FinOps practices accelerated in the second half of the year.</div>
+      <div class="divider"></div>
+      <div class="note">Warmer, more expressive — good for long-form prose</div>
+    </div>
+
+    <div class="card merriweather">
+      <div class="card-label">Merriweather</div>
+      <div class="sample-heading">The State of Cloud Spending</div>
+      <div class="sample-sub">Annual infrastructure report, 2026</div>
+      <div class="sample-body">Organizations that invested in observability tooling saw a 23% reduction in incident resolution time. The shift toward FinOps practices accelerated in the second half of the year.</div>
+      <div class="divider"></div>
+      <div class="note">Dense, scholarly — designed specifically for screens</div>
+    </div>
+
+    <div class="card georgia">
+      <div class="card-label">Georgia — system serif, no load cost</div>
+      <div class="sample-heading">The State of Cloud Spending</div>
+      <div class="sample-sub">Annual infrastructure report, 2026</div>
+      <div class="sample-body">Organizations that invested in observability tooling saw a 23% reduction in incident resolution time. The shift toward FinOps practices accelerated in the second half of the year.</div>
+      <div class="divider"></div>
+      <div class="note">Timeless, instant, still holds up extremely well · 1234567890</div>
+    </div>
+
+  </div>
+
+</div>
+</body>
+</html>

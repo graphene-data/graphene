@@ -53,6 +53,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    font-family: var(--ui-font-family);
     margin: 8px 0;
   }
 

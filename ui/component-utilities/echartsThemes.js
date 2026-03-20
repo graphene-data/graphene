@@ -20,7 +20,7 @@ const createTheme = mode => {
     darkMode: mode === 'dark', // if true, echarts will automatically update the font colour to work better on dark background
     backgroundColor: themes[mode].colors['base-100'],
     textStyle: {
-      fontFamily: ['Inter', 'sans-serif'],
+      fontFamily: "'Source Sans 3', Inter, sans-serif",
     },
     grid: {
       left: '1%',

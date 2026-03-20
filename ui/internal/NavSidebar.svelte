@@ -260,6 +260,7 @@
   ul {
     list-style: none;
     padding: 0 0.5rem 0 0;
+    font-family: var(--ui-font-family);
     margin: 0;
     display: flex;
     flex-direction: column;
