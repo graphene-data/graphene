@@ -1,5 +1,4 @@
 import {spawn} from 'node:child_process'
-import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as net from 'node:net'
 import * as os from 'node:os'
@@ -69,8 +68,6 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
   let coreDir = path.resolve(testsDir, '../..')
   let cliDir = path.join(coreDir, 'cli')
   let flightsDir = path.join(coreDir, 'examples/flights')
-  let dbPath = path.join(flightsDir, 'flights.duckdb')
-  if (!fs.existsSync(dbPath)) throw new Error('flights.duckdb not found. Run `pnpm run setup` in examples/flights')
 
   let tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-pack-install-'))
   let projectDir = path.join(tempRoot, 'flights')

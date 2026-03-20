@@ -7,7 +7,7 @@
 
 # Examples Projects
 
-`/examples` contains different datasets and Graphene projects. For each, you'll want to run `npm run setup` to download the dataset. Then you can use:
+`/examples` contains different datasets and Graphene projects. Local DuckDB datasets (like `examples/flights/flights.duckdb`) are checked in via Git LFS, so run `git lfs pull` if needed. Then you can use:
 
 `npm run cli compile "<some graphene>"` to compile to sql
 `npm run cli run "<some graphene>"` to execute that query against the db
