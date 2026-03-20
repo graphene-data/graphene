@@ -13,7 +13,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
     "slack:deploy": "node scripts/deploySlack.ts",
-    "lint": "eslint . && tsc && svelte-check",
+    "lint": "eslint . && oxfmt --check && tsc && svelte-check",
     "test": "vitest run",
     "test-one": "node ../core/scripts/turboTest.js"
   },
@@ -38,6 +38,7 @@
     "glob": "^13.0.0",
     "jsonwebtoken": "^9.0.3",
     "mdsvex": "^0.12.6",
+    "oxfmt": "^0.36.0",
     "playwright-core": "^1.58.0",
     "postgres": "^3.4.8",
     "sanitize-html": "^2.17.0",
