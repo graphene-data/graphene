@@ -160,6 +160,8 @@
     return copy
   }
 
+  // We only persist start/end in URL state, so the preset label is inferred by matching
+  // the current range against the configured preset definitions.
   function inferPreset(startValue: string | null, endValue: string | null): string {
     if (!startValue && !endValue) return ''
     let baseEnd = (() => {

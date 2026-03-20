@@ -248,6 +248,8 @@ export class PageInputs {
   }
 
   private applySnapshot(nextParams: ParamSnapshot, source: UpdateSource) {
+    // Central reconciliation point for persisted inputs: update the snapshot, sync affected
+    // fields, notify compatibility subscribers, and rerun queries from the final param state.
     let cloned = cloneParams(nextParams)
     let changed = getChangedKeys(this.params, cloned)
     if (changed.size === 0) return

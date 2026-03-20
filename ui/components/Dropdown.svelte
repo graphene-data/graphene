@@ -339,6 +339,8 @@
   })
 
   function syncSelection(fromUser: boolean) {
+    // Reconcile persisted selection with the current option set, while keeping external values
+    // authoritative and only applying defaults/select-all before the user has interacted.
     let opts = availableOptions
     if (!opts.length) {
       updateInputPayload(selection)
