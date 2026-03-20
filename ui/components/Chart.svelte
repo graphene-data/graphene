@@ -104,6 +104,18 @@
   let colorPaletteResolved = $derived(resolveColorPalette(colorPalette))
   let seriesColorsResolved = $derived(resolveColorsObject(seriesColors))
 
+  /** Rotate palette deterministically by chart title so every chart leads with a different color. */
+  let shuffledPalette = $derived.by(() => {
+    let palette = get(colorPaletteResolved)
+    if (!palette || palette.length <= 1 || !title) return palette
+    // djb2 hash
+    let hash = 5381
+    for (let i = 0; i < title.length; i++) hash = ((hash << 5) + hash + title.charCodeAt(i)) >>> 0
+    // Rotate palette to a random starting position, keeping the rest in order
+    let startIdx = hash % palette.length
+    return [...palette.slice(startIdx), ...palette.slice(0, startIdx)]
+  })
+
   let reqCols
   let showAllXAxisLabelsResolved = $state(false)
 
@@ -664,13 +676,13 @@
         let primaryAxisColor = (() => {
           if (!(Array.isArray(y2Local) && y2Local.length)) return undefined
           let yColor = get(yAxisColorStore)
-          if (yColor === 'true') return $colorPaletteResolved?.[0]
+          if (yColor === 'true') return shuffledPalette?.[0]
           if (yColor === 'false') return undefined
           return yColor
         })()
         let secondaryAxisColor = (() => {
           let y2Color = get(y2AxisColorStore)
-          if (y2Color === 'true') return $colorPaletteResolved?.[ySeriesCount]
+          if (y2Color === 'true') return shuffledPalette?.[ySeriesCount]
           if (y2Color === 'false') return undefined
           return y2Color
         })()
@@ -943,7 +955,7 @@
         series: [],
         animation: false,
         graphic: horizAxisTitleConfig,
-        color: $colorPaletteResolved,
+        color: shuffledPalette,
       }
 
       config.update(() => {

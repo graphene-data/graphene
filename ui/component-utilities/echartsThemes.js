@@ -131,7 +131,7 @@ const createTheme = mode => {
       symbolSize: 0,
       symbol: 'circle',
       smooth: false,
-      color: ['#923d59', '#488f96', '#518eca', '#b3a9a0', '#ffc857', '#495867', '#bfdbf7', '#bc4749', '#eeebd0'],
+      color: ['#395284', '#4C8A8B', '#6A7C3C', '#CCA03B', '#94B598', '#B4926D', '#7A8DAB', '#DEABA9', '#CEB771', '#6F3B42'],
       label: {
         color: '#f2f2f2',
       },

@@ -95,7 +95,7 @@
   --yellow-999: #422006;
 
   /* Aliases for previous Tailwind-like tokens */
-  --primary: var(--blue-700);
+  --primary: #EE9174;
   --base-200: #e8e8e6;
   --base-300: #d4d4d2;
   --base-content-muted: #888;

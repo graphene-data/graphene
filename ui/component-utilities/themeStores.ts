@@ -18,7 +18,7 @@ type ThemeStores = {
 
 const THEME_CONTEXT = Symbol('GrapheneThemeStores')
 
-const DEFAULT_PALETTE = ['#4C78A8', '#F58518', '#E45756', '#72B7B2', '#54A24B', '#EECA3B', '#B279A2', '#FF9DA6', '#9D755D', '#BAB0AC']
+const DEFAULT_PALETTE = ['#EE9174', '#59A48B', '#D6AFC6', '#78B0D5', '#D5AE4E', '#C16864', '#A7CCC3']
 
 const DEFAULT_THEME: Theme = {
   colors: {
@@ -27,7 +27,7 @@ const DEFAULT_THEME: Theme = {
     'base-300': '#e5e7eb',
     'base-content': '#1f2937',
     'base-content-muted': '#6b7280',
-    primary: '#2563eb',
+    primary: '#EE9174',
     positive: '#16a34a',
     negative: '#dc2626',
     warning: '#d97706',

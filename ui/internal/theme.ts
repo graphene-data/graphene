@@ -3,7 +3,7 @@
 export const themes = {
   light: {
     colors: {
-      primary: '#2563eb',
+      primary: '#EE9174',
       accent: '#c2410c',
       'base-100': '#ffffff',
       info: '#0284c7',
@@ -23,15 +23,15 @@ export const themes = {
       'warning-content': '#0a0803',
     },
     colorPalettes: {
-      default: ['#236aa4', '#45a1bf', '#a5cdee', '#8dacbf', '#85c7c6', '#d2c6ac', '#f4b548', '#8f3d56', '#71b9f4', '#46a485'],
+      default: ['#EE9174', '#59A48B', '#D6AFC6', '#78B0D5', '#D5AE4E', '#C16864', '#A7CCC3'],
     },
     colorScales: {
-      default: ['#ADD8E6', '#00008B'],
+      default: ['#59A48B', '#78B0D5'],
     },
   },
   dark: {
     colors: {
-      primary: '#3b82f6',
+      primary: '#7A8DAB',
       accent: '#fdba74',
       'base-100': '#09090b',
       info: '#38bdf8',
@@ -51,10 +51,10 @@ export const themes = {
       'warning-content': '#090803',
     },
     colorPalettes: {
-      default: ['#236aa4', '#45a1bf', '#a5cdee', '#8dacbf', '#85c7c6', '#d2c6ac', '#f4b548', '#8f3d56', '#71b9f4', '#46a485'],
+      default: ['#A7CCC3', '#EE9174', '#59A48B', '#D6AFC6', '#78B0D5', '#D5AE4E', '#C16864'],
     },
     colorScales: {
-      default: ['#ADD8E6', '#00008B'],
+      default: ['#A7CCC3', '#D6AFC6'],
     },
   },
 }
