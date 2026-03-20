@@ -362,7 +362,9 @@
   }
 
   function updateInputPayload(values: any[]) {
-    let paramValue = values.length ? values[0] : null
+    let paramValue = null
+    if (multi) paramValue = values.length ? [...values] : null
+    else paramValue = values.length ? values[0] : null
     window.$GRAPHENE.updateParam(name, paramValue)
   }
 
