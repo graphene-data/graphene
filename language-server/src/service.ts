@@ -9,11 +9,13 @@ import {
   type Disposable,
   type WorkspaceDocumentDiagnosticReport,
   type DocumentUri,
+  type Location,
+  type LocationLink,
 } from 'vscode-languageserver-protocol'
 import {URI, Utils as URIs} from 'vscode-uri'
 
-import {deleteFile, updateFile, analyze, getDiagnostics, getFiles, getHover, loadConfig, loadWorkspace} from '../../lang/core.ts'
-import {type Diagnostic as GrapheneDiagnostic} from '../../lang/types.ts'
+import {deleteFile, updateFile, analyze, getDefinition, getDiagnostics, getFiles, getHover, getReferences, loadConfig, loadWorkspace} from '../../lang/core.ts'
+import {type Diagnostic as GrapheneDiagnostic, type Location as GrapheneLocation} from '../../lang/types.ts'
 
 export function createGrapheneService(server: ReturnType<typeof createServer>): LanguageServicePlugin {
   return {
@@ -24,6 +26,8 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         workspaceDiagnostics: true,
       },
       hoverProvider: true,
+      definitionProvider: true,
+      referencesProvider: true,
     },
     create(context): LanguageServicePluginInstance {
       let [workspace] = context.env.workspaceFolders
@@ -49,6 +53,19 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
 
           let path = workspacePath(document.uri)
           return path ? {contents: getHover(path, position.line, position.character)} : null
+        },
+        async provideDefinition(document, position, _token) {
+          await analysis.pending
+
+          let path = workspacePath(document.uri)
+          let location = path ? getDefinition(path, position.line, position.character) : null
+          return location ? [toLocationLink(workspace, location)] : []
+        },
+        async provideReferences(document, position, context, _token) {
+          await analysis.pending
+
+          let path = workspacePath(document.uri)
+          return path ? getReferences(path, position.line, position.character, context.includeDeclaration).map(location => toLocation(workspace, location)) : []
         },
         async provideDiagnostics(document) {
           await analysis.pending
@@ -191,4 +208,23 @@ function toDiagnostic(diagnostic: GrapheneDiagnostic): Diagnostic {
     message: diagnostic.message,
     source: 'graphene',
   }
+}
+
+function toLocation(workspace: URI, location: GrapheneLocation): Location {
+  return {
+    uri: URIs.joinPath(workspace, location.file).toString(),
+    range: {
+      start: {line: location.from.line, character: location.from.col},
+      end: {line: location.to.line, character: location.to.col},
+    },
+  }
+}
+
+function toLocationLink(workspace: URI, location: GrapheneLocation): LocationLink {
+  let uri = URIs.joinPath(workspace, location.file).toString()
+  let range = {
+    start: {line: location.from.line, character: location.from.col},
+    end: {line: location.to.line, character: location.to.col},
+  }
+  return {targetUri: uri, targetRange: range, targetSelectionRange: range}
 }

@@ -42,14 +42,19 @@ export function getPosition(offset: number, file: FileInfo) {
   return {offset: mdOffset, line: 1, col: 0}
 }
 
-export function getOffset(line: number, col: number, file: FileInfo) {
+export function getSourceOffset(line: number, col: number, file: FileInfo) {
   let lines = file.contents.split(/\r?\n/)
   let acc = 0
   for (let i = 0; i < line; i++) {
     acc += lines[i].length + 1
   }
-  if (file.virtualContents) return virtualOffset(acc + col, file)
   return acc + col
+}
+
+export function getOffset(line: number, col: number, file: FileInfo) {
+  let offset = getSourceOffset(line, col, file)
+  if (file.virtualContents) return virtualOffset(offset, file)
+  return offset
 }
 
 export function getFile(node: SyntaxNode | SyntaxNodeRef): FileInfo {

@@ -59,7 +59,7 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
     '/mock.md',
     `
     \`\`\`sql error_query
-    from flights select not_a_function() as explode
+    from flights select 1 as origin, not_a_function() as explode
     \`\`\`
     <BarChart data="error_query" x="origin" y="explode" />
   `,
@@ -70,8 +70,8 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
   expect(outputLines()).toEqual(
     `
     ERROR: mock.md line 3: Unknown function: not_a_function
-   | from flights select not_a_function() as explode
-   |                     ^^^^^^^^^^^^^^^^
+   | from flights select 1 as origin, not_a_function() as explode
+   |                                  ^^^^^^^^^^^^^^^^
   `.trim(),
   )
 })
