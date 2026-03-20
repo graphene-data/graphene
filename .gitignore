@@ -8,7 +8,6 @@ notes.md
 todo.md
 .gitcommit
 .DS_Store
-*.duckdb
 
 **/.vscode/settings.json
 vscode/*.vsix
