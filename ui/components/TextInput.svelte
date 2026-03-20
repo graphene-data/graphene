@@ -1,6 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
+  import {usePageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
     name: string
@@ -18,20 +19,19 @@
     placeholder = 'Type to search', defaultValue = undefined, hideDuringPrint = true, unsafe = false,
   }: Props = $props()
 
-  let value = $state('')
+  let pageInputs = usePageInputs()
+  function createField() {
+    return pageInputs.text(name)
+  }
+  let field = createField()
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
   let allowUnsafe = $derived(toBoolean(unsafe))
   let displayLabel = $derived(title || label)
 
   onMount(() => {
-    value = readExternalValue(window.$GRAPHENE?.getParam?.(name), defaultValue ?? '')
-    pushValue(value)
-    return window.$GRAPHENE?.subscribeParams?.((params, event: {changed: Set<string>}) => {
-      if (!event.changed.has(name)) return
-      let nextValue = readExternalValue(params[name], '')
-      if (nextValue !== value) value = nextValue
-    })
+    if (!field.controlled) field.set(defaultValue ?? '')
+    return () => field.destroy()
   })
 
   function sanitize(input: string): string {
@@ -39,23 +39,14 @@
     return input.replace(/'/g, "''")
   }
 
-  function readExternalValue(raw: unknown, fallback: string) {
-    if (raw === undefined) return fallback
-    if (raw === null) return ''
-    if (Array.isArray(raw)) return raw.length ? String(raw[0] ?? '') : ''
-    return String(raw)
-  }
-
   function pushValue(input: string) {
     let trimmed = input ?? ''
-    let _safe = sanitize(trimmed)
-    let paramValue = trimmed === '' ? null : trimmed
-    window.$GRAPHENE.updateParam(name, paramValue)
+    sanitize(trimmed)
+    field.set(trimmed)
   }
 
   function onInput(event: Event) {
-    value = (event.currentTarget as HTMLInputElement).value
-    pushValue(value)
+    pushValue((event.currentTarget as HTMLInputElement).value)
   }
 </script>
 
@@ -70,7 +61,7 @@
     id={`text-input-${name}`}
     class="text-input"
     type="text"
-    value={value}
+    value={field.value}
     placeholder={placeholder}
     oninput={onInput}
   />

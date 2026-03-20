@@ -1,6 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
+  import {usePageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
     name: string
@@ -27,6 +28,11 @@
   let mounted = false
   let queryKey = ''
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
+  let pageInputs = usePageInputs()
+  function createField() {
+    return pageInputs.dateRange(name)
+  }
+  let field = createField()
 
   let domainStart: string | null = $state(null)
   let domainEnd: string | null = $state(null)
@@ -34,7 +40,6 @@
   let currentStart: string | null = $state(null)
   let currentEnd: string | null = $state(null)
   let currentPreset: string = $state('')
-  let hasExternalRange = false
   let touched = false
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
@@ -47,25 +52,16 @@
 
   onMount(() => {
     mounted = true
-    let startKey = `${name}_start`
-    let endKey = `${name}_end`
-    let externalStart = readParamValue(window.$GRAPHENE?.getParam?.(startKey))
-    let externalEnd = readParamValue(window.$GRAPHENE?.getParam?.(endKey))
-    hasExternalRange = externalStart !== undefined || externalEnd !== undefined
-    currentStart = externalStart === undefined ? normalizeInput(start) : externalStart
-    currentEnd = externalEnd === undefined ? normalizeInput(end) : externalEnd
+    currentStart = field.controlled ? field.value.start : normalizeInput(start)
+    currentEnd = field.controlled ? field.value.end : normalizeInput(end)
     currentPreset = inferPreset(currentStart, currentEnd)
-    if (hasExternalRange) updateParams()
+    if (field.controlled) updateParams()
     else if (defaultValue && presetList.includes(defaultValue)) applyPreset(defaultValue, false)
     else updateParams()
     refreshQuery()
-    let unsubscribeParams = window.$GRAPHENE?.subscribeParams?.((params, event: {changed: Set<string>}) => {
-      if (!event.changed.has(startKey) && !event.changed.has(endKey)) return
-      applyExternalRange(params[startKey], params[endKey])
-    })
     return () => {
       mounted = false
-      unsubscribeParams?.()
+      field.destroy()
       if (queryHandler) {
         window.$GRAPHENE?.unsubscribe?.(queryHandler)
         queryHandler = null
@@ -75,6 +71,12 @@
 
   $effect(() => {
     refreshQuery()
+  })
+
+  $effect(() => {
+    if (currentStart === field.value.start && currentEnd === field.value.end) return
+    if (!mounted) return
+    setRange(field.value.start, field.value.end, inferPreset(field.value.start, field.value.end), {syncParam: false})
   })
 
   function refreshQuery() {
@@ -96,7 +98,7 @@
       values.sort()
       domainStart = values[0]
       domainEnd = values[values.length - 1]
-      if (hasExternalRange) {
+      if (field.controlled) {
         currentPreset = inferPreset(currentStart, currentEnd)
       } else if (!touched) {
         if (defaultValue && presetList.includes(defaultValue)) {
@@ -161,13 +163,6 @@
     return copy
   }
 
-  function readParamValue(rawValue: unknown): string | null | undefined {
-    if (rawValue === undefined) return undefined
-    if (rawValue === null) return null
-    if (Array.isArray(rawValue)) return normalizeInput(rawValue[0] as string | Date | null | undefined)
-    return normalizeInput(rawValue as string | Date | null | undefined)
-  }
-
   function inferPreset(startValue: string | null, endValue: string | null): string {
     if (!startValue && !endValue) return ''
     let baseEnd = (() => {
@@ -197,18 +192,7 @@
   }
 
   function updateParams() {
-    window.$GRAPHENE.updateParams({
-      [`${name}_start`]: currentStart,
-      [`${name}_end`]: currentEnd,
-    })
-  }
-
-  function applyExternalRange(startRaw: unknown, endRaw: unknown) {
-    if (!mounted) return
-    hasExternalRange = true
-    let nextStart = readParamValue(startRaw)
-    let nextEnd = readParamValue(endRaw)
-    setRange(nextStart ?? null, nextEnd ?? null, inferPreset(nextStart ?? null, nextEnd ?? null), {syncParam: false})
+    field.set({start: currentStart, end: currentEnd})
   }
 
   function onStartChange(event: Event) {

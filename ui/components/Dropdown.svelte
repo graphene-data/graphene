@@ -2,6 +2,7 @@
   import {onMount, setContext, tick, type Snippet} from 'svelte'
   import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
   import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
+  import {usePageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Option {
     value: any
@@ -39,10 +40,14 @@
   let queryOptions: Option[] = $state([])
   let manualOptions: Option[] = $state([])
   let selection: any[] = $state([])
-  let hasExternalSelection = false
   let touched = false
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
+  let pageInputs = usePageInputs()
+  function createField() {
+    return pageInputs.dropdown(name, toBoolean(multiple))
+  }
+  let field = createField()
 
   let isOpen = $state(false)
   let searchTerm = $state('')
@@ -103,6 +108,11 @@
 
   $effect(() => {
     if (isOpen) activeIndex = ensureActiveIndex(activeIndex, filteredOptions)
+  })
+
+  $effect(() => {
+    if (sameSelection(selection, field.value)) return
+    setSelection(field.value, {syncParam: false})
   })
 
   function setupQuery() {
@@ -296,25 +306,20 @@
 
   onMount(() => {
     mounted = true
-    let externalValue = window.$GRAPHENE?.getParam?.(name)
-    if (externalValue !== undefined) applyExternalSelection(externalValue)
+    if (field.controlled) setSelection(field.value, {syncParam: false})
     else {
       let defaults = ensureArray(defaultValue)
       if (!hasNoDefault && defaults.length) setSelection(defaults, {syncParam: true})
     }
     syncSelection(false)
     setupQuery()
-    let unsubscribeParams = window.$GRAPHENE?.subscribeParams?.((params, event: {changed: Set<string>}) => {
-      if (!event.changed.has(name)) return
-      applyExternalSelection(params[name])
-    })
     if (typeof document !== 'undefined') {
       document.addEventListener('pointerdown', handlePointerDown)
       window.addEventListener('resize', updateTriggerWidth)
     }
     return () => {
       mounted = false
-      unsubscribeParams?.()
+      field.destroy()
       if (queryHandler) {
         window.$GRAPHENE?.unsubscribe?.(queryHandler)
         queryHandler = null
@@ -345,7 +350,7 @@
     let nextSelection = selection.filter(val => valueMap.has(optionKey(val)))
     if (!fromUser) {
       let defaults = ensureArray(defaultValue)
-      if (hasExternalSelection) {
+      if (field.controlled) {
         nextSelection = nextSelection
       } else if (multi && selectAllDefault) {
         nextSelection = opts.map(o => o.value)
@@ -360,11 +365,14 @@
     setSelection(nextSelection, {fromUser, syncParam: true})
   }
 
+  function sameSelection(left: any[], right: any[]) {
+    let leftKeys = left.map(optionKey)
+    let rightKeys = right.map(optionKey)
+    return leftKeys.length === rightKeys.length && leftKeys.every((key, index) => key === rightKeys[index])
+  }
+
   function setSelection(values: any[], {fromUser = false, syncParam = true}: {fromUser?: boolean; syncParam?: boolean} = {}) {
-    let keys = values.map(optionKey)
-    let existingKeys = selection.map(optionKey)
-    let changed = keys.length !== existingKeys.length || keys.some((k, idx) => k !== existingKeys[idx])
-    if (!changed) {
+    if (sameSelection(values, selection)) {
       if (syncParam && !fromUser) updateInputPayload(selection)
       return
     }
@@ -373,19 +381,8 @@
     if (syncParam) updateInputPayload(selection)
   }
 
-  function applyExternalSelection(rawValue: unknown) {
-    if (!mounted) return
-    hasExternalSelection = true
-    let values = rawValue === undefined || rawValue === null ? [] : ensureArray(rawValue)
-    if (!multi && values.length > 1) values = values.slice(0, 1)
-    setSelection(values, {syncParam: false})
-  }
-
   function updateInputPayload(values: any[]) {
-    let paramValue = null
-    if (multi) paramValue = values.length ? [...values] : null
-    else paramValue = values.length ? values[0] : null
-    window.$GRAPHENE.updateParam(name, paramValue)
+    field.set(values)
   }
 
   function selectAll() {

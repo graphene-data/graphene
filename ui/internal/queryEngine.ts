@@ -2,6 +2,7 @@
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
+import {getActivePageInputs, type ParamSubscriber} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
 
 interface QueryResult {
@@ -27,16 +28,9 @@ interface QueryNode {
   errors: Error[]
 }
 
-type ParamValue = string | number | boolean | null | Array<string | number | boolean>
-type ParamSnapshot = Record<string, ParamValue>
-type ParamEvent = {changed: Set<string>}
-type ParamSubscriber = (params: ParamSnapshot, event: ParamEvent) => void
-
 let runPending: Promise<void> | null = null
-let params = {} as ParamSnapshot
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
-let paramSubscribers = new Set<ParamSubscriber>()
 
 function registerQuery(name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
@@ -44,118 +38,6 @@ function registerQuery(name: string, contents: string) {
 }
 
 const getRoutePath = () => (typeof window === 'undefined' ? '/' : window.location.pathname || '/')
-
-function cloneParamValue(value: any): ParamValue {
-  if (Array.isArray(value)) return value.map(v => v as string | number | boolean)
-  return value as ParamValue
-}
-
-function paramsEqual(left: ParamSnapshot, right: ParamSnapshot) {
-  let leftKeys = Object.keys(left).sort()
-  let rightKeys = Object.keys(right).sort()
-  if (leftKeys.length !== rightKeys.length) return false
-  for (let i = 0; i < leftKeys.length; i++) {
-    if (leftKeys[i] !== rightKeys[i]) return false
-    if (!paramValueEqual(left[leftKeys[i]], right[rightKeys[i]])) return false
-  }
-  return true
-}
-
-function paramValueEqual(left: ParamValue | undefined, right: ParamValue | undefined) {
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right)) return false
-    if (left.length !== right.length) return false
-    return left.every((value, index) => value === right[index])
-  }
-  return left === right
-}
-
-function snapshotParams() {
-  return Object.fromEntries(Object.entries(params).map(([name, value]) => [name, cloneParamValue(value)])) as ParamSnapshot
-}
-
-function notifyParamSubscribers(event: ParamEvent) {
-  let next = snapshotParams()
-  paramSubscribers.forEach(subscriber => subscriber(next, event))
-}
-
-function getChangedParamNames(left: ParamSnapshot, right: ParamSnapshot) {
-  let changed = new Set<string>()
-  let names = new Set([...Object.keys(left), ...Object.keys(right)])
-  names.forEach(name => {
-    if (!paramValueEqual(left[name], right[name])) changed.add(name)
-  })
-  return changed
-}
-
-function serializeParam(value: ParamValue) {
-  if (Array.isArray(value)) return value.map(item => String(item))
-  if (value === null || value === undefined) return []
-  return [String(value)]
-}
-
-function syncUrlFromParams() {
-  if (typeof window === 'undefined') return
-  let search = new URLSearchParams()
-  Object.entries(params).forEach(([name, value]) => {
-    serializeParam(value).forEach(item => {
-      if (item === '') return
-      search.append(name, item)
-    })
-  })
-  let nextSearch = search.toString()
-  let currentSearch = window.location.search.replace(/^\?/, '')
-  if (nextSearch === currentSearch) return
-  let nextUrl = window.location.pathname + (nextSearch ? `?${nextSearch}` : '') + window.location.hash
-  window.history.replaceState(window.history.state, '', nextUrl)
-}
-
-function readParamsFromUrl() {
-  if (typeof window === 'undefined') return {} as ParamSnapshot
-  let next = {} as ParamSnapshot
-  for (let [name, value] of new URLSearchParams(window.location.search).entries()) {
-    let existing = next[name]
-    if (existing === undefined) next[name] = value
-    else if (Array.isArray(existing)) existing.push(value)
-    else next[name] = [String(existing), value]
-  }
-  return next
-}
-
-function applyParams(nextParams: ParamSnapshot, {skipUrlSync = false}: {skipUrlSync?: boolean} = {}) {
-  let cloned = Object.fromEntries(Object.entries(nextParams).map(([name, value]) => [name, cloneParamValue(value)])) as ParamSnapshot
-  if (paramsEqual(params, cloned)) return
-  let changed = getChangedParamNames(params, cloned)
-  params = cloned
-  if (!skipUrlSync) syncUrlFromParams()
-  notifyParamSubscribers({changed})
-  runAll() // for now, do the easy thing and reload it all
-}
-
-function updateParam(name: string, value: any) {
-  applyParams({...params, [name]: cloneParamValue(value)})
-}
-
-function updateParams(nextParams: Record<string, any>) {
-  let merged = {...params} as ParamSnapshot
-  Object.entries(nextParams).forEach(([name, value]) => {
-    merged[name] = cloneParamValue(value)
-  })
-  applyParams(merged)
-}
-
-function getParam(name: string) {
-  return params[name]
-}
-
-function subscribeParams(subscriber: ParamSubscriber) {
-  paramSubscribers.add(subscriber)
-  return () => paramSubscribers.delete(subscriber)
-}
-
-function syncParamsFromUrl() {
-  applyParams(readParamsFromUrl(), {skipUrlSync: true})
-}
 
 function query(source: string, fields: Record<string, string | string[]>, callback: ResultHandler) {
   // using Map here because it preserves the order in which we add fields to the select, which we use when we get the result.
@@ -179,10 +61,9 @@ function unsubscribe(callback: ResultHandler) {
 }
 
 function resetQueryEngine() {
-  params = {}
   queries = []
-  queryResults = {}
-  notifyParamSubscribers({changed: new Set()})
+  Object.keys(queryResults).forEach(key => delete queryResults[key])
+  getActivePageInputs().reset()
 }
 
 async function runNode(n: QueryNode) {
@@ -196,6 +77,7 @@ async function runNode(n: QueryNode) {
   let gsql = [...tables.map(q => `table ${q.name} as (${q.contents})`), n.contents].join('\n')
 
   try {
+    let params = getActivePageInputs().getParams()
     let response = await fetch('/_api/query', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -332,18 +214,17 @@ function evidenceType(type: string | undefined) {
 }
 
 if (typeof window !== 'undefined') {
-  params = readParamsFromUrl()
-  window.addEventListener('popstate', syncParamsFromUrl)
   Object.assign(window.$GRAPHENE, {
-    getParam,
+    getParam: (name: string) => getActivePageInputs().getParam(name),
     registerQuery,
-    subscribeParams,
-    syncParamsFromUrl,
-    updateParam,
-    updateParams,
+    subscribeParams: (subscriber: ParamSubscriber) => getActivePageInputs().subscribeParams(subscriber),
+    syncParamsFromUrl: () => getActivePageInputs().syncFromUrl(),
+    updateParam: (name: string, value: any) => getActivePageInputs().updateParam(name, value),
+    updateParams: (nextParams: Record<string, any>) => getActivePageInputs().updateParams(nextParams),
     query,
     unsubscribe,
     resetQueryEngine,
+    rerunQueries: runAll,
     isQueryLoading,
     queryResults,
   })
