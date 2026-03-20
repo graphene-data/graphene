@@ -97,6 +97,7 @@ test('dropdown multi-select supports select-all and clear', async ({server, page
   await page.getByRole('button', {name: 'Select all'}).click()
   await expect(trigger).toContainText('selected')
   await expect(menu.locator('.dropdown-option.is-selected')).toHaveCount(optionLabels.length)
+  expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: optionLabels})
   await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-multi-select-all')
 
