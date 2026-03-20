@@ -34,6 +34,7 @@
   let currentStart: string | null = $state(null)
   let currentEnd: string | null = $state(null)
   let currentPreset: string = $state('')
+  let hasExternalRange = false
   let touched = false
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
@@ -46,16 +47,25 @@
 
   onMount(() => {
     mounted = true
-    currentStart = normalizeInput(start)
-    currentEnd = normalizeInput(end)
-    if (defaultValue && presetList.includes(defaultValue)) {
-      applyPreset(defaultValue, false)
-    } else {
-      updateParams()
-    }
+    let startKey = `${name}_start`
+    let endKey = `${name}_end`
+    let externalStart = readParamValue(window.$GRAPHENE?.getParam?.(startKey))
+    let externalEnd = readParamValue(window.$GRAPHENE?.getParam?.(endKey))
+    hasExternalRange = externalStart !== undefined || externalEnd !== undefined
+    currentStart = externalStart === undefined ? normalizeInput(start) : externalStart
+    currentEnd = externalEnd === undefined ? normalizeInput(end) : externalEnd
+    currentPreset = inferPreset(currentStart, currentEnd)
+    if (hasExternalRange) updateParams()
+    else if (defaultValue && presetList.includes(defaultValue)) applyPreset(defaultValue, false)
+    else updateParams()
     refreshQuery()
+    let unsubscribeParams = window.$GRAPHENE?.subscribeParams?.((params, event: {changed: Set<string>}) => {
+      if (!event.changed.has(startKey) && !event.changed.has(endKey)) return
+      applyExternalRange(params[startKey], params[endKey])
+    })
     return () => {
       mounted = false
+      unsubscribeParams?.()
       if (queryHandler) {
         window.$GRAPHENE?.unsubscribe?.(queryHandler)
         queryHandler = null
@@ -86,13 +96,15 @@
       values.sort()
       domainStart = values[0]
       domainEnd = values[values.length - 1]
-      if (!touched) {
+      if (hasExternalRange) {
+        currentPreset = inferPreset(currentStart, currentEnd)
+      } else if (!touched) {
         if (defaultValue && presetList.includes(defaultValue)) {
           applyPreset(defaultValue, false)
         } else {
           let startCandidate = currentStart ?? domainStart
           let endCandidate = currentEnd ?? (domainEnd ? addDaysString(domainEnd, 1) : null)
-          setRange(startCandidate, endCandidate, currentPreset, false)
+          setRange(startCandidate, endCandidate, currentPreset, {markTouched: false, syncParam: true})
         }
       }
     }
@@ -149,27 +161,64 @@
     return copy
   }
 
-  function setRange(startValue: string | null, endValue: string | null, preset: string, markTouched: boolean) {
+  function readParamValue(rawValue: unknown): string | null | undefined {
+    if (rawValue === undefined) return undefined
+    if (rawValue === null) return null
+    if (Array.isArray(rawValue)) return normalizeInput(rawValue[0] as string | Date | null | undefined)
+    return normalizeInput(rawValue as string | Date | null | undefined)
+  }
+
+  function inferPreset(startValue: string | null, endValue: string | null): string {
+    if (!startValue && !endValue) return ''
+    let baseEnd = (() => {
+      if (endValue) {
+        let parsed = new Date(endValue)
+        if (!Number.isNaN(parsed.getTime())) return addDays(parsed, -1)
+      }
+      if (domainEnd) return new Date(domainEnd)
+      return new Date()
+    })()
+    if (Number.isNaN(baseEnd.getTime())) return ''
+    for (let preset of presetList) {
+      let range = computePresetRange(preset, baseEnd)
+      let presetStart = range?.start ? formatDate(range.start) : null
+      let presetEnd = range?.end ? formatDate(range.end) : null
+      if (presetStart === startValue && presetEnd === endValue) return preset
+    }
+    return ''
+  }
+
+  function setRange(startValue: string | null, endValue: string | null, preset: string, {markTouched = false, syncParam = true}: {markTouched?: boolean; syncParam?: boolean} = {}) {
     currentStart = startValue
     currentEnd = endValue
     currentPreset = preset
     if (markTouched) touched = true
-    updateParams()
+    if (syncParam) updateParams()
   }
 
   function updateParams() {
-    window.$GRAPHENE.updateParam(`${name}_start`, currentStart)
-    window.$GRAPHENE.updateParam(`${name}_end`, currentEnd)
+    window.$GRAPHENE.updateParams({
+      [`${name}_start`]: currentStart,
+      [`${name}_end`]: currentEnd,
+    })
+  }
+
+  function applyExternalRange(startRaw: unknown, endRaw: unknown) {
+    if (!mounted) return
+    hasExternalRange = true
+    let nextStart = readParamValue(startRaw)
+    let nextEnd = readParamValue(endRaw)
+    setRange(nextStart ?? null, nextEnd ?? null, inferPreset(nextStart ?? null, nextEnd ?? null), {syncParam: false})
   }
 
   function onStartChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
-    setRange(value, currentEnd, '', true)
+    setRange(value, currentEnd, '', {markTouched: true, syncParam: true})
   }
 
   function onEndChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
-    setRange(currentStart, value, '', true)
+    setRange(currentStart, value, '', {markTouched: true, syncParam: true})
   }
 
   function applyPreset(preset: string, markTouched = true) {
@@ -183,7 +232,7 @@
     if (!range) return
     let startVal = range.start ? formatDate(range.start) : null
     let endVal = range.end ? formatDate(range.end) : null
-    setRange(startVal, endVal, preset, markTouched)
+    setRange(startVal, endVal, preset, {markTouched, syncParam: true})
   }
 
   function computePresetRange(preset: string, baseEndInclusive: Date): {start: Date | null; end: Date | null} | null {

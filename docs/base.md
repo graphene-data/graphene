@@ -106,6 +106,8 @@ Queries can be referenced by other queries in the `from` or `join` to form DAGs 
 ## Tying input components to SQL
 Inject input values into queries by referring to their `name` attribute as $name. 
 
+Input values also sync into the page URL query string, so reloads and shared links preserve the same dashboard state.
+
 ````md
 <Dropdown name=status .../>
 ```sql my_query

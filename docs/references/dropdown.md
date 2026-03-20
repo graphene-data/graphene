@@ -24,6 +24,8 @@ from orders
 where status = $status_dropdown
 ```
 
+Dropdown selections also sync into the page URL query string. Single-select dropdowns use one key, and multi-select dropdowns repeat the key for each selected value.
+
 # Attributes
 
 | Attribute | Description | Required | Options | Default |
@@ -31,7 +33,7 @@ where status = $status_dropdown
 | name | Name of the dropdown, used to reference the selected value elsewhere as `"$name"` | true | - | - |
 | data | GSQL query or table name | false | query name | - |
 | value | Column name from the query containing values to pick from | false | column name | - |
-| multiple | Enables multi-select which returns a list | false | `true`, `false` | `false` |
+| multiple | Enables multi-select which returns a list and syncs repeated values into the URL query string | false | `true`, `false` | `false` |
 | defaultValue | Value to use when the dropdown is first loaded. Must be one of the options in the dropdown. Lists supported for multi-select. | false | value from dropdown, list of values e.g. `"Value 1, Value 2"` | - |
 | selectAllByDefault | Selects and returns all values, multiple attribute required | false | `true`, `false` | `false` |
 | noDefault | Stops any default from being selected. Overrides any set `defaultValue`. | false | boolean | `false` |

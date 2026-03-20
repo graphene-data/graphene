@@ -35,10 +35,19 @@ async function startParamTracking(page: any) {
   await page.evaluate(() => {
     let w = window as any
     w.__paramUpdates = []
-    let original = w.$GRAPHENE.updateParam.bind(w.$GRAPHENE)
+    let originalUpdateParam = w.$GRAPHENE.updateParam.bind(w.$GRAPHENE)
+    let originalUpdateParams = w.$GRAPHENE.updateParams?.bind(w.$GRAPHENE)
     w.$GRAPHENE.updateParam = (name: string, value: unknown) => {
       w.__paramUpdates.push({name, value})
-      return original(name, value)
+      return originalUpdateParam(name, value)
+    }
+    if (originalUpdateParams) {
+      w.$GRAPHENE.updateParams = (values: Record<string, unknown>) => {
+        Object.entries(values).forEach(([name, value]) => {
+          w.__paramUpdates.push({name, value})
+        })
+        return originalUpdateParams(values)
+      }
     }
   })
 }
@@ -54,6 +63,19 @@ function lastParamUpdate(page: any, name?: string): Promise<{name: string; value
 
 function allParamUpdates(page: any): Promise<Array<{name: string; value: unknown}>> {
   return page.evaluate(() => (window as any).__paramUpdates ?? [])
+}
+
+function readSearchParams(page: any): Promise<Record<string, string | string[]>> {
+  return page.evaluate(() => {
+    let values = {} as Record<string, string | string[]>
+    for (let [name, value] of new URLSearchParams(window.location.search).entries()) {
+      let existing = values[name]
+      if (existing === undefined) values[name] = value
+      else if (Array.isArray(existing)) existing.push(value)
+      else values[name] = [existing, value]
+    }
+    return values
+  })
 }
 
 test('dropdown single-select supports open, select, and close behaviors', async ({server, page}) => {
@@ -327,4 +349,140 @@ test('text input updates params and date range applies preset', async ({mount, p
   await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-25')
   await expect(page.locator('#daterange-window-end')).toHaveValue('2024-02-01')
   await expect(page.locator('#component-test')).screenshot('date-range-preset')
+})
+
+test('inputs sync url state on load, change, and reload', async ({server, page}) => {
+  let queryBodies: any[] = []
+  server.mockFile(
+    '/index.md',
+    `
+    # Synced Inputs
+
+    \`\`\`sql carrier_options
+    from flights select carrier as code, carrier as label group by 1 order by 1
+    \`\`\`
+
+    <TextInput name="search_text" title="Search Text" defaultValue="alpha" />
+    <Dropdown name="carrier_multi" data="carrier_options" value="code" label="label" title="Carriers" multiple=true />
+    <DateRange name="window" title="Window" start="2024-01-01" end="2024-01-31" />
+
+    \`\`\`sql filtered_flights
+    from flights select carrier
+    where ($search_text is null or carrier = carrier)
+      and ($carrier_multi is null or carrier in ($carrier_multi))
+      and ($window_start is null or dep_time >= $window_start)
+      and ($window_end is null or dep_time < $window_end)
+    limit 5
+    \`\`\`
+
+    <Table data="filtered_flights" />
+  `,
+  )
+
+  await page.route('**/_api/query', async route => {
+    queryBodies.push(route.request().postDataJSON())
+    await route.continue()
+  })
+
+  await page.goto(server.url() + '/?search_text=delta&carrier_multi=AA&carrier_multi=UA&window_start=2024-01-05&window_end=2024-01-12')
+  await waitForGrapheneLoad(page)
+
+  await expect(page.getByLabel('Search Text')).toHaveValue('delta')
+  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('AA')
+  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('UA')
+  await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-05')
+  await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-12')
+  await expect(page.locator('.preset-select')).toHaveValue('Last 7 Days')
+  expect(
+    queryBodies.some(
+      body =>
+        JSON.stringify(body.params) ===
+        JSON.stringify({
+          search_text: 'delta',
+          carrier_multi: ['AA', 'UA'],
+          window_start: '2024-01-05',
+          window_end: '2024-01-12',
+        }),
+    ),
+  ).toBe(true)
+
+  await page.getByLabel('Search Text').fill('omega')
+  await page.getByRole('combobox', {name: 'Carriers'}).click()
+  await page.getByRole('option', {name: 'DL'}).click()
+  await page.locator('#daterange-window-start').evaluate((el: HTMLInputElement) => {
+    el.value = '2024-01-08'
+    el.dispatchEvent(new Event('change', {bubbles: true}))
+  })
+  await expect
+    .poll(() => readSearchParams(page))
+    .toEqual({
+      search_text: 'omega',
+      carrier_multi: ['AA', 'UA', 'DL'],
+      window_start: '2024-01-08',
+      window_end: '2024-01-12',
+    })
+
+  await page.reload()
+  await waitForGrapheneLoad(page)
+  await expect(page.getByLabel('Search Text')).toHaveValue('omega')
+  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('AA')
+  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('UA')
+  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('DL')
+  await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-08')
+  await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-12')
+})
+
+test('inputs resync from url changes after navigation events', async ({server, page}) => {
+  let queryBodies: any[] = []
+  server.mockFile(
+    '/index.md',
+    `
+    # Synced Inputs
+
+    \`\`\`sql carrier_options
+    from flights select carrier as code, carrier as label group by 1 order by 1
+    \`\`\`
+
+    <TextInput name="search_text" title="Search Text" defaultValue="alpha" />
+    <Dropdown name="carrier_multi" data="carrier_options" value="code" label="label" title="Carriers" multiple=true />
+    <DateRange name="window" title="Window" start="2024-01-01" end="2024-01-31" />
+
+    \`\`\`sql filtered_flights
+    from flights select carrier
+    where ($search_text is null or carrier = carrier)
+      and ($carrier_multi is null or carrier in ($carrier_multi))
+      and ($window_start is null or dep_time >= $window_start)
+      and ($window_end is null or dep_time < $window_end)
+    limit 5
+    \`\`\`
+
+    <Table data="filtered_flights" />
+  `,
+  )
+
+  await page.route('**/_api/query', async route => {
+    queryBodies.push(route.request().postDataJSON())
+    await route.continue()
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+
+  await page.evaluate(() => {
+    history.pushState({}, '', '?search_text=sigma&carrier_multi=DL&window_start=2024-01-10&window_end=2024-01-20')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  })
+
+  await expect(page.getByLabel('Search Text')).toHaveValue('sigma')
+  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('DL')
+  await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-10')
+  await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-20')
+  await expect
+    .poll(() => queryBodies[queryBodies.length - 1]?.params)
+    .toEqual({
+      search_text: 'sigma',
+      carrier_multi: 'DL',
+      window_start: '2024-01-10',
+      window_end: '2024-01-20',
+    })
 })

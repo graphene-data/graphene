@@ -1,4 +1,5 @@
 <script lang="ts">
+  import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
 
   interface Props {
@@ -17,21 +18,32 @@
     placeholder = 'Type to search', defaultValue = undefined, hideDuringPrint = true, unsafe = false,
   }: Props = $props()
 
-  // svelte-ignore state_referenced_locally - intentionally capturing initial value only
-  let value = $state(defaultValue ?? '')
+  let value = $state('')
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
   let allowUnsafe = $derived(toBoolean(unsafe))
   let displayLabel = $derived(title || label)
 
-  // Push value changes to parent
-  $effect(() => {
+  onMount(() => {
+    value = readExternalValue(window.$GRAPHENE?.getParam?.(name), defaultValue ?? '')
     pushValue(value)
+    return window.$GRAPHENE?.subscribeParams?.((params, event: {changed: Set<string>}) => {
+      if (!event.changed.has(name)) return
+      let nextValue = readExternalValue(params[name], '')
+      if (nextValue !== value) value = nextValue
+    })
   })
 
   function sanitize(input: string): string {
     if (allowUnsafe) return input
     return input.replace(/'/g, "''")
+  }
+
+  function readExternalValue(raw: unknown, fallback: string) {
+    if (raw === undefined) return fallback
+    if (raw === null) return ''
+    if (Array.isArray(raw)) return raw.length ? String(raw[0] ?? '') : ''
+    return String(raw)
   }
 
   function pushValue(input: string) {

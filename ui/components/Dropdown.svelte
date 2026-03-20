@@ -39,6 +39,7 @@
   let queryOptions: Option[] = $state([])
   let manualOptions: Option[] = $state([])
   let selection: any[] = $state([])
+  let hasExternalSelection = false
   let touched = false
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
@@ -273,12 +274,12 @@
       let exists = selection.some(val => optionKey(val) === key)
       if (exists) {
         let next = selection.filter(val => optionKey(val) !== key)
-        setSelection(next, true)
+        setSelection(next, {fromUser: true, syncParam: true})
       } else {
-        setSelection([...selection, opt.value], true)
+        setSelection([...selection, opt.value], {fromUser: true, syncParam: true})
       }
     } else {
-      setSelection([opt.value], true)
+      setSelection([opt.value], {fromUser: true, syncParam: true})
       closeMenu(fromKeyboard)
     }
   }
@@ -295,16 +296,25 @@
 
   onMount(() => {
     mounted = true
-    let defaults = ensureArray(defaultValue)
-    if (!hasNoDefault && defaults.length) setSelection(defaults, false)
+    let externalValue = window.$GRAPHENE?.getParam?.(name)
+    if (externalValue !== undefined) applyExternalSelection(externalValue)
+    else {
+      let defaults = ensureArray(defaultValue)
+      if (!hasNoDefault && defaults.length) setSelection(defaults, {syncParam: true})
+    }
     syncSelection(false)
     setupQuery()
+    let unsubscribeParams = window.$GRAPHENE?.subscribeParams?.((params, event: {changed: Set<string>}) => {
+      if (!event.changed.has(name)) return
+      applyExternalSelection(params[name])
+    })
     if (typeof document !== 'undefined') {
       document.addEventListener('pointerdown', handlePointerDown)
       window.addEventListener('resize', updateTriggerWidth)
     }
     return () => {
       mounted = false
+      unsubscribeParams?.()
       if (queryHandler) {
         window.$GRAPHENE?.unsubscribe?.(queryHandler)
         queryHandler = null
@@ -329,13 +339,15 @@
   function syncSelection(fromUser: boolean) {
     let opts = availableOptions
     if (!opts.length) {
-      if (selection.length) updateInputPayload(selection)
+      updateInputPayload(selection)
       return
     }
     let nextSelection = selection.filter(val => valueMap.has(optionKey(val)))
     if (!fromUser) {
       let defaults = ensureArray(defaultValue)
-      if (multi && selectAllDefault) {
+      if (hasExternalSelection) {
+        nextSelection = nextSelection
+      } else if (multi && selectAllDefault) {
         nextSelection = opts.map(o => o.value)
       } else if (!touched) {
         if (defaults.length && !hasNoDefault) {
@@ -345,20 +357,28 @@
         }
       }
     }
-    setSelection(nextSelection, fromUser)
+    setSelection(nextSelection, {fromUser, syncParam: true})
   }
 
-  function setSelection(values: any[], fromUser: boolean) {
+  function setSelection(values: any[], {fromUser = false, syncParam = true}: {fromUser?: boolean; syncParam?: boolean} = {}) {
     let keys = values.map(optionKey)
     let existingKeys = selection.map(optionKey)
     let changed = keys.length !== existingKeys.length || keys.some((k, idx) => k !== existingKeys[idx])
     if (!changed) {
-      if (!fromUser) updateInputPayload(selection)
+      if (syncParam && !fromUser) updateInputPayload(selection)
       return
     }
     selection = values
     if (fromUser) touched = true
-    updateInputPayload(selection)
+    if (syncParam) updateInputPayload(selection)
+  }
+
+  function applyExternalSelection(rawValue: unknown) {
+    if (!mounted) return
+    hasExternalSelection = true
+    let values = rawValue === undefined || rawValue === null ? [] : ensureArray(rawValue)
+    if (!multi && values.length > 1) values = values.slice(0, 1)
+    setSelection(values, {syncParam: false})
   }
 
   function updateInputPayload(values: any[]) {
@@ -370,11 +390,11 @@
 
   function selectAll() {
     if (!multi) return
-    setSelection(availableOptions.map(opt => opt.value), true)
+    setSelection(availableOptions.map(opt => opt.value), {fromUser: true, syncParam: true})
   }
 
   function clearSelection() {
-    setSelection([], true)
+    setSelection([], {fromUser: true, syncParam: true})
   }
 
   let elementId = $derived(`dropdown-${name}`)

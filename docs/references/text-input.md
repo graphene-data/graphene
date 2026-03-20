@@ -17,6 +17,8 @@ from users
 where email ilike concat('%', $name_of_input, '%')
 ```
 
+Text input values also sync into the page URL query string so a reload or shared link preserves the same filter state.
+
 # Attributes
 
 | Attribute | Description | Required | Options | Default |
