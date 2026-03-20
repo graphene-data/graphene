@@ -7,8 +7,8 @@ import {config, loadConfig} from './config.ts'
 import {parseMarkdown} from './markdown.ts'
 import {fillInParams} from './params.ts'
 import {parser} from './parser.js'
-import {type Query} from './types.ts'
-import {getOffset} from './util.ts'
+import {type Query, type Location} from './types.ts'
+import {getOffset, getSourceOffset} from './util.ts'
 
 export {clearWorkspace}
 export {config, loadConfig}
@@ -43,9 +43,10 @@ export async function loadWorkspace(dir: string, includeMd: boolean) {
 }
 
 export function updateFile(contents: string, path: string) {
-  FILE_MAP[path] ||= {path, contents, tree: null, tables: [], queries: []}
+  FILE_MAP[path] ||= {path, contents, tree: null, tables: [], queries: [], navigation: {symbols: [], references: []}}
   FILE_MAP[path].contents = contents
   FILE_MAP[path].tree = null
+  FILE_MAP[path].navigation = {symbols: [], references: []}
   return FILE_MAP[path]
 }
 
@@ -62,6 +63,7 @@ export function analyze(contents?: string, contentType?: 'gsql' | 'md'): Query[]
 
   Object.values(FILE_MAP).forEach(fi => {
     let isMd = fi.path.endsWith('.md') || (fi.path == 'input' && contentType == 'md')
+    fi.navigation = {symbols: [], references: []}
     fi.tree ||= isMd ? parseMarkdown(fi) : parser.parse(fi.contents)
     fi.tree!.fileInfo = fi
     recordSyntaxErrors(fi)
@@ -80,6 +82,10 @@ export function analyze(contents?: string, contentType?: 'gsql' | 'md'): Query[]
   Object.values(FILE_MAP)
     .flatMap(f => f.tables)
     .forEach(analyzeTableFully)
+  Object.values(FILE_MAP).forEach(fi => {
+    let nodes = fi.tree!.topNode.getChildren('QueryStatement') || []
+    fi.queries = nodes.map(n => analyzeQuery(n)).filter((q): q is Query => !!q)
+  })
   return []
 }
 
@@ -113,4 +119,37 @@ export function getHover(path: string, line: number, col: number): string {
     return `#### ${entity.table.name}${desc}`
   }
   return ''
+}
+
+export function getDefinition(path: string, line: number, col: number): Location | null {
+  let symbol = getNavigationTarget(path, line, col)
+  return symbol?.location || null
+}
+
+export function getReferences(path: string, line: number, col: number, includeDeclaration = false): Location[] {
+  let symbol = getNavigationTarget(path, line, col)
+  if (!symbol) return []
+
+  let references = Object.values(FILE_MAP).flatMap(file => file.navigation.references.filter(ref => ref.targetId == symbol.id).map(ref => ref.location))
+  if (includeDeclaration) return [symbol.location, ...references]
+  return references
+}
+
+function getNavigationTarget(path: string, line: number, col: number) {
+  let fi = FILE_MAP[path]
+  if (!fi) return null
+
+  let offset = getSourceOffset(line, col, fi)
+  let reference = fi.navigation.references.find(ref => containsOffset(ref.location, offset))
+  if (reference) {
+    return Object.values(FILE_MAP)
+      .flatMap(file => file.navigation.symbols)
+      .find(symbol => symbol.id == reference.targetId)
+  }
+
+  return fi.navigation.symbols.find(symbol => containsOffset(symbol.location, offset)) || null
+}
+
+function containsOffset(location: Location, offset: number) {
+  return offset >= location.from.offset && offset <= location.to.offset
 }

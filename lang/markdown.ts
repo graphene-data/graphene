@@ -30,6 +30,7 @@ interface FenceMatch {
   contentStart: number
   content: string
   name?: string
+  nameStart?: number
 }
 
 interface ComponentMatch {
@@ -104,7 +105,12 @@ export function parseMarkdown(fi: FileInfo) {
       let contentStart = fence.contentStart
       let content = fence.content
       if (fence.name) {
-        appendMapped(`table ${fence.name} as (\n`, () => contentStart, {reset: contentStart - 1})
+        let name = fence.name
+        appendMapped('table ', () => fence.start, {reset: fence.start - 1})
+        let nameStart = fence.nameStart ?? contentStart
+        appendMapped(name, i => nameStart + i, {reset: nameStart - 1})
+        appendMapped(' ', () => nameStart + name.length, {reset: nameStart + name.length - 1})
+        appendMapped('as (\n', () => contentStart, {reset: contentStart - 1})
         appendContent(content, contentStart)
         if (!content.endsWith('\n')) appendMapped('\n', () => contentStart + content.length, {reset: contentStart + content.length - 1})
         appendMapped(')\n', () => fence.end - 1, {reset: fence.end - 2})
@@ -170,8 +176,8 @@ function collectFences(source: string): FenceMatch[] {
     headerLength += 1
     let content = match[3] || ''
     let contentStart = start + headerLength
-    let name = extractFenceName(full.slice(0, headerLength))
-    matches.push({start, end: start + full.length, headerLength, contentStart, content, name})
+    let {name, index} = extractFenceName(full.slice(0, headerLength))
+    matches.push({start, end: start + full.length, headerLength, contentStart, content, name, nameStart: index == null ? undefined : start + index})
   }
   return matches
 }
@@ -194,10 +200,10 @@ function collectComponents(source: string, fences: FenceMatch[]): ComponentMatch
   return matches
 }
 
-function extractFenceName(header: string): string | undefined {
+function extractFenceName(header: string): {name?: string; index?: number} {
   let parts = header.trim().split(/\s+/)
-  if (parts.length > 1) return parts[1]
-  return undefined
+  if (parts.length > 1) return {name: parts[1], index: header.indexOf(parts[1])}
+  return {}
 }
 
 function extractAttributes(fragment: string, baseStart: number): Record<string, AttrMatch> {
