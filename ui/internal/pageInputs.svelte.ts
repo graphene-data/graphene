@@ -327,4 +327,11 @@ export function getPageInputs() {
   }
 }
 
+// Top-level initializers that read props capture only the initial prop value. Wrapping the
+// read in a callback makes that one-time capture explicit for cases like field setup, where
+// the prop is treated as immutable component identity rather than reactive input.
+export function initOnce<T>(factory: () => T) {
+  return factory()
+}
+
 export {setPageInputsContext}

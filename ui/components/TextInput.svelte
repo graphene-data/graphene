@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
-  import {getPageInputs} from '../internal/pageInputs.svelte.ts'
+  import {getPageInputs, initOnce} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
     name: string
@@ -20,10 +20,7 @@
   }: Props = $props()
 
   let pageInputs = getPageInputs()
-  function createField() {
-    return pageInputs.text(name)
-  }
-  let field = createField()
+  let field = initOnce(() => pageInputs.text(name))
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
   let allowUnsafe = $derived(toBoolean(unsafe))

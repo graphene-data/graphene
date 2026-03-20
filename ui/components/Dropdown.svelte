@@ -2,7 +2,7 @@
   import {onMount, setContext, tick, type Snippet} from 'svelte'
   import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
   import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
-  import {getPageInputs} from '../internal/pageInputs.svelte.ts'
+  import {getPageInputs, initOnce} from '../internal/pageInputs.svelte.ts'
 
   interface Option {
     value: any
@@ -44,10 +44,7 @@
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
   let pageInputs = getPageInputs()
-  function createField() {
-    return pageInputs.dropdown(name, toBoolean(multiple))
-  }
-  let field = createField()
+  let field = initOnce(() => pageInputs.dropdown(name, toBoolean(multiple)))
 
   let isOpen = $state(false)
   let searchTerm = $state('')
