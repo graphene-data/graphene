@@ -27,7 +27,7 @@
   let displayLabel = $derived(title || label)
 
   onMount(() => {
-    if (!field.controlled) field.set(defaultValue ?? '')
+    if (!field.hasExternalValue) field.set(defaultValue ?? '')
     return () => field.destroy()
   })
 

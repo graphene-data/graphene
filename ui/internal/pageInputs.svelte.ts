@@ -23,7 +23,7 @@ type UpdateSource = 'init' | 'local' | 'external'
 class BoundField<T> {
   value: T
   present: boolean
-  controlled: boolean
+  hasExternalValue: boolean
 
   constructor(
     private controller: PageInputs,
@@ -32,7 +32,7 @@ class BoundField<T> {
   ) {
     this.value = $state(codec.empty())
     this.present = $state(false)
-    this.controlled = $state(false)
+    this.hasExternalValue = $state(false)
     this.controller.registerField(this)
     this.sync(this.controller.getParams(), 'init')
   }
@@ -45,8 +45,8 @@ class BoundField<T> {
     let next = this.codec.read(params, this.name)
     this.present = next.present
     this.value = next.value
-    if (source === 'init') this.controlled = next.present
-    else if (source === 'external') this.controlled = true
+    if (source === 'init') this.hasExternalValue = next.present
+    else if (source === 'external') this.hasExternalValue = true
   }
 
   set(next: T) {

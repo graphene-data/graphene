@@ -49,10 +49,10 @@
 
   onMount(() => {
     mounted = true
-    currentStart = field.controlled ? field.value.start : normalizeInput(start)
-    currentEnd = field.controlled ? field.value.end : normalizeInput(end)
+    currentStart = field.hasExternalValue ? field.value.start : normalizeInput(start)
+    currentEnd = field.hasExternalValue ? field.value.end : normalizeInput(end)
     currentPreset = inferPreset(currentStart, currentEnd)
-    if (field.controlled) updateParams()
+    if (field.hasExternalValue) updateParams()
     else if (defaultValue && presetList.includes(defaultValue)) applyPreset(defaultValue, false)
     else updateParams()
     refreshQuery()
@@ -73,7 +73,7 @@
   $effect(() => {
     if (currentStart === field.value.start && currentEnd === field.value.end) return
     if (!mounted) return
-    setRange(field.value.start, field.value.end, inferPreset(field.value.start, field.value.end), {syncParam: false})
+    setRange(field.value.start, field.value.end, inferPreset(field.value.start, field.value.end), {persist: false})
   })
 
   function refreshQuery() {
@@ -95,7 +95,7 @@
       values.sort()
       domainStart = values[0]
       domainEnd = values[values.length - 1]
-      if (field.controlled) {
+      if (field.hasExternalValue) {
         currentPreset = inferPreset(currentStart, currentEnd)
       } else if (!touched) {
         if (defaultValue && presetList.includes(defaultValue)) {
@@ -103,7 +103,7 @@
         } else {
           let startCandidate = currentStart ?? domainStart
           let endCandidate = currentEnd ?? (domainEnd ? addDaysString(domainEnd, 1) : null)
-          setRange(startCandidate, endCandidate, currentPreset, {markTouched: false, syncParam: true})
+          setRange(startCandidate, endCandidate, currentPreset, {markTouched: false, persist: true})
         }
       }
     }
@@ -182,12 +182,12 @@
     return ''
   }
 
-  function setRange(startValue: string | null, endValue: string | null, preset: string, {markTouched = false, syncParam = true}: {markTouched?: boolean; syncParam?: boolean} = {}) {
+  function setRange(startValue: string | null, endValue: string | null, preset: string, {markTouched = false, persist = true}: {markTouched?: boolean; persist?: boolean} = {}) {
     currentStart = startValue
     currentEnd = endValue
     currentPreset = preset
     if (markTouched) touched = true
-    if (syncParam) updateParams()
+    if (persist) updateParams()
   }
 
   function updateParams() {
@@ -196,12 +196,12 @@
 
   function onStartChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
-    setRange(value, currentEnd, '', {markTouched: true, syncParam: true})
+    setRange(value, currentEnd, '', {markTouched: true, persist: true})
   }
 
   function onEndChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
-    setRange(currentStart, value, '', {markTouched: true, syncParam: true})
+    setRange(currentStart, value, '', {markTouched: true, persist: true})
   }
 
   function applyPreset(preset: string, markTouched = true) {
@@ -215,7 +215,7 @@
     if (!range) return
     let startVal = range.start ? formatDate(range.start) : null
     let endVal = range.end ? formatDate(range.end) : null
-    setRange(startVal, endVal, preset, {markTouched, syncParam: true})
+    setRange(startVal, endVal, preset, {markTouched, persist: true})
   }
 
   function computePresetRange(preset: string, baseEndInclusive: Date): {start: Date | null; end: Date | null} | null {

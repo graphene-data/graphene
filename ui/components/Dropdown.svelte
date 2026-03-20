@@ -56,10 +56,10 @@
 
   const registerOption = (opt: Option) => {
     manualOptions = [...manualOptions, opt]
-    syncSelection(false)
+    reconcileSelection(false)
     return () => {
       manualOptions = manualOptions.filter(o => optionKey(o.value) !== optionKey(opt.value))
-      syncSelection(false)
+      reconcileSelection(false)
     }
   }
   setContext(DROPDOWN_CONTEXT, registerOption)
@@ -109,7 +109,7 @@
 
   $effect(() => {
     if (sameSelection(selection, field.value)) return
-    setSelection(field.value, {syncParam: false})
+    setSelection(field.value, {persist: false})
   })
 
   function setupQuery() {
@@ -123,7 +123,7 @@
     queryKey = key
     if (!data) {
       queryOptions = []
-      syncSelection(false)
+      reconcileSelection(false)
       return
     }
     let columns = [value]
@@ -135,7 +135,7 @@
         value: row[value],
         label: resolvedLabelField ? row[resolvedLabelField] : row[value],
       }))
-      syncSelection(false)
+      reconcileSelection(false)
     }
     if (typeof window !== 'undefined' && window.$GRAPHENE?.query) {
       window.$GRAPHENE.query(data, columns, handler)
@@ -281,12 +281,12 @@
       let exists = selection.some(val => optionKey(val) === key)
       if (exists) {
         let next = selection.filter(val => optionKey(val) !== key)
-        setSelection(next, {fromUser: true, syncParam: true})
+        setSelection(next, {fromUser: true, persist: true})
       } else {
-        setSelection([...selection, opt.value], {fromUser: true, syncParam: true})
+        setSelection([...selection, opt.value], {fromUser: true, persist: true})
       }
     } else {
-      setSelection([opt.value], {fromUser: true, syncParam: true})
+      setSelection([opt.value], {fromUser: true, persist: true})
       closeMenu(fromKeyboard)
     }
   }
@@ -303,12 +303,12 @@
 
   onMount(() => {
     mounted = true
-    if (field.controlled) setSelection(field.value, {syncParam: false})
+    if (field.hasExternalValue) setSelection(field.value, {persist: false})
     else {
       let defaults = ensureArray(defaultValue)
-      if (!hasNoDefault && defaults.length) setSelection(defaults, {syncParam: true})
+      if (!hasNoDefault && defaults.length) setSelection(defaults, {persist: true})
     }
-    syncSelection(false)
+    reconcileSelection(false)
     setupQuery()
     if (typeof document !== 'undefined') {
       document.addEventListener('pointerdown', handlePointerDown)
@@ -338,7 +338,7 @@
     if (triggerEl) updateTriggerWidth()
   })
 
-  function syncSelection(fromUser: boolean) {
+  function reconcileSelection(fromUser: boolean) {
     // Reconcile persisted selection with the current option set, while keeping external values
     // authoritative and only applying defaults/select-all before the user has interacted.
     let opts = availableOptions
@@ -349,7 +349,7 @@
     let nextSelection = selection.filter(val => valueMap.has(optionKey(val)))
     if (!fromUser) {
       let defaults = ensureArray(defaultValue)
-      if (field.controlled) {
+      if (field.hasExternalValue) {
         nextSelection = nextSelection
       } else if (multi && selectAllDefault) {
         nextSelection = opts.map(o => o.value)
@@ -361,7 +361,7 @@
         }
       }
     }
-    setSelection(nextSelection, {fromUser, syncParam: true})
+    setSelection(nextSelection, {fromUser, persist: true})
   }
 
   function sameSelection(left: any[], right: any[]) {
@@ -370,14 +370,14 @@
     return leftKeys.length === rightKeys.length && leftKeys.every((key, index) => key === rightKeys[index])
   }
 
-  function setSelection(values: any[], {fromUser = false, syncParam = true}: {fromUser?: boolean; syncParam?: boolean} = {}) {
+  function setSelection(values: any[], {fromUser = false, persist = true}: {fromUser?: boolean; persist?: boolean} = {}) {
     if (sameSelection(values, selection)) {
-      if (syncParam && !fromUser) updateInputPayload(selection)
+      if (persist && !fromUser) updateInputPayload(selection)
       return
     }
     selection = values
     if (fromUser) touched = true
-    if (syncParam) updateInputPayload(selection)
+    if (persist) updateInputPayload(selection)
   }
 
   function updateInputPayload(values: any[]) {
@@ -386,11 +386,11 @@
 
   function selectAll() {
     if (!multi) return
-    setSelection(availableOptions.map(opt => opt.value), {fromUser: true, syncParam: true})
+    setSelection(availableOptions.map(opt => opt.value), {fromUser: true, persist: true})
   }
 
   function clearSelection() {
-    setSelection([], {fromUser: true, syncParam: true})
+    setSelection([], {fromUser: true, persist: true})
   }
 
   let elementId = $derived(`dropdown-${name}`)
