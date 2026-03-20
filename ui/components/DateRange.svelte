@@ -36,7 +36,7 @@
 
   let currentStart: string | null = $state(null)
   let currentEnd: string | null = $state(null)
-  let currentPreset: string = $state('')
+  let currentPreset: string | null = $state(null)
   let touched = false
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
@@ -162,8 +162,8 @@
 
   // We only persist start/end in URL state, so the preset label is inferred by matching
   // the current range against the configured preset definitions.
-  function inferPreset(startValue: string | null, endValue: string | null): string {
-    if (!startValue && !endValue) return ''
+  function inferPreset(startValue: string | null, endValue: string | null): string | null {
+    if (!startValue && !endValue) return null
     let baseEnd = (() => {
       if (endValue) {
         let parsed = new Date(endValue)
@@ -172,17 +172,17 @@
       if (domainEnd) return new Date(domainEnd)
       return new Date()
     })()
-    if (Number.isNaN(baseEnd.getTime())) return ''
+    if (Number.isNaN(baseEnd.getTime())) return null
     for (let preset of presetList) {
       let range = computePresetRange(preset, baseEnd)
       let presetStart = range?.start ? formatDate(range.start) : null
       let presetEnd = range?.end ? formatDate(range.end) : null
       if (presetStart === startValue && presetEnd === endValue) return preset
     }
-    return ''
+    return null
   }
 
-  function setRange(startValue: string | null, endValue: string | null, preset: string, {markTouched = false, persist = true}: {markTouched?: boolean; persist?: boolean} = {}) {
+  function setRange(startValue: string | null, endValue: string | null, preset: string | null, {markTouched = false, persist = true}: {markTouched?: boolean; persist?: boolean} = {}) {
     currentStart = startValue
     currentEnd = endValue
     currentPreset = preset
@@ -196,12 +196,12 @@
 
   function onStartChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
-    setRange(value, currentEnd, '', {markTouched: true, persist: true})
+    setRange(value, currentEnd, null, {markTouched: true, persist: true})
   }
 
   function onEndChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
-    setRange(currentStart, value, '', {markTouched: true, persist: true})
+    setRange(currentStart, value, null, {markTouched: true, persist: true})
   }
 
   function applyPreset(preset: string, markTouched = true) {
@@ -289,7 +289,7 @@
   function onPresetChange(event: Event) {
     let value = (event.currentTarget as HTMLSelectElement).value
     if (!value) {
-      currentPreset = ''
+      currentPreset = null
       touched = true
       return
     }

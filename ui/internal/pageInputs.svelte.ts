@@ -16,13 +16,13 @@ interface ParamCodec<T> {
   empty(): T
   read(params: ParamSnapshot, name: string): ReadResult<T>
   write(name: string, value: T): ParamSnapshot
+  normalize?(params: ParamSnapshot, name: string): void
 }
 
 type UpdateSource = 'init' | 'local' | 'external'
 
 class BoundField<T> {
   value: T
-  present: boolean
   hasExternalValue: boolean
 
   constructor(
@@ -31,7 +31,6 @@ class BoundField<T> {
     private codec: ParamCodec<T>,
   ) {
     this.value = $state(codec.empty())
-    this.present = $state(false)
     this.hasExternalValue = $state(false)
     this.controller.registerField(this)
     this.sync(this.controller.getParams(), 'init')
@@ -43,10 +42,13 @@ class BoundField<T> {
 
   sync(params: ParamSnapshot, source: UpdateSource) {
     let next = this.codec.read(params, this.name)
-    this.present = next.present
     this.value = next.value
     if (source === 'init') this.hasExternalValue = next.present
     else if (source === 'external') this.hasExternalValue = true
+  }
+
+  normalize(params: ParamSnapshot) {
+    this.codec.normalize?.(params, this.name)
   }
 
   set(next: T) {
@@ -99,6 +101,11 @@ const dropdownMultiCodec: ParamCodec<any[]> = {
   },
   write(name, value) {
     return {[name]: value.length ? [...value] : null}
+  },
+  normalize(params, name) {
+    let raw = params[name]
+    if (raw === undefined || raw === null || Array.isArray(raw)) return
+    params[name] = [raw]
   },
 }
 
@@ -251,6 +258,7 @@ export class PageInputs {
     // Central reconciliation point for persisted inputs: update the snapshot, sync affected
     // fields, notify compatibility subscribers, and rerun queries from the final param state.
     let cloned = cloneParams(nextParams)
+    this.normalizeSnapshot(cloned)
     let changed = getChangedKeys(this.params, cloned)
     if (changed.size === 0) return
     this.params = cloned
@@ -267,6 +275,14 @@ export class PageInputs {
       this.fieldsByKey.get(key)?.forEach(field => fields.add(field))
     })
     fields.forEach(field => field.sync(this.params, source))
+  }
+
+  private normalizeSnapshot(params: ParamSnapshot) {
+    let fields = new Set<BoundField<any>>()
+    this.fieldsByKey.forEach(keyFields => {
+      keyFields.forEach(field => fields.add(field))
+    })
+    fields.forEach(field => field.normalize(params))
   }
 
   private syncUrl() {

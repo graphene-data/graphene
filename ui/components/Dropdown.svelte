@@ -108,8 +108,9 @@
   })
 
   $effect(() => {
-    if (sameSelection(selection, field.value)) return
-    setSelection(field.value, {persist: false})
+    if (!sameSelection(selection, field.value)) {
+      setSelection(field.value, {persist: false})
+    }
   })
 
   function setupQuery() {

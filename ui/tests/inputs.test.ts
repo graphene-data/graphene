@@ -481,7 +481,7 @@ test('inputs resync from url changes after navigation events', async ({server, p
     .poll(() => queryBodies[queryBodies.length - 1]?.params)
     .toEqual({
       search_text: 'sigma',
-      carrier_multi: 'DL',
+      carrier_multi: ['DL'],
       window_start: '2024-01-10',
       window_end: '2024-01-20',
     })
