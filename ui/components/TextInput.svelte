@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
-  import {usePageInputs} from '../internal/pageInputs.svelte.ts'
+  import {getPageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
     name: string
@@ -19,7 +19,7 @@
     placeholder = 'Type to search', defaultValue = undefined, hideDuringPrint = true, unsafe = false,
   }: Props = $props()
 
-  let pageInputs = usePageInputs()
+  let pageInputs = getPageInputs()
   function createField() {
     return pageInputs.text(name)
   }

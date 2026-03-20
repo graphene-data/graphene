@@ -2,7 +2,7 @@
   import {onMount, setContext, tick, type Snippet} from 'svelte'
   import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
   import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
-  import {usePageInputs} from '../internal/pageInputs.svelte.ts'
+  import {getPageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Option {
     value: any
@@ -43,7 +43,7 @@
   let touched = false
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
-  let pageInputs = usePageInputs()
+  let pageInputs = getPageInputs()
   function createField() {
     return pageInputs.dropdown(name, toBoolean(multiple))
   }

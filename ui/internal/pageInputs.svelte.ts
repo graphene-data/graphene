@@ -319,7 +319,7 @@ export function releasePageInputs(pageInputs: PageInputs) {
   activePageInputs = null
 }
 
-export function usePageInputs() {
+export function getPageInputs() {
   try {
     return getPageInputsContext()
   } catch {

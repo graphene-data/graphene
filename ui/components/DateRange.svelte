@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
-  import {usePageInputs} from '../internal/pageInputs.svelte.ts'
+  import {getPageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
     name: string
@@ -28,7 +28,7 @@
   let mounted = false
   let queryKey = ''
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
-  let pageInputs = usePageInputs()
+  let pageInputs = getPageInputs()
   function createField() {
     return pageInputs.dateRange(name)
   }
