@@ -2,7 +2,7 @@
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
-import {getActivePageInputs, type ParamSubscriber} from './pageInputs.svelte.ts'
+import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
 
 interface QueryResult {
@@ -217,7 +217,7 @@ if (typeof window !== 'undefined') {
   Object.assign(window.$GRAPHENE, {
     getParam: (name: string) => getActivePageInputs().getParam(name),
     registerQuery,
-    subscribeParams: (subscriber: ParamSubscriber) => getActivePageInputs().subscribeParams(subscriber),
+    subscribeParams: subscriber => getActivePageInputs().subscribeParams(subscriber),
     syncParamsFromUrl: () => getActivePageInputs().syncFromUrl(),
     updateParam: (name: string, value: any) => getActivePageInputs().updateParam(name, value),
     updateParams: (nextParams: Record<string, any>) => getActivePageInputs().updateParams(nextParams),

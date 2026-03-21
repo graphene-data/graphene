@@ -56,10 +56,10 @@
 
   const registerOption = (opt: Option) => {
     manualOptions = [...manualOptions, opt]
-    reconcileSelection(false)
+    syncSelection(false)
     return () => {
       manualOptions = manualOptions.filter(o => optionKey(o.value) !== optionKey(opt.value))
-      reconcileSelection(false)
+      syncSelection(false)
     }
   }
   setContext(DROPDOWN_CONTEXT, registerOption)
@@ -124,7 +124,7 @@
     queryKey = key
     if (!data) {
       queryOptions = []
-      reconcileSelection(false)
+      syncSelection(false)
       return
     }
     let columns = [value]
@@ -136,7 +136,7 @@
         value: row[value],
         label: resolvedLabelField ? row[resolvedLabelField] : row[value],
       }))
-      reconcileSelection(false)
+      syncSelection(false)
     }
     if (typeof window !== 'undefined' && window.$GRAPHENE?.query) {
       window.$GRAPHENE.query(data, columns, handler)
@@ -309,7 +309,7 @@
       let defaults = ensureArray(defaultValue)
       if (!hasNoDefault && defaults.length) setSelection(defaults, {persist: true})
     }
-    reconcileSelection(false)
+    syncSelection(false)
     setupQuery()
     if (typeof document !== 'undefined') {
       document.addEventListener('pointerdown', handlePointerDown)
@@ -339,7 +339,7 @@
     if (triggerEl) updateTriggerWidth()
   })
 
-  function reconcileSelection(fromUser: boolean) {
+  function syncSelection(fromUser: boolean) {
     // Reconcile persisted selection with the current option set, while keeping external values
     // authoritative and only applying defaults/select-all before the user has interacted.
     let opts = availableOptions
