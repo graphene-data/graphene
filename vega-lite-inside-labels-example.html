@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vega-Lite Inside Y-Axis Labels</title>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <style>
+    body { font-family: sans-serif; padding: 40px; }
+  </style>
+</head>
+<body>
+  <h2>Inside Y-Axis Labels (above tick lines)</h2>
+  <div id="chart"></div>
+  <script>
+    const spec = {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "width": 500,
+      "height": 300,
+      "data": {
+        "values": [
+          {"month": "Jan", "value": 42},
+          {"month": "Feb", "value": 78},
+          {"month": "Mar", "value": 55},
+          {"month": "Apr", "value": 91},
+          {"month": "May", "value": 63},
+          {"month": "Jun", "value": 110},
+          {"month": "Jul", "value": 88}
+        ]
+      },
+      "mark": {"type": "line", "point": true},
+      "encoding": {
+        "x": {
+          "field": "month",
+          "type": "nominal",
+          "title": "Month"
+        },
+        "y": {
+          "field": "value",
+          "type": "quantitative",
+          "title": null,
+          "axis": {
+            // Push labels to the right of the axis line (inside the chart).
+            // labelPadding is the gap between the tick end and the label.
+            // For a left-oriented y-axis, negative padding moves labels rightward.
+            // With tickSize=5, we need labelPadding < -5 to cross the axis line.
+            "labelPadding": -6,
+
+            // Align the left edge of the text at the computed x position,
+            // so the text reads into the chart rather than back out of it.
+            "labelAlign": "left",
+
+            // Place the bottom of the text at the tick's y position,
+            // so the label sits *above* its corresponding tick line.
+            "labelBaseline": "bottom",
+
+            // Keep ticks short so they don't poke out too far under the label.
+            "tickSize": 4,
+
+            "grid": true,
+            "gridOpacity": 0.4
+          }
+        }
+      }
+    };
+
+    vegaEmbed('#chart', spec);
+  </script>
+</body>
+</html>
