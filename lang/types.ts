@@ -109,6 +109,7 @@ export interface PhysicalTable extends TableBase {
 export interface ViewTable extends TableBase {
   type: 'view'
   query: Query
+  analyzed?: boolean
 }
 export interface CteTable extends TableBase {
   type: 'cte'
