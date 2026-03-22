@@ -186,6 +186,9 @@ importers:
       '@graphenedata/cli':
         specifier: workspace:*
         version: link:../../cli
+      svelte:
+        specifier: 5.53.7
+        version: 5.53.7
 
   examples/snowflake:
     dependencies:
