@@ -9,7 +9,8 @@
     "run": "npm run graphene run"
   },
   "dependencies": {
-    "@graphenedata/cli": "workspace:*"
+    "@graphenedata/cli": "workspace:*",
+    "svelte": "5.53.7"
   },
   "engines": {
     "node": ">=24.0.0",
