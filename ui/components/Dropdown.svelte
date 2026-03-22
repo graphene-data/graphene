@@ -329,7 +329,9 @@
   function syncSelection(fromUser: boolean) {
     let opts = availableOptions
     if (!opts.length) {
-      if (selection.length) updateInputPayload(selection)
+      // Keep the bound param initialized even before options load.
+      // This prevents $param references from throwing "Missing param" on first render.
+      updateInputPayload(selection)
       return
     }
     let nextSelection = selection.filter(val => valueMap.has(optionKey(val)))
