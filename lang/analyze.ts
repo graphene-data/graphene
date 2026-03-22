@@ -162,19 +162,22 @@ function getField(name: string, table: Table) {
 // Returns true if the table is (or was already) a successfully analyzed view.
 function analyzeView(table: Table) {
   if (table.type != 'view') return
-  if (table.query) return // already analyzed
+  if (table.analyzed) return
+  table.analyzed = true
+
   let query = analyzeQuery(table.syntaxNode!.getChild('QueryStatement')!)
-  let viewCols =
-    query?.fields.map(f => {
-      let col = {name: f.name, type: f.type, metadata: f.metadata, location: f.definitionLocation} as Column
-      if (f.definitionLocation) {
-        col.symbolId = symbolId('column', f.definitionLocation, `${table.symbolId}:${f.name}`)
-        getFile(table.syntaxNode!).navigation.symbols.push({id: col.symbolId, kind: 'column', name: col.name, location: f.definitionLocation, tableId: table.symbolId})
-      }
-      return col
-    }) || []
+  if (!query) return
+
+  let viewCols = query.fields.map(f => {
+    let col = {name: f.name, type: f.type, metadata: f.metadata, location: f.definitionLocation} as Column
+    if (f.definitionLocation) {
+      col.symbolId = symbolId('column', f.definitionLocation, `${table.symbolId}:${f.name}`)
+      getFile(table.syntaxNode!).navigation.symbols.push({id: col.symbolId, kind: 'column', name: col.name, location: f.definitionLocation, tableId: table.symbolId})
+    }
+    return col
+  })
   table.columns.push(...viewCols)
-  table.query = query!
+  table.query = query
 }
 
 // Analyze everything in a table - used for full project analysis (e.g., `check` command)
@@ -1157,6 +1160,7 @@ function lookupTable(node: SyntaxNode, scope?: Scope): Table | undefined {
   }
   if (!table) return diag(node, `Unknown table "${name}"`)
   analyzeView(table)
+  if (table.type == 'view' && !table.query) return
   addReference('table', node, table.symbolId)
   return table
 }
