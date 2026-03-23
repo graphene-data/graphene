@@ -7,8 +7,7 @@ import path from 'path'
 import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
 
-import {FILE_MAP} from '../lang/analyze.ts'
-import {analyze, config, type GrapheneError, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
+import {analyze, config, deleteFile, type GrapheneError, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'
@@ -48,7 +47,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  if (process.env.NODE_ENV == 'test') delete FILE_MAP[mdFile]
+  if (process.env.NODE_ENV == 'test') deleteFile(mdFile)
 
   let host = `http://localhost:${config.port}`
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')

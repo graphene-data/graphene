@@ -4,11 +4,10 @@ import type {FunctionDef, ArgDef} from './functionTypes.ts'
 
 import {diag, checkTypes} from './analyze.ts'
 import {bigQueryFunctions} from './bigQueryFunctions.ts'
-import {config} from './config.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
-import {type Expr, type FieldType, type Scope} from './types.ts'
+import {type AnalysisContext, type Expr, type FieldType, type Scope} from './types.ts'
 import {txt} from './util.ts'
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
@@ -93,22 +92,22 @@ function findOverloads(name: string, dialect: string): Overload[] {
 // Function Call Analysis
 // ============================================================================
 
-type AnalyzeExprFn = (node: SyntaxNode, scope: Scope) => Expr
+type AnalyzeExprFn = (ctx: AnalysisContext, node: SyntaxNode, scope: Scope) => Expr
 
-export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn, opts: {isWindow?: boolean} = {}): Expr {
+export function analyzeFunction(ctx: AnalysisContext, node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn, opts: {isWindow?: boolean} = {}): Expr {
   let name = txt(node.getChild('Identifier')).toLowerCase()
   let argNodes = node.getChildren('Expression')
 
   // Check for percentile functions (p50, p90, etc.) before overload lookup
   let percentileMatch = /^p(\d+)$/.exec(name)
   if (percentileMatch) {
-    let args = argNodes.map(n => analyzeExpr(n, scope))
-    if (args[0]) checkTypes(args[0], ['number'], argNodes[0])
-    return analyzePercentile(node, args, percentileMatch[1], scope, opts)
+    let args = argNodes.map(n => analyzeExpr(ctx, n, scope))
+    if (args[0]) checkTypes(ctx, args[0], ['number'], argNodes[0])
+    return analyzePercentile(ctx, node, args, percentileMatch[1], scope, opts)
   }
 
   // Find matching overload
-  let overloads = findOverloads(name, config.dialect)
+  let overloads = findOverloads(name, ctx.options.dialect)
   let overload = overloads.find(o => {
     if (o.params.length == argNodes.length) return true
     if (!o.params.some(p => p.isVariadic)) return false
@@ -127,16 +126,16 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
     if (firstType?.type === 'sql native' && firstType?.rawType === 'kw') {
       return {sql: txt(argNode), type: 'sql native' as FieldType}
     }
-    let arg = analyzeExpr(argNode, scope)
+    let arg = analyzeExpr(ctx, argNode, scope)
     let allowed = overload?.params[paramIdx]?.allowedTypes.map(t => t.type as FieldType)
-    if (allowed) checkTypes(arg, allowed, argNode)
+    if (allowed) checkTypes(ctx, arg, allowed, argNode)
     return arg
   })
 
   if (!overload) {
-    if (overloads.length === 0) return diag(node, `Unknown function: ${name}`, {sql: 'NULL', type: 'error'})
+    if (overloads.length === 0) return diag(ctx, node, `Unknown function: ${name}`, {sql: 'NULL', type: 'error'})
     let expected = [...new Set(overloads.map(o => o.params.length))].sort().join(' or ')
-    return diag(node, `Wrong number of arguments for ${name}: expected ${expected}, got ${argNodes.length}`, {sql: 'NULL', type: 'error'})
+    return diag(ctx, node, `Wrong number of arguments for ${name}: expected ${expected}, got ${argNodes.length}`, {sql: 'NULL', type: 'error'})
   }
 
   let returnType: FieldType = overload.returnType.type as FieldType
@@ -162,15 +161,16 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   }
 }
 
-function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
+function analyzePercentile(ctx: AnalysisContext, node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
   let frac = Number(`0.${digits}`)
-  if (Number(digits) == 100) return diag(node, 'p100 is not allowed', {sql: 'NULL', type: 'error'})
-  if (Number(digits) == 0) return diag(node, 'p0 is not allowed', {sql: 'NULL', type: 'error'})
-  if (config.dialect == 'bigquery' && frac > 0.99) return diag(node, 'BigQuery only supports up to p99', {sql: 'NULL', type: 'error'})
+  let dialect = ctx.options.dialect
+  if (Number(digits) == 100) return diag(ctx, node, 'p100 is not allowed', {sql: 'NULL', type: 'error'})
+  if (Number(digits) == 0) return diag(ctx, node, 'p0 is not allowed', {sql: 'NULL', type: 'error'})
+  if (dialect == 'bigquery' && frac > 0.99) return diag(ctx, node, 'BigQuery only supports up to p99', {sql: 'NULL', type: 'error'})
 
   let inner = args[0]?.sql || 'NULL'
   let sql: string
-  switch (config.dialect) {
+  switch (dialect) {
     case 'duckdb':
       sql = `quantile_cont(${inner}, ${frac})`
       break
@@ -185,7 +185,7 @@ function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope
       sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`
       break
     default:
-      return diag(node, `Percentile not supported for ${config.dialect}`, {sql: 'NULL', type: 'error'})
+      return diag(ctx, node, `Percentile not supported for ${dialect}`, {sql: 'NULL', type: 'error'})
   }
   return {
     sql,
