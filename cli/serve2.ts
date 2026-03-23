@@ -114,7 +114,7 @@ async function createConfig(): Promise<InlineConfig> {
 async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
-  let {gsql, params, hashes} = JSON.parse(Buffer.concat(chunks).toString())
+  let {gsql, params, hashes, routePath} = JSON.parse(Buffer.concat(chunks).toString())
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
@@ -126,7 +126,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
 
   if (result.diagnostics.length) {
     res.statusCode = 400
-    res.end(JSON.stringify(result.diagnostics))
+    res.end(JSON.stringify(remapInlineDiagnostics(result.diagnostics, routePath)))
     return
   }
 
@@ -146,6 +146,22 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
   let fields = result.queries[0].fields.map(f => ({name: f.name, type: f.type}))
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
+}
+
+function remapInlineDiagnostics(diagnostics: any[], routePath?: string) {
+  let pagePath = routePathToMdPath(routePath)
+  if (!pagePath) return diagnostics
+  return diagnostics.map(diagnostic => {
+    if (diagnostic.file != 'input.gsql') return diagnostic
+    return {...diagnostic, file: pagePath}
+  })
+}
+
+function routePathToMdPath(routePath?: string) {
+  if (!routePath) return null
+  let normalized = String(routePath).replace(/\?.*$/, '').replace(/\/$/, '')
+  if (normalized == '' || normalized == '/') return 'index.md'
+  return normalized.replace(/^\//, '') + '.md'
 }
 
 async function handlePage(server: ViteDevServer, res: ServerResponse<IncomingMessage>) {
