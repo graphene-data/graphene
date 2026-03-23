@@ -11,6 +11,25 @@ declare module '@lezer/common' {
 
 export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
 
+export interface AnalysisOptions {
+  dialect: string
+  defaultNamespace?: string
+}
+
+export interface AnalysisFileInput {
+  path: string
+  contents: string
+  // Only needed for legacy inline `analyze(contents, contentType)` calls, where the
+  // synthetic "input" path has no extension to tell md from gsql.
+  contentType?: 'gsql' | 'md'
+}
+
+export interface AnalysisInput {
+  files: AnalysisFileInput[]
+  options: AnalysisOptions
+  targetPath?: string
+}
+
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {
   sql: string // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
@@ -132,6 +151,19 @@ export interface Diagnostic {
   to: Position
   message: string
   severity: 'error' | 'warn'
+}
+
+export interface AnalysisContext {
+  files: Record<string, FileInfo>
+  diagnostics: Diagnostic[]
+  options: AnalysisOptions
+  analysisStack: Set<Column>
+}
+
+export interface AnalysisResult {
+  files: Record<string, FileInfo>
+  diagnostics: Diagnostic[]
+  queries: Query[]
 }
 
 export interface Location {

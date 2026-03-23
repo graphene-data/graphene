@@ -1,7 +1,7 @@
 import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
-import {analyze, getDefinition, getHover, getReferences, clearWorkspace, updateFile} from './core.ts'
+import {analyze, analyzeProject, getDefinition, getFile, getHover, getReferences, clearWorkspace, updateFile} from './core.ts'
 
 function simple(location: ReturnType<typeof getDefinition>) {
   if (!location) return null
@@ -169,5 +169,47 @@ describe('reference navigation', () => {
 from users as u select u.name as display_name`)
 
     expect(getDefinition('input', 1, 33)).toBeNull()
+  })
+})
+
+describe('pure analysis api', () => {
+  it('analyzes a workspace without relying on legacy globals', () => {
+    let result = analyzeProject({
+      options: {dialect: 'duckdb'},
+      targetPath: 'query.gsql',
+      files: [
+        {path: 'schema.gsql', contents: 'table users (id int, name text)'},
+        {path: 'query.gsql', contents: 'from users select name'},
+      ],
+    })
+
+    expect(result.diagnostics).toEqual([])
+    expect(result.queries).toHaveLength(1)
+    expect(result.files['schema.gsql']?.tables[0]?.name).toBe('users')
+  })
+
+  it('supports navigation helpers against an explicit result', () => {
+    let result = analyzeProject({
+      options: {dialect: 'duckdb'},
+      targetPath: 'input',
+      files: [{path: 'input', contents: 'table users (id int, name text)\nfrom users select name'}],
+    })
+
+    expect(getDefinition(result, 'input', 1, 18)).toEqual({
+      file: 'input',
+      from: expect.objectContaining({line: 0, col: 21}),
+      to: expect.objectContaining({line: 0, col: 25}),
+    })
+    expect(getHover(result, 'input', 1, 18)).toBe('#### users.name')
+  })
+
+  it('lets callers read files from an explicit pure result', () => {
+    let result = analyzeProject({
+      options: {dialect: 'duckdb'},
+      files: [{path: 'input', contents: 'table users (id int)'}],
+      targetPath: 'input',
+    })
+
+    expect(getFile(result, 'input')?.contents).toContain('table users')
   })
 })
