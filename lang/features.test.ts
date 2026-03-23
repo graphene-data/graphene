@@ -1,12 +1,13 @@
 import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
-import {analyze, analyzeProject, getDefinition, getFile, getHover, getReferences, clearWorkspace, updateFile} from './core.ts'
+import {analyzeProject, getDefinition as getDefinitionForResult, getFile as getFileForResult, getHover as getHoverForResult, getReferences as getReferencesForResult} from './core.ts'
+import {createAnalysisHarness} from './testHelpers.ts'
 
 function simple(location: ReturnType<typeof getDefinition>) {
   if (!location) return null
   return {
-    file: location.file,
+    file: normalizeInputPath(location.file),
     from: [location.from.line, location.from.col],
     to: [location.to.line, location.to.col],
   }
@@ -14,14 +15,53 @@ function simple(location: ReturnType<typeof getDefinition>) {
 
 function simpleList(locations: ReturnType<typeof getReferences>) {
   return locations.map(location => ({
-    file: location.file,
+    file: normalizeInputPath(location.file),
     from: [location.from.line, location.from.col],
     to: [location.to.line, location.to.col],
   }))
 }
 
+let harness = createAnalysisHarness()
+
+function clearWorkspace() {
+  harness.clearWorkspace()
+}
+
+function updateFile(contents: string, path: string) {
+  harness.updateFile(contents, path)
+}
+
+function analyze(contents?: string, contentType?: 'gsql' | 'md') {
+  return harness.analyze(contents, contentType)
+}
+
+function getDefinition(path: string, line: number, col: number) {
+  return getDefinitionForResult(harness.result(), resolveInputPath(path), line, col)
+}
+
+function getHover(path: string, line: number, col: number) {
+  return getHoverForResult(harness.result(), resolveInputPath(path), line, col)
+}
+
+function getReferences(path: string, line: number, col: number, includeDeclaration = false) {
+  return getReferencesForResult(harness.result(), resolveInputPath(path), line, col, includeDeclaration)
+}
+
+function resolveInputPath(path: string) {
+  if (path != 'input') return path
+  let result = harness.result()
+  if (result.files['input.gsql']) return 'input.gsql'
+  if (result.files['input.md']) return 'input.md'
+  return path
+}
+
+function normalizeInputPath(path: string) {
+  return path == 'input.gsql' || path == 'input.md' ? 'input' : path
+}
+
 describe('hover', () => {
   beforeEach(() => {
+    harness = createAnalysisHarness()
     clearWorkspace()
   })
 
@@ -51,6 +91,7 @@ describe('hover', () => {
 
 describe('definition navigation', () => {
   beforeEach(() => {
+    harness = createAnalysisHarness()
     clearWorkspace()
   })
 
@@ -135,6 +176,7 @@ select 1 as id
 
 describe('reference navigation', () => {
   beforeEach(() => {
+    harness = createAnalysisHarness()
     clearWorkspace()
   })
 
@@ -191,25 +233,25 @@ describe('pure analysis api', () => {
   it('supports navigation helpers against an explicit result', () => {
     let result = analyzeProject({
       options: {dialect: 'duckdb'},
-      targetPath: 'input',
-      files: [{path: 'input', contents: 'table users (id int, name text)\nfrom users select name'}],
+      targetPath: 'input.gsql',
+      files: [{path: 'input.gsql', contents: 'table users (id int, name text)\nfrom users select name'}],
     })
 
-    expect(getDefinition(result, 'input', 1, 18)).toEqual({
-      file: 'input',
+    expect(getDefinitionForResult(result, 'input.gsql', 1, 18)).toEqual({
+      file: 'input.gsql',
       from: expect.objectContaining({line: 0, col: 21}),
       to: expect.objectContaining({line: 0, col: 25}),
     })
-    expect(getHover(result, 'input', 1, 18)).toBe('#### users.name')
+    expect(getHoverForResult(result, 'input.gsql', 1, 18)).toBe('#### users.name')
   })
 
   it('lets callers read files from an explicit pure result', () => {
     let result = analyzeProject({
       options: {dialect: 'duckdb'},
-      files: [{path: 'input', contents: 'table users (id int)'}],
-      targetPath: 'input',
+      files: [{path: 'input.gsql', contents: 'table users (id int)'}],
+      targetPath: 'input.gsql',
     })
 
-    expect(getFile(result, 'input')?.contents).toContain('table users')
+    expect(getFileForResult(result, 'input.gsql')?.contents).toContain('table users')
   })
 })

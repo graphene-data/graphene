@@ -8,7 +8,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 
-import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql, getFiles} from '../lang/core.ts'
+import {analysisOptions, analyzeProject, loadWorkspace, config, toSql, type AnalysisFileInput} from '../lang/core.ts'
 import {runQuery} from './connections/index.ts'
 import {injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
@@ -118,16 +118,20 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
-  let queries = analyze(gsql)
+  let result = analyzeProject({
+    files: [...workspaceFiles, {path: 'input.gsql', contents: gsql}],
+    targetPath: 'input.gsql',
+    options: analysisOptions(),
+  })
 
-  if (getDiagnostics().length) {
+  if (result.diagnostics.length) {
     res.statusCode = 400
-    res.end(JSON.stringify(getDiagnostics()))
+    res.end(JSON.stringify(result.diagnostics))
     return
   }
 
-  if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
-  let sql = toSql(queries[0], params)
+  if (result.queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
+  let sql = toSql(result.queries[0], params)
 
   // If the client already has this data, dont run the query
   let hash = crypto.createHash('SHA1').update(sql).digest('hex')
@@ -140,7 +144,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let queryResults = await runQuery(sql)
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
+  let fields = result.queries[0].fields.map(f => ({name: f.name, type: f.type}))
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
 
@@ -220,6 +224,7 @@ function fixHmrForFailedModules() {
 // This reload blocks all requests, so we shouldn't ever analyze without a workspace.
 // Also tracks all the md files in the workspace to populate the nav sidebar
 let workspaceLoadPromise: Promise<void> | undefined
+let workspaceFiles: AnalysisFileInput[] = []
 let mdFiles: string[] = []
 const updateWorkspacePlugin = {
   name: 'updateWorkspace',
@@ -238,12 +243,11 @@ const updateWorkspacePlugin = {
   },
   configureServer: (s: ViteDevServer) => {
     let refresh = async () => {
-      clearWorkspace()
-      workspaceLoadPromise = loadWorkspace(config.root, true)
+      workspaceLoadPromise = loadWorkspace(config.root, true).then(files => {
+        workspaceFiles = process.env.NODE_ENV == 'test' ? withMockFiles(files) : files
+      })
       await workspaceLoadPromise
-      mdFiles = getFiles()
-        .filter(f => f.path.endsWith('.md'))
-        .map(f => f.path)
+      mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(file => file.path)
       mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))
       if (process.env.NODE_ENV == 'test') {
         mdFiles.push(...Object.keys(mockFileMap))
@@ -258,6 +262,14 @@ const updateWorkspacePlugin = {
     s.watcher.on('all', refresh)
     refresh()
   },
+}
+
+function withMockFiles(files: AnalysisFileInput[]) {
+  return Object.entries(mockFileMap).reduce((acc, [path, contents]) => upsertFile(acc, {path, contents}), files)
+}
+
+function upsertFile(files: AnalysisFileInput[], nextFile: AnalysisFileInput) {
+  return [...files.filter(file => file.path != nextFile.path), nextFile]
 }
 
 const handleRequestPlugin = {

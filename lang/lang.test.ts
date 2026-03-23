@@ -5,8 +5,8 @@ import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
 import {setConfig} from './config.ts'
-import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile, loadWorkspace, getFile} from './core.ts'
-import {prepareEcommerceTables} from './testHelpers.ts'
+import {loadWorkspace, toSql} from './core.ts'
+import {createAnalysisHarness, prepareEcommerceTables} from './testHelpers.ts'
 import {trimIndentation} from './util.ts'
 
 const testTables = `
@@ -62,11 +62,34 @@ const testTables = `
 `
 
 describe('lang', () => {
+  let harness = createAnalysisHarness()
+
+  function clearWorkspace() {
+    harness.clearWorkspace()
+  }
+
+  function updateFile(contents: string, path: string) {
+    harness.updateFile(contents, path)
+  }
+
+  function analyze(contents?: string, contentType?: 'gsql' | 'md') {
+    return harness.analyze(contents, contentType)
+  }
+
+  function getDiagnostics() {
+    return harness.diagnostics()
+  }
+
+  function getTable(name: string) {
+    return harness.getTable(name)
+  }
+
   beforeAll(async () => {
     await prepareEcommerceTables()
   })
 
   beforeEach(() => {
+    harness = createAnalysisHarness()
     clearWorkspace()
     setConfig({root: ''})
     updateFile(testTables, 'models.gsql')
@@ -123,13 +146,12 @@ describe('lang', () => {
       await mkdir(path.join(root, 'dist'), {recursive: true})
       await writeFile(path.join(root, 'dist', 'ignored.gsql'), 'table hidden (id int)')
 
-      clearWorkspace()
       setConfig({root, ignoredFiles: ['**/agents.md', 'dist/**']})
-      await loadWorkspace(root, true)
+      let files = await loadWorkspace(root, true)
 
-      expect(getFile('models.gsql')).toBeDefined()
-      expect(getFile('nested/agents.md')).toBeUndefined()
-      expect(getFile('dist/ignored.gsql')).toBeUndefined()
+      expect(files.find(file => file.path == 'models.gsql')).toBeDefined()
+      expect(files.find(file => file.path == 'nested/agents.md')).toBeUndefined()
+      expect(files.find(file => file.path == 'dist/ignored.gsql')).toBeUndefined()
     } finally {
       await rm(root, {recursive: true, force: true})
     }

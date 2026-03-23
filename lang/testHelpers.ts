@@ -1,7 +1,7 @@
 import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {expect as vitestExpect} from 'vitest'
 
-import {toSql, analyze, getDiagnostics, type Diagnostic} from './core.ts'
+import {analysisOptions, analyzeProject, getFile, getTable, toSql, type AnalysisFileInput, type AnalysisResult, type Diagnostic} from './core.ts'
 import {trimIndentation} from './util.ts'
 
 const ECOMM_SETUP = `
@@ -75,7 +75,67 @@ function formatDiagnostics(source: string, diagnostics: Diagnostic[]): string {
     .join('\n\n')
 }
 
+function emptyResult(): AnalysisResult {
+  return {files: {}, diagnostics: [], queries: []}
+}
+
+function inlinePath(contentType: 'gsql' | 'md') {
+  return contentType == 'md' ? 'input.md' : 'input.gsql'
+}
+
+function analyzeInline(content: string, contentType: 'gsql' | 'md' = contentIncludesMarkdown(content) ? 'md' : 'gsql', files: AnalysisFileInput[] = matcherWorkspaceFiles) {
+  let path = inlinePath(contentType)
+  return analyzeProject({
+    files: [...files.filter(file => file.path != path), {path, contents: content}],
+    targetPath: path,
+    options: analysisOptions(),
+  })
+}
+
+function contentIncludesMarkdown(content: string) {
+  return content.includes('```')
+}
+
+function upsertFile(files: AnalysisFileInput[], nextFile: AnalysisFileInput) {
+  return [...files.filter(file => file.path != nextFile.path), nextFile]
+}
+
+export function createAnalysisHarness(initialFiles: AnalysisFileInput[] = []) {
+  let files = [...initialFiles]
+  let lastResult = emptyResult()
+  matcherWorkspaceFiles = [...files]
+
+  return {
+    clearWorkspace() {
+      files = []
+      lastResult = emptyResult()
+      matcherWorkspaceFiles = []
+    },
+    updateFile(contents: string, path: string) {
+      files = upsertFile(files, {path, contents})
+      matcherWorkspaceFiles = [...files]
+    },
+    analyze(contents?: string, contentType: 'gsql' | 'md' = 'gsql') {
+      lastResult = contents === undefined ? analyzeProject({files, options: analysisOptions()}) : analyzeInline(contents, contentType, files)
+      return lastResult.queries
+    },
+    diagnostics() {
+      return lastResult.diagnostics
+    },
+    result() {
+      return lastResult
+    },
+    getTable(name: string) {
+      return getTable(lastResult, name)
+    },
+    getFile(path: string) {
+      return getFile(lastResult, path)
+    },
+  }
+}
+
 let conn: DuckDBConnection
+let matcherWorkspaceFiles: AnalysisFileInput[] = []
 
 export async function prepareEcommerceTables() {
   let db = await DuckDBInstance.create(':memory:')
@@ -93,8 +153,8 @@ if (process.env.GRAPHENE_DEBUG) {
 vitestExpect.extend({
   toRenderSql(received: string, expectedSql: string, opts: {preserveCase?: boolean} = {}) {
     let content = trimIndentation(received)
-    let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
-    let errors = getDiagnostics().filter(d => d.severity === 'error')
+    let result = analyzeInline(content)
+    let errors = result.diagnostics.filter(d => d.severity === 'error')
 
     if (errors.length > 0) {
       return {
@@ -108,7 +168,7 @@ vitestExpect.extend({
       return s.replace(/[\s\n]+/g, ' ').replace(/\s+$/, '')
     }
 
-    let sql = toSql(queries[0])
+    let sql = toSql(result.queries[0])
     let pass = normalizeSql(sql) === normalizeSql(expectedSql)
     return {
       pass,
@@ -120,8 +180,8 @@ vitestExpect.extend({
 
   async toReturnRows(received: string, ...expectedRows: unknown[][]) {
     let content = trimIndentation(received)
-    let queries = analyze(content, content.includes('```') ? 'md' : 'gsql')
-    let errors = getDiagnostics().filter(d => d.severity === 'error')
+    let result = analyzeInline(content)
+    let errors = result.diagnostics.filter(d => d.severity === 'error')
 
     if (errors.length > 0) {
       return {
@@ -129,7 +189,7 @@ vitestExpect.extend({
         message: () => `Expected no errors, but found ${errors.length}:\n\n${formatDiagnostics(content, errors)}`,
       }
     }
-    let sql = toSql(queries[0])
+    let sql = toSql(result.queries[0])
 
     try {
       let reader = await conn.runAndReadAll(sql)
@@ -154,9 +214,7 @@ vitestExpect.extend({
 
   toHaveDiagnostic(received: string, pattern: RegExp | string) {
     let content = trimIndentation(received)
-    analyze(content, content.includes('```') ? 'md' : 'gsql')
-
-    let diagnostics = getDiagnostics()
+    let diagnostics = analyzeInline(content).diagnostics
 
     let regex = typeof pattern === 'string' ? new RegExp(pattern, 'i') : pattern
     let match = diagnostics.find(d => regex.test(d.message))
@@ -173,9 +231,7 @@ vitestExpect.extend({
 
   toHaveNoErrors(received: string) {
     let content = trimIndentation(received)
-    analyze(content, content.includes('```') ? 'md' : 'gsql')
-
-    let errors = getDiagnostics().filter(d => d.severity === 'error')
+    let errors = analyzeInline(content).diagnostics.filter(d => d.severity === 'error')
     return {
       pass: errors.length === 0,
       message: () => (errors.length === 0 ? 'No errors found.' : `Expected no errors, but found ${errors.length}.\n\n${formatDiagnostics(content, errors)}`),

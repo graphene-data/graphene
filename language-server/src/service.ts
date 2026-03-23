@@ -14,7 +14,7 @@ import {
 } from 'vscode-languageserver-protocol'
 import {URI, Utils as URIs} from 'vscode-uri'
 
-import {deleteFile, updateFile, analyze, getDefinition, getDiagnostics, getFiles, getHover, getReferences, loadConfig, loadWorkspace} from '../../lang/core.ts'
+import {analysisOptions, analyzeProject, getDefinition, getFiles, getHover, getReferences, loadConfig, loadWorkspace, type AnalysisFileInput, type AnalysisResult} from '../../lang/core.ts'
 import {type Diagnostic as GrapheneDiagnostic, type Location as GrapheneLocation} from '../../lang/types.ts'
 
 export function createGrapheneService(server: ReturnType<typeof createServer>): LanguageServicePlugin {
@@ -31,10 +31,12 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
     },
     create(context): LanguageServicePluginInstance {
       let [workspace] = context.env.workspaceFolders
+      let workspaceFiles: AnalysisFileInput[] = []
+      let workspaceResult: AnalysisResult = {files: {}, diagnostics: [], queries: []}
       let analysis = createWorkspaceAnalysis({
-        load: () => {
+        load: async () => {
           loadConfig(workspace.fsPath)
-          return loadWorkspace(workspace.fsPath, true)
+          workspaceFiles = await loadWorkspace(workspace.fsPath, true)
         },
         analyze: tryAnalyze,
         delay: 200,
@@ -52,20 +54,20 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
           await analysis.pending
 
           let path = workspacePath(document.uri)
-          return path ? {contents: getHover(path, position.line, position.character)} : null
+          return path ? {contents: getHover(workspaceResult, path, position.line, position.character)} : null
         },
         async provideDefinition(document, position, _token) {
           await analysis.pending
 
           let path = workspacePath(document.uri)
-          let location = path ? getDefinition(path, position.line, position.character) : null
+          let location = path ? getDefinition(workspaceResult, path, position.line, position.character) : null
           return location ? [toLocationLink(workspace, location)] : []
         },
         async provideReferences(document, position, context, _token) {
           await analysis.pending
 
           let path = workspacePath(document.uri)
-          return path ? getReferences(path, position.line, position.character, context.includeDeclaration).map(location => toLocation(workspace, location)) : []
+          return path ? getReferences(workspaceResult, path, position.line, position.character, context.includeDeclaration).map(location => toLocation(workspace, location)) : []
         },
         async provideDiagnostics(document) {
           await analysis.pending
@@ -104,11 +106,11 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
             if (!path) continue
 
             if (change.type === FileChangeType.Deleted) {
-              deleteFile(path)
+              workspaceFiles = workspaceFiles.filter(file => file.path != path)
             } else {
               let document = server.documents.get(URI.parse(change.uri))
               if (document) {
-                updateFile(document.getText(), path)
+                workspaceFiles = upsertFile(workspaceFiles, {path, contents: document.getText()})
               }
             }
           }
@@ -119,7 +121,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         changeContent = server.documents.onDidChangeContent(({document}) => {
           let path = workspacePath(document.uri)
           if (path) {
-            updateFile(document.getText(), path)
+            workspaceFiles = upsertFile(workspaceFiles, {path, contents: document.getText()})
             analysis.invalidate()
           }
         })
@@ -135,7 +137,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
 
       async function tryAnalyze() {
         try {
-          analyze()
+          workspaceResult = analyzeProject({files: workspaceFiles, options: analysisOptions()})
           await server.languageFeatures.requestRefresh(false)
         } catch (err) {
           let message = err instanceof Error ? err.stack || err.message : String(err)
@@ -144,13 +146,11 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
       }
 
       function diagnosticsFor(path: string) {
-        return getDiagnostics()
-          .filter(diagnostic => diagnostic.file === path)
-          .map(toDiagnostic)
+        return workspaceResult.diagnostics.filter(diagnostic => diagnostic.file === path).map(toDiagnostic)
       }
 
       function workspaceDiagnostics() {
-        return getFiles().map(file => {
+        return getFiles(workspaceResult).map(file => {
           return {
             kind: DocumentDiagnosticReportKind.Full,
             uri: URIs.joinPath(workspace, file.path).toString(),
@@ -161,6 +161,10 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
       }
     },
   }
+}
+
+function upsertFile(files: AnalysisFileInput[], nextFile: AnalysisFileInput) {
+  return [...files.filter(file => file.path != nextFile.path), nextFile]
 }
 
 // Coordinates workspace analysis: load once, run the initial analysis immediately,

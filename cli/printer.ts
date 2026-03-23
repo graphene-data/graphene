@@ -2,7 +2,7 @@ import chalk from 'chalk'
 import Table from 'cli-table3'
 import {styleText as nodeStyleText} from 'node:util'
 
-import {type Diagnostic, getFile} from '../lang/core.ts'
+import {type Diagnostic, type FileInfo} from '../lang/core.ts'
 // import {logTree} from './logTree.ts'
 
 const styleText = (style: string, text: string) => {
@@ -28,11 +28,11 @@ function offsetToLineCol(src: string, offset: number): {line: number; col: numbe
   return {line: 1, col: 0, lineStart: 0, lineText: lines[0] || ''}
 }
 
-export function printDiagnostics(diags: Diagnostic[], log?: any) {
+export function printDiagnostics(diags: Diagnostic[], files: Record<string, FileInfo>, log?: any) {
   log ||= console.log
   let parts: string[] = []
   for (let d of diags) {
-    let src = getFile(d.file)?.contents || ''
+    let src = files[d.file]?.contents || ''
     let {line, col, lineStart, lineText} = offsetToLineCol(src, d.from.offset)
     let endCol = Math.max(col + 1, Math.min(lineText.length, d.to.offset - lineStart))
     let caretLen = Math.max(1, endCol - col)

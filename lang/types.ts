@@ -19,9 +19,6 @@ export interface AnalysisOptions {
 export interface AnalysisFileInput {
   path: string
   contents: string
-  // Only needed for legacy inline `analyze(contents, contentType)` calls, where the
-  // synthetic "input" path has no extension to tell md from gsql.
-  contentType?: 'gsql' | 'md'
 }
 
 export interface AnalysisInput {

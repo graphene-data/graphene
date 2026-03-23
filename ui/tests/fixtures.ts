@@ -6,8 +6,7 @@ import {test as base, onTestFinished} from 'vitest'
 
 import {mockFileMap} from '../../cli/mockFiles.ts'
 import {serve2, svelteWarnings, clearSvelteWarnings} from '../../cli/serve2.ts'
-import {type Config, config, setConfig} from '../../lang/config.ts'
-import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
+import {type Config, setConfig} from '../../lang/config.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
 import {playwrightExpect as expect} from './matchers.ts'
 
@@ -86,7 +85,6 @@ export const test = base.extend<{browser: Browser; page: Page; server: ServerFix
       let server = await serve2()
 
       function cleanup() {
-        clearWorkspace()
         Object.keys(mockFileMap).forEach(key => delete mockFileMap[key])
 
         // Vite caches our mocked files, so we need to clear them out after each test.
@@ -101,15 +99,19 @@ export const test = base.extend<{browser: Browser; page: Page; server: ServerFix
         }
       }
 
+      onTestFinished(cleanup)
+
       await use({
         url: (options: Partial<Config> = {}) => {
           setConfig({...options, root: options.root || viteRoot, port} as any)
-          loadWorkspace(config.root, false)
-          onTestFinished(cleanup)
           return `http://localhost:${port}`
         },
         mockFile: (filePath: string, content: string) => {
-          mockFileMap[filePath.replace(/^\//, '')] = trimIndentation(content)
+          let relativePath = filePath.replace(/^\//, '')
+          let wasPresent = relativePath in mockFileMap
+          mockFileMap[relativePath] = trimIndentation(content)
+          let absPath = path.join(viteRoot, relativePath)
+          server.watcher.emit(wasPresent ? 'change' : 'add', absPath)
         },
         updateMockFile: (filePath: string, content: string) => {
           let relativePath = filePath.replace(/^\//, '')
@@ -197,7 +199,6 @@ export const test = base.extend<{browser: Browser; page: Page; server: ServerFix
 test.beforeEach(() => {
   let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
   setConfig({root})
-  clearWorkspace()
 })
 
 async function getAvailablePort(): Promise<number> {

@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs'
 import path from 'path'
 
-import {analyze, config, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
+import {analysisOptions, analyzeProject, config, loadWorkspace, type AnalysisFileInput} from '../lang/core.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {printDiagnostics} from './printer.ts'
@@ -20,22 +20,30 @@ export async function check(options: CheckOptions): Promise<boolean> {
     return false
   }
 
-  await loadWorkspace(config.root, !targetFile)
+  let files = withMockFiles(await loadWorkspace(config.root, !targetFile), !targetFile)
   if (targetFile) {
-    if (process.env.NODE_ENV == 'test' && mockFileMap[targetFile]) {
-      updateFile(mockFileMap[targetFile], targetFile)
-    } else {
-      let content = readFileSync(path.resolve(config.root, targetFile), 'utf-8')
-      updateFile(content, targetFile)
-    }
+    let contents = process.env.NODE_ENV == 'test' && mockFileMap[targetFile] ? mockFileMap[targetFile] : readFileSync(path.resolve(config.root, targetFile), 'utf-8')
+    files = upsertFile(files, {path: targetFile, contents})
   }
 
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics(), log)
+  let result = analyzeProject({files, options: analysisOptions()})
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics, result.files, log)
     return false
   }
 
   log('No errors found 💎')
   return true
+}
+
+function upsertFile(files: AnalysisFileInput[], nextFile: AnalysisFileInput) {
+  return [...files.filter(file => file.path != nextFile.path), nextFile]
+}
+
+function withMockFiles(files: AnalysisFileInput[], includeMd: boolean) {
+  if (process.env.NODE_ENV != 'test') return files
+  return Object.entries(mockFileMap).reduce((acc, [path, contents]) => {
+    if (!includeMd && path.endsWith('.md')) return acc
+    return upsertFile(acc, {path, contents})
+  }, files)
 }

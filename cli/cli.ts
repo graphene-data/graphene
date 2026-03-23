@@ -7,7 +7,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 
 import {config, loadConfig} from '../lang/config.ts'
-import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import {analysisOptions, analyzeProject, loadWorkspace, toSql, type AnalysisResult, type Query} from '../lang/core.ts'
 import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
@@ -33,11 +33,12 @@ program
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
-    await loadWorkspace(process.cwd(), false)
+    let files = await loadWorkspace(process.cwd(), false)
     let sql = await readInput(input)
-    let queries = analyze(sql)
-    if (!validQuery(queries)) return
-    console.log(toSql(queries[0]))
+    let result = analyzeInline(files, 'input.gsql', sql)
+    let query = validQuery(result)
+    if (!query) return
+    console.log(toSql(query))
   })
 
 program
@@ -68,11 +69,12 @@ program
       process.exit(1)
     }
 
-    await loadWorkspace(process.cwd(), false)
+    let files = await loadWorkspace(process.cwd(), false)
     let gsql = await readInput(input)
-    let queries = analyze(gsql)
-    if (!validQuery(queries)) return
-    let sql = toSql(queries[0])
+    let result = analyzeInline(files, 'input.gsql', gsql)
+    let query = validQuery(result)
+    if (!query) return
+    let sql = toSql(query)
     let res = await runQuery(sql)
     printTable(res.rows)
   })
@@ -193,16 +195,24 @@ function getExistingPath(arg: string | undefined): string | null {
   return fs.existsSync(absolutePath) ? absolutePath : null
 }
 
-function validQuery(queries: Query[]): boolean {
-  if (getDiagnostics().length) {
-    printDiagnostics(getDiagnostics())
+function analyzeInline(files: {path: string; contents: string}[], path: string, contents: string) {
+  return analyzeProject({
+    files: [...files.filter(file => file.path != path), {path, contents}],
+    targetPath: path,
+    options: analysisOptions(),
+  })
+}
+
+function validQuery(result: AnalysisResult): Query | null {
+  if (result.diagnostics.length) {
+    printDiagnostics(result.diagnostics, result.files)
     process.exit(1)
   }
-  if (queries.length == 0) {
+  if (result.queries.length == 0) {
     console.warn('No queries found')
     process.exit(1)
   }
-  return true
+  return result.queries[0]
 }
 
 function findCaseInsensitive(values: string[], needle: string): string | null {

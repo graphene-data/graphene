@@ -7,7 +7,7 @@ import path from 'path'
 import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
 
-import {analyze, config, deleteFile, type Diagnostic, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
+import {analysisOptions, analyzeProject, config, type Diagnostic, loadWorkspace, toSql, type AnalysisFileInput} from '../lang/core.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'
@@ -33,21 +33,15 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  await loadWorkspace(config.root, false)
-  if (process.env.NODE_ENV == 'test' && mockFileMap[mdFile]) {
-    updateFile(mockFileMap[mdFile], mdFile)
-  } else {
-    let content = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
-    updateFile(content, mdFile)
-  }
+  let files = withMockFiles(await loadWorkspace(config.root, false), false)
+  let contents = process.env.NODE_ENV == 'test' && mockFileMap[mdFile] ? mockFileMap[mdFile] : readFileSync(path.resolve(config.root, mdFile), 'utf-8')
+  files = upsertFile(files, {path: mdFile, contents})
 
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics(), log)
+  let result = analyzeProject({files, options: analysisOptions()})
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics, result.files, log)
     return false
   }
-
-  if (process.env.NODE_ENV == 'test') deleteFile(mdFile)
 
   let host = `http://localhost:${config.port}`
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
@@ -96,7 +90,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
       log(`${styleText('red', 'ERROR')}: ${file} line ${e.line}: ${msg}`)
       for (let frameLine of e.frame.split('\n')) log('  ' + frameLine)
     } else if (e.file && e.from) {
-      printDiagnostics([e as Diagnostic], log)
+      printDiagnostics([e as Diagnostic], result.files, log)
     } else if (e.queryId) {
       log(`${e.queryId}: ${e.message}`)
     } else {
@@ -120,25 +114,29 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 }
 
 export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string): Promise<boolean> {
-  await loadWorkspace(process.cwd(), false)
+  let files = withMockFiles(await loadWorkspace(process.cwd(), false), false)
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
 
-  updateFile(mdContents, mdRelativePath)
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
+  files = upsertFile(files, {path: mdRelativePath, contents: mdContents})
+  let workspaceResult = analyzeProject({files, options: analysisOptions()})
+  if (workspaceResult.diagnostics.length > 0) {
+    printDiagnostics(workspaceResult.diagnostics, workspaceResult.files)
     return false
   }
 
   let runQueryFence = [mdContents, '', '```sql', `from ${queryName} select *`, '```'].join('\n')
-  let queries = analyze(runQueryFence, 'md')
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
+  let result = analyzeProject({
+    files: [...files, {path: 'input.md', contents: runQueryFence}],
+    targetPath: 'input.md',
+    options: analysisOptions(),
+  })
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics, result.files)
     return false
   }
 
-  let sql = toSql(queries[queries.length - 1])
+  let sql = toSql(result.queries[result.queries.length - 1])
   let res = await runQuery(sql)
   printTable(res.rows)
   return true
@@ -229,4 +227,16 @@ export function runVitePlugin(): PluginOption {
       })
     },
   }
+}
+
+function upsertFile(files: AnalysisFileInput[], nextFile: AnalysisFileInput) {
+  return [...files.filter(file => file.path != nextFile.path), nextFile]
+}
+
+function withMockFiles(files: AnalysisFileInput[], includeMd: boolean) {
+  if (process.env.NODE_ENV != 'test') return files
+  return Object.entries(mockFileMap).reduce((acc, [path, contents]) => {
+    if (!includeMd && path.endsWith('.md')) return acc
+    return upsertFile(acc, {path, contents})
+  }, files)
 }
