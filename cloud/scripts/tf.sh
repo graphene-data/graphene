@@ -4,6 +4,7 @@
 # Usage: ./tf.sh <environment> <command> [args...]
 # Example: ./tf.sh staging plan
 #          ./tf.sh production apply
+# When running against production, you'll need to `aws login` first
 
 set -e
 
