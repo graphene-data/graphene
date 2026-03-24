@@ -20,7 +20,7 @@ export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
   let db = getDb()
 
   let connInfo = await db.query.connections.findFirst({where: eq(connections.orgId, req.auth.orgId)})
-  if (!connInfo) return reply.code(400).send({error: 'No connection configured'})
+  if (!connInfo) return reply.code(400).send({message: 'No connection configured'})
   let sql = body.sql
   let fields = [] as any[]
 
@@ -31,7 +31,7 @@ export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
       .from(repos)
       .where(and(eq(repos.id, body.repoId), eq(repos.orgId, req.auth.orgId)))
       .then(rows => rows[0])
-    if (!repo) return reply.code(404).send({error: 'No repo configured'})
+    if (!repo) return reply.code(404).send({message: 'No repo configured'})
 
     // Load up all gsql files into a graphene workspace
     let gsqlFiles = await db.query.files.findMany({where: and(eq(files.repoId, repo.id), eq(files.extension, 'gsql'))})
@@ -40,8 +40,9 @@ export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
     gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))
     let queries = analyze(body.gsql, 'gsql')
 
-    if (getDiagnostics().length) {
-      return reply.code(400).send(JSON.stringify(getDiagnostics()))
+    let diagnostics = getDiagnostics()
+    if (diagnostics.length) {
+      return reply.code(400).send(diagnostics[0])
     }
     if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
 
@@ -50,7 +51,7 @@ export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
     fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
   }
 
-  if (!sql) return reply.code(400).send({error: 'No sql or gsql provided'})
+  if (!sql) return reply.code(400).send({message: 'No sql or gsql provided'})
 
   let conn = await getConnection(connInfo)
   let queryResults = await conn.runQuery(sql)

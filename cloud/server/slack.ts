@@ -64,11 +64,11 @@ export async function slackInstall(req: FastifyRequest, reply: FastifyReply) {
 // Handles Slack OAuth callback and upserts workspace->org installation credentials.
 export async function slackOauthCallback(req: FastifyRequest, reply: FastifyReply) {
   let query = req.query as {code?: string; state?: string; error?: string}
-  if (query.error) return reply.code(400).send({error: `Slack OAuth failed: ${query.error}`})
-  if (!query.code || !query.state) return reply.code(400).send({error: 'Missing code or state'})
+  if (query.error) return reply.code(400).send({message: `Slack OAuth failed: ${query.error}`})
+  if (!query.code || !query.state) return reply.code(400).send({message: 'Missing code or state'})
 
   let installOptions = await getSlackStateStore().verifyStateParam(new Date(), query.state)
-  if (!installOptions.metadata) return reply.code(400).send({error: 'Missing org mapping metadata in OAuth state'})
+  if (!installOptions.metadata) return reply.code(400).send({message: 'Missing org mapping metadata in OAuth state'})
 
   let oauth = await exchangeSlackOauthCode(query.code, installOptions.redirectUri || getSlackRedirectUri(req))
   if (!oauth.team?.id || !oauth.access_token) throw new Error('Slack OAuth did not return team ID and access token')
@@ -103,7 +103,7 @@ export async function slackOauthCallback(req: FastifyRequest, reply: FastifyRepl
 
 // Entry point for Slack Events API requests; verifies signature before routing.
 export async function slackEvents(req: FastifyRequest, reply: FastifyReply) {
-  if (!verifySlackRequest(req)) return reply.code(401).send({error: 'Invalid Slack signature'})
+  if (!verifySlackRequest(req)) return reply.code(401).send({message: 'Invalid Slack signature'})
   let body = req.body as any
 
   // Slack sends a challenge payload when validating the request URL.

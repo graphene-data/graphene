@@ -14,7 +14,7 @@ test('rejects events with missing signature headers', async ({cloud}) => {
   })
 
   expect(response.status).toBe(401)
-  expect(await response.json()).toEqual({error: 'Invalid Slack signature'})
+  expect(await response.json()).toEqual({message: 'Invalid Slack signature'})
 })
 
 test('responds to url verification challenge', async ({slack}) => {

@@ -63,7 +63,7 @@ export async function startDevServer({realAuth, port, project = 'flights', logge
   })
 
   fastify.get('/_api/dev/ngrok-url', (_req, reply) => {
-    if (!devNgrokUrl) return reply.code(404).send({error: 'No dev ngrok tunnel is active'})
+    if (!devNgrokUrl) return reply.code(404).send({message: 'No dev ngrok tunnel is active'})
     return {url: devNgrokUrl}
   })
 
