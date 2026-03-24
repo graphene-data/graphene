@@ -120,9 +120,10 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   await workspaceLoadPromise
   let queries = analyze(gsql)
 
-  if (getDiagnostics().length) {
+  let diagnostics = getDiagnostics()
+  if (diagnostics.length) {
     res.statusCode = 400
-    res.end(JSON.stringify(getDiagnostics()))
+    res.end(JSON.stringify(diagnostics[0]))
     return
   }
 
@@ -281,7 +282,7 @@ const handleRequestPlugin = {
       } catch (err: any) {
         if (process.env.NODE_ENV != 'test') console.error(err) // ignore in tests because they're noisy, and any unexpected errors should be captured by browserConsole.
         res.statusCode = 500
-        res.end(JSON.stringify([{message: err.message, stack: err.stack}]))
+        res.end(JSON.stringify({message: err.message, stack: err.stack}))
       }
     })
   },

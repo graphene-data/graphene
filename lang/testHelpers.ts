@@ -1,7 +1,7 @@
 import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {expect as vitestExpect} from 'vitest'
 
-import {toSql, analyze, getDiagnostics, type Diagnostic} from './core.ts'
+import {toSql, analyze, getDiagnostics, type GrapheneError} from './core.ts'
 import {trimIndentation} from './util.ts'
 
 const ECOMM_SETUP = `
@@ -54,25 +54,9 @@ const ECOMM_SETUP = `
     (501, 2, '2024-01-12', 50);
 `
 
-function codeFrame(source: string, from: number, to: number): string {
-  let lineStart = source.lastIndexOf('\n', Math.max(0, from - 1)) + 1
-  let lineEnd = source.indexOf('\n', to)
-  let end = lineEnd === -1 ? source.length : lineEnd
-  let lineText = source.slice(lineStart, end)
-  let col = Math.max(0, from - lineStart)
-  let width = Math.max(1, to - from)
-  let marker = `${' '.repeat(col)}^${'~'.repeat(Math.max(0, width - 1))}`
-  return `${lineText}\n${marker}`
-}
-
-function formatDiagnostics(source: string, diagnostics: Diagnostic[]): string {
+function formatDiagnostics(_source: string, diagnostics: GrapheneError[]): string {
   if (!diagnostics.length) return ''
-  return diagnostics
-    .map((d, i) => {
-      let frame = codeFrame(source, d.from.offset, d.to.offset)
-      return `#${i + 1}: ${d.message}\n${frame}`
-    })
-    .join('\n\n')
+  return diagnostics.map((d, i) => `#${i + 1}: ${d.message}${d.frame ? `\n${d.frame}` : ''}`).join('\n\n')
 }
 
 let conn: DuckDBConnection

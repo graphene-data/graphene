@@ -15,7 +15,7 @@ import {
 import {URI, Utils as URIs} from 'vscode-uri'
 
 import {deleteFile, updateFile, analyze, getDefinition, getDiagnostics, getFiles, getHover, getReferences, loadConfig, loadWorkspace} from '../../lang/core.ts'
-import {type Diagnostic as GrapheneDiagnostic, type Location as GrapheneLocation} from '../../lang/types.ts'
+import {type GrapheneError, type Location as GrapheneLocation} from '../../lang/types.ts'
 
 export function createGrapheneService(server: ReturnType<typeof createServer>): LanguageServicePlugin {
   return {
@@ -198,13 +198,15 @@ function createWorkspaceAnalysis({load, analyze, delay}: {load: () => Promise<vo
   }
 }
 
-function toDiagnostic(diagnostic: GrapheneDiagnostic): Diagnostic {
+function toDiagnostic(diagnostic: GrapheneError): Diagnostic {
+  let from = diagnostic.from || {line: 0, col: 0}
+  let to = diagnostic.to || from
   return {
     range: {
-      start: {line: diagnostic.from.line, character: diagnostic.from.col},
-      end: {line: diagnostic.to.line, character: diagnostic.to.col},
+      start: {line: from.line, character: from.col},
+      end: {line: to.line, character: to.col},
     },
-    severity: diagnostic.severity === 'error' ? DiagnosticSeverity.Error : DiagnosticSeverity.Warning,
+    severity: diagnostic.severity === 'warn' ? DiagnosticSeverity.Warning : DiagnosticSeverity.Error,
     message: diagnostic.message,
     source: 'graphene',
   }
