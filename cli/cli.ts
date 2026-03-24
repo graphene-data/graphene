@@ -14,7 +14,7 @@ import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {printDiagnostics, printTable} from './printer.ts'
-import {runMdFile, runNamedQueryFromMd} from './run.ts'
+import {INLINE_INPUT_PATH, runMdFile, runNamedQueryFromMd} from './run.ts'
 
 const program = new Command()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -37,8 +37,8 @@ program
     let files = await loadWorkspaceFiles(process.cwd(), false)
     let sql = await readInput(input)
     let result = analyzeProject({
-      files: [...listWorkspaceFiles(files), {path: '__input__.gsql', contents: sql, contentType: 'gsql'}],
-      targetPath: '__input__.gsql',
+      files: [...listWorkspaceFiles(files), {path: INLINE_INPUT_PATH, contents: sql, contentType: 'gsql'}],
+      targetPath: INLINE_INPUT_PATH,
       options: toAnalysisOptions(),
     })
     let queries = validQuery(result)
@@ -77,8 +77,8 @@ program
     let files = await loadWorkspaceFiles(process.cwd(), false)
     let gsql = await readInput(input)
     let result = analyzeProject({
-      files: [...listWorkspaceFiles(files), {path: '__input__.gsql', contents: gsql, contentType: 'gsql'}],
-      targetPath: '__input__.gsql',
+      files: [...listWorkspaceFiles(files), {path: INLINE_INPUT_PATH, contents: gsql, contentType: 'gsql'}],
+      targetPath: INLINE_INPUT_PATH,
       options: toAnalysisOptions(),
     })
     let queries = validQuery(result)

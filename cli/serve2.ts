@@ -14,7 +14,7 @@ import {listWorkspaceFiles, loadWorkspaceFiles, toAnalysisOptions} from '../lang
 import {runQuery} from './connections/index.ts'
 import {injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
-import {runVitePlugin} from './run.ts'
+import {INLINE_INPUT_PATH, runVitePlugin} from './run.ts'
 
 // Collect Svelte compiler warnings for test assertions
 export type SvelteWarning = {code: string; message: string; filename?: string}
@@ -121,8 +121,8 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
 
   await workspaceLoadPromise
   let result = analyzeProject({
-    files: [...listWorkspaceFiles(workspaceFiles), {path: '__input__.gsql', contents: gsql, contentType: 'gsql'}],
-    targetPath: '__input__.gsql',
+    files: [...listWorkspaceFiles(workspaceFiles), {path: INLINE_INPUT_PATH, contents: gsql, contentType: 'gsql'}],
+    targetPath: INLINE_INPUT_PATH,
     options: toAnalysisOptions(),
   })
 

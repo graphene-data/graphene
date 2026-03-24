@@ -25,7 +25,7 @@ export interface RunMdFileOptions {
 
 let browserConnections: {url: string; socket: WebSocket}[] = []
 let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {}
-const INLINE_INPUT_PATH = '__input__.md'
+export const INLINE_INPUT_PATH = 'input'
 
 export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   let log = options.log || console.log

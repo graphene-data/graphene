@@ -1,11 +1,11 @@
 import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {expect as vitestExpect} from 'vitest'
 
+import {INLINE_INPUT_PATH} from '../cli/run.ts'
 import {analyzeProject, getFile, getTable, toSql, type AnalysisFileInput, type AnalysisResult, type GrapheneError} from './core.ts'
 import {trimIndentation} from './util.ts'
 import {listWorkspaceFiles, toAnalysisOptions, updateWorkspaceFile, deleteWorkspaceFile} from './workspace.ts'
 
-const INLINE_INPUT_PATH = 'input'
 let defaultFiles: AnalysisFileInput[] = []
 
 const ECOMM_SETUP = `
