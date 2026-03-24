@@ -2,7 +2,7 @@ import chalk from 'chalk'
 import Table from 'cli-table3'
 import {styleText as nodeStyleText} from 'node:util'
 
-import {type GrapheneError} from '../lang/core.ts'
+import {type GrapheneError} from '../lang/types.ts'
 
 const styleText = (style: string, text: string) => {
   try {

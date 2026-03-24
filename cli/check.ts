@@ -1,7 +1,8 @@
 import {readFileSync} from 'node:fs'
 import path from 'path'
 
-import {analyze, config, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
+import {analyzeProject, config} from '../lang/core.ts'
+import {listWorkspaceFiles, loadWorkspaceFiles, toAnalysisOptions, updateWorkspaceFile} from '../lang/workspace.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {printDiagnostics} from './printer.ts'
@@ -20,19 +21,26 @@ export async function check(options: CheckOptions): Promise<boolean> {
     return false
   }
 
-  await loadWorkspace(config.root, !targetFile)
-  if (targetFile) {
-    if (process.env.NODE_ENV == 'test' && mockFileMap[targetFile]) {
-      updateFile(mockFileMap[targetFile], targetFile)
-    } else {
-      let content = readFileSync(path.resolve(config.root, targetFile), 'utf-8')
-      updateFile(content, targetFile)
+  let files = await loadWorkspaceFiles(config.root, !targetFile)
+  if (process.env.NODE_ENV == 'test') {
+    for (let [mockPath, contents] of Object.entries(mockFileMap)) {
+      if (targetFile && (mockPath == targetFile || mockPath.endsWith('.md'))) continue
+      updateWorkspaceFile(files, contents, mockPath, mockPath.endsWith('.md') ? 'md' : 'gsql')
     }
   }
 
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics(), log)
+  if (targetFile) {
+    if (process.env.NODE_ENV == 'test' && mockFileMap[targetFile]) {
+      updateWorkspaceFile(files, mockFileMap[targetFile], targetFile, targetFile.endsWith('.md') ? 'md' : 'gsql')
+    } else {
+      let content = readFileSync(path.resolve(config.root, targetFile), 'utf-8')
+      updateWorkspaceFile(files, content, targetFile, targetFile.endsWith('.md') ? 'md' : 'gsql')
+    }
+  }
+
+  let result = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions()})
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics, log)
     return false
   }
 

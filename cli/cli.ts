@@ -7,7 +7,8 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 
 import {config, loadConfig} from '../lang/config.ts'
-import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import {analyzeProject, toSql, type Query} from '../lang/core.ts'
+import {listWorkspaceFiles, loadWorkspaceFiles, toAnalysisOptions} from '../lang/workspace.ts'
 import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
@@ -33,10 +34,15 @@ program
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
-    await loadWorkspace(process.cwd(), false)
+    let files = await loadWorkspaceFiles(process.cwd(), false)
     let sql = await readInput(input)
-    let queries = analyze(sql)
-    if (!validQuery(queries)) return
+    let result = analyzeProject({
+      files: [...listWorkspaceFiles(files), {path: '__input__.gsql', contents: sql, contentType: 'gsql'}],
+      targetPath: '__input__.gsql',
+      options: toAnalysisOptions(),
+    })
+    let queries = validQuery(result)
+    if (!queries) return
     console.log(toSql(queries[0]))
   })
 
@@ -68,10 +74,15 @@ program
       process.exit(1)
     }
 
-    await loadWorkspace(process.cwd(), false)
+    let files = await loadWorkspaceFiles(process.cwd(), false)
     let gsql = await readInput(input)
-    let queries = analyze(gsql)
-    if (!validQuery(queries)) return
+    let result = analyzeProject({
+      files: [...listWorkspaceFiles(files), {path: '__input__.gsql', contents: gsql, contentType: 'gsql'}],
+      targetPath: '__input__.gsql',
+      options: toAnalysisOptions(),
+    })
+    let queries = validQuery(result)
+    if (!queries) return
     let sql = toSql(queries[0])
     let res = await runQuery(sql)
     printTable(res.rows)
@@ -193,16 +204,16 @@ function getExistingPath(arg: string | undefined): string | null {
   return fs.existsSync(absolutePath) ? absolutePath : null
 }
 
-function validQuery(queries: Query[]): boolean {
-  if (getDiagnostics().length) {
-    printDiagnostics(getDiagnostics())
+function validQuery(result: {files: Record<string, any>; diagnostics: any[]; queries: Query[]}): Query[] | null {
+  if (result.diagnostics.length) {
+    printDiagnostics(result.diagnostics)
     process.exit(1)
   }
-  if (queries.length == 0) {
+  if (result.queries.length == 0) {
     console.warn('No queries found')
     process.exit(1)
   }
-  return true
+  return result.queries
 }
 
 function findCaseInsensitive(values: string[], needle: string): string | null {

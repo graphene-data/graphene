@@ -8,7 +8,9 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 
-import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql, getFiles} from '../lang/core.ts'
+import {analyzeProject, config, toSql} from '../lang/core.ts'
+import {type AnalysisFileInput} from '../lang/types.ts'
+import {listWorkspaceFiles, loadWorkspaceFiles, toAnalysisOptions} from '../lang/workspace.ts'
 import {runQuery} from './connections/index.ts'
 import {injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
@@ -118,17 +120,20 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
-  let queries = analyze(gsql)
+  let result = analyzeProject({
+    files: [...listWorkspaceFiles(workspaceFiles), {path: '__input__.gsql', contents: gsql, contentType: 'gsql'}],
+    targetPath: '__input__.gsql',
+    options: toAnalysisOptions(),
+  })
 
-  let diagnostics = getDiagnostics()
-  if (diagnostics.length) {
+  if (result.diagnostics.length) {
     res.statusCode = 400
-    res.end(JSON.stringify(diagnostics[0]))
+    res.end(JSON.stringify(result.diagnostics))
     return
   }
 
-  if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
-  let sql = toSql(queries[0], params)
+  if (result.queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
+  let sql = toSql(result.queries[0], params)
 
   // If the client already has this data, dont run the query
   let hash = crypto.createHash('SHA1').update(sql).digest('hex')
@@ -141,7 +146,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let queryResults = await runQuery(sql)
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
+  let fields = result.queries[0].fields.map(f => ({name: f.name, type: f.type}))
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
 
@@ -222,6 +227,7 @@ function fixHmrForFailedModules() {
 // Also tracks all the md files in the workspace to populate the nav sidebar
 let workspaceLoadPromise: Promise<void> | undefined
 let mdFiles: string[] = []
+let workspaceFiles: Record<string, AnalysisFileInput> = {}
 const updateWorkspacePlugin = {
   name: 'updateWorkspace',
   resolveId(id: string) {
@@ -239,10 +245,11 @@ const updateWorkspacePlugin = {
   },
   configureServer: (s: ViteDevServer) => {
     let refresh = async () => {
-      clearWorkspace()
-      workspaceLoadPromise = loadWorkspace(config.root, true)
+      workspaceLoadPromise = loadWorkspaceFiles(config.root, true).then(files => {
+        workspaceFiles = files
+      })
       await workspaceLoadPromise
-      mdFiles = getFiles()
+      mdFiles = listWorkspaceFiles(workspaceFiles)
         .filter(f => f.path.endsWith('.md'))
         .map(f => f.path)
       mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))

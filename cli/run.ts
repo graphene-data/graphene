@@ -7,8 +7,9 @@ import path from 'path'
 import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
 
-import {analyze, config, deleteFile, type GrapheneError, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
+import {analyzeProject, config, type GrapheneError, toSql} from '../lang/core.ts'
 import {pollFor} from '../lang/util.ts'
+import {deleteWorkspaceFile, listWorkspaceFiles, loadWorkspaceFiles, toAnalysisOptions, updateWorkspaceFile} from '../lang/workspace.ts'
 import {openInBrowser} from './auth.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'
 import {runQuery} from './connections/index.ts'
@@ -24,6 +25,7 @@ export interface RunMdFileOptions {
 
 let browserConnections: {url: string; socket: WebSocket}[] = []
 let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {}
+const INLINE_INPUT_PATH = '__input__.md'
 
 export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   let log = options.log || console.log
@@ -33,21 +35,27 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  await loadWorkspace(config.root, false)
+  let files = await loadWorkspaceFiles(config.root, false)
+  if (process.env.NODE_ENV == 'test') {
+    for (let [mockPath, contents] of Object.entries(mockFileMap)) {
+      if (mockPath.endsWith('.md') && mockPath != mdFile) continue
+      updateWorkspaceFile(files, contents, mockPath, mockPath.endsWith('.md') ? 'md' : 'gsql')
+    }
+  }
   if (process.env.NODE_ENV == 'test' && mockFileMap[mdFile]) {
-    updateFile(mockFileMap[mdFile], mdFile)
+    updateWorkspaceFile(files, mockFileMap[mdFile], mdFile, 'md')
   } else {
     let content = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
-    updateFile(content, mdFile)
+    updateWorkspaceFile(files, content, mdFile, 'md')
   }
 
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics(), log)
+  let result = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions()})
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics, log)
     return false
   }
 
-  if (process.env.NODE_ENV == 'test') deleteFile(mdFile)
+  if (process.env.NODE_ENV == 'test') deleteWorkspaceFile(files, mdFile)
 
   let host = `http://localhost:${config.port}`
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
@@ -89,10 +97,19 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     log('No errors found 💎')
   }
 
-  errors.forEach((e: GrapheneError) => {
-    if (e.file || e.frame) printDiagnostics([e], log)
-    else if (e.queryId) log(`${e.queryId}: ${e.message}`)
-    else log(e.message)
+  errors.forEach((e: any) => {
+    if (e.type === 'compile') {
+      let file = e.file && path.isAbsolute(e.file) ? path.relative(config.root, e.file) : e.file
+      let msg = e.message.replace(/^.*?:\d+:\d+\s*/, '').replace(/\s*https:\/\/svelte\.dev\/\S+/g, '')
+      log(`${styleText('red', 'ERROR')}: ${file} line ${e.line}: ${msg}`)
+      for (let frameLine of e.frame.split('\n')) log('  ' + frameLine)
+    } else if (e.file && e.from) {
+      printDiagnostics([e], log)
+    } else if (e.queryId) {
+      log(`${e.queryId}: ${e.message}`)
+    } else {
+      log(e.message)
+    }
   })
 
   if (resp?.stillLoading) {
@@ -111,25 +128,29 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 }
 
 export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string): Promise<boolean> {
-  await loadWorkspace(process.cwd(), false)
+  let files = await loadWorkspaceFiles(process.cwd(), false)
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
 
-  updateFile(mdContents, mdRelativePath)
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
+  updateWorkspaceFile(files, mdContents, mdRelativePath, 'md')
+  let pageResult = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions()})
+  if (pageResult.diagnostics.length > 0) {
+    printDiagnostics(pageResult.diagnostics)
     return false
   }
 
   let runQueryFence = [mdContents, '', '```sql', `from ${queryName} select *`, '```'].join('\n')
-  let queries = analyze(runQueryFence, 'md')
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
+  let queryResult = analyzeProject({
+    files: [...listWorkspaceFiles(files), {path: INLINE_INPUT_PATH, contents: runQueryFence, contentType: 'md'}],
+    targetPath: INLINE_INPUT_PATH,
+    options: toAnalysisOptions(),
+  })
+  if (queryResult.diagnostics.length > 0) {
+    printDiagnostics(queryResult.diagnostics)
     return false
   }
 
-  let sql = toSql(queries[queries.length - 1])
+  let sql = toSql(queryResult.queries[queryResult.queries.length - 1])
   let res = await runQuery(sql)
   printTable(res.rows)
   return true

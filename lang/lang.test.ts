@@ -5,9 +5,10 @@ import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
 import {setConfig} from './config.ts'
-import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile, loadWorkspace, getFile} from './core.ts'
-import {prepareEcommerceTables} from './testHelpers.ts'
+import {getFile as getFileFromResult, getTable as getTableFromResult, toSql, type AnalysisResult} from './core.ts'
+import {clearDefaultTestFiles, createTestWorkspace, prepareEcommerceTables, setDefaultTestFiles} from './testHelpers.ts'
 import {trimIndentation} from './util.ts'
+import {loadWorkspaceFiles} from './workspace.ts'
 
 const testTables = `
   table users (
@@ -60,6 +61,44 @@ const testTables = `
   )
 
 `
+
+let workspace = createTestWorkspace()
+let lastResult: AnalysisResult = {files: {}, diagnostics: [], queries: []}
+
+function clearWorkspace() {
+  workspace = createTestWorkspace()
+  lastResult = {files: {}, diagnostics: [], queries: []}
+  clearDefaultTestFiles()
+}
+
+function updateFile(contents: string, path: string, contentType?: 'gsql' | 'md') {
+  workspace.updateFile(contents, path, contentType)
+  setDefaultTestFiles(workspace.files())
+}
+
+function analyze(contents?: string, contentType?: 'gsql' | 'md') {
+  lastResult = contents == null ? workspace.analyze() : workspace.analyzeInline(contents, contentType)
+  return lastResult.queries
+}
+
+function getDiagnostics() {
+  return lastResult.diagnostics
+}
+
+function getTable(name: string) {
+  return getTableFromResult(lastResult, name)
+}
+
+function getFile(name: string) {
+  return getFileFromResult(lastResult, name) || workspace.files().find(file => file.path == name)
+}
+
+async function loadWorkspace(dir: string, includeMd: boolean) {
+  let loaded = await loadWorkspaceFiles(dir, includeMd)
+  workspace = createTestWorkspace(Object.fromEntries(Object.values(loaded).map(file => [file.path, file.contents])))
+  lastResult = {files: {}, diagnostics: [], queries: []}
+  setDefaultTestFiles(workspace.files())
+}
 
 describe('lang', () => {
   beforeAll(async () => {
