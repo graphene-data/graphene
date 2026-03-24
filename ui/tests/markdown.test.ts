@@ -69,7 +69,7 @@ test('renders gsql query errors clearly with file context', async ({server, page
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
   await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
-  await expect(page.getByText('GSQL error - Unknown function: not_a_function')).toBeVisible()
+  await expect(page.getByText('Unknown function: not_a_function')).toBeVisible()
   let details = page.locator('.g-error__details').first()
   await expect(details).not.toContainText('input')
   await expect(details).toContainText('Query (data="broken_query" x="origin" y="boom")')
@@ -118,14 +118,13 @@ test('renders generic server failures clearly', async ({server, page}) => {
     await route.fulfill({
       status: 500,
       contentType: 'application/json',
-      body: JSON.stringify([{type: 'server', message: 'Internal Server Error'}]),
+      body: JSON.stringify({message: 'Sprockets imploded'}),
     })
   })
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.getByText('Server error while running query')).toBeVisible()
-  await expect(page.getByText('Internal Server Error')).toBeVisible()
+  await expect(page.getByText('Sprockets imploded')).toBeVisible()
   await expect(page).screenshot('reports-server-query-errors')
 })
 

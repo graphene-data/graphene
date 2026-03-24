@@ -1122,9 +1122,9 @@ describe('lang', () => {
     )
     let errors = getDiagnostics().filter(d => d.severity === 'error')
     expect(errors.length).toBe(1)
-    expect(errors[0].from.line).toBe(2)
-    expect(errors[0].from.col).toBe(19)
-    expect(errors[0].to.col).toBe(27)
+    expect(errors[0].from?.line).toBe(2)
+    expect(errors[0].from?.col).toBe(19)
+    expect(errors[0].to?.col).toBe(27)
   })
 
   it('marks markdown component attribute errors across the attribute value', () => {
@@ -1132,9 +1132,9 @@ describe('lang', () => {
     let errors = getDiagnostics().filter(d => d.severity === 'error')
     expect(errors.length).toBe(1)
     expect(errors[0].message).toContain('Unknown field "code"')
-    expect(errors[0].from.line).toBe(0)
-    expect(errors[0].from.col).toBe(26)
-    expect(errors[0].to.col).toBe(errors[0].from.col + 4)
+    expect(errors[0].from?.line).toBe(0)
+    expect(errors[0].from?.col).toBe(26)
+    expect(errors[0].to?.col).toBe((errors[0].from?.col || 0) + 4)
   })
 
   it('parses components with > inside quoted attribute values', () => {

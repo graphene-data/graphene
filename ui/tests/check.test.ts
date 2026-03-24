@@ -37,8 +37,8 @@ test('check defaults to analyzing the whole workspace', async () => {
   expect(outputLines()).toEqual(
     `
     ERROR: tmp_bad.gsql line 3: Unknown function: not_a_function
-   |       from flights select not_a_function()
-   |                           ^^^^^^^^^^^^^^^^
+      from flights select not_a_function()
+                          ^^^^^^^^^^^^^^^^
   `.trim(),
   )
 })
@@ -70,8 +70,8 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
   expect(outputLines()).toEqual(
     `
     ERROR: mock.md line 3: Unknown function: not_a_function
-   | from flights select 1 as origin, not_a_function() as explode
-   |                                  ^^^^^^^^^^^^^^^^
+from flights select 1 as origin, not_a_function() as explode
+                                 ^^^^^^^^^^^^^^^^
   `.trim(),
   )
 })

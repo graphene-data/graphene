@@ -8,7 +8,7 @@ import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
 
 import {FILE_MAP} from '../lang/analyze.ts'
-import {analyze, config, type Diagnostic, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
+import {analyze, config, type GrapheneError, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'
@@ -83,26 +83,17 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  let errors = Array.from(resp.errors || [])
+  let errors = Array.from(resp.errors || []) as GrapheneError[]
   if (errors.length) {
     log(styleText('red', 'Runtime errors') + ` in ${mdFile}:`)
   } else {
     log('No errors found 💎')
   }
 
-  errors.forEach((e: any) => {
-    if (e.type === 'compile') {
-      let file = e.file && path.isAbsolute(e.file) ? path.relative(config.root, e.file) : e.file
-      let msg = e.message.replace(/^.*?:\d+:\d+\s*/, '').replace(/\s*https:\/\/svelte\.dev\/\S+/g, '')
-      log(`${styleText('red', 'ERROR')}: ${file} line ${e.line}: ${msg}`)
-      for (let frameLine of e.frame.split('\n')) log('  ' + frameLine)
-    } else if (e.file && e.from) {
-      printDiagnostics([e as Diagnostic], log)
-    } else if (e.queryId) {
-      log(`${e.queryId}: ${e.message}`)
-    } else {
-      log(e.message)
-    }
+  errors.forEach((e: GrapheneError) => {
+    if (e.file || e.frame) printDiagnostics([e], log)
+    else if (e.queryId) log(`${e.queryId}: ${e.message}`)
+    else log(e.message)
   })
 
   if (resp?.stillLoading) {
