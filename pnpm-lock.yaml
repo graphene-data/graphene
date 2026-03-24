@@ -250,6 +250,9 @@ importers:
       '@volar/language-service':
         specifier: ^2.4.28
         version: 2.4.28
+      glob:
+        specifier: ^13.0.1
+        version: 13.0.6
       vscode-languageserver-protocol:
         specifier: ^3.17.5
         version: 3.17.5

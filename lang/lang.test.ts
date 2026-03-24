@@ -4,8 +4,8 @@ import path from 'node:path'
 import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
-import {setConfig} from './config.ts'
-import {getFile as getFileFromResult, getTable as getTableFromResult, toSql, type AnalysisResult} from './core.ts'
+import {config, readConfig, setConfig} from './config.ts'
+import {getFile as getFileFromResult, getTable as getTableFromResult, toSql, type WorkspaceAnalysis} from './core.ts'
 import {clearDefaultTestFiles, createTestWorkspace, prepareEcommerceTables, setDefaultTestFiles} from './testHelpers.ts'
 import {trimIndentation} from './util.ts'
 import {loadWorkspaceFiles} from './workspace.ts'
@@ -63,7 +63,7 @@ const testTables = `
 `
 
 let workspace = createTestWorkspace()
-let lastResult: AnalysisResult = {files: {}, diagnostics: [], queries: []}
+let lastResult: WorkspaceAnalysis = {files: {}, diagnostics: [], queries: []}
 
 function clearWorkspace() {
   workspace = createTestWorkspace()
@@ -94,7 +94,7 @@ function getFile(name: string) {
 }
 
 async function loadWorkspace(dir: string, includeMd: boolean) {
-  let loaded = await loadWorkspaceFiles(dir, includeMd)
+  let loaded = await loadWorkspaceFiles(dir, includeMd, config.ignoredFiles)
   workspace = createTestWorkspace(Object.fromEntries(Object.values(loaded).map(file => [file.path, file.contents])))
   lastResult = {files: {}, diagnostics: [], queries: []}
   setDefaultTestFiles(workspace.files())
@@ -169,6 +169,17 @@ describe('lang', () => {
       expect(getFile('models.gsql')).toBeDefined()
       expect(getFile('nested/agents.md')).toBeUndefined()
       expect(getFile('dist/ignored.gsql')).toBeUndefined()
+    } finally {
+      await rm(root, {recursive: true, force: true})
+    }
+  })
+
+  it('defaults readConfig.root to the package directory', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-config-root-'))
+
+    try {
+      await writeFile(path.join(root, 'package.json'), JSON.stringify({graphene: {duckdb: {}}}))
+      expect(readConfig(root).root).toBe(root)
     } finally {
       await rm(root, {recursive: true, force: true})
     }

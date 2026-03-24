@@ -1,13 +1,13 @@
 import {analyzeQuery, analyzeTableFully, applyExtends, createAnalysisContext, findTables, recordSyntaxErrors} from './analyze.ts'
-import {config, loadConfig} from './config.ts'
+import {config, loadConfig, readConfig} from './config.ts'
 import {parseMarkdown} from './markdown.ts'
 import {fillInParams} from './params.ts'
 import {parser} from './parser.js'
 import {type AnalysisFileInput, type AnalysisInput, type WorkspaceAnalysis, type FileInfo, type Location, type Query} from './types.ts'
 import {getSourceOffset} from './util.ts'
 
-export {config, loadConfig}
-export type {AnalysisFileInput, AnalysisInput, AnalysisOptions, WorkspaceAnalysis as AnalysisResult, Query, Table, GrapheneError} from './types.ts'
+export {config, loadConfig, readConfig}
+export type {AnalysisFileInput, AnalysisInput, AnalysisOptions, WorkspaceAnalysis, Query, Table, GrapheneError} from './types.ts'
 
 function createFileInfo(input: AnalysisFileInput): FileInfo {
   return {

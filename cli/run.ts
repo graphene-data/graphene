@@ -35,7 +35,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  let files = await loadWorkspaceFiles(config.root, false)
+  let files = await loadWorkspaceFiles(config.root, false, config.ignoredFiles)
   if (process.env.NODE_ENV == 'test') {
     for (let [mockPath, contents] of Object.entries(mockFileMap)) {
       if (mockPath.endsWith('.md') && mockPath != mdFile) continue
@@ -49,7 +49,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     updateWorkspaceFile(files, content, mdFile, 'md')
   }
 
-  let result = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions()})
+  let result = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions(config)})
   if (result.diagnostics.length > 0) {
     printDiagnostics(result.diagnostics, log)
     return false
@@ -128,12 +128,12 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 }
 
 export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string): Promise<boolean> {
-  let files = await loadWorkspaceFiles(process.cwd(), false)
+  let files = await loadWorkspaceFiles(process.cwd(), false, config.ignoredFiles)
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
 
   updateWorkspaceFile(files, mdContents, mdRelativePath, 'md')
-  let pageResult = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions()})
+  let pageResult = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions(config)})
   if (pageResult.diagnostics.length > 0) {
     printDiagnostics(pageResult.diagnostics)
     return false
@@ -143,7 +143,7 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
   let queryResult = analyzeProject({
     files: [...listWorkspaceFiles(files), {path: INLINE_INPUT_PATH, contents: runQueryFence, contentType: 'md'}],
     targetPath: INLINE_INPUT_PATH,
-    options: toAnalysisOptions(),
+    options: toAnalysisOptions(config),
   })
   if (queryResult.diagnostics.length > 0) {
     printDiagnostics(queryResult.diagnostics)

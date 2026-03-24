@@ -34,12 +34,12 @@ program
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
-    let files = await loadWorkspaceFiles(process.cwd(), false)
+    let files = await loadWorkspaceFiles(process.cwd(), false, config.ignoredFiles)
     let sql = await readInput(input)
     let result = analyzeProject({
       files: [...listWorkspaceFiles(files), {path: INLINE_INPUT_PATH, contents: sql, contentType: 'gsql'}],
       targetPath: INLINE_INPUT_PATH,
-      options: toAnalysisOptions(),
+      options: toAnalysisOptions(config),
     })
     let queries = validQuery(result)
     if (!queries) return
@@ -74,12 +74,12 @@ program
       process.exit(1)
     }
 
-    let files = await loadWorkspaceFiles(process.cwd(), false)
+    let files = await loadWorkspaceFiles(process.cwd(), false, config.ignoredFiles)
     let gsql = await readInput(input)
     let result = analyzeProject({
       files: [...listWorkspaceFiles(files), {path: INLINE_INPUT_PATH, contents: gsql, contentType: 'gsql'}],
       targetPath: INLINE_INPUT_PATH,
-      options: toAnalysisOptions(),
+      options: toAnalysisOptions(config),
     })
     let queries = validQuery(result)
     if (!queries) return

@@ -35,24 +35,29 @@ export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> &
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
-export function setConfig(cfg: ConfigInput) {
+function normalizeConfig(cfg: ConfigInput, fallbackRoot: string): Config {
   if (cfg.namespace && !cfg.defaultNamespace) cfg.defaultNamespace = cfg.namespace
   let dialect = cfg.dialect || 'duckdb'
   if (cfg.bigquery) dialect = 'bigquery'
   else if (cfg.snowflake) dialect = 'snowflake'
   else if (cfg.duckdb) dialect = 'duckdb'
-  Object.keys(config).forEach(key => delete config[key])
-  Object.assign(config, cfg)
-  config.dialect = dialect
-  config.root ||= process.cwd()
-  config.port ||= Number(process.env.GRAPHENE_PORT) || 4000
-  config.ignoredFiles ||= ['agents.md', 'claude.md']
+
+  let root = cfg.root ? path.resolve(fallbackRoot, cfg.root) : fallbackRoot
+  let envFile = ['.env']
+  if (Array.isArray(cfg.envFile)) envFile = cfg.envFile
+  else if (cfg.envFile) envFile = [cfg.envFile]
+  let ignoredFiles = cfg.ignoredFiles || ['agents.md', 'claude.md']
+  return {...cfg, root, envFile, ignoredFiles, dialect} as Config
 }
 
-// Read graphene config out of package.json
-export function loadConfig(dir: string, envLoader?: (envFiles: string[] | string) => void) {
-  if (config.root) return
+export function setConfig(cfg: ConfigInput) {
+  let next = normalizeConfig(cfg, process.cwd())
+  Object.keys(config).forEach(key => delete config[key])
+  Object.assign(config, next)
+  config.port ||= Number(process.env.GRAPHENE_PORT) || 4000
+}
 
+export function readConfig(dir: string): Config {
   let packageJsonObject = {} as any
   try {
     let txt = fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
@@ -61,7 +66,16 @@ export function loadConfig(dir: string, envLoader?: (envFiles: string[] | string
     console.warn('No package.json found in current directory')
   }
 
-  if (envLoader) envLoader(packageJsonObject.envFile || ['.env'])
+  let cfg = normalizeConfig(packageJsonObject, dir)
+  cfg.port ||= Number(process.env.GRAPHENE_PORT) || 4000
+  return cfg
+}
 
-  setConfig({...packageJsonObject, root: packageJsonObject.root || process.cwd()})
+// Read graphene config out of package.json
+export function loadConfig(dir: string, envLoader?: (envFiles: string[] | string) => void) {
+  if (config.root) return
+
+  let next = readConfig(dir)
+  if (envLoader) envLoader(next.envFile || ['.env'])
+  setConfig(next)
 }

@@ -21,7 +21,7 @@ export async function check(options: CheckOptions): Promise<boolean> {
     return false
   }
 
-  let files = await loadWorkspaceFiles(config.root, !targetFile)
+  let files = await loadWorkspaceFiles(config.root, !targetFile, config.ignoredFiles)
   if (process.env.NODE_ENV == 'test') {
     for (let [mockPath, contents] of Object.entries(mockFileMap)) {
       if (targetFile && (mockPath == targetFile || mockPath.endsWith('.md'))) continue
@@ -38,7 +38,7 @@ export async function check(options: CheckOptions): Promise<boolean> {
     }
   }
 
-  let result = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions()})
+  let result = analyzeProject({files: listWorkspaceFiles(files), options: toAnalysisOptions(config)})
   if (result.diagnostics.length > 0) {
     printDiagnostics(result.diagnostics, log)
     return false

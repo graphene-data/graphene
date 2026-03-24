@@ -2,7 +2,7 @@ import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {expect as vitestExpect} from 'vitest'
 
 import {INLINE_INPUT_PATH} from '../cli/run.ts'
-import {analyzeProject, getFile, getTable, toSql, type AnalysisFileInput, type AnalysisResult, type GrapheneError} from './core.ts'
+import {analyzeProject, getFile, getTable, toSql, type AnalysisFileInput, type WorkspaceAnalysis, type GrapheneError} from './core.ts'
 import {trimIndentation} from './util.ts'
 import {listWorkspaceFiles, toAnalysisOptions, updateWorkspaceFile, deleteWorkspaceFile} from './workspace.ts'
 
@@ -106,10 +106,10 @@ export function createTestWorkspace(initialFiles: Record<string, string> = {}) {
     deleteFile(path: string) {
       deleteWorkspaceFile(files, path)
     },
-    getFile(result: AnalysisResult, path: string) {
+    getFile(result: WorkspaceAnalysis, path: string) {
       return getFile(result, path)
     },
-    getTable(result: AnalysisResult, name: string) {
+    getTable(result: WorkspaceAnalysis, name: string) {
       return getTable(result, name)
     },
     files() {

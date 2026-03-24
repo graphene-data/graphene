@@ -9,8 +9,8 @@ export function toAnalysisOptions(options: Partial<AnalysisOptions> = config): A
   return {dialect: options.dialect || 'duckdb', defaultNamespace: options.defaultNamespace}
 }
 
-export async function loadWorkspaceFiles(dir: string, includeMd: boolean): Promise<Record<string, AnalysisFileInput>> {
-  let ignore = ['node_modules/**', '**/.*/**', ...(config.ignoredFiles || [])]
+export async function loadWorkspaceFiles(dir: string, includeMd: boolean, ignoredFiles: string[] = config.ignoredFiles || []): Promise<Record<string, AnalysisFileInput>> {
+  let ignore = ['node_modules/**', '**/.*/**', ...ignoredFiles]
   let paths = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore, follow: false})
   let files: Record<string, AnalysisFileInput> = {}
 

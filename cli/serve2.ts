@@ -123,7 +123,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let result = analyzeProject({
     files: [...listWorkspaceFiles(workspaceFiles), {path: INLINE_INPUT_PATH, contents: gsql, contentType: 'gsql'}],
     targetPath: INLINE_INPUT_PATH,
-    options: toAnalysisOptions(),
+    options: toAnalysisOptions(config),
   })
 
   if (result.diagnostics.length) {
@@ -245,7 +245,7 @@ const updateWorkspacePlugin = {
   },
   configureServer: (s: ViteDevServer) => {
     let refresh = async () => {
-      workspaceLoadPromise = loadWorkspaceFiles(config.root, true).then(files => {
+      workspaceLoadPromise = loadWorkspaceFiles(config.root, true, config.ignoredFiles).then(files => {
         workspaceFiles = files
       })
       await workspaceLoadPromise
