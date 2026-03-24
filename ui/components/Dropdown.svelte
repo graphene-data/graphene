@@ -344,6 +344,8 @@
     // authoritative and only applying defaults/select-all before the user has interacted.
     let opts = availableOptions
     if (!opts.length) {
+      // Keep the bound param initialized even before options load.
+      // This prevents $param references from throwing "Missing param" on first render.
       updateInputPayload(selection)
       return
     }

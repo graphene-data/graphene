@@ -1,6 +1,5 @@
 /// <reference types="vitest/globals" />
 import {spawn} from 'node:child_process'
-import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -19,11 +18,6 @@ const flightDir = path.resolve(dir, '../examples/flights')
 const TEST_PORT = 4163
 process.env.GRAPHENE_PORT = '4163'
 process.env.NODE_ENV = 'test'
-
-function ensureFlightsDatabaseExists() {
-  let dbPath = path.resolve(flightDir, 'flights.duckdb')
-  if (!fs.existsSync(dbPath)) throw new Error('flights.duckdb not found. Run `pnpm run setup` in examples/flights')
-}
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
@@ -93,8 +87,6 @@ describe('cli serve (background)', () => {
 })
 
 describe('cli run', () => {
-  beforeAll(ensureFlightsDatabaseExists)
-
   it('runs a query against flights.duckdb (happy path)', async () => {
     let res = await runCli(['run', 'from flights select count() as total'], flightDir)
     expectCliSuccess(res, 'run query')

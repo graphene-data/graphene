@@ -45,9 +45,6 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
         working-directory: ./ui
-      - name: Download flights.duckdb
-        run: pnpm run setup
-        working-directory: ./examples/flights
       - name: Lang tests
         run: pnpm -C lang test
       - name: CLI tests
@@ -60,3 +57,27 @@ jobs:
         with:
           name: UI test diffs
           path: ui/tests/results/**
+
+  run-examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./ui
+      - name: Run examples smoke test
+        run: pnpm exec vitest run ui/tests/run-examples.test.ts --root .
+        env:
+          GRAPHENE_RUN_EXAMPLES_TEST: '1'

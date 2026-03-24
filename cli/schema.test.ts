@@ -1,6 +1,5 @@
 /// <reference types="vitest/globals" />
 import {spawn} from 'node:child_process'
-import * as fs from 'node:fs'
 import * as path from 'node:path'
 import {expect} from 'vitest'
 
@@ -17,11 +16,6 @@ const ecommDir = path.resolve(dir, '../examples/ecomm')
 
 const hasSnowflakeAuth = !!process.env.SNOWFLAKE_PRI_KEY_PATH || !!process.env.SNOWFLAKE_PRI_KEY
 const hasBigQueryAuth = !!process.env.GOOGLE_APPLICATION_CREDENTIALS || !!process.env.GOOGLE_CREDENTIALS_CONTENT
-
-function ensureFlightsDatabaseExists() {
-  let dbPath = path.resolve(flightDir, 'flights.duckdb')
-  if (!fs.existsSync(dbPath)) throw new Error('flights.duckdb not found. Run `pnpm run setup` in examples/flights')
-}
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
@@ -57,8 +51,6 @@ function parseSchemaOutput(stdout: string): string[] {
 }
 
 describe('duckdb', () => {
-  beforeAll(ensureFlightsDatabaseExists)
-
   it('lists available tables when no argument is provided', async () => {
     let res = await runCli(['schema'], flightDir)
     expectCliSuccess(res, 'schema list tables')
