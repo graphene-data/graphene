@@ -1,5 +1,6 @@
 <script lang="ts">
   import {onDestroy, onMount, type Snippet} from 'svelte'
+  import type {GrapheneError} from '../../lang/types.ts'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
 
   interface Props {
@@ -11,11 +12,11 @@
 
   let {data, height = 200, fields = {}, children}: Props = $props()
 
-  let errors: Error[] | null = $state(null)
+  let error: GrapheneError | null = $state(null)
   let loaded: any[] | null = $state(null)
 
   let handleResults = (result: any) => {
-    errors = result.errors || null
+    error = result.error || null
     loaded = result.rows
   }
 
@@ -33,9 +34,9 @@
   })
 </script>
 
-{#if errors}
+{#if error}
   <div style="min-height:{height}px;width:100%;display:grid;align-content:center;padding:8px;box-sizing:border-box">
-    <ErrorDisplay error={errors[0]} />
+    <ErrorDisplay {error} />
   </div>
 {:else if !loaded}
   <div class='ql-skeleton' style={`height:${height}px`} role="status" aria-live="polite">
