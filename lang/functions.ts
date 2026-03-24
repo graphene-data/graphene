@@ -7,7 +7,7 @@ import {bigQueryFunctions} from './bigQueryFunctions.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
-import {type AnalysisContext, type Expr, type FieldType, type Scope} from './types.ts'
+import {type Workspace, type Expr, type FieldType, type Scope} from './types.ts'
 import {txt} from './util.ts'
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
@@ -92,9 +92,9 @@ function findOverloads(name: string, dialect: string): Overload[] {
 // Function Call Analysis
 // ============================================================================
 
-type AnalyzeExprFn = (ctx: AnalysisContext, node: SyntaxNode, scope: Scope) => Expr
+type AnalyzeExprFn = (ctx: Workspace, node: SyntaxNode, scope: Scope) => Expr
 
-export function analyzeFunction(ctx: AnalysisContext, node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn, opts: {isWindow?: boolean} = {}): Expr {
+export function analyzeFunction(ctx: Workspace, node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn, opts: {isWindow?: boolean} = {}): Expr {
   let name = txt(node.getChild('Identifier')).toLowerCase()
   let argNodes = node.getChildren('Expression')
 
@@ -161,7 +161,7 @@ export function analyzeFunction(ctx: AnalysisContext, node: SyntaxNode, scope: S
   }
 }
 
-function analyzePercentile(ctx: AnalysisContext, node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
+function analyzePercentile(ctx: Workspace, node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
   let frac = Number(`0.${digits}`)
   let dialect = ctx.options.dialect
   if (Number(digits) == 100) return diag(ctx, node, 'p100 is not allowed', {sql: 'NULL', type: 'error'})

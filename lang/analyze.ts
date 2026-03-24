@@ -30,7 +30,7 @@ import {
   type Scope,
   type Location,
   type NavigationSymbolKind,
-  type AnalysisContext,
+  type Workspace,
   type AnalysisOptions,
 } from './types.ts'
 import {buildFrame, txt, getFile, getPosition, toRelativePath} from './util.ts'
@@ -48,11 +48,11 @@ import {buildFrame, txt, getFile, getPosition, toRelativePath} from './util.ts'
 // NB that while the first step of collecting tables can be used between runs, analysis kinda can't since the alias for a given
 // join could change from query to query.
 
-interface InternalAnalysisContext extends AnalysisContext {
+interface InternalWorkspace extends Workspace {
   nodeEntityMap: NodeWeakMap<any>
 }
 
-export function createAnalysisContext(files: Record<string, FileInfo>, options: AnalysisOptions): AnalysisContext {
+export function createAnalysisContext(files: Record<string, FileInfo>, options: AnalysisOptions): Workspace {
   return {
     files,
     diagnostics: [],
@@ -61,8 +61,8 @@ export function createAnalysisContext(files: Record<string, FileInfo>, options: 
   }
 }
 
-function internalizeContext(ctx: AnalysisContext): InternalAnalysisContext {
-  let internal = ctx as InternalAnalysisContext
+function internalizeContext(ctx: Workspace): InternalWorkspace {
+  let internal = ctx as InternalWorkspace
   internal.nodeEntityMap ||= new NodeWeakMap()
   return internal
 }
@@ -92,7 +92,7 @@ function addReference(kind: NavigationSymbolKind, node: SyntaxNode, targetId?: s
 }
 
 // Creates tables without analyzing them.
-export function findTables(ctx: AnalysisContext, fi: FileInfo) {
+export function findTables(ctx: Workspace, fi: FileInfo) {
   let tn = fi.tree!.topNode
   fi.tables = []
   let nodes = tn.getChildren('TableStatement').concat(tn.getChildren('ViewStatement'))
@@ -121,7 +121,7 @@ export function findTables(ctx: AnalysisContext, fi: FileInfo) {
 }
 
 // `extend` blocks add columns and joins to existing tables
-export function applyExtends(ctx: AnalysisContext, fi: FileInfo) {
+export function applyExtends(ctx: Workspace, fi: FileInfo) {
   fi.tree!.topNode.getChildren('ExtendStatement').forEach(node => {
     let target = lookupTable(ctx, node.getChild('Ref')!)
     if (!target) return
@@ -130,7 +130,7 @@ export function applyExtends(ctx: AnalysisContext, fi: FileInfo) {
   })
 }
 
-function addColumn(ctx: AnalysisContext, table: Table, node: SyntaxNode) {
+function addColumn(ctx: Workspace, table: Table, node: SyntaxNode) {
   let nameNode = node.getChild('ColumnName')!
   let name = txt(nameNode)
   let type = convertDataType(txt(node.getChild('DataType')))
@@ -141,7 +141,7 @@ function addColumn(ctx: AnalysisContext, table: Table, node: SyntaxNode) {
   table.columns.push(col)
 }
 
-function addJoin(ctx: AnalysisContext, table: Table, node: SyntaxNode) {
+function addJoin(ctx: Workspace, table: Table, node: SyntaxNode) {
   let aliasNode = node.getChild('Alias') || node.getChild('Ref')!.getChildren('Identifier').pop()
   let alias = txt(aliasNode)
 
@@ -158,7 +158,7 @@ function addJoin(ctx: AnalysisContext, table: Table, node: SyntaxNode) {
   table.joins.push(join)
 }
 
-function addComputedColumn(ctx: AnalysisContext, table: Table, node: SyntaxNode) {
+function addComputedColumn(ctx: Workspace, table: Table, node: SyntaxNode) {
   let nameNode = node.getChild('Alias')!
   let name = txt(nameNode)
   let col: Column = {name, type: 'string', exprNode: node.getChild('Expression')!, metadata: extractLeadingMetadata(node)}
@@ -174,7 +174,7 @@ function getField(name: string, table: Table) {
 // Analyze a view's underlying query to determine its output columns.
 // Converts a PhysicalTable with a QueryStatement into a ViewTable with a query.
 // Returns true if the table is (or was already) a successfully analyzed view.
-function analyzeView(ctx: AnalysisContext, table: Table) {
+function analyzeView(ctx: Workspace, table: Table) {
   if (table.type != 'view') return
   if (table.analyzed) return
   table.analyzed = true
@@ -195,7 +195,7 @@ function analyzeView(ctx: AnalysisContext, table: Table) {
 }
 
 // Analyze everything in a table - used for full project analysis (e.g., `check` command)
-export function analyzeTableFully(ctx: AnalysisContext, table: Table) {
+export function analyzeTableFully(ctx: Workspace, table: Table) {
   if (table.type == 'view') analyzeView(ctx, table)
   let scope: Scope = {table, alias: table.name, fanoutPath: []}
   table.columns.forEach(c => {
@@ -215,7 +215,7 @@ export function analyzeTableFully(ctx: AnalysisContext, table: Table) {
 // Expand non-aggregate columns into query fields.
 // When table is provided, expands that single table's columns.
 // When table is null, expands all root-visible query tables (base + ad-hoc joins).
-function expandColumns(ctx: AnalysisContext, table: Table | null, alias: string, query: Query, scope: Scope, namePrefix = '') {
+function expandColumns(ctx: Workspace, table: Table | null, alias: string, query: Query, scope: Scope, namePrefix = '') {
   if (!table) {
     let baseJoin = query.joins.find(j => j.source == 'from')
     if (!baseJoin?.table) return
@@ -255,7 +255,7 @@ function expandColumns(ctx: AnalysisContext, table: Table | null, alias: string,
 }
 
 // Main query analysis - analyzes and returns a Query with computed SQL
-export function analyzeQuery(ctx: AnalysisContext, queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
+export function analyzeQuery(ctx: Workspace, queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
   let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: []}
   let ctes = new Map<string, CteTable>()
   let scope: Scope = {query, alias: '', fanoutPath: [], otherTables: outerCtes || []}
@@ -498,7 +498,7 @@ function buildSql(query: Query, cteMap: Map<string, CteTable>, options: Analysis
 }
 
 // Analyze an expression node and return SQL + type info
-export function analyzeExpr(ctx: AnalysisContext, node: SyntaxNode, scope: Scope): Expr {
+export function analyzeExpr(ctx: Workspace, node: SyntaxNode, scope: Scope): Expr {
   if (node.type.isError) return diag(ctx, node, 'Invalid expression', {sql: 'NULL', type: 'error'})
 
   switch (node.name) {
@@ -833,7 +833,7 @@ export function analyzeExpr(ctx: AnalysisContext, node: SyntaxNode, scope: Scope
   }
 }
 
-function analyzeDateArithmetic(ctx: AnalysisContext, op: '+' | '-', left: Expr, right: Expr, node: SyntaxNode): Expr {
+function analyzeDateArithmetic(ctx: Workspace, op: '+' | '-', left: Expr, right: Expr, node: SyntaxNode): Expr {
   let merged = mergeExprAnalysis([left, right], '', 'number', left.isAgg || right.isAgg)
   let dialect = ctx.options.dialect
 
@@ -866,7 +866,7 @@ function analyzeDateArithmetic(ctx: AnalysisContext, op: '+' | '-', left: Expr, 
   return diag(ctx, node, 'Invalid date arithmetic', {sql: 'NULL', type: 'error'})
 }
 
-function analyzeIntervalMultiplication(ctx: AnalysisContext, left: Expr, right: Expr, node: SyntaxNode): Expr | null {
+function analyzeIntervalMultiplication(ctx: Workspace, left: Expr, right: Expr, node: SyntaxNode): Expr | null {
   if (left.type == 'number' && right.type == 'interval') {
     return scaleInterval(ctx, left, right, node.lastChild!)
   }
@@ -876,7 +876,7 @@ function analyzeIntervalMultiplication(ctx: AnalysisContext, left: Expr, right: 
   return null
 }
 
-function scaleInterval(ctx: AnalysisContext, multiplier: Expr, intervalExpr: Expr, node: SyntaxNode): Expr {
+function scaleInterval(ctx: Workspace, multiplier: Expr, intervalExpr: Expr, node: SyntaxNode): Expr {
   if (!intervalExpr.interval) return diag(ctx, node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
   if (intervalExpr.interval.form != 'constant') return diag(ctx, node, 'Only literal intervals can be multiplied', {sql: 'NULL', type: 'error'})
   let quantitySql = intervalExpr.interval.quantitySql == '1' ? multiplier.sql : `${multiplier.sql}*${intervalExpr.interval.quantitySql}`
@@ -888,7 +888,7 @@ function scaleInterval(ctx: AnalysisContext, multiplier: Expr, intervalExpr: Exp
   }
 }
 
-function coerceToTemporal(ctx: AnalysisContext, expr: Expr, targetType: 'date' | 'timestamp', node: SyntaxNode): Expr {
+function coerceToTemporal(ctx: Workspace, expr: Expr, targetType: 'date' | 'timestamp', node: SyntaxNode): Expr {
   // Extract the string literal value (remove quotes)
   let match = expr.sql.match(/^'(.+)'$/)
   if (!match) return expr
@@ -914,7 +914,7 @@ function isPercentileWindowSpecSupported(overClause: SyntaxNode): boolean {
   return true
 }
 
-function renderOverClause(ctx: AnalysisContext, overClause: SyntaxNode, scope: Scope): string {
+function renderOverClause(ctx: Workspace, overClause: SyntaxNode, scope: Scope): string {
   let spec = overClause.getChild('WindowSpec')
   if (!spec) return ''
   let parts: string[] = []
@@ -941,7 +941,7 @@ function renderOverClause(ctx: AnalysisContext, overClause: SyntaxNode, scope: S
   return parts.join(' ')
 }
 
-function renderWindowFrame(ctx: AnalysisContext, frame: SyntaxNode, scope: Scope): string {
+function renderWindowFrame(ctx: Workspace, frame: SyntaxNode, scope: Scope): string {
   let mode = txt(frame.getChildren('Kw')[0]).toUpperCase()
   let between = frame.getChild('WindowFrameBetween')
   if (between) {
@@ -952,7 +952,7 @@ function renderWindowFrame(ctx: AnalysisContext, frame: SyntaxNode, scope: Scope
   return `${mode} ${renderWindowBound(ctx, start, scope)}`
 }
 
-function renderWindowBound(ctx: AnalysisContext, bound: SyntaxNode, scope: Scope): string {
+function renderWindowBound(ctx: Workspace, bound: SyntaxNode, scope: Scope): string {
   let kws = bound.getChildren('Kw').map(k => txt(k).toLowerCase())
   if (kws.includes('unbounded')) {
     return `UNBOUNDED ${kws.includes('following') ? 'FOLLOWING' : 'PRECEDING'}`
@@ -963,7 +963,7 @@ function renderWindowBound(ctx: AnalysisContext, bound: SyntaxNode, scope: Scope
 }
 
 // Traverse a join path (like `tableA.tableB.`), returning a new scope pointing to the target table. Adds implied joins to the query as it goes
-function followJoins(ctx: AnalysisContext, pathNodes: SyntaxNode[], scope: Scope): Scope | null {
+function followJoins(ctx: Workspace, pathNodes: SyntaxNode[], scope: Scope): Scope | null {
   let part = pathNodes[0]
   let name = txt(part)
 
@@ -1048,7 +1048,7 @@ function mergeExprAnalysis(exprs: Expr[], sql: string, type: FieldType, isAgg?: 
   }
 }
 
-function analyzeComputedFieldExpr(ctx: AnalysisContext, node: SyntaxNode, expr: Expr) {
+function analyzeComputedFieldExpr(ctx: Workspace, node: SyntaxNode, expr: Expr) {
   if (expr.fanout?.conflict) diag(ctx, node, 'Join graph creates a chasm trap')
   if (!expr.isAgg && !isBaseFanoutPath(expr.fanout?.path)) diag(ctx, node, fanoutMessage(expr.fanout?.path, 'aggregate it first'))
   let paths = uniqueFanoutPaths(expr.fanout?.sensitivePaths || [])
@@ -1057,7 +1057,7 @@ function analyzeComputedFieldExpr(ctx: AnalysisContext, node: SyntaxNode, expr: 
   }
 }
 
-function analyzeAggregateQueryExpr(ctx: AnalysisContext, node: SyntaxNode, expr: Expr) {
+function analyzeAggregateQueryExpr(ctx: Workspace, node: SyntaxNode, expr: Expr) {
   if (expr.fanout?.conflict) diag(ctx, node, 'Join graph creates a chasm trap')
 }
 
@@ -1066,7 +1066,7 @@ function analyzeAggregateQueryExpr(ctx: AnalysisContext, node: SyntaxNode, expr:
 // aggregate grains into the more specific cases we can explain clearly (chasm trap, a base
 // aggregate fanned out by one join, an ancestor aggregate fanned out by a descendant join,
 // or the generic join-graph fanout fallback).
-function analyzeAggregateQueryFanout(ctx: AnalysisContext, exprs: {node: SyntaxNode; expr: Expr}[]) {
+function analyzeAggregateQueryFanout(ctx: Workspace, exprs: {node: SyntaxNode; expr: Expr}[]) {
   let aggExprs = exprs.filter(entry => entry.expr.isAgg)
   let paths = uniqueFanoutPaths(aggExprs.flatMap(entry => entry.expr.fanout?.sensitivePaths || []))
   if (paths.length == 0) return
@@ -1158,7 +1158,7 @@ function analyzeAggregateQueryFanout(ctx: AnalysisContext, exprs: {node: SyntaxN
 }
 
 // Find a table by Ref node, failing if it doesn't exist
-function lookupTable(ctx: AnalysisContext, node: SyntaxNode, scope?: Scope): Table | undefined {
+function lookupTable(ctx: Workspace, node: SyntaxNode, scope?: Scope): Table | undefined {
   let name = txt(node)
   let table: Table | undefined
 
@@ -1191,7 +1191,7 @@ function inferName(exprNode: SyntaxNode, scope: Scope): string {
 }
 
 // TODO: do we still need this?
-function unpackAnds(ctx: AnalysisContext, node: SyntaxNode, scope: Scope): Expr[] {
+function unpackAnds(ctx: Workspace, node: SyntaxNode, scope: Scope): Expr[] {
   if (node.name == 'BinaryExpression') {
     let op = txt(node.firstChild?.nextSibling).toLowerCase()
     if (op == 'and') {
@@ -1201,13 +1201,13 @@ function unpackAnds(ctx: AnalysisContext, node: SyntaxNode, scope: Scope): Expr[
   return [analyzeExpr(ctx, node, scope)]
 }
 
-export function recordSyntaxErrors(ctx: AnalysisContext, fi: FileInfo) {
+export function recordSyntaxErrors(ctx: Workspace, fi: FileInfo) {
   fi.tree!.topNode.cursor().iterate(n => {
     if (n.type.isError) diag(ctx, n.node, 'Syntax error')
   })
 }
 
-export function diag<T>(ctx: AnalysisContext, node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
+export function diag<T>(ctx: Workspace, node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
   let file = getFile(node)
   let from = getPosition(node.from, file)
   let to = getPosition(node.to, file)
@@ -1215,7 +1215,7 @@ export function diag<T>(ctx: AnalysisContext, node: SyntaxNode | SyntaxNodeRef, 
   return defaultReturn as T
 }
 
-export function checkTypes(ctx: AnalysisContext, expr: Expr, expected: FieldType[], node: SyntaxNode) {
+export function checkTypes(ctx: Workspace, expr: Expr, expected: FieldType[], node: SyntaxNode) {
   if (expr.type == 'error' || expr.type == 'null') return
   if (expected.includes(expr.type)) return
   diag(ctx, node, `Expected ${expected.join(' or ')}, got ${expr.type}`)

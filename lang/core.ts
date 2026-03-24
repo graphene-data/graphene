@@ -7,18 +7,18 @@ import {config, loadConfig} from './config.ts'
 import {parseMarkdown} from './markdown.ts'
 import {fillInParams} from './params.ts'
 import {parser} from './parser.js'
-import {type AnalysisFileInput, type AnalysisInput, type AnalysisOptions, type AnalysisResult, type FileInfo, type Location, type Query, type Table} from './types.ts'
+import {type AnalysisFileInput, type AnalysisInput, type AnalysisOptions, type WorkspaceAnalysis, type FileInfo, type Location, type Query, type Table} from './types.ts'
 import {getSourceOffset} from './util.ts'
 
 export {config, loadConfig}
-export type {AnalysisFileInput, AnalysisInput, AnalysisOptions, AnalysisResult, Query, Table, GrapheneError} from './types.ts'
+export type {AnalysisFileInput, AnalysisInput, AnalysisOptions, WorkspaceAnalysis as AnalysisResult, Query, Table, GrapheneError} from './types.ts'
 
 // `analyzeProject(...)` is the real pure API now. These module-level values only exist
 // to preserve the older stateful `core.ts` interface used by the CLI/tests/IDE helpers:
 // callers mutate a workspace snapshot with `updateFile/loadWorkspace`, then `analyze()`
 // materializes a fresh pure result and stores it here for the legacy getter functions.
 let legacyWorkspace: Record<string, FileInfo> = {}
-let legacyResult: AnalysisResult = {files: {}, diagnostics: [], queries: []}
+let legacyResult: WorkspaceAnalysis = {files: {}, diagnostics: [], queries: []}
 
 function toAnalysisOptions(options: Partial<AnalysisOptions> = config): AnalysisOptions {
   return {dialect: options.dialect || 'duckdb', defaultNamespace: options.defaultNamespace}
@@ -41,7 +41,7 @@ function isMarkdownFile(file: AnalysisFileInput) {
 }
 
 // Pure analysis API. Callers provide files and options explicitly and receive the full analyzed result.
-export function analyzeProject(input: AnalysisInput): AnalysisResult {
+export function analyzeProject(input: AnalysisInput): WorkspaceAnalysis {
   let files = Object.fromEntries(input.files.map(file => [file.path, createFileInfo(file)]))
   let ctx = createAnalysisContext(files, input.options)
 
@@ -143,7 +143,7 @@ export function toSql(query: Query, params: Record<string, any> = {}): string {
   return query.sql
 }
 
-function currentFiles(result?: AnalysisResult) {
+function currentFiles(result?: WorkspaceAnalysis) {
   if (result) return result.files
   return {...legacyWorkspace, ...legacyResult.files}
 }
@@ -153,8 +153,8 @@ export function getDiagnostics() {
 }
 
 export function getTable(name: string): Table | undefined
-export function getTable(result: AnalysisResult, name: string): Table | undefined
-export function getTable(arg1: string | AnalysisResult, arg2?: string) {
+export function getTable(result: WorkspaceAnalysis, name: string): Table | undefined
+export function getTable(arg1: string | WorkspaceAnalysis, arg2?: string) {
   let [result, name] = typeof arg1 == 'string' ? [undefined, arg1] : [arg1, arg2!]
   return Object.values(currentFiles(result))
     .flatMap(file => file.tables)
@@ -162,19 +162,19 @@ export function getTable(arg1: string | AnalysisResult, arg2?: string) {
 }
 
 export function getFile(name: string): FileInfo | undefined
-export function getFile(result: AnalysisResult, name: string): FileInfo | undefined
-export function getFile(arg1: string | AnalysisResult, arg2?: string) {
+export function getFile(result: WorkspaceAnalysis, name: string): FileInfo | undefined
+export function getFile(arg1: string | WorkspaceAnalysis, arg2?: string) {
   let [result, name] = typeof arg1 == 'string' ? [undefined, arg1] : [arg1, arg2!]
   return currentFiles(result)[name]
 }
 
 export function getFiles(): FileInfo[]
-export function getFiles(result: AnalysisResult): FileInfo[]
-export function getFiles(result?: AnalysisResult) {
+export function getFiles(result: WorkspaceAnalysis): FileInfo[]
+export function getFiles(result?: WorkspaceAnalysis) {
   return Object.values(currentFiles(result))
 }
 
-function findColumn(result: AnalysisResult, symbolId: string) {
+function findColumn(result: WorkspaceAnalysis, symbolId: string) {
   for (let file of Object.values(result.files)) {
     for (let table of file.tables) {
       let column = table.columns.find(col => col.symbolId == symbolId)
@@ -184,13 +184,13 @@ function findColumn(result: AnalysisResult, symbolId: string) {
   return null
 }
 
-function findTableBySymbol(result: AnalysisResult, symbolId: string) {
+function findTableBySymbol(result: WorkspaceAnalysis, symbolId: string) {
   return Object.values(result.files)
     .flatMap(file => file.tables)
     .find(table => table.symbolId == symbolId)
 }
 
-function getNavigationTarget(result: AnalysisResult, path: string, line: number, col: number) {
+function getNavigationTarget(result: WorkspaceAnalysis, path: string, line: number, col: number) {
   let fi = result.files[path]
   if (!fi) return null
 
@@ -206,8 +206,8 @@ function getNavigationTarget(result: AnalysisResult, path: string, line: number,
 }
 
 export function getHover(path: string, line: number, col: number): string
-export function getHover(result: AnalysisResult, path: string, line: number, col: number): string
-export function getHover(arg1: string | AnalysisResult, arg2: string | number, arg3?: number, arg4?: number) {
+export function getHover(result: WorkspaceAnalysis, path: string, line: number, col: number): string
+export function getHover(arg1: string | WorkspaceAnalysis, arg2: string | number, arg3?: number, arg4?: number) {
   let [result, path, line, col] = typeof arg1 == 'string' ? [legacyResult, arg1, arg2 as number, arg3 as number] : [arg1, arg2 as string, arg3 as number, arg4 as number]
   let symbol = getNavigationTarget(result, path, line, col)
   if (!symbol) return ''
@@ -226,16 +226,16 @@ export function getHover(arg1: string | AnalysisResult, arg2: string | number, a
 }
 
 export function getDefinition(path: string, line: number, col: number): Location | null
-export function getDefinition(result: AnalysisResult, path: string, line: number, col: number): Location | null
-export function getDefinition(arg1: string | AnalysisResult, arg2: string | number, arg3?: number, arg4?: number) {
+export function getDefinition(result: WorkspaceAnalysis, path: string, line: number, col: number): Location | null
+export function getDefinition(arg1: string | WorkspaceAnalysis, arg2: string | number, arg3?: number, arg4?: number) {
   let [result, path, line, col] = typeof arg1 == 'string' ? [legacyResult, arg1, arg2 as number, arg3 as number] : [arg1, arg2 as string, arg3 as number, arg4 as number]
   let symbol = getNavigationTarget(result, path, line, col)
   return symbol?.location || null
 }
 
 export function getReferences(path: string, line: number, col: number, includeDeclaration?: boolean): Location[]
-export function getReferences(result: AnalysisResult, path: string, line: number, col: number, includeDeclaration?: boolean): Location[]
-export function getReferences(arg1: string | AnalysisResult, arg2: string | number, arg3?: number, arg4?: number | boolean, arg5?: boolean) {
+export function getReferences(result: WorkspaceAnalysis, path: string, line: number, col: number, includeDeclaration?: boolean): Location[]
+export function getReferences(arg1: string | WorkspaceAnalysis, arg2: string | number, arg3?: number, arg4?: number | boolean, arg5?: boolean) {
   let [result, path, line, col, includeDeclaration] =
     typeof arg1 == 'string' ? [legacyResult, arg1, arg2 as number, arg3 as number, (arg4 as boolean) || false] : [arg1, arg2 as string, arg3 as number, arg4 as number, arg5 || false]
   let symbol = getNavigationTarget(result, path, line, col)

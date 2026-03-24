@@ -11,6 +11,19 @@ declare module '@lezer/common' {
 
 export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
 
+export interface Workspace {
+  files: Record<string, FileInfo>
+  diagnostics: GrapheneError[]
+  options: AnalysisOptions
+  analysisStack: Set<Column>
+}
+
+export interface WorkspaceAnalysis {
+  files: Record<string, FileInfo>
+  diagnostics: GrapheneError[]
+  queries: Query[]
+}
+
 export interface AnalysisOptions {
   dialect: string
   defaultNamespace?: string
@@ -159,19 +172,6 @@ export interface GrapheneError {
   from?: Position
   to?: Position
   frame?: string
-}
-
-export interface AnalysisContext {
-  files: Record<string, FileInfo>
-  diagnostics: GrapheneError[]
-  options: AnalysisOptions
-  analysisStack: Set<Column>
-}
-
-export interface AnalysisResult {
-  files: Record<string, FileInfo>
-  diagnostics: GrapheneError[]
-  queries: Query[]
 }
 
 export interface Location {
