@@ -25,7 +25,7 @@ import {
   type Column,
   type FieldType,
   type FileInfo,
-  type Diagnostic,
+  type GrapheneError,
   type Expr,
   type CteTable,
   type JoinType,
@@ -33,7 +33,7 @@ import {
   type Location,
   type NavigationSymbolKind,
 } from './types.ts'
-import {txt, getFile, getPosition} from './util.ts'
+import {buildFrame, txt, getFile, getPosition, toRelativePath} from './util.ts'
 
 // Analyze is the heart of gsql processing. It works in 2 phases:
 // 1. walk the parse tree looking for tables, views, and extend blocks.
@@ -49,7 +49,7 @@ import {txt, getFile, getPosition} from './util.ts'
 // join could change from query to query.
 
 export let FILE_MAP: Record<string, FileInfo> = {} // All the files in the workspace and their tables/queries
-export let diagnostics: Diagnostic[] = [] // Tracks errors/warnings
+export let diagnostics: GrapheneError[] = [] // Tracks errors/warnings
 let analysisStack = new Set<Column>() // Track computed columns being analyzed to detect cycles
 let NODE_ENTITY_MAP = new NodeWeakMap<any>() // Points syntax nodes back to entities for ide hover tips
 
@@ -1208,7 +1208,7 @@ export function diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defau
   let file = getFile(node)
   let from = getPosition(node.from, file)
   let to = getPosition(node.to, file)
-  diagnostics.push({from, to, message, severity: 'error', file: file.path})
+  diagnostics.push({severity: 'error', message, file: toRelativePath(file.path), from, to, frame: buildFrame(from, to)})
   return defaultReturn as T
 }
 

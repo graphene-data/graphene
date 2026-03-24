@@ -19,9 +19,17 @@
   let compileError = $state(null)
   errorProvider('compile', () => compileError ? [compileError] : [])
   import.meta.hot?.on('vite:error', (payload) => {
-    compileError = payload.err
-    compileError.type = 'compile'
-    compileError.file = payload.err.id
+    let line = Math.max(0, (payload.err.loc?.line || 1) - 1)
+    let col = Math.max(0, payload.err.loc?.column || 0)
+    let path = String(payload.err.id || '').replace(/^file:\/\//, '').replace(/\\/g, '/').replace(/^\/+/, '')
+    let message = String(payload.err.message || '').replace(/^.*?:\d+:\d+\s*/, '').replace(/\s*https:\/\/svelte\.dev\/\S+/g, '').trim()
+    compileError = {
+      message,
+      frame: payload.err.frame,
+      file: path,
+      from: {line, col, offset: 0},
+      to: {line, col: col + 1, offset: 0},
+    }
     Page = null
   })
 

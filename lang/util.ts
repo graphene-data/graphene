@@ -92,6 +92,21 @@ export function trimIndentation(str: string) {
     .join('\n')
 }
 
+export function toRelativePath(path: string): string {
+  return path
+    .replace(/^file:\/\//, '')
+    .replace(/\\/g, '/')
+    .replace(/^\/+/, '')
+}
+
+export function buildFrame(from: {line: number; col: number; lineText?: string}, to: {line: number; col: number}) {
+  let lineText = from.lineText || ''
+  let endCol = from.line === to.line ? Math.max(from.col + 1, to.col) : lineText.length
+  let safeEnd = Math.max(from.col + 1, Math.min(lineText.length, endCol))
+  let caretLen = Math.max(1, safeEnd - from.col)
+  return `${lineText}\n${' '.repeat(from.col)}${'^'.repeat(caretLen)}`
+}
+
 export async function pollFor<T>(fn: () => T, timeoutMs: number, interval?: number): Promise<T | null> {
   let end = Date.now() + timeoutMs
   while (Date.now() < end) {

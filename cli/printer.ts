@@ -2,8 +2,7 @@ import chalk from 'chalk'
 import Table from 'cli-table3'
 import {styleText as nodeStyleText} from 'node:util'
 
-import {type Diagnostic, getFile} from '../lang/core.ts'
-// import {logTree} from './logTree.ts'
+import {type GrapheneError} from '../lang/core.ts'
 
 const styleText = (style: string, text: string) => {
   try {
@@ -13,36 +12,18 @@ const styleText = (style: string, text: string) => {
   }
 }
 
-function offsetToLineCol(src: string, offset: number): {line: number; col: number; lineStart: number; lineText: string} {
-  let lines = src.split(/\r?\n/)
-  let acc = 0
-  for (let i = 0; i < lines.length; i++) {
-    let lineText = lines[i]
-    let nextAcc = acc + lineText.length + 1 // +1 for newline
-    if (offset < nextAcc || i === lines.length - 1) {
-      let col = Math.max(0, offset - acc)
-      return {line: i + 1, col, lineStart: acc, lineText}
-    }
-    acc = nextAcc
-  }
-  return {line: 1, col: 0, lineStart: 0, lineText: lines[0] || ''}
-}
-
-export function printDiagnostics(diags: Diagnostic[], log?: any) {
+export function printDiagnostics(diags: GrapheneError[], log?: any) {
   log ||= console.log
   let parts: string[] = []
-  for (let d of diags) {
-    let src = getFile(d.file)?.contents || ''
-    let {line, col, lineStart, lineText} = offsetToLineCol(src, d.from.offset)
-    let endCol = Math.max(col + 1, Math.min(lineText.length, d.to.offset - lineStart))
-    let caretLen = Math.max(1, endCol - col)
-    let sev = d.severity === 'error' ? 'red' : 'yellow'
-    let header = `${styleText(sev, d.severity.toUpperCase())}: ${d.file} line ${line}: ${d.message}`
-    let gutter = '   | '
-    let caretLine = `${' '.repeat(col)}${styleText(sev, '^'.repeat(caretLen))}`
-    parts.push([header, `${gutter}${lineText}`, `${gutter}${caretLine}`].join('\n'))
+  for (let diag of diags) {
+    let sev = diag.severity === 'warn' ? 'yellow' : 'red'
+    let level = diag.severity === 'warn' ? 'WARN' : 'ERROR'
+    let line = diag.from ? diag.from.line + 1 : undefined
+    let where = diag.file ? `${diag.file}${line ? ` line ${line}` : ''}` : 'input'
+    let header = `${styleText(sev, level)}: ${where}: ${diag.message}`
+    parts.push(diag.frame ? `${header}\n${diag.frame}` : header)
   }
-  if (parts.length) log(parts.join('\n'))
+  if (parts.length) log(parts.join('\n\n'))
 }
 
 export function printTable(rows: any[]) {

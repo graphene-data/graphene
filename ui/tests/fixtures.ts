@@ -14,6 +14,7 @@ import {playwrightExpect as expect} from './matchers.ts'
 export {expect}
 
 process.env.NODE_ENV = 'test'
+process.env.VITE_TEST = '1'
 
 export type MountFn = (componentPath: string, props: any) => Promise<void>
 export type ChartConfigFn = <T>(selector: (config: any) => T) => Promise<T | null>

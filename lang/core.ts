@@ -7,12 +7,12 @@ import {config, loadConfig} from './config.ts'
 import {parseMarkdown} from './markdown.ts'
 import {fillInParams} from './params.ts'
 import {parser} from './parser.js'
-import {type Query, type Location} from './types.ts'
+import {type GrapheneError, type Location, type Query} from './types.ts'
 import {getOffset, getSourceOffset} from './util.ts'
 
 export {clearWorkspace}
 export {config, loadConfig}
-export type {Query, Table, Diagnostic} from './types.ts'
+export type {Query, Table, GrapheneError} from './types.ts'
 export function getTable(name: string) {
   return Object.values(FILE_MAP)
     .flatMap(f => f.tables)
@@ -24,7 +24,7 @@ export function getFile(name: string) {
 export function getFiles() {
   return Object.values(FILE_MAP)
 }
-export function getDiagnostics() {
+export function getDiagnostics(): GrapheneError[] {
   return diagnostics
 }
 

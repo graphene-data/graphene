@@ -125,14 +125,21 @@ export interface Position {
   offset: number
   line: number
   col: number
+  lineStart?: number
+  lineText?: string
 }
 
-export interface Diagnostic {
-  file: string
-  from: Position
-  to: Position
+export interface GrapheneError {
   message: string
-  severity: 'error' | 'warn'
+  name?: string
+  stack?: string
+  cause?: unknown
+  severity?: 'error' | 'warn'
+  queryId?: string
+  file?: string
+  from?: Position
+  to?: Position
+  frame?: string
 }
 
 export interface Location {
