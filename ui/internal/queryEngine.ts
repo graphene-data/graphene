@@ -1,13 +1,15 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
+import type {GrapheneError} from '../../lang/types.ts'
+
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
 
 interface QueryResult {
   rows?: any[]
-  errors?: Error[]
+  error?: GrapheneError
   fields?: Field[]
 }
 
@@ -25,16 +27,29 @@ interface QueryNode {
   callback?: ResultHandler
   loading: boolean
   fields: Map<string, string | string[]>
-  errors: Error[]
+  queryId?: string
+  error?: GrapheneError
 }
 
 let runPending: Promise<void> | null = null
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 
+// QueryId is a string we construct to make it easier to figure out which chart in the md is associated with which chart in the ui
+// Right now it's just a combination of the data and any field attributes, but that seems to be good enough.
+function buildQueryId(source: string | undefined, fields: Map<string, string | string[]>) {
+  let fieldIds = Array.from(fields.entries()).flatMap(([name, value]) => {
+    if (Array.isArray(value)) return value.length ? [`${name}="${value.join(', ')}"`] : []
+    if (value == null) return []
+    if (typeof value === 'string' && value.trim().length === 0) return []
+    return [`${name}="${value}"`]
+  })
+  return `Query (data="${source}"${fieldIds.length ? ` ${fieldIds.join(' ')}` : ''})`
+}
+
 function registerQuery(name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
-  queries.push({name, contents, loading: false, fields: new Map(), errors: []})
+  queries.push({name, contents, loading: false, fields: new Map()})
 }
 
 const getRoutePath = () => (typeof window === 'undefined' ? '/' : window.location.pathname || '/')
@@ -52,7 +67,7 @@ function query(source: string, fields: Record<string, string | string[]>, callba
     exprs = ['*']
   }
   let contents = `from ${source} select ${exprs.join(', ')}`
-  queries.push({contents, callback, loading: false, fields: map, errors: [], source})
+  queries.push({contents, callback, loading: false, fields: map, source, queryId: buildQueryId(source, map)})
   runAll()
 }
 
@@ -68,63 +83,65 @@ function resetQueryEngine() {
 
 async function runNode(n: QueryNode) {
   if (!n.callback) throw new Error('running node nobody is listening to')
-  n.callback({}) // notify that the query is loading
+  let callback = n.callback
+  let finish = (result: QueryResult) => {
+    callback(result)
+    n.loading = false
+  }
+
+  callback({})
   n.loading = true
-  n.errors = []
+  n.error = undefined
+
+  let queryId = n.queryId || buildQueryId(n.source, n.fields)
+  n.queryId = queryId
 
   let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
   let gsql = [...tables.map(q => `table ${q.name} as (${q.contents})`), n.contents].join('\n')
+  let params = getActivePageInputs().getParams()
 
-  try {
-    let params = getActivePageInputs().getParams()
-    let response = await fetch('/_api/query', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({params, gsql, hashes, routePath: getRoutePath(), repoId: window.$GRAPHENE?.repoId}),
-    })
-    let hash = response.headers.get('ETag') || ''
+  let error: GrapheneError | undefined
+  let response = await fetch('/_api/query', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({params, gsql, hashes, routePath: getRoutePath(), repoId: window.$GRAPHENE?.repoId}),
+  }).catch(e => (error = e))
 
-    if (response.status == 304) {
-      // cache hit. Read it out and use that
-      let body = await cacheRead(hash)
-      let result = translateData(body, n)
-      if (n.source) queryResults[n.source] = {rows: result.rows, fields: body.fields}
-      n.callback(result)
-    } else if (response.ok) {
-      // cache miss. write it to the cache, and return the data
-      cacheWrite(hash, response.clone()) // clone allows us to write the raw response into the cache
-      let body = await response.json()
-      let fields = body.fields // grab before translateData mutates
-      let result = translateData(body, n) // nb that translateData modifies in place for performance
-      if (n.source) queryResults[n.source] = {rows: result.rows, fields}
-      n.callback(result)
-    } else {
-      // request failed. Record it
-      let contentType = response.headers.get('Content-Type') || ''
-      let isJson = contentType.includes('application/json')
-      let body = isJson ? await response.json() : await response.text()
-      n.errors = Array.isArray(body) ? body : [{message: body}]
-
-      let fieldIds = Array.from(n.fields.entries()).flatMap(([name, val]) => {
-        if (Array.isArray(val)) {
-          if (val.length === 0) return [] as string[]
-          if (val.length === 1) return [`${name}="${val[0]}"`]
-          return [`${name}="${val.join(', ')}"`]
-        }
-        if (typeof val === 'string' && val.trim().length === 0) return [] as string[]
-        if (val == null) return [] as string[]
-        return [`${name}="${val}"`]
-      })
-      let idStr = `Query (data="${n.source}" ` + fieldIds.join(' ') + ')'
-      n.errors.forEach(e => ((e as any).queryId = idStr))
-      n.callback({errors: n.errors})
-    }
-  } catch (e) {
-    n.errors = [e as Error]
-  } finally {
-    n.loading = false
+  // network error
+  if (error) {
+    let err = error instanceof Error ? error : new Error(String(error))
+    n.error = {queryId, message: err.message, stack: err.stack}
+    finish({error: n.error})
+    return
   }
+
+  // cache hit. Read data out of the browser cache
+  let hash = response.headers.get('ETag') || ''
+  if (response.status == 304) {
+    let body = await cacheRead(hash)
+    let result = translateData(body, n)
+    if (n.source) queryResults[n.source] = {rows: result.rows, fields: body.fields}
+    finish(result)
+    return
+  }
+
+  // cache miss. write data into the cache
+  if (response.ok) {
+    cacheWrite(hash, response.clone())
+    let body = await response.json()
+    let fields = body.fields
+    let result = translateData(body, n)
+    if (n.source) queryResults[n.source] = {rows: result.rows, fields}
+    finish(result)
+    return
+  }
+
+  // otherwise, the query failed
+  error = (await response.json()) as GrapheneError
+  error.queryId ||= queryId
+  n.error = error
+  finish({error: n.error})
 }
 
 function runAll() {
@@ -194,14 +211,14 @@ export function translateData(data: any, node: QueryNode) {
 const isQueryLoading = () => !!queries.find(q => q.loading)
 
 errorProvider('queryEngine', () => {
-  let unique = {}
+  let unique: Record<string, GrapheneError> = {}
   queries
-    .flatMap(q => q.errors)
-    .filter(q => !!q)
-    .forEach(e => {
-      unique[e.message + String((e as any).from?.lineText)] = e
+    .map(q => q.error)
+    .filter(e => !!e)
+    .forEach(error => {
+      unique[`${error.queryId}|${error.message}|${error.frame || ''}`] = error
     })
-  return Object.values(unique) as Error[]
+  return Object.values(unique)
 })
 
 function evidenceType(type: string | undefined) {
