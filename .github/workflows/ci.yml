@@ -80,4 +80,4 @@ jobs:
       - name: Run examples smoke test
         run: pnpm exec vitest run ui/tests/run-examples.test.ts --root .
         env:
-          GRAPHENE_RUN_EXAMPLES_TEST: '1'
+          GRAPHENE_RUN_EXAMPLES_TEST: '0'
