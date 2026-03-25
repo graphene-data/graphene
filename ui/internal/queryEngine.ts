@@ -2,6 +2,7 @@
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
+import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
 
 interface QueryResult {
@@ -28,7 +29,6 @@ interface QueryNode {
 }
 
 let runPending: Promise<void> | null = null
-let params = {} as Record<string, any>
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 
@@ -38,11 +38,6 @@ function registerQuery(name: string, contents: string) {
 }
 
 const getRoutePath = () => (typeof window === 'undefined' ? '/' : window.location.pathname || '/')
-
-function updateParam(name: string, value: any) {
-  params[name] = value
-  runAll() // for now, do the easy thing and reload it all
-}
 
 function query(source: string, fields: Record<string, string | string[]>, callback: ResultHandler) {
   // using Map here because it preserves the order in which we add fields to the select, which we use when we get the result.
@@ -66,9 +61,9 @@ function unsubscribe(callback: ResultHandler) {
 }
 
 function resetQueryEngine() {
-  params = {}
   queries = []
-  queryResults = {}
+  Object.keys(queryResults).forEach(key => delete queryResults[key])
+  getActivePageInputs().reset()
 }
 
 async function runNode(n: QueryNode) {
@@ -82,6 +77,7 @@ async function runNode(n: QueryNode) {
   let gsql = [...tables.map(q => `table ${q.name} as (${q.contents})`), n.contents].join('\n')
 
   try {
+    let params = getActivePageInputs().getParams()
     let response = await fetch('/_api/query', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -219,11 +215,16 @@ function evidenceType(type: string | undefined) {
 
 if (typeof window !== 'undefined') {
   Object.assign(window.$GRAPHENE, {
+    getParam: (name: string) => getActivePageInputs().getParam(name),
     registerQuery,
-    updateParam,
+    subscribeParams: subscriber => getActivePageInputs().subscribeParams(subscriber),
+    syncParamsFromUrl: () => getActivePageInputs().syncFromUrl(),
+    updateParam: (name: string, value: any) => getActivePageInputs().updateParam(name, value),
+    updateParams: (nextParams: Record<string, any>) => getActivePageInputs().updateParams(nextParams),
     query,
     unsubscribe,
     resetQueryEngine,
+    rerunQueries: runAll,
     isQueryLoading,
     queryResults,
   })

@@ -1,8 +1,14 @@
-<script>
+<script lang="ts">
+  import {onDestroy} from 'svelte'
   import {errorProvider} from './telemetry.ts'
+  import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
   import navFiles from 'virtual:nav'
   import NavSidebar from './NavSidebar.svelte'
   import ErrorDisplay from './ErrorDisplay.svelte'
+
+  let pageInputs = activatePageInputs(new PageInputs())
+  setPageInputsContext(pageInputs)
+  onDestroy(() => releasePageInputs(pageInputs))
 
   // Nav sidebar with HMR support for the virtual file list
   let navData = $state(navFiles)
