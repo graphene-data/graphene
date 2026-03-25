@@ -1,6 +1,6 @@
 ---
 name: infra
-description: Use when working with staging/production infrastructure, including terraform, aws, and database access.
+description: Use when working with or deploying to staging/production infrastructure, including terraform, aws, and database access.
 ---
 
 # Infrastructure Guide

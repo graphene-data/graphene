@@ -48,7 +48,7 @@ resource "stytch_b2b_sdk_config" "prod" {
       pkce_required_for_password_resets = true
     }
     magic_links = {
-      enabled       = false
+      enabled       = true
       pkce_required = true
     }
     oauth = {
@@ -111,7 +111,7 @@ resource "stytch_b2b_sdk_config" "test" {
       pkce_required_for_password_resets = true
     }
     magic_links = {
-      enabled       = false
+      enabled       = true
       pkce_required = true
     }
     oauth = {
