@@ -23,12 +23,6 @@ importers:
       '@types/node':
         specifier: ^22.19.7
         version: 22.19.15
-      '@volar/language-server':
-        specifier: ^2.4.28
-        version: 2.4.28
-      '@volar/language-service':
-        specifier: ^2.4.28
-        version: 2.4.28
       dotenv:
         specifier: ^17.2.3
         version: 17.3.1
@@ -56,15 +50,6 @@ importers:
       vitest:
         specifier: 4.0.18
         version: 4.0.18(@types/node@22.19.15)
-      vscode-languageserver:
-        specifier: ^9.0.1
-        version: 9.0.1
-      vscode-languageserver-protocol:
-        specifier: ^3.17.5
-        version: 3.17.5
-      vscode-languageserver-textdocument:
-        specifier: ^1.0.12
-        version: 1.0.12
       vscode-uri:
         specifier: ^3.1.0
         version: 3.1.0
