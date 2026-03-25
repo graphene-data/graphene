@@ -1,6 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
+  import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
     name: string
@@ -27,13 +28,15 @@
   let mounted = false
   let queryKey = ''
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
+  let pageInputs = getPageInputs()
+  let field = captureInitial(() => pageInputs.dateRange(name))
 
   let domainStart: string | null = $state(null)
   let domainEnd: string | null = $state(null)
 
   let currentStart: string | null = $state(null)
   let currentEnd: string | null = $state(null)
-  let currentPreset: string = $state('')
+  let currentPreset: string | null = $state(null)
   let touched = false
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
@@ -46,16 +49,16 @@
 
   onMount(() => {
     mounted = true
-    currentStart = normalizeInput(start)
-    currentEnd = normalizeInput(end)
-    if (defaultValue && presetList.includes(defaultValue)) {
-      applyPreset(defaultValue, false)
-    } else {
-      updateParams()
-    }
+    currentStart = field.hasExternalValue ? field.value.start : normalizeInput(start)
+    currentEnd = field.hasExternalValue ? field.value.end : normalizeInput(end)
+    currentPreset = inferPreset(currentStart, currentEnd)
+    if (field.hasExternalValue) updateParams()
+    else if (defaultValue && presetList.includes(defaultValue)) applyPreset(defaultValue, false)
+    else updateParams()
     refreshQuery()
     return () => {
       mounted = false
+      field.destroy()
       if (queryHandler) {
         window.$GRAPHENE?.unsubscribe?.(queryHandler)
         queryHandler = null
@@ -65,6 +68,12 @@
 
   $effect(() => {
     refreshQuery()
+  })
+
+  $effect(() => {
+    if (currentStart === field.value.start && currentEnd === field.value.end) return
+    if (!mounted) return
+    setRange(field.value.start, field.value.end, inferPreset(field.value.start, field.value.end), {persist: false})
   })
 
   function refreshQuery() {
@@ -86,13 +95,15 @@
       values.sort()
       domainStart = values[0]
       domainEnd = values[values.length - 1]
-      if (!touched) {
+      if (field.hasExternalValue) {
+        currentPreset = inferPreset(currentStart, currentEnd)
+      } else if (!touched) {
         if (defaultValue && presetList.includes(defaultValue)) {
           applyPreset(defaultValue, false)
         } else {
           let startCandidate = currentStart ?? domainStart
           let endCandidate = currentEnd ?? (domainEnd ? addDaysString(domainEnd, 1) : null)
-          setRange(startCandidate, endCandidate, currentPreset, false)
+          setRange(startCandidate, endCandidate, currentPreset, {markTouched: false, persist: true})
         }
       }
     }
@@ -149,27 +160,48 @@
     return copy
   }
 
-  function setRange(startValue: string | null, endValue: string | null, preset: string, markTouched: boolean) {
+  // We only persist start/end in URL state, so the preset label is inferred by matching
+  // the current range against the configured preset definitions.
+  function inferPreset(startValue: string | null, endValue: string | null): string | null {
+    if (!startValue && !endValue) return null
+    let baseEnd = (() => {
+      if (endValue) {
+        let parsed = new Date(endValue)
+        if (!Number.isNaN(parsed.getTime())) return addDays(parsed, -1)
+      }
+      if (domainEnd) return new Date(domainEnd)
+      return new Date()
+    })()
+    if (Number.isNaN(baseEnd.getTime())) return null
+    for (let preset of presetList) {
+      let range = computePresetRange(preset, baseEnd)
+      let presetStart = range?.start ? formatDate(range.start) : null
+      let presetEnd = range?.end ? formatDate(range.end) : null
+      if (presetStart === startValue && presetEnd === endValue) return preset
+    }
+    return null
+  }
+
+  function setRange(startValue: string | null, endValue: string | null, preset: string | null, {markTouched = false, persist = true}: {markTouched?: boolean; persist?: boolean} = {}) {
     currentStart = startValue
     currentEnd = endValue
     currentPreset = preset
     if (markTouched) touched = true
-    updateParams()
+    if (persist) updateParams()
   }
 
   function updateParams() {
-    window.$GRAPHENE.updateParam(`${name}_start`, currentStart)
-    window.$GRAPHENE.updateParam(`${name}_end`, currentEnd)
+    field.set({start: currentStart, end: currentEnd})
   }
 
   function onStartChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
-    setRange(value, currentEnd, '', true)
+    setRange(value, currentEnd, null, {markTouched: true, persist: true})
   }
 
   function onEndChange(event: Event) {
     let value = (event.currentTarget as HTMLInputElement).value || null
-    setRange(currentStart, value, '', true)
+    setRange(currentStart, value, null, {markTouched: true, persist: true})
   }
 
   function applyPreset(preset: string, markTouched = true) {
@@ -183,7 +215,7 @@
     if (!range) return
     let startVal = range.start ? formatDate(range.start) : null
     let endVal = range.end ? formatDate(range.end) : null
-    setRange(startVal, endVal, preset, markTouched)
+    setRange(startVal, endVal, preset, {markTouched, persist: true})
   }
 
   function computePresetRange(preset: string, baseEndInclusive: Date): {start: Date | null; end: Date | null} | null {
@@ -257,7 +289,7 @@
   function onPresetChange(event: Event) {
     let value = (event.currentTarget as HTMLSelectElement).value
     if (!value) {
-      currentPreset = ''
+      currentPreset = null
       touched = true
       return
     }

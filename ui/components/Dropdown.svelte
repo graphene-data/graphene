@@ -2,6 +2,7 @@
   import {onMount, setContext, tick, type Snippet} from 'svelte'
   import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
   import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
+  import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Option {
     value: any
@@ -42,6 +43,8 @@
   let touched = false
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
+  let pageInputs = getPageInputs()
+  let field = captureInitial(() => pageInputs.dropdown(name, toBoolean(multiple)))
 
   let isOpen = $state(false)
   let searchTerm = $state('')
@@ -102,6 +105,12 @@
 
   $effect(() => {
     if (isOpen) activeIndex = ensureActiveIndex(activeIndex, filteredOptions)
+  })
+
+  $effect(() => {
+    if (!sameSelection(selection, field.value)) {
+      setSelection(field.value, {persist: false})
+    }
   })
 
   function setupQuery() {
@@ -273,12 +282,12 @@
       let exists = selection.some(val => optionKey(val) === key)
       if (exists) {
         let next = selection.filter(val => optionKey(val) !== key)
-        setSelection(next, true)
+        setSelection(next, {fromUser: true, persist: true})
       } else {
-        setSelection([...selection, opt.value], true)
+        setSelection([...selection, opt.value], {fromUser: true, persist: true})
       }
     } else {
-      setSelection([opt.value], true)
+      setSelection([opt.value], {fromUser: true, persist: true})
       closeMenu(fromKeyboard)
     }
   }
@@ -295,8 +304,11 @@
 
   onMount(() => {
     mounted = true
-    let defaults = ensureArray(defaultValue)
-    if (!hasNoDefault && defaults.length) setSelection(defaults, false)
+    if (field.hasExternalValue) setSelection(field.value, {persist: false})
+    else {
+      let defaults = ensureArray(defaultValue)
+      if (!hasNoDefault && defaults.length) setSelection(defaults, {persist: true})
+    }
     syncSelection(false)
     setupQuery()
     if (typeof document !== 'undefined') {
@@ -305,6 +317,7 @@
     }
     return () => {
       mounted = false
+      field.destroy()
       if (queryHandler) {
         window.$GRAPHENE?.unsubscribe?.(queryHandler)
         queryHandler = null
@@ -327,6 +340,8 @@
   })
 
   function syncSelection(fromUser: boolean) {
+    // Reconcile persisted selection with the current option set, while keeping external values
+    // authoritative and only applying defaults/select-all before the user has interacted.
     let opts = availableOptions
     if (!opts.length) {
       // Keep the bound param initialized even before options load.
@@ -337,7 +352,9 @@
     let nextSelection = selection.filter(val => valueMap.has(optionKey(val)))
     if (!fromUser) {
       let defaults = ensureArray(defaultValue)
-      if (multi && selectAllDefault) {
+      if (field.hasExternalValue) {
+        nextSelection = nextSelection
+      } else if (multi && selectAllDefault) {
         nextSelection = opts.map(o => o.value)
       } else if (!touched) {
         if (defaults.length && !hasNoDefault) {
@@ -347,36 +364,36 @@
         }
       }
     }
-    setSelection(nextSelection, fromUser)
+    setSelection(nextSelection, {fromUser, persist: true})
   }
 
-  function setSelection(values: any[], fromUser: boolean) {
-    let keys = values.map(optionKey)
-    let existingKeys = selection.map(optionKey)
-    let changed = keys.length !== existingKeys.length || keys.some((k, idx) => k !== existingKeys[idx])
-    if (!changed) {
-      if (!fromUser) updateInputPayload(selection)
+  function sameSelection(left: any[], right: any[]) {
+    let leftKeys = left.map(optionKey)
+    let rightKeys = right.map(optionKey)
+    return leftKeys.length === rightKeys.length && leftKeys.every((key, index) => key === rightKeys[index])
+  }
+
+  function setSelection(values: any[], {fromUser = false, persist = true}: {fromUser?: boolean; persist?: boolean} = {}) {
+    if (sameSelection(values, selection)) {
+      if (persist && !fromUser) updateInputPayload(selection)
       return
     }
     selection = values
     if (fromUser) touched = true
-    updateInputPayload(selection)
+    if (persist) updateInputPayload(selection)
   }
 
   function updateInputPayload(values: any[]) {
-    let paramValue = null
-    if (multi) paramValue = values.length ? [...values] : null
-    else paramValue = values.length ? values[0] : null
-    window.$GRAPHENE.updateParam(name, paramValue)
+    field.set(values)
   }
 
   function selectAll() {
     if (!multi) return
-    setSelection(availableOptions.map(opt => opt.value), true)
+    setSelection(availableOptions.map(opt => opt.value), {fromUser: true, persist: true})
   }
 
   function clearSelection() {
-    setSelection([], true)
+    setSelection([], {fromUser: true, persist: true})
   }
 
   let elementId = $derived(`dropdown-${name}`)

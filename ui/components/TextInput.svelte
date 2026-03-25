@@ -1,5 +1,7 @@
 <script lang="ts">
+  import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
+  import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
     name: string
@@ -17,16 +19,16 @@
     placeholder = 'Type to search', defaultValue = undefined, hideDuringPrint = true, unsafe = false,
   }: Props = $props()
 
-  // svelte-ignore state_referenced_locally - intentionally capturing initial value only
-  let value = $state(defaultValue ?? '')
+  let pageInputs = getPageInputs()
+  let field = captureInitial(() => pageInputs.text(name))
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
   let allowUnsafe = $derived(toBoolean(unsafe))
   let displayLabel = $derived(title || label)
 
-  // Push value changes to parent
-  $effect(() => {
-    pushValue(value)
+  onMount(() => {
+    if (!field.hasExternalValue) field.set(defaultValue ?? '')
+    return () => field.destroy()
   })
 
   function sanitize(input: string): string {
@@ -36,14 +38,12 @@
 
   function pushValue(input: string) {
     let trimmed = input ?? ''
-    let _safe = sanitize(trimmed)
-    let paramValue = trimmed === '' ? null : trimmed
-    window.$GRAPHENE.updateParam(name, paramValue)
+    sanitize(trimmed)
+    field.set(trimmed)
   }
 
   function onInput(event: Event) {
-    value = (event.currentTarget as HTMLInputElement).value
-    pushValue(value)
+    pushValue((event.currentTarget as HTMLInputElement).value)
   }
 </script>
 
@@ -58,7 +58,7 @@
     id={`text-input-${name}`}
     class="text-input"
     type="text"
-    value={value}
+    value={field.value}
     placeholder={placeholder}
     oninput={onInput}
   />
