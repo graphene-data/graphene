@@ -35,8 +35,8 @@ test('check defaults to analyzing the whole workspace', async () => {
   expect(outputLines()).toEqual(
     `
     ERROR: tmp_bad.gsql line 2: Unknown function: not_a_function
-   |   from flights select not_a_function()
-   |                       ^^^^^^^^^^^^^^^^
+  from flights select not_a_function()
+                      ^^^^^^^^^^^^^^^^
   `.trim(),
   )
 })

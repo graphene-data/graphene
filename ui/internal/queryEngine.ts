@@ -31,6 +31,17 @@ interface QueryNode {
   error?: GrapheneError
 }
 
+function normalizeQueryError(body: unknown, queryId: string): GrapheneError {
+  if (Array.isArray(body)) {
+    let first = body[0]
+    if (first && typeof first === 'object') return {...(first as GrapheneError), queryId: (first as GrapheneError).queryId || queryId}
+    return {queryId, message: 'Unknown error'}
+  }
+  if (body && typeof body === 'object') return {...(body as GrapheneError), queryId: (body as GrapheneError).queryId || queryId}
+  if (typeof body === 'string') return {queryId, message: body}
+  return {queryId, message: 'Unknown error'}
+}
+
 let runPending: Promise<void> | null = null
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
@@ -138,8 +149,7 @@ async function runNode(n: QueryNode) {
   }
 
   // otherwise, the query failed
-  error = (await response.json()) as GrapheneError
-  error.queryId ||= queryId
+  error = normalizeQueryError(await response.json(), queryId)
   n.error = error
   finish({error: n.error})
 }
