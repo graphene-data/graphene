@@ -13,7 +13,7 @@ export const loginUrl = import.meta.env.DEV ? `${window.location.origin}/login` 
 
 let _client: StytchB2BUIClient | null = null
 
-export function authClient() {
+export function authClient(): StytchB2BUIClient {
   if (_client) return _client
   if (import.meta.env.MODE == 'test' && import.meta.env.VITE_STYTCH_USE_MOCK) {
     _client = new MockClient() as StytchB2BUIClient

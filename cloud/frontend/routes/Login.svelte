@@ -1,56 +1,84 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {go} from '../router.ts'
-  import {authClient, session, AuthFlowType, StytchEventType, loginUrl, baseDomain} from '../authClient.ts'
+  import {authClient, session, AuthFlowType, loginUrl, baseDomain} from '../authClient.ts'
 
-  let {mode = 'login'}: {mode?: 'login' | 'authenticate'} = $props()
+  let container: HTMLElement
+  let stytch = authClient()
+  let url = new URL(window.location.href)
+  let isAuth = url.pathname === '/authenticate'
+  let isPkceFlow = isAuth &&
+    url.searchParams.has('client_id') &&
+    url.searchParams.has('redirect_uri') &&
+    (url.searchParams.has('code_challenge') || url.searchParams.get('response_type') === 'code')
 
   onMount(() => {
-    let stytch = authClient()
+    // If you're trying to cli/mcp auth, but you're not logged in, you need to do that first
+    if (isPkceFlow && !$session) mountLoginFlow()
 
-    if (mode === 'authenticate') {
-      stytch.mountIdentityProvider({elementId: '#stytch-login'})
-    } else {
-      let url = new URL(window.location.href)
+    // if this is an auth flow, mount the auth componenent
+    else if (isAuth) mountIdentityFlow()
 
-      stytch.mount({
-        elementId: '#stytch-login',
-        callbacks: {
-          onEvent: e => {
-            if (e.type == StytchEventType.AuthenticateFlowComplete) {
-              let stytchSession = stytch.session.getSync()
-              session.set(stytchSession)
-
-              let orgSlug = stytchSession?.organization_slug
-              let next = url.searchParams.get('next') || '/'
-
-              if (orgSlug && !window.location.hostname.includes('localhost')) {
-                window.location.href = `https://${orgSlug}.${baseDomain}${next}`
-              } else {
-                go(next)
-              }
-            }
-          },
-        },
-        config: {
-          authFlowType: AuthFlowType.Discovery,
-          sessionOptions: {sessionDurationMinutes: 60 * 24 * 30},
-          products: ['passwords'],
-          passwordOptions: {resetPasswordRedirectURL: loginUrl},
-          // Auto-login if user is only a member of one organization
-          directLoginForSingleMembership: {
-            status: true,
-            ignoreInvites: true,
-            ignoreJitProvisioning: true,
-          },
-        },
-      })
-    }
+    // otherwise, mount login
+    else mountLoginFlow()
   })
+
+  function mountIdentityFlow() {
+    // eslint-disable-next-line svelte/no-dom-manipulating
+    container.replaceChildren()
+    stytch.mountIdentityProvider({elementId: '#stytch-login'})
+  }
+
+  function mountLoginFlow() {
+    // eslint-disable-next-line svelte/no-dom-manipulating
+    container.replaceChildren()
+
+    stytch.mount({
+      elementId: '#stytch-login',
+      callbacks: {
+        onEvent: onLoginEvent,
+      },
+      config: {
+        authFlowType: AuthFlowType.Discovery,
+        sessionOptions: {sessionDurationMinutes: 60 * 24 * 30},
+        products: ['passwords'],
+        passwordOptions: {resetPasswordRedirectURL: loginUrl},
+        // Auto-login if user is only a member of one organization
+        directLoginForSingleMembership: {
+          status: true,
+          ignoreInvites: true,
+          ignoreJitProvisioning: true,
+        },
+      },
+    })
+  }
+
+  function onLoginEvent() {
+    let newSession = stytch.session.getSync()
+    if (!newSession) return
+    session.set(newSession)
+
+    if (newSession && isPkceFlow) {
+      // if you're doing pkce, after login you still need to auth the client
+      mountIdentityFlow()
+    } else {
+      // otherwise, go to the `next` url if present, otherwise the homepage
+      let orgSlug = newSession.organization_slug
+      let next = url.searchParams.get('next') || '/'
+
+      // make sure the `next` url points to the right subdomain.
+      // The exception is localhost dev, where the org technically has a slug but we dont use it.
+      if (orgSlug && !window.location.hostname.includes('localhost')) {
+        next = `https://${orgSlug}.${baseDomain}${next}`
+      }
+
+      go(next)
+    }
+  }
 </script>
 
 <section class="login-screen">
-  <div id="stytch-login" class="login-shell"></div>
+  <div bind:this={container} id="stytch-login" class="login-shell"></div>
 </section>
 
 <style>
