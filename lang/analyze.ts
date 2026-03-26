@@ -94,7 +94,7 @@ export function findTables(fi: FileInfo) {
 
     let hasNamespace = name.includes('.')
     let tablePath = !hasNamespace && config.defaultNamespace ? `${config.defaultNamespace}.${name}` : name
-    let type = syntaxNode.getChild('QueryStatement') ? 'view' : ('table' as const)
+    let type = syntaxNode.getChild('QueryExpression') ? 'view' : ('table' as const)
     let table = {name, type, tablePath, columns: [], joins: [], metadata: extractLeadingMetadata(syntaxNode), syntaxNode} as Table
     Object.assign(table, addSymbol('table', refNode, name))
 
@@ -165,7 +165,7 @@ function analyzeView(table: Table) {
   if (table.analyzed) return
   table.analyzed = true
 
-  let query = analyzeQuery(table.syntaxNode!.getChild('QueryStatement')!)
+  let query = analyzeQuery(table.syntaxNode!.getChild('QueryExpression')!)
   if (!query) return
 
   let viewCols = query.fields.map(f => {
@@ -242,17 +242,21 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
 
 // Main query analysis - analyzes and returns a Query with computed SQL
 export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
-  let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: []}
+  if (queryNode.name == 'QueryStatement') queryNode = queryNode.getChild('QueryExpression')!
+  if (queryNode.name == 'QueryExpression') return analyzeQueryExpression(queryNode, outerCtes)
+  return analyzeQueryExpression(queryNode.getChild('QueryExpression') || queryNode, outerCtes)
+}
+
+function analyzeQueryExpression(queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
   let ctes = new Map<string, CteTable>()
-  let scope: Scope = {query, alias: '', fanoutPath: [], otherTables: outerCtes || []}
-  let isAgg = false
-  let fanoutExprs: {node: SyntaxNode; expr: Expr}[] = []
+  let otherTables = [...(outerCtes || [])]
+  let scope: Scope = {alias: '', fanoutPath: [], otherTables}
 
   // WITH clause - analyze each CTE. Store them on Scope, as they're accessible to later CTEs, and valid tables for the query to from/join
   let withClauses = queryNode.getChild('WithClause')?.getChildren('CteDef') || []
   for (let cteDef of withClauses) {
     let name = txt(cteDef.getChild('Alias'))
-    let query = analyzeQuery(cteDef.getChild('QueryStatement')!, scope.otherTables)
+    let query = analyzeQuery(cteDef.getChild('QueryExpression')!, scope.otherTables)
     if (!query) return
     let columns = query.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
     let cte: CteTable = {name, type: 'cte', tablePath: name, columns, joins: [], query}
@@ -260,9 +264,25 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
     scope.otherTables!.push(cte)
   }
 
+  let queryBody = queryNode.getChild('QueryBody')
+  if (!queryBody) return diag(queryNode, 'Invalid query')
+  return analyzeQueryBody(queryBody, scope, ctes)
+}
+
+function analyzeQueryBody(queryNode: SyntaxNode, scope: Scope, ctes: Map<string, CteTable>): Query | void {
+  if (queryNode.getChildren('SetClause').length) return analyzeSetQuery(queryNode, scope, ctes)
+  return analyzeSimpleQuery(queryNode.getChild('SimpleQuery')!, queryNode, scope, ctes)
+}
+
+function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, parentScope: Scope, ctes: Map<string, CteTable>): Query | void {
+  let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: []}
+  let scope: Scope = {...parentScope, query}
+  let isAgg = false
+  let fanoutExprs: {node: SyntaxNode; expr: Expr}[] = []
+
   // FROM / JOIN
   // We represent both as `joins` on the query, since they're conceptually similar for most of analysis
-  let fromClause = queryNode.getChild('FromClause')
+  let fromClause = simpleNode.getChild('FromClause')
   let sources: SyntaxNode[] = fromClause ? [fromClause, ...fromClause.getChildren('JoinClause')] : []
   for (let sourceNode of sources) {
     let isJoin = sourceNode.name == 'JoinClause'
@@ -281,7 +301,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
 
     // or it could be a subquery
     if (tablePrimary.getChild('SubqueryExpression')) {
-      let subquery = analyzeQuery(tablePrimary.getChild('SubqueryExpression')!.getChild('QueryStatement')!, scope.otherTables)
+      let subquery = analyzeQuery(tablePrimary.getChild('SubqueryExpression')!.getChild('QueryExpression')!, scope.otherTables)
       if (!subquery) return
       let columns = subquery.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
       table = {name: 'subquery', type: 'subquery', tablePath: alias, columns, joins: [], query: subquery}
@@ -307,8 +327,8 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   }
 
   // SELECT clause
-  let selects = queryNode.getChild('SelectClause')?.getChildren('SelectItem') || []
-  let isDistinct = !!txt(queryNode.getChild('SelectClause')).toLowerCase().startsWith('select distinct')
+  let selects = simpleNode.getChild('SelectClause')?.getChildren('SelectItem') || []
+  let isDistinct = !!txt(simpleNode.getChild('SelectClause')).toLowerCase().startsWith('select distinct')
 
   for (let s of selects) {
     if (s.getChild('Wildcard')) {
@@ -341,8 +361,8 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   }
 
   // WHERE / HAVING - we allow aggregate filters in WHERE (moved to HAVING automatically)
-  let whereNode = queryNode.getChild('WhereClause')?.getChild('Expression')
-  let havingNode = queryNode.getChild('HavingClause')?.getChild('Expression')
+  let whereNode = simpleNode.getChild('WhereClause')?.getChild('Expression')
+  let havingNode = simpleNode.getChild('HavingClause')?.getChild('Expression')
   for (let node of [whereNode, havingNode]) {
     if (!node) continue
     for (let expr of unpackAnds(node, scope)) {
@@ -352,7 +372,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   }
 
   // GROUP BY - adds fields if not already selected
-  let groupBys = queryNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
+  let groupBys = simpleNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
   for (let g of groupBys) {
     let exprNode = g.getChild('Expression')!
     let alias = txt(g.getChild('Alias'))
@@ -385,20 +405,7 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   }
 
   // ORDER BY
-  let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
-  let orderBy: {idx: number; desc: boolean}[] = []
-  for (let o of orderBys) {
-    let fieldRef = txt(o.getChild('Identifier')) || txt(o.getChild('Number'))
-    let desc = txt(o.getChild('Kw')).toLowerCase() == 'desc'
-    let idx = Number(fieldRef) || query.fields.findIndex(f => f.name == fieldRef) + 1
-    if (idx > 0) orderBy.push({idx, desc})
-    else if (fieldRef && isNaN(Number(fieldRef))) diag(o, `Unknown field in ORDER BY: ${fieldRef}`)
-  }
-
-  // LIMIT
-  let limitNodes = queryNode.getChild('LimitClause')?.getChildren('Number') || []
-  let limit = limitNodes[0] ? Number(txt(limitNodes[0])) : undefined
-  if (limitNodes[1]) diag(limitNodes[1], 'OFFSET is not supported yet')
+  let {orderBy, limit} = analyzeOrderAndLimit(queryNode, query)
 
   // Implicit `select *` if nothing selected (only when we have a base table)
   let baseJoin = query.joins.find(j => j.source == 'from')
@@ -426,6 +433,66 @@ export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query 
   return query
 }
 
+function analyzeSetQuery(queryNode: SyntaxNode, scope: Scope, ctes: Map<string, CteTable>): Query | void {
+  let branches = [
+    {query: analyzeSimpleQuery(queryNode.getChild('SimpleQuery')!, queryNode.getChild('SimpleQuery')!, scope, new Map()), parenthesized: false},
+    ...queryNode.getChildren('SetOperand').map(node => analyzeSetOperand(node, scope)),
+  ]
+
+  let first = branches[0].query
+  if (!first) return
+  for (let branch of branches.slice(1)) {
+    if (!branch.query) return
+    if (branch.query.fields.length != first.fields.length) return diag(queryNode, 'Set operation branches must return the same number of columns')
+  }
+
+  let setOps = queryNode.getChildren('SetClause').map(node => node.getChild('SetOperator')!)
+  let query: Query = {
+    sql: '',
+    fields: first.fields.map(field => ({...field})),
+    joins: [],
+    filters: [],
+    groupBy: [],
+    orderBy: [],
+    setOp: txt(setOps[0]).toLowerCase() as Query['setOp'],
+    branches: branches as {query: Query; parenthesized?: boolean}[],
+  }
+
+  for (let opNode of setOps.slice(1)) {
+    let op = txt(opNode).toLowerCase()
+    if (op != query.setOp) return diag(opNode, 'Mixed set operators require parentheses')
+  }
+
+  let {orderBy, limit} = analyzeOrderAndLimit(queryNode, query)
+  query.orderBy = orderBy
+  query.limit = limit
+  query.sql = buildSql(query, ctes)
+  return query
+}
+
+function analyzeSetOperand(node: SyntaxNode, scope: Scope) {
+  let subqueryNode = node.getChild('SubqueryExpression')
+  if (subqueryNode) return {query: analyzeQuery(subqueryNode.getChild('QueryExpression')!, scope.otherTables), parenthesized: true}
+  return {query: analyzeSimpleQuery(node.getChild('SimpleQuery')!, node.getChild('SimpleQuery')!, scope, new Map()), parenthesized: false}
+}
+
+function analyzeOrderAndLimit(queryNode: SyntaxNode, query: Query) {
+  let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
+  let orderBy: {idx: number; desc: boolean}[] = []
+  for (let o of orderBys) {
+    let fieldRef = txt(o.getChild('Identifier')) || txt(o.getChild('Number'))
+    let desc = txt(o.getChild('Kw')).toLowerCase() == 'desc'
+    let idx = Number(fieldRef) || query.fields.findIndex(f => f.name == fieldRef) + 1
+    if (idx > 0) orderBy.push({idx, desc})
+    else if (fieldRef && isNaN(Number(fieldRef))) diag(o, `Unknown field in ORDER BY: ${fieldRef}`)
+  }
+
+  let limitNodes = queryNode.getChild('LimitClause')?.getChildren('Number') || []
+  let limit = limitNodes[0] ? Number(txt(limitNodes[0])) : undefined
+  if (limitNodes[1]) diag(limitNodes[1], 'OFFSET is not supported yet')
+  return {orderBy, limit}
+}
+
 // Assemble query parts into final SQL
 // Format a table path for the current dialect
 function formatTablePath(path: string): string {
@@ -436,6 +503,23 @@ function formatTablePath(path: string): string {
 
 function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
   let ctes: string[] = [...cteMap.values()].map(c => `${c.name} as ( ${c.query.sql} )`)
+
+  if (query.setOp) {
+    let branches = (query.branches || []).map(branch => {
+      let sql = branch.query.sql
+      return branch.parenthesized ? `( ${sql} )` : sql
+    })
+    let op = query.setOp!.toUpperCase()
+    let sql = branches.join(` ${op} `)
+    if (query.orderBy.length) {
+      let parts = query.orderBy.map(o => `${o.idx} ${o.desc ? 'desc' : 'asc'} NULLS LAST`)
+      sql += ` ORDER BY ${parts.join(',')}`
+    }
+    if (query.limit) sql += ` LIMIT ${query.limit}`
+    if (ctes.length) sql = `WITH ${ctes.join(', ')} ${sql}`
+    return sql
+  }
+
   let selectParts = query.fields.map(f => `${f.sql} as ${f.name}`)
   let baseJoin = query.joins.find(j => j.source == 'from')
 
@@ -719,7 +803,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let not = txt(node.getChild('Kw')).toLowerCase() == 'not'
       let e = analyzeExpr(node.firstChild!, scope)
       let valueList = node.getChild('InValueList')
-      let subqueryNode = node.getChild('QueryStatement')
+      let subqueryNode = node.getChild('QueryExpression')
       if (subqueryNode) {
         let subquery = analyzeQuery(subqueryNode, scope.otherTables)
         if (!subquery) return {sql: 'NULL', type: 'error'}
@@ -758,7 +842,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
     }
 
     case 'SubqueryExpression': {
-      let subquery = analyzeQuery(node.getChild('QueryStatement')!, scope.otherTables)
+      let subquery = analyzeQuery(node.getChild('QueryExpression')!, scope.otherTables)
       if (!subquery) return {sql: 'NULL', type: 'error'}
       if (subquery.fields.length != 1) return diag(node, 'Subquery expression must return exactly one column', {sql: 'NULL', type: 'error'})
       return {sql: `(${subquery.sql})`, type: subquery.fields[0].type}

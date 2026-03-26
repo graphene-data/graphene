@@ -52,6 +52,14 @@ describe('cli compile', () => {
     expect(res.stdout.toLowerCase()).toContain('select')
   })
 
+  it('compiles set operations', async () => {
+    let res = await runCli(['compile', 'select 1 as id union all select 2 as id'], flightDir)
+    expectCliSuccess(res, 'compile set operation')
+    expect(res.stdout.toLowerCase()).toContain('union all')
+    expect(res.stdout.toLowerCase()).toContain('select 1 as id')
+    expect(res.stdout.toLowerCase()).toContain('select 2 as id')
+  })
+
   it('errors on invalid function (error path)', async () => {
     let res = await runCli(['compile', 'from flights select not_a_function()'], flightDir)
     expect(res.code).not.toBe(0)

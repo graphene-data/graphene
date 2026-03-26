@@ -8,7 +8,34 @@ queryWithSemi {
 }
 
 QueryStatement {
-  WithClause? (FromClause | SelectClause | WhereClause | GroupByClause | HavingClause | OrderByClause | LimitClause)+
+  QueryExpression
+}
+
+QueryExpression {
+  WithClause? QueryBody
+}
+
+QueryBody {
+  SimpleQuery (SetClause SetOperand)+ OrderByClause? LimitClause? |
+  SimpleQuery OrderByClause? LimitClause?
+}
+
+SetOperand {
+  SimpleQuery | SubqueryExpression
+}
+
+SimpleQuery {
+  (FromClause | SelectClause | WhereClause | GroupByClause | HavingClause)+
+}
+
+SetClause {
+  SetOperator
+}
+
+SetOperator {
+  Kw<"union"> Kw<"all">? |
+  Kw<"intersect"> |
+  Kw<"except">
 }
 
 WithClause {
@@ -16,7 +43,7 @@ WithClause {
 }
 
 CteDef {
-  Alias Kw<"as"> "(" QueryStatement ")"
+  Alias Kw<"as"> "(" QueryExpression ")"
 }
 
 SelectClause {
@@ -81,7 +108,7 @@ TableStatement {
 }
 
 ViewStatement {
-  Kw<"table"> Ref Kw<"as"> "(" QueryStatement ")"
+  Kw<"table"> Ref Kw<"as"> "(" QueryExpression ")"
 }
 
 ExtendStatement {
@@ -259,7 +286,7 @@ ElseClause {
 }
 
 ExistsExpression {
-  Kw<"exists"> "(" QueryStatement ")"
+  Kw<"exists"> "(" QueryExpression ")"
 }
 
 InValueList {
@@ -298,8 +325,8 @@ MultiplyExpression[@isGroup=Expression]<T> {
 }
 
 InExpression[@isGroup=Expression]<T> {
-  addTier<T> !compare Kw<"in"> "(" (InValueList | QueryStatement) ")" |
-  addTier<T> !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryStatement) ")"
+  addTier<T> !compare Kw<"in"> "(" (InValueList | QueryExpression) ")" |
+  addTier<T> !compare Kw<"not"> Kw<"in"> "(" (InValueList | QueryExpression) ")"
 }
 
 BetweenExpression[@isGroup=Expression]<T> {
@@ -369,7 +396,7 @@ Parenthetical {
 }
 
 SubqueryExpression {
-  "(" QueryStatement ")"
+  "(" QueryExpression ")"
 }
 
 Ref {

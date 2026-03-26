@@ -40,9 +40,9 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 ### Special features
 - `group by all` is implied when aggregates exist, and does not need to be put in GSQL
 - Agg function `pXX(column)` computes the XXth percentile (e.g., p50, p975, p9999)
+- ANSI set operations `union`, `union all`, `intersect`, and `except` are supported
 
 ### Unsupported
-- Set operations (`union`, etc.)
 - Semi-structured data types (`VARIANT`, `OBJECT`, `ARRAY`)
 
 # Dashboards
