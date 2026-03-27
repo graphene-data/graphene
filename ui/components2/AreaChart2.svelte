@@ -63,7 +63,7 @@
       title: title ? {text: title, subtext: subtitle} : undefined,
       tooltip: {trigger: 'axis'},
       legend: {show: legend ?? (groupedSeries || yFields.length > 1)},
-      xAxis: {type: xType, data: x},
+      xAxis: {type: xType},
       yAxis: {type: 'value', max: type === 'stacked100' ? 1 : undefined},
       series: seriesTemplates,
     }
@@ -72,7 +72,7 @@
   function buildAreaTemplate(field: string, options: {name?: string; seriesField?: string; stack?: string}) {
     return {
       type: 'line',
-      data: field,
+      encode: {x, y: field},
       series: options.seriesField,
       name: options.name,
       stack: options.stack,

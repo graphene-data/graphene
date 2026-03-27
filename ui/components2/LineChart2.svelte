@@ -91,7 +91,6 @@
       grid: [{left: leftPadding, right: rightPadding}],
       xAxis: {
         type: xType,
-        data: x,
         splitLine: {show: parseBool(xGridlines)},
         axisTick: {show: parseBool(xTickMarks)},
         axisLine: {show: parseBool(xBaseline)},
@@ -115,7 +114,7 @@
   function buildLineTemplate(field: string, options: {seriesField?: string; name?: string; yAxisIndex: number}) {
     return {
       type: 'line',
-      data: field,
+      encode: {x, y: field},
       series: options.seriesField,
       name: options.name,
       yAxisIndex: options.yAxisIndex,

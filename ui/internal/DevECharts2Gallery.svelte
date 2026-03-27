@@ -221,8 +221,6 @@
     {name: 'value', evidenceType: 'number'},
   ]
 
-  let groupedQuarters = ['Q1', 'Q2', 'Q3']
-  let groupedValue = (region: string, channel: string, quarter: string) => groupedStackedRows.find(row => row.region === region && row.channel === channel && row.quarter === quarter)?.value ?? 0
   let sankeyNodes = Array.from(new Set(sankeyRows.flatMap(row => [row.source, row.target]))).map(name => ({name}))
   let qualityColor = (quality: number) => quality >= 68 ? '#1e3a8a' : quality >= 60 ? '#2563eb' : '#60a5fa'
 
@@ -238,9 +236,9 @@
     config={{
       title: {text: 'Line'},
       tooltip: {trigger: 'axis'},
-      xAxis: {data: 'month'},
+      xAxis: {type: 'time'},
       yAxis: {type: 'value'},
-      series: [{type: 'line', data: 'value'}],
+      series: [{type: 'line', encode: {x: 'month', y: 'value'}}],
     }}
   />
 
@@ -251,9 +249,9 @@
     config={{
       title: {text: 'Stacked Area'},
       tooltip: {trigger: 'axis'},
-      xAxis: {data: 'day'},
+      xAxis: {type: 'category'},
       yAxis: {type: 'value'},
-      series: [{type: 'line', stack: 'total', areaStyle: {}, data: 'value', series: 'metric'}],
+      series: [{type: 'line', stack: 'total', areaStyle: {}, encode: {x: 'day', y: 'value'}, series: 'metric'}],
     }}
   />
 
@@ -264,9 +262,9 @@
     config={{
       title: {text: 'Bar'},
       tooltip: {trigger: 'axis'},
-      xAxis: {data: 'quarter'},
+      xAxis: {type: 'category'},
       yAxis: {type: 'value'},
-      series: [{type: 'bar', data: 'value', series: 'metric'}],
+      series: [{type: 'bar', encode: {x: 'quarter', y: 'value'}, series: 'metric'}],
     }}
   />
 
@@ -277,9 +275,9 @@
     config={{
       title: {text: 'Scatter'},
       tooltip: {trigger: 'item'},
-      xAxis: {type: 'value', data: 'x'},
+      xAxis: {type: 'value'},
       yAxis: {type: 'value'},
-      series: [{type: 'scatter', data: 'y', series: 'group'}],
+      series: [{type: 'scatter', encode: {x: 'x', y: 'y'}, series: 'group'}],
     }}
   />
 
@@ -291,13 +289,15 @@
       title: {text: 'Grouped + Stacked Bar'},
       tooltip: {trigger: 'axis'},
       legend: {},
-      xAxis: {type: 'category', data: groupedQuarters},
+      xAxis: {type: 'category'},
       yAxis: {type: 'value'},
+      dataset: [
+        {id: 'north_only', fromDatasetId: '__graphene_base', transform: {type: 'filter', config: {dimension: 'region', '=': 'North'}}},
+        {id: 'south_only', fromDatasetId: '__graphene_base', transform: {type: 'filter', config: {dimension: 'region', '=': 'South'}}},
+      ],
       series: [
-        {name: 'North / Online', type: 'bar', stack: 'north', data: groupedQuarters.map(q => groupedValue('North', 'Online', q))},
-        {name: 'North / Retail', type: 'bar', stack: 'north', data: groupedQuarters.map(q => groupedValue('North', 'Retail', q))},
-        {name: 'South / Online', type: 'bar', stack: 'south', data: groupedQuarters.map(q => groupedValue('South', 'Online', q))},
-        {name: 'South / Retail', type: 'bar', stack: 'south', data: groupedQuarters.map(q => groupedValue('South', 'Retail', q))},
+        {type: 'bar', stack: 'north', datasetId: 'north_only', encode: {x: 'quarter', y: 'value'}, series: 'channel'},
+        {type: 'bar', stack: 'south', datasetId: 'south_only', encode: {x: 'quarter', y: 'value'}, series: 'channel'},
       ],
     }}
   />
@@ -310,7 +310,7 @@
     config={{
       title: {text: 'Pie'},
       tooltip: {trigger: 'item'},
-      series: [{type: 'pie', data: 'value'}],
+      series: [{type: 'pie', encode: {itemName: 'channel', value: 'value'}}],
     }}
   />
 
@@ -357,7 +357,7 @@
     config={{
       title: {text: 'Funnel'},
       tooltip: {trigger: 'item'},
-      series: [{type: 'funnel', data: 'value'}],
+      series: [{type: 'funnel', encode: {itemName: 'stage', value: 'value'}}],
     }}
   />
 
@@ -368,7 +368,7 @@
     config={{
       title: {text: 'Treemap'},
       tooltip: {trigger: 'item'},
-      series: [{type: 'treemap', data: 'value'}],
+      series: [{type: 'treemap', encode: {itemName: 'name', value: 'value'}}],
     }}
   />
 
@@ -384,7 +384,7 @@
       title: {text: 'Theme River'},
       tooltip: {trigger: 'axis'},
       singleAxis: {type: 'time'},
-      series: [{type: 'themeRiver', data: 'value', series: 'topic'}],
+      series: [{type: 'themeRiver', encode: {single: 'month', value: 'value', seriesName: 'topic'}, series: 'topic'}],
     }}
   />
 

@@ -10,7 +10,7 @@
     y2?: string
     group?: string
     stack?: string | boolean
-    labels?: boolean | string
+    label?: boolean | string
     title?: string
     height?: string | number
     width?: string | number
@@ -23,7 +23,7 @@
     y2 = undefined,
     group = undefined,
     stack = false,
-    labels = false,
+    label = false,
     title = undefined,
     height = '240px',
     width = '100%',
@@ -34,26 +34,29 @@
     let xFieldType = getFieldType(fields, x)
     let yFieldType = yFields.length === 1 ? getFieldType(fields, yFields[0]) : 'number'
     let horizontal = yFields.length === 1 && isNumericOrDate(xFieldType) && yFieldType !== 'number'
-
-    let categoryField = horizontal ? yFields[0] : x
-    let valueField = horizontal ? x : y
-    let valueAxisType = horizontal && xFieldType === 'date' ? 'time' : 'value'
+    let grouped = Boolean(group && yFields.length === 1)
     let stackKey = resolveStack(stack)
 
-    let series = group && yFields.length === 1
-      ? [{type: 'bar', data: yFields[0], series: group, stack: stackKey, label: parseBool(labels) ? {show: true} : undefined}]
-      : yFields.map(field => ({type: 'bar', data: field, name: field, stack: stackKey, label: parseBool(labels) ? {show: true} : undefined}))
+    let series = grouped
+      ? [{type: 'bar', encode: {x, y: yFields[0]}, series: group, stack: stackKey, label: label ? {show: true} : undefined}]
+      : yFields.map(field => ({type: 'bar', name: field, stack: stackKey, encode: {x, y: field}, label: barLabel}))
 
-    if (y2) series.push({type: 'line', data: y2, name: y2, yAxisIndex: 1})
+    if (y2) {
+      let encode = horizontal ? {x: y2, y: yFields[0]} : {x, y: y2}
+      series.push({type: 'line', name: y2, yAxisIndex: 1, encode})
+    }
+
+    let xAxis = horizontal ? {type: xFieldType === 'date' ? 'time' : 'value'} : {type: 'category'}
+    let yAxis = horizontal
+      ? [{type: 'category'}, ...(y2 ? [{type: 'value'}] : [])]
+      : [{type: 'value'}, ...(y2 ? [{type: 'value'}] : [])]
 
     return {
       title: title ? {text: title} : undefined,
       tooltip: {trigger: 'axis'},
-      legend: {show: Boolean(group || yFields.length > 1 || y2)},
-      xAxis: horizontal ? {type: valueAxisType} : {type: 'category', data: categoryField},
-      yAxis: horizontal
-        ? [{type: 'category', data: categoryField}, ...(y2 ? [{type: 'value'}] : [])]
-        : [{type: 'value'}, ...(y2 ? [{type: 'value'}] : [])],
+      legend: {show: Boolean(grouped || yFields.length > 1 || y2)},
+      xAxis,
+      yAxis,
       series,
     }
   }
@@ -61,13 +64,6 @@
   function parseList(value?: string) {
     if (!value) return []
     return value.split(',').map(v => v.trim()).filter(Boolean)
-  }
-
-  function parseBool(value: unknown) {
-    if (value === undefined || value === null) return false
-    if (typeof value === 'boolean') return value
-    if (typeof value === 'string') return value.toLowerCase() === 'true'
-    return Boolean(value)
   }
 
   function resolveStack(value?: string | boolean) {
