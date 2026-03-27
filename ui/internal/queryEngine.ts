@@ -13,7 +13,7 @@ interface QueryResult {
   fields?: Field[]
 }
 
-interface Field {
+export interface Field {
   name: string
   type?: FieldType
 }
