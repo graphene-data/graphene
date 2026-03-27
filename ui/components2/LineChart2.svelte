@@ -113,8 +113,7 @@
   function buildLineTemplate(field: string, options: {seriesField?: string; name?: string; yAxisIndex: number}) {
     return {
       type: 'line',
-      encode: {x, y: field},
-      series: options.seriesField,
+      encode: {x, y: field, group: options.seriesField},
       name: options.name,
       yAxisIndex: options.yAxisIndex,
       connectNulls: handleMissing === 'connect',

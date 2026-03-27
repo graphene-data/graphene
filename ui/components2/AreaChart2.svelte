@@ -72,8 +72,7 @@
   function buildAreaTemplate(field: string, options: {name?: string; seriesField?: string; stack?: string}) {
     return {
       type: 'line',
-      encode: {x, y: field},
-      series: options.seriesField,
+      encode: {x, y: field, group: options.seriesField},
       name: options.name,
       stack: options.stack,
       areaStyle: {},

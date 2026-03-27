@@ -36,7 +36,7 @@
     let stackKey = resolveStack(stack)
 
     let series = grouped
-      ? [{type: 'bar', encode: {x, y: yFields[0]}, series: group, stack: stackKey, label: barLabel}]
+      ? [{type: 'bar', encode: {x, y: yFields[0], group}, stack: stackKey, label: barLabel}]
       : yFields.map(field => ({type: 'bar', name: field, stack: stackKey, encode: {x, y: field}, label: barLabel}))
 
     if (y2) {
