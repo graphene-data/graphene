@@ -8,9 +8,9 @@ import {config} from './config.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
-import {coarseTemporalType, isTemporalType, parseRefinedTemporalType} from './temporal.ts'
-import {mergeTypes, commonBaseType, temporalBaseType} from './typeRelations.ts'
-import {type Expr, type FieldType, type Scope} from './types.ts'
+import {parseTemporalGrain, temporalType} from './temporal.ts'
+import {isTemporalType, mergeTypes} from './typeRelations.ts'
+import {fieldTypeBase, type Expr, type FieldType, type FieldTypeBase, type Scope} from './types.ts'
 import {txt} from './util.ts'
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
@@ -25,8 +25,8 @@ interface Overload {
 function parseArgType(typeStr: string): {type: FieldType | 'sql native'; rawType?: string}[] {
   let base = typeStr.replace(/[?.]/g, '')
   if (base === 'kw') return [{type: 'sql native', rawType: 'kw'}]
-  if (base === 'T' || base === 'any') return [{type: 'string'}, {type: 'number'}, {type: 'boolean'}, {type: 'date'}, {type: 'timestamp'}, {type: 'json'}]
-  return [{type: base as FieldType}]
+  if (base === 'T' || base === 'any') return ['string', 'number', 'boolean', 'date', 'timestamp', 'json'].map(base => ({type: {base: base as FieldTypeBase}}))
+  return [{type: {base: base as FieldTypeBase}}]
 }
 
 function getArgInfo(arg: ArgDef): {name: string; type: string} {
@@ -36,7 +36,7 @@ function getArgInfo(arg: ArgDef): {name: string; type: string} {
 
 function parseArgTypes(arg: ArgDef): {type: FieldType | 'sql native'; rawType?: string}[] {
   let type = Array.isArray(arg) ? arg[1] : arg.type
-  if (Array.isArray(type)) return type.map(t => ({type: t as FieldType}))
+  if (Array.isArray(type)) return type.map(t => ({type: {base: t as FieldTypeBase}}))
   return parseArgType(type)
 }
 
@@ -45,7 +45,7 @@ function convertDef(def: FunctionDef): Overload[] {
   let expressionType: 'aggregate' | 'window' | 'scalar' = 'scalar'
   if (def.aggregate) expressionType = 'aggregate'
   else if (def.window) expressionType = 'window'
-  let returnType = def.returns === 'T' ? ('generic' as const) : (def.returns as FieldType)
+  let returnType = def.returns === 'T' ? ('generic' as const) : {base: def.returns as FieldTypeBase}
 
   let argSets: ArgDef[][] = [def.args]
   // If any args are optional (type ends with '?'), expand into multiple overloads
@@ -96,6 +96,7 @@ function findOverloads(name: string, dialect: string): Overload[] {
 // ============================================================================
 
 type AnalyzeExprFn = (node: SyntaxNode, scope: Scope) => Expr
+type AnalyzedArg = Expr | {sql: string; type: 'sql native'}
 
 export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: AnalyzeExprFn, opts: {isWindow?: boolean} = {}): Expr {
   let name = txt(node.getChild('Identifier')).toLowerCase()
@@ -105,7 +106,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   let percentileMatch = /^p(\d+)$/.exec(name)
   if (percentileMatch) {
     let args = argNodes.map(n => analyzeExpr(n, scope))
-    if (args[0]) checkTypes(args[0], ['number'], argNodes[0])
+    if (args[0]) checkTypes(args[0], [{base: 'number'}], argNodes[0])
     return analyzePercentile(node, args, percentileMatch[1], scope, opts)
   }
 
@@ -119,7 +120,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   })
 
   // Analyze arguments and check types against overload
-  let args = argNodes.map((argNode, idx) => {
+  let args = argNodes.map((argNode, idx): AnalyzedArg => {
     let paramIdx = idx
     if (overload && paramIdx >= overload.params.length) {
       let lastParam = overload.params[overload.params.length - 1]
@@ -127,30 +128,30 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
     }
     let firstType = overload?.params[paramIdx]?.allowedTypes[0]
     if (firstType?.type === 'sql native' && firstType?.rawType === 'kw') {
-      return {sql: txt(argNode), type: 'sql native' as FieldType}
+      return {sql: txt(argNode), type: 'sql native'}
     }
     let arg = analyzeExpr(argNode, scope)
-    let allowed = overload?.params[paramIdx]?.allowedTypes.map(t => t.type as FieldType)
+    let allowed = overload?.params[paramIdx]?.allowedTypes.flatMap(t => (t.type === 'sql native' ? [] : [t.type]))
     if (allowed) checkTypes(arg, allowed, argNode)
     return arg
   })
 
   if (!overload) {
-    if (overloads.length === 0) return diag(node, `Unknown function: ${name}`, {sql: 'NULL', type: 'error'})
+    if (overloads.length === 0) return diag(node, `Unknown function: ${name}`, {sql: 'NULL', type: {base: 'error'}})
     let expected = [...new Set(overloads.map(o => o.params.length))].sort().join(' or ')
-    return diag(node, `Wrong number of arguments for ${name}: expected ${expected}, got ${argNodes.length}`, {sql: 'NULL', type: 'error'})
+    return diag(node, `Wrong number of arguments for ${name}: expected ${expected}, got ${argNodes.length}`, {sql: 'NULL', type: {base: 'error'}})
   }
 
   let returnType: FieldType = overload.returnType.type as FieldType
-  if (overload.returnType.type == 'generic') returnType = args[0]?.type || 'string'
+  if (overload.returnType.type == 'generic') returnType = firstValueArg(args)?.type || {base: 'string'}
   returnType = inferFunctionReturnType(name, args, returnType)
-  let baseType = inferFunctionBaseType(name, args, returnType)
 
-  let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
+  let valueArgs = args.filter(isValueArg)
+  let isAgg = overload.returnType.expressionType == 'aggregate' || valueArgs.some(a => a.isAgg)
   let canWindow = overload.returnType.expressionType == 'aggregate' || overload.returnType.expressionType == 'window'
-  let fanout = mergeFanoutPaths(args.map(a => a.fanout?.path))
-  let fanoutConflict = fanout.conflict || args.some(a => a.fanout?.conflict)
-  let fanoutSensitivePaths = mergeSensitiveFanouts(...args.map(a => a.fanout?.sensitivePaths))
+  let fanout = mergeFanoutPaths(valueArgs.map(a => a.fanout?.path))
+  let fanoutConflict = fanout.conflict || valueArgs.some(a => a.fanout?.conflict)
+  let fanoutSensitivePaths = mergeSensitiveFanouts(...valueArgs.map(a => a.fanout?.sensitivePaths))
   let fanoutSafeAgg = overload.returnType.expressionType == 'aggregate' && overload.fanoutSafe
   if (overload.returnType.expressionType == 'aggregate' && !fanoutSafeAgg) {
     fanoutSensitivePaths = mergeSensitiveFanouts(fanoutSensitivePaths, [fanout.path || extendFanoutPath(scope.fanoutPath)])
@@ -160,39 +161,38 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   return {
     sql,
     type: returnType,
-    baseType,
     isAgg,
     canWindow,
     fanout: normalizeExprFanout({path: isAgg ? undefined : fanout.path, sensitivePaths: fanoutSensitivePaths, conflict: fanoutConflict}),
   }
 }
 
-function inferFunctionReturnType(name: string, args: Expr[], returnType: FieldType): FieldType {
-  if (['coalesce', 'ifnull', 'least', 'greatest'].includes(name)) return mergeTypes(args.map(arg => arg.type)) || returnType
-  if (['if', 'iff'].includes(name)) return mergeTypes(args.slice(1).map(arg => arg.type)) || returnType
+function inferFunctionReturnType(name: string, args: AnalyzedArg[], returnType: FieldType): FieldType {
+  let valueArgs = args.filter(isValueArg)
+  if (['coalesce', 'ifnull', 'least', 'greatest'].includes(name)) return mergeTypes(valueArgs.map(arg => arg.type)) || returnType
+  if (['if', 'iff'].includes(name)) return mergeTypes(valueArgs.slice(1).map(arg => arg.type)) || returnType
   if (name != 'date_trunc') return returnType
-  let unitArg = args.find(arg => arg.type == 'sql native') || args.find(arg => arg.type == 'string' && /^['"].*['"]$/.test(arg.sql))
+  let unitArg = args.find(arg => arg.type == 'sql native') || valueArgs.find(arg => fieldTypeBase(arg.type) == 'string' && /^['"].*['"]$/.test(arg.sql))
   if (!unitArg) return returnType
-  let refined = parseRefinedTemporalType(unitArg.sql.replace(/^['"]|['"]$/g, ''))
-  if (!refined) return returnType
-  if (isTemporalType(returnType)) return refined
-  return coarseTemporalType(refined)
+  let grain = parseTemporalGrain(unitArg.sql.replace(/^['"]|['"]$/g, ''))
+  let source = valueArgs.find(arg => isTemporalType(arg.type))
+  if (!grain || !source) return returnType
+  return temporalType(source.type.base as 'date' | 'timestamp', grain)
 }
 
-function inferFunctionBaseType(name: string, args: Expr[], returnType: FieldType) {
-  if (!isTemporalType(returnType)) return undefined
-  if (name == 'date_trunc') {
-    let source = args.find(arg => isTemporalType(arg.type))
-    return source ? temporalBaseType(source) : coarseTemporalType(returnType)
-  }
-  return commonBaseType(args) || coarseTemporalType(returnType)
+function isValueArg(arg: AnalyzedArg): arg is Expr {
+  return arg.type !== 'sql native'
+}
+
+function firstValueArg(args: AnalyzedArg[]) {
+  return args.find(isValueArg)
 }
 
 function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
   let frac = Number(`0.${digits}`)
-  if (Number(digits) == 100) return diag(node, 'p100 is not allowed', {sql: 'NULL', type: 'error'})
-  if (Number(digits) == 0) return diag(node, 'p0 is not allowed', {sql: 'NULL', type: 'error'})
-  if (config.dialect == 'bigquery' && frac > 0.99) return diag(node, 'BigQuery only supports up to p99', {sql: 'NULL', type: 'error'})
+  if (Number(digits) == 100) return diag(node, 'p100 is not allowed', {sql: 'NULL', type: {base: 'error'}})
+  if (Number(digits) == 0) return diag(node, 'p0 is not allowed', {sql: 'NULL', type: {base: 'error'}})
+  if (config.dialect == 'bigquery' && frac > 0.99) return diag(node, 'BigQuery only supports up to p99', {sql: 'NULL', type: {base: 'error'}})
 
   let inner = args[0]?.sql || 'NULL'
   let sql: string
@@ -211,11 +211,11 @@ function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope
       sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`
       break
     default:
-      return diag(node, `Percentile not supported for ${config.dialect}`, {sql: 'NULL', type: 'error'})
+      return diag(node, `Percentile not supported for ${config.dialect}`, {sql: 'NULL', type: {base: 'error'}})
   }
   return {
     sql,
-    type: 'number',
+    type: {base: 'number'},
     isAgg: true,
     canWindow: true,
     fanout: normalizeExprFanout({

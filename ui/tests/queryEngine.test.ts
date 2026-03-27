@@ -15,8 +15,8 @@ test('translateData remaps Snowflake-style uppercase row keys to requested field
   let data = {
     rows: [{LOCATION_STATE_CODE: 'CA', NUM: 3}],
     fields: [
-      {name: 'location_state_code', type: 'string'},
-      {name: 'num', type: 'number'},
+      {name: 'location_state_code', type: {base: 'string'}},
+      {name: 'num', type: {base: 'number'}},
     ],
   }
   let node = {
@@ -36,8 +36,8 @@ test('translateData preserves refined Graphene temporal types while mapping them
   let data = {
     rows: [{month_bucket: '2024-01-01', num: 3}],
     fields: [
-      {name: 'month_bucket', type: 'month', baseType: 'date'},
-      {name: 'num', type: 'number'},
+      {name: 'month_bucket', type: {base: 'date', params: {grain: 'month'}}},
+      {name: 'num', type: {base: 'number'}},
     ],
   }
   let node = {
@@ -50,7 +50,7 @@ test('translateData preserves refined Graphene temporal types while mapping them
   let result = translateData(data, node)
 
   expect((result.rows as any)._evidenceColumnTypes).toEqual([
-    {name: 'month_bucket', evidenceType: 'date', grapheneType: 'month', grapheneBaseType: 'date'},
-    {name: 'num', evidenceType: 'number', grapheneType: 'number', grapheneBaseType: undefined},
+    {name: 'month_bucket', evidenceType: 'date', grapheneType: {base: 'date', params: {grain: 'month'}}},
+    {name: 'num', evidenceType: 'number', grapheneType: {base: 'number'}},
   ])
 })

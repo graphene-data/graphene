@@ -17,17 +17,8 @@ import {
 } from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import {
-  coarseTemporalType,
-  isTemporalType,
-  parseTemporalLiteral,
-  parseIntervalLiteral,
-  parseIntervalUnit,
-  renderTemporalArithmetic,
-  renderStandaloneInterval,
-  type BaseTemporalType,
-} from './temporal.ts'
-import {commonBaseType, commonType, isSubtype, temporalBaseType} from './typeRelations.ts'
+import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval, temporalType, type BaseTemporalType} from './temporal.ts'
+import {commonType, displayType, isSubtype, isTemporalType} from './typeRelations.ts'
 import {
   type Table,
   type Query,
@@ -131,7 +122,7 @@ function addColumn(table: Table, node: SyntaxNode) {
   let name = txt(nameNode)
   let type = convertDataType(txt(node.getChild('DataType')))
   if (!type) return diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
-  let col: Column = {name, type, baseType: isTemporalType(type) ? coarseTemporalType(type) : undefined, metadata: extractLeadingMetadata(node)}
+  let col: Column = {name, type, metadata: extractLeadingMetadata(node)}
   Object.assign(col, addSymbol('column', nameNode, name, {tableId: table.symbolId}))
   if (getField(name, table)) return diag(node, `Table already has a field called "${name}"`)
   table.columns.push(col)
@@ -157,7 +148,7 @@ function addJoin(table: Table, node: SyntaxNode) {
 function addComputedColumn(table: Table, node: SyntaxNode) {
   let nameNode = node.getChild('Alias')!
   let name = txt(nameNode)
-  let col: Column = {name, type: 'string', exprNode: node.getChild('Expression')!, metadata: extractLeadingMetadata(node)}
+  let col: Column = {name, type: {base: 'string'}, exprNode: node.getChild('Expression')!, metadata: extractLeadingMetadata(node)}
   Object.assign(col, addSymbol('column', nameNode, name, {tableId: table.symbolId}))
   if (getField(name, table)) return diag(node, `Table already has a field called "${name}"`)
   table.columns.push(col)
@@ -179,7 +170,7 @@ function analyzeView(table: Table) {
   if (!query) return
 
   let viewCols = query.fields.map(f => {
-    let col = {name: f.name, type: f.type, baseType: f.baseType, metadata: f.metadata, location: f.definitionLocation} as Column
+    let col = {name: f.name, type: f.type, metadata: f.metadata, location: f.definitionLocation} as Column
     if (f.definitionLocation) {
       col.symbolId = symbolId('column', f.definitionLocation, `${table.symbolId}:${f.name}`)
       getFile(table.syntaxNode!).navigation.symbols.push({id: col.symbolId, kind: 'column', name: col.name, location: f.definitionLocation, tableId: table.symbolId})
@@ -228,12 +219,11 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
       if (col.isAgg == null) col.isAgg = analyzeExpr(col.exprNode, {table, alias, fanoutPath: scope.fanoutPath}).isAgg
       if (col.isAgg) continue
       let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables, fanoutPath: scope.fanoutPath})
-      if (expr.type == 'interval' && expr.interval?.form == 'scaled') diag(col.exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
+      if (expr.type.base == 'interval' && expr.interval?.form == 'scaled') diag(col.exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
       query.fields.push({
         name: outName,
         sql: expr.sql,
         type: expr.type,
-        baseType: expr.baseType,
         metadata: col.metadata,
         fanout: expr.fanout,
         definitionLocation: col.location,
@@ -243,7 +233,6 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         name: outName,
         sql: `${alias}.${col.name}`,
         type: col.type,
-        baseType: col.baseType,
         metadata: col.metadata,
         fanout: normalizeExprFanout({path: scope.fanoutPath}),
         definitionLocation: col.location,
@@ -269,7 +258,7 @@ function analyzeQueryExpression(queryNode: SyntaxNode, outerCtes?: Table[]): Que
     let name = txt(cteDef.getChild('Alias'))
     let query = analyzeQuery(cteDef.getChild('QueryExpression')!, scope.otherTables)
     if (!query) return
-    let columns = query.fields.map(f => ({name: f.name, type: f.type, baseType: f.baseType, metadata: f.metadata}) as Column)
+    let columns = query.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
     let cte: CteTable = {name, type: 'cte', tablePath: name, columns, joins: [], query}
     ctes.set(name, cte)
     scope.otherTables!.push(cte)
@@ -308,7 +297,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
     if (tablePrimary.getChild('SubqueryExpression')) {
       let subquery = analyzeQuery(tablePrimary.getChild('SubqueryExpression')!.getChild('QueryExpression')!, scope.otherTables)
       if (!subquery) return
-      let columns = subquery.fields.map(f => ({name: f.name, type: f.type, baseType: f.baseType, metadata: f.metadata}) as Column)
+      let columns = subquery.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
       table = {name: 'subquery', type: 'subquery', tablePath: alias, columns, joins: [], query: subquery}
       alias ||= 'subquery'
     }
@@ -350,14 +339,13 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
       let exprNode = s.getChild('Expression')!
       let aliasNode = s.getChild('Alias')
       let expr = analyzeExpr(exprNode, scope)
-      if (expr.type == 'interval' && expr.interval?.form == 'scaled') diag(exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
+      if (expr.type.base == 'interval' && expr.interval?.form == 'scaled') diag(exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
       let name = aliasNode ? txt(aliasNode) : inferName(exprNode, scope)
       isAgg ||= !!expr.isAgg
       query.fields.push({
         name,
         sql: expr.sql,
         type: expr.type,
-        baseType: expr.baseType,
         isAgg: expr.isAgg,
         fanout: expr.fanout,
         definitionLocation: locationForNode(aliasNode || exprNode),
@@ -398,7 +386,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
 
       // If it's not in there, add it to the select.
       if (!query.fields.find(f => f.name == name)) {
-        query.fields.unshift({name, sql: expr.sql, type: expr.type, baseType: expr.baseType, fanout: expr.fanout, definitionLocation: locationForNode(g.getChild('Alias') || exprNode)})
+        query.fields.unshift({name, sql: expr.sql, type: expr.type, fanout: expr.fanout, definitionLocation: locationForNode(g.getChild('Alias') || exprNode)})
       }
       fanoutExprs.push({node: g.getChild('Expression')!, expr})
     }
@@ -575,19 +563,19 @@ function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
 
 // Analyze an expression node and return SQL + type info
 export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
-  if (node.type.isError) return diag(node, 'Invalid expression', {sql: 'NULL', type: 'error'})
+  if (node.type.isError) return diag(node, 'Invalid expression', {sql: 'NULL', type: {base: 'error'}})
 
   switch (node.name) {
     case 'Number':
-      return {sql: txt(node), type: 'number'}
+      return {sql: txt(node), type: {base: 'number'}}
     case 'Boolean':
-      return {sql: txt(node).toLowerCase(), type: 'boolean'}
+      return {sql: txt(node).toLowerCase(), type: {base: 'boolean'}}
     case 'Null':
-      return {sql: 'NULL', type: 'null'}
+      return {sql: 'NULL', type: {base: 'null'}}
     case 'String':
-      return {sql: `'${txt(node).slice(1, -1).replace(/'/g, "''")}'`, type: 'string'}
+      return {sql: `'${txt(node).slice(1, -1).replace(/'/g, "''")}'`, type: {base: 'string'}}
     case 'Param':
-      return {sql: txt(node), type: 'string'} // $param - type inferred later
+      return {sql: txt(node), type: {base: 'string'}} // $param - type inferred later
 
     case 'Ref': {
       let pathNodes = node.getChildren('Identifier')
@@ -599,12 +587,12 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // SELECT aliases instead of the table's computed columns.
       if (scope.query && !scope.table && pathNodes.length == 0) {
         let outField = scope.query.fields.find(f => f.name == fieldName)
-        if (outField) return {sql: outField.sql, type: outField.type, baseType: outField.baseType, isAgg: outField.isAgg, fanout: outField.fanout}
+        if (outField) return {sql: outField.sql, type: outField.type, isAgg: outField.isAgg, fanout: outField.fanout}
       }
 
       // Follow any dot path (e.g., `users.orders` in `users.orders.amount`), then find the field
       let targetScope = followJoins(pathNodes, scope)
-      if (!targetScope) return {sql: 'NULL', type: 'error'}
+      if (!targetScope) return {sql: 'NULL', type: {base: 'error'}}
 
       // Build the list of tables to search: if followJoins landed on a specific table, just that one.
       // Otherwise, search all tables either in FROM or explicitly JOINed (but not implicitly joined).
@@ -615,15 +603,15 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // Expect just one of the possibleJoins to have the named column. Otherwise, it's an error.
       let matches = possibleJoins.filter(j => j.table.columns.some(c => c.name == fieldName))
       if (matches.length > 1) {
-        return diag(fieldNode, `Ambiguous field "${fieldName}"`, {sql: 'NULL', type: 'error'})
+        return diag(fieldNode, `Ambiguous field "${fieldName}"`, {sql: 'NULL', type: {base: 'error'}})
       }
 
       if (matches.length == 0) {
         if (possibleJoins.some(j => j.table.joins.some(jj => jj.alias == fieldName))) {
-          return diag(fieldNode, `"${fieldName}" is a join, not a column`, {sql: 'NULL', type: 'error'})
+          return diag(fieldNode, `"${fieldName}" is a join, not a column`, {sql: 'NULL', type: {base: 'error'}})
         }
         let on = possibleJoins.length == 1 ? ` on ${possibleJoins[0].table.name}` : ''
-        return diag(fieldNode, `Unknown field "${fieldName}"${on}`, {sql: 'NULL', type: 'error'})
+        return diag(fieldNode, `Unknown field "${fieldName}"${on}`, {sql: 'NULL', type: {base: 'error'}})
       }
 
       let {table, alias} = matches[0]
@@ -632,17 +620,16 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       addReference('column', fieldNode, col.symbolId)
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, baseType: col.baseType, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
+      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
 
       // Computed column: analyze its expression in the matched table's scope
-      if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
+      if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: {base: 'error'}})
       analysisStack.add(col)
       let expr = analyzeExpr(col.exprNode, {query: scope.query, table, alias, otherTables: scope.otherTables, fanoutPath: matches[0].fanoutPath})
       analysisStack.delete(col)
       return {
         sql: `(${expr.sql})`,
         type: expr.type,
-        baseType: expr.baseType,
         isAgg: expr.isAgg,
         fanout: expr.fanout,
       }
@@ -653,16 +640,16 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
 
     case 'WindowExpression': {
       let baseNode = node.getChild('FunctionCall') || node.getChild('Count')
-      if (!baseNode) return diag(node, 'Window expressions require a function call', {sql: 'NULL', type: 'error'})
+      if (!baseNode) return diag(node, 'Window expressions require a function call', {sql: 'NULL', type: {base: 'error'}})
       let isPercentile = isPercentileFunctionCall(baseNode)
       if (isPercentile && !isPercentileWindowSpecSupported(node.getChild('OverClause')!)) {
-        return diag(node.getChild('OverClause')!, 'pXX window form currently supports PARTITION BY only', {sql: 'NULL', type: 'error'})
+        return diag(node.getChild('OverClause')!, 'pXX window form currently supports PARTITION BY only', {sql: 'NULL', type: {base: 'error'}})
       }
       let base = baseNode.name == 'FunctionCall' ? analyzeFunction(baseNode, scope, analyzeExpr, {isWindow: true}) : analyzeExpr(baseNode, scope)
-      if (base.type == 'error') return base
-      if (!base.canWindow) return diag(baseNode, 'Only aggregate or window functions can use OVER', {sql: 'NULL', type: 'error'})
+      if (base.type.base == 'error') return base
+      if (!base.canWindow) return diag(baseNode, 'Only aggregate or window functions can use OVER', {sql: 'NULL', type: {base: 'error'}})
       let over = renderOverClause(node.getChild('OverClause')!, scope)
-      return {sql: `${base.sql} OVER (${over})`, type: base.type, baseType: base.baseType, isAgg: false}
+      return {sql: `${base.sql} OVER (${over})`, type: base.type, isAgg: false}
     }
 
     case 'Parenthetical': {
@@ -676,7 +663,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         let e = analyzeExpr(inner, scope)
         return {
           sql: `count(distinct ${e.sql})`,
-          type: 'number',
+          type: {base: 'number'},
           isAgg: true,
           canWindow: true,
           fanout: normalizeExprFanout({
@@ -687,7 +674,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       }
       return {
         sql: 'count(1)',
-        type: 'number',
+        type: {base: 'number'},
         isAgg: true,
         canWindow: true,
         fanout: normalizeExprFanout({sensitivePaths: [extendFanoutPath(scope.fanoutPath)]}),
@@ -705,16 +692,16 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let op = txt(node.firstChild?.nextSibling).toLowerCase()
 
       // Type coercion for dates
-      if (isTemporalType(left.type) && right.type == 'string') {
-        right = coerceToTemporal(right, coarseTemporalType(left.type), node.lastChild!)
+      if (isTemporalType(left.type) && right.type.base == 'string') {
+        right = coerceToTemporal(right, left.type.base, node.lastChild!)
       }
-      if (isTemporalType(right.type) && left.type == 'string') {
-        left = coerceToTemporal(left, coarseTemporalType(right.type), node.firstChild!)
+      if (isTemporalType(right.type) && left.type.base == 'string') {
+        left = coerceToTemporal(left, right.type.base, node.firstChild!)
       }
 
       // Date arithmetic
       if (op == '+' || op == '-') {
-        if (isTemporalType(left.type) || left.type == 'interval' || right.type == 'interval') {
+        if (isTemporalType(left.type) || left.type.base == 'interval' || right.type.base == 'interval') {
           return analyzeDateArithmetic(op, left, right, node)
         }
       }
@@ -725,21 +712,21 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         if (multiplied) return multiplied
       }
       if (op == '*' || op == '/' || op == '%') {
-        checkTypes(left, ['number'], node.firstChild!)
-        checkTypes(right, ['number'], node.lastChild!)
+        checkTypes(left, [{base: 'number'}], node.firstChild!)
+        checkTypes(right, [{base: 'number'}], node.lastChild!)
       }
       if (op == 'like' || op == 'ilike') {
-        checkTypes(left, ['string'], node.firstChild!)
-        checkTypes(right, ['string'], node.lastChild!)
+        checkTypes(left, [{base: 'string'}], node.firstChild!)
+        checkTypes(right, [{base: 'string'}], node.lastChild!)
       }
       if (op == '||') {
-        checkTypes(left, ['string'], node.firstChild!)
-        checkTypes(right, ['string'], node.lastChild!)
+        checkTypes(left, [{base: 'string'}], node.firstChild!)
+        checkTypes(right, [{base: 'string'}], node.lastChild!)
       }
 
       let resultType = left.type
-      if (['and', 'or', '<', '<=', '>', '>=', '=', '!=', '<>', 'like', 'ilike'].includes(op)) resultType = 'boolean'
-      if (op == '||') resultType = 'string'
+      if (['and', 'or', '<', '<=', '>', '>=', '=', '!=', '<>', 'like', 'ilike'].includes(op)) resultType = {base: 'boolean'}
+      if (op == '||') resultType = {base: 'string'}
       if (op == '<>') op = '!='
 
       // ILIKE handling for BigQuery
@@ -760,16 +747,16 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
     case 'UnaryExpression': {
       let op = txt(node.firstChild).toLowerCase()
       let child = analyzeExpr(node.lastChild!, scope)
-      if (op == 'not') return {...child, sql: `NOT (${child.sql})`, type: 'boolean'}
+      if (op == 'not') return {...child, sql: `NOT (${child.sql})`, type: {base: 'boolean'}}
       if (op == '-') return {...child, sql: `-(${child.sql})`}
       if (op == '+') return {...child, sql: `(${child.sql})`}
-      return diag(node, `Unknown unary operator: ${op}`, {sql: 'NULL', type: 'error'})
+      return diag(node, `Unknown unary operator: ${op}`, {sql: 'NULL', type: {base: 'error'}})
     }
 
     case 'NullTestExpression': {
       let isNot = !!node.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not')
       let e = analyzeExpr(node.firstChild!, scope)
-      return {...e, sql: `${e.sql} IS ${isNot ? 'NOT ' : ''}NULL`, type: 'boolean'}
+      return {...e, sql: `${e.sql} IS ${isNot ? 'NOT ' : ''}NULL`, type: {base: 'boolean'}}
     }
 
     case 'CaseExpression': {
@@ -804,7 +791,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         fanoutExprs.push(elseExpr)
       }
       parts.push('END')
-      return mergeExprAnalysis(fanoutExprs, parts.join(' '), resultType || 'string', isAgg || undefined)
+      return mergeExprAnalysis(fanoutExprs, parts.join(' '), resultType || {base: 'string'}, isAgg || undefined)
     }
 
     case 'InExpression': {
@@ -814,22 +801,22 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let subqueryNode = node.getChild('QueryExpression')
       if (subqueryNode) {
         let subquery = analyzeQuery(subqueryNode, scope.otherTables)
-        if (!subquery) return {sql: 'NULL', type: 'error'}
-        if (subquery.fields.length != 1) return diag(subqueryNode, 'Subquery in IN must return exactly one column', {sql: 'NULL', type: 'error'})
-        return {...e, sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${subquery.sql})`, type: 'boolean'}
+        if (!subquery) return {sql: 'NULL', type: {base: 'error'}}
+        if (subquery.fields.length != 1) return diag(subqueryNode, 'Subquery in IN must return exactly one column', {sql: 'NULL', type: {base: 'error'}})
+        return {...e, sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${subquery.sql})`, type: {base: 'boolean'}}
       }
       if (!valueList) {
-        return diag(node, 'IN expression must provide either values or a subquery', {sql: 'NULL', type: 'error'})
+        return diag(node, 'IN expression must provide either values or a subquery', {sql: 'NULL', type: {base: 'error'}})
       }
       let values = valueList.getChildren('Expression').map(v => {
         let val = analyzeExpr(v, scope)
         // Coerce string literals to temporal types if needed
-        if (isTemporalType(e.type) && val.type == 'string') {
-          val = coerceToTemporal(val, coarseTemporalType(e.type), v)
+        if (isTemporalType(e.type) && val.type.base == 'string') {
+          val = coerceToTemporal(val, e.type.base, v)
         }
         return val.sql
       })
-      return {...e, sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: 'boolean'}
+      return {...e, sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: {base: 'boolean'}}
     }
 
     case 'BetweenExpression': {
@@ -841,20 +828,19 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let [e, low, high] = [eNode, lowNode, highNode].map(n => analyzeExpr(n, scope))
 
       if (isTemporalType(e.type)) {
-        let temporalType = coarseTemporalType(e.type)
-        low = coerceToTemporal(low, temporalType, lowNode)
-        high = coerceToTemporal(high, temporalType, highNode)
+        low = coerceToTemporal(low, e.type.base, lowNode)
+        high = coerceToTemporal(high, e.type.base, highNode)
       }
 
       let sql = `${e.sql} ${not ? 'NOT BETWEEN' : 'BETWEEN'} ${low.sql} AND ${high.sql}`
-      return mergeExprAnalysis([e, low, high], sql, 'boolean', e.isAgg || low.isAgg || high.isAgg)
+      return mergeExprAnalysis([e, low, high], sql, {base: 'boolean'}, e.isAgg || low.isAgg || high.isAgg)
     }
 
     case 'SubqueryExpression': {
-      let subquery = analyzeQuery(node.getChild('QueryExpression')!, scope.otherTables)
-      if (!subquery) return {sql: 'NULL', type: 'error'}
-      if (subquery.fields.length != 1) return diag(node, 'Subquery expression must return exactly one column', {sql: 'NULL', type: 'error'})
-      return {sql: `(${subquery.sql})`, type: subquery.fields[0].type, baseType: subquery.fields[0].baseType}
+      let subquery = analyzeQuery(node.getChild('QueryStatement')!, scope.otherTables)
+      if (!subquery) return {sql: 'NULL', type: {base: 'error'}}
+      if (subquery.fields.length != 1) return diag(node, 'Subquery expression must return exactly one column', {sql: 'NULL', type: {base: 'error'}})
+      return {sql: `(${subquery.sql})`, type: subquery.fields[0].type}
     }
 
     case 'CastExpression':
@@ -864,38 +850,43 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let typeNode = node.getChild('CastType')!
       let targetType = txt(typeNode).toUpperCase()
       let resultType = convertDataType(targetType)
-      if (!resultType) return diag(typeNode, `Unsupported cast type: ${targetType.toLowerCase()}`, {sql: 'NULL', type: 'error'})
-      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: resultType, baseType: isTemporalType(resultType) ? coarseTemporalType(resultType) : undefined}
+      if (!resultType) return diag(typeNode, `Unsupported cast type: ${targetType.toLowerCase()}`, {sql: 'NULL', type: {base: 'error'}})
+      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: resultType}
     }
 
     case 'ExtractExpression': {
       let extractInner = node.getChild('Expression')!
       let e = analyzeExpr(extractInner, scope)
-      checkTypes(e, ['date', 'timestamp'], extractInner)
+      checkTypes(e, [{base: 'date'}, {base: 'timestamp'}], extractInner)
       let unit = txt(node.getChild('ExtractUnit')!)
         .replace(/^['"]|['"]$/g, '')
         .toLowerCase()
-      return {...e, sql: `EXTRACT(${unit} FROM ${e.sql})`, type: 'number'}
+      return {...e, sql: `EXTRACT(${unit} FROM ${e.sql})`, type: {base: 'number'}}
     }
 
     case 'IntervalExpression': {
       let stringNode = node.getChild('String')
       if (stringNode) {
         let parsed = parseIntervalLiteral(txt(stringNode).slice(1, -1))
-        if (!parsed) return diag(stringNode, 'Could not parse interval', {sql: 'NULL', type: 'error'})
+        if (!parsed) return diag(stringNode, 'Could not parse interval', {sql: 'NULL', type: {base: 'error'}})
         return {
           sql: `interval ${parsed.quantity} ${parsed.unit}`,
-          type: 'interval',
+          type: {base: 'interval'},
           interval: {quantitySql: String(parsed.quantity), unit: parsed.unit, form: 'constant'},
         }
       }
       let quantityNode = node.getChild('Number') || node.getChild('Ref')
-      if (!quantityNode) return diag(node, 'Interval requires a quantity before the unit', {sql: 'NULL', type: 'error'})
+      if (!quantityNode) return diag(node, 'Interval requires a quantity before the unit', {sql: 'NULL', type: {base: 'error'}})
       let quantity = analyzeExpr(quantityNode, scope)
-      checkTypes(quantity, ['number'], quantityNode)
+      checkTypes(quantity, [{base: 'number'}], quantityNode)
       let unit = parseIntervalUnit(txt(node.getChild('IntervalUnit')!).toLowerCase())
-      if (!unit) return diag(node, 'Invalid interval unit', {sql: 'NULL', type: 'error'})
-      return {...quantity, sql: `INTERVAL ${quantity.sql} ${unit}`, type: 'interval', interval: {quantitySql: quantity.sql, unit, form: quantityNode.name == 'Number' ? 'constant' : 'dynamic'}}
+      if (!unit) return diag(node, 'Invalid interval unit', {sql: 'NULL', type: {base: 'error'}})
+      return {
+        ...quantity,
+        sql: `INTERVAL ${quantity.sql} ${unit}`,
+        type: {base: 'interval'},
+        interval: {quantitySql: quantity.sql, unit, form: quantityNode.name == 'Number' ? 'constant' : 'dynamic'},
+      }
     }
 
     case 'DateExpression':
@@ -903,66 +894,64 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let isDate = node.name == 'DateExpression'
       let lit = txt(node.getChild('String')!).slice(1, -1)
       let parsed = parseTemporalLiteral(lit, isDate ? 'date' : 'timestamp')
-      if (!parsed) return diag(node, `Invalid ${isDate ? 'date' : 'timestamp'}`, {sql: 'NULL', type: 'error'})
-      return {sql: `${isDate ? 'DATE' : 'TIMESTAMP'} '${parsed.literal}'`, type: isDate ? 'date' : 'timestamp', baseType: isDate ? 'date' : 'timestamp'}
+      if (!parsed) return diag(node, `Invalid ${isDate ? 'date' : 'timestamp'}`, {sql: 'NULL', type: {base: 'error'}})
+      return {sql: `${isDate ? 'DATE' : 'TIMESTAMP'} '${parsed.literal}'`, type: temporalType(isDate ? 'date' : 'timestamp')}
     }
 
     default:
-      return diag(node, `Unsupported expression: ${node.name}`, {sql: 'NULL', type: 'error'})
+      return diag(node, `Unsupported expression: ${node.name}`, {sql: 'NULL', type: {base: 'error'}})
   }
 }
 
 function analyzeDateArithmetic(op: '+' | '-', left: Expr, right: Expr, node: SyntaxNode): Expr {
-  let merged = mergeExprAnalysis([left, right], '', 'number', left.isAgg || right.isAgg)
+  let merged = mergeExprAnalysis([left, right], '', {base: 'number'}, left.isAgg || right.isAgg)
 
   // date - date = interval
   if (isTemporalType(left.type) && isTemporalType(right.type)) {
-    if (op != '-') return diag(node, 'Can only subtract dates', {sql: 'NULL', type: 'error'})
-    let unit = coarseTemporalType(left.type) == 'timestamp' ? 'SECOND' : 'DAY'
+    if (op != '-') return diag(node, 'Can only subtract dates', {sql: 'NULL', type: {base: 'error'}})
+    let unit = left.type.base == 'timestamp' ? 'SECOND' : 'DAY'
     if (config.dialect == 'bigquery') {
-      return {...merged, sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: 'number'}
+      return {...merged, sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: {base: 'number'}}
     }
     if (config.dialect == 'snowflake') {
-      return {...merged, sql: `TIMESTAMPDIFF(${unit}, ${right.sql}, ${left.sql})`, type: 'number'}
+      return {...merged, sql: `TIMESTAMPDIFF(${unit}, ${right.sql}, ${left.sql})`, type: {base: 'number'}}
     }
-    return {...merged, sql: `DATE_DIFF('${unit.toLowerCase()}', ${right.sql}, ${left.sql})`, type: 'number'}
+    return {...merged, sql: `DATE_DIFF('${unit.toLowerCase()}', ${right.sql}, ${left.sql})`, type: {base: 'number'}}
   }
 
   // date +/- interval
-  if (isTemporalType(left.type) && right.type == 'interval') {
-    if (!right.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
-    let temporalType = coarseTemporalType(left.type)
-    return {...merged, sql: renderTemporalArithmetic(config.dialect, left.sql, temporalType, op, right.interval), type: temporalType, baseType: temporalBaseType(left)}
+  if (isTemporalType(left.type) && right.type.base == 'interval') {
+    if (!right.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: {base: 'error'}})
+    return {...merged, sql: renderTemporalArithmetic(config.dialect, left.sql, left.type.base, op, right.interval), type: {base: left.type.base}}
   }
 
   // interval + date (normalize to date + interval)
-  if (left.type == 'interval' && isTemporalType(right.type)) {
-    if (op == '-') return diag(node, 'Cannot subtract date from interval', {sql: 'NULL', type: 'error'})
-    if (!left.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
-    let temporalType = coarseTemporalType(right.type)
-    return {...merged, sql: renderTemporalArithmetic(config.dialect, right.sql, temporalType, '+', left.interval), type: temporalType, baseType: temporalBaseType(right)}
+  if (left.type.base == 'interval' && isTemporalType(right.type)) {
+    if (op == '-') return diag(node, 'Cannot subtract date from interval', {sql: 'NULL', type: {base: 'error'}})
+    if (!left.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: {base: 'error'}})
+    return {...merged, sql: renderTemporalArithmetic(config.dialect, right.sql, right.type.base, '+', left.interval), type: {base: right.type.base}}
   }
 
-  return diag(node, 'Invalid date arithmetic', {sql: 'NULL', type: 'error'})
+  return diag(node, 'Invalid date arithmetic', {sql: 'NULL', type: {base: 'error'}})
 }
 
 function analyzeIntervalMultiplication(left: Expr, right: Expr, node: SyntaxNode): Expr | null {
-  if (left.type == 'number' && right.type == 'interval') {
+  if (left.type.base == 'number' && right.type.base == 'interval') {
     return scaleInterval(left, right, node.lastChild!)
   }
-  if (left.type == 'interval' && right.type == 'number') {
+  if (left.type.base == 'interval' && right.type.base == 'number') {
     return scaleInterval(right, left, node.firstChild!)
   }
   return null
 }
 
 function scaleInterval(multiplier: Expr, intervalExpr: Expr, node: SyntaxNode): Expr {
-  if (!intervalExpr.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
-  if (intervalExpr.interval.form != 'constant') return diag(node, 'Only literal intervals can be multiplied', {sql: 'NULL', type: 'error'})
+  if (!intervalExpr.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: {base: 'error'}})
+  if (intervalExpr.interval.form != 'constant') return diag(node, 'Only literal intervals can be multiplied', {sql: 'NULL', type: {base: 'error'}})
   let quantitySql = intervalExpr.interval.quantitySql == '1' ? multiplier.sql : `${multiplier.sql}*${intervalExpr.interval.quantitySql}`
   return {
     sql: renderStandaloneInterval(config.dialect, {quantitySql, unit: intervalExpr.interval.unit, form: 'scaled'}),
-    type: 'interval',
+    type: {base: 'interval'},
     isAgg: multiplier.isAgg || intervalExpr.isAgg,
     interval: {quantitySql, unit: intervalExpr.interval.unit, form: 'scaled'},
   }
@@ -977,7 +966,7 @@ function coerceToTemporal(expr: Expr, targetType: BaseTemporalType, node: Syntax
     diag(node, `Cannot parse as ${targetType}: ${expr.sql}`)
     return expr
   }
-  return {...expr, sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType, baseType: targetType}
+  return {...expr, sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: temporalType(targetType)}
 }
 
 function isPercentileFunctionCall(node: SyntaxNode): boolean {
@@ -1119,7 +1108,6 @@ function mergeExprAnalysis(exprs: Expr[], sql: string, type: FieldType, isAgg?: 
   return {
     sql,
     type,
-    baseType: isTemporalType(type) ? commonBaseType(exprs) || coarseTemporalType(type) : undefined,
     isAgg,
     fanout: normalizeExprFanout({
       path: isAgg ? undefined : rowFanout.path,
@@ -1309,9 +1297,9 @@ export function diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defau
 }
 
 export function checkTypes(expr: Expr, expected: FieldType[], node: SyntaxNode) {
-  if (expr.type == 'error' || expr.type == 'null') return
+  if (expr.type.base == 'error' || expr.type.base == 'null') return
   if (expected.some(type => isSubtype(expr.type, type))) return
-  diag(node, `Expected ${expected.join(' or ')}, got ${expr.type}`)
+  diag(node, `Expected ${expected.map(displayType).join(' or ')}, got ${displayType(expr.type)}`)
 }
 
 // Convert raw database types into simplified types. Malloy did this, I'm on the fence if we need it.
@@ -1334,25 +1322,25 @@ function convertDataType(dataType: string): FieldType | null {
     case 'TINYINT':
     case 'BYTEINT':
     case 'BIGDECIMAL':
-      return 'number'
+      return {base: 'number'}
     case 'VARIANT':
     case 'TEXT':
     case 'STRING':
     case 'VARCHAR':
     case 'GEOGRAPHY':
-      return 'string'
+      return {base: 'string'}
     case 'BOOL':
     case 'BOOLEAN':
-      return 'boolean'
+      return {base: 'boolean'}
     case 'DATE':
-      return 'date'
+      return temporalType('date')
     case 'DATETIME':
     case 'TIME':
     case 'TIMESTAMP':
     case 'TIMESTAMP_NTZ':
     case 'TIMESTAMP_TZ':
     case 'TIMESTAMP_LTZ':
-      return 'timestamp'
+      return temporalType('timestamp')
     default:
       return null
   }

@@ -1,11 +1,7 @@
-import {type FieldType, type Expr, type RefinedTemporalType, type TemporalBaseType} from './types.ts'
+import {type Expr, type FieldType, type RefinedTemporalType, type TemporalBaseType} from './types.ts'
 
 export type TimestampUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year'
 export type BaseTemporalType = TemporalBaseType
-
-const DATE_GRAINS = ['year', 'quarter', 'month', 'week', 'day'] as const
-const TIMESTAMP_GRAINS = ['hour', 'minute', 'second'] as const
-const REFINED_TEMPORAL_TYPES = [...DATE_GRAINS, ...TIMESTAMP_GRAINS] as const
 
 export type TemporalLiteral = {
   literal: string
@@ -112,23 +108,10 @@ export function parseIntervalUnit(value: string): TimestampUnit | null {
   return INTERVAL_UNITS[value.toLowerCase()] || null
 }
 
-export function parseRefinedTemporalType(value: string): RefinedTemporalType | null {
+export function parseTemporalGrain(value: string): RefinedTemporalType | null {
   let unit = parseIntervalUnit(value)
-  if (!unit || !isRefinedTemporalType(unit)) return null
+  if (!unit) return null
   return unit
-}
-
-export function isRefinedTemporalType(type: string | undefined): type is RefinedTemporalType {
-  return !!type && (REFINED_TEMPORAL_TYPES as readonly string[]).includes(type)
-}
-
-export function isTemporalType(type: FieldType | undefined): type is BaseTemporalType | RefinedTemporalType {
-  return type === 'date' || type === 'timestamp' || isRefinedTemporalType(type)
-}
-
-export function coarseTemporalType(type: BaseTemporalType | RefinedTemporalType): BaseTemporalType {
-  if (type === 'date' || type === 'timestamp') return type
-  return (TIMESTAMP_GRAINS as readonly string[]).includes(type) ? 'timestamp' : 'date'
 }
 
 function buildResult(year: number, month: number, day: number, hour: number, minute: number, second: number, timeframe: TemporalLiteral['timeframe'], expected: string): TemporalLiteral {
@@ -155,6 +138,10 @@ function isValidDate(year: number, month: number, day: number) {
 
 function pad(value: number) {
   return value.toString().padStart(2, '0')
+}
+
+export function temporalType(base: BaseTemporalType, grain?: TimestampUnit): FieldType {
+  return grain ? {base, params: {grain}} : {base}
 }
 
 export function renderTemporalArithmetic(dialect: string, leftSql: string, leftType: 'date' | 'timestamp', op: '+' | '-', intervalExpr: NonNullable<Expr['interval']>) {

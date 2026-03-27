@@ -11,13 +11,21 @@ declare module '@lezer/common' {
 
 export type RefinedTemporalType = TimestampUnit
 export type TemporalBaseType = 'date' | 'timestamp'
-export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | RefinedTemporalType | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
+export type FieldTypeBase = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'error' | 'null' | 'interval' | 'array' | 'record'
+
+export interface FieldType {
+  base: FieldTypeBase
+  params?: Record<string, string>
+}
+
+export function fieldTypeBase(type: FieldType | undefined): FieldTypeBase | undefined {
+  return type?.base
+}
 
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {
   sql: string // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
   type: FieldType // result type for validation
-  baseType?: TemporalBaseType // underlying warehouse temporal type when applicable
   isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
   interval?: IntervalExpr
@@ -90,7 +98,6 @@ export interface Query {
 export interface Column {
   name: string
   type: FieldType
-  baseType?: TemporalBaseType
   isAgg?: boolean // for computed columns that are aggregates
   exprNode?: SyntaxNode // for computed columns, the expression AST node (analyzed lazily in query context)
   metadata?: Record<string, string>

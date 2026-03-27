@@ -1,8 +1,9 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import type {GrapheneError} from '../../lang/types.ts'
+import type {GrapheneError, FieldType} from '../../lang/types.ts'
 
+import {evidenceType as grapheneEvidenceType} from '../../lang/typeRelations.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
@@ -15,15 +16,13 @@ interface QueryResult {
 
 interface Field {
   name: string
-  type?: string
-  baseType?: string
+  type?: FieldType
 }
 
 interface EvidenceColumnType {
   name: string
   evidenceType: string
-  grapheneType?: string
-  grapheneBaseType?: string
+  grapheneType?: FieldType
 }
 
 type ResultHandler = (res: QueryResult) => void
@@ -210,7 +209,7 @@ export function translateData(data: any, node: QueryNode) {
     }
 
     // map graphene types down to the ones evidence expects
-    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), grapheneType: field.type, grapheneBaseType: field.baseType})
+    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), grapheneType: field.type})
   })
 
   return {rows}
@@ -229,12 +228,10 @@ errorProvider('queryEngine', () => {
   return Object.values(unique)
 })
 
-function evidenceType(type: string | undefined) {
-  if (type === 'string') return 'string'
-  if (type === 'number') return 'number'
-  if (type === 'boolean') return 'boolean'
-  if (['date', 'timestamp', 'year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second'].includes(type || '')) return 'date'
-  console.warn('Unsupported evidence type ' + type)
+function evidenceType(type: FieldType | undefined) {
+  let mapped = grapheneEvidenceType(type)
+  if (mapped == 'string' || mapped == 'number' || mapped == 'boolean' || mapped == 'date') return mapped
+  console.warn('Unsupported evidence type ' + JSON.stringify(type))
   return 'string'
 }
 

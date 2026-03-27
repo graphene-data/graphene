@@ -1,34 +1,63 @@
-import {coarseTemporalType, isTemporalType} from './temporal.ts'
-import {type Expr, type FieldType, type TemporalBaseType} from './types.ts'
+import {type TimestampUnit} from './temporal.ts'
+import {fieldTypeBase, type FieldType} from './types.ts'
+
+const TEMPORAL_BASES = ['date', 'timestamp'] as const
+type TemporalBase = (typeof TEMPORAL_BASES)[number]
+
+export function displayType(type: FieldType | undefined) {
+  if (!type) return 'unknown'
+  if (!type.params || Object.keys(type.params).length == 0) return type.base
+  let entries = Object.entries(type.params)
+  if (entries.length == 1 && entries[0][0] == 'grain') return `${type.base}<${entries[0][1]}>`
+  return `${type.base}<${entries.map(([key, value]) => `${key}=${value}`).join(', ')}>`
+}
+
+export function isTemporalType(type: FieldType | undefined): type is FieldType & {base: TemporalBase} {
+  return !!type && (TEMPORAL_BASES as readonly string[]).includes(type.base)
+}
+
+export function temporalGrain(type: FieldType | undefined): TimestampUnit | undefined {
+  let grain = type?.params?.grain
+  return typeof grain == 'string' ? (grain as TimestampUnit) : undefined
+}
 
 export function isSubtype(actual: FieldType, expected: FieldType) {
-  if (actual == expected) return true
-  if (isTemporalType(actual) && (expected == 'date' || expected == 'timestamp')) return true
-  return false
+  if (actual.base != expected.base) return false
+  if (!expected.params || Object.keys(expected.params).length == 0) return true
+  if (!actual.params) return false
+  return Object.entries(expected.params).every(([key, value]) => actual.params?.[key] == value)
 }
 
 export function commonType(left: FieldType | null, right: FieldType | null): FieldType | null {
-  if (!left || left == 'null' || left == 'error') return right
-  if (!right || right == 'null' || right == 'error') return left
-  if (left == right) return left
-  if (isTemporalType(left) && isTemporalType(right)) return coarseTemporalType(left)
-  return right
+  if (!left || left.base == 'null' || left.base == 'error') return right
+  if (!right || right.base == 'null' || right.base == 'error') return left
+
+  if (left.base == right.base) {
+    if (sameParams(left.params, right.params)) return cloneType(left)
+    return {base: left.base}
+  }
+
+  if (isTemporalType(left) && isTemporalType(right)) return {base: 'timestamp'}
+  return cloneType(right)
 }
 
 export function mergeTypes(types: (FieldType | null | undefined)[]) {
   return types.reduce<FieldType | null>((merged, type) => commonType(merged, type || null), null)
 }
 
-export function temporalBaseType(expr: Pick<Expr, 'type' | 'baseType'> | {type: FieldType; baseType?: TemporalBaseType}): TemporalBaseType | undefined {
-  if (!isTemporalType(expr.type)) return undefined
-  return expr.baseType || coarseTemporalType(expr.type)
+export function cloneType(type: FieldType) {
+  return type.params ? {base: type.base, params: {...type.params}} : {base: type.base}
 }
 
-export function commonBaseType(exprs: {type: FieldType; baseType?: TemporalBaseType}[]) {
-  let temporalExprs = exprs.filter(expr => isTemporalType(expr.type))
-  if (temporalExprs.length == 0) return undefined
-  let baseTypes = [...new Set(temporalExprs.map(temporalBaseType).filter((type): type is TemporalBaseType => !!type))]
-  if (baseTypes.length == 0) return undefined
-  if (baseTypes.length == 1) return baseTypes[0]
-  return 'timestamp'
+function sameParams(left?: Record<string, string>, right?: Record<string, string>) {
+  let leftKeys = Object.keys(left || {})
+  let rightKeys = Object.keys(right || {})
+  if (leftKeys.length != rightKeys.length) return false
+  return leftKeys.every(key => left?.[key] == right?.[key])
+}
+
+export function evidenceType(type: FieldType | undefined) {
+  let base = fieldTypeBase(type)
+  if (base == 'date' || base == 'timestamp') return 'date'
+  return base
 }
