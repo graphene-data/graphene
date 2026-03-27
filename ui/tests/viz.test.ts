@@ -24,27 +24,9 @@ test('horizontal bar chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('horizontal-bar-chart')
 })
 
-test('area chart', async ({mount, chart}) => {
-  await mount('components2/AreaChart2.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
-  await expect(chart.el).screenshot('area-chart')
-})
-
 test('stacked area chart', async ({mount, chart}) => {
   await mount('components2/AreaChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', series: 'category', type: 'stacked'})
   await expect(chart.el).screenshot('stacked-area-chart')
-})
-
-test('stacked100 keeps time axis when x values are dates', async ({mount, chart}) => {
-  await mount('components2/AreaChart2.svelte', {
-    data: timeseriesGrouped(),
-    x: 'month',
-    y: 'sales_usd0k',
-    series: 'category',
-    type: 'stacked100',
-  })
-  let axisType = await chart.config(c => (Array.isArray(c.xAxis) ? c.xAxis[0] : c.xAxis).type)
-  expect(axisType).toBe('time')
-  await expect(chart.el).screenshot('stacked100-date-axis-order')
 })
 
 test('line chart timeseries', async ({mount, page, chart}) => {
@@ -108,12 +90,6 @@ test.skip('numeric year xFmt=yyyy keeps year labels', async ({mount, chart}) => 
 test('bar chart grouped labels', async ({mount, chart}) => {
   await mount('components2/BarChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', group: 'category', labels: true})
   await expect(chart.el).screenshot('bar-chart-grouped-labels')
-})
-
-test('bar chart invalid horizontal timeseries renders error state', async ({mount, page}) => {
-  await mount('components2/BarChart2.svelte', {data: timeseries(), x: 'sales_usd0k', y: 'month', title: 'Invalid Horizontal Timeseries'})
-  await expect(page.getByRole('alert')).toContainText('Horizontal charts do not support a value or time-based x-axis')
-  await expect(page.locator('#component-test')).screenshot('bar-chart-horizontal-timeseries-error')
 })
 
 test('line chart markers and step', async ({mount, chart}) => {

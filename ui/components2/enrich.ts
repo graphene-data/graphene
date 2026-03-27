@@ -54,7 +54,7 @@ function ensureDataset(config: EChartsConfig2, rows: Record<string, any>[], fiel
   return dataset.id
 }
 
-// Expand series templates that use `series: 'fieldName'` into one concrete series per distinct field value.
+// Expand series templates that use `encode.group` or `encode.stack` into one concrete series per distinct field value.
 // We do this with ECharts dataset filter transforms so wrappers stay small and users don't need to duplicate series configs.
 function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any>[], baseDatasetId: string) {
   let templates = normalizeSeries(config.series)
@@ -63,11 +63,14 @@ function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any
 
   templates.forEach((template, templateIndex) => {
     let entry: any = template
-    let splitField = typeof entry.series === 'string' ? entry.series : undefined
+    let groupField = typeof entry?.encode?.group === 'string' ? entry.encode.group : undefined
+    let stackField = typeof entry?.encode?.stack === 'string' ? entry.encode.stack : undefined
 
+    if (groupField && stackField) throw new Error('Series encode.group and encode.stack cannot both be set')
+
+    let splitField = groupField ?? stackField
     if (!splitField) {
       let next = {...entry}
-      delete next.series
       if (shouldBindSeriesToDataset(next) && next.datasetId == null) next.datasetId = baseDatasetId
       expanded.push(next)
       return
@@ -86,7 +89,6 @@ function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any
       })
 
       let next = {...entry, datasetId}
-      delete next.series
       if (next.name == null) next.name = String(seriesValue ?? '')
       expanded.push(next)
     })

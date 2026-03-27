@@ -137,6 +137,19 @@
     {quarter: 'Q3', region: 'South', channel: 'Online', value: 155},
     {quarter: 'Q3', region: 'South', channel: 'Retail', value: 115},
   ]
+  let groupedStackedSlots = Array.from(new Set(groupedStackedRows.map(row => `${row.quarter}|${row.region}`)))
+  let groupedStackedRegionLabels = groupedStackedSlots.map(slot => slot.split('|')[1])
+  let groupedStackedQuarterLabels = groupedStackedSlots.map((slot, index, slots) => {
+    let quarter = slot.split('|')[0]
+    let previousQuarter = slots[index - 1]?.split('|')[0]
+    return quarter === previousQuarter ? '' : quarter
+  })
+  let groupedStackedChannelValues = (channel: string) => {
+    return groupedStackedSlots.map(slot => {
+      let [quarter, region] = slot.split('|')
+      return groupedStackedRows.find(row => row.quarter === quarter && row.region === region && row.channel === channel)?.value ?? 0
+    })
+  }
 
   let dualAxisRows = [
     {month: 'Jan', revenue: 120, conversion_rate: 3.2},
@@ -251,7 +264,7 @@
       tooltip: {trigger: 'axis'},
       xAxis: {type: 'category'},
       yAxis: {type: 'value'},
-      series: [{type: 'line', stack: 'total', areaStyle: {}, encode: {x: 'day', y: 'value'}, series: 'metric'}],
+      series: [{type: 'line', stack: 'total', areaStyle: {}, encode: {x: 'day', y: 'value', group: 'metric'}}],
     }}
   />
 
@@ -264,7 +277,7 @@
       tooltip: {trigger: 'axis'},
       xAxis: {type: 'category'},
       yAxis: {type: 'value'},
-      series: [{type: 'bar', encode: {x: 'quarter', y: 'value'}, series: 'metric'}],
+      series: [{type: 'bar', encode: {x: 'quarter', y: 'value', group: 'metric'}}],
     }}
   />
 
@@ -277,7 +290,7 @@
       tooltip: {trigger: 'item'},
       xAxis: {type: 'value'},
       yAxis: {type: 'value'},
-      series: [{type: 'scatter', encode: {x: 'x', y: 'y'}, series: 'group'}],
+      series: [{type: 'scatter', encode: {x: 'x', y: 'y', group: 'group'}}],
     }}
   />
 
@@ -286,18 +299,18 @@
     rows={groupedStackedRows}
     fields={groupedStackedFields}
     config={{
-      title: {text: 'Grouped + Stacked Bar'},
+      title: {text: 'Grouped + Stacked Bar (Two X-Axes)'},
       tooltip: {trigger: 'axis'},
-      legend: {},
-      xAxis: {type: 'category'},
-      yAxis: {type: 'value'},
-      dataset: [
-        {id: 'north_only', fromDatasetId: '__graphene_base', transform: {type: 'filter', config: {dimension: 'region', '=': 'North'}}},
-        {id: 'south_only', fromDatasetId: '__graphene_base', transform: {type: 'filter', config: {dimension: 'region', '=': 'South'}}},
+      legend: {show: true},
+      grid: {bottom: 56},
+      xAxis: [
+        {type: 'category', data: groupedStackedRegionLabels, axisTick: {alignWithLabel: true}},
+        {type: 'category', data: groupedStackedQuarterLabels, position: 'bottom', offset: 24, axisTick: {show: false}},
       ],
+      yAxis: {type: 'value'},
       series: [
-        {type: 'bar', stack: 'north', datasetId: 'north_only', encode: {x: 'quarter', y: 'value'}, series: 'channel'},
-        {type: 'bar', stack: 'south', datasetId: 'south_only', encode: {x: 'quarter', y: 'value'}, series: 'channel'},
+        {name: 'Online', type: 'bar', stack: 'channels', data: groupedStackedChannelValues('Online')},
+        {name: 'Retail', type: 'bar', stack: 'channels', data: groupedStackedChannelValues('Retail')},
       ],
     }}
   />
@@ -384,7 +397,7 @@
       title: {text: 'Theme River'},
       tooltip: {trigger: 'axis'},
       singleAxis: {type: 'time'},
-      series: [{type: 'themeRiver', encode: {single: 'month', value: 'value', seriesName: 'topic'}, series: 'topic'}],
+      series: [{type: 'themeRiver', encode: {single: 'month', value: 'value', seriesName: 'topic', group: 'topic'}}],
     }}
   />
 
