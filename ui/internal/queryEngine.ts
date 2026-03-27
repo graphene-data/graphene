@@ -1,8 +1,8 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import type {FieldType, GrapheneError} from '../../lang/types.ts'
-
+import type {FieldMetadata, GrapheneError} from '../../lang/types.ts'
+import {type Field} from '../components2/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
@@ -11,11 +11,7 @@ interface QueryResult {
   rows?: any[]
   error?: GrapheneError
   fields?: Field[]
-}
-
-export interface Field {
-  name: string
-  type?: FieldType
+  fieldMetadata?: FieldMetadata
 }
 
 type ResultHandler = (res: QueryResult) => void

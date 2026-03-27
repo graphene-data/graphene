@@ -13,6 +13,11 @@ export type Field = {
   name: string
   type?: string
   evidenceType?: string
+  metadata?: {
+    pct?: true
+    units?: string
+    granularity?: string
+  }
 }
 
 // ECharts2 accepts column references in place of concrete arrays.
