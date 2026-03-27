@@ -105,6 +105,7 @@ async function createConfig(): Promise<InlineConfig> {
         '@graphenedata/cli > @tidyjs/tidy',
         '@graphenedata/cli > chroma-js',
         '@graphenedata/cli > echarts/dist/echarts.esm.js',
+        '@graphenedata/cli > echarts6/dist/echarts.esm.js',
         '@graphenedata/cli > @graphenedata/html2canvas',
       ],
     },
@@ -268,7 +269,7 @@ const handleRequestPlugin = {
       try {
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
-        if (pathName == '/__ct') return await handlePage(s, res)
+        if (pathName == '/__ct' || pathName == '/__dev/echarts2') return await handlePage(s, res)
 
         if (!pathName || pathName == '/') pathName = 'index'
         let relativeMdPath = pathName.replace(/^\//, '') + '.md'

@@ -104,6 +104,9 @@ importers:
       echarts:
         specifier: ^5.5.0
         version: 5.6.0
+      echarts6:
+        specifier: npm:echarts@^6.0.0
+        version: echarts@6.0.0
       fs-extra:
         specifier: 11.2.0
         version: 11.2.0
@@ -259,6 +262,9 @@ importers:
       echarts:
         specifier: ^5.5.0
         version: 5.6.0
+      echarts6:
+        specifier: npm:echarts@^6.0.0
+        version: echarts@6.0.0
       marked:
         specifier: ^16.3.0
         version: 16.4.2
@@ -2062,6 +2068,9 @@ packages:
   echarts@5.6.0:
     resolution: {integrity: sha512-oTbVTsXfKuEhxftHqL5xprgLoc0k7uScAwtryCgWF6hPYFLRwOUHiFmHGCBKP5NPFNkDVopOieyUqYGH8Fa3kA==}
 
+  echarts@6.0.0:
+    resolution: {integrity: sha512-Tte/grDQRiETQP4xz3iZWSvoHrkCQtwqd6hs+mifXcjrCuo2iKWbajFObuLJVBlDIJlOzgQPd1hsaKt/3+OMkQ==}
+
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
 
@@ -3343,6 +3352,9 @@ packages:
 
   zrender@5.6.1:
     resolution: {integrity: sha512-OFXkDJKcrlx5su2XbzJvj/34Q3m6PvyCZkVPHGYpcCJ52ek4U/ymZyfuV1nKE23AyBJ51E/6Yr0mhZ7xGTO4ag==}
+
+  zrender@6.0.0:
+    resolution: {integrity: sha512-41dFXEEXuJpNecuUQq6JlbybmnHaqqpGlbH1yxnA5V9MMP4SbohSVZsJIwz+zdjQXSSlR1Vc34EgH1zxyTDvhg==}
 
   zx@8.8.5:
     resolution: {integrity: sha512-SNgDF5L0gfN7FwVOdEFguY3orU5AkfFZm9B5YSHog/UDHv+lvmd82ZAsOenOkQixigwH2+yyH198AwNdKhj+RA==}
@@ -5457,6 +5469,11 @@ snapshots:
       tslib: 2.3.0
       zrender: 5.6.1
 
+  echarts@6.0.0:
+    dependencies:
+      tslib: 2.3.0
+      zrender: 6.0.0
+
   emoji-regex@8.0.0: {}
 
   emoji-regex@9.2.2: {}
@@ -6891,6 +6908,10 @@ snapshots:
   zimmerframe@1.1.4: {}
 
   zrender@5.6.1:
+    dependencies:
+      tslib: 2.3.0
+
+  zrender@6.0.0:
     dependencies:
       tslib: 2.3.0
 
