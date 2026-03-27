@@ -5,6 +5,7 @@
   import * as chartWindowDebug from '../component-utilities/chartWindowDebug.js'
   import {enrich} from './enrich.ts'
   import type {EChartsConfig2, Field} from './types.ts'
+  import './theme.ts'
 
   interface Props {
     config: EChartsConfig2
@@ -30,6 +31,7 @@
 
   let node: HTMLDivElement | null = $state(null)
   let chart: any = $state(null)
+  let theme = 'graphene'
 
   let chartState = $derived.by(() => {
     try {
@@ -48,7 +50,7 @@
       return
     }
 
-    chart ||= init(node, undefined, {renderer})
+    chart ||= init(node, theme, {renderer})
     chartWindowDebug.set(String(chart.id), chart)
 
     let chartId = chart.id
