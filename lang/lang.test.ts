@@ -880,14 +880,18 @@ describe('lang', () => {
 
     let direct = analyze("from events select date_trunc('month', event_date) as month_bucket, date_trunc('hour', created_at) as hour_bucket")
     expect(direct[0].fields[0].type).toBe('month')
+    expect(direct[0].fields[0].baseType).toBe('date')
     expect(direct[0].fields[1].type).toBe('hour')
+    expect(direct[0].fields[1].baseType).toBe('timestamp')
 
     let nested = analyze(`
       table monthly_events as (from events select date_trunc('month', event_date) as month_bucket)
       from monthly_events select month_bucket, min(month_bucket) as first_month
     `)
     expect(nested[0].fields[0].type).toBe('month')
+    expect(nested[0].fields[0].baseType).toBe('date')
     expect(nested[0].fields[1].type).toBe('month')
+    expect(nested[0].fields[1].baseType).toBe('date')
   })
 
   it('treats refined temporal types as temporal and degrades merge expressions conservatively', () => {

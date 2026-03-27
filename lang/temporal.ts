@@ -1,7 +1,7 @@
-import {type FieldType, type Expr, type RefinedTemporalType} from './types.ts'
+import {type FieldType, type Expr, type RefinedTemporalType, type TemporalBaseType} from './types.ts'
 
 export type TimestampUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year'
-export type BaseTemporalType = 'date' | 'timestamp'
+export type BaseTemporalType = TemporalBaseType
 
 const DATE_GRAINS = ['year', 'quarter', 'month', 'week', 'day'] as const
 const TIMESTAMP_GRAINS = ['hour', 'minute', 'second'] as const

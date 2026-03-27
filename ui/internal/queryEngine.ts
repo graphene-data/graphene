@@ -16,12 +16,14 @@ interface QueryResult {
 interface Field {
   name: string
   type?: string
+  baseType?: string
 }
 
 interface EvidenceColumnType {
   name: string
   evidenceType: string
   grapheneType?: string
+  grapheneBaseType?: string
 }
 
 type ResultHandler = (res: QueryResult) => void
@@ -208,7 +210,7 @@ export function translateData(data: any, node: QueryNode) {
     }
 
     // map graphene types down to the ones evidence expects
-    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), grapheneType: field.type})
+    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), grapheneType: field.type, grapheneBaseType: field.baseType})
   })
 
   return {rows}

@@ -36,7 +36,7 @@ test('translateData preserves refined Graphene temporal types while mapping them
   let data = {
     rows: [{month_bucket: '2024-01-01', num: 3}],
     fields: [
-      {name: 'month_bucket', type: 'month'},
+      {name: 'month_bucket', type: 'month', baseType: 'date'},
       {name: 'num', type: 'number'},
     ],
   }
@@ -50,7 +50,7 @@ test('translateData preserves refined Graphene temporal types while mapping them
   let result = translateData(data, node)
 
   expect((result.rows as any)._evidenceColumnTypes).toEqual([
-    {name: 'month_bucket', evidenceType: 'date', grapheneType: 'month'},
-    {name: 'num', evidenceType: 'number', grapheneType: 'number'},
+    {name: 'month_bucket', evidenceType: 'date', grapheneType: 'month', grapheneBaseType: 'date'},
+    {name: 'num', evidenceType: 'number', grapheneType: 'number', grapheneBaseType: undefined},
   ])
 })

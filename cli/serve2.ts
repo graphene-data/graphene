@@ -141,7 +141,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let queryResults = await runQuery(sql)
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
+  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type, baseType: f.baseType}))
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
 

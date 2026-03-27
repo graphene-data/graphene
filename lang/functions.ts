@@ -9,7 +9,7 @@ import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {coarseTemporalType, isTemporalType, parseRefinedTemporalType} from './temporal.ts'
-import {mergeTypes} from './typeRelations.ts'
+import {mergeTypes, commonBaseType, temporalBaseType} from './typeRelations.ts'
 import {type Expr, type FieldType, type Scope} from './types.ts'
 import {txt} from './util.ts'
 
@@ -144,6 +144,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   let returnType: FieldType = overload.returnType.type as FieldType
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || 'string'
   returnType = inferFunctionReturnType(name, args, returnType)
+  let baseType = inferFunctionBaseType(name, args, returnType)
 
   let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
   let canWindow = overload.returnType.expressionType == 'aggregate' || overload.returnType.expressionType == 'window'
@@ -159,6 +160,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   return {
     sql,
     type: returnType,
+    baseType,
     isAgg,
     canWindow,
     fanout: normalizeExprFanout({path: isAgg ? undefined : fanout.path, sensitivePaths: fanoutSensitivePaths, conflict: fanoutConflict}),
@@ -175,6 +177,15 @@ function inferFunctionReturnType(name: string, args: Expr[], returnType: FieldTy
   if (!refined) return returnType
   if (isTemporalType(returnType)) return refined
   return coarseTemporalType(refined)
+}
+
+function inferFunctionBaseType(name: string, args: Expr[], returnType: FieldType) {
+  if (!isTemporalType(returnType)) return undefined
+  if (name == 'date_trunc') {
+    let source = args.find(arg => isTemporalType(arg.type))
+    return source ? temporalBaseType(source) : coarseTemporalType(returnType)
+  }
+  return commonBaseType(args) || coarseTemporalType(returnType)
 }
 
 function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
