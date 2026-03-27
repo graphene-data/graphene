@@ -243,7 +243,6 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
 // Main query analysis - analyzes and returns a Query with computed SQL
 export function analyzeQuery(queryNode: SyntaxNode, outerCtes?: Table[]): Query | void {
   if (queryNode.name == 'QueryStatement') queryNode = queryNode.getChild('QueryExpression')!
-  if (queryNode.name == 'QueryExpression') return analyzeQueryExpression(queryNode, outerCtes)
   return analyzeQueryExpression(queryNode.getChild('QueryExpression') || queryNode, outerCtes)
 }
 
