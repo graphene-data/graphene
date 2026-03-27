@@ -263,13 +263,7 @@ function analyzeQueryExpression(queryNode: SyntaxNode, outerCtes?: Table[]): Que
     scope.otherTables!.push(cte)
   }
 
-  let queryBody = queryNode.getChild('QueryBody')
-  if (!queryBody) return diag(queryNode, 'Invalid query')
-  return analyzeQueryBody(queryBody, scope, ctes)
-}
-
-function analyzeQueryBody(queryNode: SyntaxNode, scope: Scope, ctes: Map<string, CteTable>): Query | void {
-  if (queryNode.getChildren('SetClause').length) return analyzeSetQuery(queryNode, scope, ctes)
+  if (queryNode.getChildren('SetOperator').length) return analyzeSetQuery(queryNode, scope, ctes)
   return analyzeSimpleQuery(queryNode.getChild('SimpleQuery')!, queryNode, scope, ctes)
 }
 
@@ -445,7 +439,7 @@ function analyzeSetQuery(queryNode: SyntaxNode, scope: Scope, ctes: Map<string, 
     if (branch.query.fields.length != first.fields.length) return diag(queryNode, 'Set operation branches must return the same number of columns')
   }
 
-  let setOps = queryNode.getChildren('SetClause').map(node => node.getChild('SetOperator')!)
+  let setOps = queryNode.getChildren('SetOperator')
   let query: Query = {
     sql: '',
     fields: first.fields.map(field => ({...field})),
