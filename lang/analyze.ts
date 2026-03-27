@@ -27,6 +27,7 @@ import {
   renderStandaloneInterval,
   type BaseTemporalType,
 } from './temporal.ts'
+import {commonType, isSubtype} from './typeRelations.ts'
 import {
   type Table,
   type Query,
@@ -784,7 +785,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         let exprs = w.getChildren('Expression')
         let when = analyzeExpr(exprs[0], scope)
         let then = analyzeExpr(exprs[1], scope)
-        resultType = mergeCaseResultType(resultType, then.type)
+        resultType = commonType(resultType, then.type)
         isAgg ||= !!when.isAgg || !!then.isAgg
         fanoutExprs.push(when, then)
         parts.push(`WHEN (${when.sql}) THEN ${then.sql}`)
@@ -793,7 +794,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let elseClause = node.getChild('ElseClause')
       if (elseClause) {
         let elseExpr = analyzeExpr(elseClause.getChild('Expression')!, scope)
-        resultType = mergeCaseResultType(resultType, elseExpr.type)
+        resultType = commonType(resultType, elseExpr.type)
         parts.push(`ELSE ${elseExpr.sql}`)
         isAgg ||= !!elseExpr.isAgg
         fanoutExprs.push(elseExpr)
@@ -1304,22 +1305,8 @@ export function diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defau
 
 export function checkTypes(expr: Expr, expected: FieldType[], node: SyntaxNode) {
   if (expr.type == 'error' || expr.type == 'null') return
-  if (expected.some(type => typeMatches(expr.type, type))) return
+  if (expected.some(type => isSubtype(expr.type, type))) return
   diag(node, `Expected ${expected.join(' or ')}, got ${expr.type}`)
-}
-
-function typeMatches(actual: FieldType, expected: FieldType) {
-  if (actual == expected) return true
-  if (isTemporalType(actual) && (expected == 'date' || expected == 'timestamp')) return true
-  return false
-}
-
-function mergeCaseResultType(current: FieldType | null, next: FieldType): FieldType {
-  if (!current || current == 'null' || current == 'error') return next
-  if (next == 'null' || next == 'error') return current
-  if (current == next) return current
-  if (isTemporalType(current) && isTemporalType(next)) return coarseTemporalType(current)
-  return next
 }
 
 // Convert raw database types into simplified types. Malloy did this, I'm on the fence if we need it.

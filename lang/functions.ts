@@ -9,6 +9,7 @@ import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {coarseTemporalType, isTemporalType, parseRefinedTemporalType} from './temporal.ts'
+import {mergeTypes} from './typeRelations.ts'
 import {type Expr, type FieldType, type Scope} from './types.ts'
 import {txt} from './util.ts'
 
@@ -165,14 +166,15 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
 }
 
 function inferFunctionReturnType(name: string, args: Expr[], returnType: FieldType): FieldType {
-  if (['coalesce', 'ifnull', 'if', 'iff', 'least', 'greatest'].includes(name) && isTemporalType(returnType)) {
-    return coarseTemporalType(returnType)
-  }
+  if (['coalesce', 'ifnull', 'least', 'greatest'].includes(name)) return mergeTypes(args.map(arg => arg.type)) || returnType
+  if (['if', 'iff'].includes(name)) return mergeTypes(args.slice(1).map(arg => arg.type)) || returnType
   if (name != 'date_trunc') return returnType
   let unitArg = args.find(arg => arg.type == 'sql native') || args.find(arg => arg.type == 'string' && /^['"].*['"]$/.test(arg.sql))
   if (!unitArg) return returnType
   let refined = parseRefinedTemporalType(unitArg.sql.replace(/^['"]|['"]$/g, ''))
-  return refined || returnType
+  if (!refined) return returnType
+  if (isTemporalType(returnType)) return refined
+  return coarseTemporalType(refined)
 }
 
 function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
