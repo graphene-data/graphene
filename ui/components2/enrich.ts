@@ -13,6 +13,7 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
   let fieldInfo = getFieldInfo(config, fields)
   inferXAxisType(config, fieldInfo)
   horizontalBarGuard(config, fieldInfo)
+  currencyValueAxisFormatting(config, fields)
   resolveDataReferences(config, rows)
   applyIntegerYAxisTicks(config)
   stackedBarCornerRadius(config)
@@ -110,6 +111,49 @@ function inferXAxisType(config: EChartsConfig2, fieldInfo: FieldInfo) {
   else xAxis.type = 'category'
 }
 
+// Apply compact currency formatting to value axes when the backing field declares currency units.
+function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
+  let yAxes = normalizeAxis(config.yAxis)
+  if (yAxes.length === 0) return
+
+  let symbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
+  let formatter = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
+
+  // Pass 1: inspect series templates and figure out which y-axis index should use which currency.
+  // We do this before mutating axes so we can dedupe: multiple series on the same axis should still
+  // result in only one formatter assignment for that axis.
+  let axisCurrency = new Map<number, keyof typeof symbols>()
+  for (let series of normalizeSeries(config.series)) {
+    if (typeof series.data !== 'string') continue
+
+    let field = findField(fields, series.data)
+    let unit = field?.metadata?.units?.toLowerCase() as keyof typeof symbols | undefined
+    if (!unit || !(unit in symbols)) continue
+
+    let axisIndex = Number((series as any).yAxisIndex ?? 0)
+    if (!axisCurrency.has(axisIndex)) axisCurrency.set(axisIndex, unit)
+  }
+
+  // Pass 2: apply one formatter per axis using the mapping from pass 1.
+  // This keeps behavior stable when many series share an axis and avoids repeatedly overwriting
+  // axisLabel.formatter inside the series loop.
+  for (let [axisIndex, unit] of axisCurrency.entries()) {
+    let axis = yAxes[axisIndex] as any
+    if (!axis || axis.type !== 'value' || axis.axisLabel?.formatter != null) continue
+
+    axis.axisLabel = {
+      ...axis.axisLabel,
+      formatter: (value: any) => {
+        let amount = Number(value)
+        if (!Number.isFinite(amount)) return String(value ?? '')
+        let sign = amount < 0 ? '-' : ''
+        let compact = formatter.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
+        return `${sign}${symbols[unit]}${compact}`
+      },
+    }
+  }
+}
+
 // This is trying to fix an issue with charts where every value is either 0 or 1.
 // TODO: just make this a test, and see if we still need it
 function applyIntegerYAxisTicks(config: EChartsConfig2) {
@@ -176,6 +220,11 @@ function extractNumericValues(data: any) {
 function normalizeSeries(series: EChartsConfig2['series']): SeriesWithColumnRefs[] {
   if (!series) return []
   return Array.isArray(series) ? series : [series]
+}
+
+function normalizeAxis(axis: any) {
+  if (!axis) return []
+  return Array.isArray(axis) ? axis : [axis]
 }
 
 function firstAxis(axis: any) {
