@@ -98,14 +98,13 @@
       },
       yAxis: [
         {
-          type: 'value',
           show: true,
           splitLine: {show: parseBool(yGridlines)},
           axisTick: {show: parseBool(yTickMarks)},
           axisLine: {show: parseBool(yBaseline)},
           axisLabel: {show: true},
         },
-        ...(y2 ? [{type: 'value', show: true, axisLabel: {show: true, color: y2AxisColor}, splitLine: {show: false}, axisTick: {show: true}, axisLine: {show: true}}] : []),
+        ...(y2 ? [{show: true, axisLabel: {show: true, color: y2AxisColor}, splitLine: {show: false}, axisTick: {show: true}, axisLine: {show: true}}] : []),
       ],
       series: seriesTemplates,
     }
