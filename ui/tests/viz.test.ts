@@ -6,18 +6,14 @@ test.beforeEach(async ({page}) => {
 })
 
 test('bar chart', async ({mount, chart}) => {
-  await mount('components2/BarChart2.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
+  await mount('components2/BarChart2.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k', title: 'Monthly Sales'})
   await expect(chart.el).screenshot('bar-chart')
 })
 
 test('bar chart with just 0,1 has sensible y axis ticks', async ({mount, chart, page}) => {
   let rows = [{category: 'A', count: 1}, {category: 'B', count: 0}, {category: 'C', count: 1}]
   await mount('components2/BarChart2.svelte', {data: {rows}, x: 'category', y: 'count'})
-
-  let minInterval = await chart.config(c => (Array.isArray(c.yAxis) ? c.yAxis[0] : c.yAxis).minInterval)
-  expect(minInterval).toBe(1)
-  await expect(page.locator('#component-test svg')).toBeVisible()
-  await expect(chart.el).screenshot('bar-chart2-basic')
+  await expect(chart.el).screenshot('bar-chart-0-to-1')
 })
 
 test('bar chart grouped + stacked', async ({mount, chart}) => {

@@ -14,6 +14,7 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
 
   inferAxisTypesFromEncodedFields(config, fields)
   horizontalBarGuard(config, fields)
+  compactGridWhenHeaderIsHidden(config)
   currencyValueAxisFormatting(config, fields)
   applyIntegerYAxisTicks(config, rows)
   stackedBarCornerRadius(config)
@@ -122,6 +123,26 @@ function inferAxisTypesFromEncodedFields(config: EChartsConfig2, fields: Field[]
   })
 }
 
+// Reclaim unused header space from the theme's default grid top.
+// We keep the most room when legends are visible, use moderate space for titles, and minimal space otherwise.
+function compactGridWhenHeaderIsHidden(config: EChartsConfig2) {
+  if (hasVisibleLegend(config.legend)) return
+
+  let title = firstVisibleTitle(config.title)
+  let top = title ? (title.subtext ? 52 : 40) : 8
+
+  let grids = normalizeGrid((config as any).grid)
+  if (grids.length === 0) {
+    ;(config as any).grid = {top}
+    return
+  }
+
+  grids.forEach((grid: any) => {
+    if (!grid || grid.top != null) return
+    grid.top = top
+  })
+}
+
 // Apply compact currency formatting to value axes when the backing field declares currency units.
 function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
   let yAxes = normalizeAxis(config.yAxis)
@@ -204,8 +225,23 @@ function normalizeAxis(axis: any) {
   return Array.isArray(axis) ? axis : [axis]
 }
 
+function normalizeGrid(grid: any) {
+  if (!grid) return []
+  return Array.isArray(grid) ? grid : [grid]
+}
+
 function firstAxis(axis: any) {
   return Array.isArray(axis) ? axis[0] : axis
+}
+
+function firstVisibleTitle(title: any) {
+  let titles = title == null ? [] : Array.isArray(title) ? title : [title]
+  return titles.find(entry => entry && entry.show !== false && Boolean(entry.text || entry.subtext))
+}
+
+function hasVisibleLegend(legend: any) {
+  let legends = legend == null ? [] : Array.isArray(legend) ? legend : [legend]
+  return legends.some(entry => entry && entry.show !== false)
 }
 
 function isHorizontalBar(config: EChartsConfig2) {

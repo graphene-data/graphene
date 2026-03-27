@@ -64,7 +64,7 @@
       tooltip: {trigger: 'axis'},
       legend: {show: legend ?? (groupedSeries || yFields.length > 1)},
       xAxis: {type: xType},
-      yAxis: {type: 'value', max: type === 'stacked100' ? 1 : undefined},
+      yAxis: {max: type === 'stacked100' ? 1 : undefined},
       series: seriesTemplates,
     }
   }
