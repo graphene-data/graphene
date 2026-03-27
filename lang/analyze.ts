@@ -17,7 +17,16 @@ import {
 } from './fanout.ts'
 import {analyzeFunction} from './functions.ts'
 import {extractLeadingMetadata} from './metadata.ts'
-import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval} from './temporal.ts'
+import {
+  coarseTemporalType,
+  isTemporalType,
+  parseTemporalLiteral,
+  parseIntervalLiteral,
+  parseIntervalUnit,
+  renderTemporalArithmetic,
+  renderStandaloneInterval,
+  type BaseTemporalType,
+} from './temporal.ts'
 import {
   type Table,
   type Query,
@@ -691,16 +700,16 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let op = txt(node.firstChild?.nextSibling).toLowerCase()
 
       // Type coercion for dates
-      if ((left.type == 'date' || left.type == 'timestamp') && right.type == 'string') {
-        right = coerceToTemporal(right, left.type, node.lastChild!)
+      if (isTemporalType(left.type) && right.type == 'string') {
+        right = coerceToTemporal(right, coarseTemporalType(left.type), node.lastChild!)
       }
-      if ((right.type == 'date' || right.type == 'timestamp') && left.type == 'string') {
-        left = coerceToTemporal(left, right.type, node.firstChild!)
+      if (isTemporalType(right.type) && left.type == 'string') {
+        left = coerceToTemporal(left, coarseTemporalType(right.type), node.firstChild!)
       }
 
       // Date arithmetic
       if (op == '+' || op == '-') {
-        if (left.type == 'date' || left.type == 'timestamp' || left.type == 'interval' || right.type == 'interval') {
+        if (isTemporalType(left.type) || left.type == 'interval' || right.type == 'interval') {
           return analyzeDateArithmetic(op, left, right, node)
         }
       }
@@ -770,12 +779,12 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         fanoutExprs.push(e)
       }
 
-      let resultType: FieldType = 'string'
+      let resultType: FieldType | null = null
       for (let w of node.getChildren('WhenClause')) {
         let exprs = w.getChildren('Expression')
         let when = analyzeExpr(exprs[0], scope)
         let then = analyzeExpr(exprs[1], scope)
-        resultType = then.type
+        resultType = mergeCaseResultType(resultType, then.type)
         isAgg ||= !!when.isAgg || !!then.isAgg
         fanoutExprs.push(when, then)
         parts.push(`WHEN (${when.sql}) THEN ${then.sql}`)
@@ -784,12 +793,13 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let elseClause = node.getChild('ElseClause')
       if (elseClause) {
         let elseExpr = analyzeExpr(elseClause.getChild('Expression')!, scope)
+        resultType = mergeCaseResultType(resultType, elseExpr.type)
         parts.push(`ELSE ${elseExpr.sql}`)
         isAgg ||= !!elseExpr.isAgg
         fanoutExprs.push(elseExpr)
       }
       parts.push('END')
-      return mergeExprAnalysis(fanoutExprs, parts.join(' '), resultType, isAgg || undefined)
+      return mergeExprAnalysis(fanoutExprs, parts.join(' '), resultType || 'string', isAgg || undefined)
     }
 
     case 'InExpression': {
@@ -809,8 +819,8 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let values = valueList.getChildren('Expression').map(v => {
         let val = analyzeExpr(v, scope)
         // Coerce string literals to temporal types if needed
-        if ((e.type == 'date' || e.type == 'timestamp') && val.type == 'string') {
-          val = coerceToTemporal(val, e.type, v)
+        if (isTemporalType(e.type) && val.type == 'string') {
+          val = coerceToTemporal(val, coarseTemporalType(e.type), v)
         }
         return val.sql
       })
@@ -825,9 +835,10 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let [eNode, lowNode, highNode] = node.getChildren('Expression')
       let [e, low, high] = [eNode, lowNode, highNode].map(n => analyzeExpr(n, scope))
 
-      if (e.type == 'date' || e.type == 'timestamp') {
-        low = coerceToTemporal(low, e.type, lowNode)
-        high = coerceToTemporal(high, e.type, highNode)
+      if (isTemporalType(e.type)) {
+        let temporalType = coarseTemporalType(e.type)
+        low = coerceToTemporal(low, temporalType, lowNode)
+        high = coerceToTemporal(high, temporalType, highNode)
       }
 
       let sql = `${e.sql} ${not ? 'NOT BETWEEN' : 'BETWEEN'} ${low.sql} AND ${high.sql}`
@@ -900,9 +911,9 @@ function analyzeDateArithmetic(op: '+' | '-', left: Expr, right: Expr, node: Syn
   let merged = mergeExprAnalysis([left, right], '', 'number', left.isAgg || right.isAgg)
 
   // date - date = interval
-  if ((left.type == 'date' || left.type == 'timestamp') && (right.type == 'date' || right.type == 'timestamp')) {
+  if (isTemporalType(left.type) && isTemporalType(right.type)) {
     if (op != '-') return diag(node, 'Can only subtract dates', {sql: 'NULL', type: 'error'})
-    let unit = left.type == 'timestamp' ? 'SECOND' : 'DAY'
+    let unit = coarseTemporalType(left.type) == 'timestamp' ? 'SECOND' : 'DAY'
     if (config.dialect == 'bigquery') {
       return {...merged, sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: 'number'}
     }
@@ -913,16 +924,18 @@ function analyzeDateArithmetic(op: '+' | '-', left: Expr, right: Expr, node: Syn
   }
 
   // date +/- interval
-  if ((left.type == 'date' || left.type == 'timestamp') && right.type == 'interval') {
+  if (isTemporalType(left.type) && right.type == 'interval') {
     if (!right.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
-    return {...merged, sql: renderTemporalArithmetic(config.dialect, left.sql, left.type, op, right.interval), type: left.type}
+    let temporalType = coarseTemporalType(left.type)
+    return {...merged, sql: renderTemporalArithmetic(config.dialect, left.sql, temporalType, op, right.interval), type: temporalType}
   }
 
   // interval + date (normalize to date + interval)
-  if (left.type == 'interval' && (right.type == 'date' || right.type == 'timestamp')) {
+  if (left.type == 'interval' && isTemporalType(right.type)) {
     if (op == '-') return diag(node, 'Cannot subtract date from interval', {sql: 'NULL', type: 'error'})
     if (!left.interval) return diag(node, 'Invalid interval expression', {sql: 'NULL', type: 'error'})
-    return {...merged, sql: renderTemporalArithmetic(config.dialect, right.sql, right.type, '+', left.interval), type: right.type}
+    let temporalType = coarseTemporalType(right.type)
+    return {...merged, sql: renderTemporalArithmetic(config.dialect, right.sql, temporalType, '+', left.interval), type: temporalType}
   }
 
   return diag(node, 'Invalid date arithmetic', {sql: 'NULL', type: 'error'})
@@ -950,7 +963,7 @@ function scaleInterval(multiplier: Expr, intervalExpr: Expr, node: SyntaxNode): 
   }
 }
 
-function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: SyntaxNode): Expr {
+function coerceToTemporal(expr: Expr, targetType: BaseTemporalType, node: SyntaxNode): Expr {
   // Extract the string literal value (remove quotes)
   let match = expr.sql.match(/^'(.+)'$/)
   if (!match) return expr
@@ -1291,8 +1304,22 @@ export function diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defau
 
 export function checkTypes(expr: Expr, expected: FieldType[], node: SyntaxNode) {
   if (expr.type == 'error' || expr.type == 'null') return
-  if (expected.includes(expr.type)) return
+  if (expected.some(type => typeMatches(expr.type, type))) return
   diag(node, `Expected ${expected.join(' or ')}, got ${expr.type}`)
+}
+
+function typeMatches(actual: FieldType, expected: FieldType) {
+  if (actual == expected) return true
+  if (isTemporalType(actual) && (expected == 'date' || expected == 'timestamp')) return true
+  return false
+}
+
+function mergeCaseResultType(current: FieldType | null, next: FieldType): FieldType {
+  if (!current || current == 'null' || current == 'error') return next
+  if (next == 'null' || next == 'error') return current
+  if (current == next) return current
+  if (isTemporalType(current) && isTemporalType(next)) return coarseTemporalType(current)
+  return next
 }
 
 // Convert raw database types into simplified types. Malloy did this, I'm on the fence if we need it.

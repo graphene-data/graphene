@@ -9,7 +9,8 @@ declare module '@lezer/common' {
   }
 }
 
-export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
+export type RefinedTemporalType = TimestampUnit
+export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | RefinedTemporalType | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
 
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {

@@ -18,6 +18,12 @@ interface Field {
   type?: string
 }
 
+interface EvidenceColumnType {
+  name: string
+  evidenceType: string
+  grapheneType?: string
+}
+
 type ResultHandler = (res: QueryResult) => void
 
 interface QueryNode {
@@ -163,7 +169,7 @@ async function _runAll() {
 export function translateData(data: any, node: QueryNode) {
   let rows = data.rows || []
   rows.dataLoaded = true // evidence components need this to be set
-  rows._evidenceColumnTypes = []
+  rows._evidenceColumnTypes = [] as EvidenceColumnType[]
   let requestFields: string[] = []
   node.fields.forEach(value => {
     if (Array.isArray(value)) requestFields.push(...value)
@@ -202,7 +208,7 @@ export function translateData(data: any, node: QueryNode) {
     }
 
     // map graphene types down to the ones evidence expects
-    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type)})
+    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), grapheneType: field.type})
   })
 
   return {rows}
@@ -225,7 +231,7 @@ function evidenceType(type: string | undefined) {
   if (type === 'string') return 'string'
   if (type === 'number') return 'number'
   if (type === 'boolean') return 'boolean'
-  if (type === 'date' || type === 'timestamp') return 'date'
+  if (['date', 'timestamp', 'year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second'].includes(type || '')) return 'date'
   console.warn('Unsupported evidence type ' + type)
   return 'string'
 }

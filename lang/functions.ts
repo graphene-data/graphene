@@ -8,6 +8,7 @@ import {config} from './config.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
+import {coarseTemporalType, isTemporalType, parseRefinedTemporalType} from './temporal.ts'
 import {type Expr, type FieldType, type Scope} from './types.ts'
 import {txt} from './util.ts'
 
@@ -141,6 +142,7 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
 
   let returnType: FieldType = overload.returnType.type as FieldType
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || 'string'
+  returnType = inferFunctionReturnType(name, args, returnType)
 
   let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
   let canWindow = overload.returnType.expressionType == 'aggregate' || overload.returnType.expressionType == 'window'
@@ -160,6 +162,17 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
     canWindow,
     fanout: normalizeExprFanout({path: isAgg ? undefined : fanout.path, sensitivePaths: fanoutSensitivePaths, conflict: fanoutConflict}),
   }
+}
+
+function inferFunctionReturnType(name: string, args: Expr[], returnType: FieldType): FieldType {
+  if (['coalesce', 'ifnull', 'if', 'iff', 'least', 'greatest'].includes(name) && isTemporalType(returnType)) {
+    return coarseTemporalType(returnType)
+  }
+  if (name != 'date_trunc') return returnType
+  let unitArg = args.find(arg => arg.type == 'sql native') || args.find(arg => arg.type == 'string' && /^['"].*['"]$/.test(arg.sql))
+  if (!unitArg) return returnType
+  let refined = parseRefinedTemporalType(unitArg.sql.replace(/^['"]|['"]$/g, ''))
+  return refined || returnType
 }
 
 function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {

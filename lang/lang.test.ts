@@ -875,6 +875,37 @@ describe('lang', () => {
     expect("from events select date_trunc('month', event_date)").toRenderSql("select DATE_TRUNC('month',EVENTS.EVENT_DATE) as COL_0 from EVENTS as EVENTS")
   })
 
+  it('tracks refined temporal types from date_trunc and preserves them through query composition', () => {
+    updateFile('table events (event_date date, created_at timestamp)', 'events.gsql')
+
+    let direct = analyze("from events select date_trunc('month', event_date) as month_bucket, date_trunc('hour', created_at) as hour_bucket")
+    expect(direct[0].fields[0].type).toBe('month')
+    expect(direct[0].fields[1].type).toBe('hour')
+
+    let nested = analyze(`
+      table monthly_events as (from events select date_trunc('month', event_date) as month_bucket)
+      from monthly_events select month_bucket, min(month_bucket) as first_month
+    `)
+    expect(nested[0].fields[0].type).toBe('month')
+    expect(nested[0].fields[1].type).toBe('month')
+  })
+
+  it('treats refined temporal types as temporal and degrades merge expressions conservatively', () => {
+    updateFile('table events (event_date date)', 'events.gsql')
+
+    expect("from events select date_trunc('month', event_date) as month_bucket where date_trunc('month', event_date) >= '2024-01-01'").toRenderSql(
+      "select date_trunc('month',events.event_date) as month_bucket from events as events where date_trunc('month',events.event_date)>=DATE '2024-01-01'",
+    )
+
+    let queries = analyze(`
+      from events select
+        coalesce(date_trunc('month', event_date), event_date) as merged_month,
+        case when true then date_trunc('month', event_date) else event_date end as merged_case
+    `)
+    expect(queries[0].fields[0].type).toBe('date')
+    expect(queries[0].fields[1].type).toBe('date')
+  })
+
   it('supports extract expressions', () => {
     expect('from users select extract(hour from created_at)').toRenderSql('select extract(hour from users.created_at) as col_0 from users as users')
   })
