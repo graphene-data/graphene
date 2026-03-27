@@ -3,22 +3,12 @@
 
 import type {FieldType, GrapheneError} from '../../lang/types.ts'
 
+import {type QueryResult, type Field} from '../component-utilities/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
 
-interface QueryResult {
-  rows?: any[]
-  error?: GrapheneError
-  fields?: Field[]
-}
-
-interface Field {
-  name: string
-  type?: FieldType
-}
-
-type ResultHandler = (res: QueryResult) => void
+type ResultHandler = (res: QueryResult | void) => void
 
 interface QueryNode {
   name?: string
@@ -67,8 +57,10 @@ function query(source: string, fields: Record<string, string | string[]>, callba
     exprs = ['*']
   }
   let contents = `from ${source} select ${exprs.join(', ')}`
-  queries.push({contents, callback, loading: false, fields: map, source, queryId: buildQueryId(source, map)})
+  let queryId = buildQueryId(source, map)
+  queries.push({contents, callback, loading: false, fields: map, source, queryId})
   runAll()
+  return queryId
 }
 
 function unsubscribe(callback: ResultHandler) {
@@ -89,7 +81,7 @@ async function runNode(n: QueryNode) {
     n.loading = false
   }
 
-  callback({})
+  callback()
   n.loading = true
   n.error = undefined
 
@@ -112,7 +104,7 @@ async function runNode(n: QueryNode) {
   if (error) {
     let err = error instanceof Error ? error : new Error(String(error))
     n.error = {queryId, message: err.message, stack: err.stack}
-    finish({error: n.error})
+    finish({rows: [], fields: [], error: n.error})
     return
   }
 
@@ -141,7 +133,7 @@ async function runNode(n: QueryNode) {
   error = (await response.json()) as GrapheneError
   error.queryId ||= queryId
   n.error = error
-  finish({error: n.error})
+  finish({rows: [], fields: [], error: n.error})
 }
 
 function runAll() {
@@ -162,6 +154,7 @@ async function _runAll() {
 
 export function translateData(data: any, node: QueryNode) {
   let rows = data.rows || []
+  let fields: Field[] = []
   rows.dataLoaded = true // evidence components need this to be set
   rows._evidenceColumnTypes = []
   let requestFields: string[] = []
@@ -201,11 +194,14 @@ export function translateData(data: any, node: QueryNode) {
       }
     }
 
+    // Return fields for the new ECharts config but with the name mapped back to what was requested
+    fields.push({...field, name})
+
     // map graphene types down to the ones evidence expects
     rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), fieldMetadata: field.type?.metadata})
   })
 
-  return {rows}
+  return {rows, fields}
 }
 
 const isQueryLoading = () => !!queries.find(q => q.loading)

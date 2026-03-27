@@ -5,6 +5,7 @@
   import navFiles from 'virtual:nav'
   import NavSidebar from './NavSidebar.svelte'
   import ErrorDisplay from './ErrorDisplay.svelte'
+  import DevECharts2Gallery from './DevECharts2Gallery.svelte'
 
   let pageInputs = activatePageInputs(new PageInputs())
   setPageInputsContext(pageInputs)
@@ -36,7 +37,10 @@
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
   let Page = $state(null)
   let pathName = window.location.pathname.replace(/^\//, '') || 'index'
-  if (pathName !== '__ct') {
+
+  if (pathName == '__dev/echarts2') {
+    Page = DevECharts2Gallery
+  } else if (pathName !== '__ct') {
     import(/* @vite-ignore */ '/' + pathName + '.md').then(mod => {
       Page = mod.default
       compileError = null

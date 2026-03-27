@@ -6,9 +6,15 @@ import {getErrors} from './telemetry.ts'
 let socket: WebSocket | null = null
 connect()
 
-function captureChart(chartTitle: string) {
+async function captureChart(chartTitle: string) {
   let escaped = window.CSS.escape(chartTitle)
-  let canvas = document.querySelector(`[data-chart-title="${escaped}"] canvas`) as HTMLCanvasElement | null
+  let chartEl = document.querySelector(`[data-chart-title="${escaped}"]`) as HTMLElement | null
+  if (!chartEl) return undefined
+  if (!(window as any).html2canvas) {
+    let html2canvas = await import('@graphenedata/html2canvas')
+    ;(window as any).html2canvas = html2canvas.default
+  }
+  let canvas = await (window as any).html2canvas(chartEl, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
   return canvas?.toDataURL('image/png')
 }
 
@@ -32,7 +38,7 @@ function connect() {
     if (type !== 'check') return
 
     let finished = await window.$GRAPHENE.waitForLoad(20_000)
-    let screenshot = chart ? captureChart(chart) : await takeScreenshot()
+    let screenshot = chart ? await captureChart(chart) : await takeScreenshot()
     socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors: getErrors(), stillLoading: !finished, screenshot}))
   }
 }
