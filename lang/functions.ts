@@ -10,7 +10,7 @@ import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExpr
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {parseTemporalGrain, temporalType} from './temporal.ts'
 import {isTemporalType, mergeTypes} from './typeRelations.ts'
-import {fieldTypeBase, type Expr, type FieldType, type FieldTypeBase, type Scope} from './types.ts'
+import {type Expr, type FieldType, type FieldTypeBase, type Scope} from './types.ts'
 import {txt} from './util.ts'
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
@@ -172,7 +172,7 @@ function inferFunctionReturnType(name: string, args: AnalyzedArg[], returnType: 
   if (['coalesce', 'ifnull', 'least', 'greatest'].includes(name)) return mergeTypes(valueArgs.map(arg => arg.type)) || returnType
   if (['if', 'iff'].includes(name)) return mergeTypes(valueArgs.slice(1).map(arg => arg.type)) || returnType
   if (name != 'date_trunc') return returnType
-  let unitArg = args.find(arg => arg.type == 'sql native') || valueArgs.find(arg => fieldTypeBase(arg.type) == 'string' && /^['"].*['"]$/.test(arg.sql))
+  let unitArg = args.find(arg => arg.type == 'sql native') || valueArgs.find(arg => arg.type.base == 'string' && /^['"].*['"]$/.test(arg.sql))
   if (!unitArg) return returnType
   let grain = parseTemporalGrain(unitArg.sql.replace(/^['"]|['"]$/g, ''))
   let source = valueArgs.find(arg => isTemporalType(arg.type))

@@ -3,7 +3,6 @@
 
 import type {GrapheneError, FieldType} from '../../lang/types.ts'
 
-import {evidenceType as grapheneEvidenceType} from '../../lang/typeRelations.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
@@ -16,13 +15,13 @@ interface QueryResult {
 
 interface Field {
   name: string
-  type?: FieldType
+  type: FieldType
 }
 
 interface EvidenceColumnType {
   name: string
   evidenceType: string
-  grapheneType?: FieldType
+  grapheneType: FieldType
 }
 
 type ResultHandler = (res: QueryResult) => void
@@ -228,9 +227,11 @@ errorProvider('queryEngine', () => {
   return Object.values(unique)
 })
 
-function evidenceType(type: FieldType | undefined) {
-  let mapped = grapheneEvidenceType(type)
-  if (mapped == 'string' || mapped == 'number' || mapped == 'boolean' || mapped == 'date') return mapped
+function evidenceType(type: FieldType) {
+  if (type.base == 'string') return 'string'
+  if (type.base == 'number') return 'number'
+  if (type.base == 'boolean') return 'boolean'
+  if (type.base == 'date' || type.base == 'timestamp') return 'date'
   console.warn('Unsupported evidence type ' + JSON.stringify(type))
   return 'string'
 }

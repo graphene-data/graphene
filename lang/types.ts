@@ -18,10 +18,6 @@ export interface FieldType {
   params?: Record<string, string>
 }
 
-export function fieldTypeBase(type: FieldType | undefined): FieldTypeBase | undefined {
-  return type?.base
-}
-
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {
   sql: string // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
