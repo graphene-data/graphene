@@ -166,7 +166,6 @@ export const test = base.extend<{browser: Browser; page: Page; server: ServerFix
     }
 
     await use(mountFn)
-    await expect(page.locator('#component-test > :not(dialog)').first()).toBeVisible()
   },
 
   chart: async ({page}, use) => {

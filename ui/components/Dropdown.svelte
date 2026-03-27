@@ -130,7 +130,7 @@
     let columns = [value]
     if (resolvedLabelField && resolvedLabelField !== value) columns.push(resolvedLabelField)
     let handler = (res: {rows?: any[]; error?: any}) => {
-      if (res.error) return
+      if (!res || res.error) return
       if (!res.rows) return
       queryOptions = res.rows.map(row => ({
         value: row[value],

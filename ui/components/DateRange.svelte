@@ -87,7 +87,7 @@
     queryKey = key
     if (!data || !dates) return
     let handler = (res: {rows?: any[]; error?: any}) => {
-      if (res.error || !res.rows?.length) return
+      if (!res || res.error || !res.rows?.length) return
       let values = res.rows
         .map(row => normalizeInput(row[dates]))
         .filter((val): val is string => !!val)

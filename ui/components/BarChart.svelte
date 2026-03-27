@@ -1,142 +1,74 @@
 <script lang="ts">
-  import type {Snippet} from 'svelte'
-  import Chart from './Chart.svelte'
-  import Bar from './Bar.svelte'
-  import QueryLoad from './QueryLoad.svelte'
-  import {getThemeStores} from '../component-utilities/themeStores'
-  import {parseCommaList} from '../component-utilities/inputUtils.ts'
+  import ECharts from './ECharts.svelte'
+  import type {EChartsConfig2, SeriesWithGroupingHint} from '../component-utilities/types.ts'
 
   interface Props {
-    data?: any, x?: any, y?: any, y2?: any, series?: any, xType?: any, yLog?: any, yLogBase?: any
-    y2SeriesType?: any, yFmt?: any, y2Fmt?: any, xFmt?: any, title?: any, subtitle?: any, legend?: any
-    xAxisTitle?: any, yAxisTitle?: any, y2AxisTitle?: any, xGridlines?: any, yGridlines?: any
-    y2Gridlines?: any, xAxisLabels?: any, yAxisLabels?: any, y2AxisLabels?: any, xBaseline?: any
-    yBaseline?: any, y2Baseline?: any, xTickMarks?: any, yTickMarks?: any, y2TickMarks?: any
-    yMin?: any, yMax?: any, yScale?: any, y2Min?: any, y2Max?: any, y2Scale?: any
-    swapXY?: boolean | string, showAllXAxisLabels?: boolean, type?: string, fillColor?: any
-    fillOpacity?: any, outlineColor?: any, outlineWidth?: any, chartAreaHeight?: any, sort?: any
-    colorPalette?: string, labels?: any, labelSize?: any, labelPosition?: any, labelColor?: any
-    labelFmt?: any, yLabelFmt?: any, y2LabelFmt?: any, stackTotalLabel?: any, seriesLabels?: any
-    showAllLabels?: any, yAxisColor?: any, y2AxisColor?: any, echartsOptions?: any, seriesOptions?: any
-    seriesColors?: any, seriesOrder?: any, connectGroup?: any, seriesLabelFmt?: any, leftPadding?: any
-    rightPadding?: any, xLabelWrap?: any, children?: Snippet
+    data: string | {rows?: any[]; fields?: any[]}
+    x: string
+    y: string
+    y2?: string
+    group?: string
+    stack?: string
+    stack100?: string
+    label?: boolean
+    title?: string
+    height?: string | number
+    width?: string | number
   }
 
-  const {resolveColor, resolveColorsObject, resolveColorPalette} = getThemeStores()
-
   let {
-    data = undefined, x = undefined, y = undefined, y2 = undefined, series = undefined, xType = undefined,
-    yLog = undefined, yLogBase = undefined, y2SeriesType = undefined, yFmt = undefined, y2Fmt = undefined,
-    xFmt = undefined, title = undefined, subtitle = undefined, legend = undefined, xAxisTitle = undefined,
-    yAxisTitle = undefined, y2AxisTitle = undefined, xGridlines = undefined, yGridlines = undefined,
-    y2Gridlines = undefined, xAxisLabels = undefined, yAxisLabels = undefined, y2AxisLabels = undefined,
-    xBaseline = undefined, yBaseline = undefined, y2Baseline = undefined, xTickMarks = undefined,
-    yTickMarks = undefined, y2TickMarks = undefined, yMin = undefined, yMax = undefined, yScale = undefined,
-    y2Min = undefined, y2Max = undefined, y2Scale = undefined, swapXY = false, showAllXAxisLabels = undefined,
-    type = 'stacked', fillColor = undefined, fillOpacity = undefined, outlineColor = undefined,
-    outlineWidth = undefined, chartAreaHeight = undefined, sort = undefined, colorPalette = 'default',
-    labels = undefined, labelSize = undefined, labelPosition = undefined, labelColor = undefined,
-    labelFmt = undefined, yLabelFmt = undefined, y2LabelFmt = undefined, stackTotalLabel = undefined,
-    seriesLabels = undefined, showAllLabels = undefined, yAxisColor = undefined, y2AxisColor = undefined,
-    echartsOptions = undefined, seriesOptions = undefined, seriesColors = undefined, seriesOrder = undefined,
-    connectGroup = undefined, seriesLabelFmt = undefined, leftPadding = undefined, rightPadding = undefined,
-    xLabelWrap = undefined, children,
+    data,
+    x,
+    y,
+    y2 = undefined,
+    group = undefined,
+    stack = undefined,
+    stack100 = undefined,
+    label = false,
+    title = undefined,
+    height = '240px',
+    width = '100%',
   }: Props = $props()
 
-  let normalizedSwapXY = $derived(swapXY === 'true' || swapXY === true)
+  function buildConfig(): EChartsConfig2 {
+    let yFields = parseList(y)
+    let mode = resolveGroupingMode(group, stack, stack100)
+    let grouped = Boolean(mode && yFields.length === 1)
+    let barLabel = label ? {show: true} : undefined
+    let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'bar-stack' : undefined
+    let stackPercentage = mode?.kind === 'stack100' ? true : undefined
 
-  let stacked100 = $derived(type === 'stacked100')
+    let series: SeriesWithGroupingHint[] = grouped
+      ? [{type: 'bar' as const, encode: {x, y: yFields[0], group: mode?.field}, stack: stackKey, stackPercentage, label: barLabel}]
+      : yFields.map(field => ({type: 'bar' as const, name: field, encode: {x, y: field}, label: barLabel}))
 
-  let fillColorStore = $derived(resolveColor(fillColor))
-  let outlineColorStore = $derived(resolveColor(outlineColor))
-  let colorPaletteStore = $derived(resolveColorPalette(colorPalette))
-  let labelColorStore = $derived(resolveColor(labelColor))
-  let yAxisColorStore = $derived(resolveColor(yAxisColor))
-  let y2AxisColorStore = $derived(resolveColor(y2AxisColor))
-  let seriesColorsStore = $derived(resolveColorsObject(seriesColors))
+    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2}})
 
-  let derivedYAxisTitle = $derived(yAxisTitle ?? (y2 ? 'true' : undefined))
-  let derivedY2AxisTitle = $derived(y2AxisTitle ?? (y2 ? 'true' : undefined))
+    return {
+      title: title ? {text: title} : undefined,
+      tooltip: {trigger: 'axis'},
+      legend: {show: Boolean(grouped || yFields.length > 1 || y2)},
+      xAxis: {},
+      yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{}] : [])],
+      series,
+    }
+  }
+
+  function parseList(value?: string) {
+    if (!value) return []
+    return value.split(',').map(v => v.trim()).filter(Boolean)
+  }
+
+  function resolveGroupingMode(group?: string, stack?: string, stack100?: string) {
+    let modes = [
+      group ? {kind: 'group' as const, field: group} : undefined,
+      stack ? {kind: 'stack' as const, field: stack} : undefined,
+      stack100 ? {kind: 'stack100' as const, field: stack100} : undefined,
+    ].filter(Boolean)
+
+    if (modes.length <= 1) return modes[0]
+    throw new Error('BarChart accepts only one of `group`, `stack`, or `stack100`')
+  }
 </script>
 
-{#snippet barChartContent(loaded: any[])}
-  <Chart
-    data={loaded}
-    chartContext={{data, x, y, series}}
-    {x}
-    {y}
-    {y2}
-    {xFmt}
-    {yFmt}
-    {y2Fmt}
-    {series}
-    {xType}
-    {yLog}
-    {yLogBase}
-    {legend}
-    {xAxisTitle}
-    yAxisTitle={derivedYAxisTitle}
-    y2AxisTitle={derivedY2AxisTitle}
-    {xGridlines}
-    {yGridlines}
-    {y2Gridlines}
-    {xAxisLabels}
-    {yAxisLabels}
-    {y2AxisLabels}
-    {xBaseline}
-    {yBaseline}
-    {y2Baseline}
-    {xTickMarks}
-    {yTickMarks}
-    {y2TickMarks}
-    yAxisColor={yAxisColorStore}
-    y2AxisColor={y2AxisColorStore}
-    {yMin}
-    {yMax}
-    {yScale}
-    {y2Min}
-    {y2Max}
-    {y2Scale}
-    swapXY={normalizedSwapXY}
-    {title}
-    {subtitle}
-    chartType="Bar Chart"
-    stackType={type}
-    {sort}
-    {stacked100}
-    {chartAreaHeight}
-    {showAllXAxisLabels}
-    colorPalette={colorPaletteStore}
-    {echartsOptions}
-    {seriesOptions}
-    {connectGroup}
-    {xLabelWrap}
-    seriesColors={seriesColorsStore}
-    {leftPadding}
-    {rightPadding}
-  >
-    <Bar
-      {type}
-      fillColor={fillColorStore}
-      {fillOpacity}
-      outlineColor={outlineColorStore}
-      {outlineWidth}
-      {labels}
-      {labelSize}
-      {labelPosition}
-      labelColor={labelColorStore}
-      {labelFmt}
-      {yLabelFmt}
-      {y2LabelFmt}
-      {stackTotalLabel}
-      {seriesLabels}
-      {showAllLabels}
-      {y2SeriesType}
-      {seriesOrder}
-      {seriesLabelFmt}
-    />
-    {@render children?.()}
-  </Chart>
-{/snippet}
-
-<QueryLoad data={data} fields={{x, y: parseCommaList(y), y2: parseCommaList(y2), series}} children={barChartContent} />
+<ECharts data={data} config={buildConfig()} {height} {width} />
