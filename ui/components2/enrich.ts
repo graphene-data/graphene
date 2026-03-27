@@ -1,114 +1,125 @@
-import type {EChartsConfig2, Field, SeriesWithColumnRefs} from './types.ts'
-import {extractSeries} from './extract.ts'
+import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
 // A lot of defaulting happens in themes but there are some defaults themes can't handle, like when it depends on the shape of data being charted.
 // Each enrichment function is a small, ideally single-purpose manipulation of the config.
-// The most important one is `resolveDataReferences` which takes column nmes from the config and turns them into data arrays echarts expects.
+// As a rule, if the provided config sets something, enrichments will not change it.
 
 // Run enrichment in a fixed order so defaults stay predictable.
 export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
   config.series = normalizeSeries(config.series)
 
-  let fieldInfo = getFieldInfo(config, fields)
-  inferXAxisType(config, fieldInfo)
-  horizontalBarGuard(config, fieldInfo)
+  let baseDatasetId = ensureDataset(config, rows, fields)
+  expandSeriesTransforms(config, rows, baseDatasetId)
+
+  inferAxisTypesFromEncodedFields(config, fields)
+  horizontalBarGuard(config, fields)
   currencyValueAxisFormatting(config, fields)
-  resolveDataReferences(config, rows)
-  applyIntegerYAxisTicks(config)
+  applyIntegerYAxisTicks(config, rows)
   stackedBarCornerRadius(config)
   return config
 }
 
-// Resolve string column references into concrete ECharts data arrays.
-//
-// Mental model:
-// 1) detect whether each series is already concrete or still references columns
-// 2) choose the shaping path (value vector, non-cartesian item mapping, cartesian extraction)
-// 3) write back a final `config.series` with only concrete arrays
-//
-// This keeps all "row -> chart-ready data" work in one readable place so custom components
-// can rely on the same behavior without duplicating mapping logic.
-function resolveDataReferences(config: EChartsConfig2, rows: Record<string, any>[]) {
-  let xAxis = firstAxis(config.xAxis)
-  let xField = typeof xAxis?.data === 'string' ? xAxis.data : undefined
-  let xAxisType = xAxis?.type ?? 'category'
+// Every chart gets a base dataset sourced from rows.
+// If callers already provided a dataset, we preserve it and make sure we can reference one source dataset by id.
+function ensureDataset(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
+  let dimensions = fields.length > 0 ? fields.map(field => field.name) : inferDimensions(rows)
+  let dataset: any = (config as any).dataset
+  let baseId = '__graphene_base'
 
-  let templates = normalizeSeries(config.series)
-  let resolved: any[] = []
-  let categoryDomain: any[] | undefined
-
-  for (let template of templates) {
-    // Case 1: series already contains concrete data arrays/objects.
-    if (typeof template.data !== 'string') {
-      resolved.push(template)
-      continue
-    }
-
-    let yField = template.data
-    let seriesField = typeof template.series === 'string' ? template.series : undefined
-
-    // Case 2: non-cartesian series map rows into item objects/tuples.
-    // If callers did not provide xAxis.data, infer a reasonable dimension column.
-    if (!isCartesianSeries(template.type)) {
-      let next: any = {...template}
-      let nameField = xField ?? inferDimensionField(rows, yField, seriesField)
-      delete next.series
-
-      if (template.type === 'themeRiver') {
-        next.data = rows.map(row => [nameField ? row[nameField] : undefined, toNumericOrNull(row[yField]), seriesField ? row[seriesField] : ''])
-      } else if (['pie', 'funnel', 'treemap', 'sunburst'].includes(String(template.type ?? ''))) {
-        next.data = rows.map(row => ({name: nameField ? row[nameField] : '', value: toNumericOrNull(row[yField])}))
-      } else {
-        next.data = rows.map(row => toNumericOrNull(row[yField]))
-      }
-
-      resolved.push(next)
-      continue
-    }
-
-    // Case 3: cartesian series without x reference become plain numeric vectors.
-    if (!xField) {
-      let next: any = {...template}
-      delete next.series
-      next.data = rows.map(row => toNumericOrNull(row[yField]))
-      resolved.push(next)
-      continue
-    }
-
-    // Case 4: cartesian series delegate to shared extraction for grouping/alignment.
-    let splitField = typeof template.series === 'string' ? template.series : undefined
-    let extracted = extractSeries(rows, {
-      x: xField,
-      y: yField,
-      series: splitField,
-      xAxisType,
-      buildSeries(seriesName, points) {
-        let next: any = {...template}
-        delete next.series
-        next.data = shouldUseXYPairs(next.type, xAxisType) ? points.map(point => [point.x, point.y]) : points.map(point => point.y)
-        if (splitField && next.name == null) next.name = seriesName
-        return next
-      },
-    })
-
-    resolved.push(...extracted.series)
-    if (!categoryDomain && extracted.categories.length > 0) categoryDomain = extracted.categories
+  if (!dataset) {
+    ;(config as any).dataset = {id: baseId, source: rows, dimensions}
+    return baseId
   }
 
-  config.series = resolved
-  if (xAxis && xAxisType === 'category' && typeof xAxis.data === 'string' && categoryDomain) xAxis.data = categoryDomain
+  if (Array.isArray(dataset)) {
+    let base = dataset.find(entry => entry?.source != null)
+    if (!base) {
+      dataset.unshift({id: baseId, source: rows, dimensions})
+      return baseId
+    }
+    if (!base.id) base.id = baseId
+    if (base.dimensions == null && dimensions.length > 0) base.dimensions = dimensions
+    return base.id
+  }
+
+  if (dataset.source == null) {
+    ;(config as any).dataset = [{id: baseId, source: rows, dimensions}, dataset]
+    return baseId
+  }
+
+  if (!dataset.id) dataset.id = baseId
+  if (dataset.dimensions == null && dimensions.length > 0) dataset.dimensions = dimensions
+  return dataset.id
 }
 
-// Infer x-axis type from field metadata when callers do not set it explicitly.
-function inferXAxisType(config: EChartsConfig2, fieldInfo: FieldInfo) {
-  let xAxis = firstAxis(config.xAxis)
-  if (!xAxis || xAxis.type != null) return
+// Expand series templates that use `series: 'fieldName'` into one concrete series per distinct field value.
+// We do this with ECharts dataset filter transforms so wrappers stay small and users don't need to duplicate series configs.
+function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any>[], baseDatasetId: string) {
+  let templates = normalizeSeries(config.series)
+  let expanded: any[] = []
+  let datasets = normalizeDataset((config as any).dataset)
 
-  let xFieldType = getFieldType(fieldInfo.xField)
-  if (xFieldType === 'date') xAxis.type = 'time'
-  else if (xFieldType === 'number') xAxis.type = 'value'
-  else xAxis.type = 'category'
+  templates.forEach((template, templateIndex) => {
+    let entry: any = template
+    let splitField = typeof entry.series === 'string' ? entry.series : undefined
+
+    if (!splitField) {
+      let next = {...entry}
+      delete next.series
+      if (shouldBindSeriesToDataset(next) && next.datasetId == null) next.datasetId = baseDatasetId
+      expanded.push(next)
+      return
+    }
+
+    let seriesValues = distinctValues(rows, splitField)
+    if (seriesValues.length === 0) return
+
+    let sourceDatasetId = entry.datasetId ?? baseDatasetId
+    seriesValues.forEach((seriesValue, valueIndex) => {
+      let datasetId = `__graphene_series_${templateIndex}_${valueIndex}`
+      datasets.push({
+        id: datasetId,
+        fromDatasetId: sourceDatasetId,
+        transform: {type: 'filter', config: {dimension: splitField, '=': seriesValue}},
+      })
+
+      let next = {...entry, datasetId}
+      delete next.series
+      if (next.name == null) next.name = String(seriesValue ?? '')
+      expanded.push(next)
+    })
+  })
+
+  config.series = expanded
+  ;(config as any).dataset = datasets.length === 1 ? datasets[0] : datasets
+}
+
+// Infer axis types from encoded field metadata
+function inferAxisTypesFromEncodedFields(config: EChartsConfig2, fields: Field[]) {
+  let xAxes = normalizeAxis(config.xAxis)
+  let yAxes = normalizeAxis(config.yAxis)
+  let series = normalizeSeries(config.series)
+
+  xAxes.forEach((axis: any, axisIndex: number) => {
+    if (!axis || axis.type != null) return
+    let encodedFields = series
+      .filter((entry: any) => Number(entry?.xAxisIndex ?? 0) === axisIndex)
+      .map(entry => getSeriesXField(entry))
+      .filter(Boolean) as string[]
+
+    axis.type = inferAxisTypeFromFields(fields, encodedFields)
+  })
+
+  yAxes.forEach((axis: any, axisIndex: number) => {
+    if (!axis || axis.type != null) return
+    let encodedFields = series
+      .filter((entry: any) => Number(entry?.yAxisIndex ?? 0) === axisIndex)
+      .map(entry => getSeriesYField(entry))
+      .filter(Boolean) as string[]
+
+    axis.type = inferAxisTypeFromFields(fields, encodedFields)
+  })
 }
 
 // Apply compact currency formatting to value axes when the backing field declares currency units.
@@ -119,14 +130,12 @@ function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
   let symbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
   let formatter = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 
-  // Pass 1: inspect series templates and figure out which y-axis index should use which currency.
-  // We do this before mutating axes so we can dedupe: multiple series on the same axis should still
-  // result in only one formatter assignment for that axis.
   let axisCurrency = new Map<number, keyof typeof symbols>()
   for (let series of normalizeSeries(config.series)) {
-    if (typeof series.data !== 'string') continue
+    let yField = getSeriesYField(series)
+    if (!yField) continue
 
-    let field = findField(fields, series.data)
+    let field = findField(fields, yField)
     let unit = field?.metadata?.units?.toLowerCase() as keyof typeof symbols | undefined
     if (!unit || !(unit in symbols)) continue
 
@@ -134,9 +143,6 @@ function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
     if (!axisCurrency.has(axisIndex)) axisCurrency.set(axisIndex, unit)
   }
 
-  // Pass 2: apply one formatter per axis using the mapping from pass 1.
-  // This keeps behavior stable when many series share an axis and avoids repeatedly overwriting
-  // axisLabel.formatter inside the series loop.
   for (let [axisIndex, unit] of axisCurrency.entries()) {
     let axis = yAxes[axisIndex] as any
     if (!axis || axis.type !== 'value' || axis.axisLabel?.formatter != null) continue
@@ -156,13 +162,12 @@ function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
 
 // This is trying to fix an issue with charts where every value is either 0 or 1.
 // TODO: just make this a test, and see if we still need it
-function applyIntegerYAxisTicks(config: EChartsConfig2) {
+function applyIntegerYAxisTicks(config: EChartsConfig2, rows: Record<string, any>[]) {
   let yAxis = firstAxis(config.yAxis)
   if (!yAxis || yAxis.type !== 'value' || yAxis.minInterval != null) return
 
-  let values = normalizeSeries(config.series)
-    .flatMap(series => extractNumericValues(series.data))
-    .filter(value => Number.isFinite(value))
+  let yFields = Array.from(new Set(normalizeSeries(config.series).map(series => getSeriesYField(series)).filter(Boolean))) as string[]
+  let values = rows.flatMap(row => yFields.map(field => Number(row?.[field]))).filter(value => Number.isFinite(value))
 
   if (values.length === 0) return
   if (values.every(value => Number.isInteger(value))) yAxis.minInterval = 1
@@ -189,35 +194,7 @@ function stackedBarCornerRadius(config: EChartsConfig2) {
   }
 }
 
-function getFieldInfo(config: EChartsConfig2, fields: Field[]): FieldInfo {
-  let xAxis = firstAxis(config.xAxis)
-  let yAxis = firstAxis(config.yAxis)
-  return {
-    xField: typeof xAxis?.data === 'string' ? findField(fields, xAxis.data) : undefined,
-    yField: typeof yAxis?.data === 'string' ? findField(fields, yAxis.data) : undefined,
-  }
-}
-
-function isCartesianSeries(type: any) {
-  return ['line', 'bar', 'scatter', 'effectScatter', 'pictorialBar'].includes(String(type ?? 'line'))
-}
-
-function shouldUseXYPairs(type: any, xAxisType: 'category' | 'value' | 'time') {
-  if (['scatter', 'effectScatter'].includes(String(type ?? ''))) return true
-  return xAxisType !== 'category'
-}
-
-function extractNumericValues(data: any) {
-  if (!Array.isArray(data)) return []
-  return data.map(item => {
-    if (typeof item === 'number') return item
-    if (Array.isArray(item)) return item.find(x => typeof x === 'number')
-    if (item && typeof item === 'object' && typeof item.value === 'number') return item.value
-    return undefined
-  })
-}
-
-function normalizeSeries(series: EChartsConfig2['series']): SeriesWithColumnRefs[] {
+function normalizeSeries(series: EChartsConfig2['series']): SeriesWithGroupingHint[] {
   if (!series) return []
   return Array.isArray(series) ? series : [series]
 }
@@ -231,16 +208,6 @@ function firstAxis(axis: any) {
   return Array.isArray(axis) ? axis[0] : axis
 }
 
-function toNumericOrNull(value: any) {
-  return Number.isFinite(value) ? value : null
-}
-
-function inferDimensionField(rows: Record<string, any>[], yField: string, seriesField?: string) {
-  let sample = rows.find(row => row && typeof row === 'object')
-  if (!sample) return undefined
-  return Object.keys(sample).find(field => field !== yField && field !== seriesField)
-}
-
 function isHorizontalBar(config: EChartsConfig2) {
   let xAxis = firstAxis(config.xAxis)
   let yAxis = firstAxis(config.yAxis)
@@ -248,11 +215,16 @@ function isHorizontalBar(config: EChartsConfig2) {
   return Boolean(hasBarSeries && xAxis?.type === 'value' && yAxis?.type === 'category')
 }
 
-function horizontalBarGuard(config: EChartsConfig2, fieldInfo: FieldInfo) {
+function horizontalBarGuard(config: EChartsConfig2, fields: Field[]) {
   if (!isHorizontalBar(config)) return
-  let yFieldType = getFieldType(fieldInfo.yField)
-  if (yFieldType !== 'date' && yFieldType !== 'number') return
-  throw new Error('Horizontal charts do not support a value or time-based x-axis')
+
+  let hasInvalidCategoryField = normalizeSeries(config.series)
+    .filter((series: any) => series?.type === 'bar')
+    .map(series => findField(fields, getSeriesCategoryFieldForHorizontal(series)))
+    .map(field => getFieldType(field))
+    .some(type => type === 'date' || type === 'number')
+
+  if (hasInvalidCategoryField) throw new Error('Horizontal charts do not support a value or time-based x-axis')
 }
 
 function findField(fields: Field[], fieldName?: string) {
@@ -268,7 +240,55 @@ function getFieldType(field?: Field) {
   return 'string'
 }
 
-type FieldInfo = {
-  xField?: Field
-  yField?: Field
+function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
+  let types = fieldNames.map(name => getFieldType(findField(fields, name))).filter(type => type !== 'unknown')
+  if (types.some(type => type === 'date')) return 'time'
+  if (types.some(type => type === 'number')) return 'value'
+  return 'category'
+}
+
+function getSeriesXField(series: any) {
+  return getEncodeField(series?.encode?.x)
+}
+
+function getSeriesYField(series: any) {
+  return getEncodeField(series?.encode?.y) ?? getEncodeField(series?.encode?.value)
+}
+
+function getSeriesCategoryFieldForHorizontal(series: any) {
+  return getEncodeField(series?.encode?.y)
+}
+
+function getEncodeField(value: any): string | undefined {
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.find(entry => typeof entry === 'string')
+  return undefined
+}
+
+function shouldBindSeriesToDataset(series: any) {
+  return series?.encode != null && series?.data == null
+}
+
+function normalizeDataset(dataset: any) {
+  if (!dataset) return []
+  return Array.isArray(dataset) ? dataset : [dataset]
+}
+
+function inferDimensions(rows: Record<string, any>[]) {
+  let sample = rows.find(row => row && typeof row === 'object')
+  if (!sample) return []
+  return Object.keys(sample)
+}
+
+function distinctValues(rows: Record<string, any>[], field: string) {
+  let values: any[] = []
+  let seen = new Set<string>()
+  for (let row of rows) {
+    let value = row?.[field]
+    let key = JSON.stringify(value ?? null)
+    if (seen.has(key)) continue
+    seen.add(key)
+    values.push(value)
+  }
+  return values
 }

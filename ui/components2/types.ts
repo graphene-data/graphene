@@ -3,11 +3,7 @@ import type {EChartsOption} from 'echarts6/types/dist/echarts'
 type SingleOrArray<T> = T | T[]
 type OptionItem<T> = T extends Array<infer U> ? U : T
 
-type EChartsXAxis = OptionItem<NonNullable<EChartsOption['xAxis']>>
-export type EChartsSeries2 = OptionItem<NonNullable<EChartsOption['series']>>
-
-type XAxisData = EChartsXAxis extends {data?: infer D} ? D : unknown[]
-type SeriesData = EChartsSeries2 extends {data?: infer D} ? D : unknown[]
+type EChartsSeries = OptionItem<NonNullable<EChartsOption['series']>>
 
 export type Field = {
   name: string
@@ -20,16 +16,11 @@ export type Field = {
   }
 }
 
-// ECharts2 accepts column references in place of concrete arrays.
-export type XAxisWithColumnRef = Omit<EChartsXAxis, 'data'> & {data?: XAxisData | string}
-
-// ECharts2 also supports `series: 'fieldName'` for grouping into multiple series.
-export type SeriesWithColumnRefs = Omit<EChartsSeries2, 'data'> & {
-  data?: SeriesData | string
+// ECharts2 supports `series: 'fieldName'` as a shorthand grouping hint.
+export type SeriesWithGroupingHint = EChartsSeries & {
   series?: string
 }
 
-export type EChartsConfig2 = Omit<EChartsOption, 'xAxis' | 'series'> & {
-  xAxis?: SingleOrArray<XAxisWithColumnRef>
-  series?: SingleOrArray<SeriesWithColumnRefs>
+export type EChartsConfig2 = Omit<EChartsOption, 'series'> & {
+  series?: SingleOrArray<SeriesWithGroupingHint>
 }
