@@ -42,12 +42,12 @@ export function trackBrowserConsole(page: Page) {
 
     let location = msg.location()
     let locationText = location.url ? ` (${location.url}:${location.lineNumber}:${location.columnNumber})` : ''
-    throw new Error(`Unexpected log ${text}${locationText}`)
+    unexpected.push(`${text}${locationText}`)
   })
   page.on('pageerror', err => {
     let text = String(err?.message || err)
     if (isExpected(text)) return
-    throw new Error(`Unexpected error ${text}`)
+    unexpected.push(text)
   })
 }
 
