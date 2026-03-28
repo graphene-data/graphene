@@ -145,6 +145,6 @@ test('dev echarts2 gallery renders without runtime errors', async ({mount, page}
   await page.setViewportSize({width: 1200, height: 1400})
   await mount('internal/DevECharts2Gallery.svelte', {})
 
-  await expect(page.locator('.echarts2-chart')).toHaveCount(14)
+  await expect(page.locator('.echarts2')).toHaveCount(14)
   await expect(page.locator('#component-test')).screenshot('echarts2-gallery')
 }, 30_000)

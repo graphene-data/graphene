@@ -16,8 +16,8 @@
   let loaded: any[] | null = $state(null)
 
   let handleResults = (result: any) => {
-    error = result.error || null
-    loaded = result.rows
+    error = result?.error || null
+    loaded = result?.rows
   }
 
   onMount(() => {

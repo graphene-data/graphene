@@ -1,5 +1,4 @@
 <script lang="ts">
-  import QueryLoad2 from './QueryLoad2.svelte'
   import ECharts2 from './ECharts2.svelte'
   import type {EChartsConfig2} from './types.ts'
 
@@ -72,8 +71,4 @@
   }
 </script>
 
-{#snippet barChartContent(result)}
-  <ECharts2 config={buildConfig()} rows={result.rows} fields={result.fields} {height} {width} chartTitle={title} />
-{/snippet}
-
-<QueryLoad2 data={data} fields={{x, y: parseList(y), y2, group: resolveGroupingMode(group, stack, stack100)?.field}} children={barChartContent} />
+<ECharts2 data={data} config={buildConfig()} {height} {width} />
