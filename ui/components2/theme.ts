@@ -35,7 +35,7 @@ let parallelAxisBase = {
   axisLine:      {lineStyle: {color: clr.border}},
 }
 
-registerTheme('graphene', {
+registerTheme('graphene-theme', {
   color: colorPalette,
   backgroundColor: clr.white,
   textStyle: {
