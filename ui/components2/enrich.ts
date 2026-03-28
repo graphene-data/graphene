@@ -23,7 +23,7 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
   // stylistic rules to provide great defaults
   inferAxisTypesFromEncodedFields(config, fields)
   horizontalBarGuard(config, fields)
-  compactGridWhenHeaderIsHidden(config)
+  computeTitleLegendAndGridPadding(config)
   currencyValueAxisFormatting(config, fields)
   applyIntegerYAxisTicks(config, rows)
   stackedBarCornerRadius(config)
@@ -141,25 +141,28 @@ function inferAxisTypesFromEncodedFields(config: EChartsConfig2, fields: Field[]
   })
 }
 
-// Reclaim unused header space from the theme's default grid top.
-// We keep the most room when legends are visible, use moderate space for titles, and minimal space otherwise.
-function compactGridWhenHeaderIsHidden(config: EChartsConfig2) {
-  if (hasVisibleLegend(config.legend as any[])) return
+// ECharts just does a bad job of this, and the title, legend, and chart can often overlap
+// This computes the proper offsets depending on what's visible
+function computeTitleLegendAndGridPadding(config: EChartsConfig2) {
+  // you're doing crazy stuff, and on your own
+  if (config.legend.length > 1 || config.title.length > 1 || config.grid.length > 1) return
 
-  let title = firstVisibleTitle(config.title as any[])
-  let top = 8
-  if (title) top = title.subtext ? 52 : 40
+  let legend = config.legend[0] || {}
+  let title = config.title[0] || {}
+  let grid = config.grid[0] || {}
 
-  let grids = (config as any).grid as any[]
-  if (grids.length === 0) {
-    grids.push({top})
-    return
+  title.top ??= 2
+  legend.top ??= 6
+  grid.top ??= 12
+
+  if (title?.text) {
+    legend.top += 18
+    grid.top += 28
   }
 
-  grids.forEach((grid: any) => {
-    if (!grid || grid.top != null) return
-    grid.top = top
-  })
+  if (legend?.show) {
+    grid.top += 24
+  }
 }
 
 // Apply compact currency formatting to value axes when the backing field declares currency units.
@@ -237,14 +240,6 @@ function stackedBarCornerRadius(config: EChartsConfig2) {
 function normalizeArray<T>(value: T | T[] | undefined | null): T[] {
   if (value == null) return []
   return Array.isArray(value) ? value : [value]
-}
-
-function firstVisibleTitle(titles: any[]) {
-  return titles.find(entry => entry && entry.show !== false && Boolean(entry.text || entry.subtext))
-}
-
-function hasVisibleLegend(legends: any[]) {
-  return legends.some(entry => entry && entry.show !== false)
 }
 
 function isHorizontalBar(config: EChartsConfig2) {
