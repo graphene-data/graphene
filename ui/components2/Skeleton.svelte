@@ -9,6 +9,7 @@
 <style>
   .ql-skeleton {
     width: 100%;
+    height: 100%;
     position: relative;
     overflow: hidden;
     background: var(--chart-skeleton-bg, #f3f4f6);

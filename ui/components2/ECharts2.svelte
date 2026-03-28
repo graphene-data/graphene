@@ -24,12 +24,13 @@
     renderer = 'svg',
   }: Props = $props()
 
-  let node: HTMLDivElement | null = $state.raw(null)
-  let chart: any = $state.raw(null)
-  let theme = 'graphene'
+  // not state, because we don't want `$effect` to run when they change
+  let node: HTMLDivElement | null = null
+  let chart: any
 
   // Use `raw` because data can be big, and there's little upside to making it reactive
   let loaded = $state.raw<QueryResult | null>(null)
+  let chartError: Error | null = $state(null)
 
   function handleResults (res: QueryResult) {
     loaded = res
@@ -53,34 +54,30 @@
     destroyChart()
   })
 
-  let chartState = $derived.by(() => {
-    if (!loaded) return {}
-    try {
-      // clone config, since enriching mutates the config, and mutating a prop is weird
-      // structuredClone doesn't like proxies, so use state.snapshot
-      let cloned = structuredClone($state.snapshot(config)) as EChartsConfig2
-      enrich(cloned, loaded.rows, loaded.fields || [])
-      return {config: cloned, error: null}
-    } catch (error) {
-      console.error('Chart failed to render', error)
-      return {config: null, error: error instanceof Error ? error : new Error(String(error))}
-    }
-  })
-
   $effect(() => {
-
-    if (chartState.error || !chartState.config) {
+    if (!loaded || loaded.error || loaded.rows.length == 0) {
       destroyChart()
       return
     }
 
-    chart ||= init(node, theme, {renderer})
-    chartWindowDebug.set(String(chart.id), chart)
-
+    console.log('foo')
+    chart ||= init(node, 'graphene-theme', {renderer})
     let chartId = chart.id
-    window.$GRAPHENE?.renderStart?.(`chart:${chartId}`)
+
     try {
-      chart.setOption({...chartState.config, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
+      chartWindowDebug.set(String(chart.id), chart)
+      window.$GRAPHENE?.renderStart?.(`chart:${chartId}`)
+
+      // clone config, since enriching mutates the config, and mutating a prop is weird
+      // structuredClone doesn't like proxies, so use state.snapshot
+      let cloned = structuredClone($state.snapshot(config)) as EChartsConfig2
+      enrich(cloned, loaded.rows, loaded.fields || [])
+
+      chart.setOption({...cloned, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
+    } catch (error) {
+      console.error('Chart failed to render', error)
+      chartError = error instanceof Error ? error : new Error(String(error))
+      destroyChart()
     } finally {
       window.$GRAPHENE?.renderComplete?.(`chart:${chartId}`)
     }
@@ -99,8 +96,8 @@
 </script>
 
 <div class="echarts2" bind:this={node} style={`height:${toDimension(height, '240px')};width:${toDimension(width, '100%')}`}>
-  {#if loaded?.error || chartState.error}
-    <ErrorDisplay error={loaded?.error || chartState.error} />
+  {#if loaded?.error || chartError}
+    <ErrorDisplay error={loaded?.error || chartError} />
   {:else if !loaded}
     <Skeleton />
   {:else if loaded.rows.length == 0}
