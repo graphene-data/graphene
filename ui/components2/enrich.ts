@@ -90,6 +90,11 @@ function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any
 
       let next = {...entry, datasetId}
       if (next.name == null) next.name = String(seriesValue ?? '')
+      if (next.encode) {
+        next.encode = {...next.encode}
+        delete next.encode.group
+        delete next.encode.stack
+      }
       expanded.push(next)
     })
   })
