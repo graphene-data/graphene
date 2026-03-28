@@ -95,6 +95,41 @@ describe('lang', () => {
     await expect('select 1').toReturnRows([1])
   })
 
+  it('supports union and union all', async () => {
+    expect('select 1 as id union select 1 as id').toRenderSql('SELECT 1 as id UNION SELECT 1 as id')
+    await expect('select 1 as id union select 1 as id').toReturnRows([1])
+
+    expect('select 1 as id union all select 1 as id').toRenderSql('SELECT 1 as id UNION ALL SELECT 1 as id')
+    await expect('select 1 as id union all select 1 as id').toReturnRows([1], [1])
+  })
+
+  it('supports intersect and except', async () => {
+    expect('select 1 as id intersect select 1 as id').toRenderSql('SELECT 1 as id INTERSECT SELECT 1 as id')
+    await expect('select 1 as id intersect select 1 as id').toReturnRows([1])
+
+    expect('select 1 as id except select 2 as id').toRenderSql('SELECT 1 as id EXCEPT SELECT 2 as id')
+    await expect('select 1 as id except select 2 as id').toReturnRows([1])
+  })
+
+  it('supports set operations over analyzed queries', async () => {
+    expect('from users select id union from orders select user_id as id').toRenderSql('SELECT users.id as id FROM users as users UNION SELECT orders.user_id as id FROM orders as orders')
+    await expect('from users select id union all from orders select user_id as id').toReturnRows([1], [2], [1], [1], [2])
+  })
+
+  it('supports parenthesized set-operation operands in subqueries and ctes', () => {
+    expect('from (select 1 as id union all select 2 as id) nums select id').toRenderSql('SELECT nums.id as id FROM ( SELECT 1 as id UNION ALL SELECT 2 as id ) as nums')
+
+    expect('with nums as (select 1 as id union all select 2 as id) from nums select id').toRenderSql('WITH nums as ( SELECT 1 as id UNION ALL SELECT 2 as id ) SELECT nums.id as id FROM nums as nums')
+  })
+
+  it('applies outer order by and limit to the full set operation', () => {
+    expect('select 2 as id union select 1 as id order by id limit 1').toRenderSql('SELECT 2 as id UNION SELECT 1 as id ORDER BY 1 asc NULLS LAST LIMIT 1')
+  })
+
+  it('requires matching column counts across set-operation branches', () => {
+    expect('select 1 as id union select 1 as id, 2 as other').toHaveDiagnostic(/same number of columns/i)
+  })
+
   it('renders unquoted identifiers for snowflake queries', () => {
     setConfig({dialect: 'snowflake', root: ''})
     expect('from users select id, orders.amount as amt order by amt desc').toRenderSql(
