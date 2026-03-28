@@ -7,7 +7,7 @@ import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
 
 // Run enrichment in a fixed order so defaults stay predictable.
 export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
-  config.series = normalizeSeries(config.series)
+  normalize(config)
 
   let baseDatasetId = ensureDataset(config, rows, fields)
   applyStackPercentage(config, rows, baseDatasetId)
@@ -22,43 +22,46 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
   return config
 }
 
+// Normalize options we read in enrichments so later rules can always iterate arrays.
+function normalize(config: EChartsConfig2) {
+  let target = config as any
+  target.series = normalizeArray(target.series)
+  target.xAxis = normalizeArray(target.xAxis)
+  target.yAxis = normalizeArray(target.yAxis)
+  target.dataset = normalizeArray(target.dataset)
+  target.grid = normalizeArray(target.grid)
+  if (target.grid.length === 0) target.grid.push({})
+  target.legend = normalizeArray(target.legend)
+  target.title = normalizeArray(target.title)
+}
+
 // Every chart gets a base dataset sourced from rows.
 // If callers already provided a dataset, we preserve it and make sure we can reference one source dataset by id.
 function ensureDataset(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
   let dimensions = fields.length > 0 ? fields.map(field => field.name) : inferDimensions(rows)
-  let dataset: any = (config as any).dataset
+  let datasets: any[] = (config as any).dataset
   let baseId = '__graphene_base'
 
-  if (!dataset) {
-    ;(config as any).dataset = {id: baseId, source: rows, dimensions}
+  if (datasets.length === 0) {
+    datasets.push({id: baseId, source: rows, dimensions})
     return baseId
   }
 
-  if (Array.isArray(dataset)) {
-    let base = dataset.find(entry => entry?.source != null)
-    if (!base) {
-      dataset.unshift({id: baseId, source: rows, dimensions})
-      return baseId
-    }
-    if (!base.id) base.id = baseId
-    if (base.dimensions == null && dimensions.length > 0) base.dimensions = dimensions
-    return base.id
-  }
-
-  if (dataset.source == null) {
-    ;(config as any).dataset = [{id: baseId, source: rows, dimensions}, dataset]
+  let base = datasets.find(entry => entry?.source != null)
+  if (!base) {
+    datasets.unshift({id: baseId, source: rows, dimensions})
     return baseId
   }
 
-  if (!dataset.id) dataset.id = baseId
-  if (dataset.dimensions == null && dimensions.length > 0) dataset.dimensions = dimensions
-  return dataset.id
+  if (!base.id) base.id = baseId
+  if (base.dimensions == null && dimensions.length > 0) base.dimensions = dimensions
+  return base.id
 }
 
 // Normalize stacked series to percentages by x-domain when `stackPercentage: true` is set.
 function applyStackPercentage(config: EChartsConfig2, rows: Record<string, any>[], baseDatasetId: string) {
-  let datasets = normalizeDataset((config as any).dataset)
-  let seriesList = normalizeSeries(config.series)
+  let datasets: any[] = (config as any).dataset
+  let seriesList = config.series as SeriesWithGroupingHint[]
   let groupIndex = 0
 
   for (let series of seriesList) {
@@ -112,20 +115,18 @@ function applyStackPercentage(config: EChartsConfig2, rows: Record<string, any>[
     // Force affected y-axes to value so 100% stacks render correctly.
     for (let entry of stackGroup) {
       let axisIndex = Number(entry?.yAxisIndex ?? 0)
-      let axis = normalizeAxis(config.yAxis)[axisIndex] as any
+      let axis = (config.yAxis as any[])[axisIndex]
       if (axis && axis.type == null) axis.type = 'value'
     }
   }
-
-  config.dataset = datasets.length === 1 ? datasets[0] : datasets
 }
 
 // Expand series templates that use `encode.group` or `encode.stack` into one concrete series per distinct field value.
 // We do this with ECharts dataset filter transforms so wrappers stay small and users don't need to duplicate series configs.
 function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any>[], baseDatasetId: string) {
-  let templates = normalizeSeries(config.series)
+  let templates = config.series as SeriesWithGroupingHint[]
   let expanded: any[] = []
-  let datasets = normalizeDataset((config as any).dataset)
+  let datasets: any[] = (config as any).dataset
 
   templates.forEach((template, templateIndex) => {
     let entry: any = template
@@ -166,14 +167,13 @@ function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any
   })
 
   config.series = expanded
-  ;(config as any).dataset = datasets.length === 1 ? datasets[0] : datasets
 }
 
-// Infer axis types from encoded field metadata
+// Infer axis types from encoded field metadata.
 function inferAxisTypesFromEncodedFields(config: EChartsConfig2, fields: Field[]) {
-  let xAxes = normalizeAxis(config.xAxis)
-  let yAxes = normalizeAxis(config.yAxis)
-  let series = normalizeSeries(config.series)
+  let xAxes = config.xAxis as any[]
+  let yAxes = config.yAxis as any[]
+  let series = config.series as any[]
 
   xAxes.forEach((axis: any, axisIndex: number) => {
     if (!axis || axis.type != null) return
@@ -199,14 +199,14 @@ function inferAxisTypesFromEncodedFields(config: EChartsConfig2, fields: Field[]
 // Reclaim unused header space from the theme's default grid top.
 // We keep the most room when legends are visible, use moderate space for titles, and minimal space otherwise.
 function compactGridWhenHeaderIsHidden(config: EChartsConfig2) {
-  if (hasVisibleLegend(config.legend)) return
+  if (hasVisibleLegend(config.legend as any[])) return
 
-  let title = firstVisibleTitle(config.title)
+  let title = firstVisibleTitle(config.title as any[])
   let top = title ? (title.subtext ? 52 : 40) : 8
 
-  let grids = normalizeGrid((config as any).grid)
+  let grids = (config as any).grid as any[]
   if (grids.length === 0) {
-    ;(config as any).grid = {top}
+    grids.push({top})
     return
   }
 
@@ -218,14 +218,14 @@ function compactGridWhenHeaderIsHidden(config: EChartsConfig2) {
 
 // Apply compact currency formatting to value axes when the backing field declares currency units.
 function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
-  let yAxes = normalizeAxis(config.yAxis)
+  let yAxes = config.yAxis as any[]
   if (yAxes.length === 0) return
 
   let symbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
   let formatter = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 
   let axisCurrency = new Map<number, keyof typeof symbols>()
-  for (let series of normalizeSeries(config.series)) {
+  for (let series of config.series as any[]) {
     let yField = getSeriesYField(series)
     if (!yField) continue
 
@@ -257,10 +257,10 @@ function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
 // This is trying to fix an issue with charts where every value is either 0 or 1.
 // TODO: just make this a test, and see if we still need it
 function applyIntegerYAxisTicks(config: EChartsConfig2, rows: Record<string, any>[]) {
-  let yAxis = firstAxis(config.yAxis)
+  let yAxis = (config.yAxis as any[])[0]
   if (!yAxis || yAxis.type !== 'value' || yAxis.minInterval != null) return
 
-  let yFields = Array.from(new Set(normalizeSeries(config.series).map(series => getSeriesYField(series)).filter(Boolean))) as string[]
+  let yFields = Array.from(new Set((config.series as any[]).map(series => getSeriesYField(series)).filter(Boolean))) as string[]
   let values = rows.flatMap(row => yFields.map(field => Number(row?.[field]))).filter(value => Number.isFinite(value))
 
   if (values.length === 0) return
@@ -269,7 +269,7 @@ function applyIntegerYAxisTicks(config: EChartsConfig2, rows: Record<string, any
 
 // Add rounded corners only to the visible outer edge of each stack.
 function stackedBarCornerRadius(config: EChartsConfig2) {
-  let seriesList = normalizeSeries(config.series)
+  let seriesList = config.series as any[]
   let grouped = new Map<string, any[]>()
 
   for (let series of seriesList) {
@@ -288,46 +288,30 @@ function stackedBarCornerRadius(config: EChartsConfig2) {
   }
 }
 
-function normalizeSeries(series: EChartsConfig2['series']): SeriesWithGroupingHint[] {
-  if (!series) return []
-  return Array.isArray(series) ? series : [series]
+function normalizeArray<T>(value: T | T[] | undefined | null): T[] {
+  if (value == null) return []
+  return Array.isArray(value) ? value : [value]
 }
 
-function normalizeAxis(axis: any) {
-  if (!axis) return []
-  return Array.isArray(axis) ? axis : [axis]
-}
-
-function normalizeGrid(grid: any) {
-  if (!grid) return []
-  return Array.isArray(grid) ? grid : [grid]
-}
-
-function firstAxis(axis: any) {
-  return Array.isArray(axis) ? axis[0] : axis
-}
-
-function firstVisibleTitle(title: any) {
-  let titles = title == null ? [] : Array.isArray(title) ? title : [title]
+function firstVisibleTitle(titles: any[]) {
   return titles.find(entry => entry && entry.show !== false && Boolean(entry.text || entry.subtext))
 }
 
-function hasVisibleLegend(legend: any) {
-  let legends = legend == null ? [] : Array.isArray(legend) ? legend : [legend]
+function hasVisibleLegend(legends: any[]) {
   return legends.some(entry => entry && entry.show !== false)
 }
 
 function isHorizontalBar(config: EChartsConfig2) {
-  let xAxis = firstAxis(config.xAxis)
-  let yAxis = firstAxis(config.yAxis)
-  let hasBarSeries = normalizeSeries(config.series).some((series: any) => series?.type === 'bar')
+  let xAxis = (config.xAxis as any[])[0]
+  let yAxis = (config.yAxis as any[])[0]
+  let hasBarSeries = (config.series as any[]).some((series: any) => series?.type === 'bar')
   return Boolean(hasBarSeries && xAxis?.type === 'value' && yAxis?.type === 'category')
 }
 
 function horizontalBarGuard(config: EChartsConfig2, fields: Field[]) {
   if (!isHorizontalBar(config)) return
 
-  let hasInvalidCategoryField = normalizeSeries(config.series)
+  let hasInvalidCategoryField = (config.series as any[])
     .filter((series: any) => series?.type === 'bar')
     .map(series => findField(fields, getSeriesCategoryFieldForHorizontal(series)))
     .map(field => getFieldType(field))
@@ -376,11 +360,6 @@ function getEncodeField(value: any): string | undefined {
 
 function shouldBindSeriesToDataset(series: any) {
   return series?.encode != null && series?.data == null
-}
-
-function normalizeDataset(dataset: any) {
-  if (!dataset) return []
-  return Array.isArray(dataset) ? dataset : [dataset]
 }
 
 function inferDimensions(rows: Record<string, any>[]) {
