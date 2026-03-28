@@ -11,7 +11,7 @@
     group?: string
     stack?: string
     stack100?: string
-    label?: boolean | string
+    label?: boolean
     title?: string
     height?: string | number
     width?: string | number

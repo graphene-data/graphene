@@ -6,6 +6,9 @@ import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
 // Each enrichment function is a small, ideally single-purpose manipulation of the config.
 // As a rule, if the provided config sets something, enrichments will not change it.
 
+// Each enrichment must have a comment above it describing what it does, and perhaps why it's needed if it isn't obvious.
+// Enrichments should also have comments inside explaining how they work if the logic is non-trivial
+
 // Run enrichment in a fixed order so defaults stay predictable.
 export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
   normalize(config)
@@ -26,6 +29,8 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
   computeTitleLegendAndGridPadding(config)
   currencyValueAxisFormatting(config, fields)
   applyIntegerYAxisTicks(config, rows)
+  barLabelPositioning(config)
+  labelsUseYAxisFormat(config)
   stackedBarCornerRadius(config)
   return config
 }
@@ -214,6 +219,53 @@ function applyIntegerYAxisTicks(config: EChartsConfig2, rows: Record<string, any
 
   if (values.length === 0) return
   if (values.every(value => Number.isInteger(value))) yAxis.minInterval = 1
+}
+
+// Keep bar labels readable by default: place them outside bars and avoid overlap when possible.
+function barLabelPositioning(config: EChartsConfig2) {
+  let horizontal = isHorizontalBar(config)
+
+  for (let series of config.series as any[]) {
+    if (series?.type !== 'bar' || !series.label || series.label.show !== true) continue
+
+    if (series.label.position == null) series.label.position = horizontal ? 'right' : 'top'
+    if (series.label.distance == null) series.label.distance = 4
+    if (series.labelLayout == null) series.labelLayout = {}
+    if (series.labelLayout.hideOverlap == null) series.labelLayout.hideOverlap = true
+  }
+}
+
+// Match series data labels to the assigned y-axis formatter when labels are enabled.
+// This keeps label formatting in sync with the y-axis without asking callers to repeat it.
+// labelsUseYAxisFormat depends on currencyValueAxisFormatting running first so labels inherit axis formatting.
+function labelsUseYAxisFormat(config: EChartsConfig2) {
+  let yAxes = config.yAxis as any[]
+
+  for (let series of config.series as any[]) {
+    // No-op when labels are off or already explicitly formatted.
+    if (!series?.label || series.label.show !== true || series.label.formatter != null) continue
+
+    let yField = getSeriesYField(series)
+    let axisIndex = Number(series.yAxisIndex ?? 0)
+    let axisFormatter = yAxes[axisIndex]?.axisLabel?.formatter
+    if (typeof axisFormatter !== 'function') continue
+
+    // ECharts can pass different value shapes depending on series/transform shape.
+    // We resolve the numeric value in a few fallback steps so labels always use the
+    // same value the y-axis is formatting.
+    series.label.formatter = (params: any) => {
+      let value = params?.value
+
+      if (yField) {
+        if (params?.data && typeof params.data === 'object' && yField in params.data) value = params.data[yField]
+        if (params?.value && typeof params.value === 'object' && !Array.isArray(params.value) && yField in params.value) {
+          value = params.value[yField]
+        }
+      }
+
+      return axisFormatter(value)
+    }
+  }
 }
 
 // Add rounded corners only to the visible outer edge of each stack.
