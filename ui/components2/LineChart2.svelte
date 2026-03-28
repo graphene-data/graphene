@@ -1,10 +1,9 @@
 <script lang="ts">
-  import QueryLoad2 from './QueryLoad2.svelte'
   import ECharts2 from './ECharts2.svelte'
-  import type {EChartsConfig2} from './types.ts'
+  import type {EChartsConfig2, QueryResult} from './types.ts'
 
   interface Props {
-    data: string | {rows?: any[]; fields?: any[]}
+    data: string | QueryResult
     x: string
     y: string
     y2?: string
@@ -54,8 +53,4 @@
   }
 </script>
 
-{#snippet lineChartContent(result)}
-  <ECharts2 config={buildConfig()} rows={result.rows} fields={result.fields} {height} {width} chartTitle={title} />
-{/snippet}
-
-<QueryLoad2 data={data} fields={{x, y: parseList(y), y2, series}} children={lineChartContent} />
+<ECharts2 data={data} config={buildConfig()} {height} {width} />

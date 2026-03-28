@@ -244,8 +244,7 @@
 <div class="chart-grid">
   <ECharts2
     height={320}
-    rows={monthRows}
-    fields={twoColFields}
+    data={{rows: monthRows, fields: twoColFields}}
     config={{
       title: {text: 'Line'},
       tooltip: {trigger: 'axis'},
@@ -257,8 +256,7 @@
 
   <ECharts2
     height={320}
-    rows={weekdaySeriesRows}
-    fields={weekdayFields}
+    data={{rows: weekdaySeriesRows, fields: weekdayFields}}
     config={{
       title: {text: 'Stacked Area'},
       tooltip: {trigger: 'axis'},
@@ -270,8 +268,7 @@
 
   <ECharts2
     height={320}
-    rows={quarterRows}
-    fields={quarterFields}
+    data={{rows: quarterRows, fields: quarterFields}}
     config={{
       title: {text: 'Bar'},
       tooltip: {trigger: 'axis'},
@@ -283,8 +280,7 @@
 
   <ECharts2
     height={320}
-    rows={scatterRows}
-    fields={scatterFields}
+    data={{rows: scatterRows, fields: scatterFields}}
     config={{
       title: {text: 'Scatter'},
       tooltip: {trigger: 'item'},
@@ -296,8 +292,7 @@
 
   <ECharts2
     height={320}
-    rows={groupedStackedRows}
-    fields={groupedStackedFields}
+    data={{rows: groupedStackedRows, fields: groupedStackedFields}}
     config={{
       title: {text: 'Grouped + Stacked Bar (Two X-Axes)'},
       tooltip: {trigger: 'axis'},
@@ -318,8 +313,7 @@
   <!-- Non-cartesian examples still use the same column-reference mapping. -->
   <ECharts2
     height={320}
-    rows={pieRows}
-    fields={labelValueFields}
+    data={{rows: pieRows, fields: labelValueFields}}
     config={{
       title: {text: 'Pie'},
       tooltip: {trigger: 'item'},
@@ -329,8 +323,7 @@
 
   <ECharts2
     height={320}
-    rows={heatmapRows}
-    fields={[{name: 'day', evidenceType: 'string'}, {name: 'period', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}
+    data={{rows: heatmapRows, fields: [{name: 'day', evidenceType: 'string'}, {name: 'period', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}}
     config={{
       title: {text: 'Heatmap'},
       tooltip: {trigger: 'item'},
@@ -346,14 +339,16 @@
 
   <ECharts2
     height={320}
-    rows={candleRows}
-    fields={[
-      {name: 'month', evidenceType: 'string'},
-      {name: 'open', evidenceType: 'number'},
-      {name: 'close', evidenceType: 'number'},
-      {name: 'low', evidenceType: 'number'},
-      {name: 'high', evidenceType: 'number'},
-    ]}
+    data={{
+      rows: candleRows,
+      fields: [
+        {name: 'month', evidenceType: 'string'},
+        {name: 'open', evidenceType: 'number'},
+        {name: 'close', evidenceType: 'number'},
+        {name: 'low', evidenceType: 'number'},
+        {name: 'high', evidenceType: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Candlestick'},
       tooltip: {trigger: 'axis'},
@@ -365,8 +360,7 @@
 
   <ECharts2
     height={320}
-    rows={funnelRows}
-    fields={[{name: 'stage', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}
+    data={{rows: funnelRows, fields: [{name: 'stage', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}}
     config={{
       title: {text: 'Funnel'},
       tooltip: {trigger: 'item'},
@@ -376,8 +370,7 @@
 
   <ECharts2
     height={320}
-    rows={treemapRows}
-    fields={[{name: 'name', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}
+    data={{rows: treemapRows, fields: [{name: 'name', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}}
     config={{
       title: {text: 'Treemap'},
       tooltip: {trigger: 'item'},
@@ -387,12 +380,14 @@
 
   <ECharts2
     height={320}
-    rows={themeRiverRows}
-    fields={[
-      {name: 'month', evidenceType: 'date'},
-      {name: 'topic', evidenceType: 'string'},
-      {name: 'value', evidenceType: 'number'},
-    ]}
+    data={{
+      rows: themeRiverRows,
+      fields: [
+        {name: 'month', evidenceType: 'date'},
+        {name: 'topic', evidenceType: 'string'},
+        {name: 'value', evidenceType: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Theme River'},
       tooltip: {trigger: 'axis'},
@@ -403,8 +398,7 @@
 
   <ECharts2
     height={320}
-    rows={dualAxisRows}
-    fields={dualAxisFields}
+    data={{rows: dualAxisRows, fields: dualAxisFields}}
     config={{
       title: {text: 'Bar + Line (Dual Axis)'},
       tooltip: {trigger: 'axis'},
@@ -423,8 +417,7 @@
 
   <ECharts2
     height={320}
-    rows={bubbleRows}
-    fields={bubbleFields}
+    data={{rows: bubbleRows, fields: bubbleFields}}
     config={{
       title: {text: 'Bubble (x/y/size/color)'},
       tooltip: {trigger: 'item'},
@@ -444,8 +437,7 @@
 
   <ECharts2
     height={320}
-    rows={sankeyRows}
-    fields={sankeyFields}
+    data={{rows: sankeyRows, fields: sankeyFields}}
     config={{
       title: {text: 'Sankey'},
       tooltip: {trigger: 'item'},

@@ -1,5 +1,4 @@
 <script lang="ts">
-  import QueryLoad2 from './QueryLoad2.svelte'
   import ECharts2 from './ECharts2.svelte'
   import type {EChartsConfig2} from './types.ts'
 
@@ -11,8 +10,6 @@
     subtitle?: string
     height?: string | number
     width?: string | number
-    echartsOptions?: Record<string, any>
-    seriesOptions?: Record<string, any>
   }
 
   let {
@@ -23,22 +20,15 @@
     subtitle = undefined,
     height = '240px',
     width = '100%',
-    echartsOptions = undefined,
-    seriesOptions = undefined,
   }: Props = $props()
 
   function buildConfig(): EChartsConfig2 {
     return {
       title: title ? {text: title, subtext: subtitle} : undefined,
       tooltip: {trigger: 'item', formatter: '{b}: {c} ({d}%)'},
-      series: [{type: 'pie', encode: {itemName: category, value}, radius: ['40%', '70%'], ...seriesOptions}],
-      ...echartsOptions,
+      series: [{type: 'pie', encode: {itemName: category, value}, radius: ['40%', '70%']}],
     }
   }
 </script>
 
-{#snippet pieChartContent(result)}
-  <ECharts2 config={buildConfig()} rows={result.rows} fields={result.fields} {height} {width} chartTitle={title} />
-{/snippet}
-
-<QueryLoad2 data={data} fields={{category, value}} children={pieChartContent} />
+<ECharts2 data={data} config={buildConfig()} {height} {width} />

@@ -39,7 +39,6 @@
 <style>
   .g-error {
     padding: 16px 20px;
-    margin: 12px 0;
     border-radius: 6px;
     border-left: 3px solid var(--red-500);
     background: var(--red-50);
