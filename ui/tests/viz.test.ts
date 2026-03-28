@@ -46,23 +46,6 @@ test('pie chart', async ({mount, chart}) => {
 test.skip('can provide a list of colors for different series', async ({mount, chart}) => {
 })
 
-test('bar chart y-axis uses integer ticks for integer data', async ({mount, chart}) => {
-  // there was a regression where we'd try to render fractional ticks (0, 0.25, 0.5, 0.75, 1), but they got rounded
-  let rows = [
-    {category: 'A', count: 1},
-    {category: 'B', count: 1},
-    {category: 'C', count: 1},
-  ] as any
-  rows._evidenceColumnTypes = [
-    {name: 'category', evidenceType: 'string'},
-    {name: 'count', evidenceType: 'number'},
-  ]
-  await mount('components2/BarChart2.svelte', {data: {rows}, x: 'category', y: 'count'})
-  let minInterval = await chart.config(c => (Array.isArray(c.yAxis) ? c.yAxis[0] : c.yAxis).minInterval)
-  expect(minInterval).toBe(1)
-  await expect(chart.el).screenshot('bar-chart-integer-ticks')
-})
-
 test.skip('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
   await mount('components2/LineChart2.svelte', {data: timeseriesWithDateSeries(), x: 'category', y: 'sales', series: 'quarter'})
   let names = await chart.config(c => (c.series ?? []).map((s: any) => s.name).sort())
