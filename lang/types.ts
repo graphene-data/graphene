@@ -79,6 +79,8 @@ export interface Query {
   groupBy: string[] // field names for GROUP BY
   orderBy: {idx: number; desc: boolean}[] // ORDER BY (1-indexed field indices)
   limit?: number
+  setOp?: 'union' | 'union all' | 'intersect' | 'except'
+  branches?: {query: Query; parenthesized?: boolean}[]
 }
 
 // A column definition (from table schema or computed)
