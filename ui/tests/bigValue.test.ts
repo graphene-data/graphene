@@ -1,5 +1,5 @@
 import {expect, test} from './fixtures.ts'
-import {singleDim, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
+import {singleDim} from './testData.ts'
 
 test('big value', async ({mount, page, chart}) => {
   await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', fmt: 'num0', title: 'Sales'})
@@ -34,3 +34,15 @@ test('big value null renders em dash', async ({mount, page}) => {
   await expect(page.getByText('—')).toBeVisible()
   await expect(page.locator('#component-test')).screenshot('big-value-null')
 })
+
+function percentData() {
+  let rows = [{ratio: 0.314}] as any
+  rows._evidenceColumnTypes = [{name: 'ratio', evidenceType: 'number'}]
+  return {rows}
+}
+
+function nullValueData() {
+  let rows = [{value: null}] as any
+  rows._evidenceColumnTypes = [{name: 'value', evidenceType: 'number'}]
+  return {rows}
+}
