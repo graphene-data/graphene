@@ -11,7 +11,7 @@
     group?: string
     stack?: string
     stack100?: string
-    label?: boolean
+    label?: boolean | string
     title?: string
     height?: string | number
     width?: string | number
@@ -33,24 +33,24 @@
 
   function buildConfig(): EChartsConfig2 {
     let yFields = parseList(y)
-    let grouped = Boolean(group && yFields.length === 1)
+    let mode = resolveGroupingMode(group, stack, stack100)
+    let grouped = Boolean(mode && yFields.length === 1)
     let barLabel = label ? {show: true} : undefined
-    let stackKey = resolveStack(stack)
+    let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'bar-stack' : undefined
+    let stackPercentage = mode?.kind === 'stack100' ? true : undefined
 
     let series = grouped
-      ? [{type: 'bar', encode: {x, y: yFields[0], group}, stack: stackKey, label: barLabel}]
-      : yFields.map(field => ({type: 'bar', name: field, stack: stackKey, encode: {x, y: field}, label: barLabel}))
+      ? [{type: 'bar', encode: {x, y: yFields[0], group: mode?.field}, stack: stackKey, stackPercentage, label: barLabel}]
+      : yFields.map(field => ({type: 'bar', name: field, encode: {x, y: field}, label: barLabel}))
 
-    if (y2) {
-      series.push({type: 'line', name: y2, yAxisIndex: 1, encode: {x, y: y2}})
-    }
+    if (y2) series.push({type: 'line', name: y2, yAxisIndex: 1, encode: {x, y: y2}})
 
     return {
       title: title ? {text: title} : undefined,
       tooltip: {trigger: 'axis'},
       legend: {show: Boolean(grouped || yFields.length > 1 || y2)},
       xAxis: {},
-      yAxis: [{}, ...(y2 ? [{}] : [])],
+      yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{}] : [])],
       series,
     }
   }
@@ -60,10 +60,15 @@
     return value.split(',').map(v => v.trim()).filter(Boolean)
   }
 
-  function resolveStack(value?: string | boolean) {
-    if (!value) return undefined
-    if (typeof value === 'string') return value
-    return 'bar-stack'
+  function resolveGroupingMode(group?: string, stack?: string, stack100?: string) {
+    let modes = [
+      group ? {kind: 'group' as const, field: group} : undefined,
+      stack ? {kind: 'stack' as const, field: stack} : undefined,
+      stack100 ? {kind: 'stack100' as const, field: stack100} : undefined,
+    ].filter(Boolean)
+
+    if (modes.length <= 1) return modes[0]
+    throw new Error('BarChart2 accepts only one of `group`, `stack`, or `stack100`')
   }
 </script>
 
@@ -71,4 +76,4 @@
   <ECharts2 config={buildConfig()} rows={result.rows} fields={result.fields} {height} {width} chartTitle={title} />
 {/snippet}
 
-<QueryLoad2 data={data} fields={{x, y: parseList(y), y2, group}} children={barChartContent} />
+<QueryLoad2 data={data} fields={{x, y: parseList(y), y2, group: resolveGroupingMode(group, stack, stack100)?.field}} children={barChartContent} />

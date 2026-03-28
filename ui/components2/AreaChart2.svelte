@@ -8,8 +8,8 @@
     x: string
     y: string
     group?: string
-    stack?: string | boolean
-    stack100?: string | boolean
+    stack?: string
+    stack100?: string
     title?: string
     height?: string | number
     width?: string | number
@@ -20,8 +20,8 @@
     x,
     y,
     group = undefined,
-    stack = true,
-    stack100 = false,
+    stack = undefined,
+    stack100 = undefined,
     title = undefined,
     height = '240px',
     width = '100%',
@@ -29,20 +29,22 @@
 
   function buildConfig(): EChartsConfig2 {
     let yFields = parseList(y)
-    let groupedSeries = Boolean(series && yFields.length === 1)
-    let stackKey = type === 'stacked' || type === 'stacked100' ? 'area' : undefined
+    let mode = resolveGroupingMode(group, stack, stack100)
+    let grouped = Boolean(mode && yFields.length === 1)
+    let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'area-stack' : undefined
+    let stackPercentage = mode?.kind === 'stack100' ? true : undefined
 
-    let seriesTemplates = groupedSeries
-      ? [{type: 'line', areaStyle: {}, stack: stackKey, encode: {x, y: yFields[0], group: series}}]
-      : yFields.map(field => ({type: 'line', name: field, areaStyle: {}, stack: stackKey, encode: {x, y: field}}))
+    let series = grouped
+      ? [{type: 'line', areaStyle: {}, stack: stackKey, stackPercentage, encode: {x, y: yFields[0], group: mode?.field}}]
+      : yFields.map(field => ({type: 'line', name: field, areaStyle: {}, encode: {x, y: field}}))
 
     return {
       title: title ? {text: title} : undefined,
       tooltip: {trigger: 'axis'},
-      legend: {show: groupedSeries || yFields.length > 1},
+      legend: {show: grouped || yFields.length > 1},
       xAxis: {},
-      yAxis: {max: type === 'stacked100' ? 1 : undefined},
-      series: seriesTemplates,
+      yAxis: {max: stackPercentage ? 1 : undefined},
+      series,
     }
   }
 
@@ -50,10 +52,21 @@
     if (!value) return []
     return value.split(',').map(v => v.trim()).filter(Boolean)
   }
+
+  function resolveGroupingMode(group?: string, stack?: string, stack100?: string) {
+    let modes = [
+      group ? {kind: 'group' as const, field: group} : undefined,
+      stack ? {kind: 'stack' as const, field: stack} : undefined,
+      stack100 ? {kind: 'stack100' as const, field: stack100} : undefined,
+    ].filter(Boolean)
+
+    if (modes.length <= 1) return modes[0]
+    throw new Error('AreaChart2 accepts only one of `group`, `stack`, or `stack100`')
+  }
 </script>
 
 {#snippet areaChartContent(result)}
   <ECharts2 config={buildConfig()} rows={result.rows} fields={result.fields} {height} {width} chartTitle={title} />
 {/snippet}
 
-<QueryLoad2 data={data} fields={{x, y: parseList(y), series}} children={areaChartContent} />
+<QueryLoad2 data={data} fields={{x, y: parseList(y), group: resolveGroupingMode(group, stack, stack100)?.field}} children={areaChartContent} />
