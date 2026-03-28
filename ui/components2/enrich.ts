@@ -1,3 +1,4 @@
+import {colorPalette} from './theme.ts'
 import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
 import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
 
@@ -28,6 +29,7 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
   horizontalBarGuard(config, fields)
   computeTitleLegendAndGridPadding(config)
   currencyValueAxisFormatting(config, fields)
+  styleSecondaryAxisForSimpleBarLineLayout(config)
   applyIntegerYAxisTicks(config, rows)
   barLabelPositioning(config)
   labelsUseYAxisFormat(config)
@@ -208,6 +210,46 @@ function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
   }
 }
 
+// For the simple bar+line mixed-chart case, keep axis styling consistent with assigned series:
+// - axis labels/values on the second axis match primary axis formatting
+// - first axis uses bar series color (when there is only one bar series shape)
+// - second axis uses line series color
+// In anything more complex, we bail to avoid surprising defaults.
+function styleSecondaryAxisForSimpleBarLineLayout(config: EChartsConfig2) {
+  let yAxes = config.yAxis as any[]
+  if (yAxes.length < 2) return
+
+  let series = config.series as any[]
+
+  let bars = series.filter(entry => Number(entry?.yAxisIndex ?? 0) === 0 && entry?.type === 'bar')
+  if (bars.length === 0) return
+
+  let secondary = series.filter(entry => Number(entry?.yAxisIndex ?? 0) === 1)
+  if (secondary.length !== 1 || secondary[0]?.type !== 'line') return
+
+  if (series.some(entry => Number(entry?.yAxisIndex ?? 0) === 0 && entry?.type !== 'bar')) return
+  if (series.some(entry => Number(entry?.yAxisIndex ?? 0) > 1)) return
+
+  let barYFields = Array.from(new Set(bars.map(entry => getSeriesYField(entry)).filter(Boolean))) as string[]
+  if (barYFields.length !== 1) return
+
+  let primaryAxis = yAxes[0]
+  let secondaryAxis = yAxes[1]
+  if (!primaryAxis || !secondaryAxis) return
+
+  let palette = getThemeColorPalette(config)
+  let barSeriesColor = seriesColorForIndex(series, bars[0], palette)
+  let lineSeriesColor = seriesColorForIndex(series, secondary[0], palette)
+
+  if (barSeriesColor) applyAxisColor(primaryAxis, barSeriesColor)
+  if (lineSeriesColor) applyAxisColor(secondaryAxis, lineSeriesColor)
+
+  let primaryFormatter = primaryAxis.axisLabel?.formatter
+  if (typeof primaryFormatter === 'function' && secondaryAxis.axisLabel?.formatter == null) {
+    secondaryAxis.axisLabel = {...secondaryAxis.axisLabel, formatter: primaryFormatter}
+  }
+}
+
 // This is trying to fix an issue with charts where every value is either 0 or 1.
 // TODO: just make this a test, and see if we still need it
 function applyIntegerYAxisTicks(config: EChartsConfig2, rows: Record<string, any>[]) {
@@ -294,6 +336,52 @@ function normalizeArray<T>(value: T | T[] | undefined | null): T[] {
   return Array.isArray(value) ? value : [value]
 }
 
+function getThemeColorPalette(config: EChartsConfig2) {
+  let configColor = (config as any).color
+  if (Array.isArray(configColor) && configColor.length > 0) return configColor
+  return colorPalette
+}
+
+function seriesColorForIndex(seriesList: any[], targetSeries: any, palette: any[]) {
+  let index = seriesList.indexOf(targetSeries)
+  if (index < 0) return undefined
+
+  let explicit = targetSeries?.itemStyle?.color || targetSeries?.lineStyle?.color || targetSeries?.areaStyle?.color || targetSeries?.color
+  if (typeof explicit === 'string') return explicit
+
+  return palette[index % palette.length]
+}
+
+function applyAxisColor(axis: any, color: string) {
+  if (!axis) return
+
+  axis.axisLine = {
+    ...(axis.axisLine || {}),
+    lineStyle: {
+      ...(axis.axisLine?.lineStyle || {}),
+      color,
+    },
+  }
+
+  axis.axisTick = {
+    ...(axis.axisTick || {}),
+    lineStyle: {
+      ...(axis.axisTick?.lineStyle || {}),
+      color,
+    },
+  }
+
+  axis.nameTextStyle = {
+    ...(axis.nameTextStyle || {}),
+    color,
+  }
+
+  axis.axisLabel = {
+    ...(axis.axisLabel || {}),
+    color,
+  }
+}
+
 function isHorizontalBar(config: EChartsConfig2) {
   let xAxis = (config.xAxis as any[])[0]
   let yAxis = (config.yAxis as any[])[0]
@@ -307,7 +395,7 @@ function horizontalBarGuard(config: EChartsConfig2, fields: Field[]) {
   let hasInvalidCategoryField = (config.series as any[])
     .filter((series: any) => series?.type === 'bar')
     .map(series => findField(fields, getSeriesCategoryFieldForHorizontal(series)))
-    .map(field => getFieldType(field))
+    .map(field => getFieldTypeFromMetadata(field))
     .some(type => type === 'date' || type === 'number')
 
   if (hasInvalidCategoryField) throw new Error('Horizontal charts do not support a value or time-based x-axis')
@@ -318,7 +406,7 @@ function findField(fields: Field[], fieldName?: string) {
   return fields.find(field => field.name === fieldName)
 }
 
-function getFieldType(field?: Field) {
+function getFieldTypeFromMetadata(field?: Field) {
   if (!field) return 'unknown'
   if (field.evidenceType === 'number' || field.type === 'number') return 'number'
   if (field.evidenceType === 'date' || field.type === 'date' || field.type === 'timestamp') return 'date'
@@ -327,7 +415,10 @@ function getFieldType(field?: Field) {
 }
 
 function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
-  let types = fieldNames.map(name => getFieldType(findField(fields, name))).filter(type => type !== 'unknown')
+  let types = fieldNames
+    .map(name => getFieldTypeFromMetadata(findField(fields, name)))
+    .filter(type => type !== 'unknown')
+
   if (types.some(type => type === 'date')) return 'time'
   if (types.some(type => type === 'number')) return 'value'
   return 'category'

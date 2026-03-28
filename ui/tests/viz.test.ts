@@ -1,6 +1,14 @@
 import {expect, test} from './fixtures.ts'
 import {singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
+function seededRandom(seed: number) {
+  let state = seed
+  return () => {
+    state = (state * 1664525 + 1013904223) >>> 0
+    return state / 0x100000000
+  }
+}
+
 test.beforeEach(async ({page}) => {
   await page.setViewportSize({width: 680, height: 400})
 })
@@ -115,7 +123,12 @@ test('area chart supports stepped markers and hidden line', async ({chart}) => {
 
 test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
   let data = timeseries() as any
-  data.rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k * 0.15}))
+  let nextRandom = seededRandom(202503)
+  data.rows = data.rows.map((r: any) => {
+    let delta = (nextRandom() - 0.5) * 0.08
+    return {...r, profit_usd0k: r.sales_usd0k * (0.15 + delta)}
+  })
+  data.fields.push({name: 'profit_usd0k', type: 'number'})
   await mount('components2/BarChart2.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
   await expect(chart.el).screenshot('bar-chart-secondary-axis-line')
 })

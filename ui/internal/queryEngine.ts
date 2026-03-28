@@ -7,7 +7,7 @@ import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
 
-interface QueryResult {
+export interface QueryResult {
   rows?: any[]
   error?: GrapheneError
   fields?: Field[]
