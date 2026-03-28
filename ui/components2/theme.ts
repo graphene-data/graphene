@@ -103,7 +103,6 @@ registerTheme('graphene', {
     symbol: 'emptyCircle',
     symbolSize: 6,
     lineStyle: {width: 2},
-    areaStyle: {opacity: 0.2},
   },
   bar: {
     itemStyle: {borderRadius: [3, 3, 0, 0]},

@@ -1,3 +1,4 @@
+import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
 import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -9,10 +10,17 @@ import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
 export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
   normalize(config)
 
+  // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
+  applyMissingPointDefaults(config, rows)
+  applyStackPercentage(config, rows, fields)
+  applyDefaultSorting(config, rows, fields)
+
   let baseDatasetId = ensureDataset(config, rows, fields)
-  applyStackPercentage(config, rows, baseDatasetId)
+
+  // generates the required number of `series` objects for this data
   expandSeriesTransforms(config, rows, baseDatasetId)
 
+  // stylistic rules to provide great defaults
   inferAxisTypesFromEncodedFields(config, fields)
   horizontalBarGuard(config, fields)
   compactGridWhenHeaderIsHidden(config)
@@ -56,69 +64,6 @@ function ensureDataset(config: EChartsConfig2, rows: Record<string, any>[], fiel
   if (!base.id) base.id = baseId
   if (base.dimensions == null && dimensions.length > 0) base.dimensions = dimensions
   return base.id
-}
-
-// Normalize stacked series to percentages by x-domain when `stackPercentage: true` is set.
-function applyStackPercentage(config: EChartsConfig2, rows: Record<string, any>[], baseDatasetId: string) {
-  let datasets: any[] = (config as any).dataset
-  let seriesList = config.series as SeriesWithGroupingHint[]
-  let groupIndex = 0
-
-  for (let series of seriesList) {
-    let xField = getSeriesXField(series)
-    let yField = getSeriesYField(series)
-    let sourceDatasetId = series?.datasetId ?? baseDatasetId
-
-    // We only normalize explicit stackPercentage series on the base dataset.
-    if (series?.stackPercentage !== true || !series?.stack || !xField || !yField || sourceDatasetId !== baseDatasetId) continue
-
-    // Find all series in the same stack/x group.
-    let stackGroup = seriesList.filter(candidate => {
-      return candidate?.stack === series.stack && getSeriesXField(candidate) === xField && getSeriesYField(candidate)
-    })
-
-    // Each stack group is processed once, on its first series.
-    if (stackGroup[0] !== series) continue
-
-    let yFields = Array.from(new Set(stackGroup.map(entry => getSeriesYField(entry)).filter(Boolean))) as string[]
-    let pctFieldByY = Object.fromEntries(yFields.map((y, index) => [y, `__graphene_stack_pct_${groupIndex}_${index}`])) as Record<string, string>
-
-    // Build per-x totals across all y fields in the stack.
-    let totalsByX = new Map<string, number>()
-    for (let row of rows) {
-      let xKey = JSON.stringify(row?.[xField] ?? null)
-      let rowTotal = yFields.reduce((sum, y) => sum + (Number(row?.[y]) || 0), 0)
-      totalsByX.set(xKey, (totalsByX.get(xKey) ?? 0) + rowTotal)
-    }
-
-    // Create a derived dataset with normalized y columns.
-    let datasetId = `__graphene_stack_pct_${groupIndex++}`
-    let normalizedRows = rows.map(row => {
-      let xKey = JSON.stringify(row?.[xField] ?? null)
-      let total = totalsByX.get(xKey) ?? 0
-      let next = {...row}
-      yFields.forEach(y => (next[pctFieldByY[y]] = total <= 0 ? 0 : (Number(row?.[y]) || 0) / total))
-      return next
-    })
-
-    datasets.push({id: datasetId, source: normalizedRows})
-
-    // Point each stacked series at its normalized y field.
-    for (let entry of stackGroup) {
-      let y = getSeriesYField(entry) as string
-      entry.datasetId = datasetId
-      entry.encode = {...entry.encode, y: pctFieldByY[y]}
-      delete entry.stackPercentage
-    }
-
-    // Normalized y fields are synthetic, so field metadata lookup can't infer axis type.
-    // Force affected y-axes to value so 100% stacks render correctly.
-    for (let entry of stackGroup) {
-      let axisIndex = Number(entry?.yAxisIndex ?? 0)
-      let axis = (config.yAxis as any[])[axisIndex]
-      if (axis && axis.type == null) axis.type = 'value'
-    }
-  }
 }
 
 // Expand series templates that use `encode.group` or `encode.stack` into one concrete series per distinct field value.
@@ -202,7 +147,8 @@ function compactGridWhenHeaderIsHidden(config: EChartsConfig2) {
   if (hasVisibleLegend(config.legend as any[])) return
 
   let title = firstVisibleTitle(config.title as any[])
-  let top = title ? (title.subtext ? 52 : 40) : 8
+  let top = 8
+  if (title) top = title.subtext ? 52 : 40
 
   let grids = (config as any).grid as any[]
   if (grids.length === 0) {
