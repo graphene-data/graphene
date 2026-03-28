@@ -37,6 +37,29 @@ export function timeseriesGrouped(): TableRows {
   return withEvidenceTypes(rows, fields)
 }
 
+export function sparseGroupedMonthRows(): TableRows {
+  let rows = [
+    {month: '2024-06-01', metric: 'A', value: 60},
+    {month: '2024-03-01', metric: 'A', value: 30},
+    {month: '2024-01-01', metric: 'A', value: 10},
+    {month: '2024-05-01', metric: 'A', value: 50},
+    {month: '2024-02-01', metric: 'A', value: 20},
+    {month: '2024-04-01', metric: 'A', value: 40},
+    {month: '2024-01-01', metric: 'B', value: 15},
+    {month: '2024-03-01', metric: 'B', value: 25},
+    {month: '2024-06-01', metric: 'B', value: 35},
+    {month: '2024-02-01', metric: 'B', value: 18},
+    {month: '2024-05-01', metric: 'B', value: 28},
+    // April for metric B is intentionally missing.
+  ]
+  let fields: Field[] = [
+    {name: 'month', type: 'date', metadata: {granularity: 'month'}},
+    {name: 'metric', type: 'string'},
+    {name: 'value', type: 'number'},
+  ]
+  return withEvidenceTypes(rows, fields)
+}
+
 export function timeseriesWithDateSeries(): TableRows {
   let rows = [
     {quarter: '2021-01-01', category: 'Widgets', sales: 100},

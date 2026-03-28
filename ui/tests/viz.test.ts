@@ -1,5 +1,5 @@
 import {expect, test} from './fixtures.ts'
-import {singleDim, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
+import {singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
 test.beforeEach(async ({page}) => {
   await page.setViewportSize({width: 680, height: 400})
@@ -10,13 +10,15 @@ test('bar chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart')
 })
 
-test('bar chart with just 0,1 has sensible y axis ticks', async ({mount, chart, page}) => {
+test('bar chart with just 0,1 has sensible y axis ticks', async ({mount, chart}) => {
   let rows = [{category: 'A', count: 1}, {category: 'B', count: 0}, {category: 'C', count: 1}]
   await mount('components2/BarChart2.svelte', {data: {rows}, x: 'category', y: 'count'})
   await expect(chart.el).screenshot('bar-chart-0-to-1')
 })
 
-test('bar chart grouped + stacked', async ({mount, chart}) => {
+test('bar chart grouped + stacked fills missing points and sorts x', async ({mount, chart}) => {
+  await mount('components2/BarChart2.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', stack: 'metric', title: 'Grouped Stacked Missing + Sort'})
+  await expect(chart.el).screenshot('bar-chart-stacked-missing-sort')
 })
 
 test('horizontal bar chart', async ({mount, chart}) => {
@@ -26,7 +28,7 @@ test('horizontal bar chart', async ({mount, chart}) => {
 
 test('stacked area chart', async ({mount, chart}) => {
   await mount('components2/AreaChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack: 'category'})
-  await expect(chart.el).screenshot('stacked-area-chart')
+  await expect(chart.el).screenshot('area-chart-stacked')
 })
 
 test('line chart timeseries', async ({mount, page, chart}) => {
@@ -43,7 +45,7 @@ test('pie chart', async ({mount, chart}) => {
 })
 
 
-test.skip('can provide a list of colors for different series', async ({mount, chart}) => {
+test.skip('can provide a list of colors for different series', async () => {
 })
 
 test.skip('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
@@ -68,10 +70,33 @@ test('bar chart grouped labels', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-grouped-labels')
 })
 
-test('line chart markers and step', async ({mount, chart}) => {
+test('categorical stacked bar charts sort by total value descending', async ({mount, chart}) => {
+  let rows = [
+    {segment: 'SMB', metric: 'New', value: 8},
+    {segment: 'Enterprise', metric: 'New', value: 35},
+    {segment: 'Mid Market', metric: 'New', value: 16},
+    {segment: 'SMB', metric: 'Expansion', value: 12},
+    {segment: 'Enterprise', metric: 'Expansion', value: 30},
+    {segment: 'Mid Market', metric: 'Expansion', value: 18},
+  ]
+
+  await mount('components2/BarChart2.svelte', {data: {rows}, x: 'segment', y: 'value', stack: 'metric', title: 'Stacked Category Sort'})
+  await expect(chart.el).screenshot('bar-chart-categorical-stacked-sort-total-desc')
 })
 
-test('line chart wraps wide x labels', async ({mount, chart}) => {
+test('line chart sorts time axis, and shows gap for missing points', async ({mount, chart}) => {
+  await mount('components2/LineChart2.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', series: 'metric', title: 'Line Missing + Sort'})
+  await expect(chart.el).screenshot('line-chart-grouped-missing-sort')
+})
+
+test('stacked area uses 0 for missing points', async ({mount, chart}) => {
+  await mount('components2/AreaChart2.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', stack: 'metric', title: 'Area Missing + Sort'})
+  await expect(chart.el).screenshot('area-chart-grouped-missing-sort')
+})
+
+test('unstacked area leaves gaps for missing points', async ({mount, chart}) => {
+  await mount('components2/AreaChart2.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', group: 'metric', title: 'Area Missing + Gaps'})
+  await expect(chart.el).screenshot('area-chart-grouped-missing-gap')
 })
 
 test('area chart stacked100', async ({mount, chart}) => {
@@ -84,7 +109,7 @@ test('bar chart stacked100', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-stacked100')
 })
 
-test('area chart supports stepped markers and hidden line', async ({mount, chart}) => {
+test('area chart supports stepped markers and hidden line', async ({chart}) => {
   await expect(chart.el).screenshot('area-chart-stepped-markers-no-line')
 })
 
