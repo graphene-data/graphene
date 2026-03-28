@@ -9,8 +9,9 @@
     y: string
     y2?: string
     group?: string
-    stack?: string | boolean
-    label?: boolean | string
+    stack?: string
+    stack100?: string
+    label?: boolean
     title?: string
     height?: string | number
     width?: string | number
@@ -22,7 +23,8 @@
     y,
     y2 = undefined,
     group = undefined,
-    stack = false,
+    stack = undefined,
+    stack100 = undefined,
     label = false,
     title = undefined,
     height = '240px',

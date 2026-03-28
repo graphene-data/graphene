@@ -7,8 +7,9 @@
     data: string | {rows?: any[]; fields?: any[]}
     x: string
     y: string
-    series?: string
-    type?: 'stacked' | 'stacked100' | 'grouped'
+    group?: string
+    stack?: string | boolean
+    stack100?: string | boolean
     title?: string
     height?: string | number
     width?: string | number
@@ -18,8 +19,9 @@
     data,
     x,
     y,
-    series = undefined,
-    type = 'stacked',
+    group = undefined,
+    stack = true,
+    stack100 = false,
     title = undefined,
     height = '240px',
     width = '100%',
