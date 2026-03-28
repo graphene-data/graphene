@@ -34,8 +34,8 @@
     let stackPercentage = mode?.kind === 'stack100' ? true : undefined
 
     let series = grouped
-      ? [{type: 'line', areaStyle: {opacity: 0.2}, stack: stackKey, stackPercentage, encode: {x, y: yFields[0], group: mode?.field}}]
-      : yFields.map(field => ({type: 'line', name: field, areaStyle: {opacity: 0.2}, encode: {x, y: field}}))
+      ? [{type: 'line' as const, areaStyle: {opacity: 0.2}, stack: stackKey, stackPercentage, encode: {x, y: yFields[0], group: mode?.field}}]
+      : yFields.map(field => ({type: 'line' as const, name: field, areaStyle: {opacity: 0.2}, encode: {x, y: field}}))
 
     return {
       title: title ? {text: title} : undefined,

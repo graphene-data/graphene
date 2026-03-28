@@ -1,6 +1,6 @@
 <script lang="ts">
   import ECharts2 from './ECharts2.svelte'
-  import type {EChartsConfig2} from './types.ts'
+  import type {EChartsConfig2, SeriesWithGroupingHint} from './types.ts'
 
   interface Props {
     data: string | {rows?: any[]; fields?: any[]}
@@ -38,11 +38,11 @@
     let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'bar-stack' : undefined
     let stackPercentage = mode?.kind === 'stack100' ? true : undefined
 
-    let series = grouped
-      ? [{type: 'bar', encode: {x, y: yFields[0], group: mode?.field}, stack: stackKey, stackPercentage, label: barLabel}]
-      : yFields.map(field => ({type: 'bar', name: field, encode: {x, y: field}, label: barLabel}))
+    let series: SeriesWithGroupingHint[] = grouped
+      ? [{type: 'bar' as const, encode: {x, y: yFields[0], group: mode?.field}, stack: stackKey, stackPercentage, label: barLabel}]
+      : yFields.map(field => ({type: 'bar' as const, name: field, encode: {x, y: field}, label: barLabel}))
 
-    if (y2) series.push({type: 'line', name: y2, yAxisIndex: 1, encode: {x, y: y2}})
+    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2}})
 
     return {
       title: title ? {text: title} : undefined,

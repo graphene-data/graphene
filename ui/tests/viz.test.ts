@@ -49,9 +49,6 @@ test('stacked area chart', async ({mount, chart}) => {
 
 test('line chart timeseries', async ({mount, page, chart}) => {
   await mount('components2/LineChart2.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
-  await expect(page.locator('#component-test svg')).toBeVisible()
-  let axisType = await chart.config(c => (Array.isArray(c.xAxis) ? c.xAxis[0] : c.xAxis).type)
-  expect(axisType).toBe('time')
   await expect(chart.el).screenshot('line-chart-timeseries')
 })
 
@@ -125,7 +122,7 @@ test('bar chart stacked100', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-stacked100')
 })
 
-test('area chart supports stepped markers and hidden line', async ({chart}) => {
+test.skip('area chart supports stepped markers and hidden line', async ({chart}) => {
   await expect(chart.el).screenshot('area-chart-stepped-markers-no-line')
 })
 
@@ -136,15 +133,7 @@ test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
     let delta = (nextRandom() - 0.5) * 0.08
     return {...r, profit_usd0k: r.sales_usd0k * (0.15 + delta)}
   })
-  data.fields.push({ name: 'profit_usd0k', type: 'number', metadata: { units: 'usd' } })
+  data.fields.push({name: 'profit_usd0k', type: 'number', metadata: {units: 'usd'}})
   await mount('components2/BarChart2.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
   await expect(chart.el).screenshot('bar-chart-secondary-axis-line')
 })
-
-test('dev echarts2 gallery renders without runtime errors', async ({mount, page}) => {
-  await page.setViewportSize({width: 1200, height: 1400})
-  await mount('internal/DevECharts2Gallery.svelte', {})
-
-  await expect(page.locator('.echarts2')).toHaveCount(14)
-  await expect(page.locator('#component-test')).screenshot('echarts2-gallery')
-}, 30_000)

@@ -1,6 +1,6 @@
 import {colorPalette} from './theme.ts'
 import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
-import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
+import type {EChartsConfig2, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
 // A lot of defaulting happens in themes but there are some defaults themes can't handle, like when it depends on the shape of data being charted.
@@ -12,76 +12,74 @@ import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
 
 // Run enrichment in a fixed order so defaults stay predictable.
 export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
-  normalize(config)
+  let normalized = normalize(config)
 
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
-  applyMissingPointDefaults(config, rows)
-  applyStackPercentage(config, rows, fields)
-  applyDefaultSorting(config, rows, fields)
+  applyMissingPointDefaults(normalized, rows)
+  applyStackPercentage(normalized, rows, fields)
+  applyDefaultSorting(normalized, rows, fields)
 
-  let baseDatasetId = ensureDataset(config, rows, fields)
+  let baseDatasetId = ensureDataset(normalized, rows, fields)
 
   // generates the required number of `series` objects for this data
-  expandSeriesTransforms(config, rows, baseDatasetId)
+  expandSeriesTransforms(normalized, rows, baseDatasetId)
 
   // stylistic rules to provide great defaults
-  inferAxisTypesFromEncodedFields(config, fields)
-  horizontalBarGuard(config, fields)
-  computeTitleLegendAndGridPadding(config)
-  valueAxisFormatting(config, fields)
-  styleSecondaryAxisForSimpleBarLineLayout(config)
-  applyIntegerYAxisTicks(config, rows)
-  barLabelPositioning(config)
-  labelsUseYAxisFormat(config)
-  stackedBarCornerRadius(config)
-  return config
+  inferAxisTypesFromEncodedFields(normalized, fields)
+  horizontalBarGuard(normalized, fields)
+  computeTitleLegendAndGridPadding(normalized)
+  valueAxisFormatting(normalized, fields)
+  styleSecondaryAxisForSimpleBarLineLayout(normalized)
+  applyIntegerYAxisTicks(normalized, rows)
+  barLabelPositioning(normalized)
+  labelsUseYAxisFormat(normalized)
+  stackedBarCornerRadius(normalized)
+  return normalized
 }
 
 // Normalize options we read in enrichments so later rules can always iterate arrays.
-function normalize(config: EChartsConfig2) {
-  let target = config as any
-  target.series = normalizeArray(target.series)
-  target.xAxis = normalizeArray(target.xAxis)
-  target.yAxis = normalizeArray(target.yAxis)
-  target.dataset = normalizeArray(target.dataset)
-  target.grid = normalizeArray(target.grid)
-  if (target.grid.length === 0) target.grid.push({})
-  target.legend = normalizeArray(target.legend)
-  target.title = normalizeArray(target.title)
+function normalize(config: EChartsConfig2): NormalConfig {
+  let target = config as NormalConfig
+  target.series = normalizeArray<SeriesWithGroupingHint>(config.series)
+  target.xAxis = normalizeArray<NormalConfig['xAxis'][number]>(config.xAxis)
+  target.yAxis = normalizeArray<NormalConfig['yAxis'][number]>(config.yAxis)
+  target.dataset = normalizeArray<NormalConfig['dataset'][number]>(config.dataset)
+  target.grid = normalizeArray<NormalConfig['grid'][number]>(config.grid)
+  if (target.grid.length === 0) target.grid.push({} as NormalConfig['grid'][number])
+  target.legend = normalizeArray<NormalConfig['legend'][number]>(config.legend)
+  target.title = normalizeArray<NormalConfig['title'][number]>(config.title)
+  return target
 }
 
 // Every chart gets a base dataset sourced from rows.
 // If callers already provided a dataset, we preserve it and make sure we can reference one source dataset by id.
-function ensureDataset(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
+function ensureDataset(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   let dimensions = fields.length > 0 ? fields.map(field => field.name) : inferDimensions(rows)
-  let datasets: any[] = (config as any).dataset
   let baseId = '__graphene_base'
 
-  if (datasets.length === 0) {
-    datasets.push({id: baseId, source: rows, dimensions})
+  if (config.dataset.length === 0) {
+    config.dataset.push({id: baseId, source: rows, dimensions})
     return baseId
   }
 
-  let base = datasets.find(entry => entry?.source != null)
+  let base = config.dataset.find(entry => entry?.source != null)
   if (!base) {
-    datasets.unshift({id: baseId, source: rows, dimensions})
+    config.dataset.unshift({id: baseId, source: rows, dimensions})
     return baseId
   }
 
   if (!base.id) base.id = baseId
   if (base.dimensions == null && dimensions.length > 0) base.dimensions = dimensions
-  return base.id
+  return String(base.id)
 }
 
 // Expand series templates that use `encode.group` or `encode.stack` into one concrete series per distinct field value.
 // We do this with ECharts dataset filter transforms so wrappers stay small and users don't need to duplicate series configs.
-function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any>[], baseDatasetId: string) {
-  let templates = config.series as SeriesWithGroupingHint[]
-  let expanded: any[] = []
-  let datasets: any[] = (config as any).dataset
+function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[], baseDatasetId: string) {
+  let templates = config.series
+  let expanded: SeriesWithGroupingHint[] = []
 
-  templates.forEach((template, templateIndex) => {
-    let entry: any = template
+  templates.forEach((entry, templateIndex) => {
     let groupField = typeof entry?.encode?.group === 'string' ? entry.encode.group : undefined
     let stackField = typeof entry?.encode?.stack === 'string' ? entry.encode.stack : undefined
 
@@ -101,7 +99,7 @@ function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any
     let sourceDatasetId = entry.datasetId ?? baseDatasetId
     seriesValues.forEach((seriesValue, valueIndex) => {
       let datasetId = `__graphene_series_${templateIndex}_${valueIndex}`
-      datasets.push({
+      config.dataset.push({
         id: datasetId,
         fromDatasetId: sourceDatasetId,
         transform: {type: 'filter', config: {dimension: splitField, '=': seriesValue}},
@@ -122,25 +120,23 @@ function expandSeriesTransforms(config: EChartsConfig2, rows: Record<string, any
 }
 
 // Infer axis types from encoded field metadata.
-function inferAxisTypesFromEncodedFields(config: EChartsConfig2, fields: Field[]) {
-  let xAxes = config.xAxis as any[]
-  let yAxes = config.yAxis as any[]
-  let series = config.series as any[]
+function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) {
+  let series = config.series
 
-  xAxes.forEach((axis: any, axisIndex: number) => {
+  config.xAxis.forEach((axis, axisIndex) => {
     if (!axis || axis.type != null) return
     let encodedFields = series
-      .filter((entry: any) => Number(entry?.xAxisIndex ?? 0) === axisIndex)
+      .filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
       .map(entry => getSeriesXField(entry))
       .filter(Boolean) as string[]
 
     axis.type = inferAxisTypeFromFields(fields, encodedFields)
   })
 
-  yAxes.forEach((axis: any, axisIndex: number) => {
+  config.yAxis.forEach((axis, axisIndex) => {
     if (!axis || axis.type != null) return
     let encodedFields = series
-      .filter((entry: any) => Number(entry?.yAxisIndex ?? 0) === axisIndex)
+      .filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
       .map(entry => getSeriesYField(entry))
       .filter(Boolean) as string[]
 
@@ -150,7 +146,7 @@ function inferAxisTypesFromEncodedFields(config: EChartsConfig2, fields: Field[]
 
 // ECharts just does a bad job of this, and the title, legend, and chart can often overlap
 // This computes the proper offsets depending on what's visible
-function computeTitleLegendAndGridPadding(config: EChartsConfig2) {
+function computeTitleLegendAndGridPadding(config: NormalConfig) {
   // you're doing crazy stuff, and on your own
   if (config.legend.length > 1 || config.title.length > 1 || config.grid.length > 1) return
 
@@ -158,23 +154,23 @@ function computeTitleLegendAndGridPadding(config: EChartsConfig2) {
   let title = config.title[0] || {}
   let grid = config.grid[0] || {}
 
-  title.top ??= 2
-  legend.top ??= 6
-  grid.top ??= 12
+  title.top = numericOffset(title.top, 2)
+  legend.top = numericOffset(legend.top, 6)
+  grid.top = numericOffset(grid.top, 12)
 
   if (title?.text) {
-    legend.top += 18
-    grid.top += 28
+    legend.top = numericOffset(legend.top, 18)
+    grid.top = numericOffset(grid.top, 28)
   }
 
   if (legend?.show) {
-    grid.top += 24
+    grid.top = numericOffset(grid.top, 24)
   }
 }
 
 // Set default formatting for inferred value axes.
 // We pick one field per axis (the first bound series) and derive formatter behavior from that field metadata.
-function valueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
+function valueAxisFormatting(config: NormalConfig, fields: Field[]) {
   let currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
   let currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 
@@ -208,7 +204,7 @@ function valueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
   }
 
   // Apply one formatter per value axis unless the user already provided one.
-  let applyAxisFormatter = (axis: any, fieldName?: string) => {
+  let applyAxisFormatter = (axis: NormalConfig['xAxis'][number] | NormalConfig['yAxis'][number], fieldName?: string) => {
     if (!axis || axis.type !== 'value' || axis.axisLabel?.formatter != null || !fieldName) return
 
     let field = findField(fields, fieldName)
@@ -219,7 +215,7 @@ function valueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
 
     axis.axisLabel = {
       ...axis.axisLabel,
-      formatter: (value: any) => {
+      formatter: (value: unknown) => {
         let amount = Number(value)
         if (!Number.isFinite(amount)) return String(value ?? '')
 
@@ -235,15 +231,15 @@ function valueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
   }
 
   // Horizontal bar charts can have value x-axes, so format x and y axes symmetrically.
-  for (let [axisIndex, axis] of (config.xAxis as any[]).entries()) {
+  for (let [axisIndex, axis] of config.xAxis.entries()) {
     // By design we use the first series on the axis as the metadata source.
-    let firstSeries = (config.series as any[]).find(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
+    let firstSeries = config.series.find(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
     applyAxisFormatter(axis, getSeriesXField(firstSeries))
   }
 
-  for (let [axisIndex, axis] of (config.yAxis as any[]).entries()) {
+  for (let [axisIndex, axis] of config.yAxis.entries()) {
     // By design we use the first series on the axis as the metadata source.
-    let firstSeries = (config.series as any[]).find(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
+    let firstSeries = config.series.find(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
     applyAxisFormatter(axis, getSeriesYField(firstSeries))
   }
 }
@@ -253,11 +249,10 @@ function valueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
 // - first axis uses bar series color (when there is only one bar series shape)
 // - second axis uses line series color
 // In anything more complex, we bail to avoid surprising defaults.
-function styleSecondaryAxisForSimpleBarLineLayout(config: EChartsConfig2) {
-  let yAxes = config.yAxis as any[]
-  if (yAxes.length < 2) return
+function styleSecondaryAxisForSimpleBarLineLayout(config: NormalConfig) {
+  if (config.yAxis.length < 2) return
 
-  let series = config.series as any[]
+  let series = config.series
 
   let bars = series.filter(entry => Number(entry?.yAxisIndex ?? 0) === 0 && entry?.type === 'bar')
   if (bars.length === 0) return
@@ -271,8 +266,8 @@ function styleSecondaryAxisForSimpleBarLineLayout(config: EChartsConfig2) {
   let barYFields = Array.from(new Set(bars.map(entry => getSeriesYField(entry)).filter(Boolean))) as string[]
   if (barYFields.length !== 1) return
 
-  let primaryAxis = yAxes[0]
-  let secondaryAxis = yAxes[1]
+  let primaryAxis = config.yAxis[0]
+  let secondaryAxis = config.yAxis[1]
   if (!primaryAxis || !secondaryAxis) return
 
   let palette = getThemeColorPalette(config)
@@ -284,17 +279,17 @@ function styleSecondaryAxisForSimpleBarLineLayout(config: EChartsConfig2) {
 
   let primaryFormatter = primaryAxis.axisLabel?.formatter
   if (typeof primaryFormatter === 'function' && secondaryAxis.axisLabel?.formatter == null) {
-    secondaryAxis.axisLabel = {...secondaryAxis.axisLabel, formatter: primaryFormatter}
+    secondaryAxis.axisLabel = {...secondaryAxis.axisLabel, formatter: (value: unknown) => formatAxisValue(primaryFormatter, value)}
   }
 }
 
 // This is trying to fix an issue with charts where every value is either 0 or 1.
 // TODO: just make this a test, and see if we still need it
-function applyIntegerYAxisTicks(config: EChartsConfig2, rows: Record<string, any>[]) {
-  let yAxis = (config.yAxis as any[])[0]
+function applyIntegerYAxisTicks(config: NormalConfig, rows: Record<string, any>[]) {
+  let yAxis = config.yAxis[0]
   if (!yAxis || yAxis.type !== 'value' || yAxis.minInterval != null) return
 
-  let yFields = Array.from(new Set((config.series as any[]).map(series => getSeriesYField(series)).filter(Boolean))) as string[]
+  let yFields = Array.from(new Set(config.series.map(series => getSeriesYField(series)).filter(Boolean))) as string[]
   let values = rows.flatMap(row => yFields.map(field => Number(row?.[field]))).filter(value => Number.isFinite(value))
 
   if (values.length === 0) return
@@ -302,63 +297,61 @@ function applyIntegerYAxisTicks(config: EChartsConfig2, rows: Record<string, any
 }
 
 // Keep bar labels readable by default: place them outside bars and avoid overlap when possible.
-function barLabelPositioning(config: EChartsConfig2) {
+function barLabelPositioning(config: NormalConfig) {
   let horizontal = isHorizontalBar(config)
 
-  for (let series of config.series as any[]) {
+  for (let series of config.series) {
     if (series?.type !== 'bar' || !series.label || series.label.show !== true) continue
 
     if (series.label.position == null) series.label.position = horizontal ? 'right' : 'top'
     if (series.label.distance == null) series.label.distance = 4
-    if (series.labelLayout == null) series.labelLayout = {}
-    if (series.labelLayout.hideOverlap == null) series.labelLayout.hideOverlap = true
+    if (series.labelLayout == null || typeof series.labelLayout === 'function') series.labelLayout = {}
+    let labelLayout = series.labelLayout as Record<string, any>
+    if (labelLayout.hideOverlap == null) labelLayout.hideOverlap = true
   }
 }
 
 // Match series data labels to the assigned y-axis formatter when labels are enabled.
 // This keeps label formatting in sync with the y-axis without asking callers to repeat it.
 // labelsUseYAxisFormat depends on valueAxisFormatting running first so labels inherit axis formatting.
-function labelsUseYAxisFormat(config: EChartsConfig2) {
-  let yAxes = config.yAxis as any[]
-
-  for (let series of config.series as any[]) {
+function labelsUseYAxisFormat(config: NormalConfig) {
+  for (let series of config.series) {
     // No-op when labels are off or already explicitly formatted.
     if (!series?.label || series.label.show !== true || series.label.formatter != null) continue
 
     let yField = getSeriesYField(series)
     let axisIndex = Number(series.yAxisIndex ?? 0)
-    let axisFormatter = yAxes[axisIndex]?.axisLabel?.formatter
+    let axisFormatter = config.yAxis[axisIndex]?.axisLabel?.formatter
     if (typeof axisFormatter !== 'function') continue
 
     // ECharts can pass different value shapes depending on series/transform shape.
     // We resolve the numeric value in a few fallback steps so labels always use the
     // same value the y-axis is formatting.
-    series.label.formatter = (params: any) => {
-      let value = params?.value
+    series.label.formatter = (params: unknown) => {
+      let typed = params as {value?: unknown; data?: Record<string, unknown>}
+      let value = typed?.value
 
       if (yField) {
-        if (params?.data && typeof params.data === 'object' && yField in params.data) value = params.data[yField]
-        if (params?.value && typeof params.value === 'object' && !Array.isArray(params.value) && yField in params.value) {
-          value = params.value[yField]
+        if (typed?.data && typeof typed.data === 'object' && yField in typed.data) value = typed.data[yField]
+        if (typed?.value && typeof typed.value === 'object' && !Array.isArray(typed.value) && yField in (typed.value as Record<string, unknown>)) {
+          value = (typed.value as Record<string, unknown>)[yField]
         }
       }
 
-      return axisFormatter(value)
+      return formatAxisValue(axisFormatter, value)
     }
   }
 }
 
 // Add rounded corners only to the visible outer edge of each stack.
-function stackedBarCornerRadius(config: EChartsConfig2) {
-  let seriesList = config.series as any[]
-  let grouped = new Map<string, any[]>()
+function stackedBarCornerRadius(config: NormalConfig) {
+  let grouped = new Map<string, SeriesWithGroupingHint[]>()
 
-  for (let series of seriesList) {
-    let entry: any = series
-    if (entry?.type !== 'bar' || !entry?.stack) continue
-    let stackKey = String(entry.stack)
+  for (let series of config.series) {
+    if (series?.type !== 'bar' || !series?.stack) continue
+    let stackKey = String(series.stack)
     if (!grouped.has(stackKey)) grouped.set(stackKey, [])
-    grouped.get(stackKey)?.push(entry)
+    grouped.get(stackKey)?.push(series)
   }
 
   let horizontal = isHorizontalBar(config)
@@ -369,18 +362,26 @@ function stackedBarCornerRadius(config: EChartsConfig2) {
   }
 }
 
-function normalizeArray<T>(value: T | T[] | undefined | null): T[] {
+function normalizeArray<T>(value: unknown): T[] {
   if (value == null) return []
-  return Array.isArray(value) ? value : [value]
+  return Array.isArray(value) ? (value as T[]) : [value as T]
 }
 
-function getThemeColorPalette(config: EChartsConfig2) {
-  let configColor = (config as any).color
+function numericOffset(value: unknown, delta: number) {
+  return typeof value === 'number' ? value + delta : delta
+}
+
+function formatAxisValue(formatter: Function, value: unknown) {
+  return String(formatter(value, 0))
+}
+
+function getThemeColorPalette(config: NormalConfig) {
+  let configColor = config.color
   if (Array.isArray(configColor) && configColor.length > 0) return configColor
   return colorPalette
 }
 
-function seriesColorForIndex(seriesList: any[], targetSeries: any, palette: any[]) {
+function seriesColorForIndex(seriesList: SeriesWithGroupingHint[], targetSeries: SeriesWithGroupingHint, palette: string[]) {
   let index = seriesList.indexOf(targetSeries)
   if (index < 0) return undefined
 
@@ -390,48 +391,26 @@ function seriesColorForIndex(seriesList: any[], targetSeries: any, palette: any[
   return palette[index % palette.length]
 }
 
-function applyAxisColor(axis: any, color: string) {
+function applyAxisColor(axis: NormalConfig['yAxis'][number], color: string) {
   if (!axis) return
-
-  axis.axisLine = {
-    ...(axis.axisLine || {}),
-    lineStyle: {
-      ...(axis.axisLine?.lineStyle || {}),
-      color,
-    },
-  }
-
-  axis.axisTick = {
-    ...(axis.axisTick || {}),
-    lineStyle: {
-      ...(axis.axisTick?.lineStyle || {}),
-      color,
-    },
-  }
-
-  axis.nameTextStyle = {
-    ...(axis.nameTextStyle || {}),
-    color,
-  }
-
-  axis.axisLabel = {
-    ...(axis.axisLabel || {}),
-    color,
-  }
+  axis.axisLine = {...axis.axisLine, lineStyle: {...axis.axisLine?.lineStyle, color}}
+  axis.axisTick = {...axis.axisTick, lineStyle: {...axis.axisTick?.lineStyle, color}}
+  axis.nameTextStyle = {...axis.nameTextStyle, color}
+  axis.axisLabel = {...axis.axisLabel, color}
 }
 
-function isHorizontalBar(config: EChartsConfig2) {
-  let xAxis = (config.xAxis as any[])[0]
-  let yAxis = (config.yAxis as any[])[0]
-  let hasBarSeries = (config.series as any[]).some((series: any) => series?.type === 'bar')
+function isHorizontalBar(config: NormalConfig) {
+  let xAxis = config.xAxis[0]
+  let yAxis = config.yAxis[0]
+  let hasBarSeries = config.series.some(series => series?.type === 'bar')
   return Boolean(hasBarSeries && xAxis?.type === 'value' && yAxis?.type === 'category')
 }
 
-function horizontalBarGuard(config: EChartsConfig2, fields: Field[]) {
+function horizontalBarGuard(config: NormalConfig, fields: Field[]) {
   if (!isHorizontalBar(config)) return
 
-  let hasInvalidCategoryField = (config.series as any[])
-    .filter((series: any) => series?.type === 'bar')
+  let hasInvalidCategoryField = config.series
+    .filter(series => series?.type === 'bar')
     .map(series => findField(fields, getSeriesCategoryFieldForHorizontal(series)))
     .map(field => getFieldTypeFromMetadata(field))
     .some(type => type === 'date' || type === 'number')
@@ -462,25 +441,25 @@ function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
   return 'category'
 }
 
-function getSeriesXField(series: any) {
+function getSeriesXField(series?: SeriesWithGroupingHint) {
   return getEncodeField(series?.encode?.x)
 }
 
-function getSeriesYField(series: any) {
+function getSeriesYField(series?: SeriesWithGroupingHint) {
   return getEncodeField(series?.encode?.y) ?? getEncodeField(series?.encode?.value)
 }
 
-function getSeriesCategoryFieldForHorizontal(series: any) {
+function getSeriesCategoryFieldForHorizontal(series?: SeriesWithGroupingHint) {
   return getEncodeField(series?.encode?.y)
 }
 
-function getEncodeField(value: any): string | undefined {
+function getEncodeField(value: unknown): string | undefined {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) return value.find(entry => typeof entry === 'string')
   return undefined
 }
 
-function shouldBindSeriesToDataset(series: any) {
+function shouldBindSeriesToDataset(series: SeriesWithGroupingHint) {
   return series?.encode != null && series?.data == null
 }
 
@@ -491,7 +470,7 @@ function inferDimensions(rows: Record<string, any>[]) {
 }
 
 function distinctValues(rows: Record<string, any>[], field: string) {
-  let values: any[] = []
+  let values: unknown[] = []
   let seen = new Set<string>()
   for (let row of rows) {
     let value = row?.[field]

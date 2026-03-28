@@ -1,4 +1,4 @@
-import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
+import type {Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 // Fill sparse grouped data so each split series has a value for each x bucket.
 //
@@ -12,8 +12,8 @@ import type {EChartsConfig2, Field, SeriesWithGroupingHint} from './types.ts'
 //   - stacked area: 0 -> continuous stacked area baseline
 //   - unstacked area: null -> visible gaps like line charts
 // - bar: 0 -> missing category bars render as zero-height bars
-export function applyMissingPointDefaults(config: EChartsConfig2, rows: Record<string, any>[]) {
-  let series = config.series as SeriesWithGroupingHint[]
+export function applyMissingPointDefaults(config: NormalConfig, rows: Record<string, any>[]) {
+  let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
   let groups = new Map<string, {xField: string; splitField: string; fills: Map<string, any>}>()
@@ -60,8 +60,8 @@ export function applyMissingPointDefaults(config: EChartsConfig2, rows: Record<s
 }
 
 // Evidence stacked100 behavior: compute percentages per x-domain and rewrite series to synthetic pct fields.
-export function applyStackPercentage(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
-  let series = config.series as SeriesWithGroupingHint[]
+export function applyStackPercentage(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
+  let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
   let groupIndex = 0
@@ -108,8 +108,8 @@ export function applyStackPercentage(config: EChartsConfig2, rows: Record<string
 // Evidence default sort policy:
 // - time/value x: sort by x asc
 // - category x: sort by stack total desc for stacked bars, otherwise by first measure desc
-export function applyDefaultSorting(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
-  let series = config.series as SeriesWithGroupingHint[]
+export function applyDefaultSorting(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
+  let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
   let xField = firstSeriesXField(series)
@@ -189,7 +189,7 @@ function ensureField(fields: Field[], name: string, options?: Partial<Field>) {
 // - bar: missing grouped points become 0
 // - area: stacked -> 0, unstacked -> null (gap)
 // - line: missing grouped points become null (shows a gap unless connectNulls is enabled)
-function getMissingFillValueForSeries(series: any) {
+function getMissingFillValueForSeries(series: SeriesWithGroupingHint) {
   if (series?.type === 'bar') return 0
 
   let isArea = series?.type === 'line' && series?.areaStyle != null
@@ -213,28 +213,28 @@ function firstSeriesXField(series: SeriesWithGroupingHint[]) {
   return undefined
 }
 
-function getSplitField(series: any) {
+function getSplitField(series: SeriesWithGroupingHint) {
   if (typeof series?.encode?.group === 'string') return series.encode.group
   if (typeof series?.encode?.stack === 'string') return series.encode.stack
   return undefined
 }
 
-function getSeriesXField(series: any) {
+function getSeriesXField(series?: SeriesWithGroupingHint) {
   return getEncodeField(series?.encode?.x)
 }
 
-function getSeriesYField(series: any) {
+function getSeriesYField(series?: SeriesWithGroupingHint) {
   return getEncodeField(series?.encode?.y) ?? getEncodeField(series?.encode?.value)
 }
 
-function getEncodeField(value: any): string | undefined {
+function getEncodeField(value: unknown): string | undefined {
   if (typeof value === 'string') return value
   if (Array.isArray(value)) return value.find(entry => typeof entry === 'string')
   return undefined
 }
 
 function distinctValues(rows: Record<string, any>[], field: string) {
-  let values: any[] = []
+  let values: unknown[] = []
   let seen = new Set<string>()
   for (let row of rows) {
     let value = row?.[field]
@@ -246,7 +246,7 @@ function distinctValues(rows: Record<string, any>[], field: string) {
   return values
 }
 
-function sortableValue(value: any, type: 'date' | 'number') {
+function sortableValue(value: unknown, type: 'date' | 'number') {
   if (type === 'number') {
     let parsed = Number(value)
     return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY
@@ -255,10 +255,10 @@ function sortableValue(value: any, type: 'date' | 'number') {
   return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY
 }
 
-function pairKey(left: any, right: any) {
+function pairKey(left: unknown, right: unknown) {
   return `${valueKey(left)}|${valueKey(right)}`
 }
 
-function valueKey(value: any) {
+function valueKey(value: unknown) {
   return JSON.stringify(value ?? null)
 }
