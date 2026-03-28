@@ -310,7 +310,6 @@
     }}
   />
 
-  <!-- Non-cartesian examples still use the same column-reference mapping. -->
   <ECharts2
     height={320}
     data={{rows: pieRows, fields: labelValueFields}}

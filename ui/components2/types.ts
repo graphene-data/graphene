@@ -3,8 +3,17 @@ import {type FieldMetadata, type GrapheneError} from '../../lang/types.ts'
 
 type SingleOrArray<T> = T | T[]
 type OptionItem<T> = T extends Array<infer U> ? U : T
+type FallbackOption<K extends keyof EChartsOption> = OptionItem<NonNullable<EChartsOption[K]>> extends infer T
+  ? unknown extends T ? Record<string, any> : T
+  : never
 
-type EChartsSeries = OptionItem<NonNullable<EChartsOption['series']>>
+type EChartsSeries = FallbackOption<'series'>
+type EChartsXAxis = FallbackOption<'xAxis'>
+type EChartsYAxis = FallbackOption<'yAxis'>
+type EChartsDataset = FallbackOption<'dataset'>
+type EChartsGrid = FallbackOption<'grid'>
+type EChartsLegend = FallbackOption<'legend'>
+type EChartsTitle = FallbackOption<'title'>
 type EChartsEncode = Record<string, any>
 
 export interface QueryResult {
@@ -24,6 +33,19 @@ export type Field = {
 // - `encode.group` or `encode.stack` splits one template into one series per distinct value.
 // - these hints are mutually exclusive.
 export type SeriesWithGroupingHint = Omit<EChartsSeries, 'encode'> & {
+  type?: string
+  name?: string
+  color?: string
+  stack?: string
+  datasetId?: string
+  data?: unknown
+  xAxisIndex?: number
+  yAxisIndex?: number
+  label?: Record<string, any>
+  labelLayout?: Record<string, any> | ((...args: any[]) => any)
+  itemStyle?: Record<string, any>
+  lineStyle?: Record<string, any>
+  areaStyle?: Record<string, any>
   stackPercentage?: boolean
   encode?: EChartsEncode & {
     group?: string
@@ -33,4 +55,16 @@ export type SeriesWithGroupingHint = Omit<EChartsSeries, 'encode'> & {
 
 export type EChartsConfig2 = Omit<EChartsOption, 'series'> & {
   series?: SingleOrArray<SeriesWithGroupingHint>
+}
+
+// Config shape after enrich() normalization runs.
+// We keep this mutable and array-based because enrichments mutate in place.
+export type NormalConfig = Omit<EChartsConfig2, 'series' | 'xAxis' | 'yAxis' | 'dataset' | 'grid' | 'legend' | 'title'> & {
+  series: SeriesWithGroupingHint[]
+  xAxis: EChartsXAxis[]
+  yAxis: EChartsYAxis[]
+  dataset: EChartsDataset[]
+  grid: EChartsGrid[]
+  legend: EChartsLegend[]
+  title: EChartsTitle[]
 }
