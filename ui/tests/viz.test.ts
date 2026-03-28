@@ -1,5 +1,5 @@
 import {expect, test} from './fixtures.ts'
-import {singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
+import {categoricalSeries, denseTimeseries, singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
 function seededRandom(seed: number) {
   let state = seed
@@ -50,6 +50,16 @@ test('stacked area chart', async ({mount, chart}) => {
 test('line chart timeseries', async ({mount, page, chart}) => {
   await mount('components2/LineChart2.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(chart.el).screenshot('line-chart-timeseries')
+})
+
+test('line charts hide markers on timeseries', async ({mount, chart}) => {
+  await mount('components2/LineChart2.svelte', {data: denseTimeseries(), x: 'ts', y: 'value', width: 420, title: 'Dense Time Axis'})
+  await expect(chart.el).screenshot('line-chart-timeseries-hide-markers')
+})
+
+test('line chart hides markers over threshold', async ({mount, chart}) => {
+  await mount('components2/LineChart2.svelte', {data: categoricalSeries(20), x: 'category', y: 'value', width: 420, title: 'Categorical 20'})
+  await expect(chart.el).screenshot('line-chart-categorical-markers-over-threshold')
 })
 
 test('pie chart', async ({mount, chart}) => {

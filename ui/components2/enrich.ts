@@ -26,6 +26,7 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
 
   // stylistic rules to provide great defaults
   inferAxisTypesFromEncodedFields(normalized, fields)
+  lineSeriesMarkerVisibility(normalized, rows)
   horizontalBarGuard(normalized, fields)
   computeTitleLegendAndGridPadding(normalized)
   valueAxisFormatting(normalized, fields)
@@ -142,6 +143,30 @@ function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) 
 
     axis.type = inferAxisTypeFromFields(fields, encodedFields)
   })
+}
+
+// Keep line/area markers readable by default.
+// - Time/value axes: hide markers (they get noisy quickly)
+// - Category axes: show markers only for small cardinality (< 20 categories)
+function lineSeriesMarkerVisibility(config: NormalConfig, rows: Record<string, any>[]) {
+  for (let series of config.series) {
+    if (series?.type !== 'line' || series.showSymbol != null) continue
+
+    let axisIndex = Number(series.xAxisIndex ?? 0)
+    let axisType = config.xAxis[axisIndex]?.type
+    if (axisType !== 'category') {
+      series.showSymbol = false
+      continue
+    }
+
+    let xField = getSeriesXField(series)
+    if (!xField) {
+      series.showSymbol = false
+      continue
+    }
+
+    series.showSymbol = distinctValues(rows, xField).length < 20
+  }
 }
 
 // ECharts just does a bad job of this, and the title, legend, and chart can often overlap

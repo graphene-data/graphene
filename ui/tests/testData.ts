@@ -90,6 +90,27 @@ export function yearlyCounts(): TableRows {
   return withEvidenceTypes(rows, fields)
 }
 
+export function denseTimeseries(points = 365): TableRows {
+  let start = Date.UTC(2024, 0, 1)
+  let rows = Array.from({length: points}, (_, index) => {
+    let trend = Math.sin(index / 12) * 25
+    let seasonality = Math.cos(index / 3) * 6
+    return {
+      ts: new Date(start + index * 24 * 60 * 60 * 1000),
+      value: 120 + trend + seasonality,
+    }
+  })
+
+  let fields: Field[] = [{name: 'ts', type: 'date'}, {name: 'value', type: 'number'}]
+  return withEvidenceTypes(rows, fields)
+}
+
+export function categoricalSeries(count: number): TableRows {
+  let rows = Array.from({length: count}, (_, index) => ({category: `Bucket ${index + 1}`, value: 100 + Math.sin(index / 2) * 20}))
+  let fields: Field[] = [{name: 'category', type: 'string'}, {name: 'value', type: 'number'}]
+  return withEvidenceTypes(rows, fields)
+}
+
 export function tableDataWithDates(): TableRows {
   let rows = [
     {month: '2021-03-01', sales: 50},
