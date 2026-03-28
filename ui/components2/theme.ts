@@ -2,7 +2,7 @@ import {registerTheme} from 'echarts6/dist/echarts.esm.js'
 
 // ── Color tokens ────────────────────────────────────────────────────────
 // Palette C · Fjord Dusk
-let palette = [
+export const colorPalette = [
   '#3D6B7E', // deep teal    — Scandinavian twilight anchor
   '#C87F5A', // warm amber   — accent warmth, kiln-fired
   '#87A68C', // sage green   — twilight foliage
@@ -36,7 +36,7 @@ let parallelAxisBase = {
 }
 
 registerTheme('graphene', {
-  color: palette,
+  color: colorPalette,
   backgroundColor: clr.white,
   textStyle: {
     fontFamily: "'Source Sans 3', sans-serif",
@@ -126,15 +126,15 @@ registerTheme('graphene', {
   boxplot: {
     itemStyle: {
       color:       clr.seqStart,
-      borderColor: palette[0],
+      borderColor: colorPalette[0],
       borderWidth: 1.5,
     },
   },
   candlestick: {
     itemStyle: {
-      color:        palette[2], // up candle   — sage green
+      color:        colorPalette[2], // up candle   — sage green
       color0:       clr.statusBad, // down candle — brick red
-      borderColor:  palette[2],
+      borderColor:  colorPalette[2],
       borderColor0: clr.statusBad,
       borderWidth:  1.5,
     },
@@ -163,8 +163,8 @@ registerTheme('graphene', {
   tree: {
     orient: 'LR',
     symbolSize: 10,
-    lineStyle: {color: palette[0], width: 2},
-    itemStyle: {color: palette[0], borderColor: palette[0]},
+    lineStyle: {color: colorPalette[0], width: 2},
+    itemStyle: {color: colorPalette[0], borderColor: colorPalette[0]},
     label: {color: clr.textDark, fontSize: 11, position: 'top', verticalAlign: 'middle', align: 'center'},
     leaves: {label: {position: 'right', verticalAlign: 'middle', align: 'left'}},
     emphasis: {focus: 'descendant'},
