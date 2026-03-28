@@ -21,6 +21,7 @@ export type Field = {
 // - `encode.group` or `encode.stack` splits one template into one series per distinct value.
 // - these hints are mutually exclusive.
 export type SeriesWithGroupingHint = Omit<EChartsSeries, 'encode'> & {
+  stackPercentage?: boolean
   encode?: EChartsEncode & {
     group?: string
     stack?: string

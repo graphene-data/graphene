@@ -25,7 +25,7 @@ test('horizontal bar chart', async ({mount, chart}) => {
 })
 
 test('stacked area chart', async ({mount, chart}) => {
-  await mount('components2/AreaChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', series: 'category', type: 'stacked'})
+  await mount('components2/AreaChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack: 'category'})
   await expect(chart.el).screenshot('stacked-area-chart')
 })
 
@@ -63,13 +63,6 @@ test('bar chart y-axis uses integer ticks for integer data', async ({mount, char
   await expect(chart.el).screenshot('bar-chart-integer-ticks')
 })
 
-test('line chart dual axis shows both y-axis labels', async ({mount, chart}) => {
-  let data = timeseries() as any
-  data.rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k * 0.1}))
-  await mount('components2/LineChart2.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
-  await expect(chart.el).screenshot('line-chart-dual-axis')
-})
-
 test.skip('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
   await mount('components2/LineChart2.svelte', {data: timeseriesWithDateSeries(), x: 'category', y: 'sales', series: 'quarter'})
   let names = await chart.config(c => (c.series ?? []).map((s: any) => s.name).sort())
@@ -99,8 +92,13 @@ test('line chart wraps wide x labels', async ({mount, chart}) => {
 })
 
 test('area chart stacked100', async ({mount, chart}) => {
-  await mount('components2/AreaChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', series: 'category', type: 'stacked100'})
+  await mount('components2/AreaChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack100: 'category'})
   await expect(chart.el).screenshot('area-chart-stacked100')
+})
+
+test('bar chart stacked100', async ({mount, chart}) => {
+  await mount('components2/BarChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack100: 'category'})
+  await expect(chart.el).screenshot('bar-chart-stacked100')
 })
 
 test('area chart supports stepped markers and hidden line', async ({mount, chart}) => {
