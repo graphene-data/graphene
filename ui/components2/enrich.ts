@@ -28,7 +28,7 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
   inferAxisTypesFromEncodedFields(config, fields)
   horizontalBarGuard(config, fields)
   computeTitleLegendAndGridPadding(config)
-  currencyValueAxisFormatting(config, fields)
+  valueAxisFormatting(config, fields)
   styleSecondaryAxisForSimpleBarLineLayout(config)
   applyIntegerYAxisTicks(config, rows)
   barLabelPositioning(config)
@@ -172,41 +172,79 @@ function computeTitleLegendAndGridPadding(config: EChartsConfig2) {
   }
 }
 
-// Apply compact currency formatting to value axes when the backing field declares currency units.
-function currencyValueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
-  let yAxes = config.yAxis as any[]
-  if (yAxes.length === 0) return
+// Set default formatting for inferred value axes.
+// We pick one field per axis (the first bound series) and derive formatter behavior from that field metadata.
+function valueAxisFormatting(config: EChartsConfig2, fields: Field[]) {
+  let currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
+  let currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 
-  let symbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
-  let formatter = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
-
-  let axisCurrency = new Map<number, keyof typeof symbols>()
-  for (let series of config.series as any[]) {
-    let yField = getSeriesYField(series)
-    if (!yField) continue
-
-    let field = findField(fields, yField)
-    let unit = field?.metadata?.units?.toLowerCase() as keyof typeof symbols | undefined
-    if (!unit || !(unit in symbols)) continue
-
-    let axisIndex = Number((series as any).yAxisIndex ?? 0)
-    if (!axisCurrency.has(axisIndex)) axisCurrency.set(axisIndex, unit)
+  // Keep numeric labels short while preserving rough magnitude and sign.
+  let compact = (num: number) => {
+    let exponent = Math.floor(Math.log10(Math.abs(num)))
+    let scale = Math.pow(10, exponent - 2)
+    let rounded = Math.round(num / scale) * scale
+    if (!Number.isFinite(rounded)) return String(num)
+    let magnitude = Math.floor(Math.log10(rounded))
+    let decimals = Math.max(0, 2 - magnitude)
+    return rounded.toFixed(decimals).replace(/\.0+$/, '').replace(/(\.[0-9]*[1-9])0+$/, '$1').replace(/\.$/, '')
   }
 
-  for (let [axisIndex, unit] of axisCurrency.entries()) {
-    let axis = yAxes[axisIndex] as any
-    if (!axis || axis.type !== 'value' || axis.axisLabel?.formatter != null) continue
+  // Number formatter for non-currency value axes (k/M/B/T + m/u/n for very small values).
+  let formatNumber = (amount: number) => {
+    if (amount === 0) return '0'
+    let sign = amount < 0 ? '-' : ''
+    let absolute = Math.abs(amount)
+
+    if (absolute >= 1e12) return `${sign}${compact(absolute / 1e12)}T`
+    if (absolute >= 1e9) return `${sign}${compact(absolute / 1e9)}B`
+    if (absolute >= 1e6) return `${sign}${compact(absolute / 1e6)}M`
+    if (absolute >= 1e3) return `${sign}${compact(absolute / 1e3)}k`
+    if (absolute >= 1) return `${sign}${compact(absolute)}`
+    if (absolute >= 1e-3) return `${sign}${compact(absolute)}`
+    if (absolute >= 1e-6) return `${sign}${compact(absolute * 1e3)}m`
+    if (absolute >= 1e-9) return `${sign}${compact(absolute * 1e6)}u`
+    if (absolute >= 1e-12) return `${sign}${compact(absolute * 1e9)}n`
+    return `${sign}${compact(absolute)}`
+  }
+
+  // Apply one formatter per value axis unless the user already provided one.
+  let applyAxisFormatter = (axis: any, fieldName?: string) => {
+    if (!axis || axis.type !== 'value' || axis.axisLabel?.formatter != null || !fieldName) return
+
+    let field = findField(fields, fieldName)
+    if (getFieldTypeFromMetadata(field) !== 'number') return
+
+    let unit = field?.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
+    let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
 
     axis.axisLabel = {
       ...axis.axisLabel,
       formatter: (value: any) => {
         let amount = Number(value)
         if (!Number.isFinite(amount)) return String(value ?? '')
-        let sign = amount < 0 ? '-' : ''
-        let compact = formatter.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
-        return `${sign}${symbols[unit]}${compact}`
+
+        if (currencyUnit) {
+          let sign = amount < 0 ? '-' : ''
+          let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
+          return `${sign}${currencySymbols[currencyUnit]}${formatted}`
+        }
+
+        return formatNumber(amount)
       },
     }
+  }
+
+  // Horizontal bar charts can have value x-axes, so format x and y axes symmetrically.
+  for (let [axisIndex, axis] of (config.xAxis as any[]).entries()) {
+    // By design we use the first series on the axis as the metadata source.
+    let firstSeries = (config.series as any[]).find(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
+    applyAxisFormatter(axis, getSeriesXField(firstSeries))
+  }
+
+  for (let [axisIndex, axis] of (config.yAxis as any[]).entries()) {
+    // By design we use the first series on the axis as the metadata source.
+    let firstSeries = (config.series as any[]).find(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
+    applyAxisFormatter(axis, getSeriesYField(firstSeries))
   }
 }
 
@@ -279,7 +317,7 @@ function barLabelPositioning(config: EChartsConfig2) {
 
 // Match series data labels to the assigned y-axis formatter when labels are enabled.
 // This keeps label formatting in sync with the y-axis without asking callers to repeat it.
-// labelsUseYAxisFormat depends on currencyValueAxisFormatting running first so labels inherit axis formatting.
+// labelsUseYAxisFormat depends on valueAxisFormatting running first so labels inherit axis formatting.
 function labelsUseYAxisFormat(config: EChartsConfig2) {
   let yAxes = config.yAxis as any[]
 

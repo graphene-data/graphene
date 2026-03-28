@@ -18,6 +18,14 @@ test('bar chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart')
 })
 
+test('bar chart formats very small values on y axis', async ({mount, chart}) => {
+  let data = singleDim()
+  data.rows = data.rows.map(row => ({...row, value: row.value / 1e12}))
+
+  await mount('components2/BarChart2.svelte', {data, x: 'category', y: 'value', title: 'Very Small Values'})
+  await expect(chart.el).screenshot('bar-chart-very-small-values')
+})
+
 test('bar chart with just 0,1 has sensible y axis ticks', async ({mount, chart}) => {
   let rows = [{category: 'A', count: 1}, {category: 'B', count: 0}, {category: 'C', count: 1}]
   await mount('components2/BarChart2.svelte', {data: {rows}, x: 'category', y: 'count'})
@@ -74,7 +82,7 @@ test.skip('numeric year xFmt=yyyy keeps year labels', async ({mount, chart}) => 
 })
 
 test('bar chart grouped labels', async ({mount, chart}) => {
-  await mount('components2/BarChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', group: 'category', labels: true})
+  await mount('components2/BarChart2.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', group: 'category', label: true})
   await expect(chart.el).screenshot('bar-chart-grouped-labels')
 })
 
@@ -128,7 +136,7 @@ test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
     let delta = (nextRandom() - 0.5) * 0.08
     return {...r, profit_usd0k: r.sales_usd0k * (0.15 + delta)}
   })
-  data.fields.push({name: 'profit_usd0k', type: 'number'})
+  data.fields.push({ name: 'profit_usd0k', type: 'number', metadata: { units: 'usd' } })
   await mount('components2/BarChart2.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
   await expect(chart.el).screenshot('bar-chart-secondary-axis-line')
 })
