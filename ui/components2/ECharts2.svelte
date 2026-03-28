@@ -1,6 +1,6 @@
 <script lang="ts">
   import {init} from 'echarts6/dist/echarts.esm.js'
-  import {onDestroy} from 'svelte'
+  import {onDestroy, untrack} from 'svelte'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import * as chartWindowDebug from '../component-utilities/chartWindowDebug.js'
   import {enrich} from './enrich.ts'
@@ -34,11 +34,20 @@
   let theme = 'graphene'
 
   let chartState = $derived.by(() => {
+    // Treat chart config/data as immutable inputs and only react to top-level reference changes.
+    // We intentionally avoid deep dependency tracking over every row/config property.
+    let inputConfig = config
+    let inputRows = rows
+    let inputFields = fields
+
     try {
-      let cloned = structuredClone(config)
-      enrich(cloned, rows, fields)
-      return {config: cloned, error: null as Error | null}
+      return untrack(() => {
+        let cloned = structuredClone(inputConfig)
+        enrich(cloned, inputRows, inputFields)
+        return {config: cloned, error: null as Error | null}
+      })
     } catch (error: any) {
+      console.error('ECharts2 enrichment/render prep failed', error)
       return {config: null, error: error instanceof Error ? error : new Error(String(error))}
     }
   })
