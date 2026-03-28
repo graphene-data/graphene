@@ -7,7 +7,6 @@ import {expect as vitestExpect} from 'vitest'
 
 // Snapshot directory - must be set via setSnapshotDir() in a setupFiles script
 let snapshotDir: string | undefined
-
 export function setSnapshotDir(dir: string) {
   snapshotDir = dir
 }
@@ -24,7 +23,6 @@ const extendedExpect = baseExpect.extend({
     // Wait for fonts to load to ensure consistent rendering across environments
     await (page as Page).evaluate(async () => {
       await document.fonts.ready
-      await (window as any).$GRAPHENE?.waitForLoad?.()
       await new Promise(r => requestAnimationFrame(r))
     })
 
