@@ -13,6 +13,30 @@ test.beforeEach(async ({page}) => {
   await page.setViewportSize({width: 680, height: 400})
 })
 
+test('echarts loading state', async ({mount, chart, sharedPage, server}) => {
+  if (!sharedPage.url().endsWith('__ct')) await sharedPage.goto(`${server.url()}/__ct`)
+
+  await sharedPage.evaluate(() => {
+    ;(window as any).__originalQuery = window.$GRAPHENE.query
+    window.$GRAPHENE.query = () => {}
+  })
+
+  try {
+    await mount('components2/ECharts2.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: 'from flights select month, sum(dep_delay) as value'})
+    await expect(chart.el).screenshot('echarts-loading-state')
+  } finally {
+    await sharedPage.evaluate(() => {
+      window.$GRAPHENE.query = (window as any).__originalQuery
+      delete (window as any).__originalQuery
+    })
+  }
+})
+
+test('echarts empty state', async ({mount, chart}) => {
+  await mount('components2/ECharts2.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: {rows: [], fields: [{name: 'month', type: 'string'}, {name: 'value', type: 'number'}]}})
+  await expect(chart.el).screenshot('echarts-empty-state')
+})
+
 test('bar chart', async ({mount, chart}) => {
   await mount('components2/BarChart2.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k', title: 'Monthly Sales'})
   await expect(chart.el).screenshot('bar-chart')
