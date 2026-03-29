@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ECharts2 from '../components2/ECharts2.svelte'
+  import ECharts from '../components/ECharts.svelte'
 
   let monthRows = [
     {month: '2024-01-01', value: 820},
@@ -242,7 +242,7 @@
 </script>
 
 <div class="chart-grid">
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: monthRows, fields: twoColFields}}
     config={{
@@ -254,7 +254,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: weekdaySeriesRows, fields: weekdayFields}}
     config={{
@@ -266,7 +266,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: quarterRows, fields: quarterFields}}
     config={{
@@ -278,7 +278,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: scatterRows, fields: scatterFields}}
     config={{
@@ -290,7 +290,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: groupedStackedRows, fields: groupedStackedFields}}
     config={{
@@ -310,7 +310,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: pieRows, fields: labelValueFields}}
     config={{
@@ -320,7 +320,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: heatmapRows, fields: [{name: 'day', evidenceType: 'string'}, {name: 'period', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}}
     config={{
@@ -336,7 +336,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{
       rows: candleRows,
@@ -357,7 +357,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: funnelRows, fields: [{name: 'stage', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}}
     config={{
@@ -367,7 +367,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: treemapRows, fields: [{name: 'name', evidenceType: 'string'}, {name: 'value', evidenceType: 'number'}]}}
     config={{
@@ -377,7 +377,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{
       rows: themeRiverRows,
@@ -395,7 +395,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: dualAxisRows, fields: dualAxisFields}}
     config={{
@@ -414,7 +414,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: bubbleRows, fields: bubbleFields}}
     config={{
@@ -434,7 +434,7 @@
     }}
   />
 
-  <ECharts2
+  <ECharts
     height={320}
     data={{rows: sankeyRows, fields: sankeyFields}}
     config={{

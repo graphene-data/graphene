@@ -20,7 +20,7 @@ test('loads markdown files', async ({server, page}) => {
   await expect(nav).toBeVisible()
   await expect(nav.getByRole('link', {name: 'Home'})).toHaveAttribute('aria-current', 'page')
   await expect(nav.getByRole('link', {name: 'Delays'})).toBeVisible()
-  await expect(page.locator('main canvas').first()).toBeVisible()
+  await expect(page.locator('main svg').first()).toBeVisible()
   await expect(page).screenshot('loads-markdown-files')
 })
 

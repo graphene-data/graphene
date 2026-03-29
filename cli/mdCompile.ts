@@ -12,13 +12,13 @@ function escapeHtml(str: string) {
 
 // Takes the contents of a <ECharts> tag, and json5 parses it
 function liftInlineEChartsConfig(content: string) {
-  return content.replace(/<(ECharts2?)\b([^>]*)>([\s\S]*?)<\/\1>/g, (match: string, tag: string, attrs = '', body = '') => {
+  return content.replace(/<ECharts\b([^>]*)>([\s\S]*?)<\/ECharts>/g, (match: string, attrs = '', body = '') => {
     let inline = body.trim()
     if (!inline) return match
     if (/\sconfig\s*=/.test(attrs)) return match
     let source = inline.startsWith('{') ? inline : `{${inline}}`
     let parsed = JSON5.parse(source)
-    return `<${tag}${attrs} config={${JSON.stringify(parsed)}}></${tag}>`
+    return `<ECharts${attrs} config={${JSON.stringify(parsed)}}></ECharts>`
   })
 }
 

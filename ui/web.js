@@ -4,18 +4,18 @@ import './internal/runSocket.ts'
 import './app.css'
 import {mount, unmount} from 'svelte'
 
-import AreaChart from './components2/AreaChart2.svelte'
-import BarChart from './components2/BarChart2.svelte'
+import AreaChart from './components/AreaChart.svelte'
+import BarChart from './components/BarChart.svelte'
 import BigValue from './components/BigValue.svelte'
 import Column from './components/Column.svelte'
 import DateRange from './components/DateRange.svelte'
 import Dropdown from './components/Dropdown.svelte'
 import DropdownOption from './components/DropdownOption.svelte'
-import ECharts from './components2/ECharts2.svelte'
+import ECharts from './components/ECharts.svelte'
 import GrapheneQuery from './components/GrapheneQuery.svelte'
 import InlineDelta from './components/InlineDelta.svelte'
-import LineChart from './components2/LineChart2.svelte'
-import PieChart from './components2/PieChart2.svelte'
+import LineChart from './components/LineChart.svelte'
+import PieChart from './components/PieChart.svelte'
 import QueryLoad from './components/QueryLoad.svelte'
 import Row from './components/Row.svelte'
 import SortIcon from './components/SortIcon.svelte'
@@ -71,7 +71,6 @@ window.$GRAPHENE.components = {
   Dropdown,
   DropdownOption,
   ECharts,
-  ECharts2: ECharts,
   ErrorChart,
   GrapheneQuery,
   InlineDelta,

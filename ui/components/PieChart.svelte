@@ -1,5 +1,5 @@
 <script lang="ts">
-  import ECharts2 from './ECharts2.svelte'
+  import ECharts from './ECharts.svelte'
   import type {EChartsConfig2} from './types.ts'
 
   interface Props {
@@ -31,4 +31,4 @@
   }
 </script>
 
-<ECharts2 data={data} config={buildConfig()} {height} {width} />
+<ECharts data={data} config={buildConfig()} {height} {width} />

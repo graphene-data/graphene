@@ -1,4 +1,4 @@
-import {type Field} from '../components2/types.ts'
+import {type Field} from '../components/types.ts'
 
 type TableRows = {rows: any[]; fields: Field[]}
 
