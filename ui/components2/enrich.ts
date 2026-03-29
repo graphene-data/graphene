@@ -146,15 +146,21 @@ function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) 
 }
 
 // Keep line/area markers readable by default.
-// - Time/value axes: hide markers (they get noisy quickly)
-// - Category axes: show markers only for small cardinality (< 20 categories)
+// - Respect explicit `showSymbol` from users.
+// - Category/time axes: show markers for small series (< 30 points).
+// - Value axes: hide markers by default.
 function lineSeriesMarkerVisibility(config: NormalConfig, rows: Record<string, any>[]) {
   for (let series of config.series) {
     if (series?.type !== 'line' || series.showSymbol != null) continue
 
     let axisIndex = Number(series.xAxisIndex ?? 0)
     let axisType = config.xAxis[axisIndex]?.type
-    if (axisType !== 'category') {
+    if (axisType === 'value') {
+      series.showSymbol = false
+      continue
+    }
+
+    if (axisType !== 'category' && axisType !== 'time') {
       series.showSymbol = false
       continue
     }
@@ -165,7 +171,7 @@ function lineSeriesMarkerVisibility(config: NormalConfig, rows: Record<string, a
       continue
     }
 
-    series.showSymbol = distinctValues(rows, xField).length < 20
+    series.showSymbol = distinctValues(rows, xField).length < 30
   }
 }
 
