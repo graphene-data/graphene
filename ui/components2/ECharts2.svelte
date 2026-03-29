@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {init} from 'echarts6/dist/echarts.esm.js'
+  import {init} from 'echarts'
   import {onDestroy, onMount} from 'svelte'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import * as chartWindowDebug from '../component-utilities/chartWindowDebug.js'

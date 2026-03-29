@@ -1,4 +1,4 @@
-import {registerTheme} from 'echarts6/dist/echarts.esm.js'
+import {registerTheme} from 'echarts'
 
 // ── Color tokens ────────────────────────────────────────────────────────
 // Palette C · Fjord Dusk
