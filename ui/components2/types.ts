@@ -1,4 +1,4 @@
-import type {EChartsOption} from 'echarts6/types/dist/echarts'
+import type {EChartsOption} from 'echarts'
 import {type FieldMetadata, type GrapheneError} from '../../lang/types.ts'
 
 type SingleOrArray<T> = T | T[]

@@ -14,8 +14,7 @@
     "@tidyjs/tidy": "^2.5.2",
     "chroma-js": "2.4.2",
     "dompurify": "^3.3.2",
-    "echarts": "^5.5.0",
-    "echarts6": "npm:echarts@^6.0.0",
+    "echarts": "^6.0.0",
     "marked": "^16.3.0",
     "ssf": "^0.11.2"
   },
