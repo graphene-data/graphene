@@ -35,6 +35,19 @@ test('echarts loading state', async ({mount, chart, sharedPage, server}) => {
 test('echarts empty state', async ({mount, chart}) => {
   await mount('components2/ECharts2.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: {rows: [], fields: [{name: 'month', type: 'string'}, {name: 'value', type: 'number'}]}})
   await expect(chart.el).screenshot('echarts-empty-state')
+
+test('echarts direct config expands encode.stack template series', async ({mount, chart}) => {
+  await mount('components2/ECharts2.svelte', {
+    data: timeseriesGrouped(),
+    config: {
+      title: {text: 'Monthly Sales by Category (direct ECharts2)'},
+      legend: {show: false},
+      xAxis: {show: false},
+      yAxis: {show: false},
+      series: {type: 'bar', encode: {x: 'month', y: 'sales_usd0k', stack: 'category'}},
+    },
+  })
+  await expect(chart.el).screenshot('echarts-direct-encode-stack-template')
 })
 
 test('bar chart', async ({mount, chart}) => {
