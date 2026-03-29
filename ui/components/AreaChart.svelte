@@ -1,6 +1,6 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
-  import type {EChartsConfig2} from '../component-utilities/types.ts'}},{
+  import type {EChartsConfig2} from '../component-utilities/types.ts'
 
   interface Props {
     data: string | {rows?: any[]; fields?: any[]}
