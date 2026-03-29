@@ -9,7 +9,7 @@ export function singleDim(): TableRows {
   })
 
   let rows = Object.keys(result).map(category => ({category, value: result[category]}))
-  let fields: Field[] = [{name: 'category', type: 'string'}, {name: 'value', type: 'number'}]
+  let fields: Field[] = [{name: 'category', type: 'string'}, {name: 'value', type: 'number', metadata: {units: 'usd'}}]
   return withEvidenceTypes(rows, fields)
 }
 
@@ -55,7 +55,7 @@ export function sparseGroupedMonthRows(): TableRows {
   let fields: Field[] = [
     {name: 'month', type: 'date', metadata: {granularity: 'month'}},
     {name: 'metric', type: 'string'},
-    {name: 'value', type: 'number'},
+    {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -70,9 +70,9 @@ export function timeseriesWithDateSeries(): TableRows {
     {quarter: '2021-07-01', category: 'Gadgets', sales: 300},
   ]
   let fields: Field[] = [
-    {name: 'quarter', type: 'date'},
+    {name: 'quarter', type: 'date', metadata: {granularity: 'quarter'}},
     {name: 'category', type: 'string'},
-    {name: 'sales', type: 'number'},
+    {name: 'sales', type: 'number', metadata: {units: 'usd'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -86,7 +86,10 @@ export function yearlyCounts(): TableRows {
     {year: 2004, flights: 110},
     {year: 2005, flights: 120},
   ]
-  let fields: Field[] = [{name: 'year', type: 'number'}, {name: 'flights', type: 'number'}]
+  let fields: Field[] = [
+    {name: 'year', type: 'number', metadata: {granularity: 'year'}},
+    {name: 'flights', type: 'number', metadata: {units: 'count'}},
+  ]
   return withEvidenceTypes(rows, fields)
 }
 
@@ -101,13 +104,16 @@ export function denseTimeseries(points = 365): TableRows {
     }
   })
 
-  let fields: Field[] = [{name: 'ts', type: 'date'}, {name: 'value', type: 'number'}]
+  let fields: Field[] = [
+    {name: 'ts', type: 'date', metadata: {granularity: 'day'}},
+    {name: 'value', type: 'number', metadata: {units: 'count'}},
+  ]
   return withEvidenceTypes(rows, fields)
 }
 
 export function categoricalSeries(count: number): TableRows {
   let rows = Array.from({length: count}, (_, index) => ({category: `Bucket ${index + 1}`, value: 100 + Math.sin(index / 2) * 20}))
-  let fields: Field[] = [{name: 'category', type: 'string'}, {name: 'value', type: 'number'}]
+  let fields: Field[] = [{name: 'category', type: 'string'}, {name: 'value', type: 'number', metadata: {units: 'count'}}]
   return withEvidenceTypes(rows, fields)
 }
 
@@ -117,7 +123,10 @@ export function tableDataWithDates(): TableRows {
     {month: '2021-01-01', sales: 75},
     {month: '2021-02-01', sales: 65},
   ]
-  let fields: Field[] = [{name: 'month', type: 'date'}, {name: 'sales', type: 'number'}]
+  let fields: Field[] = [
+    {name: 'month', type: 'date', metadata: {granularity: 'month'}},
+    {name: 'sales', type: 'number', metadata: {units: 'usd'}},
+  ]
   return withEvidenceTypes(rows, fields)
 }
 
@@ -126,7 +135,7 @@ export function tableDataForPagination(count = 15): TableRows {
     item: `Row ${index + 1}`,
     value: index + 1,
   }))
-  let fields: Field[] = [{name: 'item', type: 'string'}, {name: 'value', type: 'number'}]
+  let fields: Field[] = [{name: 'item', type: 'string'}, {name: 'value', type: 'number', metadata: {units: 'count'}}]
   return withEvidenceTypes(rows, fields)
 }
 
@@ -142,7 +151,7 @@ export function groupedDataForSection(): TableRows {
   let fields: Field[] = [
     {name: 'time_horizon', type: 'string'},
     {name: 'sku', type: 'string'},
-    {name: 'units', type: 'number'},
+    {name: 'units', type: 'number', metadata: {units: 'count'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
