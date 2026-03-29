@@ -1,4 +1,5 @@
 import {expect, test} from './fixtures.ts'
+import {expectConsoleError} from './logWatcher.ts'
 import {categoricalSeries, denseTimeseries, singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
 function seededRandom(seed: number) {
@@ -35,6 +36,25 @@ test('echarts loading state', async ({mount, chart, sharedPage, server}) => {
 test('echarts empty state', async ({mount, chart}) => {
   await mount('components2/ECharts2.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: {rows: [], fields: [{name: 'month', type: 'string'}, {name: 'value', type: 'number'}]}})
   await expect(chart.el).screenshot('echarts-empty-state')
+})
+
+test('echarts query error state', async ({mount, chart}) => {
+  expectConsoleError('Failed to load resource')
+  await mount('components2/ECharts2.svelte', {
+    config: {series: {type: 'bar', encode: {x: 'origin', y: 'explode'}}},
+    data: 'from flights select origin, sqrt(dep_delay) as explode',
+  })
+  await expect(chart.el).screenshot('echarts-query-error-state')
+})
+
+test('echarts chart configuration error state', async ({mount, chart}) => {
+  expectConsoleError('Chart failed to render')
+  await mount('components2/ECharts2.svelte', {
+    config: {xAxis: {}, yAxis: {type: 'log'}, series: {type: 'bar', encode: {x: 'carrier', y: 'worst_delay'}}},
+    data: {rows: [{carrier: 'AA', worst_delay: -1}, {carrier: 'UA', worst_delay: 0}], fields: [{name: 'carrier', type: 'string'}, {name: 'worst_delay', type: 'number'}]},
+  })
+  await expect(chart.el).screenshot('echarts-chart-config-error-state')
+})
 
 test('echarts direct config expands encode.stack template series', async ({mount, chart}) => {
   await mount('components2/ECharts2.svelte', {

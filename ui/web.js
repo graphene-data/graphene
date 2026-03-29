@@ -78,6 +78,7 @@ window.$GRAPHENE.components = {
   Dropdown,
   DropdownOption,
   ECharts,
+  ECharts2: ECharts,
   ErrorChart,
   GrapheneQuery,
   InlineDelta,

@@ -8,7 +8,7 @@ import type {EChartsConfig2, Field, NormalConfig, SeriesWithGroupingHint} from '
 // As a rule, if the provided config sets something, enrichments will not change it.
 
 // Each enrichment must have a comment above it describing what it does, and perhaps why it's needed if it isn't obvious.
-// Enrichments should also have comments inside explaining how they work if the logic is non-trivial
+// Enrichments must also have comments inside explaining how they work if the logic is non-trivial
 
 // Run enrichment in a fixed order so defaults stay predictable.
 export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
