@@ -3,13 +3,26 @@ import type {Plugin} from 'unified'
 import fs from 'fs'
 import path from 'path'
 import sanitizeHtml from 'sanitize-html'
+import JSON5 from 'json5'
 import {visit} from 'unist-util-visit'
 
-export function extractQueries() {
-  function escapeHtml(str: string) {
-    return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  }
+function escapeHtml(str: string) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
 
+// Takes the contents of a <ECharts> tag, and json5 parses it
+function liftInlineEChartsConfig(content: string) {
+  return content.replace(/<(ECharts2?)\b([^>]*)>([\s\S]*?)<\/\1>/g, (match: string, tag: string, attrs = '', body = '') => {
+    let inline = body.trim()
+    if (!inline) return match
+    if (/\sconfig\s*=/.test(attrs)) return match
+    let source = inline.startsWith('{') ? inline : `{${inline}}`
+    let parsed = JSON5.parse(source)
+    return `<${tag}${attrs} config={${JSON.stringify(parsed)}}></${tag}>`
+  })
+}
+
+export function extractQueries() {
   return function transformer(tree: any) {
     visit(tree, 'code', (node, index, parent) => {
       if (index === null) return
@@ -94,6 +107,7 @@ export function injectComponentImports() {
   return {
     markup: ({content, filename}: {content: string; filename: string}) => {
       if (!filename.endsWith('.md')) return // only auto-import components for md files
+      content = liftInlineEChartsConfig(content)
       if (content.includes('<script>')) {
         content = content.replace('<script>', `<script>\n${imp}`)
       } else {
