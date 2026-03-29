@@ -4,12 +4,9 @@ import './internal/runSocket.ts'
 import './app.css'
 import {mount, unmount} from 'svelte'
 
-import Area from './components/Area.svelte'
 import AreaChart from './components2/AreaChart2.svelte'
-import Bar from './components/Bar.svelte'
 import BarChart from './components2/BarChart2.svelte'
 import BigValue from './components/BigValue.svelte'
-import Chart from './components/Chart.svelte'
 import Column from './components/Column.svelte'
 import DateRange from './components/DateRange.svelte'
 import Dropdown from './components/Dropdown.svelte'
@@ -17,7 +14,6 @@ import DropdownOption from './components/DropdownOption.svelte'
 import ECharts from './components2/ECharts2.svelte'
 import GrapheneQuery from './components/GrapheneQuery.svelte'
 import InlineDelta from './components/InlineDelta.svelte'
-import Line from './components/Line.svelte'
 import LineChart from './components2/LineChart2.svelte'
 import PieChart from './components2/PieChart2.svelte'
 import QueryLoad from './components/QueryLoad.svelte'
@@ -67,12 +63,9 @@ window.$GRAPHENE.waitForLoad = async (timeout = 20_000) => {
 }
 
 window.$GRAPHENE.components = {
-  Area,
   AreaChart,
-  Bar,
   BarChart,
   BigValue,
-  Chart,
   Column,
   DateRange,
   Dropdown,
@@ -82,7 +75,6 @@ window.$GRAPHENE.components = {
   ErrorChart,
   GrapheneQuery,
   InlineDelta,
-  Line,
   LineChart,
   PieChart,
   QueryLoad,
