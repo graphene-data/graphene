@@ -4,9 +4,9 @@
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import * as chartWindowDebug from '../component-utilities/chartWindowDebug.js'
   import {logError} from '../internal/telemetry.ts'
-  import {enrich} from './enrich.ts'
-  import type {EChartsConfig2, QueryResult} from './types.ts'
-  import './theme.ts'
+  import {enrich} from '../component-utilities/enrich.ts'
+  import type {EChartsConfig2, QueryResult} from '../component-utilities/types.ts'
+  import '../component-utilities/theme.ts'
   import Skeleton from './Skeleton.svelte'
 
   interface Props {
