@@ -23,7 +23,7 @@ test('echarts loading state', async ({mount, chart, sharedPage, server}) => {
   })
 
   try {
-    await mount('components2/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: 'from flights select month, sum(dep_delay) as value'})
+    await mount('components/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: 'from flights select month, sum(dep_delay) as value'})
     await expect(chart.el).screenshot('echarts-loading-state')
   } finally {
     await sharedPage.evaluate(() => {
@@ -34,13 +34,13 @@ test('echarts loading state', async ({mount, chart, sharedPage, server}) => {
 })
 
 test('echarts empty state', async ({mount, chart}) => {
-  await mount('components2/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: {rows: [], fields: [{name: 'month', type: 'string'}, {name: 'value', type: 'number'}]}})
+  await mount('components/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: {rows: [], fields: [{name: 'month', type: 'string'}, {name: 'value', type: 'number'}]}})
   await expect(chart.el).screenshot('echarts-empty-state')
 })
 
 test('echarts query error state', async ({mount, chart}) => {
   expectConsoleError('Failed to load resource')
-  await mount('components2/ECharts.svelte', {
+  await mount('components/ECharts.svelte', {
     config: {series: {type: 'bar', encode: {x: 'origin', y: 'explode'}}},
     data: 'from flights select origin, sqrt(dep_delay) as explode',
   })
@@ -48,7 +48,7 @@ test('echarts query error state', async ({mount, chart}) => {
 })
 
 test('echarts chart configuration error state', async ({mount, chart}) => {
-  await mount('components2/ECharts.svelte', {
+  await mount('components/ECharts.svelte', {
     config: null as any,
     data: 'from flights select carrier limit 5',
   })
@@ -57,10 +57,10 @@ test('echarts chart configuration error state', async ({mount, chart}) => {
 })
 
 test('echarts direct config expands encode.stack template series', async ({mount, chart}) => {
-  await mount('components2/ECharts.svelte', {
+  await mount('components/ECharts.svelte', {
     data: timeseriesGrouped(),
     config: {
-      title: {text: 'Monthly Sales by Category (direct ECharts2)'},
+      title: {text: 'Monthly Sales by Category (direct ECharts)'},
       legend: {show: false},
       xAxis: {show: false},
       yAxis: {show: false},
@@ -71,7 +71,7 @@ test('echarts direct config expands encode.stack template series', async ({mount
 })
 
 test('bar chart', async ({mount, chart}) => {
-  await mount('components2/BarChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k', title: 'Monthly Sales'})
+  await mount('components/BarChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k', title: 'Monthly Sales'})
   await expect(chart.el).screenshot('bar-chart')
 })
 
@@ -80,49 +80,49 @@ test('bar chart formats very small values on y axis', async ({mount, chart}) => 
   data.rows = data.rows.map(row => ({...row, value: row.value / 1e12}))
   data.fields[1].metadata = {}
 
-  await mount('components2/BarChart.svelte', {data, x: 'category', y: 'value', title: 'Very Small Values'})
+  await mount('components/BarChart.svelte', {data, x: 'category', y: 'value', title: 'Very Small Values'})
   await expect(chart.el).screenshot('bar-chart-very-small-values')
 })
 
 test('bar chart with just 0,1 has sensible y axis ticks', async ({mount, chart}) => {
   let rows = [{category: 'A', count: 1}, {category: 'B', count: 0}, {category: 'C', count: 1}]
   let fields = [{name: 'category', type: 'string'}, {name: 'count', type: 'number', metadata: {units: 'count'}}]
-  await mount('components2/BarChart.svelte', {data: {rows, fields}, x: 'category', y: 'count'})
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'category', y: 'count'})
   await expect(chart.el).screenshot('bar-chart-0-to-1')
 })
 
 test('bar chart grouped + stacked fills missing points and sorts x', async ({mount, chart}) => {
-  await mount('components2/BarChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', stack: 'metric', title: 'Grouped Stacked Missing + Sort'})
+  await mount('components/BarChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', stack: 'metric', title: 'Grouped Stacked Missing + Sort'})
   await expect(chart.el).screenshot('bar-chart-stacked-missing-sort')
 })
 
 test('horizontal bar chart', async ({mount, chart}) => {
-  await mount('components2/BarChart.svelte', {data: singleDim(), x: 'value', y: 'category'})
+  await mount('components/BarChart.svelte', {data: singleDim(), x: 'value', y: 'category'})
   await expect(chart.el).screenshot('horizontal-bar-chart')
 })
 
 test('stacked area chart', async ({mount, chart}) => {
-  await mount('components2/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack: 'category'})
+  await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack: 'category'})
   await expect(chart.el).screenshot('area-chart-stacked')
 })
 
 test('line chart timeseries', async ({mount, page, chart}) => {
-  await mount('components2/LineChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
+  await mount('components/LineChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(chart.el).screenshot('line-chart-timeseries')
 })
 
 test('line charts hide markers on timeseries', async ({mount, chart}) => {
-  await mount('components2/LineChart.svelte', {data: denseTimeseries(), x: 'ts', y: 'value', title: 'Dense Time Axis'})
+  await mount('components/LineChart.svelte', {data: denseTimeseries(), x: 'ts', y: 'value', title: 'Dense Time Axis'})
   await expect(chart.el).screenshot('line-chart-timeseries-hide-markers')
 })
 
 test('line chart hides markers at 30 categorical points', async ({mount, chart}) => {
-  await mount('components2/LineChart.svelte', {data: categoricalSeries(30), x: 'category', y: 'value', title: 'Categorical 30'})
+  await mount('components/LineChart.svelte', {data: categoricalSeries(30), x: 'category', y: 'value', title: 'Categorical 30'})
   await expect(chart.el).screenshot('line-chart-categorical-markers-over-threshold')
 })
 
 test('pie chart', async ({mount, chart}) => {
-  await mount('components2/PieChart.svelte', {data: singleDim(), category: 'category', value: 'value'})
+  await mount('components/PieChart.svelte', {data: singleDim(), category: 'category', value: 'value'})
   await expect(chart.el).screenshot('pie-chart')
 })
 
@@ -131,14 +131,14 @@ test.skip('can provide a list of colors for different series', async () => {
 })
 
 test.skip('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
-  await mount('components2/LineChart.svelte', {data: timeseriesWithDateSeries(), x: 'category', y: 'sales', series: 'quarter'})
+  await mount('components/LineChart.svelte', {data: timeseriesWithDateSeries(), x: 'category', y: 'sales', series: 'quarter'})
   let names = await chart.config(c => (c.series ?? []).map((s: any) => s.name).sort())
   expect(names).toEqual(['2021-01', '2021-04', '2021-07'])
   await expect(chart.el).screenshot('line-chart-series-label-fmt')
 })
 
 test.skip('numeric year xFmt=yyyy keeps year labels', async ({mount, chart}) => {
-  await mount('components2/BarChart.svelte', {data: yearlyCounts(), x: 'year', y: 'flights', xFmt: 'yyyy'})
+  await mount('components/BarChart.svelte', {data: yearlyCounts(), x: 'year', y: 'flights', xFmt: 'yyyy'})
   let axisLabel = await chart.config(c => {
     let xAxis = Array.isArray(c.xAxis) ? c.xAxis[0] : c.xAxis
     return xAxis.axisLabel.formatter(2000)
@@ -148,7 +148,7 @@ test.skip('numeric year xFmt=yyyy keeps year labels', async ({mount, chart}) => 
 })
 
 test('bar chart grouped labels', async ({mount, chart}) => {
-  await mount('components2/BarChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', group: 'category', label: true})
+  await mount('components/BarChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', group: 'category', label: true})
   await expect(chart.el).screenshot('bar-chart-grouped-labels')
 })
 
@@ -168,32 +168,32 @@ test('categorical stacked bar charts sort by total value descending', async ({mo
     {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
 
-  await mount('components2/BarChart.svelte', {data: {rows, fields}, x: 'segment', y: 'value', stack: 'metric', title: 'Stacked Category Sort'})
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'segment', y: 'value', stack: 'metric', title: 'Stacked Category Sort'})
   await expect(chart.el).screenshot('bar-chart-categorical-stacked-sort-total-desc')
 })
 
 test('line chart sorts time axis, and shows gap for missing points', async ({mount, chart}) => {
-  await mount('components2/LineChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', series: 'metric', title: 'Line Missing + Sort'})
+  await mount('components/LineChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', series: 'metric', title: 'Line Missing + Sort'})
   await expect(chart.el).screenshot('line-chart-grouped-missing-sort')
 })
 
 test('stacked area uses 0 for missing points', async ({mount, chart}) => {
-  await mount('components2/AreaChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', stack: 'metric', title: 'Area Missing + Sort'})
+  await mount('components/AreaChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', stack: 'metric', title: 'Area Missing + Sort'})
   await expect(chart.el).screenshot('area-chart-grouped-missing-sort')
 })
 
 test('unstacked area leaves gaps for missing points', async ({mount, chart}) => {
-  await mount('components2/AreaChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', group: 'metric', title: 'Area Missing + Gaps'})
+  await mount('components/AreaChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', group: 'metric', title: 'Area Missing + Gaps'})
   await expect(chart.el).screenshot('area-chart-grouped-missing-gap')
 })
 
 test('area chart stacked100', async ({mount, chart}) => {
-  await mount('components2/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack100: 'category'})
+  await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack100: 'category'})
   await expect(chart.el).screenshot('area-chart-stacked100')
 })
 
 test('bar chart stacked100', async ({mount, chart}) => {
-  await mount('components2/BarChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack100: 'category'})
+  await mount('components/BarChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack100: 'category'})
   await expect(chart.el).screenshot('bar-chart-stacked100')
 })
 
@@ -209,6 +209,6 @@ test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
     return {...r, profit_usd0k: r.sales_usd0k * (0.15 + delta)}
   })
   data.fields.push({name: 'profit_usd0k', type: 'number', metadata: {units: 'usd'}})
-  await mount('components2/BarChart.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
+  await mount('components/BarChart.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
   await expect(chart.el).screenshot('bar-chart-secondary-axis-line')
 })

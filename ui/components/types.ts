@@ -29,7 +29,7 @@ export type Field = {
   metadata?: FieldMetadata
 }
 
-// ECharts2 supports lightweight grouping hints so configs stay concise.
+// ECharts supports lightweight grouping hints so configs stay concise.
 // - `encode.group` or `encode.stack` splits one template into one series per distinct value.
 // - these hints are mutually exclusive.
 export type SeriesWithGroupingHint = Omit<EChartsSeries, 'encode'> & {

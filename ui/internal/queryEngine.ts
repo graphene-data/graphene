@@ -2,7 +2,7 @@
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
 import type {GrapheneError} from '../../lang/types.ts'
-import {type QueryResult, type Field} from '../components2/types.ts'
+import {type QueryResult, type Field} from '../components/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
@@ -193,7 +193,7 @@ export function translateData(data: any, node: QueryNode) {
       }
     }
 
-    // Return fields for the new ECharts2 but with the name mapped back to what was requested
+    // Return fields for the new ECharts config but with the name mapped back to what was requested
     fields.push({...field, name})
 
     // map graphene types down to the ones evidence expects

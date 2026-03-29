@@ -2,6 +2,7 @@
   import {onDestroy, onMount, type Snippet} from 'svelte'
   import type {GrapheneError} from '../../lang/types.ts'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
+    import Skeleton from './Skeleton.svelte'
 
   interface Props {
     data: string | {rows?: any[]}
@@ -39,9 +40,7 @@
     <ErrorDisplay {error} />
   </div>
 {:else if !loaded}
-  <div class='ql-skeleton' style={`height:${height}px`} role="status" aria-live="polite">
-    <span class="ql-skeleton__pulse"></span>
-  </div>
+  <Skeleton />
 {:else if loaded.length == 0}
   <div class="empty-chart" role="note">Dataset is empty - query ran successfully, but no data was returned from the database</div>
 {:else}
