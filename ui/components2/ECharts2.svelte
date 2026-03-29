@@ -3,6 +3,7 @@
   import {onDestroy, onMount} from 'svelte'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import * as chartWindowDebug from '../component-utilities/chartWindowDebug.js'
+  import {logError} from '../internal/telemetry.ts'
   import {enrich} from './enrich.ts'
   import type {EChartsConfig2, QueryResult} from './types.ts'
   import './theme.ts'
@@ -31,19 +32,22 @@
   // Use `raw` because data can be big, and there's little upside to making it reactive
   let loaded = $state.raw<QueryResult | null>(null)
   let chartError: Error | null = $state(null)
+  let queryId: string | null = $state(null)
 
   function handleResults (res: QueryResult) {
+    chartError = null
     loaded = res
   }
 
-  // If `data` is just a string, kick off a query to fetch the data
-  // This maybe could be an effect, but we'd have to ensure we don't double-subscribe
+  // If `data` is just a string, kick off a query to fetch the data.
+  // This maybe could be an effect, but we'd have to ensure we don't double-subscribe.
   onMount(() => {
     if (typeof data == 'string') {
-      // compute the fields we need to query by looking at `config.series.encode` (for all series)
-      let series = Array.isArray(config.series) ? config.series : [config.series]
-      let fields = series.flatMap(s => Object.values(s?.encode || {}))
-      window.$GRAPHENE.query(data, fields, handleResults)
+      try {
+        queryId = window.$GRAPHENE.query(data, queryFields(config), handleResults)
+      } catch (error) {
+        chartError = error instanceof Error ? error : new Error(String(error))
+      }
     } else {
       loaded = data
     }
@@ -55,12 +59,12 @@
   })
 
   $effect(() => {
+    if (chartError) return
     if (!loaded || loaded.error || loaded.rows.length == 0) {
       destroyChart()
       return
     }
 
-    console.log('foo')
     chart ||= init(node, 'graphene-theme', {renderer})
     let chartId = chart.id
 
@@ -74,9 +78,11 @@
       enrich(cloned, loaded.rows, loaded.fields || [])
 
       chart.setOption({...cloned, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
+      chartError = null
     } catch (error) {
       console.error('Chart failed to render', error)
       chartError = error instanceof Error ? error : new Error(String(error))
+      logError(chartError, queryId ? {queryId} : undefined)
       destroyChart()
     } finally {
       window.$GRAPHENE?.renderComplete?.(`chart:${chartId}`)
@@ -90,12 +96,29 @@
     chart = null
   }
 
-  function toDimension(dimension: string | number | undefined, fallback: string) {
-    return typeof dimension === 'number' ? `${dimension}px` : dimension || fallback
+  function queryFields(config: EChartsConfig2) {
+    let fields: Record<string, string[]> = {}
+    let series = Array.isArray(config.series) ? config.series : [config.series]
+    let entries = series.flatMap(s => Object.entries(s?.encode || {}))
+    for (let [attr, col] of entries) {
+      fields[attr] ||= []
+      fields[attr].push(col)
+    }
+    return fields
   }
+
+  let style = $derived.by(() => {
+    let s = ''
+    let toDim = (dim: string | number) => typeof dim == 'number' ? `${dim}px` : dim
+    if (height) s += `height:${toDim(height)};`
+    if (width) s += `width:${toDim(width)};`
+    return s
+  })
+
+  let title = $derived(config?.title?.text)
 </script>
 
-<div class="echarts2" bind:this={node} style={`height:${toDimension(height, '240px')};width:${toDimension(width, '100%')}`}>
+<div class="echarts2" bind:this={node} style={style} data-query-id={queryId} data-chart-title={title}>
   {#if loaded?.error || chartError}
     <ErrorDisplay error={loaded?.error || chartError} />
   {:else if !loaded}
@@ -104,13 +127,12 @@
     <div class="empty-chart" role="note">Dataset is empty - query ran successfully, but no data was returned from the database</div>
   {/if}
 </div>
-<!--       // data-chart-title={chartState.title}
-// data-query-id={queryId}
- -->
 
 <style>
   .echarts2 {
     position: relative;
+    height: 240px;
+    width: 100%;
   }
 
   .empty-chart {

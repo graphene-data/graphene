@@ -56,8 +56,10 @@ function query(source: string, fields: Record<string, string | string[]>, callba
     exprs = ['*']
   }
   let contents = `from ${source} select ${exprs.join(', ')}`
-  queries.push({contents, callback, loading: false, fields: map, source, queryId: buildQueryId(source, map)})
+  let queryId = buildQueryId(source, map)
+  queries.push({contents, callback, loading: false, fields: map, source, queryId})
   runAll()
+  return queryId
 }
 
 function unsubscribe(callback: ResultHandler) {

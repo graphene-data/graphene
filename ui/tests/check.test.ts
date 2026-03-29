@@ -101,16 +101,20 @@ test('cli run with md file reports runtime query errors', async ({server, page})
 })
 
 test('cli run with md file reports runtime chart configuration errors', async ({server, page}) => {
-  expectConsoleError('Error in Bar Chart')
-  expectConsoleError(/ECharts.*has been disposed/)
+  expectConsoleError('Chart failed to render')
   server.mockFile(
     '/index.md',
     `
     # Runtime Chart Config Error
     \`\`\`sql chart_data
-    from flights select carrier, min(dep_delay) as worst_delay
+    from flights select dep_delay as x_value, dep_delay as bad_category limit 25
     \`\`\`
-    <BarChart data="chart_data" x="carrier" y="worst_delay" yLog="true" title="Runtime Chart Config Error" />
+
+    <ECharts data="chart_data">
+      xAxis: {},
+      yAxis: {type: "category"},
+      series: [{type: "bar", encode: {x: "x_value", y: "bad_category"}}],
+    </ECharts>
   `,
   )
 
@@ -119,9 +123,9 @@ test('cli run with md file reports runtime chart configuration errors', async ({
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    Runtime Chart Config Error (data="chart_data" x="carrier" y="worst_delay"): Log axis cannot display values less than or equal to zero
+    Query (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
-`),
+  `),
   )
 })
 
