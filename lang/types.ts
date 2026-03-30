@@ -10,6 +10,15 @@ declare module '@lezer/common' {
 }
 
 export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
+export type TemporalGrain = 'year' | 'quarter' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'
+
+export interface TemporalFieldMetadata {
+  grain: TemporalGrain
+}
+
+export interface FieldMetadata {
+  temporal?: TemporalFieldMetadata
+}
 
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {
@@ -19,12 +28,14 @@ export interface Expr {
   canWindow?: boolean // true if expression can be used with an OVER clause
   interval?: IntervalExpr
   fanout?: ExprFanout
+  fieldMetadata?: FieldMetadata
 }
 
 // A field in a query's SELECT clause
 export interface QueryField extends Expr {
   name: string // output column name
   metadata?: Record<string, string>
+  fieldMetadata?: FieldMetadata
   definitionLocation?: Location // where this field is defined when materialized into a view
 }
 
@@ -90,6 +101,7 @@ export interface Column {
   isAgg?: boolean // for computed columns that are aggregates
   exprNode?: SyntaxNode // for computed columns, the expression AST node (analyzed lazily in query context)
   metadata?: Record<string, string>
+  fieldMetadata?: FieldMetadata
   symbolId?: string
   location?: Location
 }
