@@ -1,8 +1,7 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import type {FieldMetadata, GrapheneError} from '../../lang/types.ts'
-
+import {formatType, type FieldMetadata, type FieldType, type GrapheneError} from '../../lang/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
@@ -15,7 +14,7 @@ interface QueryResult {
 
 interface Field {
   name: string
-  type?: string
+  type?: FieldType
   fieldMetadata?: FieldMetadata
 }
 
@@ -222,12 +221,13 @@ errorProvider('queryEngine', () => {
   return Object.values(unique)
 })
 
-function evidenceType(type: string | undefined) {
-  if (type === 'string') return 'string'
-  if (type === 'number') return 'number'
-  if (type === 'boolean') return 'boolean'
-  if (type === 'date' || type === 'timestamp') return 'date'
-  console.warn('Unsupported evidence type ' + type)
+function evidenceType(type: FieldType | undefined) {
+  let kind = formatType(type)
+  if (kind === 'string') return 'string'
+  if (kind === 'number') return 'number'
+  if (kind === 'boolean') return 'boolean'
+  if (kind === 'date' || kind === 'timestamp') return 'date'
+  console.warn('Unsupported evidence type ' + kind)
   return 'string'
 }
 

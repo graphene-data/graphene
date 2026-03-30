@@ -7,6 +7,7 @@ import {expect} from 'vitest'
 import {setConfig} from './config.ts'
 import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile, loadWorkspace, getFile} from './core.ts'
 import {prepareEcommerceTables} from './testHelpers.ts'
+import {formatType} from './types.ts'
 import {trimIndentation} from './util.ts'
 
 const testTables = `
@@ -696,6 +697,26 @@ describe('lang', () => {
     expect('table invalid (id int, value hyperthing)').toHaveDiagnostic(/Unsupported data type: hyperthing/i)
   })
 
+  it('supports array column types in table schemas', () => {
+    clearWorkspace()
+    updateFile('table events (tags array<string>, scores array<int64>)', 'arrays.gsql')
+    analyze()
+
+    let table = getTable('events')!
+    expect(table.columns.map(col => formatType(col.type))).toEqual(['array<string>', 'array<number>'])
+  })
+
+  it('rejects nested array column types', () => {
+    expect('table invalid (tags array<array<string>>)').toHaveDiagnostic(/nested arrays are not supported/i)
+  })
+
+  it('reports syntax errors for incomplete array type syntax', () => {
+    expect('table invalid (tags array<>)').toHaveDiagnostic(/syntax error/i)
+    expect('from users select cast(name as array<string>)').toHaveNoErrors()
+    expect('from users select cast(name as array<string>)').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
+    expect('from users select cast(name as array<string)').toHaveDiagnostic(/syntax error/i)
+  })
+
   it('reports diagnostics when redefining an existing workspace table', () => {
     expect('table users (id int)').toHaveDiagnostic(/table "users" is already defined/i)
   })
@@ -1342,19 +1363,50 @@ describe('lang', () => {
   it('supports cast() expressions', () => {
     expect('from users select cast(age as varchar)').toRenderSql('select CAST(users.age AS VARCHAR) as col_0 from users as users')
     expect('from users select cast(age as float64)').toRenderSql('select CAST(users.age AS FLOAT64) as col_0 from users as users')
+    expect('from users select cast(name as array<string>)').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
   })
 
   it('supports :: cast syntax', () => {
     expect('from users select age::VARCHAR').toRenderSql('select CAST(users.age AS VARCHAR) as col_0 from users as users')
     expect('from users select name::int').toRenderSql('select CAST(users.name AS INT) as col_0 from users as users')
+    expect('from users select name::array<string>').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
   })
 
   it('reports diagnostic for invalid cast type', () => {
     expect('from users select cast(age as invalidtype)').toHaveDiagnostic(/Unsupported cast type: invalidtype/i)
+    expect('from users select cast(name as array<array<string>>) ').toHaveDiagnostic(/nested arrays are not supported/i)
   })
 
   it('supports cast in expressions', () => {
     expect('from users select cast(age as varchar) = name').toRenderSql('select CAST(users.age AS VARCHAR)=users.name as col_0 from users as users')
+  })
+
+  it('preserves array element types through computed fields, views, and generic array returns', () => {
+    clearWorkspace()
+    updateFile(
+      `
+      table events (
+        id int
+        tags array<string>
+        tag_copy: tags
+      )
+
+      table event_tags as (
+        from events
+        select id, tags, tag_copy, list(id) as ids
+      )
+    `,
+      'arrays.gsql',
+    )
+    analyze()
+
+    let events = getTable('events')!
+    let eventTags = getTable('event_tags')!
+    expect(formatType(events.columns.find(col => col.name == 'tags')!.type)).toBe('array<string>')
+    expect(formatType(events.columns.find(col => col.name == 'tag_copy')!.type)).toBe('array<string>')
+    expect(formatType(eventTags.columns.find(col => col.name == 'tags')!.type)).toBe('array<string>')
+    expect(formatType(eventTags.columns.find(col => col.name == 'tag_copy')!.type)).toBe('array<string>')
+    expect(formatType(eventTags.columns.find(col => col.name == 'ids')!.type)).toBe('array<number>')
   })
 
   it('ignores comments within table definitions', () => {

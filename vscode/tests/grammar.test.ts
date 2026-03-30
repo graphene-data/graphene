@@ -94,6 +94,21 @@ table users (
     expect(findToken(lines[3], 'active').scopes).toContain('meta.declaration.table.graphene.gsql')
   })
 
+  it('highlights array type declarations and casts', async () => {
+    let lines = await tokenize(
+      `
+table events (
+  tags array<string>
+  ids: cast(tags as array<string>)
+)
+`.trim(),
+    )
+
+    expect(findToken(lines[1], 'array').scopes).toContain('storage.type.gsql')
+    expect(findToken(lines[2], 'array').scopes).toContain('storage.type.gsql')
+    expect(findToken(lines[2], 'ids').scopes).toContain('meta.declaration.table.graphene.gsql')
+  })
+
   it('highlights join declarations with the same control-keyword scope as on', async () => {
     let lines = await tokenize(
       `

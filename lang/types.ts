@@ -9,8 +9,136 @@ declare module '@lezer/common' {
   }
 }
 
-export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
+export type ScalarTypeKind = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'record'
+export interface ScalarFieldType<K extends ScalarTypeKind = ScalarTypeKind> {
+  kind: K
+}
+export interface ArrayFieldType {
+  kind: 'array'
+  elementType: FieldType
+}
+export type FieldType = ScalarFieldType | ArrayFieldType
+export type TypeKind = FieldType['kind']
 export type TemporalGrain = 'year' | 'quarter' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'
+
+let SCALAR_TYPE_ALIASES: Record<string, ScalarTypeKind> = {
+  int: 'number',
+  int64: 'number',
+  number: 'number',
+  integer: 'number',
+  numeric: 'number',
+  float: 'number',
+  float64: 'number',
+  decimal: 'number',
+  double: 'number',
+  bigint: 'number',
+  smallint: 'number',
+  tinyint: 'number',
+  byteint: 'number',
+  bigdecimal: 'number',
+  variant: 'string',
+  object: 'json',
+  text: 'string',
+  string: 'string',
+  varchar: 'string',
+  geography: 'string',
+  bool: 'boolean',
+  boolean: 'boolean',
+  date: 'date',
+  datetime: 'timestamp',
+  time: 'timestamp',
+  timestamp: 'timestamp',
+  timestamp_ntz: 'timestamp',
+  timestamp_tz: 'timestamp',
+  timestamp_ltz: 'timestamp',
+  json: 'json',
+  interval: 'interval',
+}
+
+export function scalarType<K extends ScalarTypeKind>(kind: K): ScalarFieldType<K> {
+  return {kind}
+}
+
+export function arrayOf(elementType: FieldType): ArrayFieldType {
+  return {kind: 'array', elementType}
+}
+
+export function isArrayType(type: FieldType | null | undefined): type is ArrayFieldType {
+  return !!type && typeof type == 'object' && type.kind == 'array'
+}
+
+export function isScalarType<K extends ScalarTypeKind>(type: FieldType | null | undefined, kind?: K): type is ScalarFieldType<K> {
+  if (!type || typeof type != 'object' || type.kind == 'array') return false
+  return kind ? type.kind == kind : true
+}
+
+export function isSameType(left: FieldType | null | undefined, right: FieldType | null | undefined): boolean {
+  if (!left || !right) return false
+  if (isArrayType(left) || isArrayType(right)) {
+    if (!isArrayType(left) || !isArrayType(right)) return false
+    return isSameType(left.elementType, right.elementType)
+  }
+  return left.kind == right.kind
+}
+
+export function formatType(type: FieldType | null | undefined): string {
+  if (!type) return 'unknown'
+  if (isArrayType(type)) {
+    if (isScalarType(type.elementType, 'sql native')) return 'array'
+    return `array<${formatType(type.elementType)}>`
+  }
+  return type.kind
+}
+
+export function formatTypeKind(kind: TypeKind): string {
+  return kind
+}
+
+export function normalizeScalarType(rawType: string): ScalarFieldType | null {
+  let kind = SCALAR_TYPE_ALIASES[normalizeTypeName(rawType)]
+  return kind ? scalarType(kind) : null
+}
+
+export function parseGsqlFieldType(rawType: string): {type: FieldType | null; error?: string} {
+  return parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: false, allowNamedArray: false})
+}
+
+export function parseWarehouseFieldType(rawType: string): {type: FieldType | null; error?: string} {
+  return parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: true, allowNamedArray: true})
+}
+
+function parseFieldType(rawType: string, opts: {allowArrayKeyword: boolean; allowBracketArray: boolean; allowNamedArray: boolean}): {type: FieldType | null; error?: string} {
+  let value = rawType.trim()
+  if (!value) return {type: null}
+
+  if (opts.allowBracketArray && value.endsWith('[]')) {
+    let inner = parseFieldType(value.slice(0, -2), opts)
+    if (!inner.type) return inner
+    if (isArrayType(inner.type)) return {type: null, error: 'Nested arrays are not supported'}
+    return {type: arrayOf(inner.type)}
+  }
+
+  let match = value.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*<(.+)>$/s)
+  if (match) {
+    let typeName = normalizeTypeName(match[1])
+    if (typeName == 'array' && opts.allowArrayKeyword) return parseArrayType(match[2], opts)
+    if ((typeName == 'list' || typeName == 'array') && opts.allowNamedArray) return parseArrayType(match[2], opts)
+  }
+
+  let scalarType = normalizeScalarType(value)
+  return {type: scalarType}
+}
+
+function parseArrayType(innerType: string, opts: {allowArrayKeyword: boolean; allowBracketArray: boolean; allowNamedArray: boolean}): {type: FieldType | null; error?: string} {
+  let parsed = parseFieldType(innerType, opts)
+  if (!parsed.type) return parsed
+  if (isArrayType(parsed.type)) return {type: null, error: 'Nested arrays are not supported'}
+  return {type: arrayOf(parsed.type)}
+}
+
+function normalizeTypeName(rawType: string): string {
+  return rawType.trim().replace(/\s+/g, '_').toLowerCase()
+}
 
 export interface TemporalFieldMetadata {
   grain: TemporalGrain

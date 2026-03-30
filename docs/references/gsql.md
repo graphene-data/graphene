@@ -53,6 +53,16 @@ We can break down a `table` statement into three parts: base columns, join relat
 
 The base column set is simply a reflection of the underlying database table's schema. Similar to `create table` statements in regular SQL DDL, you list each column's name and data type.
 
+For array columns, GSQL uses `array<T>` as the standard syntax:
+
+```sql
+table events (
+  id BIGINT
+  tags array<string>
+  scores array<int64>
+)
+```
+
 ### Join relationships
 
 Join relationships in a `table` statement declare joins that can be used when querying them. This makes query writing easier and more foolproof.
