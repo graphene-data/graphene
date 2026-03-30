@@ -11,7 +11,7 @@ import {type AuthContext, auth, authTokenExchange} from './auth.ts'
 import {getChatSession} from './chats.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
 import {listNavFiles, renderPage, renderDynamicModule} from './pages.ts'
-import {proxyQuery} from './query.ts'
+import {queryEndpoint} from './query.ts'
 import {slackEvents, slackInstall, slackOauthCallback, slackStatus} from './slack.ts'
 import {registerMcpServer} from './mcp.ts'
 
@@ -41,7 +41,7 @@ export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions 
   app.get('/_api/chats/:id', getChatSession)
   app.get('/_api/pages/*', renderPage)
   app.get('/_api/dynamic/module', renderDynamicModule)
-  app.post('/_api/query', proxyQuery)
+  app.post('/_api/query', queryEndpoint)
   app.post('/_api/oauth2/token', authTokenExchange)
   app.get('/_api/slack/install', slackInstall)
   app.get('/_api/slack/status', slackStatus)

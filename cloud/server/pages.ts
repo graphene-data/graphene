@@ -62,7 +62,7 @@ export async function renderPage(req: FastifyRequest, reply: FastifyReply) {
   reply.type('text/javascript').send(code)
 }
 
-async function compileMd(markdown: string, filename: string, repoId: string): Promise<string> {
+export async function compileMd(markdown: string, filename: string, repoId: string): Promise<string> {
   let svelteSource = await mdsvexCompile(markdown, {
     filename,
     extensions: ['.md'],

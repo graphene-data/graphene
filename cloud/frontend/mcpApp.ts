@@ -1,11 +1,28 @@
 import {App, applyDocumentTheme, applyHostFonts, applyHostStyleVariables, type McpUiHostContext} from '@modelcontextprotocol/ext-apps'
-import type {CallToolResult} from '@modelcontextprotocol/sdk/types.js'
+import '../../core/ui/internal/telemetry.ts'
+import {setQueryFetcher} from '../../core/ui/internal/queryEngine.ts'
+// import './app.css'
+import {mount, unmount} from 'svelte'
+// eslint-disable-next-line svelte/no-svelte-internal
+import * as svelteInternal from 'svelte/internal/client'
 
-const mainEl = document.querySelector('.main') as HTMLElement
-const sidesInput = document.getElementById('sides-input') as HTMLInputElement
-const rollBtn = document.getElementById('roll-btn') as HTMLButtonElement
-const latestResult = document.getElementById('latest-result') as HTMLElement
 
+const componentModules = import.meta.glob('../../core/ui/components/*.svelte', {eager: true}) as Record<string, {default: typeof App}>
+const components = Object.fromEntries(
+  Object.entries(componentModules)
+    .map(([file, module]) => {
+      let name = file.split('/').pop()?.replace('.svelte', '')
+      return name ? [name, module.default] : null
+    })
+    .filter((entry): entry is [string, typeof App] => Array.isArray(entry)),
+)
+
+let graphene = window.$GRAPHENE ?? ({} as typeof window.$GRAPHENE)
+graphene.components = {...(graphene.components ?? {}), ...components} as any
+graphene.svelte = svelteInternal
+graphene.mount = mount
+
+const mainEl = document.querySelector('main') as HTMLElement
 const app = new App({name: 'Tool Playground App', version: '1.0.0'})
 
 function applyHostContext(ctx: McpUiHostContext) {
@@ -20,10 +37,6 @@ function applyHostContext(ctx: McpUiHostContext) {
   }
 }
 
-function showResult(result: CallToolResult) {
-  latestResult.textContent = JSON.stringify(result.structuredContent ?? result.content, null, 2)
-}
-
 app.onerror = (error) => {
   console.error(error)
 }
@@ -32,8 +45,24 @@ app.ontoolinput = (input) => {
   console.log('toolInput', input)
 }
 
-app.ontoolresult = (result) => {
-  showResult(result)
+let instance: any // svelte page component currently mounted
+
+app.ontoolresult = async (result) => {
+  console.log('toolResult', result)
+
+  let code = result.structuredContent?.compiled
+  if (code) {
+    if (instance) unmount(instance)
+    let blob = new Blob([code], {type: 'text/javascript'})
+    let url = URL.createObjectURL(blob)
+    try {
+      let mod = await import(/* @vite-ignore */ url)
+      URL.revokeObjectURL(url)
+      instance = mount(mod.default, {target: mainEl})
+    } catch (e) {
+      console.log(e)
+    }
+  }
 }
 
 app.onhostcontextchanged = applyHostContext
@@ -42,18 +71,27 @@ app.onteardown = async () => {
   return {}
 }
 
-rollBtn.addEventListener('click', async () => {
-  let sides = Number.parseInt(sidesInput.value, 10)
-  let safeSides = Number.isFinite(sides) ? Math.max(2, sides) : 20
+setQueryFetcher(async req => {
+  console.log('sendingQuery', req)
+  let res = await app.callServerTool({name: 'run-query', arguments: req})
+  console.log('queryResponse', res)
 
-  let result = await app.callServerTool({
-    name: 'roll-dice',
-    arguments: {sides: safeSides},
-  })
-
-  showResult(result)
-  await app.sendLog({level: 'info', data: {tool: 'roll-dice', result: result.structuredContent}})
+  if (res.isError) throw res.structuredContent
+  return res.structuredContent
 })
+
+// rollBtn.addEventListener('click', async () => {
+//   let sides = Number.parseInt(sidesInput.value, 10)
+//   let safeSides = Number.isFinite(sides) ? Math.max(2, sides) : 20
+
+//   let result = await app.callServerTool({
+//     name: 'roll-dice',
+//     arguments: {sides: safeSides},
+//   })
+
+//   showResult(result)
+//   await app.sendLog({level: 'info', data: {tool: 'roll-dice', result: result.structuredContent}})
+// })
 
 await app.connect()
 const context = app.getHostContext()

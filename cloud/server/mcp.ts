@@ -6,6 +6,8 @@ import {type FastifyReply, type FastifyRequest, type FastifyInstance} from 'fast
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import {z} from 'zod'
+import {compileMd} from './pages.ts'
+import {proxyQuery, type QueryBody} from './query.ts'
 
 const resourceUri = 'ui://tool-playground/mcp-app.html'
 
@@ -24,19 +26,53 @@ async function handleMcpRequest (req: FastifyRequest, reply: FastifyReply) {
 
   registerAppTool(
     server,
-    'roll-dice',
+    'render-md',
     {
-      title: 'Roll Dice',
-      description: 'Rolls a die with N sides and returns the random result.',
-      inputSchema: {sides: z.number().int().min(2).max(1000).default(20)},
-      outputSchema: z.object({sides: z.number(), value: z.number()}),
+      title: 'Render Markdown',
+      description: 'Takes in markdown and displays it to the user',
+      inputSchema: z.object({markdown: z.string().describe('Markdown content to render')}),
+      outputSchema: z.object({compiled: z.string()}),
       _meta: {ui: {resourceUri}},
     },
-    async ({sides = 20}): Promise<CallToolResult> => {
-      let value = Math.floor(Math.random() * sides) + 1
+    async ({markdown}): Promise<CallToolResult> => {
+      let compiled = await compileMd(markdown, 'dynamic.md', '1')
       return {
-        content: [{type: 'text', text: `Rolled 1-${sides}: ${value}`}],
-        structuredContent: {sides, value},
+        content: [{type: 'text', text: 'Returned code for viewing'}],
+        structuredContent: {compiled},
+      }
+    },
+  )
+
+  registerAppTool(
+    server,
+    'run-query',
+    {
+      title: 'Run a Query',
+      description: 'Runs a query with optional params and returns results',
+      inputSchema: z.object({
+        gsql: z.string().describe('GSQL query to execute'),
+        params: z.record(z.string(), z.any()).optional(),
+      }),
+      // outputSchema: z.object({
+      //   rows: z.array(z.any()),
+      //   fields: z.array(z.any()),
+      // }),
+      _meta: {ui: {resourceUri}},
+    },
+    async (body): Promise<CallToolResult> => {
+      try {
+        let res = await proxyQuery('organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d', body as QueryBody)
+        return {
+          content: [{type: 'text', text: 'Query results'}],
+          structuredContent: res as any,
+        }
+      } catch (e: any) {
+        let err = e?.cause || e
+        return {
+          isError: true,
+          content: [{type: 'text', text: err?.message || 'Query error'}],
+          structuredContent: err,
+        }
       }
     },
   )

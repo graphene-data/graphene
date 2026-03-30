@@ -3,24 +3,48 @@ import type {FastifyReply, FastifyRequest} from 'fastify'
 import {and, eq} from 'drizzle-orm'
 
 import {analyzeWorkspace} from '../../core/lang/analyze.ts'
-import {toSql} from '../../core/lang/core.ts'
+import {type GrapheneError, toSql} from '../../core/lang/core.ts'
 import {connections, files, repos, type Connection} from '../schema.ts'
 import {getDb} from './db.ts'
 import {decryptSecret} from './secrets.ts'
+import {type QueryResult} from '../../core/ui/component-utilities/types.ts'
 
-interface QueryBody {
+export interface QueryBody {
   sql?: string
   gsql?: string
   params?: Record<string, any>
   repoId: string
 }
 
-export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
-  let body = req.body as QueryBody
+class UserFacingError extends Error { }
+class DiagnosticError extends Error {
+  constructor(g: GrapheneError) {
+    super(g.message)
+    this.cause = g
+  }
+}
+
+export async function queryEndpoint(req: FastifyRequest, reply: FastifyReply) {
+  try {
+    let res = await proxyQuery(req.auth.orgId, req.body as QueryBody)
+    reply.send(res)
+  } catch (e) {
+    if (e instanceof UserFacingError) reply.status(400).send({message: e.message})
+    else if (e instanceof DiagnosticError) reply.status(400).send(e.cause)
+    else throw e
+  }
+}
+
+export async function proxyQuery(orgId: string, body: QueryBody): Promise<QueryResult> {
   let db = getDb()
 
-  let connInfo = await db.query.connections.findFirst({where: eq(connections.orgId, req.auth.orgId)})
-  if (!connInfo) return reply.code(400).send({message: 'No connection configured'})
+  let connInfo = await db.query.connections.findFirst({where: eq(connections.orgId, orgId)})
+  if (!connInfo) throw new UserFacingError('No connection configured')
+  if (!body.repoId) {
+    let repo = await db.query.repos.findFirst({where: eq(connections.orgId, orgId)})
+    body.repoId = repo?.id || ''
+  }
+
   let sql = body.sql
   let fields = [] as any[]
 
@@ -29,9 +53,9 @@ export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
     let repo = await db
       .select()
       .from(repos)
-      .where(and(eq(repos.id, body.repoId), eq(repos.orgId, req.auth.orgId)))
+      .where(and(eq(repos.id, body.repoId), eq(repos.orgId, orgId)))
       .then(rows => rows[0])
-    if (!repo) return reply.code(404).send({message: 'No repo configured'})
+    if (!repo) throw new UserFacingError('No repo configured')
 
     // Load up all gsql files into a graphene workspace
     let gsqlFiles = await db.query.files.findMany({where: and(eq(files.repoId, repo.id), eq(files.extension, 'gsql'))})
@@ -41,9 +65,7 @@ export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
     })
     let queries = resultFiles.find(f => f.path == 'input')?.queries || []
 
-    if (diagnostics.length) {
-      return reply.code(400).send(diagnostics[0])
-    }
+    if (diagnostics.length) throw diagnostics[0]
     if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
 
     // Then, turn the requested query into sql, and execute against the db
@@ -51,14 +73,14 @@ export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
     fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
   }
 
-  if (!sql) return reply.code(400).send({message: 'No sql or gsql provided'})
+  if (!sql) throw new UserFacingError('No sql or gsql provided')
 
   let conn = await getConnection(connInfo)
   let queryResults = await conn.runQuery(sql)
 
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  reply.send({rows: queryResults.rows, fields, sql})
+  return {rows: queryResults.rows, fields, sql}
 }
 
 async function getConnection(connInfo: Connection) {
