@@ -51,7 +51,7 @@ We can break down a `table` statement into three parts: base columns, join relat
 
 ### Base columns (required)
 
-The base column set is simply a reflection of the underlying database table's schema. Similar to `create table` statements in regular SQL DDL, you list each column's name and data type.
+The base column set is simply a reflection of the underlying database table's schema. Similar to `create table` statements in regular SQL DDL, you list each column's name and data type. Arrays use the standardized `array<T>` syntax, for example `array<string>`.
 
 ### Join relationships
 

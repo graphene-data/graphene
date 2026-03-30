@@ -1,11 +1,11 @@
-import {type FieldType, type Expr} from './types.ts'
+import {scalarType, type Expr} from './types.ts'
 
 export type TimestampUnit = 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'year'
 
 export type TemporalLiteral = {
   literal: string
   timeframe: 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second'
-  type: Extract<FieldType, 'date' | 'timestamp'>
+  type: ReturnType<typeof scalarType>
 }
 
 export function parseTemporalLiteral(value: string, expected: string): TemporalLiteral | null {
@@ -109,12 +109,12 @@ export function parseIntervalUnit(value: string): TimestampUnit | null {
 
 function buildResult(year: number, month: number, day: number, hour: number, minute: number, second: number, timeframe: TemporalLiteral['timeframe'], expected: string): TemporalLiteral {
   if (expected === 'date') {
-    return {literal: `${pad(year)}-${pad(month)}-${pad(day)}`, timeframe, type: 'date'}
+    return {literal: `${pad(year)}-${pad(month)}-${pad(day)}`, timeframe, type: scalarType('date')}
   }
   return {
     literal: `${pad(year)}-${pad(month)}-${pad(day)} ${pad(hour)}:${pad(minute)}:${pad(second)}`,
     timeframe,
-    type: 'timestamp',
+    type: scalarType('timestamp'),
   }
 }
 

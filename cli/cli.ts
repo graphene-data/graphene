@@ -8,6 +8,7 @@ import {fileURLToPath} from 'url'
 
 import {config, loadConfig} from '../lang/config.ts'
 import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import {formatType, parseFieldType} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
@@ -122,7 +123,7 @@ program
     let tableLabel = config.dialect == 'snowflake' ? String(tableArg || '').toLowerCase() : tableArg
     if (!cols.length) return console.log(`Table ${tableLabel} not found`)
     console.log(`table ${tableLabel} (`)
-    cols.forEach(col => console.log(`  ${col.name} ${col.dataType}`))
+    cols.forEach(col => console.log(`  ${col.name} ${normalizeSchemaDataType(col.dataType)}`))
     console.log(')')
   })
 
@@ -207,4 +208,9 @@ function validQuery(queries: Query[]): boolean {
 
 function findCaseInsensitive(values: string[], needle: string): string | null {
   return values.find(value => value.toLowerCase() == needle.toLowerCase()) || null
+}
+
+function normalizeSchemaDataType(rawType: string) {
+  let parsed = parseFieldType(rawType)
+  return parsed?.kind == 'array' ? formatType(parsed) : rawType
 }

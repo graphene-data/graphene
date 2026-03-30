@@ -221,12 +221,13 @@ errorProvider('queryEngine', () => {
   return Object.values(unique)
 })
 
-function evidenceType(type: string | undefined) {
-  if (type === 'string') return 'string'
-  if (type === 'number') return 'number'
-  if (type === 'boolean') return 'boolean'
-  if (type === 'date' || type === 'timestamp') return 'date'
-  console.warn('Unsupported evidence type ' + type)
+function evidenceType(type: string | {kind?: string} | undefined) {
+  let kind = typeof type == 'string' ? type : type?.kind
+  if (kind === 'string' || kind === 'array' || kind === 'record' || kind === 'json') return 'string'
+  if (kind === 'number' || kind === 'interval') return 'number'
+  if (kind === 'boolean') return 'boolean'
+  if (kind === 'date' || kind === 'timestamp') return 'date'
+  console.warn('Unsupported evidence type ' + String(kind))
   return 'string'
 }
 

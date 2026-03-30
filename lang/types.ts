@@ -9,7 +9,115 @@ declare module '@lezer/common' {
   }
 }
 
-export type FieldType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'array' | 'record'
+export type ScalarFieldTypeName = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'record'
+
+export interface ScalarFieldType {
+  kind: ScalarFieldTypeName
+}
+
+export interface ArrayFieldType {
+  kind: 'array'
+  elementType?: FieldType
+}
+
+export type FieldType = ScalarFieldType | ArrayFieldType
+
+export function scalarType(kind: ScalarFieldTypeName): ScalarFieldType {
+  return {kind}
+}
+
+export function arrayType(elementType?: FieldType): ArrayFieldType {
+  return {kind: 'array', elementType}
+}
+
+export function isType(type: FieldType, kind: ScalarFieldTypeName | 'array') {
+  return type.kind == kind
+}
+
+export function isArrayType(type: FieldType): type is ArrayFieldType {
+  return type.kind == 'array'
+}
+
+export function isSameType(left: FieldType, right: FieldType): boolean {
+  if (left.kind != right.kind) return false
+  if (left.kind != 'array' || right.kind != 'array') return true
+  if (!left.elementType || !right.elementType) return !left.elementType && !right.elementType
+  return isSameType(left.elementType, right.elementType)
+}
+
+export function formatType(type: FieldType): string {
+  if (type.kind != 'array') return type.kind
+  return type.elementType ? `array<${formatType(type.elementType)}>` : 'array'
+}
+
+export function parseFieldType(rawType: string): FieldType | null {
+  let source = rawType.trim()
+  if (!source) return null
+
+  if (source.endsWith('[]')) {
+    let elementType = parseFieldType(source.slice(0, -2))
+    return elementType ? arrayType(elementType) : null
+  }
+
+  let genericMatch = source.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*<(.+)>$/)
+  if (genericMatch) {
+    let outer = genericMatch[1].toLowerCase()
+    if (outer != 'array' && outer != 'list') return null
+    let elementType = parseFieldType(genericMatch[2])
+    return elementType ? arrayType(elementType) : null
+  }
+
+  let normalized = source
+    .replace(/\([^)]*\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase()
+  switch (normalized) {
+    case 'INT':
+    case 'INT64':
+    case 'NUMBER':
+    case 'INTEGER':
+    case 'NUMERIC':
+    case 'FLOAT':
+    case 'FLOAT64':
+    case 'DECIMAL':
+    case 'DOUBLE':
+    case 'BIGINT':
+    case 'SMALLINT':
+    case 'TINYINT':
+    case 'BYTEINT':
+    case 'BIGDECIMAL':
+      return scalarType('number')
+    case 'VARIANT':
+    case 'TEXT':
+    case 'STRING':
+    case 'VARCHAR':
+    case 'GEOGRAPHY':
+      return scalarType('string')
+    case 'BOOL':
+    case 'BOOLEAN':
+      return scalarType('boolean')
+    case 'DATE':
+      return scalarType('date')
+    case 'DATETIME':
+    case 'TIME':
+    case 'TIMESTAMP':
+    case 'TIMESTAMP_NTZ':
+    case 'TIMESTAMP_TZ':
+    case 'TIMESTAMP_LTZ':
+      return scalarType('timestamp')
+    case 'JSON':
+      return scalarType('json')
+    case 'INTERVAL':
+      return scalarType('interval')
+    case 'STRUCT':
+    case 'OBJECT':
+    case 'RECORD':
+      return scalarType('record')
+    default:
+      return null
+  }
+}
 
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {

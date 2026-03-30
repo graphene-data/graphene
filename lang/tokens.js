@@ -57,6 +57,7 @@ import {
   current,
   row,
   unbounded,
+  array,
 } from './parser.terms.js'
 
 // Map of lowercase keywords to their token IDs
@@ -118,6 +119,7 @@ const keywords = {
   current: current,
   row: row,
   unbounded: unbounded,
+  array: array,
 }
 
 export function specializeIdentifier(value) {

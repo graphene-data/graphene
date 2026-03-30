@@ -108,6 +108,23 @@
       "patterns": [
         {
           "name": "storage.type.gsql",
+          "begin": "(?i)\\b(ARRAY)\\b\\s*<",
+          "beginCaptures": {
+            "1": {"name": "storage.type.gsql"}
+          },
+          "end": ">",
+          "patterns": [
+            {"include": "#comments"},
+            {"include": "#strings"},
+            {"include": "#quoted-identifiers"},
+            {"include": "#numbers"},
+            {"include": "#types"},
+            {"include": "#operators"},
+            {"include": "#punctuation"}
+          ]
+        },
+        {
+          "name": "storage.type.gsql",
           "begin": "(?i)\\b(DOUBLE\\s+PRECISION|CHAR\\s+VARYING|VARCHAR|CHAR|NCHAR|NVARCHAR|DECIMAL|NUMERIC|NUMBER)\\b\\s*\\(",
           "beginCaptures": {
             "1": {"name": "storage.type.gsql"}

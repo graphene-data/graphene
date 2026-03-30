@@ -124,7 +124,7 @@ ComputedDef {
 
 // Allow temporal keywords as data types (date, timestamp, interval are valid SQL types)
 DataType {
-  Identifier | Kw<"date"> | Kw<"timestamp"> | Kw<"interval">
+  TypeExpr
 }
 
 // Ideally we could just use `expression` as the join condition, but that introduces ambiguity when parsing, since we don't know when the expression ends and new ComputedDef begins.
@@ -168,7 +168,20 @@ TypeCastExpression[@isGroup=Expression]<T> {
 
 // Allow temporal keywords as cast targets (date, timestamp, interval are valid SQL types)
 CastType {
+  TypeExpr
+}
+
+TypeExpr {
+  ScalarType |
+  ArrayType
+}
+
+ScalarType {
   Identifier | Kw<"date"> | Kw<"timestamp"> | Kw<"interval">
+}
+
+ArrayType {
+  Kw<"array"> "<" TypeExpr ">"
 }
 
 // baseExpression includes all expression starts that are NOT parentheses.

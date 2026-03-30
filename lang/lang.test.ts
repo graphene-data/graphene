@@ -7,6 +7,7 @@ import {expect} from 'vitest'
 import {setConfig} from './config.ts'
 import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile, loadWorkspace, getFile} from './core.ts'
 import {prepareEcommerceTables} from './testHelpers.ts'
+import {formatType} from './types.ts'
 import {trimIndentation} from './util.ts'
 
 const testTables = `
@@ -1267,6 +1268,36 @@ describe('lang', () => {
 
   it('reports diagnostic for invalid cast type', () => {
     expect('from users select cast(age as invalidtype)').toHaveDiagnostic(/Unsupported cast type: invalidtype/i)
+  })
+
+  it('supports array types in table schemas', () => {
+    updateFile(
+      `table events (
+        id int
+        tags array<string>
+      )`,
+      'events.gsql',
+    )
+    analyze()
+    expect(formatType(getTable('events')!.columns.find(c => c.name == 'tags')!.type)).toBe('array<string>')
+  })
+
+  it('supports array casts', () => {
+    expect('from users select cast(name as array<string>)').toRenderSql('select CAST(users.name AS VARCHAR[]) as col_0 from users as users')
+    expect('from users select name::array<string>').toRenderSql('select CAST(users.name AS VARCHAR[]) as col_0 from users as users')
+
+    setConfig({dialect: 'bigquery', root: ''})
+    expect('from users select cast(name as array<string>)').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from `users` as users')
+    expect('from users select name::array<string>').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from `users` as users')
+
+    setConfig({dialect: 'snowflake', root: ''})
+    expect('from users select cast(name as array<string>)').toRenderSql('SELECT CAST(users.name AS ARRAY) as col_0 FROM USERS as users', {preserveCase: true})
+    expect('from users select name::array<string>').toRenderSql('SELECT CAST(users.name AS ARRAY) as col_0 FROM USERS as users', {preserveCase: true})
+  })
+
+  it('reports diagnostics for nested array types', () => {
+    expect('table events (tags array<array<string>>)').toHaveDiagnostic(/Nested array types are not supported/i)
+    expect('from users select cast(name as array<array<string>>)').toHaveDiagnostic(/Nested array types are not supported/i)
   })
 
   it('supports cast in expressions', () => {
