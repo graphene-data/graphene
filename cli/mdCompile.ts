@@ -1,9 +1,9 @@
 import type {Plugin} from 'unified'
 
 import fs from 'fs'
+import JSON5 from 'json5'
 import path from 'path'
 import sanitizeHtml from 'sanitize-html'
-import JSON5 from 'json5'
 import {visit} from 'unist-util-visit'
 
 function escapeHtml(str: string) {

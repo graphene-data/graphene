@@ -235,7 +235,11 @@
   ]
 
   let sankeyNodes = Array.from(new Set(sankeyRows.flatMap(row => [row.source, row.target]))).map(name => ({name}))
-  let qualityColor = (quality: number) => quality >= 68 ? '#1e3a8a' : quality >= 60 ? '#2563eb' : '#60a5fa'
+  let qualityColor = (quality: number) => {
+    if (quality >= 68) return '#1e3a8a'
+    if (quality >= 60) return '#2563eb'
+    return '#60a5fa'
+  }
 
   let dayPeriods = ['Morning', 'Evening']
   let weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']

@@ -2,7 +2,7 @@ import './internal/telemetry.ts'
 import './internal/queryEngine.ts'
 import './internal/runSocket.ts'
 import './app.css'
-import {mount, unmount} from 'svelte'
+import {mount} from 'svelte'
 
 import AreaChart from './components/AreaChart.svelte'
 import BarChart from './components/BarChart.svelte'

@@ -1,6 +1,7 @@
-import {colorPalette} from './theme.ts'
-import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
 import type {EChartsConfig2, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
+
+import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
+import {colorPalette} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
 // A lot of defaulting happens in themes but there are some defaults themes can't handle, like when it depends on the shape of data being charted.
@@ -213,7 +214,11 @@ function valueAxisFormatting(config: NormalConfig, fields: Field[]) {
     if (!Number.isFinite(rounded)) return String(num)
     let magnitude = Math.floor(Math.log10(rounded))
     let decimals = Math.max(0, 2 - magnitude)
-    return rounded.toFixed(decimals).replace(/\.0+$/, '').replace(/(\.[0-9]*[1-9])0+$/, '$1').replace(/\.$/, '')
+    return rounded
+      .toFixed(decimals)
+      .replace(/\.0+$/, '')
+      .replace(/(\.[0-9]*[1-9])0+$/, '$1')
+      .replace(/\.$/, '')
   }
 
   // Number formatter for non-currency value axes (k/M/B/T + m/u/n for very small values).
@@ -402,7 +407,7 @@ function numericOffset(value: unknown, delta: number) {
   return typeof value === 'number' ? value + delta : delta
 }
 
-function formatAxisValue(formatter: Function, value: unknown) {
+function formatAxisValue(formatter: (value: unknown, index: number) => unknown, value: unknown) {
   return String(formatter(value, 0))
 }
 
@@ -463,9 +468,7 @@ function getFieldTypeFromMetadata(field?: Field) {
 }
 
 function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
-  let types = fieldNames
-    .map(name => getFieldTypeFromMetadata(findField(fields, name)))
-    .filter(type => type !== 'unknown')
+  let types = fieldNames.map(name => getFieldTypeFromMetadata(findField(fields, name))).filter(type => type !== 'unknown')
 
   if (types.some(type => type === 'date')) return 'time'
   if (types.some(type => type === 'number')) return 'value'

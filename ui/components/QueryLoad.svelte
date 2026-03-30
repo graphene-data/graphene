@@ -2,7 +2,7 @@
   import {onDestroy, onMount, type Snippet} from 'svelte'
   import type {GrapheneError} from '../../lang/types.ts'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
-    import Skeleton from './Skeleton.svelte'
+  import Skeleton from './Skeleton.svelte'
 
   interface Props {
     data: string | {rows?: any[]}
@@ -48,32 +48,6 @@
 {/if}
 
 <style>
-  .ql-skeleton {
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-    background: var(--chart-skeleton-bg, #f3f4f6);
-    border-radius: 4px;
-  }
-
-  .ql-skeleton__pulse {
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 100%);
-    animation: ql-pulse 1.4s ease-in-out infinite;
-    content: '';
-  }
-
-  @keyframes ql-pulse {
-    0% {
-      transform: translateX(-100%);
-    }
-    100% {
-      transform: translateX(100%);
-    }
-  }
-
   .empty-chart {
     width: 100%;
     padding: 12px;
