@@ -10,14 +10,14 @@ function seededRandom(seed: number) {
   }
 }
 
-test.beforeEach(async ({sharedPage}) => {
-  await sharedPage.setViewportSize({width: 680, height: 400})
+test.beforeEach(async ({page}) => {
+  await page.setViewportSize({width: 680, height: 400})
 })
 
-test('echarts loading state', async ({mount, chart, sharedPage, server}) => {
-  if (!sharedPage.url().endsWith('__ct')) await sharedPage.goto(`${server.url()}/__ct`)
+test('echarts loading state', async ({mount, chart, page, server}) => {
+  if (!page.url().endsWith('__ct')) await page.goto(`${server.url()}/__ct`)
 
-  await sharedPage.evaluate(() => {
+  await page.evaluate(() => {
     ;(window as any).__originalQuery = window.$GRAPHENE.query
     window.$GRAPHENE.query = () => {}
   })
@@ -26,7 +26,7 @@ test('echarts loading state', async ({mount, chart, sharedPage, server}) => {
     await mount('components/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: 'from flights select month, sum(dep_delay) as value'})
     await expect(chart.el).screenshot('echarts-loading-state')
   } finally {
-    await sharedPage.evaluate(() => {
+    await page.evaluate(() => {
       window.$GRAPHENE.query = (window as any).__originalQuery
       delete (window as any).__originalQuery
     })
