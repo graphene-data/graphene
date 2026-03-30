@@ -31,6 +31,10 @@ import TextInput from './components/TextInput.svelte'
 import ErrorChart from './internal/ErrorDisplay.svelte'
 import LocalApp from './internal/LocalApp.svelte'
 
+// Having a global $GRAPHENE allows us to provide an api that pages can use without having to import and bundle a bunch of components.
+// That means that as you navigate around, we only have to a very small amount of js for the page itself, and the bulk of the container and component
+// code only has to load once.
+// In theory we could do this with Vite splitting, but then we have a hard dependency on the exact format vite uses. Plus I find the easier to understand.
 window.$GRAPHENE = window.$GRAPHENE || {}
 
 let nextRenderId = 0
