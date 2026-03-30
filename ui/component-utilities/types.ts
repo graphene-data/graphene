@@ -1,19 +1,14 @@
-import type {EChartsOption} from 'echarts'
-import {type FieldMetadata, type GrapheneError} from '../../lang/types.ts'
+import type {FieldMetadata, GrapheneError} from '../../lang/types.ts'
 
 type SingleOrArray<T> = T | T[]
-type OptionItem<T> = T extends Array<infer U> ? U : T
-type FallbackOption<K extends keyof EChartsOption> = OptionItem<NonNullable<EChartsOption[K]>> extends infer T
-  ? unknown extends T ? Record<string, any> : T
-  : never
 
-type EChartsSeries = FallbackOption<'series'>
-type EChartsXAxis = FallbackOption<'xAxis'>
-type EChartsYAxis = FallbackOption<'yAxis'>
-type EChartsDataset = FallbackOption<'dataset'>
-type EChartsGrid = FallbackOption<'grid'>
-type EChartsLegend = FallbackOption<'legend'>
-type EChartsTitle = FallbackOption<'title'>
+type EChartsSeries = Record<string, any>
+type EChartsXAxis = Record<string, any>
+type EChartsYAxis = Record<string, any>
+type EChartsDataset = Record<string, any>
+type EChartsGrid = Record<string, any>
+type EChartsLegend = Record<string, any>
+type EChartsTitle = Record<string, any>
 type EChartsEncode = Record<string, any>
 
 export interface QueryResult {
@@ -53,8 +48,16 @@ export type SeriesWithGroupingHint = Omit<EChartsSeries, 'encode'> & {
   }
 }
 
-export type EChartsConfig2 = Omit<EChartsOption, 'series'> & {
+export type EChartsConfig2 = {
   series?: SingleOrArray<SeriesWithGroupingHint>
+  xAxis?: SingleOrArray<EChartsXAxis>
+  yAxis?: SingleOrArray<EChartsYAxis>
+  dataset?: SingleOrArray<EChartsDataset>
+  grid?: SingleOrArray<EChartsGrid>
+  legend?: SingleOrArray<EChartsLegend>
+  title?: SingleOrArray<EChartsTitle>
+  color?: string[]
+  [key: string]: any
 }
 
 // Config shape after enrich() normalization runs.

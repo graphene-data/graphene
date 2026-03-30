@@ -1,3 +1,4 @@
+// @ts-expect-error ECharts CJS typings don't expose named exports cleanly, but bundling works.
 import {registerTheme} from 'echarts'
 
 // ── Color tokens ────────────────────────────────────────────────────────
@@ -13,26 +14,16 @@ export const colorPalette = [
 ]
 
 let clr = {
-  white:      '#ffffff',
+  white: '#ffffff',
   tooltipTxt: '#111827',
-  textDark:   '#374151',
-  textMid:    '#6b7280',
-  textLight:  '#9ca3af',
+  textDark: '#374151',
+  textMid: '#6b7280',
+  textLight: '#9ca3af',
   lineSubtle: '#d1d5db',
-  splitLine:  '#dde0e4',
-  border:     '#e5e7eb',
-  seqStart:   '#e4eff3',
-  statusBad:  '#B87470', // muted brick red — in-theme with Fjord Dusk's cool desaturation
-}
-
-// ── Shared per-chart overrides ─────────────────────────────────────────
-let noLegendGrid = {top: 40}
-let valueAxisVisible = {type: 'value', axisLine: {show: true}}
-let parallelAxisBase = {
-  nameLocation: 'start',
-  nameTextStyle: {color: clr.textLight},
-  axisLabel:     {color: clr.textLight},
-  axisLine:      {lineStyle: {color: clr.border}},
+  splitLine: '#dde0e4',
+  border: '#e5e7eb',
+  seqStart: '#e4eff3',
+  statusBad: '#B87470', // muted brick red — in-theme with Fjord Dusk's cool desaturation
 }
 
 registerTheme('graphene-theme', {
@@ -49,26 +40,26 @@ registerTheme('graphene-theme', {
   },
 
   categoryAxis: {
-    axisLine:  {lineStyle: {color: clr.border}},
+    axisLine: {lineStyle: {color: clr.border}},
     axisLabel: {color: clr.textLight},
-    axisTick:  {show: false},
+    axisTick: {show: false},
     splitLine: {show: false, lineStyle: {color: clr.splitLine, type: 'dashed'}},
   },
   valueAxis: {
-    axisLine:  {show: false, lineStyle: {color: clr.border}},
+    axisLine: {show: false, lineStyle: {color: clr.border}},
     axisLabel: {
       color: clr.textLight,
-      formatter: function(val) {
+      formatter: function (val) {
         if (val === 0) return '0'
         let abs = Math.abs(val)
         if (abs < 0.01) return val.toExponential(1)
-        if (abs >= 1e9)  return (val / 1e9).toPrecision(2).replace(/\.0$/, '') + 'B'
-        if (abs >= 1e6)  return (val / 1e6).toPrecision(2).replace(/\.0$/, '') + 'M'
-        if (abs >= 1e3)  return (val / 1e3).toPrecision(2).replace(/\.0$/, '') + 'K'
+        if (abs >= 1e9) return (val / 1e9).toPrecision(2).replace(/\.0$/, '') + 'B'
+        if (abs >= 1e6) return (val / 1e6).toPrecision(2).replace(/\.0$/, '') + 'M'
+        if (abs >= 1e3) return (val / 1e3).toPrecision(2).replace(/\.0$/, '') + 'K'
         return String(val)
       },
     },
-    axisTick:  {show: false},
+    axisTick: {show: false},
     splitLine: {lineStyle: {color: clr.splitLine}},
     splitNumber: 3,
   },
@@ -125,18 +116,18 @@ registerTheme('graphene-theme', {
   },
   boxplot: {
     itemStyle: {
-      color:       clr.seqStart,
+      color: clr.seqStart,
       borderColor: colorPalette[0],
       borderWidth: 1.5,
     },
   },
   candlestick: {
     itemStyle: {
-      color:        colorPalette[2], // up candle   — sage green
-      color0:       clr.statusBad, // down candle — brick red
-      borderColor:  colorPalette[2],
+      color: colorPalette[2], // up candle   — sage green
+      color0: clr.statusBad, // down candle — brick red
+      borderColor: colorPalette[2],
       borderColor0: clr.statusBad,
-      borderWidth:  1.5,
+      borderWidth: 1.5,
     },
   },
   gauge: {
@@ -149,7 +140,8 @@ registerTheme('graphene-theme', {
     detail: {valueAnimation: true, fontSize: 24, color: clr.textDark, offsetCenter: [0, '0%']},
   },
   funnel: {
-    left: '10%', width: '80%',
+    left: '10%',
+    width: '80%',
     label: {position: 'inside', color: clr.white, fontSize: 12},
     itemStyle: {borderColor: clr.white, borderWidth: 1},
   },

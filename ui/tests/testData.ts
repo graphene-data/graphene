@@ -9,7 +9,10 @@ export function singleDim(): TableRows {
   })
 
   let rows = Object.keys(result).map(category => ({category, value: result[category]}))
-  let fields: Field[] = [{name: 'category', type: 'string'}, {name: 'value', type: 'number', metadata: {units: 'usd'}}]
+  let fields: Field[] = [
+    {name: 'category', type: 'string'},
+    {name: 'value', type: 'number', metadata: {units: 'usd'}},
+  ]
   return withEvidenceTypes(rows, fields)
 }
 
@@ -113,7 +116,10 @@ export function denseTimeseries(points = 365): TableRows {
 
 export function categoricalSeries(count: number): TableRows {
   let rows = Array.from({length: count}, (_, index) => ({category: `Bucket ${index + 1}`, value: 100 + Math.sin(index / 2) * 20}))
-  let fields: Field[] = [{name: 'category', type: 'string'}, {name: 'value', type: 'number', metadata: {units: 'count'}}]
+  let fields: Field[] = [
+    {name: 'category', type: 'string'},
+    {name: 'value', type: 'number', metadata: {units: 'count'}},
+  ]
   return withEvidenceTypes(rows, fields)
 }
 
@@ -135,7 +141,10 @@ export function tableDataForPagination(count = 15): TableRows {
     item: `Row ${index + 1}`,
     value: index + 1,
   }))
-  let fields: Field[] = [{name: 'item', type: 'string'}, {name: 'value', type: 'number', metadata: {units: 'count'}}]
+  let fields: Field[] = [
+    {name: 'item', type: 'string'},
+    {name: 'value', type: 'number', metadata: {units: 'count'}},
+  ]
   return withEvidenceTypes(rows, fields)
 }
 

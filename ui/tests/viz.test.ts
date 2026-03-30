@@ -15,6 +15,7 @@ test.beforeEach(async ({page}) => {
 })
 
 test('echarts loading state', async ({mount, chart, page, server}) => {
+  expectConsoleError('Failed to load resource')
   if (!page.url().endsWith('__ct')) await page.goto(`${server.url()}/__ct`)
 
   await page.evaluate(() => {
@@ -23,7 +24,7 @@ test('echarts loading state', async ({mount, chart, page, server}) => {
   })
 
   try {
-    await mount('components/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: 'from flights select month, sum(dep_delay) as value'})
+    await mount('components/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: 'flights'})
     await expect(chart.el).screenshot('echarts-loading-state')
   } finally {
     await page.evaluate(() => {
@@ -34,7 +35,16 @@ test('echarts loading state', async ({mount, chart, page, server}) => {
 })
 
 test('echarts empty state', async ({mount, chart}) => {
-  await mount('components/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: {rows: [], fields: [{name: 'month', type: 'string'}, {name: 'value', type: 'number'}]}})
+  await mount('components/ECharts.svelte', {
+    config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}},
+    data: {
+      rows: [],
+      fields: [
+        {name: 'month', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    },
+  })
   await expect(chart.el).screenshot('echarts-empty-state')
 })
 
@@ -85,8 +95,15 @@ test('bar chart formats very small values on y axis', async ({mount, chart}) => 
 })
 
 test('bar chart with just 0,1 has sensible y axis ticks', async ({mount, chart}) => {
-  let rows = [{category: 'A', count: 1}, {category: 'B', count: 0}, {category: 'C', count: 1}]
-  let fields = [{name: 'category', type: 'string'}, {name: 'count', type: 'number', metadata: {units: 'count'}}]
+  let rows = [
+    {category: 'A', count: 1},
+    {category: 'B', count: 0},
+    {category: 'C', count: 1},
+  ]
+  let fields = [
+    {name: 'category', type: 'string'},
+    {name: 'count', type: 'number', metadata: {units: 'count'}},
+  ]
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'category', y: 'count'})
   await expect(chart.el).screenshot('bar-chart-0-to-1')
 })
@@ -106,7 +123,7 @@ test('stacked area chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('area-chart-stacked')
 })
 
-test('line chart timeseries', async ({mount, page, chart}) => {
+test('line chart timeseries', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(chart.el).screenshot('line-chart-timeseries')
 })
@@ -126,9 +143,7 @@ test('pie chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('pie-chart')
 })
 
-
-test.skip('can provide a list of colors for different series', async () => {
-})
+test.skip('can provide a list of colors for different series', async () => {})
 
 test.skip('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: timeseriesWithDateSeries(), x: 'category', y: 'sales', series: 'quarter'})

@@ -10,6 +10,7 @@
     "test-one": "node ../scripts/turboTest.js"
   },
   "dependencies": {
+    "@fontsource/source-sans-3": "^5.2.9",
     "@graphenedata/html2canvas": "^1.4.1",
     "@tidyjs/tidy": "^2.5.2",
     "chroma-js": "2.4.2",

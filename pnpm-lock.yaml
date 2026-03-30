@@ -250,6 +250,9 @@ importers:
 
   ui:
     dependencies:
+      '@fontsource/source-sans-3':
+        specifier: ^5.2.9
+        version: 5.2.9
       '@graphenedata/html2canvas':
         specifier: ^1.4.1
         version: 1.4.1
@@ -950,6 +953,9 @@ packages:
   '@eslint/plugin-kit@0.6.1':
     resolution: {integrity: sha512-iH1B076HoAshH1mLpHMgwdGeTs0CYwL0SPMkGuSebZrwBp16v415e9NZXg2jtrqPVQjf6IANe2Vtlr5KswtcZQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@fontsource/source-sans-3@5.2.9':
+    resolution: {integrity: sha512-u3ymIq4rfmCCyB9MEw/sFR5lPVJ1yTNXmIMbUz+9kVCFIHvNtfzXOEBuvkg3Tk0zhmioPeJ28ZK5smZ7TurezQ==}
 
   '@google-cloud/bigquery@8.2.0':
     resolution: {integrity: sha512-hxKxtmCEd9z61OxagcTosZksTRX0CqNGdnF2uNXH7c+0uWHC/o9QseAxrAY9qImoo9jsaw4rzDI9dLc/a5Jgww==}
@@ -4223,6 +4229,8 @@ snapshots:
     dependencies:
       '@eslint/core': 1.1.1
       levn: 0.4.1
+
+  '@fontsource/source-sans-3@5.2.9': {}
 
   '@google-cloud/bigquery@8.2.0':
     dependencies:
