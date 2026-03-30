@@ -213,6 +213,10 @@ function inferFunctionFieldMetadata(name: string, overload: Overload, args: Expr
   return {temporal}
 }
 
+// date_trunc part syntax varies by dialect:
+// - BigQuery commonly uses bare keywords like `month`, plus special values like `isoweek` and `week(monday)`.
+// - DuckDB and Snowflake typically pass the part as a string literal like `'month'`.
+// We normalize the supported forms into our shared grain enum and intentionally drop any finer detail.
 function inferTemporalMetadata(rawPart: string): TemporalFieldMetadata | undefined {
   let normalized = rawPart
     .trim()
