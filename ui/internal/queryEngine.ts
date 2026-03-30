@@ -5,7 +5,7 @@ import type {FieldType, GrapheneError} from '../../lang/types.ts'
 
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
-import {getActivePageInputs} from './pageInputs.svelte.ts'
+import {getActivePageInputs, type ParamSnapshot} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
 
 type ResultHandler = (res: QueryResult | void) => void
@@ -21,9 +21,20 @@ interface QueryNode {
   error?: GrapheneError
 }
 
+export interface QueryRequest {
+  params: ParamSnapshot
+  gsql: string
+  hashes: string[]
+  repoId: string
+}
+export type QueryFetcher = (req: QueryRequest) => Promise<QueryResult>
+
 let runPending: Promise<void> | null = null
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
+
+let queryFetcher: QueryFetcher = fetchWithCache
+export const setQueryFetcher = f => (queryFetcher = f)
 
 // QueryId is a string we construct to make it easier to figure out which chart in the md is associated with which chart in the ui
 // Right now it's just a combination of the data and any field attributes, but that seems to be good enough.
@@ -37,13 +48,13 @@ function buildQueryId(source: string | undefined, fields: Map<string, string | s
   return `Query (data="${source}"${fieldIds.length ? ` ${fieldIds.join(' ')}` : ''})`
 }
 
+// Called by GrapheneQuery tags to register a named query on the page
 function registerQuery(name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
   queries.push({name, contents, loading: false, fields: new Map()})
 }
 
-const getRoutePath = () => (typeof window === 'undefined' ? '/' : window.location.pathname || '/')
-
+// Called by viz components to request a particular query of data
 function query(source: string, fields: Record<string, string | string[]>, callback: ResultHandler) {
   // using Map here because it preserves the order in which we add fields to the select, which we use when we get the result.
   let map = new Map(Object.entries(fields))
@@ -73,67 +84,59 @@ function resetQueryEngine() {
   getActivePageInputs().reset()
 }
 
+// Actually runs a given query that some frontend component is listening to.
+// This is pretty dumb at the moment, it simply concats all code fenced queries as table statements, then appends the actual query at the end.
 async function runNode(n: QueryNode) {
   if (!n.callback) throw new Error('running node nobody is listening to')
-  let callback = n.callback
-  let finish = (result: QueryResult) => {
-    callback(result)
-    n.loading = false
-  }
 
-  callback()
+  n.callback() // notifies listeners we're back in the loading state
   n.loading = true
   n.error = undefined
 
-  let queryId = n.queryId || buildQueryId(n.source, n.fields)
-  n.queryId = queryId
-
+  // build up the request body. Hashes is the list of ETag hashes currently in our browser cache. We send all of them,
+  // letting the server determine the hash of this particular query, and whether data we already have is acceptable.
   let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
   let gsql = [...tables.map(q => `table ${q.name} as (${q.contents})`), n.contents].join('\n')
   let params = getActivePageInputs().getParams()
 
-  let error: GrapheneError | undefined
+  try {
+    let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId})
+    let result = translateData(res, n)
+    if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
+    n.callback(res)
+  } catch (e) {
+    let err = typeof e == 'string' ? new Error(e) : (e as Error)
+    let grapheneError = err as GrapheneError
+    n.error = {...grapheneError, queryId: n.queryId || grapheneError.queryId, message: err.message, stack: err.stack}
+    n.callback({rows: [], fields: [], error: n.error})
+  } finally {
+    n.loading = false
+  }
+}
+
+async function fetchWithCache(req: QueryRequest): Promise<QueryResult> {
   let response = await fetch('/_api/query', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({params, gsql, hashes, routePath: getRoutePath(), repoId: window.$GRAPHENE?.repoId}),
-  }).catch(e => (error = e))
-
-  // network error
-  if (error) {
-    let err = error instanceof Error ? error : new Error(String(error))
-    n.error = {queryId, message: err.message, stack: err.stack}
-    finish({rows: [], fields: [], error: n.error})
-    return
-  }
-
-  // cache hit. Read data out of the browser cache
+    body: JSON.stringify(req),
+  })
   let hash = response.headers.get('ETag') || ''
+
+  // cache hit. Read data out of the browser cache and return it
   if (response.status == 304) {
-    let body = await cacheRead(hash)
-    let result = translateData(body, n)
-    if (n.source) queryResults[n.source] = {rows: result.rows, fields: body.fields}
-    finish(result)
-    return
+    return await cacheRead(hash)
   }
 
-  // cache miss. write data into the cache
-  if (response.ok) {
-    cacheWrite(hash, response.clone())
-    let body = await response.json()
-    let fields = body.fields
-    let result = translateData(body, n)
-    if (n.source) queryResults[n.source] = {rows: result.rows, fields}
-    finish(result)
-    return
+  if (!response.ok) {
+    let body = (await response.json()) as GrapheneError
+    let err = new Error(body.message)
+    Object.assign(err, body)
+    throw err
   }
 
-  // otherwise, the query failed
-  error = (await response.json()) as GrapheneError
-  error.queryId ||= queryId
-  n.error = error
-  finish({rows: [], fields: [], error: n.error})
+  cacheWrite(hash, response.clone())
+  return await response.json()
 }
 
 function runAll() {
@@ -152,6 +155,7 @@ async function _runAll() {
   )
 }
 
+// This translates results we got back from the server into the format any frontend code expects.
 export function translateData(data: any, node: QueryNode) {
   let rows = data.rows || []
   let fields: Field[] = []
