@@ -863,7 +863,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let targetType = txt(typeNode).toUpperCase()
       let resultType = convertDataType(targetType)
       if (!resultType) return diag(typeNode, `Unsupported cast type: ${targetType.toLowerCase()}`, {sql: 'NULL', type: 'error'})
-      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: resultType, fieldMetadata: preserveTemporalMetadata(e, resultType)}
+      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: resultType, fieldMetadata: preserveTemporalMetadataThroughCast(e, resultType)}
     }
 
     case 'ExtractExpression': {
@@ -976,7 +976,7 @@ function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: Sy
   return {...expr, sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
 }
 
-function preserveTemporalMetadata(expr: Expr, resultType: FieldType) {
+function preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType) {
   if (!expr.fieldMetadata?.temporal) return
   if (resultType != 'date' && resultType != 'timestamp') return
   return expr.fieldMetadata
