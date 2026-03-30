@@ -875,6 +875,55 @@ describe('lang', () => {
     expect("from events select date_trunc('month', event_date)").toRenderSql("select DATE_TRUNC('month',EVENTS.EVENT_DATE) as COL_0 from EVENTS as EVENTS")
   })
 
+  it('infers temporal grain from date_trunc across dialects', () => {
+    updateFile('table events (event_date date)', 'events.gsql')
+
+    setConfig({root: '', bigquery: {}})
+    let [bigQuery] = analyze('from events select date_trunc(event_date, month) as month_start')
+    expect(bigQuery.fields[0].fieldMetadata).toEqual({temporal: {grain: 'month'}})
+
+    setConfig({root: ''})
+    let [duckDb] = analyze("from events select date_trunc('quarter', event_date) as quarter_start")
+    expect(duckDb.fields[0].fieldMetadata).toEqual({temporal: {grain: 'quarter'}})
+
+    setConfig({dialect: 'snowflake', root: ''})
+    let [snowflake] = analyze("from events select date_trunc('year', event_date) as year_start")
+    expect(snowflake.fields[0].fieldMetadata).toEqual({temporal: {grain: 'year'}})
+  })
+
+  it('propagates temporal grain through refs and drops it for reshaping expressions', () => {
+    updateFile(
+      `
+      table events (
+        event_date date
+        month_start: date_trunc('month', event_date)
+      )
+    `,
+      'events.gsql',
+    )
+
+    let [throughRef] = analyze('from events select month_start')
+    expect(throughRef.fields[0].fieldMetadata).toEqual({temporal: {grain: 'month'}})
+
+    let [throughCast] = analyze('from events select cast(month_start as date) as month_date')
+    expect(throughCast.fields[0].fieldMetadata).toEqual({temporal: {grain: 'month'}})
+
+    let [reshaped] = analyze('from events select extract(year from month_start) as year_num')
+    expect(reshaped.fields[0].fieldMetadata).toBeUndefined()
+  })
+
+  it('drops temporal grain on set operations when branches disagree', () => {
+    updateFile('table events (event_date date)', 'events.gsql')
+
+    let [query] = analyze(`
+      from events select date_trunc('month', event_date) as bucket
+      union all
+      from events select date_trunc('year', event_date) as bucket
+    `)
+
+    expect(query.fields[0].fieldMetadata).toBeUndefined()
+  })
+
   it('supports extract expressions', () => {
     expect('from users select extract(hour from created_at)').toRenderSql('select extract(hour from users.created_at) as col_0 from users as users')
   })
