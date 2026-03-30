@@ -1,7 +1,7 @@
 node_modules
 tests/results
 dist
-
+distMcp
 .pglite
 .env
 

@@ -1,4 +1,6 @@
 import cookie from '@fastify/cookie'
+import cors from '@fastify/cors'
+import formbody from '@fastify/formbody'
 import staticPlugin from '@fastify/static'
 import fastify, {type FastifyLoggerOptions} from 'fastify'
 import rawBody from 'fastify-raw-body'
@@ -11,16 +13,20 @@ import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, git
 import {listNavFiles, renderPage, renderDynamicModule} from './pages.ts'
 import {proxyQuery} from './query.ts'
 import {slackEvents, slackInstall, slackOauthCallback, slackStatus} from './slack.ts'
+import {registerMcpServer} from './mcp.ts'
 
 export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
   let app = fastify({logger})
   app.register(cookie, {})
+  app.register(formbody)
+  app.register(cors) // TODO scope this down to just the right endpoints
   app.register(rawBody, {global: false, runFirst: true, encoding: 'utf8'})
 
   app.decorateRequest('auth', null as unknown as AuthContext)
   app.addHook('preHandler', async (req, reply) => {
     let route = req.routeOptions.url
     if (!route || !route.startsWith('/_api')) return
+    if (route === '/_api/mcp') return
     if (route === '/_api/github/webhook') return
     if (route === '/_api/slack/events') return
     if (route === '/_api/oauth2/token') return
@@ -29,6 +35,7 @@ export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions 
   })
 
   app.get('/_health', () => ({ok: true}))
+  registerMcpServer(app)
 
   app.get('/_api/nav/:repoSlug', listNavFiles)
   app.get('/_api/chats/:id', getChatSession)

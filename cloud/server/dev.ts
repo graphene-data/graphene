@@ -36,7 +36,7 @@ interface DevServerHandle {
 }
 
 export async function startDevServer({realAuth, port, project = 'flights', logger, ngrok}: DevArgs): Promise<DevServerHandle> {
-  port = port || Number(process.env.GRAPHENE_PORT) + 1 || 4000
+  port = port || Number(process.env.GRAPHENE_PORT) + 1 || 4001
 
   let fastify = createServer(false, logger)
   await fastify.register(middie, {hook: 'onRequest'})
