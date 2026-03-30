@@ -14,6 +14,7 @@ const EvidenceType = {
  * @property {string} title
  * @property {string} type
  * @property {Object} evidenceColumnType
+ * @property {Object | undefined} fieldMetadata
  * @property {ReturnType<typeof lookupColumnFormat>} format
  * @property {ReturnType<typeof getColumnUnitSummary>} columnUnitSummary
  */
@@ -49,6 +50,7 @@ export default function getColumnSummary(data, returnType = 'object') {
       title: formatTitle(colName, format),
       type,
       evidenceColumnType,
+      fieldMetadata: evidenceColumnType.fieldMetadata,
       format,
       columnUnitSummary,
     }

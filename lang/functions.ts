@@ -8,7 +8,7 @@ import {config} from './config.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
-import {type Expr, type FieldType, type Scope} from './types.ts'
+import {type Expr, type FieldMetadata, type FieldType, type Scope, type TemporalFieldMetadata, type TemporalGrain} from './types.ts'
 import {txt} from './util.ts'
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
@@ -153,12 +153,14 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   }
   let fnName = overload.sqlName || name
   let sql = `${fnName}(${args.map(a => a.sql).join(',')})`
+  let fieldMetadata = inferFunctionFieldMetadata(name, overload, args, argNodes)
   return {
     sql,
     type: returnType,
     isAgg,
     canWindow,
     fanout: normalizeExprFanout({path: isAgg ? undefined : fanout.path, sensitivePaths: fanoutSensitivePaths, conflict: fanoutConflict}),
+    fieldMetadata,
   }
 }
 
@@ -197,4 +199,48 @@ function analyzePercentile(node: SyntaxNode, args: Expr[], digits: string, scope
       conflict: args.some(a => a.fanout?.conflict),
     }),
   }
+}
+
+function inferFunctionFieldMetadata(name: string, overload: Overload, args: Expr[], argNodes: SyntaxNode[]): FieldMetadata | undefined {
+  if (name != 'date_trunc') return
+
+  let partIdx = overload.params.findIndex(param => param.name.includes('part'))
+  if (partIdx < 0 || !args[partIdx]) return
+  if (args[partIdx].type != 'string' && args[partIdx].type != 'sql native') return
+
+  let temporal = inferTemporalMetadata(txt(argNodes[partIdx]))
+  if (!temporal) return
+  return {temporal}
+}
+
+// date_trunc part syntax varies by dialect:
+// - BigQuery commonly uses bare keywords like `month`, plus special values like `isoweek` and `week(monday)`.
+// - DuckDB and Snowflake typically pass the part as a string literal like `'month'`.
+// We normalize the supported forms into our shared grain enum and intentionally drop any finer detail.
+function inferTemporalMetadata(rawPart: string): TemporalFieldMetadata | undefined {
+  let normalized = rawPart
+    .trim()
+    .replace(/^['"]|['"]$/g, '')
+    .toLowerCase()
+  if (!normalized) return
+
+  if (/^week(?:\([a-z]+\))?$/.test(normalized) || normalized == 'isoweek') return {grain: 'week'}
+  if (normalized == 'isoyear') return {grain: 'year'}
+
+  let grain = normalizeTemporalGrain(normalized)
+  if (!grain) return
+  return {grain}
+}
+
+function normalizeTemporalGrain(value: string): TemporalGrain | undefined {
+  let grains: Record<string, TemporalGrain> = {
+    year: 'year',
+    quarter: 'quarter',
+    month: 'month',
+    day: 'day',
+    hour: 'hour',
+    minute: 'minute',
+    second: 'second',
+  }
+  return grains[value]
 }

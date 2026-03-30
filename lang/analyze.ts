@@ -32,6 +32,7 @@ import {
   type Scope,
   type Location,
   type NavigationSymbolKind,
+  type TemporalFieldMetadata,
 } from './types.ts'
 import {buildFrame, txt, getFile, getPosition, toRelativePath} from './util.ts'
 
@@ -169,7 +170,7 @@ function analyzeView(table: Table) {
   if (!query) return
 
   let viewCols = query.fields.map(f => {
-    let col = {name: f.name, type: f.type, metadata: f.metadata, location: f.definitionLocation} as Column
+    let col = {name: f.name, type: f.type, metadata: f.metadata, fieldMetadata: f.fieldMetadata, location: f.definitionLocation} as Column
     if (f.definitionLocation) {
       col.symbolId = symbolId('column', f.definitionLocation, `${table.symbolId}:${f.name}`)
       getFile(table.syntaxNode!).navigation.symbols.push({id: col.symbolId, kind: 'column', name: col.name, location: f.definitionLocation, tableId: table.symbolId})
@@ -187,7 +188,9 @@ export function analyzeTableFully(table: Table) {
   table.columns.forEach(c => {
     if (!c.exprNode) return
     let expr = analyzeExpr(c.exprNode, scope)
+    c.type = expr.type
     c.isAgg = expr.isAgg
+    c.fieldMetadata = expr.fieldMetadata
     analyzeComputedFieldExpr(c.exprNode, expr)
   })
   table.joins.forEach(j => {
@@ -224,6 +227,7 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         sql: expr.sql,
         type: expr.type,
         metadata: col.metadata,
+        fieldMetadata: expr.fieldMetadata,
         fanout: expr.fanout,
         definitionLocation: col.location,
       })
@@ -233,6 +237,7 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         sql: `${alias}.${col.name}`,
         type: col.type,
         metadata: col.metadata,
+        fieldMetadata: col.fieldMetadata,
         fanout: normalizeExprFanout({path: scope.fanoutPath}),
         definitionLocation: col.location,
       })
@@ -257,7 +262,7 @@ function analyzeQueryExpression(queryNode: SyntaxNode, outerCtes?: Table[]): Que
     let name = txt(cteDef.getChild('Alias'))
     let query = analyzeQuery(cteDef.getChild('QueryExpression')!, scope.otherTables)
     if (!query) return
-    let columns = query.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
+    let columns = query.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata, fieldMetadata: f.fieldMetadata}) as Column)
     let cte: CteTable = {name, type: 'cte', tablePath: name, columns, joins: [], query}
     ctes.set(name, cte)
     scope.otherTables!.push(cte)
@@ -296,7 +301,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
     if (tablePrimary.getChild('SubqueryExpression')) {
       let subquery = analyzeQuery(tablePrimary.getChild('SubqueryExpression')!.getChild('QueryExpression')!, scope.otherTables)
       if (!subquery) return
-      let columns = subquery.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
+      let columns = subquery.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata, fieldMetadata: f.fieldMetadata}) as Column)
       table = {name: 'subquery', type: 'subquery', tablePath: alias, columns, joins: [], query: subquery}
       alias ||= 'subquery'
     }
@@ -346,6 +351,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
         sql: expr.sql,
         type: expr.type,
         isAgg: expr.isAgg,
+        fieldMetadata: expr.fieldMetadata,
         fanout: expr.fanout,
         definitionLocation: locationForNode(aliasNode || exprNode),
       })
@@ -385,7 +391,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
 
       // If it's not in there, add it to the select.
       if (!query.fields.find(f => f.name == name)) {
-        query.fields.unshift({name, sql: expr.sql, type: expr.type, fanout: expr.fanout, definitionLocation: locationForNode(g.getChild('Alias') || exprNode)})
+        query.fields.unshift({name, sql: expr.sql, type: expr.type, fieldMetadata: expr.fieldMetadata, fanout: expr.fanout, definitionLocation: locationForNode(g.getChild('Alias') || exprNode)})
       }
       fanoutExprs.push({node: g.getChild('Expression')!, expr})
     }
@@ -440,9 +446,16 @@ function analyzeSetQuery(queryNode: SyntaxNode, scope: Scope, ctes: Map<string, 
   }
 
   let setOps = queryNode.getChildren('SetOperator')
+  let fields = first.fields.map((field, idx) => {
+    let next = {...field}
+    let matches = branches.slice(1).every(branch => sameFieldMetadata(branch.query?.fields[idx]?.fieldMetadata, field.fieldMetadata))
+    if (!matches) delete next.fieldMetadata
+    return next
+  })
+
   let query: Query = {
     sql: '',
-    fields: first.fields.map(field => ({...field})),
+    fields,
     joins: [],
     filters: [],
     groupBy: [],
@@ -586,7 +599,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // SELECT aliases instead of the table's computed columns.
       if (scope.query && !scope.table && pathNodes.length == 0) {
         let outField = scope.query.fields.find(f => f.name == fieldName)
-        if (outField) return {sql: outField.sql, type: outField.type, isAgg: outField.isAgg, fanout: outField.fanout}
+        if (outField) return {sql: outField.sql, type: outField.type, isAgg: outField.isAgg, fanout: outField.fanout, fieldMetadata: outField.fieldMetadata}
       }
 
       // Follow any dot path (e.g., `users.orders` in `users.orders.amount`), then find the field
@@ -619,7 +632,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       addReference('column', fieldNode, col.symbolId)
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
+      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanout: normalizeExprFanout({path: matches[0].fanoutPath}), fieldMetadata: col.fieldMetadata}
 
       // Computed column: analyze its expression in the matched table's scope
       if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: 'error'})
@@ -631,6 +644,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         type: expr.type,
         isAgg: expr.isAgg,
         fanout: expr.fanout,
+        fieldMetadata: expr.fieldMetadata,
       }
     }
 
@@ -746,16 +760,16 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
     case 'UnaryExpression': {
       let op = txt(node.firstChild).toLowerCase()
       let child = analyzeExpr(node.lastChild!, scope)
-      if (op == 'not') return {...child, sql: `NOT (${child.sql})`, type: 'boolean'}
-      if (op == '-') return {...child, sql: `-(${child.sql})`}
-      if (op == '+') return {...child, sql: `(${child.sql})`}
+      if (op == 'not') return {sql: `NOT (${child.sql})`, type: 'boolean', isAgg: child.isAgg, fanout: child.fanout}
+      if (op == '-') return {sql: `-(${child.sql})`, type: child.type, isAgg: child.isAgg, fanout: child.fanout}
+      if (op == '+') return {sql: `(${child.sql})`, type: child.type, isAgg: child.isAgg, fanout: child.fanout}
       return diag(node, `Unknown unary operator: ${op}`, {sql: 'NULL', type: 'error'})
     }
 
     case 'NullTestExpression': {
       let isNot = !!node.getChildren('Kw').find(n => txt(n).toLowerCase() == 'not')
       let e = analyzeExpr(node.firstChild!, scope)
-      return {...e, sql: `${e.sql} IS ${isNot ? 'NOT ' : ''}NULL`, type: 'boolean'}
+      return {sql: `${e.sql} IS ${isNot ? 'NOT ' : ''}NULL`, type: 'boolean', isAgg: e.isAgg, fanout: e.fanout}
     }
 
     case 'CaseExpression': {
@@ -801,7 +815,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         let subquery = analyzeQuery(subqueryNode, scope.otherTables)
         if (!subquery) return {sql: 'NULL', type: 'error'}
         if (subquery.fields.length != 1) return diag(subqueryNode, 'Subquery in IN must return exactly one column', {sql: 'NULL', type: 'error'})
-        return {...e, sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${subquery.sql})`, type: 'boolean'}
+        return {sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${subquery.sql})`, type: 'boolean', isAgg: e.isAgg, fanout: e.fanout}
       }
       if (!valueList) {
         return diag(node, 'IN expression must provide either values or a subquery', {sql: 'NULL', type: 'error'})
@@ -814,7 +828,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         }
         return val.sql
       })
-      return {...e, sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: 'boolean'}
+      return {sql: `${e.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: 'boolean', isAgg: e.isAgg, fanout: e.fanout}
     }
 
     case 'BetweenExpression': {
@@ -849,7 +863,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let targetType = txt(typeNode).toUpperCase()
       let resultType = convertDataType(targetType)
       if (!resultType) return diag(typeNode, `Unsupported cast type: ${targetType.toLowerCase()}`, {sql: 'NULL', type: 'error'})
-      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: resultType}
+      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: resultType, fieldMetadata: preserveTemporalMetadataThroughCast(e, resultType)}
     }
 
     case 'ExtractExpression': {
@@ -859,7 +873,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let unit = txt(node.getChild('ExtractUnit')!)
         .replace(/^['"]|['"]$/g, '')
         .toLowerCase()
-      return {...e, sql: `EXTRACT(${unit} FROM ${e.sql})`, type: 'number'}
+      return {sql: `EXTRACT(${unit} FROM ${e.sql})`, type: 'number', isAgg: e.isAgg, fanout: e.fanout}
     }
 
     case 'IntervalExpression': {
@@ -960,6 +974,24 @@ function coerceToTemporal(expr: Expr, targetType: 'date' | 'timestamp', node: Sy
     return expr
   }
   return {...expr, sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: targetType}
+}
+
+function preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType) {
+  if (!expr.fieldMetadata?.temporal) return
+  if (resultType != 'date' && resultType != 'timestamp') return
+  return expr.fieldMetadata
+}
+
+function sameFieldMetadata(left?: Expr['fieldMetadata'], right?: Expr['fieldMetadata']) {
+  if (!left && !right) return true
+  if (!left || !right) return false
+  return sameTemporalMetadata(left.temporal, right.temporal)
+}
+
+function sameTemporalMetadata(left?: TemporalFieldMetadata, right?: TemporalFieldMetadata) {
+  if (!left && !right) return true
+  if (!left || !right) return false
+  return left.grain == right.grain
 }
 
 function isPercentileFunctionCall(node: SyntaxNode): boolean {
