@@ -10,7 +10,7 @@ async function getCache() {
   return cache
 }
 
-export async function getHashes() {
+export async function getHashes(): Promise<string[]> {
   let store = await getCache()
   let keys = await store.keys()
   return keys
@@ -23,7 +23,7 @@ export async function getHashes() {
       }
       return url.pathname.replace(/^\//, '')
     })
-    .filter(h => !!h)
+    .filter(Boolean) as string[]
 }
 
 export async function cacheRead(hash: string): Promise<any | null> {
