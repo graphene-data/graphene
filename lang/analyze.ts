@@ -35,8 +35,6 @@ import {
   type NavigationSymbolKind,
   type TemporalFieldMetadata,
   formatType,
-  formatTypeKind,
-  getTypeMetadata,
   isArrayType,
   isScalarType,
   parseGsqlFieldType,
@@ -991,15 +989,15 @@ function coerceToTemporal(expr: Expr, targetType: FieldType, node: SyntaxNode): 
 }
 
 function preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType) {
-  let metadata = getTypeMetadata(expr.type)
+  let metadata = expr.type.metadata
   if (!metadata?.temporal) return resultType
   if (!isScalarType(resultType, 'date') && !isScalarType(resultType, 'timestamp')) return resultType
   return withTypeMetadata(resultType, metadata)
 }
 
 function sameFieldMetadata(left?: FieldType, right?: FieldType) {
-  let leftMetadata = getTypeMetadata(left)
-  let rightMetadata = getTypeMetadata(right)
+  let leftMetadata = left?.metadata
+  let rightMetadata = right?.metadata
   if (!leftMetadata && !rightMetadata) return true
   if (!leftMetadata || !rightMetadata) return false
   return sameTemporalMetadata(leftMetadata.temporal, rightMetadata.temporal)
@@ -1341,5 +1339,5 @@ export function diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defau
 export function checkTypes(expr: Expr, expected: TypeKind[], node: SyntaxNode) {
   if (isScalarType(expr.type, 'error') || isScalarType(expr.type, 'null')) return
   if (expected.some(kind => (kind == 'array' ? isArrayType(expr.type) : isScalarType(expr.type, kind)))) return
-  diag(node, `Expected ${expected.map(formatTypeKind).join(' or ')}, got ${formatType(expr.type)}`)
+  diag(node, `Expected ${expected.join(' or ')}, got ${formatType(expr.type)}`)
 }

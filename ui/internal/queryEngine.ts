@@ -1,7 +1,7 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import {formatType, getTypeMetadata, type FieldType, type GrapheneError} from '../../lang/types.ts'
+import {formatType, type FieldType, type GrapheneError} from '../../lang/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
@@ -201,7 +201,7 @@ export function translateData(data: any, node: QueryNode) {
     }
 
     // map graphene types down to the ones evidence expects
-    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), fieldMetadata: getTypeMetadata(field.type)})
+    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), fieldMetadata: field.type?.metadata})
   })
 
   return {rows}

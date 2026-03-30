@@ -100,14 +100,6 @@ export function formatType(type: FieldType | null | undefined): string {
   return type.kind
 }
 
-export function formatTypeKind(kind: TypeKind): string {
-  return kind
-}
-
-export function getTypeMetadata(type: FieldType | null | undefined): FieldMetadata | undefined {
-  return type?.metadata
-}
-
 export function withTypeMetadata(type: FieldType, metadata?: FieldMetadata): FieldType {
   if (!metadata) {
     if (!type.metadata) return type
