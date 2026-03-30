@@ -1,7 +1,8 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import {formatType, type FieldType, type GrapheneError} from '../../lang/types.ts'
+import type {FieldType, GrapheneError} from '../../lang/types.ts'
+
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
 import {errorProvider} from './telemetry.ts'
@@ -221,13 +222,19 @@ errorProvider('queryEngine', () => {
 })
 
 function evidenceType(type: FieldType | undefined) {
-  let kind = formatType(type)
+  let kind = typeDescription(type)
   if (kind === 'string') return 'string'
   if (kind === 'number') return 'number'
   if (kind === 'boolean') return 'boolean'
   if (kind === 'date' || kind === 'timestamp') return 'date'
   console.warn('Unsupported evidence type ' + kind)
   return 'string'
+}
+
+function typeDescription(type: FieldType | undefined): string {
+  if (!type) return 'unknown'
+  if (type.kind == 'array') return `array<${typeDescription(type.elementType)}>`
+  return type.kind
 }
 
 if (typeof window !== 'undefined') {
