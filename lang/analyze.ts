@@ -36,11 +36,12 @@ import {
   type TemporalFieldMetadata,
   formatType,
   formatTypeKind,
+  getTypeMetadata,
   isArrayType,
-  isSameType,
   isScalarType,
   parseGsqlFieldType,
   type TypeKind,
+  withTypeMetadata,
 } from './types.ts'
 import {buildFrame, txt, getFile, getPosition, toRelativePath} from './util.ts'
 
@@ -180,7 +181,7 @@ function analyzeView(table: Table) {
   if (!query) return
 
   let viewCols = query.fields.map(f => {
-    let col = {name: f.name, type: f.type, metadata: f.metadata, fieldMetadata: f.fieldMetadata, location: f.definitionLocation} as Column
+    let col = {name: f.name, type: f.type, metadata: f.metadata, location: f.definitionLocation} as Column
     if (f.definitionLocation) {
       col.symbolId = symbolId('column', f.definitionLocation, `${table.symbolId}:${f.name}`)
       getFile(table.syntaxNode!).navigation.symbols.push({id: col.symbolId, kind: 'column', name: col.name, location: f.definitionLocation, tableId: table.symbolId})
@@ -200,7 +201,6 @@ export function analyzeTableFully(table: Table) {
     let expr = analyzeExpr(c.exprNode, scope)
     c.type = expr.type
     c.isAgg = expr.isAgg
-    c.fieldMetadata = expr.fieldMetadata
     analyzeComputedFieldExpr(c.exprNode, expr)
   })
   table.joins.forEach(j => {
@@ -237,7 +237,6 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         sql: expr.sql,
         type: expr.type,
         metadata: col.metadata,
-        fieldMetadata: expr.fieldMetadata,
         fanout: expr.fanout,
         definitionLocation: col.location,
       })
@@ -247,7 +246,6 @@ function expandColumns(table: Table | null, alias: string, query: Query, scope: 
         sql: `${alias}.${col.name}`,
         type: col.type,
         metadata: col.metadata,
-        fieldMetadata: col.fieldMetadata,
         fanout: normalizeExprFanout({path: scope.fanoutPath}),
         definitionLocation: col.location,
       })
@@ -272,7 +270,7 @@ function analyzeQueryExpression(queryNode: SyntaxNode, outerCtes?: Table[]): Que
     let name = txt(cteDef.getChild('Alias'))
     let query = analyzeQuery(cteDef.getChild('QueryExpression')!, scope.otherTables)
     if (!query) return
-    let columns = query.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata, fieldMetadata: f.fieldMetadata}) as Column)
+    let columns = query.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
     let cte: CteTable = {name, type: 'cte', tablePath: name, columns, joins: [], query}
     ctes.set(name, cte)
     scope.otherTables!.push(cte)
@@ -311,7 +309,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
     if (tablePrimary.getChild('SubqueryExpression')) {
       let subquery = analyzeQuery(tablePrimary.getChild('SubqueryExpression')!.getChild('QueryExpression')!, scope.otherTables)
       if (!subquery) return
-      let columns = subquery.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata, fieldMetadata: f.fieldMetadata}) as Column)
+      let columns = subquery.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
       table = {name: 'subquery', type: 'subquery', tablePath: alias, columns, joins: [], query: subquery}
       alias ||= 'subquery'
     }
@@ -361,7 +359,6 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
         sql: expr.sql,
         type: expr.type,
         isAgg: expr.isAgg,
-        fieldMetadata: expr.fieldMetadata,
         fanout: expr.fanout,
         definitionLocation: locationForNode(aliasNode || exprNode),
       })
@@ -401,7 +398,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
 
       // If it's not in there, add it to the select.
       if (!query.fields.find(f => f.name == name)) {
-        query.fields.unshift({name, sql: expr.sql, type: expr.type, fieldMetadata: expr.fieldMetadata, fanout: expr.fanout, definitionLocation: locationForNode(g.getChild('Alias') || exprNode)})
+        query.fields.unshift({name, sql: expr.sql, type: expr.type, fanout: expr.fanout, definitionLocation: locationForNode(g.getChild('Alias') || exprNode)})
       }
       fanoutExprs.push({node: g.getChild('Expression')!, expr})
     }
@@ -458,8 +455,8 @@ function analyzeSetQuery(queryNode: SyntaxNode, scope: Scope, ctes: Map<string, 
   let setOps = queryNode.getChildren('SetOperator')
   let fields = first.fields.map((field, idx) => {
     let next = {...field}
-    let matches = branches.slice(1).every(branch => sameFieldMetadata(branch.query?.fields[idx]?.fieldMetadata, field.fieldMetadata))
-    if (!matches) delete next.fieldMetadata
+    let matches = branches.slice(1).every(branch => sameFieldMetadata(branch.query?.fields[idx]?.type, field.type))
+    if (!matches) next.type = withTypeMetadata(next.type, undefined)
     return next
   })
 
@@ -609,7 +606,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       // SELECT aliases instead of the table's computed columns.
       if (scope.query && !scope.table && pathNodes.length == 0) {
         let outField = scope.query.fields.find(f => f.name == fieldName)
-        if (outField) return {sql: outField.sql, type: outField.type, isAgg: outField.isAgg, fanout: outField.fanout, fieldMetadata: outField.fieldMetadata}
+        if (outField) return {sql: outField.sql, type: outField.type, isAgg: outField.isAgg, fanout: outField.fanout}
       }
 
       // Follow any dot path (e.g., `users.orders` in `users.orders.amount`), then find the field
@@ -642,7 +639,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       addReference('column', fieldNode, col.symbolId)
 
       // Simple case: this is just a regular column on a table
-      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanout: normalizeExprFanout({path: matches[0].fanoutPath}), fieldMetadata: col.fieldMetadata}
+      if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
 
       // Computed column: analyze its expression in the matched table's scope
       if (analysisStack.has(col)) return diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: scalarType('error')})
@@ -654,7 +651,6 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
         type: expr.type,
         isAgg: expr.isAgg,
         fanout: expr.fanout,
-        fieldMetadata: expr.fieldMetadata,
       }
     }
 
@@ -875,7 +871,7 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       if (parsed.error) return diag(typeNode, parsed.error, {sql: 'NULL', type: scalarType('error')})
       if (!parsed.type) return diag(typeNode, `Unsupported cast type: ${targetType.toLowerCase()}`, {sql: 'NULL', type: scalarType('error')})
       let resultType = parsed.type
-      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: resultType, fieldMetadata: preserveTemporalMetadataThroughCast(e, resultType)}
+      return {...e, sql: `CAST(${e.sql} AS ${targetType})`, type: preserveTemporalMetadataThroughCast(e, resultType)}
     }
 
     case 'ExtractExpression': {
@@ -995,15 +991,18 @@ function coerceToTemporal(expr: Expr, targetType: FieldType, node: SyntaxNode): 
 }
 
 function preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType) {
-  if (!expr.fieldMetadata?.temporal) return
-  if (!isScalarType(resultType, 'date') && !isScalarType(resultType, 'timestamp')) return
-  return expr.fieldMetadata
+  let metadata = getTypeMetadata(expr.type)
+  if (!metadata?.temporal) return resultType
+  if (!isScalarType(resultType, 'date') && !isScalarType(resultType, 'timestamp')) return resultType
+  return withTypeMetadata(resultType, metadata)
 }
 
-function sameFieldMetadata(left?: Expr['fieldMetadata'], right?: Expr['fieldMetadata']) {
-  if (!left && !right) return true
-  if (!left || !right) return false
-  return sameTemporalMetadata(left.temporal, right.temporal)
+function sameFieldMetadata(left?: FieldType, right?: FieldType) {
+  let leftMetadata = getTypeMetadata(left)
+  let rightMetadata = getTypeMetadata(right)
+  if (!leftMetadata && !rightMetadata) return true
+  if (!leftMetadata || !rightMetadata) return false
+  return sameTemporalMetadata(leftMetadata.temporal, rightMetadata.temporal)
 }
 
 function sameTemporalMetadata(left?: TemporalFieldMetadata, right?: TemporalFieldMetadata) {

@@ -8,7 +8,20 @@ import {config} from './config.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
-import {arrayOf, scalarType, type Expr, type FieldMetadata, type FieldType, isArrayType, isScalarType, type Scope, type TemporalFieldMetadata, type TemporalGrain, type TypeKind} from './types.ts'
+import {
+  arrayOf,
+  scalarType,
+  type FieldMetadata,
+  type Expr,
+  type FieldType,
+  isArrayType,
+  isScalarType,
+  type Scope,
+  type TemporalFieldMetadata,
+  type TemporalGrain,
+  type TypeKind,
+  withTypeMetadata,
+} from './types.ts'
 import {txt} from './util.ts'
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
@@ -161,14 +174,13 @@ export function analyzeFunction(node: SyntaxNode, scope: Scope, analyzeExpr: Ana
   }
   let fnName = overload.sqlName || name
   let sql = `${fnName}(${args.map(a => a.sql).join(',')})`
-  let fieldMetadata = inferFunctionFieldMetadata(name, overload, args, argNodes)
+  let metadata = inferFunctionFieldMetadata(name, overload, args, argNodes)
   return {
     sql,
-    type: returnType,
+    type: withTypeMetadata(returnType, metadata),
     isAgg,
     canWindow,
     fanout: normalizeExprFanout({path: isAgg ? undefined : fanout.path, sensitivePaths: fanoutSensitivePaths, conflict: fanoutConflict}),
-    fieldMetadata,
   }
 }
 

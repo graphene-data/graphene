@@ -10,12 +10,22 @@ declare module '@lezer/common' {
 }
 
 export type ScalarTypeKind = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'record'
+export interface TemporalFieldMetadata {
+  grain: TemporalGrain
+}
+
+export interface FieldMetadata {
+  temporal?: TemporalFieldMetadata
+}
+
 export interface ScalarFieldType<K extends ScalarTypeKind = ScalarTypeKind> {
   kind: K
+  metadata?: FieldMetadata
 }
 export interface ArrayFieldType {
   kind: 'array'
   elementType: FieldType
+  metadata?: FieldMetadata
 }
 export type FieldType = ScalarFieldType | ArrayFieldType
 export type TypeKind = FieldType['kind']
@@ -94,6 +104,19 @@ export function formatTypeKind(kind: TypeKind): string {
   return kind
 }
 
+export function getTypeMetadata(type: FieldType | null | undefined): FieldMetadata | undefined {
+  return type?.metadata
+}
+
+export function withTypeMetadata(type: FieldType, metadata?: FieldMetadata): FieldType {
+  if (!metadata) {
+    if (!type.metadata) return type
+    let {metadata: _metadata, ...next} = type
+    return next
+  }
+  return {...type, metadata}
+}
+
 export function normalizeScalarType(rawType: string): ScalarFieldType | null {
   let kind = SCALAR_TYPE_ALIASES[normalizeTypeName(rawType)]
   return kind ? scalarType(kind) : null
@@ -140,14 +163,6 @@ function normalizeTypeName(rawType: string): string {
   return rawType.trim().replace(/\s+/g, '_').toLowerCase()
 }
 
-export interface TemporalFieldMetadata {
-  grain: TemporalGrain
-}
-
-export interface FieldMetadata {
-  temporal?: TemporalFieldMetadata
-}
-
 // An analyzed expression - contains the SQL string plus metadata for validation
 export interface Expr {
   sql: string // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
@@ -156,14 +171,12 @@ export interface Expr {
   canWindow?: boolean // true if expression can be used with an OVER clause
   interval?: IntervalExpr
   fanout?: ExprFanout
-  fieldMetadata?: FieldMetadata
 }
 
 // A field in a query's SELECT clause
 export interface QueryField extends Expr {
   name: string // output column name
   metadata?: Record<string, string>
-  fieldMetadata?: FieldMetadata
   definitionLocation?: Location // where this field is defined when materialized into a view
 }
 
@@ -229,7 +242,6 @@ export interface Column {
   isAgg?: boolean // for computed columns that are aggregates
   exprNode?: SyntaxNode // for computed columns, the expression AST node (analyzed lazily in query context)
   metadata?: Record<string, string>
-  fieldMetadata?: FieldMetadata
   symbolId?: string
   location?: Location
 }

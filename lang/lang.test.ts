@@ -7,7 +7,7 @@ import {expect} from 'vitest'
 import {setConfig} from './config.ts'
 import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile, loadWorkspace, getFile} from './core.ts'
 import {prepareEcommerceTables} from './testHelpers.ts'
-import {formatType} from './types.ts'
+import {formatType, getTypeMetadata} from './types.ts'
 import {trimIndentation} from './util.ts'
 
 const testTables = `
@@ -901,15 +901,15 @@ describe('lang', () => {
 
     setConfig({root: '', bigquery: {}})
     let [bigQuery] = analyze('from events select date_trunc(event_date, month) as month_start')
-    expect(bigQuery.fields[0].fieldMetadata).toEqual({temporal: {grain: 'month'}})
+    expect(getTypeMetadata(bigQuery.fields[0].type)).toEqual({temporal: {grain: 'month'}})
 
     setConfig({root: ''})
     let [duckDb] = analyze("from events select date_trunc('quarter', event_date) as quarter_start")
-    expect(duckDb.fields[0].fieldMetadata).toEqual({temporal: {grain: 'quarter'}})
+    expect(getTypeMetadata(duckDb.fields[0].type)).toEqual({temporal: {grain: 'quarter'}})
 
     setConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze("from events select date_trunc('year', event_date) as year_start")
-    expect(snowflake.fields[0].fieldMetadata).toEqual({temporal: {grain: 'year'}})
+    expect(getTypeMetadata(snowflake.fields[0].type)).toEqual({temporal: {grain: 'year'}})
   })
 
   it('propagates temporal grain through refs and drops it for reshaping expressions', () => {
@@ -924,13 +924,13 @@ describe('lang', () => {
     )
 
     let [throughRef] = analyze('from events select month_start')
-    expect(throughRef.fields[0].fieldMetadata).toEqual({temporal: {grain: 'month'}})
+    expect(getTypeMetadata(throughRef.fields[0].type)).toEqual({temporal: {grain: 'month'}})
 
     let [throughCast] = analyze('from events select cast(month_start as date) as month_date')
-    expect(throughCast.fields[0].fieldMetadata).toEqual({temporal: {grain: 'month'}})
+    expect(getTypeMetadata(throughCast.fields[0].type)).toEqual({temporal: {grain: 'month'}})
 
     let [reshaped] = analyze('from events select extract(year from month_start) as year_num')
-    expect(reshaped.fields[0].fieldMetadata).toBeUndefined()
+    expect(getTypeMetadata(reshaped.fields[0].type)).toBeUndefined()
   })
 
   it('drops temporal grain on set operations when branches disagree', () => {
@@ -942,7 +942,7 @@ describe('lang', () => {
       from events select date_trunc('year', event_date) as bucket
     `)
 
-    expect(query.fields[0].fieldMetadata).toBeUndefined()
+    expect(getTypeMetadata(query.fields[0].type)).toBeUndefined()
   })
 
   it('supports extract expressions', () => {

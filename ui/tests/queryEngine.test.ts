@@ -1,6 +1,6 @@
 import {beforeAll, test, expect} from 'vitest'
 
-import {scalarType} from '../../lang/types.ts'
+import {scalarType, withTypeMetadata} from '../../lang/types.ts'
 
 let translateData: (data: any, node: any) => {rows: any[]}
 let getColumnSummary: (data: any, returnType?: string) => any
@@ -40,7 +40,7 @@ test('translateData preserves field metadata for UI column summaries', () => {
   let data = {
     rows: [{month_start: '2021-01-01', sales: 3}],
     fields: [
-      {name: 'month_start', type: scalarType('date'), fieldMetadata: {temporal: {grain: 'month'}}},
+      {name: 'month_start', type: withTypeMetadata(scalarType('date'), {temporal: {grain: 'month'}})},
       {name: 'sales', type: scalarType('number')},
     ],
   }
