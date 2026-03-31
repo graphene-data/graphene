@@ -1,5 +1,7 @@
 import {beforeAll, test, expect} from 'vitest'
 
+import {scalarType, withTypeMetadata} from '../../lang/types.ts'
+
 let translateData: (data: any, node: any) => {rows: any[]}
 let getColumnSummary: (data: any, returnType?: string) => any
 
@@ -17,8 +19,8 @@ test('translateData remaps Snowflake-style uppercase row keys to requested field
   let data = {
     rows: [{LOCATION_STATE_CODE: 'CA', NUM: 3}],
     fields: [
-      {name: 'location_state_code', type: 'string'},
-      {name: 'num', type: 'number'},
+      {name: 'location_state_code', type: scalarType('string')},
+      {name: 'num', type: scalarType('number')},
     ],
   }
   let node = {
@@ -38,8 +40,8 @@ test('translateData preserves field metadata for UI column summaries', () => {
   let data = {
     rows: [{month_start: '2021-01-01', sales: 3}],
     fields: [
-      {name: 'month_start', type: 'date', fieldMetadata: {temporal: {grain: 'month'}}},
-      {name: 'sales', type: 'number'},
+      {name: 'month_start', type: withTypeMetadata(scalarType('date'), {temporal: {grain: 'month'}})},
+      {name: 'sales', type: scalarType('number')},
     ],
   }
   let node = {

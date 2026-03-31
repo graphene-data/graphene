@@ -8,6 +8,7 @@ import {fileURLToPath} from 'url'
 
 import {config, loadConfig} from '../lang/config.ts'
 import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import {formatType, isArrayType, parseWarehouseFieldType} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
@@ -122,7 +123,11 @@ program
     let tableLabel = config.dialect == 'snowflake' ? String(tableArg || '').toLowerCase() : tableArg
     if (!cols.length) return console.log(`Table ${tableLabel} not found`)
     console.log(`table ${tableLabel} (`)
-    cols.forEach(col => console.log(`  ${col.name} ${col.dataType}`))
+    cols.forEach(col => {
+      let parsed = parseWarehouseFieldType(col.dataType)
+      let renderedType = parsed.type && isArrayType(parsed.type) ? formatType(parsed.type) : col.dataType
+      console.log(`  ${col.name} ${renderedType}`)
+    })
     console.log(')')
   })
 

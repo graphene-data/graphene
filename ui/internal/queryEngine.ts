@@ -1,7 +1,7 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import type {FieldMetadata, GrapheneError} from '../../lang/types.ts'
+import type {FieldType, GrapheneError} from '../../lang/types.ts'
 
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs} from './pageInputs.svelte.ts'
@@ -15,8 +15,7 @@ interface QueryResult {
 
 interface Field {
   name: string
-  type?: string
-  fieldMetadata?: FieldMetadata
+  type?: FieldType
 }
 
 type ResultHandler = (res: QueryResult) => void
@@ -203,7 +202,7 @@ export function translateData(data: any, node: QueryNode) {
     }
 
     // map graphene types down to the ones evidence expects
-    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), fieldMetadata: field.fieldMetadata})
+    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), fieldMetadata: field.type?.metadata})
   })
 
   return {rows}
@@ -222,13 +221,20 @@ errorProvider('queryEngine', () => {
   return Object.values(unique)
 })
 
-function evidenceType(type: string | undefined) {
-  if (type === 'string') return 'string'
-  if (type === 'number') return 'number'
-  if (type === 'boolean') return 'boolean'
-  if (type === 'date' || type === 'timestamp') return 'date'
-  console.warn('Unsupported evidence type ' + type)
+function evidenceType(type: FieldType | undefined) {
+  let kind = typeDescription(type)
+  if (kind === 'string') return 'string'
+  if (kind === 'number') return 'number'
+  if (kind === 'boolean') return 'boolean'
+  if (kind === 'date' || kind === 'timestamp') return 'date'
+  console.warn('Unsupported evidence type ' + kind)
   return 'string'
+}
+
+function typeDescription(type: FieldType | undefined): string {
+  if (!type) return 'unknown'
+  if (type.kind == 'array') return `array<${typeDescription(type.elementType)}>`
+  return type.kind
 }
 
 if (typeof window !== 'undefined') {

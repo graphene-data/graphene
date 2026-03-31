@@ -3,6 +3,8 @@ import {spawn} from 'node:child_process'
 import * as path from 'node:path'
 import {expect} from 'vitest'
 
+import {formatType, parseWarehouseFieldType} from '../lang/types.ts'
+
 interface RunResult {
   code: number
   stdout: string
@@ -67,6 +69,12 @@ describe('duckdb', () => {
     expect(output).toContain('table flights (')
     expect(output).toContain('carrier varchar')
     expect(output.trim().endsWith(')')).toBe(true)
+  })
+
+  it('normalizes warehouse array types for schema output', () => {
+    expect(formatType(parseWarehouseFieldType('VARCHAR[]').type)).toBe('array<string>')
+    expect(formatType(parseWarehouseFieldType('INTEGER[]').type)).toBe('array<number>')
+    expect(formatType(parseWarehouseFieldType('ARRAY<STRING>').type)).toBe('array<string>')
   })
 })
 
