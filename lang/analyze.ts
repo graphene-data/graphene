@@ -290,13 +290,14 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
   let sources: SyntaxNode[] = fromClause ? [fromClause, ...fromClause.getChildren('JoinClause')] : []
   for (let sourceNode of sources) {
     let isJoin = sourceNode.name == 'JoinClause'
-    let tablePrimary = sourceNode.getChild('TablePrimary')
-    if (!tablePrimary) return diag(sourceNode, `Invalid ${isJoin ? 'JOIN' : 'FROM'} source`)
-    let alias = txt(tablePrimary.getChild('Alias'))
+    let unnestSource = sourceNode.getChild('UnnestSource')
+    let tablePrimary = unnestSource ? undefined : sourceNode.getChild('TablePrimary')
+    if (!tablePrimary && !unnestSource) return diag(sourceNode, `Invalid ${isJoin ? 'JOIN' : 'FROM'} source`)
+    let alias = txt((unnestSource || tablePrimary)!.getChild('Alias'))
     let table: Table | undefined
 
     // This might be referring to a table by name
-    let refNode = tablePrimary.getChild('Ref') || undefined
+    let refNode = tablePrimary?.getChild('Ref') || undefined
     if (refNode) {
       table = lookupTable(refNode, scope)
       if (!table) return
@@ -304,7 +305,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
     }
 
     // or it could be a subquery
-    if (tablePrimary.getChild('SubqueryExpression')) {
+    if (tablePrimary?.getChild('SubqueryExpression')) {
       let subquery = analyzeQuery(tablePrimary.getChild('SubqueryExpression')!.getChild('QueryExpression')!, scope.otherTables)
       if (!subquery) return
       let columns = subquery.fields.map(f => ({name: f.name, type: f.type, metadata: f.metadata}) as Column)
@@ -316,12 +317,27 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
     let firstKw = txt(sourceNode.getChildren('Kw')[0]).toLowerCase()
     if (firstKw == 'left' || firstKw == 'right' || firstKw == 'full' || firstKw == 'cross') joinType = firstKw
 
+    if (unnestSource) {
+      if (!isJoin) return diag(unnestSource, 'UNNEST requires a preceding FROM table')
+      if (firstKw == 'join') return diag(unnestSource, 'Bare JOIN UNNEST is not supported; use CROSS JOIN UNNEST')
+      if (joinType != 'cross') return diag(unnestSource, `${joinType!.toUpperCase()} JOIN UNNEST is not supported`)
+      let exprNode = unnestSource.firstChild?.nextSibling || undefined
+      if (!exprNode) return diag(unnestSource, 'UNNEST requires an array expression')
+      let expr = analyzeExpr(exprNode, {query, alias: '', otherTables: scope.otherTables})
+      if (!isArrayType(expr.type)) return diag(exprNode, `UNNEST requires an array expression, got ${formatType(expr.type)}`)
+      let onExpr = sourceNode.getChild('Expression') || undefined
+      if (onExpr) return diag(sourceNode, 'UNNEST join does not support an ON clause')
+      if (query.joins.find(j => j.alias == alias)) return diag(unnestSource, `Query already has table called "${alias}"`)
+      query.joins.push({alias, source: 'ad-hoc', joinType, fanoutPath: extendFanoutPath(undefined, alias), unnestExpr: expr})
+      continue
+    }
+
     // Now that we have all the bits, construct the join for it.
-    if (query.joins.find(j => j.alias == alias)) return diag(tablePrimary, `Query already has table called "${alias}"`)
+    if (query.joins.find(j => j.alias == alias)) return diag(tablePrimary!, `Query already has table called "${alias}"`)
     let onExpr = sourceNode.getChild('Expression') || undefined
     let qj: QueryJoin = {alias, source: isJoin ? 'ad-hoc' : 'from', table, joinType, fanoutPath: [], onExpr}
     query.joins.push(qj)
-    NODE_ENTITY_MAP.set(tablePrimary, {entityType: 'table', table})
+    NODE_ENTITY_MAP.set(tablePrimary!, {entityType: 'table', table})
 
     // If this is a JOIN, analyze the ON expr
     // It's important we do this _after_ adding the join to the query, since analyzing the expression looks at the query
@@ -500,7 +516,7 @@ function analyzeOrderAndLimit(queryNode: SyntaxNode, query: Query) {
 
   let limitNodes = queryNode.getChild('LimitClause')?.getChildren('Number') || []
   let limit = limitNodes[0] ? Number(txt(limitNodes[0])) : undefined
-  if (limitNodes[1]) diag(limitNodes[1], 'OFFSET is not supported yet')
+  if (limitNodes[1]) diag(limitNodes[1], 'OFFSET is not supported')
   return {orderBy, limit}
 }
 
@@ -510,6 +526,18 @@ function formatTablePath(path: string): string {
   if (config.dialect === 'bigquery') return `\`${path}\``
   if (config.dialect === 'snowflake') return path.toUpperCase()
   return path
+}
+
+function renderUnnestValueSql(alias: string): string {
+  return config.dialect == 'snowflake' ? `${alias}.value` : alias
+}
+
+function renderUnnestJoinClause(join: QueryJoin): string {
+  if (!join.unnestExpr || !join.joinType) return ''
+  let exprSql = join.unnestExpr.sql
+  if (config.dialect == 'bigquery') return `CROSS JOIN UNNEST(${exprSql}) AS ${join.alias}`
+  if (config.dialect == 'snowflake') return `, TABLE(FLATTEN(INPUT => ${exprSql})) AS ${join.alias}`
+  return `CROSS JOIN unnest(${exprSql}) AS ${join.alias}(${join.alias})`
 }
 
 function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
@@ -552,6 +580,7 @@ function buildSql(query: Query, cteMap: Map<string, CteTable>): string {
   let joinClauses = query.joins
     .filter(j => j.source != 'from')
     .map(j => {
+      if (j.unnestExpr) return renderUnnestJoinClause(j)
       if (!j.table || !j.joinType) return ''
       let tablePath = renderTableRef(j.table)
       let keyword = j.joinType.toUpperCase() + ' JOIN'
@@ -616,11 +645,18 @@ export function analyzeExpr(node: SyntaxNode, scope: Scope): Expr {
       let possibleJoins = targetScope.table
         ? [{table: targetScope.table, alias: targetScope.alias, fanoutPath: targetScope.fanoutPath}]
         : scope.query?.joins.filter(j => j.source != 'implicit' && j.table).map(j => ({table: j.table!, alias: j.alias, fanoutPath: j.fanoutPath})) || []
+      let unnestMatches = !targetScope.table && pathNodes.length == 0 ? scope.query?.joins.filter(j => j.unnestExpr && j.alias == fieldName) || [] : []
 
       // Expect just one of the possibleJoins to have the named column. Otherwise, it's an error.
       let matches = possibleJoins.filter(j => j.table.columns.some(c => c.name == fieldName))
-      if (matches.length > 1) {
+      if (matches.length + unnestMatches.length > 1) {
         return diag(fieldNode, `Ambiguous field "${fieldName}"`, {sql: 'NULL', type: scalarType('error')})
+      }
+
+      if (unnestMatches.length == 1) {
+        let join = unnestMatches[0]
+        let elementType = isArrayType(join.unnestExpr!.type) ? join.unnestExpr!.type.elementType : scalarType('error')
+        return {sql: renderUnnestValueSql(join.alias), type: elementType, fanout: normalizeExprFanout({path: join.fanoutPath})}
       }
 
       if (matches.length == 0) {
@@ -1098,13 +1134,14 @@ function followJoins(pathNodes: SyntaxNode[], scope: Scope): Scope | null {
     // This could be a ref to an existing FROM/JOIN alias
     let existing = scope.query!.joins.find(j => j.alias == name)
     if (existing) {
+      if (!existing.table) return diag(part, `"${name}" is an unnested value, not a table`, null)
       NODE_ENTITY_MAP.set(part, {entityType: 'table', table: existing.table})
       addReference('table', part, existing.table?.symbolId)
       scope = {...scope, table: existing.table!, alias: existing.alias, fanoutPath: existing.fanoutPath}
       pathNodes.shift() // remove, since we're updating scope
     } else {
       // otherwise, this might be referring to a join _on_ one of those FROM/JOIN tables
-      let matches = scope.query!.joins.filter(j => j.table!.joins.some(jj => jj.alias == name))
+      let matches = scope.query!.joins.filter(j => j.table && j.table.joins.some(jj => jj.alias == name))
       if (matches.length > 1) return diag(part, `"${name}" matches multiple possible joins in this query`, null)
       if (matches.length == 0) return diag(part, `Could not find "${name}" on query`, null)
       scope = {...scope, table: matches[0].table!, alias: matches[0].alias, fanoutPath: matches[0].fanoutPath}

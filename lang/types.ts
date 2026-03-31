@@ -212,6 +212,7 @@ export interface QueryJoin {
   onClause?: string
   onExpr?: SyntaxNode
   targetNode?: SyntaxNode
+  unnestExpr?: Expr
 }
 
 // A fully analyzed query

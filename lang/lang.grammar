@@ -58,6 +58,10 @@ tablePrimary[@isGroup=TablePrimary] {
   TableName | Subquery
 }
 
+joinPrimary[@isGroup=TablePrimary] {
+  TableName | Subquery | UnnestSource
+}
+
 TableName {
   Ref (Kw<"as">? Alias)?
 }
@@ -67,7 +71,11 @@ Subquery {
 }
 
 JoinClause {
-  (Kw<"inner"> | Kw<"left"> | Kw<"right"> | Kw<"full"> | Kw<"cross">)? Kw<"join"> tablePrimary (Kw<"on"> expression)?
+  (Kw<"inner"> | Kw<"left"> | Kw<"right"> | Kw<"full"> | Kw<"cross">)? Kw<"join"> joinPrimary (Kw<"on"> expression)?
+}
+
+UnnestSource {
+  Kw<"unnest"> "(" expression ")" Kw<"as"> Alias
 }
 
 WhereClause {
