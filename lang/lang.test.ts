@@ -288,14 +288,14 @@ describe('lang', () => {
       from events
       inner join unnest(tags) as tag
       select id, tag
-    `).toHaveDiagnostic(/inner join unnest is not supported yet/i)
+    `).toHaveDiagnostic(/inner join unnest is not supported/i)
 
     expect(`
       table events (id int, tags array<string>)
       from events
       left join unnest(tags) as tag
       select id, tag
-    `).toHaveDiagnostic(/left join unnest is not supported yet/i)
+    `).toHaveDiagnostic(/left join unnest is not supported/i)
   })
 
   it('requires array input for unnest', () => {
@@ -669,7 +669,7 @@ describe('lang', () => {
   })
 
   it('parses offset but reports diagnostic', () => {
-    expect('from users select name order by name asc limit 1 offset 1').toHaveDiagnostic(/offset is not supported yet/i)
+    expect('from users select name order by name asc limit 1 offset 1').toHaveDiagnostic(/offset is not supported/i)
   })
 
   it('supports in expressions', () => {

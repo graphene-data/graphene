@@ -320,7 +320,7 @@ function analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, paren
     if (unnestSource) {
       if (!isJoin) return diag(unnestSource, 'UNNEST requires a preceding FROM table')
       if (firstKw == 'join') return diag(unnestSource, 'Bare JOIN UNNEST is not supported; use CROSS JOIN UNNEST')
-      if (joinType != 'cross') return diag(unnestSource, `${joinType!.toUpperCase()} JOIN UNNEST is not supported yet`)
+      if (joinType != 'cross') return diag(unnestSource, `${joinType!.toUpperCase()} JOIN UNNEST is not supported`)
       let exprNode = unnestSource.firstChild?.nextSibling || undefined
       if (!exprNode) return diag(unnestSource, 'UNNEST requires an array expression')
       let expr = analyzeExpr(exprNode, {query, alias: '', otherTables: scope.otherTables})
@@ -516,7 +516,7 @@ function analyzeOrderAndLimit(queryNode: SyntaxNode, query: Query) {
 
   let limitNodes = queryNode.getChild('LimitClause')?.getChildren('Number') || []
   let limit = limitNodes[0] ? Number(txt(limitNodes[0])) : undefined
-  if (limitNodes[1]) diag(limitNodes[1], 'OFFSET is not supported yet')
+  if (limitNodes[1]) diag(limitNodes[1], 'OFFSET is not supported')
   return {orderBy, limit}
 }
 
