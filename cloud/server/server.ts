@@ -13,7 +13,6 @@ import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, git
 import {listNavFiles, renderPage, renderDynamicModule} from './pages.ts'
 import {queryEndpoint} from './query.ts'
 import {slackEvents, slackInstall, slackOauthCallback, slackStatus} from './slack.ts'
-import {registerMcpServer} from './mcp.ts'
 
 export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
   let app = fastify({logger})

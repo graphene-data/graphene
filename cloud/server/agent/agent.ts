@@ -7,7 +7,7 @@ import {fileURLToPath} from 'url'
 
 import {agentSessions, type AgentSession} from '../../schema.ts'
 import {getDb} from '../db.ts'
-import {listDirTool, readFileTool, searchTool, renderMdTool, respondToUserTool} from './tools.ts'
+import {listDirTool, readFileTool, searchTool, respondToUserTool, type SharedTool} from './tools.ts'
 
 // Read Graphene documentation at module load time
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -135,6 +135,10 @@ function cleanMessages(messages: any[]) {
     content.output.value = content.output.value.filter(v => v.type != 'media')
   }
   return cloned
+}
+
+function toVercelTool(tool: SharedTool) {
+  // fill in
 }
 
 function buildSystemPrompt(): string {
