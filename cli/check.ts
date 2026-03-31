@@ -1,7 +1,10 @@
 import {readFileSync} from 'node:fs'
 import path from 'path'
 
-import {analyze, config, getDiagnostics, loadWorkspace, updateFile} from '../lang/core.ts'
+import type {WorkspaceFileInput} from '../lang/types.ts'
+
+import {config} from '../lang/config.ts'
+import {analyzeWorkspace, loadWorkspace} from '../lang/core.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {printDiagnostics} from './printer.ts'
@@ -20,22 +23,35 @@ export async function check(options: CheckOptions): Promise<boolean> {
     return false
   }
 
-  await loadWorkspace(config.root, !targetFile)
-  if (targetFile) {
-    if (process.env.NODE_ENV == 'test' && mockFileMap[targetFile]) {
-      updateFile(mockFileMap[targetFile], targetFile)
-    } else {
-      let content = readFileSync(path.resolve(config.root, targetFile), 'utf-8')
-      updateFile(content, targetFile)
+  let files = await loadWorkspace(config.root, !targetFile, config.ignoredFiles)
+  if (process.env.NODE_ENV == 'test') {
+    for (let [path, contents] of Object.entries(mockFileMap)) {
+      if (targetFile && path != targetFile) continue
+      upsertFile(files, {path, contents})
     }
   }
+  if (targetFile) {
+    let contents: string
+    if (process.env.NODE_ENV == 'test' && mockFileMap[targetFile]) {
+      contents = mockFileMap[targetFile]
+    } else {
+      contents = readFileSync(path.resolve(config.root, targetFile), 'utf-8')
+    }
+    upsertFile(files, {path: targetFile, contents})
+  }
 
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics(), log)
+  let result = analyzeWorkspace({config, files})
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics, log)
     return false
   }
 
   log('No errors found 💎')
   return true
+}
+
+function upsertFile(files: WorkspaceFileInput[], next: WorkspaceFileInput) {
+  let idx = files.findIndex(file => file.path == next.path)
+  if (idx >= 0) files[idx] = next
+  else files.push(next)
 }

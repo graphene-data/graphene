@@ -7,8 +7,9 @@ import path from 'path'
 import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
 
-import {FILE_MAP} from '../lang/analyze.ts'
-import {analyze, config, type GrapheneError, getDiagnostics, loadWorkspace, toSql, updateFile} from '../lang/core.ts'
+import {config} from '../lang/config.ts'
+import {analyzeWorkspace, getFile, loadWorkspace, toSql} from '../lang/core.ts'
+import {type AnalysisResult, type GrapheneError, type WorkspaceFileInput} from '../lang/types.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'
@@ -34,21 +35,19 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  await loadWorkspace(config.root, false)
+  let files = await loadWorkspace(config.root, false, config.ignoredFiles)
+  let mdContents: string
   if (process.env.NODE_ENV == 'test' && mockFileMap[mdFile]) {
-    updateFile(mockFileMap[mdFile], mdFile)
+    mdContents = mockFileMap[mdFile]
   } else {
-    let content = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
-    updateFile(content, mdFile)
+    mdContents = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
   }
 
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics(), log)
+  let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdFile).concat({path: mdFile, contents: mdContents, kind: 'md'})}, mdFile)
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics, log)
     return false
   }
-
-  if (process.env.NODE_ENV == 'test') delete FILE_MAP[mdFile]
 
   let host = `http://localhost:${config.port}`
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
@@ -112,25 +111,27 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 }
 
 export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string): Promise<boolean> {
-  await loadWorkspace(process.cwd(), false)
+  let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
 
-  updateFile(mdContents, mdRelativePath)
-  analyze()
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
+  let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdRelativePath).concat({path: mdRelativePath, contents: mdContents, kind: 'md'})}, mdRelativePath)
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics)
     return false
   }
 
   let runQueryFence = [mdContents, '', '```sql', `from ${queryName} select *`, '```'].join('\n')
-  let queries = analyze(runQueryFence, 'md')
-  if (getDiagnostics().length > 0) {
-    printDiagnostics(getDiagnostics())
+  let queryFiles = toWorkspaceFiles(result)
+  let queryResult = analyzeWorkspace({config, files: queryFiles.filter(file => file.path != 'input.md').concat({path: 'input.md', contents: runQueryFence, kind: 'md'})}, 'input.md')
+  if (queryResult.diagnostics.length > 0) {
+    printDiagnostics(queryResult.diagnostics)
     return false
   }
 
-  let sql = toSql(queries[queries.length - 1])
+  let input = getFile(queryResult, 'input.md')
+  if (!input?.queries.length) return false
+  let sql = toSql(input.queries[input.queries.length - 1])
   let res = await runQuery(sql)
   printTable(res.rows)
   return true
@@ -182,6 +183,15 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
 
   conn.socket.send(JSON.stringify({type: 'check', chart, requestId: id}))
   pendingRequests[id] = {response: res}
+}
+
+function toWorkspaceFiles(result: AnalysisResult): WorkspaceFileInput[] {
+  return result.files.map(file => ({
+    path: file.path,
+    contents: file.contents,
+    kind: file.path.endsWith('.md') ? 'md' : 'gsql',
+    parsed: {tree: file.tree!, virtualContents: file.virtualContents, virtualToMarkdownOffset: file.virtualToMarkdownOffset},
+  }))
 }
 
 export function runVitePlugin(): PluginOption {

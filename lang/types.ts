@@ -5,8 +5,38 @@ import type {TimestampUnit} from './temporal.ts'
 
 declare module '@lezer/common' {
   interface Tree {
-    fileInfo: FileInfo
+    fileInfo?: FileInfo
   }
+}
+
+export interface AnalysisWorkspace {
+  config: AnalysisConfig
+  files: WorkspaceFileInput[]
+}
+
+export interface AnalysisResult {
+  files: FileInfo[]
+  diagnostics: GrapheneError[]
+}
+
+export interface AnalysisConfig {
+  dialect: string
+  defaultNamespace?: string
+}
+
+export interface WorkspaceFileInput {
+  path: string
+  contents: string
+  kind?: FileKind
+  parsed?: ParsedFileArtifacts
+}
+
+export type FileKind = 'gsql' | 'md'
+
+export interface ParsedFileArtifacts {
+  tree: Tree
+  virtualContents?: string
+  virtualToMarkdownOffset?: number[]
 }
 
 export type ScalarTypeKind = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'record'
@@ -188,6 +218,7 @@ export interface IntervalExpr {
 
 // Context for analyzing expressions - table/alias change as we traverse joins, but query is shared
 export interface Scope {
+  file: FileInfo
   query?: Query // null when analyzing table definitions (not in a query context)
   table?: Table
   alias: string // current alias for this table context (e.g., "users", "orders", "users_orders")
@@ -243,6 +274,7 @@ export interface Column {
 interface TableBase {
   name: string
   tablePath: string
+  filePath: string
   columns: Column[]
   joins: QueryJoin[]
   metadata?: Record<string, string>
@@ -303,6 +335,7 @@ export interface NavigationSymbol {
   name: string
   location: Location
   tableId?: string
+  hover?: string
 }
 
 export interface NavigationReference {

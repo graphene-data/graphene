@@ -1,4 +1,4 @@
-import type {FileInfo} from './types.ts'
+import type {ParsedFileArtifacts, WorkspaceFileInput} from './types.ts'
 
 import {parser} from './parser.js'
 
@@ -45,8 +45,8 @@ interface AttrMatch {
   start: number
 }
 
-export function parseMarkdown(fi: FileInfo) {
-  let source = fi.contents
+export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
+  let source = file.contents
   let fences = collectFences(source)
   let components = collectComponents(source, fences)
   let events = [...fences, ...components].sort((a, b) => a.start - b.start)
@@ -159,9 +159,11 @@ export function parseMarkdown(fi: FileInfo) {
   appendWhitespace(cursor, source.length)
 
   let doc = virtual.join('')
-  fi.virtualContents = doc
-  fi.virtualToMarkdownOffset = [...mapping, source.length]
-  return parser.parse(doc)
+  return {
+    tree: parser.parse(doc),
+    virtualContents: doc,
+    virtualToMarkdownOffset: [...mapping, source.length],
+  }
 }
 
 function collectFences(source: string): FenceMatch[] {

@@ -7,7 +7,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 
 import {config, loadConfig} from '../lang/config.ts'
-import {analyze, getDiagnostics, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import {formatType, isArrayType, parseWarehouseFieldType} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
@@ -34,10 +34,11 @@ program
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(async (input: string | undefined) => {
-    await loadWorkspace(process.cwd(), false)
+    let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
     let sql = await readInput(input)
-    let queries = analyze(sql)
-    if (!validQuery(queries)) return
+    let result = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: sql})}, 'input')
+    let queries = getFile(result, 'input')?.queries || []
+    if (!validQuery(result, queries)) return
     console.log(toSql(queries[0]))
   })
 
@@ -69,10 +70,11 @@ program
       process.exit(1)
     }
 
-    await loadWorkspace(process.cwd(), false)
+    let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
     let gsql = await readInput(input)
-    let queries = analyze(gsql)
-    if (!validQuery(queries)) return
+    let result = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: gsql})}, 'input')
+    let queries = getFile(result, 'input')?.queries || []
+    if (!validQuery(result, queries)) return
     let sql = toSql(queries[0])
     let res = await runQuery(sql)
     printTable(res.rows)
@@ -198,9 +200,9 @@ function getExistingPath(arg: string | undefined): string | null {
   return fs.existsSync(absolutePath) ? absolutePath : null
 }
 
-function validQuery(queries: Query[]): boolean {
-  if (getDiagnostics().length) {
-    printDiagnostics(getDiagnostics())
+function validQuery(result: {diagnostics: any[]}, queries: Query[]): boolean {
+  if (result.diagnostics.length) {
+    printDiagnostics(result.diagnostics)
     process.exit(1)
   }
   if (queries.length == 0) {
