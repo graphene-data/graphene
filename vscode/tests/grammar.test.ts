@@ -127,4 +127,19 @@ table users (
     expect(findToken(lines[3], 'many').scopes).toContain('keyword.control.gsql')
     expect(findToken(lines[3], 'on').scopes).toContain('keyword.control.gsql')
   })
+
+  it('highlights unnest with the same control-keyword scope as cross join', async () => {
+    let lines = await tokenize(
+      `
+from events
+cross join unnest(tags) as tag
+select tag
+`.trim(),
+    )
+
+    expect(findToken(lines[1], 'cross').scopes).toContain('keyword.control.gsql')
+    expect(findToken(lines[1], 'join').scopes).toContain('keyword.control.gsql')
+    expect(findToken(lines[1], 'unnest').scopes).toContain('keyword.control.gsql')
+    expect(findToken(lines[1], 'as').scopes).toContain('keyword.control.gsql')
+  })
 })

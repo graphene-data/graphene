@@ -248,6 +248,65 @@ describe('lang', () => {
     expect('from orders cross join users on users.id = orders.user_id select amount').toHaveDiagnostic(/cross join cannot have an on clause/i)
   })
 
+  it('supports cross join unnest with scalar alias binding', async () => {
+    let q = `
+      table events (id int, tags array<string>)
+      from events
+      cross join unnest(tags) as tag
+      select id, tag
+      order by id, tag
+    `
+    expect(q).toRenderSql('select events.id as id, tag as tag from events as events cross join unnest(events.tags) as tag(tag) order by 1 asc nulls last,2 asc nulls last')
+    await expect(q).toReturnRows([1, 'beta'], [1, 'vip'])
+  })
+
+  it('renders unnest per dialect', () => {
+    let q = `
+      table events (id int, tags array<string>)
+      from events
+      cross join unnest(tags) as tag
+      select id, tag
+    `
+
+    setConfig({root: '', bigquery: {}})
+    expect(q).toRenderSql('select events.id as id, tag as tag from `events` as events cross join unnest(events.tags) as tag')
+
+    setConfig({dialect: 'snowflake', root: ''})
+    expect(q).toRenderSql('select events.id as id, tag.value as tag from EVENTS as events , TABLE(FLATTEN(INPUT => events.tags)) AS tag')
+  })
+
+  it('rejects unsupported unnest join forms', () => {
+    expect(`
+      table events (id int, tags array<string>)
+      from events
+      join unnest(tags) as tag
+      select id, tag
+    `).toHaveDiagnostic(/bare join unnest is not supported/i)
+
+    expect(`
+      table events (id int, tags array<string>)
+      from events
+      inner join unnest(tags) as tag
+      select id, tag
+    `).toHaveDiagnostic(/inner join unnest is not supported/i)
+
+    expect(`
+      table events (id int, tags array<string>)
+      from events
+      left join unnest(tags) as tag
+      select id, tag
+    `).toHaveDiagnostic(/left join unnest is not supported/i)
+  })
+
+  it('requires array input for unnest', () => {
+    expect(`
+      table events (id int, tags array<string>)
+      from events
+      cross join unnest(id) as tag
+      select tag
+    `).toHaveDiagnostic(/unnest requires an array expression/i)
+  })
+
   it('resolves bare refs across ad-hoc joins and errors on ambiguity', () => {
     expect('from orders join users on users.id = orders.user_id select amount').toRenderSql('select orders.amount as amount from orders as orders inner join users as users on users.id=orders.user_id')
 
@@ -610,7 +669,7 @@ describe('lang', () => {
   })
 
   it('parses offset but reports diagnostic', () => {
-    expect('from users select name order by name asc limit 1 offset 1').toHaveDiagnostic(/offset is not supported yet/i)
+    expect('from users select name order by name asc limit 1 offset 1').toHaveDiagnostic(/offset is not supported/i)
   })
 
   it('supports in expressions', () => {
@@ -1562,6 +1621,15 @@ describe('lang', () => {
       )
       from joined select name, avg(age), sum(quantity)
     `).toHaveNoErrors()
+  })
+
+  it('treats unnest as a fanout grain in aggregate queries', () => {
+    expect(`
+      table events (id int, tags array<string>)
+      from events
+      cross join unnest(tags) as tag
+      select avg(id), sum(length(tag))
+    `).toHaveDiagnostic(/aggregate expression `avg\(id\)` is fanned out by join to table `tag`/i)
   })
 
   it('handles computed columns with chained joins', () => {

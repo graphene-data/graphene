@@ -44,6 +44,7 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 
 ### Types
 - Array columns and casts use `array<T>` syntax in GSQL, for example `tags array<string>` or `cast(tags as array<string>)`
+- Arrays can be expanded in queries with `cross join unnest(tags) as tag`
 - Other semi-structured data types (`VARIANT`, `OBJECT`, `RECORD`) are unsupported
 
 # Dashboards
