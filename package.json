@@ -30,17 +30,5 @@
   },
   "engines": {
     "node": ">=24.0.0"
-  },
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "@sveltejs/kit",
-      "keytar"
-    ],
-    "onlyBuiltDependencies": [
-      "@vscode/vsce-sign",
-      "duckdb",
-      "esbuild",
-      "svelte-preprocess"
-    ]
   }
 }
