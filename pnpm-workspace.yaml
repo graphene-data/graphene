@@ -1,0 +1,20 @@
+packages:
+  - "website"
+  - "cloud"
+
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+
+# avoid using a package that was released in the last 3 days, for security.
+# Use minimumReleaseAgeExclude to bump past a known vulnerability
+minimumReleaseAge: 4320
+
+# iirc, there was a mismatch where these fastify extensions were pinned to an old version of fastify
+packageExtensions:
+  "@fastify/cookie":
+    dependencies:
+      fastify: "*"
+  "@fastify/middie":
+    dependencies:
+      fastify: "*"

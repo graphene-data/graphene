@@ -71,22 +71,5 @@
     "typescript-eslint": "^8.38.0",
     "vite": "^7.1.11",
     "vitest": "4.0.15"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ],
-    "packageExtensions": {
-      "@fastify/cookie": {
-        "dependencies": {
-          "fastify": "*"
-        }
-      },
-      "@fastify/middie": {
-        "dependencies": {
-          "fastify": "*"
-        }
-      }
-    }
   }
 }

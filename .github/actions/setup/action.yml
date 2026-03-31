@@ -19,7 +19,7 @@ runs:
       with:
         node-version: 24
         cache: pnpm
-        cache-dependency-path: cloud/pnpm-lock.yaml
+        cache-dependency-path: pnpm-lock.yaml
 
     - name: Cloud deps
       working-directory: cloud
