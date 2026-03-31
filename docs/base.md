@@ -42,8 +42,9 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 - Agg function `pXX(column)` computes the XXth percentile (e.g., p50, p975, p9999)
 - ANSI set operations `union`, `union all`, `intersect`, and `except` are supported
 
-### Unsupported
-- Semi-structured data types (`VARIANT`, `OBJECT`, `ARRAY`)
+### Types
+- Array columns and casts use `array<T>` syntax in GSQL, for example `tags array<string>` or `cast(tags as array<string>)`
+- Other semi-structured data types (`VARIANT`, `OBJECT`, `RECORD`) are unsupported
 
 # Dashboards
 Graphene dashboards extend Markdown with the following:
