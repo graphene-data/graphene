@@ -34,6 +34,11 @@ const ECOMM_SETUP = `
     amount integer
   );
 
+  create table events (
+    id integer primary key,
+    tags varchar[]
+  );
+
   insert into users values
     (1, 'Alice', 'alice@example.com', '2024-01-01', 30),
     (2, 'Bob',   'bob@example.com',   '2024-01-10', 40);
@@ -52,6 +57,11 @@ const ECOMM_SETUP = `
   insert into payments values
     (500, 1, '2024-01-05', 100),
     (501, 2, '2024-01-12', 50);
+
+  insert into events values
+    (1, ['vip', 'beta']),
+    (2, []),
+    (3, null);
 `
 
 function formatDiagnostics(_source: string, diagnostics: GrapheneError[]): string {
