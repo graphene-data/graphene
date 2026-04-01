@@ -3,7 +3,7 @@ import type {FastifyReply, FastifyRequest} from 'fastify'
 import {eq} from 'drizzle-orm'
 import jwt from 'jsonwebtoken'
 import {B2BClient} from 'stytch'
-
+import {origin} from './utils.ts'
 import type {AuthContext} from './types.js'
 
 import {orgs} from '../schema.ts'
@@ -55,6 +55,8 @@ export async function auth(req: FastifyRequest, reply: FastifyReply) {
   }
 
   if (!req.auth) {
+    let authMetaUrl = `${origin(req)}/.well-known/oauth-protected-resource/_api/mcp`
+    reply.header('WWW-Authenticate', `Bearer error="invalid_token", error_description="Authentication required", resource_metadata="${authMetaUrl}"`)
     reply.code(401).send({error: 'Authentication required'})
     return
   }
@@ -110,4 +112,14 @@ export async function authTokenExchange(req: FastifyRequest, reply: FastifyReply
   })
   let json = await res.json()
   reply.code(res.status).send(json)
+}
+
+// Dynamic client registration shim backed by Graphene's connected-app client id.
+export function oauthRegister(req: FastifyRequest, reply: FastifyReply) {
+  let metadata = (req.body || {}) as Record<string, unknown>
+  reply.type('application/json').send({
+    ...metadata,
+    client_id: process.env.AUTH_CLIENT_ID_MCP,
+    token_endpoint_auth_method: 'none',
+  })
 }

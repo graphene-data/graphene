@@ -7,7 +7,7 @@ import rawBody from 'fastify-raw-body'
 import path from 'path'
 import {fileURLToPath} from 'url'
 
-import {type AuthContext, auth, authTokenExchange} from './auth.ts'
+import {type AuthContext, auth, authTokenExchange, oauthRegister} from './auth.ts'
 import {getChatSession} from './chats.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
 import {listNavFiles, renderPage, renderDynamicModule} from './pages.ts'
@@ -15,20 +15,21 @@ import {queryEndpoint} from './query.ts'
 import {slackEvents, slackInstall, slackOauthCallback, slackStatus} from './slack.ts'
 
 export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
-  let app = fastify({logger})
+  let app = fastify({logger, ignoreTrailingSlash: true})
   app.register(cookie, {})
   app.register(formbody)
-  app.register(cors) // TODO scope this down to just the right endpoints
+  app.register(cors, {origin: false}) // TODO scope this down to just the right endpoints
   app.register(rawBody, {global: false, runFirst: true, encoding: 'utf8'})
 
   app.decorateRequest('auth', null as unknown as AuthContext)
   app.addHook('preHandler', async (req, reply) => {
     let route = req.routeOptions.url
-    if (!route || !route.startsWith('/_api')) return
-    if (route === '/_api/mcp') return
+    if (!route || !route.startsWith('/_api')) return // passes through to serving index.html
+    if (route === '/_api/mcp') return // handles its own auth
     if (route === '/_api/github/webhook') return
     if (route === '/_api/slack/events') return
     if (route === '/_api/oauth2/token') return
+    if (route === '/_api/oauth2/register') return
     if (route === '/_api/dev/ngrok-url') return
     await auth(req, reply)
   })
@@ -41,6 +42,7 @@ export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions 
   app.get('/_api/pages/*', renderPage)
   app.get('/_api/dynamic/module', renderDynamicModule)
   app.post('/_api/query', queryEndpoint)
+  app.post('/_api/oauth2/register', oauthRegister)
   app.post('/_api/oauth2/token', authTokenExchange)
   app.get('/_api/slack/install', slackInstall)
   app.get('/_api/slack/status', slackStatus)
