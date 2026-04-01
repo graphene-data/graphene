@@ -115,7 +115,7 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
   let tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-pack-install-'))
   let projectDir = path.join(tempRoot, 'flights')
   let port = await getAvailablePort()
-  let childEnv = {...process.env, GRAPHENE_PORT: String(port)}
+  let childEnv = {...process.env, GRAPHENE_PORT: String(port)} as any
   delete childEnv.NODE_ENV
 
   let serveHandle: ServeHandle | null = null
