@@ -1,4 +1,4 @@
-import {spawn} from 'node:child_process'
+import {spawn, type ChildProcess} from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import * as net from 'node:net'
 import * as os from 'node:os'
@@ -13,6 +13,11 @@ interface RunResult {
   code: number
   stdout: string
   stderr: string
+}
+
+interface ServeHandle {
+  child: ChildProcess
+  getLogs: () => string
 }
 
 const shouldRunPackInstallTest = !!process.env.CI || process.env.GRAPHENE_PACK_TEST === '1'
@@ -63,6 +68,44 @@ function parseScreenshotPath(output: string, cwd: string) {
   return path.isAbsolute(screenshotPath) ? screenshotPath : path.resolve(cwd, screenshotPath)
 }
 
+async function startServe(cwd: string, env: NodeJS.ProcessEnv, port: number, timeoutMs = 60_000): Promise<ServeHandle> {
+  let child = spawn('npm', ['run', 'graphene', '--', 'serve'], {cwd, env})
+  let logs = ''
+
+  child.stdout.on('data', data => {
+    logs += data.toString()
+  })
+  child.stderr.on('data', data => {
+    logs += data.toString()
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    let timeout = setTimeout(() => {
+      reject(new Error(`Timed out waiting for serve to start on port ${port}\nlogs:\n${logs}`))
+    }, timeoutMs)
+
+    let onData = () => {
+      if (logs.includes(`Server running at http://localhost:${port}`)) {
+        clearTimeout(timeout)
+        resolve()
+      }
+    }
+
+    child.stdout.on('data', onData)
+    child.stderr.on('data', onData)
+    child.once('exit', code => {
+      clearTimeout(timeout)
+      reject(new Error(`graphene serve exited early with code ${code}\nlogs:\n${logs}`))
+    })
+    child.once('error', err => {
+      clearTimeout(timeout)
+      reject(err)
+    })
+  })
+
+  return {child, getLogs: () => logs}
+}
+
 test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user project', {timeout: 300_000}, async ({page}) => {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
@@ -72,7 +115,10 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
   let tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-pack-install-'))
   let projectDir = path.join(tempRoot, 'flights')
   let port = await getAvailablePort()
-  let childEnv = {...process.env, NODE_ENV: 'development', GRAPHENE_PORT: String(port)}
+  let childEnv = {...process.env, GRAPHENE_PORT: String(port)}
+  delete childEnv.NODE_ENV
+
+  let serveHandle: ServeHandle | null = null
 
   try {
     await page.setViewportSize({width: 1800, height: 1200})
@@ -91,10 +137,15 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
     let installResult = await run('npm', ['install', tarballPath], projectDir, childEnv)
     expectSuccess('npm install tarball', installResult)
 
-    let serveResult = await run('npm', ['run', 'graphene', '--', 'serve', '--bg'], projectDir, childEnv)
-    expectSuccess('npm run graphene serve --bg', serveResult)
+    serveHandle = await startServe(projectDir, childEnv, port)
 
-    await page.goto(`http://localhost:${port}/`)
+    try {
+      await page.goto(`http://localhost:${port}/`)
+    } catch (error: any) {
+      let logs = serveHandle.getLogs()
+      console.log(logs)
+      throw error
+    }
     await waitForGrapheneLoad(page)
     await page.waitForTimeout(500)
 
@@ -127,7 +178,8 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
     await page.setContent(`<img id="shot" src="data:image/png;base64,${screenshot.toString('base64')}" />`)
     await expect(page.locator('#shot')).screenshot('packaged-cli-check-index')
   } finally {
-    expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
+    expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
+    serveHandle?.child.kill('SIGTERM')
     await run('npm', ['run', 'graphene', '--', 'stop'], projectDir, childEnv)
     await fsp.rm(tempRoot, {recursive: true, force: true})
   }
