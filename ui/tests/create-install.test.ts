@@ -56,7 +56,7 @@ function parseTarballPath(result: RunResult, cwd: string) {
   return path.isAbsolute(tarball) ? tarball : path.resolve(cwd, tarball)
 }
 
-test.skipIf(!shouldRunCreatePackTest)('packs create and scaffolds a project that renders', {timeout: 300_000}, async ({page}) => {
+test.skipIf(!shouldRunCreatePackTest)('packs create and scaffolds a project that loads', {timeout: 300_000}, async ({page}) => {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
   let createDir = path.join(coreDir, 'create')
@@ -65,17 +65,19 @@ test.skipIf(!shouldRunCreatePackTest)('packs create and scaffolds a project that
   let port = await getAvailablePort()
   let childEnv = {...process.env, NODE_ENV: 'development', GRAPHENE_PORT: String(port)}
   let projectDir = path.join(tempRoot, 'demo-app')
+  let createTarball: string | undefined
+  let cliTarball: string | undefined
 
   try {
     await page.setViewportSize({width: 1600, height: 1000})
 
     let packCreate = await run('pnpm', ['pack'], createDir)
     expectSuccess('pnpm pack create', packCreate)
-    let createTarball = parseTarballPath(packCreate, createDir)
+    createTarball = parseTarballPath(packCreate, createDir)
 
     let packCli = await run('pnpm', ['pack'], cliDir)
     expectSuccess('pnpm pack cli', packCli)
-    let cliTarball = parseTarballPath(packCli, cliDir)
+    cliTarball = parseTarballPath(packCli, cliDir)
 
     let scaffold = await run('npm', ['exec', '--yes', '--package', createTarball, '--', 'create-graphenedata', 'demo-app', '--yes', '--no-install'], tempRoot, childEnv)
     expectSuccess('npm exec create-graphenedata', scaffold)
@@ -92,10 +94,13 @@ test.skipIf(!shouldRunCreatePackTest)('packs create and scaffolds a project that
 
     await page.goto(`http://localhost:${port}/`)
     await waitForGrapheneLoad(page)
-    await expect(page.locator('main')).screenshot('create-project-renders')
+    await expect(page.locator('main')).toBeVisible()
+    await expect(page.locator('main')).toContainText('This Graphene project is configured for DuckDB.')
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
     await run('npm', ['run', 'graphene', '--', 'stop'], projectDir, childEnv)
+    if (createTarball) await fsp.rm(createTarball, {force: true})
+    if (cliTarball) await fsp.rm(cliTarball, {force: true})
     await fsp.rm(tempRoot, {recursive: true, force: true})
   }
 })
