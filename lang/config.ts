@@ -1,4 +1,4 @@
-import * as fs from 'fs'
+import {readFile} from 'node:fs/promises'
 import path from 'path'
 
 export interface Config {
@@ -62,9 +62,9 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd())
   } as Config
 }
 
-export function readConfigInput(dir: string): ConfigInput | null {
+export async function readConfigInput(dir: string): Promise<ConfigInput | null> {
   try {
-    let txt = fs.readFileSync(path.join(dir, 'package.json'), 'utf8')
+    let txt = await readFile(path.join(dir, 'package.json'), 'utf8')
     let graphene = JSON.parse(txt).graphene
     if (!graphene || typeof graphene != 'object' || Array.isArray(graphene)) return null
     return graphene
@@ -73,15 +73,15 @@ export function readConfigInput(dir: string): ConfigInput | null {
   }
 }
 
-export function readConfig(dir: string, envLoader?: (envFiles: string[] | string) => void, defaultRoot = dir): Config {
-  let packageJsonObject = readConfigInput(dir) || ({} as ConfigInput)
+export async function readConfig(dir: string, envLoader?: (envFiles: string[] | string) => void, defaultRoot = dir): Promise<Config> {
+  let packageJsonObject = (await readConfigInput(dir)) || ({} as ConfigInput)
   if (envLoader) envLoader(packageJsonObject.envFile || ['.env'])
   return normalizeConfig({...packageJsonObject, root: packageJsonObject.root || defaultRoot}, defaultRoot)
 }
 
 // Read graphene config out of package.json
-export function loadConfig(dir: string, envLoader?: (envFiles: string[] | string) => void) {
+export async function loadConfig(dir: string, envLoader?: (envFiles: string[] | string) => void) {
   if (config.root) return
   Object.keys(config).forEach(key => delete config[key])
-  Object.assign(config, readConfig(dir, envLoader, process.cwd()))
+  Object.assign(config, await readConfig(dir, envLoader, process.cwd()))
 }

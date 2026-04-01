@@ -16,7 +16,7 @@ import {
 } from 'vscode-languageserver-protocol'
 import {URI} from 'vscode-uri'
 
-import {type Config, readConfig, readConfigInput} from '../../lang/config.ts'
+import {type Config, normalizeConfig, readConfigInput} from '../../lang/config.ts'
 import {analyzeWorkspace, getDefinition, getDiagnostics, getFiles, getHover, getReferences, loadWorkspace} from '../../lang/core.ts'
 import {type AnalysisResult, type GrapheneError, type Location as GrapheneLocation, type WorkspaceFileInput} from '../../lang/types.ts'
 
@@ -257,8 +257,9 @@ export async function discoverGrapheneProjects(workspaceFolders: readonly URI[])
 
     for (let packageJsonPath of packageJsonPaths) {
       let root = path.join(workspace.fsPath, path.dirname(packageJsonPath))
-      if (!readConfigInput(root)) continue
-      projects.set(root, {root, config: readConfig(root, undefined, root)})
+      let input = await readConfigInput(root)
+      if (!input) continue
+      projects.set(root, {root, config: normalizeConfig({...input, root: input.root || root}, root)})
     }
   }
 
