@@ -13,23 +13,9 @@ For example, you can use the `fmt` attribute to format values inside a BigValue 
 />
 ```
 
-Within charts, you can format individual columns using `xFmt` and `yFmt`:
+For charts, use the `ECharts` component for custom formatting logic (axis labels, tooltips, and series labels) via ECharts formatters in `config`.
 
-```markdown
-<LineChart
-  data=sales_data
-  x=date
-  y=sales
-  xFmt="m/d"
-  yFmt=eur
-/>
-```
-
-In the example above, `xFmt` is passing in an Excel-style code to format the dates and `yFmt` is referencing a built-in format (see the full list of supported formats below).
-
-**Date formatting**
-
-Formatting does not apply to the date axis of a chart. For example, if you set `xFmt` to `"m/d/yy"`, you will only see that formatting reflected in your chart tooltips and annotations. This is to ensure that the chart axis labels have the correct spacing.
+For convenience charts (`BarChart`, `LineChart`, `AreaChart`, `PieChart`), Graphene applies sensible defaults and uses field metadata (for example, currency units) when formatting inferred value axes.
 
 # Built-in Formats
 
