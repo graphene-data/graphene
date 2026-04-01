@@ -23,7 +23,7 @@ export interface QueryResult {
 export type Field = {
   name: string
   type: FieldType
-  metadata: {
+  metadata?: {
     pct?: true
     units?: string
     granularity?: string

@@ -1,6 +1,5 @@
 import type {EChartsConfig2, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
-import {type ScalarTypeKind} from '../../lang/types.ts'
 import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
 import {colorPalette} from './theme.ts'
 
@@ -454,15 +453,12 @@ function horizontalBarGuard(config: NormalConfig, fields: Field[]) {
   if (hasInvalidCategoryField) throw new Error('Horizontal charts do not support a value or time-based x-axis')
 }
 
-function fieldType(fields: Field[], fieldName?: string): ScalarTypeKind | 'unknown' {
+function fieldType(fields: Field[], fieldName?: string): string {
   if (!fieldName) return 'unknown'
 
   let field = fields.find(entry => entry.name === fieldName)
   if (!field) return 'unknown'
   if (field.type.kind === 'array') throw new Error(`Field ${fieldName} has unsupported non-scalar type: array`)
-
-  if (!field.type) return 'string'
-  if (typeof field.type === 'string') return field.type
   return field.type.kind
 }
 
