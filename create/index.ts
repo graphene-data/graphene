@@ -399,25 +399,41 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
 }
 
 async function installDeps(targetDir: string): Promise<InstallResult> {
-  let task = clack.taskLog({title: 'Installing dependencies...'})
-  let child = spawn('npm', ['install'], {cwd: targetDir, stdio: ['ignore', 'pipe', 'pipe']})
+  let task = clack.taskLog({title: 'Installing dependencies...', retainLog: true})
+  let child = spawn('npm', ['install'], {
+    cwd: targetDir,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    env: {...process.env, FORCE_COLOR: '1', npm_config_color: 'always'},
+  })
   if (!child.stdout || !child.stderr) throw new Error('npm install pipes were not created')
   let stderr = ''
   child.stdout.setEncoding('utf8')
   child.stderr.setEncoding('utf8')
 
-  let forward = (chunk: string) => {
-    for (let line of chunk.split(/\r?\n/)) {
+  let buffers = {stdout: '', stderr: ''}
+
+  let forward = (chunk: string, stream: 'stdout' | 'stderr') => {
+    let next = buffers[stream] + chunk
+    let lines = next.split(/\r?\n/)
+    buffers[stream] = lines.pop() || ''
+
+    for (let line of lines) {
       if (!line.trim()) continue
       task.message(line)
     }
   }
 
-  child.stdout.on('data', chunk => forward(String(chunk)))
+  let flush = (stream: 'stdout' | 'stderr') => {
+    let line = buffers[stream]
+    if (!line.trim()) return
+    task.message(line)
+  }
+
+  child.stdout.on('data', chunk => forward(String(chunk), 'stdout'))
   child.stderr.on('data', chunk => {
     let text = String(chunk)
     stderr += text
-    forward(text)
+    forward(text, 'stderr')
   })
 
   let code = await new Promise<number>((resolve, reject) => {
@@ -425,7 +441,10 @@ async function installDeps(targetDir: string): Promise<InstallResult> {
     child.on('close', exitCode => resolve(exitCode ?? 1))
   })
 
-  if (code === 0) task.success('Dependencies installed')
+  flush('stdout')
+  flush('stderr')
+
+  if (code === 0) task.success('Dependencies installed', {showLog: true})
   else task.error('npm install failed', {showLog: true})
 
   return {code, stderr}

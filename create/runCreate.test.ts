@@ -117,7 +117,7 @@ describe('runCreate', () => {
     await expect(runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('Target directory is not empty')
   })
 
-  it('streams install output into the task log and clears on success', async () => {
+  it('streams install output into the task log and keeps line breaks on success', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./index.ts')
     let stdout = streamSink()
@@ -127,9 +127,10 @@ describe('runCreate', () => {
 
     await runCreate({argv: ['demo-app', '--yes', '--install'], cwd: root, stdin: process.stdin, stdout: stdout.stream, stderr: stderr.stream})
 
-    expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies...'})
-    expect(taskLogState.message).toHaveBeenCalledWith('added 10 packages')
-    expect(taskLogState.success).toHaveBeenCalledWith('Dependencies installed')
+    expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies...', retainLog: true})
+    expect(taskLogState.message).toHaveBeenNthCalledWith(1, 'added 10 packages')
+    expect(taskLogState.message).toHaveBeenNthCalledWith(2, 'funding info')
+    expect(taskLogState.success).toHaveBeenCalledWith('Dependencies installed', {showLog: true})
   })
 
   it('marks install failures without clearing the log', async () => {
