@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {defaultProjectName, parseArgs, renderTemplate} from './index.ts'
+import {defaultProjectName, parseArgs, renderTemplate} from './create.ts'
 
 describe('create helpers', () => {
   it('parses the supported CLI arguments', () => {

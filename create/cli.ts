@@ -1,6 +1,6 @@
 import process from 'node:process'
 
-import {runCreate} from './index.ts'
+import {runCreate} from './create.ts'
 
 await runCreate({
   argv: process.argv.slice(2),

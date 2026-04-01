@@ -85,7 +85,7 @@ describe('runCreate', () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let keyPath = path.join(root, 'graphene_snowflake_key.p8')
     await writeFile(keyPath, 'private key')
-    let {runCreate} = await import('./index.ts')
+    let {runCreate} = await import('./create.ts')
     let stdout = streamSink()
     let stderr = streamSink()
 
@@ -112,14 +112,14 @@ describe('runCreate', () => {
     let targetDir = path.join(root, 'demo-app')
     await mkdir(targetDir, {recursive: true})
     await writeFile(path.join(targetDir, 'occupied.txt'), 'occupied')
-    let {runCreate} = await import('./index.ts')
+    let {runCreate} = await import('./create.ts')
 
     await expect(runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('Target directory is not empty')
   })
 
   it('streams install output into the task log and keeps line breaks on success', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
-    let {runCreate} = await import('./index.ts')
+    let {runCreate} = await import('./create.ts')
     let stdout = streamSink()
     let stderr = streamSink()
 
@@ -135,7 +135,7 @@ describe('runCreate', () => {
 
   it('marks install failures without clearing the log', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
-    let {runCreate} = await import('./index.ts')
+    let {runCreate} = await import('./create.ts')
 
     spawnMock.mockImplementation(() => createChild({exitCode: 1, stderr: 'npm ERR! failed\n'}))
 

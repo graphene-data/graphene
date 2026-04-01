@@ -400,7 +400,7 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
 
 async function installDeps(targetDir: string): Promise<InstallResult> {
   let task = clack.taskLog({title: 'Installing dependencies...', retainLog: true})
-  let child = spawn('npm', ['install'], {
+  let child = spawn('npm', ['install', '--no-fund'], {
     cwd: targetDir,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: {...process.env, FORCE_COLOR: '1', npm_config_color: 'always'},
