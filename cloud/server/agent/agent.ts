@@ -1,12 +1,14 @@
 import {anthropic} from '@ai-sdk/anthropic'
-import {generateText, stepCountIs} from 'ai'
+import {generateText, stepCountIs, tool as createTool} from 'ai'
 import {eq} from 'drizzle-orm'
 import {readFileSync} from 'fs'
 import path from 'path'
 import {fileURLToPath} from 'url'
+import {z} from 'zod'
 
 import {agentSessions, type AgentSession} from '../../schema.ts'
 import {getDb} from '../db.ts'
+import {renderMdScreenshot} from './renderMd.ts'
 import {listDirTool, readFileTool, searchTool, respondToUserTool, type SharedTool} from './tools.ts'
 
 // Read Graphene documentation at module load time
@@ -29,11 +31,11 @@ export async function runAgent(session: AgentSession): Promise<{text: string; sc
     model: anthropic('claude-sonnet-4-20250514'),
     system: systemPrompt,
     tools: {
-      listDir: listDirTool(session.repoId!),
-      readFile: readFileTool(session.repoId!),
-      search: searchTool(session.repoId!),
-      renderMd: renderMdTool(session.repoId!),
-      respondToUser: respondToUserTool(),
+      listDir: toVercelTool(session.repoId, listDirTool),
+      readFile: toVercelTool(session.repoId, readFileTool),
+      search: toVercelTool(session.repoId, searchTool),
+      renderMd: toVercelTool(session.repoId, renderMdScreenshot),
+      respondToUser: toVercelTool(session.repoId, respondToUserTool),
     },
     stopWhen: stepCountIs(50),
     onStepFinish: (step: any) => console.dir(step.content, {depth: null}),
@@ -137,8 +139,22 @@ function cleanMessages(messages: any[]) {
   return cloned
 }
 
-function toVercelTool(tool: SharedTool) {
-  // fill in
+function toVercelTool(repoId: string, tool: SharedTool) {
+  let inputSchema = isZodSchema(tool.inputSchema) ? tool.inputSchema : z.object(tool.inputSchema || {})
+  let outputSchema: z.ZodTypeAny | undefined = undefined
+  if (tool.outputSchema) outputSchema = isZodSchema(tool.outputSchema) ? tool.outputSchema : z.object(tool.outputSchema)
+
+  return createTool({
+    description: tool.description,
+    inputSchema,
+    outputSchema,
+    execute: async (input: any) => await tool.fn(repoId, input),
+    toModelOutput: tool.toModelOutput,
+  })
+}
+
+function isZodSchema(value: unknown): value is z.ZodTypeAny {
+  return !!value && typeof value == 'object' && 'safeParse' in value && typeof (value as any).safeParse == 'function'
 }
 
 function buildSystemPrompt(): string {

@@ -4,10 +4,10 @@ import {and, eq} from 'drizzle-orm'
 
 import {analyzeWorkspace} from '../../core/lang/analyze.ts'
 import {type GrapheneError, toSql} from '../../core/lang/core.ts'
+import {type QueryResult} from '../../core/ui/component-utilities/types.ts'
 import {connections, files, repos, type Connection} from '../schema.ts'
 import {getDb} from './db.ts'
 import {decryptSecret} from './secrets.ts'
-import {type QueryResult} from '../../core/ui/component-utilities/types.ts'
 
 export interface QueryBody {
   sql?: string
@@ -16,7 +16,7 @@ export interface QueryBody {
   repoId: string
 }
 
-class UserFacingError extends Error { }
+class UserFacingError extends Error {}
 class DiagnosticError extends Error {
   constructor(g: GrapheneError) {
     super(g.message)

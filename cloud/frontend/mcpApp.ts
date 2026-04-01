@@ -1,11 +1,12 @@
 import {App, applyDocumentTheme, applyHostFonts, applyHostStyleVariables, type McpUiHostContext} from '@modelcontextprotocol/ext-apps'
+
 import '../../core/ui/internal/telemetry.ts'
-import {setQueryFetcher} from '../../core/ui/internal/queryEngine.ts'
 // import './app.css'
 import {mount, unmount} from 'svelte'
 // eslint-disable-next-line svelte/no-svelte-internal
 import * as svelteInternal from 'svelte/internal/client'
 
+import {setQueryFetcher} from '../../core/ui/internal/queryEngine.ts'
 
 const componentModules = import.meta.glob('../../core/ui/components/*.svelte', {eager: true}) as Record<string, {default: typeof App}>
 const components = Object.fromEntries(
@@ -37,17 +38,17 @@ function applyHostContext(ctx: McpUiHostContext) {
   }
 }
 
-app.onerror = (error) => {
+app.onerror = error => {
   console.error(error)
 }
 
-app.ontoolinput = (input) => {
+app.ontoolinput = input => {
   console.log('toolInput', input)
 }
 
 let instance: any // svelte page component currently mounted
 
-app.ontoolresult = async (result) => {
+app.ontoolresult = async result => {
   console.log('toolResult', result)
 
   let code = result.structuredContent?.compiled

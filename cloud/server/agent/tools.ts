@@ -1,15 +1,8 @@
 import {eq, like, or, and} from 'drizzle-orm'
-import fs from 'node:fs'
-import path from 'node:path'
-import {fileURLToPath} from 'node:url'
 import {z} from 'zod'
 
 import {files} from '../../schema.ts'
 import {getDb} from '../db.ts'
-import {compileMd} from '../pages.ts'
-import {proxyQuery, type QueryBody} from '../query.ts'
-
-let rootDir = path.resolve(fileURLToPath(import.meta.url), '../../..')
 
 // Shared tool definitions. These are framework-agnostic and adapted by AI/MCP wrappers.
 export interface SharedTool {
@@ -17,7 +10,7 @@ export interface SharedTool {
   description: string
   inputSchema?: z.ZodType | z.ZodRawShape
   outputSchema?: z.ZodType | z.ZodRawShape
-  fn: (repoId:string, args: any) => Promise<any> | any
+  fn: (repoId: string, args: any) => Promise<any> | any
   toModelOutput?: (args: any) => any
   _meta?: any
 }
@@ -36,7 +29,7 @@ export const listDirTool = {
   inputSchema: z.object({path: z.string()}),
   outputSchema: z.array(z.string()),
   fn: async function listDir(repoId: string, {path}: {path: string}) {
-    let prefix = path ? `${path}/` : ''
+    let prefix = path ? `${path.replace(/\/$/, '')}/` : ''
     let allFiles = await getDb()
       .select({path: files.path, extension: files.extension})
       .from(files)
@@ -63,19 +56,14 @@ export const readFileTool = {
   description: 'Read the contents of a file',
   inputSchema: z.object({path: z.string()}),
   fn: async function readFile(repoId: string, {path: filePath}: {path: string}) {
-    if (filePath.endsWith('docs/graphene.md') || filePath.endsWith('docs/graphene')) {
-      let docsPath = path.resolve(rootDir, '../core/docs/graphene.md')
-      if (fs.existsSync(docsPath)) return {content: fs.readFileSync(docsPath, 'utf-8'), extension: 'md'}
-    }
+    let parts = filePath.split('.')
+    let ext = parts.pop()
+    let fileName = parts.join('.')
+    console.log('looking for', parts, ext)
 
-    let cleanPath = filePath.replace(/\.(md|gsql)$/, '')
-
-    let file = await getDb()
-      .select({content: files.content, extension: files.extension})
-      .from(files)
-      .where(and(eq(files.repoId, repoId), eq(files.path, cleanPath)))
-      .then(rows => rows[0])
-
+    let file = await getDb().query.files.findFirst({
+      where: and(eq(files.repoId, repoId), eq(files.path, fileName), eq(files.extension, ext)),
+    })
     if (!file) return {error: `File not found: ${filePath}`}
     return {content: file.content, extension: file.extension}
   },
@@ -98,7 +86,7 @@ export const searchTool = {
   },
 } satisfies SharedTool
 
-// Allows the agent to explicitly respond to the user, referencing a particular render to show
+// Allows the agent to explicitly respond to the user, referencing a particular render to show. Used by the slackbot
 export const respondToUserTool = {
   name: 'respond',
   description: 'Finalize your response to the user. Call this exactly once when you are done. Include mdId to attach the matching renderMd screenshot in Slack.',
@@ -110,72 +98,6 @@ export const respondToUserTool = {
     return {text, mdId}
   },
 } satisfies SharedTool
-
-export const renderDynamicMd = {
-  name: 'render-md',
-  description: 'Render inline markdown with Graphene dynamic rendering.',
-  inputSchema: z.object({markdown: z.string()}),
-  fn: async function renderDynamicMd(repoId: string, {markdown}: {markdown: string}) {
-    let compiledModule = await compileMd(markdown, 'dynamic.md', repoId)
-    return {
-      content: [{type: 'text' as const, text: 'Queued render in Graphene viewer.'}],
-      structuredContent: {ok: true},
-      _meta: {graphene: {kind: 'dynamic', repoId, compiledModule}},
-    }
-  },
-} satisfies SharedTool
-
-export const renderPage = {
-  name: 'render-page',
-  description: 'Render an existing markdown page from the repository.',
-  inputSchema: z.object({path: z.string()}),
-  fn: async function renderPage(repoId: string, {path}: {path: string}) {
-    // normalize path
-    path = (path || '').trim().replace(/^\/+/, '').replace(/\/+$/, '')
-    if (!path) path = 'index'
-    if (!path.endsWith('.md')) return null
-    path = path.replace(/\.md$/, '')
-
-    let page = await getDb()
-      .select({path: files.path, content: files.content})
-      .from(files)
-      .where(and(eq(files.repoId, repoId), eq(files.extension, 'md'), or(eq(files.path, path), eq(files.path, `${path}/index`))))
-      .then(rows => rows[0] || null)
-    if (!page) return {isError: true, content: [{type: 'text' as const, text: `Markdown page not found: ${path}`}]}
-
-    let compiledModule = await compileMd(page.content, `${page.path}.md`, repoId)
-    return {
-      content: [{type: 'text' as const, text: `Queued render for ${page.path}.md`}],
-      structuredContent: {ok: true, path: `${page.path}.md`},
-      _meta: {graphene: {kind: 'page', repoId, path: `${page.path}.md`, compiledModule}},
-    }
-  },
-} satisfies SharedTool
-
-export const runQuery = {
-  name: 'run-query',
-  description: 'Runs a given GSQL query and returns results',
-  inputSchema: z.object({
-    gsql: z.string().describe('GSQL query to execute'),
-    params: z.record(z.string(), z.any()).optional(),
-  }),
-  fn: async function runQuery(body) {
-    try {
-      let res = await proxyQuery('organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d', body as QueryBody)
-      return {
-        content: [{type: 'text', text: 'Query results'}],
-        structuredContent: res as any,
-      }
-    } catch (e: any) {
-      let err = e?.cause || e
-      return {
-        isError: true,
-        content: [{type: 'text', text: err?.message || 'Query error'}],
-        structuredContent: err,
-      }
-    }
-  },
-}
 
 function extractPreview(content: string, query: string, contextChars = 100): string {
   let lowerContent = content.toLowerCase()
