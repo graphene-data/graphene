@@ -1,3 +1,4 @@
+import {scalarType} from '../../lang/types.ts'
 import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 import {groupedDataForSection, tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData.ts'
 
@@ -283,9 +284,9 @@ test('row-level link behavior opens external destinations and hides link column'
     {name: 'Gamma', value: 5, url: 'https://example.com/gamma'},
   ] as any
   rows._evidenceColumnTypes = [
-    {name: 'name', evidenceType: 'string'},
-    {name: 'value', evidenceType: 'number'},
-    {name: 'url', evidenceType: 'string'},
+    {name: 'name', type: scalarType('string')},
+    {name: 'value', type: scalarType('number')},
+    {name: 'url', type: scalarType('string')},
   ]
 
   await mount('components/Table.svelte', {data: {rows}, link: 'url', rowNumbers: true, rows: 'all'})

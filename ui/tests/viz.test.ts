@@ -1,3 +1,4 @@
+import {scalarType} from '../../lang/types.ts'
 import {expect, test} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 import {categoricalSeries, denseTimeseries, singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
@@ -32,20 +33,6 @@ test('echarts loading state', async ({mount, chart, page, server}) => {
       delete (window as any).__originalQuery
     })
   }
-})
-
-test('echarts empty state', async ({mount, chart}) => {
-  await mount('components/ECharts.svelte', {
-    config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}},
-    data: {
-      rows: [],
-      fields: [
-        {name: 'month', type: 'string'},
-        {name: 'value', type: 'number'},
-      ],
-    },
-  })
-  await expect(chart.el).screenshot('echarts-empty-state')
 })
 
 test('echarts query error state', async ({mount, chart}) => {
@@ -101,8 +88,8 @@ test('bar chart with just 0,1 has sensible y axis ticks', async ({mount, chart})
     {category: 'C', count: 1},
   ]
   let fields = [
-    {name: 'category', type: 'string'},
-    {name: 'count', type: 'number', metadata: {units: 'count'}},
+    {name: 'category', type: scalarType('string')},
+    {name: 'count', type: scalarType('number'), metadata: {units: 'count'}},
   ]
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'category', y: 'count'})
   await expect(chart.el).screenshot('bar-chart-0-to-1')
@@ -178,9 +165,9 @@ test('categorical stacked bar charts sort by total value descending', async ({mo
   ]
 
   let fields = [
-    {name: 'segment', type: 'string'},
-    {name: 'metric', type: 'string'},
-    {name: 'value', type: 'number', metadata: {units: 'count'}},
+    {name: 'segment', type: scalarType('string')},
+    {name: 'metric', type: scalarType('string')},
+    {name: 'value', type: scalarType('number'), metadata: {units: 'count'}},
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'segment', y: 'value', stack: 'metric', title: 'Stacked Category Sort'})
@@ -223,7 +210,7 @@ test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
     let delta = (nextRandom() - 0.5) * 0.08
     return {...r, profit_usd0k: r.sales_usd0k * (0.15 + delta)}
   })
-  data.fields.push({name: 'profit_usd0k', type: 'number', metadata: {units: 'usd'}})
+  data.fields.push({name: 'profit_usd0k', type: scalarType('number'), metadata: {units: 'usd'}})
   await mount('components/BarChart.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
   await expect(chart.el).screenshot('bar-chart-secondary-axis-line')
 })

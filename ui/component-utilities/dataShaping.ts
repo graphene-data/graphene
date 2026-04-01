@@ -1,5 +1,7 @@
 import type {Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
+import {scalarType} from '../../lang/types.ts'
+
 // Fill sparse grouped data so each split series has a value for each x bucket.
 //
 // This only applies to grouped templates (`encode.group` or `encode.stack`).
@@ -182,7 +184,7 @@ function sortRowsByCategoryMetric(rows: Record<string, any>[], xField: string, m
 
 function ensureField(fields: Field[], name: string, options?: Partial<Field>) {
   if (fields.some(field => field.name === name)) return
-  fields.push({name, type: 'number', evidenceType: 'number', ...options})
+  fields.push({name, type: scalarType('number'), ...options})
 }
 
 // Default missing datapoint handling differs by chart type.
@@ -200,8 +202,10 @@ function getMissingFillValueForSeries(series: SeriesWithGroupingHint) {
 
 function inferFieldType(fields: Field[], fieldName: string) {
   let field = fields.find(entry => entry.name === fieldName)
-  if (field?.evidenceType === 'date' || field?.type === 'date' || field?.type === 'timestamp') return 'date'
-  if (field?.evidenceType === 'number' || field?.type === 'number') return 'number'
+  if (!field) return 'string'
+  if (field.type.kind === 'array') throw new Error(`Field ${fieldName} has unsupported non-scalar type: array`)
+  if (field.type.kind === 'date' || field.type.kind === 'timestamp') return 'date'
+  if (field.type.kind === 'number') return 'number'
   return 'string'
 }
 
