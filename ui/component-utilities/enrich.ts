@@ -1,5 +1,6 @@
 import type {EChartsConfig2, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
+import {type ScalarTypeKind} from '../../lang/types.ts'
 import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
 import {colorPalette} from './theme.ts'
 
@@ -243,9 +244,9 @@ function valueAxisFormatting(config: NormalConfig, fields: Field[]) {
   let applyAxisFormatter = (axis: NormalConfig['xAxis'][number] | NormalConfig['yAxis'][number], fieldName?: string) => {
     if (!axis || axis.type !== 'value' || axis.axisLabel?.formatter != null || !fieldName) return
 
-    let field = findField(fields, fieldName)
-    if (getFieldTypeFromMetadata(field) !== 'number') return
+    if (fieldType(fields, fieldName) !== 'number') return
 
+    let field = fields.find(entry => entry.name === fieldName)
     let unit = field?.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
     let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
 
@@ -407,7 +408,7 @@ function numericOffset(value: unknown, delta: number) {
   return typeof value === 'number' ? value + delta : delta
 }
 
-function formatAxisValue(formatter: (value: unknown, index: number) => unknown, value: unknown) {
+function formatAxisValue(formatter: (...args: any[]) => unknown, value: unknown) {
   return String(formatter(value, 0))
 }
 
@@ -447,30 +448,28 @@ function horizontalBarGuard(config: NormalConfig, fields: Field[]) {
 
   let hasInvalidCategoryField = config.series
     .filter(series => series?.type === 'bar')
-    .map(series => findField(fields, getSeriesCategoryFieldForHorizontal(series)))
-    .map(field => getFieldTypeFromMetadata(field))
-    .some(type => type === 'date' || type === 'number')
+    .map(series => fieldType(fields, getSeriesCategoryFieldForHorizontal(series)))
+    .some(type => type === 'date' || type === 'timestamp' || type === 'number')
 
   if (hasInvalidCategoryField) throw new Error('Horizontal charts do not support a value or time-based x-axis')
 }
 
-function findField(fields: Field[], fieldName?: string) {
-  if (!fieldName) return undefined
-  return fields.find(field => field.name === fieldName)
-}
+function fieldType(fields: Field[], fieldName?: string): ScalarTypeKind | 'unknown' {
+  if (!fieldName) return 'unknown'
 
-function getFieldTypeFromMetadata(field?: Field) {
+  let field = fields.find(entry => entry.name === fieldName)
   if (!field) return 'unknown'
-  if (field.evidenceType === 'number' || field.type === 'number') return 'number'
-  if (field.evidenceType === 'date' || field.type === 'date' || field.type === 'timestamp') return 'date'
-  if (field.evidenceType === 'boolean' || field.type === 'boolean') return 'boolean'
-  return 'string'
+  if (field.type.kind === 'array') throw new Error(`Field ${fieldName} has unsupported non-scalar type: array`)
+
+  if (!field.type) return 'string'
+  if (typeof field.type === 'string') return field.type
+  return field.type.kind
 }
 
 function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
-  let types = fieldNames.map(name => getFieldTypeFromMetadata(findField(fields, name))).filter(type => type !== 'unknown')
+  let types = fieldNames.map(name => fieldType(fields, name)).filter(type => type !== 'unknown')
 
-  if (types.some(type => type === 'date')) return 'time'
+  if (types.some(type => type === 'date' || type === 'timestamp')) return 'time'
   if (types.some(type => type === 'number')) return 'value'
   return 'category'
 }
