@@ -31,7 +31,7 @@ describe('dynamic endpoint', () => {
 
     let markdown = `# Flight Delays
 
-\`\`\`sql delays
+\`\`\`gsql delays
 from flights select carrier, avg(dep_delay) as avg_delay order by avg_delay desc limit 5
 \`\`\`
 
@@ -47,7 +47,7 @@ from flights select carrier, avg(dep_delay) as avg_delay order by avg_delay desc
     await page.waitForSelector('h1', {timeout: 5000})
 
     await expect(page.locator('h1')).toHaveText('Flight Delays')
-    await expect(page.locator('canvas')).toBeVisible({timeout: 15000})
+    await expect(page.locator('.echarts')).toBeVisible({timeout: 15000})
 
     await expect(page).screenshot('dynamic-bar-chart')
 

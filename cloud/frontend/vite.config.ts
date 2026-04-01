@@ -11,9 +11,6 @@ export function createFrontendViteConfig() {
     root: frontendDir,
     publicDir: path.join(repoRoot, 'core/ui/public'),
     plugins: [svelte() as any, fixSvelteDepsInTests()],
-    resolve: {
-      conditions: ['svelte', 'browser'],
-    },
     server: {
       allowedHosts: ['.ngrok-free.dev'],
       fs: {
