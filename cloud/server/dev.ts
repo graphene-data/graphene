@@ -58,7 +58,7 @@ export async function startDevServer({realAuth, port, project = 'flights', logge
   })
 
   fastify.use((req, res, next) => {
-    if (req.url?.startsWith('/_api')) next()
+    if (req.url?.startsWith('/_api') || req.url?.startsWith('/.well-known')) next()
     else vite.middlewares(req, res, next)
   })
 

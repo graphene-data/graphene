@@ -1,5 +1,7 @@
 import type {ModelMessage} from 'ai'
 
+import {Client} from '@modelcontextprotocol/sdk/client/index.js'
+import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import dotenv from 'dotenv'
 import net from 'net'
 import crypto from 'node:crypto'
@@ -21,11 +23,6 @@ process.env.SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET || 'test-sig
 // Load pglite classes once before all tests, with a random port for parallel execution
 await setupPglite(await getAvailablePort())
 
-interface CloudOptions {
-  realAuth: boolean
-  project: string
-}
-
 interface SlackFixture {
   simulateWebhook: (payload: any) => Promise<{statusCode: number; json: () => Promise<any>}>
   simulateUserMessage: (text: string, options?: {teamId?: string; channel?: string; ts?: string; threadTs?: string}) => Promise<{statusCode: number; json: () => Promise<any>}>
@@ -40,7 +37,16 @@ interface MockLLMFixture {
   getRequests: () => {messages: ModelMessage[]; systemPrompt: string}[]
 }
 
-export const test = base.extend<{browser: Browser; page: Page; cloud: {url: string}; slack: SlackFixture; mockLLM: MockLLMFixture} & CloudOptions>({
+export const test = base.extend<{
+  realAuth: boolean
+  project: string
+  browser: Browser
+  page: Page
+  cloud: {url: string}
+  slack: SlackFixture
+  mockLLM: MockLLMFixture
+  mcpClient: Client
+}>({
   realAuth: false,
   project: 'flights',
 
@@ -122,6 +128,19 @@ export const test = base.extend<{browser: Browser; page: Page; cloud: {url: stri
     })
 
     setAgentMock(null)
+  },
+
+  mcpClient: async ({cloud}, use) => {
+    let client = new Client({name: 'mcp-e2e-test-client', version: '1.0.0'})
+    let transport = new StreamableHTTPClientTransport(new URL('/_api/mcp', cloud.url))
+    await client.connect(transport)
+
+    try {
+      await use(client)
+    } finally {
+      await transport.close()
+      await client.close()
+    }
   },
 
   // Slack fixture for simulating inbound events and inspecting outbound API calls

@@ -10,12 +10,13 @@ import {fileURLToPath} from 'url'
 import {type AuthContext, auth, authTokenExchange, oauthRegister} from './auth.ts'
 import {getChatSession} from './chats.ts'
 import {githubInstall, githubSetup, listAvailableRepos, addRepo, removeRepo, githubWebhook} from './github.ts'
+import {registerMcpServer} from './mcp.ts'
 import {listNavFiles, renderPage, renderDynamicModule} from './pages.ts'
 import {queryEndpoint} from './query.ts'
 import {slackEvents, slackInstall, slackOauthCallback, slackStatus} from './slack.ts'
 
 export function createServer(serveStatic: boolean, logger: FastifyLoggerOptions = {level: 'warn'}) {
-  let app = fastify({logger, ignoreTrailingSlash: true})
+  let app = fastify({logger})
   app.register(cookie, {})
   app.register(formbody)
   app.register(cors, {origin: false}) // TODO scope this down to just the right endpoints

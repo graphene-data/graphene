@@ -11,6 +11,7 @@ import {z} from 'zod'
 
 import {repos} from '../schema.ts'
 import {listDirTool, readFileTool, type SharedTool} from './agent/tools.ts'
+import {auth} from './auth.ts'
 import {getDb} from './db.ts'
 import {origin} from './utils.ts'
 import {compileMd} from './pages.ts'
@@ -36,12 +37,11 @@ function wellKnown(req: FastifyRequest, reply: FastifyReply) {
   let route = (req.params as any)['*']
   if (req.method == 'OPTIONS') return reply.code(204).send()
   let ori = origin(req)
-
   let authMeta = {
     issuer: ori,
     authorization_endpoint: `${ori}/authenticate`,
     token_endpoint: `${ori}/_api/oauth2/token`,
-    registration_endpoint: `${ori}/oauth/register`,
+    registration_endpoint: `${ori}/_api/oauth2/register`,
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
     token_endpoint_auth_methods_supported: ['none'],
@@ -59,8 +59,10 @@ function wellKnown(req: FastifyRequest, reply: FastifyReply) {
         bearer_methods_supported: ['header'],
       })
     case 'oauth-authorization-server':
+    case 'oauth-authorization-server/_api/mcp':
       return reply.type('application/json').send(authMeta)
     case 'openid-configuration':
+    case 'openid-configuration/_api/mcp':
       return reply.type('application/json').send({
         ...authMeta,
         subject_types_supported: ['public'],
@@ -74,15 +76,15 @@ function wellKnown(req: FastifyRequest, reply: FastifyReply) {
 // Actually handle MCP requests. This is called for every tool call, as well as some status notifications
 // We're using the MCP SDK server to start with, though I don't love that it's a bit of a black box
 async function handleMcpRequest(req: FastifyRequest, reply: FastifyReply) {
-  // tmp hack for testing before we add auth
-  req.auth = {orgId: 'organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d'} as any
+  await auth(req, reply)
+  if (reply.sent) return
 
   let repo = await getDb().query.repos.findFirst({where: eq(repos.orgId, req.auth.orgId)})
   if (!repo) throw new Error('Missing repo for org')
 
   // This feels incrediblely wasteful to do for each request, but that's what the MCP examples do,
   // and it's not clear to be how stateful the server is, and if it will leak stuff when shared.
-  let server = createServer(repo.id)
+  let server = createServer(repo.id, req.auth.orgId)
   let transport = new StreamableHTTPServerTransport({sessionIdGenerator: undefined})
 
   reply.raw.setHeader('Vary', 'Origin')
@@ -102,14 +104,14 @@ async function handleMcpRequest(req: FastifyRequest, reply: FastifyReply) {
 }
 
 // Creates a new McpServer instance, and attaches all the tools/resources we want to expose.
-function createServer(repoId: string): McpServer {
+function createServer(repoId: string, orgId: string): McpServer {
   let server = new McpServer({name: 'Graphene MCP', version: '1.0.0'})
   registerSharedTool(server, repoId, listDirTool)
   registerSharedTool(server, repoId, readFileTool)
 
   registerSharedTool(server, repoId, {
     name: 'render-md',
-    description: 'Takes in markdown and displawhat ys it to the user',
+    description: 'Takes in markdown and displays it to the user',
     inputSchema: z.object({markdown: z.string().describe('Markdown content to render')}),
     outputSchema: z.object({compiled: z.string()}),
     _meta: {ui: {resourceUri}},
@@ -127,7 +129,7 @@ function createServer(repoId: string): McpServer {
       params: z.record(z.string(), z.any()).optional(),
     }),
     fn: async function runQuery(repoId, body: QueryBody) {
-      return await proxyQuery('organization-test-fe0fbae3-a479-4b60-8e80-7a76e76cc35d', {...body, repoId})
+      return await proxyQuery(orgId, {...body, repoId})
     },
   })
 

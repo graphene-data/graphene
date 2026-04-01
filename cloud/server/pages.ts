@@ -5,7 +5,7 @@ import {compile as mdsvexCompile} from 'mdsvex'
 import {compile as svelteCompile} from 'svelte/compiler'
 
 import {componentNames, rehypePlugins, remarkPlugins} from '../../core/cli/mdCompile.ts'
-import {files, repos} from '../schema.ts'
+import {type File, files, repos} from '../schema.ts'
 import {PROD} from './consts.ts'
 import {getDb} from './db.ts'
 
