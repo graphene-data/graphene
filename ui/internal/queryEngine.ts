@@ -1,7 +1,7 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import type {GrapheneError} from '../../lang/types.ts'
+import type {FieldType, GrapheneError} from '../../lang/types.ts'
 
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
