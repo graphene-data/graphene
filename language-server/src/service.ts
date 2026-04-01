@@ -65,29 +65,31 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         async provideHover(document, position) {
           await analysis.pending
 
-          let target = projectDocument(document.uri)
-          return target ? {contents: getHover(target.project.analysis, target.path, position.line, position.character)} : null
+          let target = projectFromUri(document.uri)
+          if (!target) return null
+          return {contents: getHover(target.project.analysis, target.path, position.line, position.character)}
         },
         async provideDefinition(document, position, _token) {
           await analysis.pending
 
-          let target = projectDocument(document.uri)
-          let location = target ? getDefinition(target.project.analysis, target.path, position.line, position.character) : null
-          return target && location ? [toLocationLink(target.project.root, location)] : []
+          let target = projectFromUri(document.uri)
+          if (!target) return []
+          let location = getDefinition(target.project.analysis, target.path, position.line, position.character)
+          return location ? [toLocationLink(target.project.root, location)] : []
         },
         async provideReferences(document, position, context, _token) {
           await analysis.pending
 
-          let target = projectDocument(document.uri)
-          return target
-            ? getReferences(target.project.analysis, target.path, position.line, position.character, context.includeDeclaration).map(location => toLocation(target.project.root, location))
-            : []
+          let target = projectFromUri(document.uri)
+          if (!target) return []
+          return getReferences(target.project.analysis, target.path, position.line, position.character, context.includeDeclaration).map(location => toLocation(target.project.root, location))
         },
         async provideDiagnostics(document) {
           await analysis.pending
 
-          let target = projectDocument(document.uri)
-          return target ? diagnosticsFor(target.project, target.path) : []
+          let target = projectFromUri(document.uri)
+          if (!target) return []
+          return diagnosticsFor(target.project, target.path)
         },
         async provideWorkspaceDiagnostics() {
           await analysis.pending
@@ -125,7 +127,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         })
 
         changeContent = server.documents.onDidChangeContent(({document}) => {
-          let target = projectDocument(document.uri)
+          let target = projectFromUri(document.uri)
           if (!target) return
 
           target.project.files = upsertFile(target.project.files, {path: target.path, contents: document.getText()})
@@ -146,7 +148,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         let touched = false
 
         for (let change of changes) {
-          let target = projectPath(change.uri)
+          let target = projectFromUri(change.uri)
           if (!target) continue
 
           if (change.type === FileChangeType.Deleted) {
@@ -165,13 +167,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         if (touched) analysis.invalidate()
       }
 
-      function projectDocument(uri: DocumentUri) {
-        let target = projectPath(uri)
-        if (!target) return null
-        return {project: target.project, path: target.path}
-      }
-
-      function projectPath(uri: DocumentUri) {
+      function projectFromUri(uri: DocumentUri) {
         let absolutePath = fileUriPath(uri)
         if (!absolutePath) return null
 
