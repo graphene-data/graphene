@@ -64,14 +64,30 @@ Queries can be referenced by other queries in the `from` or `join` to form DAGs 
 `data` can be a query name or a table name. Attributes that accept columns also accept GSQL expressions.
 
 ## Components
-### Visualizations
-- BarChart: data, x, y, y2, series, title, subtitle, xFmt, yFmt, y2Fmt, colorPalette, type, swapXY, labels, labelFmt, sort, legend, yMin, yMax
-- LineChart: data, x, y, y2, series, title, subtitle, xFmt, yFmt, colorPalette, labels, sort, legend, handleMissing, markers, markerShape, lineType, lineWidth
-- AreaChart: data, x, y, series, title, subtitle, xFmt, yFmt, colorPalette, type, labels, sort, legend, handleMissing, fillOpacity, line
-- PieChart: data, category, value, title, subtitle
+All viz components take `data`, which is the name of a gsql table or code-fenced query in the markdown.
+Component "field" attributes (like x and y) map to a column within data.
+Attributes like `x`, `y`, `y2`, `group`, `stack`, `stack100` are the names of columns within the `data` table.
+`title` - shown above the viz
+- BarChart: Fields [x,y,y2,group,stack,stack100]. y2 will always be a line, stack and stack100 are mutually exclusive. `label` (show labels above bars)
+- LineChart: Fields [x,y,y2,series]
+- AreaChart: Fields [x,y,group,stack,stack100]
+- PieChart: Fields: [category,value]
+
 - BigValue: data, value, title, fmt, comparison, comparisonFmt, comparisonTitle, downIsGood, sparkline, sparklineType, sparklineColor
 - Table: data, rows, title, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
   - Column (sub-component of Table): id, title, fmt, align, wrap, contentType, totalAgg, redNegatives
+
+## ECharts
+To further customize the look and feel of a chart, use the ECharts component to provide an echarts config.
+Be sure to set `data`, and use `encode` on series to map columns in the `data`.
+In addition to the regular fields `encode` takes, it also accepts `stack` and `group`, which will automatically expand that column to the required number of series.
+
+```md
+<ECharts data="sales_by_category">
+  xAxis: {axisLine: {lineStyle: {color: 'purple'}}},
+  series: [{type: "bar", encode: {x: "month", y: "revenue", stack: "category"}],
+</ECharts>
+```
 
 ### Inputs
 - Dropdown: name, data, value, label, defaultValue, multiple, title
@@ -79,31 +95,6 @@ Queries can be referenced by other queries in the `from` or `join` to form DAGs 
 
 ### Other components
 - Row: no attributes (layout container, distributes children horizontally)
-
-## Component attributes
-- series: column whose values become separate lines/bars (series=country plots one line per country)
-- type: stacked (default), grouped (BarChart only), stacked100
-- y2: secondary y-axis, y2SeriesType sets its chart type (line/bar/scatter)
-- swapXY: horizontal bars
-- handleMissing: gap (default), connect, zero
-- colorPalette: comma-separated "#hex1, #hex2", applied to series in order
-- seriesOrder: control series order "Val1, Val2", pairs with colorPalette
-- labels: show value labels on chart
-- markers: show dots on line points; markerShape: circle, emptyCircle, rect, triangle, diamond
-- lineType: solid, dashed, dotted
-- downIsGood: green for negative (for comparison/delta)
-- sparkline: date column for mini trend; sparklineType: line, area, bar
-- groupBy: group table rows; groupType: accordion (collapsible) or section (merged)
-- totalRow: sum row at bottom; subtotals: sum row per group
-- link: make table rows clickable, value is URL column
-- contentType:
-  - delta: arrows+colors. deltaSymbol, downIsGood, chip, neutralMin/Max
-  - colorscale: background gradient. colorScale, colorMin/Mid/Max
-  - bar: in-cell bar. barColor, negativeBarColor
-  - link: clickable. linkLabel, openInNewTab
-  - image: show image. height, width
-  - sparkline/sparkarea/sparkbar: mini chart from array. sparkX, sparkY, sparkColor
-- totalAgg: sum (default), mean, weightedMean, median, min, max, count, countDistinct
 
 ## Tying input components to SQL
 Inject input values into queries by referring to their `name` attribute as $name. 
