@@ -156,9 +156,13 @@ export function defaultProjectName(targetDir: string): string {
 export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers; cliVersion: string}): TemplateFiles {
   let graphene: GrapheneTemplateConfig = {dialect: answers.database}
   if (answers.defaultNamespace) graphene.defaultNamespace = answers.defaultNamespace
-  if (answers.database === 'duckdb') graphene.duckdb = {path: answers.duckdbPath || './data.duckdb'}
-  else if (answers.database === 'snowflake') graphene.snowflake = {account: answers.snowflakeAccount || '', username: answers.snowflakeUsername || ''}
-  else graphene.bigquery = {projectId: answers.bigqueryProjectId || ''}
+  if (answers.database === 'duckdb') {
+    if (answers.duckdbPath) graphene.duckdb = {path: answers.duckdbPath}
+  } else if (answers.database === 'snowflake') {
+    graphene.snowflake = {account: answers.snowflakeAccount || '', username: answers.snowflakeUsername || ''}
+  } else {
+    graphene.bigquery = {projectId: answers.bigqueryProjectId || ''}
+  }
 
   let pkg: TemplatePackageJson = {
     name: answers.projectName,
@@ -289,7 +293,6 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
       targetDir,
       projectName: options.name || defaultProjectName(targetDir),
       database: 'duckdb',
-      duckdbPath: './data.duckdb',
       install: options.install ?? false,
     }
   }
@@ -337,18 +340,18 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
   }
 
   if (database === 'duckdb') {
-    answers.duckdbPath = unwrapPrompt(
-      await clack.text({
-        message: 'Path to .duckdb file',
-        placeholder: './data.duckdb',
-        initialValue: './data.duckdb',
-        validate(value) {
-          if (typeof value !== 'string' || !value.trim()) return 'DuckDB path is required'
-          if (!value.endsWith('.duckdb')) return 'DuckDB path must end with .duckdb'
-        },
-        ...promptOptions(input, output),
-      }),
-    )
+    answers.duckdbPath =
+      unwrapPrompt(
+        await clack.text({
+          message: 'Path to .duckdb file',
+          placeholder: './data.duckdb',
+          validate(value) {
+            if (typeof value !== 'string' || !value.trim()) return
+            if (!value.endsWith('.duckdb')) return 'DuckDB path must end with .duckdb'
+          },
+          ...promptOptions(input, output),
+        }),
+      ).trim() || undefined
   } else if (database === 'snowflake') {
     answers.snowflakeAccount = unwrapPrompt(
       await clack.text({

@@ -117,6 +117,20 @@ describe('runCreate', () => {
     await expect(runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('Target directory is not empty')
   })
 
+  it('leaves duckdb config unset when the path prompt is blank', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    selectMock.mockResolvedValue('duckdb')
+    confirmMock.mockResolvedValue(false)
+
+    await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
+    expect(pkg.graphene).toEqual({dialect: 'duckdb'})
+  })
+
   it('streams install output into the task log and keeps line breaks on success', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')

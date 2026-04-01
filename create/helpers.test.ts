@@ -43,6 +43,21 @@ describe('create helpers', () => {
     expect(files['index.md']).toContain('configured for DuckDB')
   })
 
+  it('omits duckdb config when no path is provided', () => {
+    let files = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {
+        targetDir: 'demo-app',
+        projectName: 'demo-app',
+        database: 'duckdb',
+        install: false,
+      },
+    })
+    let pkg = JSON.parse(files['package.json'])
+
+    expect(pkg.graphene).toEqual({dialect: 'duckdb'})
+  })
+
   it('renders a snowflake project with .env auth vars', () => {
     let files = renderTemplate({
       cliVersion: '0.0.15',
