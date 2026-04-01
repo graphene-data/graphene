@@ -83,7 +83,7 @@ function formatDiagnostics(_source: string, diagnostics: GrapheneError[]): strin
 
 let conn: DuckDBConnection
 let files: WorkspaceFileInput[] = []
-let lastResult: AnalysisResult = {files: [], diagnostics: []}
+let lastAnalysis: AnalysisResult = {files: [], diagnostics: []}
 
 export async function prepareEcommerceTables() {
   let db = await DuckDBInstance.create(':memory:')
@@ -93,7 +93,7 @@ export async function prepareEcommerceTables() {
 
 export function clearWorkspace() {
   files = []
-  lastResult = {files: [], diagnostics: []}
+  lastAnalysis = {files: [], diagnostics: []}
 }
 
 export function updateFile(contents: string, path: string, kind?: 'gsql' | 'md') {
@@ -105,17 +105,17 @@ export function updateFile(contents: string, path: string, kind?: 'gsql' | 'md')
 
 export async function loadWorkspace(dir: string, includeMd: boolean) {
   files = await loadWorkspaceFiles(dir, includeMd, config.ignoredFiles)
-  lastResult = {files: [], diagnostics: []}
+  lastAnalysis = {files: [], diagnostics: []}
 }
 
 export function analyze(contents?: string, contentType?: 'gsql' | 'md') {
   if (contents) {
-    lastResult = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents, kind: contentType})}, 'input')
+    lastAnalysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents, kind: contentType})}, 'input')
   } else {
-    lastResult = analyzeWorkspace({config, files})
+    lastAnalysis = analyzeWorkspace({config, files})
   }
   files = files.map(file => {
-    let analyzed = getFileFromResult(lastResult, file.path)
+    let analyzed = getFileFromResult(lastAnalysis, file.path)
     if (!analyzed) return file
     return {
       ...file,
@@ -126,31 +126,31 @@ export function analyze(contents?: string, contentType?: 'gsql' | 'md') {
       },
     }
   })
-  return getFileFromResult(lastResult, 'input')?.queries || []
+  return getFileFromResult(lastAnalysis, 'input')?.queries || []
 }
 
 export function getDiagnostics() {
-  return getDiagnosticsFromResult(lastResult)
+  return getDiagnosticsFromResult(lastAnalysis)
 }
 
 export function getTable(name: string) {
-  return getTableFromResult(lastResult, name)
+  return getTableFromResult(lastAnalysis, name)
 }
 
 export function getFile(name: string) {
-  return getFileFromResult(lastResult, name) || files.find(file => file.path == name)
+  return getFileFromResult(lastAnalysis, name) || files.find(file => file.path == name)
 }
 
 export function getHover(path: string, line: number, col: number) {
-  return getHoverFromResult(lastResult, path, line, col)
+  return getHoverFromResult(lastAnalysis, path, line, col)
 }
 
 export function getDefinition(path: string, line: number, col: number) {
-  return getDefinitionFromResult(lastResult, path, line, col)
+  return getDefinitionFromResult(lastAnalysis, path, line, col)
 }
 
 export function getReferences(path: string, line: number, col: number, includeDeclaration = false) {
-  return getReferencesFromResult(lastResult, path, line, col, includeDeclaration)
+  return getReferencesFromResult(lastAnalysis, path, line, col, includeDeclaration)
 }
 
 // small delay to allow debugger to attach, since vitest doesn't support --inspect-wait

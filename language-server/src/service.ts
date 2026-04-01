@@ -168,9 +168,9 @@ function upsertFile(files: WorkspaceFileInput[], next: WorkspaceFileInput) {
   return files.map((file, fileIdx) => (fileIdx == idx ? next : file))
 }
 
-function updateParsedFiles(files: WorkspaceFileInput[], result: AnalysisResult) {
+function updateParsedFiles(files: WorkspaceFileInput[], analysis: AnalysisResult) {
   return files.map(file => {
-    let analyzed = result.files.find(next => next.path == file.path)
+    let analyzed = analysis.files.find(next => next.path == file.path)
     if (!analyzed) return file
     return {
       ...file,

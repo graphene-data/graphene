@@ -185,8 +185,8 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
   pendingRequests[id] = {response: res}
 }
 
-function toWorkspaceFiles(result: AnalysisResult): WorkspaceFileInput[] {
-  return result.files.map(file => ({
+function toWorkspaceFiles(analysis: AnalysisResult): WorkspaceFileInput[] {
+  return analysis.files.map(file => ({
     path: file.path,
     contents: file.contents,
     kind: file.path.endsWith('.md') ? 'md' : 'gsql',

@@ -27,49 +27,49 @@ export async function loadWorkspace(dir: string, includeMd: boolean, ignoredFile
   return files
 }
 
-export function getTable(result: AnalysisResult, name: string) {
-  return result.files.flatMap(file => file.tables).find(table => table.name == name)
+export function getTable(analysis: AnalysisResult, name: string) {
+  return analysis.files.flatMap(file => file.tables).find(table => table.name == name)
 }
 
-export function getFile(result: AnalysisResult, name: string) {
-  return result.files.find(file => file.path == name)
+export function getFile(analysis: AnalysisResult, name: string) {
+  return analysis.files.find(file => file.path == name)
 }
 
-export function getFiles(result: AnalysisResult) {
-  return result.files
+export function getFiles(analysis: AnalysisResult) {
+  return analysis.files
 }
 
-export function getDiagnostics(result: AnalysisResult): GrapheneError[] {
-  return result.diagnostics
+export function getDiagnostics(analysis: AnalysisResult): GrapheneError[] {
+  return analysis.diagnostics
 }
 
-export function getHover(result: AnalysisResult, path: string, line: number, col: number): string {
-  let symbol = getNavigationTarget(result, path, line, col)
+export function getHover(analysis: AnalysisResult, path: string, line: number, col: number): string {
+  let symbol = getNavigationTarget(analysis, path, line, col)
   return symbol?.hover || ''
 }
 
-export function getDefinition(result: AnalysisResult, path: string, line: number, col: number): Location | null {
-  let symbol = getNavigationTarget(result, path, line, col)
+export function getDefinition(analysis: AnalysisResult, path: string, line: number, col: number): Location | null {
+  let symbol = getNavigationTarget(analysis, path, line, col)
   return symbol?.location || null
 }
 
-export function getReferences(result: AnalysisResult, path: string, line: number, col: number, includeDeclaration = false): Location[] {
-  let symbol = getNavigationTarget(result, path, line, col)
+export function getReferences(analysis: AnalysisResult, path: string, line: number, col: number, includeDeclaration = false): Location[] {
+  let symbol = getNavigationTarget(analysis, path, line, col)
   if (!symbol) return []
 
-  let references = result.files.flatMap(file => file.navigation.references.filter(ref => ref.targetId == symbol.id).map(ref => ref.location))
+  let references = analysis.files.flatMap(file => file.navigation.references.filter(ref => ref.targetId == symbol.id).map(ref => ref.location))
   if (includeDeclaration) return [symbol.location, ...references]
   return references
 }
 
-function getNavigationTarget(result: AnalysisResult, path: string, line: number, col: number) {
-  let file = getFile(result, path)
+function getNavigationTarget(analysis: AnalysisResult, path: string, line: number, col: number) {
+  let file = getFile(analysis, path)
   if (!file) return null
 
   let offset = getSourceOffset(line, col, file)
   let reference = file.navigation.references.find(ref => containsOffset(ref.location, offset))
   if (reference) {
-    return result.files.flatMap(next => next.navigation.symbols).find(symbol => symbol.id == reference.targetId)
+    return analysis.files.flatMap(next => next.navigation.symbols).find(symbol => symbol.id == reference.targetId)
   }
 
   return file.navigation.symbols.find(symbol => containsOffset(symbol.location, offset)) || null
