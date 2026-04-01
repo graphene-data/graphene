@@ -23,7 +23,9 @@ export interface Config {
     database?: string
   }
 
-  duckdb?: Record<string, unknown>
+  duckdb?: {
+    path?: string
+  }
 }
 
 export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> & {

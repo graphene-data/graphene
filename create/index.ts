@@ -1,13 +1,15 @@
-import type {Writable} from 'node:stream'
+import type {Readable, Writable} from 'node:stream'
 
+import * as clack from '@clack/prompts'
 import {spawn} from 'node:child_process'
-import {mkdir, readFile, readdir, writeFile} from 'node:fs/promises'
+import {access, mkdir, readFile, readdir, writeFile} from 'node:fs/promises'
 import path from 'node:path'
-import prompts, {type PromptObject} from 'prompts'
 
 interface CreatePackageJson {
   version?: string
 }
+
+type Database = 'duckdb' | 'snowflake' | 'bigquery'
 
 interface CreateOptions {
   yes: boolean
@@ -15,6 +17,27 @@ interface CreateOptions {
   name: string | undefined
   targetDir: string | undefined
   help: boolean
+}
+
+interface DuckDbConfig {
+  path: string
+}
+
+interface SnowflakeConfig {
+  account: string
+  username: string
+}
+
+interface BigQueryConfig {
+  projectId: string
+}
+
+interface GrapheneTemplateConfig {
+  dialect: Database
+  defaultNamespace?: string
+  duckdb?: DuckDbConfig
+  snowflake?: SnowflakeConfig
+  bigquery?: BigQueryConfig
 }
 
 interface TemplatePackageJson {
@@ -30,31 +53,35 @@ interface TemplatePackageJson {
     '@graphenedata/cli': string
     svelte: string
   }
-  graphene: {
-    dialect: 'duckdb'
-  }
-}
-
-interface PromptAnswers {
-  targetDir?: string
-  projectName?: string
-  install?: boolean
-}
-
-type PromptName = 'targetDir' | 'projectName' | 'install'
-
-interface ResolvedAnswers {
-  targetDir: string
-  projectName: string
-  install: boolean
+  graphene: GrapheneTemplateConfig
 }
 
 interface CreateContext {
   argv: string[]
   cwd: string
-  stdin: NodeJS.ReadStream
+  stdin: Readable
   stdout: Writable
   stderr: Writable
+}
+
+interface ScaffoldAnswers {
+  targetDir: string
+  projectName: string
+  database: Database
+  defaultNamespace?: string
+  duckdbPath?: string
+  snowflakeAccount?: string
+  snowflakeUsername?: string
+  snowflakeKeyPath?: string
+  snowflakePassphrase?: string
+  bigqueryProjectId?: string
+  bigqueryKeyPath?: string
+  install: boolean
+}
+
+interface InstallResult {
+  code: number
+  stderr: string
 }
 
 type TemplateFiles = Record<string, string>
@@ -67,6 +94,12 @@ async function readCreatePackageJson(): Promise<CreatePackageJson> {
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
     return JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as CreatePackageJson
+  }
+}
+
+class CreateCancelled extends Error {
+  constructor() {
+    super('Create canceled')
   }
 }
 
@@ -120,10 +153,15 @@ export function defaultProjectName(targetDir: string): string {
   return normalized || 'graphene-app'
 }
 
-// Keep the first starter intentionally small so the prompt flow can evolve around it.
-export function renderTemplate({projectName, cliVersion}: {projectName: string; cliVersion: string}): TemplateFiles {
+export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers; cliVersion: string}): TemplateFiles {
+  let graphene: GrapheneTemplateConfig = {dialect: answers.database}
+  if (answers.defaultNamespace) graphene.defaultNamespace = answers.defaultNamespace
+  if (answers.database === 'duckdb') graphene.duckdb = {path: answers.duckdbPath || './data.duckdb'}
+  else if (answers.database === 'snowflake') graphene.snowflake = {account: answers.snowflakeAccount || '', username: answers.snowflakeUsername || ''}
+  else graphene.bigquery = {projectId: answers.bigqueryProjectId || ''}
+
   let pkg: TemplatePackageJson = {
-    name: projectName,
+    name: answers.projectName,
     version: '0.0.1',
     scripts: {
       graphene: 'graphene',
@@ -135,39 +173,37 @@ export function renderTemplate({projectName, cliVersion}: {projectName: string; 
       '@graphenedata/cli': cliVersion,
       svelte: '5.53.7',
     },
-    graphene: {
-      dialect: 'duckdb',
-    },
+    graphene,
   }
 
-  return {
+  let files: TemplateFiles = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
-    '.gitignore': ['node_modules', '.DS_Store'].join('\n') + '\n',
-    'README.md':
-      [
-        `# ${projectName}`,
-        '',
-        'This project was bootstrapped with `npm create @graphenedata`.',
-        '',
-        '## Getting started',
-        '',
-        '```bash',
-        'npm install',
-        'npm run serve',
-        '```',
-        '',
-        'Start by editing `index.md` and the files in `tables/`.',
-      ].join('\n') + '\n',
-    'index.md':
-      [
-        '# New Graphene Project',
-        '',
-        'Your project is ready. Start by adding models in `tables/` and queries or charts in this page.',
-        '',
-        'When you are ready, run `graphene check index.md` to validate the page.',
-      ].join('\n') + '\n',
-    'tables/example.gsql': ['table example (', '  id int', '  label string', ')'].join('\n') + '\n',
+    '.gitignore': ['node_modules', '.env', '*.duckdb'].join('\n') + '\n',
+    'index.md': renderIndex(answers),
   }
+
+  let envFile = renderEnvFile(answers)
+  if (envFile) files['.env'] = envFile
+
+  return files
+}
+
+function renderIndex(answers: ScaffoldAnswers): string {
+  let dialectLabel = 'DuckDB'
+  if (answers.database === 'snowflake') dialectLabel = 'Snowflake'
+  else if (answers.database === 'bigquery') dialectLabel = 'BigQuery'
+  return [`# ${answers.projectName}`, '', `This Graphene project is configured for ${dialectLabel}.`, '', 'Start by adding models and queries to this project.'].join('\n') + '\n'
+}
+
+function renderEnvFile(answers: ScaffoldAnswers): string | null {
+  let lines: string[] = []
+  if (answers.database === 'snowflake') {
+    lines.push(`SNOWFLAKE_PRI_KEY_PATH=${answers.snowflakeKeyPath || ''}`)
+    if (answers.snowflakePassphrase) lines.push(`SNOWFLAKE_PRI_PASSPHRASE=${answers.snowflakePassphrase}`)
+  } else if (answers.database === 'bigquery') {
+    lines.push(`GOOGLE_APPLICATION_CREDENTIALS=${answers.bigqueryKeyPath || ''}`)
+  }
+  return lines.length ? lines.join('\n') + '\n' : null
 }
 
 export async function ensureEmptyDir(targetDir: string): Promise<void> {
@@ -202,100 +238,228 @@ function printHelp(stdout: Writable): void {
   )
 }
 
-async function collectAnswers({options, stdin, stdout}: {options: CreateOptions; stdin: NodeJS.ReadStream; stdout: Writable}): Promise<ResolvedAnswers> {
-  let initialTarget = options.targetDir || 'graphene-app'
-  let initialName = options.name || defaultProjectName(initialTarget)
-  if (options.yes) return {targetDir: initialTarget, projectName: initialName, install: options.install ?? false}
+function promptOptions(input: Readable, output: Writable) {
+  return {input, output}
+}
 
-  let questions: PromptObject<PromptName>[] = [
-    {
-      type: options.targetDir ? null : 'text',
-      name: 'targetDir',
-      message: 'Where should Graphene create the project?',
-      initial: initialTarget,
-      validate: value => (typeof value === 'string' && value.trim() ? true : 'Project directory is required'),
-    },
-    {
-      type: options.name ? null : 'text',
-      name: 'projectName',
-      message: 'Package name',
-      initial: prev => defaultProjectName(typeof prev === 'string' && prev ? prev : initialTarget),
-      validate: value => (typeof value === 'string' && value.trim() ? true : 'Package name is required'),
-    },
-    {
-      type: options.install == null ? 'toggle' : null,
-      name: 'install',
-      message: 'Install dependencies now?',
-      initial: false,
-      active: 'yes',
-      inactive: 'no',
-    },
-  ]
+function unwrapPrompt<T>(value: T | symbol): T {
+  if (clack.isCancel(value)) throw new CreateCancelled()
+  return value
+}
 
-  let promptOptions: {
-    onCancel: () => never
-    stdin: NodeJS.ReadStream
-    stdout: Writable
-  } = {
-    stdin,
-    stdout,
-    onCancel() {
-      throw new Error('Create canceled')
-    },
-  }
-  let answers = await prompts<PromptName>(questions, promptOptions)
-  let promptAnswers = answers as PromptAnswers
-
-  return {
-    targetDir: options.targetDir || promptAnswers.targetDir || initialTarget,
-    projectName: options.name || promptAnswers.projectName || initialName,
-    install: options.install ?? promptAnswers.install ?? false,
+function validateRequired(message: string) {
+  return (value: string | undefined) => {
+    if (typeof value !== 'string' || !value.trim()) return message
   }
 }
 
-async function installDeps(targetDir: string, stdout: Writable, stderr: Writable): Promise<void> {
-  let child = spawn('npm', ['install'], {
-    cwd: targetDir,
-    stdio: ['ignore', 'pipe', 'pipe'] as const,
-  })
-  if (!child.stdout || !child.stderr) throw new Error('npm install pipes were not created')
+function validateFileExtension(filePath: string | undefined, expectedExtension: string): string | undefined {
+  if (typeof filePath !== 'string' || !filePath.trim()) return `Path to ${expectedExtension} file is required`
+  if (!filePath.endsWith(expectedExtension)) return `File must end with ${expectedExtension}`
+}
 
-  await new Promise<void>((resolve, reject) => {
-    child.stdout.on('data', chunk => stdout.write(chunk))
-    child.stderr.on('data', chunk => stderr.write(chunk))
-    child.on('error', reject)
-    child.on('close', code => {
-      if (code === 0) {
-        resolve()
-        return
-      }
-      reject(new Error(`npm install failed with code ${code}`))
-    })
+async function promptExistingFilePath({message, expectedExtension, input, output}: {message: string; expectedExtension: string; input: Readable; output: Writable}): Promise<string> {
+  while (true) {
+    let filePath = unwrapPrompt(
+      await clack.path({
+        message,
+        validate: value => validateFileExtension(value, expectedExtension),
+        ...promptOptions(input, output),
+      }),
+    )
+    try {
+      await access(filePath)
+      return filePath
+    } catch {
+      clack.log.error(`File not found: ${filePath}`, {output})
+    }
+  }
+}
+
+function namespacePlaceholder(database: Database) {
+  if (database === 'snowflake') return 'MY_DB.ANALYTICS'
+  if (database === 'bigquery') return 'my-project.analytics'
+  return 'analytics'
+}
+
+async function collectAnswers({options, input, output}: {options: CreateOptions; input: Readable; output: Writable}): Promise<ScaffoldAnswers> {
+  if (options.yes) {
+    let targetDir = options.targetDir || 'graphene-app'
+    return {
+      targetDir,
+      projectName: options.name || defaultProjectName(targetDir),
+      database: 'duckdb',
+      duckdbPath: './data.duckdb',
+      install: options.install ?? false,
+    }
+  }
+
+  let targetDir = options.targetDir
+  if (!targetDir) {
+    targetDir = unwrapPrompt(
+      await clack.text({
+        message: 'Project name',
+        placeholder: 'my-analytics',
+        initialValue: 'graphene-app',
+        validate: validateRequired('Project name is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+  }
+
+  let projectName = options.name || defaultProjectName(targetDir)
+  let database = unwrapPrompt(
+    await clack.select<Database>({
+      message: 'Database',
+      options: [
+        {value: 'duckdb', label: 'DuckDB (local file)'},
+        {value: 'snowflake', label: 'Snowflake'},
+        {value: 'bigquery', label: 'BigQuery'},
+      ],
+      ...promptOptions(input, output),
+    }),
+  )
+
+  let defaultNamespace = unwrapPrompt(
+    await clack.text({
+      message: 'Default namespace (optional)',
+      placeholder: namespacePlaceholder(database),
+      ...promptOptions(input, output),
+    }),
+  ).trim()
+
+  let answers: ScaffoldAnswers = {
+    targetDir,
+    projectName,
+    database,
+    defaultNamespace: defaultNamespace || undefined,
+    install: false,
+  }
+
+  if (database === 'duckdb') {
+    answers.duckdbPath = unwrapPrompt(
+      await clack.text({
+        message: 'Path to .duckdb file',
+        placeholder: './data.duckdb',
+        initialValue: './data.duckdb',
+        validate(value) {
+          if (typeof value !== 'string' || !value.trim()) return 'DuckDB path is required'
+          if (!value.endsWith('.duckdb')) return 'DuckDB path must end with .duckdb'
+        },
+        ...promptOptions(input, output),
+      }),
+    )
+  } else if (database === 'snowflake') {
+    answers.snowflakeAccount = unwrapPrompt(
+      await clack.text({
+        message: 'Snowflake account ID',
+        placeholder: 'myorg-myaccount',
+        validate: validateRequired('Snowflake account ID is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.snowflakeUsername = unwrapPrompt(
+      await clack.text({
+        message: 'Snowflake username',
+        placeholder: 'graphene_user',
+        validate: validateRequired('Snowflake username is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.snowflakeKeyPath = await promptExistingFilePath({message: 'Path to .p8 key file', expectedExtension: '.p8', input, output})
+    answers.snowflakePassphrase = unwrapPrompt(
+      await clack.password({
+        message: 'Key passphrase',
+        ...promptOptions(input, output),
+      }),
+    )
+  } else {
+    answers.bigqueryProjectId = unwrapPrompt(
+      await clack.text({
+        message: 'GCP project ID',
+        placeholder: 'my-project-123',
+        validate: validateRequired('GCP project ID is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.bigqueryKeyPath = await promptExistingFilePath({message: 'Path to service account .json key file', expectedExtension: '.json', input, output})
+  }
+
+  answers.install =
+    options.install ??
+    unwrapPrompt(
+      await clack.confirm({
+        message: 'Install dependencies now?',
+        initialValue: true,
+        ...promptOptions(input, output),
+      }),
+    )
+
+  return answers
+}
+
+async function installDeps(targetDir: string): Promise<InstallResult> {
+  let task = clack.taskLog({title: 'Installing dependencies...'})
+  let child = spawn('npm', ['install'], {cwd: targetDir, stdio: ['ignore', 'pipe', 'pipe']})
+  if (!child.stdout || !child.stderr) throw new Error('npm install pipes were not created')
+  let stderr = ''
+  child.stdout.setEncoding('utf8')
+  child.stderr.setEncoding('utf8')
+
+  let forward = (chunk: string) => {
+    for (let line of chunk.split(/\r?\n/)) {
+      if (!line.trim()) continue
+      task.message(line)
+    }
+  }
+
+  child.stdout.on('data', chunk => forward(String(chunk)))
+  child.stderr.on('data', chunk => {
+    let text = String(chunk)
+    stderr += text
+    forward(text)
   })
+
+  let code = await new Promise<number>((resolve, reject) => {
+    child.on('error', reject)
+    child.on('close', exitCode => resolve(exitCode ?? 1))
+  })
+
+  if (code === 0) task.success('Dependencies installed')
+  else task.error('npm install failed', {showLog: true})
+
+  return {code, stderr}
 }
 
 // Resolve answers, write the starter, and optionally install dependencies.
-export async function runCreate({argv, cwd, stdin, stdout, stderr}: CreateContext): Promise<void> {
+export async function runCreate({argv, cwd, stdin, stdout}: CreateContext): Promise<void> {
   let options = parseArgs(argv)
   if (options.help) {
     printHelp(stdout)
     return
   }
 
-  let answers = await collectAnswers({options, stdin, stdout})
-  let targetDir = path.resolve(cwd, answers.targetDir)
-  let projectName = defaultProjectName(answers.projectName)
+  clack.intro('Create a new Graphene project', {output: stdout})
 
-  await ensureEmptyDir(targetDir)
-  let cliVersion = packageJson.version || '0.0.15'
-  await writeTemplate(targetDir, renderTemplate({projectName, cliVersion}))
+  try {
+    let answers = await collectAnswers({options, input: stdin, output: stdout})
+    let targetDir = path.resolve(cwd, answers.targetDir)
 
-  stdout.write(`Created Graphene project in ${targetDir}\n`)
-  if (!answers.install) {
-    stdout.write('Skipped npm install\n')
-    return
+    await ensureEmptyDir(targetDir)
+    let cliVersion = packageJson.version || '0.0.15'
+    await writeTemplate(targetDir, renderTemplate({answers, cliVersion}))
+
+    if (answers.install) {
+      let install = await installDeps(targetDir)
+      if (install.code !== 0) throw new Error(install.stderr.trim() || `npm install failed with code ${install.code}`)
+    }
+
+    clack.outro('Done!', {output: stdout})
+  } catch (err) {
+    if (err instanceof CreateCancelled) {
+      clack.cancel('Operation cancelled.', {output: stdout})
+      return
+    }
+    throw err
   }
-
-  await installDeps(targetDir, stdout, stderr)
-  stdout.write('Installed dependencies\n')
 }

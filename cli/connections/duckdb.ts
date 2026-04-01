@@ -20,13 +20,13 @@ export class DuckDBConnection implements QueryConnection {
   }
 
   private async initialize() {
-    let dbPath = this.options.path
+    let dbPath = this.options.path || config.duckdb?.path
     if (!dbPath) {
       let files = await fs.readdir(config.root)
       dbPath = files.find(f => f.endsWith('.duckdb'))
       if (!dbPath) throw new Error('No .duckdb file found in current directory')
-      dbPath = path.resolve(config.root, dbPath)
     }
+    if (!path.isAbsolute(dbPath)) dbPath = path.resolve(config.root, dbPath)
 
     let db = await DuckDBInstance.create(':memory:')
     this.connection = await db.connect()

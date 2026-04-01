@@ -30,9 +30,10 @@ describe('create bin', () => {
     let result = await runBin(root, ['demo-app', '--yes', '--no-install'])
 
     expect(result.code).toBe(0)
-    expect(result.stdout).toContain('Created Graphene project')
+    expect(result.stdout).toContain('Done!')
 
     let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
     expect(pkg.name).toBe('demo-app')
+    expect(pkg.graphene).toEqual({dialect: 'duckdb', duckdb: {path: './data.duckdb'}})
   })
 })
