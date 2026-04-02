@@ -29,6 +29,8 @@ interface Overload {
   returnType: {type: FieldType | 'generic' | 'array'; expressionType?: 'aggregate' | 'scalar' | 'window'}
   fanoutSafe?: boolean
   sqlName?: string
+  supportsBareInvocation?: boolean
+  bareSqlName?: string
 }
 
 // Convert a FunctionDef arg type string (e.g. 'number', 'T', 'string...', 'kw') to allowedTypes
@@ -74,6 +76,8 @@ function convertDef(def: FunctionDef): Overload[] {
     returnType: {type: returnType, expressionType},
     fanoutSafe: def.fanoutSafe,
     sqlName: def.sqlName,
+    supportsBareInvocation: def.supportsBareInvocation && args.length == 0,
+    bareSqlName: def.bareSqlName,
   }))
 }
 
@@ -115,7 +119,18 @@ function findOverloads(name: string, dialect: string): Overload[] {
 export function analyzeFunction(analyzer: Analyzer, node: SyntaxNode, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
   let name = txt(node.getChild('Identifier')).toLowerCase()
   let argNodes = node.getChildren('Expression')
+  return analyzeNamedFunction(analyzer, node, name, argNodes, scope, opts)
+}
 
+export function analyzeBareFunction(analyzer: Analyzer, node: SyntaxNode, name: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr | undefined {
+  let overloads = findOverloads(name, analyzer.config.dialect)
+  if (overloads.length == 0) return
+  let overload = overloads.find(o => o.supportsBareInvocation && o.params.length == 0)
+  if (!overload) return
+  return analyzeResolvedFunction(name, overload, [], [], scope, {...opts, bare: true})
+}
+
+function analyzeNamedFunction(analyzer: Analyzer, node: SyntaxNode, name: string, argNodes: SyntaxNode[], scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
   // Check for percentile functions (p50, p90, etc.) before overload lookup
   let percentileMatch = /^p(\d+)$/.exec(name)
   if (percentileMatch) {
@@ -156,6 +171,10 @@ export function analyzeFunction(analyzer: Analyzer, node: SyntaxNode, scope: Sco
     return analyzer.diag(node, `Wrong number of arguments for ${name}: expected ${expected}, got ${argNodes.length}`, {sql: 'NULL', type: scalarType('error')})
   }
 
+  return analyzeResolvedFunction(name, overload, args, argNodes, scope, opts)
+}
+
+function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[], argNodes: SyntaxNode[], scope: Scope, opts: {isWindow?: boolean; bare?: boolean} = {}): Expr {
   let returnType: FieldType = overload.returnType.type as FieldType
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || scalarType('string')
   if (overload.returnType.type == 'array') returnType = inferArrayReturnType(args)
@@ -169,8 +188,8 @@ export function analyzeFunction(analyzer: Analyzer, node: SyntaxNode, scope: Sco
   if (overload.returnType.expressionType == 'aggregate' && !fanoutSafeAgg) {
     fanoutSensitivePaths = mergeSensitiveFanouts(fanoutSensitivePaths, [fanout.path || extendFanoutPath(scope.fanoutPath)])
   }
-  let fnName = overload.sqlName || name
-  let sql = `${fnName}(${args.map(a => a.sql).join(',')})`
+  let fnName = opts.bare ? overload.bareSqlName || overload.sqlName || name : overload.sqlName || name
+  let sql = opts.bare ? fnName : `${fnName}(${args.map(a => a.sql).join(',')})`
   let metadata = inferFunctionFieldMetadata(name, overload, args, argNodes)
   return {
     sql,
