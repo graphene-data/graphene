@@ -1,8 +1,8 @@
 import stripAnsi from 'strip-ansi'
 
 import {check} from '../../cli/check.ts'
+import {mockFileMap} from '../../cli/mockFiles.ts'
 import {runMdFile} from '../../cli/run.ts'
-import {updateFile} from '../../lang/core.ts'
 import {trimIndentation} from '../../lang/util.ts'
 import {test, expect} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
@@ -21,17 +21,15 @@ function outputLines() {
 
 test.beforeEach(() => {
   logs = ''
+  Object.keys(mockFileMap).forEach(key => delete mockFileMap[key])
 })
 
 test('check defaults to analyzing the whole workspace', async () => {
-  updateFile(
-    `
+  mockFileMap['tmp_bad.gsql'] = `
     table tmp_bad as (
       from flights select not_a_function()
     )
-  `,
-    'tmp_bad.gsql',
-  )
+  `
 
   await check({log})
   expect(outputLines()).toEqual(

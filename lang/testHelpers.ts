@@ -1,7 +1,19 @@
 import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {expect as vitestExpect} from 'vitest'
 
-import {toSql, analyze, getDiagnostics, type GrapheneError} from './core.ts'
+import {config} from './config.ts'
+import {
+  analyzeWorkspace,
+  getDefinition as getDefinitionFromResult,
+  getDiagnostics as getDiagnosticsFromResult,
+  getFile as getFileFromResult,
+  getHover as getHoverFromResult,
+  getReferences as getReferencesFromResult,
+  getTable as getTableFromResult,
+  loadWorkspace as loadWorkspaceFiles,
+  toSql,
+} from './core.ts'
+import {type AnalysisResult, type GrapheneError, type WorkspaceFileInput} from './types.ts'
 import {trimIndentation} from './util.ts'
 
 const ECOMM_SETUP = `
@@ -70,11 +82,75 @@ function formatDiagnostics(_source: string, diagnostics: GrapheneError[]): strin
 }
 
 let conn: DuckDBConnection
+let files: WorkspaceFileInput[] = []
+let lastAnalysis: AnalysisResult = {files: [], diagnostics: []}
 
 export async function prepareEcommerceTables() {
   let db = await DuckDBInstance.create(':memory:')
   conn = await db.connect()
   await conn.run(ECOMM_SETUP)
+}
+
+export function clearWorkspace() {
+  files = []
+  lastAnalysis = {files: [], diagnostics: []}
+}
+
+export function updateFile(contents: string, path: string, kind?: 'gsql' | 'md') {
+  let next = {path, contents, kind}
+  let idx = files.findIndex(file => file.path == path)
+  if (idx >= 0) files[idx] = next
+  else files.push(next)
+}
+
+export async function loadWorkspace(dir: string, includeMd: boolean) {
+  files = await loadWorkspaceFiles(dir, includeMd, config.ignoredFiles)
+  lastAnalysis = {files: [], diagnostics: []}
+}
+
+export function analyze(contents?: string, contentType?: 'gsql' | 'md') {
+  if (contents) {
+    lastAnalysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents, kind: contentType})}, 'input')
+  } else {
+    lastAnalysis = analyzeWorkspace({config, files})
+  }
+  files = files.map(file => {
+    let analyzed = getFileFromResult(lastAnalysis, file.path)
+    if (!analyzed) return file
+    return {
+      ...file,
+      parsed: {
+        tree: analyzed.tree!,
+        virtualContents: analyzed.virtualContents,
+        virtualToMarkdownOffset: analyzed.virtualToMarkdownOffset,
+      },
+    }
+  })
+  return getFileFromResult(lastAnalysis, 'input')?.queries || []
+}
+
+export function getDiagnostics() {
+  return getDiagnosticsFromResult(lastAnalysis)
+}
+
+export function getTable(name: string) {
+  return getTableFromResult(lastAnalysis, name)
+}
+
+export function getFile(name: string) {
+  return getFileFromResult(lastAnalysis, name) || files.find(file => file.path == name)
+}
+
+export function getHover(path: string, line: number, col: number) {
+  return getHoverFromResult(lastAnalysis, path, line, col)
+}
+
+export function getDefinition(path: string, line: number, col: number) {
+  return getDefinitionFromResult(lastAnalysis, path, line, col)
+}
+
+export function getReferences(path: string, line: number, col: number, includeDeclaration = false) {
+  return getReferencesFromResult(lastAnalysis, path, line, col, includeDeclaration)
 }
 
 // small delay to allow debugger to attach, since vitest doesn't support --inspect-wait

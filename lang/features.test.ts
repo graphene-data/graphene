@@ -1,7 +1,7 @@
 import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
-import {analyze, getDefinition, getHover, getReferences, clearWorkspace, updateFile} from './core.ts'
+import {analyze, getDefinition, getHover, getReferences, clearWorkspace, updateFile} from './testHelpers.ts'
 
 function simple(location: ReturnType<typeof getDefinition>) {
   if (!location) return null

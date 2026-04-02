@@ -61,7 +61,7 @@ export function getFile(node: SyntaxNode | SyntaxNodeRef): FileInfo {
   if (node.node) node = node.node
   let top: SyntaxNode = node as SyntaxNode
   while (top.parent) top = top.parent
-  return top!.tree!.fileInfo
+  return top!.tree!.fileInfo!
 }
 
 export function txt(node: SyntaxNode | null | undefined) {

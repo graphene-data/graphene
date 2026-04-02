@@ -5,8 +5,8 @@ import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
 import {setConfig} from './config.ts'
-import {clearWorkspace, getTable, analyze, toSql, getDiagnostics, updateFile, loadWorkspace, getFile} from './core.ts'
-import {prepareEcommerceTables} from './testHelpers.ts'
+import {toSql} from './core.ts'
+import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
 import {formatType} from './types.ts'
 import {trimIndentation} from './util.ts'
 
