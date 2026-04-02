@@ -1,14 +1,18 @@
 import {expect, test} from './fixtures.ts'
 import {singleDim} from './testData.ts'
 
-test('big value', async ({mount, page, chart}) => {
+test.beforeEach(async ({sharedPage}) => {
+  await sharedPage.setViewportSize({width: 1280, height: 720})
+})
+
+test('big value', async ({mount, sharedPage, chart}) => {
   await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', fmt: 'num0', title: 'Sales'})
-  await expect(page.getByText('Sales')).toBeVisible()
-  await expect(page.getByText('611,113')).toBeVisible()
+  await expect(sharedPage.getByText('Sales')).toBeVisible()
+  await expect(sharedPage.getByText('611,113')).toBeVisible()
   await expect(chart.el).screenshot('big-value')
 })
 
-test('big value percent formatting', async ({mount, page}) => {
+test('big value percent formatting', async ({mount, sharedPage}) => {
   await mount('components/BigValue.svelte', {
     data: percentData(),
     value: 'ratio',
@@ -17,22 +21,22 @@ test('big value percent formatting', async ({mount, page}) => {
     subtitle: 'This month',
   })
 
-  await expect(page.getByText('Conversion')).toBeVisible()
-  await expect(page.getByText('This month')).toBeVisible()
-  await expect(page.getByText('31.4%')).toBeVisible()
-  await expect(page.locator('#component-test')).screenshot('big-value-percent')
+  await expect(sharedPage.getByText('Conversion')).toBeVisible()
+  await expect(sharedPage.getByText('This month')).toBeVisible()
+  await expect(sharedPage.getByText('31.4%')).toBeVisible()
+  await expect(sharedPage.locator('#component-test')).screenshot('big-value-percent')
 })
 
-test('big value null renders em dash', async ({mount, page}) => {
+test('big value null renders em dash', async ({mount, sharedPage}) => {
   await mount('components/BigValue.svelte', {
     data: nullValueData(),
     value: 'value',
     title: 'Nullable Metric',
   })
 
-  await expect(page.getByText('Nullable Metric')).toBeVisible()
-  await expect(page.getByText('—')).toBeVisible()
-  await expect(page.locator('#component-test')).screenshot('big-value-null')
+  await expect(sharedPage.getByText('Nullable Metric')).toBeVisible()
+  await expect(sharedPage.getByText('—')).toBeVisible()
+  await expect(sharedPage.locator('#component-test')).screenshot('big-value-null')
 })
 
 function percentData() {

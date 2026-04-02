@@ -2,7 +2,7 @@ import './internal/telemetry.ts'
 import './internal/queryEngine.ts'
 import './internal/runSocket.ts'
 import './app.css'
-import {mount} from 'svelte'
+import {mount, unmount} from 'svelte'
 
 import AreaChart from './components/AreaChart.svelte'
 import BarChart from './components/BarChart.svelte'
@@ -93,5 +93,7 @@ window.$GRAPHENE.components = {
   TableTotalRow,
   TextInput,
 }
+
+window.$GRAPHENE.svelte = {mount, unmount}
 
 mount(LocalApp, {target: document.body})
