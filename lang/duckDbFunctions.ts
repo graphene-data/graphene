@@ -2108,6 +2108,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#current_date`,
     args: [],
     returns: 'date',
+    supportsBareInvocation: true,
   },
   {
     name: 'current_time',
@@ -2119,6 +2120,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/timestamp#current_time`,
     args: [],
     returns: 'timestamp',
+    supportsBareInvocation: true,
   },
   {
     name: 'current_timestamp',
@@ -2130,6 +2132,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/timestamp#current_localtimestamp`,
     args: [{name: 'precision', type: 'number?'}],
     returns: 'timestamp',
+    supportsBareInvocation: true,
   },
   {
     name: 'local_timestamp',
@@ -2142,6 +2145,20 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [],
     returns: 'timestamp',
     sqlName: 'LOCALTIMESTAMP',
+    aliases: ['localtimestamp'],
+    supportsBareInvocation: true,
+  },
+  {
+    name: 'localtime',
+    description: trim(`
+      localtime
+
+      Returns the current time in the local time zone.
+    `),
+    url: `${duck}/timestamp#current_time`,
+    args: [],
+    returns: 'timestamp',
+    supportsBareInvocation: true,
   },
 
   // ============================================================================

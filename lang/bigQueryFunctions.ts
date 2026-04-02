@@ -1868,6 +1868,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     url: `${bq}/date_functions#current_date`,
     args: [{name: 'time_zone', type: 'string?', description: 'The time zone to use. Defaults to UTC.'}],
     returns: 'date',
+    supportsBareInvocation: true,
   },
   {
     name: 'date',
@@ -2072,6 +2073,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     url: `${bq}/datetime_functions#current_datetime`,
     args: [{name: 'time_zone', type: 'string?', description: 'The time zone to use. Defaults to UTC.'}],
     returns: 'timestamp',
+    supportsBareInvocation: true,
   },
   {
     name: 'local_timestamp',
@@ -2084,6 +2086,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     args: [],
     returns: 'timestamp',
     sqlName: 'CURRENT_DATETIME',
+    supportsBareInvocation: true,
   },
   {
     name: 'datetime',
@@ -2240,6 +2243,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     url: `${bq}/time_functions#current_time`,
     args: [{name: 'time_zone', type: 'string?', description: 'The time zone to use. Defaults to UTC.'}],
     returns: 'timestamp', // Graphene treats TIME as timestamp
+    supportsBareInvocation: true,
   },
   {
     name: 'time',
@@ -2398,6 +2402,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     url: `${bq}/timestamp_functions#current_timestamp`,
     args: [{name: 'time_zone', type: 'string?', description: 'The time zone to use.'}],
     returns: 'timestamp',
+    supportsBareInvocation: true,
   },
   {
     name: 'timestamp',
