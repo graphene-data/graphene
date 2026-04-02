@@ -5,12 +5,12 @@
   import * as chartWindowDebug from '../component-utilities/chartWindowDebug.js'
   import {logError} from '../internal/telemetry.ts'
   import {enrich} from '../component-utilities/enrich.ts'
-  import type {EChartsConfig2, QueryResult} from '../component-utilities/types.ts'
+  import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
   import '../component-utilities/theme.ts'
   import Skeleton from './Skeleton.svelte'
 
   interface Props {
-    config: EChartsConfig2
+    config: EChartsConfig
     data: string | QueryResult
     height?: string | number
     width?: string | number
@@ -74,7 +74,7 @@
 
       // clone config, since enriching mutates the config, and mutating a prop is weird
       // structuredClone doesn't like proxies, so use state.snapshot
-      let cloned = structuredClone($state.snapshot(config)) as EChartsConfig2
+      let cloned = structuredClone($state.snapshot(config)) as EChartsConfig
       enrich(cloned, loaded.rows, loaded.fields || [])
 
       chart.setOption({...cloned, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
@@ -96,7 +96,7 @@
     chart = null
   }
 
-  function queryFields(config: EChartsConfig2) {
+  function queryFields(config: EChartsConfig) {
     let fields: Record<string, string[]> = {}
     let series = Array.isArray(config.series) ? config.series : [config.series]
     let entries = series.flatMap(s => Object.entries(s?.encode || {}))
