@@ -2,8 +2,8 @@ import type {FastifyReply, FastifyRequest} from 'fastify'
 
 import {and, eq} from 'drizzle-orm'
 
-import {setConfig} from '../../core/lang/config.ts'
-import {updateFile, clearWorkspace, analyze, getDiagnostics, toSql} from '../../core/lang/core.ts'
+import {analyzeWorkspace} from '../../core/lang/analyze.ts'
+import {toSql} from '../../core/lang/core.ts'
 import {connections, files, repos, type Connection} from '../schema.ts'
 import {getDb} from './db.ts'
 import {decryptSecret} from './secrets.ts'
@@ -35,12 +35,12 @@ export async function proxyQuery(req: FastifyRequest, reply: FastifyReply) {
 
     // Load up all gsql files into a graphene workspace
     let gsqlFiles = await db.query.files.findMany({where: and(eq(files.repoId, repo.id), eq(files.extension, 'gsql'))})
-    clearWorkspace()
-    setConfig({dialect: connInfo.kind, defaultNamespace: connInfo.namespace ?? undefined, root: '/dev/null'})
-    gsqlFiles.forEach(f => updateFile(f.content, `${f.path}.gsql`))
-    let queries = analyze(body.gsql, 'gsql')
+    let {files: resultFiles, diagnostics} = analyzeWorkspace({
+      config: {dialect: connInfo.kind, defaultNamespace: connInfo.namespace ?? undefined},
+      files: [...gsqlFiles.map(f => ({contents: f.content, path: f.path + '.gsql'})), {path: 'input', contents: body.gsql}],
+    })
+    let queries = resultFiles.find(f => f.path == 'input')?.queries || []
 
-    let diagnostics = getDiagnostics()
     if (diagnostics.length) {
       return reply.code(400).send(diagnostics[0])
     }
