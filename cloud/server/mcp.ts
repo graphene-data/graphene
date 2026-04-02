@@ -19,8 +19,14 @@ import {proxyQuery, type QueryBody} from './query.ts'
 import {fileURLToPath} from 'node:url'
 import {readFileSync} from 'node:fs'
 
-// # Manual testing
-// * chatGPT with developer mode
+// Graphene's MCP server allows hosts to explore schemas, run queries, and display results.
+//
+// ## Manual testing
+// https://modelcontextprotocol.io/docs/tools/inspector is the official test tool, and useful for auth, tools, and apps.
+// https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/basic-host is a lighter-weight alternative. Can disable auth to use this.
+// In chatGPT, you can enable developer mode to add unpublished MCPs.
+//  NB that you need to click into the details and "refresh" when you change the app code, or shape of the tools.
+//  I sometimes found I also had to start a new chat, but not always
 
 
 const resourceUri = 'ui://tool-playground/mcp-app.html'
