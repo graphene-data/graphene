@@ -50,6 +50,13 @@ export default defineConfig({
           include: ['vscode/**/*.test.ts'],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'language-server',
+          include: ['language-server/**/*.test.ts'],
+        },
+      },
     ],
   },
 })

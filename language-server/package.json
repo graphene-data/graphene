@@ -7,6 +7,7 @@
     "@volar/language-core": "^2.4.28",
     "@volar/language-server": "^2.4.28",
     "@volar/language-service": "^2.4.28",
+    "glob": "^13.0.1",
     "vscode-languageserver-protocol": "^3.17.5",
     "vscode-uri": "^3.1.0"
   }
