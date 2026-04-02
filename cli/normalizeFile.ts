@@ -1,7 +1,7 @@
 import fs from 'fs-extra'
 import path from 'path'
 
-import {config} from '../lang/core.ts'
+import {config} from '../lang/config.ts'
 import {mockFileMap} from './mockFiles.ts'
 
 export function normalizeFile(file: string): string | null {

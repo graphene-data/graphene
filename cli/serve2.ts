@@ -8,7 +8,10 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 
-import {loadWorkspace, config, clearWorkspace, analyze, getDiagnostics, toSql, getFiles} from '../lang/core.ts'
+import type {AnalysisResult, WorkspaceFileInput} from '../lang/types.ts'
+
+import {config} from '../lang/config.ts'
+import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
 import {runQuery} from './connections/index.ts'
 import {injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
@@ -119,15 +122,17 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
-  let queries = analyze(gsql)
+  let result = analyzeWorkspace({config, files: [...workspaceFiles, {path: 'input', contents: gsql}]})
+  updateParsedFiles(result)
 
-  let diagnostics = getDiagnostics()
+  let diagnostics = result.diagnostics
   if (diagnostics.length) {
     res.statusCode = 400
     res.end(JSON.stringify(diagnostics[0]))
     return
   }
 
+  let queries = result.files.find(file => file.path == 'input')?.queries || []
   if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
   let sql = toSql(queries[0], params)
 
@@ -222,6 +227,7 @@ function fixHmrForFailedModules() {
 // This reload blocks all requests, so we shouldn't ever analyze without a workspace.
 // Also tracks all the md files in the workspace to populate the nav sidebar
 let workspaceLoadPromise: Promise<void> | undefined
+let workspaceFiles: WorkspaceFileInput[] = []
 let mdFiles: string[] = []
 const updateWorkspacePlugin = {
   name: 'updateWorkspace',
@@ -240,12 +246,15 @@ const updateWorkspacePlugin = {
   },
   configureServer: (s: ViteDevServer) => {
     let refresh = async () => {
-      clearWorkspace()
-      workspaceLoadPromise = loadWorkspace(config.root, true)
+      workspaceLoadPromise = (async () => {
+        let loaded = await loadWorkspace(config.root, true, config.ignoredFiles)
+        workspaceFiles = loaded.map(file => {
+          let existing = workspaceFiles.find(existing => existing.path == file.path && existing.contents == file.contents)
+          return existing?.parsed ? {...file, parsed: existing.parsed} : file
+        })
+      })()
       await workspaceLoadPromise
-      mdFiles = getFiles()
-        .filter(f => f.path.endsWith('.md'))
-        .map(f => f.path)
+      mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(file => file.path)
       mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))
       if (process.env.NODE_ENV == 'test') {
         mdFiles.push(...Object.keys(mockFileMap))
@@ -260,6 +269,21 @@ const updateWorkspacePlugin = {
     s.watcher.on('all', refresh)
     refresh()
   },
+}
+
+function updateParsedFiles(analysis: AnalysisResult) {
+  workspaceFiles = workspaceFiles.map(file => {
+    let analyzed = analysis.files.find(next => next.path == file.path)
+    if (!analyzed) return file
+    return {
+      ...file,
+      parsed: {
+        tree: analyzed.tree!,
+        virtualContents: analyzed.virtualContents,
+        virtualToMarkdownOffset: analyzed.virtualToMarkdownOffset,
+      },
+    }
+  })
 }
 
 const handleRequestPlugin = {
