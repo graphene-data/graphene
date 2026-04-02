@@ -1209,6 +1209,20 @@ describe('lang', () => {
     `).toRenderSql('select current_date() as col_0, current_time() as col_1, current_timestamp() as col_2, current_timestamp(3) as col_3, localtimestamp() as col_4 from users as users')
   })
 
+  it('supports duckdb bare current datetime functions', () => {
+    expect(`
+      from users select
+        current_date,
+        current_time,
+        current_timestamp,
+        localtime,
+        local_timestamp,
+        localtimestamp
+    `).toRenderSql(
+      'select current_date as current_date, current_time as current_time, current_timestamp as current_timestamp, localtime as localtime, localtimestamp as local_timestamp, localtimestamp as localtimestamp from users as users',
+    )
+  })
+
   it('supports bigquery current datetime functions with optional args', () => {
     setConfig({root: '', bigquery: {}})
     try {
@@ -1229,6 +1243,68 @@ describe('lang', () => {
     } finally {
       setConfig({root: ''})
     }
+  })
+
+  it('supports bigquery bare current datetime functions', () => {
+    setConfig({root: '', bigquery: {}})
+    try {
+      expect(`
+        from users select
+          current_date,
+          current_datetime,
+          current_time,
+          current_timestamp,
+          local_timestamp
+      `).toRenderSql(
+        'select current_date as current_date, current_datetime as current_datetime, current_time as current_time, current_timestamp as current_timestamp, current_datetime as local_timestamp from `users` as users',
+      )
+    } finally {
+      setConfig({root: ''})
+    }
+  })
+
+  it('supports snowflake bare current datetime functions', () => {
+    setConfig({dialect: 'snowflake', root: ''})
+    try {
+      expect(`
+        from users select
+          current_date,
+          current_time,
+          current_timestamp,
+          localtime,
+          localtimestamp
+      `).toRenderSql(
+        'SELECT current_date as current_date, current_time as current_time, current_timestamp as current_timestamp, localtime as localtime, localtimestamp as localtimestamp FROM USERS as users',
+        {preserveCase: true},
+      )
+    } finally {
+      setConfig({root: ''})
+    }
+  })
+
+  it('keeps column refs ahead of bare niladic functions', () => {
+    let queries = analyze(`
+      table t (
+        current_date int
+      )
+      from t select current_date, t.current_date
+    `)
+    expect(toSql(queries[0])).toMatch(/select t\.current_date as current_date, t\.current_date as t_current_date from t as t/i)
+  })
+
+  it('still errors for unknown bare names', () => {
+    expect('from users select definitely_not_a_function').toHaveDiagnostic(/Unknown field "definitely_not_a_function" on users/i)
+  })
+
+  it('does not add bare support for excluded functions', () => {
+    setConfig({dialect: 'snowflake', root: ''})
+    try {
+      expect('from users select sysdate').toHaveDiagnostic(/Unknown field "sysdate" on users/i)
+    } finally {
+      setConfig({root: ''})
+    }
+
+    expect('from users select now').toHaveDiagnostic(/Unknown field "now" on users/i)
   })
 
   it.skip('applies parameters inside views', () => {

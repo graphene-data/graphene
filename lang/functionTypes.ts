@@ -35,6 +35,10 @@ export interface FunctionDef {
   sqlTemplate?: string
   // Alternative names that should also resolve to this function (e.g., ['count_if'] for 'countif')
   aliases?: string[]
+  // Whether a zero-arg function can also be invoked as a bare identifier without parentheses.
+  supportsBareInvocation?: boolean
+  // SQL spelling to use for bare invocations when it differs from `sqlName`/`name`.
+  bareSqlName?: string
   // For functions with multiple overloads (e.g., string_agg with/without separator)
   // When present, `args` and `returns` are ignored in favor of overloads
   overloads?: FunctionOverload[]

@@ -14,7 +14,7 @@ import {
   multiGrainMessage,
   uniqueFanoutPaths,
 } from './fanout.ts'
-import {analyzeFunction} from './functions.ts'
+import {analyzeBareFunction, analyzeFunction} from './functions.ts'
 import {parseMarkdown} from './markdown.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parser} from './parser.js'
@@ -752,6 +752,10 @@ class AnalysisSession implements Analyzer {
         if (matches.length == 0) {
           if (possibleJoins.some(join => join.table.joins.some(next => next.alias == fieldName))) {
             return this.diag(fieldNode, `"${fieldName}" is a join, not a column`, {sql: 'NULL', type: scalarType('error')})
+          }
+          if (pathNodes.length == 0) {
+            let bareFn = analyzeBareFunction(this, node, fieldName.toLowerCase(), scope)
+            if (bareFn) return bareFn
           }
           let on = possibleJoins.length == 1 ? ` on ${possibleJoins[0].table.name}` : ''
           return this.diag(fieldNode, `Unknown field "${fieldName}"${on}`, {sql: 'NULL', type: scalarType('error')})

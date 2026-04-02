@@ -2377,6 +2377,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/current_date`,
     args: [],
     returns: 'date',
+    supportsBareInvocation: true,
   },
   {
     name: 'current_time',
@@ -2388,6 +2389,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/current_time`,
     args: [],
     returns: 'timestamp',
+    supportsBareInvocation: true,
   },
   {
     name: 'current_timestamp',
@@ -2399,5 +2401,30 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/current_timestamp`,
     args: [],
     returns: 'timestamp',
+    supportsBareInvocation: true,
+  },
+  {
+    name: 'localtime',
+    description: trim(`
+      LOCALTIME
+
+      Returns the current time in the session time zone.
+    `),
+    url: `${sf}/localtime`,
+    args: [],
+    returns: 'timestamp',
+    supportsBareInvocation: true,
+  },
+  {
+    name: 'localtimestamp',
+    description: trim(`
+      LOCALTIMESTAMP
+
+      Returns the current timestamp in the session time zone.
+    `),
+    url: `${sf}/localtimestamp`,
+    args: [],
+    returns: 'timestamp',
+    supportsBareInvocation: true,
   },
 ]
