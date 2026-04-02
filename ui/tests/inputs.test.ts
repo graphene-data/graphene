@@ -1,6 +1,7 @@
 import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 
-test.beforeEach(async ({page}) => {
+test.beforeEach(async ({page, sharedPage}) => {
+  await sharedPage.setViewportSize({width: 900, height: 620})
   await page.setViewportSize({width: 900, height: 620})
 })
 
@@ -285,18 +286,18 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   await expect(page.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
 })
 
-test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, page}) => {
+test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, sharedPage}) => {
   await mount('components/TextInput.svelte', {
     name: 'search_label',
     label: 'Search Label',
     description: 'Filter rows by keyword',
     hideDuringPrint: 'false',
   })
-  let textInput = page.getByLabel('Search Label')
+  let textInput = sharedPage.getByLabel('Search Label')
   await expect(textInput).toHaveAttribute('placeholder', 'Type to search')
-  await expect(page.locator('#component-test .input-description')).toHaveText('Filter rows by keyword')
-  await expect(page.locator('#component-test .input-block')).not.toHaveClass(/hide-print/)
-  await expect(page.locator('#component-test')).screenshot('text-input-label-description-print')
+  await expect(sharedPage.locator('#component-test .input-description')).toHaveText('Filter rows by keyword')
+  await expect(sharedPage.locator('#component-test .input-block')).not.toHaveClass(/hide-print/)
+  await expect(sharedPage.locator('#component-test')).screenshot('text-input-label-description-print')
 
   await mount('components/DateRange.svelte', {
     name: 'period',
@@ -309,25 +310,25 @@ test('text input and date range render label, description, placeholder, and prin
     hideDuringPrint: 'false',
   })
 
-  await expect(page.getByLabel('Period Label')).toBeVisible()
-  await expect(page.locator('#component-test .input-description')).toHaveText('Select reporting period')
-  await expect(page.locator('#component-test .input-block')).not.toHaveClass(/hide-print/)
-  await expect(page.locator('#daterange-period-start')).toHaveValue('2024-01-01')
-  await expect(page.locator('#daterange-period-end')).toHaveValue('2024-02-01')
-  await expect(page.locator('.preset-select')).toHaveValue('Last Month')
-  await expect(page.locator('#component-test')).screenshot('date-range-label-description-default-preset')
+  await expect(sharedPage.getByLabel('Period Label')).toBeVisible()
+  await expect(sharedPage.locator('#component-test .input-description')).toHaveText('Select reporting period')
+  await expect(sharedPage.locator('#component-test .input-block')).not.toHaveClass(/hide-print/)
+  await expect(sharedPage.locator('#daterange-period-start')).toHaveValue('2024-01-01')
+  await expect(sharedPage.locator('#daterange-period-end')).toHaveValue('2024-02-01')
+  await expect(sharedPage.locator('.preset-select')).toHaveValue('Last Month')
+  await expect(sharedPage.locator('#component-test')).screenshot('date-range-label-description-default-preset')
 })
 
-test('text input updates params and date range applies preset', async ({mount, page}) => {
+test('text input updates params and date range applies preset', async ({mount, sharedPage}) => {
   await mount('components/TextInput.svelte', {name: 'search_text', title: 'Search Text', defaultValue: 'alpha', placeholder: 'Type here'})
-  let textInput = page.getByLabel('Search Text')
+  let textInput = sharedPage.getByLabel('Search Text')
   await expect(textInput).toHaveValue('alpha')
 
-  await startParamTracking(page)
+  await startParamTracking(sharedPage)
   await textInput.fill('delta')
-  expect(await lastParamUpdate(page, 'search_text')).toEqual({name: 'search_text', value: 'delta'})
+  expect(await lastParamUpdate(sharedPage, 'search_text')).toEqual({name: 'search_text', value: 'delta'})
   await textInput.blur()
-  await expect(page.locator('#component-test')).screenshot('text-input-basic')
+  await expect(sharedPage.locator('#component-test')).screenshot('text-input-basic')
 
   await mount('components/DateRange.svelte', {
     name: 'window',
@@ -336,19 +337,19 @@ test('text input updates params and date range applies preset', async ({mount, p
     end: '2024-01-31',
     presetRanges: ['Last 7 Days'],
   })
-  await startParamTracking(page)
+  await startParamTracking(sharedPage)
 
-  await page.locator('#daterange-window-start').evaluate((el: HTMLInputElement) => {
+  await sharedPage.locator('#daterange-window-start').evaluate((el: HTMLInputElement) => {
     el.value = '2024-01-05'
     el.dispatchEvent(new Event('change', {bubbles: true}))
   })
-  let updates = await allParamUpdates(page)
+  let updates = await allParamUpdates(sharedPage)
   expect(updates).toContainEqual({name: 'window_start', value: '2024-01-05'})
 
-  await page.locator('.preset-select').selectOption('Last 7 Days')
-  await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-25')
-  await expect(page.locator('#daterange-window-end')).toHaveValue('2024-02-01')
-  await expect(page.locator('#component-test')).screenshot('date-range-preset')
+  await sharedPage.locator('.preset-select').selectOption('Last 7 Days')
+  await expect(sharedPage.locator('#daterange-window-start')).toHaveValue('2024-01-25')
+  await expect(sharedPage.locator('#daterange-window-end')).toHaveValue('2024-02-01')
+  await expect(sharedPage.locator('#component-test')).screenshot('date-range-preset')
 })
 
 test('inputs sync url state on load, change, and reload', async ({server, page}) => {
