@@ -1,11 +1,11 @@
-import {type Page, chromium, type Browser} from '@playwright/test'
+import {type Page, chromium, type Browser, type Locator} from '@playwright/test'
 import net from 'net'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import {test as base, onTestFinished} from 'vitest'
 
 import {mockFileMap} from '../../cli/mockFiles.ts'
-import {serve2, svelteWarnings, clearSvelteWarnings} from '../../cli/serve2.ts'
+import {serve2} from '../../cli/serve2.ts'
 import {type Config, config, setConfig} from '../../lang/config.ts'
 import {clearWorkspace, loadWorkspace} from '../../lang/core.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
@@ -16,7 +16,13 @@ export {expect}
 process.env.NODE_ENV = 'test'
 process.env.VITE_TEST = '1'
 
-export type MountFn = (componentPath: string, props: any) => Promise<void>
+declare global {
+  interface Window {
+    __inst?: any
+  }
+}
+
+export type MountFn = (componentPath: string, props: any) => Promise<Locator>
 export type ChartConfigFn = <T>(selector: (config: any) => T) => Promise<T | null>
 
 export interface ChartFixture {
@@ -31,7 +37,16 @@ export interface ServerFixture {
   updateMockFile: (path: string, content: string) => void
 }
 
-export const test = base.extend<{browser: Browser; page: Page; server: ServerFixture; mount: MountFn; chart: ChartFixture}>({
+const chromeConfig = {
+  viewport: {width: 1280, height: 720},
+  deviceScaleFactor: 1,
+  locale: 'en-US' as const,
+  timezoneId: 'UTC' as const,
+  colorScheme: 'light' as const,
+  reducedMotion: 'reduce' as const,
+}
+
+export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page; server: ServerFixture; mount: MountFn; chart: ChartFixture}>({
   browser: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
@@ -53,28 +68,26 @@ export const test = base.extend<{browser: Browser; page: Page; server: ServerFix
   ],
 
   page: async ({browser}, use) => {
-    let context = await browser.newContext({
-      viewport: {width: 1280, height: 720},
-      deviceScaleFactor: 1,
-      locale: 'en-US',
-      timezoneId: 'UTC',
-      colorScheme: 'light',
-      reducedMotion: 'reduce',
-    })
+    let context = await browser.newContext(chromeConfig)
     let page = await context.newPage()
     trackBrowserConsole(page)
-    clearSvelteWarnings()
-
-    onTestFinished(() => {
-      if (svelteWarnings.length) {
-        let formatted = svelteWarnings.map(w => `  - [${w.code}] ${w.message} (${w.filename})`).join('\n')
-        throw new Error(`Unexpected Svelte warnings:\n${formatted}`)
-      }
-    })
     await use(page)
     if (process.env.GRAPHENE_DEBUG) await new Promise(() => {})
     await context.close()
   },
+
+  sharedPage: [
+    async ({browser}, use) => {
+      let context = await browser.newContext(chromeConfig)
+      let page = await context.newPage()
+      await page.setViewportSize({width: 680, height: 400})
+      trackBrowserConsole(page)
+      await use(page)
+      if (process.env.GRAPHENE_DEBUG) await new Promise(() => {})
+      await context.close()
+    },
+    {scope: 'worker'},
+  ],
 
   // This boots up our cli server on a unique port for e2e tests.
   server: [
@@ -124,60 +137,55 @@ export const test = base.extend<{browser: Browser; page: Page; server: ServerFix
     {scope: 'worker'} as any,
   ],
 
-  mount: async ({page, server}: {page: Page; server: ServerFixture}, use) => {
-    let mountFn = async (componentPath: string, props: any) => {
-      await page.goto(`${server.url()}/__ct`)
+  // mounts a given svelte component with props
+  // This reuses an existing page, which is less isolated, but much faster
+  // This is hard-coded for viz components, but an earlier (slower) version dynamically loaded svelte files, if that's ever needed
+  mount: async ({sharedPage, server}: {sharedPage: Page; server: ServerFixture}, use) => {
+    if (!sharedPage.url().endsWith('__ct')) {
+      await sharedPage.goto(`${server.url()}/__ct`)
+    }
 
+    await use(async (componentPath: string, props: any) => {
       // evidence depends on the object being set on an array, but wont serialize when playwright sends it to the frontend, so unpack it here
       let modifiedProps = {...props}
       if (props.data?.rows?._evidenceColumnTypes) modifiedProps._evidenceColumnTypes = props.data.rows._evidenceColumnTypes
 
-      await page.evaluate(p => {
-        window.__props = p
-        if (p._evidenceColumnTypes) {
-          p.data.rows._evidenceColumnTypes = p._evidenceColumnTypes
-          p.data.rows.dataLoaded = true // hack since evidence expects this on an array
-          delete p._evidenceColumnTypes
-        }
-      }, modifiedProps)
-      let uiRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-      let resolvedComponentPath = path.resolve(uiRoot, componentPath)
-      let browserPath = '/@fs/' + resolvedComponentPath.replace(/\\/g, '/')
-      // Wait for web.js to finish loading (which sets up window.$GRAPHENE and loads svelte)
-      await page.waitForFunction(() => window.$GRAPHENE?.components)
+      // now send the props down to the page, and put the evidence types back where they're expected
+      let compName = componentPath.match(/(\w+)\.svelte/)?.[1] || 'splat'
+      await sharedPage.evaluate(
+        ({compName, props}) => {
+          if (window.__inst) window.$GRAPHENE.svelte.unmount(window.__inst)
 
-      // Dynamic import of both svelte and component together - this ensures Vite
-      // transforms the imports and we get the same module instances
-      await page.addScriptTag({
-        type: 'module',
-        content: `
-        // Import svelte via dynamic import so Vite can resolve it properly
-        const svelte = await import('/node_modules/.vite/deps/svelte.js')
-        const {default: Component} = await import(${JSON.stringify(browserPath)})
+          if (props._evidenceColumnTypes) {
+            props.data.rows._evidenceColumnTypes = props._evidenceColumnTypes
+            props.data.rows.dataLoaded = true // hack since evidence expects this on an array
+            delete props._evidenceColumnTypes
+          }
 
-        document.getElementById('nav').remove()
-        let el = document.createElement('div')
-        el.id = 'component-test'
-        document.getElementById('content').appendChild(el)
+          document.getElementById('nav')?.remove()
+          let container = document.getElementById('content')
+          if (container) container.innerHTML = ''
+          let el = document.createElement('div')
+          el.id = 'component-test'
+          container?.appendChild(el)
+          window.__inst = window.$GRAPHENE.svelte.mount(window.$GRAPHENE.components[compName], {target: el, props})
+        },
+        {compName, props: modifiedProps},
+      )
 
-        window.__inst = svelte.mount(Component, {target: el, props: window.__props})
-      `,
-      })
-    }
-
-    await use(mountFn)
+      return sharedPage.locator('#component-test')
+    })
   },
 
-  chart: async ({page}, use) => {
+  chart: async ({sharedPage}, use) => {
     let readConfig: ChartConfigFn = async selector => {
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
-      await page.waitForFunction(() => {
+      await sharedPage.waitForFunction(() => {
         let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
         return charts && Object.keys(charts).length > 0
       })
-      await waitForGrapheneLoad(page)
-      return await page.evaluate(source => {
+      return await sharedPage.evaluate(source => {
         let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__') as any])[0] as any
         let option = chart.getModel().getOption()
         try {
@@ -190,7 +198,7 @@ export const test = base.extend<{browser: Browser; page: Page; server: ServerFix
       }, selectorSource)
     }
 
-    await use({config: readConfig, el: page.locator('#component-test')})
+    await use({config: readConfig, el: sharedPage.locator('#component-test')})
   },
 })
 

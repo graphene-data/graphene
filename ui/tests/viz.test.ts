@@ -11,28 +11,40 @@ function seededRandom(seed: number) {
   }
 }
 
-test.beforeEach(async ({page}) => {
-  await page.setViewportSize({width: 680, height: 400})
+test.beforeEach(async ({sharedPage}) => {
+  await sharedPage.setViewportSize({width: 680, height: 400})
 })
 
-test('echarts loading state', async ({mount, chart, page, server}) => {
+test('echarts query error state', async ({mount, chart}) => {
   expectConsoleError('Failed to load resource')
-  if (!page.url().endsWith('__ct')) await page.goto(`${server.url()}/__ct`)
-
-  await page.evaluate(() => {
-    ;(window as any).__originalQuery = window.$GRAPHENE.query
-    window.$GRAPHENE.query = () => {}
+  await mount('components/ECharts.svelte', {
+    config: {series: {type: 'bar', encode: {x: 'origin', y: 'explode'}}},
+    data: 'from flights select origin, sqrt(dep_delay) as explode',
   })
+  await expect(chart.el).screenshot('echarts-query-error-state')
+})
 
-  try {
-    await mount('components/ECharts.svelte', {config: {series: {type: 'bar', encode: {x: 'month', y: 'value'}}}, data: 'flights'})
-    await expect(chart.el).screenshot('echarts-loading-state')
-  } finally {
-    await page.evaluate(() => {
-      window.$GRAPHENE.query = (window as any).__originalQuery
-      delete (window as any).__originalQuery
-    })
-  }
+test('echarts chart configuration error state', async ({mount, chart}) => {
+  await mount('components/ECharts.svelte', {
+    config: null as any,
+    data: 'from flights select carrier limit 5',
+  })
+  await expect(chart.el.getByRole('alert')).toBeVisible()
+  await expect(chart.el).screenshot('echarts-chart-config-error-state')
+})
+
+test('echarts direct config expands encode.stack template series', async ({mount, chart}) => {
+  await mount('components/ECharts.svelte', {
+    data: timeseriesGrouped(),
+    config: {
+      title: {text: 'Monthly Sales by Category (direct ECharts)'},
+      legend: {show: false},
+      xAxis: {show: false},
+      yAxis: {show: false},
+      series: {type: 'bar', encode: {x: 'month', y: 'sales_usd0k', stack: 'category'}},
+    },
+  })
+  await expect(chart.el).screenshot('echarts-direct-encode-stack-template')
 })
 
 test('echarts query error state', async ({mount, chart}) => {

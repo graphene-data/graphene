@@ -4,38 +4,40 @@ import {groupedDataForSection, tableDataForPagination, tableDataWithDates, times
 
 const tableSelector = '[data-testid="DataTable-no-id"] table'
 
-test('renders table data', async ({mount, page}) => {
-  await mount('components/Table.svelte', {data: timeseriesGrouped(), title: 'Sales'})
-  await waitForGrapheneLoad(page)
-  let table = page.locator(tableSelector)
-  await table.locator('tr:has(td)').first().waitFor()
-  await expect(page.locator('.table-container')).screenshot('table-renders-data')
+test.beforeEach(async ({sharedPage}) => {
+  await sharedPage.setViewportSize({width: 1280, height: 720})
 })
 
-test('sorts by column header', async ({mount, page}) => {
-  await mount('components/Table.svelte', {data: tableDataWithDates()})
-  let table = page.locator(tableSelector)
+test('renders table data', async ({mount}) => {
+  let t = await mount('components/Table.svelte', {data: timeseriesGrouped(), title: 'Sales'})
+  await t.locator('tr:has(td)').first().waitFor()
+  await expect(t).screenshot('table-renders-data')
+})
+
+test('sorts by column header', async ({mount}) => {
+  let component = await mount('components/Table.svelte', {data: tableDataWithDates()})
+  let table = component.locator('table')
   await table.locator('tr:has(td)').first().waitFor()
   await expect(table.locator('tr:has(td)')).toHaveCount(3)
 
   let readFirstColumn = () => table.locator('tr:has(td) td:first-child').allTextContents()
 
   await expect.poll(readFirstColumn).toEqual(['2021-03-01', '2021-01-01', '2021-02-01'])
-  await expect(page.locator('.table-container')).screenshot('sort-default')
+  await expect(component.locator('.table-container')).screenshot('sort-default')
 
   let header = table.getByRole('columnheader').first()
   await header.click()
   await expect.poll(readFirstColumn).toEqual(['2021-01-01', '2021-02-01', '2021-03-01'])
-  await expect(page.locator('.table-container')).screenshot('sort-ascending')
+  await expect(component.locator('.table-container')).screenshot('sort-ascending')
 
   await header.click()
   await expect.poll(readFirstColumn).toEqual(['2021-03-01', '2021-02-01', '2021-01-01'])
-  await expect(page.locator('.table-container')).screenshot('sort-descending')
+  await expect(component.locator('.table-container')).screenshot('sort-descending')
 })
 
-test('sortable=false keeps header clicks from changing order', async ({mount, page}) => {
-  await mount('components/Table.svelte', {data: tableDataWithDates(), sortable: false})
-  let table = page.locator(tableSelector)
+test('sortable=false keeps header clicks from changing order', async ({mount}) => {
+  let component = await mount('components/Table.svelte', {data: tableDataWithDates(), sortable: false})
+  let table = component.locator('table')
   await table.locator('tr:has(td)').first().waitFor()
 
   let readFirstColumn = () => table.locator('tr:has(td) td:first-child').allTextContents()
@@ -44,32 +46,32 @@ test('sortable=false keeps header clicks from changing order', async ({mount, pa
   let header = table.getByRole('columnheader').first()
   await header.click()
   await expect.poll(readFirstColumn).toEqual(['2021-03-01', '2021-01-01', '2021-02-01'])
-  await expect(page.locator('.table-container')).screenshot('sort-disabled')
+  await expect(component.locator('.table-container')).screenshot('sort-disabled')
 })
 
-test('paginates rows', async ({mount, page}) => {
-  await mount('components/Table.svelte', {data: tableDataForPagination(12), rows: 5})
-  let table = page.locator('[data-testid="DataTable-no-id"] table')
+test('paginates rows', async ({mount}) => {
+  let component = await mount('components/Table.svelte', {data: tableDataForPagination(12), rows: 5})
+  let table = component.locator('table')
   await expect(table).toBeVisible()
   await expect(table.locator('tr:has(td)')).toHaveCount(5)
 
   let firstCell = () => table.locator('tr:has(td) td:first-child').first()
 
   await expect(firstCell()).toHaveText('Row 1')
-  await expect(page.getByRole('button', {name: 'First'})).toBeDisabled()
-  await expect(page.getByRole('button', {name: 'Prev'})).toBeDisabled()
-  await page.getByRole('button', {name: 'Next'}).click()
+  await expect(component.getByRole('button', {name: 'First'})).toBeDisabled()
+  await expect(component.getByRole('button', {name: 'Prev'})).toBeDisabled()
+  await component.getByRole('button', {name: 'Next'}).click()
   await expect(firstCell()).toHaveText('Row 6')
-  await page.getByRole('button', {name: 'Last'}).click()
+  await component.getByRole('button', {name: 'Last'}).click()
   await expect(firstCell()).toHaveText('Row 11')
-  await expect(page.getByRole('button', {name: 'Last'})).toBeDisabled()
-  await expect(page.getByRole('button', {name: 'Next'})).toBeDisabled()
-  await page.getByRole('button', {name: 'First'}).click()
+  await expect(component.getByRole('button', {name: 'Last'})).toBeDisabled()
+  await expect(component.getByRole('button', {name: 'Next'})).toBeDisabled()
+  await component.getByRole('button', {name: 'First'}).click()
   await expect(firstCell()).toHaveText('Row 1')
-  await expect(page.getByRole('button', {name: 'Prev'})).toBeDisabled()
-  await expect(page.getByText('Page 1 of 3')).toBeVisible()
-  await expect(page.locator('.pagination__meta')).toHaveText('5 of 12 rows')
-  await expect(page.locator('.table-container')).screenshot('pagination-first-last')
+  await expect(component.getByRole('button', {name: 'Prev'})).toBeDisabled()
+  await expect(component.getByText('Page 1 of 3')).toBeVisible()
+  await expect(component.locator('.pagination__meta')).toHaveText('5 of 12 rows')
+  await expect(component.locator('.table-container')).screenshot('pagination-first-last')
 })
 
 test('colorscale with colorBreakpoints applies correct background colors', async ({server, page}) => {
@@ -118,10 +120,9 @@ test('colorBreakpoints work when all column values are identical', async ({serve
   await expect(page.locator('.table-container')).screenshot('colorscale-breakpoints-uniform')
 })
 
-test('groupType=section renders correct rowSpan for first row of each group', async ({mount, page}) => {
-  await mount('components/Table.svelte', {data: groupedDataForSection(), groupBy: 'time_horizon', groupType: 'section'})
-  await waitForGrapheneLoad(page)
-  let table = page.locator(tableSelector)
+test('groupType=section renders correct rowSpan for first row of each group', async ({mount}) => {
+  let component = await mount('components/Table.svelte', {data: groupedDataForSection(), groupBy: 'time_horizon', groupType: 'section'})
+  let table = component.locator('table')
   await table.locator('tr:has(td)').first().waitFor()
 
   let cell30days = table.locator('td', {hasText: '30 days'}).first()
@@ -132,45 +133,46 @@ test('groupType=section renders correct rowSpan for first row of each group', as
 
   let cell90days = table.locator('td', {hasText: '90 days'}).first()
   await expect(cell90days).toHaveAttribute('rowspan', '1')
-  await expect(page.locator('.table-container')).screenshot('group-section-rowspan')
+  await expect(component.locator('.table-container')).screenshot('group-section-rowspan')
 })
 
-test('row numbers stay stable across sort and pagination states', async ({mount, page}) => {
-  await mount('components/Table.svelte', {
+test('row numbers stay stable across sort and pagination states', async ({mount, sharedPage}) => {
+  let component = await mount('components/Table.svelte', {
     data: tableDataForPagination(12),
     rows: 5,
     rowNumbers: true,
     sort: 'value desc',
   })
-  await waitForGrapheneLoad(page)
+  await waitForGrapheneLoad(sharedPage)
 
-  let table = page.locator(tableSelector)
+  let table = component.locator('table')
   await expect(table).toBeVisible()
-  await expect(table.locator('tr.table-row').first().locator('td.index')).toHaveText('1')
-  await expect(table.locator('tr.table-row').first().locator('td.number')).toHaveText('12')
-  await expect(page.locator('.table-container')).screenshot('row-numbers-sort-page-1')
+  let firstRow = table.locator('tr.table-row').first()
+  await expect(firstRow.locator('td.index')).toHaveText('1')
+  await expect(firstRow.locator('td').last()).toHaveText('12')
+  await expect(component.locator('.table-container')).screenshot('row-numbers-sort-page-1')
 
   await table.getByRole('columnheader', {name: 'Value'}).click()
-  await expect(table.locator('tr.table-row').first().locator('td.number')).toHaveText('1')
-  await expect(page.locator('.table-container')).screenshot('row-numbers-sort-asc-page-1')
+  await expect(table.locator('tr.table-row').first().locator('td').last()).toHaveText('1')
+  await expect(component.locator('.table-container')).screenshot('row-numbers-sort-asc-page-1')
 
-  await page.getByRole('button', {name: 'Next'}).click()
-  await expect(table.locator('tr.table-row').first().locator('td.index')).toHaveText('6')
-  await expect(table.locator('tr.table-row').first().locator('td.number')).toHaveText('6')
-  await expect(page.locator('.table-container')).screenshot('row-numbers-sort-asc-page-2')
+  await component.getByRole('button', {name: 'Next'}).click()
+  firstRow = table.locator('tr.table-row').first()
+  await expect(firstRow.locator('td.index')).toHaveText('6')
+  await expect(firstRow.locator('td').last()).toHaveText('6')
+  await expect(component.locator('.table-container')).screenshot('row-numbers-sort-asc-page-2')
 })
 
-test('accordion grouping with subtotals renders and collapses predictably', async ({mount, page}) => {
-  await mount('components/Table.svelte', {
+test('accordion grouping with subtotals renders and collapses predictably', async ({mount}) => {
+  let component = await mount('components/Table.svelte', {
     data: groupedDataForSection(),
     groupBy: 'time_horizon',
     groupType: 'accordion',
     subtotals: true,
     rowNumbers: true,
   })
-  await waitForGrapheneLoad(page)
 
-  let table = page.locator(tableSelector)
+  let table = component.locator('table')
   await expect(table).toBeVisible()
   await expect(table.locator('tr.group-row')).toHaveCount(3)
   await expect(table.locator('tr.subtotal-row')).toHaveCount(3)
@@ -183,9 +185,9 @@ test('accordion grouping with subtotals renders and collapses predictably', asyn
   await table.locator('tr.group-row').first().click()
   await expect(table.locator('tr.table-row')).toHaveCount(6)
   await expect(table.locator('tr.subtotal-row')).toHaveCount(3)
-  await expect(page.locator('.table-container')).screenshot('group-accordion-subtotals-open')
+  await expect(component.locator('.table-container')).screenshot('group-accordion-subtotals-open')
 
-  await mount('components/Table.svelte', {
+  component = await mount('components/Table.svelte', {
     data: groupedDataForSection(),
     groupBy: 'time_horizon',
     groupType: 'accordion',
@@ -193,11 +195,11 @@ test('accordion grouping with subtotals renders and collapses predictably', asyn
     rowNumbers: true,
     groupsOpen: false,
   })
-  await waitForGrapheneLoad(page)
+  table = component.locator('table')
   await expect(table.locator('tr.group-row')).toHaveCount(3)
   await expect(table.locator('tr.table-row')).toHaveCount(0)
   await expect(table.locator('tr.subtotal-row')).toHaveCount(0)
-  await expect(page.locator('.table-container')).screenshot('group-accordion-subtotals-collapsed')
+  await expect(component.locator('.table-container')).screenshot('group-accordion-subtotals-collapsed')
 })
 
 test('table attributes render grouped headers, wrapped titles, and row styling options', async ({server, page}) => {
@@ -244,8 +246,8 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
   await expect(page.locator('.table-container')).screenshot('attribute-groups-and-styling')
 })
 
-test('section groups respect groupNamePosition and subtotal styles', async ({mount, page}) => {
-  await mount('components/Table.svelte', {
+test('section groups respect groupNamePosition and subtotal styles', async ({mount}) => {
+  let component = await mount('components/Table.svelte', {
     data: groupedDataForSection(),
     groupBy: 'time_horizon',
     groupType: 'section',
@@ -254,30 +256,31 @@ test('section groups respect groupNamePosition and subtotal styles', async ({mou
     subtotalRowColor: '#ecfeff',
     subtotalFontColor: '#0c4a6e',
   })
-  await waitForGrapheneLoad(page)
 
-  let table = page.locator(tableSelector)
+  let table = component.locator('table')
   await expect(table).toBeVisible()
   await expect(table.locator('tr.subtotal-row')).toHaveCount(3)
-  await expect(page.locator('.table-container')).screenshot('section-group-position-top')
+  await expect(component.locator('.table-container')).screenshot('section-group-position-top')
 })
 
-test('total row renders for ungrouped tables', async ({mount, page}) => {
-  await mount('components/Table.svelte', {
+test('total row renders for ungrouped tables', async ({mount, sharedPage}) => {
+  let component = await mount('components/Table.svelte', {
     data: tableDataForPagination(4),
     rowNumbers: true,
     totalRow: true,
     rows: 'all',
   })
-  await waitForGrapheneLoad(page)
 
-  let table = page.locator(tableSelector)
-  await expect(table.locator('tr.total-row')).toBeVisible()
-  await expect(table.locator('tr.total-row td.number')).toHaveText('10')
-  await expect(page.locator('.table-container')).screenshot('total-row-basic')
+  await waitForGrapheneLoad(sharedPage)
+
+  let table = component.locator('table')
+  let totalRow = table.locator('tr.total-row')
+  await expect(totalRow).toBeVisible()
+  await expect(totalRow).toContainText('10')
+  await expect(component.locator('.table-container')).screenshot('total-row-basic')
 })
 
-test('row-level link behavior opens external destinations and hides link column', async ({mount, page}) => {
+test('row-level link behavior opens external destinations and hides link column', async ({mount, sharedPage}) => {
   let rows = [
     {name: 'Alpha', value: 12, url: 'https://example.com/alpha'},
     {name: 'Beta', value: 8, url: null},
@@ -289,23 +292,22 @@ test('row-level link behavior opens external destinations and hides link column'
     {name: 'url', type: scalarType('string')},
   ]
 
-  await mount('components/Table.svelte', {data: {rows}, link: 'url', rowNumbers: true, rows: 'all'})
-  await waitForGrapheneLoad(page)
+  let component = await mount('components/Table.svelte', {data: {rows}, link: 'url', rowNumbers: true, rows: 'all'})
 
-  let table = page.locator(tableSelector)
+  let table = component.locator('table')
   await expect(table).toBeVisible()
   await expect(table.getByRole('columnheader', {name: 'Url'})).toHaveCount(0)
 
-  let noPopupPromise = page
+  let noPopupPromise = sharedPage
     .waitForEvent('popup', {timeout: 500})
     .then(() => true)
     .catch(() => false)
   await table.locator('tr.table-row').nth(1).click()
   expect(await noPopupPromise).toBe(false)
 
-  await expect(page.locator('.table-container')).screenshot('row-link-hidden-column')
+  await expect(component.locator('.table-container')).screenshot('row-link-hidden-column')
 
-  let popupPromise = page.waitForEvent('popup')
+  let popupPromise = sharedPage.waitForEvent('popup')
   await table.locator('tr.table-row').first().click()
   let popup = await popupPromise
   await expect.poll(() => popup.url()).toContain('https://example.com/alpha')
