@@ -1,6 +1,6 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
-  import type {EChartsConfig2} from '../component-utilities/types.ts'
+  import type {EChartsConfig} from '../component-utilities/types.ts'
 
   interface Props {
     data: string | {rows?: any[]; fields?: any[]}
@@ -22,7 +22,7 @@
     width = '100%',
   }: Props = $props()
 
-  function buildConfig(): EChartsConfig2 {
+  function buildConfig(): EChartsConfig {
     return {
       title: title ? {text: title, subtext: subtitle} : undefined,
       tooltip: {trigger: 'item', formatter: '{b}: {c} ({d}%)'},

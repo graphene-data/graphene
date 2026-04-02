@@ -59,13 +59,13 @@ export type SeriesWithGroupingHint = Omit<SeriesOption, 'encode'> &
     }
   }
 
-export type EChartsConfig2 = Omit<EChartsOption, 'series'> & {
+export type EChartsConfig = Omit<EChartsOption, 'series'> & {
   series?: SingleOrArray<SeriesWithGroupingHint>
 }
 
 // Config shape after enrich() normalization runs.
 // We keep this mutable and array-based because enrichments mutate in place.
-export type NormalConfig = Omit<EChartsConfig2, 'series' | 'xAxis' | 'yAxis' | 'dataset' | 'grid' | 'legend' | 'title'> & {
+export type NormalConfig = Omit<EChartsConfig, 'series' | 'xAxis' | 'yAxis' | 'dataset' | 'grid' | 'legend' | 'title'> & {
   series: SeriesWithGroupingHint[]
   xAxis: XAXisComponentOption[]
   yAxis: YAXisComponentOption[]

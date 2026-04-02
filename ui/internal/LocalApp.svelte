@@ -5,7 +5,7 @@
   import navFiles from 'virtual:nav'
   import NavSidebar from './NavSidebar.svelte'
   import ErrorDisplay from './ErrorDisplay.svelte'
-  import DevECharts2Gallery from './DevECharts2Gallery.svelte'
+  import DevEChartsGallery from './DevEChartsGallery.svelte'
 
   let pageInputs = activatePageInputs(new PageInputs())
   setPageInputsContext(pageInputs)
@@ -38,8 +38,8 @@
   let Page = $state(null)
   let pathName = window.location.pathname.replace(/^\//, '') || 'index'
 
-  if (pathName == '__dev/echarts2') {
-    Page = DevECharts2Gallery
+  if (pathName == '__dev/echarts') {
+    Page = DevEChartsGallery
   } else if (pathName !== '__ct') {
     import(/* @vite-ignore */ '/' + pathName + '.md').then(mod => {
       Page = mod.default
