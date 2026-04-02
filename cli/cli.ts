@@ -25,7 +25,7 @@ const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(
 const libPkg = fs.readJsonSync(pkgPath)
 program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
 
-loadConfig(process.cwd(), envFiles => {
+await loadConfig(process.cwd(), envFiles => {
   dotenv.config({quiet: true, path: envFiles || '.env'})
 })
 

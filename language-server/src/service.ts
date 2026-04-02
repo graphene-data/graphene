@@ -1,22 +1,38 @@
 import {type createServer} from '@volar/language-server/node.js'
 import {type LanguageServicePlugin, type LanguageServicePluginInstance} from '@volar/language-service'
-import {relative as relativePath} from 'node:path'
+import {glob} from 'glob'
+import {readFile} from 'node:fs/promises'
+import path from 'node:path'
 import {
   DiagnosticSeverity,
   DocumentDiagnosticReportKind,
   FileChangeType,
   type Diagnostic,
   type Disposable,
-  type WorkspaceDocumentDiagnosticReport,
   type DocumentUri,
   type Location,
   type LocationLink,
+  type WorkspaceDocumentDiagnosticReport,
 } from 'vscode-languageserver-protocol'
-import {URI, Utils as URIs} from 'vscode-uri'
+import {URI} from 'vscode-uri'
 
-import {config, loadConfig} from '../../lang/config.ts'
+import {type Config, normalizeConfig, readConfigInput} from '../../lang/config.ts'
 import {analyzeWorkspace, getDefinition, getDiagnostics, getFiles, getHover, getReferences, loadWorkspace} from '../../lang/core.ts'
 import {type AnalysisResult, type GrapheneError, type Location as GrapheneLocation, type WorkspaceFileInput} from '../../lang/types.ts'
+
+type ProjectRoot = string
+
+interface ProjectState {
+  root: ProjectRoot
+  config: Config
+  files: WorkspaceFileInput[]
+  analysis: AnalysisResult
+}
+
+export interface DiscoveredGrapheneProject {
+  root: ProjectRoot
+  config: Config
+}
 
 export function createGrapheneService(server: ReturnType<typeof createServer>): LanguageServicePlugin {
   return {
@@ -31,22 +47,15 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
       referencesProvider: true,
     },
     create(context): LanguageServicePluginInstance {
-      let [workspace] = context.env.workspaceFolders
-      let workspaceFiles: WorkspaceFileInput[] = []
-      let analysisResult: AnalysisResult = {files: [], diagnostics: []}
+      let projects = new Map<ProjectRoot, ProjectState>()
+      let dirtyRoots = new Set<ProjectRoot>()
+      let reportedDiagnosticUris = new Set<string>()
       let analysis = createWorkspaceAnalysis({
-        load: () => {
-          loadConfig(workspace.fsPath)
-          return loadWorkspace(workspace.fsPath, true, config.ignoredFiles).then(files => {
-            workspaceFiles = files
-          })
-        },
-        analyze: tryAnalyze,
+        load: loadProjects,
+        analyze: analyzeDirtyProjects,
         delay: 200,
       })
       let workspaceWatcher = watchWorkspace()
-
-      console.log('started Graphene language server', workspace.fsPath)
 
       return {
         dispose() {
@@ -56,27 +65,31 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         async provideHover(document, position) {
           await analysis.pending
 
-          let path = workspacePath(document.uri)
-          return path ? {contents: getHover(analysisResult, path, position.line, position.character)} : null
+          let target = projectFromUri(document.uri)
+          if (!target) return null
+          return {contents: getHover(target.project.analysis, target.path, position.line, position.character)}
         },
         async provideDefinition(document, position, _token) {
           await analysis.pending
 
-          let path = workspacePath(document.uri)
-          let location = path ? getDefinition(analysisResult, path, position.line, position.character) : null
-          return location ? [toLocationLink(workspace, location)] : []
+          let target = projectFromUri(document.uri)
+          if (!target) return []
+          let location = getDefinition(target.project.analysis, target.path, position.line, position.character)
+          return location ? [toLocationLink(target.project.root, location)] : []
         },
         async provideReferences(document, position, context, _token) {
           await analysis.pending
 
-          let path = workspacePath(document.uri)
-          return path ? getReferences(analysisResult, path, position.line, position.character, context.includeDeclaration).map(location => toLocation(workspace, location)) : []
+          let target = projectFromUri(document.uri)
+          if (!target) return []
+          return getReferences(target.project.analysis, target.path, position.line, position.character, context.includeDeclaration).map(location => toLocation(target.project.root, location))
         },
         async provideDiagnostics(document) {
           await analysis.pending
 
-          let path = workspacePath(document.uri)
-          return path ? diagnosticsFor(path) : []
+          let target = projectFromUri(document.uri)
+          if (!target) return []
+          return diagnosticsFor(target.project, target.path)
         },
         async provideWorkspaceDiagnostics() {
           await analysis.pending
@@ -84,10 +97,20 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         },
       }
 
-      function workspacePath(uri: DocumentUri): string | null {
-        let parsed = URI.parse(uri)
-        if (parsed.scheme !== 'file') return null
-        return relativePath(workspace.fsPath, parsed.fsPath)
+      async function loadProjects() {
+        let discovered = await discoverGrapheneProjects(context.env.workspaceFolders || [])
+        let next = new Map<ProjectRoot, ProjectState>()
+
+        await Promise.all(
+          discovered.map(async project => {
+            let files = await loadWorkspace(project.root, true, project.config.ignoredFiles)
+            next.set(project.root, {root: project.root, config: project.config, files, analysis: {files: [], diagnostics: []}})
+          }),
+        )
+
+        projects = next
+        dirtyRoots = new Set(next.keys())
+        console.log('started Graphene language server', [...projects.keys()])
       }
 
       function watchWorkspace(): Disposable {
@@ -100,25 +123,15 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         })
 
         changeWatchedFiles = server.fileWatcher.onDidChangeWatchedFiles(({changes}) => {
-          for (let change of changes) {
-            let path = workspacePath(change.uri)
-            if (!path) continue
-
-            if (change.type === FileChangeType.Deleted) {
-              workspaceFiles = workspaceFiles.filter(file => file.path != path)
-            } else {
-              let document = server.documents.get(URI.parse(change.uri))
-              if (document) workspaceFiles = upsertFile(workspaceFiles, {path, contents: document.getText()})
-            }
-          }
-
-          analysis.invalidate()
+          void applyFileChanges(changes)
         })
 
         changeContent = server.documents.onDidChangeContent(({document}) => {
-          let path = workspacePath(document.uri)
-          if (!path) return
-          workspaceFiles = upsertFile(workspaceFiles, {path, contents: document.getText()})
+          let target = projectFromUri(document.uri)
+          if (!target) return
+
+          target.project.files = upsertFile(target.project.files, {path: target.path, contents: document.getText()})
+          dirtyRoots.add(target.project.root)
           analysis.invalidate()
         })
 
@@ -131,35 +144,152 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         }
       }
 
-      async function tryAnalyze() {
-        try {
-          analysisResult = analyzeWorkspace({config, files: workspaceFiles})
-          workspaceFiles = updateParsedFiles(workspaceFiles, analysisResult)
-          await server.languageFeatures.requestRefresh(false)
-        } catch (err) {
-          let message = err instanceof Error ? err.stack || err.message : String(err)
-          console.error(`Analyze failed: ${message}`)
+      async function applyFileChanges(changes: {uri: DocumentUri; type: FileChangeType}[]) {
+        let touched = false
+
+        for (let change of changes) {
+          let target = projectFromUri(change.uri)
+          if (!target) continue
+
+          if (change.type === FileChangeType.Deleted) {
+            target.project.files = target.project.files.filter(file => file.path != target.path)
+          } else {
+            let document = server.documents.get(URI.parse(change.uri))
+            let contents = document?.getText() || (await readWorkspaceFile(target.absolutePath))
+            if (contents == null) continue
+            target.project.files = upsertFile(target.project.files, {path: target.path, contents})
+          }
+
+          dirtyRoots.add(target.project.root)
+          touched = true
+        }
+
+        if (touched) analysis.invalidate()
+      }
+
+      function projectFromUri(uri: DocumentUri) {
+        let absolutePath = fileUriPath(uri)
+        if (!absolutePath) return null
+
+        let root = findOwningProjectRoot(absolutePath, projects.keys())
+        if (!root) return null
+
+        let project = projects.get(root)
+        if (!project) return null
+
+        return {
+          project,
+          absolutePath,
+          path: path.relative(root, absolutePath),
         }
       }
 
-      function diagnosticsFor(path: string) {
-        return getDiagnostics(analysisResult)
-          .filter(diagnostic => diagnostic.file === path)
+      async function analyzeDirtyProjects() {
+        let changed = false
+
+        for (let root of dirtyRoots) {
+          let project = projects.get(root)
+          if (!project) continue
+
+          try {
+            project.analysis = analyzeWorkspace({config: project.config, files: project.files})
+            project.files = updateParsedFiles(project.files, project.analysis)
+            changed = true
+          } catch (err) {
+            let message = err instanceof Error ? err.stack || err.message : String(err)
+            console.error(`Analyze failed for ${root}: ${message}`)
+          }
+        }
+
+        dirtyRoots.clear()
+        if (changed) await server.languageFeatures.requestRefresh(false)
+      }
+
+      function diagnosticsFor(project: ProjectState, filePath: string) {
+        return getDiagnostics(project.analysis)
+          .filter(diagnostic => diagnostic.file === filePath)
           .map(toDiagnostic)
       }
 
       function workspaceDiagnostics() {
-        return getFiles(analysisResult).map(file => {
-          return {
-            kind: DocumentDiagnosticReportKind.Full,
-            uri: URIs.joinPath(workspace, file.path).toString(),
-            version: null,
-            items: diagnosticsFor(file.path),
+        let currentUris = new Set<string>()
+        let reports: WorkspaceDocumentDiagnosticReport[] = []
+
+        for (let project of projects.values()) {
+          for (let file of getFiles(project.analysis)) {
+            let uri = URI.file(path.resolve(project.root, file.path)).toString()
+            currentUris.add(uri)
+            reports.push({
+              kind: DocumentDiagnosticReportKind.Full,
+              uri,
+              version: null,
+              items: diagnosticsFor(project, file.path),
+            })
           }
-        }) satisfies WorkspaceDocumentDiagnosticReport[]
+        }
+
+        for (let uri of reportedDiagnosticUris) {
+          if (currentUris.has(uri)) continue
+          reports.push({
+            kind: DocumentDiagnosticReportKind.Full,
+            uri,
+            version: null,
+            items: [],
+          })
+        }
+
+        reportedDiagnosticUris = currentUris
+        return reports
       }
     },
   }
+}
+
+export async function discoverGrapheneProjects(workspaceFolders: readonly URI[]): Promise<DiscoveredGrapheneProject[]> {
+  let projects = new Map<ProjectRoot, DiscoveredGrapheneProject>()
+
+  for (let workspace of workspaceFolders) {
+    let packageJsonPaths = await glob('**/package.json', {
+      cwd: workspace.fsPath,
+      ignore: ['node_modules/**', '**/.*/**'],
+      follow: false,
+    })
+
+    for (let packageJsonPath of packageJsonPaths) {
+      let root = path.join(workspace.fsPath, path.dirname(packageJsonPath))
+      let input = await readConfigInput(root)
+      if (!input) continue
+      projects.set(root, {root, config: normalizeConfig({...input, root: input.root || root}, root)})
+    }
+  }
+
+  return [...projects.values()].sort((left, right) => left.root.localeCompare(right.root))
+}
+
+export function findOwningProjectRoot(filePath: string, projectRoots: Iterable<ProjectRoot>): ProjectRoot | null {
+  let matches = [...projectRoots].filter(root => containsPath(root, filePath))
+  if (!matches.length) return null
+  matches.sort((left, right) => right.length - left.length)
+  return matches[0]
+}
+
+function containsPath(root: ProjectRoot, filePath: string) {
+  let relative = path.relative(root, filePath)
+  return relative == '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
+}
+
+async function readWorkspaceFile(filePath: string) {
+  try {
+    return await readFile(filePath, 'utf8')
+  } catch {
+    return null
+  }
+}
+
+function fileUriPath(uri: DocumentUri): string | null {
+  let parsed = URI.parse(uri)
+  if (parsed.scheme !== 'file') return null
+  return parsed.fsPath
 }
 
 function upsertFile(files: WorkspaceFileInput[], next: WorkspaceFileInput) {
@@ -232,9 +362,9 @@ function toDiagnostic(diagnostic: GrapheneError): Diagnostic {
   }
 }
 
-function toLocation(workspace: URI, location: GrapheneLocation): Location {
+function toLocation(root: ProjectRoot, location: GrapheneLocation): Location {
   return {
-    uri: URIs.joinPath(workspace, location.file).toString(),
+    uri: URI.file(path.resolve(root, location.file)).toString(),
     range: {
       start: {line: location.from.line, character: location.from.col},
       end: {line: location.to.line, character: location.to.col},
@@ -242,8 +372,8 @@ function toLocation(workspace: URI, location: GrapheneLocation): Location {
   }
 }
 
-function toLocationLink(workspace: URI, location: GrapheneLocation): LocationLink {
-  let uri = URIs.joinPath(workspace, location.file).toString()
+function toLocationLink(root: ProjectRoot, location: GrapheneLocation): LocationLink {
+  let uri = URI.file(path.resolve(root, location.file)).toString()
   let range = {
     start: {line: location.from.line, character: location.from.col},
     end: {line: location.to.line, character: location.to.col},

@@ -35,6 +35,9 @@ importers:
       eslint-plugin-svelte:
         specifier: ^3.14.0
         version: 3.15.0(eslint@10.0.3)(svelte@5.53.7)
+      glob:
+        specifier: ^13.0.1
+        version: 13.0.6
       globals:
         specifier: ^16.5.0
         version: 16.5.0
@@ -244,6 +247,9 @@ importers:
       '@volar/language-service':
         specifier: ^2.4.28
         version: 2.4.28
+      glob:
+        specifier: ^13.0.1
+        version: 13.0.6
       vscode-languageserver-protocol:
         specifier: ^3.17.5
         version: 3.17.5
