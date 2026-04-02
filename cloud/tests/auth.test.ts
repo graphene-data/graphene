@@ -20,7 +20,8 @@ describe('auth', () => {
     expectConsoleError(/Authentication required/)
 
     await expect(page.locator('#stytch-login')).toContainText('Sign up or log in')
-    await expect(page).screenshot('auth-login-form')
+    // disable this, as stytches styling seems to be unstable as to whether or not the corners are rounded
+    // await expect(page).screenshot('auth-login-form')
 
     let loginShell = page.locator('#stytch-login')
     await loginShell.locator('input[name="email"], input[type="email"]').first().fill(TEST_EMAIL)
