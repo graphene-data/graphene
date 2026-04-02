@@ -1,4 +1,4 @@
-import type {EChartsConfig2, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
+import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
 import {colorPalette} from './theme.ts'
@@ -12,7 +12,7 @@ import {colorPalette} from './theme.ts'
 // Enrichments must also have comments inside explaining how they work if the logic is non-trivial
 
 // Run enrichment in a fixed order so defaults stay predictable.
-export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fields: Field[]) {
+export function enrich(config: EChartsConfig, rows: Record<string, any>[], fields: Field[]) {
   let normalized = normalize(config)
 
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
@@ -40,7 +40,7 @@ export function enrich(config: EChartsConfig2, rows: Record<string, any>[], fiel
 }
 
 // Normalize options we read in enrichments so later rules can always iterate arrays.
-function normalize(config: EChartsConfig2): NormalConfig {
+function normalize(config: EChartsConfig): NormalConfig {
   let target = config as NormalConfig
   target.series = normalizeArray<SeriesWithGroupingHint>(config.series)
   target.xAxis = normalizeArray<NormalConfig['xAxis'][number]>(config.xAxis)

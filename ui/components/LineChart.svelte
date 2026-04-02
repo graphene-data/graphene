@@ -1,6 +1,6 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
-  import type {EChartsConfig2, QueryResult} from '../component-utilities/types.ts'
+  import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
 
   interface Props {
     data: string | QueryResult
@@ -24,7 +24,7 @@
     width = '100%',
   }: Props = $props()
 
-  function buildConfig(): EChartsConfig2 {
+  function buildConfig(): EChartsConfig {
     let yFields = parseList(y)
     let groupedSeries = Boolean(series && yFields.length === 1)
 

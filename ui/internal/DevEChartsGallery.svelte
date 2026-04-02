@@ -465,7 +465,7 @@
     padding: 16px;
   }
 
-  :global(.chart-grid .echarts2-container) {
+  :global(.chart-grid .echarts-container) {
     margin: 0;
   }
 </style>
