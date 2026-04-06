@@ -38,6 +38,13 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: 'create',
+          include: ['create/**/*.test.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
           name: 'lang',
           setupFiles: ['lang/testHelpers.ts'],
           include: ['lang/**/*.test.ts'],

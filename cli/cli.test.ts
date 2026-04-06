@@ -107,6 +107,30 @@ describe('cli run', () => {
     expect(res.stdout.toLowerCase()).toContain('week')
   })
 
+  it('uses a configured duckdb path when present', async () => {
+    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-configured-duckdb-'))
+    let pkg = {
+      name: 'tmp-graphene',
+      version: '0.0.1',
+      scripts: {graphene: 'graphene'},
+      dependencies: {'@graphenedata/cli': 'workspace:*'},
+      graphene: {
+        dialect: 'duckdb',
+        duckdb: {path: path.join(flightDir, 'flights.duckdb')},
+      },
+    }
+
+    try {
+      await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n')
+      await fsp.cp(path.join(flightDir, 'tables'), path.join(tmpDir, 'tables'), {recursive: true})
+      let res = await runCli(['run', 'from flights select count() as total'], tmpDir)
+      expectCliSuccess(res, 'run query with configured duckdb path')
+      expect(res.stdout.toLowerCase()).toContain('total')
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
+
   it('rejects passing a gsql file path', async () => {
     let res = await runCli(['run', 'tables/flights.gsql'], flightDir)
     expect(res.code).toBe(1)
