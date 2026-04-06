@@ -1,6 +1,7 @@
 packages:
   - lang
   - cli
+  - create
   - ui
   - agent
   - language-server

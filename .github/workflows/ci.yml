@@ -49,6 +49,8 @@ jobs:
         run: pnpm -C lang test
       - name: CLI tests
         run: pnpm -C cli test
+      - name: Create tests
+        run: pnpm -C create test
       - name: UI tests
         run: pnpm -C ui test
       - name: Upload failures
