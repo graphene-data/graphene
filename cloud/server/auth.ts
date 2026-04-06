@@ -7,7 +7,7 @@ import {origin} from './utils.ts'
 import type {AuthContext} from './types.js'
 
 import {orgs} from '../schema.ts'
-import {DOMAIN, PROD, TEST} from './consts.ts'
+import {DEV, DOMAIN, PROD, TEST} from './consts.ts'
 import {getDb} from './db.ts'
 
 export type {AuthContext}
@@ -63,6 +63,7 @@ export async function auth(req: FastifyRequest, reply: FastifyReply) {
 
   // Skip subdomain validation for agent auth in dev (Lambda accesses via ngrok tunnel)
   if (isAgentAuth && !PROD) return
+  if (DEV && req.hostname.includes('ngrok')) return
 
   // Validate subdomain matches user's org
   let host = (req.hostname || '').split(':')[0]
