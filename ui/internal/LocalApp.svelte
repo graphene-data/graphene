@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {onDestroy} from 'svelte'
+  import {onDestroy, onMount} from 'svelte'
   import {errorProvider} from './telemetry.ts'
   import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
   import navFiles from 'virtual:nav'
@@ -36,16 +36,26 @@
 
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
   let Page = $state(null)
-  let pathName = window.location.pathname.replace(/^\//, '') || 'index'
 
-  if (pathName == '__dev/echarts') {
-    Page = DevEChartsGallery
-  } else if (pathName !== '__ct') {
-    import(/* @vite-ignore */ '/' + pathName + '.md').then(mod => {
+  onMount(async () => {
+    let pathName = window.location.pathname.replace(/^\//, '') || 'index'
+
+    // force fonts to load before we mount the component.
+    // This is important for echarts, as it measures text and if done with the wrong font, then
+    // a) when the right font loads, things will just slightly not line up with edges
+    // b) test snapshots will differ, as they measure with whatever the system sans font is
+    // c) screenshots taken by `graphene run` might have the wrong font
+    document.fonts.load("12px 'Source Sans 3'")
+    await document.fonts.ready
+
+    if (pathName == '__dev/echarts') {
+      Page = DevEChartsGallery
+    } else if (pathName !== '__ct') {
+      let mod = await import(/* @vite-ignore */ '/' + pathName + '.md')
       Page = mod.default
       compileError = null
-    }).catch(() => {})
-  }
+    }
+  })
 </script>
 
 <nav id="nav"><NavSidebar files={navData} /></nav>

@@ -22,6 +22,7 @@ function liftInlineEChartsConfig(content: string) {
   })
 }
 
+// Turn code fences into <GrapheneQuery> tags, which register those queries
 export function extractQueries() {
   return function transformer(tree: any) {
     visit(tree, 'code', (node, index, parent) => {
