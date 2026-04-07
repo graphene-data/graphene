@@ -51,7 +51,7 @@ Last but not least, Graphene is **open**. You can use this project for internal 
 - [Try the demo project](https://github.com/graphene-data/example-flights)
 - [Create a new Graphene project]() **[NEED LINK]**
 
-Graphene currently supports Snowflake, BigQuery, and DuckDB as data sources.
+Graphene currently supports Snowflake, BigQuery, and DuckDB as data sources. It is easy to add more - just ask.
 
 ## How it works
 
@@ -59,11 +59,11 @@ A Graphene project can either be a standalone repo or a directory within a large
 - **Semantic models**, via .gsql files. GSQL is both a modeling language and a query language, in the same way that SQL has both DDL and DML.
 - **Pages**, via .md files. Pages are typically used for dashboards, but can also contain notebook-style narratives, documentation, and other visual content.
 
-Graphene itself ships as a CLI which can be installed via npm. The CLI can run and compile GSQL queries, check syntax, print screenshots, and more.
+Graphene itself is a CLI which can be installed via npm. The CLI can run and compile GSQL queries, check syntax, print screenshots, and more.
 
 ## Documentation
 
-Graphene's entire documentation ships as an agent skill in the Graphene npm package. The source files are available [here](/docs).
+Graphene's entire documentation is organized into an agent skill in the Graphene npm package. The source files are available [here](/docs).
 
 ## Production use cases
 
@@ -75,8 +75,4 @@ Graphene is used in the following ways:
 
 ## License and credits
 
-Graphene is licensed under the Elastic License 2.0 which allows you to use it for internal use cases for free, forever. If you would like to use the Graphene Cloud services above, or if you would like to build a service for your own customers using Graphene, please contact us [here](https://graphenedata.com/contact-us/).
-
-## Contributing
-
-We welcome contributions from the community. Read our [Contributing Guide]() **[NEED LINK]** first.
+Graphene is licensed under the Elastic License 2.0 which allows you to use it for internal use cases for free, forever. If you would like to use the Graphene Cloud services above, or if you would like a commercial license, please contact us [here](https://graphenedata.com/contact-us/).
