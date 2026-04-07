@@ -150,7 +150,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
       // now send the props down to the page, and put the evidence types back where they're expected
       let compName = componentPath.match(/(\w+)\.svelte/)?.[1] || 'splat'
       await sharedPage.evaluate(
-        ({compName, props}) => {
+        async ({compName, props}) => {
           if (window.__inst) window.$GRAPHENE.svelte.unmount(window.__inst)
 
           if (props._evidenceColumnTypes) {
@@ -158,6 +158,10 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
             props.data.rows.dataLoaded = true // hack since evidence expects this on an array
             delete props._evidenceColumnTypes
           }
+
+          // ensure fonts have loaded before we mount our component
+          document.fonts.load("12px 'Source Sans 3'")
+          await document.fonts.ready
 
           document.getElementById('nav')?.remove()
           let container = document.getElementById('content')
