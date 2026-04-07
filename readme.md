@@ -35,7 +35,7 @@ Graphene is:
 - [x] **Built for agents**. Everything is code, written only in languages that are well embedded in training data (SQL, Markdown, HTML). All actions are CLIs; nothing is trapped in a GUI.
 - [x] **Optimized for correctness**. Metrics and join relationships are deterministic, callable objects in SQL queries, rather than fuzzy English descriptions. When combined with [agent skills](https://agentskills.io/home) for general business context, agents perform at human levels of competency.
 - [x] **Beautiful**. Layout, theming, and visualizations are beautiful by default, and don't require a token-expensive human-agent loop to dial things in.
-- [x] **High-ceiling**. Agents can create any visualization that's imaginable using ECharts, the world's most feature-complete open source visualization library. And Graphene's query language is as powerful as ANSI SQL, which supports X+ **[UPDATE THIS]** functions, CTEs, subqueries, set operations, window functions, arrays, and more.
+- [x] **High-ceiling**. Agents can create any visualization that's imaginable using ECharts, the world's most feature-complete open source visualization library. And Graphene's query language is as powerful as ANSI SQL, which supports 170+ functions, CTEs, subqueries, set operations, window functions, arrays, and more.
 - [x] **Fast**. Context exploration and syntax checks happen locally. Typical coding agents produce Graphene dashboards in about 30 seconds.
 
 <br/>
