@@ -25,7 +25,6 @@
   function buildConfig(): EChartsConfig {
     return {
       title: title ? {text: title, subtext: subtitle} : undefined,
-      tooltip: {trigger: 'item', formatter: '{b}: {c} ({d}%)'},
       series: [{type: 'pie', encode: {itemName: category, value}, radius: ['40%', '70%']}],
     }
   }

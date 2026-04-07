@@ -35,6 +35,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   applyIntegerYAxisTicks(normalized, rows)
   barLabelPositioning(normalized)
   labelsUseYAxisFormat(normalized)
+  addPieTooltips(normalized)
   stackedBarCornerRadius(normalized)
   return normalized
 }
@@ -376,6 +377,26 @@ function labelsUseYAxisFormat(config: NormalConfig) {
 
       return formatAxisValue(axisFormatter, value)
     }
+  }
+}
+
+// Add a pie-friendly default tooltip when charts include pie series.
+// Pie params can pass row objects as `params.value`, so we format from the encoded value field.
+function addPieTooltips(config: NormalConfig) {
+  let hasPie = config.series.some(series => series?.type === 'pie')
+  if (!hasPie || config.tooltip != null) return
+
+  config.tooltip = {
+    trigger: 'item',
+    formatter: (params: any) => {
+      let value = params?.value
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        let series = config.series[Number(params?.seriesIndex ?? 0)]
+        let yField = getSeriesYField(series)
+        value = yField && value[yField] != null ? value[yField] : value.value
+      }
+      return `${params?.name ?? ''}: ${value ?? ''} (${params?.percent ?? 0}%)`
+    },
   }
 }
 
