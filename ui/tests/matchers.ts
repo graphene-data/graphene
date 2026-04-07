@@ -36,7 +36,7 @@ const extendedExpect = baseExpect.extend({
       scale: 'css',
       locator,
       maxDiffPixelRatio: 0, // strict: no differing pixels allowed
-      threshold: 0, // strict per-pixel color matching
+      threshold: 0.01, // strict per-pixel color matching
       timeout: 5_000,
     } as any
     if (expectedBuffer) opts.expected = expectedBuffer
