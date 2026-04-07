@@ -28,7 +28,7 @@ let clr = {
 
 registerTheme('graphene-theme', {
   color: colorPalette,
-  backgroundColor: clr.white,
+  backgroundColor: 'transparent',
   textStyle: {
     fontFamily: "'Source Sans 3', sans-serif",
     color: clr.textMid,
