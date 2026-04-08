@@ -29,18 +29,18 @@ Traditional BI tools are built primarily for humans, not agents. This means:
 - They focus on raising the floor at the expense of lowering the ceiling (limited viz types, simplified querying APIs).
 - They assume the human user has the tribal knowledge and business context necessary for analysis.
 
-In the future, we believe most low-level data analytics work will be done by agents, allowing humans to focus on the higher level insights and decision-making. To make this a reality, we believe an entirely new tool is needed.
+In the future, we believe **most low-level data analytics work will be done by agents**, allowing humans to focus on the higher level insights and decision-making. To make this a reality, we believe an entirely new tool is needed.
 
 Graphene is:
 - [x] **Built for agents**. Everything is code, written only in languages that are well embedded in training data (SQL, Markdown, HTML). All actions are CLIs; nothing is trapped in a GUI.
 - [x] **High-ceiling**. Agents can create any visualization that's imaginable using ECharts, the world's most feature-complete open source visualization library. And Graphene's query language is as powerful as ANSI SQL, which supports 170+ functions, CTEs, subqueries, set operations, window functions, arrays, and more.
-- [x] **Optimized for agent context**. Metrics and join relationships are deterministic, callable objects in SQL queries, rather than fuzzy English descriptions. When combined with [agent skills](https://agentskills.io/home) for general business context, agents perform at human levels of competency.
+- [x] **Optimized for agent context**. GSQL contains a semantic layer which allows metrics and join relationships to be invoked in queries. When combined with [agent skills](https://agentskills.io/home) for general business context and best practices, agents perform at human levels of competency.
 
 ### Open, forever
 
 Last but not least, Graphene is **open**. You can use this project for internal purposes for free, forever, and aren't locked in to a contract with us.
 
-<br/>
+## Graphene in action
 
 [SCREENSHOTS OF DASHBOARD(S)]
 
