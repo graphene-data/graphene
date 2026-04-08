@@ -1,0 +1,19 @@
+table nyc_taxi (
+  trip_id UInt32
+  pickup_datetime DateTime
+  dropoff_datetime DateTime
+  passenger_count UInt8
+  trip_distance Float32
+  fare_amount Float32
+  extra Float32
+  tip_amount Float32
+  tolls_amount Float32
+  total_amount Float32
+  payment_type String
+  pickup_ntaname String
+  dropoff_ntaname String
+
+  trip_minutes: date_diff('second', pickup_datetime, dropoff_datetime) / 60
+  avg_total_amount: avg(total_amount)
+  cash_trip_rate: avg(case when payment_type = 'CSH' then 1 else 0 end)
+)

@@ -8,7 +8,7 @@ import {fileURLToPath} from 'url'
 
 import {config, loadConfig} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
-import {formatType, isArrayType, parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
+import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
@@ -84,51 +84,55 @@ program
   .argument('[schema | table]', 'Optional schema or table name to describe')
   .action(async (tableArg: string) => {
     let connection = await getConnection()
-    let datasets = await connection.listDatasets()
-    let matchedDataset = tableArg ? findCaseInsensitive(datasets, tableArg) : null
+    try {
+      let datasets = await connection.listDatasets()
+      let matchedDataset = tableArg ? findCaseInsensitive(datasets, tableArg) : null
 
-    // if there's no arg and more than one dataset, just list the datasets
-    if (!tableArg && datasets.length > 1) {
-      return console.log(`Datasets available:\n${datasets.join('\n')}`)
+      // if there's no arg and more than one dataset, just list the datasets
+      if (!tableArg && datasets.length > 1) {
+        return console.log(`Datasets available:\n${datasets.join('\n')}`)
+      }
+
+      // figure out if you're wanting to list tables in a schema/dataset
+      let dsToList: string | null = null
+      let parts = tableArg ? tableArg.split('.') : []
+
+      if (tableArg && connection.listSchemas && parts.length == 1 && matchedDataset) {
+        let schemas = await connection.listSchemas(matchedDataset)
+        return console.log(`Schemas in ${matchedDataset}:\n${schemas.join('\n')}`)
+      }
+
+      if (matchedDataset)
+        dsToList = matchedDataset // you gave the name of a dataset
+      else if (!tableArg && config.defaultNamespace)
+        dsToList = config.defaultNamespace // default namespace configured
+      else if (!tableArg && datasets.length == 1)
+        dsToList = datasets[0] // only one dataset, and no args
+      else if (!tableArg && config.dialect == 'duckdb') dsToList = '<default>'
+      else if (tableArg && config.dialect == 'snowflake' && parts.length == 2) {
+        let db = findCaseInsensitive(datasets, parts[0]) || parts[0]
+        dsToList = `${db}.${parts.slice(1).join('.')}`
+      }
+
+      if (dsToList) {
+        let tables = await connection.listTables(dsToList)
+        return console.log(`Tables${dsToList ? ` in ${dsToList}` : ''}:\n${tables.join('\n')}`)
+      }
+
+      // otherwise, assume you're wanting to see tables
+      let cols = await connection.describeTable(tableArg)
+      let tableLabel = config.dialect == 'snowflake' ? String(tableArg || '').toLowerCase() : tableArg
+      if (!cols.length) return console.log(`Table ${tableLabel} not found`)
+      console.log(`table ${tableLabel} (`)
+      cols.forEach(col => {
+        let parsed = parseWarehouseFieldType(col.dataType)
+        let renderedType = parsed.displayType || col.dataType
+        console.log(`  ${col.name} ${renderedType}`)
+      })
+      console.log(')')
+    } finally {
+      await connection.close()
     }
-
-    // figure out if you're wanting to list tables in a schema/dataset
-    let dsToList: string | null = null
-    let parts = tableArg ? tableArg.split('.') : []
-
-    if (tableArg && connection.listSchemas && parts.length == 1 && matchedDataset) {
-      let schemas = await connection.listSchemas(matchedDataset)
-      return console.log(`Schemas in ${matchedDataset}:\n${schemas.join('\n')}`)
-    }
-
-    if (matchedDataset)
-      dsToList = matchedDataset // you gave the name of a dataset
-    else if (!tableArg && config.defaultNamespace)
-      dsToList = config.defaultNamespace // default namespace configured
-    else if (!tableArg && datasets.length == 1)
-      dsToList = datasets[0] // only one dataset, and no args
-    else if (!tableArg && config.dialect == 'duckdb') dsToList = '<default>'
-    else if (tableArg && config.dialect == 'snowflake' && parts.length == 2) {
-      let db = findCaseInsensitive(datasets, parts[0]) || parts[0]
-      dsToList = `${db}.${parts.slice(1).join('.')}`
-    }
-
-    if (dsToList) {
-      let tables = await connection.listTables(dsToList)
-      return console.log(`Tables${dsToList ? ` in ${dsToList}` : ''}:\n${tables.join('\n')}`)
-    }
-
-    // otherwise, assume you're wanting to see tables
-    let cols = await connection.describeTable(tableArg)
-    let tableLabel = config.dialect == 'snowflake' ? String(tableArg || '').toLowerCase() : tableArg
-    if (!cols.length) return console.log(`Table ${tableLabel} not found`)
-    console.log(`table ${tableLabel} (`)
-    cols.forEach(col => {
-      let parsed = parseWarehouseFieldType(col.dataType)
-      let renderedType = parsed.type && isArrayType(parsed.type) ? formatType(parsed.type) : col.dataType
-      console.log(`  ${col.name} ${renderedType}`)
-    })
-    console.log(')')
   })
 
 program

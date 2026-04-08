@@ -143,6 +143,13 @@ export class SnowflakeConnection implements QueryConnection {
     let databases = await this.listDatasets()
     return databases.find(db => db.toLowerCase() == name.toLowerCase()) || name
   }
+
+  async close(): Promise<void> {
+    await this.ready
+    await new Promise<void>((resolve, reject) => {
+      this.connection.destroy(err => (err ? reject(err) : resolve()))
+    })
+  }
 }
 
 function snowflakeIdent(value: string) {

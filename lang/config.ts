@@ -23,6 +23,12 @@ export interface Config {
     database?: string
   }
 
+  clickhouse?: {
+    url?: string
+    username?: string
+    database?: string
+  }
+
   duckdb?: {
     path?: string
   }
@@ -49,6 +55,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd())
   let dialect = cfg.dialect || 'duckdb'
   if (cfg.bigquery) dialect = 'bigquery'
   else if (cfg.snowflake) dialect = 'snowflake'
+  else if (cfg.clickhouse) dialect = 'clickhouse'
   else if (cfg.duckdb) dialect = 'duckdb'
   let envFile = ['.env']
   if (Array.isArray(cfg.envFile)) envFile = cfg.envFile

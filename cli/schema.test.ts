@@ -15,9 +15,11 @@ const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
 const flightDir = path.resolve(dir, '../examples/flights')
 const snowflakeDir = path.resolve(dir, '../examples/snowflake')
 const ecommDir = path.resolve(dir, '../examples/ecomm')
+const clickhouseDir = path.resolve(dir, '../examples/clickhouse')
 
 const hasSnowflakeAuth = !!process.env.SNOWFLAKE_PRI_KEY_PATH || !!process.env.SNOWFLAKE_PRI_KEY
 const hasBigQueryAuth = !!process.env.GOOGLE_APPLICATION_CREDENTIALS || !!process.env.GOOGLE_CREDENTIALS_CONTENT
+const hasClickHouseAuth = !!process.env.CLICKHOUSE_URL && !!process.env.CLICKHOUSE_USERNAME && !!process.env.CLICKHOUSE_PASSWORD
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
@@ -75,6 +77,10 @@ describe('duckdb', () => {
     expect(formatType(parseWarehouseFieldType('VARCHAR[]').type)).toBe('array<string>')
     expect(formatType(parseWarehouseFieldType('INTEGER[]').type)).toBe('array<number>')
     expect(formatType(parseWarehouseFieldType('ARRAY<STRING>').type)).toBe('array<string>')
+    expect(formatType(parseWarehouseFieldType('Nullable(Float64)').type)).toBe('number')
+    expect(formatType(parseWarehouseFieldType('LowCardinality(String)').type)).toBe('string')
+    expect(formatType(parseWarehouseFieldType("Enum8('CSH' = 1, 'CRE' = 2)").type)).toBe('string')
+    expect(formatType(parseWarehouseFieldType('Array(String)').type)).toBe('array<string>')
   })
 })
 
@@ -143,5 +149,27 @@ describe.skipIf(!hasBigQueryAuth)('bigquery', () => {
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table ')
     expect(output).toContain('(')
+  })
+})
+
+describe.skipIf(!hasClickHouseAuth)('clickhouse', () => {
+  if (!hasClickHouseAuth) {
+    console.warn('Skipping ClickHouse schema tests: CLICKHOUSE_URL/USERNAME/PASSWORD not set')
+  }
+
+  it('lists available tables in the configured database', async () => {
+    let res = await runCli(['schema'], clickhouseDir)
+    expectCliSuccess(res, 'schema list tables (clickhouse)')
+    let tables = parseSchemaOutput(res.stdout)
+    expect(tables).toContain('default.nyc_taxi')
+  })
+
+  it('describes a clickhouse table from the configured database', async () => {
+    let res = await runCli(['schema', 'nyc_taxi'], clickhouseDir)
+    expectCliSuccess(res, 'schema describe table (clickhouse)')
+    let output = res.stdout.toLowerCase()
+    expect(output).toContain('table nyc_taxi (')
+    expect(output).toContain('pickup_datetime datetime')
+    expect(output).toContain('payment_type string')
   })
 })

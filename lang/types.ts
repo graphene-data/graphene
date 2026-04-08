@@ -68,10 +68,15 @@ let SCALAR_TYPE_ALIASES: Record<string, ScalarTypeKind> = {
   integer: 'number',
   numeric: 'number',
   float: 'number',
-  float64: 'number',
   decimal: 'number',
+  float32: 'number',
+  float64: 'number',
   double: 'number',
   bigint: 'number',
+  uint8: 'number',
+  uint16: 'number',
+  uint32: 'number',
+  uint64: 'number',
   smallint: 'number',
   tinyint: 'number',
   byteint: 'number',
@@ -81,6 +86,8 @@ let SCALAR_TYPE_ALIASES: Record<string, ScalarTypeKind> = {
   text: 'string',
   string: 'string',
   varchar: 'string',
+  char: 'string',
+  fixedstring: 'string',
   geography: 'string',
   bool: 'boolean',
   boolean: 'boolean',
@@ -88,6 +95,7 @@ let SCALAR_TYPE_ALIASES: Record<string, ScalarTypeKind> = {
   datetime: 'timestamp',
   time: 'timestamp',
   timestamp: 'timestamp',
+  datetime64: 'timestamp',
   timestamp_ntz: 'timestamp',
   timestamp_tz: 'timestamp',
   timestamp_ltz: 'timestamp',
@@ -148,13 +156,17 @@ export function parseGsqlFieldType(rawType: string): {type: FieldType | null; er
   return parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: false, allowNamedArray: false})
 }
 
-export function parseWarehouseFieldType(rawType: string): {type: FieldType | null; error?: string} {
-  return parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: true, allowNamedArray: true})
+export function parseWarehouseFieldType(rawType: string): {type: FieldType | null; error?: string; displayType?: string} {
+  let parsed = parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: true, allowNamedArray: true})
+  let displayType = parsed.type && shouldNormalizeWarehouseType(rawType) ? formatType(parsed.type) : rawType
+  return {...parsed, displayType}
 }
 
 function parseFieldType(rawType: string, opts: {allowArrayKeyword: boolean; allowBracketArray: boolean; allowNamedArray: boolean}): {type: FieldType | null; error?: string} {
-  let value = rawType.trim()
+  let value = unwrapWarehouseType(rawType.trim())
   if (!value) return {type: null}
+
+  if (/^enum(?:8|16)\s*\(/i.test(value)) return {type: scalarType('string')}
 
   if (opts.allowBracketArray && value.endsWith('[]')) {
     let inner = parseFieldType(value.slice(0, -2), opts)
@@ -170,8 +182,14 @@ function parseFieldType(rawType: string, opts: {allowArrayKeyword: boolean; allo
     if ((typeName == 'list' || typeName == 'array') && opts.allowNamedArray) return parseArrayType(match[2], opts)
   }
 
-  let scalarType = normalizeScalarType(value)
-  return {type: scalarType}
+  let callMatch = value.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\((.+)\)$/s)
+  if (callMatch) {
+    let typeName = normalizeTypeName(callMatch[1])
+    if ((typeName == 'list' || typeName == 'array') && opts.allowNamedArray) return parseArrayType(callMatch[2], opts)
+  }
+
+  let normalizedScalarType = normalizeScalarType(value)
+  return {type: normalizedScalarType}
 }
 
 function parseArrayType(innerType: string, opts: {allowArrayKeyword: boolean; allowBracketArray: boolean; allowNamedArray: boolean}): {type: FieldType | null; error?: string} {
@@ -183,6 +201,27 @@ function parseArrayType(innerType: string, opts: {allowArrayKeyword: boolean; al
 
 function normalizeTypeName(rawType: string): string {
   return rawType.trim().replace(/\s+/g, '_').toLowerCase()
+}
+
+function unwrapWarehouseType(rawType: string): string {
+  let value = rawType.trim()
+  while (true) {
+    let wrapped = unwrapTypeCall(value, 'nullable') || unwrapTypeCall(value, 'lowcardinality')
+    if (!wrapped) return value
+    value = wrapped
+  }
+}
+
+function shouldNormalizeWarehouseType(rawType: string) {
+  // Schema output usually preserves the warehouse's native type spelling, but these
+  // wrappers/syntax variants are mostly implementation detail and read better once
+  // normalized to Graphene's shared type vocabulary.
+  return /\[\]$/.test(rawType) || /^array\s*[<(]/i.test(rawType) || /^nullable\s*\(/i.test(rawType) || /^lowcardinality\s*\(/i.test(rawType) || /^enum(?:8|16)\s*\(/i.test(rawType)
+}
+
+function unwrapTypeCall(value: string, fn: string): string | null {
+  if (!value.toLowerCase().startsWith(fn + '(') || !value.endsWith(')')) return null
+  return value.slice(fn.length + 1, -1).trim() || null
 }
 
 // An analyzed expression - contains the SQL string plus metadata for validation

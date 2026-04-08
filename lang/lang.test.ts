@@ -7,7 +7,7 @@ import {expect} from 'vitest'
 import {setConfig} from './config.ts'
 import {toSql} from './core.ts'
 import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
-import {formatType} from './types.ts'
+import {formatType, parseWarehouseFieldType} from './types.ts'
 import {trimIndentation} from './util.ts'
 
 const testTables = `
@@ -149,6 +149,12 @@ describe('lang', () => {
     expect('from raw.users select id').toRenderSql('select users.id as id from raw.users as users')
   })
 
+  it('applies defaultNamespace to unqualified table paths for clickhouse', () => {
+    setConfig({dialect: 'clickhouse', root: '', defaultNamespace: 'default'})
+    updateFile('table nyc_taxi (trip_id int)', 'clickhouse.gsql')
+    expect('from nyc_taxi select trip_id').toRenderSql('SELECT nyc_taxi.trip_id as trip_id FROM default.nyc_taxi as nyc_taxi')
+  })
+
   it('ignores workspace files matched by ignoredFiles globs', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-workspace-ignore-'))
 
@@ -273,6 +279,9 @@ describe('lang', () => {
 
     setConfig({dialect: 'snowflake', root: ''})
     expect(q).toRenderSql('select events.id as id, tag.value as tag from EVENTS as events , TABLE(FLATTEN(INPUT => events.tags)) AS tag')
+
+    setConfig({dialect: 'clickhouse', root: ''})
+    expect(q).toRenderSql('SELECT events.id as id, tag as tag FROM events as events ARRAY JOIN events.tags AS tag')
   })
 
   it('rejects unsupported unnest join forms', () => {
@@ -969,6 +978,10 @@ describe('lang', () => {
     setConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze("from events select date_trunc('year', event_date) as year_start")
     expect(snowflake.fields[0].type.metadata).toEqual({temporal: {grain: 'year'}})
+
+    setConfig({dialect: 'clickhouse', root: ''})
+    let [clickhouse] = analyze("from events select date_trunc('week', event_date) as week_start")
+    expect(clickhouse.fields[0].type.metadata).toEqual({temporal: {grain: 'week'}})
   })
 
   it('propagates temporal grain through refs and drops it for reshaping expressions', () => {
@@ -1282,6 +1295,23 @@ describe('lang', () => {
     }
   })
 
+  it('supports clickhouse current datetime functions without bare aliases', () => {
+    setConfig({dialect: 'clickhouse', root: ''})
+    try {
+      expect(`
+        from users select
+          current_date(),
+          current_timestamp()
+      `).toRenderSql('SELECT current_date() as col_0, current_timestamp() as col_1 FROM users as users')
+
+      expect('from users select current_date').toHaveDiagnostic(/Unknown field "current_date" on users/i)
+      expect('from users select current_time()').toHaveDiagnostic(/Unknown function: current_time/i)
+      expect('from users select localtimestamp').toHaveDiagnostic(/Unknown field "localtimestamp" on users/i)
+    } finally {
+      setConfig({root: ''})
+    }
+  })
+
   it('keeps column refs ahead of bare niladic functions', () => {
     let queries = analyze(`
       table t (
@@ -1495,10 +1525,22 @@ describe('lang', () => {
     )
   })
 
+  it('renders clickhouse pXX aggregates and windows', () => {
+    setConfig({dialect: 'clickhouse', root: ''})
+    expect('from orders select p50(amount) as median_amount').toRenderSql('SELECT quantile(0.5)(orders.amount) as median_amount FROM orders as orders')
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id').toRenderSql(
+      'SELECT orders.id as id, quantile(0.5)(orders.amount) OVER (PARTITION BY orders.user_id) as p50_by_user FROM orders as orders ORDER BY 1 asc NULLS LAST',
+    )
+  })
+
   it('supports cast() expressions', () => {
     expect('from users select cast(age as varchar)').toRenderSql('select CAST(users.age AS VARCHAR) as col_0 from users as users')
     expect('from users select cast(age as float64)').toRenderSql('select CAST(users.age AS FLOAT64) as col_0 from users as users')
     expect('from users select cast(name as array<string>)').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
+
+    setConfig({dialect: 'clickhouse', root: ''})
+    expect('from users select cast(age as float64)').toRenderSql('SELECT CAST(users.age AS Float64) as col_0 FROM users as users')
+    expect('from users select cast(name as array<string>)').toRenderSql('SELECT CAST(users.name AS Array(VARCHAR)) as col_0 FROM users as users')
   })
 
   it('supports :: cast syntax', () => {
@@ -1514,6 +1556,13 @@ describe('lang', () => {
 
   it('supports cast in expressions', () => {
     expect('from users select cast(age as varchar) = name').toRenderSql('select CAST(users.age AS VARCHAR)=users.name as col_0 from users as users')
+  })
+
+  it('normalizes clickhouse warehouse types for schema output', () => {
+    expect(formatType(parseWarehouseFieldType('Nullable(Float64)').type)).toBe('number')
+    expect(formatType(parseWarehouseFieldType('LowCardinality(String)').type)).toBe('string')
+    expect(formatType(parseWarehouseFieldType("Enum8('CSH' = 1, 'CRE' = 2)").type)).toBe('string')
+    expect(formatType(parseWarehouseFieldType('Array(String)').type)).toBe('array<string>')
   })
 
   it('preserves array element types through computed fields, views, and generic array returns', () => {
