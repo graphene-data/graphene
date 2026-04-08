@@ -51,7 +51,7 @@ Last but not least, Graphene is **open**. You can use this project for internal 
 - [Try the demo project](https://github.com/graphene-data/example-flights)
 - [Create a new Graphene project]() **[NEED LINK]**
 
-Graphene currently supports Snowflake, BigQuery, and DuckDB as data sources. It is easy to add more - just ask.
+Graphene currently supports Snowflake, BigQuery, and local data (via DuckDB) as data sources. It is easy to add more - just ask.
 
 ## How it works
 
