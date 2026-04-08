@@ -15,9 +15,9 @@
 <div align="center">
   <a href="https://graphenedata.com">Website</a>
   &nbsp;•&nbsp;
-  <a href="">Demo Project</a><!-- NEED URL -->
+  <a href="https://github.com/graphene-data/example-flights">Demo Project</a>
   &nbsp;•&nbsp;
-  <a href="">Setup</a><!-- NEED URL -->
+  <a href="/docs/setup.md">Setup</a>
 </div>
 
 <br/>
@@ -49,17 +49,19 @@ Last but not least, Graphene is **open**. You can use this project for internal 
 ## Get started
 
 - [Try the demo project](https://github.com/graphene-data/example-flights)
-- [Create a new Graphene project]() **[NEED LINK]**
+- [Create a new Graphene project](/docs/setup.md)
 
 Graphene currently supports Snowflake, BigQuery, and local data (via DuckDB) as data sources. It is easy to add more - just ask.
 
+Once your project is set up, simply start the dev server via `npx graphene serve` (or via `npm exec`, `pnpm`, etc.) and then prompt your coding agent to do analytics work: answer a data question, build a dashboard, edit the model, etc.
+
 ## How it works
 
-A Graphene project can either be a standalone repo or a directory within a larger codebase (such as dbt). It is comprised of:
+A Graphene project can either be a standalone repo or a directory within a larger codebase (such as dbt or a larger mono-repo). It is comprised of:
 - **Semantic models**, via .gsql files. GSQL is both a modeling language and a query language, in the same way that SQL has both DDL and DML.
 - **Pages**, via .md files. Pages are typically used for dashboards, but can also contain notebook-style narratives, documentation, and other visual content.
 
-Graphene itself is a CLI which can be installed via npm. The CLI can run and compile GSQL queries, check syntax, print screenshots, and more.
+Graphene itself is a CLI which can be installed via npm. The CLI can run and compile GSQL queries, render pages in the browser, check syntax, print screenshots, and more.
 
 ## Documentation
 
