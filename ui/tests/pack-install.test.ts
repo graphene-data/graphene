@@ -61,13 +61,6 @@ function parseTarballPath(result: RunResult, cwd: string) {
   return path.isAbsolute(tarball) ? tarball : path.resolve(cwd, tarball)
 }
 
-function parseScreenshotPath(output: string, cwd: string) {
-  let match = output.match(/Screenshot saved to\s+(.+\.png)/)
-  if (!match) throw new Error(`Could not find screenshot path in output:\n${output}`)
-  let screenshotPath = match[1].trim()
-  return path.isAbsolute(screenshotPath) ? screenshotPath : path.resolve(cwd, screenshotPath)
-}
-
 async function startServe(cwd: string, env: NodeJS.ProcessEnv, port: number, timeoutMs = 60_000): Promise<ServeHandle> {
   let child = spawn('npm', ['run', 'graphene', '--', 'serve'], {cwd, env})
   let logs = ''
@@ -164,19 +157,24 @@ test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user pr
 
     let checkOutput = stripAnsi(checkResult.stdout + checkResult.stderr)
     expect(checkOutput).toContain('No errors found')
+    expect(checkOutput).not.toContain('Warning: Queries were still loading when the screenshot was taken')
 
     let runResult = await run('npm', ['run', 'graphene', '--', 'run', 'index.md'], projectDir, childEnv)
     expectSuccess('npm run graphene run index.md', runResult)
 
     let runOutput = stripAnsi(runResult.stdout + runResult.stderr)
     expect(runOutput).toContain('No errors found')
+    expect(runOutput).toContain('Screenshot saved to')
+    expect(runOutput).not.toContain('Warning: Queries were still loading when the screenshot was taken')
 
-    let screenshotPath = parseScreenshotPath(runOutput, projectDir)
-    let screenshot = await fsp.readFile(screenshotPath)
-    expect(screenshot.length).toBeGreaterThan(20_000)
-
-    await page.setContent(`<img id="shot" src="data:image/png;base64,${screenshot.toString('base64')}" />`)
-    await expect(page.locator('#shot')).screenshot('packaged-cli-check-index')
+    // Snapshot the live page with Playwright while the packaged server is running.
+    await page.goto(`http://localhost:${port}/`)
+    await waitForGrapheneLoad(page)
+    await page.evaluate(async () => {
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    })
+    await page.waitForTimeout(500)
+    await expect(page).screenshot('packaged-cli-check-index')
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
     serveHandle?.child.kill('SIGTERM')
