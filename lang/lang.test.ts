@@ -1312,6 +1312,19 @@ describe('lang', () => {
     }
   })
 
+  it('supports broader clickhouse function coverage', () => {
+    setConfig({dialect: 'clickhouse', root: ''})
+    try {
+      expect('from users select count_if(age > 18) as adults').toRenderSql('SELECT countIf(users.age>18) as adults FROM users as users')
+      expect('from users select sum_if(age, age > 18) as adult_age_sum').toRenderSql('SELECT sumIf(users.age,users.age>18) as adult_age_sum FROM users as users')
+      expect("from users select startswith(name, 'A') as starts_a").toRenderSql("SELECT startsWith(users.name,'A') as starts_a FROM users as users")
+      expect("from users select format_datetime(created_at, '%Y-%m') as month_label").toRenderSql("SELECT formatDateTime(users.created_at,'%Y-%m') as month_label FROM users as users")
+      expect('from users select to_year(created_at) as year_num').toRenderSql('SELECT toYear(users.created_at) as year_num FROM users as users')
+    } finally {
+      setConfig({root: ''})
+    }
+  })
+
   it('keeps column refs ahead of bare niladic functions', () => {
     let queries = analyze(`
       table t (
