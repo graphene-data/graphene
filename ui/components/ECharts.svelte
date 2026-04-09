@@ -115,7 +115,11 @@
 
   let style = $derived.by(() => {
     let s = ''
-    let toDim = (dim: string | number) => typeof dim == 'number' ? `${dim}px` : dim
+    let toDim = (dim: string | number) => {
+      let t = typeof dim
+      if (t == 'number' || (t == 'string' && (dim as string).match(/^\d+$/))) return `${dim}px`
+      return dim
+    }
     if (height) s += `height:${toDim(height)};`
     if (width) s += `width:${toDim(width)};`
     return s
@@ -137,8 +141,6 @@
 <style>
   .echarts {
     position: relative;
-    height: 240px;
-    width: 100%;
   }
 
   .empty-chart {
