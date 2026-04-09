@@ -49,6 +49,28 @@ test('parses inline echarts config body in markdown', async ({server, page}) => 
   await expect(page).screenshot('echarts-inline-config-markdown')
 })
 
+test('charts resize when shrunk', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql delays
+    select date_trunc('week', dep_time) as week, avg(dep_delay) as dep_delay, avg(arr_delay) as arr_delay from flights
+    \`\`\`
+
+    <Row>
+      <LineChart data="delays" x="week" y="dep_delay" />
+      <LineChart data="delays" x="week" y="arr_delay" />
+    </Row>
+  `,
+  )
+
+  await page.setViewportSize({width: 1200, height: 700})
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await page.setViewportSize({width: 700, height: 700})
+  await expect(page).screenshot('charts-resize')
+})
+
 test('expands nav for nested files', async ({server, page}) => {
   server.mockFile('/other/index.md', '# Other Folder')
   server.mockFile('/other/more.md', 'Hi there!')

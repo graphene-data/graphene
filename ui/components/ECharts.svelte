@@ -28,6 +28,7 @@
   // not state, because we don't want `$effect` to run when they change
   let node: HTMLDivElement | null = null
   let chart: any
+  let resizeObserver: ResizeObserver | null = null
 
   // Use `raw` because data can be big, and there's little upside to making it reactive
   let loaded = $state.raw<QueryResult | null>(null)
@@ -42,6 +43,9 @@
   // If `data` is just a string, kick off a query to fetch the data.
   // This maybe could be an effect, but we'd have to ensure we don't double-subscribe.
   onMount(() => {
+    resizeObserver = new ResizeObserver(() => chart?.resize())
+    if (node) resizeObserver.observe(node)
+
     if (typeof data == 'string') {
       try {
         queryId = window.$GRAPHENE.query(data, queryFields(config), handleResults)
@@ -54,6 +58,8 @@
   })
 
   onDestroy(() => {
+    resizeObserver?.disconnect()
+    resizeObserver = null
     window.$GRAPHENE.unsubscribe(handleResults)
     destroyChart()
   })
