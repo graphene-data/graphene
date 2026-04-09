@@ -25,7 +25,7 @@
   function buildConfig(): EChartsConfig {
     return {
       title: title ? {text: title, subtext: subtitle} : undefined,
-      series: [{type: 'pie', encode: {itemName: category, value}, radius: ['40%', '70%']}],
+      series: [{type: 'pie', encode: {itemName: category, value}}],
     }
   }
 </script>
