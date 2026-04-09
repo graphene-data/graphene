@@ -1,123 +1,22 @@
 @import '@fontsource/source-sans-3/400.css';
 @import '@fontsource/source-sans-3/600.css';
-
-@font-face {
-  /* latin-ext */
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url(/inter-latin-ext.woff2) format('woff2');
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-@font-face {
-  /* latin */
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url(/inter-latin.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
-@font-face {
-  /* latin */
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 100 800;
-  font-display: swap;
-  src: url(/jetbrains-mono-latin.woff2) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
+@import '@fontsource/source-serif-4/700.css';
+@import '@fontsource/fira-code/400.css';
 
 :root {
-  /* Layout */
-  --header-height: 3.5rem;
+  --prose-font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --ui-font-family: 'Source Sans 3', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --monospace-font-family: 'Fira Code' ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* Font stacks */
-  --monospace-font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
-  --ui-font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
-  --ui-font-family-compact:
-    Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji', sans-serif;
-
-  /* Palette (kept for compatibility with existing variables) */
-  --blue-50: #eff6ff;
-  --blue-100: #dbeafe;
-  --blue-200: #bfdbfe;
-  --blue-300: #93c5fd;
-  --blue-400: #60a5fa;
-  --blue-500: #3b82f6;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
-  --blue-800: #1e40af;
-  --blue-900: #1e3a8a;
-  --blue-999: #172554;
-  --blue-link: var(--blue-700);
-
-  --green-50: #f0fdf4;
-  --green-100: #dcfce7;
-  --green-200: #bbf7d0;
-  --green-300: #86efac;
-  --green-400: #4ade80;
-  --green-500: #22c55e;
-  --green-600: #16a34a;
-  --green-700: #15803d;
-  --green-800: #166534;
-  --green-900: #14532d;
-  --green-999: #052e16;
-
-  --grey-50: #f9fafb;
-  --grey-100: #f3f4f6;
-  --grey-200: #e5e7eb;
-  --grey-300: #d1d5db;
-  --grey-400: #9ca3af;
-  --grey-500: #6b7280;
-  --grey-600: #4b5563;
-  --grey-700: #374151;
-  --grey-800: #1f2937;
-  --grey-900: #111827;
-  --grey-999: #030712;
-
-  --red-50: #fef2f2;
-  --red-100: #fee2e2;
-  --red-200: #fecaca;
-  --red-300: #fca5a5;
-  --red-400: #f87171;
-  --red-500: #ef4444;
-  --red-600: #dc2626;
-  --red-700: #b91c1c;
-  --red-800: #991b1b;
-  --red-900: #7f1d1d;
-  --red-999: #450a0a;
-
-  --yellow-50: #fefce8;
-  --yellow-100: #fef9c3;
-  --yellow-200: #fef08a;
-  --yellow-300: #fde047;
-  --yellow-400: #facc15;
-  --yellow-500: #eab308;
-  --yellow-600: #ca8a04;
-  --yellow-700: #a16207;
-  --yellow-800: #854d0e;
-  --yellow-900: #713f12;
-  --yellow-999: #422006;
-
-  /* Aliases for previous Tailwind-like tokens */
-  --primary: var(--blue-700);
-  --base-200: var(--grey-200);
-  --base-300: var(--grey-300);
-  --base-content-muted: var(--grey-600);
-  --base-heading: var(--grey-900);
+  --color-background: #ffffff;
+  /*--color-background: #f9f9f8;*/
+  --color-heading: #1a1a1a;
+  --color-content: #2e2e2e;
+  --color-muted: #888888;
+  --color-border: #e8e8e6;
+  --color-link: #1d4ed8;
 }
 
-.chart-footer {
-  display: none !important;
-}
-
-/* Global */
 html {
   scroll-behavior: smooth;
 }
@@ -129,14 +28,15 @@ body {
   font-family: 'Inter', var(--ui-font-family);
   font-synthesis: none;
   line-height: 1.7;
-  color: var(--base-heading);
+  color: var(--color-content);
+  background-color: var(--color-background);
 }
 
 nav {
   width: 200px;
   flex-shrink: 0;
   padding: 32px 0 16px 0px;
-  border-right: 1px solid var(--base-200);
+  border-right: 1px solid #e5e7eb;
 }
 
 main {
@@ -145,19 +45,18 @@ main {
   padding: 20px 48px 80px;
 }
 
-/* Default border color */
 *,
 *::before,
 *::after,
 ::backdrop,
 ::file-selector-button {
-  border-color: var(--base-300);
+  border-color: var(--color-border);
 }
 
 /* OSX-style scrollbars */
 .pretty-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: var(--base-300) transparent;
+  scrollbar-color: #d1d5db transparent;
 }
 .pretty-scrollbar::-webkit-scrollbar {
   height: 6px;
@@ -171,7 +70,7 @@ main {
   border-radius: 7px;
 }
 .pretty-scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: var(--base-200);
+  background-color: #e5e7eb;
 }
 
 /* Hidden scrollbar */
@@ -203,15 +102,6 @@ select {
   -webkit-appearance: none;
 }
 
-/* Markdown content */
-.markdown {
-  font-family: 'Inter', var(--ui-font-family);
-  font-size: 1rem;
-  line-height: 1.7;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 img {
   display: block;
   margin-left: auto;
@@ -221,16 +111,16 @@ img {
   border-radius: 0.5rem;
 }
 
-article a {
-  color: var(--primary);
+a {
+  color: var(--color-link);
   text-decoration: underline;
   text-decoration-color: transparent;
   transition:
     color 200ms ease,
     text-decoration-color 200ms ease;
 }
-article a:hover {
-  text-decoration-color: var(--primary);
+a:hover {
+  text-decoration-color: brightness(85%);
 }
 
 p,
@@ -241,7 +131,6 @@ ol {
   line-height: 1.7;
 }
 
-/* Lists */
 ol {
   list-style: decimal;
   padding-inline-start: 1.5rem;
@@ -251,7 +140,6 @@ ul {
   padding-inline-start: 1.5rem;
 }
 
-/* Second-level lists */
 ul ul {
   list-style: circle;
 }
@@ -291,9 +179,9 @@ h3,
 h4,
 h5,
 h6 {
-  scroll-margin-top: var(--header-height);
+  scroll-margin-top: 3.5rem;
   break-inside: avoid;
-  color: var(--base-heading);
+  color: #111827;
   font-family: 'Inter', var(--ui-font-family);
   font-optical-sizing: auto;
   font-weight: 100;
@@ -355,15 +243,15 @@ hr {
   max-width: 36rem;
   margin-left: auto;
   margin-right: auto;
-  background-color: var(--base-300);
+  background-color: #d1d5db;
   border: 0;
 }
 
 code {
   font-family: var(--monospace-font-family);
   font-size: 0.875em;
-  background-color: var(--base-200);
-  border: 1px solid var(--base-300);
+  background-color: #e5e7eb;
+  border: 1px solid #d1d5db;
   border-radius: 0.125rem;
   padding-left: 0.25rem;
   padding-right: 0.25rem;
@@ -376,8 +264,8 @@ form code {
 }
 
 blockquote {
-  background-color: var(--base-200);
-  border-left: 4px solid var(--base-content-muted);
+  background-color: #e5e7eb;
+  border-left: 4px solid #4b5563;
   padding-left: 0.75rem;
   margin-top: 2rem;
   margin-bottom: 2rem;
@@ -394,7 +282,7 @@ blockquote > :last-child {
   margin-bottom: 0;
 }
 blockquote * {
-  color: var(--base-content-muted);
+  color: #4b5563;
 }
 
 /* Ensure size and color are maintained for bold, italic, strikethrough, links inside markdown */
@@ -405,35 +293,3 @@ a {
   font-size: 1em;
   color: inherit;
 }
-
-/*table {
-  min-width: 100%;
-  border-collapse: collapse;
-  text-align: center;
-  margin-left: auto;
-  margin-right: auto;
-  margin-top: 1.25rem;
-  margin-bottom: 1.25rem;
-}
-th {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-  border-bottom: 1px solid var(--grey-800);
-  padding-top: 0;
-  padding-bottom: 0;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-td {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-  padding-left: 0.5rem;
-  padding-right: 0.5rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}*/
