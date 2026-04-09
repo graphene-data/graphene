@@ -5,12 +5,12 @@ import path from 'node:path'
 
 import type {Config} from '../../lang/config.ts'
 import type {WorkspaceFileInput} from '../../lang/core.ts'
-import type {CliCommandCompletedEvent, TelemetryCommand, TelemetryEvent, WorkspaceScannedEvent} from './types.ts'
+import type {CliCommandCompletedEvent, TelemetryBatch, TelemetryCommand, TelemetryEvent, WorkspaceScannedEvent} from './types.ts'
 
 import {TelemetryStorage} from './storage.ts'
 export type {TelemetryCommand} from './types.ts'
 
-const DEFAULT_TELEMETRY_ENDPOINT = 'https://telemetry.graphene.dev/events'
+const DEFAULT_TELEMETRY_ENDPOINT = 'https://app.graphenedata.com/cli-telemetry'
 const SAFE_FLAG_NAMES: Partial<Record<TelemetryCommand, Record<string, string[]>>> = {
   run: {chart: ['--chart', '-c'], query: ['--query', '-q']},
   serve: {bg: ['--bg']},
@@ -96,6 +96,7 @@ export class CliTelemetry {
   }
 
   private send(event: TelemetryEvent) {
+    let batch: TelemetryBatch = {events: [event]}
     let controller = new AbortController()
     let timeout = setTimeout(() => controller.abort(), 500)
     timeout.unref?.()
@@ -103,7 +104,7 @@ export class CliTelemetry {
     void fetch(this.endpoint, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(event),
+      body: JSON.stringify(batch),
       signal: controller.signal,
     })
       .catch(() => {})

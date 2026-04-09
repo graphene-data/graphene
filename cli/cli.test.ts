@@ -151,10 +151,10 @@ describe('cli check', () => {
 describe('cli telemetry', () => {
   it('sends telemetry to the configured endpoint', async () => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-telemetry-'))
-    let events: any[] = []
+    let batches: any[] = []
     let server = createServer(async (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
       let body = await readRequestBody(req)
-      events.push(JSON.parse(body))
+      batches.push(JSON.parse(body))
       res.statusCode = 204
       res.end()
     })
@@ -171,7 +171,9 @@ describe('cli telemetry', () => {
       })
 
       expectCliSuccess(res, 'telemetry compile')
-      await waitFor(() => events.length >= 4)
+      await waitFor(() => batches.length >= 4)
+
+      let events = batches.flatMap(batch => batch.events)
 
       let names = events.map(event => event.event).sort()
       expect(names).toEqual(['cli_command_completed', 'cli_command_started', 'cli_install_seen', 'workspace_scanned'])
@@ -188,6 +190,11 @@ describe('cli telemetry', () => {
       expect(scanned.command).toBe('compile')
       expect(scanned.gsql_file_count).toBeGreaterThan(0)
       expect(scanned.md_file_count).toBe(0)
+
+      for (let batch of batches) {
+        expect(batch).toMatchObject({events: expect.any(Array)})
+        expect(batch.events).toHaveLength(1)
+      }
 
       for (let event of events) {
         expect(event.install_id).toBeTruthy()
@@ -206,10 +213,10 @@ describe('cli telemetry', () => {
 
   it('only sends cli_install_seen on the first run for an install', async () => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-telemetry-install-seen-'))
-    let events: any[] = []
+    let batches: any[] = []
     let server = createServer(async (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
       let body = await readRequestBody(req)
-      events.push(JSON.parse(body))
+      batches.push(JSON.parse(body))
       res.statusCode = 204
       res.end()
     })
@@ -224,14 +231,17 @@ describe('cli telemetry', () => {
 
       let first = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir, env})
       expectCliSuccess(first, 'telemetry first compile')
-      await waitFor(() => events.length >= 4)
+      await waitFor(() => batches.length >= 4)
+      let events = batches.flatMap(batch => batch.events)
       expect(events.filter(event => event.event == 'cli_install_seen')).toHaveLength(1)
 
-      events.length = 0
+      batches.length = 0
 
       let second = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir, env})
       expectCliSuccess(second, 'telemetry second compile')
-      await waitFor(() => events.length >= 3)
+      await waitFor(() => batches.length >= 3)
+
+      events = batches.flatMap(batch => batch.events)
 
       let names = events.map(event => event.event).sort()
       expect(names).toEqual(['cli_command_completed', 'cli_command_started', 'workspace_scanned'])

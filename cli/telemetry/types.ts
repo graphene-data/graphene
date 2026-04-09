@@ -48,3 +48,7 @@ export interface CliCommandCompletedEvent extends CommonEventFields {
 }
 
 export type TelemetryEvent = CliInstallSeenEvent | CliUpgradedEvent | WorkspaceScannedEvent | CliCommandStartedEvent | CliCommandCompletedEvent
+
+export interface TelemetryBatch {
+  events: TelemetryEvent[]
+}
