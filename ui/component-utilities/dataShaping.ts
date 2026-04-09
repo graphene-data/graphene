@@ -92,7 +92,7 @@ export function applyStackPercentage(config: NormalConfig, rows: Record<string, 
       for (let y of yFields) row[pctFieldByY[y]] = total <= 0 ? 0 : (Number(row?.[y]) || 0) / total
     }
 
-    for (let y of yFields) ensureField(fields, pctFieldByY[y], {metadata: {pct: true}})
+    for (let y of yFields) ensureField(fields, pctFieldByY[y], {metadata: {ratio: true}})
 
     for (let candidate of stackGroup) {
       let y = getSeriesYField(candidate)

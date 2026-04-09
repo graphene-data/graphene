@@ -30,7 +30,9 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   lineSeriesMarkerVisibility(normalized, rows)
   horizontalBarGuard(normalized, fields)
   computeTitleLegendAndGridPadding(normalized)
-  valueAxisFormatting(normalized, fields)
+  hideStackPercentageValueAxis(normalized)
+  removeHiddenValueAxisPadding(normalized)
+  valueFormatting(normalized, fields)
   styleSecondaryAxisForSimpleBarLineLayout(normalized)
   applyIntegerYAxisTicks(normalized, rows)
   barLabelPositioning(normalized)
@@ -201,83 +203,45 @@ function computeTitleLegendAndGridPadding(config: NormalConfig) {
   }
 }
 
-// Set default formatting for inferred value axes.
-// We pick one field per axis (the first bound series) and derive formatter behavior from that field metadata.
-function valueAxisFormatting(config: NormalConfig, fields: Field[]) {
-  let currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
-  let currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
-
-  // Keep numeric labels short while preserving rough magnitude and sign.
-  let compact = (num: number) => {
-    let exponent = Math.floor(Math.log10(Math.abs(num)))
-    let scale = Math.pow(10, exponent - 2)
-    let rounded = Math.round(num / scale) * scale
-    if (!Number.isFinite(rounded)) return String(num)
-    let magnitude = Math.floor(Math.log10(rounded))
-    let decimals = Math.max(0, 2 - magnitude)
-    return rounded
-      .toFixed(decimals)
-      .replace(/\.0+$/, '')
-      .replace(/(\.[0-9]*[1-9])0+$/, '$1')
-      .replace(/\.$/, '')
-  }
-
-  // Number formatter for non-currency value axes (k/M/B/T + m/u/n for very small values).
-  let formatNumber = (amount: number) => {
-    if (amount === 0) return '0'
-    let sign = amount < 0 ? '-' : ''
-    let absolute = Math.abs(amount)
-
-    if (absolute >= 1e12) return `${sign}${compact(absolute / 1e12)}T`
-    if (absolute >= 1e9) return `${sign}${compact(absolute / 1e9)}B`
-    if (absolute >= 1e6) return `${sign}${compact(absolute / 1e6)}M`
-    if (absolute >= 1e3) return `${sign}${compact(absolute / 1e3)}k`
-    if (absolute >= 1) return `${sign}${compact(absolute)}`
-    if (absolute >= 1e-3) return `${sign}${compact(absolute)}`
-    if (absolute >= 1e-6) return `${sign}${compact(absolute * 1e3)}m`
-    if (absolute >= 1e-9) return `${sign}${compact(absolute * 1e6)}u`
-    if (absolute >= 1e-12) return `${sign}${compact(absolute * 1e9)}n`
-    return `${sign}${compact(absolute)}`
-  }
-
-  // Apply one formatter per value axis unless the user already provided one.
+// Set default value formatting for value axes and series tooltips.
+// We derive one formatter per field so axis labels and hover values stay consistent.
+function valueFormatting(config: NormalConfig, fields: Field[]) {
   let applyAxisFormatter = (axis: NormalConfig['xAxis'][number] | NormalConfig['yAxis'][number], fieldName?: string) => {
     if (!axis || axis.type !== 'value' || axis.axisLabel?.formatter != null || !fieldName) return
-
     if (fieldType(fields, fieldName) !== 'number') return
 
     let field = fields.find(entry => entry.name === fieldName)
-    let unit = field?.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
-    let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
+    let formatter = makeValueFormatter(field)
+    if (!formatter) return
 
-    axis.axisLabel = {
-      ...axis.axisLabel,
-      formatter: (value: unknown) => {
-        let amount = Number(value)
-        if (!Number.isFinite(amount)) return String(value ?? '')
-
-        if (currencyUnit) {
-          let sign = amount < 0 ? '-' : ''
-          let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
-          return `${sign}${currencySymbols[currencyUnit]}${formatted}`
-        }
-
-        return formatNumber(amount)
-      },
-    }
+    axis.axisLabel = {...axis.axisLabel, formatter}
   }
 
   // Horizontal bar charts can have value x-axes, so format x and y axes symmetrically.
   for (let [axisIndex, axis] of config.xAxis.entries()) {
-    // By design we use the first series on the axis as the metadata source.
     let firstSeries = config.series.find(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
     applyAxisFormatter(axis, getSeriesXField(firstSeries))
   }
 
   for (let [axisIndex, axis] of config.yAxis.entries()) {
-    // By design we use the first series on the axis as the metadata source.
     let firstSeries = config.series.find(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
     applyAxisFormatter(axis, getSeriesYField(firstSeries))
+  }
+
+  for (let series of config.series) {
+    let seriesTooltip = series.tooltip as Record<string, any> | undefined
+    if (seriesTooltip?.formatter != null || seriesTooltip?.valueFormatter != null) continue
+
+    let valueFieldName = getSeriesYField(series)
+    if (!valueFieldName || fieldType(fields, valueFieldName) !== 'number') continue
+
+    let field = fields.find(entry => entry.name === valueFieldName)
+    if (!field?.metadata?.ratio && !field?.metadata?.pct) continue
+
+    let formatter = makeValueFormatter(field)
+    if (!formatter) continue
+
+    series.tooltip = {...seriesTooltip, valueFormatter: formatter}
   }
 }
 
@@ -543,6 +507,64 @@ function inferDimensions(rows: Record<string, any>[]) {
   let sample = rows.find(row => row && typeof row === 'object')
   if (!sample) return []
   return Object.keys(sample)
+}
+
+function makeValueFormatter(field?: Field) {
+  if (!field || typeof field.type !== 'string' || field.type !== 'number') return undefined
+
+  let currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
+  let percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 1})
+  let currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
+
+  let unit = field.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
+  let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
+
+  return (value: unknown) => {
+    let amount = Number(value)
+    if (!Number.isFinite(amount)) return String(value ?? '')
+
+    if (field.metadata?.ratio) return `${percent.format(amount * 100)}%`
+    if (field.metadata?.pct) return `${percent.format(amount)}%`
+
+    if (currencyUnit) {
+      let sign = amount < 0 ? '-' : ''
+      let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
+      return `${sign}${currencySymbols[currencyUnit]}${formatted}`
+    }
+
+    return formatCompactNumber(amount)
+  }
+}
+
+function formatCompactNumber(amount: number) {
+  if (amount === 0) return '0'
+  let sign = amount < 0 ? '-' : ''
+  let absolute = Math.abs(amount)
+
+  if (absolute >= 1e12) return `${sign}${compactValue(absolute / 1e12)}T`
+  if (absolute >= 1e9) return `${sign}${compactValue(absolute / 1e9)}B`
+  if (absolute >= 1e6) return `${sign}${compactValue(absolute / 1e6)}M`
+  if (absolute >= 1e3) return `${sign}${compactValue(absolute / 1e3)}k`
+  if (absolute >= 1) return `${sign}${compactValue(absolute)}`
+  if (absolute >= 1e-3) return `${sign}${compactValue(absolute)}`
+  if (absolute >= 1e-6) return `${sign}${compactValue(absolute * 1e3)}m`
+  if (absolute >= 1e-9) return `${sign}${compactValue(absolute * 1e6)}u`
+  if (absolute >= 1e-12) return `${sign}${compactValue(absolute * 1e9)}n`
+  return `${sign}${compactValue(absolute)}`
+}
+
+function compactValue(num: number) {
+  let exponent = Math.floor(Math.log10(Math.abs(num)))
+  let scale = Math.pow(10, exponent - 2)
+  let rounded = Math.round(num / scale) * scale
+  if (!Number.isFinite(rounded)) return String(num)
+  let magnitude = Math.floor(Math.log10(rounded))
+  let decimals = Math.max(0, 2 - magnitude)
+  return rounded
+    .toFixed(decimals)
+    .replace(/\.0+$/, '')
+    .replace(/(\.[0-9]*[1-9])0+$/, '$1')
+    .replace(/\.$/, '')
 }
 
 function distinctValues(rows: Record<string, any>[], field: string) {
