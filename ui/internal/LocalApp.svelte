@@ -6,6 +6,7 @@
   import NavSidebar from './NavSidebar.svelte'
   import ErrorDisplay from './ErrorDisplay.svelte'
   import DevEChartsGallery from './DevEChartsGallery.svelte'
+  import DevStyleGallery from './DevStyleGallery.svelte'
 
   let pageInputs = activatePageInputs(new PageInputs())
   setPageInputsContext(pageInputs)
@@ -50,6 +51,8 @@
 
     if (pathName == '__dev/echarts') {
       Page = DevEChartsGallery
+    } else if (pathName == '__dev/styles') {
+      Page = DevStyleGallery
     } else if (pathName !== '__ct') {
       let mod = await import(/* @vite-ignore */ '/' + pathName + '.md')
       Page = mod.default
