@@ -68,7 +68,13 @@ importers:
       '@duckdb/node-api':
         specifier: 1.3.2-alpha.26
         version: 1.3.2-alpha.26
+      '@fontsource/fira-code':
+        specifier: ^5.2.7
+        version: 5.2.7
       '@fontsource/source-sans-3':
+        specifier: ^5.2.9
+        version: 5.2.9
+      '@fontsource/source-serif-4':
         specifier: ^5.2.9
         version: 5.2.9
       '@google-cloud/bigquery':
@@ -287,7 +293,13 @@ importers:
 
   ui:
     dependencies:
+      '@fontsource/fira-code':
+        specifier: ^5.2.7
+        version: 5.2.7
       '@fontsource/source-sans-3':
+        specifier: ^5.2.9
+        version: 5.2.9
+      '@fontsource/source-serif-4':
         specifier: ^5.2.9
         version: 5.2.9
       '@graphenedata/html2canvas':
@@ -1004,8 +1016,14 @@ packages:
     resolution: {integrity: sha512-iH1B076HoAshH1mLpHMgwdGeTs0CYwL0SPMkGuSebZrwBp16v415e9NZXg2jtrqPVQjf6IANe2Vtlr5KswtcZQ==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
+  '@fontsource/fira-code@5.2.7':
+    resolution: {integrity: sha512-tnB9NNund9TwIym8/7DMJe573nlPEQb+fKUV5GL8TBYXjIhDvL0D7mgmNVNQUPhXp+R7RylQeiBdkA4EbOHPGQ==}
+
   '@fontsource/source-sans-3@5.2.9':
     resolution: {integrity: sha512-u3ymIq4rfmCCyB9MEw/sFR5lPVJ1yTNXmIMbUz+9kVCFIHvNtfzXOEBuvkg3Tk0zhmioPeJ28ZK5smZ7TurezQ==}
+
+  '@fontsource/source-serif-4@5.2.9':
+    resolution: {integrity: sha512-er/Pym9emsEVJNf947umJ4kXarXfsiN6CN7kTYinefKRaHLwiquiiHOZvKvxWgkV8JMCf3pV3g0NcsPFpVCH9w==}
 
   '@google-cloud/bigquery@8.2.0':
     resolution: {integrity: sha512-hxKxtmCEd9z61OxagcTosZksTRX0CqNGdnF2uNXH7c+0uWHC/o9QseAxrAY9qImoo9jsaw4rzDI9dLc/a5Jgww==}
@@ -4382,7 +4400,11 @@ snapshots:
       '@eslint/core': 1.1.1
       levn: 0.4.1
 
+  '@fontsource/fira-code@5.2.7': {}
+
   '@fontsource/source-sans-3@5.2.9': {}
+
+  '@fontsource/source-serif-4@5.2.9': {}
 
   '@google-cloud/bigquery@8.2.0':
     dependencies:

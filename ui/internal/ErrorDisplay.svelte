@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type {GrapheneError} from '../../lang/types.ts'
+  import type {GrapheneError} from '../../lang/index.d.ts'
 
   interface Props {
     error: GrapheneError | string
@@ -40,9 +40,9 @@
   .g-error {
     padding: 16px 20px;
     border-radius: 6px;
-    border-left: 3px solid var(--red-500);
-    background: var(--red-50);
-    color: var(--red-800);
+    border-left: 3px solid #ef4444;
+    background: #fef2f2;
+    color: #991b1b;
   }
   .g-error__message {
     margin: 0;
@@ -55,6 +55,6 @@
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
-    color: var(--red-700);
+    color: #b91c1c;
   }
 </style>
