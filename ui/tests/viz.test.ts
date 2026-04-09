@@ -1,7 +1,10 @@
+// Tests that various echarts render as expected.
+// When writing these tests, prefer just using a screenshot, and avoid adding assertions that check things already visible in the screenshot.
+
 import {scalarType} from '../../lang/types.ts'
 import {expect, test} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
-import {categoricalSeries, denseTimeseries, singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
+import {categoricalSeries, denseTimeseries, ratioTimeseries, singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
 function seededRandom(seed: number) {
   let state = seed
@@ -130,6 +133,11 @@ test('line chart timeseries', async ({mount, chart}) => {
 test('line charts hide markers on timeseries', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: denseTimeseries(), x: 'ts', y: 'value', title: 'Dense Time Axis'})
   await expect(chart.el).screenshot('line-chart-timeseries-hide-markers')
+})
+
+test('line chart uses ratio metadata for axis and tooltip percentage formatting', async ({mount, chart}) => {
+  await mount('components/LineChart.svelte', {data: ratioTimeseries(), x: 'month', y: 'conversion_rate', title: 'Conversion Rate'})
+  await expect(chart.el).screenshot('line-chart-ratio-metadata-percent-axis')
 })
 
 test('line chart hides markers at 30 categorical points', async ({mount, chart}) => {
