@@ -88,6 +88,17 @@ test('horizontal bar chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('horizontal-bar-chart')
 })
 
+test('horizontal bar chart auto-expands height for many categories', async ({mount, chart}) => {
+  let rows = Array.from({length: 14}, (_, index) => ({category: `Category ${index + 1}`, value: (index + 1) * 10}))
+  let fields = [
+    {name: 'category', type: scalarType('string')},
+    {name: 'value', type: scalarType('number'), metadata: {units: 'count'}},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'value', y: 'category'})
+  await expect(chart.el).screenshot('horizontal-bar-chart-auto-height')
+})
+
 test('stacked area chart', async ({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', stack: 'category'})
   await expect(chart.el).screenshot('area-chart-stacked')
