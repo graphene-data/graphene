@@ -1,0 +1,32 @@
+{
+  "name": "clickhouse-example",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "graphene": "node ../../cli/cli.ts",
+    "dev": "npm run graphene serve",
+    "compile": "npm run graphene compile",
+    "run": "npm run graphene run",
+    "serve": "npm run dev"
+  },
+  "dependencies": {
+    "@graphenedata/cli": "workspace:*",
+    "svelte": "5.53.7"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "graphene": {
+    "dialect": "clickhouse",
+    "defaultNamespace": "default",
+    "clickhouse": {
+      "url": "https://kzo1vb16sa.us-east-1.aws.clickhouse.cloud:8443",
+      "username": "default"
+    },
+    "envFile": [
+      ".env",
+      "../../.env",
+      "../../../.env"
+    ]
+  }
+}

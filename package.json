@@ -8,7 +8,7 @@
     "lint:fix": "eslint . --fix && oxfmt",
     "test": "vitest run",
     "test-one": "node scripts/turboTest.js",
-    "check-examples": "pnpm -C examples/flights graphene check && pnpm -C examples/ecomm graphene check && pnpm -C examples/snowflake graphene check"
+    "check-examples": "pnpm -C examples/flights graphene check && pnpm -C examples/ecomm graphene check && pnpm -C examples/snowflake graphene check && pnpm -C examples/clickhouse graphene check"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",

@@ -628,6 +628,7 @@ class AnalysisSession implements Analyzer {
     if (!join.unnestExpr || !join.joinType) return ''
     let exprSql = join.unnestExpr.sql
     if (this.config.dialect == 'bigquery') return `CROSS JOIN UNNEST(${exprSql}) AS ${join.alias}`
+    if (this.config.dialect == 'clickhouse') return `ARRAY JOIN ${exprSql} AS ${join.alias}`
     if (this.config.dialect == 'snowflake') return `, TABLE(FLATTEN(INPUT => ${exprSql})) AS ${join.alias}`
     return `CROSS JOIN unnest(${exprSql}) AS ${join.alias}(${join.alias})`
   }
@@ -983,11 +984,12 @@ class AnalysisSession implements Analyzer {
         let inner = node.getChild('Expression') || node.firstChild!
         let expr = this.analyzeExpr(inner, scope)
         let typeNode = node.getChild('CastType')!
-        let targetType = txt(typeNode).toUpperCase()
-        let parsed = parseGsqlFieldType(targetType)
+        let rawType = txt(typeNode)
+        let parsed = parseGsqlFieldType(rawType)
         if (parsed.error) return this.diag(typeNode, parsed.error, {sql: 'NULL', type: scalarType('error')})
-        if (!parsed.type) return this.diag(typeNode, `Unsupported cast type: ${targetType.toLowerCase()}`, {sql: 'NULL', type: scalarType('error')})
+        if (!parsed.type) return this.diag(typeNode, `Unsupported cast type: ${rawType.toLowerCase()}`, {sql: 'NULL', type: scalarType('error')})
         let resultType = parsed.type
+        let targetType = this.renderCastType(rawType)
         return {...expr, sql: `CAST(${expr.sql} AS ${targetType})`, type: this.preserveTemporalMetadataThroughCast(expr, resultType)}
       }
 
@@ -1427,5 +1429,20 @@ class AnalysisSession implements Analyzer {
     if (isScalarType(expr.type, 'error') || isScalarType(expr.type, 'null')) return
     if (expected.some(kind => (kind == 'array' ? isArrayType(expr.type) : isScalarType(expr.type, kind)))) return
     this.diag(node, `Expected ${expected.join(' or ')}, got ${formatType(expr.type)}`)
+  }
+
+  private renderCastType(rawType: string): string {
+    if (this.config.dialect != 'clickhouse') return rawType.toUpperCase()
+
+    // ClickHouse accepts the shared Graphene type names in analysis, but some CAST
+    // targets require ClickHouse-specific spellings like Float64 and Array(VARCHAR).
+    let normalized = rawType.trim().toLowerCase()
+    if (normalized == 'string' || normalized == 'text' || normalized == 'varchar' || normalized == 'char') return 'VARCHAR'
+    if (normalized == 'float' || normalized == 'float64' || normalized == 'double' || normalized == 'double precision') return 'Float64'
+    if (normalized == 'float32' || normalized == 'real') return 'Float32'
+
+    let arrayMatch = normalized.match(/^array\s*<(.+)>$/s)
+    if (arrayMatch) return `Array(${this.renderCastType(arrayMatch[1])})`
+    return rawType.toUpperCase()
   }
 }

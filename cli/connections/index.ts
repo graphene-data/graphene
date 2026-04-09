@@ -24,6 +24,18 @@ export async function getConnection(): Promise<QueryConnection> {
   } else if (config.dialect === 'duckdb') {
     let mod = await import('./duckdb.ts')
     return new mod.DuckDBConnection({})
+  } else if (config.dialect === 'clickhouse') {
+    let mod = await import('./clickhouse.ts')
+    let url = config.clickhouse?.url || process.env.CLICKHOUSE_URL
+    let username = config.clickhouse?.username || process.env.CLICKHOUSE_USERNAME
+    let password = process.env.CLICKHOUSE_PASSWORD
+    if (!url || !username || !password) throw new Error('ClickHouse requires url and username in config or env, plus CLICKHOUSE_PASSWORD in env')
+    return new mod.ClickHouseConnection({
+      url,
+      username,
+      password,
+      database: config.clickhouse?.database || config.defaultNamespace || 'default',
+    })
   } else if (config.dialect === 'snowflake') {
     let mod = await import('./snowflake.ts')
     return new mod.SnowflakeConnection({
@@ -48,5 +60,9 @@ export async function runQuery(sql: string, params?: QueryParams): Promise<Query
   }
 
   let conn = await getConnection()
-  return await conn.runQuery(sql, params)
+  try {
+    return await conn.runQuery(sql, params)
+  } finally {
+    await conn.close()
+  }
 }
