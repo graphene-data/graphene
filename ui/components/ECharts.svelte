@@ -20,7 +20,7 @@
   let {
     config,
     data,
-    height = '240px',
+    height = '320px',
     width = '100%',
     renderer = 'svg',
   }: Props = $props()

@@ -20,8 +20,8 @@
     y2 = undefined,
     series = undefined,
     title = undefined,
-    height = '240px',
-    width = '100%',
+    height = undefined,
+    width = undefined,
   }: Props = $props()
 
   function buildConfig(): EChartsConfig {
