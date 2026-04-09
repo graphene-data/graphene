@@ -62,7 +62,15 @@ describe('cli telemetry', () => {
       expect(storage.installId).toBe(firstInstallId)
 
       let upgradeSuccess = storage.markSuccessfulInvocation('0.0.16')
-      expect(upgradeSuccess).toEqual({shouldSendInstallSeen: true, fromVersion: '0.0.15'})
+      expect(upgradeSuccess).toEqual({shouldSendInstallSeen: false, fromVersion: '0.0.15'})
+      expect(storage.installId).toBe(firstInstallId)
+
+      let repeatUpgradeVersion = storage.markSuccessfulInvocation('0.0.16')
+      expect(repeatUpgradeVersion).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
+      expect(storage.installId).toBe(firstInstallId)
+
+      let switchBackVersion = storage.markSuccessfulInvocation('0.0.15')
+      expect(switchBackVersion).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
       expect(storage.installId).toBe(firstInstallId)
     } finally {
       if (originalConfigHome === undefined) delete process.env.XDG_CONFIG_HOME

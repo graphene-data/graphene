@@ -23,11 +23,12 @@ export class TelemetryStorage {
 
   markSuccessfulInvocation(cliVersion: string) {
     let state = this.read()
-    let shouldSendInstallSeen = !state.installSeenVersions.includes(cliVersion)
-    let fromVersion = state.lastSeenVersion && state.lastSeenVersion != cliVersion ? state.lastSeenVersion : undefined
+    let hasSeenVersion = state.installSeenVersions.includes(cliVersion)
+    let shouldSendInstallSeen = !state.lastSeenVersion && state.installSeenVersions.length == 0
+    let fromVersion = !hasSeenVersion && state.lastSeenVersion && state.lastSeenVersion != cliVersion ? state.lastSeenVersion : undefined
 
     this.store.set('lastSeenVersion', cliVersion)
-    this.store.set('installSeenVersions', shouldSendInstallSeen ? [...new Set([...state.installSeenVersions, cliVersion])] : state.installSeenVersions)
+    this.store.set('installSeenVersions', [...new Set([...state.installSeenVersions, cliVersion])])
 
     return {shouldSendInstallSeen, fromVersion}
   }
