@@ -18,6 +18,7 @@ const flightDir = path.resolve(dir, '../examples/flights')
 const TEST_PORT = 4163
 process.env.GRAPHENE_PORT = '4163'
 process.env.NODE_ENV = 'test'
+process.env.GRAPHENE_TELEMETRY_DISABLED = '1'
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
