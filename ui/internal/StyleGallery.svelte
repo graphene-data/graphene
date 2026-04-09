@@ -13,30 +13,7 @@
     '--color-link',
   ]
 
-  let typographyTargets = [
-    {key: 'h1', label: 'Heading 1'},
-    {key: 'h2', label: 'Heading 2'},
-    {key: 'h3', label: 'Heading 3'},
-    {key: 'h4', label: 'Heading 4'},
-    {key: 'h5', label: 'Heading 5'},
-    {key: 'h6', label: 'Heading 6'},
-    {key: 'body', label: 'Body text'},
-    {key: 'code', label: 'Inline code'},
-    {key: 'blockquote', label: 'Blockquote'},
-    {key: 'link', label: 'Link'},
-  ]
-
   let styleRows = $state([] as Array<{name: string, value: string}>)
-  let typographyRows = $state([] as Array<{
-    key: string
-    label: string
-    fontFamily: string
-    fontSize: string
-    lineHeight: string
-    fontWeight: string
-    letterSpacing: string
-    color: string
-  }>)
 
   let sampleNodes = {} as Record<string, HTMLElement>
 
@@ -44,34 +21,6 @@
 
   let refreshRows = () => {
     styleRows = styleVars.map(name => ({name, value: readCssVar(name)}))
-
-    typographyRows = typographyTargets.map(target => {
-      let node = sampleNodes[target.key]
-      if (!node) {
-        return {
-          key: target.key,
-          label: target.label,
-          fontFamily: '(not mounted)',
-          fontSize: '-',
-          lineHeight: '-',
-          fontWeight: '-',
-          letterSpacing: '-',
-          color: '-',
-        }
-      }
-
-      let styles = getComputedStyle(node)
-      return {
-        key: target.key,
-        label: target.label,
-        fontFamily: styles.fontFamily,
-        fontSize: styles.fontSize,
-        lineHeight: styles.lineHeight,
-        fontWeight: styles.fontWeight,
-        letterSpacing: styles.letterSpacing,
-        color: styles.color,
-      }
-    })
   }
 
   let registerSample = (node: HTMLElement) => {
@@ -139,7 +88,7 @@
       </tr>
     </thead>
     <tbody>
-      {#each styleRows as row}
+      {#each styleRows as row (row.name)}
         <tr>
           <td><code>{row.name}</code></td>
           <td><code>{row.value}</code></td>
@@ -157,10 +106,6 @@
 
   .style-demo-title {
     margin-top: 0;
-  }
-
-  .style-demo-description {
-    margin-bottom: 1.25rem;
   }
 
   .sample-panel {
@@ -182,6 +127,4 @@
     vertical-align: top;
     overflow-wrap: anywhere;
   }
-
-
 </style>
