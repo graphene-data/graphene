@@ -304,7 +304,7 @@
     justify-content: center;
     width: 1.5rem;
     height: 1.5rem;
-    color: var(--base-heading);
+    color: #111827;
     background: transparent;
     border: none;
     cursor: pointer;
@@ -333,7 +333,7 @@
     display: inline-block;
     transition: transform 150ms ease;
     font-size: 0.7rem;
-    color: var(--base-content-muted);
+    color: #4b5563;
   }
 
   .chevron.open {
@@ -346,7 +346,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: var(--base-heading);
+    color: #111827;
   }
 
   .folder-row a {
@@ -355,7 +355,7 @@
     font-size: 0.85rem;
     padding: 0.2rem 0.35rem;
     border-radius: 4px;
-    color: var(--base-heading);
+    color: #111827;
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
@@ -374,7 +374,7 @@
     font-size: 0.85rem;
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
-    color: var(--base-heading);
+    color: #111827;
     text-decoration: none;
   }
 
@@ -391,6 +391,6 @@
   }
 
   a.active {
-    color: var(--base-900, #0f172a);
+    color: #0f172a;
   }
 </style>

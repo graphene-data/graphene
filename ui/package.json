@@ -10,7 +10,9 @@
     "test-one": "node ../scripts/turboTest.js"
   },
   "dependencies": {
+    "@fontsource/fira-code": "^5.2.7",
     "@fontsource/source-sans-3": "^5.2.9",
+    "@fontsource/source-serif-4": "^5.2.9",
     "@graphenedata/html2canvas": "^1.4.1",
     "@tidyjs/tidy": "^2.5.2",
     "chroma-js": "2.4.2",
