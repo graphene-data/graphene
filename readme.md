@@ -51,7 +51,7 @@ Last but not least, Graphene is **open**. You can use this project for internal 
 - [Try the demo project](https://github.com/graphene-data/example-flights)
 - [Create a new Graphene project](/docs/setup.md)
 
-Graphene currently supports Snowflake, BigQuery, and local data (via DuckDB) as data sources. It is easy to add more - just ask.
+Graphene currently supports Snowflake, BigQuery, ClickHouse, and local data (via DuckDB) as data sources. It is easy to add more - just ask.
 
 Once your project is set up, simply start the dev server via `npx graphene serve` (or via `npm exec`, `pnpm`, etc.) and then prompt your coding agent to do analytics work: answer a data question, build a dashboard, edit the model, etc.
 
