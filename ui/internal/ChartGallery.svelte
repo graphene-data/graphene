@@ -2,12 +2,12 @@
   import ECharts from '../components/ECharts.svelte'
 
   let monthRows = [
-    {month: '2024-01-01', value: 820},
-    {month: '2024-02-01', value: 932},
-    {month: '2024-03-01', value: 901},
-    {month: '2024-04-01', value: 1290},
-    {month: '2024-05-01', value: 1330},
-    {month: '2024-06-01', value: 1520},
+    {month: '2024-01-01', value: 0.082},
+    {month: '2024-02-01', value: 0.0932},
+    {month: '2024-03-01', value: 0.0901},
+    {month: '2024-04-01', value: 0.129},
+    {month: '2024-05-01', value: 0.133},
+    {month: '2024-06-01', value: 0.152},
   ]
 
   let weekdaySeriesRows = [
@@ -181,7 +181,7 @@
 
   let twoColFields = [
     {name: 'month', type: 'date'},
-    {name: 'value', type: 'number'},
+    {name: 'value', type: 'number', metadata: {ratio: true}},
   ]
 
   let weekdayFields = [
@@ -250,7 +250,7 @@
     height={320}
     data={{rows: monthRows, fields: twoColFields}}
     config={{
-      title: {text: 'Line'},
+      title: {text: 'Line (Percentage Metadata)'},
       tooltip: {trigger: 'axis'},
       xAxis: {type: 'time'},
       yAxis: {type: 'value'},
@@ -459,7 +459,7 @@
 <style>
   .chart-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 16px;
   }

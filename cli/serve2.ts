@@ -300,7 +300,7 @@ const handleRequestPlugin = {
       try {
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
-        if (pathName) if (pathName == '/__ct' || pathName == '/__dev/echarts' || pathName == '/__dev/styles') return await handlePage(s, res)
+        if (pathName) if (pathName == '/__ct' || pathName == '/_charts' || pathName == '/_styles') return await handlePage(s, res)
 
         if (!pathName || pathName == '/') pathName = 'index'
         let relativeMdPath = pathName.replace(/^\//, '') + '.md'
