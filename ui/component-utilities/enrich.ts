@@ -42,6 +42,19 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   return normalized
 }
 
+// For horizontal bars, count distinct category values so wrappers can size containers.
+export function horizontalBarCount(config: NormalConfig, rows: Record<string, any>[]) {
+  if (!isHorizontalBar(config)) return 0
+
+  let categoryFields = config.series
+    .filter(series => series?.type === 'bar')
+    .map(series => getSeriesCategoryFieldForHorizontal(series))
+    .filter(Boolean) as string[]
+
+  if (categoryFields.length === 0) return 0
+  return Math.max(...categoryFields.map(field => distinctValues(rows, field).length))
+}
+
 // Normalize options we read in enrichments so later rules can always iterate arrays.
 function normalize(config: EChartsConfig): NormalConfig {
   let target = config as NormalConfig

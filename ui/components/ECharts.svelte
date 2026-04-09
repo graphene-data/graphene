@@ -4,8 +4,8 @@
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import * as chartWindowDebug from '../component-utilities/chartWindowDebug.js'
   import {logError} from '../internal/telemetry.ts'
-  import {enrich} from '../component-utilities/enrich.ts'
-  import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
+  import {enrich, horizontalBarCount} from '../component-utilities/enrich.ts'
+  import type {EChartsConfig, NormalConfig, QueryResult} from '../component-utilities/types.ts'
   import '../component-utilities/theme.ts'
   import Skeleton from './Skeleton.svelte'
 
@@ -20,7 +20,7 @@
   let {
     config,
     data,
-    height = '320px',
+    height = undefined,
     width = '100%',
     renderer = 'svg',
   }: Props = $props()
@@ -34,6 +34,7 @@
   let loaded = $state.raw<QueryResult | null>(null)
   let chartError: Error | null = $state(null)
   let queryId: string | null = $state(null)
+  let chartSizeStyle: string = $state(calculateChartSize())
 
   function handleResults (res: QueryResult) {
     chartError = null
@@ -65,7 +66,10 @@
   })
 
   $effect(() => {
+    chartSizeStyle = calculateChartSize()
+
     if (chartError) return
+
     if (!loaded || loaded.error || loaded.rows.length == 0) {
       destroyChart()
       return
@@ -113,22 +117,30 @@
     return fields
   }
 
-  let style = $derived.by(() => {
-    let s = ''
-    let toDim = (dim: string | number) => {
-      let t = typeof dim
-      if (t == 'number' || (t == 'string' && (dim as string).match(/^\d+$/))) return `${dim}px`
-      return dim
+  function calculateChartSize(config?: NormalConfig, rows: Record<string, any>[] = []) {
+    let threshold = 8 // over this many bars, start to grow
+    let resolvedHeight: string | number = height ?? '320px'
+    let barSeries = config?.series.find(s => s.type == 'bar')
+    let categoricalY = config?.yAxis[0]?.type == 'category'
+
+    if (config && barSeries && categoricalY) {
+      let distinctX = horizontalBarCount(config, rows)
+      if (distinctX > threshold) resolvedHeight = 320 * Math.max(1, distinctX / threshold)
     }
-    if (height) s += `height:${toDim(height)};`
-    if (width) s += `width:${toDim(width)};`
-    return s
-  })
+
+    return `height:${toDim(resolvedHeight)};width:${toDim(width ?? '100%')};`
+  }
+
+  function toDim(dim: string | number) {
+    let t = typeof dim
+    if (t == 'number' || (t == 'string' && (dim as string).match(/^\d+$/))) return `${dim}px`
+    return dim
+  }
 
   let title = $derived(config?.title?.text)
 </script>
 
-<div class="echarts" bind:this={node} style={style} data-query-id={queryId} data-chart-title={title}>
+<div class="echarts" bind:this={node} style={chartSizeStyle} data-query-id={queryId} data-chart-title={title}>
   {#if loaded?.error || chartError}
     <ErrorDisplay error={loaded?.error || chartError} />
   {:else if !loaded}
