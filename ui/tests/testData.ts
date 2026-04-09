@@ -123,6 +123,19 @@ export function categoricalSeries(count: number): TableRows {
   return withEvidenceTypes(rows, fields)
 }
 
+export function ratioTimeseries(): TableRows {
+  let rows = [
+    {month: '2024-01-01', conversion_rate: 0.124},
+    {month: '2024-02-01', conversion_rate: 0.158},
+    {month: '2024-03-01', conversion_rate: 0.137},
+  ]
+  let fields: Field[] = [
+    {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
+    {name: 'conversion_rate', type: 'number', metadata: {ratio: true}},
+  ]
+  return withEvidenceTypes(rows, fields)
+}
+
 export function tableDataWithDates(): TableRows {
   let rows = [
     {month: '2021-03-01', sales: 50},

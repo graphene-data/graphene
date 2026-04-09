@@ -26,11 +26,11 @@ table order_items (
   revenue: sum(case when is_rev_recognized then sale_price else 0 end) -- Aka net revenue/sales
   cogs: sum(case when is_rev_recognized then cost else 0 end) -- Cost of goods sold
   gross_profit: revenue - cogs
-  gross_margin_pct: safe_divide(gross_profit, revenue)
+  gross_margin_pct: safe_divide(gross_profit, revenue) -- #ratio=true
 
-  shipped_rate: safe_divide(sum(case when shipped_at is not null then 1 else 0 end), count(*))
-  delivered_rate: safe_divide(sum(case when delivered_at is not null then 1 else 0 end), count(*))
-  return_rate: safe_divide(sum(case when returned_at is not null then 1 else 0 end), count(*))
+  shipped_rate: safe_divide(sum(case when shipped_at is not null then 1 else 0 end), count(*)) -- #ratio=true
+  delivered_rate: safe_divide(sum(case when delivered_at is not null then 1 else 0 end), count(*)) -- #ratio=true
+  return_rate: safe_divide(sum(case when returned_at is not null then 1 else 0 end), count(*)) -- #ratio=true
 )
 
 -- Workaround due to aggregate locality ambiguity problem. See https://graphenedata.slack.com/archives/C095V84GQPR/p1760648883764849
