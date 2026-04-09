@@ -16,4 +16,5 @@ export interface QueryConnection {
   listSchemas?(dataset: string): Promise<string[]>
   listTables(dataset?: string): Promise<string[]>
   describeTable(table: string): Promise<SchemaColumn[]>
+  close(): Promise<void>
 }

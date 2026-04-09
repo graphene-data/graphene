@@ -4,6 +4,7 @@ import type {Analyzer} from './analyze.ts'
 import type {FunctionDef, ArgDef} from './functionTypes.ts'
 
 import {bigQueryFunctions} from './bigQueryFunctions.ts'
+import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
@@ -103,6 +104,7 @@ function buildMap(defs: FunctionDef[]): Record<string, Overload[]> {
 
 let dialectMaps: Record<string, Record<string, Overload[]>> = {
   bigquery: buildMap(bigQueryFunctions),
+  clickhouse: buildMap(clickHouseFunctions),
   duckdb: buildMap(duckDbFunctions),
   snowflake: buildMap(snowflakeFunctions),
 }
@@ -218,6 +220,9 @@ function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], d
       } else {
         sql = `approx_quantiles(${inner}, 100)[OFFSET(${Math.round(frac * 100)})]`
       }
+      break
+    case 'clickhouse':
+      sql = `quantile(${frac})(${inner})`
       break
     case 'snowflake':
       sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`

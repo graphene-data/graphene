@@ -87,4 +87,9 @@ export class DuckDBConnection implements QueryConnection {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })
   }
+
+  async close(): Promise<void> {
+    await this.ready
+    this.connection?.closeSync()
+  }
 }

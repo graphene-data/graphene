@@ -77,4 +77,6 @@ export class BigQueryConnection implements QueryConnection {
     let datasets = await this.listDatasets()
     return datasets.find(ds => ds.toLowerCase() == name.toLowerCase()) || name
   }
+
+  async close(): Promise<void> {}
 }
