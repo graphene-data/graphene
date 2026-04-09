@@ -26,6 +26,13 @@ let clr = {
   statusBad: '#B87470', // muted brick red — in-theme with Fjord Dusk's cool desaturation
 }
 
+let axisCommon = {
+  axisLine: {lineStyle: {color: clr.border}},
+  axisLabel: {color: clr.textLight},
+  axisTick: {show: false},
+  splitLine: {show: false, lineStyle: {color: clr.splitLine, type: 'dashed'}},
+}
+
 registerTheme('graphene-theme', {
   color: colorPalette,
   backgroundColor: 'transparent',
@@ -38,30 +45,19 @@ registerTheme('graphene-theme', {
     left: 'left',
     textStyle: {color: clr.textDark, fontSize: 15},
   },
-
   categoryAxis: {
-    axisLine: {lineStyle: {color: clr.border}},
-    axisLabel: {color: clr.textLight},
-    axisTick: {show: false},
-    splitLine: {show: false, lineStyle: {color: clr.splitLine, type: 'dashed'}},
+    ...axisCommon,
   },
   valueAxis: {
-    axisLine: {show: false, lineStyle: {color: clr.border}},
-    axisLabel: {
-      color: clr.textLight,
-      formatter: function (val) {
-        if (val === 0) return '0'
-        let abs = Math.abs(val)
-        if (abs < 0.01) return val.toExponential(1)
-        if (abs >= 1e9) return (val / 1e9).toPrecision(2).replace(/\.0$/, '') + 'B'
-        if (abs >= 1e6) return (val / 1e6).toPrecision(2).replace(/\.0$/, '') + 'M'
-        if (abs >= 1e3) return (val / 1e3).toPrecision(2).replace(/\.0$/, '') + 'K'
-        return String(val)
-      },
-    },
-    axisTick: {show: false},
+    ...axisCommon,
     splitLine: {lineStyle: {color: clr.splitLine}},
     splitNumber: 3,
+  },
+  timeAxis: {
+    ...axisCommon,
+  },
+  logAxis: {
+    ...axisCommon,
   },
   tooltip: {
     backgroundColor: clr.white,
