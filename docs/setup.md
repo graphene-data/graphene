@@ -1,7 +1,5 @@
 This document describes the process for creating a new Graphene project from scratch, connected to your data. If you just want to take Graphene for a quick spin on some demo data, check out our [example project](https://github.com/graphene-data/example-flights).
 
-
-
 # Prepare database access
 
 ## Local data
@@ -123,7 +121,29 @@ To set up Graphene on a BigQuery connection you will need the following:
 
 # Set up your Graphene project
 
-[TO DO]   
+Run the Graphene installer with npm, yarn, or pnpm:
+
+```bash
+npm create @graphenedata
+```
+
+The installer will walk you through a short series of prompts:
+
+1. **Project name** — the directory name to use for your project (e.g. `my-analytics`)
+2. **Database** — the type of database the source data lives in
+3. **Default namespace** — optional; the database/schema to use when none is specified in a query (e.g. `my_db.my_schema`)
+4. **Database-specific connection details:**
+   - *DuckDB:* path to your `.duckdb` file
+   - *Snowflake:* account ID, username, path to your `.p8` key file, and key passphrase
+   - *BigQuery:* GCP project ID and path to your service account `.json` key file
+5. **Install dependencies** — whether to run `npm install` immediately - choose 'No' if you want to use a different package manager such as `pnpm` or `yarn`.
+
+Once it finishes, `cd` into your project directory and start the dev server:
+
+```bash
+cd my-analytics
+npx graphene serve
+```
 
 # Install the IDE extension (optional)
 
@@ -131,12 +151,37 @@ Graphene has extensions for VSCode and Cursor which add syntax highlighting, lin
 
 The extension is called **Graphene VSCode Language Support** which you can search for and install in **View > Extensions** for both VSCode and Cursor.
 
+# Set up your coding agent
+
+Add the following to your AGENTS.md (or CLAUDE.md):
+  - Short description of your business/use case
+  - Short description of the scope of the data available in the project, and where the .gsql files are located
+  - What package manager the project uses (so the agent knows what to prepend to CLI commands): `npm`, `pnpm`, `yarn`, etc.
+  - What database the project is connected to, so the agent knows what GSQL functions are available, eg. "Assume all [database] functions are available when writing GSQL."
+  - A glossary of internal jargon and acronyms
+  - If your schema is highly denormalized, describe the [ontology](https://en.wikipedia.org/wiki/Ontology_(information_science)) of the entities and relationships in the data.
+
+Then add the Graphene agent skills by symlinking to them. From your coding agent's skills directory (eg. .claude/skills):
+
+```bash
+ln -s ../../node_modules/@graphenedata/cli/dist/skills/graphene graphene
+ln -s ../../node_modules/@graphenedata/cli/dist/skills/model-gsql model-gsql
+```
+
+Symlinking allows the skill to update whenever you upgrade the package version, so that your agent is always aware of the latest features.
+
 # Create your semantic model
 
 Tell your agent to use the `model-gsql` skill to create .gsql files for a small group of tables. Review its work, correct it as necessary, and then tell it to tackle the remaining tables you want modeled. Encourage it to delegate the work to subagents.
 
+For best results, point the agent at your dbt repo so that it can deeply understand the meaning of the data and synthesize it into descriptions in GSQL files.
+
 If you have an existing semantic model from another tool, you can add that file/project as context and tell the agent to migrate it over. If it's really big, you should migrate it in chunks so that you can review and revise the agent's approach as it goes.
 
-# Add auxiliary context files
+# Add auxiliary agent context
 
-[TO DO]
+Finally, consider adding the following content as agent skills:
+- Descriptions of various departments within the company and how they operate 
+- Analytical "cookbooks" or preferences that are unique to your business, eg. how to perform cohort analysis in a particular way, how the company expects financial reports to look, etc.
+
+Sometimes the easiest way to author these is to tell an agent to summarize what it learned from a session into a new skill.
