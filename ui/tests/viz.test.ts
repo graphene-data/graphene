@@ -36,7 +36,7 @@ test('echarts chart configuration error state', async ({mount, chart}) => {
   await expect(chart.el).screenshot('echarts-chart-config-error-state')
 })
 
-test('echarts direct config expands encode.stack template series', async ({mount, chart}) => {
+test('echarts expands encode.stack', async ({mount, chart}) => {
   await mount('components/ECharts.svelte', {
     data: timeseriesGrouped(),
     config: {
@@ -47,39 +47,7 @@ test('echarts direct config expands encode.stack template series', async ({mount
       series: {type: 'bar', encode: {x: 'month', y: 'sales_usd0k', stack: 'category'}},
     },
   })
-  await expect(chart.el).screenshot('echarts-direct-encode-stack-template')
-})
-
-test('echarts query error state', async ({mount, chart}) => {
-  expectConsoleError('Failed to load resource')
-  await mount('components/ECharts.svelte', {
-    config: {series: {type: 'bar', encode: {x: 'origin', y: 'explode'}}},
-    data: 'from flights select origin, sqrt(dep_delay) as explode',
-  })
-  await expect(chart.el).screenshot('echarts-query-error-state')
-})
-
-test('echarts chart configuration error state', async ({mount, chart}) => {
-  await mount('components/ECharts.svelte', {
-    config: null as any,
-    data: 'from flights select carrier limit 5',
-  })
-  await expect(chart.el.getByRole('alert')).toBeVisible()
-  await expect(chart.el).screenshot('echarts-chart-config-error-state')
-})
-
-test('echarts direct config expands encode.stack template series', async ({mount, chart}) => {
-  await mount('components/ECharts.svelte', {
-    data: timeseriesGrouped(),
-    config: {
-      title: {text: 'Monthly Sales by Category (direct ECharts)'},
-      legend: {show: false},
-      xAxis: {show: false},
-      yAxis: {show: false},
-      series: {type: 'bar', encode: {x: 'month', y: 'sales_usd0k', stack: 'category'}},
-    },
-  })
-  await expect(chart.el).screenshot('echarts-direct-encode-stack-template')
+  await expect(chart.el).screenshot('echarts-stack')
 })
 
 test('bar chart', async ({mount, chart}) => {
