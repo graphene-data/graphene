@@ -281,6 +281,32 @@ function valueAxisFormatting(config: NormalConfig, fields: Field[]) {
   }
 }
 
+// Hide value y-axes for stacked-100 charts, since values are percentages and labels are usually redundant.
+function hideStackPercentageValueAxis(config: NormalConfig) {
+  for (let [axisIndex, axis] of config.yAxis.entries()) {
+    if (!axis || axis.type !== 'value' || axis.show != null) continue
+
+    let seriesOnAxis = config.series.filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
+    if (seriesOnAxis.length === 0) continue
+
+    let yFields = seriesOnAxis.map(entry => getSeriesYField(entry)).filter(Boolean) as string[]
+    if (yFields.length === 0) continue
+
+    if (yFields.every(name => name.startsWith('__graphene_stack_pct_'))) axis.show = false
+  }
+}
+
+// When value axes are hidden (like stacked-100 charts), reclaim the default left gutter.
+function removeHiddenValueAxisPadding(config: NormalConfig) {
+  if (config.grid.length !== 1) return
+  if (config.yAxis.length === 0) return
+  if (config.yAxis.some(axis => axis?.show !== false)) return
+
+  let grid = config.grid[0]
+  if (!grid || grid.left != null) return
+  grid.left = 16
+}
+
 // For the simple bar+line mixed-chart case, keep axis styling consistent with assigned series:
 // - axis labels/values on the second axis match primary axis formatting
 // - first axis uses bar series color (when there is only one bar series shape)
