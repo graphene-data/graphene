@@ -14,7 +14,7 @@
   --color-content: #2e2e2e;
   --color-muted: #888888;
   --color-border: #e8e8e6;
-  --color-link: #1d4ed8;
+  --color-link: #5076b8;
 }
 
 html {
@@ -115,9 +115,7 @@ a {
   color: var(--color-link);
   text-decoration: underline;
   text-decoration-color: transparent;
-  transition:
-    color 200ms ease,
-    text-decoration-color 200ms ease;
+  transition: color 200ms ease, text-decoration-color 200ms ease;
 }
 a:hover {
   text-decoration-color: brightness(85%);
@@ -288,8 +286,7 @@ blockquote * {
 /* Ensure size and color are maintained for bold, italic, strikethrough, links inside markdown */
 strong,
 em,
-del,
-a {
+del {
   font-size: 1em;
   color: inherit;
 }
