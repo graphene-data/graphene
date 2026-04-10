@@ -66,8 +66,6 @@
   })
 
   $effect(() => {
-    chartSizeStyle = calculateChartSize()
-
     if (chartError) return
 
     if (!loaded || loaded.error || loaded.rows.length == 0) {
@@ -75,32 +73,46 @@
       return
     }
 
-    chart ||= init(node, 'graphene-theme', {renderer})
-    let chartId = chart.id
+    if (!chart) {
+      chart = init(node, 'graphene-theme', {renderer})
+      chart.on('legendselectchanged', renderChart)
+    }
 
     try {
       chartWindowDebug.set(String(chart.id), chart)
-      window.$GRAPHENE?.renderStart?.(`chart:${chartId}`)
-
-      // clone config, since enriching mutates the config, and mutating a prop is weird
-      // structuredClone doesn't like proxies, so use state.snapshot
-      let cloned = structuredClone($state.snapshot(config)) as EChartsConfig
-      enrich(cloned, loaded.rows, loaded.fields || [])
-
-      chart.setOption({...cloned, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
+      window.$GRAPHENE?.renderStart?.(`chart:${chart.id}`)
+      renderChart()
       chartError = null
+      window.$GRAPHENE?.renderComplete?.(`chart:${chart.id}`)
     } catch (error) {
       console.error('Chart failed to render', error)
       chartError = error instanceof Error ? error : new Error(String(error))
       logError(chartError, queryId ? {queryId} : undefined)
+      window.$GRAPHENE?.renderComplete?.(`chart:${chart.id}`)
       destroyChart()
-    } finally {
-      window.$GRAPHENE?.renderComplete?.(`chart:${chartId}`)
     }
   })
 
+  // Build a fresh enriched option each render so legend-driven stack rounding
+  // always reflects the currently visible series.
+  function renderChart() {
+    if (!chart || !loaded) return
+
+    // clone config, since enriching mutates the config, and mutating a prop is weird
+    // structuredClone doesn't like proxies, so use state.snapshot
+    let cloned = structuredClone($state.snapshot(config)) as EChartsConfig
+    let rows = loaded.rows
+    let fields = loaded.fields || []
+    cloned.legendSelection = chart.getOption()?.legend?.[0]?.selected
+    let enriched = enrich(cloned, rows, fields)
+
+    chartSizeStyle = calculateChartSize(enriched, rows)
+    chart.setOption({...enriched, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
+  }
+
   function destroyChart() {
     if (!chart) return
+    chart.off('legendselectchanged', renderChart)
     chartWindowDebug.unset(String(chart.id))
     chart.dispose()
     chart = null
