@@ -48,6 +48,7 @@ export type SeriesWithGroupingHint = Omit<SeriesOption, 'encode'> &
 
 export type EChartsConfig = Omit<EChartsOption, 'series'> & {
   series?: SingleOrArray<SeriesWithGroupingHint>
+  legendSelection?: any
 }
 
 // Config shape after enrich() normalization runs.
