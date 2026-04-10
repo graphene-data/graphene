@@ -9,6 +9,7 @@ import {fileURLToPath} from 'url'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 
 import type {AnalysisResult, WorkspaceFileInput} from '../lang/types.ts'
+import type {CliTelemetry} from './telemetry/index.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
@@ -26,8 +27,8 @@ export function clearSvelteWarnings() {
 
 let uiRoot: string
 
-export async function serve2(): Promise<ViteDevServer> {
-  let server = await createServer(await createConfig())
+export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
+  let server = await createServer(await createConfig(telemetry))
   // I originally added this to avoid the page refreshing immediately on load.
   // We def don't want to run it in tests, because its not safe to do in parallel.
   // I'm not sure it's still needed, now that we explicitly list out `optimizeDeps.includes`, refreshes should be rare
@@ -38,7 +39,7 @@ export async function serve2(): Promise<ViteDevServer> {
   return server
 }
 
-async function createConfig(): Promise<InlineConfig> {
+async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = Number(process.env.GRAPHENE_PORT) || 4000
   await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
@@ -74,7 +75,7 @@ async function createConfig(): Promise<InlineConfig> {
       fixHmrForFailedModules(),
       runVitePlugin(),
       handleRequestPlugin,
-      updateWorkspacePlugin,
+      updateWorkspacePlugin(telemetry),
       mockFilesForTests(),
     ],
     publicDir: path.resolve(uiRoot, 'public'),
@@ -229,46 +230,49 @@ function fixHmrForFailedModules() {
 let workspaceLoadPromise: Promise<void> | undefined
 let workspaceFiles: WorkspaceFileInput[] = []
 let mdFiles: string[] = []
-const updateWorkspacePlugin = {
-  name: 'updateWorkspace',
-  resolveId(id: string) {
-    if (id == 'virtual:nav') return '\0virtual:nav'
-  },
-  load(id: string) {
-    if (id != '\0virtual:nav') return
-    let allFiles = [...mdFiles]
-    if (process.env.NODE_ENV == 'test') {
-      for (let key of Object.keys(mockFileMap)) {
-        if (!allFiles.includes(key)) allFiles.push(key)
-      }
-    }
-    return `export default ${JSON.stringify(allFiles)}`
-  },
-  configureServer: (s: ViteDevServer) => {
-    let refresh = async () => {
-      workspaceLoadPromise = (async () => {
-        let loaded = await loadWorkspace(config.root, true, config.ignoredFiles)
-        workspaceFiles = loaded.map(file => {
-          let existing = workspaceFiles.find(existing => existing.path == file.path && existing.contents == file.contents)
-          return existing?.parsed ? {...file, parsed: existing.parsed} : file
-        })
-      })()
-      await workspaceLoadPromise
-      mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(file => file.path)
-      mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))
+function updateWorkspacePlugin(telemetry?: CliTelemetry) {
+  return {
+    name: 'updateWorkspace',
+    resolveId(id: string) {
+      if (id == 'virtual:nav') return '\0virtual:nav'
+    },
+    load(id: string) {
+      if (id != '\0virtual:nav') return
+      let allFiles = [...mdFiles]
       if (process.env.NODE_ENV == 'test') {
-        mdFiles.push(...Object.keys(mockFileMap))
+        for (let key of Object.keys(mockFileMap)) {
+          if (!allFiles.includes(key)) allFiles.push(key)
+        }
+      }
+      return `export default ${JSON.stringify(allFiles)}`
+    },
+    configureServer: (s: ViteDevServer) => {
+      let refresh = async () => {
+        workspaceLoadPromise = (async () => {
+          let loaded = await loadWorkspace(config.root, true, config.ignoredFiles)
+          telemetry?.workspaceScanned('serve', loaded)
+          workspaceFiles = loaded.map(file => {
+            let existing = workspaceFiles.find(existing => existing.path == file.path && existing.contents == file.contents)
+            return existing?.parsed ? {...file, parsed: existing.parsed} : file
+          })
+        })()
+        await workspaceLoadPromise
+        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(file => file.path)
+        mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))
+        if (process.env.NODE_ENV == 'test') {
+          mdFiles.push(...Object.keys(mockFileMap))
+        }
+
+        let mod = s.moduleGraph.getModuleById('\0virtual:nav')
+        if (!mod) return
+        s.reloadModule(mod) // triggers HMR of any `virtual:nav` imports
       }
 
-      let mod = s.moduleGraph.getModuleById('\0virtual:nav')
-      if (!mod) return
-      s.reloadModule(mod) // triggers HMR of any `virtual:nav` imports
-    }
-
-    s.watcher.add(['**/*.gsql', '**/*.md'])
-    s.watcher.on('all', refresh)
-    refresh()
-  },
+      s.watcher.add(['**/*.gsql', '**/*.md'])
+      s.watcher.on('all', refresh)
+      refresh()
+    },
+  }
 }
 
 function updateParsedFiles(analysis: AnalysisResult) {
