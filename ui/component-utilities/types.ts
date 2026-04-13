@@ -51,12 +51,14 @@ export type EChartsConfig = Omit<EChartsOption, 'series'> & {
   legendSelection?: any
 }
 
+type AxisWithField<TAxis> = TAxis & {field?: Field}
+
 // Config shape after enrich() normalization runs.
 // We keep this mutable and array-based because enrichments mutate in place.
 export type NormalConfig = Omit<EChartsConfig, 'series' | 'xAxis' | 'yAxis' | 'dataset' | 'grid' | 'legend' | 'title'> & {
   series: SeriesWithGroupingHint[]
-  xAxis: XAXisComponentOption[]
-  yAxis: YAXisComponentOption[]
+  xAxis: AxisWithField<XAXisComponentOption>[]
+  yAxis: AxisWithField<YAXisComponentOption>[]
   dataset: DatasetComponentOption[]
   grid: GridComponentOption[]
   legend: LegendComponentOption[]
