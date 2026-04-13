@@ -177,118 +177,81 @@
     {source: 'Proposal', target: 'Lost', value: 60},
   ]
 
-  let twoColFields = [
-    {name: 'month', type: 'date'},
-    {name: 'value', type: 'number', metadata: {ratio: true}},
-  ]
-
-  let weekdayFields = [
-    {name: 'day', type: 'string'},
-    {name: 'metric', type: 'string'},
-    {name: 'value', type: 'number'},
-  ]
-
-  let quarterFields = [
-    {name: 'quarter', type: 'string'},
-    {name: 'metric', type: 'string'},
-    {name: 'value', type: 'number'},
-  ]
-
-  let scatterFields = [
-    {name: 'group', type: 'string'},
-    {name: 'x', type: 'number'},
-    {name: 'y', type: 'number'},
-  ]
-
-  let labelValueFields = [
-    {name: 'channel', type: 'string'},
-    {name: 'value', type: 'number'},
-  ]
-
-  let groupedStackedFields = [
-    {name: 'quarter', type: 'string'},
-    {name: 'region', type: 'string'},
-    {name: 'channel', type: 'string'},
-    {name: 'value', type: 'number'},
-    {name: 'slot', type: 'number'},
-  ]
-
-  let dualAxisFields = [
-    {name: 'month', type: 'date'},
-    {name: 'revenue', type: 'number'},
-    {name: 'conversion_rate', type: 'number'},
-  ]
-
-  let bubbleFields = [
-    {name: 'segment', type: 'string'},
-    {name: 'efficiency', type: 'number'},
-    {name: 'growth', type: 'number'},
-    {name: 'pipeline', type: 'number'},
-    {name: 'quality', type: 'number'},
-  ]
-
-  let sankeyFields = [
-    {name: 'source', type: 'string'},
-    {name: 'target', type: 'string'},
-    {name: 'value', type: 'number'},
-  ]
-
   let dayPeriods = ['Morning', 'Evening']
   let weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 </script>
 
 <div class="chart-grid">
   <ECharts
-    height={320}
-    data={{rows: monthRows, fields: twoColFields}}
+    data={{
+      rows: monthRows,
+      fields: [
+        {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
+        {name: 'value', type: 'number', metadata: {ratio: true}},
+      ],
+    }}
     config={{
       title: {text: 'Line (Percentage Metadata)'},
-      tooltip: {trigger: 'axis'},
-      xAxis: {type: 'time'},
-      yAxis: {type: 'value'},
       series: [{type: 'line', encode: {x: 'month', y: 'value'}}],
     }}
   />
 
   <ECharts
-    height={320}
-    data={{rows: weekdaySeriesRows, fields: weekdayFields}}
+    data={{
+      rows: weekdaySeriesRows,
+      fields: [
+        {name: 'day', type: 'string'},
+        {name: 'metric', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Stacked Area'},
-      tooltip: {trigger: 'axis'},
-      xAxis: {type: 'category'},
-      yAxis: {type: 'value'},
       series: [{type: 'line', stack: 'total', areaStyle: {}, encode: {x: 'day', y: 'value', group: 'metric'}}],
     }}
   />
 
   <ECharts
-    height={320}
-    data={{rows: quarterRows, fields: quarterFields}}
+    data={{
+      rows: quarterRows,
+      fields: [
+        {name: 'quarter', type: 'string'},
+        {name: 'metric', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Bar'},
-      tooltip: {trigger: 'axis'},
-      xAxis: {type: 'category'},
-      yAxis: {type: 'value'},
       series: [{type: 'bar', encode: {x: 'quarter', y: 'value', group: 'metric'}}],
     }}
   />
 
   <ECharts
-    height={320}
-    data={{rows: scatterRows, fields: scatterFields}}
+    data={{
+      rows: scatterRows,
+      fields: [
+        {name: 'group', type: 'string'},
+        {name: 'x', type: 'number'},
+        {name: 'y', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Scatter'},
-      tooltip: {trigger: 'item'},
-      xAxis: {type: 'value'},
-      yAxis: {type: 'value'},
       series: [{type: 'scatter', encode: {x: 'x', y: 'y', group: 'group'}}],
     }}
   />
 
   <ECharts
-    height={320}
-    data={{rows: groupedStackedSlotRows, fields: groupedStackedFields}}
+    data={{
+      rows: groupedStackedSlotRows,
+      fields: [
+        {name: 'quarter', type: 'string'},
+        {name: 'region', type: 'string'},
+        {name: 'channel', type: 'string'},
+        {name: 'value', type: 'number'},
+        {name: 'slot', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Grouped + Stacked Bar (Two X-Axes)'},
       tooltip: {trigger: 'axis'},
@@ -304,8 +267,13 @@
   />
 
   <ECharts
-    height={320}
-    data={{rows: pieRows, fields: labelValueFields}}
+    data={{
+      rows: pieRows,
+      fields: [
+        {name: 'channel', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Pie'},
       tooltip: {trigger: 'item'},
@@ -314,8 +282,14 @@
   />
 
   <ECharts
-    height={320}
-    data={{rows: heatmapRows, fields: [{name: 'day', type: 'string'}, {name: 'period', type: 'string'}, {name: 'value', type: 'number'}]}}
+    data={{
+      rows: heatmapRows,
+      fields: [
+        {name: 'day', type: 'string'},
+        {name: 'period', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Heatmap'},
       tooltip: {trigger: 'item'},
@@ -327,7 +301,6 @@
   />
 
   <ECharts
-    height={320}
     data={{
       rows: candleRows,
       fields: [
@@ -348,8 +321,13 @@
   />
 
   <ECharts
-    height={320}
-    data={{rows: funnelRows, fields: [{name: 'stage', type: 'string'}, {name: 'value', type: 'number'}]}}
+    data={{
+      rows: funnelRows,
+      fields: [
+        {name: 'stage', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Funnel'},
       tooltip: {trigger: 'item'},
@@ -358,8 +336,13 @@
   />
 
   <ECharts
-    height={320}
-    data={{rows: treemapRows, fields: [{name: 'name', type: 'string'}, {name: 'value', type: 'number'}]}}
+    data={{
+      rows: treemapRows,
+      fields: [
+        {name: 'name', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Treemap'},
       tooltip: {trigger: 'item'},
@@ -368,7 +351,6 @@
   />
 
   <ECharts
-    height={320}
     data={{
       rows: themeRiverRows,
       fields: [
@@ -386,8 +368,14 @@
   />
 
   <ECharts
-    height={320}
-    data={{rows: dualAxisRows, fields: dualAxisFields}}
+    data={{
+      rows: dualAxisRows,
+      fields: [
+        {name: 'month', type: 'date'},
+        {name: 'revenue', type: 'number'},
+        {name: 'conversion_rate', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Bar + Line (Dual Axis)'},
       tooltip: {trigger: 'axis'},
@@ -405,8 +393,16 @@
   />
 
   <ECharts
-    height={320}
-    data={{rows: bubbleRows, fields: bubbleFields}}
+    data={{
+      rows: bubbleRows,
+      fields: [
+        {name: 'segment', type: 'string'},
+        {name: 'efficiency', type: 'number'},
+        {name: 'growth', type: 'number'},
+        {name: 'pipeline', type: 'number'},
+        {name: 'quality', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Bubble (x/y/size/color)'},
       tooltip: {trigger: 'item'},
@@ -421,8 +417,14 @@
   />
 
   <ECharts
-    height={320}
-    data={{rows: sankeyRows, fields: sankeyFields}}
+    data={{
+      rows: sankeyRows,
+      fields: [
+        {name: 'source', type: 'string'},
+        {name: 'target', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
     config={{
       title: {text: 'Sankey'},
       tooltip: {trigger: 'item'},
