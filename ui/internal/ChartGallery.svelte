@@ -144,20 +144,18 @@
     let previousQuarter = slots[index - 1]?.split('|')[0]
     return quarter === previousQuarter ? '' : quarter
   })
-  let groupedStackedChannelValues = (channel: string) => {
-    return groupedStackedSlots.map(slot => {
-      let [quarter, region] = slot.split('|')
-      return groupedStackedRows.find(row => row.quarter === quarter && row.region === region && row.channel === channel)?.value ?? 0
-    })
-  }
+  let groupedStackedSlotRows = groupedStackedRows.map(row => ({
+    ...row,
+    slot: groupedStackedSlots.indexOf(`${row.quarter}|${row.region}`),
+  }))
 
   let dualAxisRows = [
-    {month: 'Jan', revenue: 120, conversion_rate: 3.2},
-    {month: 'Feb', revenue: 138, conversion_rate: 3.5},
-    {month: 'Mar', revenue: 150, conversion_rate: 3.9},
-    {month: 'Apr', revenue: 166, conversion_rate: 4.1},
-    {month: 'May', revenue: 184, conversion_rate: 4.4},
-    {month: 'Jun', revenue: 205, conversion_rate: 4.8},
+    {month: '2024-01-01', revenue: 120, conversion_rate: 3.2},
+    {month: '2024-02-01', revenue: 138, conversion_rate: 3.5},
+    {month: '2024-03-01', revenue: 150, conversion_rate: 3.9},
+    {month: '2024-04-01', revenue: 166, conversion_rate: 4.1},
+    {month: '2024-05-01', revenue: 184, conversion_rate: 4.4},
+    {month: '2024-06-01', revenue: 205, conversion_rate: 4.8},
   ]
 
   let bubbleRows = [
@@ -212,10 +210,11 @@
     {name: 'region', type: 'string'},
     {name: 'channel', type: 'string'},
     {name: 'value', type: 'number'},
+    {name: 'slot', type: 'number'},
   ]
 
   let dualAxisFields = [
-    {name: 'month', type: 'string'},
+    {name: 'month', type: 'date'},
     {name: 'revenue', type: 'number'},
     {name: 'conversion_rate', type: 'number'},
   ]
@@ -233,13 +232,6 @@
     {name: 'target', type: 'string'},
     {name: 'value', type: 'number'},
   ]
-
-  let sankeyNodes = Array.from(new Set(sankeyRows.flatMap(row => [row.source, row.target]))).map(name => ({name}))
-  let qualityColor = (quality: number) => {
-    if (quality >= 68) return '#1e3a8a'
-    if (quality >= 60) return '#2563eb'
-    return '#60a5fa'
-  }
 
   let dayPeriods = ['Morning', 'Evening']
   let weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -296,7 +288,7 @@
 
   <ECharts
     height={320}
-    data={{rows: groupedStackedRows, fields: groupedStackedFields}}
+    data={{rows: groupedStackedSlotRows, fields: groupedStackedFields}}
     config={{
       title: {text: 'Grouped + Stacked Bar (Two X-Axes)'},
       tooltip: {trigger: 'axis'},
@@ -307,10 +299,7 @@
         {type: 'category', data: groupedStackedQuarterLabels, position: 'bottom', offset: 24, axisTick: {show: false}},
       ],
       yAxis: {type: 'value'},
-      series: [
-        {name: 'Online', type: 'bar', stack: 'channels', data: groupedStackedChannelValues('Online')},
-        {name: 'Retail', type: 'bar', stack: 'channels', data: groupedStackedChannelValues('Retail')},
-      ],
+      series: [{type: 'bar', stack: 'channels', encode: {x: 'slot', y: 'value', group: 'channel'}}],
     }}
   />
 
@@ -333,10 +322,7 @@
       xAxis: {type: 'category', data: weekDays},
       yAxis: {type: 'category', data: dayPeriods},
       visualMap: {min: 0, max: 100, show: false},
-      series: [{
-        type: 'heatmap',
-        data: heatmapRows.map(row => [weekDays.indexOf(row.day), dayPeriods.indexOf(row.period), row.value]),
-      }],
+      series: [{type: 'heatmap', encode: {x: 'day', y: 'period', value: 'value'}}],
     }}
   />
 
@@ -355,9 +341,9 @@
     config={{
       title: {text: 'Candlestick'},
       tooltip: {trigger: 'axis'},
-      xAxis: {type: 'category', data: candleRows.map(row => row.month)},
+      xAxis: {type: 'category'},
       yAxis: {type: 'value', scale: true},
-      series: [{type: 'candlestick', data: candleRows.map(row => [row.open, row.close, row.low, row.high])}],
+      series: [{type: 'candlestick', encode: {x: 'month', y: ['open', 'close', 'low', 'high']}}],
     }}
   />
 
@@ -406,14 +392,14 @@
       title: {text: 'Bar + Line (Dual Axis)'},
       tooltip: {trigger: 'axis'},
       legend: {},
-      xAxis: {type: 'category', data: dualAxisRows.map(row => row.month)},
+      xAxis: {type: 'time'},
       yAxis: [
         {type: 'value', name: 'Revenue'},
         {type: 'value', name: 'Conversion %'},
       ],
       series: [
-        {name: 'Revenue', type: 'bar', data: dualAxisRows.map(row => row.revenue)},
-        {name: 'Conversion %', type: 'line', yAxisIndex: 1, smooth: true, data: dualAxisRows.map(row => row.conversion_rate)},
+        {name: 'Revenue', type: 'bar', encode: {x: 'month', y: 'revenue'}},
+        {name: 'Conversion %', type: 'line', yAxisIndex: 1, smooth: true, encode: {x: 'month', y: 'conversion_rate'}},
       ],
     }}
   />
@@ -426,15 +412,11 @@
       tooltip: {trigger: 'item'},
       xAxis: {type: 'value', name: 'Efficiency'},
       yAxis: {type: 'value', name: 'Growth'},
-      series: [{
-        type: 'scatter',
-        data: bubbleRows.map(row => ({
-          name: row.segment,
-          value: [row.efficiency, row.growth],
-          symbolSize: Math.sqrt(row.pipeline) * 1.8,
-          itemStyle: {color: qualityColor(row.quality)},
-        })),
-      }],
+      visualMap: [
+        {dimension: 'quality', min: 50, max: 72, inRange: {color: ['#60a5fa', '#2563eb', '#1e3a8a']}, show: false},
+        {dimension: 'pipeline', min: 100, max: 280, inRange: {symbolSize: [10, 28]}, show: false},
+      ],
+      series: [{type: 'scatter', encode: {x: 'efficiency', y: 'growth', tooltip: ['segment', 'pipeline', 'quality']}}],
     }}
   />
 
@@ -448,8 +430,7 @@
         type: 'sankey',
         layout: 'none',
         emphasis: {focus: 'adjacency'},
-        data: sankeyNodes,
-        links: sankeyRows,
+        encode: {source: 'source', target: 'target', value: 'value'},
         lineStyle: {curveness: 0.5},
       }],
     }}

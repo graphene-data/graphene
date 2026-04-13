@@ -24,6 +24,36 @@ test('loads markdown files', async ({server, page}) => {
   await expect(page).screenshot('loads-markdown-files')
 })
 
+test('flights simple stacked bar renders', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Simple Stacked Bar Example
+
+    \`\`\`gsql monthly_flight_status
+    select
+      date_trunc('month', dep_time) as month,
+      case
+        when cancelled = 'Y' then 'Cancelled'
+        when diverted = 'Y' then 'Diverted'
+        else 'Completed'
+      end as status,
+      count(*) as flights
+    from flights
+    where (cancelled = 'Y' OR diverted = 'Y')
+    group by 1, 2
+    order by 1 asc
+    \`\`\`
+
+    <BarChart title="Flights by Month (Stacked)" data=monthly_flight_status x=month y=flights stack=status />
+  `,
+  )
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page).screenshot('flights-simple-stacked-bar')
+})
+
 test('parses inline echarts config body in markdown', async ({server, page}) => {
   server.mockFile(
     '/index.md',
