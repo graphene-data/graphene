@@ -223,6 +223,27 @@ test('categorical stacked bar charts sort by total value descending', async ({mo
   await expect(chart.el).screenshot('bar-chart-categorical-stacked-sort-total-desc')
 })
 
+test('bar chart explicit sort orders categories by another column', async ({mount, chart}) => {
+  let rows = [
+    {segment: 'SMB', metric: 'New', value: 8, sort_rank: 2},
+    {segment: 'Enterprise', metric: 'New', value: 35, sort_rank: 3},
+    {segment: 'Mid Market', metric: 'New', value: 16, sort_rank: 1},
+    {segment: 'SMB', metric: 'Expansion', value: 12, sort_rank: 2},
+    {segment: 'Enterprise', metric: 'Expansion', value: 30, sort_rank: 3},
+    {segment: 'Mid Market', metric: 'Expansion', value: 18, sort_rank: 1},
+  ]
+
+  let fields = [
+    {name: 'segment', type: scalarType('string')},
+    {name: 'metric', type: scalarType('string')},
+    {name: 'value', type: scalarType('number'), metadata: {units: 'count'}},
+    {name: 'sort_rank', type: scalarType('number')},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'segment', y: 'value', stack: 'metric', sort: 'sort_rank asc', title: 'Explicit Sort'})
+  await expect(chart.el).screenshot('bar-chart-explicit-sort-column')
+})
+
 test('line chart sorts time axis, and shows gap for missing points', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', series: 'metric', title: 'Line Missing + Sort'})
   await expect(chart.el).screenshot('line-chart-grouped-missing-sort')

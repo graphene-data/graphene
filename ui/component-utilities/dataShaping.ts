@@ -105,37 +105,45 @@ export function applyStackPercentage(config: NormalConfig, rows: Record<string, 
   }
 }
 
-// Evidence default sort policy:
-// - time/value x: sort by x asc
-// - category x: sort by stack total desc for stacked bars, otherwise by first measure desc
-export function applyDefaultSorting(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
+// Sort rows with either an explicit `encode.sort` rule or our built-in defaults.
+// Explicit sort format: "column" or "column asc|desc".
+export function applySorting(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
-  let xField = firstSeriesXField(series)
-  if (!xField) return
-
-  let xType = inferFieldType(fields, xField)
-  let primarySeries = series.filter(entry => getSeriesXField(entry) === xField && getSeriesYField(entry))
-  if (primarySeries.length === 0) return
-
-  if (xType === 'date' || xType === 'number') {
-    sortRowsByXAscending(rows, xField, xType)
+  // Explicit sort always wins and only applies to categorical axes.
+  let explicitSort = resolveExplicitSort(series, fields)
+  let categoryField = [...config.xAxis, ...config.yAxis].find(axis => axis?.type === 'category')?.field?.name
+  if (explicitSort) {
+    if (!categoryField) throw new Error('sort is only supported when the chart has a categorical axis')
+    sortCategoriesByField(rows, categoryField, explicitSort.field, explicitSort.direction, fields)
     return
   }
 
-  if (xType !== 'string') return
+  let primaryXField = config.xAxis[0]?.field
+  if (!primaryXField) return
+
+  // time/value x fields keep natural ascending order
+  if (primaryXField.type === 'date' || primaryXField.type === 'timestamp' || primaryXField.type === 'number') {
+    sortRowsByXAscending(rows, primaryXField.name, primaryXField.type === 'number' ? 'number' : 'date')
+    return
+  }
+
+  if (primaryXField.type !== 'string') return
+
+  let primarySeries = series.filter(entry => getSeriesXField(entry) === primaryXField.name && getSeriesYField(entry))
+  if (primarySeries.length === 0) return
 
   let hasStackedBars = primarySeries.some(entry => entry?.type === 'bar' && !!entry?.stack)
   if (hasStackedBars) {
     let yFields = Array.from(new Set(primarySeries.map(entry => getSeriesYField(entry)).filter(Boolean))) as string[]
-    sortRowsByCategoryMetric(rows, xField, row => yFields.reduce((sum, y) => sum + (Number(row?.[y]) || 0), 0))
+    sortCategoriesByValue(rows, primaryXField.name, row => yFields.reduce((sum, y) => sum + (Number(row?.[y]) || 0), 0), 'desc')
     return
   }
 
   let firstY = getSeriesYField(primarySeries[0])
   if (!firstY) return
-  sortRowsByCategoryMetric(rows, xField, row => Number(row?.[firstY]) || 0)
+  sortCategoriesByValue(rows, primaryXField.name, row => Number(row?.[firstY]) || 0, 'desc')
 }
 
 // Materialize dataset-backed bar series into explicit point arrays so later enrichments can mutate points.
@@ -217,31 +225,70 @@ function sortRowsByXAscending(rows: Record<string, any>[], xField: string, xType
   for (let i = 0; i < indexed.length; i++) rows[i] = indexed[i].row
 }
 
-function sortRowsByCategoryMetric(rows: Record<string, any>[], xField: string, metricForRow: (row: Record<string, any>) => number) {
-  let metricByX = new Map<string, number>()
-  let valueByKey = new Map<string, any>()
+// Aggregate one numeric value per category, then order categories by that value.
+function sortCategoriesByValue(rows: Record<string, any>[], categoryField: string, metricForRow: (row: Record<string, any>) => number, direction: 'asc' | 'desc') {
+  let metricByCategory = new Map<string, number>()
 
   for (let row of rows) {
-    let xValue = row?.[xField]
-    let key = valueKey(xValue)
-    valueByKey.set(key, xValue)
-    metricByX.set(key, (metricByX.get(key) ?? 0) + metricForRow(row))
+    let key = valueKey(row?.[categoryField])
+    metricByCategory.set(key, (metricByCategory.get(key) ?? 0) + metricForRow(row))
   }
 
-  let orderedKeys = Array.from(metricByX.keys())
-  orderedKeys.sort((a, b) => {
-    let aMetric = metricByX.get(a) ?? 0
-    let bMetric = metricByX.get(b) ?? 0
-    return bMetric - aMetric
+  let orderedCategoryKeys = Array.from(metricByCategory.keys())
+  orderedCategoryKeys.sort((left, right) => {
+    let leftMetric = metricByCategory.get(left) ?? 0
+    let rightMetric = metricByCategory.get(right) ?? 0
+    return direction === 'asc' ? leftMetric - rightMetric : rightMetric - leftMetric
   })
 
-  let positionByX = new Map<string, number>(orderedKeys.map((key, index) => [key, index]))
+  sortRowsByCategoryOrder(rows, categoryField, orderedCategoryKeys)
+}
+
+// Sort categories by a specific field.
+// Numeric fields are summed per category; non-numeric fields use first value seen.
+function sortCategoriesByField(rows: Record<string, any>[], categoryField: string, sortField: string, direction: 'asc' | 'desc', fields: Field[]) {
+  let sortType = inferFieldType(fields, sortField)
+
+  if (sortType === 'number') {
+    sortCategoriesByValue(rows, categoryField, row => Number(row?.[sortField]) || 0, direction)
+    return
+  }
+
+  let sortValueByCategory = new Map<string, unknown>()
+  for (let row of rows) {
+    let key = valueKey(row?.[categoryField])
+    if (sortValueByCategory.has(key)) continue
+    sortValueByCategory.set(key, row?.[sortField])
+  }
+
+  let orderedCategoryKeys = distinctValues(rows, categoryField).map(value => valueKey(value))
+  orderedCategoryKeys.sort((left, right) => {
+    let leftValue = sortValueByCategory.get(left)
+    let rightValue = sortValueByCategory.get(right)
+
+    if (sortType === 'date') {
+      let leftDate = sortableValue(leftValue, 'date')
+      let rightDate = sortableValue(rightValue, 'date')
+      return direction === 'asc' ? leftDate - rightDate : rightDate - leftDate
+    }
+
+    let comparison = String(leftValue ?? '').localeCompare(String(rightValue ?? ''), undefined, {numeric: true})
+    return direction === 'asc' ? comparison : -comparison
+  })
+
+  sortRowsByCategoryOrder(rows, categoryField, orderedCategoryKeys)
+}
+
+// Apply a category order while preserving original row order within each category.
+function sortRowsByCategoryOrder(rows: Record<string, any>[], categoryField: string, orderedCategoryKeys: string[]) {
+  let positionByCategory = new Map<string, number>(orderedCategoryKeys.map((key, index) => [key, index]))
   let indexed = rows.map((row, index) => ({row, index}))
-  indexed.sort((a, b) => {
-    let aPos = positionByX.get(valueKey(a.row?.[xField])) ?? Number.MAX_SAFE_INTEGER
-    let bPos = positionByX.get(valueKey(b.row?.[xField])) ?? Number.MAX_SAFE_INTEGER
-    if (aPos !== bPos) return aPos - bPos
-    return a.index - b.index
+
+  indexed.sort((left, right) => {
+    let leftPos = positionByCategory.get(valueKey(left.row?.[categoryField])) ?? Number.MAX_SAFE_INTEGER
+    let rightPos = positionByCategory.get(valueKey(right.row?.[categoryField])) ?? Number.MAX_SAFE_INTEGER
+    if (leftPos !== rightPos) return leftPos - rightPos
+    return left.index - right.index
   })
 
   for (let i = 0; i < indexed.length; i++) rows[i] = indexed[i].row
@@ -274,12 +321,34 @@ function inferFieldType(fields: Field[], fieldName: string) {
   return 'string'
 }
 
-function firstSeriesXField(series: SeriesWithGroupingHint[]) {
-  for (let entry of series) {
-    let xField = getSeriesXField(entry)
-    if (xField) return xField
-  }
-  return undefined
+function resolveExplicitSort(series: SeriesWithGroupingHint[], fields: Field[]) {
+  let specs = Array.from(
+    new Set(
+      series
+        .map(entry => entry?.encode?.sort)
+        .filter(value => typeof value === 'string')
+        .map(value => String(value)),
+    ),
+  )
+  if (specs.length === 0) return undefined
+  if (specs.length > 1) throw new Error('sort must be the same across all series')
+
+  let parsed = parseSortSpec(specs[0])
+  if (!fields.some(field => field.name === parsed.field))
+    throw new Error(`${parsed.field} is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).`)
+  return parsed
+}
+
+function parseSortSpec(sort: string): {field: string; direction: 'asc' | 'desc'} {
+  let parts = sort.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0 || parts.length > 2) throw new Error('sort should contain one column name and optionally a direction (asc or desc).')
+
+  let field = parts[0]
+  let direction = parts[1]?.toLowerCase()
+  if (!field) throw new Error('sort should contain one column name and optionally a direction (asc or desc).')
+  if (!direction) return {field, direction: 'asc'}
+  if (direction !== 'asc' && direction !== 'desc') throw new Error('sort should contain one column name and optionally a direction (asc or desc).')
+  return {field, direction}
 }
 
 function getSplitField(series: SeriesWithGroupingHint) {

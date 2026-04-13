@@ -9,6 +9,7 @@
     group?: string
     stack?: string
     stack100?: string
+    sort?: string
     title?: string
     height?: string | number
     width?: string | number
@@ -21,6 +22,7 @@
     group = undefined,
     stack = undefined,
     stack100 = undefined,
+    sort = undefined,
     title = undefined,
     height = undefined,
     width = undefined,
@@ -33,9 +35,10 @@
     let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'area-stack' : undefined
     let stackPercentage = mode?.kind === 'stack100' ? true : undefined
 
+    let sortHint = typeof sort === 'string' && sort.trim().length > 0 ? {sort} : {}
     let series = grouped
-      ? [{type: 'line' as const, areaStyle: {opacity: 0.2}, stack: stackKey, stackPercentage, encode: {x, y: yFields[0], group: mode?.field}}]
-      : yFields.map(field => ({type: 'line' as const, name: field, areaStyle: {opacity: 0.2}, encode: {x, y: field}}))
+      ? [{type: 'line' as const, areaStyle: {opacity: 0.2}, stack: stackKey, stackPercentage, encode: {x, y: yFields[0], group: mode?.field, ...sortHint}}]
+      : yFields.map(field => ({type: 'line' as const, name: field, areaStyle: {opacity: 0.2}, encode: {x, y: field, ...sortHint}}))
 
     return {
       title: title ? {text: title} : undefined,
