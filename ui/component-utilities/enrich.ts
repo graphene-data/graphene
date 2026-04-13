@@ -1,6 +1,6 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
-import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage} from './dataShaping.ts'
+import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
 import {colorPalette} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -30,6 +30,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   lineSeriesMarkerVisibility(normalized, rows)
   horizontalBarGuard(normalized, fields)
   computeTitleLegendAndGridPadding(normalized)
+  applyLegendSelection(normalized)
   hideStackPercentageValueAxis(normalized)
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, fields)
@@ -38,6 +39,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   barLabelPositioning(normalized)
   labelsUseYAxisFormat(normalized)
   addPieTooltips(normalized)
+  inlineDataIntoSeries(normalized, rows)
   stackedBarCornerRadius(normalized)
   return normalized
 }
@@ -214,6 +216,13 @@ function computeTitleLegendAndGridPadding(config: NormalConfig) {
   if (legend?.show) {
     grid.top = numericOffset(grid.top, 24)
   }
+}
+
+// When you toggle a series in the legend, we re-render the chart.
+// This preserves the users selection, but also means that the currently selected series are available to enrichments.
+function applyLegendSelection(config: NormalConfig) {
+  if (!config.legendSelection) return
+  config.legend[0] = {...config.legend[0], selected: config.legendSelection as any}
 }
 
 // Set default value formatting for value axes and series tooltips.
@@ -403,22 +412,52 @@ function addPieTooltips(config: NormalConfig) {
   }
 }
 
-// Add rounded corners only to the visible outer edge of each stack.
+// Round only the topmost (or rightmost for horizontal) visible non-zero bar in each stack slot.
 function stackedBarCornerRadius(config: NormalConfig) {
-  let grouped = new Map<string, SeriesWithGroupingHint[]>()
+  let horizontal = isHorizontalBar(config)
+  let cornerRadius = horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]
+  let valueIndex = horizontal ? 0 : 1
+  let selected = config.legend[0]?.selected || {}
+  let stacks = new Map<string, SeriesWithGroupingHint[]>()
 
+  // Unstacked bars can use a single series-level radius.
   for (let series of config.series) {
-    if (series?.type !== 'bar' || !series?.stack) continue
-    let stackKey = String(series.stack)
-    if (!grouped.has(stackKey)) grouped.set(stackKey, [])
-    grouped.get(stackKey)?.push(series)
+    if (series?.type !== 'bar' || series?.stack || series?.itemStyle?.borderRadius != null) continue
+    series.itemStyle = {...series.itemStyle, borderRadius: cornerRadius}
   }
 
-  let horizontal = isHorizontalBar(config)
-  for (let group of grouped.values()) {
-    let lastSeries = group[group.length - 1]
-    if (!lastSeries || lastSeries.itemStyle?.borderRadius != null) continue
-    lastSeries.itemStyle = {...lastSeries.itemStyle, borderRadius: horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]}
+  for (let [index, series] of config.series.entries()) {
+    if (series?.type !== 'bar' || series?.itemStyle?.borderRadius != null || !Array.isArray(series.data)) continue
+
+    let axisKey = `${Number(series.xAxisIndex ?? 0)}:${Number(series.yAxisIndex ?? 0)}`
+    let stackKey = series.stack ?? `__  graphene_unstacked_${index}`
+    let key = `${axisKey}::${stackKey}`
+    let group = stacks.get(key) ?? []
+    group.push(series)
+    stacks.set(key, group)
+  }
+
+  // For each stack slot, scan top-down and round the first visible non-zero segment.
+  for (let stackSeries of stacks.values()) {
+    let maxPoints = Math.max(...stackSeries.map(series => (series.data as unknown[]).length), 0)
+
+    for (let pointIndex = 0; pointIndex < maxPoints; pointIndex++) {
+      for (let seriesIndex = stackSeries.length - 1; seriesIndex >= 0; seriesIndex--) {
+        let series = stackSeries[seriesIndex]
+        if (selected[series.name || ''] === false) continue
+
+        let point = (series.data as unknown[])[pointIndex]
+        if (!point || typeof point !== 'object') continue
+
+        let value = Number((point as Record<string, any>)?.value?.[valueIndex])
+        if (!Number.isFinite(value) || value === 0) continue
+
+        let typed = point as Record<string, any>
+        let existingItemStyle = typed.itemStyle && typeof typed.itemStyle === 'object' ? typed.itemStyle : {}
+        ;(series.data as Record<string, any>[])[pointIndex] = {...typed, itemStyle: {...existingItemStyle, borderRadius: cornerRadius}}
+        break
+      }
+    }
   }
 }
 

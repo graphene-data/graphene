@@ -92,7 +92,6 @@ registerTheme('graphene-theme', {
     lineStyle: {width: 2},
   },
   bar: {
-    itemStyle: {borderRadius: [3, 3, 0, 0]},
   },
   pie: {
     radius: ['30%', '58%'],
