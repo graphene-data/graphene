@@ -119,6 +119,28 @@ test('line chart uses ratio metadata for axis and tooltip percentage formatting'
   await expect(chart.el).screenshot('line-chart-ratio-metadata-percent-axis')
 })
 
+test('line chart tooltip formats calculated non-whole numbers', async ({mount, chart, sharedPage}) => {
+  let rows = [
+    {month: 'Jan', avg_delay: 10 / 3},
+    {month: 'Feb', avg_delay: 14 / 3},
+    {month: 'Mar', avg_delay: 22 / 3},
+  ]
+  let fields = [
+    {name: 'month', type: scalarType('string')},
+    {name: 'avg_delay', type: scalarType('number')},
+  ]
+
+  await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'avg_delay', title: 'Average Delay'})
+
+  await sharedPage.evaluate(() => {
+    let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
+    let chart = charts && Object.values(charts)[0]
+    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  })
+
+  await expect(chart.el).screenshot('line-chart-tooltip-calculated-non-whole')
+})
+
 test('line chart hides markers at 30 categorical points', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: categoricalSeries(30), x: 'category', y: 'value', title: 'Categorical 30'})
   await expect(chart.el).screenshot('line-chart-categorical-markers-over-threshold')

@@ -10,6 +10,7 @@ import {colorPalette} from './theme.ts'
 
 // Each enrichment must have a comment above it describing what it does, and perhaps why it's needed if it isn't obvious.
 // Enrichments must also have comments inside explaining how they work if the logic is non-trivial
+// Avoid creating new helpers unless the logic is used in several places.
 
 // Run enrichment in a fixed order so defaults stay predictable.
 export function enrich(config: EChartsConfig, rows: Record<string, any>[], fields: Field[]) {
@@ -141,27 +142,27 @@ function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[
 
 // Infer axis types from encoded field metadata.
 function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) {
-  let series = config.series
-
-  config.xAxis.forEach((axis, axisIndex) => {
-    if (!axis || axis.type != null) return
-    let encodedFields = series
+  for (let [axisIndex, axis] of config.xAxis.entries()) {
+    if (!axis) continue
+    let encodedFields = config.series
       .filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
       .map(entry => getSeriesXField(entry))
       .filter(Boolean) as string[]
 
-    axis.type = inferAxisTypeFromFields(fields, encodedFields)
-  })
+    axis.field ||= fields.find(field => field.name === encodedFields[0])
+    axis.type ||= inferAxisTypeFromFields(fields, encodedFields)
+  }
 
-  config.yAxis.forEach((axis, axisIndex) => {
-    if (!axis || axis.type != null) return
-    let encodedFields = series
+  for (let [axisIndex, axis] of config.yAxis.entries()) {
+    if (!axis) continue
+    let encodedFields = config.series
       .filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
-      .map(entry => getSeriesYField(entry))
+      .map(entry => getSeriesValueFieldName(entry))
       .filter(Boolean) as string[]
 
-    axis.type = inferAxisTypeFromFields(fields, encodedFields)
-  })
+    axis.field ||= fields.find(field => field.name === encodedFields[0])
+    axis.type ||= inferAxisTypeFromFields(fields, encodedFields)
+  }
 }
 
 // Keep line/area markers readable by default.
@@ -228,42 +229,19 @@ function applyLegendSelection(config: NormalConfig) {
 // Set default value formatting for value axes and series tooltips.
 // We derive one formatter per field so axis labels and hover values stay consistent.
 function valueFormatting(config: NormalConfig, fields: Field[]) {
-  let applyAxisFormatter = (axis: NormalConfig['xAxis'][number] | NormalConfig['yAxis'][number], fieldName?: string) => {
-    if (!axis || axis.type !== 'value' || axis.axisLabel?.formatter != null || !fieldName) return
-    if (fieldType(fields, fieldName) !== 'number') return
-
-    let field = fields.find(entry => entry.name === fieldName)
-    let formatter = makeValueFormatter(field)
-    if (!formatter) return
-
-    axis.axisLabel = {...axis.axisLabel, formatter}
-  }
-
-  // Horizontal bar charts can have value x-axes, so format x and y axes symmetrically.
-  for (let [axisIndex, axis] of config.xAxis.entries()) {
-    let firstSeries = config.series.find(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
-    applyAxisFormatter(axis, getSeriesXField(firstSeries))
-  }
-
-  for (let [axisIndex, axis] of config.yAxis.entries()) {
-    let firstSeries = config.series.find(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
-    applyAxisFormatter(axis, getSeriesYField(firstSeries))
+  let valueAxes = [...config.xAxis, ...config.yAxis].filter(axis => axis?.type === 'value')
+  for (let axis of valueAxes) {
+    if (axis.axisLabel?.formatter != null) continue
+    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field)}
   }
 
   for (let series of config.series) {
-    let seriesTooltip = series.tooltip as Record<string, any> | undefined
-    if (seriesTooltip?.formatter != null || seriesTooltip?.valueFormatter != null) continue
+    series.tooltip ||= {}
+    let tooltip = series.tooltip as Record<string, any>
+    if (tooltip.formatter != null || tooltip.valueFormatter != null) continue
 
-    let valueFieldName = getSeriesYField(series)
-    if (!valueFieldName || fieldType(fields, valueFieldName) !== 'number') continue
-
-    let field = fields.find(entry => entry.name === valueFieldName)
-    if (!field?.metadata?.ratio && !field?.metadata?.pct) continue
-
-    let formatter = makeValueFormatter(field)
-    if (!formatter) continue
-
-    series.tooltip = {...seriesTooltip, valueFormatter: formatter}
+    let field = getSeriesValueField(series, fields)
+    tooltip.valueFormatter = makeValueFormatter(field)
   }
 }
 
@@ -275,7 +253,7 @@ function hideStackPercentageValueAxis(config: NormalConfig) {
     let seriesOnAxis = config.series.filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
     if (seriesOnAxis.length === 0) continue
 
-    let yFields = seriesOnAxis.map(entry => getSeriesYField(entry)).filter(Boolean) as string[]
+    let yFields = seriesOnAxis.map(entry => getSeriesValueFieldName(entry)).filter(Boolean) as string[]
     if (yFields.length === 0) continue
 
     if (yFields.every(name => name.startsWith('__graphene_stack_pct_'))) axis.show = false
@@ -312,7 +290,7 @@ function styleSecondaryAxisForSimpleBarLineLayout(config: NormalConfig) {
   if (series.some(entry => Number(entry?.yAxisIndex ?? 0) === 0 && entry?.type !== 'bar')) return
   if (series.some(entry => Number(entry?.yAxisIndex ?? 0) > 1)) return
 
-  let barYFields = Array.from(new Set(bars.map(entry => getSeriesYField(entry)).filter(Boolean))) as string[]
+  let barYFields = Array.from(new Set(bars.map(entry => getSeriesValueFieldName(entry)).filter(Boolean))) as string[]
   if (barYFields.length !== 1) return
 
   let primaryAxis = config.yAxis[0]
@@ -338,7 +316,7 @@ function applyIntegerYAxisTicks(config: NormalConfig, rows: Record<string, any>[
   let yAxis = config.yAxis[0]
   if (!yAxis || yAxis.type !== 'value' || yAxis.minInterval != null) return
 
-  let yFields = Array.from(new Set(config.series.map(series => getSeriesYField(series)).filter(Boolean))) as string[]
+  let yFields = Array.from(new Set(config.series.map(series => getSeriesValueFieldName(series)).filter(Boolean))) as string[]
   let values = rows.flatMap(row => yFields.map(field => Number(row?.[field]))).filter(value => Number.isFinite(value))
 
   if (values.length === 0) return
@@ -368,7 +346,7 @@ function labelsUseYAxisFormat(config: NormalConfig) {
     // No-op when labels are off or already explicitly formatted.
     if (!series?.label || series.label.show !== true || series.label.formatter != null) continue
 
-    let yField = getSeriesYField(series)
+    let yField = getSeriesValueFieldName(series)
     let axisIndex = Number(series.yAxisIndex ?? 0)
     let axisFormatter = config.yAxis[axisIndex]?.axisLabel?.formatter
     if (typeof axisFormatter !== 'function') continue
@@ -537,8 +515,14 @@ function getSeriesXField(series?: SeriesWithGroupingHint) {
   return getEncodeField(series?.encode?.x)
 }
 
-function getSeriesYField(series?: SeriesWithGroupingHint) {
+function getSeriesValueFieldName(series?: SeriesWithGroupingHint) {
   return getEncodeField(series?.encode?.y) ?? getEncodeField(series?.encode?.value)
+}
+
+function getSeriesValueField(series: SeriesWithGroupingHint, fields: Field[]) {
+  let fieldName = getSeriesValueFieldName(series)
+  if (!fieldName) return undefined
+  return fields.find(field => field.name === fieldName)
 }
 
 function getSeriesCategoryFieldForHorizontal(series?: SeriesWithGroupingHint) {
@@ -561,22 +545,21 @@ function inferDimensions(rows: Record<string, any>[]) {
   return Object.keys(sample)
 }
 
+// Creates a formatter function the takes a numeric value and type/metadata info about a field to determine how to format it.
 function makeValueFormatter(field?: Field) {
-  if (!field || typeof field.type !== 'string' || field.type !== 'number') return undefined
-
   let currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
   let percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 1})
   let currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 
-  let unit = field.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
+  let unit = field?.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
   let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
 
   return (value: unknown) => {
     let amount = Number(value)
     if (!Number.isFinite(amount)) return String(value ?? '')
 
-    if (field.metadata?.ratio) return `${percent.format(amount * 100)}%`
-    if (field.metadata?.pct) return `${percent.format(amount)}%`
+    if (field?.metadata?.ratio) return `${percent.format(amount * 100)}%`
+    if (field?.metadata?.pct) return `${percent.format(amount)}%`
 
     if (currencyUnit) {
       let sign = amount < 0 ? '-' : ''
@@ -584,34 +567,30 @@ function makeValueFormatter(field?: Field) {
       return `${sign}${currencySymbols[currencyUnit]}${formatted}`
     }
 
-    return formatCompactNumber(amount)
+    if (amount === 0) return '0'
+    let sign = amount < 0 ? '-' : ''
+    let absolute = Math.abs(amount)
+
+    if (absolute >= 1e12) return `${sign}${compactValue(absolute / 1e12)}T`
+    if (absolute >= 1e9) return `${sign}${compactValue(absolute / 1e9)}B`
+    if (absolute >= 1e6) return `${sign}${compactValue(absolute / 1e6)}M`
+    if (absolute >= 1e3) return `${sign}${compactValue(absolute / 1e3)}k`
+    if (absolute >= 1) return `${sign}${compactValue(absolute)}`
+    if (absolute >= 1e-3) return `${sign}${compactValue(absolute)}`
+    if (absolute >= 1e-6) return `${sign}${compactValue(absolute * 1e3)}m`
+    if (absolute >= 1e-9) return `${sign}${compactValue(absolute * 1e6)}u`
+    if (absolute >= 1e-12) return `${sign}${compactValue(absolute * 1e9)}n`
+    return `${sign}${compactValue(absolute)}`
   }
-}
-
-function formatCompactNumber(amount: number) {
-  if (amount === 0) return '0'
-  let sign = amount < 0 ? '-' : ''
-  let absolute = Math.abs(amount)
-
-  if (absolute >= 1e12) return `${sign}${compactValue(absolute / 1e12)}T`
-  if (absolute >= 1e9) return `${sign}${compactValue(absolute / 1e9)}B`
-  if (absolute >= 1e6) return `${sign}${compactValue(absolute / 1e6)}M`
-  if (absolute >= 1e3) return `${sign}${compactValue(absolute / 1e3)}k`
-  if (absolute >= 1) return `${sign}${compactValue(absolute)}`
-  if (absolute >= 1e-3) return `${sign}${compactValue(absolute)}`
-  if (absolute >= 1e-6) return `${sign}${compactValue(absolute * 1e3)}m`
-  if (absolute >= 1e-9) return `${sign}${compactValue(absolute * 1e6)}u`
-  if (absolute >= 1e-12) return `${sign}${compactValue(absolute * 1e9)}n`
-  return `${sign}${compactValue(absolute)}`
 }
 
 function compactValue(num: number) {
   let exponent = Math.floor(Math.log10(Math.abs(num)))
-  let scale = Math.pow(10, exponent - 2)
+  let scale = Math.pow(10, exponent - 1)
   let rounded = Math.round(num / scale) * scale
   if (!Number.isFinite(rounded)) return String(num)
   let magnitude = Math.floor(Math.log10(rounded))
-  let decimals = Math.max(0, 2 - magnitude)
+  let decimals = Math.max(0, 1 - magnitude)
   return rounded
     .toFixed(decimals)
     .replace(/\.0+$/, '')
