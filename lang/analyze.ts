@@ -1,5 +1,7 @@
 import {type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
+import type {GrapheneError} from './index.d.ts'
+
 import {
   aggregateFanoutMessage,
   normalizeExprFanout,
@@ -25,7 +27,6 @@ import {
   type AnalysisResult,
   type AnalysisWorkspace,
   type FileInfo,
-  type GrapheneError,
   type Query,
   type Table,
   type QueryJoin,
@@ -37,13 +38,12 @@ import {
   type Scope,
   type Location,
   type NavigationSymbolKind,
-  type TemporalFieldMetadata,
+  type FieldMeta,
   formatType,
   isArrayType,
   isScalarType,
   parseGsqlFieldType,
   type TypeKind,
-  withTypeMetadata,
   type WorkspaceFileInput,
 } from './types.ts'
 import {buildFrame, txt, getFile, getPosition, toRelativePath} from './util.ts'
@@ -330,7 +330,7 @@ class AnalysisSession implements Analyzer {
           name: outName,
           sql: expr.sql,
           type: expr.type,
-          metadata: col.metadata,
+          metadata: {...expr.metadata, ...col.metadata},
           fanout: expr.fanout,
           definitionLocation: col.location,
         })
@@ -466,6 +466,7 @@ class AnalysisSession implements Analyzer {
           name,
           sql: expr.sql,
           type: expr.type,
+          metadata: expr.metadata,
           isAgg: expr.isAgg,
           fanout: expr.fanout,
           definitionLocation: this.locationForNode(aliasNode || exprNode),
@@ -506,7 +507,7 @@ class AnalysisSession implements Analyzer {
 
         // If it's not in there, add it to the select.
         if (!query.fields.find(field => field.name == name)) {
-          query.fields.unshift({name, sql: expr.sql, type: expr.type, fanout: expr.fanout, definitionLocation: this.locationForNode(groupBy.getChild('Alias') || exprNode)})
+          query.fields.unshift({name, sql: expr.sql, type: expr.type, metadata: expr.metadata, fanout: expr.fanout, definitionLocation: this.locationForNode(groupBy.getChild('Alias') || exprNode)})
         }
         fanoutExprs.push({node: groupBy.getChild('Expression')!, expr})
       }
@@ -561,8 +562,8 @@ class AnalysisSession implements Analyzer {
     let setOps = queryNode.getChildren('SetOperator')
     let fields = first.fields.map((field, idx) => {
       let next = {...field}
-      let matches = branches.slice(1).every(branch => this.sameFieldMetadata(branch.query?.fields[idx]?.type, field.type))
-      if (!matches) next.type = withTypeMetadata(next.type, undefined)
+      let matches = branches.slice(1).every(branch => this.sameFieldMetadata(branch.query?.fields[idx]?.metadata, field.metadata))
+      if (!matches) next.metadata = this.withoutTimeGrain(next.metadata)
       return next
     })
 
@@ -767,14 +768,14 @@ class AnalysisSession implements Analyzer {
         this.addReference('column', fieldNode, col.symbolId)
 
         // Simple case: this is just a regular column on a table
-        if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
+        if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
 
         // Computed column: analyze its expression in the matched table's scope
         if (this.computedColumnStack.has(col)) return this.diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: scalarType('error')})
         this.computedColumnStack.add(col)
         let expr = this.analyzeExpr(col.exprNode, {file: this.fileForPath(table.filePath), query: scope.query, table, alias, otherTables: scope.otherTables, fanoutPath: matches[0].fanoutPath})
         this.computedColumnStack.delete(col)
-        return {sql: `(${expr.sql})`, type: expr.type, isAgg: expr.isAgg, fanout: expr.fanout}
+        return {sql: `(${expr.sql})`, type: expr.type, metadata: {...expr.metadata, ...col.metadata}, isAgg: expr.isAgg, fanout: expr.fanout}
       }
 
       case 'FunctionCall':
@@ -990,7 +991,7 @@ class AnalysisSession implements Analyzer {
         if (!parsed.type) return this.diag(typeNode, `Unsupported cast type: ${rawType.toLowerCase()}`, {sql: 'NULL', type: scalarType('error')})
         let resultType = parsed.type
         let targetType = this.renderCastType(rawType)
-        return {...expr, sql: `CAST(${expr.sql} AS ${targetType})`, type: this.preserveTemporalMetadataThroughCast(expr, resultType)}
+        return {...expr, sql: `CAST(${expr.sql} AS ${targetType})`, type: resultType, metadata: this.preserveTemporalMetadataThroughCast(expr, resultType)}
       }
 
       case 'ExtractExpression': {
@@ -1057,14 +1058,14 @@ class AnalysisSession implements Analyzer {
     // date +/- interval
     if ((isScalarType(left.type, 'date') || isScalarType(left.type, 'timestamp')) && isScalarType(right.type, 'interval')) {
       if (!right.interval) return this.diag(node, 'Invalid interval expression', {sql: 'NULL', type: scalarType('error')})
-      return {...merged, sql: renderTemporalArithmetic(this.config.dialect, left.sql, left.type.kind, op, right.interval), type: left.type}
+      return {...merged, sql: renderTemporalArithmetic(this.config.dialect, left.sql, left.type, op, right.interval), type: left.type}
     }
 
     // interval + date (normalize to date + interval)
     if (isScalarType(left.type, 'interval') && (isScalarType(right.type, 'date') || isScalarType(right.type, 'timestamp'))) {
       if (op == '-') return this.diag(node, 'Cannot subtract date from interval', {sql: 'NULL', type: scalarType('error')})
       if (!left.interval) return this.diag(node, 'Invalid interval expression', {sql: 'NULL', type: scalarType('error')})
-      return {...merged, sql: renderTemporalArithmetic(this.config.dialect, right.sql, right.type.kind, '+', left.interval), type: right.type}
+      return {...merged, sql: renderTemporalArithmetic(this.config.dialect, right.sql, right.type, '+', left.interval), type: right.type}
     }
 
     return this.diag(node, 'Invalid date arithmetic', {sql: 'NULL', type: scalarType('error')})
@@ -1093,33 +1094,30 @@ class AnalysisSession implements Analyzer {
     // Extract the string literal value (remove quotes)
     let match = expr.sql.match(/^'(.+)'$/)
     if (!match) return expr
-    let parsed = parseTemporalLiteral(match[1], targetType.kind)
+    let parsed = parseTemporalLiteral(match[1], targetType)
     if (!parsed) {
-      this.diag(node, `Cannot parse as ${targetType.kind}: ${expr.sql}`)
+      this.diag(node, `Cannot parse as ${targetType}: ${expr.sql}`)
       return expr
     }
-    return {...expr, sql: `${targetType.kind.toUpperCase()} '${parsed.literal}'`, type: scalarType(targetType.kind)}
+    return {...expr, sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: scalarType(targetType)}
   }
 
-  private preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType) {
-    let metadata = expr.type.metadata
-    if (!metadata?.temporal) return resultType
-    if (!isScalarType(resultType, 'date') && !isScalarType(resultType, 'timestamp')) return resultType
-    return withTypeMetadata(resultType, metadata)
+  private preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType): FieldMeta | undefined {
+    if (!expr.metadata?.timeGrain) return undefined
+    if (!isScalarType(resultType, 'date') && !isScalarType(resultType, 'timestamp')) return undefined
+    return expr.metadata
   }
 
-  private sameFieldMetadata(left?: FieldType, right?: FieldType) {
-    let leftMetadata = left?.metadata
-    let rightMetadata = right?.metadata
-    if (!leftMetadata && !rightMetadata) return true
-    if (!leftMetadata || !rightMetadata) return false
-    return this.sameTemporalMetadata(leftMetadata.temporal, rightMetadata.temporal)
-  }
-
-  private sameTemporalMetadata(left?: TemporalFieldMetadata, right?: TemporalFieldMetadata) {
+  private sameFieldMetadata(left?: FieldMeta, right?: FieldMeta) {
     if (!left && !right) return true
     if (!left || !right) return false
-    return left.grain == right.grain
+    return left.timeGrain == right.timeGrain
+  }
+
+  private withoutTimeGrain(metadata?: FieldMeta): FieldMeta | undefined {
+    if (!metadata?.timeGrain) return metadata
+    let {timeGrain: _timeGrain, ...next} = metadata
+    return Object.keys(next).length ? next : undefined
   }
 
   private isPercentileFunctionCall(node: SyntaxNode): boolean {

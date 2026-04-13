@@ -1,11 +1,12 @@
 <script lang="ts">
   import {onDestroy, onMount, type Snippet} from 'svelte'
-  import type {GrapheneError} from '../../lang/types.ts'
+  import type {GrapheneError} from '../../lang/index.d.ts'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
+  import type {QueryResult} from '../component-utilities/types.ts'
   import Skeleton from './Skeleton.svelte'
 
   interface Props {
-    data: string | {rows?: any[]}
+    data: string | QueryResult
     height?: number
     fields?: Record<string, string | string[]>
     children?: Snippet<[any[]]>

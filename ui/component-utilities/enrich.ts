@@ -479,8 +479,8 @@ function fieldType(fields: Field[], fieldName?: string): string {
 
   let field = fields.find(entry => entry.name === fieldName)
   if (!field) return 'unknown'
-  if (field.type.kind === 'array') throw new Error(`Field ${fieldName} has unsupported non-scalar type: array`)
-  return field.type.kind
+  if (typeof field.type !== 'string') throw new Error(`Field ${fieldName} has unsupported non-scalar type: array`)
+  return field.type
 }
 
 function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {

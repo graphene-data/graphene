@@ -25,6 +25,9 @@ export function clearSvelteWarnings() {
   svelteWarnings.length = 0
 }
 
+// Bump this whenever the query response shape changes so client caches invalidate.
+const QUERY_VERSION = 1
+
 let uiRoot: string
 
 export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
@@ -138,7 +141,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let sql = toSql(queries[0], params)
 
   // If the client already has this data, dont run the query
-  let hash = crypto.createHash('SHA1').update(sql).digest('hex')
+  let hash = crypto.createHash('SHA1').update(`query-v${QUERY_VERSION}|${sql}`).digest('hex')
   res.setHeader('ETag', hash)
   if (hashes.includes(hash) && req.headers['cache-control'] != 'no-cache') {
     res.statusCode = 304
@@ -148,7 +151,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let queryResults = await runQuery(sql)
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  let fields = queries[0].fields.map(f => ({name: f.name, type: f.type}))
+  let fields = queries[0].fields.map(field => ({name: field.name, type: field.type, metadata: field.metadata || {}}))
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
 }
 
