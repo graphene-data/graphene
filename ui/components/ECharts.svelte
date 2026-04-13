@@ -122,11 +122,24 @@
     let fields: Record<string, string[]> = {}
     let series = Array.isArray(config.series) ? config.series : [config.series]
     let entries = series.flatMap(s => Object.entries(s?.encode || {}))
+
     for (let [attr, col] of entries) {
+      let value = queryableEncodeValue(attr, col)
+      if (!value) continue
       fields[attr] ||= []
-      fields[attr].push(col)
+      fields[attr].push(value)
     }
     return fields
+  }
+
+  function queryableEncodeValue(attr: string, value: unknown) {
+    if (typeof value !== 'string') return undefined
+    let trimmed = value.trim()
+    if (!trimmed) return undefined
+
+    // sort supports "column" or "column asc|desc". We only need the field in SELECT.
+    if (attr === 'sort') return trimmed.split(/\s+/)[0]
+    return trimmed
   }
 
   function calculateChartSize(config?: NormalConfig, rows: Record<string, any>[] = []) {

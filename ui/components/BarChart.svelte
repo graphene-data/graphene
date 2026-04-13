@@ -11,6 +11,7 @@
     stack?: string
     stack100?: string
     label?: boolean
+    sort?: string
     title?: string
     height?: string | number
     width?: string | number
@@ -25,6 +26,7 @@
     stack = undefined,
     stack100 = undefined,
     label = false,
+    sort = undefined,
     title = undefined,
     height = undefined,
     width = undefined,
@@ -38,11 +40,12 @@
     let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'bar-stack' : undefined
     let stackPercentage = mode?.kind === 'stack100' ? true : undefined
 
+    let sortHint = typeof sort === 'string' && sort.trim().length > 0 ? {sort} : {}
     let series: SeriesWithGroupingHint[] = grouped
-      ? [{type: 'bar' as const, encode: {x, y: yFields[0], group: mode?.field}, stack: stackKey, stackPercentage, label: barLabel}]
-      : yFields.map(field => ({type: 'bar' as const, name: field, encode: {x, y: field}, label: barLabel}))
+      ? [{type: 'bar' as const, encode: {x, y: yFields[0], group: mode?.field, ...sortHint}, stack: stackKey, stackPercentage, label: barLabel}]
+      : yFields.map(field => ({type: 'bar' as const, name: field, encode: {x, y: field, ...sortHint}, label: barLabel}))
 
-    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2}})
+    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
 
     return {
       title: title ? {text: title} : undefined,
