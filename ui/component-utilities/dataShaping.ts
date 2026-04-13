@@ -138,6 +138,73 @@ export function applyDefaultSorting(config: NormalConfig, rows: Record<string, a
   sortRowsByCategoryMetric(rows, xField, row => Number(row?.[firstY]) || 0)
 }
 
+// Materialize dataset-backed bar series into explicit point arrays so later enrichments can mutate points.
+// This is needed to round the corners of bars, which can only be done with point-level item styles.
+export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, any>[]) {
+  let horizontal = isHorizontalBar(config)
+  let datasetsById = new Map<string, Record<string, any>>()
+  for (let dataset of config.dataset) {
+    if (!dataset?.id) continue
+    datasetsById.set(String(dataset.id), dataset as Record<string, any>)
+  }
+
+  let memo = new Map<string, Record<string, any>[] | null>()
+  let datasetRows = (datasetId?: string): Record<string, any>[] | null => {
+    if (!datasetId) return rows
+    if (memo.has(datasetId)) return memo.get(datasetId) ?? null
+
+    let dataset = datasetsById.get(datasetId)
+    if (!dataset) return null
+
+    if (Array.isArray(dataset.source)) {
+      memo.set(datasetId, dataset.source as Record<string, any>[])
+      return dataset.source as Record<string, any>[]
+    }
+
+    let parentId = dataset.fromDatasetId != null ? String(dataset.fromDatasetId) : undefined
+    if (!parentId) return null
+
+    let parentRows = datasetRows(parentId)
+    if (!parentRows) return null
+
+    let transform = dataset.transform as Record<string, any> | undefined
+    if (transform?.type !== 'filter') return null
+
+    let filterConfig = transform.config as Record<string, any> | undefined
+    let filterField = filterConfig?.dimension
+    if (typeof filterField !== 'string' || !filterConfig || !Object.prototype.hasOwnProperty.call(filterConfig, '=')) return null
+
+    let filtered = parentRows.filter(row => row?.[filterField] === filterConfig['='])
+    memo.set(datasetId, filtered)
+    return filtered
+  }
+
+  for (let series of config.series) {
+    if (series?.type !== 'bar' || !series?.stack || series?.data != null) continue
+
+    let xField = getSeriesXField(series)
+    let yField = getSeriesYField(series)
+    let categoryField = horizontal ? yField : xField
+    if (!xField || !yField || !categoryField) continue
+
+    let seriesRows = datasetRows(series.datasetId)
+    if (!seriesRows) continue
+
+    let rowByCategory = new Map<string, Record<string, any>>()
+    for (let row of seriesRows) {
+      let key = valueKey(row?.[categoryField])
+      if (!rowByCategory.has(key)) rowByCategory.set(key, row)
+    }
+
+    let categories = distinctValues(rows, categoryField)
+    series.data = categories.map(categoryValue => {
+      let sourceRow = rowByCategory.get(valueKey(categoryValue))!
+      return {...sourceRow, value: [sourceRow[xField], sourceRow[yField]]}
+    })
+    delete series.datasetId
+  }
+}
+
 function sortRowsByXAscending(rows: Record<string, any>[], xField: string, xType: 'date' | 'number') {
   let indexed = rows.map((row, index) => ({row, index}))
   indexed.sort((a, b) => {
@@ -219,6 +286,13 @@ function getSplitField(series: SeriesWithGroupingHint) {
   if (typeof series?.encode?.group === 'string') return series.encode.group
   if (typeof series?.encode?.stack === 'string') return series.encode.stack
   return undefined
+}
+
+function isHorizontalBar(config: NormalConfig) {
+  let xAxis = config.xAxis[0]
+  let yAxis = config.yAxis[0]
+  let hasBarSeries = config.series.some(series => series?.type === 'bar')
+  return Boolean(hasBarSeries && xAxis?.type === 'value' && yAxis?.type === 'category')
 }
 
 function getSeriesXField(series?: SeriesWithGroupingHint) {
