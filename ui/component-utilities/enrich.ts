@@ -1,6 +1,6 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
-import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
+import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
 import {makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {colorPalette} from './theme.ts'
 
@@ -19,16 +19,18 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   ensureAxes(normalized)
   ensureTooltip(normalized)
 
+  // Resolve axis types/fields up front so row shaping (like explicit sorting) can use axis metadata.
+  inferAxisTypesFromEncodedFields(normalized, fields)
+
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
   applyMissingPointDefaults(normalized, rows)
   applyStackPercentage(normalized, rows, fields)
-  applyDefaultSorting(normalized, rows, fields)
+  applySorting(normalized, rows, fields)
 
   let baseDatasetId = ensureDataset(normalized, rows, fields)
   expandSeriesTransforms(normalized, rows, baseDatasetId)
 
   // stylistic rules to provide great defaults
-  inferAxisTypesFromEncodedFields(normalized, fields)
   lineSeriesMarkerVisibility(normalized, rows)
   horizontalBarGuard(normalized, fields)
   computeTitleLegendAndGridPadding(normalized)

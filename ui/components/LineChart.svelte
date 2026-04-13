@@ -8,6 +8,7 @@
     y: string
     y2?: string
     series?: string
+    sort?: string
     title?: string
     height?: string | number
     width?: string | number
@@ -19,6 +20,7 @@
     y,
     y2 = undefined,
     series = undefined,
+    sort = undefined,
     title = undefined,
     height = undefined,
     width = undefined,
@@ -28,13 +30,14 @@
     let yFields = parseList(y)
     let groupedSeries = Boolean(series && yFields.length === 1)
 
+    let sortHint = typeof sort === 'string' && sort.trim().length > 0 ? {sort} : {}
     let primarySeries = groupedSeries
-      ? [{type: 'line', encode: {x, y: yFields[0], group: series}}]
-      : yFields.map(field => ({type: 'line', name: field, encode: {x, y: field}}))
+      ? [{type: 'line', encode: {x, y: yFields[0], group: series, ...sortHint}}]
+      : yFields.map(field => ({type: 'line', name: field, encode: {x, y: field, ...sortHint}}))
 
     let seriesTemplates: any[] = [...primarySeries]
     if (y2) {
-      seriesTemplates.push({type: 'line', name: y2, yAxisIndex: 1, encode: {x, y: y2}})
+      seriesTemplates.push({type: 'line', name: y2, yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
     }
 
     return {

@@ -43,6 +43,7 @@ export type SeriesWithGroupingHint = Omit<SeriesOption, 'encode'> &
     encode?: SeriesEncode & {
       group?: string
       stack?: string
+      sort?: string
     }
   }
 
