@@ -2,13 +2,16 @@ import {glob} from 'glob'
 import {readFile} from 'node:fs/promises'
 import path from 'node:path'
 
+import type {GrapheneError} from './index.d.ts'
+
 import {analyzeWorkspace} from './analyze.ts'
 import {fillInParams} from './params.ts'
-import {type AnalysisResult, type GrapheneError, type Location, type Query, type WorkspaceFileInput} from './types.ts'
+import {type AnalysisResult, type Location, type Query, type WorkspaceFileInput} from './types.ts'
 import {getSourceOffset} from './util.ts'
 
 export {analyzeWorkspace}
-export type {AnalysisResult, AnalysisWorkspace, FileInfo, GrapheneError, Query, Table, WorkspaceFileInput} from './types.ts'
+export type {GrapheneError} from './index.d.ts'
+export type {AnalysisResult, AnalysisWorkspace, FileInfo, Query, Table, WorkspaceFileInput} from './types.ts'
 
 export async function loadWorkspace(dir: string, includeMd: boolean, ignoredFiles: string[] = []): Promise<WorkspaceFileInput[]> {
   let ignore = ['node_modules/**', '**/.*/**', ...ignoredFiles]

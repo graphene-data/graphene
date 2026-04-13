@@ -7,11 +7,12 @@ import path from 'path'
 import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
 
+import type {GrapheneError} from '../lang/index.d.ts'
 import type {CliTelemetry} from './telemetry/index.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql} from '../lang/core.ts'
-import {type AnalysisResult, type GrapheneError, type WorkspaceFileInput} from '../lang/types.ts'
+import {type AnalysisResult, type WorkspaceFileInput} from '../lang/types.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'

@@ -9,26 +9,13 @@ import type {
   YAXisComponentOption,
 } from 'echarts/types/dist/echarts'
 
-import type {FieldType, GrapheneError} from '../../lang/types.ts'
+import type {Field as ApiField, QueryResult as ApiQueryResult} from '../../lang/index.d.ts'
 
 type SingleOrArray<T> = T | T[]
 type SeriesEncode = Record<string, unknown>
 
-export interface QueryResult {
-  rows: any[]
-  fields?: Field[]
-  error?: GrapheneError
-}
-
-export type Field = {
-  name: string
-  type: FieldType
-  metadata?: {
-    pct?: true
-    units?: string
-    granularity?: string
-  }
-}
+export type Field = ApiField
+export type QueryResult = ApiQueryResult
 
 type CommonSeriesFields = {
   type?: string

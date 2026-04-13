@@ -53,7 +53,7 @@ ${(await readdir(path.resolve(__dirname, '../docs/references'))).map(f => `- ref
 await cp(path.resolve(__dirname, '../docs/references'), path.resolve(skillDir, 'references'), {recursive: true})
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
 await mkdir(path.resolve(__dirname, 'dist/lang'), {recursive: true})
-await cp(path.resolve(__dirname, '../lang/types.ts'), path.resolve(__dirname, 'dist/lang/types.ts'))
+await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 'dist/lang/index.d.ts'))
 await transpileSvelteModules(path.resolve(__dirname, 'dist/ui'))
 await rm(path.resolve(__dirname, 'dist/ui/node_modules'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))

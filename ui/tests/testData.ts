@@ -1,4 +1,3 @@
-import {scalarType} from '../../lang/types.ts'
 import {type Field} from '../component-utilities/types.ts'
 
 type TableRows = {rows: any[]; fields: Field[]}
@@ -11,8 +10,8 @@ export function singleDim(): TableRows {
 
   let rows = Object.keys(result).map(category => ({category, value: result[category]}))
   let fields: Field[] = [
-    {name: 'category', type: scalarType('string')},
-    {name: 'value', type: scalarType('number'), metadata: {units: 'usd'}},
+    {name: 'category', type: 'string'},
+    {name: 'value', type: 'number', metadata: {units: 'usd'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -25,8 +24,8 @@ export function timeseries(): TableRows {
 
   let rows = Object.keys(result).map(month => ({month: new Date(month), sales_usd0k: result[month]}))
   let fields: Field[] = [
-    {name: 'month', type: scalarType('date'), metadata: {granularity: 'month'}},
-    {name: 'sales_usd0k', type: scalarType('number'), metadata: {units: 'usd'}},
+    {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
+    {name: 'sales_usd0k', type: 'number', metadata: {units: 'usd'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -34,9 +33,9 @@ export function timeseries(): TableRows {
 export function timeseriesGrouped(): TableRows {
   let rows = ordersByCategory.map(row => ({...row, month: new Date(row.month)}))
   let fields: Field[] = [
-    {name: 'month', type: scalarType('date'), metadata: {granularity: 'month'}},
-    {name: 'category', type: scalarType('string')},
-    {name: 'sales_usd0k', type: scalarType('number'), metadata: {units: 'usd'}},
+    {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
+    {name: 'category', type: 'string'},
+    {name: 'sales_usd0k', type: 'number', metadata: {units: 'usd'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -57,9 +56,9 @@ export function sparseGroupedMonthRows(): TableRows {
     // April for metric B is intentionally missing.
   ]
   let fields: Field[] = [
-    {name: 'month', type: scalarType('date'), metadata: {granularity: 'month'}},
-    {name: 'metric', type: scalarType('string')},
-    {name: 'value', type: scalarType('number'), metadata: {units: 'count'}},
+    {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
+    {name: 'metric', type: 'string'},
+    {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -74,9 +73,9 @@ export function timeseriesWithDateSeries(): TableRows {
     {quarter: '2021-07-01', category: 'Gadgets', sales: 300},
   ]
   let fields: Field[] = [
-    {name: 'quarter', type: scalarType('date'), metadata: {granularity: 'quarter'}},
-    {name: 'category', type: scalarType('string')},
-    {name: 'sales', type: scalarType('number'), metadata: {units: 'usd'}},
+    {name: 'quarter', type: 'date', metadata: {timeGrain: 'quarter'}},
+    {name: 'category', type: 'string'},
+    {name: 'sales', type: 'number', metadata: {units: 'usd'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -91,8 +90,8 @@ export function yearlyCounts(): TableRows {
     {year: 2005, flights: 120},
   ]
   let fields: Field[] = [
-    {name: 'year', type: scalarType('number'), metadata: {granularity: 'year'}},
-    {name: 'flights', type: scalarType('number'), metadata: {units: 'count'}},
+    {name: 'year', type: 'number', metadata: {timeGrain: 'year'}},
+    {name: 'flights', type: 'number', metadata: {units: 'count'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -109,8 +108,8 @@ export function denseTimeseries(points = 365): TableRows {
   })
 
   let fields: Field[] = [
-    {name: 'ts', type: scalarType('date'), metadata: {granularity: 'day'}},
-    {name: 'value', type: scalarType('number'), metadata: {units: 'count'}},
+    {name: 'ts', type: 'date', metadata: {timeGrain: 'day'}},
+    {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -118,8 +117,8 @@ export function denseTimeseries(points = 365): TableRows {
 export function categoricalSeries(count: number): TableRows {
   let rows = Array.from({length: count}, (_, index) => ({category: `Bucket ${index + 1}`, value: 100 + Math.sin(index / 2) * 20}))
   let fields: Field[] = [
-    {name: 'category', type: scalarType('string')},
-    {name: 'value', type: scalarType('number'), metadata: {units: 'count'}},
+    {name: 'category', type: 'string'},
+    {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -131,8 +130,8 @@ export function tableDataWithDates(): TableRows {
     {month: '2021-02-01', sales: 65},
   ]
   let fields: Field[] = [
-    {name: 'month', type: scalarType('date'), metadata: {granularity: 'month'}},
-    {name: 'sales', type: scalarType('number'), metadata: {units: 'usd'}},
+    {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
+    {name: 'sales', type: 'number', metadata: {units: 'usd'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -143,8 +142,8 @@ export function tableDataForPagination(count = 15): TableRows {
     value: index + 1,
   }))
   let fields: Field[] = [
-    {name: 'item', type: scalarType('string')},
-    {name: 'value', type: scalarType('number'), metadata: {units: 'count'}},
+    {name: 'item', type: 'string'},
+    {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -159,9 +158,9 @@ export function groupedDataForSection(): TableRows {
     {time_horizon: '90 days', sku: 'SKU-A', units: 200},
   ]
   let fields: Field[] = [
-    {name: 'time_horizon', type: scalarType('string')},
-    {name: 'sku', type: scalarType('string')},
-    {name: 'units', type: scalarType('number'), metadata: {units: 'count'}},
+    {name: 'time_horizon', type: 'string'},
+    {name: 'sku', type: 'string'},
+    {name: 'units', type: 'number', metadata: {units: 'count'}},
   ]
   return withEvidenceTypes(rows, fields)
 }
@@ -172,10 +171,10 @@ function withEvidenceTypes(rows: any[], fields: Field[]): TableRows {
 }
 
 function evidenceType(field: Field) {
-  if (field.type.kind === 'array') return 'string'
-  if (field.type.kind === 'number') return 'number'
-  if (field.type.kind === 'date' || field.type.kind === 'timestamp') return 'date'
-  if (field.type.kind === 'boolean') return 'boolean'
+  if (typeof field.type !== 'string') return 'string'
+  if (field.type === 'number') return 'number'
+  if (field.type === 'date' || field.type === 'timestamp') return 'date'
+  if (field.type === 'boolean') return 'boolean'
   return 'string'
 }
 

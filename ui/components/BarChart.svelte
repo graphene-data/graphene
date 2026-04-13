@@ -1,9 +1,9 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
-  import type {EChartsConfig, SeriesWithGroupingHint} from '../component-utilities/types.ts'
+  import type {EChartsConfig, QueryResult, SeriesWithGroupingHint} from '../component-utilities/types.ts'
 
   interface Props {
-    data: string | {rows?: any[]; fields?: any[]}
+    data: string | QueryResult
     x: string
     y: string
     y2?: string

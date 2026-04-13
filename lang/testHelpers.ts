@@ -1,6 +1,8 @@
 import {type DuckDBConnection, DuckDBInstance} from '@duckdb/node-api'
 import {expect as vitestExpect} from 'vitest'
 
+import type {GrapheneError} from './index.d.ts'
+
 import {config} from './config.ts'
 import {
   analyzeWorkspace,
@@ -13,7 +15,7 @@ import {
   loadWorkspace as loadWorkspaceFiles,
   toSql,
 } from './core.ts'
-import {type AnalysisResult, type GrapheneError, type WorkspaceFileInput} from './types.ts'
+import {type AnalysisResult, type WorkspaceFileInput} from './types.ts'
 import {trimIndentation} from './util.ts'
 
 const ECOMM_SETUP = `

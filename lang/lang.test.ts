@@ -728,12 +728,12 @@ describe('lang', () => {
       from t select name
     `)
     let table = getTable('t')!
-    expect(table.metadata?.description?.toLowerCase()).toContain('this is my test table')
+    expect(String(table.metadata?.description || '').toLowerCase()).toContain('this is my test table')
     let name = table.columns.find(c => c.name === 'name')!
-    expect(name.metadata!.description!.toLowerCase()).toContain('a description')
+    expect(String(name.metadata!.description || '').toLowerCase()).toContain('a description')
     expect(name.metadata!.format).toBe('first_last')
     let another = table.columns.find(c => c.name === 'another_field')!
-    expect(another.metadata!.description!.toLowerCase()).toContain('this is another field')
+    expect(String(another.metadata!.description || '').toLowerCase()).toContain('this is another field')
     expect(another.metadata!.units).toBe('seconds')
   })
 
@@ -746,8 +746,20 @@ describe('lang', () => {
     let t = getTable('foo')!
     let id = t.columns.find(c => c.name === 'id')!
     let name = t.columns.find(c => c.name === 'name')!
-    expect(id.metadata!.description!.toLowerCase()).toContain('name field')
+    expect(String(id.metadata!.description || '').toLowerCase()).toContain('name field')
     expect(name.metadata?.description).toBeUndefined()
+  })
+
+  it('propagates field metadata from table columns to query output fields', () => {
+    updateFile(
+      `table revenue (
+      amount int -- gross revenue #units=usd
+    )`,
+      'revenue.gsql',
+    )
+
+    let [query] = analyze('from revenue select amount')
+    expect(query.fields[0].metadata).toMatchObject({units: 'usd'})
   })
 
   it('reports diagnostics for duplicate table definitions', () => {
@@ -969,19 +981,19 @@ describe('lang', () => {
 
     setConfig({root: '', bigquery: {}})
     let [bigQuery] = analyze('from events select date_trunc(event_date, month) as month_start')
-    expect(bigQuery.fields[0].type.metadata).toEqual({temporal: {grain: 'month'}})
+    expect(bigQuery.fields[0].metadata).toEqual({timeGrain: 'month'})
 
     setConfig({root: ''})
     let [duckDb] = analyze("from events select date_trunc('quarter', event_date) as quarter_start")
-    expect(duckDb.fields[0].type.metadata).toEqual({temporal: {grain: 'quarter'}})
+    expect(duckDb.fields[0].metadata).toEqual({timeGrain: 'quarter'})
 
     setConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze("from events select date_trunc('year', event_date) as year_start")
-    expect(snowflake.fields[0].type.metadata).toEqual({temporal: {grain: 'year'}})
+    expect(snowflake.fields[0].metadata).toEqual({timeGrain: 'year'})
 
     setConfig({dialect: 'clickhouse', root: ''})
     let [clickhouse] = analyze("from events select date_trunc('week', event_date) as week_start")
-    expect(clickhouse.fields[0].type.metadata).toEqual({temporal: {grain: 'week'}})
+    expect(clickhouse.fields[0].metadata).toEqual({timeGrain: 'week'})
   })
 
   it('propagates temporal grain through refs and drops it for reshaping expressions', () => {
@@ -996,13 +1008,13 @@ describe('lang', () => {
     )
 
     let [throughRef] = analyze('from events select month_start')
-    expect(throughRef.fields[0].type.metadata).toEqual({temporal: {grain: 'month'}})
+    expect(throughRef.fields[0].metadata).toEqual({timeGrain: 'month'})
 
     let [throughCast] = analyze('from events select cast(month_start as date) as month_date')
-    expect(throughCast.fields[0].type.metadata).toEqual({temporal: {grain: 'month'}})
+    expect(throughCast.fields[0].metadata).toEqual({timeGrain: 'month'})
 
     let [reshaped] = analyze('from events select extract(year from month_start) as year_num')
-    expect(reshaped.fields[0].type.metadata).toBeUndefined()
+    expect(reshaped.fields[0].metadata).toBeUndefined()
   })
 
   it('drops temporal grain on set operations when branches disagree', () => {
@@ -1014,7 +1026,7 @@ describe('lang', () => {
       from events select date_trunc('year', event_date) as bucket
     `)
 
-    expect(query.fields[0].type.metadata).toBeUndefined()
+    expect(query.fields[0].metadata).toBeUndefined()
   })
 
   it('supports extract expressions', () => {

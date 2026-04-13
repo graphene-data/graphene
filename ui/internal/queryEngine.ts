@@ -1,7 +1,7 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
-import type {FieldType, GrapheneError} from '../../lang/types.ts'
+import type {GrapheneError} from '../../lang/index.d.ts'
 
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
@@ -27,6 +27,7 @@ export interface QueryRequest {
   hashes: string[]
   repoId: string
 }
+
 export type QueryFetcher = (req: QueryRequest) => Promise<QueryResult>
 
 let runPending: Promise<void> | null = null
@@ -104,12 +105,12 @@ async function runNode(n: QueryNode) {
     let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId})
     let result = translateData(res, n)
     if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
-    n.callback(res)
+    n.callback(result)
   } catch (e) {
     let err = typeof e == 'string' ? new Error(e) : (e as Error)
     let grapheneError = err as GrapheneError
     n.error = {...grapheneError, queryId: n.queryId || grapheneError.queryId, message: err.message, stack: err.stack}
-    n.callback({rows: [], fields: [], error: n.error})
+    n.callback({rows: [], fields: [], error: n.error, sql: ''})
   } finally {
     n.loading = false
   }
@@ -156,7 +157,7 @@ async function _runAll() {
 }
 
 // This translates results we got back from the server into the format any frontend code expects.
-export function translateData(data: any, node: QueryNode) {
+export function translateData(data: any, node: QueryNode): QueryResult {
   let rows = data.rows || []
   let fields: Field[] = []
   rows.dataLoaded = true // evidence components need this to be set
@@ -202,7 +203,7 @@ export function translateData(data: any, node: QueryNode) {
     fields.push({...field, name})
 
     // map graphene types down to the ones evidence expects
-    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), fieldMetadata: field.type?.metadata})
+    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), fieldMetadata: field.metadata})
   })
 
   return {rows, fields}
@@ -221,7 +222,7 @@ errorProvider('queryEngine', () => {
   return Object.values(unique)
 })
 
-function evidenceType(type: FieldType | undefined) {
+function evidenceType(type: Field['type'] | undefined) {
   let kind = typeDescription(type)
   if (kind === 'string') return 'string'
   if (kind === 'number') return 'number'
@@ -231,10 +232,10 @@ function evidenceType(type: FieldType | undefined) {
   return 'string'
 }
 
-function typeDescription(type: FieldType | undefined): string {
+function typeDescription(type: Field['type'] | undefined): string {
   if (!type) return 'unknown'
-  if (type.kind == 'array') return `array<${typeDescription(type.elementType)}>`
-  return type.kind
+  if (typeof type === 'string') return type
+  return `array<${typeDescription(type.elementType)}>`
 }
 
 if (typeof window !== 'undefined') {

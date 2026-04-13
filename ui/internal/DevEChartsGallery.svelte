@@ -1,5 +1,4 @@
 <script lang="ts">
-  import {scalarType} from '../../lang/types.ts'
   import ECharts from '../components/ECharts.svelte'
 
   let monthRows = [
@@ -181,58 +180,58 @@
   ]
 
   let twoColFields = [
-    {name: 'month', type: scalarType('date')},
-    {name: 'value', type: scalarType('number')},
+    {name: 'month', type: 'date'},
+    {name: 'value', type: 'number'},
   ]
 
   let weekdayFields = [
-    {name: 'day', type: scalarType('string')},
-    {name: 'metric', type: scalarType('string')},
-    {name: 'value', type: scalarType('number')},
+    {name: 'day', type: 'string'},
+    {name: 'metric', type: 'string'},
+    {name: 'value', type: 'number'},
   ]
 
   let quarterFields = [
-    {name: 'quarter', type: scalarType('string')},
-    {name: 'metric', type: scalarType('string')},
-    {name: 'value', type: scalarType('number')},
+    {name: 'quarter', type: 'string'},
+    {name: 'metric', type: 'string'},
+    {name: 'value', type: 'number'},
   ]
 
   let scatterFields = [
-    {name: 'group', type: scalarType('string')},
-    {name: 'x', type: scalarType('number')},
-    {name: 'y', type: scalarType('number')},
+    {name: 'group', type: 'string'},
+    {name: 'x', type: 'number'},
+    {name: 'y', type: 'number'},
   ]
 
   let labelValueFields = [
-    {name: 'channel', type: scalarType('string')},
-    {name: 'value', type: scalarType('number')},
+    {name: 'channel', type: 'string'},
+    {name: 'value', type: 'number'},
   ]
 
   let groupedStackedFields = [
-    {name: 'quarter', type: scalarType('string')},
-    {name: 'region', type: scalarType('string')},
-    {name: 'channel', type: scalarType('string')},
-    {name: 'value', type: scalarType('number')},
+    {name: 'quarter', type: 'string'},
+    {name: 'region', type: 'string'},
+    {name: 'channel', type: 'string'},
+    {name: 'value', type: 'number'},
   ]
 
   let dualAxisFields = [
-    {name: 'month', type: scalarType('string')},
-    {name: 'revenue', type: scalarType('number')},
-    {name: 'conversion_rate', type: scalarType('number')},
+    {name: 'month', type: 'string'},
+    {name: 'revenue', type: 'number'},
+    {name: 'conversion_rate', type: 'number'},
   ]
 
   let bubbleFields = [
-    {name: 'segment', type: scalarType('string')},
-    {name: 'efficiency', type: scalarType('number')},
-    {name: 'growth', type: scalarType('number')},
-    {name: 'pipeline', type: scalarType('number')},
-    {name: 'quality', type: scalarType('number')},
+    {name: 'segment', type: 'string'},
+    {name: 'efficiency', type: 'number'},
+    {name: 'growth', type: 'number'},
+    {name: 'pipeline', type: 'number'},
+    {name: 'quality', type: 'number'},
   ]
 
   let sankeyFields = [
-    {name: 'source', type: scalarType('string')},
-    {name: 'target', type: scalarType('string')},
-    {name: 'value', type: scalarType('number')},
+    {name: 'source', type: 'string'},
+    {name: 'target', type: 'string'},
+    {name: 'value', type: 'number'},
   ]
 
   let sankeyNodes = Array.from(new Set(sankeyRows.flatMap(row => [row.source, row.target]))).map(name => ({name}))
@@ -327,7 +326,7 @@
 
   <ECharts
     height={320}
-    data={{rows: heatmapRows, fields: [{name: 'day', type: scalarType('string')}, {name: 'period', type: scalarType('string')}, {name: 'value', type: scalarType('number')}]}}
+    data={{rows: heatmapRows, fields: [{name: 'day', type: 'string'}, {name: 'period', type: 'string'}, {name: 'value', type: 'number'}]}}
     config={{
       title: {text: 'Heatmap'},
       tooltip: {trigger: 'item'},
@@ -346,11 +345,11 @@
     data={{
       rows: candleRows,
       fields: [
-        {name: 'month', type: scalarType('string')},
-        {name: 'open', type: scalarType('number')},
-        {name: 'close', type: scalarType('number')},
-        {name: 'low', type: scalarType('number')},
-        {name: 'high', type: scalarType('number')},
+        {name: 'month', type: 'string'},
+        {name: 'open', type: 'number'},
+        {name: 'close', type: 'number'},
+        {name: 'low', type: 'number'},
+        {name: 'high', type: 'number'},
       ],
     }}
     config={{
@@ -364,7 +363,7 @@
 
   <ECharts
     height={320}
-    data={{rows: funnelRows, fields: [{name: 'stage', type: scalarType('string')}, {name: 'value', type: scalarType('number')}]}}
+    data={{rows: funnelRows, fields: [{name: 'stage', type: 'string'}, {name: 'value', type: 'number'}]}}
     config={{
       title: {text: 'Funnel'},
       tooltip: {trigger: 'item'},
@@ -374,7 +373,7 @@
 
   <ECharts
     height={320}
-    data={{rows: treemapRows, fields: [{name: 'name', type: scalarType('string')}, {name: 'value', type: scalarType('number')}]}}
+    data={{rows: treemapRows, fields: [{name: 'name', type: 'string'}, {name: 'value', type: 'number'}]}}
     config={{
       title: {text: 'Treemap'},
       tooltip: {trigger: 'item'},
@@ -387,9 +386,9 @@
     data={{
       rows: themeRiverRows,
       fields: [
-        {name: 'month', type: scalarType('date')},
-        {name: 'topic', type: scalarType('string')},
-        {name: 'value', type: scalarType('number')},
+        {name: 'month', type: 'date'},
+        {name: 'topic', type: 'string'},
+        {name: 'value', type: 'number'},
       ],
     }}
     config={{
