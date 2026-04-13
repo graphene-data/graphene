@@ -115,7 +115,9 @@ a {
   color: var(--color-link);
   text-decoration: underline;
   text-decoration-color: transparent;
-  transition: color 200ms ease, text-decoration-color 200ms ease;
+  transition:
+    color 200ms ease,
+    text-decoration-color 200ms ease;
 }
 a:hover {
   text-decoration-color: brightness(85%);
