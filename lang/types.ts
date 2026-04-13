@@ -1,6 +1,7 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
 
 import type {ExprFanout, FanoutPath} from './fanout.ts'
+import type {ArrayField, FieldMeta, FieldType, GrapheneError, Position, ScalarField, TimeGrain} from './index.d.ts'
 import type {TimestampUnit} from './temporal.ts'
 
 declare module '@lezer/common' {
@@ -39,29 +40,10 @@ export interface ParsedFileArtifacts {
   virtualToMarkdownOffset?: number[]
 }
 
-export type ScalarTypeKind = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'record'
-export interface TemporalFieldMetadata {
-  grain: TemporalGrain
-}
+export type {FieldType, FieldMeta, GrapheneError, Position, ScalarField, ArrayField, TimeGrain}
+export type TypeKind = ScalarField | 'array'
 
-export interface FieldMetadata {
-  temporal?: TemporalFieldMetadata
-}
-
-export interface ScalarFieldType<K extends ScalarTypeKind = ScalarTypeKind> {
-  kind: K
-  metadata?: FieldMetadata
-}
-export interface ArrayFieldType {
-  kind: 'array'
-  elementType: FieldType
-  metadata?: FieldMetadata
-}
-export type FieldType = ScalarFieldType | ArrayFieldType
-export type TypeKind = FieldType['kind']
-export type TemporalGrain = 'year' | 'quarter' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'
-
-let SCALAR_TYPE_ALIASES: Record<string, ScalarTypeKind> = {
+let SCALAR_TYPE_ALIASES: Record<string, ScalarField> = {
   int: 'number',
   int64: 'number',
   number: 'number',
@@ -103,21 +85,21 @@ let SCALAR_TYPE_ALIASES: Record<string, ScalarTypeKind> = {
   interval: 'interval',
 }
 
-export function scalarType<K extends ScalarTypeKind>(kind: K): ScalarFieldType<K> {
-  return {kind}
+export function scalarType<K extends ScalarField>(kind: K): K {
+  return kind
 }
 
-export function arrayOf(elementType: FieldType): ArrayFieldType {
-  return {kind: 'array', elementType}
+export function arrayOf(elementType: FieldType): ArrayField {
+  return {type: 'array', elementType}
 }
 
-export function isArrayType(type: FieldType | null | undefined): type is ArrayFieldType {
-  return !!type && typeof type == 'object' && type.kind == 'array'
+export function isArrayType(type: FieldType | null | undefined): type is ArrayField {
+  return !!type && typeof type == 'object' && type.type == 'array'
 }
 
-export function isScalarType<K extends ScalarTypeKind>(type: FieldType | null | undefined, kind?: K): type is ScalarFieldType<K> {
-  if (!type || typeof type != 'object' || type.kind == 'array') return false
-  return kind ? type.kind == kind : true
+export function isScalarType<K extends ScalarField>(type: FieldType | null | undefined, kind?: K): type is K {
+  if (!type || typeof type != 'string') return false
+  return kind ? type == kind : true
 }
 
 export function isSameType(left: FieldType | null | undefined, right: FieldType | null | undefined): boolean {
@@ -126,7 +108,7 @@ export function isSameType(left: FieldType | null | undefined, right: FieldType 
     if (!isArrayType(left) || !isArrayType(right)) return false
     return isSameType(left.elementType, right.elementType)
   }
-  return left.kind == right.kind
+  return left == right
 }
 
 export function formatType(type: FieldType | null | undefined): string {
@@ -135,19 +117,10 @@ export function formatType(type: FieldType | null | undefined): string {
     if (isScalarType(type.elementType, 'sql native')) return 'array'
     return `array<${formatType(type.elementType)}>`
   }
-  return type.kind
+  return type
 }
 
-export function withTypeMetadata(type: FieldType, metadata?: FieldMetadata): FieldType {
-  if (!metadata) {
-    if (!type.metadata) return type
-    let {metadata: _metadata, ...next} = type
-    return next
-  }
-  return {...type, metadata}
-}
-
-export function normalizeScalarType(rawType: string): ScalarFieldType | null {
+export function normalizeScalarType(rawType: string): ScalarField | null {
   let kind = SCALAR_TYPE_ALIASES[normalizeTypeName(rawType)]
   return kind ? scalarType(kind) : null
 }
@@ -228,6 +201,7 @@ function unwrapTypeCall(value: string, fn: string): string | null {
 export interface Expr {
   sql: string // the SQL for this expression, e.g. "users.\"name\"" or "sum(users.\"amount\")"
   type: FieldType // result type for validation
+  metadata?: FieldMeta
   isAgg?: boolean // true if contains an aggregate function
   canWindow?: boolean // true if expression can be used with an OVER clause
   interval?: IntervalExpr
@@ -237,7 +211,6 @@ export interface Expr {
 // A field in a query's SELECT clause
 export interface QueryField extends Expr {
   name: string // output column name
-  metadata?: Record<string, string>
   definitionLocation?: Location // where this field is defined when materialized into a view
 }
 
@@ -304,7 +277,7 @@ export interface Column {
   type: FieldType
   isAgg?: boolean // for computed columns that are aggregates
   exprNode?: SyntaxNode // for computed columns, the expression AST node (analyzed lazily in query context)
-  metadata?: Record<string, string>
+  metadata?: FieldMeta
   symbolId?: string
   location?: Location
 }
@@ -338,27 +311,6 @@ export interface SubqueryTable extends TableBase {
   query: Query
 }
 export type Table = PhysicalTable | ViewTable | CteTable | SubqueryTable
-
-export interface Position {
-  offset: number
-  line: number
-  col: number
-  lineStart?: number
-  lineText?: string
-}
-
-export interface GrapheneError {
-  message: string
-  name?: string
-  stack?: string
-  cause?: unknown
-  severity?: 'error' | 'warn'
-  queryId?: string
-  file?: string
-  from?: Position
-  to?: Position
-  frame?: string
-}
 
 export interface Location {
   file: string

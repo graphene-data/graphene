@@ -1,4 +1,4 @@
-import type {GrapheneError} from '../../lang/types.ts'
+import type {GrapheneError} from '../../lang/index.d.ts'
 
 type ErrorProvider = () => GrapheneError[]
 

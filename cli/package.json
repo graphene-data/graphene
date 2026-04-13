@@ -15,6 +15,7 @@
   ],
   "type": "module",
   "main": "bin.js",
+  "types": "dist/index.d.ts",
   "exports": {
     "./ui": {
       "browser": "./dist/ui/web.js"
