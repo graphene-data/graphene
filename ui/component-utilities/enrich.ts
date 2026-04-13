@@ -15,6 +15,8 @@ import {colorPalette} from './theme.ts'
 // Run enrichment in a fixed order so defaults stay predictable.
 export function enrich(config: EChartsConfig, rows: Record<string, any>[], fields: Field[]) {
   let normalized = normalize(config)
+  ensureAxes(normalized)
+  ensureTooltip(normalized)
 
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
   applyMissingPointDefaults(normalized, rows)
@@ -22,8 +24,6 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   applyDefaultSorting(normalized, rows, fields)
 
   let baseDatasetId = ensureDataset(normalized, rows, fields)
-
-  // generates the required number of `series` objects for this data
   expandSeriesTransforms(normalized, rows, baseDatasetId)
 
   // stylistic rules to provide great defaults
@@ -138,6 +138,25 @@ function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[
   })
 
   config.series = expanded
+}
+
+// Ensure cartesian series always have at least one x/y axis object.
+// This gives later enrichments an axis target to infer into, and avoids
+// ECharts runtime errors like `xAxis "0" not found`.
+function ensureAxes(config: NormalConfig) {
+  let cartesianSeriesTypes = new Set(['line', 'bar', 'scatter', 'candlestick', 'heatmap', 'boxplot', 'effectScatter'])
+  let needsCartesianAxes = config.series.some(series => series?.type != null && cartesianSeriesTypes.has(series.type))
+  if (!needsCartesianAxes) return
+
+  if (!config.xAxis[0]) config.xAxis[0] = {}
+  if (!config.yAxis[0]) config.yAxis[0] = {}
+}
+
+// Provide a tooltip default unless callers explicitly set the tooltip key.
+// We treat `tooltip: null` or `tooltip: undefined` as an intentional opt-out.
+function ensureTooltip(config: NormalConfig) {
+  if (Object.prototype.hasOwnProperty.call(config, 'tooltip')) return
+  config.tooltip = {trigger: 'axis'}
 }
 
 // Infer axis types from encoded field metadata.

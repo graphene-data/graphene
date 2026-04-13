@@ -91,8 +91,7 @@ registerTheme('graphene-theme', {
     symbolSize: 6,
     lineStyle: {width: 2},
   },
-  bar: {
-  },
+  bar: {},
   pie: {
     radius: ['30%', '58%'],
     label: {color: clr.textMid},
