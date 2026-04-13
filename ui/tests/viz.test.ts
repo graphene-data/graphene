@@ -119,6 +119,29 @@ test('line chart uses ratio metadata for axis and tooltip percentage formatting'
   await expect(chart.el).screenshot('line-chart-ratio-metadata-percent-axis')
 })
 
+test('time tooltip uses readable timeGrain formatting', async ({mount, chart, sharedPage}) => {
+  let rows = [
+    {period: '2023-01-01', value: 10},
+    {period: '2023-02-01', value: 12},
+    {period: '2023-03-01', value: 11},
+    {period: '2023-04-01', value: 14},
+  ]
+
+  let fields = [
+    {name: 'period', type: scalarType('date'), metadata: {timeGrain: 'month'}},
+    {name: 'value', type: scalarType('number')},
+  ]
+
+  await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'period', y: 'value', title: 'Month Grain'})
+  await sharedPage.evaluate(() => {
+    let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
+    let chart = charts && (Object.values(charts)[0] as any)
+    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3})
+  })
+
+  await expect(chart.el).screenshot('line-chart-tooltip-time-month-grain')
+})
+
 test('line chart tooltip formats calculated non-whole numbers', async ({mount, chart, sharedPage}) => {
   let rows = [
     {month: 'Jan', avg_delay: 10 / 3},
@@ -134,7 +157,7 @@ test('line chart tooltip formats calculated non-whole numbers', async ({mount, c
 
   await sharedPage.evaluate(() => {
     let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
-    let chart = charts && Object.values(charts)[0]
+    let chart = charts && (Object.values(charts)[0] as any)
     chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
   })
 

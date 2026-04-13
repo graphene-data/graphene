@@ -1,6 +1,7 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 import {applyDefaultSorting, applyMissingPointDefaults, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
+import {makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {colorPalette} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -35,6 +36,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   hideStackPercentageValueAxis(normalized)
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, fields)
+  timeFormatting(normalized)
   styleSecondaryAxisForSimpleBarLineLayout(normalized)
   applyIntegerYAxisTicks(normalized, rows)
   barLabelPositioning(normalized)
@@ -181,6 +183,25 @@ function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) 
 
     axis.field ||= fields.find(field => field.name === encodedFields[0])
     axis.type ||= inferAxisTypeFromFields(fields, encodedFields)
+  }
+}
+
+// Ensure that times looks nice. Unlike base echarts, we have metadata about the time value we can use.
+function timeFormatting(config: NormalConfig) {
+  let tooltip = config.tooltip as Record<string, any> | undefined
+  if (tooltip?.axisPointer?.label?.formatter) return
+
+  for (let axis of config.xAxis) {
+    if (!axis || axis.type !== 'time') continue
+    if (axis.axisPointer?.label?.formatter != null) continue
+
+    let timeGrain = String(axis.field?.metadata?.timeGrain || '').toLowerCase()
+    if (!timeGrain) continue
+
+    // axisPointer affects the formatting of the tooltip, but not the axis labels themselves
+    axis.axisPointer ||= {}
+    axis.axisPointer.label ||= {}
+    axis.axisPointer.label.formatter = makeTimeFormatter(axis.field)
   }
 }
 
@@ -562,59 +583,6 @@ function inferDimensions(rows: Record<string, any>[]) {
   let sample = rows.find(row => row && typeof row === 'object')
   if (!sample) return []
   return Object.keys(sample)
-}
-
-// Creates a formatter function the takes a numeric value and type/metadata info about a field to determine how to format it.
-function makeValueFormatter(field?: Field) {
-  let currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
-  let percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 1})
-  let currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
-
-  let unit = field?.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
-  let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
-
-  return (value: unknown) => {
-    let amount = Number(value)
-    if (!Number.isFinite(amount)) return String(value ?? '')
-
-    if (field?.metadata?.ratio) return `${percent.format(amount * 100)}%`
-    if (field?.metadata?.pct) return `${percent.format(amount)}%`
-
-    if (currencyUnit) {
-      let sign = amount < 0 ? '-' : ''
-      let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
-      return `${sign}${currencySymbols[currencyUnit]}${formatted}`
-    }
-
-    if (amount === 0) return '0'
-    let sign = amount < 0 ? '-' : ''
-    let absolute = Math.abs(amount)
-
-    if (absolute >= 1e12) return `${sign}${compactValue(absolute / 1e12)}T`
-    if (absolute >= 1e9) return `${sign}${compactValue(absolute / 1e9)}B`
-    if (absolute >= 1e6) return `${sign}${compactValue(absolute / 1e6)}M`
-    if (absolute >= 1e3) return `${sign}${compactValue(absolute / 1e3)}k`
-    if (absolute >= 1) return `${sign}${compactValue(absolute)}`
-    if (absolute >= 1e-3) return `${sign}${compactValue(absolute)}`
-    if (absolute >= 1e-6) return `${sign}${compactValue(absolute * 1e3)}m`
-    if (absolute >= 1e-9) return `${sign}${compactValue(absolute * 1e6)}u`
-    if (absolute >= 1e-12) return `${sign}${compactValue(absolute * 1e9)}n`
-    return `${sign}${compactValue(absolute)}`
-  }
-}
-
-function compactValue(num: number) {
-  let exponent = Math.floor(Math.log10(Math.abs(num)))
-  let scale = Math.pow(10, exponent - 1)
-  let rounded = Math.round(num / scale) * scale
-  if (!Number.isFinite(rounded)) return String(num)
-  let magnitude = Math.floor(Math.log10(rounded))
-  let decimals = Math.max(0, 1 - magnitude)
-  return rounded
-    .toFixed(decimals)
-    .replace(/\.0+$/, '')
-    .replace(/(\.[0-9]*[1-9])0+$/, '$1')
-    .replace(/\.$/, '')
 }
 
 function distinctValues(rows: Record<string, any>[], field: string) {
