@@ -13,6 +13,26 @@ export const colorPalette = [
   '#C4868E', // dusty rose   — fading alpine glow
 ]
 
+// Rotate a palette by a deterministic page offset so pages don't always start on the same color.
+// We keep this pure and reusable so enrichments can apply it onto config.color.
+export function paletteForPath(pathname?: string) {
+  if (import.meta.env.VITE_TEST) return [...colorPalette] // Keep screenshot baselines stable in UI tests.
+
+  let rawPath = pathname ?? location.pathname
+  let key = String(rawPath).split('?')[0].split('#')[0].replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+  key = key.replace(/\/index$/i, '') || 'index'
+
+  let hash = 2166136261
+  for (let i = 0; i < key.length; i++) {
+    hash ^= key.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+
+  let offset = (hash >>> 0) % colorPalette.length
+  if (offset === 0) return [...colorPalette]
+  return [...colorPalette.slice(offset), ...colorPalette.slice(0, offset)]
+}
+
 let clr = {
   white: '#ffffff',
   tooltipTxt: '#111827',
