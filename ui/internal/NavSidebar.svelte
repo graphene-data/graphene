@@ -206,60 +206,66 @@
   }
 </script>
 
-<ul>
-  {#each flatNodes as node (node.path)}
-    {#if node.type === 'folder'}
-      <li class={isVisible(node, openFolders) ? '' : 'hidden'} style={`--depth:${node.depth}`} data-folder={node.path}>
-        <div
-          class={node.route ? 'folder-row' : 'folder-row clickable'}
-          role={node.route ? undefined : 'button'}
-          aria-expanded={node.route ? undefined : String(isOpen(node.path, openFolders))}
-          onclick={node.route ? undefined : () => toggleFolder(node.path)}
-          onkeydown={node.route ? undefined : (event) => handleFolderRowKey(event, node.path)}
-        >
-          <button
-            class="toggle"
-            type="button"
-            data-folder-toggle={node.path}
-            aria-expanded={isOpen(node.path, openFolders)}
-            onclick={(event) => { event.stopPropagation(); toggleFolder(node.path) }}
-            aria-label={(isOpen(node.path, openFolders) ? 'Collapse' : 'Expand') + ' ' + node.label}
+<nav id='nav'>
+  <ul>
+    {#each flatNodes as node (node.path)}
+      {#if node.type === 'folder'}
+        <li class={isVisible(node, openFolders) ? '' : 'hidden'} style={`--depth:${node.depth}`} data-folder={node.path}>
+          <div
+            class={node.route ? 'folder-row' : 'folder-row clickable'}
+            role={node.route ? undefined : 'button'}
+            aria-expanded={node.route ? undefined : String(isOpen(node.path, openFolders))}
+            onclick={node.route ? undefined : () => toggleFolder(node.path)}
+            onkeydown={node.route ? undefined : (event) => handleFolderRowKey(event, node.path)}
           >
-            <span class={isOpen(node.path, openFolders) ? 'chevron open' : 'chevron'}>▸</span>
-          </button>
-          {#if node.route}
-            <a
-              href={node.route}
-              class={node.route === currentRoute ? 'active' : ''}
-              aria-current={node.route === currentRoute ? 'page' : undefined}
-              onclick={(e) => handleLinkClick(e, node.route)}
+            <button
+              class="toggle"
+              type="button"
+              data-folder-toggle={node.path}
+              aria-expanded={isOpen(node.path, openFolders)}
+              onclick={(event) => { event.stopPropagation(); toggleFolder(node.path) }}
+              aria-label={(isOpen(node.path, openFolders) ? 'Collapse' : 'Expand') + ' ' + node.label}
             >
-              {node.label}
-            </a>
-          {:else}
-            <span class="label">{node.label}</span>
-          {/if}
-        </div>
-      </li>
-    {:else}
-      <li class={isVisible(node, openFolders) ? 'file' : 'file hidden'} style={`--depth:${node.depth}`}>
-        <a
-          href={node.route}
-          class={node.path === normalizedCurrent ? 'active' : ''}
-          aria-current={node.path === normalizedCurrent ? 'page' : undefined}
-          onclick={(e) => handleLinkClick(e, node.route)}
-        >
-          <span>{node.label}</span>
-        </a>
-      </li>
-    {/if}
-  {/each}
-</ul>
+              <span class={isOpen(node.path, openFolders) ? 'chevron open' : 'chevron'}>▸</span>
+            </button>
+            {#if node.route}
+              <a
+                href={node.route}
+                class={node.route === currentRoute ? 'active' : ''}
+                aria-current={node.route === currentRoute ? 'page' : undefined}
+                onclick={(e) => handleLinkClick(e, node.route)}
+              >
+                {node.label}
+              </a>
+            {:else}
+              <span class="label">{node.label}</span>
+            {/if}
+          </div>
+        </li>
+      {:else}
+        <li class={isVisible(node, openFolders) ? 'file' : 'file hidden'} style={`--depth:${node.depth}`}>
+          <a
+            href={node.route}
+            class={node.path === normalizedCurrent ? 'active' : ''}
+            aria-current={node.path === normalizedCurrent ? 'page' : undefined}
+            onclick={(e) => handleLinkClick(e, node.route)}
+          >
+            <span>{node.label}</span>
+          </a>
+        </li>
+      {/if}
+    {/each}
+  </ul>
+</nav>
 
 <style>
+  nav {
+    border-right: 1px solid #e5e7eb;
+  }
+
   ul {
     list-style: none;
-    padding: 0 0.5rem 0 0;
+    padding: 32px 0.5rem 0 0;
     margin: 0;
     display: flex;
     flex-direction: column;
