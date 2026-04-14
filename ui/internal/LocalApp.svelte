@@ -36,7 +36,7 @@
   })
 
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
-  let Page = $state(null)
+  let Page = $state<any>(null)
 
   onMount(async () => {
     let pathName = window.location.pathname.replace(/^\//, '') || 'index'
@@ -50,9 +50,9 @@
     await document.fonts.ready
 
     if (pathName == '_charts') {
-      Page = DevEChartsGallery
+      Page = ChartGallery
     } else if (pathName == '_styles') {
-      Page = DevStyleGallery
+      Page = StyleGallery
     } else if (pathName !== '__ct') {
       let mod = await import(/* @vite-ignore */ '/' + pathName + '.md')
       Page = mod.default

@@ -172,10 +172,13 @@ test('line chart hides markers at 30 categorical points', async ({mount, chart})
 test('pie chart', async ({mount, chart, sharedPage}) => {
   await mount('components/PieChart.svelte', {data: singleDim(), category: 'category', value: 'value'})
   await expect(chart.el).screenshot('pie-chart')
-  await sharedPage.evaluate(() => {
+
+  await sharedPage.evaluate(async () => {
     let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__') as any])[0] as any
     chart.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
   })
+
   await expect(chart.el).screenshot('pie-chart-tooltip')
 })
 
