@@ -27,10 +27,15 @@ const extendedExpect = baseExpect.extend({
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
     })
 
+    let resultsDir = path.resolve(snapshotDir, '..', 'results', testFile)
     let snapshotPath = path.resolve(snapshotDir, testFile, snapshotName + '.png')
-    let expectedBuffer = await fs.readFile(snapshotPath).catch(() => null)
+    let expectedBuffer = await fs.readFile(snapshotPath).catch(() => undefined)
 
-    let opts = {
+    if (expectedBuffer && !isPng(expectedBuffer)) {
+      return {message: () => `Screenshot ${snapshotName} is not a valid png (might need to LFS pull)`, pass: false}
+    }
+
+    let result = await (page as any)._expectScreenshot({
       animations: 'disabled',
       caret: 'hide',
       scale: 'css',
@@ -38,52 +43,41 @@ const extendedExpect = baseExpect.extend({
       maxDiffPixelRatio: 0, // strict: no differing pixels allowed
       threshold: 0.01, // strict per-pixel color matching
       timeout: 5_000,
-    } as any
-    if (expectedBuffer) opts.expected = expectedBuffer
-    let result = await (page as any)._expectScreenshot(opts)
-
+      expected: expectedBuffer,
+    })
     if (!result) throw new Error('Playwright did not return screenshot result')
 
-    // In CI, fail if screenshots don't match and save diffs. Locally, update the snapshot.
-    if (process.env.CI) {
-      if (!expectedBuffer) {
-        return {message: () => `Screenshot ${snapshotName} does not exist. Run tests locally to create it.`, pass: false}
-      }
-      if (result.diff) {
-        let resultsDir = path.resolve(snapshotDir, '..', 'results', testFile)
-        if (result.actual) await writeBuffer(path.join(resultsDir, snapshotName + '-actual.png'), result.actual)
-        if (result.previous) await writeBuffer(path.join(resultsDir, snapshotName + '-expected.png'), result.previous)
-        await writeBuffer(path.join(resultsDir, snapshotName + '-diff.png'), result.diff)
-        return {message: () => `Screenshot ${snapshotName} does not match expected`, pass: false}
-      }
-    } else {
-      if (result.actual) await writeBuffer(snapshotPath, result.actual)
+    let updateSnapshot = (vitestExpect.getState().snapshotState as any)?._updateSnapshot
+    if (updateSnapshot == 'all' || (updateSnapshot == 'new' && !expectedBuffer)) {
+      if (!result.actual) throw new Error('no snapshot returned')
+      await writeBuffer(snapshotPath, result.actual)
+      return {message: () => `Screenshot ${snapshotName} updated`, pass: true}
     }
 
-    return {message: () => 'Screenshot ' + snapshotName + ' matches', pass: true}
+    if (!expectedBuffer) {
+      return {message: () => `Screenshot ${snapshotName} is missing`, pass: false}
+    }
+
+    if (result.diff) {
+      if (expectedBuffer) await writeBuffer(path.join(resultsDir, snapshotName + '-expected.png'), expectedBuffer)
+      await writeBuffer(path.join(resultsDir, snapshotName + '-actual.png'), result.actual)
+      await writeBuffer(path.join(resultsDir, snapshotName + '-zdiff.png'), result.diff)
+      return {message: () => `Screenshot ${snapshotName} does not match expected`, pass: false}
+    } else {
+      return {message: () => 'Screenshot ' + snapshotName + ' matches', pass: true}
+    }
   },
 })
+
+function isPng(buffer: Buffer) {
+  if (buffer.length < 8) return false
+  return buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47 && buffer[4] === 0x0d && buffer[5] === 0x0a && buffer[6] === 0x1a && buffer[7] === 0x0a
+}
 
 async function writeBuffer(filePath: string, data: Buffer) {
   await fs.mkdir(path.dirname(filePath), {recursive: true})
   await fs.writeFile(filePath, data)
 }
-
-// async function recordScreenshotArtifacts (
-//   snapshotName: string,
-//   result: {actual?: Buffer; previous?: Buffer; diff?: Buffer},
-//   baseDir: string,
-// ) {
-//   let artifactBase = path.join(baseDir, snapshotName.replace(/\.png$/, ''))
-//   if (result.actual) await writeBuffer(`${artifactBase}-actual.png`, result.actual)
-//   if (result.previous) await writeBuffer(`${artifactBase}-expected.png`, result.previous)
-//   if (result.diff) await writeBuffer(`${artifactBase}-diff.png`, result.diff)
-// }
-
-// function formatScreenshotLog (entries?: {name?: string; message?: string}[]) {
-//   if (!entries?.length) return ''
-//   return entries.map(entry => [entry.name, entry.message].filter(Boolean).join(': ')).join('\n')
-// }
 
 interface ScreenshotMatchers {
   screenshot(snapshotName: string): Promise<void>
