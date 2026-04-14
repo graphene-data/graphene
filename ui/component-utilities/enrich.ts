@@ -2,7 +2,7 @@ import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from '.
 
 import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
 import {makeTimeFormatter, makeValueFormatter} from './format.ts'
-import {colorPalette} from './theme.ts'
+import {paletteForPath} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
 // A lot of defaulting happens in themes but there are some defaults themes can't handle, like when it depends on the shape of data being charted.
@@ -18,6 +18,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   let normalized = normalize(config)
   ensureAxes(normalized)
   ensureTooltip(normalized)
+  ensureColors(normalized)
 
   // Resolve axis types/fields up front so row shaping (like explicit sorting) can use axis metadata.
   inferAxisTypesFromEncodedFields(normalized, fields)
@@ -161,6 +162,12 @@ function ensureAxes(config: NormalConfig) {
 function ensureTooltip(config: NormalConfig) {
   if (Object.prototype.hasOwnProperty.call(config, 'tooltip')) return
   config.tooltip = {trigger: 'axis'}
+}
+
+// Ensure we have a color palette set for the chart.
+// This rotates by default.
+function ensureColors(config: NormalConfig) {
+  config.color ||= paletteForPath()
 }
 
 // Infer axis types from encoded field metadata.
@@ -339,7 +346,7 @@ function styleSecondaryAxisForSimpleBarLineLayout(config: NormalConfig) {
   let secondaryAxis = config.yAxis[1]
   if (!primaryAxis || !secondaryAxis) return
 
-  let palette = getThemeColorPalette(config)
+  let palette = config.color || []
   let barSeriesColor = seriesColorForIndex(series, bars[0], palette)
   let lineSeriesColor = seriesColorForIndex(series, secondary[0], palette)
 
@@ -492,12 +499,6 @@ function numericOffset(value: unknown, delta: number) {
 
 function formatAxisValue(formatter: (...args: any[]) => unknown, value: unknown) {
   return String(formatter(value, 0))
-}
-
-function getThemeColorPalette(config: NormalConfig) {
-  let configColor = config.color
-  if (Array.isArray(configColor) && configColor.length > 0) return configColor
-  return colorPalette
 }
 
 function seriesColorForIndex(seriesList: SeriesWithGroupingHint[], targetSeries: SeriesWithGroupingHint, palette: string[]) {
