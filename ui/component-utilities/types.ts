@@ -5,6 +5,7 @@ import type {
   LegendComponentOption,
   SeriesOption,
   TitleComponentOption,
+  TooltipComponentOption,
   XAXisComponentOption,
   YAXisComponentOption,
 } from 'echarts/types/dist/echarts'
@@ -56,7 +57,7 @@ type AxisWithField<TAxis> = TAxis & {field?: Field}
 
 // Config shape after enrich() normalization runs.
 // We keep this mutable and array-based because enrichments mutate in place.
-export type NormalConfig = Omit<EChartsConfig, 'series' | 'xAxis' | 'yAxis' | 'dataset' | 'grid' | 'legend' | 'title'> & {
+export type NormalConfig = Omit<EChartsConfig, 'series' | 'xAxis' | 'yAxis' | 'dataset' | 'grid' | 'legend' | 'title' | 'tooltip'> & {
   series: SeriesWithGroupingHint[]
   xAxis: AxisWithField<XAXisComponentOption>[]
   yAxis: AxisWithField<YAXisComponentOption>[]
@@ -64,4 +65,5 @@ export type NormalConfig = Omit<EChartsConfig, 'series' | 'xAxis' | 'yAxis' | 'd
   grid: GridComponentOption[]
   legend: LegendComponentOption[]
   title: TitleComponentOption[]
+  tooltip: TooltipComponentOption[]
 }

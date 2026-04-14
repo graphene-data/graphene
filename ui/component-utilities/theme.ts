@@ -19,7 +19,11 @@ export function paletteForPath(pathname?: string) {
   if (import.meta.env.VITE_TEST) return [...colorPalette] // Keep screenshot baselines stable in UI tests.
 
   let rawPath = pathname ?? location.pathname
-  let key = String(rawPath).split('?')[0].split('#')[0].replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
+  let key = String(rawPath)
+    .split('?')[0]
+    .split('#')[0]
+    .replace(/\\/g, '/')
+    .replace(/^\/+|\/+$/g, '')
   key = key.replace(/\/index$/i, '') || 'index'
 
   let hash = 2166136261

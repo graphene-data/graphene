@@ -47,9 +47,10 @@ const extendedExpect = baseExpect.extend({
     })
     if (!result) throw new Error('Playwright did not return screenshot result')
 
+    // update snapshot if needed/allowed
     let updateSnapshot = (vitestExpect.getState().snapshotState as any)?._updateSnapshot
-    if (updateSnapshot == 'all' || (updateSnapshot == 'new' && !expectedBuffer)) {
-      if (!result.actual) throw new Error('no snapshot returned')
+    let updateAllowed = updateSnapshot == 'all' || (updateSnapshot == 'new' && !expectedBuffer)
+    if (result.actual && updateAllowed) {
       await writeBuffer(snapshotPath, result.actual)
       return {message: () => `Screenshot ${snapshotName} updated`, pass: true}
     }

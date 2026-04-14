@@ -74,6 +74,8 @@ function normalize(config: EChartsConfig): NormalConfig {
   if (target.grid.length === 0) target.grid.push({} as NormalConfig['grid'][number])
   target.legend = normalizeArray<NormalConfig['legend'][number]>(config.legend)
   target.title = normalizeArray<NormalConfig['title'][number]>(config.title)
+
+  target.tooltip = normalizeArray<NormalConfig['tooltip'][number]>(config.tooltip).filter(tooltip => tooltip && typeof tooltip === 'object')
   return target
 }
 
@@ -157,11 +159,10 @@ function ensureAxes(config: NormalConfig) {
   if (!config.yAxis[0]) config.yAxis[0] = {}
 }
 
-// Provide a tooltip default unless callers explicitly set the tooltip key.
-// We treat `tooltip: null` or `tooltip: undefined` as an intentional opt-out.
+// Ensure we always have exactly one top-level tooltip object in normalized config.
 function ensureTooltip(config: NormalConfig) {
-  if (Object.prototype.hasOwnProperty.call(config, 'tooltip')) return
-  config.tooltip = {trigger: 'axis'}
+  if (config.tooltip.length > 0) return
+  config.tooltip.push({trigger: 'axis'})
 }
 
 // Ensure we have a color palette set for the chart.
@@ -197,7 +198,7 @@ function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) 
 
 // Ensure that times looks nice. Unlike base echarts, we have metadata about the time value we can use.
 function timeFormatting(config: NormalConfig) {
-  let tooltip = config.tooltip as Record<string, any> | undefined
+  let tooltip = config.tooltip[0] as Record<string, any> | undefined
   if (tooltip?.axisPointer?.label?.formatter) return
 
   for (let axis of config.xAxis) {
@@ -346,9 +347,8 @@ function styleSecondaryAxisForSimpleBarLineLayout(config: NormalConfig) {
   let secondaryAxis = config.yAxis[1]
   if (!primaryAxis || !secondaryAxis) return
 
-  let palette = config.color || []
-  let barSeriesColor = seriesColorForIndex(series, bars[0], palette)
-  let lineSeriesColor = seriesColorForIndex(series, secondary[0], palette)
+  let barSeriesColor = seriesColorForIndex(config, series, bars[0])
+  let lineSeriesColor = seriesColorForIndex(config, series, secondary[0])
 
   if (barSeriesColor) applyAxisColor(primaryAxis, barSeriesColor)
   if (lineSeriesColor) applyAxisColor(secondaryAxis, lineSeriesColor)
@@ -419,23 +419,23 @@ function labelsUseYAxisFormat(config: NormalConfig) {
   }
 }
 
-// Add a pie-friendly default tooltip when charts include pie series.
+// Add a pie-friendly default tooltip formatter when charts include pie series.
 // Pie params can pass row objects as `params.value`, so we format from the encoded value field.
 function addPieTooltips(config: NormalConfig) {
-  let hasPie = config.series.some(series => series?.type === 'pie')
-  if (!hasPie || config.tooltip != null) return
+  if (!config.series.some(series => series?.type === 'pie')) return
 
-  config.tooltip = {
-    trigger: 'item',
-    formatter: (params: any) => {
-      let value = params?.value
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        let series = config.series[Number(params?.seriesIndex ?? 0)]
-        let yField = getSeriesYField(series)
-        value = yField && value[yField] != null ? value[yField] : value.value
-      }
-      return `${params?.name ?? ''}: ${value ?? ''} (${params?.percent ?? 0}%)`
-    },
+  let tooltip = config.tooltip[0]
+  if (!tooltip || tooltip.formatter != null) return
+
+  tooltip.trigger = 'item'
+  tooltip.formatter = (params: any) => {
+    let value = params?.value
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      let series = config.series[Number(params?.seriesIndex ?? 0)]
+      let yField = getSeriesValueFieldName(series)
+      value = yField && value[yField] != null ? value[yField] : value.value
+    }
+    return `${params?.name ?? ''}: ${value ?? ''} (${params?.percent ?? 0}%)`
   }
 }
 
@@ -501,13 +501,16 @@ function formatAxisValue(formatter: (...args: any[]) => unknown, value: unknown)
   return String(formatter(value, 0))
 }
 
-function seriesColorForIndex(seriesList: SeriesWithGroupingHint[], targetSeries: SeriesWithGroupingHint, palette: string[]) {
+function seriesColorForIndex(config: NormalConfig, seriesList: SeriesWithGroupingHint[], targetSeries: SeriesWithGroupingHint) {
   let index = seriesList.indexOf(targetSeries)
   if (index < 0) return undefined
 
   let explicit = targetSeries?.itemStyle?.color || targetSeries?.lineStyle?.color || targetSeries?.areaStyle?.color || targetSeries?.color
   if (typeof explicit === 'string') return explicit
 
+  if (!Array.isArray(config.color)) return undefined
+  let palette = config.color.filter(color => typeof color === 'string')
+  if (palette.length === 0) return undefined
   return palette[index % palette.length]
 }
 
