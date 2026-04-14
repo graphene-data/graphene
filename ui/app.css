@@ -25,7 +25,7 @@ body {
   display: flex;
   margin: 0;
   min-height: 100vh;
-  font-family: 'Inter', var(--ui-font-family);
+  font-family: var(--ui-font-family);
   font-synthesis: none;
   line-height: 1.7;
   color: var(--color-content);
@@ -182,7 +182,7 @@ h6 {
   scroll-margin-top: 3.5rem;
   break-inside: avoid;
   color: #111827;
-  font-family: 'Inter', var(--ui-font-family);
+  font-family: var(--ui-font-family);
   font-optical-sizing: auto;
   font-weight: 100;
   font-style: normal;
