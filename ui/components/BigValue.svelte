@@ -57,9 +57,11 @@
   }
 
   .big-value__title {
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 600;
-    color: var(--graphene-big-value-title, #111827);
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
   }
 
   .big-value__subtitle {
@@ -68,8 +70,12 @@
   }
 
   .big-value__value {
-    font-size: 32px;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    font-family: var(--prose-font-family);
+    font-optical-sizing: auto;
     font-weight: 600;
-    color: var(--graphene-big-value-value, #111827);
+    color: #111;
   }
 </style>
