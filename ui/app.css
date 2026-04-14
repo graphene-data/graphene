@@ -1,6 +1,7 @@
 @import '@fontsource/source-sans-3/400.css';
 @import '@fontsource/source-sans-3/600.css';
-@import '@fontsource/source-serif-4/700.css';
+@import '@fontsource/source-serif-4/300.css';
+@import '@fontsource/source-serif-4/600.css';
 @import '@fontsource/fira-code/400.css';
 
 :root {
@@ -27,6 +28,7 @@ body {
   min-height: 100vh;
   font-family: var(--ui-font-family);
   font-synthesis: none;
+  font-size: 17px;
   line-height: 1.7;
   color: var(--color-content);
   background-color: var(--color-background);
@@ -35,8 +37,6 @@ body {
 nav {
   width: 200px;
   flex-shrink: 0;
-  padding: 32px 0 16px 0px;
-  border-right: 1px solid #e5e7eb;
 }
 
 main {
@@ -182,16 +182,13 @@ h6 {
   scroll-margin-top: 3.5rem;
   break-inside: avoid;
   color: #111827;
-  font-family: var(--ui-font-family);
   font-optical-sizing: auto;
-  font-weight: 100;
   font-style: normal;
 }
 
 /* h1.title:first-of-type,
 h1:first-of-type { margin-top: 0.25rem; margin-bottom: 0.5rem; } */
 
-h1.title,
 h1 {
   margin-top: 2rem;
   margin-bottom: 0.25rem;
@@ -200,6 +197,7 @@ h1 {
   letter-spacing: 0.025em;
   font-weight: 700;
   break-inside: avoid;
+  font-family: var(--prose-font-family);
 }
 
 h2 {
@@ -208,6 +206,7 @@ h2 {
   font-size: 1.25rem;
   line-height: 1.75rem;
   font-weight: 600;
+  font-family: var(--prose-font-family);
 }
 
 h3 {
@@ -216,6 +215,7 @@ h3 {
   font-size: 1rem;
   line-height: 1.5rem;
   font-weight: 600;
+  font-family: var(--ui-font-family);
 }
 
 h4 {
@@ -223,17 +223,20 @@ h4 {
   font-size: 0.875rem;
   line-height: 1.25rem;
   font-weight: 600;
+  font-family: var(--ui-font-family);
 }
 h5 {
   margin-top: 1rem;
   font-size: 0.75rem;
   line-height: 1rem;
   font-weight: 600;
+  font-family: var(--ui-font-family);
 }
 h6 {
   margin-top: 1rem;
   font-size: 0.75rem;
   line-height: 1rem;
+  font-family: var(--ui-font-family);
 }
 
 hr {
@@ -291,4 +294,12 @@ em,
 del {
   font-size: 1em;
   color: inherit;
+}
+
+.pageContent {
+  max-width: 880px;
+}
+
+.pageContent p {
+  font-family: var(--prose-font-family);
 }

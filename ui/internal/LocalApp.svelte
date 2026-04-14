@@ -61,8 +61,8 @@
   })
 </script>
 
-<nav id="nav"><NavSidebar files={navData} /></nav>
-<main id="content">
+<NavSidebar files={navData} />
+<main id="content" class={{pageContent: !!Page}}>
   {#if compileError}
     <h1 class="page-error-heading">Error loading page</h1>
     <ErrorDisplay error={compileError} />
