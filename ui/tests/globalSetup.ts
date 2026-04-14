@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import {type TestProject} from 'vitest/node'
@@ -8,6 +9,8 @@ import {setConfig} from '../../lang/config.ts'
 export default async function setup(project: TestProject) {
   let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
   setConfig({root: viteRoot})
+
+  await fs.rm(path.join(import.meta.dirname, 'results'), {force: true, recursive: true})
 
   // we only need to prepareDeps if we're running ui tests
   let files = project.testFilesList || []
