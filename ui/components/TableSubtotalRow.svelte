@@ -3,7 +3,7 @@
   import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
   import TableCell from './TableCell.svelte'
-  import {toBoolean} from '../component-utilities/convert'
+  import {toBoolean} from '../component-utilities/inputUtils'
 
   interface Props {
     groupName?: string

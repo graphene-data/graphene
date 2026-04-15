@@ -6,8 +6,7 @@
   import {getContext, onDestroy, onMount, untrack} from 'svelte'
   import {type Writable, get} from 'svelte/store'
   import {getThemeStores} from '../component-utilities/themeStores'
-  import {toBoolean} from '../component-utilities/convert'
-  import {parseCommaList} from '../component-utilities/inputUtils.ts'
+    import {parseCommaList, toBoolean} from '../component-utilities/inputUtils.ts'
 
   interface Props {
     id: string, description?: string, contentType?: string, title?: string, align?: string

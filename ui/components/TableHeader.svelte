@@ -1,7 +1,7 @@
 <script lang="ts">
   import SortIcon from './SortIcon.svelte'
   import {safeExtractColumn} from '../component-utilities/tableUtils'
-  import {toBoolean} from '../component-utilities/convert'
+  import {toBoolean} from '../component-utilities/inputUtils'
 
   interface Props {
     rowNumbers?: boolean | string
