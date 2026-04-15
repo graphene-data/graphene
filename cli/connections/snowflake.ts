@@ -165,6 +165,9 @@ function snowflakeIdent(value: string) {
 let snowflakeModule: SnowflakeModule | null = null
 
 async function loadSnowflake(): Promise<SnowflakeModule> {
-  snowflakeModule ||= await import('snowflake-sdk')
+  if (!snowflakeModule) {
+    let mod = await import('snowflake-sdk')
+    snowflakeModule = ((mod as any).default || mod) as SnowflakeModule
+  }
   return snowflakeModule
 }

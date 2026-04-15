@@ -50,6 +50,7 @@ export class BigQueryConnection implements QueryConnection {
   }
 
   async listDatasets(): Promise<string[]> {
+    await this.ready
     let [datasets] = await this.client.getDatasets()
     return datasets.map(d => String(d.id || d.metadata.datasetReference?.datasetId || '').toLowerCase())
   }
