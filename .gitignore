@@ -4,6 +4,7 @@
 ui/tests/results
 
 cli/*.tgz
+create/*.tgz
 notes.md
 todo.md
 .gitcommit

@@ -208,7 +208,7 @@ test.beforeEach(() => {
   setConfig({root})
 })
 
-async function getAvailablePort(): Promise<number> {
+export async function getAvailablePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
     let srv = net.createServer()
     srv.unref()
