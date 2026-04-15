@@ -1,7 +1,6 @@
 <script lang="ts">
   import {setContext, untrack, type Snippet} from 'svelte'
   import {writable} from 'svelte/store'
-  import {propKey, strictBuild} from '../component-utilities/chartContext.js'
   import getColumnSummary from '../component-utilities/getColumnSummary.js'
   import {convertColumnToDate} from '../component-utilities/dateParsing.js'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
@@ -63,7 +62,7 @@
 
   // Initialize store without data - it will be populated by the effect below
   const tablePropsStore = writable<{data: any[]; columns: any[]; priorityColumns:(string | undefined)[]}>({data: [], columns: [], priorityColumns: []})
-  setContext(propKey, tablePropsStore)
+  setContext('tableProps', tablePropsStore)
 
   // Update store when data or groupBy changes
   $effect(() => {
@@ -176,7 +175,6 @@
       let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
       logError(thrown, {queryId: 'DataTable'})
       resultError = message
-      if (strictBuild) throw thrown
     }
 
     return {
