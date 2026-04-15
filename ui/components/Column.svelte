@@ -5,7 +5,6 @@
 <script lang="ts">
   import {getContext, onDestroy, onMount, untrack} from 'svelte'
   import {type Writable, get} from 'svelte/store'
-  import {propKey, strictBuild} from '../component-utilities/chartContext.js'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/convert'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
@@ -44,7 +43,7 @@
   let backgroundColorStore = $derived(resolveColor(backgroundColor))
   let colorScaleStore = $derived(resolveColorPalette(colorScale))
 
-  const chartProps = getContext<Writable<any>>(propKey)
+  const chartProps = getContext<Writable<any>>('tableProps')
 
   const identifier = Symbol('GrapheneColumn')
 
@@ -108,11 +107,10 @@
       let data = get(chartProps).data?.[0]
       if (data && !Object.keys(data).includes(id)) {
         let error = `Error in table: ${id} does not exist in the dataset`
-        if (strictBuild) throw new Error(error)
         console.warn(error)
       }
     } catch(error) {
-      if (strictBuild) throw error
+      console.warn(error)
     }
 
     // Initial registration

@@ -1,5 +1,3 @@
-import {strictBuild} from './chartContext.js'
-
 type ColumnSummary = {
   id: string
   type?: string
@@ -17,7 +15,6 @@ export const safeExtractColumn = <T extends ColumnLike>(column: T, columnSummary
   let foundCols = columnSummary.filter(d => d.id === column.id)
   if (!foundCols.length) {
     let error = column.id === undefined ? new Error('please add an "id" property to all the <Column ... />') : new Error(`column with id: "${column.id}" not found`)
-    if (strictBuild) throw error
     console.warn(error.message)
     return {id: column.id ?? ''}
   }
