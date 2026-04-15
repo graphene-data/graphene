@@ -1,4 +1,5 @@
-export function toBoolean(value: any): boolean {
+export function toBoolean(value: any): boolean | undefined {
+  if (value === undefined || value === null) return undefined
   if (typeof value === 'boolean') return value
   if (typeof value === 'number') return value !== 0
   if (typeof value === 'string') {
