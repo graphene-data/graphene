@@ -1,23 +1,16 @@
-import {spawn, type ChildProcess} from 'node:child_process'
+import {spawn} from 'node:child_process'
 import * as fsp from 'node:fs/promises'
-import * as net from 'node:net'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import {fileURLToPath} from 'node:url'
-import stripAnsi from 'strip-ansi'
 
-import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
+import {test, expect, waitForGrapheneLoad, getAvailablePort} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
 interface RunResult {
   code: number
   stdout: string
   stderr: string
-}
-
-interface ServeHandle {
-  child: ChildProcess
-  getLogs: () => string
 }
 
 function run(command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<RunResult> {
@@ -35,21 +28,15 @@ function run(command: string, args: string[], cwd: string, env: NodeJS.ProcessEn
   })
 }
 
-function expectSuccess(step: string, result: RunResult) {
-  if (result.code === 0) return
-  throw new Error(`[pack-install.test] ${step} failed (code ${result.code})\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
+function getOutput(res: RunResult) {
+  let lines = (res.stdout + res.stderr).split('\n')
+  lines = lines.filter(l => !l.startsWith('npm warn Unknown env config') && !l.startsWith('npm warn Unknown global config'))
+  return lines.join('\n').trim()
 }
 
-async function getAvailablePort(): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    let srv = net.createServer()
-    srv.unref()
-    srv.on('error', reject)
-    srv.listen(0, '127.0.0.1', () => {
-      let {port} = srv.address() as net.AddressInfo
-      srv.close(() => resolve(port))
-    })
-  })
+function expectSuccess(step: string, result: RunResult) {
+  if (result.code === 0) return
+  throw new Error(`[install.test] ${step} failed (code ${result.code})\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
 }
 
 function parseTarballPath(result: RunResult, cwd: string) {
@@ -59,124 +46,108 @@ function parseTarballPath(result: RunResult, cwd: string) {
   return path.isAbsolute(tarball) ? tarball : path.resolve(cwd, tarball)
 }
 
-async function startServe(cwd: string, env: NodeJS.ProcessEnv, port: number, timeoutMs = 60_000): Promise<ServeHandle> {
-  let child = spawn('npm', ['run', 'graphene', '--', 'serve'], {cwd, env})
-  let logs = ''
-
-  child.stdout.on('data', data => {
-    logs += data.toString()
-  })
-  child.stderr.on('data', data => {
-    logs += data.toString()
-  })
-
-  await new Promise<void>((resolve, reject) => {
-    let timeout = setTimeout(() => {
-      reject(new Error(`Timed out waiting for serve to start on port ${port}\nlogs:\n${logs}`))
-    }, timeoutMs)
-
-    let onData = () => {
-      if (logs.includes(`Server running at http://localhost:${port}`)) {
-        clearTimeout(timeout)
-        resolve()
-      }
-    }
-
-    child.stdout.on('data', onData)
-    child.stderr.on('data', onData)
-    child.once('exit', code => {
-      clearTimeout(timeout)
-      reject(new Error(`graphene serve exited early with code ${code}\nlogs:\n${logs}`))
-    })
-    child.once('error', err => {
-      clearTimeout(timeout)
-      reject(err)
-    })
-  })
-
-  return {child, getLogs: () => logs}
-}
-
-test.skipIf(!process.env.SLOW_TEST)('packs cli and installs it into a user project', {timeout: 300_000}, async ({page}) => {
+test.skipIf(!process.env.SLOW_TEST)('install graphene and use it', {timeout: 300_000}, async ({page}) => {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
+  let createDir = path.join(coreDir, 'create')
   let cliDir = path.join(coreDir, 'cli')
-  let flightsDir = path.join(coreDir, 'examples/flights')
 
-  let tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-pack-install-'))
-  let projectDir = path.join(tempRoot, 'flights')
+  let tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-install-'))
+  let projectDir = path.join(tempRoot, 'demo-app')
   let port = await getAvailablePort()
   let childEnv = {...process.env, GRAPHENE_PORT: String(port)} as any
   delete childEnv.NODE_ENV
-
-  let serveHandle: ServeHandle | null = null
+  let createTarball: string | undefined
+  let cliTarball: string | undefined
 
   try {
     await page.setViewportSize({width: 1800, height: 1200})
 
-    let packResult = await run('pnpm', ['pack'], cliDir)
-    expectSuccess('pnpm pack', packResult)
-    let tarballPath = parseTarballPath(packResult, cliDir)
+    let packCreate = await run('pnpm', ['pack'], createDir)
+    expectSuccess('pnpm pack create', packCreate)
+    createTarball = parseTarballPath(packCreate, createDir)
 
-    await fsp.cp(flightsDir, projectDir, {recursive: true, filter: source => path.basename(source) !== 'node_modules'})
+    let packCli = await run('pnpm', ['pack'], cliDir)
+    expectSuccess('pnpm pack cli', packCli)
+    cliTarball = parseTarballPath(packCli, cliDir)
 
-    let packageJsonPath = path.join(projectDir, 'package.json')
-    let packageJson = JSON.parse(await fsp.readFile(packageJsonPath, 'utf8'))
-    packageJson.scripts = {...packageJson.scripts, graphene: 'graphene'}
-    await fsp.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + '\n')
+    let scaffold = await run('npm', ['exec', '--yes', '--package', createTarball, '--', 'create-graphenedata', 'demo-app', '--yes', '--no-install'], tempRoot, childEnv)
+    expectSuccess('npm exec create-graphenedata', scaffold)
 
-    let installResult = await run('npm', ['install', tarballPath], projectDir, childEnv)
+    let installResult = await run('npm', ['install', cliTarball], projectDir, childEnv)
     expectSuccess('npm install tarball', installResult)
 
-    serveHandle = await startServe(projectDir, childEnv, port)
+    // add actual data and a page with a real chart, so our smoke test will
+    // also ensure the queries and viz actually work
+    let flightsDbPath = path.join(coreDir, 'examples/flights/flights.duckdb')
+    await fsp.symlink(flightsDbPath, path.join(projectDir, 'data.duckdb'))
+    await fsp.writeFile(
+      path.join(projectDir, 'models.gsql'),
+      `table flights (
+  carrier VARCHAR
+  dep_delay BIGINT
+)
+`,
+    )
+    await fsp.writeFile(
+      path.join(projectDir, 'chart.md'),
+      `# Flight delays by carrier
 
-    try {
-      await page.goto(`http://localhost:${port}/`)
-    } catch (error: any) {
-      let logs = serveHandle.getLogs()
-      console.log(logs)
-      throw error
-    }
-    await waitForGrapheneLoad(page)
-    await page.waitForTimeout(500)
+\`\`\`sql carrier_delays
+select carrier, avg(dep_delay) as avg_dep_delay
+from flights
+group by 1
+order by 2 desc
+limit 10
+\`\`\`
 
-    let topDelta = await page.evaluate(() => {
-      let bigValues = Array.from(document.querySelectorAll('.big-value')) as HTMLElement[]
-      if (bigValues.length < 2) return null
-      let firstTop = bigValues[0].getBoundingClientRect().top
-      let secondTop = bigValues[1].getBoundingClientRect().top
-      return Math.abs(firstTop - secondTop)
-    })
-    expect(topDelta).not.toBeNull()
-    expect(topDelta!).toBeLessThan(5)
+<BarChart data=carrier_delays x=carrier y=avg_dep_delay />
+`,
+    )
 
-    let checkResult = await run('npm', ['run', 'graphene', '--', 'check', 'index.md'], projectDir, childEnv)
-    expectSuccess('npm run graphene check index.md', checkResult)
+    // `serve` wont return until we kill the server.
+    // We could run this in the background with `--bg`, but then have to worry about zombie servers if the test fails
+    void run('npm', ['run', 'graphene', '--', 'serve'], projectDir, childEnv)
 
-    let checkOutput = stripAnsi(checkResult.stdout + checkResult.stderr)
-    expect(checkOutput).toContain('No errors found')
-    expect(checkOutput).not.toContain('Warning: Queries were still loading when the screenshot was taken')
-
-    let runResult = await run('npm', ['run', 'graphene', '--', 'run', 'index.md'], projectDir, childEnv)
-    expectSuccess('npm run graphene run index.md', runResult)
-
-    let runOutput = stripAnsi(runResult.stdout + runResult.stderr)
-    expect(runOutput).toContain('No errors found')
-    expect(runOutput).toContain('Screenshot saved to')
-    expect(runOutput).not.toContain('Warning: Queries were still loading when the screenshot was taken')
+    // we need to wait until the server has started up, but it's hard to know exactly when that is, unless we were to watch the output
+    await page.waitForTimeout(3000)
 
     // Snapshot the live page with Playwright while the packaged server is running.
-    await page.goto(`http://localhost:${port}/`)
+    // The ideal here would actually be to test the screenshot we got back from `run`, but that's currently differs between local and
+    // ci because html2canvas does not preserve chart svg fonts, meaning we fall back to system ui fonts.
+    await page.goto(`http://localhost:${port}/chart`)
     await waitForGrapheneLoad(page)
     await page.evaluate(async () => {
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
     })
     await page.waitForTimeout(500)
     await expect(page).screenshot('packaged-cli-check-index')
+
+    let checkResult = await run('npm', ['run', 'graphene', '--', 'check'], projectDir, childEnv)
+    expectSuccess('graphene check', checkResult)
+    expect(getOutput(checkResult)).toEqual(
+      `
+> demo-app@0.0.1 graphene
+> graphene check
+
+No errors found 💎`.trim(),
+    )
+    console.log('checked')
+
+    let runResult = await run('npm', ['run', 'graphene', '--', 'run', 'chart.md'], projectDir, childEnv)
+    expectSuccess('graphene run index.md', runResult)
+    expect(getOutput(runResult).replace(/graphene-screenshot-.*\.png/, 'graphene-screenshot.png')).toEqual(
+      `
+> demo-app@0.0.1 graphene
+> graphene run chart.md
+
+No errors found 💎
+Screenshot saved to /tmp/graphene-screenshot.png
+      `.trim(),
+    )
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
-    serveHandle?.child.kill('SIGTERM')
-    await run('npm', ['run', 'graphene', '--', 'stop'], projectDir, childEnv)
+    await run('npm', ['run', 'graphene', '--', 'stop'], projectDir, childEnv) // extra stop, in case the test failed before the regular `stop` above
     await fsp.rm(tempRoot, {recursive: true, force: true})
   }
 })
