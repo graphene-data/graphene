@@ -4,12 +4,18 @@ import * as clack from '@clack/prompts'
 import {spawn} from 'node:child_process'
 import {access, mkdir, readFile, readdir, writeFile} from 'node:fs/promises'
 import path from 'node:path'
+import cliPackageJson from '../cli/package.json' with {type: 'json'}
 
 interface CreatePackageJson {
   version?: string
 }
 
+interface CliPackageJson {
+  peerDependencies?: Partial<Record<WarehouseClient, string>>
+}
+
 type Database = 'duckdb' | 'snowflake' | 'bigquery'
+type WarehouseClient = '@duckdb/node-api' | '@google-cloud/bigquery' | 'snowflake-sdk'
 
 interface CreateOptions {
   yes: boolean
@@ -49,10 +55,7 @@ interface TemplatePackageJson {
     compile: string
     run: string
   }
-  dependencies: {
-    '@graphenedata/cli': string
-    svelte: string
-  }
+  dependencies: Record<'@graphenedata/cli' | 'svelte', string> & Partial<Record<WarehouseClient, string>>
   graphene: GrapheneTemplateConfig
 }
 
@@ -87,6 +90,7 @@ interface InstallResult {
 type TemplateFiles = Record<string, string>
 
 const packageJson = await readCreatePackageJson()
+const cliManifest = cliPackageJson as CliPackageJson
 
 async function readCreatePackageJson(): Promise<CreatePackageJson> {
   try {
@@ -179,6 +183,8 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
     },
     graphene,
   }
+  let warehouseClient = getWarehouseClient(answers.database)
+  pkg.dependencies[warehouseClient] = getWarehouseClientVersion(warehouseClient)
 
   let files: TemplateFiles = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
@@ -284,6 +290,18 @@ function namespacePlaceholder(database: Database) {
   if (database === 'snowflake') return 'MY_DB.ANALYTICS'
   if (database === 'bigquery') return 'my-project.analytics'
   return 'analytics'
+}
+
+function getWarehouseClient(database: Database): WarehouseClient {
+  if (database === 'snowflake') return 'snowflake-sdk'
+  if (database === 'bigquery') return '@google-cloud/bigquery'
+  return '@duckdb/node-api'
+}
+
+function getWarehouseClientVersion(packageName: WarehouseClient): string {
+  let version = cliManifest.peerDependencies?.[packageName]
+  if (!version) throw new Error(`Missing ${packageName} peerDependency in cli/package.json`)
+  return version
 }
 
 async function collectAnswers({options, input, output}: {options: CreateOptions; input: Readable; output: Writable}): Promise<ScaffoldAnswers> {

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@graphenedata/cli": "workspace:*",
+    "@duckdb/node-api": "^1.5.1-r.1",
     "svelte": "5.53.7"
   },
   "engines": {

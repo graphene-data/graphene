@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@graphenedata/cli": "workspace:*",
+    "@google-cloud/bigquery": "^8.2.0",
     "svelte": "5.53.7"
   },
   "engines": {
