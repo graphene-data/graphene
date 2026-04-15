@@ -1,6 +1,8 @@
 import './internal/telemetry.ts'
 import './internal/queryEngine.ts'
 import './internal/runSocket.ts'
+import {getInstanceByDom} from 'echarts'
+
 import './app.css'
 import {mount, unmount} from 'svelte'
 
@@ -39,6 +41,10 @@ window.$GRAPHENE = window.$GRAPHENE || {}
 
 let nextRenderId = 0
 let pendingRenders = new Set()
+
+window.$GRAPHENE.getChart = domNode => {
+  return getInstanceByDom(domNode)
+}
 
 window.$GRAPHENE.renderStart = id => {
   let renderId = id == null ? `render:${++nextRenderId}` : String(id)

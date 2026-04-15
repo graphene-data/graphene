@@ -2,7 +2,6 @@
   import {init} from 'echarts'
   import {onDestroy, onMount} from 'svelte'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
-  import * as chartWindowDebug from '../component-utilities/chartWindowDebug.js'
   import {logError} from '../internal/telemetry.ts'
   import {enrich, horizontalBarCount} from '../component-utilities/enrich.ts'
   import type {EChartsConfig, NormalConfig, QueryResult} from '../component-utilities/types.ts'
@@ -79,7 +78,6 @@
     }
 
     try {
-      chartWindowDebug.set(String(chart.id), chart)
       window.$GRAPHENE?.renderStart?.(`chart:${chart.id}`)
       renderChart()
       chartError = null
@@ -113,7 +111,6 @@
   function destroyChart() {
     if (!chart) return
     chart.off('legendselectchanged', renderChart)
-    chartWindowDebug.unset(String(chart.id))
     chart.dispose()
     chart = null
   }

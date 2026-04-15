@@ -133,10 +133,11 @@ test('time tooltip uses readable timeGrain formatting', async ({mount, chart, sh
   ]
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'period', y: 'value', title: 'Month Grain'})
-  await sharedPage.evaluate(() => {
-    let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
-    let chart = charts && (Object.values(charts)[0] as any)
+  await sharedPage.evaluate(async () => {
+    let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
+    let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
     chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3})
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
   })
 
   await expect(chart.el).screenshot('line-chart-tooltip-time-month-grain')
@@ -156,8 +157,8 @@ test('line chart tooltip formats calculated non-whole numbers', async ({mount, c
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'avg_delay', title: 'Average Delay'})
 
   await sharedPage.evaluate(() => {
-    let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
-    let chart = charts && (Object.values(charts)[0] as any)
+    let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
+    let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
     chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
   })
 
@@ -174,8 +175,9 @@ test('pie chart', async ({mount, chart, sharedPage}) => {
   await expect(chart.el).screenshot('pie-chart')
 
   await sharedPage.evaluate(async () => {
-    let chart = Object.values(window[Symbol.for('__evidence-chart-window-debug__') as any])[0] as any
-    chart.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+    let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
+    let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
+    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
   })
 
