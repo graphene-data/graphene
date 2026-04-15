@@ -142,4 +142,35 @@ select tag
     expect(findToken(lines[1], 'unnest').scopes).toContain('keyword.control.gsql')
     expect(findToken(lines[1], 'as').scopes).toContain('keyword.control.gsql')
   })
+
+  it('highlights metadata pairs inside hash comments', async () => {
+    let lines = await tokenize(
+      `
+table revenue (
+  #color=green #hide #format="US Dollar"
+  amount int
+)
+`.trim(),
+    )
+
+    expect(findToken(lines[1], 'color').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'green').scopes).toContain('string.other.metadata.gsql')
+    expect(findToken(lines[1], 'hide').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'format').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'US Dollar').scopes).toContain('string.other.metadata.gsql')
+  })
+
+  it('highlights metadata pairs embedded in dash comments', async () => {
+    let lines = await tokenize(
+      `
+table revenue (
+  amount int -- gross revenue #hide #format="US Dollar"
+)
+`.trim(),
+    )
+
+    expect(findToken(lines[1], 'gross').scopes).toContain('comment.line.double-dash.gsql')
+    expect(findToken(lines[1], 'hide').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'format').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+  })
 })
