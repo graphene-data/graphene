@@ -3,7 +3,6 @@ import {getContext} from 'svelte'
 
 import {findImplicitAutoFormat, autoFormat, fallbackFormat, isAutoFormat} from './autoFormatting'
 import {BUILT_IN_FORMATS} from './builtInFormats'
-import {standardizeDateString} from './dateParsing'
 import {CUSTOM_FORMATTING_SETTINGS_CONTEXT_KEY} from './globalContexts'
 
 const AXIS_FORMATTING_CONTEXT = 'axis'
@@ -153,11 +152,9 @@ function applyFormatting(value, columnFormat = undefined, columnUnitSummary = un
       let typedValue
       try {
         if (columnFormat.valueType === 'date' && typeof value === 'string') {
-          typedValue = new Date(standardizeDateString(value))
+          typedValue = new Date(value)
         } else if (value instanceof Date) {
-          // "2023-09-06T22:40:43.000Z" minus the Z is interpreted
-          // as local time
-          // similar in behavior to standardizeDateString
+          // "2023-09-06T22:40:43.000Z" minus the Z is interpreted as local time.
           typedValue = new Date(value.toISOString().slice(0, -1))
         } else if (columnFormat.valueType === 'number' && typeof value !== 'number' && !Number.isNaN(value)) {
           typedValue = Number(value)
