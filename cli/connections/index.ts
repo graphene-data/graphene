@@ -61,6 +61,7 @@ async function importWarehouseConnection<T>(load: () => Promise<T>, packageName:
     return await load()
   } catch (err) {
     if (!isMissingWarehouseClientError(err, packageName)) throw err
+    // eslint-disable-next-line preserve-caught-error
     throw new Error(`${warehouseLabel} support requires installing ${packageName}. Add it to your project dependencies, for example: npm install ${packageName}`)
   }
 }
