@@ -2,7 +2,6 @@
   import {setContext, untrack, type Snippet} from 'svelte'
   import {writable} from 'svelte/store'
   import getColumnSummary from '../component-utilities/getColumnSummary.js'
-  import {convertColumnToDate} from '../component-utilities/dateParsing.js'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import TableHeader from './TableHeader.svelte'
   import TableRow from './TableRow.svelte'
@@ -154,16 +153,8 @@
         }
       }
 
-      let dateCols = resultColumnSummary
-        .filter((col) => col.type === 'date' && !(inputData?.[0]?.[col.id] instanceof Date))
-        .map((col) => col.id)
-
-      let tempData = inputData
-      for (let columnId of dateCols) {
-        tempData = convertColumnToDate(tempData, columnId)
-      }
-      resultProcessedData = tempData
-      resultNormalizedData = tempData
+      resultProcessedData = inputData
+      resultNormalizedData = inputData
 
       if (link && !showLinkColBool) {
         let linkIndex = resultColumnSummary.findIndex((col) => col.id === link)
