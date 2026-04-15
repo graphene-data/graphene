@@ -2,14 +2,14 @@ import type {SyntaxNode} from '@lezer/common'
 
 import {getFile} from './util.ts'
 
-let metadataPair = /(^|\s)(#)\s*([A-Za-z0-9_-]+)\s*=\s*("(?:[^"\\]|\\.)*"|[^\s#]+)/g
+let embeddedMetadataPair = /(^|\s)(#)([A-Za-z0-9_-]+)(?:\s*=\s*("(?:[^"\\]|\\.)*"|[^\s#]+)|(?=(?:\s*(?:#|--|$))))/g
 
 type CommentKind = 'dash' | 'hash'
 
 // Extract metadata from comments that appear directly above a syntax node.
 // Rules:
-// - `#` lines are metadata-only comments and may contain multiple `#key=value` entries.
-// - `--` lines are description comments, but may embed trailing `#key=value` metadata.
+// - `#` lines are metadata-only comments and may contain multiple `#key` / `#key=value` entries.
+// - `--` lines are description comments, but may embed trailing `#key` / `#key=value` metadata.
 // - Legacy `--# key=value` lines are ignored.
 // - Adjacency required: we scan upward; a blank or non-comment line stops the scan.
 // - If the node is not the first token on its line, ignore leading comments.
@@ -73,7 +73,7 @@ function parseTrailingComment(after: string): {kind: CommentKind; text: string} 
 
 function consumeComment(comment: {kind: CommentKind; text: string}, metadata: Record<string, string>, descriptionLines: string[]) {
   if (comment.kind === 'hash') {
-    let cleaned = extractMetadataPairs(`# ${comment.text}`, metadata)
+    let cleaned = extractHashMetadata(comment.text, metadata)
     let trailingDescription = parseHashCommentDescription(cleaned)
     if (trailingDescription) descriptionLines.push(trailingDescription)
     return
@@ -86,15 +86,34 @@ function consumeComment(comment: {kind: CommentKind; text: string}, metadata: Re
   if (description) descriptionLines.push(description)
 }
 
+function extractHashMetadata(text: string, metadata: Record<string, string>) {
+  let cursor = skipWhitespace(text, 0)
+  let pair = matchMetadataToken(text, cursor, false)
+  if (!pair) return text.trim()
+
+  metadata[pair.key] = parseMetadataValue(pair.rawValue)
+  cursor = pair.end
+
+  while (true) {
+    let nextStart = skipWhitespace(text, cursor)
+    if (text[nextStart] !== '#') return text.slice(nextStart).trim()
+    let nextPair = matchMetadataToken(text, nextStart, true)
+    if (!nextPair) return text.slice(nextStart).trim()
+    metadata[nextPair.key] = parseMetadataValue(nextPair.rawValue)
+    cursor = nextPair.end
+  }
+}
+
 function extractMetadataPairs(text: string, metadata: Record<string, string>) {
-  let cleaned = text.replace(metadataPair, (match, leadingSpace, _hash, key, rawValue) => {
+  let cleaned = text.replace(embeddedMetadataPair, (_match, leadingSpace, _hash, key, rawValue) => {
     if (key) metadata[key] = parseMetadataValue(rawValue)
     return leadingSpace ? ' ' : ''
   })
   return cleaned.replace(/\s+/g, ' ').trim()
 }
 
-function parseMetadataValue(rawValue: string) {
+function parseMetadataValue(rawValue?: string) {
+  if (!rawValue) return 'true'
   if (!rawValue.startsWith('"')) return rawValue
   return rawValue.slice(1, -1).replace(/\\(["\\])/g, '$1')
 }
@@ -103,6 +122,53 @@ function parseHashCommentDescription(cleaned: string) {
   if (!cleaned.startsWith('--')) return undefined
   let description = cleaned.slice(2).trim()
   return description || undefined
+}
+
+function matchMetadataToken(text: string, start: number, hasHashPrefix: boolean) {
+  let cursor = hasHashPrefix ? start + 1 : start
+  let keyStart = cursor
+  while (/[A-Za-z0-9_-]/.test(text[cursor] || '')) cursor++
+  if (cursor === keyStart) return undefined
+
+  let key = text.slice(keyStart, cursor)
+  let afterKey = skipWhitespace(text, cursor)
+  if (text[afterKey] === '=') {
+    let valueStart = skipWhitespace(text, afterKey + 1)
+    let value = readMetadataValue(text, valueStart)
+    if (!value) return undefined
+    return {key, rawValue: value.rawValue, end: value.end}
+  }
+
+  if (afterKey >= text.length || text[afterKey] === '#' || text.startsWith('--', afterKey)) {
+    return {key, rawValue: undefined, end: afterKey}
+  }
+}
+
+function readMetadataValue(text: string, start: number) {
+  if (!text[start]) return undefined
+  if (text[start] === '"') {
+    let cursor = start + 1
+    while (cursor < text.length) {
+      if (text[cursor] === '\\') {
+        cursor += 2
+        continue
+      }
+      if (text[cursor] === '"') return {rawValue: text.slice(start, cursor + 1), end: cursor + 1}
+      cursor++
+    }
+    return undefined
+  }
+
+  let cursor = start
+  while (cursor < text.length && !/[\s#]/.test(text[cursor])) cursor++
+  if (cursor === start) return undefined
+  return {rawValue: text.slice(start, cursor), end: cursor}
+}
+
+function skipWhitespace(text: string, start: number) {
+  let cursor = start
+  while (/\s/.test(text[cursor] || '')) cursor++
+  return cursor
 }
 
 function minNonNegative(...values: number[]) {

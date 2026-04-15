@@ -26,8 +26,8 @@ table flights (
   is_cancelled_or_diverted: cancelled = 'Y' or diverted = 'Y' -- Whether the flight was cancelled or diverted
   miles_flown: case when is_cancelled_or_diverted then 0 else distance end -- Actual miles flown, approximated by the distance between the origin and destination airports not including cancelled or diverted flights
 
-  on_time_departure_rate: avg(case when dep_delay <= 0 then 1 else 0 end) -- Percentage of flights that departed on time or early (0-1 scale) #ratio=true
-  on_time_arrival_rate: avg(case when arr_delay <= 0 then 1 else 0 end) -- Percentage of flights that arrived on time or early (0-1 scale) #ratio=true
-  cancellation_rate: avg(case when cancelled = 'Y' then 1 else 0 end) -- Percentage of flights that were cancelled (0-1 scale) #ratio=true
-  diversion_rate: avg(case when diverted = 'Y' then 1 else 0 end) -- Percentage of flights that were diverted (0-1 scale) #ratio=true
+  on_time_departure_rate: avg(case when dep_delay <= 0 then 1 else 0 end) -- Percentage of flights that departed on time or early (0-1 scale) #ratio
+  on_time_arrival_rate: avg(case when arr_delay <= 0 then 1 else 0 end) -- Percentage of flights that arrived on time or early (0-1 scale) #ratio
+  cancellation_rate: avg(case when cancelled = 'Y' then 1 else 0 end) -- Percentage of flights that were cancelled (0-1 scale) #ratio
+  diversion_rate: avg(case when diverted = 'Y' then 1 else 0 end) -- Percentage of flights that were diverted (0-1 scale) #ratio
 );

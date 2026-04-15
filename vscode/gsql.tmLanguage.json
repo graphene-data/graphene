@@ -50,7 +50,7 @@
       "patterns": [
         {
           "name": "meta.metadata-pair.gsql",
-          "match": "\\s*([A-Za-z0-9_-]+)(\\s*=\\s*)(\"(?:\\\\.|[^\"])*\"|[^\\s#]+)",
+          "match": "\\s*([A-Za-z0-9_-]+)(?:(\\s*=\\s*)(\"(?:\\\\.|[^\"])*\"|[^\\s#]+))?(?=\\s*(?:#|--|$))",
           "captures": {
             "1": {"name": "entity.other.attribute-name.metadata.gsql"},
             "2": {"name": "keyword.operator.assignment.metadata.gsql"},
@@ -63,12 +63,12 @@
       "patterns": [
         {
           "name": "meta.metadata-pair.gsql",
-          "match": "(#)(\\s*)([A-Za-z0-9_-]+)(\\s*=\\s*)(\"(?:\\\\.|[^\"])*\"|[^\\s#]+)",
+          "match": "(#)([A-Za-z0-9_-]+)(?:(\\s*=\\s*)(\"(?:\\\\.|[^\"])*\"|[^\\s#]+))?(?=\\s*(?:#|--|$))",
           "captures": {
             "1": {"name": "punctuation.definition.metadata.gsql"},
-            "3": {"name": "entity.other.attribute-name.metadata.gsql"},
-            "4": {"name": "keyword.operator.assignment.metadata.gsql"},
-            "5": {"name": "string.other.metadata.gsql"}
+            "2": {"name": "entity.other.attribute-name.metadata.gsql"},
+            "3": {"name": "keyword.operator.assignment.metadata.gsql"},
+            "4": {"name": "string.other.metadata.gsql"}
           }
         }
       ]

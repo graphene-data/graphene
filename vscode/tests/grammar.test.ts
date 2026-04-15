@@ -147,7 +147,7 @@ select tag
     let lines = await tokenize(
       `
 table revenue (
-  #color=green #format="US Dollar"
+  #color=green #hide #format="US Dollar"
   amount int
 )
 `.trim(),
@@ -155,6 +155,7 @@ table revenue (
 
     expect(findToken(lines[1], 'color').scopes).toContain('entity.other.attribute-name.metadata.gsql')
     expect(findToken(lines[1], 'green').scopes).toContain('string.other.metadata.gsql')
+    expect(findToken(lines[1], 'hide').scopes).toContain('entity.other.attribute-name.metadata.gsql')
     expect(findToken(lines[1], 'format').scopes).toContain('entity.other.attribute-name.metadata.gsql')
     expect(findToken(lines[1], 'US Dollar').scopes).toContain('string.other.metadata.gsql')
   })
@@ -163,14 +164,13 @@ table revenue (
     let lines = await tokenize(
       `
 table revenue (
-  amount int -- gross revenue #units=usd #format="US Dollar"
+  amount int -- gross revenue #hide #format="US Dollar"
 )
 `.trim(),
     )
 
     expect(findToken(lines[1], 'gross').scopes).toContain('comment.line.double-dash.gsql')
-    expect(findToken(lines[1], 'units').scopes).toContain('entity.other.attribute-name.metadata.gsql')
-    expect(findToken(lines[1], 'usd').scopes).toContain('string.other.metadata.gsql')
+    expect(findToken(lines[1], 'hide').scopes).toContain('entity.other.attribute-name.metadata.gsql')
     expect(findToken(lines[1], 'format').scopes).toContain('entity.other.attribute-name.metadata.gsql')
   })
 })

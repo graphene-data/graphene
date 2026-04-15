@@ -29,11 +29,11 @@ table users (
   days_to_first_purchase: timestamp_diff(user_facts.first_purchase_at, created_at, minute) / 1440.0
   -- timestamp_diff(current_timestamp(), last_purchase_at, minute) as time_since_last_purchase_minutes -- current_timestamp() not supported yet
 
-  conversion_rate: safe_divide(orders.customer_count, count(id)) -- percentage of users who made at least one purchase #ratio=true
+  conversion_rate: safe_divide(orders.customer_count, count(id)) -- percentage of users who made at least one purchase #ratio
 )
 
 -- Do not query this directly
-#hide=true
+#hide
 table user_facts as (
   from users select
     id,

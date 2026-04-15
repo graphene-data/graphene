@@ -17,7 +17,7 @@ export type Field = {
 
 // Metadata attached to fields.
 // There are a few built-in ones that Graphene already uses, but you can always attach your own metadata:
-// `price: cogs * 1.15 #units=usd #format="US Dollar"` -> {units: 'usd', format: 'US Dollar'}
+// `price: cogs * 1.15 #ratio #format="US Dollar"` -> {ratio: true, format: 'US Dollar'}
 export type FieldMeta = {
   ratio?: true // 0 to 1 value
   pct?: true // 0 to 100 value

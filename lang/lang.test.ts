@@ -15,7 +15,7 @@ const testTables = `
     id int
     name text
     -- email address of the user
-    #pii=true
+    #pii
     email text
     created_at timestamp
     age int
@@ -740,28 +740,28 @@ describe('lang', () => {
   it('parses quoted values and multiple hash metadata comments', () => {
     analyze(`
       -- currency metrics
-      #color=green #format="US Dollar"
+      #color=green #hide #format="US Dollar"
       table revenue (
         amount int,
-        -- gross revenue #units=usd #format="US Dollar"
+        -- gross revenue #units=usd #hide #format="US Dollar"
         gross int,
-        net int #units=usd #format="US Dollar"
+        net int #units=usd #hide #format="US Dollar"
       )
       from revenue select gross, net
     `)
 
     let table = getTable('revenue')!
-    expect(table.metadata).toMatchObject({description: 'currency metrics', color: 'green', format: 'US Dollar'})
+    expect(table.metadata).toMatchObject({description: 'currency metrics', color: 'green', hide: 'true', format: 'US Dollar'})
     let gross = table.columns.find(c => c.name === 'gross')!
-    expect(gross.metadata).toMatchObject({description: 'gross revenue', units: 'usd', format: 'US Dollar'})
+    expect(gross.metadata).toMatchObject({description: 'gross revenue', units: 'usd', hide: 'true', format: 'US Dollar'})
     let net = table.columns.find(c => c.name === 'net')!
-    expect(net.metadata).toMatchObject({units: 'usd', format: 'US Dollar'})
+    expect(net.metadata).toMatchObject({units: 'usd', hide: 'true', format: 'US Dollar'})
   })
 
   it('keeps literal hash signs in descriptions while parsing trailing metadata pairs', () => {
     analyze(`
       table foo (
-        -- Description with # sign #hide=true #pii=true
+        -- Description with # sign #hide #pii
         name text
       )
     `)
@@ -774,14 +774,14 @@ describe('lang', () => {
   it('treats trailing dash comments in hash metadata lines as description', () => {
     analyze(`
       table foo (
-        #key=value -- More comment
+        #hide #key=value -- More comment
         name text
       )
     `)
 
     let table = getTable('foo')!
     let name = table.columns.find(c => c.name === 'name')!
-    expect(name.metadata).toMatchObject({key: 'value', description: 'More comment'})
+    expect(name.metadata).toMatchObject({hide: 'true', key: 'value', description: 'More comment'})
   })
 
   it('does not parse legacy dash-hash metadata comments', () => {
