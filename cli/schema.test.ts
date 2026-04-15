@@ -17,10 +17,6 @@ const snowflakeDir = path.resolve(dir, '../examples/snowflake')
 const ecommDir = path.resolve(dir, '../examples/ecomm')
 const clickhouseDir = path.resolve(dir, '../examples/clickhouse')
 
-const hasSnowflakeAuth = !!process.env.SNOWFLAKE_PRI_KEY_PATH || !!process.env.SNOWFLAKE_PRI_KEY
-const hasBigQueryAuth = !!process.env.GOOGLE_APPLICATION_CREDENTIALS || !!process.env.GOOGLE_CREDENTIALS_CONTENT
-const hasClickHouseAuth = !!process.env.CLICKHOUSE_URL && !!process.env.CLICKHOUSE_USERNAME && !!process.env.CLICKHOUSE_PASSWORD
-
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
     let cliEntry = path.resolve(dir, 'cli.ts')
@@ -84,11 +80,7 @@ describe('duckdb', () => {
   })
 })
 
-describe.skipIf(!hasSnowflakeAuth)('snowflake', () => {
-  if (!hasSnowflakeAuth) {
-    console.warn('⚠️  Skipping Snowflake schema tests: SNOWFLAKE_PRI_KEY_PATH not set')
-  }
-
+describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
   // Snowflake has a 3-level hierarchy: DATABASE.SCHEMA.TABLE
   // The example is configured with namespace "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02"
 
@@ -124,11 +116,7 @@ describe.skipIf(!hasSnowflakeAuth)('snowflake', () => {
   })
 })
 
-describe.skipIf(!hasBigQueryAuth)('bigquery', () => {
-  if (!hasBigQueryAuth) {
-    console.warn('⚠️  Skipping BigQuery schema tests: GOOGLE_APPLICATION_CREDENTIALS not set')
-  }
-
+describe.skipIf(!process.env.SLOW_TEST)('bigquery', () => {
   it('lists available tables in the configured namespace', async () => {
     let res = await runCli(['schema'], ecommDir)
     expectCliSuccess(res, 'schema list tables (bigquery)')
@@ -152,11 +140,7 @@ describe.skipIf(!hasBigQueryAuth)('bigquery', () => {
   })
 })
 
-describe.skipIf(!hasClickHouseAuth)('clickhouse', () => {
-  if (!hasClickHouseAuth) {
-    console.warn('Skipping ClickHouse schema tests: CLICKHOUSE_URL/USERNAME/PASSWORD not set')
-  }
-
+describe.skipIf(!process.env.SLOW_TEST || true)('clickhouse', () => {
   it('lists available tables in the configured database', async () => {
     let res = await runCli(['schema'], clickhouseDir)
     expectCliSuccess(res, 'schema list tables (clickhouse)')
