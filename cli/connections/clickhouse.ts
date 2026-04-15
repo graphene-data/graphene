@@ -1,5 +1,3 @@
-import {createClient, type ClickHouseClient} from '@clickhouse/client'
-
 import {type QueryConnection, type QueryResult, type QueryParams, type SchemaColumn} from './types.ts'
 
 export interface ClickHouseOptions {
@@ -9,13 +7,22 @@ export interface ClickHouseOptions {
   database?: string
 }
 
+type ClickHouseModule = typeof import('@clickhouse/client')
+type ClickHouseClient = ReturnType<ClickHouseModule['createClient']>
+
 export class ClickHouseConnection implements QueryConnection {
-  private client: ClickHouseClient
+  private ready: Promise<void>
+  private client!: ClickHouseClient
   private defaultDatabase: string
 
   constructor(options: ClickHouseOptions) {
     this.defaultDatabase = options.database || 'default'
-    this.client = createClient({
+    this.ready = this.initialize(options)
+  }
+
+  private async initialize(options: ClickHouseOptions) {
+    let mod = await loadClickHouse()
+    this.client = mod.createClient({
       url: options.url,
       username: options.username,
       password: options.password,
@@ -25,6 +32,7 @@ export class ClickHouseConnection implements QueryConnection {
   }
 
   async runQuery(sql: string, _params?: QueryParams): Promise<QueryResult> {
+    await this.ready
     let result = await this.client.query({query: sql, format: 'JSONEachRow'})
     let rows = (await result.json()) as Array<Record<string, unknown>>
     return {rows, totalRows: rows.length}
@@ -67,10 +75,18 @@ export class ClickHouseConnection implements QueryConnection {
   }
 
   async close(): Promise<void> {
+    await this.ready
     await this.client.close()
   }
 }
 
 function escapeClickHouseString(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+let clickhouseModule: ClickHouseModule | null = null
+
+async function loadClickHouse(): Promise<ClickHouseModule> {
+  clickhouseModule ||= await import('@clickhouse/client')
+  return clickhouseModule
 }
