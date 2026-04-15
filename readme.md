@@ -17,7 +17,8 @@
 
 From `vscode`, use `pnpm run install-cursor` (or `-vscode`) to package up the current vscode extension and install it in your editor. This requires you've installed the cli command for your editor.
 
-To test out packaged graphene, `cd cli && pnpm pack`. In a new folder, you can `npm install <path-to-pack.tgz>`.
+To test out packaged graphene, `cd cli && pnpm pack`. In a new folder, you can `npm install <path-to-pack.tgz> <warehouse-client>`.
+For example, DuckDB projects should install `@duckdb/node-api`, BigQuery projects `@google-cloud/bigquery`, Snowflake projects `snowflake-sdk`, and ClickHouse projects `@clickhouse/client`.
 
 # Linking
 
