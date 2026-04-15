@@ -1,7 +1,9 @@
+import type * as BigQueryTypes from '@google-cloud/bigquery'
+
 import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
 
-type BigQueryModule = typeof import('@google-cloud/bigquery')
+type BigQueryModule = typeof BigQueryTypes
 type BigQueryClient = InstanceType<BigQueryModule['BigQuery']>
 type BigQueryOptions = ConstructorParameters<BigQueryModule['BigQuery']>[0]
 

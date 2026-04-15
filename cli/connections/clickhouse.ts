@@ -1,3 +1,5 @@
+import type * as ClickHouseTypes from '@clickhouse/client'
+
 import {type QueryConnection, type QueryResult, type QueryParams, type SchemaColumn} from './types.ts'
 
 export interface ClickHouseOptions {
@@ -7,7 +9,7 @@ export interface ClickHouseOptions {
   database?: string
 }
 
-type ClickHouseModule = typeof import('@clickhouse/client')
+type ClickHouseModule = typeof ClickHouseTypes
 type ClickHouseClient = ReturnType<ClickHouseModule['createClient']>
 
 export class ClickHouseConnection implements QueryConnection {

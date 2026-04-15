@@ -1,3 +1,5 @@
+import type * as SnowflakeTypes from 'snowflake-sdk'
+
 import {createPrivateKey} from 'node:crypto'
 
 import {config} from '../../lang/config.ts'
@@ -12,7 +14,7 @@ interface SnowflakeOptions {
   logLevel?: string
 }
 
-type SnowflakeModule = typeof import('snowflake-sdk')
+type SnowflakeModule = typeof SnowflakeTypes
 type SnowflakeConnectionType = ReturnType<SnowflakeModule['createConnection']>
 
 // Raw notes on setting up a new user:

@@ -1,3 +1,5 @@
+import type * as DuckDBTypes from '@duckdb/node-api'
+
 import {promises as fs} from 'fs'
 import path from 'path'
 
@@ -8,7 +10,7 @@ interface DuckDbOptions {
   path?: string
 }
 
-type DuckDBModule = typeof import('@duckdb/node-api')
+type DuckDBModule = typeof DuckDBTypes
 type InnerConnection = Awaited<ReturnType<InstanceType<DuckDBModule['DuckDBInstance']>['connect']>>
 
 export class DuckDBConnection implements QueryConnection {
