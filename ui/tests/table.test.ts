@@ -14,6 +14,11 @@ test('renders table data', async ({mount}) => {
   await expect(t).screenshot('table-renders-data')
 })
 
+test('table renders error state for missing sort column', async ({mount}) => {
+  let component = await mount('components/Table.svelte', {data: tableDataWithDates(), sort: 'missing_col asc'})
+  await expect(component).screenshot('missing-column')
+})
+
 test('sorts by column header', async ({mount}) => {
   let component = await mount('components/Table.svelte', {data: tableDataWithDates()})
   let table = component.locator('table')
