@@ -57,7 +57,7 @@
     "mdsvex": "^0.12.6",
     "nanoid": "3.3.8",
     "sanitize-html": "^2.17.0",
-    "snowflake-sdk": "^2.3.4",
+    "snowflake-sdk": "^2.4.0",
     "ssf": "^0.11.2",
     "svelte": "5.53.7",
     "unified": "^11.0.5",
