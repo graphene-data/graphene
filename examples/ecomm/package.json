@@ -11,8 +11,8 @@
     "serve": "npm run dev"
   },
   "dependencies": {
-    "@graphenedata/cli": "workspace:*",
     "@google-cloud/bigquery": "^8.2.0",
+    "@graphenedata/cli": "workspace:*",
     "svelte": "5.53.7"
   },
   "engines": {

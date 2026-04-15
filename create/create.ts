@@ -4,6 +4,7 @@ import * as clack from '@clack/prompts'
 import {spawn} from 'node:child_process'
 import {access, mkdir, readFile, readdir, writeFile} from 'node:fs/promises'
 import path from 'node:path'
+
 import cliPackageJson from '../cli/package.json' with {type: 'json'}
 
 interface CreatePackageJson {
