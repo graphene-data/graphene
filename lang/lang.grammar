@@ -447,7 +447,7 @@ Alias { Identifier }
 
 @tokens {
   whitespace { @whitespace+ }
-  comment { "--" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
+  comment { "--" ![\n]* | "#" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
 
   Identifier { @asciiLetter (@asciiLetter | @digit | "_")* }
   Param { "$" (@asciiLetter | @digit | "_")+ }

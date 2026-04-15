@@ -19,18 +19,57 @@
   "repository": {
     "comments": {
       "patterns": [
-        {
-          "name": "comment.line.double-dash.gsql",
-          "match": "--.*$"
-        },
+        {"include": "#hash-metadata-comment"},
+        {"include": "#dash-comment"},
         {
           "name": "comment.block.gsql",
           "begin": "/\\*",
           "end": "\\*/"
-        },
+        }
+      ]
+    },
+    "hash-metadata-comment": {
+      "name": "comment.line.number-sign.gsql",
+      "begin": "#",
+      "beginCaptures": {
+        "0": {"name": "punctuation.definition.comment.gsql"}
+      },
+      "end": "$",
+      "patterns": [{"include": "#metadata-first-pair"}, {"include": "#metadata-pair"}]
+    },
+    "dash-comment": {
+      "name": "comment.line.double-dash.gsql",
+      "begin": "--",
+      "beginCaptures": {
+        "0": {"name": "punctuation.definition.comment.gsql"}
+      },
+      "end": "$",
+      "patterns": [{"include": "#metadata-pair"}]
+    },
+    "metadata-first-pair": {
+      "patterns": [
         {
-          "name": "comment.line.number-sign.gsql",
-          "match": "#.*$"
+          "name": "meta.metadata-pair.gsql",
+          "match": "\\s*([A-Za-z0-9_-]+)(\\s*=\\s*)(\"(?:\\\\.|[^\"])*\"|[^\\s#]+)",
+          "captures": {
+            "1": {"name": "entity.other.attribute-name.metadata.gsql"},
+            "2": {"name": "keyword.operator.assignment.metadata.gsql"},
+            "3": {"name": "string.other.metadata.gsql"}
+          }
+        }
+      ]
+    },
+    "metadata-pair": {
+      "patterns": [
+        {
+          "name": "meta.metadata-pair.gsql",
+          "match": "(#)(\\s*)([A-Za-z0-9_-]+)(\\s*=\\s*)(\"(?:\\\\.|[^\"])*\"|[^\\s#]+)",
+          "captures": {
+            "1": {"name": "punctuation.definition.metadata.gsql"},
+            "3": {"name": "entity.other.attribute-name.metadata.gsql"},
+            "4": {"name": "keyword.operator.assignment.metadata.gsql"},
+            "5": {"name": "string.other.metadata.gsql"}
+          }
         }
       ]
     },

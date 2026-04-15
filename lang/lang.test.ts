@@ -15,7 +15,7 @@ const testTables = `
     id int
     name text
     -- email address of the user
-    --# pii=true
+    #pii=true
     email text
     created_at timestamp
     age int
@@ -721,7 +721,7 @@ describe('lang', () => {
       table t (
         id int,
         -- a description
-        --# format=first_last
+        #format=first_last
         name text,
         another_field text, -- this is another field #units=seconds
       )
@@ -735,6 +735,67 @@ describe('lang', () => {
     let another = table.columns.find(c => c.name === 'another_field')!
     expect(String(another.metadata!.description || '').toLowerCase()).toContain('this is another field')
     expect(another.metadata!.units).toBe('seconds')
+  })
+
+  it('parses quoted values and multiple hash metadata comments', () => {
+    analyze(`
+      -- currency metrics
+      #color=green #format="US Dollar"
+      table revenue (
+        amount int,
+        -- gross revenue #units=usd #format="US Dollar"
+        gross int,
+        net int #units=usd #format="US Dollar"
+      )
+      from revenue select gross, net
+    `)
+
+    let table = getTable('revenue')!
+    expect(table.metadata).toMatchObject({description: 'currency metrics', color: 'green', format: 'US Dollar'})
+    let gross = table.columns.find(c => c.name === 'gross')!
+    expect(gross.metadata).toMatchObject({description: 'gross revenue', units: 'usd', format: 'US Dollar'})
+    let net = table.columns.find(c => c.name === 'net')!
+    expect(net.metadata).toMatchObject({units: 'usd', format: 'US Dollar'})
+  })
+
+  it('keeps literal hash signs in descriptions while parsing trailing metadata pairs', () => {
+    analyze(`
+      table foo (
+        -- Description with # sign #hide=true #pii=true
+        name text
+      )
+    `)
+
+    let table = getTable('foo')!
+    let name = table.columns.find(c => c.name === 'name')!
+    expect(name.metadata).toMatchObject({description: 'Description with # sign', hide: 'true', pii: 'true'})
+  })
+
+  it('treats trailing dash comments in hash metadata lines as description', () => {
+    analyze(`
+      table foo (
+        #key=value -- More comment
+        name text
+      )
+    `)
+
+    let table = getTable('foo')!
+    let name = table.columns.find(c => c.name === 'name')!
+    expect(name.metadata).toMatchObject({key: 'value', description: 'More comment'})
+  })
+
+  it('does not parse legacy dash-hash metadata comments', () => {
+    analyze(`
+      table foo (
+        --# format=first_last
+        name text
+      )
+    `)
+
+    let table = getTable('foo')!
+    let name = table.columns.find(c => c.name === 'name')!
+    expect(name.metadata?.format).toBeUndefined()
+    expect(name.metadata?.description).toBeUndefined()
   })
 
   it('does not attach a single leading comment to multiple fields on the same line', () => {
@@ -1624,6 +1685,7 @@ describe('lang', () => {
       id INT64
       computed: id / 2
       -- this is a comment
+      #units=usd
       name STRING
     ); from test select id`).toRenderSql('select test.id as id from test as test')
   })

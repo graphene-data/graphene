@@ -33,7 +33,7 @@ table users (
 )
 
 -- Do not query this directly
--- #hide
+#hide=true
 table user_facts as (
   from users select
     id,
