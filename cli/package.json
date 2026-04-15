@@ -63,22 +63,22 @@
   },
   "devDependencies": {
     "@clickhouse/client": "^1.18.2",
-    "@duckdb/node-api": "^1.5.1-r.1",
+    "@duckdb/node-api": "1.3.2-alpha.26",
     "@google-cloud/bigquery": "^8.2.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.0.0",
     "@types/sanitize-html": "^2.16.0",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.27.2",
-    "snowflake-sdk": "^2.4.0",
+    "snowflake-sdk": "2.3.4",
     "vitest": "4.0.18",
     "vscode-languageserver-types": "^3.17.0"
   },
   "peerDependencies": {
     "@clickhouse/client": "^1.18.2",
-    "@duckdb/node-api": "^1.5.1-r.1",
+    "@duckdb/node-api": "1.3.2-alpha.26",
     "@google-cloud/bigquery": "^8.2.0",
-    "snowflake-sdk": "^2.4.0"
+    "snowflake-sdk": "2.3.4"
   },
   "peerDependenciesMeta": {
     "@clickhouse/client": {

@@ -37,7 +37,7 @@ describe('create helpers', () => {
 
     expect(pkg.name).toBe('demo-app')
     expect(pkg.dependencies['@graphenedata/cli']).toBe('0.0.15')
-    expect(pkg.dependencies['@duckdb/node-api']).toBe('^1.5.1-r.1')
+    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
     expect(pkg.graphene).toEqual({dialect: 'duckdb', duckdb: {path: './data.duckdb'}})
     expect(files['.gitignore']).toContain('*.duckdb')
     expect(files['.env']).toBeUndefined()
@@ -57,7 +57,7 @@ describe('create helpers', () => {
     let pkg = JSON.parse(files['package.json'])
 
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
-    expect(pkg.dependencies['@duckdb/node-api']).toBe('^1.5.1-r.1')
+    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
   })
 
   it('renders a snowflake project with .env auth vars', () => {
@@ -82,7 +82,7 @@ describe('create helpers', () => {
       defaultNamespace: 'MY_DB.ANALYTICS',
       snowflake: {account: 'myorg-myaccount', username: 'graphene_user'},
     })
-    expect(pkg.dependencies['snowflake-sdk']).toBe('^2.4.0')
+    expect(pkg.dependencies['snowflake-sdk']).toBe('2.3.4')
     expect(files['.env']).toContain('SNOWFLAKE_PRI_KEY_PATH=/Users/me/.ssh/graphene_snowflake_key.p8')
     expect(files['.env']).toContain('SNOWFLAKE_PRI_PASSPHRASE=secret')
   })
