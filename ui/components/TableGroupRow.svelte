@@ -4,7 +4,7 @@
   import InlineDelta from './InlineDelta.svelte'
   import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
   import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
-  import {toBoolean} from '../component-utilities/convert'
+  import {toBoolean} from '../component-utilities/inputUtils'
 
   interface Props {
     groupName: string

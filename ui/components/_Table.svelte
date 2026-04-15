@@ -12,7 +12,7 @@
   import Column from './Column.svelte'
   import {getFinalColumnOrder} from '../component-utilities/tableUtils'
   import {getThemeStores} from '../component-utilities/themeStores'
-  import {toBoolean} from '../component-utilities/convert'
+  import {toBoolean} from '../component-utilities/inputUtils'
   import {logError} from '../internal/telemetry.js'
 
   interface Props {
