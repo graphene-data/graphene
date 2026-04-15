@@ -4,7 +4,6 @@
   import {propKey, strictBuild} from '../component-utilities/chartContext.js'
   import getColumnSummary from '../component-utilities/getColumnSummary.js'
   import {convertColumnToDate} from '../component-utilities/dateParsing.js'
-  import checkInputs from '../component-utilities/checkInputs.js'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import TableHeader from './TableHeader.svelte'
   import TableRow from './TableRow.svelte'
@@ -147,7 +146,6 @@
         inputData = data
       }
 
-      checkInputs(inputData)
       resultColumnSummary = getColumnSummary(inputData, 'array')
 
       if (initialSort.sortBy) {
