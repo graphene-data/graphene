@@ -21,8 +21,8 @@
     "dialect": "clickhouse",
     "defaultNamespace": "default",
     "clickhouse": {
-      "url": "https://kzo1vb16sa.us-east-1.aws.clickhouse.cloud:8443",
-      "username": "default"
+      "url": "http://ec2-3-217-185-14.compute-1.amazonaws.com:8123",
+      "username": "graphene"
     },
     "envFile": [
       ".env",

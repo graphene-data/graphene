@@ -16,6 +16,7 @@ const flightDir = path.resolve(dir, '../examples/flights')
 const snowflakeDir = path.resolve(dir, '../examples/snowflake')
 const ecommDir = path.resolve(dir, '../examples/ecomm')
 const clickhouseDir = path.resolve(dir, '../examples/clickhouse')
+const hasClickHouseAuth = !!process.env.CLICKHOUSE_URL && !!process.env.CLICKHOUSE_USERNAME && !!process.env.CLICKHOUSE_PASSWORD
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
@@ -140,7 +141,7 @@ describe.skipIf(!process.env.SLOW_TEST)('bigquery', () => {
   })
 })
 
-describe.skipIf(!process.env.SLOW_TEST || true)('clickhouse', () => {
+describe.skipIf(!process.env.SLOW_TEST || !hasClickHouseAuth)('clickhouse', () => {
   it('lists available tables in the configured database', async () => {
     let res = await runCli(['schema'], clickhouseDir)
     expectCliSuccess(res, 'schema list tables (clickhouse)')

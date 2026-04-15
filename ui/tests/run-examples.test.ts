@@ -73,8 +73,7 @@ async function getExampleDirs(examplesDir: string): Promise<string[]> {
 }
 
 function shouldRunExample(exampleName: string) {
-  // Temporarily skip clickhouse example until CI creds are configured.
-  if (exampleName === 'clickhouse') return false
+  if (exampleName === 'clickhouse') return !!process.env.CLICKHOUSE_URL && !!process.env.CLICKHOUSE_USERNAME && !!process.env.CLICKHOUSE_PASSWORD
   return true
 }
 
