@@ -28,12 +28,9 @@
     "prepack": "pnpm run build"
   },
   "dependencies": {
-    "@clickhouse/client": "^1.18.2",
-    "@duckdb/node-api": "1.3.2-alpha.26",
     "@fontsource/fira-code": "^5.2.7",
     "@fontsource/source-sans-3": "^5.2.9",
     "@fontsource/source-serif-4": "^5.2.9",
-    "@google-cloud/bigquery": "^8.2.0",
     "@graphenedata/html2canvas": "^1.4.1",
     "@lezer/common": "^1.2.3",
     "@lezer/lr": "^1.4.2",
@@ -57,7 +54,6 @@
     "mdsvex": "^0.12.6",
     "nanoid": "3.3.8",
     "sanitize-html": "^2.17.0",
-    "snowflake-sdk": "^2.3.4",
     "ssf": "^0.11.2",
     "svelte": "5.53.7",
     "unified": "^11.0.5",
@@ -66,13 +62,37 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "@clickhouse/client": "^1.18.2",
+    "@duckdb/node-api": "1.3.2-alpha.26",
+    "@google-cloud/bigquery": "^8.2.0",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.0.0",
     "@types/sanitize-html": "^2.16.0",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.27.2",
+    "snowflake-sdk": "2.3.4",
     "vitest": "4.0.18",
     "vscode-languageserver-types": "^3.17.0"
+  },
+  "peerDependencies": {
+    "@clickhouse/client": "^1.18.2",
+    "@duckdb/node-api": "1.3.2-alpha.26",
+    "@google-cloud/bigquery": "^8.2.0",
+    "snowflake-sdk": "2.3.4"
+  },
+  "peerDependenciesMeta": {
+    "@clickhouse/client": {
+      "optional": true
+    },
+    "@duckdb/node-api": {
+      "optional": true
+    },
+    "@google-cloud/bigquery": {
+      "optional": true
+    },
+    "snowflake-sdk": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=20"

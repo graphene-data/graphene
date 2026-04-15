@@ -1,5 +1,6 @@
+import type * as SnowflakeTypes from 'snowflake-sdk'
+
 import {createPrivateKey} from 'node:crypto'
-import snowflake from 'snowflake-sdk'
 
 import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
@@ -13,6 +14,9 @@ interface SnowflakeOptions {
   logLevel?: string
 }
 
+type SnowflakeModule = typeof SnowflakeTypes
+type SnowflakeConnectionType = ReturnType<SnowflakeModule['createConnection']>
+
 // Raw notes on setting up a new user:
 // * create a `demouser` with a new `demorole`. It should have
 // That role needs `operate` and `usage` on a warehouse, and `usage` on the relevant db or schema
@@ -23,13 +27,14 @@ interface SnowflakeOptions {
 
 export class SnowflakeConnection implements QueryConnection {
   private ready: Promise<void>
-  private connection!: snowflake.Connection
+  private connection!: SnowflakeConnectionType
 
   constructor(opts: SnowflakeOptions) {
     this.ready = this.initialize(opts || {})
   }
 
   async initialize(opts: SnowflakeOptions) {
+    let snowflake = await loadSnowflake()
     let privateKeyPath = opts.privateKeyPath || config.snowflake?.privateKeyPath
 
     let authOptions: any = {}
@@ -155,4 +160,14 @@ export class SnowflakeConnection implements QueryConnection {
 function snowflakeIdent(value: string) {
   if (!value) throw new Error('Snowflake identifiers cannot be empty')
   return `"${value.replace(/"/g, '""')}"`
+}
+
+let snowflakeModule: SnowflakeModule | null = null
+
+async function loadSnowflake(): Promise<SnowflakeModule> {
+  if (!snowflakeModule) {
+    let mod = await import('snowflake-sdk')
+    snowflakeModule = ((mod as any).default || mod) as SnowflakeModule
+  }
+  return snowflakeModule
 }
