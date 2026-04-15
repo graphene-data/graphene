@@ -15,8 +15,6 @@ interface RunResult {
   stderr: string
 }
 
-const shouldRunExamplesTest = process.env.GRAPHENE_RUN_EXAMPLES_TEST === '1'
-
 function runCli(args: string[], cwd: string, env: NodeJS.ProcessEnv): Promise<RunResult> {
   return new Promise(resolve => {
     let cliEntry = path.resolve(cwd, '../../cli/cli.ts')
@@ -74,6 +72,12 @@ async function getExampleDirs(examplesDir: string): Promise<string[]> {
     .sort()
 }
 
+function shouldRunExample(exampleName: string) {
+  // Temporarily skip clickhouse example until CI creds are configured.
+  if (exampleName === 'clickhouse') return false
+  return true
+}
+
 async function getAvailablePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
     let srv = net.createServer()
@@ -86,11 +90,15 @@ async function getAvailablePort(): Promise<number> {
   })
 }
 
-test.skipIf(!shouldRunExamplesTest)('graphene run succeeds for every markdown file in examples', {timeout: 900_000}, async ({page}) => {
+test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for every markdown file in examples', {timeout: 900_000}, async ({page}) => {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
   let examplesDir = path.join(coreDir, 'examples')
-  let exampleDirs = await getExampleDirs(examplesDir)
+  let allExampleDirs = await getExampleDirs(examplesDir)
+  let exampleDirs = allExampleDirs.filter(exampleDir => shouldRunExample(path.basename(exampleDir)))
+  let skippedExamples = allExampleDirs.map(dir => path.basename(dir)).filter(name => !shouldRunExample(name))
+
+  expect(allExampleDirs.length).toBeGreaterThan(0)
   expect(exampleDirs.length).toBeGreaterThan(0)
 
   expectConsoleError(/\[ECharts\] The ticks may be not readable/)
@@ -98,7 +106,8 @@ test.skipIf(!shouldRunExamplesTest)('graphene run succeeds for every markdown fi
   let runPlan = await Promise.all(exampleDirs.map(async exampleDir => ({exampleDir, markdownFiles: await listMarkdownFiles(exampleDir)})))
   let plannedFiles = runPlan.flatMap(({exampleDir, markdownFiles}) => markdownFiles.map(mdPath => `${path.basename(exampleDir)}/${mdPath}`))
 
-  console.log(`[run-examples] found ${exampleDirs.length} example directories`)
+  console.log(`[run-examples] found ${exampleDirs.length} runnable example directories`)
+  if (skippedExamples.length) console.log(`[run-examples] skipped examples: ${skippedExamples.join(', ')}`)
   console.log(`[run-examples] planned markdown files (${plannedFiles.length}):`)
   plannedFiles.forEach(file => console.log(`[run-examples]   - ${file}`))
 

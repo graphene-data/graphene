@@ -20,8 +20,6 @@ interface ServeHandle {
   getLogs: () => string
 }
 
-const shouldRunPackInstallTest = !!process.env.CI || process.env.GRAPHENE_PACK_TEST === '1'
-
 function run(command: string, args: string[], cwd: string, env: NodeJS.ProcessEnv = process.env): Promise<RunResult> {
   return new Promise(resolve => {
     let child = spawn(command, args, {cwd, env})
@@ -99,7 +97,7 @@ async function startServe(cwd: string, env: NodeJS.ProcessEnv, port: number, tim
   return {child, getLogs: () => logs}
 }
 
-test.skipIf(!shouldRunPackInstallTest)('packs cli and installs it into a user project', {timeout: 300_000}, async ({page}) => {
+test.skipIf(!process.env.SLOW_TEST)('packs cli and installs it into a user project', {timeout: 300_000}, async ({page}) => {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
   let cliDir = path.join(coreDir, 'cli')
