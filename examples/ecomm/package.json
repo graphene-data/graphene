@@ -13,7 +13,7 @@
   "dependencies": {
     "@google-cloud/bigquery": "^8.2.0",
     "@graphenedata/cli": "workspace:*",
-    "svelte": "5.53.7"
+    "svelte": "5.55.3"
   },
   "engines": {
     "node": ">=24.0.0"
