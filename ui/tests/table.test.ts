@@ -1,8 +1,6 @@
 import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 import {groupedDataForSection, tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData.ts'
 
-const tableSelector = '[data-testid="DataTable-no-id"] table'
-
 test.beforeEach(async ({sharedPage}) => {
   await sharedPage.setViewportSize({width: 1280, height: 720})
 })
@@ -78,50 +76,58 @@ test('paginates rows', async ({mount}) => {
   await expect(component.locator('.table-container')).screenshot('pagination-first-last')
 })
 
-test('colorscale with colorBreakpoints applies correct background colors', async ({server, page}) => {
-  // Three columns with different value ranges against the same 0-1 breakpoints.
-  // High column should be green, low column should be red — verify via screenshot.
-  server.mockFile(
-    '/index.md',
-    `
-    \`\`\`sql retention_data
-    from flights select carrier, count(*) / 100000.0 as high_val, count(*) / 500000.0 as mid_val, count(*) / 2000000.0 as low_val group by carrier limit 5
-    \`\`\`
+test('colorscale with colorBreakpoints applies correct background colors', async ({mount}) => {
+  let rows = [
+    {carrier: 'WN', high_val: 0.886, mid_val: 0.178, low_val: 0.044},
+    {carrier: 'US', high_val: 0.377, mid_val: 0.075, low_val: 0.019},
+    {carrier: 'AA', high_val: 0.346, mid_val: 0.069, low_val: 0.017},
+    {carrier: 'NW', high_val: 0.336, mid_val: 0.067, low_val: 0.017},
+    {carrier: 'UA', high_val: 0.328, mid_val: 0.066, low_val: 0.016},
+  ]
+  let fields = [
+    {name: 'carrier', type: 'string'},
+    {name: 'high_val', type: 'number', metadata: {ratio: true}},
+    {name: 'mid_val', type: 'number', metadata: {ratio: true}},
+    {name: 'low_val', type: 'number', metadata: {ratio: true}},
+  ]
 
-    <Table data=retention_data rows=all>
-      <Column id=carrier title="Carrier" />
-      <Column id=high_val title="High" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
-      <Column id=mid_val title="Mid" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
-      <Column id=low_val title="Low" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
-    </Table>
-  `,
-  )
+  let component = await mount('components/TableHarness.svelte', {
+    data: {rows, fields},
+    tableProps: {rows: 'all'},
+    columns: [
+      {id: 'carrier', title: 'Carrier'},
+      {id: 'high_val', title: 'High', contentType: 'colorscale', colorScale: 'red, yellow, green', colorBreakpoints: '0, 0.5, 1'},
+      {id: 'mid_val', title: 'Mid', contentType: 'colorscale', colorScale: 'red, yellow, green', colorBreakpoints: '0, 0.5, 1'},
+      {id: 'low_val', title: 'Low', contentType: 'colorscale', colorScale: 'red, yellow, green', colorBreakpoints: '0, 0.5, 1'},
+    ],
+  })
 
-  await page.goto(server.url() + '/', {waitUntil: 'commit'})
-  await page.locator('table tr:has(td)').first().waitFor()
-  await expect(page.locator('.table-container')).screenshot('colorscale-breakpoints')
+  await component.locator('table tr:has(td)').first().waitFor()
+  await expect(component.locator('.table-container')).screenshot('colorscale-breakpoints')
 })
 
-test('colorBreakpoints work when all column values are identical', async ({server, page}) => {
-  // Edge case: all rows have the same value (columnMin === columnMax).
-  // Breakpoints define the domain, so val=1.0 should map to green end of 0/0.5/1 scale.
-  server.mockFile(
-    '/index.md',
-    `
-    \`\`\`sql uniform_data
-    from flights select carrier, 1.0 as val limit 3
-    \`\`\`
+test('colorBreakpoints work when all column values are identical', async ({mount}) => {
+  let rows = [
+    {carrier: 'AA', val: 1},
+    {carrier: 'AS', val: 1},
+    {carrier: 'B6', val: 1},
+  ]
+  let fields = [
+    {name: 'carrier', type: 'string'},
+    {name: 'val', type: 'number', metadata: {ratio: true}},
+  ]
 
-    <Table data=uniform_data rows=all>
-      <Column id=carrier title="Carrier" />
-      <Column id=val title="Value" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
-    </Table>
-  `,
-  )
+  let component = await mount('components/TableHarness.svelte', {
+    data: {rows, fields},
+    tableProps: {rows: 'all'},
+    columns: [
+      {id: 'carrier', title: 'Carrier'},
+      {id: 'val', title: 'Value', contentType: 'colorscale', colorScale: 'red, yellow, green', colorBreakpoints: '0, 0.5, 1'},
+    ],
+  })
 
-  await page.goto(server.url() + '/', {waitUntil: 'commit'})
-  await page.locator('table tr:has(td)').first().waitFor()
-  await expect(page.locator('.table-container')).screenshot('colorscale-breakpoints-uniform')
+  await component.locator('table tr:has(td)').first().waitFor()
+  await expect(component.locator('.table-container')).screenshot('colorscale-breakpoints-uniform')
 })
 
 test('groupType=section renders correct rowSpan for first row of each group', async ({mount}) => {
@@ -206,48 +212,46 @@ test('accordion grouping with subtotals renders and collapses predictably', asyn
   await expect(component.locator('.table-container')).screenshot('group-accordion-subtotals-collapsed')
 })
 
-test('table attributes render grouped headers, wrapped titles, and row styling options', async ({server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    \`\`\`sql table_style_data
-    from flights
-    select
-      carrier,
-      count(*) as flights,
-      avg(dep_delay) as avg_delay,
-      max(dep_delay) as max_delay
-    group by carrier
-    order by carrier
-    limit 4
-    \`\`\`
+test('table attributes render grouped headers, wrapped titles, and row styling options', async ({mount}) => {
+  let rows = [
+    {carrier: 'AA', flights: 34580, avg_delay: 7.395, max_delay: 1160},
+    {carrier: 'AS', flights: 8450, avg_delay: 12.271, max_delay: 694},
+    {carrier: 'B6', flights: 4840, avg_delay: 7.502, max_delay: 654},
+    {carrier: 'CO', flights: 7140, avg_delay: 6.013, max_delay: 716},
+  ]
+  let fields = [
+    {name: 'carrier', type: 'string'},
+    {name: 'flights', type: 'number'},
+    {name: 'avg_delay', type: 'number'},
+    {name: 'max_delay', type: 'number'},
+  ]
 
-    <Table
-      data=table_style_data
-      rows=all
-      title="Carrier delay profile"
-      subtitle="Grouped headers, wrapped titles, and compact rows"
-      rowShading=true
-      rowLines=false
-      wrapTitles=true
-      compact=true
-      headerColor="#d9f0ff"
-      headerFontColor="#0f172a"
-      backgroundColor="#f8fafc"
-    >
-      <Column id=carrier title="Carrier" description="Carrier code" colGroup="Meta" />
-      <Column id=flights title="Total Flights" colGroup="Metrics" align=right />
-      <Column id=avg_delay title="Average Delay Minutes Across All Flight Records" colGroup="Metrics" wrapTitle=true />
-      <Column id=max_delay title="Peak Delay" colGroup="Metrics" align=center />
-    </Table>
-  `,
-  )
+  let component = await mount('components/TableHarness.svelte', {
+    data: {rows, fields},
+    tableProps: {
+      rows: 'all',
+      title: 'Carrier delay profile',
+      subtitle: 'Grouped headers, wrapped titles, and compact rows',
+      rowShading: true,
+      rowLines: false,
+      wrapTitles: true,
+      compact: true,
+      headerColor: '#d9f0ff',
+      headerFontColor: '#0f172a',
+      backgroundColor: '#f8fafc',
+    },
+    columns: [
+      {id: 'carrier', title: 'Carrier', description: 'Carrier code', colGroup: 'Meta'},
+      {id: 'flights', title: 'Total Flights', colGroup: 'Metrics', align: 'right'},
+      {id: 'avg_delay', title: 'Average Delay Minutes Across All Flight Records', colGroup: 'Metrics', wrapTitle: true},
+      {id: 'max_delay', title: 'Peak Delay', colGroup: 'Metrics', align: 'center'},
+    ],
+  })
 
-  await page.goto(server.url() + '/', {waitUntil: 'commit'})
-  let table = page.locator(tableSelector)
+  let table = component.locator('table')
   await table.locator('tr:has(td)').first().waitFor()
   await expect(table.locator('tr:has(td)')).toHaveCount(4)
-  await expect(page.locator('.table-container')).screenshot('attribute-groups-and-styling')
+  await expect(component.locator('.table-container')).screenshot('attribute-groups-and-styling')
 })
 
 test('section groups respect groupNamePosition and subtotal styles', async ({mount}) => {
@@ -318,61 +322,65 @@ test('row-level link behavior opens external destinations and hides link column'
   await popup.close()
 })
 
-test('colorscale and link content columns render together', async ({server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    \`\`\`sql style_table
-    from flights select carrier, count(*) / 30000.0 as retention, 'https://example.com' as details_url group by carrier order by carrier limit 5
-    \`\`\`
+test('colorscale and link content columns render together', async ({mount, sharedPage}) => {
+  let rows = [
+    {carrier: 'AA', retention: 1.153, details_url: 'https://example.com'},
+    {carrier: 'AS', retention: 0.282, details_url: 'https://example.com'},
+    {carrier: 'B6', retention: 0.161, details_url: 'https://example.com'},
+    {carrier: 'CO', retention: 0.238, details_url: 'https://example.com'},
+    {carrier: 'DL', retention: 1.071, details_url: 'https://example.com'},
+  ]
+  let fields = [
+    {name: 'carrier', type: 'string'},
+    {name: 'retention', type: 'number', metadata: {ratio: true}},
+    {name: 'details_url', type: 'string'},
+  ]
 
-    <Table data=style_table rows=all>
-      <Column id=carrier title="Carrier" />
-      <Column id=retention title="Retention" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
-      <Column id=details_url title="Details" contentType=link linkLabel="Open" openInNewTab=true />
-    </Table>
-  `,
-  )
+  let component = await mount('components/TableHarness.svelte', {
+    data: {rows, fields},
+    tableProps: {rows: 'all'},
+    columns: [
+      {id: 'carrier', title: 'Carrier'},
+      {id: 'retention', title: 'Retention', contentType: 'colorscale', colorScale: 'red, yellow, green', colorBreakpoints: '0, 0.5, 1'},
+      {id: 'details_url', title: 'Details', contentType: 'link', linkLabel: 'Open', openInNewTab: true},
+    ],
+  })
 
-  await page.goto(server.url() + '/', {waitUntil: 'commit'})
-  let table = page.locator(tableSelector)
+  let table = component.locator('table')
   await table.locator('tr:has(td)').first().waitFor()
+  await expect(component.locator('.table-container')).screenshot('colorscale-with-link-content')
 
-  await expect(page.locator('.table-container')).screenshot('colorscale-with-link-content')
-
-  let popupPromise = page.waitForEvent('popup')
+  let popupPromise = sharedPage.waitForEvent('popup')
   await table.locator('a.table-link').first().click()
   let popup = await popupPromise
   await expect.poll(() => popup.url()).toContain('https://example.com')
   await popup.close()
 })
 
-test('image and link content columns honor sizing, labels, and tab target attributes', async ({server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    \`\`\`sql media_table
-    from flights
-    select
-      carrier,
-      'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2234%22 height=%2218%22%3E%3Crect width=%2234%22 height=%2218%22 fill=%22%230ea5e9%22/%3E%3C/svg%3E' as logo,
-      concat('https://example.com/carriers/', lower(carrier)) as profile_url
-    group by carrier
-    order by carrier
-    limit 3
-    \`\`\`
+test('image and link content columns honor sizing, labels, and tab target attributes', async ({mount}) => {
+  let logo = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2234%22 height=%2218%22%3E%3Crect width=%2234%22 height=%2218%22 fill=%22%230ea5e9%22/%3E%3C/svg%3E'
+  let rows = [
+    {carrier: 'AA', logo, profile_url: 'https://example.com/carriers/aa'},
+    {carrier: 'AS', logo, profile_url: 'https://example.com/carriers/as'},
+    {carrier: 'B6', logo, profile_url: 'https://example.com/carriers/b6'},
+  ]
+  let fields = [
+    {name: 'carrier', type: 'string'},
+    {name: 'logo', type: 'string'},
+    {name: 'profile_url', type: 'string'},
+  ]
 
-    <Table data=media_table rows=all>
-      <Column id=carrier title="Carrier" />
-      <Column id=logo title="Logo" contentType=image alt=carrier width="34px" height="18px" />
-      <Column id=profile_url title="Profile" contentType=link linkLabel=carrier openInNewTab=false />
-    </Table>
-  `,
-  )
+  let component = await mount('components/TableHarness.svelte', {
+    data: {rows, fields},
+    tableProps: {rows: 'all'},
+    columns: [
+      {id: 'carrier', title: 'Carrier'},
+      {id: 'logo', title: 'Logo', contentType: 'image', alt: 'carrier', width: '34px', height: '18px'},
+      {id: 'profile_url', title: 'Profile', contentType: 'link', linkLabel: 'carrier', openInNewTab: false},
+    ],
+  })
 
-  await page.goto(server.url() + '/', {waitUntil: 'commit'})
-  let table = page.locator(tableSelector)
+  let table = component.locator('table')
   await table.locator('tr:has(td)').first().waitFor()
-
-  await expect(page.locator('.table-container')).screenshot('content-image-and-link')
+  await expect(component.locator('.table-container')).screenshot('content-image-and-link')
 })

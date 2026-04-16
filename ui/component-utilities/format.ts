@@ -1,7 +1,7 @@
 import type {Field} from './types.ts'
 
 const currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
-const percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 1})
+const percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0})
 const currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 const monthYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'})
 const monthDayYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
