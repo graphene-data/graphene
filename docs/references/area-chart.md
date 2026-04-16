@@ -36,5 +36,6 @@ Here's an example:
 | stack100 | Same as `stack`, but normalized to 100% | false | column/expression name | - |
 
 `group`, `stack`, and `stack100` are mutually exclusive.
+When `y` has multiple fields, `group`/`stack`/`stack100` are not supported.
 
 For more control, use [`ECharts`](./echarts.md) directly.
