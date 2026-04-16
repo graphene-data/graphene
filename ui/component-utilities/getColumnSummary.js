@@ -19,22 +19,23 @@ const EvidenceType = {
 /**
  * @function
  * @template T
- * @param {Record<string, unknown>[]} data
+ * @param {Record<string, unknown>[]} rows
+ * @param {{name: string, type: string, metadata?: Record<string, unknown>}[]} fields
  * @param {T} returnType
  * @returns {T extends 'object' ? Record<string, ColumnSummary> : (ColumnSummary & { id: string })[]}
  */
-export default function getColumnSummary(data, returnType = 'object') {
+export default function getColumnSummary(rows, fields, returnType = 'object') {
   /** @type {Record<string, ColumnSummary>} */
   let columnSummary = {}
 
-  let fields = Array.isArray(data?._fields) ? data._fields : []
-  if (fields.length === 0) throw new Error('Table data is missing field metadata. Expected rows._fields to be set.')
+  if (!Array.isArray(fields) || fields.length === 0) throw new Error('Table data is missing field metadata.')
+  if (!Array.isArray(rows) || rows.length === 0) return returnType !== 'object' ? [] : {}
 
-  for (let colName of Object.keys(data[0])) {
+  for (let colName of Object.keys(rows[0])) {
     let field = fields.find(item => item?.name?.toLowerCase() === colName?.toLowerCase())
     let type = inferTypeFromField(field)
     let isNumeric = type === EvidenceType.NUMBER
-    let columnUnitSummary = getColumnUnitSummary(data, colName, isNumeric)
+    let columnUnitSummary = getColumnUnitSummary(rows, colName, isNumeric)
 
     if (!isNumeric) {
       columnUnitSummary.maxDecimals = 0
