@@ -7,6 +7,7 @@ import * as path from 'node:path'
 import {expect} from 'vitest'
 
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
+import {preloadWarehouseConnections} from './connections/index.ts'
 
 interface RunResult {
   code: number
@@ -47,6 +48,11 @@ function expectCliSuccess(res: RunResult, step: string) {
 }
 
 describe('cli compile', () => {
+  it('preloads warehouse connection modules for cloud startup', async () => {
+    await expect(preloadWarehouseConnections()).resolves.toBeUndefined()
+    await expect(preloadWarehouseConnections()).resolves.toBeUndefined()
+  })
+
   it('compiles a basic query (happy path)', async () => {
     let res = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir})
     expectCliSuccess(res, 'compile basic query')

@@ -13,27 +13,21 @@ function validateBigQueryIdent(ident: string) {
 }
 
 export class BigQueryConnection implements QueryConnection {
-  private ready: Promise<void>
-  private client!: BigQueryClient
-  private module!: BigQueryModule
+  private readonly client: BigQueryClient
+  private readonly module: BigQueryModule
   private readonly projectId: string
   private readonly defaultNamespace?: string
 
-  constructor(options: BigQueryOptions = {}) {
+  constructor(module: BigQueryModule, options: BigQueryOptions = {}) {
     options.projectId ||= config.bigquery?.projectId
     if (!options.projectId) throw new Error('projectId must be set in config or provided in service account credentials')
     this.projectId = options.projectId
     this.defaultNamespace = config.defaultNamespace
-    this.ready = this.initialize(options)
-  }
-
-  private async initialize(options: BigQueryOptions) {
-    this.module = await loadBigQuery()
-    this.client = new this.module.BigQuery({...options, userAgent: 'Graphene'})
+    this.module = module
+    this.client = new module.BigQuery({...options, userAgent: 'Graphene'})
   }
 
   async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
-    await this.ready
     let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params})
     let [rows] = await job.getQueryResults({maxResults: 10000})
     let metadata = job.metadata || (await job.getMetadata())[0]
@@ -50,7 +44,6 @@ export class BigQueryConnection implements QueryConnection {
   }
 
   async listDatasets(): Promise<string[]> {
-    await this.ready
     let [datasets] = await this.client.getDatasets()
     return datasets.map(d => String(d.id || d.metadata.datasetReference?.datasetId || '').toLowerCase())
   }
@@ -92,11 +85,4 @@ export class BigQueryConnection implements QueryConnection {
   }
 
   async close(): Promise<void> {}
-}
-
-let bigQueryModule: BigQueryModule | null = null
-
-async function loadBigQuery(): Promise<BigQueryModule> {
-  bigQueryModule ||= await import('@google-cloud/bigquery')
-  return bigQueryModule
 }

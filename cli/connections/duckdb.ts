@@ -17,15 +17,15 @@ export class DuckDBConnection implements QueryConnection {
   options: DuckDbOptions
   ready: Promise<void>
   connection: InnerConnection | null = null
-  module!: DuckDBModule
+  readonly module: DuckDBModule
 
-  constructor(options?: DuckDbOptions) {
+  constructor(module: DuckDBModule, options?: DuckDbOptions) {
+    this.module = module
     this.options = options || {}
     this.ready = this.initialize()
   }
 
   private async initialize() {
-    this.module = await loadDuckDB()
     let dbPath = this.options.path || config.duckdb?.path
     if (!dbPath) {
       let files = await fs.readdir(config.root)
@@ -98,11 +98,4 @@ export class DuckDBConnection implements QueryConnection {
     await this.ready
     this.connection?.closeSync()
   }
-}
-
-let duckdbModule: DuckDBModule | null = null
-
-async function loadDuckDB(): Promise<DuckDBModule> {
-  duckdbModule ||= await import('@duckdb/node-api')
-  return duckdbModule
 }

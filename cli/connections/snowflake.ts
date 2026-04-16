@@ -26,15 +26,16 @@ type SnowflakeConnectionType = ReturnType<SnowflakeModule['createConnection']>
 // Instructions for generating private/public keys: https://docs.snowflake.com/en/user-guide/key-pair-auth#generate-the-private-keys
 
 export class SnowflakeConnection implements QueryConnection {
+  private readonly snowflake: SnowflakeModule
   private ready: Promise<void>
   private connection!: SnowflakeConnectionType
 
-  constructor(opts: SnowflakeOptions) {
+  constructor(snowflake: SnowflakeModule, opts: SnowflakeOptions) {
+    this.snowflake = snowflake
     this.ready = this.initialize(opts || {})
   }
 
   async initialize(opts: SnowflakeOptions) {
-    let snowflake = await loadSnowflake()
     let privateKeyPath = opts.privateKeyPath || config.snowflake?.privateKeyPath
 
     let authOptions: any = {}
@@ -46,9 +47,9 @@ export class SnowflakeConnection implements QueryConnection {
     }
 
     // default is info, which is kinda chatty on success. TRACE is super useful for debugging though
-    snowflake.configure({logLevel: (opts.logLevel as any) || 'WARN', logFilePath: '/dev/null'})
+    this.snowflake.configure({logLevel: (opts.logLevel as any) || 'WARN', logFilePath: '/dev/null'})
 
-    this.connection = snowflake.createConnection({
+    this.connection = this.snowflake.createConnection({
       ...opts,
       ...(config.snowflake || {}),
       ...authOptions,
@@ -160,14 +161,4 @@ export class SnowflakeConnection implements QueryConnection {
 function snowflakeIdent(value: string) {
   if (!value) throw new Error('Snowflake identifiers cannot be empty')
   return `"${value.replace(/"/g, '""')}"`
-}
-
-let snowflakeModule: SnowflakeModule | null = null
-
-async function loadSnowflake(): Promise<SnowflakeModule> {
-  if (!snowflakeModule) {
-    let mod = await import('snowflake-sdk')
-    snowflakeModule = ((mod as any).default || mod) as SnowflakeModule
-  }
-  return snowflakeModule
 }
