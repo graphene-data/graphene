@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@graphenedata/cli": "workspace:*",
-    "snowflake-sdk": "2.3.4",
-    "svelte": "5.53.7"
+    "snowflake-sdk": "2.4.0",
+    "svelte": "5.55.3"
   },
   "engines": {
     "node": ">=24.0.0"
