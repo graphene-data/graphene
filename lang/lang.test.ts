@@ -1094,6 +1094,30 @@ describe('lang', () => {
     expect('from users select extract(hour from created_at)').toRenderSql('select extract(hour from users.created_at) as col_0 from users as users')
   })
 
+  it('infers time ordinal metadata for extract and date_part', () => {
+    updateFile('table events (event_date date, created_at timestamp)', 'events.gsql')
+
+    setConfig({root: '', bigquery: {}})
+    let [bigQuery] = analyze('from events select extract(dayofweek from event_date) as dow')
+    expect(bigQuery.fields[0].metadata).toEqual({timeOrdinal: 'dow_1s'})
+
+    setConfig({root: ''})
+    let [duckDbDow] = analyze("from events select date_part('dow', event_date) as dow")
+    expect(duckDbDow.fields[0].metadata).toEqual({timeOrdinal: 'dow_0s'})
+    let [duckDbIsoDow] = analyze('from events select extract(isodow from event_date) as iso_dow')
+    expect(duckDbIsoDow.fields[0].metadata).toEqual({timeOrdinal: 'dow_1m'})
+
+    setConfig({dialect: 'snowflake', root: ''})
+    let [snowflake] = analyze('from events select dayofweek(event_date) as dow')
+    expect(snowflake.fields[0].metadata).toEqual({timeOrdinal: 'dow_0s'})
+
+    setConfig({dialect: 'clickhouse', root: ''})
+    let [clickhouse] = analyze('from events select to_day_of_week(created_at) as dow')
+    expect(clickhouse.fields[0].metadata).toEqual({timeOrdinal: 'dow_1m'})
+
+    setConfig({root: ''})
+  })
+
   it('supports null and boolean literals', () => {
     expect('from users select name, null, true, FALSE').toRenderSql('select users.name as name, null as col_1, true as col_2, false as col_3 from users as users')
   })

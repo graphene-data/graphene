@@ -6,6 +6,7 @@
 
 import type {FunctionDef} from './functionTypes.ts'
 
+import {inferTemporalGrainMetadata} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const bq = 'https://cloud.google.com/bigquery/docs/reference/standard-sql'
@@ -1978,6 +1979,7 @@ export const bigQueryFunctions: FunctionDef[] = [
       {name: 'date_part', type: 'kw', description: 'The date part to truncate to.'},
     ],
     returns: 'T',
+    metadata: args => inferTemporalGrainMetadata(args[1]?.sql),
     sqlTemplate: 'DATE_TRUNC(${date_expression}, ${date_part})',
   },
   {
@@ -2182,6 +2184,7 @@ export const bigQueryFunctions: FunctionDef[] = [
       {name: 'part', type: 'string', description: 'The part to truncate to.'},
     ],
     returns: 'datetime',
+    metadata: args => inferTemporalGrainMetadata(args[1]?.sql),
   },
   {
     name: 'format_datetime',
@@ -2340,6 +2343,7 @@ export const bigQueryFunctions: FunctionDef[] = [
       {name: 'part', type: 'string', description: 'The part to truncate to.'},
     ],
     returns: 'time',
+    metadata: args => inferTemporalGrainMetadata(args[1]?.sql),
   },
   {
     name: 'format_time',
@@ -2495,6 +2499,7 @@ export const bigQueryFunctions: FunctionDef[] = [
       {name: 'time_zone', type: 'string?', description: 'The time zone to use.'},
     ],
     returns: 'timestamp',
+    metadata: args => inferTemporalGrainMetadata(args[1]?.sql),
   },
   {
     name: 'format_timestamp',

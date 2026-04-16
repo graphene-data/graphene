@@ -1,7 +1,7 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
 
 import type {ExprFanout, FanoutPath} from './fanout.ts'
-import type {ArrayField, FieldMeta, FieldType, GrapheneError, Position, ScalarField, TimeGrain} from './index.d.ts'
+import type {ArrayField, FieldMeta, FieldType, GrapheneError, Position, ScalarField, TimeGrain, TimeOrdinal} from './index.d.ts'
 import type {TimestampUnit} from './temporal.ts'
 
 declare module '@lezer/common' {
@@ -40,7 +40,7 @@ export interface ParsedFileArtifacts {
   virtualToMarkdownOffset?: number[]
 }
 
-export type {FieldType, FieldMeta, GrapheneError, Position, ScalarField, ArrayField, TimeGrain}
+export type {FieldType, FieldMeta, GrapheneError, Position, ScalarField, ArrayField, TimeGrain, TimeOrdinal}
 export type TypeKind = ScalarField | 'array'
 
 let SCALAR_TYPE_ALIASES: Record<string, ScalarField> = {

@@ -23,6 +23,7 @@ export type FieldMeta = {
   pct?: true // 0 to 100 value
   units?: string
   timeGrain?: TimeGrain // resolution when the field is a date or timestamp
+  timeOrdinal?: TimeOrdinal // if the value represents something special like day_of_week, week_of_year, etc
   [key: string]: string | true | undefined
 }
 
@@ -31,6 +32,12 @@ export type ScalarField = 'string' | 'number' | 'boolean' | 'date' | 'timestamp'
 export type ArrayField = {type: 'array'; elementType: FieldType}
 
 export type TimeGrain = 'year' | 'quarter' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'
+export type TimeOrdinal = 'hour_of_day' | DayOfWeek | 'day_of_month' | 'day_of_year' | 'week_of_year' | 'month_of_year'
+
+export type DayOfWeek =
+  | 'dow_1s' // 1-7, starting sunday
+  | 'dow_0s' // 0-6, starting sunday
+  | 'dow_1m' // 1-7, starting monday
 
 export interface GrapheneError {
   message: string
