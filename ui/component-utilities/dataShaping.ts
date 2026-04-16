@@ -2,7 +2,7 @@ import type {Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 // Fill sparse grouped data so each split series has a value for each x bucket.
 //
-// This only applies to grouped templates (`encode.group` or `encode.stack`).
+// This only applies to split templates (`encode.splitBy`).
 // We do not attempt to fabricate x values here; we only ensure a full Cartesian
 // product of existing x values and split values.
 //
@@ -16,16 +16,16 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
   let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
-  let groups = new Map<string, {xField: string; splitField: string; fills: Map<string, any>}>()
+  let groups = new Map<string, {xField: string; splitFields: string[]; fills: Map<string, any>}>()
 
   for (let entry of series) {
-    let splitField = getSplitField(entry)
+    let splitFields = getSplitFields(entry)
     let xField = getSeriesXField(entry)
     let yField = getSeriesYField(entry)
-    if (!splitField || !xField || !yField) continue
+    if (splitFields.length === 0 || !xField || !yField) continue
 
-    let key = `${xField}::${splitField}`
-    if (!groups.has(key)) groups.set(key, {xField, splitField, fills: new Map()})
+    let key = `${xField}::${splitFields.join('::')}`
+    if (!groups.has(key)) groups.set(key, {xField, splitFields, fills: new Map()})
 
     // This line is where chart-specific missing-value behavior is chosen.
     // See getMissingFillValueForSeries() below for the type mapping.
@@ -39,19 +39,22 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
 
   for (let group of groups.values()) {
     let xValues = distinctValues(rows, group.xField)
-    let splitValues = distinctValues(rows, group.splitField)
-    if (xValues.length === 0 || splitValues.length === 0) continue
+    let splitValues = group.splitFields.map(field => distinctValues(rows, field))
+    if (xValues.length === 0 || splitValues.some(values => values.length === 0)) continue
 
     let existing = new Set<string>()
     for (let row of rows) {
-      existing.add(pairKey(row?.[group.xField], row?.[group.splitField]))
+      existing.add(compositeKey([row?.[group.xField], ...group.splitFields.map(field => row?.[field])]))
     }
 
     for (let xValue of xValues) {
-      for (let splitValue of splitValues) {
-        if (existing.has(pairKey(xValue, splitValue))) continue
+      for (let splitCombination of cartesianValues(splitValues)) {
+        if (existing.has(compositeKey([xValue, ...splitCombination]))) continue
 
-        let row: Record<string, any> = {[group.xField]: xValue, [group.splitField]: splitValue}
+        let row: Record<string, any> = {[group.xField]: xValue}
+        group.splitFields.forEach((field, index) => {
+          row[field] = splitCombination[index]
+        })
         for (let [yField, fillValue] of group.fills.entries()) row[yField] = fillValue
         rows.push(row)
       }
@@ -134,7 +137,7 @@ export function applySorting(config: NormalConfig, rows: Record<string, any>[], 
   let primarySeries = series.filter(entry => getSeriesXField(entry) === primaryXField.name && getSeriesYField(entry))
   if (primarySeries.length === 0) return
 
-  let hasStackedBars = primarySeries.some(entry => entry?.type === 'bar' && !!entry?.stack)
+  let hasStackedBars = primarySeries.some(entry => entry?.type === 'bar' && (!!entry?.stack || getSplitFields(entry).length === 2))
   if (hasStackedBars) {
     let yFields = Array.from(new Set(primarySeries.map(entry => getSeriesYField(entry)).filter(Boolean))) as string[]
     sortCategoriesByValue(rows, primaryXField.name, row => yFields.reduce((sum, y) => sum + (Number(row?.[y]) || 0), 0), 'desc')
@@ -351,10 +354,14 @@ function parseSortSpec(sort: string): {field: string; direction: 'asc' | 'desc'}
   return {field, direction}
 }
 
-function getSplitField(series: SeriesWithGroupingHint) {
-  if (typeof series?.encode?.group === 'string') return series.encode.group
-  if (typeof series?.encode?.stack === 'string') return series.encode.stack
-  return undefined
+function getSplitFields(series: SeriesWithGroupingHint) {
+  let splitBy = series?.encode?.splitBy
+  if (typeof splitBy === 'string') return [splitBy]
+  if (!Array.isArray(splitBy)) return []
+  return splitBy
+    .filter(value => typeof value === 'string')
+    .map(value => value.trim())
+    .filter(Boolean)
 }
 
 function isHorizontalBar(config: NormalConfig) {
@@ -400,8 +407,23 @@ function sortableValue(value: unknown, type: 'date' | 'number') {
   return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY
 }
 
-function pairKey(left: unknown, right: unknown) {
-  return `${valueKey(left)}|${valueKey(right)}`
+function cartesianValues(valueLists: unknown[][]) {
+  if (valueLists.length === 0) return [[]] as unknown[][]
+
+  return valueLists.reduce<unknown[][]>(
+    (acc, values) => {
+      let next: unknown[][] = []
+      for (let prefix of acc) {
+        for (let value of values) next.push([...prefix, value])
+      }
+      return next
+    },
+    [[]],
+  )
+}
+
+function compositeKey(values: unknown[]) {
+  return values.map(value => valueKey(value)).join('|')
 }
 
 function valueKey(value: unknown) {

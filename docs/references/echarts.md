@@ -30,26 +30,40 @@ Inside `<ECharts>...</ECharts>`, Graphene parses the config as JSON5:
 - trailing commas are allowed
 - you can wrap the whole thing in `{ ... }` or omit the outer braces
 
-## Grouping and stacking hints
+## Customizing with split hints
 
-Graphene supports a few `encode` extensions to reduce boilerplate:
-- `encode.group`: expands one series template into one series per distinct value
-- `encode.stack`: same expansion, but stacked
-- `stackPercentage: true`: converts stacked values to 100% stacking
+To keep configs concise, Graphene supports a split hint:
 
-Example:
+- `encode.splitBy: "field"`: split one series template into one series per distinct field value
+- `encode.splitBy: ["groupField", "stackField"]` (bar only): expands to grouped+stacked bars, where the first field groups and the second stacks
+- with a single split field, `series.stack` decides stacked vs grouped behavior
+- `stackPercentage: true`: convert stacked values to percentages (100% stacked)
+
+Examples:
 
 ```markdown
 <ECharts data="sales_by_month_and_region">
   xAxis: {},
   yAxis: {},
   series: [{
-    type: "bar",
-    encode: {x: "month", y: "revenue", stack: "region"},
-    stack: "revenue-stack",
-    stackPercentage: true,
-  }],
+    type: 'bar',
+    encode: {x: 'month', y: 'revenue', splitBy: 'region'},
+    stack: 'revenue-stack',
+    stackPercentage: true
+  }]
 </ECharts>
+
+<!-- Char that is both grouped by region and stacked by channel -->
+<ECharts data="sales_by_month_region_channel">
+  xAxis: {},
+  yAxis: {},
+  series: [{
+    type: 'bar',
+    encode: {x: 'month', y: 'revenue', splitBy: ['region', 'channel']},
+    stack: 'revenue-stack',
+    stackPercentage: true
+  }]
+/>
 ```
 
 For common chart types, prefer `BarChart`, `LineChart`, `AreaChart`, and `PieChart`. Use `ECharts` when you need deeper customization.
