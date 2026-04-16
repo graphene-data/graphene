@@ -1,6 +1,5 @@
-import type * as SnowflakeTypes from 'snowflake-sdk'
-
 import {createPrivateKey} from 'node:crypto'
+import snowflake from 'snowflake-sdk'
 
 import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
@@ -14,9 +13,6 @@ interface SnowflakeOptions {
   logLevel?: string
 }
 
-type SnowflakeModule = typeof SnowflakeTypes
-type SnowflakeConnectionType = ReturnType<SnowflakeModule['createConnection']>
-
 // Raw notes on setting up a new user:
 // * create a `demouser` with a new `demorole`. It should have
 // That role needs `operate` and `usage` on a warehouse, and `usage` on the relevant db or schema
@@ -26,12 +22,10 @@ type SnowflakeConnectionType = ReturnType<SnowflakeModule['createConnection']>
 // Instructions for generating private/public keys: https://docs.snowflake.com/en/user-guide/key-pair-auth#generate-the-private-keys
 
 export class SnowflakeConnection implements QueryConnection {
-  private readonly snowflake: SnowflakeModule
   private ready: Promise<void>
-  private connection!: SnowflakeConnectionType
+  private connection!: snowflake.Connection
 
-  constructor(snowflake: SnowflakeModule, opts: SnowflakeOptions) {
-    this.snowflake = snowflake
+  constructor(opts: SnowflakeOptions) {
     this.ready = this.initialize(opts || {})
   }
 
@@ -47,9 +41,9 @@ export class SnowflakeConnection implements QueryConnection {
     }
 
     // default is info, which is kinda chatty on success. TRACE is super useful for debugging though
-    this.snowflake.configure({logLevel: (opts.logLevel as any) || 'WARN', logFilePath: '/dev/null'})
+    snowflake.configure({logLevel: (opts.logLevel as any) || 'WARN', logFilePath: '/dev/null'})
 
-    this.connection = this.snowflake.createConnection({
+    this.connection = snowflake.createConnection({
       ...opts,
       ...(config.snowflake || {}),
       ...authOptions,

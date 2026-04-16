@@ -1,5 +1,4 @@
-import type * as DuckDBTypes from '@duckdb/node-api'
-
+import {DuckDBTimestampValue, DuckDBInstance, DuckDBDateValue, DuckDBDecimalValue, type DuckDBConnection as InnerConnection} from '@duckdb/node-api'
 import {promises as fs} from 'fs'
 import path from 'path'
 
@@ -10,17 +9,12 @@ interface DuckDbOptions {
   path?: string
 }
 
-type DuckDBModule = typeof DuckDBTypes
-type InnerConnection = Awaited<ReturnType<InstanceType<DuckDBModule['DuckDBInstance']>['connect']>>
-
 export class DuckDBConnection implements QueryConnection {
   options: DuckDbOptions
   ready: Promise<void>
   connection: InnerConnection | null = null
-  readonly module: DuckDBModule
 
-  constructor(module: DuckDBModule, options?: DuckDbOptions) {
-    this.module = module
+  constructor(options?: DuckDbOptions) {
     this.options = options || {}
     this.ready = this.initialize()
   }
@@ -34,7 +28,7 @@ export class DuckDBConnection implements QueryConnection {
     }
     if (!path.isAbsolute(dbPath)) dbPath = path.resolve(config.root, dbPath)
 
-    let db = await this.module.DuckDBInstance.create(':memory:')
+    let db = await DuckDBInstance.create(':memory:')
     this.connection = await db.connect()
     let escapedPath = dbPath.replace(/'/g, "''")
     // Attach the project DuckDB file in read-only mode and make it the active schema
@@ -50,9 +44,9 @@ export class DuckDBConnection implements QueryConnection {
       for (let [k, v] of Object.entries(record)) {
         if (typeof v === 'bigint') out[k] = Number(v)
         else if (v === null) out[k] = null
-        else if (v instanceof this.module.DuckDBTimestampValue) out[k] = new Date(Number(v.micros / 1000n)).toUTCString()
-        else if (v instanceof this.module.DuckDBDateValue) out[k] = v.toString()
-        else if (v instanceof this.module.DuckDBDecimalValue) out[k] = v.toDouble()
+        else if (v instanceof DuckDBTimestampValue) out[k] = new Date(Number(v.micros / 1000n)).toUTCString()
+        else if (v instanceof DuckDBDateValue) out[k] = v.toString()
+        else if (v instanceof DuckDBDecimalValue) out[k] = v.toDouble()
         else if (typeof v === 'object') throw new Error(`Unsupported datatype ${v.constructor?.name}`)
         else out[k] = v
       }
