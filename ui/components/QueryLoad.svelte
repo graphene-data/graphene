@@ -19,12 +19,20 @@
 
   let handleResults = (result: any) => {
     error = result?.error || null
-    loaded = result?.rows
+    let rows = result?.rows
+    if (Array.isArray(rows) && Array.isArray(result?.fields)) {
+      ;(rows as any)._fields = result.fields
+    }
+    loaded = rows
   }
 
   onMount(() => {
     if (typeof data !== 'string') {
-      loaded = data.rows ?? null
+      let rows = data.rows ?? null
+      if (Array.isArray(rows) && Array.isArray(data.fields)) {
+        ;(rows as any)._fields = data.fields
+      }
+      loaded = rows
     } else {
       let usedFields = Object.fromEntries(Object.entries(fields).filter(e => !!e[1]))
       window.$GRAPHENE.query(data, usedFields, handleResults)

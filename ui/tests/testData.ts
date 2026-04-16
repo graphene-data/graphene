@@ -13,7 +13,7 @@ export function singleDim(): TableRows {
     {name: 'category', type: 'string'},
     {name: 'value', type: 'number', metadata: {units: 'usd'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function timeseries(): TableRows {
@@ -27,7 +27,7 @@ export function timeseries(): TableRows {
     {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
     {name: 'sales_usd0k', type: 'number', metadata: {units: 'usd'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function timeseriesGrouped(): TableRows {
@@ -37,7 +37,7 @@ export function timeseriesGrouped(): TableRows {
     {name: 'category', type: 'string'},
     {name: 'sales_usd0k', type: 'number', metadata: {units: 'usd'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function sparseGroupedMonthRows(): TableRows {
@@ -60,7 +60,7 @@ export function sparseGroupedMonthRows(): TableRows {
     {name: 'metric', type: 'string'},
     {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function timeseriesWithDateSeries(): TableRows {
@@ -77,7 +77,7 @@ export function timeseriesWithDateSeries(): TableRows {
     {name: 'category', type: 'string'},
     {name: 'sales', type: 'number', metadata: {units: 'usd'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function yearlyCounts(): TableRows {
@@ -93,7 +93,7 @@ export function yearlyCounts(): TableRows {
     {name: 'year', type: 'number', metadata: {timeGrain: 'year'}},
     {name: 'flights', type: 'number', metadata: {units: 'count'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function denseTimeseries(points = 365): TableRows {
@@ -111,7 +111,7 @@ export function denseTimeseries(points = 365): TableRows {
     {name: 'ts', type: 'date', metadata: {timeGrain: 'day'}},
     {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function categoricalSeries(count: number): TableRows {
@@ -120,7 +120,7 @@ export function categoricalSeries(count: number): TableRows {
     {name: 'category', type: 'string'},
     {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function ratioTimeseries(): TableRows {
@@ -133,7 +133,7 @@ export function ratioTimeseries(): TableRows {
     {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
     {name: 'conversion_rate', type: 'number', metadata: {ratio: true}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function tableDataWithDates(): TableRows {
@@ -146,7 +146,7 @@ export function tableDataWithDates(): TableRows {
     {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
     {name: 'sales', type: 'number', metadata: {units: 'usd'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function tableDataForPagination(count = 15): TableRows {
@@ -158,7 +158,7 @@ export function tableDataForPagination(count = 15): TableRows {
     {name: 'item', type: 'string'},
     {name: 'value', type: 'number', metadata: {units: 'count'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
 export function groupedDataForSection(): TableRows {
@@ -175,20 +175,11 @@ export function groupedDataForSection(): TableRows {
     {name: 'sku', type: 'string'},
     {name: 'units', type: 'number', metadata: {units: 'count'}},
   ]
-  return withEvidenceTypes(rows, fields)
+  return withFields(rows, fields)
 }
 
-function withEvidenceTypes(rows: any[], fields: Field[]): TableRows {
-  ;(rows as any)._evidenceColumnTypes = fields.map(field => ({name: field.name, evidenceType: evidenceType(field)}))
+function withFields(rows: any[], fields: Field[]): TableRows {
   return {rows, fields}
-}
-
-function evidenceType(field: Field) {
-  if (typeof field.type !== 'string') return 'string'
-  if (field.type === 'number') return 'number'
-  if (field.type === 'date' || field.type === 'timestamp') return 'date'
-  if (field.type === 'boolean') return 'boolean'
-  return 'string'
 }
 
 let ordersByCategory = [

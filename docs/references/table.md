@@ -45,7 +45,6 @@ Here's an example:
 | groupBy | Column or expression to use to create groups. Note that groups are currently limited to a single group column. | false | column name, stored expression name, GSQL expression | - |
 | groupType | How the groups are shown in the table. Can be accordion (expand/collapse) or section (group column values are merged across rows) | false | `accordion`, `section` | `accordion` |
 | subtotals | Whether to show aggregated totals for the groups | false | `true`, `false` | `false` |
-| subtotalFmt | Specify an override format to use in the subtotal row ([see available formats](#value-formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format | - |
 | groupsOpen | [groupType=accordion] Whether to show the accordions as open on page load | false | `true`, `false` | `true` |
 | accordionRowColor | [groupType=accordion] Background color for the accordion row | false | Hex color code, css color name | - |
 | subtotalRowColor | [groupType=section] Background color for the subtotal row | false | Hex color code, css color name | - |
@@ -62,8 +61,8 @@ Here's an example:
 <Table data=country_summary>
   <Column id=country />
   <Column id=category />
-  <Column id=value_usd fmt=eur />
-  <Column id=yoy title="Y/Y Growth" fmt=pct3 />
+  <Column id=value_usd />
+  <Column id=yoy title="Y/Y Growth" />
 </Table>
 ```
 
@@ -73,10 +72,7 @@ Here's an example:
 | title | Override title of column | false | string | column name (formatted) |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 | align | Align column text | false | `left`, `center`, `right` | `left` |
-| fmt | Format the values in the column ([see available formats](#value-formatting)) | false | Excel-style format, built-in format | - |
-| fmtColumn | Column to use to format values in this column. This is used to achieve different value formats by row. The fmtColumn should contain strings of format codes - either Graphene built-in formats or Excel codes. | false | column name | - |
 | totalAgg | Specify an aggregation function to use for the total row. Accepts predefined functions, custom strings or values | false | `sum`, `mean`, `weightedMean`, `median`, `min`, `max`, `count`, `countDistinct`, custom string or value | `sum` |
-| totalFmt | Specify an override format to use in the total row ([see available formats](#value-formatting)). Custom strings or values are unformatted by default. | false | Excel-style format, built-in format | - |
 | weightCol | Column or expression to use as the weight values for weighted mean aggregation. If not specified, a weight of 1 for each value will be used and the result will be the same as the `mean` aggregation. | false | column name, stored expression name, GSQL expression | - |
 | wrap | Wrap column text | false | `true`, `false` | `false` |
 | wrapTitle | Wrap column title | false | `true`, `false` | `false` |

@@ -3,7 +3,7 @@
   import InlineDelta from './InlineDelta.svelte'
   import TableCell from './TableCell.svelte'
   import {safeExtractColumn} from '../component-utilities/tableUtils'
-  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
+  import {formatFromField} from '../component-utilities/format.ts'
   import {getThemeStores} from '../component-utilities/themeStores'
 
   interface Props {
@@ -145,13 +145,6 @@
         if (contentContrast < backgroundContrast) return $theme.colors['base-100']
         return $theme.colors['base-content']
       })()}
-      {@const columnFormat = (() => {
-        if (column.fmt) return getFormatObjectFromString(column.fmt, summary.format?.valueType)
-        if (column.fmtColumn && row[column.fmtColumn]) {
-          return getFormatObjectFromString(row[column.fmtColumn], summary.format?.valueType)
-        }
-        return summary.format
-      })()}
       {@const paddingLeft = k === 0 && grouped && groupType === 'accordion' && !rowNumbers ? '28px' : undefined}
       {@const shouldShow = !(groupType === 'section' && groupColumn === summary.id && i !== 0)}
       <TableCell
@@ -186,20 +179,12 @@
               {#if column.linkLabel != undefined}
                 {#if row[column.linkLabel] != undefined}
                   {@const labelSummary = safeExtractColumn({id: column.linkLabel}, columnSummary)}
-                  {formatValue(
-                    row[column.linkLabel],
-                    column.fmt ? getFormatObjectFromString(column.fmt, labelSummary.format?.valueType) : labelSummary.format,
-                    labelSummary.columnUnitSummary,
-                  )}
+                  {formatFromField(labelSummary.field, row[column.linkLabel])}
                 {:else}
                   {column.linkLabel}
                 {/if}
               {:else}
-                {formatValue(
-                  row[column.id],
-                  column.fmt ? getFormatObjectFromString(column.fmt, summary.format?.valueType) : summary.format,
-                  summary.columnUnitSummary,
-                )}
+                {formatFromField(summary.field, row[column.id])}
               {/if}
             </a>
           {/if}
@@ -207,8 +192,7 @@
           <InlineDelta
             value={row[column.id]}
             downIsGood={column.downIsGood}
-            formatObject={columnFormat}
-            columnUnitSummary={summary.columnUnitSummary}
+            field={summary.field}
             showValue={column.showValue}
             showSymbol={column.deltaSymbol}
             align={column.align}
@@ -217,13 +201,7 @@
             chip={column.chip}
           />
         {:else}
-          {#if row[column.id] === null || row[column.id] === undefined}
-            –
-          {:else if summary.type === 'number'}
-            {formatValue(row[column.id], columnFormat, summary.columnUnitSummary)}
-          {:else}
-            {formatValue(row[column.id], columnFormat, summary.columnUnitSummary)}
-          {/if}
+          {formatFromField(summary.field, row[column.id])}
         {/if}
       </TableCell>
     {/each}

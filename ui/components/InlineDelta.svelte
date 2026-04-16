@@ -1,13 +1,11 @@
 <script lang="ts">
-  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
+  import {formatFromField} from '../component-utilities/format.ts'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/inputUtils'
 
   interface Props {
     value?: number | string | null
-    fmt?: string
-    formatObject?: any
-    columnUnitSummary?: any
+    field?: any
     downIsGood?: boolean
     showValue?: boolean
     showSymbol?: boolean
@@ -22,9 +20,7 @@
 
   let {
     value = undefined,
-    fmt = undefined,
-    formatObject = undefined,
-    columnUnitSummary = undefined,
+    field = undefined,
     downIsGood: downIsGoodProp = false,
     showValue: showValueProp = true,
     showSymbol: showSymbolProp = true,
@@ -77,12 +73,6 @@
 
   let chipClass = $derived(pickColor('delta-chip--positive', 'delta-chip--negative', 'delta-chip--neutral'))
 
-  let resolvedFormat = $derived((() => {
-    if (formatObject) return formatObject
-    if (fmt) return getFormatObjectFromString(fmt, 'number')
-    return undefined
-  })())
-
   let deltaClass = $derived((() => {
     let classes = ['delta']
     if (chip) classes = [...classes, 'delta-chip', chipClass]
@@ -95,7 +85,7 @@
   const renderValue = () => {
     if (numericValue === null) return '–'
     try {
-      return formatValue(numericValue, resolvedFormat, columnUnitSummary)
+      return formatFromField(field, numericValue)
     } catch(error) {
       console.error('Failed to format delta value', error)
       return String(numericValue)
