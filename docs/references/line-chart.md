@@ -10,7 +10,7 @@ Here's an example:
   data=revenue_by_month
   x=month
   y=revenue
-  series=region
+  splitBy=region
 />
 ```
 
@@ -32,9 +32,8 @@ Here's an example:
 | x | Field for x-axis | true | column/expression name | - |
 | y | One or more value fields (comma-separated) | true | column(s), e.g. `revenue` or `revenue, cost` | - |
 | y2 | Optional field rendered on secondary axis | false | column/expression name | - |
-| series | Split one `y` field into one line per distinct value | false | column/expression name | - |
+| splitBy | Split one `y` field into one line per distinct value | false | column/expression name | - |
 
-If `y` includes multiple fields, each field becomes its own line.
-`series` requires a single `y` field.
+`splitBy` is incompatible with multiple y fields. If `y` includes multiple fields, each field becomes its own line.
 
 For advanced behavior (custom line styles, annotations, axis config, dataset transforms), use [`ECharts`](./echarts.md) directly.

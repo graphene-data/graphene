@@ -35,15 +35,15 @@ type CommonSeriesFields = {
   showSymbol?: boolean
 }
 
-// ECharts supports lightweight grouping hints so configs stay concise.
-// - `encode.group` or `encode.stack` splits one template into one series per distinct value.
-// - these hints are mutually exclusive.
+// ECharts supports a lightweight split hint so configs stay concise.
+// - `encode.splitBy: "field"` splits one template into one series per distinct field value.
+// - `encode.splitBy: ["groupBy", "stackBy"]` is bar-only grouped+stacked shorthand.
+// - with a single split field, use native `series.stack` to choose stacked vs grouped behavior.
 export type SeriesWithGroupingHint = Omit<SeriesOption, 'encode'> &
   CommonSeriesFields & {
     stackPercentage?: boolean
     encode?: SeriesEncode & {
-      group?: string
-      stack?: string
+      splitBy?: string | string[]
       sort?: string
     }
   }

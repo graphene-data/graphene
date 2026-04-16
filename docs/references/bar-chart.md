@@ -10,7 +10,8 @@ Here's an example:
   data=orders_by_category
   x=category
   y=revenue
-  stack=region
+  splitBy=region
+  arrange=stack
 />
 ```
 
@@ -30,14 +31,13 @@ Here's an example:
 | Attribute | Description | Required | Options | Default |
 |----------|-------------|----------|---------|---------|
 | x | Field for category axis | true | column/expression name | - |
-| y | One or more value fields (comma-separated). Multiple values create one series per field. | true | column(s), e.g. `revenue` or `revenue, cost` | - |
+| x | Field for category axis. For horizontal bars you can provide multiple comma-separated x fields. | true | column/expression name(s) | - |
+| y | One or more value fields (comma-separated). For horizontal bars this should be the category field. | true | column(s), e.g. `revenue` or `revenue, cost` | - |
 | y2 | Optional field rendered as a line on secondary axis | false | column/expression name | - |
-| group | Split one `y` field into grouped bars by distinct values of this field | false | column/expression name | - |
-| stack | Split one `y` field into stacked bars by distinct values of this field | false | column/expression name | - |
-| stack100 | Same as `stack`, but normalized to 100% | false | column/expression name | - |
+| splitBy | Split one value field into multiple series by distinct values of this field | false | column/expression name | - |
+| arrange | Arrangement for `splitBy` series | false | `stack`, `group`, `stack100` | `stack` |
 | label | Show value labels on bars | false | `true`, `false` | `false` |
 
-`group`, `stack`, and `stack100` are mutually exclusive.
-When `y` has multiple fields, `group`/`stack`/`stack100` are not supported.
+`splitBy` is incompatible with multiple value fields.
 
 For advanced behavior (custom tooltips, axes, transforms, chart types), use [`ECharts`](./echarts.md) directly.
