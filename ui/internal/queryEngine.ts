@@ -202,7 +202,6 @@ export function translateData(data: any, node: QueryNode): QueryResult {
     fields.push({...field, name})
   })
 
-  rows._fields = fields
   return {rows, fields}
 }
 

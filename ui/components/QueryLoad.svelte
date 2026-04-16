@@ -9,30 +9,22 @@
     data: string | QueryResult
     height?: number
     fields?: Record<string, string | string[]>
-    children?: Snippet<[any[]]>
+    children?: Snippet<[QueryResult]>
   }
 
   let {data, height = 200, fields = {}, children}: Props = $props()
 
   let error: GrapheneError | null = $state(null)
-  let loaded: any[] | null = $state(null)
+  let loaded: QueryResult | null = $state(null)
 
-  let handleResults = (result: any) => {
+  let handleResults = (result: QueryResult) => {
     error = result?.error || null
-    let rows = result?.rows
-    if (Array.isArray(rows) && Array.isArray(result?.fields)) {
-      ;(rows as any)._fields = result.fields
-    }
-    loaded = rows
+    loaded = {rows: result?.rows ?? [], fields: result?.fields ?? [], error: result?.error, sql: result?.sql}
   }
 
   onMount(() => {
     if (typeof data !== 'string') {
-      let rows = data.rows ?? null
-      if (Array.isArray(rows) && Array.isArray(data.fields)) {
-        ;(rows as any)._fields = data.fields
-      }
-      loaded = rows
+      loaded = {rows: data.rows ?? [], fields: data.fields ?? [], error: data.error, sql: data.sql}
     } else {
       let usedFields = Object.fromEntries(Object.entries(fields).filter(e => !!e[1]))
       window.$GRAPHENE.query(data, usedFields, handleResults)
@@ -50,7 +42,7 @@
   </div>
 {:else if !loaded}
   <Skeleton />
-{:else if loaded.length == 0}
+{:else if loaded.rows.length == 0}
   <div class="empty-chart" role="note">Dataset is empty - query ran successfully, but no data was returned from the database</div>
 {:else}
   {@render children?.(loaded)}
