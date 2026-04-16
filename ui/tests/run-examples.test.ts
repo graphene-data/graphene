@@ -72,12 +72,6 @@ async function getExampleDirs(examplesDir: string): Promise<string[]> {
     .sort()
 }
 
-function shouldRunExample(exampleName: string) {
-  // Temporarily skip clickhouse example until CI creds are configured.
-  if (exampleName === 'clickhouse') return false
-  return true
-}
-
 async function getAvailablePort(): Promise<number> {
   return await new Promise((resolve, reject) => {
     let srv = net.createServer()
@@ -94,11 +88,8 @@ test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for every markdown fi
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
   let examplesDir = path.join(coreDir, 'examples')
-  let allExampleDirs = await getExampleDirs(examplesDir)
-  let exampleDirs = allExampleDirs.filter(exampleDir => shouldRunExample(path.basename(exampleDir)))
-  let skippedExamples = allExampleDirs.map(dir => path.basename(dir)).filter(name => !shouldRunExample(name))
+  let exampleDirs = await getExampleDirs(examplesDir)
 
-  expect(allExampleDirs.length).toBeGreaterThan(0)
   expect(exampleDirs.length).toBeGreaterThan(0)
 
   expectConsoleError(/\[ECharts\] The ticks may be not readable/)
@@ -107,7 +98,6 @@ test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for every markdown fi
   let plannedFiles = runPlan.flatMap(({exampleDir, markdownFiles}) => markdownFiles.map(mdPath => `${path.basename(exampleDir)}/${mdPath}`))
 
   console.log(`[run-examples] found ${exampleDirs.length} runnable example directories`)
-  if (skippedExamples.length) console.log(`[run-examples] skipped examples: ${skippedExamples.join(', ')}`)
   console.log(`[run-examples] planned markdown files (${plannedFiles.length}):`)
   plannedFiles.forEach(file => console.log(`[run-examples]   - ${file}`))
 

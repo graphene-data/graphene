@@ -140,7 +140,8 @@ describe.skipIf(!process.env.SLOW_TEST)('bigquery', () => {
   })
 })
 
-describe.skipIf(!process.env.SLOW_TEST || true)('clickhouse', () => {
+// retry to work around clickhouse connection instability, see scripts/clickhouseRepoConnectError.js
+describe.skipIf(!process.env.SLOW_TEST)('clickhouse', {retry: 3, timeout: 20_000}, () => {
   it('lists available tables in the configured database', async () => {
     let res = await runCli(['schema'], clickhouseDir)
     expectCliSuccess(res, 'schema list tables (clickhouse)')
