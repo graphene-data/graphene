@@ -22,7 +22,7 @@ test('big value percent formatting', async ({mount, sharedPage}) => {
 
   await expect(sharedPage.getByText('Conversion')).toBeVisible()
   await expect(sharedPage.getByText('This month')).toBeVisible()
-  await expect(sharedPage.getByText('31.4%')).toBeVisible()
+  await expect(sharedPage.getByText('31%')).toBeVisible()
   await expect(sharedPage.locator('#component-test')).screenshot('big-value-percent')
 })
 

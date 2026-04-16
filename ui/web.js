@@ -25,6 +25,7 @@ import Table from './components/Table.svelte'
 import TableCell from './components/TableCell.svelte'
 import TableGroupRow from './components/TableGroupRow.svelte'
 import TableGroupToggle from './components/TableGroupToggle.svelte'
+import TableHarness from './components/TableHarness.svelte'
 import TableHeader from './components/TableHeader.svelte'
 import TableRow from './components/TableRow.svelte'
 import TableSubtotalRow from './components/TableSubtotalRow.svelte'
@@ -94,6 +95,7 @@ window.$GRAPHENE.components = {
   TableGroupRow,
   TableGroupToggle,
   TableHeader,
+  TableHarness,
   TableRow,
   TableSubtotalRow,
   TableTotalRow,
