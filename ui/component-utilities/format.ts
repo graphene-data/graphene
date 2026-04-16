@@ -5,6 +5,18 @@ const percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 1})
 const currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 const monthYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'})
 const monthDayYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
+const titleCaseAcronyms = ['id', 'gdp']
+const titleCaseLowerWords = ['of', 'the', 'and', 'in', 'on']
+
+// Formats a raw column name into a readable title.
+export function formatTitle(column: string) {
+  let cleaned = column.replace(/"/g, '').replace(/_/g, ' ')
+  return cleaned.replace(/\S*/g, token => {
+    if (titleCaseAcronyms.includes(token)) return token.toUpperCase()
+    if (titleCaseLowerWords.includes(token)) return token.toLowerCase()
+    return token.charAt(0).toUpperCase() + token.substr(1).toLowerCase()
+  })
+}
 
 // Creates a formatter function that takes a numeric value and type/metadata info about a field to determine how to format it.
 export function makeValueFormatter(field?: Field) {
@@ -67,6 +79,16 @@ export function makeTimeFormatter(field?: Field) {
 
     return monthDayYearFormatter.format(date)
   }
+}
+
+// Formats one value by selecting the right formatter from the field type.
+export function formatFromField(field: Field | undefined, value: unknown) {
+  if (value === null || value === undefined) return '-'
+
+  let type = String(field?.type || '').toLowerCase()
+  if (type === 'number') return makeValueFormatter(field)(value)
+  if (type === 'date' || type === 'timestamp') return makeTimeFormatter(field)(value)
+  return String(value)
 }
 
 function extractFormatterValue(input: unknown) {

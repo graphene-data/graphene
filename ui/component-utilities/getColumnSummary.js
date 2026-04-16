@@ -1,5 +1,4 @@
-import {lookupColumnFormat} from './formatting.js'
-import formatTitle from './formatTitle.js'
+import {formatTitle} from './format.ts'
 import {getColumnUnitSummary} from './getColumnExtents.js'
 
 const EvidenceType = {
@@ -13,9 +12,7 @@ const EvidenceType = {
  * @typedef {Object} ColumnSummary
  * @property {string} title
  * @property {string} type
- * @property {Object} evidenceColumnType
- * @property {Object | undefined} fieldMetadata
- * @property {ReturnType<typeof lookupColumnFormat>} format
+ * @property {{name: string, type: string, metadata?: Record<string, unknown>}} field
  * @property {ReturnType<typeof getColumnUnitSummary>} columnUnitSummary
  */
 
@@ -30,28 +27,28 @@ export default function getColumnSummary(data, returnType = 'object') {
   /** @type {Record<string, ColumnSummary>} */
   let columnSummary = {}
 
-  let types = Array.isArray(data?._evidenceColumnTypes) ? data._evidenceColumnTypes : []
+  let fields = Array.isArray(data?._fields) ? data._fields : []
+  if (fields.length === 0) throw new Error('Table data is missing field metadata. Expected rows._fields to be set.')
 
   for (let colName of Object.keys(data[0])) {
-    let evidenceColumnType = types.find(item => item.name?.toLowerCase() === colName?.toLowerCase()) ?? {
-      name: colName,
-      evidenceType: EvidenceType.STRING,
-    }
-    let type = evidenceColumnType.evidenceType
-    let columnUnitSummary = evidenceColumnType.evidenceType === EvidenceType.NUMBER ? getColumnUnitSummary(data, colName, true) : getColumnUnitSummary(data, colName, false)
+    let field = fields.find(item => item?.name?.toLowerCase() === colName?.toLowerCase())
+    let type = inferTypeFromField(field)
+    let isNumeric = type === EvidenceType.NUMBER
+    let columnUnitSummary = getColumnUnitSummary(data, colName, isNumeric)
 
-    if (evidenceColumnType.evidenceType !== EvidenceType.NUMBER) {
+    if (!isNumeric) {
       columnUnitSummary.maxDecimals = 0
-      columnUnitSummary.unitType = evidenceColumnType.evidenceType
+      columnUnitSummary.unitType = type
     }
-    let format = lookupColumnFormat(colName, evidenceColumnType, columnUnitSummary)
 
     columnSummary[colName] = {
-      title: formatTitle(colName, format),
+      title: formatTitle(colName),
       type,
-      evidenceColumnType,
-      fieldMetadata: evidenceColumnType.fieldMetadata,
-      format,
+      field: {
+        name: colName,
+        type,
+        metadata: field?.metadata,
+      },
       columnUnitSummary,
     }
   }
@@ -61,4 +58,13 @@ export default function getColumnSummary(data, returnType = 'object') {
   }
 
   return columnSummary
+}
+
+function inferTypeFromField(field) {
+  let type = String(field?.type || '').toLowerCase()
+  if (type === 'number') return EvidenceType.NUMBER
+  if (type === 'boolean') return EvidenceType.BOOLEAN
+  if (type === 'date' || type === 'timestamp') return EvidenceType.DATE
+  if (type === 'string') return EvidenceType.STRING
+  return EvidenceType.STRING
 }

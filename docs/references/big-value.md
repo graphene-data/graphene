@@ -8,7 +8,6 @@ Here's an example:
   value=num_orders
   sparkline=month
   comparison=order_growth
-  comparisonFmt=pct1
   comparisonTitle="vs. Last Month"
 />
 ```
@@ -24,7 +23,6 @@ Here's an example:
 | title | Title of the card. | false | string | Title of the value column. |
 | minWidth | Overrides min-width of component | false | % or px value | `"18%"` |
 | maxWidth | Adds a max-width to the component | false | % or px value | - |
-| fmt | Sets format for the value ([see available formats](#value-formatting)) | false | Excel-style format, built-in format | - |
 | emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
 | emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | `"No records"` |
 | link | Used to navigate to other pages. Can be a full external link like `"https://google.com"` or an internal link like `"/sales/performance"` | false | - | - |
@@ -39,7 +37,6 @@ Here's an example:
 | downIsGood | If present, negative comparison values appear in green, and positive values appear in red. | false | `true`, `false` | `false` |
 | neutralMin | Sets the bottom of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | `0` |
 | neutralMax | Sets the top of the range for 'neutral' values - neutral values appear in grey rather than red or green | false | number | `0` |
-| comparisonFmt | Sets format for the comparison ([see available formats](#value-formatting)) | false | Excel-style format, built-in format | - |
 
 ## Sparkline
 
@@ -47,7 +44,6 @@ Here's an example:
 |------|-------------|----------|---------|---------|
 | sparkline | Column or expression to pull the date from to create the sparkline. | false | column name, stored expression name, GSQL expression | - |
 | sparklineType | Chart type for sparkline | false | `line`, `area`, `bar` | `line` |
-| sparklineValueFmt | Formatting for tooltip values | false | format code | same as fmt if supplied |
 | sparklineDateFmt | Formatting for tooltip dates | false | format code | `YYYY-MM-DD` |
 | sparklineColor | Color of visualization | false | CSS name, hexademical, RGB, HSL | - |
 | sparklineYScale | Whether to truncate the y-axis of the chart to enhance visibility | false | `true`, `false` | `false` |

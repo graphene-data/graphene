@@ -3,7 +3,7 @@
   import TableGroupToggle from './TableGroupToggle.svelte'
   import InlineDelta from './InlineDelta.svelte'
   import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
-  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
+  import {formatFromField} from '../component-utilities/format.ts'
   import {toBoolean} from '../component-utilities/inputUtils'
 
   interface Props {
@@ -38,12 +38,6 @@
     }
   }
 
-  const resolveFormat = (column: any, summary: any) => {
-    if (column.subtotalFmt) return getFormatObjectFromString(column.subtotalFmt)
-    if (column.totalFmt) return getFormatObjectFromString(column.totalFmt)
-    if (column.fmt) return getFormatObjectFromString(column.fmt, summary.format?.valueType)
-    return summary.format
-  }
 </script>
 
 <tr
@@ -64,7 +58,6 @@
 
   {#each orderedColumns as column, index (index)}
     {@const summary = safeExtractColumn(column, columnSummary)}
-    {@const format = resolveFormat(column, summary)}
     {#if index === 0}
       {#if rowNumbers}
         <!-- Covered by the row-number label cell -->
@@ -78,13 +71,12 @@
       {/if}
     {:else if subtotals}
       <TableCell class={summary.type} {compact} align={column.align}>
-        {#if ['sum', 'mean', 'median', 'min', 'max', 'weightedMean', 'count', 'countDistinct', undefined].includes(column.totalAgg) || column.subtotalFmt}
+        {#if ['sum', 'mean', 'median', 'min', 'max', 'weightedMean', 'count', 'countDistinct', undefined].includes(column.totalAgg)}
           {#if column.contentType === 'delta'}
             <InlineDelta
               value={aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol)}
               downIsGood={column.downIsGood}
-              formatObject={format}
-              columnUnitSummary={summary.columnUnitSummary}
+              field={summary.field}
               showValue={column.showValue}
               showSymbol={column.deltaSymbol}
               align={column.align}
@@ -93,11 +85,7 @@
               chip={column.chip}
             />
           {:else}
-            {formatValue(
-              aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol),
-              format,
-              summary.columnUnitSummary,
-            )}
+            {formatFromField(summary.field, aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol))}
           {/if}
         {:else}
           {column.totalAgg}

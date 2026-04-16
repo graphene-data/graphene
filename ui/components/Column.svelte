@@ -11,27 +11,27 @@
   interface Props {
     id: string, description?: string, contentType?: string, title?: string, align?: string
     wrap?: boolean | string, wrapTitle?: boolean | string, height?: string, width?: string, alt?: string
-    openInNewTab?: boolean | string, linkLabel?: string, fmt?: string, totalAgg?: string, totalFmt?: string
-    weightCol?: string, subtotalFmt?: string, colorMax?: string, colorMin?: string, colorMid?: string
+    openInNewTab?: boolean | string, linkLabel?: string, totalAgg?: string
+    weightCol?: string, colorMax?: string, colorMin?: string, colorMid?: string
     colorBreakpoints?: string[], colorScale?: any, scaleColumn?: string, downIsGood?: boolean | string
     showValue?: boolean | string, deltaSymbol?: boolean | string, neutralMin?: number | string
     neutralMax?: number | string, chip?: boolean | string, sparkWidth?: number | string
     sparkHeight?: number | string, sparkColor?: string, sparkX?: string, sparkY?: string
     sparkYScale?: boolean | string, barColor?: string, negativeBarColor?: string, backgroundColor?: string
-    hideLabels?: boolean | string, colGroup?: string, fmtColumn?: string, redNegatives?: boolean | string
+    hideLabels?: boolean | string, colGroup?: string, redNegatives?: boolean | string
   }
 
   let {
     id, description = undefined, contentType = undefined, title = undefined, align = undefined,
     wrap = undefined, wrapTitle = undefined, height = undefined, width = undefined, alt = undefined,
-    openInNewTab = undefined, linkLabel = undefined, fmt = undefined, totalAgg = undefined,
-    totalFmt = undefined, weightCol = undefined, subtotalFmt = undefined, colorMax = undefined,
+    openInNewTab = undefined, linkLabel = undefined, totalAgg = undefined,
+    weightCol = undefined, colorMax = undefined,
     colorMin = undefined, colorMid = undefined, colorBreakpoints = undefined, colorScale = 'default',
     scaleColumn = undefined, downIsGood = undefined, showValue = undefined, deltaSymbol = undefined,
     neutralMin = 0, neutralMax = 0, chip = undefined, sparkWidth = undefined, sparkHeight = undefined,
     sparkColor = undefined, sparkX = undefined, sparkY = undefined, sparkYScale = undefined,
     barColor = '#a5cdee', negativeBarColor = '#fca5a5', backgroundColor = 'transparent',
-    hideLabels = undefined, colGroup = undefined, fmtColumn = undefined, redNegatives = undefined,
+    hideLabels = undefined, colGroup = undefined, redNegatives = undefined,
   }: Props = $props()
 
   const {resolveColor, resolveColorPalette} = getThemeStores()
@@ -66,11 +66,7 @@
     alt,
     openInNewTab: toBoolean(openInNewTab) ?? false,
     linkLabel,
-    fmt,
-    fmtColumn,
     totalAgg,
-    totalFmt,
-    subtotalFmt,
     weightCol,
     downIsGood: toBoolean(downIsGood) ?? false,
     deltaSymbol: toBoolean(deltaSymbol) ?? true,
@@ -124,7 +120,7 @@
   $effect(() => {
     // Read all props that could change
     void [id, title, align, wrap, wrapTitle, contentType, height, width, alt, openInNewTab,
-      linkLabel, fmt, fmtColumn, totalAgg, totalFmt, subtotalFmt, weightCol, downIsGood,
+      linkLabel, totalAgg, weightCol, downIsGood,
       deltaSymbol, chip, neutralMin, neutralMax, showValue, colorMax, colorMin, colorMid,
       colorScale, colorBreakpoints, scaleColumn, colGroup, description, redNegatives,
       sparkWidth, sparkHeight, sparkColor, sparkX, sparkY, sparkYScale, barColor,

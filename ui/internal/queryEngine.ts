@@ -161,7 +161,6 @@ export function translateData(data: any, node: QueryNode): QueryResult {
   let rows = data.rows || []
   let fields: Field[] = []
   rows.dataLoaded = true // evidence components need this to be set
-  rows._evidenceColumnTypes = []
   let requestFields: string[] = []
   node.fields.forEach(value => {
     if (Array.isArray(value)) requestFields.push(...value)
@@ -201,11 +200,9 @@ export function translateData(data: any, node: QueryNode): QueryResult {
 
     // Return fields for the new ECharts config but with the name mapped back to what was requested
     fields.push({...field, name})
-
-    // map graphene types down to the ones evidence expects
-    rows._evidenceColumnTypes.push({name, evidenceType: evidenceType(field.type), fieldMetadata: field.metadata})
   })
 
+  rows._fields = fields
   return {rows, fields}
 }
 
@@ -221,22 +218,6 @@ errorProvider('queryEngine', () => {
     })
   return Object.values(unique)
 })
-
-function evidenceType(type: Field['type'] | undefined) {
-  let kind = typeDescription(type)
-  if (kind === 'string') return 'string'
-  if (kind === 'number') return 'number'
-  if (kind === 'boolean') return 'boolean'
-  if (kind === 'date' || kind === 'timestamp') return 'date'
-  console.warn('Unsupported evidence type ' + kind)
-  return 'string'
-}
-
-function typeDescription(type: Field['type'] | undefined): string {
-  if (!type) return 'unknown'
-  if (typeof type === 'string') return type
-  return `array<${typeDescription(type.elementType)}>`
-}
 
 if (typeof window !== 'undefined') {
   Object.assign(window.$GRAPHENE, {

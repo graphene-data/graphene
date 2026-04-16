@@ -1,4 +1,3 @@
-import {scalarType} from '../../lang/types.ts'
 import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 import {groupedDataForSection, tableDataForPagination, tableDataWithDates, timeseriesGrouped} from './testData.ts'
 
@@ -91,9 +90,9 @@ test('colorscale with colorBreakpoints applies correct background colors', async
 
     <Table data=retention_data rows=all>
       <Column id=carrier title="Carrier" />
-      <Column id=high_val fmt=pct0 title="High" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
-      <Column id=mid_val fmt=pct0 title="Mid" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
-      <Column id=low_val fmt=pct0 title="Low" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+      <Column id=high_val title="High" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+      <Column id=mid_val title="Mid" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+      <Column id=low_val title="Low" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
     </Table>
   `,
   )
@@ -115,7 +114,7 @@ test('colorBreakpoints work when all column values are identical', async ({serve
 
     <Table data=uniform_data rows=all>
       <Column id=carrier title="Carrier" />
-      <Column id=val fmt=pct0 title="Value" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+      <Column id=val title="Value" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
     </Table>
   `,
   )
@@ -238,8 +237,8 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
     >
       <Column id=carrier title="Carrier" description="Carrier code" colGroup="Meta" />
       <Column id=flights title="Total Flights" colGroup="Metrics" align=right />
-      <Column id=avg_delay title="Average Delay Minutes Across All Flight Records" colGroup="Metrics" fmt=num2 wrapTitle=true />
-      <Column id=max_delay title="Peak Delay" colGroup="Metrics" fmt=num1 align=center />
+      <Column id=avg_delay title="Average Delay Minutes Across All Flight Records" colGroup="Metrics" wrapTitle=true />
+      <Column id=max_delay title="Peak Delay" colGroup="Metrics" align=center />
     </Table>
   `,
   )
@@ -291,13 +290,13 @@ test('row-level link behavior opens external destinations and hides link column'
     {name: 'Beta', value: 8, url: null},
     {name: 'Gamma', value: 5, url: 'https://example.com/gamma'},
   ] as any
-  rows._evidenceColumnTypes = [
-    {name: 'name', type: scalarType('string')},
-    {name: 'value', type: scalarType('number')},
-    {name: 'url', type: scalarType('string')},
-  ]
+  let fields = [
+    {name: 'name', type: 'string'},
+    {name: 'value', type: 'number'},
+    {name: 'url', type: 'string'},
+  ] as any
 
-  let component = await mount('components/Table.svelte', {data: {rows}, link: 'url', rowNumbers: true, rows: 'all'})
+  let component = await mount('components/Table.svelte', {data: {rows, fields}, link: 'url', rowNumbers: true, rows: 'all'})
 
   let table = component.locator('table')
   await expect(table).toBeVisible()
@@ -329,7 +328,7 @@ test('colorscale and link content columns render together', async ({server, page
 
     <Table data=style_table rows=all>
       <Column id=carrier title="Carrier" />
-      <Column id=retention fmt=pct0 title="Retention" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
+      <Column id=retention title="Retention" contentType=colorscale colorScale="red, yellow, green" colorBreakpoints="0, 0.5, 1" />
       <Column id=details_url title="Details" contentType=link linkLabel="Open" openInNewTab=true />
     </Table>
   `,

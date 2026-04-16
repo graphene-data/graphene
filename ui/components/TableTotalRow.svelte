@@ -2,7 +2,7 @@
   import InlineDelta from './InlineDelta.svelte'
   import TableCell from './TableCell.svelte'
   import {safeExtractColumn, weightedMean} from '../component-utilities/tableUtils'
-  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
+  import {formatFromField} from '../component-utilities/format.ts'
 
   interface Props {
     data?: any[]
@@ -41,11 +41,6 @@
 
   {#each orderedColumns as column (column.id)}
     {@const summary = safeExtractColumn(column, columnSummary)}
-    {@const format = (() => {
-      if (column.totalFmt) return getFormatObjectFromString(column.totalFmt)
-      if (column.fmt) return getFormatObjectFromString(column.fmt, summary.format?.valueType)
-      return summary.format
-    })()}
     {@const totalAgg = column.totalAgg ?? 'sum'}
     <TableCell
       {compact}
@@ -61,8 +56,7 @@
           <InlineDelta
             value={totalAgg === 'weightedMean' ? weightedMean(data, column.id, column.weightCol) : summary.columnUnitSummary?.[totalAgg]}
             downIsGood={column.downIsGood}
-            formatObject={format}
-            columnUnitSummary={summary.columnUnitSummary}
+            field={summary.field}
             showValue={column.showValue}
             showSymbol={column.deltaSymbol}
             align={column.align}
@@ -71,18 +65,10 @@
             chip={column.chip}
           />
         {:else}
-          {formatValue(
-            totalAgg === 'weightedMean' ? weightedMean(data, column.id, column.weightCol) : summary.columnUnitSummary?.[totalAgg],
-            format,
-            summary.columnUnitSummary,
-          )}
+          {formatFromField(summary.field, totalAgg === 'weightedMean' ? weightedMean(data, column.id, column.weightCol) : summary.columnUnitSummary?.[totalAgg])}
         {/if}
       {:else}
-        {#if column.totalFmt}
-          {formatValue(totalAgg, format, summary.columnUnitSummary)}
-        {:else}
-          {totalAgg}
-        {/if}
+        {totalAgg}
       {/if}
     </TableCell>
   {/each}

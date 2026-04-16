@@ -1,7 +1,7 @@
 <script lang="ts">
   import InlineDelta from './InlineDelta.svelte'
   import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
-  import {formatValue, getFormatObjectFromString} from '../component-utilities/formatting.js'
+  import {formatFromField} from '../component-utilities/format.ts'
   import TableCell from './TableCell.svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
 
@@ -33,20 +33,13 @@
   {/if}
   {#each orderedColumns as column (column.id)}
     {@const summary = safeExtractColumn(column, columnSummary)}
-    {@const baseFormat = column.fmt ? getFormatObjectFromString(column.fmt, summary.format?.valueType) : summary.format}
-    {@const format = (() => {
-      if (column.subtotalFmt) return getFormatObjectFromString(column.subtotalFmt)
-      if (column.totalFmt) return getFormatObjectFromString(column.totalFmt)
-      return baseFormat
-    })()}
     <TableCell class={summary.type} {compact} align={column.align}>
       {#if column.id !== groupBy}
         {#if column.contentType === 'delta'}
           <InlineDelta
             value={aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol)}
             downIsGood={column.downIsGood}
-            formatObject={baseFormat}
-            columnUnitSummary={summary.columnUnitSummary}
+            field={summary.field}
             showValue={column.showValue}
             showSymbol={column.deltaSymbol}
             align={column.align}
@@ -55,11 +48,7 @@
             chip={column.chip}
           />
         {:else}
-          {formatValue(
-            aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol),
-            format,
-            summary.columnUnitSummary,
-          )}
+          {formatFromField(summary.field, aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol))}
         {/if}
       {:else if groupType === 'section'}
         {groupName}
