@@ -1,6 +1,6 @@
 <script lang="ts">
   import InlineDelta from './InlineDelta.svelte'
-  import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
+  import {summarizeColumn, type SummaryMetric} from '../component-utilities/dataSummary.ts'
   import {formatFromField} from '../component-utilities/format.ts'
   import TableCell from './TableCell.svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
@@ -8,7 +8,6 @@
   interface Props {
     groupName?: string
     currentGroupData?: any[]
-    columnSummary?: any[]
     rowColor?: string
     groupBy?: string
     groupType?: 'accordion' | 'section'
@@ -19,12 +18,22 @@
   }
 
   let {
-    groupName = undefined, currentGroupData = [], columnSummary = [], rowColor = undefined,
+    groupName = undefined, currentGroupData = [], rowColor = undefined,
     groupBy = undefined, groupType = undefined, rowNumbers: rowNumbersProp = undefined,
     fontColor = undefined, orderedColumns = [], compact = undefined,
   }: Props = $props()
 
   let rowNumbers = $derived(toBoolean(rowNumbersProp) ?? false)
+
+  const SUPPORTED_METRICS: SummaryMetric[] = ['sum', 'mean', 'median', 'min', 'max', 'count', 'countDistinct']
+
+  const getAggregateValue = (rows: Record<string, unknown>[], column: any) => {
+    let metric = column?.totalAgg as SummaryMetric | undefined
+    if (!metric && String(column?.type || '').toLowerCase() === 'number') metric = 'sum'
+    if (!metric || !SUPPORTED_METRICS.includes(metric)) return '-'
+    let summary = summarizeColumn(rows, column.field ?? {name: column.id, type: column.type}, [metric])
+    return summary[metric] ?? null
+  }
 </script>
 
 <tr class="subtotal-row" style:background-color={rowColor} style:color={fontColor}>
@@ -32,14 +41,13 @@
     <TableCell class="index" {compact}></TableCell>
   {/if}
   {#each orderedColumns as column (column.id)}
-    {@const summary = safeExtractColumn(column, columnSummary)}
-    <TableCell class={summary.type} {compact} align={column.align}>
+    <TableCell class={column.type} {compact} align={column.align}>
       {#if column.id !== groupBy}
         {#if column.contentType === 'delta'}
           <InlineDelta
-            value={aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol)}
+            value={getAggregateValue(currentGroupData, column)}
             downIsGood={column.downIsGood}
-            field={summary.field}
+            field={column.field}
             showValue={column.showValue}
             showSymbol={column.deltaSymbol}
             align={column.align}
@@ -48,7 +56,7 @@
             chip={column.chip}
           />
         {:else}
-          {formatFromField(summary.field, aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol))}
+          {formatFromField(column.field, getAggregateValue(currentGroupData, column))}
         {/if}
       {:else if groupType === 'section'}
         {groupName}

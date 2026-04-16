@@ -1,6 +1,5 @@
 <script lang="ts">
   import SortIcon from './SortIcon.svelte'
-  import {safeExtractColumn} from '../component-utilities/tableUtils'
   import {toBoolean} from '../component-utilities/inputUtils'
 
   interface Props {
@@ -8,7 +7,6 @@
     headerColor?: string
     headerFontColor?: string
     orderedColumns?: any[]
-    columnSummary?: any[]
     sortable?: boolean | string
     sortClick?: (columnId: string) => () => void
     formatColumnTitles?: boolean | string
@@ -20,7 +18,7 @@
 
   let {
     rowNumbers: rowNumbersProp = false, headerColor = undefined, headerFontColor = undefined,
-    orderedColumns = [], columnSummary = [], sortable: sortableProp = true, sortClick = () => () => {},
+    orderedColumns = [], sortable: sortableProp = true, sortClick = () => () => {},
     formatColumnTitles: formatColumnTitlesProp = true, sortObj = {col: null, ascending: null},
     wrapTitles: wrapTitlesProp = false, compact: compactProp = false, link = undefined,
   }: Props = $props()
@@ -34,8 +32,7 @@
   const getWrapTitleAlignment = (column: any) => {
     if (column.align === 'right') return 'header-title--align-end'
     if (column.align === 'center') return 'header-title--align-center'
-    let extracted = safeExtractColumn(column, columnSummary)
-    if (extracted.type === 'number') return 'header-title--align-end'
+    if (column.type === 'number') return 'header-title--align-end'
     return 'header-title--align-start'
   }
 
@@ -55,10 +52,10 @@
     return sortObj.ascending ? 'ascending' : 'descending'
   }
 
-  const resolveHeaderTitle = (column: any, summary: any) => {
+  const resolveHeaderTitle = (column: any) => {
     if (column.title) return column.title
-    if (formatColumnTitles) return summary.title
-    return summary.id
+    if (formatColumnTitles) return column.defaultTitle ?? column.id
+    return column.id
   }
 
   let columnsWithGroupSpan = $derived(computeGroupSpans(orderedColumns))
@@ -96,10 +93,9 @@
       ></th>
     {/if}
     {#each orderedColumns as column (column.id)}
-      {@const summary = safeExtractColumn(column, columnSummary)}
       <th
         role="columnheader"
-        class={`header-cell ${summary.type ?? ''} ${compact ? 'header-cell--compact' : ''}`}
+        class={`header-cell ${column.type ?? ''} ${compact ? 'header-cell--compact' : ''}`}
         style:color={headerFontColor}
         style:background={headerColor}
         style:text-align={column.align ?? (['sparkline', 'sparkbar', 'sparkarea', 'bar'].includes(column.contentType) ? 'center' : undefined)}
@@ -109,7 +105,7 @@
       >
         <div class={`header-title ${wrapTitles || column.wrapTitle ? 'header-title--wrap' : ''} ${wrapTitles || column.wrapTitle ? getWrapTitleAlignment(column) : ''}`.trim()}>
           <span class={`header-title__text ${wrapTitles || column.wrapTitle ? 'header-title__text--wrap' : ''}`}>
-            {resolveHeaderTitle(column, summary)}
+            {resolveHeaderTitle(column)}
             {#if column.description}
               <span class="header-title__info" title={column.description}>ⓘ</span>
             {/if}

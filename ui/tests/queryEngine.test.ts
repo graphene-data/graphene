@@ -3,7 +3,6 @@ import {beforeAll, test, expect} from 'vitest'
 import {scalarType} from '../../lang/types.ts'
 
 let translateData: (data: any, node: any) => {rows: any[]; fields?: any[]}
-let getColumnSummary: (rows: any[], fields: any[], returnType?: string) => any
 
 beforeAll(async () => {
   ;(globalThis as any).window = {
@@ -12,7 +11,6 @@ beforeAll(async () => {
     removeEventListener: () => {},
   }
   ;({translateData} = await import('../internal/queryEngine.ts'))
-  ;({default: getColumnSummary} = await import('../component-utilities/getColumnSummary.js'))
 })
 
 test('translateData remaps Snowflake-style uppercase row keys to requested field casing', () => {
@@ -36,7 +34,7 @@ test('translateData remaps Snowflake-style uppercase row keys to requested field
   expect(result.fields?.map((field: any) => field.name)).toEqual(['location_state_code', 'num'])
 })
 
-test('translateData preserves field metadata for UI column summaries', () => {
+test('translateData preserves field metadata for downstream table rendering', () => {
   let data = {
     rows: [{month_start: '2021-01-01', sales: 3}],
     fields: [
@@ -52,8 +50,6 @@ test('translateData preserves field metadata for UI column summaries', () => {
   }
 
   let result = translateData(data, node)
-  let summary = getColumnSummary(result.rows, result.fields || [])
 
   expect(result.fields?.[0].metadata).toEqual({timeGrain: 'month'})
-  expect(summary.month_start.field.metadata).toEqual({timeGrain: 'month'})
 })

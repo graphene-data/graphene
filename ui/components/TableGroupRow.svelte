@@ -2,7 +2,7 @@
   import TableCell from './TableCell.svelte'
   import TableGroupToggle from './TableGroupToggle.svelte'
   import InlineDelta from './InlineDelta.svelte'
-  import {aggregateColumn, safeExtractColumn} from '../component-utilities/tableUtils'
+  import {summarizeColumn, type SummaryMetric} from '../component-utilities/dataSummary.ts'
   import {formatFromField} from '../component-utilities/format.ts'
   import {toBoolean} from '../component-utilities/inputUtils'
 
@@ -10,7 +10,6 @@
     groupName: string
     currentGroupData?: any[]
     toggled?: boolean
-    columnSummary?: any[]
     rowNumbers?: boolean | string
     rowColor?: string
     subtotals?: boolean | string
@@ -20,7 +19,7 @@
   }
 
   let {
-    groupName, currentGroupData = [], toggled = true, columnSummary = [],
+    groupName, currentGroupData = [], toggled = true,
     rowNumbers: rowNumbersProp = undefined, rowColor = undefined, subtotals: subtotalsProp = true,
     orderedColumns = [], compact: compactProp = undefined, onToggle,
   }: Props = $props()
@@ -28,6 +27,16 @@
   let rowNumbers = $derived(toBoolean(rowNumbersProp) ?? false)
   let subtotals = $derived(toBoolean(subtotalsProp) ?? true)
   let compact = $derived(toBoolean(compactProp))
+
+  const SUPPORTED_METRICS: SummaryMetric[] = ['sum', 'mean', 'median', 'min', 'max', 'count', 'countDistinct']
+
+  const getAggregateValue = (rows: Record<string, unknown>[], column: any) => {
+    let metric = column?.totalAgg as SummaryMetric | undefined
+    if (!metric && String(column?.type || '').toLowerCase() === 'number') metric = 'sum'
+    if (!metric || !SUPPORTED_METRICS.includes(metric)) return '-'
+    let summary = summarizeColumn(rows, column.field ?? {name: column.id, type: column.type}, [metric])
+    return summary[metric] ?? null
+  }
 
   const toggleGroup = () => onToggle?.({groupName})
 
@@ -57,7 +66,6 @@
   {/if}
 
   {#each orderedColumns as column, index (index)}
-    {@const summary = safeExtractColumn(column, columnSummary)}
     {#if index === 0}
       {#if rowNumbers}
         <!-- Covered by the row-number label cell -->
@@ -70,25 +78,21 @@
       </TableCell>
       {/if}
     {:else if subtotals}
-      <TableCell class={summary.type} {compact} align={column.align}>
-        {#if ['sum', 'mean', 'median', 'min', 'max', 'weightedMean', 'count', 'countDistinct', undefined].includes(column.totalAgg)}
-          {#if column.contentType === 'delta'}
-            <InlineDelta
-              value={aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol)}
-              downIsGood={column.downIsGood}
-              field={summary.field}
-              showValue={column.showValue}
-              showSymbol={column.deltaSymbol}
-              align={column.align}
-              neutralMin={column.neutralMin ?? 0}
-              neutralMax={column.neutralMax ?? 0}
-              chip={column.chip}
-            />
-          {:else}
-            {formatFromField(summary.field, aggregateColumn(currentGroupData, column.id, column.totalAgg, summary.type, column.weightCol))}
-          {/if}
+      <TableCell class={column.type} {compact} align={column.align}>
+        {#if column.contentType === 'delta'}
+          <InlineDelta
+            value={getAggregateValue(currentGroupData, column)}
+            downIsGood={column.downIsGood}
+            field={column.field}
+            showValue={column.showValue}
+            showSymbol={column.deltaSymbol}
+            align={column.align}
+            neutralMin={column.neutralMin ?? 0}
+            neutralMax={column.neutralMax ?? 0}
+            chip={column.chip}
+          />
         {:else}
-          {column.totalAgg}
+          {formatFromField(column.field, getAggregateValue(currentGroupData, column))}
         {/if}
       </TableCell>
     {:else}
