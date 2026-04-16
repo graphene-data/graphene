@@ -1,5 +1,6 @@
 import type {FunctionDef} from './functionTypes.ts'
 
+import {inferTemporalGrainMetadata} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const trim = trimIndentation
@@ -765,6 +766,7 @@ export const clickHouseFunctions: FunctionDef[] = [
       {name: 'datetime', type: ['date', 'timestamp']},
     ],
     returns: 'timestamp',
+    metadata: args => inferTemporalGrainMetadata(args[0]?.sql),
     sqlTemplate: 'DATE_TRUNC(${date_part}, ${datetime})',
   },
   {
@@ -854,6 +856,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#todayofmonth`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
+    metadata: {timeOrdinal: 'day_of_month'},
     sqlName: 'toDayOfMonth',
     aliases: ['to_day_of_month'],
   },
@@ -867,6 +870,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#todayofweek`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
+    metadata: {timeOrdinal: 'dow_1m'},
     sqlName: 'toDayOfWeek',
     aliases: ['to_day_of_week'],
   },
@@ -880,6 +884,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tohour`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
+    metadata: {timeOrdinal: 'hour_of_day'},
     sqlName: 'toHour',
     aliases: ['to_hour'],
   },
@@ -906,6 +911,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tomonth`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
+    metadata: {timeOrdinal: 'month_of_year'},
     sqlName: 'toMonth',
     aliases: ['to_month'],
   },
@@ -932,6 +938,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tostartofday`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'timestamp',
+    metadata: {timeGrain: 'day'},
     sqlName: 'toStartOfDay',
     aliases: ['to_start_of_day'],
   },
@@ -945,6 +952,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tostartofmonth`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'timestamp',
+    metadata: {timeGrain: 'month'},
     sqlName: 'toStartOfMonth',
     aliases: ['to_start_of_month'],
   },
@@ -958,6 +966,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tostartofquarter`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'timestamp',
+    metadata: {timeGrain: 'quarter'},
     sqlName: 'toStartOfQuarter',
     aliases: ['to_start_of_quarter'],
   },
@@ -971,6 +980,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tostartofweek`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'timestamp',
+    metadata: {timeGrain: 'week'},
     sqlName: 'toStartOfWeek',
     aliases: ['to_start_of_week'],
   },
@@ -984,6 +994,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tostartofyear`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'timestamp',
+    metadata: {timeGrain: 'year'},
     sqlName: 'toStartOfYear',
     aliases: ['to_start_of_year'],
   },

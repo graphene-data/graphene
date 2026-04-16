@@ -21,6 +21,7 @@ import {parseMarkdown} from './markdown.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parser} from './parser.js'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval} from './temporal.ts'
+import {inferTemporalOrdinal} from './temporalMetadata.ts'
 import {
   scalarType,
   type AnalysisConfig,
@@ -1001,7 +1002,14 @@ class AnalysisSession implements Analyzer {
         let unit = txt(node.getChild('ExtractUnit')!)
           .replace(/^['"]|['"]$/g, '')
           .toLowerCase()
-        return {sql: `EXTRACT(${unit} FROM ${expr.sql})`, type: scalarType('number'), isAgg: expr.isAgg, fanout: expr.fanout}
+        let timeOrdinal = inferTemporalOrdinal(unit, this.config.dialect)
+        return {
+          sql: `EXTRACT(${unit} FROM ${expr.sql})`,
+          type: scalarType('number'),
+          metadata: timeOrdinal ? {timeOrdinal} : undefined,
+          isAgg: expr.isAgg,
+          fanout: expr.fanout,
+        }
       }
 
       case 'IntervalExpression': {

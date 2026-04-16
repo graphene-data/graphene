@@ -8,7 +8,7 @@ import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
-import {arrayOf, scalarType, type Expr, type FieldMeta, type FieldType, isArrayType, isScalarType, type Scope, type TimeGrain, type TypeKind} from './types.ts'
+import {arrayOf, scalarType, type Expr, type FieldMeta, type FieldType, isArrayType, isScalarType, type Scope, type TypeKind} from './types.ts'
 import {txt} from './util.ts'
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
@@ -19,6 +19,7 @@ interface Overload {
   sqlName?: string
   supportsBareInvocation?: boolean
   bareSqlName?: string
+  metadata?: FunctionDef['metadata']
 }
 
 // Convert a FunctionDef arg type string (e.g. 'number', 'T', 'string...', 'kw') to allowedTypes
@@ -66,6 +67,7 @@ function convertDef(def: FunctionDef): Overload[] {
     sqlName: def.sqlName,
     supportsBareInvocation: def.supportsBareInvocation && args.length == 0,
     bareSqlName: def.bareSqlName,
+    metadata: def.metadata,
   }))
 }
 
@@ -116,7 +118,7 @@ export function analyzeBareFunction(analyzer: Analyzer, node: SyntaxNode, name: 
   if (overloads.length == 0) return
   let overload = overloads.find(o => o.supportsBareInvocation && o.params.length == 0)
   if (!overload) return
-  return analyzeResolvedFunction(name, overload, [], [], scope, {...opts, bare: true})
+  return analyzeResolvedFunction(name, overload, [], scope, {...opts, bare: true})
 }
 
 function analyzeNamedFunction(analyzer: Analyzer, node: SyntaxNode, name: string, argNodes: SyntaxNode[], scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
@@ -160,10 +162,10 @@ function analyzeNamedFunction(analyzer: Analyzer, node: SyntaxNode, name: string
     return analyzer.diag(node, `Wrong number of arguments for ${name}: expected ${expected}, got ${argNodes.length}`, {sql: 'NULL', type: scalarType('error')})
   }
 
-  return analyzeResolvedFunction(name, overload, args, argNodes, scope, opts)
+  return analyzeResolvedFunction(name, overload, args, scope, opts)
 }
 
-function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[], argNodes: SyntaxNode[], scope: Scope, opts: {isWindow?: boolean; bare?: boolean} = {}): Expr {
+function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[], scope: Scope, opts: {isWindow?: boolean; bare?: boolean} = {}): Expr {
   let returnType: FieldType = overload.returnType.type as FieldType
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || scalarType('string')
   if (overload.returnType.type == 'array') returnType = inferArrayReturnType(args)
@@ -179,7 +181,7 @@ function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[],
   }
   let fnName = opts.bare ? overload.bareSqlName || overload.sqlName || name : overload.sqlName || name
   let sql = opts.bare ? fnName : `${fnName}(${args.map(a => a.sql).join(',')})`
-  let metadata = inferFunctionFieldMetadata(name, overload, args, argNodes)
+  let metadata = inferFunctionFieldMetadata(overload, args)
   return {
     sql,
     type: returnType,
@@ -230,45 +232,10 @@ function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], d
   }
 }
 
-function inferFunctionFieldMetadata(name: string, overload: Overload, args: Expr[], argNodes: SyntaxNode[]): FieldMeta | undefined {
-  if (name != 'date_trunc') return
-
-  let partIdx = overload.params.findIndex(param => param.name.includes('part'))
-  if (partIdx < 0 || !args[partIdx]) return
-  if (!isScalarType(args[partIdx].type, 'string') && !isScalarType(args[partIdx].type, 'sql native')) return
-
-  let timeGrain = inferTemporalMetadata(txt(argNodes[partIdx]))
-  if (!timeGrain) return
-  return {timeGrain}
-}
-
-// date_trunc part syntax varies by dialect:
-// - BigQuery commonly uses bare keywords like `month`, plus special values like `isoweek` and `week(monday)`.
-// - DuckDB and Snowflake typically pass the part as a string literal like `'month'`.
-// We normalize the supported forms into our shared grain enum and intentionally drop any finer detail.
-function inferTemporalMetadata(rawPart: string): TimeGrain | undefined {
-  let normalized = rawPart
-    .trim()
-    .replace(/^['"]|['"]$/g, '')
-    .toLowerCase()
-  if (!normalized) return
-
-  if (/^week(?:\([a-z]+\))?$/.test(normalized) || normalized == 'isoweek') return 'week'
-  if (normalized == 'isoyear') return 'year'
-  return normalizeTemporalGrain(normalized)
-}
-
-function normalizeTemporalGrain(value: string): TimeGrain | undefined {
-  let grains: Record<string, TimeGrain> = {
-    year: 'year',
-    quarter: 'quarter',
-    month: 'month',
-    day: 'day',
-    hour: 'hour',
-    minute: 'minute',
-    second: 'second',
-  }
-  return grains[value]
+function inferFunctionFieldMetadata(overload: Overload, args: Expr[]): FieldMeta | undefined {
+  if (!overload.metadata) return
+  if (typeof overload.metadata == 'function') return overload.metadata(args)
+  return overload.metadata
 }
 
 function inferArrayReturnType(args: Expr[]): FieldType {

@@ -1,6 +1,8 @@
 // Type definitions for SQL function references
 // These are used to define functions in a human-readable format that gets converted to overloads for type checking
 
+import {type Expr, type FieldMeta} from './types.ts'
+
 export type SQLType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'any' | 'bytes'
 
 // Arg definition - can be a simple tuple or an object with description
@@ -42,4 +44,7 @@ export interface FunctionDef {
   // For functions with multiple overloads (e.g., string_agg with/without separator)
   // When present, `args` and `returns` are ignored in favor of overloads
   overloads?: FunctionOverload[]
+  // Metadata automatically attached to the result of this function.
+  // Can be static or computed from analyzed args.
+  metadata?: FieldMeta | ((args: Expr[]) => FieldMeta | undefined)
 }
