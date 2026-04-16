@@ -1,7 +1,8 @@
 <script lang="ts">
   import {setContext, untrack, type Snippet} from 'svelte'
   import {writable} from 'svelte/store'
-  import getColumnSummary from '../component-utilities/getColumnSummary.js'
+  import {formatTitle} from '../component-utilities/format.ts'
+  import {summarizeColumn} from '../component-utilities/dataSummary.ts'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import TableHeader from './TableHeader.svelte'
   import TableRow from './TableRow.svelte'
@@ -94,11 +95,6 @@
   // Use $derived to reactively read from the store
   let tablePropsColumns = $derived($tablePropsStore.columns ?? [])
 
-  let finalColumnOrder = $derived(getFinalColumnOrder(tablePropsColumns.map((column: any) => column.id), priorityColumns))
-  let orderedColumns = $derived([...tablePropsColumns].sort(
-    (a, b) => finalColumnOrder.indexOf(a.id) - finalColumnOrder.indexOf(b.id),
-  ))
-
   let sortObj: {col: string | null; ascending: boolean | null} = $state({col: null, ascending: null})
 
   // Parse initial sort on mount
@@ -126,7 +122,7 @@
   // Process data - combine all data processing into one $derived.by block to avoid loops
   let processedState = $derived.by(() => {
     let resultError: string | undefined = undefined
-    let resultColumnSummary: any[] = []
+    let resultColumns: any[] = []
     let resultProcessedData: any[] = []
     let resultDataTestId: string | undefined = undefined
     let resultNormalizedData: any[] = []
@@ -136,10 +132,28 @@
       let inputFields = Array.isArray(data?.fields) ? data.fields : []
       resultDataTestId = coerceId((data as any)?.id)
 
-      resultColumnSummary = getColumnSummary(inputRows, inputFields, 'array')
+      if (!Array.isArray(inputFields) || inputFields.length === 0) throw new Error('Table data is missing field metadata.')
+      if (Array.isArray(inputRows) && inputRows.length > 0) {
+        for (let colName of Object.keys(inputRows[0])) {
+          let field = inputFields.find(item => item?.name?.toLowerCase() === colName?.toLowerCase())
+          let type = String(field?.type || '').toLowerCase()
+          let resolvedField = field ?? {name: colName, type}
+          let stats = type === 'number' ? summarizeColumn(inputRows, resolvedField, ['min', 'max']) : {}
+
+          resultColumns.push({
+            id: colName,
+            defaultTitle: formatTitle(colName),
+            type,
+            field: resolvedField,
+            stats,
+          })
+        }
+      }
+
+      if (link && !showLinkColBool) resultColumns = resultColumns.filter((column) => column.id !== link)
 
       if (initialSort.sortBy) {
-        let columnNames = resultColumnSummary.map((col) => col.id)
+        let columnNames = resultColumns.map((col) => col.id)
         if (!columnNames.includes(initialSort.sortBy)) {
           throw new Error(`${initialSort.sortBy} is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).`)
         }
@@ -147,13 +161,6 @@
 
       resultProcessedData = inputRows
       resultNormalizedData = inputRows
-
-      if (link && !showLinkColBool) {
-        let linkIndex = resultColumnSummary.findIndex((col) => col.id === link)
-        if (linkIndex !== -1) {
-          resultColumnSummary = [...resultColumnSummary.slice(0, linkIndex), ...resultColumnSummary.slice(linkIndex + 1)]
-        }
-      }
     } catch(thrown) {
       let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
       logError(thrown, {queryId: 'DataTable'})
@@ -162,15 +169,36 @@
 
     return {
       error: resultError,
-      columnSummary: resultColumnSummary,
+      columns: resultColumns,
       processedData: resultProcessedData,
       dataTestId: resultDataTestId,
       normalizedData: resultNormalizedData,
     }
   })
 
+  let columnLookup = $derived.by(() => {
+    let lookup: Record<string, any> = {}
+    for (let column of processedState.columns) lookup[column.id] = column
+    return lookup
+  })
+
+  let resolvedColumns = $derived(tablePropsColumns.map((column: any) => {
+    let meta = columnLookup[column.id] || {}
+    return {
+      ...column,
+      defaultTitle: meta.defaultTitle ?? formatTitle(column.id),
+      type: meta.type,
+      field: meta.field,
+      stats: meta.stats,
+    }
+  }))
+
+  let finalColumnOrder = $derived(getFinalColumnOrder(resolvedColumns.map((column: any) => column.id), priorityColumns))
+  let orderedColumns = $derived([...resolvedColumns].sort(
+    (a, b) => finalColumnOrder.indexOf(a.id) - finalColumnOrder.indexOf(b.id),
+  ))
+
   // Extract processed state
-  let columnSummary = $derived(processedState.columnSummary)
   let normalizedData = $derived(processedState.normalizedData)
   let dataTestId = $derived(processedState.dataTestId)
 
@@ -331,7 +359,7 @@
   {#if children}
     {@render children()}
   {:else}
-    {#each columnSummary as column (column.id)}
+    {#each processedState.columns as column (column.id)}
       <Column id={column.id} />
     {/each}
   {/if}
@@ -354,7 +382,6 @@
           headerColor={$headerColorStore}
           headerFontColor={$headerFontColorStore}
           {orderedColumns}
-          {columnSummary}
           sortable={sortableBool}
           {sortClick}
           formatColumnTitles={formatColumnTitlesBool}
@@ -371,7 +398,6 @@
                 {groupName}
                 currentGroupData={sortedGroupedData[groupName]}
                 toggled={groupToggleStates[groupName]}
-                {columnSummary}
                 rowNumbers={effectiveRowNumbers}
                 rowColor={$accordionRowColorStore}
                 subtotals={subtotalsBool}
@@ -388,12 +414,12 @@
                 rowNumbers={effectiveRowNumbers}
                 rowLines={rowLinesBool}
                 compact={compactBool}
-                {columnSummary}
                 grouped={true}
                 {groupType}
                 groupColumn={groupBy}
                 groupNamePosition={groupNamePosition}
                 orderedColumns={orderedColumns}
+                columnLookup={columnLookup}
                 index={groupOffsets[groupName] ?? 0}
                 rowSpan={sortedGroupedData[groupName].length}
               />
@@ -401,7 +427,6 @@
                 <TableSubtotalRow
                   {groupName}
                   currentGroupData={sortedGroupedData[groupName]}
-                  {columnSummary}
                   rowColor={$subtotalRowColorStore}
                   fontColor={$subtotalFontColorStore}
                   groupBy={groupBy}
@@ -421,12 +446,12 @@
             rowNumbers={effectiveRowNumbers}
             rowLines={rowLinesBool}
             compact={compactBool}
-            {columnSummary}
             grouped={false}
             {groupType}
             groupColumn={groupBy}
             groupNamePosition={groupNamePosition}
             orderedColumns={orderedColumns}
+            columnLookup={columnLookup}
             index={rowsNum * (currentPage - 1)}
           />
         {/if}
@@ -435,7 +460,6 @@
           <TableTotalRow
             data={tableData}
             rowNumbers={effectiveRowNumbers}
-            {columnSummary}
             rowColor={$totalRowColorStore}
             fontColor={$totalFontColorStore}
             groupType={groupType}
