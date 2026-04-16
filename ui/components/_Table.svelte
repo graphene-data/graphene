@@ -13,9 +13,10 @@
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/inputUtils'
   import {logError} from '../internal/telemetry.js'
+  import type {QueryResult} from '../component-utilities/types.ts'
 
   interface Props {
-    data?: any[], rows?: number | string, title?: string, subtitle?: string, rowNumbers?: boolean | string
+    data?: QueryResult, rows?: number | string, title?: string, subtitle?: string, rowNumbers?: boolean | string
     sort?: string, sortable?: boolean | string, groupBy?: string, groupsOpen?: boolean | string
     groupType?: 'accordion' | 'section', accordionRowColor?: string, groupNamePosition?: 'top' | 'middle' | 'bottom'
     subtotals?: boolean | string, subtotalRowColor?: string, subtotalFontColor?: string
@@ -29,7 +30,7 @@
   const {resolveColor} = getThemeStores()
 
   let {
-    data = [], rows = 10, title = undefined, subtitle = undefined, rowNumbers = false, sort = undefined,
+    data = {rows: [], fields: []}, rows = 10, title = undefined, subtitle = undefined, rowNumbers = false, sort = undefined,
     sortable = true, groupBy = undefined, groupsOpen = true, groupType = 'accordion',
     accordionRowColor = undefined, groupNamePosition = 'middle', subtotals = false,
     subtotalRowColor = undefined, subtotalFontColor = undefined, rowShading = false, rowLines = true,
@@ -65,11 +66,10 @@
 
   // Update store when data or groupBy changes
   $effect(() => {
-    // Track data and groupBy
-    let currentData = data
+    let currentRows = data?.rows ?? []
     let currentGroupBy = groupBy
     untrack(() => {
-      tablePropsStore.update((state) => ({...state, data: currentData, priorityColumns: [currentGroupBy]}))
+      tablePropsStore.update((state) => ({...state, data: currentRows, priorityColumns: [currentGroupBy]}))
     })
   })
 
@@ -132,19 +132,11 @@
     let resultNormalizedData: any[] = []
 
     try {
-      // First normalize data - extract rows array from object if needed
-      let inputData: any[]
-      if (!Array.isArray(data)) {
-        let raw = data as any
-        resultDataTestId = coerceId(raw?.id)
-        let candidate = raw?.rows
-        inputData = Array.isArray(candidate) ? candidate : []
-      } else {
-        resultDataTestId = coerceId((data as any)?.id)
-        inputData = data
-      }
+      let inputRows = Array.isArray(data?.rows) ? data.rows : []
+      let inputFields = Array.isArray(data?.fields) ? data.fields : []
+      resultDataTestId = coerceId((data as any)?.id)
 
-      resultColumnSummary = getColumnSummary(inputData, 'array')
+      resultColumnSummary = getColumnSummary(inputRows, inputFields, 'array')
 
       if (initialSort.sortBy) {
         let columnNames = resultColumnSummary.map((col) => col.id)
@@ -153,8 +145,8 @@
         }
       }
 
-      resultProcessedData = inputData
-      resultNormalizedData = inputData
+      resultProcessedData = inputRows
+      resultNormalizedData = inputRows
 
       if (link && !showLinkColBool) {
         let linkIndex = resultColumnSummary.findIndex((col) => col.id === link)

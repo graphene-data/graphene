@@ -1,9 +1,10 @@
 <script lang="ts">
   import QueryLoad from './QueryLoad.svelte'
   import {formatFromField} from '../component-utilities/format.ts'
+  import type {QueryResult} from '../component-utilities/types.ts'
 
   interface Props {
-    data: string | {rows?: any[]}
+    data: string | QueryResult
     value?: string
     title?: string
     subtitle?: string
@@ -11,18 +12,18 @@
 
   let {data, value = undefined, title = undefined, subtitle = undefined}: Props = $props()
 
-  function formatValue(input: any, loaded: any[]) {
+  function formatValue(input: any, loaded: QueryResult) {
     if (input === null || input === undefined) return '—'
-    let field = loaded?._fields?.find((entry: any) => entry?.name === value)
+    let field = loaded?.fields?.find((entry: any) => entry?.name === value)
     return formatFromField(field as any, input)
   }
 </script>
 
-{#snippet bigValueContent(loaded: any[])}
+{#snippet bigValueContent(loaded: QueryResult)}
   <div class="big-value">
     {#if title}<div class="big-value__title">{title}</div>{/if}
     {#if subtitle}<div class="big-value__subtitle">{subtitle}</div>{/if}
-    <div class="big-value__value">{formatValue(loaded?.[0]?.[value], loaded)}</div>
+    <div class="big-value__value">{formatValue(loaded?.rows?.[0]?.[value], loaded)}</div>
   </div>
 {/snippet}
 
