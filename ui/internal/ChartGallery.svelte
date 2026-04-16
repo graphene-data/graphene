@@ -207,7 +207,7 @@
     }}
     config={{
       title: {text: 'Stacked Area'},
-      series: [{type: 'line', stack: 'total', areaStyle: {}, encode: {x: 'day', y: 'value', group: 'metric'}}],
+      series: [{type: 'line', stack: 'total', areaStyle: {}, encode: {x: 'day', y: 'value', splitBy: 'metric'}}],
     }}
   />
 
@@ -222,7 +222,7 @@
     }}
     config={{
       title: {text: 'Bar'},
-      series: [{type: 'bar', encode: {x: 'quarter', y: 'value', group: 'metric'}}],
+      series: [{type: 'bar', encode: {x: 'quarter', y: 'value', splitBy: 'metric'}}],
     }}
   />
 
@@ -237,7 +237,7 @@
     }}
     config={{
       title: {text: 'Scatter'},
-      series: [{type: 'scatter', encode: {x: 'x', y: 'y', group: 'group'}}],
+      series: [{type: 'scatter', encode: {x: 'x', y: 'y', splitBy: 'group'}}],
     }}
   />
 
@@ -262,7 +262,7 @@
         {type: 'category', data: groupedStackedQuarterLabels, position: 'bottom', offset: 24, axisTick: {show: false}},
       ],
       yAxis: {type: 'value'},
-      series: [{type: 'bar', stack: 'channels', encode: {x: 'slot', y: 'value', group: 'channel'}}],
+      series: [{type: 'bar', stack: 'channels', encode: {x: 'slot', y: 'value', splitBy: 'channel'}}],
     }}
   />
 
@@ -363,7 +363,7 @@
       title: {text: 'Theme River'},
       tooltip: {trigger: 'axis'},
       singleAxis: {type: 'time'},
-      series: [{type: 'themeRiver', encode: {single: 'month', value: 'value', seriesName: 'topic', group: 'topic'}}],
+      series: [{type: 'themeRiver', encode: {single: 'month', value: 'value', seriesName: 'topic', splitBy: 'topic'}}],
     }}
   />
 

@@ -10,7 +10,8 @@ Here's an example:
   data=revenue_by_month
   x=month
   y=revenue
-  stack=channel
+  splitBy=channel
+  arrange=stack
 />
 ```
 
@@ -31,11 +32,9 @@ Here's an example:
 |----------|-------------|----------|---------|---------|
 | x | Field for x-axis | true | column/expression name | - |
 | y | One or more value fields (comma-separated) | true | column(s), e.g. `revenue` or `revenue, cost` | - |
-| group | Split one `y` field into multiple overlapping area series | false | column/expression name | - |
-| stack | Split one `y` field into stacked areas | false | column/expression name | - |
-| stack100 | Same as `stack`, but normalized to 100% | false | column/expression name | - |
+| splitBy | Split one value field into multiple area series by distinct values of this field | false | column/expression name | - |
+| arrange | Arrangement for `splitBy` series | false | `stack`, `stack100` | `stack` |
 
-`group`, `stack`, and `stack100` are mutually exclusive.
-When `y` has multiple fields, `group`/`stack`/`stack100` are not supported.
+`splitBy` is incompatible with multiple y fields.
 
 For more control, use [`ECharts`](./echarts.md) directly.

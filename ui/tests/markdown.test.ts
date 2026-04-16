@@ -45,7 +45,7 @@ test('flights simple stacked bar renders', async ({server, page}) => {
     order by 1 asc, 2 asc
     \`\`\`
 
-    <BarChart title="Flights by Month (Stacked)" data=monthly_flight_status x=month y=flights stack=status />
+    <BarChart title="Flights by Month (Stacked)" data=monthly_flight_status x=month y=flights splitBy=status arrange=stack />
   `,
   )
 

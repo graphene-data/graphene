@@ -8,9 +8,8 @@
     x: string
     y: string
     y2?: string
-    group?: string
-    stack?: string
-    stack100?: string
+    splitBy?: string
+    arrange?: 'stack' | 'group' | 'stack100'
     label?: boolean
     sort?: string
     title?: string
@@ -23,9 +22,8 @@
     x,
     y,
     y2 = undefined,
-    group = undefined,
-    stack = undefined,
-    stack100 = undefined,
+    splitBy = undefined,
+    arrange = 'stack',
     label = false,
     sort = undefined,
     title = undefined,
@@ -34,40 +32,46 @@
   }: Props = $props()
 
   function buildConfig(): EChartsConfig {
+    let xFields = parseCommaList(x)
     let yFields = parseCommaList(y)
-    let mode = resolveGroupingMode(group, stack, stack100)
-    if (mode && yFields.length > 1) throw new Error('BarChart does not support `group`, `stack`, or `stack100` when `y` has multiple fields')
-    let grouped = Boolean(mode && yFields.length === 1)
+    let horizontal = xFields.length > 1
+
+    if (xFields.length > 1 && yFields.length !== 1) throw new Error('BarChart only supports multiple x fields for horizontal charts with a single y field')
+    if (splitBy && horizontal && xFields.length > 1) throw new Error('BarChart does not support splitBy with multiple x fields')
+    if (splitBy && !horizontal && yFields.length > 1) throw new Error('BarChart does not support splitBy with multiple y fields')
+
     let barLabel = label ? {show: true} : undefined
-    let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'bar-stack' : undefined
-    let stackPercentage = mode?.kind === 'stack100' ? true : undefined
-
+    let stack = arrange === 'stack' || arrange === 'stack100' ? 'bar-stack' : undefined
+    let stackPercentage = arrange === 'stack100' ? true : undefined
     let sortHint = typeof sort === 'string' && sort.trim().length > 0 ? {sort} : {}
-    let series: SeriesWithGroupingHint[] = grouped
-      ? [{type: 'bar' as const, encode: {x, y: yFields[0], group: mode?.field, ...sortHint}, stack: stackKey, stackPercentage, label: barLabel}]
-      : yFields.map(field => ({type: 'bar' as const, name: field, encode: {x, y: field, ...sortHint}, label: barLabel}))
 
+    let series: SeriesWithGroupingHint[]
+
+    if (splitBy) {
+      // "tall" data, series are created for unique values of the valueField (handled by an enrichment)
+      let valueField = horizontal ? xFields[0] : yFields[0]
+      let encode = {x: horizontal ? valueField : x, y: horizontal ? y : valueField, splitBy, ...sortHint}
+      series = [{type: 'bar' as const, encode, stack, stackPercentage, label: barLabel}]
+    } else {
+      // "wide" data, series are created for field listed in the y (or x, for horizontal) attribute
+      if (horizontal) {
+        series = xFields.map(field => ({type: 'bar' as const, name: field, encode: {x: field, y, ...sortHint}, label: barLabel}))
+      } else {
+        series = yFields.map(field => ({type: 'bar' as const, name: field, encode: {x, y: field, ...sortHint}, label: barLabel}))
+      }
+    }
+
+    // y2 is a special shortcut for adding a line on top of a bar chart
     if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
 
     return {
       title: title ? {text: title} : undefined,
       tooltip: {trigger: 'axis'},
-      legend: {show: Boolean(grouped || yFields.length > 1 || y2)},
+      legend: {show: Boolean(splitBy || y2 || (!horizontal && yFields.length > 1) || (horizontal && xFields.length > 1))},
       xAxis: {},
       yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{}] : [])],
       series,
     }
-  }
-
-  function resolveGroupingMode(group?: string, stack?: string, stack100?: string) {
-    let modes = [
-      group ? {kind: 'group' as const, field: group} : undefined,
-      stack ? {kind: 'stack' as const, field: stack} : undefined,
-      stack100 ? {kind: 'stack100' as const, field: stack100} : undefined,
-    ].filter(Boolean)
-
-    if (modes.length <= 1) return modes[0]
-    throw new Error('BarChart accepts only one of `group`, `stack`, or `stack100`')
   }
 </script>
 

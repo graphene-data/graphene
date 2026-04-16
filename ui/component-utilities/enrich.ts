@@ -101,30 +101,66 @@ function ensureDataset(config: NormalConfig, rows: Record<string, any>[], fields
   return String(base.id)
 }
 
-// Expand series templates that use `encode.group` or `encode.stack` into one concrete series per distinct field value.
+// Expand series templates that use `encode.splitBy` into one concrete series per distinct field value.
 // We do this with ECharts dataset filter transforms so wrappers stay small and users don't need to duplicate series configs.
 function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[], baseDatasetId: string) {
   let templates = config.series
   let expanded: SeriesWithGroupingHint[] = []
 
   templates.forEach((entry, templateIndex) => {
-    let groupField = typeof entry?.encode?.group === 'string' ? entry.encode.group : undefined
-    let stackField = typeof entry?.encode?.stack === 'string' ? entry.encode.stack : undefined
-
-    if (groupField && stackField) throw new Error('Series encode.group and encode.stack cannot both be set')
-
-    let splitField = groupField ?? stackField
-    if (!splitField) {
+    let splitFields = getSplitByFields(entry)
+    if (splitFields.length === 0) {
       let next = {...entry}
       if (shouldBindSeriesToDataset(next) && next.datasetId == null) next.datasetId = baseDatasetId
       expanded.push(next)
       return
     }
 
+    if (splitFields.length > 2) throw new Error('encode.splitBy supports at most two fields')
+
+    let sourceDatasetId = entry.datasetId ?? baseDatasetId
+
+    if (splitFields.length === 2) {
+      if (entry?.type !== 'bar') throw new Error('encode.splitBy with two fields is only supported for bar series')
+
+      let [groupField, stackField] = splitFields
+      let groupValues = distinctValues(rows, groupField)
+      let stackValues = distinctValues(rows, stackField)
+      if (groupValues.length === 0 || stackValues.length === 0) return
+
+      groupValues.forEach((groupValue, groupIndex) => {
+        let groupedDatasetId = `__graphene_series_${templateIndex}_${groupIndex}`
+        config.dataset.push({
+          id: groupedDatasetId,
+          fromDatasetId: sourceDatasetId,
+          transform: {type: 'filter', config: {dimension: groupField, '=': groupValue}},
+        })
+
+        stackValues.forEach((stackValue, stackIndex) => {
+          let datasetId = `__graphene_series_${templateIndex}_${groupIndex}_${stackIndex}`
+          config.dataset.push({
+            id: datasetId,
+            fromDatasetId: groupedDatasetId,
+            transform: {type: 'filter', config: {dimension: stackField, '=': stackValue}},
+          })
+
+          let next = {...entry, datasetId, stack: String(groupValue ?? '')}
+          if (next.name == null) next.name = `${String(groupValue ?? '')} · ${String(stackValue ?? '')}`
+          if (next.encode) {
+            next.encode = {...next.encode}
+            delete next.encode.splitBy
+          }
+          expanded.push(next)
+        })
+      })
+
+      return
+    }
+
+    let splitField = splitFields[0]
     let seriesValues = distinctValues(rows, splitField)
     if (seriesValues.length === 0) return
 
-    let sourceDatasetId = entry.datasetId ?? baseDatasetId
     seriesValues.forEach((seriesValue, valueIndex) => {
       let datasetId = `__graphene_series_${templateIndex}_${valueIndex}`
       config.dataset.push({
@@ -137,8 +173,7 @@ function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[
       if (next.name == null) next.name = String(seriesValue ?? '')
       if (next.encode) {
         next.encode = {...next.encode}
-        delete next.encode.group
-        delete next.encode.stack
+        delete next.encode.splitBy
       }
       expanded.push(next)
     })
@@ -573,6 +608,16 @@ function getSeriesValueField(series: SeriesWithGroupingHint, fields: Field[]) {
 
 function getSeriesCategoryFieldForHorizontal(series?: SeriesWithGroupingHint) {
   return getEncodeField(series?.encode?.y)
+}
+
+function getSplitByFields(series?: SeriesWithGroupingHint) {
+  let splitBy = series?.encode?.splitBy
+  if (typeof splitBy === 'string') return [splitBy]
+  if (!Array.isArray(splitBy)) return []
+  return splitBy
+    .filter(value => typeof value === 'string')
+    .map(value => value.trim())
+    .filter(Boolean)
 }
 
 function getEncodeField(value: unknown): string | undefined {

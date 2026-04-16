@@ -1,13 +1,13 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
-  import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
+  import type {EChartsConfig, QueryResult, SeriesWithGroupingHint} from '../component-utilities/types.ts'
 
   interface Props {
     data: string | QueryResult
     x: string
     y: string
-    series?: string
+    splitBy?: string
     sort?: string
     title?: string
     height?: string | number
@@ -18,7 +18,7 @@
     data,
     x,
     y,
-    series = undefined,
+    splitBy = undefined,
     sort = undefined,
     title = undefined,
     height = undefined,
@@ -27,23 +27,26 @@
 
   function buildConfig(): EChartsConfig {
     let yFields = parseCommaList(y)
-    if (series && yFields.length > 1) throw new Error('LineChart does not support `series` when `y` has multiple fields')
-    let groupedSeries = Boolean(series && yFields.length === 1)
+    if (splitBy && yFields.length > 1) throw new Error('LineChart does not support splitBy with multiple y fields')
 
     let sortHint = typeof sort === 'string' && sort.trim().length > 0 ? {sort} : {}
-    let primarySeries = groupedSeries
-      ? [{type: 'line', encode: {x, y: yFields[0], group: series, ...sortHint}}]
-      : yFields.map(field => ({type: 'line', name: field, encode: {x, y: field, ...sortHint}}))
+    let series: SeriesWithGroupingHint[]
 
-    let seriesTemplates: any[] = [...primarySeries]
+    if (splitBy) {
+      // "tall" data, one template split into one series per splitBy value by enrich()
+      series = [{type: 'line' as const, encode: {x, y: yFields[0], splitBy, ...sortHint}}]
+    } else {
+      // "wide" data, one line per field listed in y
+      series = yFields.map(field => ({type: 'line' as const, name: field, encode: {x, y: field, ...sortHint}}))
+    }
 
     return {
       title: title ? {text: title} : undefined,
       tooltip: {trigger: 'axis'},
-      legend: {show: groupedSeries || yFields.length > 1},
+      legend: {show: Boolean(splitBy || yFields.length > 1)},
       xAxis: {},
       yAxis: [{}],
-      series: seriesTemplates,
+      series,
     }
   }
 
