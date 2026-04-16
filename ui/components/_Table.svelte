@@ -10,7 +10,6 @@
   import TableSubtotalRow from './TableSubtotalRow.svelte'
   import TableTotalRow from './TableTotalRow.svelte'
   import Column from './Column.svelte'
-  import {getFinalColumnOrder} from '../component-utilities/tableUtils'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/inputUtils'
   import {logError} from '../internal/telemetry.js'
@@ -218,6 +217,12 @@
       return trimmed.toLowerCase()
     }
     return String(value).toLowerCase()
+  }
+
+  const getFinalColumnOrder = (columns: string[], priorityColumns: Array<string | undefined>): string[] => {
+    let priorities = priorityColumns.filter(Boolean) as string[]
+    let restColumns = columns.filter(key => !priorities.includes(key))
+    return [...priorities, ...restColumns]
   }
 
   const compareValues = (a: unknown, b: unknown, ascending: boolean) => {
