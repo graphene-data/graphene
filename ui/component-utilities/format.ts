@@ -5,6 +5,9 @@ const percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0})
 const currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 const monthYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'})
 const monthDayYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
+const sundayWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const
+const mondayWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
+const yearMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
 const titleCaseAcronyms = ['id', 'gdp']
 const titleCaseLowerWords = ['of', 'the', 'and', 'in', 'on']
 
@@ -89,6 +92,52 @@ export function formatFromField(field: Field | undefined, value: unknown) {
   if (type === 'number') return makeValueFormatter(field)(value)
   if (type === 'date' || type === 'timestamp') return makeTimeFormatter(field)(value)
   return String(value)
+}
+
+// Formats ordinal time buckets like hour_of_day and day_of_week variants.
+export function formatTimeOrdinal(field: Field | undefined, input: unknown) {
+  let value = extractFormatterValue(input)
+  let ordinal = String(field?.metadata?.timeOrdinal || '').toLowerCase()
+  if (!ordinal) return String(value ?? '')
+
+  if (ordinal === 'hour_of_day') {
+    let hour = Number(value)
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) return String(value ?? '')
+    let normalized = hour % 12 || 12
+    return `${normalized}${hour < 12 ? 'am' : 'pm'}`
+  }
+
+  if (ordinal === 'dow_1s') {
+    let day = Number(value)
+    if (!Number.isInteger(day) || day < 1 || day > 7) return String(value ?? '')
+    return sundayWeek[day - 1]
+  }
+
+  if (ordinal === 'dow_0s') {
+    let day = Number(value)
+    if (!Number.isInteger(day) || day < 0 || day > 6) return String(value ?? '')
+    return sundayWeek[day]
+  }
+
+  if (ordinal === 'dow_1m') {
+    let day = Number(value)
+    if (!Number.isInteger(day) || day < 1 || day > 7) return String(value ?? '')
+    return mondayWeek[day - 1]
+  }
+
+  if (ordinal === 'month_of_year') {
+    let month = Number(value)
+    if (!Number.isInteger(month) || month < 1 || month > 12) return String(value ?? '')
+    return yearMonths[month - 1]
+  }
+
+  if (ordinal === 'quarter_of_year') {
+    let quarter = Number(value)
+    if (!Number.isInteger(quarter) || quarter < 1 || quarter > 4) return String(value ?? '')
+    return `Q${quarter}`
+  }
+
+  return String(value ?? '')
 }
 
 function extractFormatterValue(input: unknown) {
