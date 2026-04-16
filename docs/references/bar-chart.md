@@ -38,5 +38,6 @@ Here's an example:
 | label | Show value labels on bars | false | `true`, `false` | `false` |
 
 `group`, `stack`, and `stack100` are mutually exclusive.
+When `y` has multiple fields, `group`/`stack`/`stack100` are not supported.
 
 For advanced behavior (custom tooltips, axes, transforms, chart types), use [`ECharts`](./echarts.md) directly.

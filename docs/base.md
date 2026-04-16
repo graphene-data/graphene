@@ -69,7 +69,7 @@ Component "field" attributes (like x and y) map to a column within data.
 Attributes like `x`, `y`, `y2`, `group`, `stack`, `stack100` are the names of columns within the `data` table.
 `title` - shown above the viz
 - BarChart: Fields [x,y,y2,group,stack,stack100]. y2 will always be a line, stack and stack100 are mutually exclusive. `label` (show labels above bars)
-- LineChart: Fields [x,y,y2,series]
+- LineChart: Fields [x,y,series]
 - AreaChart: Fields [x,y,group,stack,stack100]
 - PieChart: Fields: [category,value]
 

@@ -35,5 +35,6 @@ Here's an example:
 | series | Split one `y` field into one line per distinct value | false | column/expression name | - |
 
 If `y` includes multiple fields, each field becomes its own line.
+`series` requires a single `y` field.
 
 For advanced behavior (custom line styles, annotations, axis config, dataset transforms), use [`ECharts`](./echarts.md) directly.

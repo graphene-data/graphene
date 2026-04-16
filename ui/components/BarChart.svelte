@@ -1,6 +1,7 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
   import type {EChartsConfig, QueryResult, SeriesWithGroupingHint} from '../component-utilities/types.ts'
+  import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   interface Props {
     data: string | QueryResult
@@ -33,8 +34,9 @@
   }: Props = $props()
 
   function buildConfig(): EChartsConfig {
-    let yFields = parseList(y)
+    let yFields = parseCommaList(y)
     let mode = resolveGroupingMode(group, stack, stack100)
+    if (mode && yFields.length > 1) throw new Error('BarChart does not support `group`, `stack`, or `stack100` when `y` has multiple fields')
     let grouped = Boolean(mode && yFields.length === 1)
     let barLabel = label ? {show: true} : undefined
     let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'bar-stack' : undefined
@@ -55,11 +57,6 @@
       yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{}] : [])],
       series,
     }
-  }
-
-  function parseList(value?: string) {
-    if (!value) return []
-    return value.split(',').map(v => v.trim()).filter(Boolean)
   }
 
   function resolveGroupingMode(group?: string, stack?: string, stack100?: string) {

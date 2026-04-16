@@ -127,8 +127,9 @@
       let value = queryableEncodeValue(attr, col)
       if (!value) continue
       fields[attr] ||= []
-      fields[attr].push(value)
+      if (!fields[attr].includes(value)) fields[attr].push(value)
     }
+
     return fields
   }
 

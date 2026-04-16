@@ -14,6 +14,22 @@ function seededRandom(seed: number) {
   }
 }
 
+function timeseriesWithMultipleY() {
+  let data = timeseries() as any
+  let nextRandom = seededRandom(202604)
+  data.rows = data.rows.map((row: any) => {
+    let jitter = (nextRandom() - 0.5) * 0.06
+    return {
+      ...row,
+      profit_usd0k: row.sales_usd0k * (0.22 + jitter),
+      cost_usd0k: row.sales_usd0k * (0.68 - jitter),
+    }
+  })
+  data.fields.push({name: 'profit_usd0k', type: scalarType('number'), metadata: {units: 'usd'}})
+  data.fields.push({name: 'cost_usd0k', type: scalarType('number'), metadata: {units: 'usd'}})
+  return data
+}
+
 test.beforeEach(async ({sharedPage}) => {
   await sharedPage.setViewportSize({width: 680, height: 400})
 })
@@ -53,6 +69,11 @@ test('echarts expands encode.stack', async ({mount, chart}) => {
 test('bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k', title: 'Monthly Sales'})
   await expect(chart.el).screenshot('bar-chart')
+})
+
+test('bar chart supports multiple y fields', async ({mount, chart}) => {
+  await mount('components/BarChart.svelte', {data: timeseriesWithMultipleY(), x: 'month', y: 'sales_usd0k,profit_usd0k,cost_usd0k'})
+  await expect(chart.el).screenshot('bar-chart-multiple-y')
 })
 
 test('bar chart formats very small values on y axis', async ({mount, chart}) => {
@@ -104,9 +125,19 @@ test('stacked area chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('area-chart-stacked')
 })
 
+test('area chart supports multiple y fields', async ({mount, chart}) => {
+  await mount('components/AreaChart.svelte', {data: timeseriesWithMultipleY(), x: 'month', y: 'sales_usd0k,profit_usd0k,cost_usd0k'})
+  await expect(chart.el).screenshot('area-chart-multiple-y')
+})
+
 test('line chart timeseries', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k'})
   await expect(chart.el).screenshot('line-chart-timeseries')
+})
+
+test('line chart supports multiple y fields', async ({mount, chart}) => {
+  await mount('components/LineChart.svelte', {data: timeseriesWithMultipleY(), x: 'month', y: 'sales_usd0k,profit_usd0k,cost_usd0k'})
+  await expect(chart.el).screenshot('line-chart-multiple-y')
 })
 
 test('line charts hide markers on timeseries', async ({mount, chart}) => {
