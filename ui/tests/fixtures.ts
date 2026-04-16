@@ -143,21 +143,12 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
     }
 
     await use(async (componentPath: string, props: any) => {
-      // evidence depends on the object being set on an array, but wont serialize when playwright sends it to the frontend, so unpack it here
       let modifiedProps = {...props}
-      if (props.data?.rows?._evidenceColumnTypes) modifiedProps._evidenceColumnTypes = props.data.rows._evidenceColumnTypes
 
-      // now send the props down to the page, and put the evidence types back where they're expected
       let compName = componentPath.match(/(\w+)\.svelte/)?.[1] || 'splat'
       await sharedPage.evaluate(
         async ({compName, props}) => {
           if (window.__inst) window.$GRAPHENE.svelte.unmount(window.__inst)
-
-          if (props._evidenceColumnTypes) {
-            props.data.rows._evidenceColumnTypes = props._evidenceColumnTypes
-            props.data.rows.dataLoaded = true // hack since evidence expects this on an array
-            delete props._evidenceColumnTypes
-          }
 
           // ensure fonts have loaded before we mount our component
           document.fonts.load("12px 'Source Sans 3'")

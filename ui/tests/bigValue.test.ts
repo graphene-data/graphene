@@ -6,9 +6,9 @@ test.beforeEach(async ({sharedPage}) => {
 })
 
 test('big value', async ({mount, sharedPage, chart}) => {
-  await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', fmt: 'num0', title: 'Sales'})
+  await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', title: 'Sales'})
   await expect(sharedPage.getByText('Sales')).toBeVisible()
-  await expect(sharedPage.getByText('611,113')).toBeVisible()
+  await expect(sharedPage.getByText('$611.1k')).toBeVisible()
   await expect(chart.el).screenshot('big-value')
 })
 
@@ -16,7 +16,6 @@ test('big value percent formatting', async ({mount, sharedPage}) => {
   await mount('components/BigValue.svelte', {
     data: percentData(),
     value: 'ratio',
-    fmt: 'pct1',
     title: 'Conversion',
     subtitle: 'This month',
   })
@@ -41,12 +40,12 @@ test('big value null renders em dash', async ({mount, sharedPage}) => {
 
 function percentData() {
   let rows = [{ratio: 0.314}] as any
-  rows._evidenceColumnTypes = [{name: 'ratio', evidenceType: 'number'}]
-  return {rows}
+  let fields = [{name: 'ratio', type: 'number', metadata: {ratio: true}}] as any
+  return {rows, fields}
 }
 
 function nullValueData() {
   let rows = [{value: null}] as any
-  rows._evidenceColumnTypes = [{name: 'value', evidenceType: 'number'}]
-  return {rows}
+  let fields = [{name: 'value', type: 'number'}] as any
+  return {rows, fields}
 }

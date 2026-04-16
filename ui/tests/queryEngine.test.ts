@@ -33,7 +33,7 @@ test('translateData remaps Snowflake-style uppercase row keys to requested field
   let result = translateData(data, node)
 
   expect(result.rows[0]).toEqual({location_state_code: 'CA', num: 3})
-  expect((result.rows as any)._evidenceColumnTypes.map((c: any) => c.name)).toEqual(['location_state_code', 'num'])
+  expect((result.rows as any)._fields.map((field: any) => field.name)).toEqual(['location_state_code', 'num'])
 })
 
 test('translateData preserves field metadata for UI column summaries', () => {
@@ -54,6 +54,6 @@ test('translateData preserves field metadata for UI column summaries', () => {
   let result = translateData(data, node)
   let summary = getColumnSummary(result.rows)
 
-  expect((result.rows as any)._evidenceColumnTypes[0].fieldMetadata).toEqual({timeGrain: 'month'})
-  expect(summary.month_start.fieldMetadata).toEqual({timeGrain: 'month'})
+  expect((result.rows as any)._fields[0].metadata).toEqual({timeGrain: 'month'})
+  expect(summary.month_start.field.metadata).toEqual({timeGrain: 'month'})
 })

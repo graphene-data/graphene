@@ -1,40 +1,20 @@
 <script lang="ts">
   import QueryLoad from './QueryLoad.svelte'
+  import {formatFromField} from '../component-utilities/format.ts'
 
   interface Props {
     data: string | {rows?: any[]}
     value?: string
-    fmt?: string
     title?: string
     subtitle?: string
   }
 
-  let {data, value = undefined, fmt = undefined, title = undefined, subtitle = undefined}: Props = $props()
+  let {data, value = undefined, title = undefined, subtitle = undefined}: Props = $props()
 
-  function formatValue(input: any) {
+  function formatValue(input: any, loaded: any[]) {
     if (input === null || input === undefined) return '—'
-    if (!fmt) return String(input)
-
-    if (fmt.startsWith('num')) {
-      let fraction = parseInt(fmt.replace(/[^0-9]/g, '') || '0', 10)
-      let formatter = new Intl.NumberFormat('en-US', {
-        maximumFractionDigits: fraction,
-        minimumFractionDigits: fraction,
-      })
-      return formatter.format(Number(input))
-    }
-
-    if (fmt.startsWith('pct')) {
-      let fraction = parseInt(fmt.replace(/[^0-9]/g, '') || '0', 10)
-      let formatter = new Intl.NumberFormat('en-US', {
-        style: 'percent',
-        maximumFractionDigits: fraction,
-        minimumFractionDigits: fraction,
-      })
-      return formatter.format(Number(input))
-    }
-
-    return String(input)
+    let field = loaded?._fields?.find((entry: any) => entry?.name === value)
+    return formatFromField(field as any, input)
   }
 </script>
 
@@ -42,7 +22,7 @@
   <div class="big-value">
     {#if title}<div class="big-value__title">{title}</div>{/if}
     {#if subtitle}<div class="big-value__subtitle">{subtitle}</div>{/if}
-    <div class="big-value__value">{formatValue(loaded?.[0]?.[value])}</div>
+    <div class="big-value__value">{formatValue(loaded?.[0]?.[value], loaded)}</div>
   </div>
 {/snippet}
 
