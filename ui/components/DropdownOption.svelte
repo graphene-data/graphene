@@ -1,6 +1,5 @@
 <script lang="ts">
   import {getContext, onMount} from 'svelte'
-  import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
 
   interface Props {
     value: any
@@ -10,7 +9,7 @@
   let {value, valueLabel = undefined}: Props = $props()
 
   type RegisterFn = ((option: {value: any; label: string}) => (() => void) | void) | undefined
-  const register = getContext<RegisterFn>(DROPDOWN_CONTEXT)
+  const register = getContext<RegisterFn>('dropdown')
 
   let unregister: (() => void) | void
 
