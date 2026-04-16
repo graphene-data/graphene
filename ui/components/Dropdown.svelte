@@ -1,6 +1,5 @@
 <script lang="ts">
   import {onMount, setContext, tick, type Snippet} from 'svelte'
-  import {DROPDOWN_CONTEXT} from '../component-utilities/dropdownContext'
   import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
   import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
 
@@ -62,7 +61,7 @@
       syncSelection(false)
     }
   }
-  setContext(DROPDOWN_CONTEXT, registerOption)
+  setContext('dropdown', registerOption)
 
   const optionKey = (val: any): string => {
     if (val === null) return 'null'
