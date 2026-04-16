@@ -1,75 +1,55 @@
-Use `ECharts` when you want full control over chart behavior and styling.
+Use `ECharts` when you need chart behavior that goes beyond the built-in chart components.
 
-Graphene uses Apache ECharts under the hood. The `ECharts` component lets you pass an ECharts config directly, while Graphene enrichments still fill in sensible defaults (dataset wiring, axis inference, formatting, and common layout fixes).
+Graphene charts are powered by Apache ECharts. In markdown, you define the ECharts option object **inside the `<ECharts>` tag body**.
 
-Here's a simple example:
+Example:
 
 ```markdown
-<ECharts
-  data=sales_by_month
-  config={{
-    title: {text: 'Revenue'},
-    tooltip: {trigger: 'axis'},
-    xAxis: {},
-    yAxis: {},
-    series: [{type: 'line', encode: {x: 'month', y: 'revenue'}}]
-  }}
-/>
+<ECharts data="sales_by_month">
+  title: {text: "Revenue"},
+  tooltip: {trigger: "axis"},
+  xAxis: {},
+  yAxis: {},
+  series: [{type: "line", encode: {x: "month", y: "revenue"}}],
+</ECharts>
 ```
 
 # Attributes
 
 | Attribute | Description | Required | Options | Default |
 |----------|-------------|----------|---------|---------|
-| data | GSQL query/table name, or inline query result object | true | query name or `{rows, fields}` | - |
-| config | ECharts option object | true | valid ECharts config | - |
+| data | GSQL query or table name | true | query/table name | - |
 | height | Chart height in px or CSS size string | false | number, string | `240px` |
 | width | Chart width in px or CSS size string | false | number, string | `100%` |
 | renderer | ECharts renderer | false | `svg`, `canvas` | `svg` |
 
-## Data shape
+## Config body syntax
 
-When using inline data, pass both `rows` and `fields`:
+Inside `<ECharts>...</ECharts>`, Graphene parses the config as JSON5:
+- unquoted keys are allowed (`xAxis: {}`)
+- trailing commas are allowed
+- you can wrap the whole thing in `{ ... }` or omit the outer braces
 
-```markdown
-<ECharts
-  data={{
-    rows: [{month: '2026-01', revenue: 120}],
-    fields: [
-      {name: 'month', type: {kind: 'scalar', scalar: 'date'}},
-      {name: 'revenue', type: {kind: 'scalar', scalar: 'number', metadata: {units: 'usd'}}}
-    ]
-  }}
-  config={{...}}
-/>
-```
+## Grouping and stacking hints
 
-`fields` replaces the old `_evidenceColumnTypes` approach.
-
-## Customizing with grouping hints
-
-To keep configs concise, Graphene supports series grouping hints:
-
-- `encode.group`: split one series template into one series per distinct field value
-- `encode.stack`: same split behavior, but with stacked series semantics
-- `stackPercentage: true`: convert stacked values to percentages (100% stacked)
+Graphene supports a few `encode` extensions to reduce boilerplate:
+- `encode.group`: expands one series template into one series per distinct value
+- `encode.stack`: same expansion, but stacked
+- `stackPercentage: true`: converts stacked values to 100% stacking
 
 Example:
 
 ```markdown
-<ECharts
-  data=sales_by_month_and_region
-  config={{
-    xAxis: {},
-    yAxis: {},
-    series: [{
-      type: 'bar',
-      encode: {x: 'month', y: 'revenue', stack: 'region'},
-      stack: 'revenue-stack',
-      stackPercentage: true
-    }]
-  }}
-/>
+<ECharts data="sales_by_month_and_region">
+  xAxis: {},
+  yAxis: {},
+  series: [{
+    type: "bar",
+    encode: {x: "month", y: "revenue", stack: "region"},
+    stack: "revenue-stack",
+    stackPercentage: true,
+  }],
+</ECharts>
 ```
 
-This is the recommended path for custom charts: start from an ECharts config, then rely on Graphene enrichments for defaults instead of re-implementing shared behavior.
+For common chart types, prefer `BarChart`, `LineChart`, `AreaChart`, and `PieChart`. Use `ECharts` when you need deeper customization.
