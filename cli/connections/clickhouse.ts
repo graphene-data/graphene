@@ -1,4 +1,4 @@
-import {createClient, type ClickHouseClient} from '@clickhouse/client'
+import type * as ClickHouseTypes from '@clickhouse/client'
 
 import {type QueryConnection, type QueryResult, type QueryParams, type SchemaColumn} from './types.ts'
 
@@ -9,13 +9,16 @@ export interface ClickHouseOptions {
   database?: string
 }
 
+type ClickHouseModule = typeof ClickHouseTypes
+type ClickHouseClient = ReturnType<ClickHouseModule['createClient']>
+
 export class ClickHouseConnection implements QueryConnection {
   private readonly client: ClickHouseClient
   private defaultDatabase: string
 
-  constructor(options: ClickHouseOptions) {
+  constructor(module: ClickHouseModule, options: ClickHouseOptions) {
     this.defaultDatabase = options.database || 'default'
-    this.client = createClient({
+    this.client = module.createClient({
       url: options.url,
       username: options.username,
       password: options.password,

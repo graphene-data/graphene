@@ -1,7 +1,11 @@
-import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
+import type * as BigQueryTypes from '@google-cloud/bigquery'
 
 import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
+
+type BigQueryModule = typeof BigQueryTypes
+type BigQueryClient = InstanceType<BigQueryModule['BigQuery']>
+type BigQueryOptions = ConstructorParameters<BigQueryModule['BigQuery']>[0]
 
 // BigQuery identifiers can contain letters, numbers, underscores, and hyphens
 function validateBigQueryIdent(ident: string) {
@@ -9,16 +13,18 @@ function validateBigQueryIdent(ident: string) {
 }
 
 export class BigQueryConnection implements QueryConnection {
-  private readonly client: BigQuery
+  private readonly client: BigQueryClient
+  private readonly module: BigQueryModule
   private readonly projectId: string
   private readonly defaultNamespace?: string
 
-  constructor(options: BigQueryOptions = {}) {
+  constructor(module: BigQueryModule, options: BigQueryOptions = {}) {
     options.projectId ||= config.bigquery?.projectId
     if (!options.projectId) throw new Error('projectId must be set in config or provided in service account credentials')
     this.projectId = options.projectId
     this.defaultNamespace = config.defaultNamespace
-    this.client = new BigQuery({...options, userAgent: 'Graphene'})
+    this.module = module
+    this.client = new module.BigQuery({...options, userAgent: 'Graphene'})
   }
 
   async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
@@ -29,8 +35,8 @@ export class BigQueryConnection implements QueryConnection {
 
     rows.forEach(r => {
       Object.entries(r).forEach(([k, v]) => {
-        if (v instanceof BigQueryTimestamp) r[k] = v.value
-        if (v instanceof BigQueryDate) r[k] = v.value
+        if (v instanceof this.module.BigQueryTimestamp) r[k] = v.value
+        if (v instanceof this.module.BigQueryDate) r[k] = v.value
       })
     })
 
