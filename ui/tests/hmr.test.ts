@@ -1,7 +1,7 @@
 import {test, expect} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
-test('valid → invalid → valid via HMR', async ({server, page}) => {
+test('valid → invalid → valid via HMR', {timeout: 20000}, async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')

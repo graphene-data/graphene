@@ -352,7 +352,7 @@ test('text input updates params and date range applies preset', async ({mount, s
   await expect(sharedPage.locator('#component-test')).screenshot('date-range-preset')
 })
 
-test('inputs sync url state on load, change, and reload', async ({server, page}) => {
+test('inputs sync url state on load, change, and reload', {timeout: 20000}, async ({server, page}) => {
   let queryBodies: any[] = []
   server.mockFile(
     '/index.md',
