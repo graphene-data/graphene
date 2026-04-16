@@ -6,13 +6,13 @@
   import {getContext, onDestroy, onMount, untrack} from 'svelte'
   import {type Writable, get} from 'svelte/store'
   import {getThemeStores} from '../component-utilities/themeStores'
-    import {parseCommaList, toBoolean} from '../component-utilities/inputUtils.ts'
+  import {parseCommaList, toBoolean} from '../component-utilities/inputUtils.ts'
 
   interface Props {
     id: string, description?: string, contentType?: string, title?: string, align?: string
     wrap?: boolean | string, wrapTitle?: boolean | string, height?: string, width?: string, alt?: string
     openInNewTab?: boolean | string, linkLabel?: string, totalAgg?: string
-    weightCol?: string, colorMax?: string, colorMin?: string, colorMid?: string
+    colorMax?: string, colorMin?: string, colorMid?: string
     colorBreakpoints?: string[], colorScale?: any, scaleColumn?: string, downIsGood?: boolean | string
     showValue?: boolean | string, deltaSymbol?: boolean | string, neutralMin?: number | string
     neutralMax?: number | string, chip?: boolean | string, sparkWidth?: number | string
@@ -25,7 +25,7 @@
     id, description = undefined, contentType = undefined, title = undefined, align = undefined,
     wrap = undefined, wrapTitle = undefined, height = undefined, width = undefined, alt = undefined,
     openInNewTab = undefined, linkLabel = undefined, totalAgg = undefined,
-    weightCol = undefined, colorMax = undefined,
+    colorMax = undefined,
     colorMin = undefined, colorMid = undefined, colorBreakpoints = undefined, colorScale = 'default',
     scaleColumn = undefined, downIsGood = undefined, showValue = undefined, deltaSymbol = undefined,
     neutralMin = 0, neutralMax = 0, chip = undefined, sparkWidth = undefined, sparkHeight = undefined,
@@ -67,7 +67,6 @@
     openInNewTab: toBoolean(openInNewTab) ?? false,
     linkLabel,
     totalAgg,
-    weightCol,
     downIsGood: toBoolean(downIsGood) ?? false,
     deltaSymbol: toBoolean(deltaSymbol) ?? true,
     chip: toBoolean(chip) ?? false,
@@ -120,7 +119,7 @@
   $effect(() => {
     // Read all props that could change
     void [id, title, align, wrap, wrapTitle, contentType, height, width, alt, openInNewTab,
-      linkLabel, totalAgg, weightCol, downIsGood,
+      linkLabel, totalAgg, downIsGood,
       deltaSymbol, chip, neutralMin, neutralMax, showValue, colorMax, colorMin, colorMid,
       colorScale, colorBreakpoints, scaleColumn, colGroup, description, redNegatives,
       sparkWidth, sparkHeight, sparkColor, sparkX, sparkY, sparkYScale, barColor,

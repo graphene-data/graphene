@@ -2,7 +2,6 @@
   import chroma from 'chroma-js'
   import InlineDelta from './InlineDelta.svelte'
   import TableCell from './TableCell.svelte'
-  import {safeExtractColumn} from '../component-utilities/tableUtils'
   import {formatFromField} from '../component-utilities/format.ts'
   import {getThemeStores} from '../component-utilities/themeStores'
 
@@ -13,7 +12,7 @@
     rowNumbers?: boolean | string
     rowLines?: boolean | string
     index?: number
-    columnSummary?: any[]
+    columnLookup?: Record<string, any>
     grouped?: boolean
     groupType?: 'accordion' | 'section'
     groupColumn?: string
@@ -26,7 +25,7 @@
   let {
     displayedData = [], rowShading: rowShadingProp = undefined, link = undefined,
     rowNumbers: rowNumbersProp = undefined, rowLines: rowLinesProp = undefined, index = 0,
-    columnSummary = [], grouped = false, groupType = undefined, groupColumn = undefined,
+    columnLookup = {}, grouped = false, groupType = undefined, groupColumn = undefined,
     rowSpan = 1, groupNamePosition = 'middle', orderedColumns = [], compact: compactProp = undefined,
   }: Props = $props()
 
@@ -124,10 +123,9 @@
     {/if}
 
     {#each orderedColumns as column, k (k)}
-      {@const summary = safeExtractColumn(column, columnSummary)}
-      {@const scaleSummary = column.scaleColumn ? columnSummary.find((d) => d.id === column.scaleColumn) : summary}
-      {@const columnMin = column.colorMin ?? scaleSummary?.columnUnitSummary?.min}
-      {@const columnMax = column.colorMax ?? scaleSummary?.columnUnitSummary?.max}
+      {@const scaleSummary = column.scaleColumn ? columnLookup[column.scaleColumn] : column}
+      {@const columnMin = column.colorMin ?? scaleSummary?.stats?.min}
+      {@const columnMax = column.colorMax ?? scaleSummary?.stats?.max}
       {@const colorScale = column.contentType === 'colorscale'
         ? computeColorScale(column, columnMin, columnMax)
         : undefined}
@@ -146,12 +144,12 @@
         return $theme.colors['base-content']
       })()}
       {@const paddingLeft = k === 0 && grouped && groupType === 'accordion' && !rowNumbers ? '28px' : undefined}
-      {@const shouldShow = !(groupType === 'section' && groupColumn === summary.id && i !== 0)}
+      {@const shouldShow = !(groupType === 'section' && groupColumn === column.id && i !== 0)}
       <TableCell
-        class={summary?.type}
+        class={column?.type}
         {compact}
         verticalAlign={groupType === 'section' ? groupNamePosition : undefined}
-        rowSpan={groupType === 'section' && groupColumn === summary.id && i === 0 ? rowSpan : 1}
+        rowSpan={groupType === 'section' && groupColumn === column.id && i === 0 ? rowSpan : 1}
         {paddingLeft}
         wrap={column.wrap}
         cellColor={formattedColor}
@@ -178,13 +176,12 @@
             >
               {#if column.linkLabel != undefined}
                 {#if row[column.linkLabel] != undefined}
-                  {@const labelSummary = safeExtractColumn({id: column.linkLabel}, columnSummary)}
-                  {formatFromField(labelSummary.field, row[column.linkLabel])}
+                  {formatFromField(columnLookup[column.linkLabel]?.field, row[column.linkLabel])}
                 {:else}
                   {column.linkLabel}
                 {/if}
               {:else}
-                {formatFromField(summary.field, row[column.id])}
+                {formatFromField(column.field, row[column.id])}
               {/if}
             </a>
           {/if}
@@ -192,7 +189,7 @@
           <InlineDelta
             value={row[column.id]}
             downIsGood={column.downIsGood}
-            field={summary.field}
+            field={column.field}
             showValue={column.showValue}
             showSymbol={column.deltaSymbol}
             align={column.align}
@@ -201,7 +198,7 @@
             chip={column.chip}
           />
         {:else}
-          {formatFromField(summary.field, row[column.id])}
+          {formatFromField(column.field, row[column.id])}
         {/if}
       </TableCell>
     {/each}
