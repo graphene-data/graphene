@@ -1,7 +1,7 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
-import {makeTimeFormatter, makeValueFormatter} from './format.ts'
+import {formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {paletteForPath} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -40,6 +40,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, fields)
   timeFormatting(normalized)
+  ordinalFormatting(normalized)
   styleSecondaryAxisForSimpleBarLineLayout(normalized)
   applyIntegerYAxisTicks(normalized, rows)
   barLabelPositioning(normalized)
@@ -247,6 +248,25 @@ function timeFormatting(config: NormalConfig) {
     axis.axisPointer ||= {}
     axis.axisPointer.label ||= {}
     axis.axisPointer.label.formatter = makeTimeFormatter(axis.field)
+  }
+}
+
+// Format categorical time ordinals like hour_of_day and day_of_week using field metadata.
+function ordinalFormatting(config: NormalConfig) {
+  let axes = [...config.xAxis, ...config.yAxis]
+  for (let axis of axes) {
+    if (!axis || axis.type !== 'category') continue
+    if (!axis.field?.metadata?.timeOrdinal) continue
+
+    if (axis.axisLabel?.formatter == null) {
+      axis.axisLabel = {...axis.axisLabel, formatter: (input: unknown) => formatTimeOrdinal(axis.field, input)}
+    }
+
+    if (axis.axisPointer?.label?.formatter == null) {
+      axis.axisPointer ||= {}
+      axis.axisPointer.label ||= {}
+      axis.axisPointer.label.formatter = (input: unknown) => formatTimeOrdinal(axis.field, input)
+    }
   }
 }
 
@@ -585,7 +605,13 @@ function fieldType(fields: Field[], fieldName?: string): string {
 }
 
 function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
-  let types = fieldNames.map(name => fieldType(fields, name)).filter(type => type !== 'unknown')
+  let resolved = fieldNames.map(name => fields.find(field => field.name === name)).filter(Boolean) as Field[]
+  if (resolved.some(field => field?.metadata?.timeOrdinal)) return 'category'
+
+  let types = resolved.map(field => {
+    if (typeof field.type !== 'string') throw new Error(`Field ${field.name} has unsupported non-scalar type: array`)
+    return field.type
+  })
 
   if (types.some(type => type === 'date' || type === 'timestamp')) return 'time'
   if (types.some(type => type === 'number')) return 'value'

@@ -32,9 +32,9 @@ export type ScalarField = 'string' | 'number' | 'boolean' | 'date' | 'timestamp'
 export type ArrayField = {type: 'array'; elementType: FieldType}
 
 export type TimeGrain = 'year' | 'quarter' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'
-export type TimeOrdinal = 'hour_of_day' | DayOfWeek | 'day_of_month' | 'day_of_year' | 'week_of_year' | 'month_of_year'
+export type TimeOrdinal = 'hour_of_day' | DayOfWeekOrdinal | 'day_of_month' | 'day_of_year' | 'week_of_year' | 'month_of_year' | 'quarter_of_year'
 
-export type DayOfWeek =
+export type DayOfWeekOrdinal =
   | 'dow_1s' // 1-7, starting sunday
   | 'dow_0s' // 0-6, starting sunday
   | 'dow_1m' // 1-7, starting monday
