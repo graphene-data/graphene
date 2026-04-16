@@ -6,6 +6,7 @@
 
 import type {FunctionDef} from './functionTypes.ts'
 
+import {inferTemporalGrainMetadata, inferTemporalOrdinalMetadata} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const duck = 'https://duckdb.org/docs/stable/sql/functions'
@@ -1791,6 +1792,7 @@ export const duckDbFunctions: FunctionDef[] = [
       {name: 'date', type: ['date', 'timestamp']},
     ],
     returns: 'number',
+    metadata: args => inferTemporalOrdinalMetadata(args[0]?.sql, 'duckdb'),
   },
   {
     name: 'date_sub',
@@ -2096,6 +2098,7 @@ export const duckDbFunctions: FunctionDef[] = [
       {name: 'timestamp', type: ['date', 'timestamp']},
     ],
     returns: 'timestamp',
+    metadata: args => inferTemporalGrainMetadata(args[0]?.sql),
     sqlTemplate: 'DATE_TRUNC(${part}, ${timestamp})',
   },
   {
