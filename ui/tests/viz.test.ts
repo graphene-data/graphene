@@ -196,6 +196,99 @@ test('line chart tooltip formats calculated non-whole numbers', async ({mount, c
   await expect(chart.el).screenshot('line-chart-tooltip-calculated-non-whole')
 })
 
+test('hour_of_day ordinal axis labels and tooltip formatting', async ({mount, chart, sharedPage}) => {
+  let rows = [
+    {hour_of_day: 23, flights: 8},
+    {hour_of_day: 0, flights: 18},
+    {hour_of_day: 13, flights: 14},
+    {hour_of_day: 6, flights: 11},
+  ]
+  let fields = [
+    {name: 'hour_of_day', type: scalarType('number'), metadata: {timeOrdinal: 'hour_of_day'}},
+    {name: 'flights', type: scalarType('number'), metadata: {units: 'count'}},
+  ]
+
+  await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'hour_of_day', y: 'flights', title: 'Hour Ordinal'})
+  await sharedPage.evaluate(() => {
+    let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
+    let chart = charts && (Object.values(charts)[0] as any)
+    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2})
+  })
+
+  await expect(chart.el).screenshot('line-chart-hour-of-day-ordinal-tooltip')
+})
+
+test('day_of_week ordinal axis labels and tooltip formatting', async ({mount, chart, sharedPage}) => {
+  let rows = [
+    {day_of_week: 1, flights: 35},
+    {day_of_week: 2, flights: 12},
+    {day_of_week: 3, flights: 21},
+    {day_of_week: 4, flights: 17},
+    {day_of_week: 5, flights: 33},
+    {day_of_week: 6, flights: 25},
+    {day_of_week: 7, flights: 19},
+  ]
+  let fields = [
+    {name: 'day_of_week', type: scalarType('number'), metadata: {timeOrdinal: 'dow_1s'}},
+    {name: 'flights', type: scalarType('number'), metadata: {units: 'count'}},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'day_of_week', y: 'flights', title: 'Weekday Ordinal'})
+  await sharedPage.evaluate(() => {
+    let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
+    let chart = charts && (Object.values(charts)[0] as any)
+    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  })
+
+  await expect(chart.el).screenshot('bar-chart-day-of-week-ordinal-tooltip')
+})
+
+test('month_of_year ordinal axis labels and tooltip formatting', async ({mount, chart, sharedPage}) => {
+  let rows = [
+    {month_of_year: 11, revenue: 85},
+    {month_of_year: 2, revenue: 64},
+    {month_of_year: 7, revenue: 72},
+    {month_of_year: 1, revenue: 58},
+    {month_of_year: 12, revenue: 91},
+    {month_of_year: 4, revenue: 67},
+  ]
+  let fields = [
+    {name: 'month_of_year', type: scalarType('number'), metadata: {timeOrdinal: 'month_of_year'}},
+    {name: 'revenue', type: scalarType('number'), metadata: {units: 'usd'}},
+  ]
+
+  await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month_of_year', y: 'revenue', title: 'Month Ordinal'})
+  await sharedPage.evaluate(() => {
+    let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
+    let chart = charts && (Object.values(charts)[0] as any)
+    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2})
+  })
+
+  await expect(chart.el).screenshot('line-chart-month-of-year-ordinal-tooltip')
+})
+
+test('quarter_of_year ordinal axis labels and tooltip formatting', async ({mount, chart, sharedPage}) => {
+  let rows = [
+    {quarter_of_year: 4, value: 91},
+    {quarter_of_year: 1, value: 58},
+    {quarter_of_year: 3, value: 72},
+    {quarter_of_year: 2, value: 67},
+  ]
+  let fields = [
+    {name: 'quarter_of_year', type: scalarType('number'), metadata: {timeOrdinal: 'quarter_of_year'}},
+    {name: 'value', type: scalarType('number'), metadata: {units: 'count'}},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'quarter_of_year', y: 'value', title: 'Quarter Ordinal'})
+  await sharedPage.evaluate(() => {
+    let charts = window[Symbol.for('__evidence-chart-window-debug__') as any]
+    let chart = charts && (Object.values(charts)[0] as any)
+    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 1})
+  })
+
+  await expect(chart.el).screenshot('bar-chart-quarter-of-year-ordinal-tooltip')
+})
+
 test('line chart hides markers at 30 categorical points', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: categoricalSeries(30), x: 'category', y: 'value', title: 'Categorical 30'})
   await expect(chart.el).screenshot('line-chart-categorical-markers-over-threshold')

@@ -11,32 +11,42 @@
   ]
 
   let weekdaySeriesRows = [
-    {day: 'Mon', metric: 'Downloads', value: 150},
-    {day: 'Tue', metric: 'Downloads', value: 230},
-    {day: 'Wed', metric: 'Downloads', value: 224},
-    {day: 'Thu', metric: 'Downloads', value: 218},
-    {day: 'Fri', metric: 'Downloads', value: 335},
-    {day: 'Sat', metric: 'Downloads', value: 410},
-    {day: 'Sun', metric: 'Downloads', value: 360},
-    {day: 'Mon', metric: 'Installs', value: 80},
-    {day: 'Tue', metric: 'Installs', value: 120},
-    {day: 'Wed', metric: 'Installs', value: 150},
-    {day: 'Thu', metric: 'Installs', value: 130},
-    {day: 'Fri', metric: 'Installs', value: 210},
-    {day: 'Sat', metric: 'Installs', value: 280},
-    {day: 'Sun', metric: 'Installs', value: 220},
+    {day_of_week: 1, metric: 'Downloads', value: 150},
+    {day_of_week: 2, metric: 'Downloads', value: 230},
+    {day_of_week: 3, metric: 'Downloads', value: 224},
+    {day_of_week: 4, metric: 'Downloads', value: 218},
+    {day_of_week: 5, metric: 'Downloads', value: 335},
+    {day_of_week: 6, metric: 'Downloads', value: 410},
+    {day_of_week: 7, metric: 'Downloads', value: 360},
+    {day_of_week: 1, metric: 'Installs', value: 80},
+    {day_of_week: 2, metric: 'Installs', value: 120},
+    {day_of_week: 3, metric: 'Installs', value: 150},
+    {day_of_week: 4, metric: 'Installs', value: 130},
+    {day_of_week: 5, metric: 'Installs', value: 210},
+    {day_of_week: 6, metric: 'Installs', value: 280},
+    {day_of_week: 7, metric: 'Installs', value: 220},
   ]
 
-  let quarterRows = [
-    {quarter: 'Q1', metric: 'Revenue', value: 42000},
-    {quarter: 'Q2', metric: 'Revenue', value: 51000},
-    {quarter: 'Q3', metric: 'Revenue', value: 48000},
-    {quarter: 'Q4', metric: 'Revenue', value: 67000},
-    {quarter: 'Q1', metric: 'Cost', value: 28000},
-    {quarter: 'Q2', metric: 'Cost', value: 32000},
-    {quarter: 'Q3', metric: 'Cost', value: 30000},
-    {quarter: 'Q4', metric: 'Cost', value: 38000},
+  let quarterMetricRows = [
+    {quarter_of_year: 1, metric: 'Revenue', value: 42},
+    {quarter_of_year: 2, metric: 'Revenue', value: 51},
+    {quarter_of_year: 3, metric: 'Revenue', value: 48},
+    {quarter_of_year: 4, metric: 'Revenue', value: 67},
+    {quarter_of_year: 1, metric: 'Cost', value: 28},
+    {quarter_of_year: 2, metric: 'Cost', value: 32},
+    {quarter_of_year: 3, metric: 'Cost', value: 30},
+    {quarter_of_year: 4, metric: 'Cost', value: 38},
   ]
+
+  let hourOrdinalRows = [
+    {hour_of_day: 22, volume: 120},
+    {hour_of_day: 7, volume: 95},
+    {hour_of_day: 14, volume: 143},
+    {hour_of_day: 3, volume: 60},
+    {hour_of_day: 19, volume: 158},
+    {hour_of_day: 10, volume: 112},
+  ]
+
 
   let scatterRows = [
     {group: 'Group A', x: 10, y: 8},
@@ -200,31 +210,46 @@
     data={{
       rows: weekdaySeriesRows,
       fields: [
-        {name: 'day', type: 'string'},
+        {name: 'day_of_week', type: 'number', metadata: {timeOrdinal: 'dow_1m'}},
         {name: 'metric', type: 'string'},
         {name: 'value', type: 'number'},
       ],
     }}
     config={{
       title: {text: 'Stacked Area'},
-      series: [{type: 'line', stack: 'total', areaStyle: {}, encode: {x: 'day', y: 'value', group: 'metric'}}],
+      series: [{type: 'line', stack: 'total', areaStyle: {}, encode: {x: 'day_of_week', y: 'value', group: 'metric'}}],
     }}
   />
 
   <ECharts
     data={{
-      rows: quarterRows,
+      rows: quarterMetricRows,
       fields: [
-        {name: 'quarter', type: 'string'},
+        {name: 'quarter_of_year', type: 'number', metadata: {timeOrdinal: 'quarter_of_year'}},
         {name: 'metric', type: 'string'},
         {name: 'value', type: 'number'},
       ],
     }}
     config={{
-      title: {text: 'Bar'},
-      series: [{type: 'bar', encode: {x: 'quarter', y: 'value', group: 'metric'}}],
+      title: {text: 'Bar (Quarter Ordinal)'},
+      series: [{type: 'bar', encode: {x: 'quarter_of_year', y: 'value', group: 'metric'}}],
     }}
   />
+
+  <ECharts
+    data={{
+      rows: hourOrdinalRows,
+      fields: [
+        {name: 'hour_of_day', type: 'number', metadata: {timeOrdinal: 'hour_of_day'}},
+        {name: 'volume', type: 'number'},
+      ],
+    }}
+    config={{
+      title: {text: 'Line (Hour Ordinal)'},
+      series: [{type: 'line', encode: {x: 'hour_of_day', y: 'volume'}}],
+    }}
+  />
+
 
   <ECharts
     data={{

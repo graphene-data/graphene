@@ -123,6 +123,12 @@ export function applySorting(config: NormalConfig, rows: Record<string, any>[], 
   let primaryXField = config.xAxis[0]?.field
   if (!primaryXField) return
 
+  let timeOrdinal = String(primaryXField.metadata?.timeOrdinal || '').toLowerCase()
+  if (timeOrdinal) {
+    sortRowsByXTimeOrdinal(rows, primaryXField.name, timeOrdinal)
+    return
+  }
+
   // time/value x fields keep natural ascending order
   if (primaryXField.type === 'date' || primaryXField.type === 'timestamp' || primaryXField.type === 'number') {
     sortRowsByXAscending(rows, primaryXField.name, primaryXField.type === 'number' ? 'number' : 'date')
@@ -218,6 +224,18 @@ function sortRowsByXAscending(rows: Record<string, any>[], xField: string, xType
   indexed.sort((a, b) => {
     let aValue = sortableValue(a.row?.[xField], xType)
     let bValue = sortableValue(b.row?.[xField], xType)
+    if (aValue < bValue) return -1
+    if (aValue > bValue) return 1
+    return a.index - b.index
+  })
+  for (let i = 0; i < indexed.length; i++) rows[i] = indexed[i].row
+}
+
+function sortRowsByXTimeOrdinal(rows: Record<string, any>[], xField: string, timeOrdinal: string) {
+  let indexed = rows.map((row, index) => ({row, index}))
+  indexed.sort((a, b) => {
+    let aValue = ordinalSortValue(a.row?.[xField], timeOrdinal)
+    let bValue = ordinalSortValue(b.row?.[xField], timeOrdinal)
     if (aValue < bValue) return -1
     if (aValue > bValue) return 1
     return a.index - b.index
@@ -398,6 +416,28 @@ function sortableValue(value: unknown, type: 'date' | 'number') {
   }
   let timestamp = value instanceof Date ? value.getTime() : Date.parse(String(value ?? ''))
   return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY
+}
+
+function ordinalSortValue(value: unknown, timeOrdinal: string) {
+  let numeric = Number(value)
+  if (!Number.isFinite(numeric)) return Number.POSITIVE_INFINITY
+
+  if (timeOrdinal === 'dow_1m') return numeric >= 1 && numeric <= 7 ? numeric : Number.POSITIVE_INFINITY
+
+  if (timeOrdinal === 'dow_1s') {
+    if (numeric < 1 || numeric > 7) return Number.POSITIVE_INFINITY
+    return numeric === 1 ? 7 : numeric - 1
+  }
+
+  if (timeOrdinal === 'dow_0s') {
+    if (numeric < 0 || numeric > 6) return Number.POSITIVE_INFINITY
+    return numeric === 0 ? 7 : numeric
+  }
+
+  if (timeOrdinal === 'month_of_year') return numeric >= 1 && numeric <= 12 ? numeric : Number.POSITIVE_INFINITY
+  if (timeOrdinal === 'quarter_of_year') return numeric >= 1 && numeric <= 4 ? numeric : Number.POSITIVE_INFINITY
+
+  return numeric
 }
 
 function pairKey(left: unknown, right: unknown) {
