@@ -211,6 +211,7 @@ export interface Expr {
 // A field in a query's SELECT clause
 export interface QueryField extends Expr {
   name: string // output column name
+  disambiguatedName?: string // alternate inferred name used when output names would otherwise collide
   definitionLocation?: Location // where this field is defined when materialized into a view
 }
 
