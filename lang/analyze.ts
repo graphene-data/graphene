@@ -375,7 +375,7 @@ class AnalysisSession implements Analyzer {
     return this.analyzeSimpleQuery(queryNode.getChild('SimpleQuery')!, queryNode, scope, ctes)
   }
 
-  private analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, parentScope: Scope, ctes: Map<string, CteTable>): Query | void {
+  private analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, parentScope: Scope, ctes: Map<string, CteTable>, opts: {suppressImplicitOrderBy?: boolean} = {}): Query | void {
     let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: []}
     let scope: Scope = {...parentScope, query}
     let isAgg = false
@@ -531,7 +531,7 @@ class AnalysisSession implements Analyzer {
     }
 
     // Default ORDER BY for aggregate queries
-    if (orderBy.length == 0 && query.groupBy.length > 0) {
+    if (!opts.suppressImplicitOrderBy && orderBy.length == 0 && query.groupBy.length > 0) {
       let firstAggIdx = query.fields.findIndex(field => field.isAgg)
       if (firstAggIdx >= 0) orderBy.push({idx: firstAggIdx + 1, desc: true})
       else orderBy.push({idx: 1, desc: false}) // SELECT DISTINCT
@@ -549,7 +549,10 @@ class AnalysisSession implements Analyzer {
 
   private analyzeSetQuery(queryNode: SyntaxNode, scope: Scope, ctes: Map<string, CteTable>): Query | void {
     let branches = [
-      {query: this.analyzeSimpleQuery(queryNode.getChild('SimpleQuery')!, queryNode.getChild('SimpleQuery')!, scope, new Map()), parenthesized: false},
+      {
+        query: this.analyzeSimpleQuery(queryNode.getChild('SimpleQuery')!, queryNode.getChild('SimpleQuery')!, scope, new Map(), {suppressImplicitOrderBy: true}),
+        parenthesized: false,
+      },
       ...queryNode.getChildren('SetOperand').map(node => this.analyzeSetOperand(node, scope)),
     ]
 
@@ -594,7 +597,10 @@ class AnalysisSession implements Analyzer {
   private analyzeSetOperand(node: SyntaxNode, scope: Scope) {
     let subqueryNode = node.getChild('SubqueryExpression')
     if (subqueryNode) return {query: this.analyzeQuery(subqueryNode.getChild('QueryExpression')!, scope.otherTables), parenthesized: true}
-    return {query: this.analyzeSimpleQuery(node.getChild('SimpleQuery')!, node.getChild('SimpleQuery')!, scope, new Map()), parenthesized: false}
+    return {
+      query: this.analyzeSimpleQuery(node.getChild('SimpleQuery')!, node.getChild('SimpleQuery')!, scope, new Map(), {suppressImplicitOrderBy: true}),
+      parenthesized: false,
+    }
   }
 
   private analyzeOrderAndLimit(queryNode: SyntaxNode, query: Query) {
