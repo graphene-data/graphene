@@ -194,7 +194,7 @@ test('line chart uses ratio metadata for axis and tooltip percentage formatting'
   await expect(chart.el).screenshot('line-chart-ratio-metadata-percent-axis')
 })
 
-test('time tooltip uses readable timeGrain formatting', async ({mount, chart, sharedPage}) => {
+test('time tooltip uses readable timeGrain formatting', async ({mount, chart}) => {
   let rows = [
     {period: '2023-01-01', value: 10},
     {period: '2023-02-01', value: 12},
@@ -208,17 +208,12 @@ test('time tooltip uses readable timeGrain formatting', async ({mount, chart, sh
   ]
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'period', y: 'value', title: 'Month Grain'})
-  await sharedPage.evaluate(async () => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
-    let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
-    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3})
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-  })
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3})
 
   await expect(chart.el).screenshot('line-chart-tooltip-time-month-grain')
 })
 
-test('line chart tooltip formats calculated non-whole numbers', async ({mount, chart, sharedPage}) => {
+test('line chart tooltip formats calculated non-whole numbers', async ({mount, chart}) => {
   let rows = [
     {month: 'Jan', avg_delay: 10 / 3},
     {month: 'Feb', avg_delay: 14 / 3},
@@ -230,12 +225,7 @@ test('line chart tooltip formats calculated non-whole numbers', async ({mount, c
   ]
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'avg_delay', title: 'Average Delay'})
-
-  await sharedPage.evaluate(() => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
-    let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
-    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
-  })
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
 
   await expect(chart.el).screenshot('line-chart-tooltip-calculated-non-whole')
 })
@@ -338,7 +328,7 @@ test('line chart hides markers at 30 categorical points', async ({mount, chart})
   await expect(chart.el).screenshot('line-chart-categorical-markers-over-threshold')
 })
 
-test('scatter tooltip preserves high precision values on hover', async ({mount, chart, sharedPage}) => {
+test('scatter tooltip preserves high precision values on hover', async ({mount, chart}) => {
   let rows = [
     {point: 'A', x: 0.123456789123, y: 98.765432198765},
     {point: 'B', x: 0.333333333333, y: 12.987654321987},
@@ -360,31 +350,15 @@ test('scatter tooltip preserves high precision values on hover', async ({mount, 
     },
   })
 
-  await sharedPage.evaluate(async () => {
-    await window.$GRAPHENE?.waitForLoad?.()
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
-    let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
-    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 1})
-
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-  })
-
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 1})
   await expect(chart.el).screenshot('scatter-tooltip-high-precision')
 })
 
-test('pie chart', async ({mount, chart, sharedPage}) => {
+test('pie chart', async ({mount, chart}) => {
   await mount('components/PieChart.svelte', {data: singleDim(), category: 'category', value: 'value'})
   await expect(chart.el).screenshot('pie-chart')
 
-  await sharedPage.evaluate(async () => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
-    let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
-    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
-  })
-
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
   await expect(chart.el).screenshot('pie-chart-tooltip')
 })
 
