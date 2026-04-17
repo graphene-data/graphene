@@ -26,6 +26,7 @@ export type ChartConfigFn = <T>(selector: (config: any) => T) => Promise<T | nul
 
 export interface ChartFixture {
   config: ChartConfigFn
+  chartDispatchAction: (action: any) => Promise<void>
   el: any
 }
 
@@ -161,6 +162,10 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
           el.id = 'component-test'
           container?.appendChild(el)
           window.__inst = window.$GRAPHENE.svelte.mount(window.$GRAPHENE.components[compName], {target: el, props})
+
+          // Wait for load
+          await window.$GRAPHENE?.waitForLoad?.()
+          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
         },
         {compName, props: modifiedProps},
       )
@@ -190,7 +195,16 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
       }, selectorSource)
     }
 
-    await use({config: readConfig, el: sharedPage.locator('#component-test')})
+    let chartDispatchAction = async (action: any) => {
+      await sharedPage.evaluate(async chartAction => {
+        let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
+        let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
+        chart?.dispatchAction(chartAction)
+        await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+      }, action)
+    }
+
+    await use({config: readConfig, chartDispatchAction, el: sharedPage.locator('#component-test')})
   },
 })
 
