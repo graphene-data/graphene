@@ -117,6 +117,32 @@ describe('lang', () => {
     await expect('from users select id union all from orders select user_id as id').toReturnRows([1], [2], [1], [1], [2])
   })
 
+  it('suppresses implicit branch order by for aggregate set operations', () => {
+    expect(`
+      from users select name as label, sum(payments.amount) as amt
+      union all
+      from users select email as label, sum(payments.amount) as amt
+    `).toRenderSql(
+      'SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 UNION ALL SELECT users.email as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1',
+    )
+  })
+
+  it('keeps implicit order by for standalone aggregate queries', () => {
+    expect('from users select name as label, sum(payments.amount) as amt').toRenderSql(
+      'SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 ORDER BY 2 desc NULLS LAST',
+    )
+  })
+
+  it('preserves implicit order by inside parenthesized set operands', () => {
+    expect(`
+      from users select name as label, sum(payments.amount) as amt
+      union all
+      (from users select email as label, sum(payments.amount) as amt)
+    `).toRenderSql(
+      'SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 UNION ALL ( SELECT users.email as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 ORDER BY 2 desc NULLS LAST )',
+    )
+  })
+
   it('supports parenthesized set-operation operands in subqueries and ctes', () => {
     expect('from (select 1 as id union all select 2 as id) nums select id').toRenderSql('SELECT nums.id as id FROM ( SELECT 1 as id UNION ALL SELECT 2 as id ) as nums')
 
@@ -125,6 +151,15 @@ describe('lang', () => {
 
   it('applies outer order by and limit to the full set operation', () => {
     expect('select 2 as id union select 1 as id order by id limit 1').toRenderSql('SELECT 2 as id UNION SELECT 1 as id ORDER BY 1 asc NULLS LAST LIMIT 1')
+  })
+
+  it('executes aggregate set operations with an outer order by', async () => {
+    await expect(`
+      from users select 'name:' || name as label, sum(payments.amount) as amt
+      union all
+      from users select 'email:' || email as label, sum(payments.amount) as amt
+      order by label
+    `).toReturnRows(['email:alice@example.com', 100], ['email:bob@example.com', 50], ['name:Alice', 100], ['name:Bob', 50])
   })
 
   it('requires matching column counts across set-operation branches', () => {
