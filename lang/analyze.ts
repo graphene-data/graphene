@@ -327,22 +327,24 @@ class AnalysisSession implements Analyzer {
         if (col.isAgg) continue
         let expr = this.analyzeExpr(col.exprNode, {file, query: scope.query, table, alias, otherTables: scope.otherTables, fanoutPath: scope.fanoutPath})
         if (isScalarType(expr.type, 'interval') && expr.interval?.form == 'scaled') this.diag(col.exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
-        query.fields.push({
+        this.addQueryField(query, {
           name: outName,
           sql: expr.sql,
           type: expr.type,
           metadata: {...expr.metadata, ...col.metadata},
           fanout: expr.fanout,
           definitionLocation: col.location,
+          diagNode: col.exprNode || table.syntaxNode,
         })
       } else {
-        query.fields.push({
+        this.addQueryField(query, {
           name: outName,
           sql: `${alias}.${col.name}`,
           type: col.type,
           metadata: col.metadata,
           fanout: normalizeExprFanout({path: scope.fanoutPath}),
           definitionLocation: col.location,
+          diagNode: table.syntaxNode,
         })
       }
     }
@@ -461,16 +463,18 @@ class AnalysisSession implements Analyzer {
         let aliasNode = select.getChild('Alias')
         let expr = this.analyzeExpr(exprNode, scope)
         if (isScalarType(expr.type, 'interval') && expr.interval?.form == 'scaled') this.diag(exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
-        let name = aliasNode ? txt(aliasNode) : this.inferName(exprNode, scope)
+        let {name, disambiguatedName} = aliasNode ? {name: txt(aliasNode), disambiguatedName: undefined} : this.inferName(exprNode, scope)
         isAgg ||= !!expr.isAgg
-        query.fields.push({
+        this.addQueryField(query, {
           name,
+          disambiguatedName,
           sql: expr.sql,
           type: expr.type,
           metadata: expr.metadata,
           isAgg: expr.isAgg,
           fanout: expr.fanout,
           definitionLocation: this.locationForNode(aliasNode || exprNode),
+          diagNode: aliasNode || exprNode,
         })
         fanoutExprs.push({node: exprNode, expr})
       }
@@ -503,12 +507,22 @@ class AnalysisSession implements Analyzer {
         // If that expression is already in the selected fields, it's just a reference.
         let expr = this.analyzeExpr(exprNode, scope)
         if (expr.isAgg) this.diag(groupBy, 'Cannot group by aggregate expressions')
-        let name = groupBy.getChild('Alias') ? txt(groupBy.getChild('Alias')) : this.inferName(exprNode, scope)
-        query.groupBy.push(name)
+        let existing = query.fields.find(field => field.sql == expr.sql)
+        if (existing) query.groupBy.push(existing.name)
 
         // If it's not in there, add it to the select.
-        if (!query.fields.find(field => field.name == name)) {
-          query.fields.unshift({name, sql: expr.sql, type: expr.type, metadata: expr.metadata, fanout: expr.fanout, definitionLocation: this.locationForNode(groupBy.getChild('Alias') || exprNode)})
+        if (!existing) {
+          let field = {
+            ...(groupBy.getChild('Alias') ? {name: txt(groupBy.getChild('Alias')), disambiguatedName: undefined} : this.inferName(exprNode, scope)),
+            sql: expr.sql,
+            type: expr.type,
+            metadata: expr.metadata,
+            fanout: expr.fanout,
+            definitionLocation: this.locationForNode(groupBy.getChild('Alias') || exprNode),
+            diagNode: groupBy.getChild('Alias') || exprNode,
+          }
+          this.addQueryField(query, field, {prepend: true})
+          query.groupBy.push(field.name)
         }
         fanoutExprs.push({node: groupBy.getChild('Expression')!, expr})
       }
@@ -1405,13 +1419,64 @@ class AnalysisSession implements Analyzer {
     return table
   }
 
-  private inferName(exprNode: SyntaxNode, scope: Scope): string {
-    if (exprNode.name == 'Ref')
-      return exprNode
-        .getChildren('Identifier')
-        .map(i => txt(i))
-        .join('_')
-    return `col_${scope.query?.fields.length || 0}`
+  private addQueryField(query: Query, field: Query['fields'][number] & {diagNode?: SyntaxNode}, opts?: {prepend?: boolean}) {
+    let conflicts = query.fields.filter(existing => existing.name == field.name)
+    if (conflicts.length == 0) return this.insertQueryField(query, field, opts)
+
+    if (field.disambiguatedName && conflicts.every(existing => existing.disambiguatedName)) {
+      let taken = new Set(query.fields.filter(existing => existing.name != field.name).map(existing => existing.name))
+      if (this.renameInferredFields(conflicts, taken, [field.disambiguatedName])) {
+        field.name = field.disambiguatedName
+        return this.insertQueryField(query, field, opts)
+      }
+    }
+
+    if (field.disambiguatedName) {
+      let taken = new Set(query.fields.filter(existing => existing.name != field.name).map(existing => existing.name))
+      if (!taken.has(field.disambiguatedName)) {
+        field.name = field.disambiguatedName
+        conflicts = query.fields.filter(existing => existing.name == field.name)
+        if (conflicts.length == 0) return this.insertQueryField(query, field, opts)
+      }
+    }
+
+    if (!field.disambiguatedName && conflicts.every(existing => existing.disambiguatedName)) {
+      let taken = new Set(query.fields.filter(existing => existing.name != field.name).map(existing => existing.name))
+      if (this.renameInferredFields(conflicts, taken)) return this.insertQueryField(query, field, opts)
+    }
+
+    if (field.diagNode) this.diag(field.diagNode, `Duplicate output column name "${field.name}"`)
+    this.insertQueryField(query, field, opts)
+  }
+
+  private insertQueryField(query: Query, field: Query['fields'][number], opts?: {prepend?: boolean}) {
+    if (opts?.prepend) query.fields.unshift(field)
+    else query.fields.push(field)
+  }
+
+  private renameInferredFields(fields: Query['fields'], taken: Set<string>, extraNames: string[] = []): boolean {
+    let nextNames = new Set<string>()
+    for (let field of fields) {
+      if (!field.disambiguatedName || taken.has(field.disambiguatedName) || nextNames.has(field.disambiguatedName)) return false
+      nextNames.add(field.disambiguatedName)
+    }
+    for (let name of extraNames) {
+      if (taken.has(name) || nextNames.has(name)) return false
+      nextNames.add(name)
+    }
+    fields.forEach(field => {
+      field.name = field.disambiguatedName!
+    })
+    return true
+  }
+
+  private inferName(exprNode: SyntaxNode, scope: Scope): Pick<Query['fields'][number], 'name' | 'disambiguatedName'> {
+    if (exprNode.name == 'Ref') {
+      let names = exprNode.getChildren('Identifier').map(i => txt(i))
+      return {name: names.at(-1)!, disambiguatedName: names.join('_')}
+    }
+    let name = `col_${scope.query?.fields.length || 0}`
+    return {name, disambiguatedName: name}
   }
 
   // TODO: do we still need this?
