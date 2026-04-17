@@ -29,11 +29,11 @@ from order_items select products.category, revenue, gross_profit, gross_margin_p
 from order_items select users.state, revenue, units_sold as units order by 2 desc limit 25
 ```
 
-<BarChart data="revenue_by_state" title="Top States by Revenue" x="users_state" y="revenue" swapXY="true" />
+<BarChart data="revenue_by_state" title="Top States by Revenue" x="state" y="revenue" swapXY="true" />
 
 <Row>
-  <BarChart data="revenue_by_category" title="Revenue by Category" x="products_category" y="revenue" swapXY="true" />
-  <PieChart data="revenue_by_category" title="Category Revenue Share" category="products_category" value="revenue" />
+  <BarChart data="revenue_by_category" title="Revenue by Category" x="category" y="revenue" swapXY="true" />
+  <PieChart data="revenue_by_category" title="Category Revenue Share" category="category" value="revenue" />
 </Row>
 
 ```sql top_products
