@@ -21,39 +21,46 @@ export function formatTitle(column: string) {
   })
 }
 
-// Creates a formatter function that takes a numeric value and type/metadata info about a field to determine how to format it.
-export function makeValueFormatter(field?: Field) {
+// ECharts valueFormatter will take different arguments depending on the chart type.
+// For bar/line/area it's just a number
+// for scatter, it's [x,y], for candlestick [open, close, low, high], etc
+export function makeValueFormatter(fields: Field[] = []) {
+  return (value: unknown) => {
+    if (Array.isArray(value)) return value.map((entry, index) => formatSingleValue(entry, fields[index] || fields[0])).join(', ')
+    return formatSingleValue(value, fields[0])
+  }
+}
+
+// Formats one numeric value with field metadata (units, ratio/pct, compact notation).
+export function formatSingleValue(value: any, field?: Field) {
+  let amount = Number(value)
+  if (!Number.isFinite(amount)) return String(value ?? '')
+
+  if (field?.metadata?.ratio) return `${percent.format(amount * 100)}%`
+  if (field?.metadata?.pct) return `${percent.format(amount)}%`
+
   let unit = field?.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
   let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
-
-  return (value: unknown) => {
-    let amount = Number(value)
-    if (!Number.isFinite(amount)) return String(value ?? '')
-
-    if (field?.metadata?.ratio) return `${percent.format(amount * 100)}%`
-    if (field?.metadata?.pct) return `${percent.format(amount)}%`
-
-    if (currencyUnit) {
-      let sign = amount < 0 ? '-' : ''
-      let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
-      return `${sign}${currencySymbols[currencyUnit]}${formatted}`
-    }
-
-    if (amount === 0) return '0'
+  if (currencyUnit) {
     let sign = amount < 0 ? '-' : ''
-    let absolute = Math.abs(amount)
-
-    if (absolute >= 1e12) return `${sign}${compactValue(absolute / 1e12)}T`
-    if (absolute >= 1e9) return `${sign}${compactValue(absolute / 1e9)}B`
-    if (absolute >= 1e6) return `${sign}${compactValue(absolute / 1e6)}M`
-    if (absolute >= 1e3) return `${sign}${compactValue(absolute / 1e3)}k`
-    if (absolute >= 1) return `${sign}${compactValue(absolute)}`
-    if (absolute >= 1e-3) return `${sign}${compactValue(absolute)}`
-    if (absolute >= 1e-6) return `${sign}${compactValue(absolute * 1e3)}m`
-    if (absolute >= 1e-9) return `${sign}${compactValue(absolute * 1e6)}u`
-    if (absolute >= 1e-12) return `${sign}${compactValue(absolute * 1e9)}n`
-    return `${sign}${compactValue(absolute)}`
+    let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
+    return `${sign}${currencySymbols[currencyUnit]}${formatted}`
   }
+
+  if (amount === 0) return '0'
+  let sign = amount < 0 ? '-' : ''
+  let absolute = Math.abs(amount)
+
+  if (absolute >= 1e12) return `${sign}${compactValue(absolute / 1e12)}T`
+  if (absolute >= 1e9) return `${sign}${compactValue(absolute / 1e9)}B`
+  if (absolute >= 1e6) return `${sign}${compactValue(absolute / 1e6)}M`
+  if (absolute >= 1e3) return `${sign}${compactValue(absolute / 1e3)}k`
+  if (absolute >= 1) return `${sign}${compactValue(absolute)}`
+  if (absolute >= 1e-3) return `${sign}${compactValue(absolute)}`
+  if (absolute >= 1e-6) return `${sign}${compactValue(absolute * 1e3)}m`
+  if (absolute >= 1e-9) return `${sign}${compactValue(absolute * 1e6)}u`
+  if (absolute >= 1e-12) return `${sign}${compactValue(absolute * 1e9)}n`
+  return `${sign}${compactValue(absolute)}`
 }
 
 // Creates a formatter function that renders date/timestamp values based on field metadata.timeGrain.
@@ -61,7 +68,11 @@ export function makeTimeFormatter(field?: Field) {
   let timeGrain = String(field?.metadata?.timeGrain || '').toLowerCase()
 
   return (input: unknown) => {
-    let value = extractFormatterValue(input)
+    let value = input
+    if (value && typeof value === 'object' && 'value' in (value as Record<string, unknown>)) {
+      value = (value as Record<string, unknown>).value
+    }
+
     let date = value instanceof Date ? value : new Date(Number(value))
     if (!Number.isFinite(date.getTime())) return String(value ?? '')
 
@@ -89,7 +100,7 @@ export function formatFromField(field: Field | undefined, value: unknown) {
   if (value === null || value === undefined) return '-'
 
   let type = String(field?.type || '').toLowerCase()
-  if (type === 'number') return makeValueFormatter(field)(value)
+  if (type === 'number') return formatSingleValue(value, field)
   if (type === 'date' || type === 'timestamp') return makeTimeFormatter(field)(value)
   return String(value)
 }

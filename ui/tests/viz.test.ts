@@ -338,6 +338,42 @@ test('line chart hides markers at 30 categorical points', async ({mount, chart})
   await expect(chart.el).screenshot('line-chart-categorical-markers-over-threshold')
 })
 
+test('scatter tooltip preserves high precision values on hover', async ({mount, chart, sharedPage}) => {
+  let rows = [
+    {point: 'A', x: 0.123456789123, y: 98.765432198765},
+    {point: 'B', x: 0.333333333333, y: 12.987654321987},
+    {point: 'C', x: 0.987654321987, y: 45.123456789123},
+  ]
+  let fields = [
+    {name: 'point', type: scalarType('string')},
+    {name: 'x', type: scalarType('number')},
+    {name: 'y', type: scalarType('number')},
+  ]
+
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    config: {
+      tooltip: {trigger: 'item', position: [24, 24]},
+      xAxis: {type: 'value'},
+      yAxis: {type: 'value'},
+      series: [{type: 'scatter', symbolSize: 14, encode: {x: 'x', y: 'y', tooltip: ['point', 'x', 'y']}}],
+    },
+  })
+
+  await sharedPage.evaluate(async () => {
+    await window.$GRAPHENE?.waitForLoad?.()
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+
+    let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
+    let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
+    chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 1})
+
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+  })
+
+  await expect(chart.el).screenshot('scatter-tooltip-high-precision')
+})
+
 test('pie chart', async ({mount, chart, sharedPage}) => {
   await mount('components/PieChart.svelte', {data: singleDim(), category: 'category', value: 'value'})
   await expect(chart.el).screenshot('pie-chart')

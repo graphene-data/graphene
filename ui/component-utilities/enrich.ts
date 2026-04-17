@@ -32,7 +32,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   expandSeriesTransforms(normalized, rows, baseDatasetId)
 
   // stylistic rules to provide great defaults
-  lineSeriesMarkerVisibility(normalized, rows)
+  lineSeriesMarkerVisibility(normalized, rows, fields)
   horizontalBarGuard(normalized, fields)
   computeTitleLegendAndGridPadding(normalized)
   applyLegendSelection(normalized)
@@ -213,7 +213,7 @@ function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) 
     if (!axis) continue
     let encodedFields = config.series
       .filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
-      .map(entry => getSeriesXField(entry))
+      .map(entry => getSeriesXField(entry, fields))
       .filter(Boolean) as string[]
 
     axis.field ||= fields.find(field => field.name === encodedFields[0])
@@ -224,7 +224,7 @@ function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) 
     if (!axis) continue
     let encodedFields = config.series
       .filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
-      .map(entry => getSeriesValueFieldName(entry))
+      .map(entry => getSeriesValueFieldName(entry, fields))
       .filter(Boolean) as string[]
 
     axis.field ||= fields.find(field => field.name === encodedFields[0])
@@ -274,7 +274,7 @@ function ordinalFormatting(config: NormalConfig) {
 // - Respect explicit `showSymbol` from users.
 // - Category/time axes: show markers for small series (< 30 points).
 // - Value axes: hide markers by default.
-function lineSeriesMarkerVisibility(config: NormalConfig, rows: Record<string, any>[]) {
+function lineSeriesMarkerVisibility(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   for (let series of config.series) {
     if (series?.type !== 'line' || series.showSymbol != null) continue
 
@@ -290,7 +290,7 @@ function lineSeriesMarkerVisibility(config: NormalConfig, rows: Record<string, a
       continue
     }
 
-    let xField = getSeriesXField(series)
+    let xField = getSeriesXField(series, fields)
     if (!xField) {
       series.showSymbol = false
       continue
@@ -337,16 +337,13 @@ function valueFormatting(config: NormalConfig, fields: Field[]) {
   let valueAxes = [...config.xAxis, ...config.yAxis].filter(axis => axis?.type === 'value')
   for (let axis of valueAxes) {
     if (axis.axisLabel?.formatter != null) continue
-    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field)}
+    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [])}
   }
 
   for (let series of config.series) {
     series.tooltip ||= {}
-    let tooltip = series.tooltip as Record<string, any>
-    if (tooltip.formatter != null || tooltip.valueFormatter != null) continue
-
-    let field = getSeriesValueField(series, fields)
-    tooltip.valueFormatter = makeValueFormatter(field)
+    if (series.tooltip?.formatter || series.tooltip.valueFormatter) continue
+    series.tooltip.valueFormatter = makeValueFormatter(getSeriesValueFields(series, fields))
   }
 }
 
@@ -618,22 +615,31 @@ function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
   return 'category'
 }
 
-function getSeriesXField(series?: SeriesWithGroupingHint) {
-  return getEncodeField(series?.encode?.x)
+function getSeriesXField(series: SeriesWithGroupingHint | undefined, fields?: Field[]) {
+  return getEncodeField(series, fields || [], 'x')?.name ?? getEncodeFieldName(series, 'x')
 }
 
-function getSeriesValueFieldName(series?: SeriesWithGroupingHint) {
-  return getEncodeField(series?.encode?.y) ?? getEncodeField(series?.encode?.value)
+function getSeriesValueFieldName(series: SeriesWithGroupingHint | undefined, fields?: Field[]) {
+  return getEncodeField(series, fields || [], 'y')?.name ?? getEncodeField(series, fields || [], 'value')?.name ?? getEncodeFieldName(series, 'y') ?? getEncodeFieldName(series, 'value')
 }
 
-function getSeriesValueField(series: SeriesWithGroupingHint, fields: Field[]) {
-  let fieldName = getSeriesValueFieldName(series)
-  if (!fieldName) return undefined
-  return fields.find(field => field.name === fieldName)
+function getSeriesValueFields(series: SeriesWithGroupingHint, fields: Field[]) {
+  switch (series.type) {
+    case 'scatter':
+    case 'effectScatter':
+      return [getEncodeField(series, fields, 'x'), getEncodeField(series, fields, 'y')].filter(Boolean) as Field[]
+    case 'bar': {
+      let xField = getEncodeField(series, fields, 'x')
+      let yField = getEncodeField(series, fields, 'y')
+      return xField?.type == 'number' ? [xField] : ([yField].filter(Boolean) as Field[])
+    }
+    default:
+      return [getEncodeField(series, fields, 'y')].filter(Boolean) as Field[]
+  }
 }
 
 function getSeriesCategoryFieldForHorizontal(series?: SeriesWithGroupingHint) {
-  return getEncodeField(series?.encode?.y)
+  return getEncodeFieldName(series, 'y')
 }
 
 function getSplitByFields(series?: SeriesWithGroupingHint) {
@@ -646,10 +652,21 @@ function getSplitByFields(series?: SeriesWithGroupingHint) {
     .filter(Boolean)
 }
 
-function getEncodeField(value: unknown): string | undefined {
-  if (typeof value === 'string') return value
-  if (Array.isArray(value)) return value.find(entry => typeof entry === 'string')
-  return undefined
+function getEncodeFields(value: unknown): string[] {
+  if (typeof value === 'string') return [value]
+  if (!Array.isArray(value)) return []
+  return value.filter(entry => typeof entry === 'string') as string[]
+}
+
+function getEncodeFieldName(series: SeriesWithGroupingHint | undefined, encodeProp: string) {
+  let encode = series?.encode as Record<string, unknown> | undefined
+  return getEncodeFields(encode?.[encodeProp])[0]
+}
+
+function getEncodeField(series: SeriesWithGroupingHint | undefined, fields: Field[], encodeProp: string): Field | undefined {
+  let name = getEncodeFieldName(series, encodeProp)
+  if (!name) return undefined
+  return fields.find(field => field.name === name)
 }
 
 function shouldBindSeriesToDataset(series: SeriesWithGroupingHint) {
