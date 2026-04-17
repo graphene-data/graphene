@@ -103,7 +103,6 @@ describe('runCreate', () => {
       defaultNamespace: 'MY_DB.ANALYTICS',
       snowflake: {account: 'myorg-myaccount', username: 'graphene_user'},
     })
-    expect(pkg.dependencies['snowflake-sdk']).toBeTruthy()
     expect(await readFile(path.join(root, 'my-analytics', '.env'), 'utf8')).toContain(`SNOWFLAKE_PRI_KEY_PATH=${keyPath}`)
     expect(outroMock).toHaveBeenCalledWith('Done!', {output: stdout.stream})
   })
@@ -130,7 +129,6 @@ describe('runCreate', () => {
 
     let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
-    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
   })
 
   it('streams install output into the task log and keeps line breaks on success', async () => {

@@ -10,7 +10,6 @@
     "serve": "npm run dev"
   },
   "dependencies": {
-    "@clickhouse/client": "^1.18.2",
     "@graphenedata/cli": "workspace:*",
     "svelte": "5.55.3"
   },

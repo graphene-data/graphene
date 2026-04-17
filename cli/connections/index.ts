@@ -4,19 +4,12 @@ import {config} from '../../lang/config.ts'
 import {authenticatedFetch} from '../auth.ts'
 import {type QueryResult, type QueryConnection, type QueryParams} from './types.ts'
 
-const warehouseClients = {
-  bigquery: '@google-cloud/bigquery',
-  clickhouse: '@clickhouse/client',
-  duckdb: '@duckdb/node-api',
-  snowflake: 'snowflake-sdk',
-} as const
-
 // Reads credentials from environment variables and passes them to the connection constructors.
 // The connection classes themselves have no env-reading logic — this keeps the cloud server
 // from accidentally picking up local env vars instead of database-stored credentials.
 export async function getConnection(): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
-    let mod = await importWarehouseConnection(() => import('./bigQuery.ts'), warehouseClients.bigquery, 'BigQuery')
+    let mod = await import('./bigQuery.ts')
     let options: any = {}
     if (process.env.GOOGLE_CREDENTIALS_CONTENT) {
       // the actual json as an env var
@@ -29,10 +22,10 @@ export async function getConnection(): Promise<QueryConnection> {
     }
     return new mod.BigQueryConnection(options)
   } else if (config.dialect === 'duckdb') {
-    let mod = await importWarehouseConnection(() => import('./duckdb.ts'), warehouseClients.duckdb, 'DuckDB')
+    let mod = await import('./duckdb.ts')
     return new mod.DuckDBConnection({})
   } else if (config.dialect === 'clickhouse') {
-    let mod = await importWarehouseConnection(() => import('./clickhouse.ts'), warehouseClients.clickhouse, 'ClickHouse')
+    let mod = await import('./clickhouse.ts')
     let url = config.clickhouse?.url || process.env.CLICKHOUSE_URL
     let username = config.clickhouse?.username || process.env.CLICKHOUSE_USERNAME
     let password = process.env.CLICKHOUSE_PASSWORD
@@ -44,7 +37,7 @@ export async function getConnection(): Promise<QueryConnection> {
       database: config.clickhouse?.database || config.defaultNamespace || 'default',
     })
   } else if (config.dialect === 'snowflake') {
-    let mod = await importWarehouseConnection(() => import('./snowflake.ts'), warehouseClients.snowflake, 'Snowflake')
+    let mod = await import('./snowflake.ts')
     return new mod.SnowflakeConnection({
       privateKeyPath: process.env.SNOWFLAKE_PRI_KEY_PATH,
       privateKey: process.env.SNOWFLAKE_PRI_KEY,
@@ -54,21 +47,6 @@ export async function getConnection(): Promise<QueryConnection> {
   } else {
     throw new Error(`Unsupported dialect: ${config.dialect}`)
   }
-}
-
-async function importWarehouseConnection<T>(load: () => Promise<T>, packageName: string, warehouseLabel: string): Promise<T> {
-  try {
-    return await load()
-  } catch (err) {
-    if (!isMissingWarehouseClientError(err, packageName)) throw err
-    // eslint-disable-next-line preserve-caught-error
-    throw new Error(`${warehouseLabel} support requires installing ${packageName}. Add it to your project dependencies, for example: npm install ${packageName}`)
-  }
-}
-
-function isMissingWarehouseClientError(err: unknown, packageName: string): boolean {
-  let error = err as NodeJS.ErrnoException | undefined
-  return error?.code === 'ERR_MODULE_NOT_FOUND' && String(error.message || '').includes(packageName)
 }
 
 export async function runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
