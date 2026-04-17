@@ -66,11 +66,11 @@ Queries can be referenced by other queries in the `from` or `join` to form DAGs 
 ## Components
 All viz components take `data`, which is the name of a gsql table or code-fenced query in the markdown.
 Component "field" attributes (like x and y) map to a column within data.
-Attributes like `x`, `y`, `y2`, `group`, `stack`, `stack100` are the names of columns within the `data` table.
+Attributes like `x`, `y`, `y2`, and `splitBy` are the names of columns within the `data` table.
 `title` - shown above the viz
-- BarChart: Fields [x,y,y2,group,stack,stack100]. y2 will always be a line, stack and stack100 are mutually exclusive. `label` (show labels above bars)
-- LineChart: Fields [x,y,series]
-- AreaChart: Fields [x,y,group,stack,stack100]
+- BarChart: Fields [x,y,y2,splitBy,arrange]. `arrange` can be `stack`, `group`, or `stack100` (default `stack`). `label` shows labels above bars.
+- LineChart: Fields [x,y,y2,splitBy]
+- AreaChart: Fields [x,y,splitBy,arrange]. `arrange` can be `stack` or `stack100` (default `stack`).
 - PieChart: Fields: [category,value]
 
 - BigValue: data, value, title, fmt, comparison, comparisonFmt, comparisonTitle, downIsGood, sparkline, sparklineType, sparklineColor
@@ -80,12 +80,12 @@ Attributes like `x`, `y`, `y2`, `group`, `stack`, `stack100` are the names of co
 ## ECharts
 To further customize the look and feel of a chart, use the ECharts component to provide an echarts config.
 Be sure to set `data`, and use `encode` on series to map columns in the `data`.
-In addition to the regular fields `encode` takes, it also accepts `stack` and `group`, which will automatically expand that column to the required number of series.
+In addition to the regular fields `encode` takes, it also accepts `splitBy`, which automatically expands one template into multiple series. For bar charts, `splitBy` can be a two-item list (`[groupBy, stackBy]`) for grouped+stacked bars.
 
 ```md
 <ECharts data="sales_by_category">
   xAxis: {axisLine: {lineStyle: {color: 'purple'}}},
-  series: [{type: "bar", encode: {x: "month", y: "revenue", stack: "category"}],
+  series: [{type: "bar", stack: "bar-stack", encode: {x: "month", y: "revenue", splitBy: "category"}],
 </ECharts>
 ```
 

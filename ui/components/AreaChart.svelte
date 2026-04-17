@@ -7,9 +7,8 @@
     data: string | QueryResult
     x: string
     y: string
-    group?: string
-    stack?: string
-    stack100?: string
+    splitBy?: string
+    arrange?: 'stack' | 'stack100'
     sort?: string
     title?: string
     height?: string | number
@@ -20,9 +19,8 @@
     data,
     x,
     y,
-    group = undefined,
-    stack = undefined,
-    stack100 = undefined,
+    splitBy = undefined,
+    arrange = 'stack',
     sort = undefined,
     title = undefined,
     height = undefined,
@@ -31,36 +29,29 @@
 
   function buildConfig(): EChartsConfig {
     let yFields = parseCommaList(y)
-    let mode = resolveGroupingMode(group, stack, stack100)
-    if (mode && yFields.length > 1) throw new Error('AreaChart does not support `group`, `stack`, or `stack100` when `y` has multiple fields')
-    let grouped = Boolean(mode && yFields.length === 1)
-    let stackKey = mode?.kind === 'stack' || mode?.kind === 'stack100' ? 'area-stack' : undefined
-    let stackPercentage = mode?.kind === 'stack100' ? true : undefined
+    if (splitBy && yFields.length > 1) throw new Error('AreaChart does not support splitBy with multiple y fields')
 
+    let stack = arrange === 'stack' || arrange === 'stack100' ? 'area-stack' : undefined
+    let stackPercentage = arrange === 'stack100' ? true : undefined
     let sortHint = typeof sort === 'string' && sort.trim().length > 0 ? {sort} : {}
-    let series = grouped
-      ? [{type: 'line' as const, areaStyle: {opacity: 0.2}, stack: stackKey, stackPercentage, encode: {x, y: yFields[0], group: mode?.field, ...sortHint}}]
-      : yFields.map(field => ({type: 'line' as const, name: field, areaStyle: {opacity: 0.2}, encode: {x, y: field, ...sortHint}}))
+
+    let series
+    if (splitBy) {
+      // "tall" data, one template split into one series per splitBy value by enrich()
+      series = [{type: 'line' as const, areaStyle: {opacity: 0.2}, stack, stackPercentage, encode: {x, y: yFields[0], splitBy, ...sortHint}}]
+    } else {
+      // "wide" data, one area series per field listed in y
+      series = yFields.map(field => ({type: 'line' as const, name: field, areaStyle: {opacity: 0.2}, encode: {x, y: field, ...sortHint}}))
+    }
 
     return {
       title: title ? {text: title} : undefined,
       tooltip: {trigger: 'axis'},
-      legend: {show: grouped || yFields.length > 1},
+      legend: {show: Boolean(splitBy || yFields.length > 1)},
       xAxis: {},
       yAxis: {max: stackPercentage ? 1 : undefined},
       series,
     }
-  }
-
-  function resolveGroupingMode(group?: string, stack?: string, stack100?: string) {
-    let modes = [
-      group ? {kind: 'group' as const, field: group} : undefined,
-      stack ? {kind: 'stack' as const, field: stack} : undefined,
-      stack100 ? {kind: 'stack100' as const, field: stack100} : undefined,
-    ].filter(Boolean)
-
-    if (modes.length <= 1) return modes[0]
-    throw new Error('AreaChart accepts only one of `group`, `stack`, or `stack100`')
   }
 </script>
 
