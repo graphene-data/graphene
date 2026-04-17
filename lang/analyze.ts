@@ -463,9 +463,7 @@ class AnalysisSession implements Analyzer {
         let aliasNode = select.getChild('Alias')
         let expr = this.analyzeExpr(exprNode, scope)
         if (isScalarType(expr.type, 'interval') && expr.interval?.form == 'scaled') this.diag(exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
-        let {name, disambiguatedName} = aliasNode
-          ? {name: txt(aliasNode), disambiguatedName: undefined}
-          : this.inferName(exprNode, scope)
+        let {name, disambiguatedName} = aliasNode ? {name: txt(aliasNode), disambiguatedName: undefined} : this.inferName(exprNode, scope)
         isAgg ||= !!expr.isAgg
         this.addQueryField(query, {
           name,
@@ -515,9 +513,7 @@ class AnalysisSession implements Analyzer {
         // If it's not in there, add it to the select.
         if (!existing) {
           let field = {
-            ...(groupBy.getChild('Alias')
-              ? {name: txt(groupBy.getChild('Alias')), disambiguatedName: undefined}
-              : this.inferName(exprNode, scope)),
+            ...(groupBy.getChild('Alias') ? {name: txt(groupBy.getChild('Alias')), disambiguatedName: undefined} : this.inferName(exprNode, scope)),
             sql: expr.sql,
             type: expr.type,
             metadata: expr.metadata,
@@ -1448,7 +1444,8 @@ class AnalysisSession implements Analyzer {
   }
 
   private insertQueryField(query: Query, field: Query['fields'][number], opts?: {prepend?: boolean}) {
-    opts?.prepend ? query.fields.unshift(field) : query.fields.push(field)
+    if (opts?.prepend) query.fields.unshift(field)
+    else query.fields.push(field)
   }
 
   private renameInferredFields(fields: Query['fields'], taken: Set<string>, extraNames: string[] = []): boolean {
