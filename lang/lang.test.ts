@@ -231,7 +231,7 @@ describe('lang', () => {
   })
 
   it('expands dot-join syntax', () => {
-    expect('from orders select id, users.name').toRenderSql('select orders.id as id, users.name as users_name from orders as orders left join users as users on users.id=orders.user_id')
+    expect('from orders select id, users.name').toRenderSql('select orders.id as id, users.name as name from orders as orders left join users as users on users.id=orders.user_id')
   })
 
   it('handles column naming when mutliple columns have the same name', () => {
@@ -242,12 +242,56 @@ describe('lang', () => {
 
   it('supports ad-hoc query joins', () => {
     expect('from orders join users on users.id = orders.user_id select amount, users.name').toRenderSql(
-      'select orders.amount as amount, users.name as users_name from orders as orders inner join users as users on users.id=orders.user_id',
+      'select orders.amount as amount, users.name as name from orders as orders inner join users as users on users.id=orders.user_id',
     )
   })
 
+  it('uses leaf names for unambiguous columns when joining aliased ctes', () => {
+    let q = `
+      with dep as (
+        from orders
+        select user_id as code, avg(amount) as dep_delay
+      ),
+      arr as (
+        from payments
+        select user_id as code, avg(amount) as arr_delay
+      )
+      select d.code, d.dep_delay, a.arr_delay
+      from dep d inner join arr a on d.code = a.code
+    `
+    expect(q).toRenderSql(
+      'with dep as ( select orders.user_id as code, avg(orders.amount) as dep_delay from orders as orders group by 1 order by 2 desc nulls last ), arr as ( select payments.user_id as code, avg(payments.amount) as arr_delay from payments as payments group by 1 order by 2 desc nulls last ) select d.code as code, d.dep_delay as dep_delay, a.arr_delay as arr_delay from dep as d inner join arr as a on d.code=a.code',
+    )
+    let [query] = analyze(q)
+    expect(query.fields.map(field => field.name)).toEqual(['code', 'dep_delay', 'arr_delay'])
+  })
+
+  it('falls back to qualified names when inferred join columns collide', () => {
+    let q = `
+      with dep as (
+        from orders
+        select user_id as code, avg(amount) as dep_delay
+      ),
+      arr as (
+        from payments
+        select user_id as code, avg(amount) as arr_delay
+      )
+      select d.code, a.code
+      from dep d inner join arr a on d.code = a.code
+    `
+    expect(q).toRenderSql(
+      'with dep as ( select orders.user_id as code, avg(orders.amount) as dep_delay from orders as orders group by 1 order by 2 desc nulls last ), arr as ( select payments.user_id as code, avg(payments.amount) as arr_delay from payments as payments group by 1 order by 2 desc nulls last ) select d.code as d_code, a.code as a_code from dep as d inner join arr as a on d.code=a.code',
+    )
+    let [query] = analyze(q)
+    expect(query.fields.map(field => field.name)).toEqual(['d_code', 'a_code'])
+  })
+
+  it('reports diagnostics for duplicate final output names', () => {
+    expect('from orders join users on users.id = orders.user_id select amount as value, users.name as value').toHaveDiagnostic(/Duplicate output column name "value"/i)
+  })
+
   it('supports cross join without an ON clause', () => {
-    expect('from orders cross join users select amount, users.name').toRenderSql('select orders.amount as amount, users.name as users_name from orders as orders cross join users as users')
+    expect('from orders cross join users select amount, users.name').toRenderSql('select orders.amount as amount, users.name as name from orders as orders cross join users as users')
   })
 
   it('rejects cross join with an ON clause', () => {
@@ -326,11 +370,11 @@ describe('lang', () => {
     updateFile('table user_totals as (from orders select user_id, sum(amount) as total)', 'user_totals.gsql')
 
     expect('from users join user_totals on user_totals.user_id = users.id select name, user_totals.total').toRenderSql(
-      'with user_totals as ( select orders.user_id as user_id, sum(orders.amount) as total from orders as orders group by 1 order by 2 desc nulls last ) select users.name as name, user_totals.total as user_totals_total from users as users inner join user_totals as user_totals on user_totals.user_id=users.id',
+      'with user_totals as ( select orders.user_id as user_id, sum(orders.amount) as total from orders as orders group by 1 order by 2 desc nulls last ) select users.name as name, user_totals.total as total from users as users inner join user_totals as user_totals on user_totals.user_id=users.id',
     )
 
     expect('with active_users as (from users select id, name) from orders join active_users on active_users.id = orders.user_id select active_users.name').toRenderSql(
-      'with active_users as ( select users.id as id, users.name as name from users as users ) select active_users.name as active_users_name from orders as orders inner join active_users as active_users on active_users.id=orders.user_id',
+      'with active_users as ( select users.id as id, users.name as name from users as users ) select active_users.name as name from orders as orders inner join active_users as active_users on active_users.id=orders.user_id',
     )
   })
 
@@ -558,7 +602,7 @@ describe('lang', () => {
     )
 
     expect('from order_items select id, users.name').toRenderSql(
-      'select order_items.id as id, users.name as users_name from order_items as order_items left join users as users on users.id=order_items.user_id',
+      'select order_items.id as id, users.name as name from order_items as order_items left join users as users on users.id=order_items.user_id',
     )
   })
 
@@ -610,7 +654,7 @@ describe('lang', () => {
     )
 
     expect('from users select name, order_stats.total_spent order by name').toRenderSql(
-      'with order_stats as ( select orders.user_id as user_id, sum(orders.amount) as total_spent from orders as orders group by 1 order by 2 desc nulls last ) select users.name as name, order_stats.total_spent as order_stats_total_spent from users as users left join order_stats as order_stats on order_stats.user_id=users.id order by 1 asc nulls last',
+      'with order_stats as ( select orders.user_id as user_id, sum(orders.amount) as total_spent from orders as orders group by 1 order by 2 desc nulls last ) select users.name as name, order_stats.total_spent as total_spent from users as users left join order_stats as order_stats on order_stats.user_id=users.id order by 1 asc nulls last',
     )
 
     await expect('from users select name, order_stats.total_spent order by name').toReturnRows(['Alice', 60], ['Bob', 40])
@@ -1278,7 +1322,7 @@ describe('lang', () => {
   })
 
   it('allows join expressions to refer to the alias', () => {
-    expect('table t (oid int, join one users as usr on usr.id = oid); from t select usr.name').toRenderSql('select usr.name as usr_name from t as t left join users as usr on usr.id=t.oid')
+    expect('table t (oid int, join one users as usr on usr.id = oid); from t select usr.name').toRenderSql('select usr.name as name from t as t left join users as usr on usr.id=t.oid')
   })
 
   it('allows measures to refer to themselves', () => {
