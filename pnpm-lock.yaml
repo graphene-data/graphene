@@ -62,12 +62,6 @@ importers:
 
   cli:
     dependencies:
-      '@clickhouse/client':
-        specifier: ^1.18.2
-        version: 1.18.2
-      '@duckdb/node-api':
-        specifier: 1.3.2-alpha.26
-        version: 1.3.2-alpha.26
       '@fontsource/fira-code':
         specifier: ^5.2.7
         version: 5.2.7
@@ -77,9 +71,6 @@ importers:
       '@fontsource/source-serif-4':
         specifier: ^5.2.9
         version: 5.2.9
-      '@google-cloud/bigquery':
-        specifier: ^8.2.0
-        version: 8.2.0
       '@graphenedata/html2canvas':
         specifier: ^1.4.1
         version: 1.4.1
@@ -149,9 +140,6 @@ importers:
       sanitize-html:
         specifier: ^2.17.0
         version: 2.17.1
-      snowflake-sdk:
-        specifier: 2.4.0
-        version: 2.4.0(asn1.js@5.4.1)
       ssf:
         specifier: ^0.11.2
         version: 0.11.2
@@ -171,6 +159,15 @@ importers:
         specifier: ^8.18.0
         version: 8.19.0
     devDependencies:
+      '@clickhouse/client':
+        specifier: ^1.18.2
+        version: 1.18.2
+      '@duckdb/node-api':
+        specifier: 1.3.2-alpha.26
+        version: 1.3.2-alpha.26
+      '@google-cloud/bigquery':
+        specifier: ^8.2.0
+        version: 8.2.0
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
@@ -186,6 +183,9 @@ importers:
       esbuild:
         specifier: ^0.27.2
         version: 0.27.3
+      snowflake-sdk:
+        specifier: 2.4.0
+        version: 2.4.0(asn1.js@5.4.1)
       vitest:
         specifier: 4.0.18
         version: 4.0.18(@types/node@20.19.37)
