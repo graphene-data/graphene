@@ -261,6 +261,7 @@
 <style>
   nav {
     border-right: 1px solid #e5e7eb;
+    background: #ffffff;
   }
 
   ul {

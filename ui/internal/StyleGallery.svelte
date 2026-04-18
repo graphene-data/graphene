@@ -219,11 +219,7 @@
     margin: 0 auto;
   }
 
-  .style-demo-title {
-    margin-top: 0;
-  }
-
-  .sample-panel {
+.sample-panel {
     margin-bottom: 1.25rem;
   }
 

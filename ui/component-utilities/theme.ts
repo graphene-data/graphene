@@ -67,6 +67,7 @@ registerTheme('graphene-theme', {
   },
   title: {
     left: 'left',
+    padding: 0,
     textStyle: {color: clr.textDark, fontSize: 15},
   },
   categoryAxis: {

@@ -50,7 +50,7 @@
   }
   .g-error__details {
     margin: 12px 0 0;
-    font-family: 'JetBrains Mono', var(--monospace-font-family);
+    font-family: var(--monospace-font-family);
     font-size: 0.875rem;
     line-height: 1.6;
     white-space: pre-wrap;

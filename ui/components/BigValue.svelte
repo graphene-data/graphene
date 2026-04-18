@@ -54,7 +54,7 @@
     font-size: 28px;
     letter-spacing: -0.02em;
     line-height: 1;
-    font-family: var(--prose-font-family);
+    font-family: var(--ui-font-family);
     font-optical-sizing: auto;
     font-weight: 600;
     color: #111;
