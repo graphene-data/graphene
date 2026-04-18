@@ -1136,7 +1136,7 @@ describe('lang', () => {
     expect(clickhouse.fields[0].metadata).toEqual({timeGrain: 'week'})
   })
 
-  it('propagates temporal grain through refs and drops it for reshaping expressions', () => {
+  it('propagates temporal grain through refs and replaces it with extraction metadata for reshaping expressions', () => {
     updateFile(
       `
       table events (
@@ -1154,7 +1154,7 @@ describe('lang', () => {
     expect(throughCast.fields[0].metadata).toEqual({timeGrain: 'month'})
 
     let [reshaped] = analyze('from events select extract(year from month_start) as year_num')
-    expect(reshaped.fields[0].metadata).toBeUndefined()
+    expect(reshaped.fields[0].metadata).toEqual({timePart: 'year'})
   })
 
   it('drops temporal grain on set operations when branches disagree', () => {
@@ -1173,28 +1173,63 @@ describe('lang', () => {
     expect('from users select extract(hour from created_at)').toRenderSql('select extract(hour from users.created_at) as col_0 from users as users')
   })
 
-  it('infers time ordinal metadata for extract and date_part', () => {
+  it('supports backend-native temporal extraction shorthands', () => {
+    updateFile('table events (event_date date, created_at timestamp)', 'events.gsql')
+
+    setConfig({root: ''})
+    expect('from events select hour(created_at), quarter(event_date)').toHaveNoErrors()
+
+    setConfig({dialect: 'snowflake', root: ''})
+    expect('from events select dayofmonth(event_date), weekofyear(event_date)').toHaveNoErrors()
+
+    setConfig({dialect: 'clickhouse', root: ''})
+    expect('from events select to_quarter(created_at), to_week(created_at), to_day_of_year(created_at)').toHaveNoErrors()
+
+    setConfig({root: ''})
+  })
+
+  it('infers time part and ordinal metadata for extract, date_part, and native shorthands', () => {
     updateFile('table events (event_date date, created_at timestamp)', 'events.gsql')
 
     setConfig({root: '', bigquery: {}})
     let [bigQuery] = analyze('from events select extract(dayofweek from event_date) as dow')
-    expect(bigQuery.fields[0].metadata).toEqual({timeOrdinal: 'dow_1s'})
+    expect(bigQuery.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_1s'})
 
     setConfig({root: ''})
     let [duckDbDow] = analyze("from events select date_part('dow', event_date) as dow")
-    expect(duckDbDow.fields[0].metadata).toEqual({timeOrdinal: 'dow_0s'})
+    expect(duckDbDow.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_0s'})
     let [duckDbIsoDow] = analyze('from events select extract(isodow from event_date) as iso_dow')
-    expect(duckDbIsoDow.fields[0].metadata).toEqual({timeOrdinal: 'dow_1m'})
+    expect(duckDbIsoDow.fields[0].metadata).toEqual({timePart: 'isodow', timeOrdinal: 'dow_1m'})
+    let [duckDbQuarter] = analyze('from events select quarter(event_date) as quarter_num')
+    expect(duckDbQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
 
     setConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze('from events select dayofweek(event_date) as dow')
-    expect(snowflake.fields[0].metadata).toEqual({timeOrdinal: 'dow_0s'})
+    expect(snowflake.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_0s'})
+    let [snowflakeQuarter] = analyze('from events select quarter(event_date) as quarter_num')
+    expect(snowflakeQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
 
     setConfig({dialect: 'clickhouse', root: ''})
     let [clickhouse] = analyze('from events select to_day_of_week(created_at) as dow')
-    expect(clickhouse.fields[0].metadata).toEqual({timeOrdinal: 'dow_1m'})
+    expect(clickhouse.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_1m'})
+    let [clickhouseHour] = analyze('from events select to_hour(created_at) as hour_num')
+    expect(clickhouseHour.fields[0].metadata).toEqual({timePart: 'hour', timeOrdinal: 'hour_of_day'})
+    let [clickhouseQuarter] = analyze('from events select to_quarter(created_at) as quarter_num')
+    expect(clickhouseQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
 
     setConfig({root: ''})
+  })
+
+  it('drops extraction metadata on set operations when branches disagree', () => {
+    updateFile('table events (event_date date, created_at timestamp)', 'events.gsql')
+
+    let [query] = analyze(`
+      from events select extract(hour from created_at) as bucket
+      union all
+      from events select extract(month from created_at) as bucket
+    `)
+
+    expect(query.fields[0].metadata).toBeUndefined()
   })
 
   it('supports null and boolean literals', () => {

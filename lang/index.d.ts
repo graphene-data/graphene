@@ -23,6 +23,7 @@ export type FieldMeta = {
   pct?: true // 0 to 100 value
   units?: string
   timeGrain?: TimeGrain // resolution when the field is a date or timestamp
+  timePart?: string // extracted temporal part, normalized across backend spellings
   timeOrdinal?: TimeOrdinal // if the value represents something special like day_of_week, week_of_year, etc
   [key: string]: string | true | undefined
 }
