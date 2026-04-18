@@ -1,10 +1,32 @@
 import type {FieldMeta, TimeGrain, TimeOrdinal} from './types.ts'
 
-export function inferTemporalGrain(rawPart?: string): TimeGrain | undefined {
-  let normalized = String(rawPart || '')
+function normalizeTemporalPart(rawPart?: string) {
+  return String(rawPart || '')
     .trim()
     .replace(/^['"]|['"]$/g, '')
     .toLowerCase()
+}
+
+export function inferTemporalPart(rawPart?: string): string | undefined {
+  let normalized = normalizeTemporalPart(rawPart)
+  if (!normalized) return
+
+  if (/^week(?:\([a-z]+\))?$/.test(normalized)) return 'week'
+
+  let parts: Record<string, string> = {
+    dow: 'dayofweek',
+    weekday: 'dayofweek',
+    dayofmonth: 'day',
+    doy: 'dayofyear',
+    weekofyear: 'week',
+    dayofweekiso: 'isodow',
+    iso_dayofweek: 'isodow',
+  }
+  return parts[normalized] || normalized
+}
+
+export function inferTemporalGrain(rawPart?: string): TimeGrain | undefined {
+  let normalized = normalizeTemporalPart(rawPart)
   if (!normalized) return
 
   if (/^week(?:\([a-z]+\))?$/.test(normalized) || normalized == 'isoweek') return 'week'
@@ -27,11 +49,13 @@ export function inferTemporalGrainMetadata(rawPart?: string): FieldMeta | undefi
   return timeGrain ? {timeGrain} : undefined
 }
 
+export function inferTemporalPartMetadata(rawPart?: string): FieldMeta | undefined {
+  let timePart = inferTemporalPart(rawPart)
+  return timePart ? {timePart} : undefined
+}
+
 export function inferTemporalOrdinal(rawPart: string | undefined, dialect: string): TimeOrdinal | undefined {
-  let normalized = String(rawPart || '')
-    .trim()
-    .replace(/^['"]|['"]$/g, '')
-    .toLowerCase()
+  let normalized = normalizeTemporalPart(rawPart)
   if (!normalized) return
 
   if (normalized == 'hour') return 'hour_of_day'
@@ -39,6 +63,7 @@ export function inferTemporalOrdinal(rawPart: string | undefined, dialect: strin
   if (normalized == 'dayofyear' || normalized == 'doy') return 'day_of_year'
   if (normalized == 'week' || normalized == 'weekofyear' || normalized == 'isoweek') return 'week_of_year'
   if (normalized == 'month') return 'month_of_year'
+  if (normalized == 'quarter') return 'quarter_of_year'
 
   if (normalized == 'isodow' || normalized == 'dayofweekiso' || normalized == 'iso_dayofweek') return 'dow_1m'
 
@@ -52,4 +77,14 @@ export function inferTemporalOrdinal(rawPart: string | undefined, dialect: strin
 export function inferTemporalOrdinalMetadata(rawPart: string | undefined, dialect: string): FieldMeta | undefined {
   let timeOrdinal = inferTemporalOrdinal(rawPart, dialect)
   return timeOrdinal ? {timeOrdinal} : undefined
+}
+
+export function inferTemporalExtractionMetadata(rawPart: string | undefined, dialect: string): FieldMeta | undefined {
+  let timePart = inferTemporalPart(rawPart)
+  let timeOrdinal = inferTemporalOrdinal(rawPart, dialect)
+  if (!timePart && !timeOrdinal) return
+  return {
+    ...(timePart ? {timePart} : {}),
+    ...(timeOrdinal ? {timeOrdinal} : {}),
+  }
 }

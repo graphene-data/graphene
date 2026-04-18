@@ -21,7 +21,7 @@ import {parseMarkdown} from './markdown.ts'
 import {extractLeadingMetadata} from './metadata.ts'
 import {parser} from './parser.js'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval} from './temporal.ts'
-import {inferTemporalOrdinal} from './temporalMetadata.ts'
+import {inferTemporalExtractionMetadata} from './temporalMetadata.ts'
 import {
   scalarType,
   type AnalysisConfig,
@@ -1022,11 +1022,10 @@ class AnalysisSession implements Analyzer {
         let unit = txt(node.getChild('ExtractUnit')!)
           .replace(/^['"]|['"]$/g, '')
           .toLowerCase()
-        let timeOrdinal = inferTemporalOrdinal(unit, this.config.dialect)
         return {
           sql: `EXTRACT(${unit} FROM ${expr.sql})`,
           type: scalarType('number'),
-          metadata: timeOrdinal ? {timeOrdinal} : undefined,
+          metadata: inferTemporalExtractionMetadata(unit, this.config.dialect),
           isAgg: expr.isAgg,
           fanout: expr.fanout,
         }
@@ -1133,18 +1132,18 @@ class AnalysisSession implements Analyzer {
   private preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType): FieldMeta | undefined {
     if (!expr.metadata?.timeGrain) return undefined
     if (!isScalarType(resultType, 'date') && !isScalarType(resultType, 'timestamp')) return undefined
-    return expr.metadata
+    return {timeGrain: expr.metadata.timeGrain}
   }
 
   private sameFieldMetadata(left?: FieldMeta, right?: FieldMeta) {
     if (!left && !right) return true
     if (!left || !right) return false
-    return left.timeGrain == right.timeGrain
+    return left.timeGrain == right.timeGrain && left.timePart == right.timePart && left.timeOrdinal == right.timeOrdinal
   }
 
   private withoutTimeGrain(metadata?: FieldMeta): FieldMeta | undefined {
-    if (!metadata?.timeGrain) return metadata
-    let {timeGrain: _timeGrain, ...next} = metadata
+    if (!metadata?.timeGrain && !metadata?.timePart && !metadata?.timeOrdinal) return metadata
+    let {timeGrain: _timeGrain, timePart: _timePart, timeOrdinal: _timeOrdinal, ...next} = metadata
     return Object.keys(next).length ? next : undefined
   }
 

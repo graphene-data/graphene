@@ -1,6 +1,6 @@
 import type {FunctionDef} from './functionTypes.ts'
 
-import {inferTemporalGrainMetadata} from './temporalMetadata.ts'
+import {inferTemporalExtractionMetadata, inferTemporalGrainMetadata} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const trim = trimIndentation
@@ -856,9 +856,23 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#todayofmonth`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: {timeOrdinal: 'day_of_month'},
+    metadata: inferTemporalExtractionMetadata('day', 'clickhouse'),
     sqlName: 'toDayOfMonth',
     aliases: ['to_day_of_month'],
+  },
+  {
+    name: 'todayofyear',
+    description: trim(`
+      toDayOfYear(datetime)
+
+      Extracts the day of the year.
+    `),
+    url: `${click}/functions/date-time-functions#todayofyear`,
+    args: [{name: 'datetime', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('dayofyear', 'clickhouse'),
+    sqlName: 'toDayOfYear',
+    aliases: ['to_day_of_year'],
   },
   {
     name: 'todayofweek',
@@ -870,7 +884,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#todayofweek`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: {timeOrdinal: 'dow_1m'},
+    metadata: inferTemporalExtractionMetadata('dayofweek', 'clickhouse'),
     sqlName: 'toDayOfWeek',
     aliases: ['to_day_of_week'],
   },
@@ -884,7 +898,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tohour`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: {timeOrdinal: 'hour_of_day'},
+    metadata: inferTemporalExtractionMetadata('hour', 'clickhouse'),
     sqlName: 'toHour',
     aliases: ['to_hour'],
   },
@@ -898,6 +912,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tominute`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
+    metadata: inferTemporalExtractionMetadata('minute', 'clickhouse'),
     sqlName: 'toMinute',
     aliases: ['to_minute'],
   },
@@ -911,9 +926,23 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tomonth`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: {timeOrdinal: 'month_of_year'},
+    metadata: inferTemporalExtractionMetadata('month', 'clickhouse'),
     sqlName: 'toMonth',
     aliases: ['to_month'],
+  },
+  {
+    name: 'toquarter',
+    description: trim(`
+      toQuarter(datetime)
+
+      Extracts the quarter.
+    `),
+    url: `${click}/functions/date-time-functions#toquarter`,
+    args: [{name: 'datetime', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('quarter', 'clickhouse'),
+    sqlName: 'toQuarter',
+    aliases: ['to_quarter'],
   },
   {
     name: 'tosecond',
@@ -925,8 +954,23 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#tosecond`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
+    metadata: inferTemporalExtractionMetadata('second', 'clickhouse'),
     sqlName: 'toSecond',
     aliases: ['to_second'],
+  },
+  {
+    name: 'toweek',
+    description: trim(`
+      toWeek(datetime)
+
+      Extracts the week number.
+    `),
+    url: `${click}/functions/date-time-functions#toweek`,
+    args: [{name: 'datetime', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('week', 'clickhouse'),
+    sqlName: 'toWeek',
+    aliases: ['to_week'],
   },
   {
     name: 'tostartofday',
@@ -1008,6 +1052,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     url: `${click}/functions/date-time-functions#toyear`,
     args: [{name: 'datetime', type: ['date', 'timestamp']}],
     returns: 'number',
+    metadata: inferTemporalExtractionMetadata('year', 'clickhouse'),
     sqlName: 'toYear',
     aliases: ['to_year'],
   },
