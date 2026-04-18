@@ -6,7 +6,7 @@
 
 import type {FunctionDef} from './functionTypes.ts'
 
-import {inferTemporalGrainMetadata, inferTemporalOrdinalMetadata} from './temporalMetadata.ts'
+import {inferTemporalExtractionMetadata, inferTemporalGrainMetadata} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const duck = 'https://duckdb.org/docs/stable/sql/functions'
@@ -1792,7 +1792,187 @@ export const duckDbFunctions: FunctionDef[] = [
       {name: 'date', type: ['date', 'timestamp']},
     ],
     returns: 'number',
-    metadata: args => inferTemporalOrdinalMetadata(args[0]?.sql, 'duckdb'),
+    metadata: args => inferTemporalExtractionMetadata(args[0]?.sql, 'duckdb'),
+  },
+  {
+    name: 'year',
+    description: trim(`
+      year(date)
+
+      Extracts the year.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('year', 'duckdb'),
+  },
+  {
+    name: 'quarter',
+    description: trim(`
+      quarter(date)
+
+      Extracts the quarter.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('quarter', 'duckdb'),
+  },
+  {
+    name: 'month',
+    description: trim(`
+      month(date)
+
+      Extracts the month.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('month', 'duckdb'),
+  },
+  {
+    name: 'week',
+    description: trim(`
+      week(date)
+
+      Extracts the week number.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('week', 'duckdb'),
+  },
+  {
+    name: 'weekofyear',
+    description: trim(`
+      weekofyear(date)
+
+      Extracts the ISO week number.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('weekofyear', 'duckdb'),
+  },
+  {
+    name: 'day',
+    description: trim(`
+      day(date)
+
+      Extracts the day of month.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('day', 'duckdb'),
+  },
+  {
+    name: 'dayofmonth',
+    description: trim(`
+      dayofmonth(date)
+
+      Extracts the day of month.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('dayofmonth', 'duckdb'),
+  },
+  {
+    name: 'dayofweek',
+    description: trim(`
+      dayofweek(date)
+
+      Extracts the day of week.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('dayofweek', 'duckdb'),
+  },
+  {
+    name: 'weekday',
+    description: trim(`
+      weekday(date)
+
+      Extracts the day of week.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('weekday', 'duckdb'),
+  },
+  {
+    name: 'dayofyear',
+    description: trim(`
+      dayofyear(date)
+
+      Extracts the day of year.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('dayofyear', 'duckdb'),
+  },
+  {
+    name: 'hour',
+    description: trim(`
+      hour(date)
+
+      Extracts the hour.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('hour', 'duckdb'),
+  },
+  {
+    name: 'minute',
+    description: trim(`
+      minute(date)
+
+      Extracts the minute.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('minute', 'duckdb'),
+  },
+  {
+    name: 'second',
+    description: trim(`
+      second(date)
+
+      Extracts the second.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('second', 'duckdb'),
+  },
+  {
+    name: 'isodow',
+    description: trim(`
+      isodow(date)
+
+      Extracts the ISO day of week.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('isodow', 'duckdb'),
+  },
+  {
+    name: 'isoyear',
+    description: trim(`
+      isoyear(date)
+
+      Extracts the ISO year.
+    `),
+    url: `${duck}/datepart.html`,
+    args: [{name: 'date', type: ['date', 'timestamp']}],
+    returns: 'number',
+    metadata: inferTemporalExtractionMetadata('isoyear', 'duckdb'),
   },
   {
     name: 'date_sub',
