@@ -2,15 +2,18 @@
   import {onMount} from 'svelte'
 
   let styleVars = [
-    '--prose-font-family',
-    '--ui-font-family',
-    '--monospace-font-family',
-    '--color-background',
-    '--color-heading',
-    '--color-content',
+    '--font-prose',
+    '--font-sans',
+    '--font-ui',
+    '--font-mono',
+    '--color-bg',
+    '--color-primary-dark',
+    '--color-body',
     '--color-muted',
+    '--color-tertiary',
     '--color-border',
-    '--color-link',
+    '--color-border-dark',
+    '--color-code-bg',
   ]
 
   let styleRows = $state([] as Array<{name: string, value: string}>)

@@ -38,6 +38,7 @@
   }
 
   .big-value__title {
+    font-family: var(--font-ui);
     font-size: 11px;
     font-weight: 600;
     color: #aaa;
@@ -54,7 +55,7 @@
     font-size: 28px;
     letter-spacing: -0.02em;
     line-height: 1;
-    font-family: var(--ui-font-family);
+    font-family: var(--font-ui);
     font-optical-sizing: auto;
     font-weight: 600;
     color: #111;
