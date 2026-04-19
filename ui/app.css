@@ -10,22 +10,25 @@
 @import '@fontsource/jetbrains-mono/400.css';
 
 :root {
-  --prose-font-family: 'Source Serif 4', Georgia, 'Times New Roman', serif;
-  --heading-font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --ui-font-family: 'Source Sans 3', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --monospace-font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-prose: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-ui: 'Source Sans 3', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --color-background: #FAFAF9;
-  --color-heading: #0C0A09;
-  --color-content: #3A3532;
+  --color-bg: #FAFAF9;
+  --color-primary-dark: #0C0A09;
+  --color-body: #57534E;
   --color-muted: #A8A29E;
   --color-tertiary: #7A726A;
   --color-border: #E7E5E4;
   --color-border-dark: #DFDDD8;
   --color-code-bg: #F1F0ED;
-  --color-link: #57534E;
+  --color-code-text: #4A4541;
 }
 
+/* ============================================================
+   Base
+   ============================================================ */
 html {
   scroll-behavior: smooth;
 }
@@ -34,17 +37,28 @@ body {
   display: flex;
   margin: 0;
   min-height: 100vh;
-  font-family: var(--ui-font-family);
+  font-family: var(--font-ui);
   font-synthesis: none;
   font-size: 18px;
   line-height: 1.6;
-  color: var(--color-content);
-  background-color: var(--color-background);
+  color: var(--color-body);
+  background-color: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
+*,
+*::before,
+*::after,
+::backdrop,
+::file-selector-button {
+  border-color: var(--color-border);
+}
+
+/* ============================================================
+   Layout (app chrome)
+   ============================================================ */
 nav {
   width: 200px;
   flex-shrink: 0;
@@ -56,82 +70,32 @@ main {
   padding: 20px 48px 80px;
 }
 
-*,
-*::before,
-*::after,
-::backdrop,
-::file-selector-button {
-  border-color: var(--color-border);
+/* ============================================================
+   Typography
+   ============================================================ */
+
+/* Headings — shared family/weight/color/spacing; individual rules set size + margins. */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color-primary-dark);
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.2;
+  margin-bottom: 0.75rem;
+  scroll-margin-top: 3.5rem;
+  break-inside: avoid;
+}
+h1 { font-size: 1.75rem; margin-top: 3rem; }
+h2 { font-size: 1.375rem; margin-top: 2.75rem; }
+h3, h4, h5, h6 {
+  font-size: 1.125rem;
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
 }
 
-/* OSX-style scrollbars */
-.pretty-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
-}
-.pretty-scrollbar::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
-}
-.pretty-scrollbar::-webkit-scrollbar-track {
-  background-color: transparent;
-}
-.pretty-scrollbar::-webkit-scrollbar-thumb {
-  background-color: transparent;
-  border-radius: 7px;
-}
-.pretty-scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: #e5e7eb;
-}
-
-/* Hidden scrollbar */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.chart {
-  margin: 1rem 0 2rem;
-}
-
-/* Remove UA styles for select */
-button,
-input,
-optgroup,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
-
-select {
-  appearance: none;
-  -moz-appearance: none;
-  -webkit-appearance: none;
-}
-
-img {
-  display: block;
-  margin-left: auto;
-  margin-right: auto;
-  height: auto;
-  max-width: 100%;
-  border-radius: 0.5rem;
-}
-
-a {
-  color: var(--color-content);
-  text-decoration: underline;
-  text-underline-offset: 6px;
-}
-a:hover {
-  color: var(--color-heading);
-  transition: color 0.15s;
-}
-
+/* Block flow */
 p,
 ul,
 ol {
@@ -139,13 +103,7 @@ ol {
   margin-block-start: 0;
 }
 
-ol {
-  list-style: decimal;
-  padding-inline-start: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
+/* Lists */
 ul {
   list-style: disc;
   padding-inline-start: 1.5rem;
@@ -153,115 +111,95 @@ ul {
   flex-direction: column;
   gap: 0.5rem;
 }
-
+ol {
+  list-style: decimal;
+  padding-inline-start: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
 ul ul { list-style: circle; }
-ol ol { list-style: lower-alpha; }
 ul ul ul { list-style: square; }
+ol ol { list-style: lower-alpha; }
 ol ol ol { list-style: lower-roman; }
-
-ul ul,
-ul ol,
-ol ul,
-ol ol {
+ul ul, ul ol, ol ul, ol ol {
   margin-top: 0.5rem;
   margin-block-end: 0;
 }
-
 li {
   list-style: inherit;
   text-align: -webkit-match-parent;
 }
+li::marker { color: var(--color-primary-dark); }
 
-li::marker {
-  color: var(--color-heading);
+/* Links */
+a {
+  color: var(--color-body);
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  transition: color 0.15s;
+}
+a:hover { color: var(--color-primary-dark); }
+
+/* Inline formatting */
+strong { color: var(--color-primary-dark); font-weight: 600; }
+del { color: var(--color-muted); }
+
+/* Code */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  background: var(--color-code-bg);
+  border-radius: 4px;
+  padding: 0.15em 0.4em;
+}
+form code { font-size: unset; }
+
+pre {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-border-dark);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.05);
+  padding: 1.25rem 1.75rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  font-size: 0.75rem;
+}
+pre code {
+  background: none;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--color-code-text);
+  white-space: pre-wrap;
 }
 
-/* Headings */
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  scroll-margin-top: 3.5rem;
-  break-inside: avoid;
-  color: var(--color-heading);
-  font-optical-sizing: auto;
-  font-style: normal;
+/* Blockquote */
+blockquote {
+  border-left: 3px solid var(--color-border-dark);
+  padding-left: 1.25rem;
+  margin-bottom: 1.5rem;
+  color: var(--color-tertiary);
 }
+blockquote > :first-child { margin-top: 0; }
+blockquote > :last-child { margin-bottom: 0; }
 
-h1 {
-  margin-top: 2.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 1.75rem;
-  line-height: 1.2;
-  letter-spacing: -0.5px;
-  font-weight: 700;
-  font-family: var(--heading-font-family);
-}
-
-h2 {
-  margin-top: 2.5rem;
-  margin-bottom: 0.75rem;
-  font-size: 1.375rem;
-  line-height: 1.2;
-  letter-spacing: -0.25px;
-  font-weight: 700;
-  font-family: var(--heading-font-family);
-}
-
-h3,
-h4,
-h5,
-h6 {
-  margin-top: 2rem;
-  margin-bottom: 0.5rem;
-  font-size: 1.125rem;
-  line-height: 1.3;
-  letter-spacing: -0.1px;
-  font-weight: 700;
-  font-family: var(--heading-font-family);
-}
-
+/* Horizontal rule */
 hr {
   border: none;
   border-top: 1px solid var(--color-border);
   margin: 2.5rem 0;
 }
 
-code {
-  font-family: var(--monospace-font-family);
-  font-size: 0.875em;
-  background: var(--color-code-bg);
-  border-radius: 4px;
-  padding: 0.15em 0.4em;
-}
-
-form code {
-  font-size: unset;
-}
-
-blockquote {
-  border-left: 3px solid var(--color-border-dark);
-  padding-left: 1.25rem;
-  margin-bottom: 1.25rem;
-  color: var(--color-tertiary);
-}
-blockquote > :first-child { margin-top: 0; }
-blockquote > :last-child { margin-bottom: 0; }
-
-strong { color: var(--color-heading); font-weight: 600; font-size: 1em; }
-em { font-size: 1em; }
-del { color: var(--color-muted); font-size: 1em; }
-
+/* Tables */
 table {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: 1.5rem;
+  font-family: var(--font-ui);
   font-size: 0.9375rem;
 }
 th {
-  color: var(--color-heading);
+  color: var(--color-primary-dark);
   font-weight: 600;
   text-align: left;
   padding: 0.625rem 1rem;
@@ -272,25 +210,67 @@ td {
   border-bottom: 1px solid var(--color-border);
 }
 
+/* ============================================================
+   Form resets
+   ============================================================ */
+button,
+input,
+optgroup,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+select {
+  appearance: none;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+}
+
+/* ============================================================
+   Utilities
+   ============================================================ */
+
+/* OSX-style scrollbars */
+.pretty-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+.pretty-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+.pretty-scrollbar::-webkit-scrollbar-track { background-color: transparent; }
+.pretty-scrollbar::-webkit-scrollbar-thumb { background-color: transparent; border-radius: 7px; }
+.pretty-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #e5e7eb; }
+
+/* Hidden scrollbar */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.chart { margin: 1rem 0 2rem; }
+
+/* ============================================================
+   Prose container (rendered markdown)
+   ============================================================ */
 .pageContent {
   max-width: 720px;
-}
-
-
-/* Viz/UI components render as direct div children — default bottom margin for dashboard flow */
-.pageContent > div {
-  margin-bottom: 1.5rem;
-}
-
-/* Extra breathing room when prose follows a viz */
-.pageContent > div + :is(p, ul, ol, blockquote, hr, table, pre) {
-  margin-top: 1rem;
-}
-
-.pageContent p,
-.pageContent ul,
-.pageContent ol,
-.pageContent blockquote {
-  font-family: var(--prose-font-family);
+  font-family: var(--font-prose);
   letter-spacing: -0.01em;
 }
+
+/* Embedded images in rendered markdown */
+.pageContent img {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  height: auto;
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+
+/* Viz/UI components render as direct div children — default bottom margin for dashboard flow */
+.pageContent > div { margin-bottom: 1.5rem; }
+
+/* Extra breathing room when prose follows a viz */
+.pageContent > div + :is(p, ul, ol, blockquote, hr, table, pre) { margin-top: 1rem; }

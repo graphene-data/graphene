@@ -603,7 +603,7 @@
     background: #ffffff;
     color: #1f2937;
     font-size: 14px;
-    font-family: var(--ui-font-family);
+    font-family: var(--font-ui);
     font-synthesis: none;
     cursor: pointer;
     transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
@@ -680,7 +680,7 @@
     padding: 6px 10px;
     font-size: 13px;
     line-height: 16px;
-    font-family: var(--ui-font-family);
+    font-family: var(--font-ui);
     font-synthesis: none;
     background: #f9fafb;
     color: inherit;
@@ -708,7 +708,7 @@
     cursor: pointer;
     font-size: 14px;
     line-height: 18px;
-    font-family: var(--ui-font-family);
+    font-family: var(--font-ui);
     font-synthesis: none;
     transition: background 100ms ease, color 100ms ease;
     color: #1f2937;
@@ -775,7 +775,7 @@
     background: none;
     color: #2563eb;
     font-size: 13px;
-    font-family: var(--ui-font-family);
+    font-family: var(--font-ui);
     font-synthesis: none;
     cursor: pointer;
     padding: 4px 0;
