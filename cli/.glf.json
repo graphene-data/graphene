@@ -1,0 +1,4 @@
+{
+  "inputs": ["./package.json"],
+  "output": "./THIRD-PARTY-LICENSES.txt"
+}

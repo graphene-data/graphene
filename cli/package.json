@@ -23,6 +23,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && rm -f *.tgz && node ./esbuild.mjs",
+    "generate-license-file": "generate-license-file --overwrite",
     "test": "vitest run cli --root ..",
     "test-one": "node ../scripts/turboTest.js",
     "prepack": "pnpm run build"
