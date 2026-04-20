@@ -9,13 +9,15 @@
     data: string | QueryResult
     height?: number
     fields?: Record<string, string | string[]>
+    inline?: boolean
     children?: Snippet<[QueryResult]>
   }
 
-  let {data, height = 200, fields = {}, children}: Props = $props()
+  let {data, height = 200, fields = {}, inline = false, children}: Props = $props()
 
   let error: GrapheneError | null = $state(null)
   let loaded: QueryResult | null = $state(null)
+  let tooltipId = `query-error-${Math.random().toString(36).slice(2)}`
 
   let handleResults = (result: QueryResult) => {
     error = result?.error || null
@@ -24,6 +26,7 @@
 
   onMount(() => {
     if (typeof data !== 'string') {
+      error = data.error || null
       loaded = {rows: data.rows ?? [], fields: data.fields ?? [], error: data.error, sql: data.sql}
     } else {
       let usedFields = Object.fromEntries(Object.entries(fields).filter(e => !!e[1]))
@@ -37,9 +40,18 @@
 </script>
 
 {#if error}
-  <div style="min-height:{height}px;width:100%;display:grid;align-content:center;padding:8px;box-sizing:border-box">
-    <ErrorDisplay {error} />
-  </div>
+  {#if inline}
+    <span class="inline-error">
+      <button class="inline-error__icon" type="button" aria-label="Query failed" aria-describedby={tooltipId}>!</button>
+      <span class="inline-error__tooltip" id={tooltipId} role="tooltip">
+        <ErrorDisplay {error} />
+      </span>
+    </span>
+  {:else}
+    <div style="min-height:{height}px;width:100%;display:grid;align-content:center;padding:8px;box-sizing:border-box">
+      <ErrorDisplay {error} />
+    </div>
+  {/if}
 {:else if !loaded}
   <Skeleton />
 {:else if loaded.rows.length == 0}
@@ -59,5 +71,46 @@
     color: rgba(75, 85, 99, 0.9);
     text-align: center;
     background: rgba(243, 244, 246, 0.6);
+  }
+
+  .inline-error {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+  }
+
+  .inline-error__icon {
+    width: 1.05em;
+    height: 1.05em;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--graphene-error-border, #ef4444);
+    border-radius: 999px;
+    background: var(--graphene-error-background, #fef2f2);
+    color: var(--graphene-error-content-strong, #b91c1c);
+    cursor: help;
+    font: inherit;
+    font-size: 0.75em;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .inline-error__tooltip {
+    display: none;
+    position: absolute;
+    z-index: 1000;
+    top: calc(100% + 8px);
+    left: 0;
+    width: min(420px, 80vw);
+    text-align: left;
+    filter: drop-shadow(0 8px 18px rgba(15, 23, 42, 0.18));
+  }
+
+  .inline-error:hover .inline-error__tooltip,
+  .inline-error:focus-within .inline-error__tooltip {
+    display: block;
   }
 </style>
