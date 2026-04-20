@@ -37,6 +37,7 @@
 
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
   let Page = $state<any>(null)
+  let pageMeta = $state<any>({})
 
   onMount(async () => {
     let pathName = window.location.pathname.replace(/^\//, '') || 'index'
@@ -56,17 +57,21 @@
     } else if (pathName !== '__ct') {
       let mod = await import(/* @vite-ignore */ '/' + pathName + '.md')
       Page = mod.default
+      pageMeta = mod.metadata || {}
       compileError = null
     }
   })
 </script>
 
 <NavSidebar files={navData} />
-<main id="content" class={{pageContent: !!Page}}>
+<main id="content" class={{pageContent: !!Page, dashboardLayout: pageMeta.layout == 'dashboard'}}>
   {#if compileError}
     <h1 class="page-error-heading">Error loading page</h1>
     <ErrorDisplay error={compileError} />
   {:else if Page}
+    {#if pageMeta.title}
+      <h1>{pageMeta.title}</h1>
+    {/if}
     <Page />
   {/if}
 </main>

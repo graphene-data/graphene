@@ -1,4 +1,6 @@
-# All Tables
+---
+title: All Tables
+---
 
 ## Contacts
 

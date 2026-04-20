@@ -1,5 +1,6 @@
 ---
 title: Product Explorer
+layout: dashboard
 ---
 
 Select filters to explore product performance by category, brand, and time.

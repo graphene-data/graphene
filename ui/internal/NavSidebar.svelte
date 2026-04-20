@@ -1,7 +1,6 @@
 <script>
   import {SvelteSet, SvelteMap} from 'svelte/reactivity'
 
-  /** @type {string} */
   let {currentFile = '', files = [], onNavigate = undefined, baseRoute = ''} = $props()
 
   let tree = $state([])
@@ -11,25 +10,33 @@
   let treeSignature = $state('')
   let lastCurrent = $state('')
 
-  let normalizedFiles = $derived((files || [])
-    .map((file) => file.replace(/^\.\//, '').replace(/\\/g, '/')))
-
+  let navFiles = $derived((files || []).map(normalizeNavFile))
+  let normalizedFiles = $derived(navFiles.map((file) => file.path))
+  let titlesByPath = $derived(Object.fromEntries(navFiles.filter(file => !!file.title).map(file => [file.path, file.title])))
 
   let normalizedCurrent = $derived(deriveCurrentFile(currentFile, normalizedFiles, baseRoute))
   let currentRoute = $derived(normalizedCurrent ? pathToRoute(normalizedCurrent) : '/')
 
   function deriveCurrentFile(_currentFile, _normalizedFiles, _baseRoute) {
-    let fromProp = normalizeFilePath(currentFile)
+    let fromProp = normalizeFilePath(_currentFile)
     let route = getLocationRoute()
-    if (route && normalizedFiles) {
-      let match = normalizedFiles.find((file) => pathToRoute(file) === route)
+    if (route && _normalizedFiles) {
+      let match = _normalizedFiles.find((file) => pathToRoute(file) === route)
       if (match) return match
     }
     return fromProp
   }
 
+  function normalizeNavFile(file) {
+    if (!file || typeof file.path !== 'string') throw new Error('NavSidebar files must be {path, title?} objects')
+    return {
+      path: normalizeFilePath(file.path),
+      title: typeof file.title === 'string' && file.title ? file.title : undefined,
+    }
+  }
+
   function normalizeFilePath(filePath) {
-    return (filePath || '').replace(/^\.\//, '').replace(/\\/g, '/')
+    return (filePath || '').replace(/^\.\//, '').replace(/\\/g, '/').replace(/^\/+/, '')
   }
 
   function getLocationRoute() {
@@ -40,10 +47,10 @@
   }
 
   $effect(() => {
-    let nextSignature = normalizedFiles.join('|')
+    let nextSignature = navFiles.map(file => `${file.path}:${file.title || ''}`).join('|')
     if (nextSignature !== treeSignature) {
       treeSignature = nextSignature
-      tree = buildTree(normalizedFiles)
+      tree = buildTree(normalizedFiles, titlesByPath)
       flatNodes = flattenTree(tree)
       openFolders = createDefaultOpenFolders(tree, normalizedCurrent)
     }
@@ -79,7 +86,7 @@
     return node.ancestors.every((path) => isOpen(path, openSet))
   }
 
-  function buildTree(paths) {
+  function buildTree(paths, titleLookup = {}) {
     let root = []
     let folderMap = new SvelteMap()
 
@@ -113,7 +120,10 @@
 
       if (fileName.toLowerCase() === 'index.md' && parentPath) {
         let folderNode = folderMap.get(parentPath)
-        if (folderNode) folderNode.route = pathToRoute(fullPath)
+        if (folderNode) {
+          folderNode.route = pathToRoute(fullPath)
+          if (titleLookup[fullPath]) folderNode.label = titleLookup[fullPath]
+        }
         continue
       }
 
@@ -122,7 +132,7 @@
       parentChildren.push({
         type: 'file',
         name: fileName,
-        label: formatLabel(fileName, 'file'),
+        label: formatLabel(fileName, 'file', titleLookup[fullPath]),
         path: fullPath,
         route: pathToRoute(fullPath),
       })
@@ -181,7 +191,8 @@
     return next
   }
 
-  function formatLabel(value, type) {
+  function formatLabel(value, type, explicitTitle = undefined) {
+    if (explicitTitle) return explicitTitle
     let cleaned = type === 'file' ? value.replace(/\.md$/, '') : value
     if (cleaned.toLowerCase() === 'index') return 'Home'
     return cleaned

@@ -1,6 +1,7 @@
 import type {Plugin} from 'unified'
 
 import fs from 'fs'
+import yaml from 'js-yaml'
 import JSON5 from 'json5'
 import path from 'path'
 import sanitizeHtml from 'sanitize-html'
@@ -129,6 +130,17 @@ export function componentNames() {
   let files = fs.readdirSync(path.join(import.meta.dirname, '../ui/components'))
   cachedComponentNames = files.map(f => path.basename(f, '.svelte')).filter(f => !f.startsWith('_'))
   return cachedComponentNames || []
+}
+
+export type PageFrontmatter = {title?: string}
+
+// Parse YAML frontmatter from the --- delimited block at the top of a markdown file.
+const frontmatterRe = /^---\s*\n([\s\S]*?)\n---(?:\n|$)/
+export function extractFrontmatter(contents: string): PageFrontmatter {
+  let match = contents.trimStart().match(frontmatterRe)
+  if (!match) return {}
+  let raw = yaml.safeLoad(match[1]) as Record<string, any> | undefined
+  return {title: raw?.title ? String(raw.title) : undefined}
 }
 
 export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles, mergeAdjacentHtml]
