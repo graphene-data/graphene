@@ -67,7 +67,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd())
     dialect,
     root: cfg.root || defaultRoot,
     port: cfg.port || Number(process.env.GRAPHENE_PORT) || 4000,
-    ignoredFiles: cfg.ignoredFiles || ['agents.md', 'claude.md'],
+    ignoredFiles: cfg.ignoredFiles || ['**/agents.md', '**/claude.md'],
     envFile,
   } as Config
 }

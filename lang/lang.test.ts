@@ -190,6 +190,14 @@ describe('lang', () => {
     expect('from nyc_taxi select trip_id').toRenderSql('SELECT nyc_taxi.trip_id as trip_id FROM default.nyc_taxi as nyc_taxi')
   })
 
+  it('excludes agents.md from workspace by default', async () => {
+    let root = path.join(import.meta.dirname, '../examples/flights')
+    clearWorkspace()
+    setConfig({root})
+    await loadWorkspace(root, true)
+    expect(getFile('AGENTS.md')).toBeUndefined()
+  })
+
   it('ignores workspace files matched by ignoredFiles globs', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-workspace-ignore-'))
 
