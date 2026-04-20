@@ -1,7 +1,22 @@
 /// <reference types="vitest/globals" />
 import {compile} from 'mdsvex'
 
-import {remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+
+describe('extractFrontmatter', () => {
+  it('parses title', () => {
+    let fm = extractFrontmatter('---\ntitle: My Page\nlayout: dashboard\n---\n\n# Hello')
+    expect(fm).toEqual({title: 'My Page'})
+  })
+
+  it('returns empty object when no frontmatter', () => {
+    expect(extractFrontmatter('# Just a heading')).toEqual({})
+  })
+
+  it('handles leading whitespace', () => {
+    expect(extractFrontmatter('\n---\ntitle: Trimmed\n---')).toEqual({title: 'Trimmed'})
+  })
+})
 
 describe('markdown sanitization', () => {
   it('keeps wrapper components intact across blank lines', async () => {

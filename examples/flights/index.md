@@ -1,4 +1,7 @@
-# Flight Analytics Dashboard
+---
+title: Flight Analytics Dashboard
+layout: dashboard
+---
 
 A comprehensive dashboard showcasing flight data metrics from 2000-2005.
 

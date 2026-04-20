@@ -14,7 +14,7 @@ import type {CliTelemetry} from './telemetry/index.ts'
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
 import {runQuery} from './connections/index.ts'
-import {injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {runVitePlugin} from './run.ts'
 
@@ -232,7 +232,7 @@ function fixHmrForFailedModules() {
 // Also tracks all the md files in the workspace to populate the nav sidebar
 let workspaceLoadPromise: Promise<void> | undefined
 let workspaceFiles: WorkspaceFileInput[] = []
-let mdFiles: string[] = []
+let mdFiles: {path: string; title?: string}[] = []
 function updateWorkspacePlugin(telemetry?: CliTelemetry) {
   return {
     name: 'updateWorkspace',
@@ -241,30 +241,32 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
     },
     load(id: string) {
       if (id != '\0virtual:nav') return
-      let allFiles = [...mdFiles]
+
+      // in tests, inject mock files into the nav.
+      // we do this on `load` as each test doesn't always refresh the workspace
+      // TODO, we should prob inject these into `loadWorkspace`, then we wouldn't need this block at all
+      let res = [...mdFiles]
       if (process.env.NODE_ENV == 'test') {
-        for (let key of Object.keys(mockFileMap)) {
-          if (!allFiles.includes(key)) allFiles.push(key)
+        for (let [path, contents] of Object.entries(mockFileMap)) {
+          let mockFile = {path, title: extractFrontmatter(contents).title}
+          let idx = res.findIndex(file => file.path == path)
+          if (idx >= 0) res.splice(idx, 1, mockFile)
+          else res.push(mockFile)
         }
       }
-      return `export default ${JSON.stringify(allFiles)}`
+
+      return `export default ${JSON.stringify(res)}`
     },
     configureServer: (s: ViteDevServer) => {
       let refresh = async () => {
         workspaceLoadPromise = (async () => {
-          let loaded = await loadWorkspace(config.root, true, config.ignoredFiles)
-          telemetry?.workspaceScanned('serve', loaded)
-          workspaceFiles = loaded.map(file => {
-            let existing = workspaceFiles.find(existing => existing.path == file.path && existing.contents == file.contents)
-            return existing?.parsed ? {...file, parsed: existing.parsed} : file
-          })
+          workspaceFiles = await loadWorkspace(config.root, true, config.ignoredFiles)
+          // telemetry?.workspaceScanned('serve', workspaceFiles) // TODO this fires every time a file changes. Too much?
         })()
         await workspaceLoadPromise
-        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(file => file.path)
-        mdFiles = mdFiles.filter(f => !config.ignoredFiles?.includes(path.basename(f).toLowerCase()))
-        if (process.env.NODE_ENV == 'test') {
-          mdFiles.push(...Object.keys(mockFileMap))
-        }
+
+        // store md file path/title so we can serve it as virtual:nav for the sidebar
+        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(f => ({path: f.path, title: extractFrontmatter(f.contents).title}))
 
         let mod = s.moduleGraph.getModuleById('\0virtual:nav')
         if (!mod) return

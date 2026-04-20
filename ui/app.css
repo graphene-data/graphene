@@ -309,6 +309,10 @@ select {
   letter-spacing: -0.01em;
 }
 
+.pageContent.dashboardLayout {
+  max-width: 1200px;
+}
+
 /* Embedded images in rendered markdown */
 .pageContent img {
   display: block;

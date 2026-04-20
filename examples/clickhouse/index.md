@@ -1,4 +1,7 @@
-# NYC Taxi Overview
+---
+title: NYC Taxi Overview
+layout: dashboard
+---
 
 ClickHouse sample dashboard over `default.nyc_taxi`.
 
