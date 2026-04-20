@@ -159,7 +159,7 @@ program
         return exit(0)
       } else {
         let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
-        await mod.serve2(telemetry)
+        await mod.serve2()
       }
     }),
   )
