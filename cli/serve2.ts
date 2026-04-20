@@ -9,7 +9,6 @@ import {fileURLToPath} from 'url'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 
 import type {AnalysisResult, WorkspaceFileInput} from '../lang/types.ts'
-import type {CliTelemetry} from './telemetry/index.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
@@ -30,8 +29,8 @@ const QUERY_VERSION = 1
 
 let uiRoot: string
 
-export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
-  let server = await createServer(await createConfig(telemetry))
+export async function serve2(): Promise<ViteDevServer> {
+  let server = await createServer(await createConfig())
   // I originally added this to avoid the page refreshing immediately on load.
   // We def don't want to run it in tests, because its not safe to do in parallel.
   // I'm not sure it's still needed, now that we explicitly list out `optimizeDeps.includes`, refreshes should be rare
@@ -42,7 +41,7 @@ export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
   return server
 }
 
-async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
+async function createConfig(): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = Number(process.env.GRAPHENE_PORT) || 4000
   await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
@@ -78,7 +77,7 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
       fixHmrForFailedModules(),
       runVitePlugin(),
       handleRequestPlugin,
-      updateWorkspacePlugin(telemetry),
+      updateWorkspacePlugin(),
       mockFilesForTests(),
     ],
     publicDir: path.resolve(uiRoot, 'public'),
@@ -233,7 +232,7 @@ function fixHmrForFailedModules() {
 let workspaceLoadPromise: Promise<void> | undefined
 let workspaceFiles: WorkspaceFileInput[] = []
 let mdFiles: {path: string; title?: string}[] = []
-function updateWorkspacePlugin(telemetry?: CliTelemetry) {
+function updateWorkspacePlugin() {
   return {
     name: 'updateWorkspace',
     resolveId(id: string) {
