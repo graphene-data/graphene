@@ -76,6 +76,7 @@ Attributes like `x`, `y`, `y2`, and `splitBy` are the names of columns within th
 - BigValue: data, value, title, fmt, comparison, comparisonFmt, comparisonTitle, downIsGood, sparkline, sparklineType, sparklineColor
 - Table: data, rows, title, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
   - Column (sub-component of Table): id, title, fmt, align, wrap, contentType, totalAgg, redNegatives
+- Value: data, column, row
 
 ## ECharts
 To further customize the look and feel of a chart, use the ECharts component to provide an echarts config.
