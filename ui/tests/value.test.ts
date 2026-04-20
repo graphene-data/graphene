@@ -18,8 +18,16 @@ describe('<Value/>', () => {
   })
 
   test('null renders em dash', async ({mount, sharedPage}) => {
-    await mount('components/BigValue.svelte', {data: nullValueData(), column: 'value'})
+    await mount('components/Value.svelte', {data: nullValueData(), column: 'value'})
     await expect(sharedPage.getByText('—')).toBeVisible()
+  })
+
+  test('query error renders inline tooltip', async ({mount, sharedPage}) => {
+    await mount('components/Value.svelte', {data: errorData(), column: 'value'})
+    let errorIcon = sharedPage.getByRole('button', {name: 'Query failed'})
+    await errorIcon.hover()
+    await expect(sharedPage.getByText('Could not resolve column "value"')).toBeVisible()
+    await expect(sharedPage).screenshot('inline-error-tooltip')
   })
 
   function percentData() {
@@ -32,5 +40,10 @@ describe('<Value/>', () => {
     let rows = [{value: null}] as any
     let fields = [{name: 'value', type: 'number'}] as any
     return {rows, fields}
+  }
+
+  function errorData() {
+    let error = {message: 'Could not resolve column "value"', queryId: 'broken_value'} as any
+    return {rows: [], fields: [], error}
   }
 })

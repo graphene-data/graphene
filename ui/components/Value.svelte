@@ -22,4 +22,4 @@
   <span>{formatValue(loaded?.rows?.[row]?.[column], loaded)}</span>
 {/snippet}
 
-<QueryLoad {data} fields={{column}} children={valueContent} />
+<QueryLoad {data} fields={{column}} inline children={valueContent} />
