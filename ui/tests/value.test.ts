@@ -6,9 +6,10 @@ describe('<Value/>', () => {
     await sharedPage.setViewportSize({width: 1280, height: 720})
   })
 
-  test('currency formatting', async ({mount, sharedPage}) => {
+  test('currency formatting', async ({mount, sharedPage, chart}) => {
     await mount('components/Value.svelte', {data: singleDim(), column: 'value'})
     await expect(sharedPage.getByText('$611.1k')).toBeVisible()
+    await expect(chart.el).screenshot('currency-formatting')
   })
 
   test('percent formatting', async ({mount, sharedPage}) => {
