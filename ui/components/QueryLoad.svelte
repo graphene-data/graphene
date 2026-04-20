@@ -87,10 +87,10 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid #ef4444;
+    border: 1px solid var(--graphene-error-border, #ef4444);
     border-radius: 999px;
-    background: #fef2f2;
-    color: #b91c1c;
+    background: var(--graphene-error-background, #fef2f2);
+    color: var(--graphene-error-content-strong, #b91c1c);
     cursor: help;
     font: inherit;
     font-size: 0.75em;
