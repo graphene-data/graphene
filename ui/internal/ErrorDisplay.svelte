@@ -40,9 +40,9 @@
   .g-error {
     padding: 16px 20px;
     border-radius: 6px;
-    border-left: 3px solid #ef4444;
-    background: #fef2f2;
-    color: #991b1b;
+    border-left: 3px solid var(--graphene-error-border, #ef4444);
+    background: var(--graphene-error-background, #fef2f2);
+    color: var(--graphene-error-content, #991b1b);
   }
   .g-error__message {
     margin: 0;
@@ -55,6 +55,6 @@
     line-height: 1.6;
     white-space: pre-wrap;
     word-break: break-word;
-    color: #b91c1c;
+    color: var(--graphene-error-content-strong, #b91c1c);
   }
 </style>
