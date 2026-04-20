@@ -1,4 +1,7 @@
-# Snowflake Restaurant Data Overview
+---
+title: Snowflake Restaurant Data Overview
+layout: dashboard
+---
 
 ```gsql summary
 from establishments_open

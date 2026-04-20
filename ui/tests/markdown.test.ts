@@ -5,7 +5,10 @@ test('loads markdown files', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Flight Delay Analysis
+    ---
+    title: Flight Delay Analysis
+    layout: dashboard
+    ---
 
     \`\`\`gsql delays
     select carrier, avg(dep_delay) as delay from flights
@@ -14,13 +17,16 @@ test('loads markdown files', async ({server, page}) => {
     <BarChart data="delays" x="carrier" y="delay" />
   `,
   )
+  server.mockFile('delays.md', '---\ntitle: Delay Deep-Dive\n---\n# Delays')
+
   await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
   let nav = page.getByRole('navigation')
   await expect(nav).toBeVisible()
-  await expect(nav.getByRole('link', {name: 'Home'})).toHaveAttribute('aria-current', 'page')
-  await expect(nav.getByRole('link', {name: 'Delays'})).toBeVisible()
+  await expect(nav.getByRole('link', {name: 'Flight Delay Analysis'})).toHaveAttribute('aria-current', 'page')
+  await expect(nav.getByRole('link', {name: 'Delay Deep-Dive'})).toBeVisible()
   await expect(page.locator('main svg').first()).toBeVisible()
+  await expect(page.locator('main#content')).toHaveCSS('max-width', '1200px')
   await expect(page).screenshot('loads-markdown-files')
 })
 

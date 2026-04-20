@@ -20,6 +20,9 @@ importers:
       '@types/fs-extra':
         specifier: ^11.0.4
         version: 11.0.4
+      '@types/js-yaml':
+        specifier: ^3.12.10
+        version: 3.12.10
       '@types/node':
         specifier: ^22.19.7
         version: 22.19.15
@@ -52,7 +55,7 @@ importers:
         version: 8.56.1(eslint@10.2.0)(typescript@5.9.3)
       vitest:
         specifier: 4.0.18
-        version: 4.0.18(@types/node@22.19.15)
+        version: 4.0.18(@types/node@22.19.15)(yaml@2.8.3)
       vscode-uri:
         specifier: ^3.1.0
         version: 3.1.0
@@ -85,7 +88,7 @@ importers:
         version: 1.4.8
       '@sveltejs/vite-plugin-svelte':
         specifier: ^6.2.4
-        version: 6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37))
+        version: 6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3))
       '@tidyjs/tidy':
         specifier: ^2.5.2
         version: 2.5.2
@@ -128,6 +131,9 @@ importers:
       glob:
         specifier: ^13.0.1
         version: 13.0.6
+      js-yaml:
+        specifier: ^3.14.2
+        version: 3.14.2
       json5:
         specifier: ^2.2.3
         version: 2.2.3
@@ -157,7 +163,7 @@ importers:
         version: 4.1.2
       vite:
         specifier: 7.3.2
-        version: 7.3.2(@types/node@20.19.37)
+        version: 7.3.2(@types/node@20.19.37)(yaml@2.8.3)
       ws:
         specifier: ^8.18.0
         version: 8.19.0
@@ -191,7 +197,7 @@ importers:
         version: 2.4.0(asn1.js@5.4.1)
       vitest:
         specifier: 4.0.18
-        version: 4.0.18(@types/node@20.19.37)
+        version: 4.0.18(@types/node@20.19.37)(yaml@2.8.3)
       vscode-languageserver-types:
         specifier: ^3.17.0
         version: 3.17.5
@@ -338,7 +344,7 @@ importers:
         version: 1.58.2
       '@sveltejs/vite-plugin-svelte':
         specifier: 6.2.4
-        version: 6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15))
+        version: 6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3))
       fs-extra:
         specifier: 11.2.0
         version: 11.2.0
@@ -1498,6 +1504,9 @@ packages:
   '@types/fs-extra@11.0.4':
     resolution: {integrity: sha512-yTbItCNreRooED33qjunPthRcSjERP1r4MqCZc7wv0u2sUkzTFp45tgUfS5+r7FrZPdmCCNflLhVSP/o+SemsQ==}
 
+  '@types/js-yaml@3.12.10':
+    resolution: {integrity: sha512-/Mtaq/wf+HxXpvhzFYzrzCqNRcA958sW++7JOFC8nPrZcvfi/TrzOaaGbvt27ltJB2NQbHVAg5a1wUCsyMH7NA==}
+
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
@@ -1688,6 +1697,9 @@ packages:
   ansi-styles@6.2.3:
     resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
     engines: {node: '>=12'}
+
+  argparse@1.0.10:
+    resolution: {integrity: sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==}
 
   aria-query@5.3.1:
     resolution: {integrity: sha512-Z/ZeOgVl7bcSYZ/u/rh0fOpvEpq//LZmdbkXyc7syVzjPAhfOa9ebsdTSjEBDU4vs5nC98Kfduj1uFo0qyET3g==}
@@ -2064,6 +2076,11 @@ packages:
     resolution: {integrity: sha512-7p3DrVEIopW1B1avAGLuCSh1jubc01H2JHc8B4qqGblmg5gI9yumBgACjWo4JlIc04ufug4xJ3SQI8HkS/Rgzw==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
+  esprima@4.0.1:
+    resolution: {integrity: sha512-eGuFFw7Upda+g4p+QHvnW0RyTX/SVeJBDM/gCtMARO0cLuT2HcEKnTPvhjV6aGeqrCB/sbNop0Kszm0jsaWU4A==}
+    engines: {node: '>=4'}
+    hasBin: true
+
   esquery@1.7.0:
     resolution: {integrity: sha512-Ap6G0WQwcU/LHsvLwON1fAQX9Zp0A2Y6Y/cJBl9r/JbW90Zyg4/zbG6zzKa2OTALELarYHmKu0GhpM5EO+7T0g==}
     engines: {node: '>=0.10'}
@@ -2392,6 +2409,10 @@ packages:
 
   jackspeak@3.4.3:
     resolution: {integrity: sha512-OGlZQpz2yfahA/Rd1Y8Cd9SIEsqvXkLVoSw/cgwhnhFMDbsQFeZYoJJ7bIZBS9BcamUW96asq/npPWugM+RQBw==}
+
+  js-yaml@3.14.2:
+    resolution: {integrity: sha512-PMSmkqxr106Xa156c2M265Z+FTrPl+oxd/rgOQy2tijQeK5TxQ43psO1ZCwhVOSdnn+RzkzlRz/eY4BgJBYVpg==}
+    hasBin: true
 
   json-bigint@1.0.0:
     resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
@@ -2790,6 +2811,9 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
+  sprintf-js@1.0.3:
+    resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
+
   ssf@0.11.2:
     resolution: {integrity: sha512-+idbmIXoYET47hH+d7dfm2epdOMUDjqcB4648sTZ+t2JwoyBFL/insLfB/racrDmsKB3diwsDA696pZMieAC5g==}
     engines: {node: '>=0.8'}
@@ -3162,6 +3186,11 @@ packages:
   yaml@1.10.2:
     resolution: {integrity: sha512-r3vXyErRCYJ7wg28yvBY5VSoAF8ZvlcW9/BwUzEtUsjvX/DKs24dIkuwjtuprwJJHsbyUbLApepYTR1BN4uHrg==}
     engines: {node: '>= 6'}
+
+  yaml@2.8.3:
+    resolution: {integrity: sha512-AvbaCLOO2Otw/lW5bmh9d/WEdcDFdQp2Z2ZUH3pX9U2ihyUY0nvLv7J6TrWowklRGPYbB/IuIMfYgxaCPg5Bpg==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
 
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
@@ -4581,39 +4610,39 @@ snapshots:
     dependencies:
       acorn: 8.16.0
 
-  '@sveltejs/vite-plugin-svelte-inspector@5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)))(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37))':
+  '@sveltejs/vite-plugin-svelte-inspector@5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3)))(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3))':
     dependencies:
-      '@sveltejs/vite-plugin-svelte': 6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37))
+      '@sveltejs/vite-plugin-svelte': 6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3))
       obug: 2.1.1
       svelte: 5.55.3(@typescript-eslint/types@8.56.1)
-      vite: 7.3.2(@types/node@20.19.37)
+      vite: 7.3.2(@types/node@20.19.37)(yaml@2.8.3)
 
-  '@sveltejs/vite-plugin-svelte-inspector@5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)))(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15))':
+  '@sveltejs/vite-plugin-svelte-inspector@5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3)))(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3))':
     dependencies:
-      '@sveltejs/vite-plugin-svelte': 6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15))
+      '@sveltejs/vite-plugin-svelte': 6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3))
       obug: 2.1.1
       svelte: 5.55.3(@typescript-eslint/types@8.56.1)
-      vite: 7.3.2(@types/node@22.19.15)
+      vite: 7.3.2(@types/node@22.19.15)(yaml@2.8.3)
 
-  '@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37))':
+  '@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3))':
     dependencies:
-      '@sveltejs/vite-plugin-svelte-inspector': 5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)))(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37))
+      '@sveltejs/vite-plugin-svelte-inspector': 5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3)))(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3))
       deepmerge: 4.3.1
       magic-string: 0.30.21
       obug: 2.1.1
       svelte: 5.55.3(@typescript-eslint/types@8.56.1)
-      vite: 7.3.2(@types/node@20.19.37)
-      vitefu: 1.1.2(vite@7.3.2(@types/node@20.19.37))
+      vite: 7.3.2(@types/node@20.19.37)(yaml@2.8.3)
+      vitefu: 1.1.2(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3))
 
-  '@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15))':
+  '@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3))':
     dependencies:
-      '@sveltejs/vite-plugin-svelte-inspector': 5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)))(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15))
+      '@sveltejs/vite-plugin-svelte-inspector': 5.0.2(@sveltejs/vite-plugin-svelte@6.2.4(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3)))(svelte@5.55.3(@typescript-eslint/types@8.56.1))(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3))
       deepmerge: 4.3.1
       magic-string: 0.30.21
       obug: 2.1.1
       svelte: 5.55.3(@typescript-eslint/types@8.56.1)
-      vite: 7.3.2(@types/node@22.19.15)
-      vitefu: 1.1.2(vite@7.3.2(@types/node@22.19.15))
+      vite: 7.3.2(@types/node@22.19.15)(yaml@2.8.3)
+      vitefu: 1.1.2(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3))
 
   '@techteamer/ocsp@1.0.1':
     dependencies:
@@ -4646,6 +4675,8 @@ snapshots:
       '@types/jsonfile': 6.1.4
       '@types/node': 22.19.15
 
+  '@types/js-yaml@3.12.10': {}
+
   '@types/json-schema@7.0.15': {}
 
   '@types/jsonfile@6.1.4':
@@ -4654,7 +4685,7 @@ snapshots:
 
   '@types/mdast@4.0.4':
     dependencies:
-      '@types/unist': 2.0.11
+      '@types/unist': 3.0.3
 
   '@types/node@20.19.37':
     dependencies:
@@ -4790,21 +4821,21 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.0.3
 
-  '@vitest/mocker@4.0.18(vite@7.3.2(@types/node@20.19.37))':
+  '@vitest/mocker@4.0.18(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.0.18
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.2(@types/node@20.19.37)
+      vite: 7.3.2(@types/node@20.19.37)(yaml@2.8.3)
 
-  '@vitest/mocker@4.0.18(vite@7.3.2(@types/node@22.19.15))':
+  '@vitest/mocker@4.0.18(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.0.18
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 7.3.2(@types/node@22.19.15)
+      vite: 7.3.2(@types/node@22.19.15)(yaml@2.8.3)
 
   '@vitest/pretty-format@4.0.18':
     dependencies:
@@ -4900,6 +4931,10 @@ snapshots:
       color-convert: 2.0.1
 
   ansi-styles@6.2.3: {}
+
+  argparse@1.0.10:
+    dependencies:
+      sprintf-js: 1.0.3
 
   aria-query@5.3.1: {}
 
@@ -5301,6 +5336,8 @@ snapshots:
       acorn-jsx: 5.3.2(acorn@8.16.0)
       eslint-visitor-keys: 5.0.1
 
+  esprima@4.0.1: {}
+
   esquery@1.7.0:
     dependencies:
       estraverse: 5.3.0
@@ -5637,6 +5674,11 @@ snapshots:
       '@isaacs/cliui': 8.0.2
     optionalDependencies:
       '@pkgjs/parseargs': 0.11.0
+
+  js-yaml@3.14.2:
+    dependencies:
+      argparse: 1.0.10
+      esprima: 4.0.1
 
   json-bigint@1.0.0:
     dependencies:
@@ -6067,6 +6109,8 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
+  sprintf-js@1.0.3: {}
+
   ssf@0.11.2:
     dependencies:
       frac: 1.1.2
@@ -6296,7 +6340,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@7.3.2(@types/node@20.19.37):
+  vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3):
     dependencies:
       esbuild: 0.27.3
       fdir: 6.5.0(picomatch@4.0.4)
@@ -6307,8 +6351,9 @@ snapshots:
     optionalDependencies:
       '@types/node': 20.19.37
       fsevents: 2.3.3
+      yaml: 2.8.3
 
-  vite@7.3.2(@types/node@22.19.15):
+  vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3):
     dependencies:
       esbuild: 0.27.3
       fdir: 6.5.0(picomatch@4.0.4)
@@ -6319,19 +6364,20 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.19.15
       fsevents: 2.3.3
+      yaml: 2.8.3
 
-  vitefu@1.1.2(vite@7.3.2(@types/node@20.19.37)):
+  vitefu@1.1.2(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3)):
     optionalDependencies:
-      vite: 7.3.2(@types/node@20.19.37)
+      vite: 7.3.2(@types/node@20.19.37)(yaml@2.8.3)
 
-  vitefu@1.1.2(vite@7.3.2(@types/node@22.19.15)):
+  vitefu@1.1.2(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3)):
     optionalDependencies:
-      vite: 7.3.2(@types/node@22.19.15)
+      vite: 7.3.2(@types/node@22.19.15)(yaml@2.8.3)
 
-  vitest@4.0.18(@types/node@20.19.37):
+  vitest@4.0.18(@types/node@20.19.37)(yaml@2.8.3):
     dependencies:
       '@vitest/expect': 4.0.18
-      '@vitest/mocker': 4.0.18(vite@7.3.2(@types/node@20.19.37))
+      '@vitest/mocker': 4.0.18(vite@7.3.2(@types/node@20.19.37)(yaml@2.8.3))
       '@vitest/pretty-format': 4.0.18
       '@vitest/runner': 4.0.18
       '@vitest/snapshot': 4.0.18
@@ -6348,7 +6394,7 @@ snapshots:
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.3.2(@types/node@20.19.37)
+      vite: 7.3.2(@types/node@20.19.37)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.37
@@ -6365,10 +6411,10 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@4.0.18(@types/node@22.19.15):
+  vitest@4.0.18(@types/node@22.19.15)(yaml@2.8.3):
     dependencies:
       '@vitest/expect': 4.0.18
-      '@vitest/mocker': 4.0.18(vite@7.3.2(@types/node@22.19.15))
+      '@vitest/mocker': 4.0.18(vite@7.3.2(@types/node@22.19.15)(yaml@2.8.3))
       '@vitest/pretty-format': 4.0.18
       '@vitest/runner': 4.0.18
       '@vitest/snapshot': 4.0.18
@@ -6385,7 +6431,7 @@ snapshots:
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.0.3
-      vite: 7.3.2(@types/node@22.19.15)
+      vite: 7.3.2(@types/node@22.19.15)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.15
@@ -6485,6 +6531,9 @@ snapshots:
       is-wsl: 3.1.1
 
   yaml@1.10.2: {}
+
+  yaml@2.8.3:
+    optional: true
 
   yocto-queue@0.1.0: {}
 
