@@ -8,7 +8,6 @@ import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
 
 import type {GrapheneError} from '../lang/index.d.ts'
-import type {CliTelemetry} from './telemetry/index.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql} from '../lang/core.ts'
@@ -20,6 +19,7 @@ import {runQuery} from './connections/index.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {printDiagnostics, printTable} from './printer.ts'
+import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
 export interface RunMdFileOptions {
   mdArg: string
@@ -40,7 +40,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   let files = await loadWorkspace(config.root, false, config.ignoredFiles)
-  options.telemetry?.workspaceScanned('run', files)
+  options.telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
   let mdContents: string
   if (process.env.NODE_ENV == 'test' && mockFileMap[mdFile]) {
     mdContents = mockFileMap[mdFile]
@@ -117,7 +117,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 
 export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, telemetry?: CliTelemetry): Promise<boolean> {
   let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-  telemetry?.workspaceScanned('run', files)
+  telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
 

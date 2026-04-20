@@ -5,10 +5,10 @@ import path from 'node:path'
 
 import type {Config} from '../../lang/config.ts'
 import type {WorkspaceFileInput} from '../../lang/core.ts'
-import type {CliCommandCompletedEvent, TelemetryBatch, TelemetryCommand, TelemetryEvent, WorkspaceScannedEvent} from './types.ts'
+import type {TelemetryBatch, TelemetryCommand, TelemetryEvent, TelemetryEventName, TelemetryPayloads} from './types.ts'
 
 import {TelemetryStorage} from './storage.ts'
-export type {TelemetryCommand} from './types.ts'
+export type {TelemetryCommand, TelemetryEventName, TelemetryPayloads} from './types.ts'
 
 const DEFAULT_TELEMETRY_ENDPOINT = 'https://app.graphenedata.com/cli-telemetry'
 const SAFE_FLAG_NAMES: Partial<Record<TelemetryCommand, Record<string, string[]>>> = {
@@ -42,47 +42,20 @@ export class CliTelemetry {
     this.projectHash = await getProjectHash(cwd)
   }
 
-  commandStarted(command: TelemetryCommand, argv = process.argv.slice(2)) {
+  event<K extends TelemetryEventName>(event: K, ...args: TelemetryPayloads[K] extends undefined ? [] : [payload: TelemetryPayloads[K]]) {
     if (!this.enabled) return
-    this.send({
-      ...this.commonFields(),
-      event: 'cli_command_started',
-      command,
-      flags: getPresentFlags(command, argv),
-    })
-  }
-
-  async commandCompleted(command: TelemetryCommand, event: Omit<CliCommandCompletedEvent, keyof ReturnType<CliTelemetry['commonFields']> | 'event' | 'command'>) {
-    if (!this.enabled) return
-
-    if (event.success) {
-      let {shouldSendInstallSeen, fromVersion} = await this.storage.markSuccessfulInvocation(this.cliVersion)
-      if (shouldSendInstallSeen) this.send({...this.commonFields(), event: 'cli_install_seen'})
-      if (fromVersion) {
-        this.send({
-          ...this.commonFields(),
-          event: 'cli_upgraded',
-          from_version: fromVersion,
-          to_version: this.cliVersion,
-        })
-      }
+    if (event == 'workspace_scanned') {
+      if (this.workspaceScanSent) return
+      this.workspaceScanSent = true
     }
 
-    this.send({...this.commonFields(), event: 'cli_command_completed', command, ...event})
+    let payload = args[0] || {}
+    this.send({...this.commonFields(), event, ...payload} as TelemetryEvent)
   }
 
-  workspaceScanned(command: Extract<TelemetryCommand, 'check' | 'compile' | 'run' | 'serve'>, files: WorkspaceFileInput[]) {
-    if (!this.enabled || this.workspaceScanSent) return
-    this.workspaceScanSent = true
-
-    let event: WorkspaceScannedEvent = {
-      ...this.commonFields(),
-      event: 'workspace_scanned',
-      command,
-      gsql_file_count: files.filter(file => file.path.endsWith('.gsql')).length,
-      md_file_count: files.filter(file => file.path.endsWith('.md')).length,
-    }
-    this.send(event)
+  async markSuccessfulInvocation() {
+    if (!this.enabled) return {shouldSendInstallSeen: false, fromVersion: undefined}
+    return this.storage.markSuccessfulInvocation(this.cliVersion)
   }
 
   private commonFields() {
@@ -130,6 +103,13 @@ export function getPresentFlags(command: TelemetryCommand, argv: string[]) {
     .map(([name]) => name)
 
   return present.sort()
+}
+
+export function getWorkspaceScanCounts(files: Pick<WorkspaceFileInput, 'path'>[]) {
+  return {
+    gsql_file_count: files.filter(file => file.path.endsWith('.gsql')).length,
+    md_file_count: files.filter(file => file.path.endsWith('.md')).length,
+  }
 }
 
 export async function getProjectHash(startDir: string) {

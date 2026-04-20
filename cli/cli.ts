@@ -15,7 +15,7 @@ import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {printDiagnostics, printTable} from './printer.ts'
 import {runMdFile, runNamedQueryFromMd} from './run.ts'
-import {CliTelemetry, type TelemetryCommand} from './telemetry/index.ts'
+import {CliTelemetry, getPresentFlags, getWorkspaceScanCounts, type TelemetryCommand} from './telemetry/index.ts'
 
 const program = new Command()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -40,7 +40,7 @@ program
   .action(
     withTelemetry('compile', async (exit, input: string | undefined) => {
       let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-      telemetry.workspaceScanned('compile', files)
+      telemetry.event('workspace_scanned', {command: 'compile', ...getWorkspaceScanCounts(files)})
       let sql = await readInput(input)
       let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: sql})}, 'input')
       let [query] = validateInputQuery(analysis, exit)
@@ -78,7 +78,7 @@ program
       }
 
       let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-      telemetry.workspaceScanned('run', files)
+      telemetry.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
       let gsql = await readInput(input)
       let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: gsql})}, 'input')
       let [query] = validateInputQuery(analysis, exit)
@@ -159,7 +159,7 @@ program
         return exit(0)
       } else {
         let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
-        await mod.serve2()
+        await mod.serve2(telemetry)
       }
     }),
   )
@@ -248,7 +248,7 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
     let exitCalled = false
     let caughtError: unknown
 
-    telemetry.commandStarted(command)
+    telemetry.event('cli_command_started', {command, flags: getPresentFlags(command, process.argv.slice(2))})
 
     let exit = (code: number = 0): never => {
       exitCalled = true
@@ -264,7 +264,12 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
       success = false
       caughtError = err
     } finally {
-      await telemetry.commandCompleted(command, {success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
+      if (success) {
+        let {shouldSendInstallSeen, fromVersion} = await telemetry.markSuccessfulInvocation()
+        if (shouldSendInstallSeen) telemetry.event('cli_install_seen')
+        if (fromVersion) telemetry.event('cli_upgraded', {from_version: fromVersion, to_version: libPkg.version})
+      }
+      telemetry.event('cli_command_completed', {command, success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
     }
 
     if (caughtError) throw caughtError

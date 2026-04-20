@@ -3,10 +3,21 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
-import {getPresentFlags, getProjectHash, isTelemetryEnabled} from './telemetry/index.ts'
+import {getPresentFlags, getProjectHash, getWorkspaceScanCounts, isTelemetryEnabled} from './telemetry/index.ts'
 import {TelemetryStorage} from './telemetry/storage.ts'
 
 describe('cli telemetry', () => {
+  it('summarizes workspace scans as file type counts', () => {
+    let files = [
+      {path: 'tables/flights.gsql', contents: 'from flights'},
+      {path: 'tables/carriers.gsql', contents: 'from carriers'},
+      {path: 'reports/index.md', contents: '# Report'},
+      {path: 'README.txt', contents: 'ignore me'},
+    ]
+
+    expect(getWorkspaceScanCounts(files)).toEqual({gsql_file_count: 2, md_file_count: 1})
+  })
+
   it('tracks only safe flag names, not values', () => {
     expect(getPresentFlags('run', ['run', 'report.md', '--query', 'weekly_trends', '--chart', 'Revenue by Region'])).toEqual(['chart', 'query'])
     expect(getPresentFlags('serve', ['serve', '--bg'])).toEqual(['bg'])

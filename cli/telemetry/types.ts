@@ -16,38 +16,38 @@ export interface CommonEventFields {
   node_version: string
 }
 
-export interface CliInstallSeenEvent extends CommonEventFields {
-  event: 'cli_install_seen'
+export interface TelemetryPayloads {
+  cli_install_seen: undefined
+  cli_upgraded: {
+    from_version: string
+    to_version: string
+  }
+  workspace_scanned: {
+    command: 'check' | 'compile' | 'run' | 'serve'
+    gsql_file_count: number
+    md_file_count: number
+  }
+  cli_command_started: {
+    command: TelemetryCommand
+    flags: string[]
+  }
+  cli_command_completed: {
+    command: TelemetryCommand
+    success: boolean
+    exit_code: number
+    duration_ms: number
+  }
 }
 
-export interface CliUpgradedEvent extends CommonEventFields {
-  event: 'cli_upgraded'
-  from_version: string
-  to_version: string
-}
+export type TelemetryEventName = keyof TelemetryPayloads
+export type TelemetryEventFor<K extends TelemetryEventName> = CommonEventFields & {event: K} & (TelemetryPayloads[K] extends undefined ? object : TelemetryPayloads[K])
+export type TelemetryEvent = {[K in TelemetryEventName]: TelemetryEventFor<K>}[TelemetryEventName]
 
-export interface WorkspaceScannedEvent extends CommonEventFields {
-  event: 'workspace_scanned'
-  command: 'check' | 'compile' | 'run' | 'serve'
-  gsql_file_count: number
-  md_file_count: number
-}
-
-export interface CliCommandStartedEvent extends CommonEventFields {
-  event: 'cli_command_started'
-  command: TelemetryCommand
-  flags: string[]
-}
-
-export interface CliCommandCompletedEvent extends CommonEventFields {
-  event: 'cli_command_completed'
-  command: TelemetryCommand
-  success: boolean
-  exit_code: number
-  duration_ms: number
-}
-
-export type TelemetryEvent = CliInstallSeenEvent | CliUpgradedEvent | WorkspaceScannedEvent | CliCommandStartedEvent | CliCommandCompletedEvent
+export type CliInstallSeenEvent = TelemetryEventFor<'cli_install_seen'>
+export type CliUpgradedEvent = TelemetryEventFor<'cli_upgraded'>
+export type WorkspaceScannedEvent = TelemetryEventFor<'workspace_scanned'>
+export type CliCommandStartedEvent = TelemetryEventFor<'cli_command_started'>
+export type CliCommandCompletedEvent = TelemetryEventFor<'cli_command_completed'>
 
 export interface TelemetryBatch {
   events: TelemetryEvent[]

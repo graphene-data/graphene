@@ -2,13 +2,13 @@ import {readFileSync} from 'node:fs'
 import path from 'path'
 
 import type {WorkspaceFileInput} from '../lang/types.ts'
-import type {CliTelemetry} from './telemetry/index.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace} from '../lang/core.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {printDiagnostics} from './printer.ts'
+import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
 interface CheckOptions {
   fileArg?: string
@@ -26,7 +26,7 @@ export async function check(options: CheckOptions): Promise<boolean> {
   }
 
   let files = await loadWorkspace(config.root, !targetFile, config.ignoredFiles)
-  options.telemetry?.workspaceScanned('check', files)
+  options.telemetry?.event('workspace_scanned', {command: 'check', ...getWorkspaceScanCounts(files)})
   if (process.env.NODE_ENV == 'test') {
     for (let [path, contents] of Object.entries(mockFileMap)) {
       if (targetFile && path != targetFile) continue
