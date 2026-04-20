@@ -15,7 +15,7 @@ export type {AnalysisResult, AnalysisWorkspace, FileInfo, Query, Table, Workspac
 
 export async function loadWorkspace(dir: string, includeMd: boolean, ignoredFiles: string[] = []): Promise<WorkspaceFileInput[]> {
   let ignore = ['node_modules/**', '**/.*/**', ...ignoredFiles]
-  let paths = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore, follow: false})
+  let paths = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore, follow: false, nocase: true})
   let files: WorkspaceFileInput[] = []
 
   for await (let file of paths) {
