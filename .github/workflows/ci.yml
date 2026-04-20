@@ -26,7 +26,7 @@ jobs:
       - name: Lint
         run: pnpm lint
       - name: Generate license file
-        run: pnpm generate-license-file
+        run: pnpm -C cli generate-license-file
       - name: Check generated license file
         run: git diff --exit-code -- cli/THIRD-PARTY-LICENSES.txt
 
