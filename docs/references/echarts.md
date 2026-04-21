@@ -42,6 +42,8 @@ Each series type maps columns via `encode`. Graphene accepts:
 | `sankey`, `chord` | `source`, `target`, `value` |
 | `themeRiver` | `single`, `value`, `seriesName` |
 
+For a beeswarm, use a `scatter` series and set `jitter` (plus optional `jitterOverlap`/`jitterMargin`) on the categorical axis.
+
 ## Customizing with split hints
 
 To keep configs concise, Graphene supports a split hint:

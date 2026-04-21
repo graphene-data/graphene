@@ -197,6 +197,11 @@
     {source: 'Support', target: 'Design', value: 6},
   ]
 
+  let beeswarmRows: {group: string; value: number}[] = []
+  for (let group of ['SMB', 'Mid Market', 'Enterprise', 'Public Sector']) {
+    for (let i = 0; i < 30; i++) beeswarmRows.push({group, value: Math.round(50 + (Math.random() - 0.5) * 40)})
+  }
+
   let dayPeriods = ['Morning', 'Evening']
   let weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 </script>
@@ -448,6 +453,23 @@
         {dimension: 'pipeline', min: 100, max: 280, inRange: {symbolSize: [10, 28]}, show: false},
       ],
       series: [{type: 'scatter', encode: {x: 'efficiency', y: 'growth', tooltip: ['segment', 'pipeline', 'quality']}}],
+    }}
+  />
+
+  <ECharts
+    data={{
+      rows: beeswarmRows,
+      fields: [
+        {name: 'group', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
+    config={{
+      title: {text: 'Beeswarm'},
+      tooltip: {trigger: 'item'},
+      xAxis: {type: 'category', jitter: 40, jitterOverlap: false},
+      yAxis: {type: 'value'},
+      series: [{type: 'scatter', symbolSize: 8, encode: {x: 'group', y: 'value'}}],
     }}
   />
 
