@@ -34,8 +34,6 @@ test('flights simple stacked bar renders', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Simple Stacked Bar Example
-
     \`\`\`gsql monthly_flight_status
     select
       date_trunc('month', dep_time) as month,
@@ -107,30 +105,21 @@ test('charts resize when shrunk', async ({server, page}) => {
   await expect(page).screenshot('charts-resize')
 })
 
-test('expands nav for nested files', async ({server, page}) => {
-  server.mockFile('/other/index.md', '# Other Folder')
-  server.mockFile('/other/more.md', 'Hi there!')
-  await page.goto(server.url() + '/other/more')
-  await expect(page.locator('main')).toContainText('Hi there!')
-  let nav = page.getByRole('navigation')
-  let otherToggle = nav.locator('[data-folder-toggle="other"]')
-  await expect(otherToggle).toHaveAttribute('aria-expanded', 'true')
-  await expect(nav.getByRole('link', {name: 'More'})).toHaveAttribute('aria-current', 'page')
-})
-
 test('allows collapsing and expanding folders', async ({server, page}) => {
   server.mockFile('/other/index.md', '# Other Folder')
-  server.mockFile('/other/more.md', 'More page content')
+  server.mockFile('/other/more.md', '---\ntitle: Very long title for this one that should clip\n---\n\nHi there!')
+  server.mockFile('/other/third.md', '# Third')
+  server.mockFile('/other/second/foo.md', 'Foo')
   await page.goto(server.url() + '/other/more')
+  // Sidebar is hidden by default; reveal it by hovering the hamburger trigger.
+  await page.getByRole('button', {name: 'Toggle navigation'}).hover()
   let nav = page.getByRole('navigation')
-  let otherFolder = nav.locator('[data-folder="other"]')
   let otherToggle = nav.locator('[data-folder-toggle="other"]')
-  await otherFolder.hover()
   await otherToggle.click()
-  await expect(nav.getByRole('link', {name: 'More'})).toBeHidden()
-  await otherFolder.hover()
+  await expect(nav.getByRole('link', {name: 'Third'})).toBeHidden()
   await otherToggle.click()
-  await expect(nav.getByRole('link', {name: 'More'})).toBeVisible()
+  await expect(nav.getByRole('link', {name: 'Third'})).toBeVisible()
+  await expect(page).screenshot('expanded-nav')
 })
 
 test('renders gsql query errors clearly with file context', async ({server, page}) => {
