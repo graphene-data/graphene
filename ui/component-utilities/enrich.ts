@@ -27,11 +27,11 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   applyMissingPointDefaults(normalized, rows)
   applyStackPercentage(normalized, rows, fields)
   applySorting(normalized, rows, fields)
-  materializeSankeySeries(normalized, rows)
 
   let baseDatasetId = ensureDataset(normalized, rows, fields)
   expandSeriesSplitBy(normalized, rows, fields, baseDatasetId)
   expandTreeMapData(normalized, rows, fields)
+  expandSankeyData(normalized, rows, fields)
 
   // stylistic rules to provide great defaults
   lineSeriesMarkerVisibility(normalized, rows, fields)
@@ -173,39 +173,25 @@ function expandSeriesSplitBy(config: NormalConfig, rows: Record<string, any>[], 
   config.series = expanded
 }
 
-// Sankey does not consume dataset+encode directly, so turn encoded edge rows into native nodes/links.
-function materializeSankeySeries(config: NormalConfig, rows: Record<string, any>[]) {
+// ECharts sankey doesn't read from a dataset - it needs explicit `data` (nodes) and `links` arrays.
+// We build nodes from the distinct source+target names and map each row to a link.
+function expandSankeyData(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   for (let series of config.series) {
-    let target = series as SeriesWithGroupingHint & {links?: unknown[]}
-    if (target?.type !== 'sankey' || target.data != null || target.links != null) continue
+    if (series?.type !== 'sankey' || series.data != null || series.links != null) continue
 
-    let sourceField = getEncodeFieldName(target, 'source')
-    let targetField = getEncodeFieldName(target, 'target')
-    let valueField = getEncodeFieldName(target, 'value')
+    let sourceField = getEncodeField(series, fields, 'source')
+    let targetField = getEncodeField(series, fields, 'target')
+    let valueField = getEncodeField(series, fields, 'value')
     if (!sourceField || !targetField || !valueField) continue
 
-    let seen = new Set<string>()
-    let nodes: {name: string}[] = []
-    let links: {source: string; target: string; value: number}[] = []
-
+    let nodeNames = new Set<string>()
     for (let row of rows) {
-      let source = row?.[sourceField]
-      let targetName = row?.[targetField]
-      if (source == null || targetName == null) continue
-
-      for (let name of [String(source), String(targetName)]) {
-        if (seen.has(name)) continue
-        seen.add(name)
-        nodes.push({name})
-      }
-
-      links.push({source: String(source), target: String(targetName), value: Number(row?.[valueField]) || 0})
+      nodeNames.add(String(row[sourceField.name]))
+      nodeNames.add(String(row[targetField.name]))
     }
-
-    target.data = nodes
-    target.links = links
-    delete target.encode
-    delete target.datasetId
+    series.data = Array.from(nodeNames, name => ({name}))
+    series.links = rows.map(row => ({source: String(row[sourceField.name]), target: String(row[targetField.name]), value: row[valueField.name]}))
+    delete series.datasetId
   }
 }
 
