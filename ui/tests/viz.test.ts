@@ -561,6 +561,38 @@ test('chord chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('echarts-chord')
 })
 
+test('beeswarm chart', async ({mount, chart, sharedPage}) => {
+  // echarts' jitter uses Math.random internally; stub it so the screenshot is deterministic
+  await sharedPage.evaluate(() => {
+    let state = 1
+    Math.random = () => {
+      state = (state * 1664525 + 1013904223) >>> 0
+      return state / 0x100000000
+    }
+  })
+  let rows: {group: string; value: number}[] = []
+  let groups = ['SMB', 'Mid Market', 'Enterprise', 'Public Sector']
+  let rand = seededRandom(424242)
+  for (let group of groups) {
+    for (let i = 0; i < 30; i++) rows.push({group, value: Math.round(50 + (rand() - 0.5) * 40 + groups.indexOf(group) * 8)})
+  }
+  let fields = [
+    {name: 'group', type: scalarType('string')},
+    {name: 'value', type: scalarType('number')},
+  ]
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    config: {
+      title: {text: 'Beeswarm'},
+      tooltip: {trigger: 'item'},
+      xAxis: {type: 'category', jitter: 40, jitterOverlap: false},
+      yAxis: {type: 'value'},
+      series: [{type: 'scatter', symbolSize: 8, encode: {x: 'group', y: 'value'}}],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-beeswarm')
+})
+
 test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
   let data = timeseries() as any
   let nextRandom = seededRandom(202503)
