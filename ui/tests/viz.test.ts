@@ -477,6 +477,38 @@ test('treemap chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('echarts-treemap')
 })
 
+test('theme river chart', async ({mount, chart}) => {
+  let rows = [
+    {month: '2024-01-01', topic: 'JS', value: 10},
+    {month: '2024-02-01', topic: 'JS', value: 15},
+    {month: '2024-03-01', topic: 'JS', value: 20},
+    {month: '2024-04-01', topic: 'JS', value: 18},
+    {month: '2024-05-01', topic: 'JS', value: 25},
+    {month: '2024-06-01', topic: 'JS', value: 30},
+    {month: '2024-01-01', topic: 'Python', value: 8},
+    {month: '2024-02-01', topic: 'Python', value: 12},
+    {month: '2024-03-01', topic: 'Python', value: 18},
+    {month: '2024-04-01', topic: 'Python', value: 22},
+    {month: '2024-05-01', topic: 'Python', value: 20},
+    {month: '2024-06-01', topic: 'Python', value: 25},
+  ]
+  let fields = [
+    {name: 'month', type: scalarType('date')},
+    {name: 'topic', type: scalarType('string')},
+    {name: 'value', type: scalarType('number')},
+  ]
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    config: {
+      title: {text: 'Theme River'},
+      tooltip: {trigger: 'axis'},
+      singleAxis: {type: 'time'},
+      series: [{type: 'themeRiver', encode: {single: 'month', value: 'value', seriesName: 'topic'}}],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-theme-river')
+})
+
 test('sankey chart', async ({mount, chart}) => {
   let rows = [
     {source: 'Leads', target: 'Qualified', value: 420},
