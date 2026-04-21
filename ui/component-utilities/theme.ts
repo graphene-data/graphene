@@ -67,6 +67,7 @@ registerTheme('graphene-theme', {
   },
   title: {
     left: 'left',
+    padding: 0,
     textStyle: {color: clr.textDark, fontSize: 15},
   },
   categoryAxis: {
@@ -119,7 +120,7 @@ registerTheme('graphene-theme', {
   pie: {
     radius: ['30%', '58%'],
     label: {color: clr.textMid},
-    itemStyle: {borderColor: 'var(--color-background)', borderWidth: 1},
+    itemStyle: {borderColor: 'var(--color-bg)', borderWidth: 1},
   },
   scatter: {
     symbolSize: 8,

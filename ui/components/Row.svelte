@@ -4,7 +4,7 @@
   div {
     display: flex;
     flex-direction: row;
-    gap: 1rem;
+    gap: 1.5rem;
   }
 
   /* Ensure styles apply to slotted children (not scoped) */

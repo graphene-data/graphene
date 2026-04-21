@@ -32,7 +32,7 @@
 <div class="g-error" role="alert">
   <p class="g-error__message">{parsed.message}</p>
   {#if parsed.details.length}
-    <pre class="g-error__details">{parsed.details.join('\n')}</pre>
+    <div class="g-error__details">{parsed.details.join('\n')}</div>
   {/if}
 </div>
 
@@ -50,7 +50,7 @@
   }
   .g-error__details {
     margin: 12px 0 0;
-    font-family: 'JetBrains Mono', var(--monospace-font-family);
+    font-family: var(--font-mono);
     font-size: 0.875rem;
     line-height: 1.6;
     white-space: pre-wrap;

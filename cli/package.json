@@ -28,7 +28,8 @@
     "prepack": "pnpm run build"
   },
   "dependencies": {
-    "@fontsource/fira-code": "^5.2.7",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/source-sans-3": "^5.2.9",
     "@fontsource/source-serif-4": "^5.2.9",
     "@graphenedata/html2canvas": "^1.4.1",
