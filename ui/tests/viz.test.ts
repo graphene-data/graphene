@@ -535,6 +535,32 @@ test('sankey chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('echarts-sankey')
 })
 
+test('chord chart', async ({mount, chart}) => {
+  let rows = [
+    {source: 'Design', target: 'Engineering', value: 30},
+    {source: 'Design', target: 'Marketing', value: 12},
+    {source: 'Engineering', target: 'Support', value: 18},
+    {source: 'Engineering', target: 'Marketing', value: 8},
+    {source: 'Marketing', target: 'Sales', value: 24},
+    {source: 'Sales', target: 'Support', value: 16},
+    {source: 'Support', target: 'Design', value: 6},
+  ]
+  let fields = [
+    {name: 'source', type: scalarType('string')},
+    {name: 'target', type: scalarType('string')},
+    {name: 'value', type: scalarType('number')},
+  ]
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    config: {
+      title: {text: 'Chord'},
+      tooltip: {trigger: 'item'},
+      series: [{type: 'chord', encode: {source: 'source', target: 'target', value: 'value'}}],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-chord')
+})
+
 test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
   let data = timeseries() as any
   let nextRandom = seededRandom(202503)
