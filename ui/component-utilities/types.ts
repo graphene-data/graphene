@@ -25,6 +25,7 @@ type CommonSeriesFields = {
   stack?: string
   datasetId?: string
   data?: unknown
+  links?: unknown
   xAxisIndex?: number
   yAxisIndex?: number
   label?: Record<string, any>

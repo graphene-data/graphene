@@ -477,6 +477,32 @@ test('treemap chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('echarts-treemap')
 })
 
+test('sankey chart', async ({mount, chart}) => {
+  let rows = [
+    {source: 'Leads', target: 'Qualified', value: 420},
+    {source: 'Leads', target: 'Disqualified', value: 180},
+    {source: 'Qualified', target: 'Demo', value: 260},
+    {source: 'Qualified', target: 'No Decision', value: 160},
+    {source: 'Demo', target: 'Proposal', value: 190},
+    {source: 'Proposal', target: 'Won', value: 130},
+    {source: 'Proposal', target: 'Lost', value: 60},
+  ]
+  let fields = [
+    {name: 'source', type: scalarType('string')},
+    {name: 'target', type: scalarType('string')},
+    {name: 'value', type: scalarType('number')},
+  ]
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    config: {
+      title: {text: 'Sankey'},
+      tooltip: {trigger: 'item'},
+      series: [{type: 'sankey', emphasis: {focus: 'adjacency'}, lineStyle: {curveness: 0.5}, encode: {source: 'source', target: 'target', value: 'value'}}],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-sankey')
+})
+
 test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
   let data = timeseries() as any
   let nextRandom = seededRandom(202503)
