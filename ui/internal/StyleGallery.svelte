@@ -7,12 +7,12 @@
     '--font-ui',
     '--font-mono',
     '--color-bg',
-    '--color-primary-dark',
+    '--color-primary-strong',
     '--color-body',
     '--color-muted',
     '--color-tertiary',
     '--color-border',
-    '--color-border-dark',
+    '--color-border-strong',
     '--color-code-bg',
   ]
 

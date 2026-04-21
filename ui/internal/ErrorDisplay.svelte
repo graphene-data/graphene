@@ -32,7 +32,7 @@
 <div class="g-error" role="alert">
   <p class="g-error__message">{parsed.message}</p>
   {#if parsed.details.length}
-    <pre class="g-error__details">{parsed.details.join('\n')}</pre>
+    <div class="g-error__details">{parsed.details.join('\n')}</div>
   {/if}
 </div>
 

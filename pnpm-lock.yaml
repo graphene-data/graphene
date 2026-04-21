@@ -62,6 +62,12 @@ importers:
 
   cli:
     dependencies:
+      '@fontsource/inter':
+        specifier: ^5.2.8
+        version: 5.2.8
+      '@fontsource/jetbrains-mono':
+        specifier: ^5.2.8
+        version: 5.2.8
       '@fontsource/source-sans-3':
         specifier: ^5.2.9
         version: 5.2.9
