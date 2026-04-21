@@ -32,6 +32,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   expandSeriesSplitBy(normalized, rows, fields, baseDatasetId)
   expandTreeMapData(normalized, rows, fields)
   expandSankeyData(normalized, rows, fields)
+  expandThemeRiverData(normalized, rows, fields)
 
   // stylistic rules to provide great defaults
   lineSeriesMarkerVisibility(normalized, rows, fields)
@@ -171,6 +172,22 @@ function expandSeriesSplitBy(config: NormalConfig, rows: Record<string, any>[], 
   })
 
   config.series = expanded
+}
+
+// ECharts themeRiver doesn't consume our base dataset shape - it expects rows as [date, value, seriesName] tuples.
+// themeRiver handles its own grouping by seriesName, so we translate `encode.single/value/seriesName` into explicit `data`.
+function expandThemeRiverData(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
+  for (let series of config.series) {
+    if (series?.type !== 'themeRiver' || series.data != null) continue
+
+    let singleField = getEncodeField(series, fields, 'single')
+    let valueField = getEncodeField(series, fields, 'value')
+    let nameField = getEncodeField(series, fields, 'seriesName')
+    if (!singleField || !valueField || !nameField) continue
+
+    series.data = rows.map(row => [row[singleField.name], row[valueField.name], row[nameField.name]])
+    delete series.datasetId
+  }
 }
 
 // ECharts sankey doesn't read from a dataset - it needs explicit `data` (nodes) and `links` arrays.

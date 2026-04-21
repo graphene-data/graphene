@@ -40,6 +40,7 @@ Each series type maps columns via `encode`. Graphene accepts:
 | `pie`, `funnel` | `itemName`, `value` |
 | `treemap` | `itemName`, `value` |
 | `sankey` | `source`, `target`, `value` |
+| `themeRiver` | `single`, `value`, `seriesName` |
 
 ## Customizing with split hints
 
