@@ -30,6 +30,16 @@ Inside `<ECharts>...</ECharts>`, Graphene parses the config as JSON5:
 - trailing commas are allowed
 - you can wrap the whole thing in `{ ... }` or omit the outer braces
 
+## Encode fields by series type
+
+Each series type maps columns via `encode`. Graphene accepts:
+
+| Series type | Encode fields |
+|-------------|---------------|
+| `bar`, `line`, `scatter`, `candlestick`, `heatmap`, `effectScatter` | `x`, `y`, `splitBy` |
+| `pie`, `funnel` | `itemName`, `value` |
+| `treemap` | `itemName`, `value` |
+
 ## Customizing with split hints
 
 To keep configs concise, Graphene supports a split hint:

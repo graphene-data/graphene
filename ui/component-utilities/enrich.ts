@@ -31,6 +31,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
 
   let baseDatasetId = ensureDataset(normalized, rows, fields)
   expandSeriesSplitBy(normalized, rows, fields, baseDatasetId)
+  expandTreeMapData(normalized, rows, fields)
 
   // stylistic rules to provide great defaults
   lineSeriesMarkerVisibility(normalized, rows, fields)
@@ -205,6 +206,22 @@ function materializeSankeySeries(config: NormalConfig, rows: Record<string, any>
     target.links = links
     delete target.encode
     delete target.datasetId
+  }
+}
+
+// ECharts treemap doesn't read from a dataset - it requires an explicit hierarchical `series.data`.
+// We turn our tabular rows into a flat list of leaves keyed by the encoded itemName/value fields.
+// Nested hierarchies could be supported later by accepting a list of itemName fields.
+function expandTreeMapData(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
+  for (let series of config.series) {
+    if (series?.type !== 'treemap' || series.data != null) continue
+
+    let nameField = getEncodeField(series, fields, 'itemName')
+    let valueField = getEncodeField(series, fields, 'value')
+    if (!nameField || !valueField) continue
+
+    series.data = rows.map(row => ({name: row[nameField.name], value: row[valueField.name]}))
+    delete series.datasetId
   }
 }
 
