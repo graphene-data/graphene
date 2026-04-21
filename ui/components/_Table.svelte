@@ -500,7 +500,7 @@
     margin: 8px 0;
     position: relative;
     color: var(--color-base-content, #1f2937);
-    font-family: var(--ui-font-family, system-ui);
+    font-family: var(--font-ui, system-ui);
     line-height: 1.45;
   }
 

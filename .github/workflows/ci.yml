@@ -68,6 +68,13 @@ jobs:
       - uses: ./.github/actions/setup
       - run: pnpm test ui/tests/install.test.ts
         env: {SLOW_TEST: '1'}
+      - name: Upload failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UI test diffs
+          path: ui/tests/results/**
+
 
   test-schema:
     runs-on: ubuntu-latest
@@ -83,6 +90,13 @@ jobs:
           SNOWFLAKE_PRI_KEY: ${{ secrets.SNOWFLAKE_PRI_KEY }}
           SNOWFLAKE_PRI_PASSPHRASE: graphenedata
           CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+      - name: Upload failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UI test diffs
+          path: ui/tests/results/**
+
 
   test-examples:
     runs-on: ubuntu-latest
@@ -98,3 +112,9 @@ jobs:
           SNOWFLAKE_PRI_KEY: ${{ secrets.SNOWFLAKE_PRI_KEY }}
           SNOWFLAKE_PRI_PASSPHRASE: graphenedata
           CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+      - name: Upload failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UI test diffs
+          path: ui/tests/results/**
