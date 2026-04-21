@@ -39,7 +39,7 @@ Each series type maps columns via `encode`. Graphene accepts:
 | `bar`, `line`, `scatter`, `candlestick`, `heatmap`, `effectScatter` | `x`, `y`, `splitBy` |
 | `pie`, `funnel` | `itemName`, `value` |
 | `treemap` | `itemName`, `value` |
-| `sankey` | `source`, `target`, `value` |
+| `sankey`, `chord` | `source`, `target`, `value` |
 | `themeRiver` | `single`, `value`, `seriesName` |
 
 ## Customizing with split hints

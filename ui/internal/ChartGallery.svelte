@@ -187,6 +187,16 @@
     {source: 'Proposal', target: 'Lost', value: 60},
   ]
 
+  let chordRows = [
+    {source: 'Design', target: 'Engineering', value: 30},
+    {source: 'Design', target: 'Marketing', value: 12},
+    {source: 'Engineering', target: 'Support', value: 18},
+    {source: 'Engineering', target: 'Marketing', value: 8},
+    {source: 'Marketing', target: 'Sales', value: 24},
+    {source: 'Sales', target: 'Support', value: 16},
+    {source: 'Support', target: 'Design', value: 6},
+  ]
+
   let dayPeriods = ['Morning', 'Evening']
   let weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 </script>
@@ -438,6 +448,22 @@
         {dimension: 'pipeline', min: 100, max: 280, inRange: {symbolSize: [10, 28]}, show: false},
       ],
       series: [{type: 'scatter', encode: {x: 'efficiency', y: 'growth', tooltip: ['segment', 'pipeline', 'quality']}}],
+    }}
+  />
+
+  <ECharts
+    data={{
+      rows: chordRows,
+      fields: [
+        {name: 'source', type: 'string'},
+        {name: 'target', type: 'string'},
+        {name: 'value', type: 'number'},
+      ],
+    }}
+    config={{
+      title: {text: 'Chord'},
+      tooltip: {trigger: 'item'},
+      series: [{type: 'chord', encode: {source: 'source', target: 'target', value: 'value'}}],
     }}
   />
 

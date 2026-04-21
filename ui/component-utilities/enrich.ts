@@ -31,7 +31,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   let baseDatasetId = ensureDataset(normalized, rows, fields)
   expandSeriesSplitBy(normalized, rows, fields, baseDatasetId)
   expandTreeMapData(normalized, rows, fields)
-  expandSankeyData(normalized, rows, fields)
+  expandNodeLinkData(normalized, rows, fields)
   expandThemeRiverData(normalized, rows, fields)
 
   // stylistic rules to provide great defaults
@@ -190,11 +190,12 @@ function expandThemeRiverData(config: NormalConfig, rows: Record<string, any>[],
   }
 }
 
-// ECharts sankey doesn't read from a dataset - it needs explicit `data` (nodes) and `links` arrays.
+// Sankey and chord both ignore datasets and want explicit `data` (nodes) and `links` (edges).
 // We build nodes from the distinct source+target names and map each row to a link.
-function expandSankeyData(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
+function expandNodeLinkData(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   for (let series of config.series) {
-    if (series?.type !== 'sankey' || series.data != null || series.links != null) continue
+    if (series?.type !== 'sankey' && series?.type !== 'chord') continue
+    if (series.data != null || series.links != null) continue
 
     let sourceField = getEncodeField(series, fields, 'source')
     let targetField = getEncodeField(series, fields, 'target')
