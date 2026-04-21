@@ -30,39 +30,39 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   materializeSankeySeries(normalized, rows)
 
   let baseDatasetId = ensureDataset(normalized, rows, fields)
-  expandSeriesTransforms(normalized, rows, baseDatasetId)
+  expandSeriesSplitBy(normalized, rows, fields, baseDatasetId)
 
   // stylistic rules to provide great defaults
   lineSeriesMarkerVisibility(normalized, rows, fields)
   horizontalBarGuard(normalized, fields)
   computeTitleLegendAndGridPadding(normalized)
   applyLegendSelection(normalized)
-  hideStackPercentageValueAxis(normalized)
+  hideStackPercentageValueAxis(normalized, fields)
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, fields)
   timeFormatting(normalized)
   ordinalFormatting(normalized)
-  styleSecondaryAxisForSimpleBarLineLayout(normalized)
-  applyIntegerYAxisTicks(normalized, rows)
+  styleSecondaryAxisForSimpleBarLineLayout(normalized, fields)
+  applyIntegerYAxisTicks(normalized, rows, fields)
   barLabelPositioning(normalized)
-  labelsUseYAxisFormat(normalized)
-  addPieTooltips(normalized)
+  labelsUseYAxisFormat(normalized, fields)
+  addPieTooltips(normalized, fields)
   inlineDataIntoSeries(normalized, rows)
   stackedBarCornerRadius(normalized)
   return normalized
 }
 
 // For horizontal bars, count distinct category values so wrappers can size containers.
-export function horizontalBarCount(config: NormalConfig, rows: Record<string, any>[]) {
+export function horizontalBarCount(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   if (!isHorizontalBar(config)) return 0
 
   let categoryFields = config.series
     .filter(series => series?.type === 'bar')
-    .map(series => getSeriesCategoryFieldForHorizontal(series))
-    .filter(Boolean) as string[]
+    .map(series => getEncodeField(series, fields, 'y'))
+    .filter((f): f is Field => !!f)
 
   if (categoryFields.length === 0) return 0
-  return Math.max(...categoryFields.map(field => distinctValues(rows, field).length))
+  return Math.max(...categoryFields.map(field => distinctValues(rows, field.name).length))
 }
 
 // Normalize options we read in enrichments so later rules can always iterate arrays.
@@ -103,31 +103,31 @@ function ensureDataset(config: NormalConfig, rows: Record<string, any>[], fields
   return String(base.id)
 }
 
-// Expand series templates that use `encode.splitBy` into one concrete series per distinct field value.
+// We've added `encode.splitBy` as a way to concisely configure a chart whose data should be split into many series.
+// This enrichment takes care of generating both a dataset and a series pointing at that dataset for each distinct value in splitBy.
 // We do this with ECharts dataset filter transforms so wrappers stay small and users don't need to duplicate series configs.
-function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[], baseDatasetId: string) {
-  let templates = config.series
+function expandSeriesSplitBy(config: NormalConfig, rows: Record<string, any>[], fields: Field[], baseDatasetId: string) {
   let expanded: SeriesWithGroupingHint[] = []
 
-  templates.forEach((entry, templateIndex) => {
-    let splitFields = getSplitByFields(entry)
+  config.series.forEach((series, templateIndex) => {
+    let splitFields = getEncodeFields(series, fields, 'splitBy')
+
+    // Non-split series pass through unchanged. ECharts will read from the base dataset (index 0) by default.
     if (splitFields.length === 0) {
-      let next = {...entry}
-      if (shouldBindSeriesToDataset(next) && next.datasetId == null) next.datasetId = baseDatasetId
-      expanded.push(next)
+      expanded.push(series)
       return
     }
 
     if (splitFields.length > 2) throw new Error('encode.splitBy supports at most two fields')
 
-    let sourceDatasetId = entry.datasetId ?? baseDatasetId
+    let sourceDatasetId = series.datasetId ?? baseDatasetId
 
     if (splitFields.length === 2) {
-      if (entry?.type !== 'bar') throw new Error('encode.splitBy with two fields is only supported for bar series')
+      if (series?.type !== 'bar') throw new Error('encode.splitBy with two fields is only supported for bar series')
 
       let [groupField, stackField] = splitFields
-      let groupValues = distinctValues(rows, groupField)
-      let stackValues = distinctValues(rows, stackField)
+      let groupValues = distinctValues(rows, groupField.name)
+      let stackValues = distinctValues(rows, stackField.name)
       if (groupValues.length === 0 || stackValues.length === 0) return
 
       groupValues.forEach((groupValue, groupIndex) => {
@@ -135,7 +135,7 @@ function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[
         config.dataset.push({
           id: groupedDatasetId,
           fromDatasetId: sourceDatasetId,
-          transform: {type: 'filter', config: {dimension: groupField, '=': groupValue}},
+          transform: {type: 'filter', config: {dimension: groupField.name, '=': groupValue}},
         })
 
         stackValues.forEach((stackValue, stackIndex) => {
@@ -143,16 +143,10 @@ function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[
           config.dataset.push({
             id: datasetId,
             fromDatasetId: groupedDatasetId,
-            transform: {type: 'filter', config: {dimension: stackField, '=': stackValue}},
+            transform: {type: 'filter', config: {dimension: stackField.name, '=': stackValue}},
           })
 
-          let next = {...entry, datasetId, stack: String(groupValue ?? '')}
-          if (next.name == null) next.name = `${String(groupValue ?? '')} · ${String(stackValue ?? '')}`
-          if (next.encode) {
-            next.encode = {...next.encode}
-            delete next.encode.splitBy
-          }
-          expanded.push(next)
+          expanded.push(buildSplitSeries(series, datasetId, `${String(groupValue ?? '')} · ${String(stackValue ?? '')}`, String(groupValue ?? '')))
         })
       })
 
@@ -160,7 +154,7 @@ function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[
     }
 
     let splitField = splitFields[0]
-    let seriesValues = distinctValues(rows, splitField)
+    let seriesValues = distinctValues(rows, splitField.name)
     if (seriesValues.length === 0) return
 
     seriesValues.forEach((seriesValue, valueIndex) => {
@@ -168,16 +162,10 @@ function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[
       config.dataset.push({
         id: datasetId,
         fromDatasetId: sourceDatasetId,
-        transform: {type: 'filter', config: {dimension: splitField, '=': seriesValue}},
+        transform: {type: 'filter', config: {dimension: splitField.name, '=': seriesValue}},
       })
 
-      let next = {...entry, datasetId}
-      if (next.name == null) next.name = String(seriesValue ?? '')
-      if (next.encode) {
-        next.encode = {...next.encode}
-        delete next.encode.splitBy
-      }
-      expanded.push(next)
+      expanded.push(buildSplitSeries(series, datasetId, String(seriesValue ?? '')))
     })
   })
 
@@ -220,6 +208,18 @@ function materializeSankeySeries(config: NormalConfig, rows: Record<string, any>
   }
 }
 
+// Produce a concrete series derived from a splitBy template, bound to a filtered dataset.
+function buildSplitSeries(template: SeriesWithGroupingHint, datasetId: string, name: string, stack?: string): SeriesWithGroupingHint {
+  let next: SeriesWithGroupingHint = {...template, datasetId}
+  if (stack != null) next.stack = stack
+  if (next.name == null) next.name = name
+  if (next.encode) {
+    next.encode = {...next.encode}
+    delete next.encode.splitBy
+  }
+  return next
+}
+
 // Ensure cartesian series always have at least one x/y axis object.
 // This gives later enrichments an axis target to infer into, and avoids
 // ECharts runtime errors like `xAxis "0" not found`.
@@ -248,24 +248,24 @@ function ensureColors(config: NormalConfig) {
 function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) {
   for (let [axisIndex, axis] of config.xAxis.entries()) {
     if (!axis) continue
-    let encodedFields = config.series
+    let encoded = config.series
       .filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
-      .map(entry => getSeriesXField(entry, fields))
-      .filter(Boolean) as string[]
+      .map(entry => getEncodeField(entry, fields, 'x'))
+      .filter((f): f is Field => !!f)
 
-    axis.field ||= fields.find(field => field.name === encodedFields[0])
-    axis.type ||= inferAxisTypeFromFields(fields, encodedFields)
+    axis.field ||= encoded[0]
+    axis.type ||= inferAxisTypeFromFields(encoded)
   }
 
   for (let [axisIndex, axis] of config.yAxis.entries()) {
     if (!axis) continue
-    let encodedFields = config.series
+    let encoded = config.series
       .filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
-      .map(entry => getSeriesValueFieldName(entry, fields))
-      .filter(Boolean) as string[]
+      .map(entry => getSeriesValueField(entry, fields))
+      .filter((f): f is Field => !!f)
 
-    axis.field ||= fields.find(field => field.name === encodedFields[0])
-    axis.type ||= inferAxisTypeFromFields(fields, encodedFields)
+    axis.field ||= encoded[0]
+    axis.type ||= inferAxisTypeFromFields(encoded)
   }
 }
 
@@ -327,13 +327,13 @@ function lineSeriesMarkerVisibility(config: NormalConfig, rows: Record<string, a
       continue
     }
 
-    let xField = getSeriesXField(series, fields)
+    let xField = getEncodeField(series, fields, 'x')
     if (!xField) {
       series.showSymbol = false
       continue
     }
 
-    series.showSymbol = distinctValues(rows, xField).length < 30
+    series.showSymbol = distinctValues(rows, xField.name).length < 30
   }
 }
 
@@ -385,17 +385,17 @@ function valueFormatting(config: NormalConfig, fields: Field[]) {
 }
 
 // Hide value y-axes for stacked-100 charts, since values are percentages and labels are usually redundant.
-function hideStackPercentageValueAxis(config: NormalConfig) {
+function hideStackPercentageValueAxis(config: NormalConfig, fields: Field[]) {
   for (let [axisIndex, axis] of config.yAxis.entries()) {
     if (!axis || axis.type !== 'value' || axis.show != null) continue
 
     let seriesOnAxis = config.series.filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
     if (seriesOnAxis.length === 0) continue
 
-    let yFields = seriesOnAxis.map(entry => getSeriesValueFieldName(entry)).filter(Boolean) as string[]
+    let yFields = seriesOnAxis.map(entry => getSeriesValueField(entry, fields)).filter((f): f is Field => !!f)
     if (yFields.length === 0) continue
 
-    if (yFields.every(name => name.startsWith('__graphene_stack_pct_'))) axis.show = false
+    if (yFields.every(field => field.name.startsWith('__graphene_stack_pct_'))) axis.show = false
   }
 }
 
@@ -415,7 +415,7 @@ function removeHiddenValueAxisPadding(config: NormalConfig) {
 // - first axis uses bar series color (when there is only one bar series shape)
 // - second axis uses line series color
 // In anything more complex, we bail to avoid surprising defaults.
-function styleSecondaryAxisForSimpleBarLineLayout(config: NormalConfig) {
+function styleSecondaryAxisForSimpleBarLineLayout(config: NormalConfig, fields: Field[]) {
   if (config.yAxis.length < 2) return
 
   let series = config.series
@@ -429,8 +429,8 @@ function styleSecondaryAxisForSimpleBarLineLayout(config: NormalConfig) {
   if (series.some(entry => Number(entry?.yAxisIndex ?? 0) === 0 && entry?.type !== 'bar')) return
   if (series.some(entry => Number(entry?.yAxisIndex ?? 0) > 1)) return
 
-  let barYFields = Array.from(new Set(bars.map(entry => getSeriesValueFieldName(entry)).filter(Boolean))) as string[]
-  if (barYFields.length !== 1) return
+  let barYFields = new Set(bars.map(entry => getSeriesValueField(entry, fields)?.name).filter(Boolean))
+  if (barYFields.size !== 1) return
 
   let primaryAxis = config.yAxis[0]
   let secondaryAxis = config.yAxis[1]
@@ -450,11 +450,11 @@ function styleSecondaryAxisForSimpleBarLineLayout(config: NormalConfig) {
 
 // This is trying to fix an issue with charts where every value is either 0 or 1.
 // TODO: just make this a test, and see if we still need it
-function applyIntegerYAxisTicks(config: NormalConfig, rows: Record<string, any>[]) {
+function applyIntegerYAxisTicks(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   let yAxis = config.yAxis[0]
   if (!yAxis || yAxis.type !== 'value' || yAxis.minInterval != null) return
 
-  let yFields = Array.from(new Set(config.series.map(series => getSeriesValueFieldName(series)).filter(Boolean))) as string[]
+  let yFields = Array.from(new Set(config.series.map(series => getSeriesValueField(series, fields)?.name).filter(Boolean))) as string[]
   let values = rows.flatMap(row => yFields.map(field => Number(row?.[field]))).filter(value => Number.isFinite(value))
 
   if (values.length === 0) return
@@ -479,12 +479,12 @@ function barLabelPositioning(config: NormalConfig) {
 // Match series data labels to the assigned y-axis formatter when labels are enabled.
 // This keeps label formatting in sync with the y-axis without asking callers to repeat it.
 // labelsUseYAxisFormat depends on valueAxisFormatting running first so labels inherit axis formatting.
-function labelsUseYAxisFormat(config: NormalConfig) {
+function labelsUseYAxisFormat(config: NormalConfig, fields: Field[]) {
   for (let series of config.series) {
     // No-op when labels are off or already explicitly formatted.
     if (!series?.label || series.label.show !== true || series.label.formatter != null) continue
 
-    let yField = getSeriesValueFieldName(series)
+    let yField = getSeriesValueField(series, fields)?.name
     let axisIndex = Number(series.yAxisIndex ?? 0)
     let axisFormatter = config.yAxis[axisIndex]?.axisLabel?.formatter
     if (typeof axisFormatter !== 'function') continue
@@ -510,7 +510,7 @@ function labelsUseYAxisFormat(config: NormalConfig) {
 
 // Add a pie-friendly default tooltip formatter when charts include pie series.
 // Pie params can pass row objects as `params.value`, so we format from the encoded value field.
-function addPieTooltips(config: NormalConfig) {
+function addPieTooltips(config: NormalConfig, fields: Field[]) {
   if (!config.series.some(series => series?.type === 'pie')) return
 
   let tooltip = config.tooltip[0]
@@ -521,7 +521,7 @@ function addPieTooltips(config: NormalConfig) {
     let value = params?.value
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       let series = config.series[Number(params?.seriesIndex ?? 0)]
-      let yField = getSeriesValueFieldName(series)
+      let yField = getSeriesValueField(series, fields)?.name
       value = yField && value[yField] != null ? value[yField] : value.value
     }
     return `${params?.name ?? ''}: ${value ?? ''} (${params?.percent ?? 0}%)`
@@ -623,23 +623,13 @@ function horizontalBarGuard(config: NormalConfig, fields: Field[]) {
 
   let hasInvalidCategoryField = config.series
     .filter(series => series?.type === 'bar')
-    .map(series => fieldType(fields, getSeriesCategoryFieldForHorizontal(series)))
+    .map(series => getEncodeField(series, fields, 'y')?.type)
     .some(type => type === 'date' || type === 'timestamp' || type === 'number')
 
   if (hasInvalidCategoryField) throw new Error('Horizontal charts do not support a value or time-based x-axis')
 }
 
-function fieldType(fields: Field[], fieldName?: string): string {
-  if (!fieldName) return 'unknown'
-
-  let field = fields.find(entry => entry.name === fieldName)
-  if (!field) return 'unknown'
-  if (typeof field.type !== 'string') throw new Error(`Field ${fieldName} has unsupported non-scalar type: array`)
-  return field.type
-}
-
-function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
-  let resolved = fieldNames.map(name => fields.find(field => field.name === name)).filter(Boolean) as Field[]
+function inferAxisTypeFromFields(resolved: Field[]) {
   if (resolved.some(field => field?.metadata?.timeOrdinal)) return 'category'
 
   let types = resolved.map(field => {
@@ -652,62 +642,41 @@ function inferAxisTypeFromFields(fields: Field[], fieldNames: string[]) {
   return 'category'
 }
 
-function getSeriesXField(series: SeriesWithGroupingHint | undefined, fields?: Field[]) {
-  return getEncodeField(series, fields || [], 'x')?.name ?? getEncodeFieldName(series, 'x')
+// Series sometimes encode their value field as `y` and sometimes as `value` (pie, funnel, etc).
+function getSeriesValueField(series: SeriesWithGroupingHint | undefined, fields: Field[]) {
+  return getEncodeField(series, fields, 'y') ?? getEncodeField(series, fields, 'value')
 }
 
-function getSeriesValueFieldName(series: SeriesWithGroupingHint | undefined, fields?: Field[]) {
-  return getEncodeField(series, fields || [], 'y')?.name ?? getEncodeField(series, fields || [], 'value')?.name ?? getEncodeFieldName(series, 'y') ?? getEncodeFieldName(series, 'value')
-}
-
+// The field(s) to format in a series' tooltip. Depends on series type since scatter/bar put the numeric value in different encode props.
 function getSeriesValueFields(series: SeriesWithGroupingHint, fields: Field[]) {
   switch (series.type) {
     case 'scatter':
     case 'effectScatter':
-      return [getEncodeField(series, fields, 'x'), getEncodeField(series, fields, 'y')].filter(Boolean) as Field[]
+      return [getEncodeField(series, fields, 'x'), getEncodeField(series, fields, 'y')].filter((f): f is Field => !!f)
     case 'bar': {
       let xField = getEncodeField(series, fields, 'x')
       let yField = getEncodeField(series, fields, 'y')
-      return xField?.type == 'number' ? [xField] : ([yField].filter(Boolean) as Field[])
+      return xField?.type == 'number' ? [xField] : [yField].filter((f): f is Field => !!f)
     }
     default:
-      return [getEncodeField(series, fields, 'y')].filter(Boolean) as Field[]
+      return [getEncodeField(series, fields, 'y')].filter((f): f is Field => !!f)
   }
 }
 
-function getSeriesCategoryFieldForHorizontal(series?: SeriesWithGroupingHint) {
-  return getEncodeFieldName(series, 'y')
-}
+// The props on series.encode can either be a string, an array, or a comma-delimited string.
+// In all cases, this returns the corresponding fields for each item.
+function getEncodeFields(series: SeriesWithGroupingHint | undefined, fields: Field[], encodeProp: string): Field[] {
+  let raw = series?.encode?.[encodeProp]
 
-function getSplitByFields(series?: SeriesWithGroupingHint) {
-  let splitBy = series?.encode?.splitBy
-  if (typeof splitBy === 'string') return [splitBy]
-  if (!Array.isArray(splitBy)) return []
-  return splitBy
-    .filter(value => typeof value === 'string')
-    .map(value => value.trim())
-    .filter(Boolean)
-}
+  let names: string[] = []
+  if (Array.isArray(raw)) names = raw.filter((v): v is string => typeof v === 'string')
+  if (typeof raw === 'string') names = raw.split(',')
 
-function getEncodeFields(value: unknown): string[] {
-  if (typeof value === 'string') return [value]
-  if (!Array.isArray(value)) return []
-  return value.filter(entry => typeof entry === 'string') as string[]
-}
-
-function getEncodeFieldName(series: SeriesWithGroupingHint | undefined, encodeProp: string) {
-  let encode = series?.encode as Record<string, unknown> | undefined
-  return getEncodeFields(encode?.[encodeProp])[0]
+  return names.map(name => fields.find(f => f.name === name)).filter((f): f is Field => !!f)
 }
 
 function getEncodeField(series: SeriesWithGroupingHint | undefined, fields: Field[], encodeProp: string): Field | undefined {
-  let name = getEncodeFieldName(series, encodeProp)
-  if (!name) return undefined
-  return fields.find(field => field.name === name)
-}
-
-function shouldBindSeriesToDataset(series: SeriesWithGroupingHint) {
-  return series?.encode != null && series?.data == null
+  return getEncodeFields(series, fields, encodeProp)[0]
 }
 
 function inferDimensions(rows: Record<string, any>[]) {

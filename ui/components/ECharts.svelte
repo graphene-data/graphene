@@ -104,7 +104,7 @@
     cloned.legendSelection = chart.getOption()?.legend?.[0]?.selected
     let enriched = enrich(cloned, rows, fields)
 
-    chartSizeStyle = calculateChartSize(enriched, rows)
+    chartSizeStyle = calculateChartSize(enriched, rows, fields)
     chart.setOption({...enriched, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
   }
 
@@ -140,14 +140,14 @@
     return trimmed
   }
 
-  function calculateChartSize(config?: NormalConfig, rows: Record<string, any>[] = []) {
+  function calculateChartSize(config?: NormalConfig, rows: Record<string, any>[] = [], fields: any[] = []) {
     let threshold = 8 // over this many bars, start to grow
     let resolvedHeight: string | number = height ?? '320px'
     let barSeries = config?.series.find(s => s.type == 'bar')
     let categoricalY = config?.yAxis[0]?.type == 'category'
 
     if (config && barSeries && categoricalY) {
-      let distinctX = horizontalBarCount(config, rows)
+      let distinctX = horizontalBarCount(config, rows, fields)
       if (distinctX > threshold) resolvedHeight = 320 * Math.max(1, distinctX / threshold)
     }
 
