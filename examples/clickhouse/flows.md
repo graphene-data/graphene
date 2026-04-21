@@ -1,6 +1,21 @@
 # NYC Taxi Origin-Destination Flows
 
-Trip movement between pickup and dropoff neighborhoods in the NYC taxi sample.
+Trip movement between pickup and dropoff neighborhoods from a bounded sample of NYC taxi trips.
+
+```sql flow_sample
+select
+  pickup_ntaname,
+  dropoff_ntaname,
+  trip_distance,
+  trip_minutes,
+  total_amount
+from nyc_taxi
+where pickup_ntaname is not null
+  and dropoff_ntaname is not null
+  and pickup_ntaname != ''
+  and dropoff_ntaname != ''
+limit 250000
+```
 
 ```sql flow_summary
 select
@@ -8,16 +23,12 @@ select
   count(distinct pickup_ntaname) as pickup_neighborhoods,
   count(distinct dropoff_ntaname) as dropoff_neighborhoods,
   count(distinct concat(pickup_ntaname, ' -> ', dropoff_ntaname)) as routes
-from nyc_taxi
-where pickup_ntaname is not null
-  and dropoff_ntaname is not null
-  and pickup_ntaname != ''
-  and dropoff_ntaname != ''
+from flow_sample
 ```
 
 <Row>
-  <BigValue data=flow_summary value=trips title="Trips with OD" fmt=num0 />
-  <BigValue data=flow_summary value=routes title="Routes" fmt=num0 />
+  <BigValue data=flow_summary value=trips title="Sample Trips" fmt=num0 />
+  <BigValue data=flow_summary value=routes title="Sample Routes" fmt=num0 />
   <BigValue data=flow_summary value=pickup_neighborhoods title="Pickup Areas" fmt=num0 />
   <BigValue data=flow_summary value=dropoff_neighborhoods title="Dropoff Areas" fmt=num0 />
 </Row>
@@ -27,11 +38,7 @@ select
   concat('Pickup: ', pickup_ntaname) as source,
   concat('Dropoff: ', dropoff_ntaname) as target,
   count(*) as trips
-from nyc_taxi
-where pickup_ntaname is not null
-  and dropoff_ntaname is not null
-  and pickup_ntaname != ''
-  and dropoff_ntaname != ''
+from flow_sample
 group by 1, 2
 order by 3 desc
 limit 40
@@ -80,9 +87,7 @@ select
   pickup_ntaname,
   count(*) as trips,
   avg(total_amount) as avg_total_amount
-from nyc_taxi
-where pickup_ntaname is not null
-  and pickup_ntaname != ''
+from flow_sample
 group by 1
 order by 2 desc
 limit 12
@@ -93,9 +98,7 @@ select
   dropoff_ntaname,
   count(*) as trips,
   avg(total_amount) as avg_total_amount
-from nyc_taxi
-where dropoff_ntaname is not null
-  and dropoff_ntaname != ''
+from flow_sample
 group by 1
 order by 2 desc
 limit 12
@@ -114,11 +117,7 @@ select
   avg(trip_distance) as avg_distance,
   avg(trip_minutes) as avg_minutes,
   avg(total_amount) as avg_total_amount
-from nyc_taxi
-where pickup_ntaname is not null
-  and dropoff_ntaname is not null
-  and pickup_ntaname != ''
-  and dropoff_ntaname != ''
+from flow_sample
 group by 1, 2
 order by 3 desc
 limit 25
