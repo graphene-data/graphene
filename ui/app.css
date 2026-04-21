@@ -63,16 +63,6 @@ body {
 }
 
 /* ============================================================
-   Layout (app chrome)
-   ============================================================ */
-
-main {
-  margin: 0 auto;
-  min-width: 0;
-  padding: 20px 48px 80px;
-}
-
-/* ============================================================
    Typography
    ============================================================ */
 
@@ -306,13 +296,8 @@ select {
    Prose container (rendered markdown)
    ============================================================ */
 .pageContent {
-  max-width: 720px;
   font-family: var(--font-prose);
   letter-spacing: -0.01em;
-}
-
-.pageContent.dashboardLayout {
-  max-width: 1200px;
 }
 
 /* Embedded images in rendered markdown */
