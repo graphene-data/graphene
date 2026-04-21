@@ -24,6 +24,13 @@
   --color-border-strong: #dfddd8;
   --color-code-bg: #f1f0ed;
   --color-code-text: #4a4541;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #252525;
+  --sidebar-accent: #f4f4f5;
+  --sidebar-accent-foreground: #171717;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #b5b5b5;
 }
 
 /* ============================================================
@@ -34,7 +41,6 @@ html {
 }
 
 body {
-  display: flex;
   margin: 0;
   min-height: 100vh;
   font-family: var(--font-ui);
@@ -59,13 +65,9 @@ body {
 /* ============================================================
    Layout (app chrome)
    ============================================================ */
-nav {
-  width: 200px;
-  flex-shrink: 0;
-}
 
 main {
-  flex: 1;
+  margin: 0 auto;
   min-width: 0;
   padding: 20px 48px 80px;
 }

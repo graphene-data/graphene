@@ -3,7 +3,9 @@
   import {errorProvider} from './telemetry.ts'
   import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
   import navFiles from 'virtual:nav'
-  import NavSidebar from './NavSidebar.svelte'
+  import Sidebar from './Sidebar.svelte'
+  import SidebarToggle from './SidebarToggle.svelte'
+  import PageNavGroup from './PageNavGroup.svelte'
   import ErrorDisplay from './ErrorDisplay.svelte'
   import ChartGallery from './ChartGallery.svelte'
   import StyleGallery from './StyleGallery.svelte'
@@ -63,7 +65,11 @@
   })
 </script>
 
-<NavSidebar files={navData} />
+<SidebarToggle style='position:fixed;top:2rem;left:0.5rem;opacity:0.3;' />
+<Sidebar>
+  <PageNavGroup files={navData} />
+</Sidebar>
+
 <main id="content" class={{pageContent: !!Page, dashboardLayout: pageMeta.layout == 'dashboard'}}>
   {#if compileError}
     <h1 class="page-error-heading">Error loading page</h1>
@@ -78,4 +84,9 @@
 
 <style>
   .page-error-heading { margin-top: 0; }
+
+  /* want to control this margin so it lines up with the SidebarToggle */
+  main h1:first-child {
+    margin-top: 12px;
+  }
 </style>
