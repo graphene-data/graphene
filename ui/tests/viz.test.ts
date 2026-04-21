@@ -453,6 +453,30 @@ test.skip('area chart supports stepped markers and hidden line', async ({chart})
   await expect(chart.el).screenshot('area-chart-stepped-markers-no-line')
 })
 
+test('treemap chart', async ({mount, chart}) => {
+  let rows = [
+    {name: 'Storage', value: 40},
+    {name: 'Compute', value: 30},
+    {name: 'Network', value: 20},
+    {name: 'Database', value: 15},
+    {name: 'Security', value: 10},
+    {name: 'CDN', value: 8},
+  ]
+  let fields = [
+    {name: 'name', type: scalarType('string')},
+    {name: 'value', type: scalarType('number')},
+  ]
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    config: {
+      title: {text: 'Treemap'},
+      tooltip: {trigger: 'item'},
+      series: [{type: 'treemap', encode: {itemName: 'name', value: 'value'}}],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-treemap')
+})
+
 test('bar chart applies secondary axis assignment', async ({mount, chart}) => {
   let data = timeseries() as any
   let nextRandom = seededRandom(202503)
