@@ -27,6 +27,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   applyMissingPointDefaults(normalized, rows)
   applyStackPercentage(normalized, rows, fields)
   applySorting(normalized, rows, fields)
+  materializeSankeySeries(normalized, rows)
 
   let baseDatasetId = ensureDataset(normalized, rows, fields)
   expandSeriesTransforms(normalized, rows, baseDatasetId)
@@ -181,6 +182,42 @@ function expandSeriesTransforms(config: NormalConfig, rows: Record<string, any>[
   })
 
   config.series = expanded
+}
+
+// Sankey does not consume dataset+encode directly, so turn encoded edge rows into native nodes/links.
+function materializeSankeySeries(config: NormalConfig, rows: Record<string, any>[]) {
+  for (let series of config.series) {
+    let target = series as SeriesWithGroupingHint & {links?: unknown[]}
+    if (target?.type !== 'sankey' || target.data != null || target.links != null) continue
+
+    let sourceField = getEncodeFieldName(target, 'source')
+    let targetField = getEncodeFieldName(target, 'target')
+    let valueField = getEncodeFieldName(target, 'value')
+    if (!sourceField || !targetField || !valueField) continue
+
+    let seen = new Set<string>()
+    let nodes: {name: string}[] = []
+    let links: {source: string; target: string; value: number}[] = []
+
+    for (let row of rows) {
+      let source = row?.[sourceField]
+      let targetName = row?.[targetField]
+      if (source == null || targetName == null) continue
+
+      for (let name of [String(source), String(targetName)]) {
+        if (seen.has(name)) continue
+        seen.add(name)
+        nodes.push({name})
+      }
+
+      links.push({source: String(source), target: String(targetName), value: Number(row?.[valueField]) || 0})
+    }
+
+    target.data = nodes
+    target.links = links
+    delete target.encode
+    delete target.datasetId
+  }
 }
 
 // Ensure cartesian series always have at least one x/y axis object.
