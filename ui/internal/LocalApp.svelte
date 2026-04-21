@@ -65,7 +65,7 @@
   })
 </script>
 
-<SidebarToggle style='position:fixed;top:2rem;left:0.5rem;opacity:0.3;' />
+<SidebarToggle style='position:fixed;top:2rem;left:2rem;opacity:0.3;' />
 <Sidebar>
   <PageNavGroup files={navData} />
 </Sidebar>
@@ -83,6 +83,17 @@
 </main>
 
 <style>
+  main.pageContent {
+    margin: 0 auto;
+    min-width: 0;
+    padding: 20px 4rem 80px;
+    max-width: 720px;
+  }
+
+  main.pageContent.dashboardLayout {
+    max-width: 1200px;
+  }
+
   .page-error-heading { margin-top: 0; }
 
   /* want to control this margin so it lines up with the SidebarToggle */
