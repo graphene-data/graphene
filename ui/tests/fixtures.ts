@@ -5,7 +5,7 @@ import {fileURLToPath} from 'url'
 import {test as base, onTestFinished} from 'vitest'
 
 import {mockFileMap} from '../../cli/mockFiles.ts'
-import {serve2} from '../../cli/serve2.ts'
+import {clearSvelteWarnings, serve2, svelteWarnings} from '../../cli/serve2.ts'
 import {type Config, setConfig} from '../../lang/config.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
 import {playwrightExpect as expect} from './matchers.ts'
@@ -211,6 +211,14 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
 test.beforeEach(() => {
   let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
   setConfig({root})
+  clearSvelteWarnings()
+})
+
+test.afterEach(() => {
+  if (svelteWarnings.length) {
+    let formatted = svelteWarnings.map(w => `  - [${w.code}] ${w.message} (${w.filename})`).join('\n')
+    throw new Error(`Unexpected Svelte warnings:\n${formatted}`)
+  }
 })
 
 export async function getAvailablePort(): Promise<number> {
