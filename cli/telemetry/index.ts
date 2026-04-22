@@ -17,7 +17,7 @@ const SAFE_FLAG_NAMES: Partial<Record<TelemetryCommand, Record<string, string[]>
 }
 
 export class CliTelemetry {
-  private storage = new TelemetryStorage()
+  private storage: TelemetryStorage
   private installId = ''
   private projectHash?: string
   private enabled = true
@@ -30,12 +30,14 @@ export class CliTelemetry {
     this.cfg = cfg
     this.cliVersion = cliVersion
     this.endpoint = endpoint
+    this.storage = new TelemetryStorage({projectRoot: cfg.root})
   }
 
   async init(cwd = process.cwd()) {
     this.enabled = isTelemetryEnabled(this.cfg, this.endpoint)
     if (!this.enabled) return
 
+    await this.storage.init()
     this.installId = this.storage.installId
     this.projectHash = await getProjectHash(cwd)
   }
@@ -50,11 +52,11 @@ export class CliTelemetry {
     })
   }
 
-  commandCompleted(command: TelemetryCommand, event: Omit<CliCommandCompletedEvent, keyof ReturnType<CliTelemetry['commonFields']> | 'event' | 'command'>) {
+  async commandCompleted(command: TelemetryCommand, event: Omit<CliCommandCompletedEvent, keyof ReturnType<CliTelemetry['commonFields']> | 'event' | 'command'>) {
     if (!this.enabled) return
 
     if (event.success) {
-      let {shouldSendInstallSeen, fromVersion} = this.storage.markSuccessfulInvocation(this.cliVersion)
+      let {shouldSendInstallSeen, fromVersion} = await this.storage.markSuccessfulInvocation(this.cliVersion)
       if (shouldSendInstallSeen) this.send({...this.commonFields(), event: 'cli_install_seen'})
       if (fromVersion) {
         this.send({

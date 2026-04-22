@@ -10,11 +10,13 @@ Telemetry is enabled when:
 
 The default endpoint is `https://app.graphenedata.com/cli-telemetry`. Tests and local development can override it with `GRAPHENE_TELEMETRY_ENDPOINT`.
 
+Telemetry state persistence is best-effort. State is stored in the current project's `node_modules/.graphene/telemetry.json` when `node_modules` already exists. If the project cache cannot be read or written, command behavior should not change and install or upgrade lifecycle events are skipped.
+
 ## Common fields
 
 Every event includes these fields:
 
-- `install_id`: A random UUID generated once and persisted in the local Graphene config store. It identifies a CLI installation, not a user account or machine owner.
+- `install_id`: A random UUID generated once and persisted in the local Graphene project cache. It identifies a project-local CLI installation, not a user account or machine owner.
 - `project_hash`: A SHA-256 hash of the nearest `package.json` `name`, prefixed with `graphene:` before hashing. This lets us distinguish projects without sending the raw package name.
 - `cli_version`: The Graphene CLI version.
 - `timestamp`: The event time in ISO-8601 format.
