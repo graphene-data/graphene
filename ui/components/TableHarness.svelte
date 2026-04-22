@@ -10,7 +10,7 @@
   }
 
   let {data, tableProps = {}, columns = [], width = 880}: Props = $props()
-  let wrapperWidth = typeof width === 'number' ? `${width}px` : width
+  let wrapperWidth = $derived(typeof width === 'number' ? `${width}px` : width)
 </script>
 
 <div class="table-harness" style:width={wrapperWidth}>
