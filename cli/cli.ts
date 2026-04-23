@@ -264,7 +264,7 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
       success = false
       caughtError = err
     } finally {
-      telemetry.commandCompleted(command, {success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
+      await telemetry.commandCompleted(command, {success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
     }
 
     if (caughtError) throw caughtError
