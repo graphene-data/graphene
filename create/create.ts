@@ -50,6 +50,7 @@ interface GrapheneTemplateConfig {
 interface TemplatePackageJson {
   name: string
   version: string
+  packageManager?: string
   scripts: {
     graphene: string
     serve: string
@@ -63,14 +64,21 @@ interface TemplatePackageJson {
 interface CreateContext {
   argv: string[]
   cwd: string
+  env?: NodeJS.ProcessEnv
   stdin: Readable
   stdout: Writable
   stderr: Writable
 }
 
+interface PackageManager {
+  name: 'npm' | 'pnpm' | 'yarn' | 'bun'
+  version?: string
+}
+
 interface ScaffoldAnswers {
   targetDir: string
   projectName: string
+  packageManager?: PackageManager
   database: Database
   defaultNamespace?: string
   duckdbPath?: string
@@ -158,6 +166,19 @@ export function defaultProjectName(targetDir: string): string {
   return normalized || 'graphene-app'
 }
 
+// Create commands are normally launched by a package manager, which exposes its identity in npm-compatible env vars.
+export function detectPackageManager(env: NodeJS.ProcessEnv = {}): PackageManager {
+  let userAgent = env.npm_config_user_agent || env.NPM_CONFIG_USER_AGENT || ''
+  let userAgentMatch = userAgent.match(/(?:^|\s)(npm|pnpm|yarn|bun)\/([^\s]+)/)
+  if (userAgentMatch) return {name: userAgentMatch[1] as PackageManager['name'], version: userAgentMatch[2]}
+
+  let execPath = path.basename(env.npm_execpath || env.NPM_EXEC_PATH || '').toLowerCase()
+  if (execPath.includes('pnpm')) return {name: 'pnpm'}
+  if (execPath.includes('yarn')) return {name: 'yarn'}
+  if (execPath.includes('bun')) return {name: 'bun'}
+  return {name: 'npm'}
+}
+
 export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers; cliVersion: string}): TemplateFiles {
   let graphene: GrapheneTemplateConfig = {dialect: answers.database}
   if (answers.defaultNamespace) graphene.defaultNamespace = answers.defaultNamespace
@@ -172,6 +193,7 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   let pkg: TemplatePackageJson = {
     name: answers.projectName,
     version: '0.0.1',
+    packageManager: answers.packageManager?.version ? `${answers.packageManager.name}@${answers.packageManager.version}` : undefined,
     scripts: {
       graphene: 'graphene',
       serve: 'graphene serve',
@@ -184,6 +206,7 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
     },
     graphene,
   }
+  if (!pkg.packageManager) delete pkg.packageManager
   let warehouseClient = getWarehouseClient(answers.database)
   pkg.dependencies[warehouseClient] = getWarehouseClientVersion(warehouseClient)
 
@@ -243,7 +266,7 @@ function printHelp(stdout: Writable): void {
       'Options:',
       '  -y, --yes        Skip prompts and accept defaults',
       '  --name <name>    Set the generated package name',
-      '  --install        Run npm install after scaffolding',
+      '  --install        Install dependencies after scaffolding',
       '  --no-install     Skip dependency installation',
     ].join('\n') + '\n',
   )
@@ -305,12 +328,13 @@ function getWarehouseClientVersion(packageName: WarehouseClient): string {
   return version
 }
 
-async function collectAnswers({options, input, output}: {options: CreateOptions; input: Readable; output: Writable}): Promise<ScaffoldAnswers> {
+async function collectAnswers({options, packageManager, input, output}: {options: CreateOptions; packageManager: PackageManager; input: Readable; output: Writable}): Promise<ScaffoldAnswers> {
   if (options.yes) {
     let targetDir = options.targetDir || 'graphene-app'
     return {
       targetDir,
       projectName: options.name || defaultProjectName(targetDir),
+      packageManager,
       database: 'duckdb',
       install: options.install ?? false,
     }
@@ -353,6 +377,7 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
   let answers: ScaffoldAnswers = {
     targetDir,
     projectName,
+    packageManager,
     database,
     defaultNamespace: defaultNamespace || undefined,
     install: false,
@@ -411,7 +436,7 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
     options.install ??
     unwrapPrompt(
       await clack.confirm({
-        message: 'Install dependencies now?',
+        message: `Install dependencies with ${packageManager.name} now?`,
         initialValue: true,
         ...promptOptions(input, output),
       }),
@@ -420,14 +445,20 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
   return answers
 }
 
-async function installDeps(targetDir: string): Promise<InstallResult> {
-  let task = clack.taskLog({title: 'Installing dependencies...', retainLog: true})
-  let child = spawn('npm', ['install', '--no-fund'], {
+function installCommand(packageManager: PackageManager): [string, string[]] {
+  if (packageManager.name === 'npm') return ['npm', ['install', '--no-fund']]
+  return [packageManager.name, ['install']]
+}
+
+async function installDeps(targetDir: string, packageManager: PackageManager, env: NodeJS.ProcessEnv): Promise<InstallResult> {
+  let [command, args] = installCommand(packageManager)
+  let task = clack.taskLog({title: `Installing dependencies with ${packageManager.name}...`, retainLog: true})
+  let child = spawn(command, args, {
     cwd: targetDir,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: {...process.env, FORCE_COLOR: '1', npm_config_color: 'always'},
+    env: {...env, FORCE_COLOR: '1', npm_config_color: 'always'},
   })
-  if (!child.stdout || !child.stderr) throw new Error('npm install pipes were not created')
+  if (!child.stdout || !child.stderr) throw new Error(`${command} install pipes were not created`)
   let stderr = ''
   child.stdout.setEncoding('utf8')
   child.stderr.setEncoding('utf8')
@@ -467,13 +498,13 @@ async function installDeps(targetDir: string): Promise<InstallResult> {
   flush('stderr')
 
   if (code === 0) task.success('Dependencies installed', {showLog: true})
-  else task.error('npm install failed', {showLog: true})
+  else task.error(`${command} install failed`, {showLog: true})
 
   return {code, stderr}
 }
 
 // Resolve answers, write the starter, and optionally install dependencies.
-export async function runCreate({argv, cwd, stdin, stdout}: CreateContext): Promise<void> {
+export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateContext): Promise<void> {
   let options = parseArgs(argv)
   if (options.help) {
     printHelp(stdout)
@@ -483,7 +514,8 @@ export async function runCreate({argv, cwd, stdin, stdout}: CreateContext): Prom
   clack.intro('Create a new Graphene project', {output: stdout})
 
   try {
-    let answers = await collectAnswers({options, input: stdin, output: stdout})
+    let packageManager = detectPackageManager(env)
+    let answers = await collectAnswers({options, packageManager, input: stdin, output: stdout})
     let targetDir = path.resolve(cwd, answers.targetDir)
 
     await ensureEmptyDir(targetDir)
@@ -491,8 +523,8 @@ export async function runCreate({argv, cwd, stdin, stdout}: CreateContext): Prom
     await writeTemplate(targetDir, renderTemplate({answers, cliVersion}))
 
     if (answers.install) {
-      let install = await installDeps(targetDir)
-      if (install.code !== 0) throw new Error(install.stderr.trim() || `npm install failed with code ${install.code}`)
+      let install = await installDeps(targetDir, packageManager, env)
+      if (install.code !== 0) throw new Error(install.stderr.trim() || `${packageManager.name} install failed with code ${install.code}`)
     }
 
     clack.outro('Done!', {output: stdout})

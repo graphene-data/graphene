@@ -143,10 +143,52 @@ describe('runCreate', () => {
 
     await runCreate({argv: ['demo-app', '--yes', '--install'], cwd: root, stdin: process.stdin, stdout: stdout.stream, stderr: stderr.stream})
 
-    expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies...', retainLog: true})
+    expect(spawnMock).toHaveBeenCalledWith('npm', ['install', '--no-fund'], expect.objectContaining({cwd: path.join(root, 'demo-app')}))
+    expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies with npm...', retainLog: true})
     expect(taskLogState.message).toHaveBeenNthCalledWith(1, 'added 10 packages')
     expect(taskLogState.message).toHaveBeenNthCalledWith(2, 'funding info')
     expect(taskLogState.success).toHaveBeenCalledWith('Dependencies installed', {showLog: true})
+  })
+
+  it('uses the invoking package manager for install and generated metadata', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({
+      argv: ['demo-app', '--yes', '--install'],
+      cwd: root,
+      env: {npm_config_user_agent: 'pnpm/10.1.0 npm/? node/v24.0.0 darwin arm64'},
+      stdin: process.stdin,
+      stdout: streamSink().stream,
+      stderr: streamSink().stream,
+    })
+
+    let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
+    expect(pkg.packageManager).toBe('pnpm@10.1.0')
+    expect(spawnMock).toHaveBeenCalledWith('pnpm', ['install'], expect.objectContaining({cwd: path.join(root, 'demo-app')}))
+    expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies with pnpm...', retainLog: true})
+  })
+
+  it('names the detected package manager in the install prompt', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    selectMock.mockResolvedValue('duckdb')
+    confirmMock.mockResolvedValue(false)
+
+    await runCreate({
+      argv: [],
+      cwd: root,
+      env: {npm_config_user_agent: 'yarn/4.12.0 npm/? node/v24.0.0 darwin arm64'},
+      stdin: process.stdin,
+      stdout: streamSink().stream,
+      stderr: streamSink().stream,
+    })
+
+    expect(confirmMock).toHaveBeenCalledWith(expect.objectContaining({message: 'Install dependencies with yarn now?'}))
   })
 
   it('marks install failures without clearing the log', async () => {

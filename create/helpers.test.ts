@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest'
 
-import {defaultProjectName, parseArgs, renderTemplate} from './create.ts'
+import {defaultProjectName, detectPackageManager, parseArgs, renderTemplate} from './create.ts'
 
 describe('create helpers', () => {
   it('parses the supported CLI arguments', () => {
@@ -22,12 +22,20 @@ describe('create helpers', () => {
     expect(defaultProjectName('___')).toBe('___')
   })
 
+  it('detects the invoking package manager from npm-compatible env vars', () => {
+    expect(detectPackageManager({npm_config_user_agent: 'pnpm/10.1.0 npm/? node/v24.0.0 darwin arm64'})).toEqual({name: 'pnpm', version: '10.1.0'})
+    expect(detectPackageManager({npm_config_user_agent: 'yarn/4.12.0 npm/? node/v24.0.0 darwin arm64'})).toEqual({name: 'yarn', version: '4.12.0'})
+    expect(detectPackageManager({npm_execpath: '/usr/local/lib/node_modules/bun/bin/bun'})).toEqual({name: 'bun'})
+    expect(detectPackageManager({})).toEqual({name: 'npm'})
+  })
+
   it('renders a duckdb project with a configured path and starter page', () => {
     let files = renderTemplate({
       cliVersion: '0.0.15',
       answers: {
         targetDir: 'demo-app',
         projectName: 'demo-app',
+        packageManager: {name: 'pnpm', version: '10.1.0'},
         database: 'duckdb',
         duckdbPath: './data.duckdb',
         install: false,
@@ -36,6 +44,7 @@ describe('create helpers', () => {
     let pkg = JSON.parse(files['package.json'])
 
     expect(pkg.name).toBe('demo-app')
+    expect(pkg.packageManager).toBe('pnpm@10.1.0')
     expect(pkg.dependencies['@graphenedata/cli']).toBe('0.0.15')
     expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
     expect(pkg.graphene).toEqual({dialect: 'duckdb', duckdb: {path: './data.duckdb'}})
