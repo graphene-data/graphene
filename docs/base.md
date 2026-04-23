@@ -63,11 +63,6 @@ select category, revenue from orders
 Queries can be referenced by other queries in the `from` or `join` to form DAGs of data transformations within the dashboard.
 `data` can be a query name or a table name. Attributes that accept columns also accept GSQL expressions.
 
-## Page frontmatter
-You can add YAML frontmatter at the top of a page. The following attributes are supported:
-title: title displayed at the top of the page
-layout: `notebook` is the default, good for prose with embedded charts. `dashboard` has a wider max-width, for chart-heavy pages with lots of <Row>s.
-
 ## Components
 All viz components take `data`, which is the name of a gsql table or code-fenced query in the markdown.
 Component "field" attributes (like x and y) map to a column within data.
@@ -81,7 +76,6 @@ Attributes like `x`, `y`, `y2`, and `splitBy` are the names of columns within th
 - BigValue: data, value, title, fmt, comparison, comparisonFmt, comparisonTitle, downIsGood, sparkline, sparklineType, sparklineColor
 - Table: data, rows, title, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
   - Column (sub-component of Table): id, title, fmt, align, wrap, contentType, totalAgg, redNegatives
-- Value: data, column, row
 
 ## ECharts
 To further customize the look and feel of a chart, use the ECharts component to provide an echarts config.
