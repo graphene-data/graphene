@@ -232,6 +232,8 @@ function renderAgents(answers: ScaffoldAnswers): string {
     [
       '## Graphene Reference',
       '',
+      `Assume all ${databaseLabel(answers.database)} functions are available when writing GSQL.`,
+      '',
       'Common commands:',
       '',
       `- ${grapheneCommand(answers.packageManager, 'check')} - check the project for syntax and analysis errors`,
@@ -241,11 +243,14 @@ function renderAgents(answers: ScaffoldAnswers): string {
   )
 }
 
+function databaseLabel(database: Database) {
+  if (database === 'snowflake') return 'Snowflake'
+  if (database === 'bigquery') return 'BigQuery'
+  return 'DuckDB'
+}
+
 function renderIndex(answers: ScaffoldAnswers): string {
-  let dialectLabel = 'DuckDB'
-  if (answers.database === 'snowflake') dialectLabel = 'Snowflake'
-  else if (answers.database === 'bigquery') dialectLabel = 'BigQuery'
-  return [`# ${answers.projectName}`, '', `This Graphene project is configured for ${dialectLabel}.`, '', 'Start by adding models and queries to this project.'].join('\n') + '\n'
+  return [`# ${answers.projectName}`, '', `This Graphene project is configured for ${databaseLabel(answers.database)}.`, '', 'Start by adding models and queries to this project.'].join('\n') + '\n'
 }
 
 function renderEnvFile(answers: ScaffoldAnswers): string | null {

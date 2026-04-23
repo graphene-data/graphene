@@ -51,6 +51,7 @@ describe('create helpers', () => {
     expect(files['AGENTS.md']).toContain('pnpm graphene check')
     expect(files['AGENTS.md']).toContain('pnpm graphene run index.md')
     expect(files['AGENTS.md']).toContain('pnpm graphene serve --bg')
+    expect(files['AGENTS.md']).toContain('Assume all DuckDB functions are available when writing GSQL.')
     expect(files['.gitignore']).toContain('*.duckdb')
     expect(files['.env']).toBeUndefined()
     expect(files['index.md']).toContain('configured for DuckDB')
@@ -109,6 +110,7 @@ describe('create helpers', () => {
       defaultNamespace: 'MY_DB.ANALYTICS',
       snowflake: {account: 'myorg-myaccount', username: 'graphene_user'},
     })
+    expect(files['AGENTS.md']).toContain('Assume all Snowflake functions are available when writing GSQL.')
     expect(pkg.dependencies['snowflake-sdk']).toBeTruthy()
     expect(files['.env']).toContain('SNOWFLAKE_PRI_KEY_PATH=/Users/me/.ssh/graphene_snowflake_key.p8')
     expect(files['.env']).toContain('SNOWFLAKE_PRI_PASSPHRASE=secret')
@@ -134,6 +136,7 @@ describe('create helpers', () => {
       defaultNamespace: 'my-project.analytics',
       bigquery: {projectId: 'my-project-123'},
     })
+    expect(files['AGENTS.md']).toContain('Assume all BigQuery functions are available when writing GSQL.')
     expect(pkg.dependencies['@google-cloud/bigquery']).toBe('^8.2.0')
     expect(files['.env']).toContain('GOOGLE_APPLICATION_CREDENTIALS=/Users/me/.ssh/graphene-bq-key.json')
   })
