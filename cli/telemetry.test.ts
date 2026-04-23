@@ -45,36 +45,70 @@ describe('cli telemetry', () => {
 
   it('persists install and upgrade state', async () => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-telemetry-state-'))
-    let originalConfigHome = process.env.XDG_CONFIG_HOME
-    process.env.XDG_CONFIG_HOME = tmpDir
 
     try {
-      let storage = new TelemetryStorage()
+      await fsp.mkdir(path.join(tmpDir, 'node_modules'))
+      let storage = new TelemetryStorage({projectRoot: tmpDir})
+      await storage.init()
       let firstInstallId = storage.installId
       expect(firstInstallId).toBeTruthy()
 
-      let initialSuccess = storage.markSuccessfulInvocation('0.0.15')
+      let initialSuccess = await storage.markSuccessfulInvocation('0.0.15')
       expect(initialSuccess).toEqual({shouldSendInstallSeen: true, fromVersion: undefined})
       expect(storage.installId).toBe(firstInstallId)
 
-      let repeatSuccess = storage.markSuccessfulInvocation('0.0.15')
+      let repeatSuccess = await storage.markSuccessfulInvocation('0.0.15')
       expect(repeatSuccess).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
       expect(storage.installId).toBe(firstInstallId)
 
-      let upgradeSuccess = storage.markSuccessfulInvocation('0.0.16')
+      let upgradeSuccess = await storage.markSuccessfulInvocation('0.0.16')
       expect(upgradeSuccess).toEqual({shouldSendInstallSeen: false, fromVersion: '0.0.15'})
       expect(storage.installId).toBe(firstInstallId)
 
-      let repeatUpgradeVersion = storage.markSuccessfulInvocation('0.0.16')
+      let repeatUpgradeVersion = await storage.markSuccessfulInvocation('0.0.16')
       expect(repeatUpgradeVersion).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
       expect(storage.installId).toBe(firstInstallId)
 
-      let switchBackVersion = storage.markSuccessfulInvocation('0.0.15')
+      let nextStorage = new TelemetryStorage({projectRoot: tmpDir})
+      await nextStorage.init()
+      expect(nextStorage.installId).toBe(firstInstallId)
+      expect(await nextStorage.markSuccessfulInvocation('0.0.17')).toEqual({shouldSendInstallSeen: false, fromVersion: '0.0.16'})
+
+      let switchBackVersion = await storage.markSuccessfulInvocation('0.0.15')
       expect(switchBackVersion).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
       expect(storage.installId).toBe(firstInstallId)
     } finally {
-      if (originalConfigHome === undefined) delete process.env.XDG_CONFIG_HOME
-      else process.env.XDG_CONFIG_HOME = originalConfigHome
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
+
+  it('does not throw when telemetry state cannot be persisted', async () => {
+    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-telemetry-unwritable-'))
+
+    try {
+      await fsp.mkdir(path.join(tmpDir, 'node_modules'))
+      await fsp.writeFile(path.join(tmpDir, 'node_modules/.graphene'), '')
+
+      let storage = new TelemetryStorage({projectRoot: tmpDir})
+      await storage.init()
+      expect(storage.installId).toBeTruthy()
+      expect(await storage.markSuccessfulInvocation('0.0.15')).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
+      expect(await storage.markSuccessfulInvocation('0.0.16')).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
+
+  it('uses ephemeral state when the project has no node_modules', async () => {
+    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-telemetry-no-node-modules-'))
+
+    try {
+      let storage = new TelemetryStorage({projectRoot: tmpDir})
+      await storage.init()
+      expect(storage.installId).toBeTruthy()
+      expect(await storage.markSuccessfulInvocation('0.0.15')).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
+      await expect(fsp.access(path.join(tmpDir, 'node_modules'))).rejects.toBeTruthy()
+    } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
   })

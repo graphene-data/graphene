@@ -46,6 +46,14 @@ function expectCliSuccess(res: RunResult, step: string) {
   expect(res.code).toBe(0)
 }
 
+async function createTelemetryProject(prefix: string) {
+  let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), prefix))
+  await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify({name: prefix, graphene: {duckdb: {}}}, null, 2) + '\n')
+  await fsp.cp(path.join(flightDir, 'tables'), path.join(tmpDir, 'tables'), {recursive: true})
+  await fsp.mkdir(path.join(tmpDir, 'node_modules'))
+  return tmpDir
+}
+
 describe('cli compile', () => {
   it('compiles a basic query (happy path)', async () => {
     let res = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir})
@@ -150,7 +158,7 @@ describe('cli check', () => {
 
 describe('cli telemetry', () => {
   it('sends telemetry to the configured endpoint', async () => {
-    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-telemetry-'))
+    let tmpDir = await createTelemetryProject('graphene-cli-telemetry-')
     let batches: any[] = []
     let server = createServer(async (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
       let body = await readRequestBody(req)
@@ -162,11 +170,10 @@ describe('cli telemetry', () => {
     try {
       let endpoint = await listen(server)
       let res = await runCli(['compile', 'from flights select carrier'], {
-        cwd: flightDir,
+        cwd: tmpDir,
         env: {
           GRAPHENE_TELEMETRY_DISABLED: '0',
           GRAPHENE_TELEMETRY_ENDPOINT: endpoint,
-          XDG_CONFIG_HOME: tmpDir,
         },
       })
 
@@ -212,7 +219,7 @@ describe('cli telemetry', () => {
   })
 
   it('only sends cli_install_seen on the first run for an install', async () => {
-    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-telemetry-install-seen-'))
+    let tmpDir = await createTelemetryProject('graphene-cli-telemetry-install-seen-')
     let batches: any[] = []
     let server = createServer(async (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
       let body = await readRequestBody(req)
@@ -226,10 +233,9 @@ describe('cli telemetry', () => {
       let env = {
         GRAPHENE_TELEMETRY_DISABLED: '0',
         GRAPHENE_TELEMETRY_ENDPOINT: endpoint,
-        XDG_CONFIG_HOME: tmpDir,
       }
 
-      let first = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir, env})
+      let first = await runCli(['compile', 'from flights select carrier'], {cwd: tmpDir, env})
       expectCliSuccess(first, 'telemetry first compile')
       await waitFor(() => batches.length >= 4)
       let events = batches.flatMap(batch => batch.events)
@@ -237,7 +243,7 @@ describe('cli telemetry', () => {
 
       batches.length = 0
 
-      let second = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir, env})
+      let second = await runCli(['compile', 'from flights select carrier'], {cwd: tmpDir, env})
       expectCliSuccess(second, 'telemetry second compile')
       await waitFor(() => batches.length >= 3)
 
@@ -248,6 +254,26 @@ describe('cli telemetry', () => {
       expect(events.filter(event => event.event == 'cli_install_seen')).toHaveLength(0)
     } finally {
       await new Promise(resolve => server.close(resolve))
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
+
+  it('does not fail the command when telemetry state cannot be persisted', async () => {
+    let tmpDir = await createTelemetryProject('graphene-cli-telemetry-blocked-')
+
+    try {
+      await fsp.writeFile(path.join(tmpDir, 'node_modules/.graphene'), '')
+      let res = await runCli(['check', 'tables/flights.gsql'], {
+        cwd: tmpDir,
+        env: {
+          GRAPHENE_TELEMETRY_DISABLED: '0',
+          GRAPHENE_TELEMETRY_ENDPOINT: 'http://127.0.0.1:9',
+        },
+      })
+
+      expectCliSuccess(res, 'telemetry blocked check')
+      expect(res.stdout).toContain('No errors found')
+    } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
   })
