@@ -1,5 +1,5 @@
 import {EventEmitter} from 'node:events'
-import {mkdtemp, mkdir, readFile, writeFile} from 'node:fs/promises'
+import {lstat, mkdtemp, mkdir, readFile, readlink, writeFile} from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import {Writable} from 'node:stream'
@@ -90,10 +90,10 @@ describe('runCreate', () => {
     let stderr = streamSink()
 
     textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('MY_DB.ANALYTICS').mockResolvedValueOnce('myorg-myaccount').mockResolvedValueOnce('graphene_user')
-    selectMock.mockResolvedValue('snowflake')
+    selectMock.mockResolvedValueOnce('snowflake').mockResolvedValueOnce('none')
     pathMock.mockResolvedValue(keyPath)
     passwordMock.mockResolvedValue('secret')
-    confirmMock.mockResolvedValue(false)
+    spawnMock.mockImplementation(() => createChild())
 
     await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: stdout.stream, stderr: stderr.stream})
 
@@ -123,14 +123,15 @@ describe('runCreate', () => {
     let {runCreate} = await import('./create.ts')
 
     textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
-    selectMock.mockResolvedValue('duckdb')
-    confirmMock.mockResolvedValue(false)
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('none')
+    spawnMock.mockImplementation(() => createChild())
 
     await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
 
     let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
     expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
+    expect(await readFile(path.join(root, 'demo-app', 'AGENTS.md'), 'utf8')).toContain('npx graphene check')
   })
 
   it('streams install output into the task log and keeps line breaks on success', async () => {
@@ -141,12 +142,105 @@ describe('runCreate', () => {
 
     spawnMock.mockImplementation(() => createChild({stdout: 'added 10 packages\nfunding info\n'}))
 
-    await runCreate({argv: ['demo-app', '--yes', '--install'], cwd: root, stdin: process.stdin, stdout: stdout.stream, stderr: stderr.stream})
+    await runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: stdout.stream, stderr: stderr.stream})
 
-    expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies...', retainLog: true})
+    expect(spawnMock).toHaveBeenCalledWith('npm', ['install', '--no-fund'], expect.objectContaining({cwd: path.join(root, 'demo-app')}))
+    expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies with npm...', retainLog: true})
     expect(taskLogState.message).toHaveBeenNthCalledWith(1, 'added 10 packages')
     expect(taskLogState.message).toHaveBeenNthCalledWith(2, 'funding info')
     expect(taskLogState.success).toHaveBeenCalledWith('Dependencies installed', {showLog: true})
+  })
+
+  it('uses the invoking package manager for install and generated metadata', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({
+      argv: ['demo-app', '--yes'],
+      cwd: root,
+      env: {npm_config_user_agent: 'pnpm/10.1.0 npm/? node/v24.0.0 darwin arm64'},
+      stdin: process.stdin,
+      stdout: streamSink().stream,
+      stderr: streamSink().stream,
+    })
+
+    let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
+    expect(pkg.packageManager).toBe('pnpm@10.1.0')
+    expect(spawnMock).toHaveBeenCalledWith('pnpm', ['install'], expect.objectContaining({cwd: path.join(root, 'demo-app')}))
+    expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies with pnpm...', retainLog: true})
+  })
+
+  it('skips skill linking by default in --yes mode', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    expect(spawnMock).toHaveBeenCalled()
+    expect(await lstat(path.join(root, 'demo-app/.agents/skills/graphene')).catch(() => null)).toBeNull()
+    expect(await lstat(path.join(root, 'demo-app/.claude/skills/graphene')).catch(() => null)).toBeNull()
+  })
+
+  it('does not prompt before installing dependencies', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('none')
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({
+      argv: [],
+      cwd: root,
+      env: {npm_config_user_agent: 'yarn/4.12.0 npm/? node/v24.0.0 darwin arm64'},
+      stdin: process.stdin,
+      stdout: streamSink().stream,
+      stderr: streamSink().stream,
+    })
+
+    expect(confirmMock).not.toHaveBeenCalled()
+    expect(spawnMock).toHaveBeenCalledWith('yarn', ['install'], expect.any(Object))
+  })
+
+  it('symlinks the Graphene skill into the selected agent folder', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.agents')
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    let linkTarget = await readlink(path.join(root, 'demo-app/.agents/skills/graphene'))
+    expect(linkTarget).toBe('../../node_modules/@graphenedata/cli/dist/skills/graphene')
+  })
+
+  it('symlinks the Graphene skill into the selected Claude folder', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.claude')
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    let linkTarget = await readlink(path.join(root, 'demo-app/.claude/skills/graphene'))
+    expect(linkTarget).toBe('../../node_modules/@graphenedata/cli/dist/skills/graphene')
+  })
+
+  it('skips dependency installation with --no-install', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    await runCreate({argv: ['demo-app', '--yes', '--no-install'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    expect(spawnMock).not.toHaveBeenCalled()
   })
 
   it('marks install failures without clearing the log', async () => {
@@ -155,7 +249,7 @@ describe('runCreate', () => {
 
     spawnMock.mockImplementation(() => createChild({exitCode: 1, stderr: 'npm ERR! failed\n'}))
 
-    await expect(runCreate({argv: ['demo-app', '--yes', '--install'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('npm ERR! failed')
+    await expect(runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('npm ERR! failed')
     expect(taskLogState.error).toHaveBeenCalledWith('npm install failed', {showLog: true})
   })
 })
