@@ -131,6 +131,7 @@ describe('runCreate', () => {
     let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
     expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
+    expect(await readFile(path.join(root, 'demo-app', 'AGENTS.md'), 'utf8')).toContain('npx graphene check')
   })
 
   it('streams install output into the task log and keeps line breaks on success', async () => {

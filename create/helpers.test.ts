@@ -48,6 +48,9 @@ describe('create helpers', () => {
     expect(pkg.dependencies['@graphenedata/cli']).toBe('0.0.15')
     expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
     expect(pkg.graphene).toEqual({dialect: 'duckdb', duckdb: {path: './data.duckdb'}})
+    expect(files['AGENTS.md']).toContain('pnpm graphene check')
+    expect(files['AGENTS.md']).toContain('pnpm graphene run index.md')
+    expect(files['AGENTS.md']).toContain('pnpm graphene serve --bg')
     expect(files['.gitignore']).toContain('*.duckdb')
     expect(files['.env']).toBeUndefined()
     expect(files['index.md']).toContain('configured for DuckDB')
@@ -67,6 +70,21 @@ describe('create helpers', () => {
 
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
     expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
+    expect(files['AGENTS.md']).toContain('npx graphene check')
+  })
+
+  it('renders AGENTS.md commands for yarn and bun projects', () => {
+    let yarnFiles = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'yarn', version: '4.12.0'}, database: 'duckdb', skillLinkTarget: 'none'},
+    })
+    let bunFiles = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'bun', version: '1.3.0'}, database: 'duckdb', skillLinkTarget: 'none'},
+    })
+
+    expect(yarnFiles['AGENTS.md']).toContain('yarn graphene check')
+    expect(bunFiles['AGENTS.md']).toContain('bun run graphene check')
   })
 
   it('renders a snowflake project with .env auth vars', () => {

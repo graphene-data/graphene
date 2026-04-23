@@ -210,6 +210,7 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   let files: TemplateFiles = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
     '.gitignore': ['node_modules', '.env', '*.duckdb'].join('\n') + '\n',
+    'AGENTS.md': renderAgents(answers),
     'index.md': renderIndex(answers),
   }
 
@@ -217,6 +218,27 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   if (envFile) files['.env'] = envFile
 
   return files
+}
+
+function grapheneCommand(packageManager: PackageManager | undefined, args: string): string {
+  if (packageManager?.name === 'pnpm') return `pnpm graphene ${args}`
+  if (packageManager?.name === 'yarn') return `yarn graphene ${args}`
+  if (packageManager?.name === 'bun') return `bun run graphene ${args}`
+  return `npx graphene ${args}`
+}
+
+function renderAgents(answers: ScaffoldAnswers): string {
+  return (
+    [
+      '## Graphene Reference',
+      '',
+      'Common commands:',
+      '',
+      `- ${grapheneCommand(answers.packageManager, 'check')} - check the project for syntax and analysis errors`,
+      `- ${grapheneCommand(answers.packageManager, 'run index.md')} - execute the index page`,
+      `- ${grapheneCommand(answers.packageManager, 'serve --bg')} - start or restart the local dev server`,
+    ].join('\n') + '\n'
+  )
 }
 
 function renderIndex(answers: ScaffoldAnswers): string {
