@@ -20,7 +20,7 @@ type WarehouseClient = '@duckdb/node-api' | '@google-cloud/bigquery' | 'snowflak
 
 interface CreateOptions {
   yes: boolean
-  install: boolean | undefined
+  install: boolean
   name: string | undefined
   targetDir: string | undefined
   help: boolean
@@ -88,7 +88,6 @@ interface ScaffoldAnswers {
   snowflakePassphrase?: string
   bigqueryProjectId?: string
   bigqueryKeyPath?: string
-  install: boolean
 }
 
 interface InstallResult {
@@ -118,15 +117,11 @@ class CreateCancelled extends Error {
 
 // Parse the small CLI surface directly so the initializer stays dependency-light.
 export function parseArgs(argv: string[]): CreateOptions {
-  let options: CreateOptions = {yes: false, install: undefined, name: undefined, targetDir: undefined, help: false}
+  let options: CreateOptions = {yes: false, install: true, name: undefined, targetDir: undefined, help: false}
   for (let i = 0; i < argv.length; i++) {
     let arg = argv[i]
     if (arg === '--yes' || arg === '-y') {
       options.yes = true
-      continue
-    }
-    if (arg === '--install') {
-      options.install = true
       continue
     }
     if (arg === '--no-install') {
@@ -261,12 +256,11 @@ export async function writeTemplate(targetDir: string, files: TemplateFiles): Pr
 function printHelp(stdout: Writable): void {
   stdout.write(
     [
-      'Usage: npm create @graphenedata [target-dir] [-- --yes] [--name <project-name>] [--install|--no-install]',
+      'Usage: npm create @graphenedata [target-dir] [-- --yes] [--name <project-name>] [--no-install]',
       '',
       'Options:',
       '  -y, --yes        Skip prompts and accept defaults',
       '  --name <name>    Set the generated package name',
-      '  --install        Install dependencies after scaffolding',
       '  --no-install     Skip dependency installation',
     ].join('\n') + '\n',
   )
@@ -336,7 +330,6 @@ async function collectAnswers({options, packageManager, input, output}: {options
       projectName: options.name || defaultProjectName(targetDir),
       packageManager,
       database: 'duckdb',
-      install: options.install ?? false,
     }
   }
 
@@ -380,7 +373,6 @@ async function collectAnswers({options, packageManager, input, output}: {options
     packageManager,
     database,
     defaultNamespace: defaultNamespace || undefined,
-    install: false,
   }
 
   if (database === 'duckdb') {
@@ -431,16 +423,6 @@ async function collectAnswers({options, packageManager, input, output}: {options
     )
     answers.bigqueryKeyPath = await promptExistingFilePath({message: 'Path to service account .json key file', expectedExtension: '.json', input, output})
   }
-
-  answers.install =
-    options.install ??
-    unwrapPrompt(
-      await clack.confirm({
-        message: `Install dependencies with ${packageManager.name} now?`,
-        initialValue: true,
-        ...promptOptions(input, output),
-      }),
-    )
 
   return answers
 }
@@ -503,7 +485,7 @@ async function installDeps(targetDir: string, packageManager: PackageManager, en
   return {code, stderr}
 }
 
-// Resolve answers, write the starter, and optionally install dependencies.
+// Resolve answers, write the starter, and install dependencies unless explicitly skipped.
 export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateContext): Promise<void> {
   let options = parseArgs(argv)
   if (options.help) {
@@ -522,7 +504,7 @@ export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateCont
     let cliVersion = packageJson.version || '0.0.15'
     await writeTemplate(targetDir, renderTemplate({answers, cliVersion}))
 
-    if (answers.install) {
+    if (options.install) {
       let install = await installDeps(targetDir, packageManager, env)
       if (install.code !== 0) throw new Error(install.stderr.trim() || `${packageManager.name} install failed with code ${install.code}`)
     }

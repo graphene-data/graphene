@@ -4,9 +4,9 @@ import {defaultProjectName, detectPackageManager, parseArgs, renderTemplate} fro
 
 describe('create helpers', () => {
   it('parses the supported CLI arguments', () => {
-    expect(parseArgs(['demo', '--yes', '--name', 'demo-app', '--install'])).toEqual({
+    expect(parseArgs(['demo', '--yes', '--name', 'demo-app', '--no-install'])).toEqual({
       help: false,
-      install: true,
+      install: false,
       name: 'demo-app',
       targetDir: 'demo',
       yes: true,
@@ -38,7 +38,6 @@ describe('create helpers', () => {
         packageManager: {name: 'pnpm', version: '10.1.0'},
         database: 'duckdb',
         duckdbPath: './data.duckdb',
-        install: false,
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -60,7 +59,6 @@ describe('create helpers', () => {
         targetDir: 'demo-app',
         projectName: 'demo-app',
         database: 'duckdb',
-        install: false,
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -81,7 +79,6 @@ describe('create helpers', () => {
         snowflakeUsername: 'graphene_user',
         snowflakeKeyPath: '/Users/me/.ssh/graphene_snowflake_key.p8',
         snowflakePassphrase: 'secret',
-        install: true,
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -106,7 +103,6 @@ describe('create helpers', () => {
         defaultNamespace: 'my-project.analytics',
         bigqueryProjectId: 'my-project-123',
         bigqueryKeyPath: '/Users/me/.ssh/graphene-bq-key.json',
-        install: true,
       },
     })
     let pkg = JSON.parse(files['package.json'])

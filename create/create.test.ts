@@ -93,7 +93,7 @@ describe('runCreate', () => {
     selectMock.mockResolvedValue('snowflake')
     pathMock.mockResolvedValue(keyPath)
     passwordMock.mockResolvedValue('secret')
-    confirmMock.mockResolvedValue(false)
+    spawnMock.mockImplementation(() => createChild())
 
     await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: stdout.stream, stderr: stderr.stream})
 
@@ -124,7 +124,7 @@ describe('runCreate', () => {
 
     textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
     selectMock.mockResolvedValue('duckdb')
-    confirmMock.mockResolvedValue(false)
+    spawnMock.mockImplementation(() => createChild())
 
     await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
 
@@ -141,7 +141,7 @@ describe('runCreate', () => {
 
     spawnMock.mockImplementation(() => createChild({stdout: 'added 10 packages\nfunding info\n'}))
 
-    await runCreate({argv: ['demo-app', '--yes', '--install'], cwd: root, stdin: process.stdin, stdout: stdout.stream, stderr: stderr.stream})
+    await runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: stdout.stream, stderr: stderr.stream})
 
     expect(spawnMock).toHaveBeenCalledWith('npm', ['install', '--no-fund'], expect.objectContaining({cwd: path.join(root, 'demo-app')}))
     expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies with npm...', retainLog: true})
@@ -157,7 +157,7 @@ describe('runCreate', () => {
     spawnMock.mockImplementation(() => createChild())
 
     await runCreate({
-      argv: ['demo-app', '--yes', '--install'],
+      argv: ['demo-app', '--yes'],
       cwd: root,
       env: {npm_config_user_agent: 'pnpm/10.1.0 npm/? node/v24.0.0 darwin arm64'},
       stdin: process.stdin,
@@ -171,13 +171,13 @@ describe('runCreate', () => {
     expect(taskLogMock).toHaveBeenCalledWith({title: 'Installing dependencies with pnpm...', retainLog: true})
   })
 
-  it('names the detected package manager in the install prompt', async () => {
+  it('does not prompt before installing dependencies', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
     textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
     selectMock.mockResolvedValue('duckdb')
-    confirmMock.mockResolvedValue(false)
+    spawnMock.mockImplementation(() => createChild())
 
     await runCreate({
       argv: [],
@@ -188,7 +188,17 @@ describe('runCreate', () => {
       stderr: streamSink().stream,
     })
 
-    expect(confirmMock).toHaveBeenCalledWith(expect.objectContaining({message: 'Install dependencies with yarn now?'}))
+    expect(confirmMock).not.toHaveBeenCalled()
+    expect(spawnMock).toHaveBeenCalledWith('yarn', ['install'], expect.any(Object))
+  })
+
+  it('skips dependency installation with --no-install', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    await runCreate({argv: ['demo-app', '--yes', '--no-install'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    expect(spawnMock).not.toHaveBeenCalled()
   })
 
   it('marks install failures without clearing the log', async () => {
@@ -197,7 +207,7 @@ describe('runCreate', () => {
 
     spawnMock.mockImplementation(() => createChild({exitCode: 1, stderr: 'npm ERR! failed\n'}))
 
-    await expect(runCreate({argv: ['demo-app', '--yes', '--install'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('npm ERR! failed')
+    await expect(runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('npm ERR! failed')
     expect(taskLogState.error).toHaveBeenCalledWith('npm install failed', {showLog: true})
   })
 })
