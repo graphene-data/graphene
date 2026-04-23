@@ -53,7 +53,7 @@ Last but not least, Graphene is **open**. You can use this project for internal 
 
 Graphene currently supports Snowflake, BigQuery, ClickHouse, and local data (via DuckDB) as data sources. It is easy for us to add more - just ask.
 
-Once your project is set up, simply start the dev server via `npx graphene serve` (or via `npm exec`, `pnpm`, etc.) and then prompt your coding agent to do analytics work: answer a data question, build a dashboard, edit the model, etc.
+Once your project is set up, simply start the dev server via `npm exec graphene serve` (or `pnpm graphene serve`, etc. based on your package manager) and then prompt your coding agent to do analytics work: answer a data question, build a dashboard, edit the model, etc.
 
 ## How it works
 
