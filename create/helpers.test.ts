@@ -38,6 +38,7 @@ describe('create helpers', () => {
         packageManager: {name: 'pnpm', version: '10.1.0'},
         database: 'duckdb',
         duckdbPath: './data.duckdb',
+        skillLinkTarget: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -59,6 +60,7 @@ describe('create helpers', () => {
         targetDir: 'demo-app',
         projectName: 'demo-app',
         database: 'duckdb',
+        skillLinkTarget: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -79,6 +81,7 @@ describe('create helpers', () => {
         snowflakeUsername: 'graphene_user',
         snowflakeKeyPath: '/Users/me/.ssh/graphene_snowflake_key.p8',
         snowflakePassphrase: 'secret',
+        skillLinkTarget: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -103,6 +106,7 @@ describe('create helpers', () => {
         defaultNamespace: 'my-project.analytics',
         bigqueryProjectId: 'my-project-123',
         bigqueryKeyPath: '/Users/me/.ssh/graphene-bq-key.json',
+        skillLinkTarget: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])

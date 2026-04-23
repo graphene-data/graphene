@@ -2,7 +2,7 @@ import type {Readable, Writable} from 'node:stream'
 
 import * as clack from '@clack/prompts'
 import {spawn} from 'node:child_process'
-import {access, mkdir, readFile, readdir, writeFile} from 'node:fs/promises'
+import {access, mkdir, readFile, readlink, readdir, symlink, writeFile} from 'node:fs/promises'
 import path from 'node:path'
 
 import cliPackageJson from '../cli/package.json' with {type: 'json'}
@@ -17,6 +17,7 @@ interface CliPackageJson {
 
 type Database = 'duckdb' | 'snowflake' | 'bigquery'
 type WarehouseClient = '@duckdb/node-api' | '@google-cloud/bigquery' | 'snowflake-sdk'
+type SkillLinkTarget = '.agents' | '.claude' | 'none'
 
 interface CreateOptions {
   yes: boolean
@@ -88,6 +89,7 @@ interface ScaffoldAnswers {
   snowflakePassphrase?: string
   bigqueryProjectId?: string
   bigqueryKeyPath?: string
+  skillLinkTarget: SkillLinkTarget
 }
 
 interface InstallResult {
@@ -330,6 +332,7 @@ async function collectAnswers({options, packageManager, input, output}: {options
       projectName: options.name || defaultProjectName(targetDir),
       packageManager,
       database: 'duckdb',
+      skillLinkTarget: 'none',
     }
   }
 
@@ -373,6 +376,7 @@ async function collectAnswers({options, packageManager, input, output}: {options
     packageManager,
     database,
     defaultNamespace: defaultNamespace || undefined,
+    skillLinkTarget: 'none',
   }
 
   if (database === 'duckdb') {
@@ -422,6 +426,20 @@ async function collectAnswers({options, packageManager, input, output}: {options
       }),
     )
     answers.bigqueryKeyPath = await promptExistingFilePath({message: 'Path to service account .json key file', expectedExtension: '.json', input, output})
+  }
+
+  if (options.install) {
+    answers.skillLinkTarget = unwrapPrompt(
+      await clack.select<SkillLinkTarget>({
+        message: 'Add the Graphene skill for agents?',
+        options: [
+          {value: '.agents', label: '.agents/skills/graphene'},
+          {value: '.claude', label: '.claude/skills/graphene'},
+          {value: 'none', label: 'Skip'},
+        ],
+        ...promptOptions(input, output),
+      }),
+    )
   }
 
   return answers
@@ -485,6 +503,24 @@ async function installDeps(targetDir: string, packageManager: PackageManager, en
   return {code, stderr}
 }
 
+async function symlinkGrapheneSkill(targetDir: string, skillLinkTarget: SkillLinkTarget): Promise<void> {
+  if (skillLinkTarget === 'none') return
+
+  let sourcePath = path.join(targetDir, 'node_modules/@graphenedata/cli/dist/skills/graphene')
+  let linkPath = path.join(targetDir, skillLinkTarget, 'skills/graphene')
+  let relativeSourcePath = path.relative(path.dirname(linkPath), sourcePath)
+
+  await mkdir(path.dirname(linkPath), {recursive: true})
+  try {
+    await symlink(relativeSourcePath, linkPath, 'dir')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
+    let existingTarget = await readlink(linkPath).catch(() => null)
+    if (existingTarget === relativeSourcePath) return
+    throw new Error(`Cannot link Graphene skill because ${linkPath} already exists`, {cause: err})
+  }
+}
+
 // Resolve answers, write the starter, and install dependencies unless explicitly skipped.
 export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateContext): Promise<void> {
   let options = parseArgs(argv)
@@ -507,6 +543,7 @@ export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateCont
     if (options.install) {
       let install = await installDeps(targetDir, packageManager, env)
       if (install.code !== 0) throw new Error(install.stderr.trim() || `${packageManager.name} install failed with code ${install.code}`)
+      await symlinkGrapheneSkill(targetDir, answers.skillLinkTarget)
     }
 
     clack.outro('Done!', {output: stdout})

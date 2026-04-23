@@ -1,5 +1,5 @@
 import {EventEmitter} from 'node:events'
-import {mkdtemp, mkdir, readFile, writeFile} from 'node:fs/promises'
+import {mkdtemp, mkdir, readFile, readlink, writeFile} from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import {Writable} from 'node:stream'
@@ -90,7 +90,7 @@ describe('runCreate', () => {
     let stderr = streamSink()
 
     textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('MY_DB.ANALYTICS').mockResolvedValueOnce('myorg-myaccount').mockResolvedValueOnce('graphene_user')
-    selectMock.mockResolvedValue('snowflake')
+    selectMock.mockResolvedValueOnce('snowflake').mockResolvedValueOnce('none')
     pathMock.mockResolvedValue(keyPath)
     passwordMock.mockResolvedValue('secret')
     spawnMock.mockImplementation(() => createChild())
@@ -123,7 +123,7 @@ describe('runCreate', () => {
     let {runCreate} = await import('./create.ts')
 
     textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
-    selectMock.mockResolvedValue('duckdb')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('none')
     spawnMock.mockImplementation(() => createChild())
 
     await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
@@ -176,7 +176,7 @@ describe('runCreate', () => {
     let {runCreate} = await import('./create.ts')
 
     textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
-    selectMock.mockResolvedValue('duckdb')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('none')
     spawnMock.mockImplementation(() => createChild())
 
     await runCreate({
@@ -190,6 +190,20 @@ describe('runCreate', () => {
 
     expect(confirmMock).not.toHaveBeenCalled()
     expect(spawnMock).toHaveBeenCalledWith('yarn', ['install'], expect.any(Object))
+  })
+
+  it('symlinks the Graphene skill into the selected agent folder', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.agents')
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    let linkTarget = await readlink(path.join(root, 'demo-app/.agents/skills/graphene'))
+    expect(linkTarget).toBe('../../node_modules/@graphenedata/cli/dist/skills/graphene')
   })
 
   it('skips dependency installation with --no-install', async () => {
