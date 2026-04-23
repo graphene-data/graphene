@@ -2,7 +2,7 @@ import type {Readable, Writable} from 'node:stream'
 
 import * as clack from '@clack/prompts'
 import {spawn} from 'node:child_process'
-import {access, mkdir, readFile, readdir, writeFile} from 'node:fs/promises'
+import {access, mkdir, readFile, readlink, readdir, symlink, writeFile} from 'node:fs/promises'
 import path from 'node:path'
 
 import cliPackageJson from '../cli/package.json' with {type: 'json'}
@@ -17,10 +17,11 @@ interface CliPackageJson {
 
 type Database = 'duckdb' | 'snowflake' | 'bigquery'
 type WarehouseClient = '@duckdb/node-api' | '@google-cloud/bigquery' | 'snowflake-sdk'
+type SkillLinkTarget = '.agents' | '.claude' | 'none'
 
 interface CreateOptions {
   yes: boolean
-  install: boolean | undefined
+  install: boolean
   name: string | undefined
   targetDir: string | undefined
   help: boolean
@@ -50,6 +51,7 @@ interface GrapheneTemplateConfig {
 interface TemplatePackageJson {
   name: string
   version: string
+  packageManager?: string
   scripts: {
     graphene: string
     serve: string
@@ -63,14 +65,21 @@ interface TemplatePackageJson {
 interface CreateContext {
   argv: string[]
   cwd: string
+  env?: NodeJS.ProcessEnv
   stdin: Readable
   stdout: Writable
   stderr: Writable
 }
 
+interface PackageManager {
+  name: 'npm' | 'pnpm' | 'yarn' | 'bun'
+  version?: string
+}
+
 interface ScaffoldAnswers {
   targetDir: string
   projectName: string
+  packageManager?: PackageManager
   database: Database
   defaultNamespace?: string
   duckdbPath?: string
@@ -80,7 +89,7 @@ interface ScaffoldAnswers {
   snowflakePassphrase?: string
   bigqueryProjectId?: string
   bigqueryKeyPath?: string
-  install: boolean
+  skillLinkTarget: SkillLinkTarget
 }
 
 interface InstallResult {
@@ -110,15 +119,11 @@ class CreateCancelled extends Error {
 
 // Parse the small CLI surface directly so the initializer stays dependency-light.
 export function parseArgs(argv: string[]): CreateOptions {
-  let options: CreateOptions = {yes: false, install: undefined, name: undefined, targetDir: undefined, help: false}
+  let options: CreateOptions = {yes: false, install: true, name: undefined, targetDir: undefined, help: false}
   for (let i = 0; i < argv.length; i++) {
     let arg = argv[i]
     if (arg === '--yes' || arg === '-y') {
       options.yes = true
-      continue
-    }
-    if (arg === '--install') {
-      options.install = true
       continue
     }
     if (arg === '--no-install') {
@@ -158,6 +163,19 @@ export function defaultProjectName(targetDir: string): string {
   return normalized || 'graphene-app'
 }
 
+// Create commands are normally launched by a package manager, which exposes its identity in npm-compatible env vars.
+export function detectPackageManager(env: NodeJS.ProcessEnv = {}): PackageManager {
+  let userAgent = env.npm_config_user_agent || env.NPM_CONFIG_USER_AGENT || ''
+  let userAgentMatch = userAgent.match(/(?:^|\s)(npm|pnpm|yarn|bun)\/([^\s]+)/)
+  if (userAgentMatch) return {name: userAgentMatch[1] as PackageManager['name'], version: userAgentMatch[2]}
+
+  let execPath = path.basename(env.npm_execpath || env.NPM_EXEC_PATH || '').toLowerCase()
+  if (execPath.includes('pnpm')) return {name: 'pnpm'}
+  if (execPath.includes('yarn')) return {name: 'yarn'}
+  if (execPath.includes('bun')) return {name: 'bun'}
+  return {name: 'npm'}
+}
+
 export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers; cliVersion: string}): TemplateFiles {
   let graphene: GrapheneTemplateConfig = {dialect: answers.database}
   if (answers.defaultNamespace) graphene.defaultNamespace = answers.defaultNamespace
@@ -172,6 +190,7 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   let pkg: TemplatePackageJson = {
     name: answers.projectName,
     version: '0.0.1',
+    packageManager: answers.packageManager?.version ? `${answers.packageManager.name}@${answers.packageManager.version}` : undefined,
     scripts: {
       graphene: 'graphene',
       serve: 'graphene serve',
@@ -184,12 +203,14 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
     },
     graphene,
   }
+  if (!pkg.packageManager) delete pkg.packageManager
   let warehouseClient = getWarehouseClient(answers.database)
   pkg.dependencies[warehouseClient] = getWarehouseClientVersion(warehouseClient)
 
   let files: TemplateFiles = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
     '.gitignore': ['node_modules', '.env', '*.duckdb'].join('\n') + '\n',
+    'AGENTS.md': renderAgents(answers),
     'index.md': renderIndex(answers),
   }
 
@@ -199,11 +220,37 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   return files
 }
 
+function grapheneCommand(packageManager: PackageManager | undefined, args: string): string {
+  if (packageManager?.name === 'pnpm') return `pnpm graphene ${args}`
+  if (packageManager?.name === 'yarn') return `yarn graphene ${args}`
+  if (packageManager?.name === 'bun') return `bun run graphene ${args}`
+  return `npx graphene ${args}`
+}
+
+function renderAgents(answers: ScaffoldAnswers): string {
+  return (
+    [
+      '## Graphene Reference',
+      '',
+      `Assume all ${databaseLabel(answers.database)} functions are available when writing GSQL.`,
+      '',
+      'Common commands:',
+      '',
+      `- ${grapheneCommand(answers.packageManager, 'check')} - check the project for syntax and analysis errors`,
+      `- ${grapheneCommand(answers.packageManager, 'run index.md')} - execute the index page`,
+      `- ${grapheneCommand(answers.packageManager, 'serve --bg')} - start or restart the local dev server`,
+    ].join('\n') + '\n'
+  )
+}
+
+function databaseLabel(database: Database) {
+  if (database === 'snowflake') return 'Snowflake'
+  if (database === 'bigquery') return 'BigQuery'
+  return 'DuckDB'
+}
+
 function renderIndex(answers: ScaffoldAnswers): string {
-  let dialectLabel = 'DuckDB'
-  if (answers.database === 'snowflake') dialectLabel = 'Snowflake'
-  else if (answers.database === 'bigquery') dialectLabel = 'BigQuery'
-  return [`# ${answers.projectName}`, '', `This Graphene project is configured for ${dialectLabel}.`, '', 'Start by adding models and queries to this project.'].join('\n') + '\n'
+  return [`# ${answers.projectName}`, '', `This Graphene project is configured for ${databaseLabel(answers.database)}.`, '', 'Start by adding models and queries to this project.'].join('\n') + '\n'
 }
 
 function renderEnvFile(answers: ScaffoldAnswers): string | null {
@@ -238,12 +285,11 @@ export async function writeTemplate(targetDir: string, files: TemplateFiles): Pr
 function printHelp(stdout: Writable): void {
   stdout.write(
     [
-      'Usage: npm create @graphenedata [target-dir] [-- --yes] [--name <project-name>] [--install|--no-install]',
+      'Usage: npm create @graphenedata [target-dir] [-- --yes] [--name <project-name>] [--no-install]',
       '',
       'Options:',
       '  -y, --yes        Skip prompts and accept defaults',
       '  --name <name>    Set the generated package name',
-      '  --install        Run npm install after scaffolding',
       '  --no-install     Skip dependency installation',
     ].join('\n') + '\n',
   )
@@ -305,14 +351,15 @@ function getWarehouseClientVersion(packageName: WarehouseClient): string {
   return version
 }
 
-async function collectAnswers({options, input, output}: {options: CreateOptions; input: Readable; output: Writable}): Promise<ScaffoldAnswers> {
+async function collectAnswers({options, packageManager, input, output}: {options: CreateOptions; packageManager: PackageManager; input: Readable; output: Writable}): Promise<ScaffoldAnswers> {
   if (options.yes) {
     let targetDir = options.targetDir || 'graphene-app'
     return {
       targetDir,
       projectName: options.name || defaultProjectName(targetDir),
+      packageManager,
       database: 'duckdb',
-      install: options.install ?? false,
+      skillLinkTarget: 'none',
     }
   }
 
@@ -353,9 +400,10 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
   let answers: ScaffoldAnswers = {
     targetDir,
     projectName,
+    packageManager,
     database,
     defaultNamespace: defaultNamespace || undefined,
-    install: false,
+    skillLinkTarget: 'none',
   }
 
   if (database === 'duckdb') {
@@ -407,27 +455,37 @@ async function collectAnswers({options, input, output}: {options: CreateOptions;
     answers.bigqueryKeyPath = await promptExistingFilePath({message: 'Path to service account .json key file', expectedExtension: '.json', input, output})
   }
 
-  answers.install =
-    options.install ??
-    unwrapPrompt(
-      await clack.confirm({
-        message: 'Install dependencies now?',
-        initialValue: true,
+  if (options.install) {
+    answers.skillLinkTarget = unwrapPrompt(
+      await clack.select<SkillLinkTarget>({
+        message: 'Add the Graphene skill for agents?',
+        options: [
+          {value: '.agents', label: '.agents/skills/graphene'},
+          {value: '.claude', label: '.claude/skills/graphene'},
+          {value: 'none', label: 'Skip'},
+        ],
         ...promptOptions(input, output),
       }),
     )
+  }
 
   return answers
 }
 
-async function installDeps(targetDir: string): Promise<InstallResult> {
-  let task = clack.taskLog({title: 'Installing dependencies...', retainLog: true})
-  let child = spawn('npm', ['install', '--no-fund'], {
+function installCommand(packageManager: PackageManager): [string, string[]] {
+  if (packageManager.name === 'npm') return ['npm', ['install', '--no-fund']]
+  return [packageManager.name, ['install']]
+}
+
+async function installDeps(targetDir: string, packageManager: PackageManager, env: NodeJS.ProcessEnv): Promise<InstallResult> {
+  let [command, args] = installCommand(packageManager)
+  let task = clack.taskLog({title: `Installing dependencies with ${packageManager.name}...`, retainLog: true})
+  let child = spawn(command, args, {
     cwd: targetDir,
     stdio: ['ignore', 'pipe', 'pipe'],
-    env: {...process.env, FORCE_COLOR: '1', npm_config_color: 'always'},
+    env: {...env, FORCE_COLOR: '1', npm_config_color: 'always'},
   })
-  if (!child.stdout || !child.stderr) throw new Error('npm install pipes were not created')
+  if (!child.stdout || !child.stderr) throw new Error(`${command} install pipes were not created`)
   let stderr = ''
   child.stdout.setEncoding('utf8')
   child.stderr.setEncoding('utf8')
@@ -467,13 +525,31 @@ async function installDeps(targetDir: string): Promise<InstallResult> {
   flush('stderr')
 
   if (code === 0) task.success('Dependencies installed', {showLog: true})
-  else task.error('npm install failed', {showLog: true})
+  else task.error(`${command} install failed`, {showLog: true})
 
   return {code, stderr}
 }
 
-// Resolve answers, write the starter, and optionally install dependencies.
-export async function runCreate({argv, cwd, stdin, stdout}: CreateContext): Promise<void> {
+async function symlinkGrapheneSkill(targetDir: string, skillLinkTarget: SkillLinkTarget): Promise<void> {
+  if (skillLinkTarget === 'none') return
+
+  let sourcePath = path.join(targetDir, 'node_modules/@graphenedata/cli/dist/skills/graphene')
+  let linkPath = path.join(targetDir, skillLinkTarget, 'skills/graphene')
+  let relativeSourcePath = path.relative(path.dirname(linkPath), sourcePath)
+
+  await mkdir(path.dirname(linkPath), {recursive: true})
+  try {
+    await symlink(relativeSourcePath, linkPath, 'dir')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
+    let existingTarget = await readlink(linkPath).catch(() => null)
+    if (existingTarget === relativeSourcePath) return
+    throw new Error(`Cannot link Graphene skill because ${linkPath} already exists`, {cause: err})
+  }
+}
+
+// Resolve answers, write the starter, and install dependencies unless explicitly skipped.
+export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateContext): Promise<void> {
   let options = parseArgs(argv)
   if (options.help) {
     printHelp(stdout)
@@ -483,16 +559,18 @@ export async function runCreate({argv, cwd, stdin, stdout}: CreateContext): Prom
   clack.intro('Create a new Graphene project', {output: stdout})
 
   try {
-    let answers = await collectAnswers({options, input: stdin, output: stdout})
+    let packageManager = detectPackageManager(env)
+    let answers = await collectAnswers({options, packageManager, input: stdin, output: stdout})
     let targetDir = path.resolve(cwd, answers.targetDir)
 
     await ensureEmptyDir(targetDir)
     let cliVersion = packageJson.version || '0.0.15'
     await writeTemplate(targetDir, renderTemplate({answers, cliVersion}))
 
-    if (answers.install) {
-      let install = await installDeps(targetDir)
-      if (install.code !== 0) throw new Error(install.stderr.trim() || `npm install failed with code ${install.code}`)
+    if (options.install) {
+      let install = await installDeps(targetDir, packageManager, env)
+      if (install.code !== 0) throw new Error(install.stderr.trim() || `${packageManager.name} install failed with code ${install.code}`)
+      await symlinkGrapheneSkill(targetDir, answers.skillLinkTarget)
     }
 
     clack.outro('Done!', {output: stdout})
