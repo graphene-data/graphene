@@ -9,7 +9,7 @@ import {type QueryResult, type QueryConnection, type QueryParams} from './types.
 // from accidentally picking up local env vars instead of database-stored credentials.
 export async function getConnection(): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
-    let mod = await import('./bigQuery.ts')
+    let mod = await importConnection(() => import('./bigQuery.ts'), '@google-cloud/bigquery', 'BigQuery')
     let options: any = {}
     if (process.env.GOOGLE_CREDENTIALS_CONTENT) {
       // the actual json as an env var
@@ -22,10 +22,10 @@ export async function getConnection(): Promise<QueryConnection> {
     }
     return new mod.BigQueryConnection(options)
   } else if (config.dialect === 'duckdb') {
-    let mod = await import('./duckdb.ts')
+    let mod = await importConnection(() => import('./duckdb.ts'), '@duckdb/node-api', 'DuckDB')
     return new mod.DuckDBConnection({})
   } else if (config.dialect === 'clickhouse') {
-    let mod = await import('./clickhouse.ts')
+    let mod = await importConnection(() => import('./clickhouse.ts'), '@clickhouse/client', 'ClickHouse')
     let url = config.clickhouse?.url || process.env.CLICKHOUSE_URL
     let username = config.clickhouse?.username || process.env.CLICKHOUSE_USERNAME
     let password = process.env.CLICKHOUSE_PASSWORD
@@ -37,7 +37,7 @@ export async function getConnection(): Promise<QueryConnection> {
       database: config.clickhouse?.database || config.defaultNamespace || 'default',
     })
   } else if (config.dialect === 'snowflake') {
-    let mod = await import('./snowflake.ts')
+    let mod = await importConnection(() => import('./snowflake.ts'), 'snowflake-sdk', 'Snowflake')
     return new mod.SnowflakeConnection({
       privateKeyPath: process.env.SNOWFLAKE_PRI_KEY_PATH,
       privateKey: process.env.SNOWFLAKE_PRI_KEY,
@@ -46,6 +46,20 @@ export async function getConnection(): Promise<QueryConnection> {
     })
   } else {
     throw new Error(`Unsupported dialect: ${config.dialect}`)
+  }
+}
+
+// Import connection, with a nice error message about what to do if a peer dep is missing.
+async function importConnection<T>(load: () => Promise<T>, packageName: string, warehouseLabel: string): Promise<T> {
+  try {
+    return await load()
+  } catch (err: any) {
+    let depMissing = err.code == 'ERR_MODULE_NOT_FOUND' || (err.message || '').includes(packageName)
+    if (depMissing) {
+      throw new Error(`${warehouseLabel} support requires installing ${packageName}.\nAdd it to your project dependencies, for example:\nnpm install ${packageName}`, {cause: err})
+    } else {
+      throw err
+    }
   }
 }
 

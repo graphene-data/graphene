@@ -19,8 +19,11 @@ let makeAllPackagesExternalPlugin = {
 await build({
   // cli build
   entryPoints: [path.resolve(__dirname, 'cli.ts')],
-  outfile: path.resolve(__dirname, 'dist/cli/cli.js'), // the extra `/cli/` keeps deployed dev relative paths the same between cli and ui
+  outdir: path.resolve(__dirname, 'dist/cli'), // the extra `/cli/` keeps deployed dev relative paths the same between cli and ui
+  entryNames: '[name]',
+  chunkNames: '[name]-[hash]',
   bundle: true,
+  splitting: true,
   platform: 'node',
   format: 'esm',
   target: 'node20',
