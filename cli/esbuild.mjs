@@ -30,8 +30,9 @@ await build({
   plugins: [makeAllPackagesExternalPlugin],
 })
 
-let skillDir = path.resolve(__dirname, 'dist/skills/graphene')
-await rm(skillDir, {recursive: true, force: true})
+let distSkillsDir = path.resolve(__dirname, 'dist/skills')
+await rm(distSkillsDir, {recursive: true, force: true})
+let skillDir = path.resolve(distSkillsDir, 'graphene')
 await mkdir(skillDir, {recursive: true})
 await writeFile(
   path.resolve(skillDir, 'SKILL.md'),
@@ -46,6 +47,7 @@ ${await readFile(path.resolve(__dirname, '../docs/cli.md'), 'utf8')}
 ${await readFile(path.resolve(__dirname, '../docs/best-practices.md'), 'utf8')}
 # Reference documentation
 Consult the reference documentation for more detailed information on using Graphene.
+For semantic modeling with GSQL references, read \`references/model-gsql.md\`.
 
 ${(await readdir(path.resolve(__dirname, '../docs/references'))).map(f => `- references/${f}`).join('\n')}
 `,
