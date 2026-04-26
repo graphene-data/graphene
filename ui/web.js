@@ -106,4 +106,6 @@ window.$GRAPHENE.components = {
 
 window.$GRAPHENE.svelte = {mount, unmount}
 
-mount(LocalApp, {target: document.body})
+if (window.location.pathname.replace(/\/+$/, '') !== '/__ct') {
+  mount(LocalApp, {target: document.body})
+}
