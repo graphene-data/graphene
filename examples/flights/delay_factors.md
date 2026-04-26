@@ -90,15 +90,13 @@ select
 order by avg_delay desc
 ```
 
-<ECharts data=carrier_stats height=380px>
+<ECharts data=carrier_stats height=400px>
   {
-    tooltip: {trigger: 'item'},
-    grid: {left: 145, right: 60, top: 10, bottom: 20},
+    title: {text: 'Avg departure delay by airline (minutes)'},
+    tooltip: {show: false},
+    grid: {left: 130},
     xAxis: {
       type: 'value',
-      name: 'Average departure delay (minutes)',
-      nameLocation: 'middle',
-      nameGap: 32,
       min: 0,
       max: 15,
       axisLine: {show: false},
@@ -120,13 +118,13 @@ order by avg_delay desc
         symbolAnchor: 'end',
         symbolPosition: 'end',
         encode: {x: 'avg_delay', y: 'carrier'},
-        itemStyle: {color: '#6b9dc9'},
+        itemStyle: {color: '#3D6B7E'},
       },
       {
         type: 'scatter',
         symbolSize: 12,
         encode: {x: 'avg_delay', y: 'carrier', itemName: 'delay_label'},
-        itemStyle: {color: '#6b9dc9', opacity: 1},
+        itemStyle: {color: '#3D6B7E', opacity: 1},
         label: {
           show: true,
           position: 'right',
@@ -166,8 +164,9 @@ from dep d inner join arr a on d.code = a.code
 
 <ECharts data=airport_both height=400px>
   {
+    title: {text: 'Departure vs arrival delay by airport'},
     tooltip: {trigger: 'item'},
-    grid: {left: 65, right: 30, top: 30, bottom: 65},
+    grid: {left: 65, right: 30, bottom: 65},
     xAxis: {
       type: 'value',
       name: 'Avg departure delay from this airport (min)',
@@ -183,7 +182,7 @@ from dep d inner join arr a on d.code = a.code
       type: 'value',
       name: 'Avg arrival delay at this airport (min)',
       nameLocation: 'middle',
-      nameGap: 50,
+      nameGap: 40,
       min: 0,
       max: 15,
       splitLine: {lineStyle: {color: '#f0f0f0'}},
@@ -203,7 +202,6 @@ from dep d inner join arr a on d.code = a.code
         type: 'scatter',
         symbolSize: 9,
         encode: {x: 'd_dep_delay', y: 'a_arr_delay', itemName: 'd_city'},
-        itemStyle: {color: '#2c6fad', opacity: 0.7},
         tooltip: {formatter: '{b}'},
         z: 2,
       },

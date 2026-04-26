@@ -1,103 +1,182 @@
 ---
-title: Flight Analytics Dashboard
+title: Flight Operations Overview
 layout: dashboard
 ---
 
-A comprehensive dashboard showcasing flight data metrics from 2000-2005.
+```sql kpis
+from flights
+select count() as total_flights, on_time_arrival_rate, cancellation_rate, avg(dep_delay) as avg_dep_delay
+```
 
-## Key Metrics
+```sql monthly_trend
+from flights
+where cancelled = 'N'
+select date_trunc('month', dep_time) as month, count() as flights
+order by month
+```
 
-<Row>
-  <BigValue data=flights value=count(*) title="Total Flights" fmt=num0 />
-  <BigValue data=flights value=sum(miles_flown) title="Total Miles Flown" fmt=num0m />
-  <BigValue data=flights value=on_time_departure_rate title="On-Time Departure Rate" fmt=pct1 />
-  <BigValue data=flights value=on_time_arrival_rate title="On-Time Arrival Rate" fmt=pct1 />
-</Row>
-
-<Row>
-  <BigValue data=flights value=cancellation_rate title="Cancellation Rate" fmt=pct2 />
-  <BigValue data=flights value=diversion_rate title="Diversion Rate" fmt=pct2 />
-  <BigValue data=flights value=avg(dep_delay) title="Avg Departure Delay (min)" fmt=num1 />
-  <BigValue data=flights value=avg(arr_delay) title="Avg Arrival Delay (min)" fmt=num1 />
-</Row>
-
-```sql weekly_trends
+```sql delay_heatmap
+from flights
+where cancelled = 'N' and extract(hour from dep_time)::integer between 5 and 23
 select
-  date_trunc('week', dep_time) as week,
+  case extract(hour from dep_time)::integer
+    when 5 then '5am' when 6 then '6am' when 7 then '7am' when 8 then '8am'
+    when 9 then '9am' when 10 then '10am' when 11 then '11am' when 12 then '12pm'
+    when 13 then '1pm' when 14 then '2pm' when 15 then '3pm' when 16 then '4pm'
+    when 17 then '5pm' when 18 then '6pm' when 19 then '7pm' when 20 then '8pm'
+    when 21 then '9pm' when 22 then '10pm' when 23 then '11pm'
+  end as hour_label,
+  case extract(dow from dep_time)::integer
+    when 0 then 'Sun' when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed'
+    when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat'
+  end as day_label,
+  round(avg(dep_delay), 1) as avg_delay
+```
+
+```sql top_carriers
+from flights
+select
+  carriers.nickname as carrier,
+  count() as flights,
+  on_time_arrival_rate,
   cancellation_rate,
-  diversion_rate,
   avg(dep_delay) as avg_dep_delay,
-  avg(arr_delay) as avg_arr_delay,
-  on_time_departure_rate,
-  on_time_arrival_rate,
-  count(*) as flight_count,
-  avg(distance) as avg_distance
-from flights
-group by 1
-order by 1 asc
+  count(distinct destination) as destinations,
+  round(avg(aircraft.age), 1) as avg_aircraft_age,
+  round(avg(distance), 0) as avg_distance,
+  '/carrier_detail?carrier=' || carriers.code as link
+order by flights desc
 ```
 
-## Trends over time
-
-<Row>
-  <LineChart title="Flight volume vs. average distance" 
-    subtitle="Trending to more, shorter distance flights" 
-    data=weekly_trends 
-    x=week 
-    y=flight_count 
-    y2=avg_distance 
-  />
-  <LineChart title="Cancellation rate" 
-    subtitle="9/11 is clearly shown with a spike in cancellations" 
-    data=weekly_trends 
-    x=week 
-    y=cancellation_rate 
-    yFmt=pct1 
-  />
-</Row>
-
-## Carrier Comparison
-
-```sql carrier_performance
+```sql performance_by_year
+from flights
 select
-  carriers.name as carrier_name,
-  count(*) as flight_count,
-  on_time_departure_rate,
-  1 - on_time_departure_rate as delayed_departure_rate,
-  on_time_arrival_rate,
-  1 - on_time_arrival_rate as delayed_arrival_rate,
-  cancellation_rate,
-  avg(dep_delay) as avg_departure_delay,
-  avg(arr_delay) as avg_arrival_delay
+  date_trunc('year', dep_time) as year,
+  case
+    when cancelled = 'Y' then 'Cancelled'
+    when dep_delay > 15 then 'Delayed'
+    else 'On Time'
+  end as status,
+  count() as flights
+order by year
+```
+
+```sql manufacturer_share
 from flights
-group by 1
-order by 2 desc
+where cancelled = 'N' and aircraft.aircraft_model_code is not null
+select aircraft.aircraft_models.manufacturer as manufacturer, count() as flights
+order by flights desc
+limit 6
+```
+
+```sql airport_scatter
+from flights
+where cancelled = 'N'
+select
+  origin as code,
+  round(avg(dep_delay), 1) as avg_dep_delay,
+  round(avg(arr_delay), 1) as avg_arr_delay,
+  round(count() / count(distinct extract(year from dep_time)::integer), 0) as avg_annual_flights
+having count() > 100
 ```
 
 <Row>
-  <BarChart title="Average Departure Delay by Carrier (minutes)" 
-    data=carrier_performance 
-    x=carrier_name 
-    y=avg_departure_delay 
-    yAxisTitle="Minutes"
-    y2=delayed_departure_rate
-    y2Fmt=pct1
-    y2SeriesType=line
-    y2AxisTitle="% Flights Delayed"
-  />
-  <PieChart title="Flight Distribution by Carrier" 
-    data=carrier_performance 
-    category=carrier_name 
-    value=flight_count 
-  />
+<BigValue data=kpis value=total_flights title="Total Flights" fmt=num0 />
+<BigValue data=kpis value=on_time_arrival_rate title="On-Time Arrival" fmt=pct1 />
+<BigValue data=kpis value=cancellation_rate title="Cancellation Rate" fmt=pct1 />
+<BigValue data=kpis value=avg_dep_delay title="Avg Departure Delay" fmt="0.0" />
 </Row>
 
-<Table title="Carrier details" data=carrier_performance sort="flight_count desc" rows=25>
-  <Column id=carrier_name />
-  <Column id=flight_count />
-  <Column id=on_time_departure_rate fmt=pct1 />
-  <Column id=on_time_arrival_rate fmt=pct1 />
-  <Column id=cancellation_rate fmt=pct2 />
-  <Column id=avg_departure_delay fmt=num1 />
-  <Column id=avg_arrival_delay fmt=num1 />
+<Row>
+<AreaChart title="Monthly Flight Volume"
+    data=monthly_trend 
+    x=month 
+    y=flights
+/>
+<BarChart title="Flight Status by Year"
+  data=performance_by_year
+  x=year
+  y=flights
+  splitBy=status
+  arrange=stack
+/>
+</Row>
+
+<Row>
+<ECharts data=delay_heatmap height=520px>
+{
+  title: {text: 'Avg Departure Delay by Hour & Day of Week (min)'},
+  tooltip: {trigger: 'item'},
+  visualMap: {
+    min: -7.5, max: 30,
+    calculable: true,
+    orient: 'horizontal',
+    left: 'center',
+    bottom: 4,
+    inRange: {color: ['#5B8F9E', '#e4eff3', '#D4A94C', '#C87F5A', '#C4868E', '#B87470']},
+  },
+  grid: {top: 20},
+  xAxis: {
+    type: 'category',
+    position: 'top',
+    data: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+  },
+  yAxis: {
+    type: 'category',
+    inverse: true,
+    data: ['5am','6am','7am','8am','9am','10am','11am','12pm','1pm','2pm','3pm','4pm','5pm','6pm','7pm','8pm','9pm','10pm','11pm'],
+  },
+  series: [{
+    type: 'heatmap',
+    encode: {x: 'day_label', y: 'hour_label', value: 'avg_delay'},
+    label: {show: false},
+  }]
+}
+</ECharts>
+<ECharts data=airport_scatter height=528px>
+{
+  title: {text: 'Departure vs Arrival Delay by Airport'},
+  tooltip: {trigger: 'item'},
+  grid: {top: 20},
+  visualMap: {
+    dimension: 'avg_annual_flights',
+    type: 'continuous',
+    min: 0, max: 3000,
+    inRange: {symbolSize: [4, 32]},
+    show: false,
+  },
+  xAxis: {
+    type: 'value',
+    name: 'Avg Departure Delay (min)',
+    nameLocation: 'middle',
+    nameGap: 22,
+    axisLine: {show: false},
+    axisTick: {show: false},
+  },
+  yAxis: {
+    type: 'value',
+    name: 'Avg Arrival Delay (min)',
+    nameLocation: 'middle',
+    nameGap: 20,
+    axisLine: {show: false},
+    axisTick: {show: false},
+  },
+  series: [{
+    type: 'scatter',
+    encode: {x: 'avg_dep_delay', y: 'avg_arr_delay', itemName: 'code', tooltip: 'avg_annual_flights'},
+    itemStyle: {opacity: 0.8},
+    tooltip: {formatter: '{b}'},
+  }]
+}
+</ECharts>
+</Row>
+<Table data=top_carriers title="Top Carriers" link=link showLinkCol=false rows=100>
+  <Column id=carrier />
+  <Column id=flights fmt=num0 />
+  <Column id=on_time_arrival_rate title="On-Time Arr %" fmt=pct1 contentType=colorscale colorScale=positive />
+  <Column id=cancellation_rate title="Cancel %" fmt=pct2 contentType=colorscale colorScale=negative />
+  <Column id=avg_dep_delay title="Avg Delay (min)" fmt="0.0" />
+  <Column id=destinations title="Destinations" fmt=num0 />
+  <Column id=avg_aircraft_age title="Avg Aircraft Age" fmt="0.0" />
+  <Column id=avg_distance title="Avg Distance (mi)" fmt=num0 />
 </Table>
