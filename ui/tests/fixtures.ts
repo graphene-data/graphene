@@ -155,12 +155,12 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
           document.fonts.load("12px 'Source Sans 3'")
           await document.fonts.ready
 
-          document.getElementById('nav')?.remove()
-          let container = document.getElementById('content')
-          if (container) container.innerHTML = ''
+          let container = document.getElementsByTagName('main')[0] || document.createElement('main')
+          if (!container.isConnected) document.body.appendChild(container)
+          container.innerHTML = ''
           let el = document.createElement('div')
           el.id = 'component-test'
-          container?.appendChild(el)
+          container.appendChild(el)
           window.__inst = window.$GRAPHENE.svelte.mount(window.$GRAPHENE.components[compName], {target: el, props})
 
           // Wait for load
