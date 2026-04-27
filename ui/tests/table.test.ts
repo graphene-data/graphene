@@ -244,7 +244,7 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
       {id: 'carrier', title: 'Carrier', description: 'Carrier code', colGroup: 'Meta'},
       {id: 'flights', title: 'Total Flights', colGroup: 'Metrics', align: 'right'},
       {id: 'avg_delay', title: 'Average Delay Minutes Across All Flight Records', colGroup: 'Metrics', wrapTitle: true},
-      {id: 'max_delay', title: 'Peak Delay', colGroup: 'Metrics', align: 'center'},
+      {id: 'max_delay', title: 'Peak Delay', colGroup: 'Metrics'},
     ],
   })
 
@@ -252,6 +252,35 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
   await table.locator('tr:has(td)').first().waitFor()
   await expect(table.locator('tr:has(td)')).toHaveCount(4)
   await expect(component.locator('.table-container')).screenshot('attribute-groups-and-styling')
+})
+
+test('headers align with their cells with and without wrapped titles', async ({mount}) => {
+  let rows = [
+    {carrier: 'AA', flights: 34580, avg_delay: 7.395, refund_rate: 0.128},
+    {carrier: 'AS', flights: 8450, avg_delay: 12.271, refund_rate: 0.094},
+    {carrier: 'B6', flights: 4840, avg_delay: 7.502, refund_rate: 0.173},
+  ]
+  let fields = [
+    {name: 'carrier', type: 'string'},
+    {name: 'flights', type: 'number'},
+    {name: 'avg_delay', type: 'number'},
+    {name: 'refund_rate', type: 'number', metadata: {ratio: true}},
+  ]
+
+  let component = await mount('components/TableHarness.svelte', {
+    data: {rows, fields},
+    width: 620,
+    tableProps: {rows: 'all', title: 'Header alignment', sort: 'avg_delay asc'},
+    columns: [
+      {id: 'carrier', title: 'Carrier Code With A Wrapped Left Aligned Header', wrapTitle: true},
+      {id: 'flights', title: 'Total Flights'},
+      {id: 'avg_delay', title: 'Average Delay Minutes Across All Flight Records In The Dataset For Current Period', wrapTitle: true},
+      {id: 'refund_rate', title: 'Refund Rate', align: 'center'},
+    ],
+  })
+
+  await component.locator('table tr:has(td)').first().waitFor()
+  await expect(component.locator('.table-container')).screenshot('headers-align-with-cells')
 })
 
 test('section groups respect groupNamePosition and subtotal styles', async ({mount}) => {
