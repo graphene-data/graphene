@@ -29,11 +29,11 @@
   let wrapTitles = $derived(toBoolean(wrapTitlesProp) ?? false)
   let compact = $derived(toBoolean(compactProp) ?? false)
 
-  const getWrapTitleAlignment = (column: any) => {
-    if (column.align === 'right') return 'header-title--align-end'
-    if (column.align === 'center') return 'header-title--align-center'
-    if (column.type === 'number') return 'header-title--align-end'
-    return 'header-title--align-start'
+  const getHeaderAlignment = (column: any) => {
+    if (column.align) return column.align
+    if (['sparkline', 'sparkbar', 'sparkarea', 'bar'].includes(column.contentType)) return 'center'
+    if (column.type === 'number') return 'right'
+    return 'left'
   }
 
   const computeGroupSpans = (columns: any[]) => {
@@ -98,26 +98,22 @@
         class={`header-cell ${column.type ?? ''} ${compact ? 'header-cell--compact' : ''}`}
         style:color={headerFontColor}
         style:background={headerColor}
-        style:text-align={column.align ?? (['sparkline', 'sparkbar', 'sparkarea', 'bar'].includes(column.contentType) ? 'center' : undefined)}
+        style:text-align={getHeaderAlignment(column)}
         style:cursor={sortable ? 'pointer' : 'auto'}
         onclick={sortable ? sortClick(column.id) : undefined}
         aria-sort={getAriaSortValue(column.id)}
       >
-        <div class={`header-title ${wrapTitles || column.wrapTitle ? 'header-title--wrap' : ''} ${wrapTitles || column.wrapTitle ? getWrapTitleAlignment(column) : ''}`.trim()}>
-          <span class={`header-title__text ${wrapTitles || column.wrapTitle ? 'header-title__text--wrap' : ''}`}>
-            {resolveHeaderTitle(column)}
-            {#if column.description}
-              <span class="header-title__info" title={column.description}>ⓘ</span>
-            {/if}
-          </span>
+        <span class={`header-title__text ${wrapTitles || column.wrapTitle ? 'header-title__text--wrap' : ''}`}>
+          {resolveHeaderTitle(column)}
+          {#if column.description}
+            <span class="header-title__info" title={column.description}>ⓘ</span>
+          {/if}
+        </span>
+        {#if sortObj.col === column.id}
           <span class="header-sort-indicator">
-            {#if sortObj.col === column.id}
-              <SortIcon ascending={sortObj.ascending ?? undefined} />
-            {:else}
-              <span class="header-sort-placeholder"><SortIcon ascending /></span>
-            {/if}
+            <SortIcon ascending={sortObj.ascending ?? undefined} />
           </span>
-        </div>
+        {/if}
       </th>
     {/each}
     {#if link}
@@ -174,40 +170,20 @@
   }
 
   .header-cell {
+    position: relative;
     padding: 2px 13px 2px 6px;
     vertical-align: bottom;
   }
 
   .header-cell--compact {
-    padding: 1px 6px 1px 1px;
+    padding: 1px 16.5px 1px 1px;
     font-size: 12px;
-  }
-
-  .header-title {
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 4px;
-  }
-
-  .header-title--wrap {
-    align-items: stretch;
-  }
-
-  .header-title--align-end {
-    justify-content: flex-end;
-  }
-
-  .header-title--align-center {
-    justify-content: center;
-  }
-
-  .header-title--align-start {
-    justify-content: flex-start;
   }
 
   .header-title__text {
     display: inline-block;
+    max-width: 100%;
+    text-align: inherit;
     letter-spacing: -0.015em;
   }
 
@@ -223,12 +199,11 @@
   }
 
   .header-sort-indicator {
+    position: absolute;
+    right: 1px;
+    bottom: 4px;
     display: inline-flex;
     align-items: center;
-  }
-
-  .header-sort-placeholder {
-    visibility: hidden;
   }
 
   .header-link-cell {

@@ -151,6 +151,7 @@
         verticalAlign={groupType === 'section' ? groupNamePosition : undefined}
         rowSpan={groupType === 'section' && groupColumn === column.id && i === 0 ? rowSpan : 1}
         {paddingLeft}
+        align={column.align}
         wrap={column.wrap}
         cellColor={formattedColor}
         fontColor={fontColor}
