@@ -12,7 +12,7 @@ function escapeHtml(str: string) {
 }
 
 // Takes the contents of a <ECharts> tag, and json5 parses it
-function liftInlineEChartsConfig(content: string) {
+export function liftInlineEChartsConfig(content: string) {
   return content.replace(/<ECharts\b([^>]*)>([\s\S]*?)<\/ECharts>/g, (match: string, attrs = '', body = '') => {
     let inline = body.trim()
     if (!inline) return match
