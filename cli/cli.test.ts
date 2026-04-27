@@ -112,9 +112,9 @@ describe('cli run', () => {
   })
 
   it('runs a named query from a markdown file', async () => {
-    let res = await runCli(['run', 'index.md', '--query', 'weekly_trends'], {cwd: flightDir})
+    let res = await runCli(['run', 'index.md', '--query', 'monthly_trend'], {cwd: flightDir})
     expectCliSuccess(res, 'run markdown query')
-    expect(res.stdout.toLowerCase()).toContain('week')
+    expect(res.stdout.toLowerCase()).toContain('month')
   })
 
   it('uses a configured duckdb path when present', async () => {
