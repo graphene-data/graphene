@@ -449,6 +449,27 @@ test('bar chart stacked100', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-stacked100')
 })
 
+test('bar chart sorted stacked100 tooltips use values, not the sort column', async ({mount, chart}) => {
+  let rows = [
+    {age_sort: 2, age_group: '40-59', risk_count: 0, participants: 0.38},
+    {age_sort: 2, age_group: '40-59', risk_count: 1, participants: 0.62},
+    {age_sort: 1, age_group: '20-39', risk_count: 0, participants: 0.59},
+    {age_sort: 1, age_group: '20-39', risk_count: 1, participants: 0.41},
+    {age_sort: 3, age_group: '60+', risk_count: 0, participants: 0.33},
+    {age_sort: 3, age_group: '60+', risk_count: 1, participants: 0.67},
+  ]
+  let fields = [
+    {name: 'age_sort', type: scalarType('number')},
+    {name: 'age_group', type: scalarType('string')},
+    {name: 'risk_count', type: scalarType('number')},
+    {name: 'participants', type: scalarType('number')},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'age_group', y: 'participants', splitBy: 'risk_count', arrange: 'stack100', sort: 'age_sort'})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  await expect(chart.el).screenshot('bar-chart-stacked100-sorted-tooltip')
+})
+
 test.skip('area chart supports stepped markers and hidden line', async ({chart}) => {
   await expect(chart.el).screenshot('area-chart-stepped-markers-no-line')
 })

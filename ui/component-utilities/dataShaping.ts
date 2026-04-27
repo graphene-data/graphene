@@ -112,10 +112,13 @@ export function applyStackPercentage(config: NormalConfig, rows: Record<string, 
 // Explicit sort format: "column" or "column asc|desc".
 export function applySorting(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   let series = config.series
-  if (series.length === 0 || rows.length === 0) return
+  if (series.length === 0) return
 
   // Explicit sort always wins and only applies to categorical axes.
   let explicitSort = resolveExplicitSort(series, fields)
+  removeSortHints(series)
+  if (rows.length === 0) return
+
   let categoryField = [...config.xAxis, ...config.yAxis].find(axis => axis?.type === 'category')?.field?.name
   if (explicitSort) {
     if (!categoryField) throw new Error('sort is only supported when the chart has a categorical axis')
@@ -358,6 +361,16 @@ function resolveExplicitSort(series: SeriesWithGroupingHint[], fields: Field[]) 
   if (!fields.some(field => field.name === parsed.field))
     throw new Error(`${parsed.field} is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).`)
   return parsed
+}
+
+// encode.sort is a Graphene-only hint. Remove it once parsed so ECharts does not
+// treat the sort column as another encoded dimension in tooltips.
+function removeSortHints(series: SeriesWithGroupingHint[]) {
+  for (let entry of series) {
+    if (!entry?.encode || entry.encode.sort == null) continue
+    entry.encode = {...entry.encode}
+    delete entry.encode.sort
+  }
 }
 
 function parseSortSpec(sort: string): {field: string; direction: 'asc' | 'desc'} {
