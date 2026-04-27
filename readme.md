@@ -25,6 +25,7 @@
 ## Why Graphene?
 
 In the future, we believe **most low-level data analytics work will be done by agents**, allowing humans to focus on insights and decision-making. However, today's tools weren't built with agents in mind:
+
 - They are GUI centric. Lots of actions can only be done via GUI and aren't accessible programmatically.
 - They focus on raising the floor at the expense of lowering the ceiling (limited viz types, simplified querying APIs).
 - They assume the human user has the tribal knowledge and business context necessary for analysis.
@@ -32,6 +33,7 @@ In the future, we believe **most low-level data analytics work will be done by a
 If we really want agents to be more productive with data, an entirely new toolset is needed.
 
 Graphene is:
+
 - [x] **Built for agents**. Everything is code, written only in languages that are prevalent in training data (SQL, Markdown, HTML). All actions are CLIs; nothing is trapped in a button.
 - [x] **High-ceiling**. Agents can create any visualization that's imaginable using ECharts, one of the world's most feature-complete visualization libraries. And Graphene's query language is as powerful as ANSI SQL, which supports 170+ functions, CTEs, subqueries, set operations, window functions, arrays, and more.
 - [x] **Optimized for agent context**. GSQL contains a semantic layer which allows metrics and join relationships to be invoked in queries. When combined with [agent skills](https://agentskills.io/home) for general business context and best practices, agents perform at human levels of competency.
@@ -58,6 +60,7 @@ Once your project is set up, simply start the dev server via `npm exec graphene 
 ## How it works
 
 A Graphene project can either be a standalone repo or a directory within a larger codebase (such as dbt or a larger mono-repo). It is comprised of:
+
 - **Semantic models**, via .gsql files. GSQL is both a modeling language and a query language, in the same way that SQL has both DDL and DML.
 - **Pages**, via .md files. Pages are typically used for dashboards, but can also contain notebook-style narratives, documentation, and other visual content.
 
@@ -70,6 +73,7 @@ Graphene's entire documentation is organized into an agent skill in the Graphene
 ## Production use cases
 
 Graphene is used in the following ways:
+
 - Hostless: Everyone uses a coding agent, performs data analysis locally, and collaborates simply via git.
 - Slack agent (available with Graphene Cloud)
 - MCP over HTTPS (available with Graphene Cloud)
