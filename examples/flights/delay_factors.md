@@ -5,7 +5,7 @@ layout: notebook
 
 Every frequent flyer has a pet theory. Pick the right airline. Avoid Chicago. Never fly a 20-year-old plane. These intuitions have just enough truth in them to survive, but they obscure which factors actually move the needle — and by how much.
 
-This is an analysis of FAA data covering roughly 345,000 U.S. commercial flights from 2000 to 2005. For each candidate factor — airline, origin airport, day of the week, and time of day — I measured how much of the variance in individual departure delays each one explains (η², or eta-squared). A high η² means knowing that factor genuinely helps predict whether *your* flight will be late.
+This is an analysis of FAA data covering roughly 345,000 U.S. commercial flights from 2000 to 2005. For each candidate factor — airline, origin airport, day of the week, and time of day — I measured how much of the variance in individual departure delays each one explains (η², or eta-squared). A high η² means knowing that factor genuinely helps predict whether _your_ flight will be late.
 
 ## One factor dwarfs the rest
 
@@ -139,7 +139,7 @@ order by avg_delay desc
 
 Alaska and Atlantic Southeast average about 12 minutes late; ATA and Continental Express average around 4. That 8-minute gap is meaningful — across a trip with a connection, it compounds — but notice the scale relative to the time-of-day chart. The worst airline is roughly as bad as flying at 3 p.m. instead of 6 a.m. The best airline can't fully compensate for a late-evening departure.
 
-Part of the airline spread reflects *network structure* rather than operational discipline. Airlines that run point-to-point routes (ATA, Continental Express) have fewer propagation paths for delay. Hub-and-spoke carriers like United and Alaska connect more legs in sequence, so a delay in one corner of the network ripples further.
+Part of the airline spread reflects _network structure_ rather than operational discipline. Airlines that run point-to-point routes (ATA, Continental Express) have fewer propagation paths for delay. Hub-and-spoke carriers like United and Alaska connect more legs in sequence, so a delay in one corner of the network ripples further.
 
 ## Where you start matters — and where you land matters differently
 
@@ -213,7 +213,7 @@ Each dot is one airport. The dashed diagonal is where departure delay equals arr
 
 The broad cluster sits just below the diagonal: most airports pass on a little extra delay. The outliers tell a richer story.
 
-**ORD, ATL, and PHL** cluster in the upper right — high on both axes. These airports generate departure delays *and* their inbound lanes are congested enough to add extra arrival delays on top.
+**ORD, ATL, and PHL** cluster in the upper right — high on both axes. These airports generate departure delays _and_ their inbound lanes are congested enough to add extra arrival delays on top.
 
 **EWR sits well above the diagonal.** Newark departs with moderate delays but arrives with the highest in the dataset — 13 minutes average. Flights bound for Newark are slotted into the congested New York–area airspace, where planes stack up in holding patterns regardless of how they left. JFK and LGA show the same effect, milder.
 
