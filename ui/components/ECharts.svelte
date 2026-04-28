@@ -33,6 +33,7 @@
   let loaded = $state.raw<QueryResult | null>(null)
   let chartError: Error | null = $state(null)
   let queryId: string | null = $state(null)
+  let chartTitle: string | undefined = $state(undefined)
   let chartSizeStyle: string = $state(calculateChartSize())
 
   function handleResults (res: QueryResult) {
@@ -104,6 +105,7 @@
     cloned.legendSelection = chart.getOption()?.legend?.[0]?.selected
     let enriched = enrich(cloned, rows, fields)
 
+    chartTitle = enriched.title.find(t => t?.text)?.text
     chartSizeStyle = calculateChartSize(enriched, rows, fields)
     chart.setOption({...enriched, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
   }
@@ -160,10 +162,9 @@
     return dim
   }
 
-  let title = $derived(config?.title?.text)
 </script>
 
-<div class="echarts" bind:this={node} style={chartSizeStyle} data-query-id={queryId} data-chart-title={title}>
+<div class="echarts" bind:this={node} style={chartSizeStyle} data-query-id={queryId} data-chart-title={chartTitle}>
   {#if loaded?.error || chartError}
     <ErrorDisplay error={loaded?.error || chartError} />
   {:else if !loaded}

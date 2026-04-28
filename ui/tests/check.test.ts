@@ -206,3 +206,30 @@ test('cli run with --chart captures a single chart screenshot', async ({server, 
   `),
   )
 })
+
+test('cli run with --chart captures an ECharts screenshot by title', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # ECharts Screenshot
+    \`\`\`sql chart_data
+    from flights select carrier, sum(distance) as total_distance
+    \`\`\`
+    <ECharts data="chart_data">
+      title: [{text: "Carrier Distance"}],
+      xAxis: {type: "category"},
+      yAxis: {},
+      series: [{type: "bar", encode: {x: "carrier", y: "total_distance"}}],
+    </ECharts>
+  `,
+  )
+
+  await page.goto(server.url())
+  await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    No errors found 💎
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
