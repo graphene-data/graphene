@@ -1,4 +1,4 @@
-import type {ParsedFileArtifacts, WorkspaceFileInput} from './types.ts'
+import type {ParsedFileArtifacts, ParsedFileDiagnostic, WorkspaceFileInput} from './types.ts'
 
 import {parser} from './parser.js'
 
@@ -16,12 +16,36 @@ import {parser} from './parser.js'
 //
 // Only components with a `data` attribute get turned into queries, and only attributes in a static list are fields to select.
 
-const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'series', 'value', 'category'] as const
+const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'value', 'category', 'splitBy', 'sort'] as const
 type ComponentAttributeKey = (typeof COMPONENT_ATTRIBUTE_KEYS)[number]
+const DEFAULT_FIELD_ATTRIBUTE_KEYS: ComponentAttributeKey[] = ['x', 'y', 'y2', 'value', 'category']
+const COMPONENT_FIELD_ATTRIBUTE_KEYS: Record<string, ComponentAttributeKey[]> = {
+  BarChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
+  AreaChart: ['x', 'y', 'splitBy', 'sort'],
+  PieChart: ['category', 'value'],
+  LineChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
+}
 
-const GSQL_FENCE = /^([ \t]*)(`{3,})g?sql[^\n]*\n([\s\S]*?)^\1\2[ \t]*$/gim
+const FENCE = /^([ \t]*)(`{3,})([^\n]*)\n([\s\S]*?)^\1\2[ \t]*$/gim
 const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+(?:[^>"']|"[^"]*"|'[^']*')*\/>/g
-const ATTRIBUTE = /(\w+)="([^"]*)"/g
+
+const CHART_PROPS: Record<string, Set<string>> = {
+  BarChart: new Set(['data', 'x', 'y', 'y2', 'splitBy', 'arrange', 'label', 'sort', 'title', 'height', 'width']),
+  AreaChart: new Set(['data', 'x', 'y', 'splitBy', 'arrange', 'sort', 'title', 'height', 'width']),
+  PieChart: new Set(['data', 'category', 'value', 'title', 'subtitle', 'height', 'width']),
+}
+
+const OBSOLETE_PROP_MESSAGES: Record<string, string> = {
+  series: 'Use splitBy instead.',
+  chartAreaHeight: 'Use height instead.',
+  swapXY: 'Swap the x and y mappings for horizontal bars instead.',
+  xFmt: 'Use field metadata or ECharts for custom formatting.',
+  yFmt: 'Use field metadata or ECharts for custom formatting.',
+  y2Fmt: 'Use field metadata or ECharts for custom formatting.',
+  subtitle: 'subtitle is only valid on PieChart. Use ECharts for chart subtext.',
+  emptySet: 'emptySet is not supported on chart wrappers.',
+  emptyMessage: 'emptyMessage is not supported on chart wrappers.',
+}
 
 interface FenceMatch {
   start: number
@@ -29,6 +53,7 @@ interface FenceMatch {
   headerLength: number
   contentStart: number
   content: string
+  gsql: boolean
   name?: string
   nameStart?: number
 }
@@ -38,18 +63,25 @@ interface ComponentMatch {
   end: number
   data: AttrMatch | null
   attributes: Partial<Record<ComponentAttributeKey, AttrMatch>>
+  diagnostics: ParsedFileDiagnostic[]
 }
 
 interface AttrMatch {
   value: string
   start: number
+  end: number
+  key: string
+  keyStart: number
+  keyEnd: number
 }
 
 export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
   let source = file.contents
   let fences = collectFences(source)
+  let gsqlFences = fences.filter(f => f.gsql)
   let components = collectComponents(source, fences)
-  let events = [...fences, ...components].sort((a, b) => a.start - b.start)
+  let events = [...gsqlFences, ...components].sort((a, b) => a.start - b.start)
+  let diagnostics = components.flatMap(component => component.diagnostics)
 
   let virtual: string[] = []
   let mapping: number[] = []
@@ -130,15 +162,18 @@ export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
       appendMapped(' select ', () => component.start)
 
       let previousAttr: AttrMatch | null = null
+      let selectedValues = new Set<string>()
       for (let key of COMPONENT_ATTRIBUTE_KEYS) {
         let attribute = attributes[key]
         if (!attribute) continue
+        if (selectedValues.has(attribute.value)) continue
         if (previousAttr) {
           let prevEnd = previousAttr.start + previousAttr.value.length
           appendMapped(', ', () => prevEnd)
         }
         appendMapped(attribute.value, (i: number) => attribute.start + i, {reset: attribute.start - 1})
         previousAttr = attribute
+        selectedValues.add(attribute.value)
       }
 
       let lastAttr = previousAttr
@@ -163,23 +198,26 @@ export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
     tree: parser.parse(doc),
     virtualContents: doc,
     virtualToMarkdownOffset: [...mapping, source.length],
+    diagnostics,
   }
 }
 
 function collectFences(source: string): FenceMatch[] {
   let matches: FenceMatch[] = []
-  GSQL_FENCE.lastIndex = 0
+  FENCE.lastIndex = 0
   let match: RegExpExecArray | null
-  while ((match = GSQL_FENCE.exec(source))) {
+  while ((match = FENCE.exec(source))) {
     let start = match.index ?? 0
     let full = match[0]
     let headerLength = full.indexOf('\n')
     if (headerLength === -1) continue
     headerLength += 1
-    let content = match[3] || ''
+    let language = (match[3] || '').trim().split(/\s+/)[0]?.toLowerCase()
+    let gsql = language == 'sql' || language == 'gsql'
+    let content = match[4] || ''
     let contentStart = start + headerLength
     let {name, index} = extractFenceName(full.slice(0, headerLength))
-    matches.push({start, end: start + full.length, headerLength, contentStart, content, name, nameStart: index == null ? undefined : start + index})
+    matches.push({start, end: start + full.length, headerLength, contentStart, content, gsql, name, nameStart: index == null ? undefined : start + index})
   }
   return matches
 }
@@ -192,14 +230,19 @@ function collectComponents(source: string, fences: FenceMatch[]): ComponentMatch
     let start = match.index ?? 0
     let end = start + match[0].length
     if (isInsideFence(start, fences)) continue
+    let componentName = match[1]
     let attrs = extractAttributes(match[0], start)
     let attributeMatches: Partial<Record<ComponentAttributeKey, AttrMatch>> = {}
-    for (let key of COMPONENT_ATTRIBUTE_KEYS) {
-      if (attrs[key]) attributeMatches[key] = attrs[key]
+    for (let key of fieldAttributeKeys(componentName)) {
+      if (attrs[key]) attributeMatches[key] = normalizeFieldAttribute(key, attrs[key])
     }
-    matches.push({start, end, data: attrs.data || null, attributes: attributeMatches})
+    matches.push({start, end, data: attrs.data || null, attributes: attributeMatches, diagnostics: validateChartProps(componentName, attrs)})
   }
   return matches
+}
+
+function fieldAttributeKeys(componentName: string): ComponentAttributeKey[] {
+  return COMPONENT_FIELD_ATTRIBUTE_KEYS[componentName] || DEFAULT_FIELD_ATTRIBUTE_KEYS
 }
 
 function extractFenceName(header: string): {name?: string; index?: number} {
@@ -210,15 +253,90 @@ function extractFenceName(header: string): {name?: string; index?: number} {
 
 function extractAttributes(fragment: string, baseStart: number): Record<string, AttrMatch> {
   let attrs: Record<string, AttrMatch> = {}
-  ATTRIBUTE.lastIndex = 0
-  let match: RegExpExecArray | null
-  while ((match = ATTRIBUTE.exec(fragment))) {
-    let key = match[1]
-    let value = match[2]
-    let valueStart = baseStart + match.index + key.length + 2
-    attrs[key] = {value, start: valueStart}
+
+  let name = fragment.match(/^<([A-Z][A-Za-z0-9]*)/)?.[1]
+  let i = name ? name.length + 1 : 1
+  while (i < fragment.length) {
+    while (/\s/.test(fragment[i] || '')) i++
+    if (!fragment[i] || fragment[i] == '/' || fragment[i] == '>') break
+
+    if (fragment[i] == '{') {
+      while (fragment[i] && fragment[i] != '}') i++
+      if (fragment[i] == '}') i++
+      continue
+    }
+
+    if (!/[\w:-]/.test(fragment[i])) {
+      i++
+      continue
+    }
+
+    let keyStart = i
+    while (/[\w:-]/.test(fragment[i] || '')) i++
+    let keyEnd = i
+    let key = fragment.slice(keyStart, keyEnd)
+
+    while (/\s/.test(fragment[i] || '')) i++
+
+    let value = 'true'
+    let valueStart = keyStart
+    let valueEnd = keyEnd
+    if (fragment[i] == '=') {
+      i++
+      while (/\s/.test(fragment[i] || '')) i++
+
+      let quote = fragment[i] == '"' || fragment[i] == "'" ? fragment[i] : ''
+      if (quote) {
+        i++
+        valueStart = i
+        while (fragment[i] && fragment[i] != quote) i++
+        valueEnd = i
+        value = fragment.slice(valueStart, valueEnd)
+        if (fragment[i] == quote) i++
+      } else {
+        valueStart = i
+        while (fragment[i] && !/\s/.test(fragment[i]) && fragment[i] != '/' && fragment[i] != '>') i++
+        valueEnd = i
+        value = fragment.slice(valueStart, valueEnd)
+      }
+    }
+
+    attrs[key] = {
+      value,
+      start: baseStart + valueStart,
+      end: baseStart + valueEnd,
+      key,
+      keyStart: baseStart + keyStart,
+      keyEnd: baseStart + keyEnd,
+    }
   }
   return attrs
+}
+
+function normalizeFieldAttribute(key: ComponentAttributeKey, attr: AttrMatch): AttrMatch {
+  if (key != 'sort') return attr
+  let match = attr.value.match(/\S+/)
+  if (!match) return attr
+  let offset = match.index ?? 0
+  return {...attr, value: match[0], start: attr.start + offset, end: attr.start + offset + match[0].length}
+}
+
+function validateChartProps(componentName: string, attrs: Record<string, AttrMatch>): ParsedFileDiagnostic[] {
+  let allowed = CHART_PROPS[componentName]
+  if (!allowed) return []
+
+  let diagnostics: ParsedFileDiagnostic[] = []
+  for (let attr of Object.values(attrs)) {
+    if (allowed.has(attr.key)) continue
+    let message = `Unsupported prop "${attr.key}" on ${componentName}. ${unsupportedPropHint(attr)}`
+    diagnostics.push({message, from: attr.keyStart, to: attr.keyEnd})
+  }
+  return diagnostics
+}
+
+function unsupportedPropHint(attr: AttrMatch) {
+  if (attr.key == 'type' && attr.value == 'stacked100') return 'Use arrange="stack100" instead.'
+  return OBSOLETE_PROP_MESSAGES[attr.key] || 'Use ECharts for custom chart configuration.'
 }
 
 function isInsideFence(offset: number, fences: FenceMatch[]) {

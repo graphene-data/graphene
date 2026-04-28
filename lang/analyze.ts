@@ -124,8 +124,10 @@ class AnalysisSession implements Analyzer {
       navigation: {symbols: [], references: []},
       virtualContents: parsed.virtualContents,
       virtualToMarkdownOffset: parsed.virtualToMarkdownOffset,
+      parsedDiagnostics: parsed.diagnostics,
     } as FileInfo
     next.tree!.fileInfo = next
+    this.recordParsedDiagnostics(next, parsed.diagnostics || [])
     return next
   }
 
@@ -1491,6 +1493,29 @@ class AnalysisSession implements Analyzer {
     fi.tree!.topNode.cursor().iterate(node => {
       if (node.type.isError) this.diag(node.node, 'Syntax error')
     })
+  }
+
+  private recordParsedDiagnostics(fi: FileInfo, diagnostics: {message: string; from: number; to: number}[]) {
+    for (let diagnostic of diagnostics) {
+      let from = this.sourcePosition(diagnostic.from, fi)
+      let to = this.sourcePosition(diagnostic.to, fi)
+      this.diagnostics.push({severity: 'error', message: diagnostic.message, file: toRelativePath(fi.path), from, to, frame: buildFrame(from, to)})
+    }
+  }
+
+  private sourcePosition(offset: number, file: FileInfo) {
+    let lines = file.contents.split(/\r?\n/)
+    let acc = 0
+    for (let i = 0; i < lines.length; i++) {
+      let lineText = lines[i]
+      let nextAcc = acc + lineText.length + 1
+      if (offset < nextAcc || i === lines.length - 1) {
+        let col = Math.max(0, offset - acc)
+        return {offset, line: i, col, lineStart: acc, lineText}
+      }
+      acc = nextAcc
+    }
+    return {offset, line: 0, col: 0, lineText: ''}
   }
 
   diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {

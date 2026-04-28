@@ -1650,6 +1650,52 @@ describe('lang', () => {
     )
   })
 
+  it('validates unquoted chart attributes and extracts splitBy and sort fields', () => {
+    expect(`
+      \`\`\`gsql test
+        from users select name, age, email, created_at
+      \`\`\`
+      <BarChart data=test x=name y=age splitBy=email sort="created_at asc" />
+    `).toRenderSql(
+      'with test as ( select users.name as name, users.age as age, users.email as email, users.created_at as created_at from users as users ) select test.name as name, test.age as age, test.email as email, test.created_at as created_at from test as test',
+    )
+
+    analyze('<BarChart data=users x=name y=age sort="name asc" />', 'md')
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+  })
+
+  it('reports unsupported chart wrapper props with migration hints', () => {
+    analyze('<BarChart data=users x=name y=age series=email />', 'md')
+    expect(getDiagnostics().some(d => /Unsupported prop "series" on BarChart\. Use splitBy instead\./.test(d.message))).toBe(true)
+
+    analyze('<AreaChart data=users x=name y=age type=stacked100 />', 'md')
+    expect(getDiagnostics().some(d => /Unsupported prop "type" on AreaChart\. Use arrange="stack100" instead\./.test(d.message))).toBe(true)
+
+    analyze('<PieChart data=users category=name value=age emptySet=warn />', 'md')
+    expect(getDiagnostics().some(d => /Unsupported prop "emptySet" on PieChart\. emptySet is not supported/.test(d.message))).toBe(true)
+  })
+
+  it('allows PieChart subtitle but rejects subtitle on other chart wrappers', () => {
+    analyze('<PieChart data=users category=name value=age subtitle="Age split" />', 'md')
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+
+    analyze('<BarChart data=users x=name y=age subtitle="Age split" />', 'md')
+    expect(getDiagnostics().some(d => /subtitle is only valid on PieChart/.test(d.message))).toBe(true)
+  })
+
+  it('ignores chart-looking tags inside fenced code blocks', () => {
+    expect(`
+      \`\`\`markdown
+      <BarChart data=users x=name y=age series=email />
+      \`\`\`
+    `).toHaveNoErrors()
+  })
+
+  it('does not validate LineChart y2 in markdown yet', () => {
+    analyze('<LineChart data=users x=name y=age y2=total_orders />', 'md')
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+  })
+
   it('handles params in a md code fence', () => {
     let queries = analyze('```gsql test\nfrom users where age > $cutoff\n```\n<BarChart data="test" x="name" y="avg(age)" />', 'md')
     let sql = toSql(queries[0], {cutoff: 20})
