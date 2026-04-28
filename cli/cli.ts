@@ -14,7 +14,7 @@ import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {printDiagnostics, printTable} from './printer.ts'
-import {runMdFile, runNamedQueryFromMd} from './run.ts'
+import {listMdFileQueries, runMdFile, runNamedQueryFromMd} from './run.ts'
 import {CliTelemetry, getPresentFlags, getWorkspaceScanCounts, type TelemetryCommand} from './telemetry/index.ts'
 
 const program = new Command()
@@ -52,7 +52,7 @@ program
   .command('run')
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
-  .option('-c, --chart <chartTitle>', 'Title of a specific chart to capture')
+  .option('-c, --chart <chartTitleOrQueryId>', 'Title or query ID of a specific chart to capture')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
   .action(
     withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string}) => {
@@ -85,6 +85,23 @@ program
       let sql = toSql(query)
       let res = await runQuery(sql)
       printTable(res.rows)
+    }),
+  )
+
+program
+  .command('list')
+  .description('List the query IDs for charts on a markdown page')
+  .argument('<file>', 'Markdown file to inspect')
+  .action(
+    withTelemetry('list', async (exit, fileArg: string) => {
+      let inputPath = getExistingPath(fileArg)
+      if (!inputPath || !inputPath.endsWith('.md')) {
+        console.error('list requires a markdown file path')
+        return exit(1)
+      }
+
+      let res = await listMdFileQueries(inputPath, telemetry)
+      return exit(res ? 0 : 1)
     }),
   )
 

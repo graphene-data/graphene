@@ -1,4 +1,4 @@
-export type TelemetryCommand = 'check' | 'compile' | 'login' | 'run' | 'schema' | 'serve' | 'stop'
+export type TelemetryCommand = 'check' | 'compile' | 'list' | 'login' | 'run' | 'schema' | 'serve' | 'stop'
 
 export interface TelemetryState {
   installId: string
@@ -23,7 +23,7 @@ export interface TelemetryPayloads {
     to_version: string
   }
   workspace_scanned: {
-    command: 'check' | 'compile' | 'run' | 'serve'
+    command: 'check' | 'compile' | 'list' | 'run' | 'serve'
     gsql_file_count: number
     md_file_count: number
   }

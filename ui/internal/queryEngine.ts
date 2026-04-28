@@ -46,7 +46,7 @@ function buildQueryId(source: string | undefined, fields: Map<string, string | s
     if (typeof value === 'string' && value.trim().length === 0) return []
     return [`${name}="${value}"`]
   })
-  return `Query (data="${source}"${fieldIds.length ? ` ${fieldIds.join(' ')}` : ''})`
+  return `data="${source}"${fieldIds.length ? ` ${fieldIds.join(' ')}` : ''}`
 }
 
 // Called by GrapheneQuery tags to register a named query on the page
