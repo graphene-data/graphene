@@ -58,7 +58,7 @@ select
     else 'On Time'
   end as status,
   count() as flights
-order by year
+order by year, status
 ```
 
 ```sql manufacturer_share
