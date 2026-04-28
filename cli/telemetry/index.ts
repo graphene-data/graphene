@@ -55,7 +55,7 @@ export class CliTelemetry {
 
   async markSuccessfulInvocation() {
     if (!this.enabled) return {shouldSendInstallSeen: false, fromVersion: undefined}
-    return this.storage.markSuccessfulInvocation(this.cliVersion)
+    return await this.storage.markSuccessfulInvocation(this.cliVersion)
   }
 
   private commonFields() {
