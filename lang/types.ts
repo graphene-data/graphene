@@ -38,6 +38,13 @@ export interface ParsedFileArtifacts {
   tree: Tree
   virtualContents?: string
   virtualToMarkdownOffset?: number[]
+  diagnostics?: ParsedFileDiagnostic[]
+}
+
+export interface ParsedFileDiagnostic {
+  message: string
+  from: number
+  to: number
 }
 
 export type {FieldType, FieldMeta, GrapheneError, Position, ScalarField, ArrayField, TimeGrain, TimeOrdinal}
@@ -350,4 +357,5 @@ export interface FileInfo {
   navigation: FileNavigation
   virtualContents?: string
   virtualToMarkdownOffset?: number[]
+  parsedDiagnostics?: ParsedFileDiagnostic[]
 }

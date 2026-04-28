@@ -74,6 +74,19 @@ from flights select 1 as origin, not_a_function() as explode
   )
 })
 
+test('check with mdFile reports unsupported chart wrapper props', async () => {
+  mockFileMap['mock.md'] = trimIndentation(`
+    \`\`\`sql chart_data
+    from flights select carrier, distance
+    \`\`\`
+    <BarChart data=chart_data x=carrier y=distance yFmt=num0 />
+  `)
+
+  let result = await check({fileArg: 'mock.md', log})
+  expect(result).toBe(false)
+  expect(outputLines()).toContain('ERROR: mock.md line 4: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.')
+})
+
 test('cli run with md file reports runtime query errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(
