@@ -125,6 +125,7 @@ export function analyze(contents?: string, contentType?: 'gsql' | 'md') {
         tree: analyzed.tree!,
         virtualContents: analyzed.virtualContents,
         virtualToMarkdownOffset: analyzed.virtualToMarkdownOffset,
+        diagnostics: analyzed.parsedDiagnostics,
       },
     }
   })

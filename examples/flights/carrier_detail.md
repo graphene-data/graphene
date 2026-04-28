@@ -154,7 +154,7 @@ select
 order by sort_key
 ```
 
-<BarChart data=delay_dist x=bucket y=flights sort="sort_key asc" title="Departure Delay Distribution" yFmt=num0 emptySet=warn />
+<BarChart data=delay_dist x=bucket y=flights sort="sort_key asc" title="Departure Delay Distribution" />
 
 ```sql fleet_aircraft
 from aircraft
