@@ -6,24 +6,25 @@ import {getErrors} from './telemetry.ts'
 let socket: WebSocket | null = null
 connect()
 
+// html2canvas is dynamically loaded so we don't include it on pages that don't need it.
+let html2canvas: any
+async function loadHtml2Canvas() {
+  html2canvas ||= (await import('@graphenedata/html2canvas'))?.default
+}
+
 async function captureChart(chartTitle: string) {
   let escaped = window.CSS.escape(chartTitle)
   let chartEl = document.querySelector(`[data-chart-title="${escaped}"]`) as HTMLElement | null
   if (!chartEl) return undefined
-  if (!(window as any).html2canvas) {
-    let html2canvas = await import('@graphenedata/html2canvas')
-    ;(window as any).html2canvas = html2canvas.default
-  }
-  let canvas = await (window as any).html2canvas(chartEl, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
+
+  await loadHtml2Canvas()
+  let canvas = await html2canvas(chartEl, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
   return canvas?.toDataURL('image/png')
 }
 
 async function takeScreenshot() {
-  if (!(window as any).html2canvas) {
-    let html2canvas = await import('@graphenedata/html2canvas')
-    ;(window as any).html2canvas = html2canvas.default
-  }
-  let canvas = await (window as any).html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
+  await loadHtml2Canvas()
+  let canvas = await html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
   return canvas?.toDataURL('image/png')
 }
 
