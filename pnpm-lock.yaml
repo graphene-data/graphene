@@ -117,11 +117,8 @@ importers:
         specifier: ^17.2.3
         version: 17.3.1
       echarts:
-        specifier: ^5.5.0
-        version: 5.6.0
-      echarts6:
-        specifier: npm:echarts@^6.0.0
-        version: echarts@6.0.0
+        specifier: ^6.0.0
+        version: 6.0.0
       fs-extra:
         specifier: 11.2.0
         version: 11.2.0
@@ -1934,9 +1931,6 @@ packages:
   ecdsa-sig-formatter@1.0.11:
     resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
 
-  echarts@5.6.0:
-    resolution: {integrity: sha512-oTbVTsXfKuEhxftHqL5xprgLoc0k7uScAwtryCgWF6hPYFLRwOUHiFmHGCBKP5NPFNkDVopOieyUqYGH8Fa3kA==}
-
   echarts@6.0.0:
     resolution: {integrity: sha512-Tte/grDQRiETQP4xz3iZWSvoHrkCQtwqd6hs+mifXcjrCuo2iKWbajFObuLJVBlDIJlOzgQPd1hsaKt/3+OMkQ==}
 
@@ -3127,9 +3121,6 @@ packages:
 
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
-
-  zrender@5.6.1:
-    resolution: {integrity: sha512-OFXkDJKcrlx5su2XbzJvj/34Q3m6PvyCZkVPHGYpcCJ52ek4U/ymZyfuV1nKE23AyBJ51E/6Yr0mhZ7xGTO4ag==}
 
   zrender@6.0.0:
     resolution: {integrity: sha512-41dFXEEXuJpNecuUQq6JlbybmnHaqqpGlbH1yxnA5V9MMP4SbohSVZsJIwz+zdjQXSSlR1Vc34EgH1zxyTDvhg==}
@@ -5066,11 +5057,6 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
-  echarts@5.6.0:
-    dependencies:
-      tslib: 2.3.0
-      zrender: 5.6.1
-
   echarts@6.0.0:
     dependencies:
       tslib: 2.3.0
@@ -6403,10 +6389,6 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   zimmerframe@1.1.4: {}
-
-  zrender@5.6.1:
-    dependencies:
-      tslib: 2.3.0
 
   zrender@6.0.0:
     dependencies:
