@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://graphenedata.com">
-      <img width="150" height="150" alt="Graphene Logo" src="/logo.png" />
+      <img height="150" alt="Graphene Logo" src="./logo.png" />
   </a>
 </div>
 
