@@ -27,10 +27,10 @@ const DEFAULT_THEME: Theme = {
     'base-300': '#e5e7eb',
     'base-content': '#1f2937',
     'base-content-muted': '#6b7280',
-    primary: '#2563eb',
-    positive: '#16a34a',
-    negative: '#dc2626',
-    warning: '#d97706',
+    primary: '#3D6B7E',
+    positive: '#87A68C',
+    negative: '#B87470',
+    warning: '#D4A94C',
   },
   colorPalettes: {
     default: DEFAULT_PALETTE,
@@ -92,6 +92,15 @@ export const resolveColorsObject = (input: Record<string, unknown> | string | un
   return readable(Object.fromEntries(entries))
 }
 
+// A single color makes a flat scale; expand to a bg→color gradient so heatmaps work.
+// Kept in sync with --color-bg in app.css; chroma.scale needs a real color (CSS vars don't work).
+const PAGE_BG = '#fafaf9'
+const finalizePalette = (values: string[]): string[] => {
+  if (values.length === 0) return DEFAULT_PALETTE
+  if (values.length === 1) return [PAGE_BG, values[0]]
+  return values
+}
+
 export const resolveColorPalette = (input: unknown): Readable<string[] | undefined> => {
   if (isReadable<string[] | undefined>(input)) return input
   if (input == null) return readable(DEFAULT_PALETTE)
@@ -104,7 +113,7 @@ export const resolveColorPalette = (input: unknown): Readable<string[] | undefin
       let parsed = parseJson(key)
       if (Array.isArray(parsed)) {
         let values = parsed.map(item => normalizeColor(item)).filter(Boolean) as string[]
-        return readable(values.length ? values : DEFAULT_PALETTE)
+        return readable(finalizePalette(values))
       }
     }
     if (key.includes(',')) {
@@ -112,15 +121,15 @@ export const resolveColorPalette = (input: unknown): Readable<string[] | undefin
         .split(',')
         .map(part => normalizeColor(part))
         .filter(Boolean) as string[]
-      return readable(values.length ? values : DEFAULT_PALETTE)
+      return readable(finalizePalette(values))
     }
     let normalized = normalizeColor(key)
-    return readable(normalized ? [normalized] : DEFAULT_PALETTE)
+    return readable(normalized ? finalizePalette([normalized]) : DEFAULT_PALETTE)
   }
 
   if (Array.isArray(input)) {
     let values = input.map(item => normalizeColor(item)).filter(Boolean) as string[]
-    return readable(values.length ? values : DEFAULT_PALETTE)
+    return readable(finalizePalette(values))
   }
 
   return readable(DEFAULT_PALETTE)
