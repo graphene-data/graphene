@@ -233,3 +233,21 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({ser
   `),
   )
 })
+
+test('cli run with --chart reports when no chart title matches', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Chart Screenshot
+    \`\`\`sql chart_data
+    from flights select carrier, sum(distance) as total_distance
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', chart: 'Missing Chart', log})
+  expect(result).toBe(false)
+  expect(outputLines()).toEqual('Could not find chart "Missing Chart" on index.md')
+})

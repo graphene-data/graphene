@@ -88,9 +88,12 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   let errors = Array.from(resp.errors || []) as GrapheneError[]
+  let chartNotFound = !!options.chart && !resp.screenshot
+  if (chartNotFound) log(`Could not find chart "${options.chart}" on ${mdFile}`)
+
   if (errors.length) {
     log(styleText('red', 'Runtime errors') + ` in ${mdFile}:`)
-  } else {
+  } else if (!chartNotFound) {
     log('No errors found 💎')
   }
 
@@ -112,7 +115,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     log('Screenshot saved to', screenshotPath)
   }
 
-  return errors.length == 0
+  return errors.length == 0 && !chartNotFound
 }
 
 export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, telemetry?: CliTelemetry): Promise<boolean> {
