@@ -1,20 +1,17 @@
-<br/>
-
 <div align="center">
+  <br/>
   <a href="https://graphenedata.com">
       <img height="125" alt="Graphene Logo" src="./logo.png" />
   </a>
+  <br/>
+  <br/>
 </div>
-
-<br/>
 
 <p align="center">
   <b>Graphene</b> is a data analytics framework built for agents.
   <br/>
   Ask questions and build visualizations 10x faster when agents do the work.
 </p>
-
-<br/>
 
 <div align="center">
   <a href="https://graphenedata.com">Website</a>
