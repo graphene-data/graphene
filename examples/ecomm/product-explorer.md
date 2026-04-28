@@ -45,6 +45,6 @@ group by 1 order by 2 desc limit 20
 ```
 
 <Row>
-  <BarChart data="category_breakdown" title="Units by Category" x="category" y="units" swapXY="true"/>
+  <BarChart data="category_breakdown" title="Units by Category" x="units" y="category"/>
   <PieChart data="category_breakdown" title="Revenue Share by Category" category="category" value="revenue"/>
 </Row>
