@@ -16,6 +16,7 @@ import {runQuery} from './connections/index.ts'
 import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {runVitePlugin} from './run.ts'
+import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
 // Collect Svelte compiler warnings for test assertions
 export type SvelteWarning = {code: string; message: string; filename?: string}
@@ -29,8 +30,8 @@ const QUERY_VERSION = 1
 
 let uiRoot: string
 
-export async function serve2(): Promise<ViteDevServer> {
-  let server = await createServer(await createConfig())
+export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
+  let server = await createServer(await createConfig(telemetry))
   // I originally added this to avoid the page refreshing immediately on load.
   // We def don't want to run it in tests, because its not safe to do in parallel.
   // I'm not sure it's still needed, now that we explicitly list out `optimizeDeps.includes`, refreshes should be rare
@@ -41,7 +42,7 @@ export async function serve2(): Promise<ViteDevServer> {
   return server
 }
 
-async function createConfig(): Promise<InlineConfig> {
+async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = Number(process.env.GRAPHENE_PORT) || 4000
   await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
@@ -77,7 +78,7 @@ async function createConfig(): Promise<InlineConfig> {
       fixHmrForFailedModules(),
       runVitePlugin(),
       handleRequestPlugin,
-      updateWorkspacePlugin(),
+      updateWorkspacePlugin(telemetry),
       mockFilesForTests(),
     ],
     publicDir: path.resolve(uiRoot, 'public'),
@@ -232,7 +233,7 @@ function fixHmrForFailedModules() {
 let workspaceLoadPromise: Promise<void> | undefined
 let workspaceFiles: WorkspaceFileInput[] = []
 let mdFiles: {path: string; title?: string}[] = []
-function updateWorkspacePlugin() {
+function updateWorkspacePlugin(telemetry?: CliTelemetry) {
   return {
     name: 'updateWorkspace',
     resolveId(id: string) {
@@ -259,8 +260,12 @@ function updateWorkspacePlugin() {
     configureServer: (s: ViteDevServer) => {
       let refresh = async () => {
         workspaceLoadPromise = (async () => {
-          workspaceFiles = await loadWorkspace(config.root, true, config.ignoredFiles)
-          // telemetry?.workspaceScanned('serve', workspaceFiles) // TODO this fires every time a file changes. Too much?
+          let loaded = await loadWorkspace(config.root, true, config.ignoredFiles)
+          telemetry?.event('workspace_scanned', {command: 'serve', ...getWorkspaceScanCounts(loaded)})
+          workspaceFiles = loaded.map(file => {
+            let existing = workspaceFiles.find(existing => existing.path == file.path && existing.contents == file.contents)
+            return existing?.parsed ? {...file, parsed: existing.parsed} : file
+          })
         })()
         await workspaceLoadPromise
 

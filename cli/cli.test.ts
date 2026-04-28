@@ -197,6 +197,8 @@ describe('cli telemetry', () => {
       expect(scanned.command).toBe('compile')
       expect(scanned.gsql_file_count).toBeGreaterThan(0)
       expect(scanned.md_file_count).toBe(0)
+      expect(scanned).not.toHaveProperty('files')
+      expect(JSON.stringify(scanned)).not.toContain('flights.gsql')
 
       for (let batch of batches) {
         expect(batch).toMatchObject({events: expect.any(Array)})
