@@ -574,6 +574,7 @@
     }
   }
   .input-label {
+    font-family: var(--font-ui);
     font-size: 12px;
     font-weight: 600;
     color: var(--input-label-color, #374151);
