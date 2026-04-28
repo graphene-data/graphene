@@ -71,7 +71,11 @@
     $theme.colors['base-content-muted'],
   ))
 
-  let chipClass = $derived(pickColor('delta-chip--positive', 'delta-chip--negative', 'delta-chip--neutral'))
+  let chipClass = $derived(pickColor(
+    downIsGood ? 'delta-chip--negative' : 'delta-chip--positive',
+    downIsGood ? 'delta-chip--positive' : 'delta-chip--negative',
+    'delta-chip--neutral',
+  ))
 
   let deltaClass = $derived((() => {
     let classes = ['delta']
@@ -143,13 +147,13 @@
   }
 
   .delta-chip--positive {
-    background: rgba(22, 163, 74, 0.1);
-    border-color: rgba(22, 163, 74, 0.2);
+    background: rgba(135, 166, 140, 0.15);
+    border-color: rgba(135, 166, 140, 0.3);
   }
 
   .delta-chip--negative {
-    background: rgba(220, 38, 38, 0.1);
-    border-color: rgba(220, 38, 38, 0.2);
+    background: rgba(184, 116, 112, 0.15);
+    border-color: rgba(184, 116, 112, 0.3);
   }
 
   .delta-chip--neutral {
