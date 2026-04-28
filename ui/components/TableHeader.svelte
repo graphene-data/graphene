@@ -68,7 +68,7 @@
       {#if rowNumbers}
         <th class={`header-index ${compact ? 'header-index--compact' : ''}`} style:background-color={headerColor}></th>
       {/if}
-      {#each columnsWithGroupSpan as column (column.id)}
+      {#each columnsWithGroupSpan as column (column.identifier ?? column.id)}
         {#if column.colGroup && column.isNewGroup}
           <th class="header-group" colspan={column.span}>
             <div class="header-group__label">{column.colGroup}</div>
@@ -92,7 +92,7 @@
         style:color={headerFontColor}
       ></th>
     {/if}
-    {#each orderedColumns as column (column.id)}
+    {#each orderedColumns as column (column.identifier ?? column.id)}
       <th
         role="columnheader"
         class={`header-cell ${column.type ?? ''} ${compact ? 'header-cell--compact' : ''}`}
