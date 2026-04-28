@@ -1,5 +1,6 @@
 import type {SyntaxNode, Tree} from '@lezer/common'
 
+import type {Config} from './config.ts'
 import type {ExprFanout, FanoutPath} from './fanout.ts'
 import type {ArrayField, FieldMeta, FieldType, GrapheneError, Position, ScalarField, TimeGrain, TimeOrdinal} from './index.d.ts'
 import type {TimestampUnit} from './temporal.ts'
@@ -11,18 +12,14 @@ declare module '@lezer/common' {
 }
 
 export interface AnalysisWorkspace {
-  config: AnalysisConfig
+  config: Config
   files: WorkspaceFileInput[]
 }
 
 export interface AnalysisResult {
   files: FileInfo[]
   diagnostics: GrapheneError[]
-}
-
-export interface AnalysisConfig {
-  dialect: string
-  defaultNamespace?: string
+  queries: Query[]
 }
 
 export interface WorkspaceFileInput {
@@ -30,6 +27,7 @@ export interface WorkspaceFileInput {
   contents: string
   kind?: FileKind
   parsed?: ParsedFileArtifacts
+  mock?: boolean
 }
 
 export type FileKind = 'gsql' | 'md'

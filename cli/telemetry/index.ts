@@ -4,7 +4,7 @@ import {access, constants, readFile} from 'node:fs/promises'
 import path from 'node:path'
 
 import type {Config} from '../../lang/config.ts'
-import type {WorkspaceFileInput} from '../../lang/core.ts'
+import type {AnalysisWorkspace, WorkspaceFileInput} from '../../lang/core.ts'
 import type {TelemetryBatch, TelemetryCommand, TelemetryEvent, TelemetryEventName, TelemetryPayloads} from './types.ts'
 
 import {TelemetryStorage} from './storage.ts'
@@ -105,7 +105,8 @@ export function getPresentFlags(command: TelemetryCommand, argv: string[]) {
   return present.sort()
 }
 
-export function getWorkspaceScanCounts(files: Pick<WorkspaceFileInput, 'path'>[]) {
+export function getWorkspaceScanCounts(workspaceOrFiles: AnalysisWorkspace | Pick<WorkspaceFileInput, 'path'>[]) {
+  let files = Array.isArray(workspaceOrFiles) ? workspaceOrFiles : workspaceOrFiles.files
   return {
     gsql_file_count: files.filter(file => file.path.endsWith('.gsql')).length,
     md_file_count: files.filter(file => file.path.endsWith('.md')).length,

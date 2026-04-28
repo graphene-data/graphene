@@ -12,7 +12,7 @@ import {
   getHover as getHoverFromResult,
   getReferences as getReferencesFromResult,
   getTable as getTableFromResult,
-  loadWorkspace as loadWorkspaceFiles,
+  loadWorkspace as loadWorkspaceFromCore,
   toSql,
 } from './core.ts'
 import {type AnalysisResult, type WorkspaceFileInput} from './types.ts'
@@ -85,7 +85,7 @@ function formatDiagnostics(_source: string, diagnostics: GrapheneError[]): strin
 
 let conn: DuckDBConnection
 let files: WorkspaceFileInput[] = []
-let lastAnalysis: AnalysisResult = {files: [], diagnostics: []}
+let lastAnalysis: AnalysisResult = {files: [], diagnostics: [], queries: []}
 
 export async function prepareEcommerceTables() {
   let db = await DuckDBInstance.create(':memory:')
@@ -95,7 +95,7 @@ export async function prepareEcommerceTables() {
 
 export function clearWorkspace() {
   files = []
-  lastAnalysis = {files: [], diagnostics: []}
+  lastAnalysis = {files: [], diagnostics: [], queries: []}
 }
 
 export function updateFile(contents: string, path: string, kind?: 'gsql' | 'md') {
@@ -105,9 +105,10 @@ export function updateFile(contents: string, path: string, kind?: 'gsql' | 'md')
   else files.push(next)
 }
 
-export async function loadWorkspace(dir: string, includeMd: boolean) {
-  files = await loadWorkspaceFiles(dir, includeMd, config.ignoredFiles)
-  lastAnalysis = {files: [], diagnostics: []}
+export async function loadWorkspace(_dir: string, _includeMd: boolean) {
+  let workspace = await loadWorkspaceFromCore({config, files})
+  files = workspace.files
+  lastAnalysis = {files: [], diagnostics: [], queries: []}
 }
 
 export function analyze(contents?: string, contentType?: 'gsql' | 'md') {

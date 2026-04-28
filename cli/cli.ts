@@ -7,14 +7,15 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 
 import {config, loadConfig} from '../lang/config.ts'
-import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
-import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
+import {analyze, loadWorkspace, toSql} from '../lang/core.ts'
+import {mockFileMap} from '../lang/mockFiles.ts'
+import {parseWarehouseFieldType} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {printDiagnostics, printTable} from './printer.ts'
-import {listMdFileQueries, runMdFile, runNamedQueryFromMd} from './run.ts'
+import {listMdFileQueries, runMdFile} from './run.ts'
 import {CliTelemetry, getPresentFlags, getWorkspaceScanCounts, type TelemetryCommand} from './telemetry/index.ts'
 
 const program = new Command()
@@ -39,12 +40,19 @@ program
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(
     withTelemetry('compile', async (exit, input: string | undefined) => {
-      let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-      telemetry.event('workspace_scanned', {command: 'compile', ...getWorkspaceScanCounts(files)})
+      let workspace = await loadWorkspace({config, files: []})
+      telemetry.event('workspace_scanned', {command: 'compile', ...getWorkspaceScanCounts(workspace)})
       let sql = await readInput(input)
-      let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: sql})}, 'input')
-      let [query] = validateInputQuery(analysis, exit)
-      console.log(toSql(query))
+      let {queries, diagnostics} = analyze(workspace, sql, 'gsql')
+      if (diagnostics.length) {
+        printDiagnostics(diagnostics)
+        return exit(1)
+      }
+      if (!queries.length) {
+        console.warn('No queries found')
+        return exit(1)
+      }
+      console.log(toSql(queries[0]))
     }),
   )
 
@@ -61,9 +69,34 @@ program
         return exit(1)
       }
 
-      let inputPath = getExistingPath(input)
-      if (inputPath && inputPath.endsWith('.md')) {
-        let res = options.query ? await runNamedQueryFromMd(inputPath, options.query, telemetry) : await runMdFile({mdArg: inputPath, chart: options.chart, telemetry})
+      let inputFile = resolveWorkspaceFile(input)
+      if (inputFile?.endsWith('.gsql')) {
+        console.error('Running .gsql files is no longer supported. Pass inline GSQL or use a markdown file path with --query.')
+        return exit(1)
+      }
+
+      let workspace = await loadWorkspace({config, files: []})
+      telemetry.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(workspace)})
+
+      if (inputFile?.endsWith('.md')) {
+        let contents = await readInput(inputFile)
+        if (options.query) {
+          contents += `\n\n\`\`\`sql\nfrom ${options.query} select *\n\`\`\`\n`
+          let {queries, diagnostics} = analyze(workspace, contents, 'md')
+          if (diagnostics.length) {
+            printDiagnostics(diagnostics)
+            return exit(1)
+          }
+          if (!queries.length) {
+            console.warn('No queries found')
+            return exit(1)
+          }
+          let res = await runQuery(toSql(queries[queries.length - 1]))
+          printTable(res.rows)
+          return
+        }
+
+        let res = await runMdFile({mdArg: inputFile, chart: options.chart, telemetry})
         return exit(res ? 0 : 1)
       }
 
@@ -72,18 +105,17 @@ program
         return exit(1)
       }
 
-      if (inputPath && inputPath.endsWith('.gsql')) {
-        console.error('Running .gsql files is no longer supported. Pass inline GSQL or use a markdown file path with --query.')
+      let gsql = await readInput(input)
+      let {queries, diagnostics} = analyze(workspace, gsql, 'gsql')
+      if (diagnostics.length) {
+        printDiagnostics(diagnostics)
         return exit(1)
       }
-
-      let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-      telemetry.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
-      let gsql = await readInput(input)
-      let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: gsql})}, 'input')
-      let [query] = validateInputQuery(analysis, exit)
-      let sql = toSql(query)
-      let res = await runQuery(sql)
+      if (!queries.length) {
+        console.warn('No queries found')
+        return exit(1)
+      }
+      let res = await runQuery(toSql(queries[0]))
       printTable(res.rows)
     }),
   )
@@ -94,13 +126,13 @@ program
   .argument('<file>', 'Markdown file to inspect')
   .action(
     withTelemetry('list', async (exit, fileArg: string) => {
-      let inputPath = getExistingPath(fileArg)
-      if (!inputPath || !inputPath.endsWith('.md')) {
+      let inputFile = resolveWorkspaceFile(fileArg)
+      if (!inputFile || !inputFile.endsWith('.md')) {
         console.error('list requires a markdown file path')
         return exit(1)
       }
 
-      let res = await listMdFileQueries(inputPath, telemetry)
+      let res = await listMdFileQueries(inputFile)
       return exit(res ? 0 : 1)
     }),
   )
@@ -196,7 +228,12 @@ program
   .argument('[file]', 'Optional markdown or gsql file to check')
   .action(
     withTelemetry('check', async (exit, fileArg: string | undefined) => {
-      let res = await check({fileArg, telemetry})
+      let targetFile = resolveWorkspaceFile(fileArg)
+      if (fileArg && !targetFile) {
+        console.error(`Couldn't find ${fileArg}`)
+        return exit(1)
+      }
+      let res = await check({fileArg: targetFile, telemetry})
       return exit(res ? 0 : 1) // if we started the server in the background, just returning won't actually exit the process.
     }),
   )
@@ -214,8 +251,12 @@ program
 
 program.parse(process.argv)
 
+// If the input is a path, return the contents of that path. If it's `-`, read from stdin,
+// otherwise just return the input arg verbatim (usually means it's a query)
 async function readInput(arg): Promise<string> {
-  if (!arg || arg === '-') {
+  if (!arg) return ''
+
+  if (arg === '-') {
     return await new Promise<string>(resolve => {
       let data = ''
       process.stdin.setEncoding('utf-8')
@@ -225,32 +266,28 @@ async function readInput(arg): Promise<string> {
     })
   }
 
-  let absolutePath = path.resolve(arg)
-  if (fs.existsSync(absolutePath)) {
-    return await fs.promises.readFile(absolutePath, 'utf-8')
+  // cheap check to see if this is a query, rather than a path
+  if (arg.includes(' ')) {
+    return arg
   }
+
+  if (process.env.NODE_ENV == 'test' && mockFileMap[arg]) {
+    return mockFileMap[arg]
+  }
+
+  let absolutePath = [path.resolve(process.cwd(), arg), path.resolve(config.root, arg)].find(p => fs.existsSync(p))
+  if (absolutePath) return await fs.promises.readFile(absolutePath, 'utf-8')
 
   return arg
 }
 
-function getExistingPath(arg: string | undefined): string | null {
-  if (!arg || arg === '-') return null
-  let absolutePath = path.resolve(arg)
-  return fs.existsSync(absolutePath) ? absolutePath : null
-}
+function resolveWorkspaceFile(arg: string | undefined): string | undefined {
+  let clean = arg?.trim()
+  if (!clean || clean === '-') return undefined
+  if (process.env.NODE_ENV == 'test' && mockFileMap[clean]) return clean
 
-function validateInputQuery(analysis: AnalysisResult, exit: (code?: number) => never): Query[] {
-  if (analysis.diagnostics.length) {
-    printDiagnostics(analysis.diagnostics)
-    return exit(1)
-  }
-
-  let queries = getFile(analysis, 'input')?.queries || []
-  if (queries.length == 0) {
-    console.warn('No queries found')
-    return exit(1)
-  }
-  return queries
+  let absolutePath = [path.resolve(process.cwd(), clean), path.resolve(config.root, clean)].find(p => fs.existsSync(p))
+  return absolutePath ? path.relative(config.root, absolutePath) : undefined
 }
 
 function findCaseInsensitive(values: string[], needle: string): string | null {

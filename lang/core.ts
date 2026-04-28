@@ -5,29 +5,47 @@ import path from 'node:path'
 import type {GrapheneError} from './index.d.ts'
 
 import {analyzeWorkspace} from './analyze.ts'
+import {mockFileMap} from './mockFiles.ts'
 import {fillInParams} from './params.ts'
-import {type AnalysisResult, type Location, type Query, type WorkspaceFileInput} from './types.ts'
+import {type AnalysisResult, type AnalysisWorkspace, type Location, type Query, type WorkspaceFileInput} from './types.ts'
 import {getSourceOffset} from './util.ts'
 
 export {analyzeWorkspace}
 export type {GrapheneError} from './index.d.ts'
 export type {AnalysisResult, AnalysisWorkspace, FileInfo, Query, Table, WorkspaceFileInput} from './types.ts'
 
-export async function loadWorkspace(dir: string, includeMd: boolean, ignoredFiles: string[] = []): Promise<WorkspaceFileInput[]> {
-  let ignore = ['node_modules/**', '**/.*/**', ...ignoredFiles]
-  let paths = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore, follow: false, nocase: true})
-  let files: WorkspaceFileInput[] = []
+export async function loadWorkspace(workspace: AnalysisWorkspace): Promise<AnalysisWorkspace> {
+  let root = workspace.config.root
+  let ignore = ['node_modules/**', '**/.*/**', ...workspace.config.ignoredFiles]
+  let paths = await glob('**/*.{gsql,md}', {cwd: root, ignore, follow: false, nocase: true})
+  workspace.files = []
 
   for await (let file of paths) {
-    try {
-      let contents = await readFile(path.join(dir, file), 'utf-8')
-      files.push({path: file, contents})
-    } catch (err: any) {
-      console.error('Failed to read file', file, err.message)
-    }
+    let contents = await readFile(path.join(root, file), 'utf-8')
+    workspace.files.push({path: file, contents})
   }
 
-  return files
+  if (process.env.NODE_ENV == 'test') {
+    for (let [filePath, contents] of Object.entries(mockFileMap)) upsertFile(workspace.files, {path: filePath, contents, mock: true})
+  }
+
+  return workspace
+}
+
+export function analyze(workspace: AnalysisWorkspace, input: string, inputType: 'gsql' | 'md'): AnalysisResult {
+  let inputPath = `input.${inputType}`
+  let files = workspace.files.filter(file => file.path != inputPath).concat({path: inputPath, contents: input, kind: inputType})
+  return analyzeWorkspace({...workspace, files}, inputPath)
+}
+
+export function analyzeAll(workspace: AnalysisWorkspace): AnalysisResult {
+  return analyzeWorkspace(workspace)
+}
+
+function upsertFile(files: WorkspaceFileInput[], next: WorkspaceFileInput) {
+  let idx = files.findIndex(file => file.path == next.path)
+  if (idx >= 0) files[idx] = next
+  else files.push(next)
 }
 
 export function getTable(analysis: AnalysisResult, name: string) {

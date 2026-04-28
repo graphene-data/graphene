@@ -2,6 +2,7 @@ import {type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import type {GrapheneError} from './index.d.ts'
 
+import {type Config} from './config.ts'
 import {
   aggregateFanoutMessage,
   normalizeExprFanout,
@@ -24,7 +25,6 @@ import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTem
 import {inferTemporalExtractionMetadata} from './temporalMetadata.ts'
 import {
   scalarType,
-  type AnalysisConfig,
   type AnalysisResult,
   type AnalysisWorkspace,
   type FileInfo,
@@ -67,14 +67,14 @@ export function analyzeWorkspace(workspace: AnalysisWorkspace, targetPath?: stri
 }
 
 export interface Analyzer {
-  config: AnalysisConfig
+  config: Config
   analyzeExpr(node: SyntaxNode, scope: Scope): Expr
   diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T
   checkTypes(expr: Expr, expected: TypeKind[], node: SyntaxNode): void
 }
 
 class AnalysisSession implements Analyzer {
-  config: AnalysisConfig
+  config: Config
   files: FileInfo[]
   diagnostics: GrapheneError[] = []
   filesByPath: Record<string, FileInfo> = {}
@@ -97,11 +97,11 @@ class AnalysisSession implements Analyzer {
 
     if (targetPath) {
       let target = this.fileForPath(targetPath)
-      if (!target) return {files: this.files, diagnostics: this.diagnostics}
+      if (!target) return {files: this.files, diagnostics: this.diagnostics, queries: []}
       target.tables.forEach(table => this.analyzeTableFully(table))
       let nodes = target.tree!.topNode.getChildren('QueryStatement') || []
       target.queries = nodes.map(node => this.analyzeQuery(node)).filter((query): query is Query => !!query)
-      return {files: this.files, diagnostics: this.diagnostics}
+      return {files: this.files, diagnostics: this.diagnostics, queries: target.queries}
     }
 
     this.files.flatMap(file => file.tables).forEach(table => this.analyzeTableFully(table))
@@ -110,7 +110,7 @@ class AnalysisSession implements Analyzer {
       file.queries = nodes.map(node => this.analyzeQuery(node)).filter((query): query is Query => !!query)
     })
 
-    return {files: this.files, diagnostics: this.diagnostics}
+    return {files: this.files, diagnostics: this.diagnostics, queries: this.files.flatMap(file => file.queries)}
   }
 
   private createFile(file: WorkspaceFileInput): FileInfo {

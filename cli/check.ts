@@ -1,12 +1,5 @@
-import {readFileSync} from 'node:fs'
-import path from 'path'
-
-import type {WorkspaceFileInput} from '../lang/types.ts'
-
 import {config} from '../lang/config.ts'
-import {analyzeWorkspace, loadWorkspace} from '../lang/core.ts'
-import {mockFileMap} from './mockFiles.ts'
-import {normalizeFile} from './normalizeFile.ts'
+import {analyzeAll, analyzeWorkspace, loadWorkspace} from '../lang/core.ts'
 import {printDiagnostics} from './printer.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
@@ -18,43 +11,23 @@ interface CheckOptions {
 
 export async function check(options: CheckOptions): Promise<boolean> {
   let log = options.log || console.log
-  let targetFile = options.fileArg && normalizeFile(options.fileArg)
+  let targetFile = options.fileArg
 
-  if (options.fileArg && !targetFile) {
-    log(`Couldn't find ${options.fileArg}`)
-    return false
-  }
+  let workspace = await loadWorkspace({config, files: []})
+  options.telemetry?.event('workspace_scanned', {command: 'check', ...getWorkspaceScanCounts(workspace)})
 
-  let files = await loadWorkspace(config.root, !targetFile, config.ignoredFiles)
-  options.telemetry?.event('workspace_scanned', {command: 'check', ...getWorkspaceScanCounts(files)})
-  if (process.env.NODE_ENV == 'test') {
-    for (let [path, contents] of Object.entries(mockFileMap)) {
-      if (targetFile && path != targetFile) continue
-      upsertFile(files, {path, contents})
-    }
-  }
+  let res
   if (targetFile) {
-    let contents: string
-    if (process.env.NODE_ENV == 'test' && mockFileMap[targetFile]) {
-      contents = mockFileMap[targetFile]
-    } else {
-      contents = readFileSync(path.resolve(config.root, targetFile), 'utf-8')
-    }
-    upsertFile(files, {path: targetFile, contents})
+    workspace.files = workspace.files.filter(file => file.path.endsWith('.gsql') || file.path == targetFile)
+    res = analyzeWorkspace(workspace, targetFile)
+  } else {
+    res = analyzeAll(workspace)
   }
-
-  let result = analyzeWorkspace({config, files})
-  if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics, log)
+  if (res.diagnostics.length > 0) {
+    printDiagnostics(res.diagnostics, log)
     return false
   }
 
   log('No errors found 💎')
   return true
-}
-
-function upsertFile(files: WorkspaceFileInput[], next: WorkspaceFileInput) {
-  let idx = files.findIndex(file => file.path == next.path)
-  if (idx >= 0) files[idx] = next
-  else files.push(next)
 }

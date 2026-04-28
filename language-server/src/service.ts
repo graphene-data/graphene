@@ -103,8 +103,8 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
 
         await Promise.all(
           discovered.map(async project => {
-            let files = await loadWorkspace(project.root, true, project.config.ignoredFiles)
-            next.set(project.root, {root: project.root, config: project.config, files, analysis: {files: [], diagnostics: []}})
+            let workspace = await loadWorkspace({config: project.config, files: []})
+            next.set(project.root, {root: project.root, config: workspace.config, files: workspace.files, analysis: {files: [], diagnostics: [], queries: []}})
           }),
         )
 

@@ -1,6 +1,7 @@
 import {svelte, vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import crypto from 'crypto'
 import fs from 'fs-extra'
+import {glob} from 'glob'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {type IncomingMessage, type ServerResponse} from 'http'
 import {mdsvex} from 'mdsvex'
@@ -8,13 +9,13 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 
-import type {AnalysisResult, WorkspaceFileInput} from '../lang/types.ts'
+import type {WorkspaceFileInput} from '../lang/types.ts'
 
 import {config} from '../lang/config.ts'
-import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
+import {analyze, loadWorkspace, toSql} from '../lang/core.ts'
+import {mockFileMap} from '../lang/mockFiles.ts'
 import {runQuery} from './connections/index.ts'
 import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
-import {mockFileMap} from './mockFiles.ts'
 import {runVitePlugin} from './run.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
@@ -125,8 +126,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
-  let result = analyzeWorkspace({config, files: [...workspaceFiles, {path: 'input', contents: gsql}]})
-  updateParsedFiles(result)
+  let result = analyze({config, files: workspaceFiles}, gsql, 'gsql')
 
   let diagnostics = result.diagnostics
   if (diagnostics.length) {
@@ -135,7 +135,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
     return
   }
 
-  let queries = result.files.find(file => file.path == 'input')?.queries || []
+  let queries = result.queries
   if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
   let sql = toSql(queries[0], params)
 
@@ -232,19 +232,22 @@ function fixHmrForFailedModules() {
 let workspaceLoadPromise: Promise<void> | undefined
 let workspaceFiles: WorkspaceFileInput[] = []
 let mdFiles: {path: string; title?: string}[] = []
+async function loadRealMdFiles() {
+  let ignore = ['node_modules/**', '**/.*/**', ...config.ignoredFiles]
+  let paths = await glob('**/*.md', {cwd: config.root, ignore, follow: false, nocase: true})
+  return await Promise.all(paths.map(async filePath => ({path: filePath, title: extractFrontmatter(await fs.readFile(path.join(config.root, filePath), 'utf-8')).title})))
+}
+
 function updateWorkspacePlugin(telemetry?: CliTelemetry) {
   return {
     name: 'updateWorkspace',
     resolveId(id: string) {
       if (id == 'virtual:nav') return '\0virtual:nav'
     },
-    load(id: string) {
+    async load(id: string) {
       if (id != '\0virtual:nav') return
 
-      // in tests, inject mock files into the nav.
-      // we do this on `load` as each test doesn't always refresh the workspace
-      // TODO, we should prob inject these into `loadWorkspace`, then we wouldn't need this block at all
-      let res = [...mdFiles]
+      let res = process.env.NODE_ENV == 'test' ? await loadRealMdFiles() : [...mdFiles]
       if (process.env.NODE_ENV == 'test') {
         for (let [path, contents] of Object.entries(mockFileMap)) {
           let mockFile = {path, title: extractFrontmatter(contents).title}
@@ -259,9 +262,9 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
     configureServer: (s: ViteDevServer) => {
       let refresh = async () => {
         workspaceLoadPromise = (async () => {
-          let loaded = await loadWorkspace(config.root, true, config.ignoredFiles)
-          telemetry?.event('workspace_scanned', {command: 'serve', ...getWorkspaceScanCounts(loaded)})
-          workspaceFiles = loaded.map(file => {
+          let workspace = await loadWorkspace({config, files: []})
+          telemetry?.event('workspace_scanned', {command: 'serve', ...getWorkspaceScanCounts(workspace)})
+          workspaceFiles = workspace.files.map(file => {
             let existing = workspaceFiles.find(existing => existing.path == file.path && existing.contents == file.contents)
             return existing?.parsed ? {...file, parsed: existing.parsed} : file
           })
@@ -269,7 +272,7 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
         await workspaceLoadPromise
 
         // store md file path/title so we can serve it as virtual:nav for the sidebar
-        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(f => ({path: f.path, title: extractFrontmatter(f.contents).title}))
+        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md') && !file.mock).map(f => ({path: f.path, title: extractFrontmatter(f.contents).title}))
 
         let mod = s.moduleGraph.getModuleById('\0virtual:nav')
         if (!mod) return
@@ -281,21 +284,6 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
       refresh()
     },
   }
-}
-
-function updateParsedFiles(analysis: AnalysisResult) {
-  workspaceFiles = workspaceFiles.map(file => {
-    let analyzed = analysis.files.find(next => next.path == file.path)
-    if (!analyzed) return file
-    return {
-      ...file,
-      parsed: {
-        tree: analyzed.tree!,
-        virtualContents: analyzed.virtualContents,
-        virtualToMarkdownOffset: analyzed.virtualToMarkdownOffset,
-      },
-    }
-  })
 }
 
 const handleRequestPlugin = {

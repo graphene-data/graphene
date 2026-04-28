@@ -19,7 +19,7 @@
     }
 
     if (error.queryId) details.push(`Query (${error.queryId})`)
-    if (file && file != 'input') {
+    if (file && !['input', 'input.gsql', 'input.md'].includes(file)) {
       let line = error.from?.line != null ? error.from.line + 1 : undefined
       details.push(line ? `${file}:${line}` : file)
     }

@@ -1,8 +1,8 @@
 import stripAnsi from 'strip-ansi'
 
 import {check} from '../../cli/check.ts'
-import {mockFileMap} from '../../cli/mockFiles.ts'
 import {listMdFileQueries, runMdFile} from '../../cli/run.ts'
+import {mockFileMap} from '../../lang/mockFiles.ts'
 import {trimIndentation} from '../../lang/util.ts'
 import {test, expect} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'

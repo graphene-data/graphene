@@ -4,9 +4,9 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {test as base, onTestFinished} from 'vitest'
 
-import {mockFileMap} from '../../cli/mockFiles.ts'
 import {clearSvelteWarnings, serve2, svelteWarnings} from '../../cli/serve2.ts'
 import {type Config, setConfig} from '../../lang/config.ts'
+import {mockFileMap} from '../../lang/mockFiles.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
 import {playwrightExpect as expect} from './matchers.ts'
 
@@ -121,7 +121,9 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
           return `http://localhost:${port}`
         },
         mockFile: (filePath: string, content: string) => {
-          mockFileMap[filePath.replace(/^\//, '')] = trimIndentation(content)
+          let relativePath = filePath.replace(/^\//, '')
+          mockFileMap[relativePath] = trimIndentation(content)
+          server.watcher.emit('add', path.join(viteRoot, relativePath))
         },
         updateMockFile: (filePath: string, content: string) => {
           let relativePath = filePath.replace(/^\//, '')
