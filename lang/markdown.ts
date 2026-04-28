@@ -1,6 +1,7 @@
 import type {ParsedFileArtifacts, ParsedFileDiagnostic, WorkspaceFileInput} from './types.ts'
 
 import {parser} from './parser.js'
+import {extractSveltishAttributes, type SveltishAttribute} from './sveltish.ts'
 
 // This parser turns Graphene md files into the equivalent gsql, and then parses that gsql.
 // Code fences are turned in to table definitions, while Component calls are turned into queries.
@@ -61,18 +62,9 @@ interface FenceMatch {
 interface ComponentMatch {
   start: number
   end: number
-  data: AttrMatch | null
-  attributes: Partial<Record<ComponentAttributeKey, AttrMatch>>
+  data: SveltishAttribute | null
+  attributes: Partial<Record<ComponentAttributeKey, SveltishAttribute>>
   diagnostics: ParsedFileDiagnostic[]
-}
-
-interface AttrMatch {
-  value: string
-  start: number
-  end: number
-  key: string
-  keyStart: number
-  keyEnd: number
 }
 
 export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
@@ -161,7 +153,7 @@ export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
       appendMapped(data.value, (i: number) => data.start + i, {reset: data.start - 1})
       appendMapped(' select ', () => component.start)
 
-      let previousAttr: AttrMatch | null = null
+      let previousAttr: SveltishAttribute | null = null
       let selectedValues = new Set<string>()
       for (let key of COMPONENT_ATTRIBUTE_KEYS) {
         let attribute = attributes[key]
@@ -231,8 +223,8 @@ function collectComponents(source: string, fences: FenceMatch[]): ComponentMatch
     let end = start + match[0].length
     if (isInsideFence(start, fences)) continue
     let componentName = match[1]
-    let attrs = extractAttributes(match[0], start)
-    let attributeMatches: Partial<Record<ComponentAttributeKey, AttrMatch>> = {}
+    let attrs = extractSveltishAttributes(match[0], start)
+    let attributeMatches: Partial<Record<ComponentAttributeKey, SveltishAttribute>> = {}
     for (let key of fieldAttributeKeys(componentName)) {
       if (attrs[key]) attributeMatches[key] = normalizeFieldAttribute(key, attrs[key])
     }
@@ -251,69 +243,7 @@ function extractFenceName(header: string): {name?: string; index?: number} {
   return {}
 }
 
-function extractAttributes(fragment: string, baseStart: number): Record<string, AttrMatch> {
-  let attrs: Record<string, AttrMatch> = {}
-
-  let name = fragment.match(/^<([A-Z][A-Za-z0-9]*)/)?.[1]
-  let i = name ? name.length + 1 : 1
-  while (i < fragment.length) {
-    while (/\s/.test(fragment[i] || '')) i++
-    if (!fragment[i] || fragment[i] == '/' || fragment[i] == '>') break
-
-    if (fragment[i] == '{') {
-      while (fragment[i] && fragment[i] != '}') i++
-      if (fragment[i] == '}') i++
-      continue
-    }
-
-    if (!/[\w:-]/.test(fragment[i])) {
-      i++
-      continue
-    }
-
-    let keyStart = i
-    while (/[\w:-]/.test(fragment[i] || '')) i++
-    let keyEnd = i
-    let key = fragment.slice(keyStart, keyEnd)
-
-    while (/\s/.test(fragment[i] || '')) i++
-
-    let value = 'true'
-    let valueStart = keyStart
-    let valueEnd = keyEnd
-    if (fragment[i] == '=') {
-      i++
-      while (/\s/.test(fragment[i] || '')) i++
-
-      let quote = fragment[i] == '"' || fragment[i] == "'" ? fragment[i] : ''
-      if (quote) {
-        i++
-        valueStart = i
-        while (fragment[i] && fragment[i] != quote) i++
-        valueEnd = i
-        value = fragment.slice(valueStart, valueEnd)
-        if (fragment[i] == quote) i++
-      } else {
-        valueStart = i
-        while (fragment[i] && !/\s/.test(fragment[i]) && fragment[i] != '/' && fragment[i] != '>') i++
-        valueEnd = i
-        value = fragment.slice(valueStart, valueEnd)
-      }
-    }
-
-    attrs[key] = {
-      value,
-      start: baseStart + valueStart,
-      end: baseStart + valueEnd,
-      key,
-      keyStart: baseStart + keyStart,
-      keyEnd: baseStart + keyEnd,
-    }
-  }
-  return attrs
-}
-
-function normalizeFieldAttribute(key: ComponentAttributeKey, attr: AttrMatch): AttrMatch {
+function normalizeFieldAttribute(key: ComponentAttributeKey, attr: SveltishAttribute): SveltishAttribute {
   if (key != 'sort') return attr
   let match = attr.value.match(/\S+/)
   if (!match) return attr
@@ -321,7 +251,7 @@ function normalizeFieldAttribute(key: ComponentAttributeKey, attr: AttrMatch): A
   return {...attr, value: match[0], start: attr.start + offset, end: attr.start + offset + match[0].length}
 }
 
-function validateChartProps(componentName: string, attrs: Record<string, AttrMatch>): ParsedFileDiagnostic[] {
+function validateChartProps(componentName: string, attrs: Record<string, SveltishAttribute>): ParsedFileDiagnostic[] {
   let allowed = CHART_PROPS[componentName]
   if (!allowed) return []
 
@@ -334,7 +264,7 @@ function validateChartProps(componentName: string, attrs: Record<string, AttrMat
   return diagnostics
 }
 
-function unsupportedPropHint(attr: AttrMatch) {
+function unsupportedPropHint(attr: SveltishAttribute) {
   if (attr.key == 'type' && attr.value == 'stacked100') return 'Use arrange="stack100" instead.'
   return OBSOLETE_PROP_MESSAGES[attr.key] || 'Use ECharts for custom chart configuration.'
 }
