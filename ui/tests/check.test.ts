@@ -2,7 +2,7 @@ import stripAnsi from 'strip-ansi'
 
 import {check} from '../../cli/check.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
-import {runMdFile} from '../../cli/run.ts'
+import {listMdFileQueries, runMdFile} from '../../cli/run.ts'
 import {trimIndentation} from '../../lang/util.ts'
 import {test, expect} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
@@ -157,7 +157,7 @@ test('cli run with md file reports table configuration errors', async ({server, 
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    DataTable: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
+    Query (DataTable): not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
 `),
   )
@@ -226,6 +226,46 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({ser
 
   await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    No errors found 💎
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
+test('cli list prints chart query IDs', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Query List
+    \`\`\`sql chart_data
+    from flights select carrier, sum(distance) as total_distance
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await listMdFileQueries('index.md', undefined, log)
+  expect(result).toBe(true)
+  expect(outputLines()).toEqual('data="chart_data" x="carrier" y="total_distance"')
+})
+
+test('cli run with --chart captures a chart screenshot by query ID', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Chart Screenshot
+    \`\`\`sql chart_data
+    from flights select carrier, sum(distance) as total_distance
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
+  `,
+  )
+
+  await page.goto(server.url())
+  await runMdFile({mdArg: 'index.md', chart: 'data="chart_data" x="carrier" y="total_distance"', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
     No errors found 💎

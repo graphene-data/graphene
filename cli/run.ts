@@ -54,38 +54,8 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  let host = `http://localhost:${config.port}`
-  let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
-  if (pageUrl === '/index') pageUrl = '/'
-
-  if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
-    log('Starting Graphene server...')
-    await runServeInBackground()
-  }
-
-  let resp = await sendRunRequest({host, pageUrl, chart: options.chart})
-
-  if (resp.checkError == 'no_server') {
-    log('Failed to start Graphene server')
-    return false
-  }
-
-  if (resp.checkError == 'no_tab' && process.env.NODE_ENV !== 'test') {
-    log(`Opening page ${host}${pageUrl}`)
-    openInBrowser(host + pageUrl)
-    await new Promise(resolve => setTimeout(resolve, 500))
-    resp = await sendRunRequest({host, pageUrl, chart: options.chart})
-  }
-
-  if (resp.checkError == 'no_tab') {
-    log('Failed to open a new tab')
-    return false
-  }
-
-  if (resp.checkError) {
-    log('Failed to run check: ' + resp.checkError)
-    return false
-  }
+  let resp = await sendSocketRequest({mdFile, action: 'check', chart: options.chart, log})
+  if (!resp) return false
 
   let errors = Array.from(resp.errors || []) as GrapheneError[]
   let chartNotFound = !!options.chart && !resp.screenshot
@@ -99,7 +69,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 
   errors.forEach((e: GrapheneError) => {
     if (e.file || e.frame) printDiagnostics([e], log)
-    else if (e.queryId) log(`${e.queryId}: ${e.message}`)
+    else if (e.queryId) log(`Query (${e.queryId}): ${e.message}`)
     else log(e.message)
   })
 
@@ -116,6 +86,32 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   return errors.length == 0 && !chartNotFound
+}
+
+export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry, log: (...args: any[]) => void = console.log): Promise<boolean> {
+  let mdFile = normalizeFile(mdArg)
+  if (!mdFile) {
+    log(`Couldn't find ${mdArg}`)
+    return false
+  }
+
+  let files = await loadWorkspace(config.root, false, config.ignoredFiles)
+  telemetry?.event('workspace_scanned', {command: 'list', ...getWorkspaceScanCounts(files)})
+  let mdContents = process.env.NODE_ENV == 'test' && mockFileMap[mdFile] ? mockFileMap[mdFile] : readFileSync(path.resolve(config.root, mdFile), 'utf-8')
+
+  let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdFile).concat({path: mdFile, contents: mdContents, kind: 'md'})}, mdFile)
+  if (result.diagnostics.length > 0) {
+    printDiagnostics(result.diagnostics, log)
+    return false
+  }
+
+  let resp = await sendSocketRequest({mdFile, action: 'list', log})
+  if (!resp) return false
+
+  let queryIds = (resp.queryIds || []) as string[]
+  if (!queryIds.length) log('No chart queries found')
+  else queryIds.forEach(queryId => log(queryId))
+  return true
 }
 
 export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, telemetry?: CliTelemetry): Promise<boolean> {
@@ -146,7 +142,44 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
   return true
 }
 
-async function sendRunRequest({host, pageUrl, chart}) {
+async function sendSocketRequest({mdFile, action, chart, log}: {mdFile: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
+  let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
+  if (pageUrl === '/index') pageUrl = '/'
+
+  if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
+    log('Starting Graphene server...')
+    await runServeInBackground()
+  }
+
+  let host = `http://localhost:${config.port}`
+  let resp = await fetchSocketRequest({host, pageUrl, action, chart})
+
+  if (resp.error == 'no_server') {
+    log('Failed to start Graphene server')
+    return null
+  }
+
+  if (resp.error == 'no_tab' && process.env.NODE_ENV !== 'test') {
+    log(`Opening page ${host}${pageUrl}`)
+    openInBrowser(host + pageUrl)
+    await new Promise(resolve => setTimeout(resolve, 500))
+    resp = await fetchSocketRequest({host, pageUrl, action, chart})
+  }
+
+  if (resp.error == 'no_tab') {
+    log('Failed to open a new tab')
+    return null
+  }
+
+  if (resp.error) {
+    log(`Failed to ${action == 'check' ? 'run check' : 'list queries'}: ${resp.error}`)
+    return null
+  }
+
+  return resp
+}
+
+async function fetchSocketRequest({host, pageUrl, action, chart}: {host: string; pageUrl: string; action: 'check' | 'list'; chart?: string}) {
   let abort = new AbortController()
   let timeout = setTimeout(() => abort.abort(), 30_000)
   let browserHost = host.replace('127.0.0.1', 'localhost')
@@ -154,7 +187,7 @@ async function sendRunRequest({host, pageUrl, chart}) {
     let response = await fetch(`${host}/_api/check`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({pageUrl: browserHost + pageUrl, chart}),
+      body: JSON.stringify({pageUrl: browserHost + pageUrl, action, chart}),
       signal: abort.signal,
     })
     clearTimeout(timeout)
@@ -162,23 +195,23 @@ async function sendRunRequest({host, pageUrl, chart}) {
     let body = response.headers.get('content-type') == 'application/json' ? await response.json() : {error: await response.text()}
 
     if (!response.ok) {
-      if (body.error) return {checkError: body.error}
+      if (body.error) return {error: body.error}
       console.error(`Unexpected response: ${JSON.stringify(body)}`)
-      return {checkError: 'Unexpected response from Graphene server'}
+      return {error: 'Unexpected response from Graphene server'}
     }
 
     return body
   } catch (err: any) {
     clearTimeout(timeout)
-    if (err.name === 'AbortError') return {checkError: 'timeout'}
-    return {checkError: 'no_server'}
+    if (err.name === 'AbortError') return {error: 'timeout'}
+    return {error: 'no_server'}
   }
 }
 
 export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
-  let {pageUrl, chart} = JSON.parse(Buffer.concat(chunks).toString())
+  let {pageUrl, action, chart} = JSON.parse(Buffer.concat(chunks).toString())
   let id = Math.random().toString(36).slice(2)
   res.setHeader('Content-Type', 'application/json')
 
@@ -190,7 +223,7 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
     return
   }
 
-  conn.socket.send(JSON.stringify({type: 'check', chart, requestId: id}))
+  conn.socket.send(JSON.stringify({type: 'check', action, chart, requestId: id}))
   pendingRequests[id] = {response: res}
 }
 

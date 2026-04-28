@@ -32,7 +32,7 @@ Sent at the start of every tracked CLI command.
 
 Fields:
 
-- `command`: One of `check`, `compile`, `login`, `run`, `schema`, `serve`, or `stop`
+- `command`: One of `check`, `compile`, `list`, `login`, `run`, `schema`, `serve`, or `stop`
 - `flags`: A sorted list of safe flag names that were present
 
 Only a small allowlist of flag names is tracked:
@@ -78,6 +78,7 @@ It is currently emitted only for:
 
 - `check`
 - `compile`
+- `list`
 - `run`
 - `serve`
 
