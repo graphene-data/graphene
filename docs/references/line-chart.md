@@ -10,7 +10,7 @@ Here's an example:
   data=revenue_by_month
   x=month
   y=revenue
-  y2=conversion_rate
+  splitBy=region
 />
 ```
 
