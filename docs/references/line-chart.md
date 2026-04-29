@@ -31,9 +31,10 @@ Here's an example:
 |----------|-------------|----------|---------|---------|
 | x | Field for x-axis | true | column/expression name | - |
 | y | One or more value fields (comma-separated) | true | column(s), e.g. `revenue` or `revenue, cost` | - |
-| y2 | Optional field rendered on secondary axis | false | column/expression name | - |
+| y2 | Optional single field rendered on secondary axis | false | column/expression name | - |
 | splitBy | Split one `y` field into one line per distinct value | false | column/expression name | - |
 
 `splitBy` is incompatible with multiple y fields. If `y` includes multiple fields, each field becomes its own line.
+Use `y2` when one additional line should use a separate value axis, such as a rate alongside a total.
 
 For advanced behavior (custom line styles, annotations, axis config, dataset transforms), use [`ECharts`](./echarts.md) directly.

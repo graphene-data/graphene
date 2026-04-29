@@ -22,7 +22,7 @@ order by 1 asc
 limit 12
 ```
 
-<LineChart title="Weekly Taxi Trips" data=weekly_trips x=pickup_week y=trips y2=avg_total_amount y2Fmt=usd2 />
+<LineChart title="Weekly Taxi Trips" data=weekly_trips x=pickup_week y=trips y2=avg_total_amount />
 
 ```sql payment_mix
 select

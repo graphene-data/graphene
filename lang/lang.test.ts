@@ -1691,9 +1691,24 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('does not validate LineChart y2 in markdown yet', () => {
+  it('allows LineChart y2 in markdown', () => {
     analyze('<LineChart data=users x=name y=age y2=total_orders />', 'md')
     expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+  })
+
+  it('reports unsupported LineChart wrapper props', () => {
+    analyze('<LineChart data=users x=name y=age y2=total_orders y2Fmt=num0 />', 'md')
+    expect(getDiagnostics().some(d => /Unsupported prop "y2Fmt" on LineChart\. Use field metadata or ECharts for custom formatting\./.test(d.message))).toBe(true)
+  })
+
+  it('allows AreaChart y2 in markdown', () => {
+    analyze('<AreaChart data=users x=name y=age y2=total_orders />', 'md')
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+  })
+
+  it('reports unsupported AreaChart wrapper props', () => {
+    analyze('<AreaChart data=users x=name y=age y2=total_orders y2Fmt=num0 />', 'md')
+    expect(getDiagnostics().some(d => /Unsupported prop "y2Fmt" on AreaChart\. Use field metadata or ECharts for custom formatting\./.test(d.message))).toBe(true)
   })
 
   it('handles params in a md code fence', () => {
