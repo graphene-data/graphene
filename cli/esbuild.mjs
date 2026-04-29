@@ -59,6 +59,7 @@ await cp(path.resolve(__dirname, '../docs/references'), path.resolve(skillDir, '
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
 await mkdir(path.resolve(__dirname, 'dist/lang'), {recursive: true})
 await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 'dist/lang/index.d.ts'))
+await cp(path.resolve(__dirname, '../lang/chartProps.ts'), path.resolve(__dirname, 'dist/lang/chartProps.ts'))
 await transpileSvelteModules(path.resolve(__dirname, 'dist/ui'))
 await rm(path.resolve(__dirname, 'dist/ui/node_modules'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))

@@ -87,21 +87,23 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  let errors = Array.from(resp.errors || []) as GrapheneError[]
+  let diagnostics = Array.from(resp.diagnostics || resp.errors || []) as GrapheneError[]
+  let errors = diagnostics.filter(d => d.severity != 'warn')
+  let warnings = diagnostics.filter(d => d.severity == 'warn')
   let chartNotFound = !!options.chart && !resp.screenshot
   if (chartNotFound) log(`Could not find chart "${options.chart}" on ${mdFile}`)
-
   if (errors.length) {
     log(styleText('red', 'Runtime errors') + ` in ${mdFile}:`)
   } else if (!chartNotFound) {
     log('No errors found 💎')
   }
 
-  errors.forEach((e: GrapheneError) => {
-    if (e.file || e.frame) printDiagnostics([e], log)
-    else if (e.queryId) log(`${e.queryId}: ${e.message}`)
-    else log(e.message)
-  })
+  errors.forEach((e: GrapheneError) => printRuntimeDiagnostic(e, log))
+
+  if (warnings.length) {
+    log(styleText('yellow', 'Runtime warnings') + ` in ${mdFile}:`)
+    warnings.forEach((e: GrapheneError) => printRuntimeDiagnostic(e, log))
+  }
 
   if (resp?.stillLoading) {
     log('Warning: Queries were still loading when the screenshot was taken')
@@ -116,6 +118,12 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   return errors.length == 0 && !chartNotFound
+}
+
+function printRuntimeDiagnostic(e: GrapheneError, log: (...args: any[]) => void) {
+  if (e.file || e.frame) printDiagnostics([e], log)
+  else if (e.queryId) log(`${e.queryId}: ${e.message}`)
+  else log(e.message)
 }
 
 export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, telemetry?: CliTelemetry): Promise<boolean> {

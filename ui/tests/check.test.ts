@@ -87,6 +87,61 @@ test('check with mdFile reports unsupported chart wrapper props', async () => {
   expect(outputLines()).toContain('ERROR: mock.md line 4: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.')
 })
 
+test('cli run with md file reports dynamic unsupported chart wrapper props as warnings', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Runtime Chart Prop Warning
+    \`\`\`sql chart_data
+    from flights select carrier, distance limit 25
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="distance" {...{yFmt: 'num0'}} />
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', log})
+  expect(result).toBe(true)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    No errors found 💎
+    Runtime warnings in index.md:
+    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with md file reports dynamic unsupported ECharts top-level props as warnings', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Runtime ECharts Prop Warning
+    \`\`\`sql chart_data
+    from flights select carrier, distance limit 25
+    \`\`\`
+
+    <ECharts data="chart_data" {...{chartAreaHeight: 240}}>
+      xAxis: {},
+      yAxis: {},
+      series: [{type: "bar", encode: {x: "carrier", y: "distance"}}],
+    </ECharts>
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', log})
+  expect(result).toBe(true)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    No errors found 💎
+    Runtime warnings in index.md:
+    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts. Use height instead.
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
 test('cli run with md file reports runtime query errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(

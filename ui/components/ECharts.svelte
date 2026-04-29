@@ -3,6 +3,7 @@
   import {onDestroy, onMount} from 'svelte'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import {logError} from '../internal/telemetry.ts'
+  import {chartContext, registerChartPropWarnings} from '../component-utilities/chartValidation.ts'
   import {enrich, horizontalBarCount} from '../component-utilities/enrich.ts'
   import type {EChartsConfig, NormalConfig, QueryResult} from '../component-utilities/types.ts'
   import '../component-utilities/theme.ts'
@@ -22,7 +23,10 @@
     height = undefined,
     width = '100%',
     renderer = 'svg',
-  }: Props = $props()
+    ...extraProps
+  }: Props & Record<string, unknown> = $props()
+
+  registerChartPropWarnings('ECharts', () => extraProps, () => chartContext('ECharts', data))
 
   // not state, because we don't want `$effect` to run when they change
   let node: HTMLDivElement | null = null

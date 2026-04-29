@@ -1,6 +1,7 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
   import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
+  import {chartContext, registerChartPropWarnings} from '../component-utilities/chartValidation.ts'
 
   interface Props {
     data: string | QueryResult
@@ -20,7 +21,10 @@
     subtitle = undefined,
     height = undefined,
     width = undefined,
-  }: Props = $props()
+    ...extraProps
+  }: Props & Record<string, unknown> = $props()
+
+  registerChartPropWarnings('PieChart', () => extraProps, () => chartContext('PieChart', data))
 
   function buildConfig(): EChartsConfig {
     return {

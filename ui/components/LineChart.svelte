@@ -1,5 +1,6 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
+  import {chartContext, registerChartPropWarnings} from '../component-utilities/chartValidation.ts'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
   import type {EChartsConfig, QueryResult, SeriesWithGroupingHint} from '../component-utilities/types.ts'
 
@@ -25,7 +26,10 @@
     title = undefined,
     height = undefined,
     width = undefined,
-  }: Props = $props()
+    ...extraProps
+  }: Props & Record<string, unknown> = $props()
+
+  registerChartPropWarnings('LineChart', () => extraProps, () => chartContext('LineChart', data))
 
   function buildConfig(): EChartsConfig {
     let yFields = parseCommaList(y)
