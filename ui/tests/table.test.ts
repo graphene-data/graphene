@@ -106,6 +106,34 @@ test('colorscale with colorBreakpoints applies correct background colors', async
   await expect(component.locator('.table-container')).screenshot('colorscale-breakpoints')
 })
 
+test('delta columns render positive, negative, neutral, and down-is-good states', async ({mount}) => {
+  let rows = [
+    {metric: 'Revenue', change: 12, churn_change: -3, neutral_change: 0},
+    {metric: 'Costs', change: -7, churn_change: 4, neutral_change: 0.2},
+    {metric: 'Flat', change: 0, churn_change: 0, neutral_change: -0.2},
+  ]
+  let fields = [
+    {name: 'metric', type: 'string'},
+    {name: 'change', type: 'number'},
+    {name: 'churn_change', type: 'number'},
+    {name: 'neutral_change', type: 'number'},
+  ]
+
+  let component = await mount('components/TableHarness.svelte', {
+    data: {rows, fields},
+    tableProps: {rows: 'all'},
+    columns: [
+      {id: 'metric', title: 'Metric'},
+      {id: 'change', title: 'Change', contentType: 'delta'},
+      {id: 'churn_change', title: 'Churn', contentType: 'delta', downIsGood: true, chip: true},
+      {id: 'neutral_change', title: 'Within Band', contentType: 'delta', neutralMin: -0.5, neutralMax: 0.5, chip: true},
+    ],
+  })
+
+  await component.locator('table tr:has(td)').first().waitFor()
+  await expect(component.locator('.table-container')).screenshot('delta-columns')
+})
+
 test('single-color colorscale renders as a heatmap from the page background', async ({mount}) => {
   let rows = [
     {carrier: 'WN', score: 0.95},
