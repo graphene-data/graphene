@@ -7,6 +7,7 @@
     data: string | QueryResult
     x: string
     y: string
+    y2?: string
     splitBy?: string
     arrange?: 'stack' | 'stack100'
     sort?: string
@@ -19,6 +20,7 @@
     data,
     x,
     y,
+    y2 = undefined,
     splitBy = undefined,
     arrange = 'stack',
     sort = undefined,
@@ -44,12 +46,14 @@
       series = yFields.map(field => ({type: 'line' as const, name: field, areaStyle: {opacity: 0.2}, encode: {x, y: field, ...sortHint}}))
     }
 
+    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
+
     return {
       title: title ? {text: title} : undefined,
       tooltip: {trigger: 'axis'},
-      legend: {show: Boolean(splitBy || yFields.length > 1)},
+      legend: {show: Boolean(splitBy || y2 || yFields.length > 1)},
       xAxis: {},
-      yAxis: {max: stackPercentage ? 1 : undefined},
+      yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{}] : [])],
       series,
     }
   }

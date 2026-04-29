@@ -7,6 +7,7 @@
     data: string | QueryResult
     x: string
     y: string
+    y2?: string
     splitBy?: string
     sort?: string
     title?: string
@@ -18,6 +19,7 @@
     data,
     x,
     y,
+    y2 = undefined,
     splitBy = undefined,
     sort = undefined,
     title = undefined,
@@ -40,12 +42,14 @@
       series = yFields.map(field => ({type: 'line' as const, name: field, encode: {x, y: field, ...sortHint}}))
     }
 
+    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
+
     return {
       title: title ? {text: title} : undefined,
       tooltip: {trigger: 'axis'},
-      legend: {show: Boolean(splitBy || yFields.length > 1)},
+      legend: {show: Boolean(splitBy || y2 || yFields.length > 1)},
       xAxis: {},
-      yAxis: [{}],
+      yAxis: [{}, ...(y2 ? [{}] : [])],
       series,
     }
   }
