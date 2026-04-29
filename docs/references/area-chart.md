@@ -32,9 +32,11 @@ Here's an example:
 |----------|-------------|----------|---------|---------|
 | x | Field for x-axis | true | column/expression name | - |
 | y | One or more value fields (comma-separated) | true | column(s), e.g. `revenue` or `revenue, cost` | - |
+| y2 | Optional single field rendered as a line on secondary axis | false | column/expression name | - |
 | splitBy | Split one value field into multiple area series by distinct values of this field | false | column/expression name | - |
 | arrange | Arrangement for `splitBy` series | false | `stack`, `stack100` | `stack` |
 
 `splitBy` is incompatible with multiple y fields.
+Use `y2` when one additional line should use a separate value axis, such as a rate alongside a total area.
 
 For more control, use [`ECharts`](./echarts.md) directly.

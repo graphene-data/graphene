@@ -1701,6 +1701,16 @@ describe('lang', () => {
     expect(getDiagnostics().some(d => /Unsupported prop "y2Fmt" on LineChart\. Use field metadata or ECharts for custom formatting\./.test(d.message))).toBe(true)
   })
 
+  it('allows AreaChart y2 in markdown', () => {
+    analyze('<AreaChart data=users x=name y=age y2=total_orders />', 'md')
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+  })
+
+  it('reports unsupported AreaChart wrapper props', () => {
+    analyze('<AreaChart data=users x=name y=age y2=total_orders y2Fmt=num0 />', 'md')
+    expect(getDiagnostics().some(d => /Unsupported prop "y2Fmt" on AreaChart\. Use field metadata or ECharts for custom formatting\./.test(d.message))).toBe(true)
+  })
+
   it('handles params in a md code fence', () => {
     let queries = analyze('```gsql test\nfrom users where age > $cutoff\n```\n<BarChart data="test" x="name" y="avg(age)" />', 'md')
     let sql = toSql(queries[0], {cutoff: 20})
