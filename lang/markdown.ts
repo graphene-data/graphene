@@ -32,6 +32,7 @@ const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+(?:[^>"']|"[^"]*"|'[^']*')*\/>/g
 
 const CHART_PROPS: Record<string, Set<string>> = {
   BarChart: new Set(['data', 'x', 'y', 'y2', 'splitBy', 'arrange', 'label', 'sort', 'title', 'height', 'width']),
+  LineChart: new Set(['data', 'x', 'y', 'y2', 'splitBy', 'sort', 'title', 'height', 'width']),
   AreaChart: new Set(['data', 'x', 'y', 'splitBy', 'arrange', 'sort', 'title', 'height', 'width']),
   PieChart: new Set(['data', 'category', 'value', 'title', 'subtitle', 'height', 'width']),
 }

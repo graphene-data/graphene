@@ -184,6 +184,14 @@ test('line chart supports multiple y fields', async ({mount, chart}) => {
   await expect(chart.el).screenshot('line-chart-multiple-y')
 })
 
+test('line chart supports secondary y axis', async ({mount, chart}) => {
+  let data = timeseries() as any
+  data.rows = data.rows.map((r: any) => ({...r, profit_usd0k: r.sales_usd0k / 10}))
+  data.fields.push({name: 'profit_usd0k', type: scalarType('number'), metadata: {units: 'usd'}})
+  await mount('components/LineChart.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
+  await expect(chart.el).screenshot('line-chart-dual-axis')
+})
+
 test('line charts hide markers on timeseries', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: denseTimeseries(), x: 'ts', y: 'value', title: 'Dense Time Axis'})
   await expect(chart.el).screenshot('line-chart-timeseries-hide-markers')
