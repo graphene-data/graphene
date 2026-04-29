@@ -54,11 +54,6 @@
     return neutral
   }
 
-  let symbol = $derived((() => {
-    if (status === 'positive') return '▲'
-    if (status === 'negative') return '▼'
-    return '–'
-  })())
   let symbolColor = $derived(pickColor(
     downIsGood ? $theme.colors.negative : $theme.colors.positive,
     downIsGood ? $theme.colors.positive : $theme.colors.negative,
@@ -97,19 +92,33 @@
   }
 </script>
 
+{#snippet deltaSymbol()}
+  {#if showSymbol}
+    <span class="delta-symbol" style={`color:${symbolColor}`} aria-hidden="true">
+      {#if status === 'positive'}
+        <svg viewBox="0 0 16 16" focusable="false">
+          <path d="M8 3 14 13H2Z" fill="currentColor" />
+        </svg>
+      {:else if status === 'negative'}
+        <svg viewBox="0 0 16 16" focusable="false">
+          <path d="M2 3h12L8 13Z" fill="currentColor" />
+        </svg>
+      {:else}
+        <span class="delta-symbol__neutral">–</span>
+      {/if}
+    </span>
+  {/if}
+{/snippet}
+
 <span class={deltaClass} style={`text-align:${resolvedAlign}`}>
   {#if symbolPosition === 'left'}
-    {#if showSymbol}
-      <span class="delta-symbol" style={`color:${symbolColor}`}>{symbol}</span>
-    {/if}
+    {@render deltaSymbol()}
   {/if}
   {#if showValue}
     <span class="delta-value" style={`color:${textColor}`}>{renderValue()}</span>
   {/if}
   {#if symbolPosition === 'right'}
-    {#if showSymbol}
-      <span class="delta-symbol" style={`color:${symbolColor}`}>{symbol}</span>
-    {/if}
+    {@render deltaSymbol()}
   {/if}
   {#if text}
     <span class="delta-text">{text}</span>
@@ -129,6 +138,22 @@
   }
 
   .delta-symbol {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 0.75em;
+    height: 0.75em;
+    line-height: 1;
+    flex: 0 0 0.75em;
+  }
+
+  .delta-symbol svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .delta-symbol__neutral {
     font-size: 0.75em;
     line-height: 1;
   }
