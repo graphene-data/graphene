@@ -106,6 +106,32 @@ test('colorscale with colorBreakpoints applies correct background colors', async
   await expect(component.locator('.table-container')).screenshot('colorscale-breakpoints')
 })
 
+test('single-color colorscale renders as a heatmap from the page background', async ({mount}) => {
+  let rows = [
+    {carrier: 'WN', score: 0.95},
+    {carrier: 'AA', score: 0.72},
+    {carrier: 'UA', score: 0.48},
+    {carrier: 'AS', score: 0.24},
+    {carrier: 'B6', score: 0.05},
+  ]
+  let fields = [
+    {name: 'carrier', type: 'string'},
+    {name: 'score', type: 'number', metadata: {ratio: true}},
+  ]
+
+  let component = await mount('components/TableHarness.svelte', {
+    data: {rows, fields},
+    tableProps: {rows: 'all'},
+    columns: [
+      {id: 'carrier', title: 'Carrier'},
+      {id: 'score', title: 'Score', contentType: 'colorscale', colorScale: '#3D6B7E'},
+    ],
+  })
+
+  await component.locator('table tr:has(td)').first().waitFor()
+  await expect(component.locator('.table-container')).screenshot('colorscale-single-color-heatmap')
+})
+
 test('colorBreakpoints work when all column values are identical', async ({mount}) => {
   let rows = [
     {carrier: 'AA', val: 1},

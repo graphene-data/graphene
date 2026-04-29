@@ -92,12 +92,16 @@ export const resolveColorsObject = (input: Record<string, unknown> | string | un
   return readable(Object.fromEntries(entries))
 }
 
+const cssVar = (name: string): string | undefined => {
+  if (typeof document === 'undefined' || typeof getComputedStyle === 'undefined') return undefined
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || undefined
+}
+
 // A single color makes a flat scale; expand to a bg→color gradient so heatmaps work.
-// Kept in sync with --color-bg in app.css; chroma.scale needs a real color (CSS vars don't work).
-const PAGE_BG = '#fafaf9'
+// chroma.scale needs a real color, so resolve the CSS var before building the palette.
 const finalizePalette = (values: string[]): string[] => {
   if (values.length === 0) return DEFAULT_PALETTE
-  if (values.length === 1) return [PAGE_BG, values[0]]
+  if (values.length === 1) return [cssVar('--color-bg') ?? DEFAULT_THEME.colors['base-100'], values[0]]
   return values
 }
 
