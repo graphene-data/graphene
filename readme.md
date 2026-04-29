@@ -51,6 +51,7 @@ Graphene pages support visualizations, input components for filtering and dynami
 ### Powerful workflows
 
 When you deconstruct data analytics into code, CLIs, and coding agents, things that used to be hard become easy:
+
 - Promote metrics from pages into the model, or demote metrics out of the model back into pages
 - Bulk refactors in a single atomic commit/PR
 - Ability to use extensive skill/MCP ecosystem to augment agent behavior
