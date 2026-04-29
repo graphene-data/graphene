@@ -142,6 +142,64 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props a
   )
 })
 
+test('cli run with md file reports multiple dynamic unsupported chart props as warnings', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Multiple Runtime Chart Prop Warnings
+    \`\`\`sql chart_data
+    from flights select carrier, distance limit 25
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="distance" {...{yFmt: 'num0', emptySet: 'warn'}} />
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', log})
+  expect(result).toBe(true)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    No errors found 💎
+    Runtime warnings in index.md:
+    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
+    BarChart (data="chart_data"): Unsupported prop "emptySet" on BarChart. emptySet is not supported on chart wrappers.
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with md file reports runtime warnings and errors together', async ({server, page}) => {
+  expectConsoleError('Chart failed to render')
+  server.mockFile(
+    '/index.md',
+    `
+    # Runtime Chart Warning And Error
+    \`\`\`sql chart_data
+    from flights select dep_delay as x_value, dep_delay as bad_category limit 25
+    \`\`\`
+
+    <ECharts data="chart_data" {...{chartAreaHeight: 240}}>
+      xAxis: {},
+      yAxis: {type: "category"},
+      series: [{type: "bar", encode: {x: "x_value", y: "bad_category"}}],
+    </ECharts>
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', log})
+  expect(result).toBe(false)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Runtime errors in index.md:
+    Query (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
+    Runtime warnings in index.md:
+    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts. Use height instead.
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
 test('cli run with md file reports runtime query errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(
