@@ -1,5 +1,5 @@
 <script lang="ts">
-  import {onDestroy, onMount} from 'svelte'
+  import {onDestroy, onMount, tick} from 'svelte'
   import {errorProvider} from './telemetry.ts'
   import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
   import navFiles from 'virtual:nav'
@@ -40,6 +40,8 @@
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
   let Page = $state<any>(null)
   let pageMeta = $state<any>({})
+  let pageReadyResolve: (() => void) | undefined
+  window.$GRAPHENE.pageReady = new Promise<void>(resolve => pageReadyResolve = resolve)
 
   onMount(async () => {
     let pathName = window.location.pathname.replace(/^\//, '') || 'index'
@@ -62,6 +64,8 @@
       pageMeta = mod.metadata || {}
       compileError = null
     }
+    await tick()
+    pageReadyResolve?.()
   })
 </script>
 

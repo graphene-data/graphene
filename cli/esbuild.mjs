@@ -4,6 +4,7 @@ import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 import pkg from './package.json' with {type: 'json'}
+import {stageNpmPackage} from './publishPackage.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -58,12 +59,14 @@ ${(await readdir(path.resolve(__dirname, '../docs/references'))).map(f => `- ref
 await cp(path.resolve(__dirname, '../docs/references'), path.resolve(skillDir, 'references'), {recursive: true})
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
 await mkdir(path.resolve(__dirname, 'dist/lang'), {recursive: true})
+await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 'dist/index.d.ts'))
 await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 'dist/lang/index.d.ts'))
 await transpileSvelteModules(path.resolve(__dirname, 'dist/ui'))
 await rm(path.resolve(__dirname, 'dist/ui/node_modules'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))
 await rm(path.resolve(__dirname, 'dist/ui/tests'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/cli/cli.js.map'))
+await stageNpmPackage({repoRoot: path.resolve(__dirname, '..'), cliRoot: __dirname})
 
 async function transpileSvelteModules(root) {
   let files = await collectFiles(root)

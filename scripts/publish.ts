@@ -40,7 +40,8 @@ await $`git tag ${tag}`
 await $`git push origin ${tag}`
 
 // Publish package artifacts.
-await $`(cd cli && npm publish --access public)`
+await $`pnpm -C cli build`
+await $`npm publish cli/dist/npm --access public`
 await $`(cd vscode && npx vsce publish --no-dependencies)`
 await $`(cd vscode && npx ovsx publish --no-dependencies)`
 

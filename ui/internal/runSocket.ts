@@ -46,7 +46,8 @@ function connect() {
     if (type !== 'check') return
 
     if (action === 'list') {
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      await window.$GRAPHENE.pageReady
+      await new Promise(resolve => requestAnimationFrame(resolve))
       socket!.send(JSON.stringify({type: 'checkResponse', requestId, queryIds: listQueryIds()}))
       return
     }
