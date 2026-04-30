@@ -1,6 +1,8 @@
 <script lang="ts">
+  import {onMount} from 'svelte'
   import ECharts from './ECharts.svelte'
   import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
+  import {logExtraProps} from '../internal/telemetry.ts'
 
   interface Props {
     data: string | QueryResult
@@ -20,7 +22,10 @@
     subtitle = undefined,
     height = undefined,
     width = undefined,
-  }: Props = $props()
+    ...extraProps
+  }: Props & Record<string, unknown> = $props()
+
+  onMount(() => logExtraProps('PieChart', data, extraProps))
 
   function buildConfig(): EChartsConfig {
     return {
