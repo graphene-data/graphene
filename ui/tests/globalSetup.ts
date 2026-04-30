@@ -4,11 +4,11 @@ import {fileURLToPath} from 'url'
 import {type TestProject} from 'vitest/node'
 
 import {prepareDeps} from '../../cli/serve2.ts'
-import {setConfig} from '../../lang/config.ts'
+import {setGlobalConfig} from '../../lang/config.ts'
 
 export default async function setup(project: TestProject) {
   let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
-  setConfig({root: viteRoot})
+  setGlobalConfig({root: viteRoot})
 
   await fs.rm(path.join(import.meta.dirname, 'results'), {force: true, recursive: true})
 

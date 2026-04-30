@@ -6,7 +6,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import {fileURLToPath} from 'url'
 
-import {config, loadConfig} from '../lang/config.ts'
+import {config, loadConfig, setGlobalConfig} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
@@ -26,9 +26,10 @@ const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(
 const libPkg = fs.readJsonSync(pkgPath)
 program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
 
-await loadConfig(process.cwd(), envFiles => {
-  dotenv.config({quiet: true, path: envFiles || '.env'})
+let cfg = await loadConfig(process.cwd(), envFiles => {
+  dotenv.config({quiet: true, path: envFiles})
 })
+setGlobalConfig(cfg)
 
 const telemetry = new CliTelemetry(config, libPkg.version)
 await telemetry.init(process.cwd())
