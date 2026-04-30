@@ -69,6 +69,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 
   errors.forEach((e: GrapheneError) => {
     if (e.file || e.frame) printDiagnostics([e], log)
+    else if (isComponentPropError(e)) log(`${e.queryId}: ${e.message}`)
     else if (e.queryId) log(`Query (${e.queryId}): ${e.message}`)
     else log(e.message)
   })
@@ -86,6 +87,10 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   return errors.length == 0 && !chartNotFound
+}
+
+function isComponentPropError(e: GrapheneError) {
+  return !!e.queryId?.match(/^[A-Z]\w*( \(data="[^"]+"\))?$/) && e.message.startsWith('Unsupported prop ')
 }
 
 export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry, log: (...args: any[]) => void = console.log): Promise<boolean> {

@@ -87,6 +87,115 @@ test('check with mdFile reports unsupported chart wrapper props', async () => {
   expect(outputLines()).toContain('ERROR: mock.md line 4: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.')
 })
 
+test('cli run with md file reports dynamic unsupported chart wrapper props', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Runtime Chart Prop Error
+    \`\`\`sql chart_data
+    from flights select carrier, distance limit 25
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="distance" {...{yFmt: 'num0'}} />
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', log})
+  expect(result).toBe(false)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Runtime errors in index.md:
+    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart.
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with md file reports dynamic unsupported ECharts top-level props', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Runtime ECharts Prop Error
+    \`\`\`sql chart_data
+    from flights select carrier, distance limit 25
+    \`\`\`
+
+    <ECharts data="chart_data" {...{chartAreaHeight: 240}}>
+      xAxis: {},
+      yAxis: {},
+      series: [{type: "bar", encode: {x: "carrier", y: "distance"}}],
+    </ECharts>
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', log})
+  expect(result).toBe(false)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Runtime errors in index.md:
+    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts.
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with md file reports multiple dynamic unsupported chart props', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Multiple Runtime Chart Prop Errors
+    \`\`\`sql chart_data
+    from flights select carrier, distance limit 25
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="distance" {...{yFmt: 'num0', emptySet: 'warn'}} />
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', log})
+  expect(result).toBe(false)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Runtime errors in index.md:
+    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart.
+    BarChart (data="chart_data"): Unsupported prop "emptySet" on BarChart.
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with md file reports runtime chart prop and render errors together', async ({server, page}) => {
+  expectConsoleError('Chart failed to render')
+  server.mockFile(
+    '/index.md',
+    `
+    # Runtime Chart Prop And Render Error
+    \`\`\`sql chart_data
+    from flights select dep_delay as x_value, dep_delay as bad_category limit 25
+    \`\`\`
+
+    <ECharts data="chart_data" {...{chartAreaHeight: 240}}>
+      xAxis: {},
+      yAxis: {type: "category"},
+      series: [{type: "bar", encode: {x: "x_value", y: "bad_category"}}],
+    </ECharts>
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await runMdFile({mdArg: 'index.md', log})
+  expect(result).toBe(false)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Runtime errors in index.md:
+    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts.
+    Query (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+  `),
+  )
+})
+
 test('cli run with md file reports runtime query errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(
