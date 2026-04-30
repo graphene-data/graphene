@@ -1,7 +1,7 @@
 // WebSocket connection for the `graphene run` command.
 // Listens for run requests, waits for queries to finish, captures screenshots, and reports errors.
 
-import {getDiagnostics, getErrors} from './telemetry.ts'
+import {getErrors} from './telemetry.ts'
 
 let socket: WebSocket | null = null
 connect()
@@ -40,6 +40,6 @@ function connect() {
 
     let finished = await window.$GRAPHENE.waitForLoad(20_000)
     let screenshot = chart ? await captureChart(chart) : await takeScreenshot()
-    socket!.send(JSON.stringify({type: 'checkResponse', requestId, diagnostics: getDiagnostics(), errors: getErrors(), stillLoading: !finished, screenshot}))
+    socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors: getErrors(), stillLoading: !finished, screenshot}))
   }
 }

@@ -1,7 +1,8 @@
 <script lang="ts">
+  import {onMount} from 'svelte'
   import ECharts from './ECharts.svelte'
   import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
-  import {chartContext, registerChartPropWarnings} from '../component-utilities/chartValidation.ts'
+  import {logExtraProps} from '../internal/telemetry.ts'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   interface Props {
@@ -31,7 +32,7 @@
     ...extraProps
   }: Props & Record<string, unknown> = $props()
 
-  registerChartPropWarnings('AreaChart', () => extraProps, () => chartContext('AreaChart', data))
+  onMount(() => logExtraProps('AreaChart', data, extraProps))
 
   function buildConfig(): EChartsConfig {
     let yFields = parseCommaList(y)

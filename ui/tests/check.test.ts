@@ -87,11 +87,11 @@ test('check with mdFile reports unsupported chart wrapper props', async () => {
   expect(outputLines()).toContain('ERROR: mock.md line 4: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.')
 })
 
-test('cli run with md file reports dynamic unsupported chart wrapper props as warnings', async ({server, page}) => {
+test('cli run with md file reports dynamic unsupported chart wrapper props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Runtime Chart Prop Warning
+    # Runtime Chart Prop Error
     \`\`\`sql chart_data
     from flights select carrier, distance limit 25
     \`\`\`
@@ -101,22 +101,21 @@ test('cli run with md file reports dynamic unsupported chart wrapper props as wa
 
   await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', log})
-  expect(result).toBe(true)
+  expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
-    No errors found 💎
-    Runtime warnings in index.md:
-    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
+    Runtime errors in index.md:
+    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart.
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
 })
 
-test('cli run with md file reports dynamic unsupported ECharts top-level props as warnings', async ({server, page}) => {
+test('cli run with md file reports dynamic unsupported ECharts top-level props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Runtime ECharts Prop Warning
+    # Runtime ECharts Prop Error
     \`\`\`sql chart_data
     from flights select carrier, distance limit 25
     \`\`\`
@@ -131,22 +130,21 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props a
 
   await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', log})
-  expect(result).toBe(true)
+  expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
-    No errors found 💎
-    Runtime warnings in index.md:
-    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts. Use height instead.
+    Runtime errors in index.md:
+    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts.
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
 })
 
-test('cli run with md file reports multiple dynamic unsupported chart props as warnings', async ({server, page}) => {
+test('cli run with md file reports multiple dynamic unsupported chart props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Multiple Runtime Chart Prop Warnings
+    # Multiple Runtime Chart Prop Errors
     \`\`\`sql chart_data
     from flights select carrier, distance limit 25
     \`\`\`
@@ -156,24 +154,23 @@ test('cli run with md file reports multiple dynamic unsupported chart props as w
 
   await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', log})
-  expect(result).toBe(true)
+  expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
-    No errors found 💎
-    Runtime warnings in index.md:
-    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
-    BarChart (data="chart_data"): Unsupported prop "emptySet" on BarChart. emptySet is not supported on chart wrappers.
+    Runtime errors in index.md:
+    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart.
+    BarChart (data="chart_data"): Unsupported prop "emptySet" on BarChart.
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
 })
 
-test('cli run with md file reports runtime warnings and errors together', async ({server, page}) => {
+test('cli run with md file reports runtime chart prop and render errors together', async ({server, page}) => {
   expectConsoleError('Chart failed to render')
   server.mockFile(
     '/index.md',
     `
-    # Runtime Chart Warning And Error
+    # Runtime Chart Prop And Render Error
     \`\`\`sql chart_data
     from flights select dep_delay as x_value, dep_delay as bad_category limit 25
     \`\`\`
@@ -192,9 +189,8 @@ test('cli run with md file reports runtime warnings and errors together', async 
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
+    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts.
     Query (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
-    Runtime warnings in index.md:
-    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts. Use height instead.
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
