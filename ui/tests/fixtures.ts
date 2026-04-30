@@ -6,7 +6,7 @@ import {test as base, onTestFinished} from 'vitest'
 
 import {mockFileMap} from '../../cli/mockFiles.ts'
 import {clearSvelteWarnings, serve2, svelteWarnings} from '../../cli/serve2.ts'
-import {type Config, setConfig} from '../../lang/config.ts'
+import {type Config, setGlobalConfig} from '../../lang/config.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
 import {playwrightExpect as expect} from './matchers.ts'
 
@@ -96,7 +96,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
       let port = await getAvailablePort()
       let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
       process.env.GRAPHENE_PORT = String(port)
-      setConfig({port, root: viteRoot})
+      setGlobalConfig({port, root: viteRoot})
       let server = await serve2()
 
       function cleanup() {
@@ -116,7 +116,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
 
       await use({
         url: (options: Partial<Config> = {}) => {
-          setConfig({...options, root: options.root || viteRoot, port} as any)
+          setGlobalConfig({...options, root: options.root || viteRoot, port} as any)
           onTestFinished(cleanup)
           return `http://localhost:${port}`
         },
@@ -210,7 +210,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
 
 test.beforeEach(() => {
   let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
-  setConfig({root})
+  setGlobalConfig({root})
   clearSvelteWarnings()
 })
 

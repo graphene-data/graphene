@@ -62,6 +62,19 @@ describe('cli compile', () => {
     expect(res.stdout.toLowerCase()).toContain('select')
   })
 
+  it('errors if the nearest package.json does not have graphene config', async () => {
+    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-no-config-'))
+
+    try {
+      await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify({name: 'tmp-graphene'}, null, 2) + '\n')
+      let res = await runCli(['compile', 'from flights select carrier'], {cwd: tmpDir})
+      expect(res.code).toBe(1)
+      expect(res.stderr.toLowerCase()).toContain('no graphene config found')
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
+
   it('errors on invalid function (error path)', async () => {
     let res = await runCli(['compile', 'from flights select not_a_function()'], {cwd: flightDir})
     expect(res.code).not.toBe(0)
@@ -103,12 +116,24 @@ describe('cli run', () => {
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
+  it('loads the project config when running from a nested directory', async () => {
+    let res = await runCli(['run', 'from flights select count() as total'], {cwd: path.join(flightDir, 'tables')})
+    expectCliSuccess(res, 'run query from nested directory')
+    expect(res.stdout.toLowerCase()).toContain('total')
+  })
+
   it('shows an error when no .duckdb is present (error path)', async () => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-'))
     let input = ['table t (a int)', 'from t select a'].join('\n')
-    let res = await runCli(['run', input], {cwd: tmpDir})
-    expect(res.code).toBe(1)
-    expect(res.stderr.toLowerCase()).toContain('no .duckdb file found')
+
+    try {
+      await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify({name: 'tmp-graphene', graphene: {duckdb: {}}}, null, 2) + '\n')
+      let res = await runCli(['run', input], {cwd: tmpDir})
+      expect(res.code).toBe(1)
+      expect(res.stderr.toLowerCase()).toContain('no .duckdb file found')
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
   })
 
   it('runs a named query from a markdown file', async () => {
