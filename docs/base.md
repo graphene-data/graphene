@@ -1,22 +1,22 @@
-Graphene is a framework for doing data analysis and BI as code. Schema definitions and semantic models are in `.gsql` files, dashboards in `.md`.
+Graphene is a framework for doing data analysis and BI as code. Schema definitions and semantic models are in `.gsql` files, dashboards/notebooks (called pages) in `.md`.
 
 # GSQL
 GSQL extends ANSI SQL with dimensions, measures, and join relationships. Declare them in `table` statements:
 
 ```sql
 table orders (
-  id BIGINT
-  user_id BIGINT
-  amount FLOAT
-  status STRING
+  id bigint
+  user_id bigint
+  amount float
+  status string
   join one users on user_id = users.id  -- many orders per user
   is_complete: status = 'Complete'      -- dimension (scalar expression)
   revenue: sum(amount)                  -- measure (agg expression)
   avg_order: revenue / count(*)         -- measures can compose
 )
 table users (
-  id BIGINT
-  name VARCHAR
+  id bigint
+  name varchar
   join many orders on id = orders.user_id
 )
 ```
@@ -37,88 +37,101 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 - OK: `floor(revenue)`, `revenue / cost` 
 - OK: `sum(case when is_complete then 1 else 0 end)` or `group by is_complete` (because `is_complete` is a dimension, not a measure)
 
+### Arrays
+- Array columns and casts use `array<T>` syntax in GSQL, for example `tags array<string>` or `cast(tags as array<string>)`
+- Arrays can be expanded in queries with `cross join unnest(tags) as tag`
+
 ### Special features
 - `group by all` is implied when aggregates exist, and does not need to be put in GSQL
 - Agg function `pXX(column)` computes the XXth percentile (e.g., p50, p975, p9999)
-- ANSI set operations `union`, `union all`, `intersect`, and `except` are supported
+- `select`, `from`, `order by`, etc. in any order
 
-### Types
-- Array columns and casts use `array<T>` syntax in GSQL, for example `tags array<string>` or `cast(tags as array<string>)`
-- Arrays can be expanded in queries with `cross join unnest(tags) as tag`
-- Other semi-structured data types (`VARIANT`, `OBJECT`, `RECORD`) are unsupported
+### Supported
+- All scalar, agg, and window functions of the connected database
+- ANSI joins, CTEs, subqueries, set operations
 
-# Dashboards
-Graphene dashboards extend Markdown with the following:
+### Not supported
+- Table functions
+- UDFs
+- `pivot`, `lateral`
+- `variant`, `object`, `record` types
+
+# Pages
+Graphene pages extend Markdown with the following:
 - GSQL queries in code fences
-- Visualization components reference query names
+- Visualization and input components
 
 ````md
-```sql sales_by_category
-select category, revenue from orders
+---
+title: My First Dashboard
+layout: dashboard
+---
+
+```sql sales_by_status
+select status, revenue
+from orders
+where status <> 'cancelled'
 ```
-<BarChart data="sales_by_category" x="category" y="revenue" />
-<BigValue data="sales_by_category" value="revenue" />
+
+<BigValue data="sales_by_status" value="revenue" />
+<BarChart data="sales_by_status" x="status" y="revenue" />
 ````
 
-Queries can be referenced by other queries in the `from` or `join` to form DAGs of data transformations within the dashboard.
-`data` can be a query name or a table name. Attributes that accept columns also accept GSQL expressions.
+Queries can be referenced by other queries in the `from` or `join` to form DAGs of data logic within the page.
 
 ## Page frontmatter
 You can add YAML frontmatter at the top of a page. The following attributes are supported:
-title: title displayed at the top of the page
-layout: `notebook` is the default, good for prose with embedded charts. `dashboard` has a wider max-width, for chart-heavy pages with lots of <Row>s.
+- `title`: title displayed at the top of the page
+- `layout`: `notebook` is the default, good for prose interspersed with charts. `dashboard` has a wider max-width, for chart-heavy pages with lots of `<Row>`s.
 
-## Components
-All viz components take `data`, which is the name of a gsql table or code-fenced query in the markdown.
-Component "field" attributes (like x and y) map to a column within data.
-Attributes like `x`, `y`, `y2`, and `splitBy` are the names of columns within the `data` table.
-`title` - shown above the viz
-- BarChart: Fields [x,y,y2,splitBy,arrange]. `arrange` can be `stack`, `group`, or `stack100` (default `stack`). `label` shows labels above bars.
-- LineChart: Fields [x,y,y2,splitBy]
-- AreaChart: Fields [x,y,y2,splitBy,arrange]. `arrange` can be `stack` or `stack100` (default `stack`).
-- PieChart: Fields: [category,value]
+## Viz and display components
+- LineChart: title, data, x, y, y2, splitBy, height, width
+- AreaChart: title, data, x, y, y2, splitBy, arrange (`stack` (default), `group`, or `stack100`), height, width
+- BarChart: title, data, x, y, y2, splitBy, arrange, label (true or false (default); shows labels above bars), height, width
+- PieChart: title, data, category, value, height, width
+- ECharts: data, height, width, renderer
+- BigValue: title, data, value, comparison, comparisonTitle, downIsGood, sparkline, sparklineType, sparklineColor
+- Table: title, data, rows, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
+  - Column (sub-component of Table): id (column name), title, fmt, align, wrap, contentType, totalAgg, redNegatives
+- Value (for inlining dynamic numbers within markdown text): data, column, row.
+- Row (layout container, distributes children horizontally): No attributes
 
-- BigValue: data, value, title, fmt, comparison, comparisonFmt, comparisonTitle, downIsGood, sparkline, sparklineType, sparklineColor
-- Table: data, rows, title, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
-  - Column (sub-component of Table): id, title, fmt, align, wrap, contentType, totalAgg, redNegatives
-- Value: data, column, row
+Notes on common attributes:
+- `data` can also point at a modeled GSQL table.
+- Any attribute that accepts a column can also accept an arbitrary GSQL expression. These attributes are x, y, y2, splitBy, category, value, comparison, sparkline, link, groupBy, weightCol, scaleColumn
+- `splitBy` creates a series for each distinct value in the column (long format data).
+- `y` can take a comma-separated list of columns/expressions, to map multiple fields to the same y-axis as separate series (wide format data).
+- `height` and `width` accept any CSS size units eg. `240px` or `50%`.
 
-## ECharts
-To further customize the look and feel of a chart, use the ECharts component to provide an echarts config.
-Be sure to set `data`, and use `encode` on series to map columns in the `data`.
-In addition to the regular fields `encode` takes, it also accepts `splitBy`, which automatically expands one template into multiple series. For bar charts, `splitBy` can be a two-item list (`[groupBy, stackBy]`) for grouped+stacked bars.
+### ECharts
+To create visualizations or customizations beyond Graphene's out-of-the-box components, specify an ECharts config via `<ECharts>`.
 
 ```md
-<ECharts data="sales_by_category">
+<ECharts data="sales_by_status">
   xAxis: {axisLine: {lineStyle: {color: 'purple'}}},
-  series: [{type: "bar", stack: "bar-stack", encode: {x: "month", y: "revenue", splitBy: "category"}],
+  series: [{type: "bar", stack: "bar-stack", encode: {x: "month", y: "revenue", splitBy: "status"}],
 </ECharts>
 ```
 
-### Inputs
-- Dropdown: name, data, value, label, defaultValue, multiple, title
-- TextInput: name, title, placeholder
+Graphene introduces an `encode` property within `series` configs to map to columns in the data source.
+In addition to the regular fields `encode` takes, it also accepts `splitBy`, which automatically expands one template into multiple series. For bar charts, `splitBy` can be a two-item list (`[groupBy, stackBy]`) for grouped+stacked bars.
 
-### Other components
-- Row: no attributes (layout container, distributes children horizontally)
+## Input components
+- Dropdown: title, name, data, value (column to populate list with), label, defaultValue, multiple
+- TextInput: title, name, placeholder
+- DateRange: title, name, data, dates, start, end, defaultValue, presetRanges, description
 
-## Tying input components to SQL
-Inject input values into queries by referring to their `name` attribute as $name. 
-
-Input values also sync into the page URL query string, so reloads and shared links preserve the same dashboard state.
+Inject input values into queries by referring to their `name` attribute as `$name` in GSQL. 
 
 ````md
 <Dropdown name=status .../>
+
 ```sql my_query
 select ...
 where status = $status
 ```
 ````
 
-## Formatting
-`fmt` attributes accept Excel custom format codes or built-in Graphene formats:
-- Numbers: num, num0-num4, num0k, num0m, num0b (etc.), id, fract, mult, mult0-mult2, sci
-- Currency: usd, usd0-usd2, usd0k, usd0m, usd0b (etc.), (also eur, gbp, etc.)
-- Percent: pct, pct0, pct1, pct2, pct3
-- Dates: shortdate, longdate, fulldate, mdy, dmy, hms, ddd, dddd, mmm, mmmm, yyyy
-- Excel: "$#,##0.00", "0.0%", "m/d/yy" (etc.)
+DateRange components emit two referenceable values via `${name}_start` and `${name}_end`.
+
+Input values also sync into the page URL query string (eg. `localhost:4000/my_dashboard?status=cancelled`), so reloads and shared links preserve the same dashboard state.
