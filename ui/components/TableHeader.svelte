@@ -175,6 +175,10 @@
     vertical-align: bottom;
   }
 
+  .header-cell:first-child {
+    padding-left: 3px;
+  }
+
   .header-cell--compact {
     padding: 1px 16.5px 1px 1px;
     font-size: 12px;
