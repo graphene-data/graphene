@@ -85,7 +85,9 @@ describe('create helpers', () => {
     })
 
     expect(yarnFiles['AGENTS.md']).toContain('yarn graphene check')
+    expect(yarnFiles['.yarnrc.yml']).toContain('nodeLinker: node-modules')
     expect(bunFiles['AGENTS.md']).toContain('bun run graphene check')
+    expect(bunFiles['.yarnrc.yml']).toBeUndefined()
   })
 
   it('renders a snowflake project with .env auth vars', () => {

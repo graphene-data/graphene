@@ -11,8 +11,7 @@
   },
   "dependencies": {
     "@clickhouse/client": "^1.18.2",
-    "@graphenedata/cli": "workspace:*",
-    "svelte": "5.55.3"
+    "@graphenedata/cli": "workspace:*"
   },
   "engines": {
     "node": ">=24.0.0"

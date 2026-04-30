@@ -58,7 +58,7 @@ interface TemplatePackageJson {
     compile: string
     run: string
   }
-  dependencies: Record<'@graphenedata/cli' | 'svelte', string> & Partial<Record<WarehouseClient, string>>
+  dependencies: Record<string, string> & Partial<Record<WarehouseClient, string>>
   graphene: GrapheneTemplateConfig
 }
 
@@ -199,7 +199,6 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
     },
     dependencies: {
       '@graphenedata/cli': cliVersion,
-      svelte: '5.53.7',
     },
     graphene,
   }
@@ -213,6 +212,7 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
     'AGENTS.md': renderAgents(answers),
     'index.md': renderIndex(answers),
   }
+  if (answers.packageManager?.name === 'yarn') files['.yarnrc.yml'] = 'nodeLinker: node-modules\n'
 
   let envFile = renderEnvFile(answers)
   if (envFile) files['.env'] = envFile
