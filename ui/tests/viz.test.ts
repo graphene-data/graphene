@@ -132,6 +132,28 @@ test('bar chart grouped + stacked fills missing points and sorts x', async ({mou
   await expect(chart.el).screenshot('bar-chart-stacked-missing-sort')
 })
 
+test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}) => {
+  let rows = [
+    {year: 2022, status: 'Cancelled', flights: 5},
+    {year: 2022, status: 'Delayed', flights: 14},
+    {year: 2022, status: 'On Time', flights: 80},
+    {year: 2021, status: 'Cancelled', flights: 4},
+    {year: 2021, status: 'Delayed', flights: 10},
+    {year: 2021, status: 'On Time', flights: 90},
+    {year: 2024, status: 'Cancelled', flights: 6},
+    {year: 2024, status: 'Delayed', flights: 18},
+    {year: 2024, status: 'On Time', flights: 76},
+  ]
+  let fields = [
+    {name: 'year', type: scalarType('number'), metadata: {timePart: 'year'}},
+    {name: 'status', type: scalarType('string')},
+    {name: 'flights', type: scalarType('number'), metadata: {units: 'count'}},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'year', y: 'flights', splitBy: 'status', arrange: 'stack', title: 'Flight Status by Year'})
+  await expect(chart.el).screenshot('bar-chart-numeric-year-domain')
+})
+
 test('horizontal bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: singleDim(), x: 'value', y: 'category'})
   await expect(chart.el).screenshot('horizontal-bar-chart')
@@ -273,13 +295,12 @@ test('day_of_week ordinal axis labels and tooltip formatting', async ({mount, ch
     {day_of_week: 1, flights: 35},
     {day_of_week: 2, flights: 12},
     {day_of_week: 3, flights: 21},
-    {day_of_week: 4, flights: 17},
     {day_of_week: 5, flights: 33},
     {day_of_week: 6, flights: 25},
     {day_of_week: 7, flights: 19},
   ]
   let fields = [
-    {name: 'day_of_week', type: scalarType('number'), metadata: {timeOrdinal: 'dow_1s'}},
+    {name: 'day_of_week', type: scalarType('number'), metadata: {timeOrdinal: 'dow_1m'}},
     {name: 'flights', type: scalarType('number'), metadata: {units: 'count'}},
   ]
 
