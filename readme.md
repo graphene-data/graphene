@@ -1,7 +1,7 @@
 <div align="center">
   <br/>
   <a href="https://graphenedata.com">
-      <img height="125" alt="Graphene Logo" src="./logo.png" />
+      <img height="125" alt="Graphene Logo" src="./assets/logo.png" />
   </a>
   <br/>
   <br/>
@@ -47,7 +47,7 @@ Importantly, Graphene is **open**. You can use this project for internal purpose
 
 Graphene pages support visualizations, input components for filtering and dynamic behaviors, and layout modes for monitoring-oriented dashboards vs. narrative-oriented notebooks.
 
-<img alt="Graphene Screenshots" src="/page_examples.png"/>
+<img alt="Graphene Screenshots" src="./assets/page_examples.png"/>
 
 ### Powerful workflows
 
