@@ -1,3 +1,5 @@
+import type {Page} from '@playwright/test'
+
 import {spawn} from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
@@ -34,6 +36,13 @@ function getOutput(res: RunResult) {
   return lines.join('\n').trim()
 }
 
+interface PackageManagerTest {
+  name: 'npm' | 'pnpm' | 'yarn'
+  create: (tarball: string) => [string, string[]]
+  install: (tarball: string) => [string, string[]]
+  graphene: (args: string[]) => [string, string[]]
+}
+
 function expectSuccess(step: string, result: RunResult) {
   if (result.code === 0) return
   throw new Error(`[install.test] ${step} failed (code ${result.code})\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
@@ -42,11 +51,24 @@ function expectSuccess(step: string, result: RunResult) {
 function parseTarballPath(result: RunResult, cwd: string) {
   let matches = Array.from((result.stdout + result.stderr).matchAll(/([^\s]+\.tgz)/g), m => m[1])
   let tarball = matches.at(-1)
-  if (!tarball) throw new Error('Could not find packed .tgz path in pnpm pack output')
+  if (!tarball) throw new Error('Could not find packed .tgz path in pack output')
   return path.isAbsolute(tarball) ? tarball : path.resolve(cwd, tarball)
 }
 
-test.skipIf(!process.env.SLOW_TEST)('install graphene and use it', {timeout: 300_000}, async ({page}) => {
+// pnpm dlx caches local tarballs by their source path/version, so reusing the packed file in the package
+// directory can run stale code after local changes. Copy it into this test's temp dir to force a fresh package source.
+async function copyTarballToTemp(tarball: string, tempRoot: string) {
+  let tempTarball = path.join(tempRoot, path.basename(tarball))
+  await fsp.copyFile(tarball, tempTarball)
+  return tempTarball
+}
+
+async function expectNoSvelteDependency(projectDir: string) {
+  let pkg = JSON.parse(await fsp.readFile(path.join(projectDir, 'package.json'), 'utf8'))
+  expect(pkg.dependencies?.svelte).toBeUndefined()
+}
+
+async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page: Page) {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
   let createDir = path.join(coreDir, 'create')
@@ -57,25 +79,27 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it', {timeout: 300
   let port = await getAvailablePort()
   let childEnv = {...process.env, GRAPHENE_PORT: String(port)} as any
   delete childEnv.NODE_ENV
-  let createTarball: string | undefined
-  let cliTarball: string | undefined
 
   try {
     await page.setViewportSize({width: 1800, height: 1200})
 
     let packCreate = await run('pnpm', ['pack'], createDir)
     expectSuccess('pnpm pack create', packCreate)
-    createTarball = parseTarballPath(packCreate, createDir)
+    let createTarball = await copyTarballToTemp(parseTarballPath(packCreate, createDir), tempRoot)
 
     let packCli = await run('pnpm', ['pack'], cliDir)
     expectSuccess('pnpm pack cli', packCli)
-    cliTarball = parseTarballPath(packCli, cliDir)
+    let cliTarball = await copyTarballToTemp(parseTarballPath(packCli, cliDir), tempRoot)
 
-    let scaffold = await run('npm', ['exec', '--yes', '--package', createTarball, '--', 'create-graphenedata', 'demo-app', '--yes', '--no-install'], tempRoot, childEnv)
-    expectSuccess('npm exec create-graphenedata', scaffold)
+    let [createCommand, createArgs] = packageManager.create(createTarball)
+    let scaffold = await run(createCommand, createArgs, tempRoot, childEnv)
+    expectSuccess(`${packageManager.name} create-graphenedata`, scaffold)
+    await expectNoSvelteDependency(projectDir)
 
-    let installResult = await run('npm', ['install', cliTarball], projectDir, childEnv)
-    expectSuccess('npm install tarball', installResult)
+    let [installCommand, installArgs] = packageManager.install(cliTarball)
+    let installResult = await run(installCommand, installArgs, projectDir, childEnv)
+    expectSuccess(`${packageManager.name} install tarball`, installResult)
+    await expectNoSvelteDependency(projectDir)
 
     // add actual data and a page with a real chart, so our smoke test will
     // also ensure the queries and viz actually work
@@ -107,7 +131,8 @@ limit 10
 
     // `serve` wont return until we kill the server.
     // We could run this in the background with `--bg`, but then have to worry about zombie servers if the test fails
-    void run('npm', ['run', 'graphene', '--', 'serve'], projectDir, childEnv)
+    let [serveCommand, serveArgs] = packageManager.graphene(['serve'])
+    void run(serveCommand, serveArgs, projectDir, childEnv)
 
     // we need to wait until the server has started up, but it's hard to know exactly when that is, unless we were to watch the output
     await page.waitForTimeout(3000)
@@ -121,33 +146,60 @@ limit 10
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
     })
     await page.waitForTimeout(500)
-    await expect(page).screenshot('packaged-cli-check-index')
+    await expect(page).screenshot('packaged-cli-check-index-' + packageManager.name)
 
-    let checkResult = await run('npm', ['run', 'graphene', '--', 'check'], projectDir, childEnv)
+    let [checkCommand, checkArgs] = packageManager.graphene(['check'])
+    let checkResult = await run(checkCommand, checkArgs, projectDir, childEnv)
     expectSuccess('graphene check', checkResult)
-    expect(getOutput(checkResult)).toEqual(
-      `
-> demo-app@0.0.1 graphene
-> graphene check
-
-No errors found 💎`.trim(),
-    )
+    expect(getOutput(checkResult)).toContain('No errors found 💎')
     console.log('checked')
 
-    let runResult = await run('npm', ['run', 'graphene', '--', 'run', 'chart.md'], projectDir, childEnv)
-    expectSuccess('graphene run index.md', runResult)
-    expect(getOutput(runResult).replace(/graphene-screenshot-.*\.png/, 'graphene-screenshot.png')).toEqual(
-      `
-> demo-app@0.0.1 graphene
-> graphene run chart.md
-
-No errors found 💎
-Screenshot saved to /tmp/graphene-screenshot.png
-      `.trim(),
-    )
+    let [runCommand, runArgs] = packageManager.graphene(['run', 'chart.md'])
+    let runResult = await run(runCommand, runArgs, projectDir, childEnv)
+    expectSuccess('graphene run chart.md', runResult)
+    let runOutput = getOutput(runResult).replace(/graphene-screenshot-.*\.png/, 'graphene-screenshot.png')
+    expect(runOutput).toContain('No errors found 💎')
+    expect(runOutput).toContain('Screenshot saved to /tmp/graphene-screenshot.png')
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
-    await run('npm', ['run', 'graphene', '--', 'stop'], projectDir, childEnv) // extra stop, in case the test failed before the regular `stop` above
+    let [stopCommand, stopArgs] = packageManager.graphene(['stop'])
+    await run(stopCommand, stopArgs, projectDir, childEnv) // extra stop, in case the test failed before the regular `stop` above
     await fsp.rm(tempRoot, {recursive: true, force: true})
   }
+}
+
+test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with npm', {timeout: 300_000}, async ({page}) => {
+  await installGrapheneAndUseIt(
+    {
+      name: 'npm',
+      create: tarball => ['npm', ['exec', '--yes', '--package', tarball, '--', 'create-graphenedata', 'demo-app', '--yes', '--no-install']],
+      install: tarball => ['npm', ['install', tarball]],
+      graphene: args => ['npm', ['run', 'graphene', '--', ...args]],
+    },
+    page,
+  )
+})
+
+test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with pnpm', {timeout: 300_000}, async ({page}) => {
+  await installGrapheneAndUseIt(
+    {
+      name: 'pnpm',
+      create: tarball => ['pnpm', ['dlx', '--package', tarball, 'create-graphenedata', 'demo-app', '--yes', '--no-install']],
+      install: tarball => ['pnpm', ['add', tarball]],
+      graphene: args => ['pnpm', ['run', 'graphene', '--', ...args]],
+    },
+    page,
+  )
+})
+
+test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with yarn', {timeout: 300_000}, async ({page}) => {
+  await installGrapheneAndUseIt(
+    {
+      name: 'yarn',
+      create: tarball => ['corepack', ['yarn@4.12.0', 'dlx', '--package', tarball, 'create-graphenedata', 'demo-app', '--yes', '--no-install']],
+      install: tarball => ['corepack', ['yarn@4.12.0', 'add', tarball]],
+      graphene: args => ['corepack', ['yarn@4.12.0', 'run', 'graphene', ...args]],
+    },
+    page,
+  )
 })
