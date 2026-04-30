@@ -18,7 +18,7 @@
       file = '/myproject/index.md'
     }
 
-    if (error.queryId) details.push(error.queryId)
+    if (error.queryId) details.push(`Query (${error.queryId})`)
     if (file && file != 'input') {
       let line = error.from?.line != null ? error.from.line + 1 : undefined
       details.push(line ? `${file}:${line}` : file)

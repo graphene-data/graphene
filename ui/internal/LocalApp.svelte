@@ -86,7 +86,7 @@
   main.pageContent {
     margin: 0 auto;
     min-width: 0;
-    padding: 20px 4rem 80px;
+    padding: 20px 6rem 80px;
     max-width: 720px;
   }
 
