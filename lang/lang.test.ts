@@ -4,7 +4,7 @@ import path from 'node:path'
 import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
-import {setConfig} from './config.ts'
+import {setGlobalConfig} from './config.ts'
 import {toSql} from './core.ts'
 import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
 import {formatType, parseWarehouseFieldType} from './types.ts'
@@ -69,7 +69,7 @@ describe('lang', () => {
 
   beforeEach(() => {
     clearWorkspace()
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
     updateFile(testTables, 'models.gsql')
   })
 
@@ -167,25 +167,25 @@ describe('lang', () => {
   })
 
   it('renders unquoted identifiers for snowflake queries', () => {
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     expect('from users select id, orders.amount as amt order by amt desc').toRenderSql(
       'SELECT users.id as id, orders.amount as amt FROM USERS as users LEFT JOIN ORDERS as orders ON orders.user_id=users.id ORDER BY 2 desc NULLS LAST',
     )
   })
 
   it('applies defaultNamespace to unqualified table paths', () => {
-    setConfig({root: '', defaultNamespace: 'analytics'})
+    setGlobalConfig({root: '', defaultNamespace: 'analytics'})
     expect('from users select id').toRenderSql('select users.id as id from analytics.users as users')
   })
 
   it('does not apply defaultNamespace to already-qualified table paths', () => {
-    setConfig({root: '', defaultNamespace: 'analytics'})
+    setGlobalConfig({root: '', defaultNamespace: 'analytics'})
     updateFile('table raw.users (id int)', 'namespaced.gsql')
     expect('from raw.users select id').toRenderSql('select users.id as id from raw.users as users')
   })
 
   it('applies defaultNamespace to unqualified table paths for clickhouse', () => {
-    setConfig({dialect: 'clickhouse', root: '', defaultNamespace: 'default'})
+    setGlobalConfig({dialect: 'clickhouse', root: '', defaultNamespace: 'default'})
     updateFile('table nyc_taxi (trip_id int)', 'clickhouse.gsql')
     expect('from nyc_taxi select trip_id').toRenderSql('SELECT nyc_taxi.trip_id as trip_id FROM default.nyc_taxi as nyc_taxi')
   })
@@ -193,7 +193,7 @@ describe('lang', () => {
   it('excludes agents.md from workspace by default', async () => {
     let root = path.join(import.meta.dirname, '../examples/flights')
     clearWorkspace()
-    setConfig({root})
+    setGlobalConfig({root})
     await loadWorkspace(root, true)
     expect(getFile('AGENTS.md')).toBeUndefined()
   })
@@ -209,7 +209,7 @@ describe('lang', () => {
       await writeFile(path.join(root, 'dist', 'ignored.gsql'), 'table hidden (id int)')
 
       clearWorkspace()
-      setConfig({root, ignoredFiles: ['**/agents.md', 'dist/**']})
+      setGlobalConfig({root, ignoredFiles: ['**/agents.md', 'dist/**']})
       await loadWorkspace(root, true)
 
       expect(getFile('models.gsql')).toBeDefined()
@@ -223,7 +223,7 @@ describe('lang', () => {
   // Skipped: this test has issues with join chain resolution that are unrelated to uppercase handling
   // The SQL output doesn't match expectations for nested joins through snowflake tables
   it.skip('uppercases nested join chains and query_source views for snowflake tables', () => {
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     updateFile(
       `
       table users_chain (
@@ -361,13 +361,13 @@ describe('lang', () => {
       select id, tag
     `
 
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect(q).toRenderSql('select events.id as id, tag as tag from `events` as events cross join unnest(events.tags) as tag')
 
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     expect(q).toRenderSql('select events.id as id, tag.value as tag from EVENTS as events , TABLE(FLATTEN(INPUT => events.tags)) AS tag')
 
-    setConfig({dialect: 'clickhouse', root: ''})
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
     expect(q).toRenderSql('SELECT events.id as id, tag as tag FROM events as events ARRAY JOIN events.tags AS tag')
   })
 
@@ -1063,46 +1063,46 @@ describe('lang', () => {
   })
 
   it('supports count_if alias for countif on BigQuery', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from orders select count_if(amount > 100)').toRenderSql('select countif(orders.amount>100) as col_0 from `orders` as orders')
   })
 
   it('supports BigQuery math functions', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from orders select abs(amount), sqrt(amount), round(amount, 2)').toRenderSql(
       'select abs(orders.amount) as col_0, sqrt(orders.amount) as col_1, round(orders.amount,2) as col_2 from `orders` as orders',
     )
   })
 
   it('supports BigQuery string functions', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from users select lower(name), upper(name), length(name)').toRenderSql('select lower(users.name) as col_0, upper(users.name) as col_1, length(users.name) as col_2 from `users` as users')
   })
 
   it('supports functions with keyword args', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from users select timestamp_diff(created_at, created_at, day)').toRenderSql('select timestamp_diff(users.created_at,users.created_at,day) as col_0 from `users` as users')
   })
 
   it('renders BigQuery pXX windows via PERCENTILE_CONT', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id').toRenderSql(
       'select orders.id as id, PERCENTILE_CONT(orders.amount, 0.5) OVER (PARTITION BY orders.user_id) as p50_by_user from `orders` as orders order by 1 asc nulls last',
     )
   })
 
   it('keeps existing BigQuery non-window pXX behavior', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from orders select p50(amount) as p50').toRenderSql('select approx_quantiles(orders.amount, 100)[OFFSET(50)] as p50 from `orders` as orders')
   })
 
   it('keeps BigQuery pXX limits for windows', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from orders select p999(amount) over (partition by user_id)').toHaveDiagnostic(/BigQuery only supports up to p99/i)
   })
 
   it('treats date part keywords as literals only when allowed', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     updateFile('table calendar (created_at timestamp, day text, week text)', 'calendar.gsql')
 
     expect('from calendar select week').toRenderSql('select calendar.week as week from `calendar` as calendar')
@@ -1113,33 +1113,33 @@ describe('lang', () => {
   })
 
   it('supports date_trunc on date columns (as opposed to timestamp)', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     updateFile('table events (event_date date)', 'events.gsql')
     expect('from events select date_trunc(event_date, month)').toRenderSql('select date_trunc(events.event_date,month) as col_0 from `events` as events')
 
-    setConfig({root: ''}) // duckdb (default)
+    setGlobalConfig({root: ''}) // duckdb (default)
     expect("from events select date_trunc('month', event_date)").toRenderSql("select date_trunc('month',events.event_date) as col_0 from events as events")
 
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     expect("from events select date_trunc('month', event_date)").toRenderSql("select DATE_TRUNC('month',EVENTS.EVENT_DATE) as COL_0 from EVENTS as EVENTS")
   })
 
   it('infers temporal grain from date_trunc across dialects', () => {
     updateFile('table events (event_date date)', 'events.gsql')
 
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     let [bigQuery] = analyze('from events select date_trunc(event_date, month) as month_start')
     expect(bigQuery.fields[0].metadata).toEqual({timeGrain: 'month'})
 
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
     let [duckDb] = analyze("from events select date_trunc('quarter', event_date) as quarter_start")
     expect(duckDb.fields[0].metadata).toEqual({timeGrain: 'quarter'})
 
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze("from events select date_trunc('year', event_date) as year_start")
     expect(snowflake.fields[0].metadata).toEqual({timeGrain: 'year'})
 
-    setConfig({dialect: 'clickhouse', root: ''})
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
     let [clickhouse] = analyze("from events select date_trunc('week', event_date) as week_start")
     expect(clickhouse.fields[0].metadata).toEqual({timeGrain: 'week'})
   })
@@ -1184,26 +1184,26 @@ describe('lang', () => {
   it('supports backend-native temporal extraction shorthands', () => {
     updateFile('table events (event_date date, created_at timestamp)', 'events.gsql')
 
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
     expect('from events select hour(created_at), quarter(event_date)').toHaveNoErrors()
 
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     expect('from events select dayofmonth(event_date), weekofyear(event_date)').toHaveNoErrors()
 
-    setConfig({dialect: 'clickhouse', root: ''})
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
     expect('from events select to_quarter(created_at), to_week(created_at), to_day_of_year(created_at)').toHaveNoErrors()
 
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
   })
 
   it('infers time part and ordinal metadata for extract, date_part, and native shorthands', () => {
     updateFile('table events (event_date date, created_at timestamp)', 'events.gsql')
 
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     let [bigQuery] = analyze('from events select extract(dayofweek from event_date) as dow')
     expect(bigQuery.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_1s'})
 
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
     let [duckDbDow] = analyze("from events select date_part('dow', event_date) as dow")
     expect(duckDbDow.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_0s'})
     let [duckDbIsoDow] = analyze('from events select extract(isodow from event_date) as iso_dow')
@@ -1211,13 +1211,13 @@ describe('lang', () => {
     let [duckDbQuarter] = analyze('from events select quarter(event_date) as quarter_num')
     expect(duckDbQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
 
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze('from events select dayofweek(event_date) as dow')
     expect(snowflake.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_0s'})
     let [snowflakeQuarter] = analyze('from events select quarter(event_date) as quarter_num')
     expect(snowflakeQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
 
-    setConfig({dialect: 'clickhouse', root: ''})
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
     let [clickhouse] = analyze('from events select to_day_of_week(created_at) as dow')
     expect(clickhouse.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_1m'})
     let [clickhouseHour] = analyze('from events select to_hour(created_at) as hour_num')
@@ -1225,7 +1225,7 @@ describe('lang', () => {
     let [clickhouseQuarter] = analyze('from events select to_quarter(created_at) as quarter_num')
     expect(clickhouseQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
 
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
   })
 
   it('drops extraction metadata on set operations when branches disagree', () => {
@@ -1305,13 +1305,13 @@ describe('lang', () => {
   })
 
   it('renders dynamic intervals for BigQuery', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from users select created_at - interval age minute as shifted').toRenderSql('select users.created_at - interval users.age minute as shifted from `users` as users')
     expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql('select users.created_at - interval users.age minute as shifted from `users` as users')
   })
 
   it('renders dynamic intervals for Snowflake via DATEADD', () => {
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     expect('from users select created_at - interval age minute as shifted').toRenderSql('SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users')
     expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql('SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users')
   })
@@ -1456,7 +1456,7 @@ describe('lang', () => {
   })
 
   it('supports bigquery current datetime functions with optional args', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     try {
       expect(`
         from users select
@@ -1473,12 +1473,12 @@ describe('lang', () => {
         "select current_date() as col_0, current_date('America/Los_Angeles') as col_1, current_time() as col_2, current_time('UTC') as col_3, current_timestamp() as col_4, current_timestamp('America/Los_Angeles') as col_5, current_datetime() as col_6, current_datetime() as col_7, current_datetime('UTC') as col_8 from `users` as users",
       )
     } finally {
-      setConfig({root: ''})
+      setGlobalConfig({root: ''})
     }
   })
 
   it('supports bigquery bare current datetime functions', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     try {
       expect(`
         from users select
@@ -1491,12 +1491,12 @@ describe('lang', () => {
         'select current_date as current_date, current_datetime as current_datetime, current_time as current_time, current_timestamp as current_timestamp, current_datetime as local_timestamp from `users` as users',
       )
     } finally {
-      setConfig({root: ''})
+      setGlobalConfig({root: ''})
     }
   })
 
   it('supports snowflake bare current datetime functions', () => {
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     try {
       expect(`
         from users select
@@ -1510,12 +1510,12 @@ describe('lang', () => {
         {preserveCase: true},
       )
     } finally {
-      setConfig({root: ''})
+      setGlobalConfig({root: ''})
     }
   })
 
   it('supports clickhouse current datetime functions without bare aliases', () => {
-    setConfig({dialect: 'clickhouse', root: ''})
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
     try {
       expect(`
         from users select
@@ -1527,12 +1527,12 @@ describe('lang', () => {
       expect('from users select current_time()').toHaveDiagnostic(/Unknown function: current_time/i)
       expect('from users select localtimestamp').toHaveDiagnostic(/Unknown field "localtimestamp" on users/i)
     } finally {
-      setConfig({root: ''})
+      setGlobalConfig({root: ''})
     }
   })
 
   it('supports broader clickhouse function coverage', () => {
-    setConfig({dialect: 'clickhouse', root: ''})
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
     try {
       expect('from users select count_if(age > 18) as adults').toRenderSql('SELECT countIf(users.age>18) as adults FROM users as users')
       expect('from users select sum_if(age, age > 18) as adult_age_sum').toRenderSql('SELECT sumIf(users.age,users.age>18) as adult_age_sum FROM users as users')
@@ -1540,7 +1540,7 @@ describe('lang', () => {
       expect("from users select format_datetime(created_at, '%Y-%m') as month_label").toRenderSql("SELECT formatDateTime(users.created_at,'%Y-%m') as month_label FROM users as users")
       expect('from users select to_year(created_at) as year_num').toRenderSql('SELECT toYear(users.created_at) as year_num FROM users as users')
     } finally {
-      setConfig({root: ''})
+      setGlobalConfig({root: ''})
     }
   })
 
@@ -1559,11 +1559,11 @@ describe('lang', () => {
   })
 
   it('does not add bare support for excluded functions', () => {
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     try {
       expect('from users select sysdate').toHaveDiagnostic(/Unknown field "sysdate" on users/i)
     } finally {
-      setConfig({root: ''})
+      setGlobalConfig({root: ''})
     }
 
     expect('from users select now').toHaveDiagnostic(/Unknown field "now" on users/i)
@@ -1601,7 +1601,7 @@ describe('lang', () => {
   })
 
   it('snowflake named markdown queries preserve lowercase aliases in component references', () => {
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     expect(`
       \`\`\`gsql by_state
         from users select name as state_code, count() as num
@@ -1704,7 +1704,7 @@ describe('lang', () => {
 
   it('trimmed sanitization breaks a simple join cycle', () => {
     clearWorkspace()
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
     updateFile(
       `
       table alpha (
@@ -1779,24 +1779,24 @@ describe('lang', () => {
 
   it('supports standard functions in bigquery', () => {
     // BigQuery uses a different dialect than the StandardSQL that many use in Malloy. Ensure that we're loading standard fns into bigquery
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from users select floor(age) as floored_age').toRenderSql('select floor(users.age) as floored_age from `users` as users')
   })
 
   it('renders window order expressions with BigQuery identifiers', () => {
-    setConfig({root: '', bigquery: {}})
+    setGlobalConfig({root: '', bigquery: {}})
     expect('from orders select row_number() over (order by amount desc) as rn').toRenderSql('select row_number() OVER (ORDER BY orders.amount DESC) as rn from `orders` as orders')
   })
 
   it('renders window frames in Snowflake with unquoted identifiers', () => {
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     expect('from orders select sum(amount) over (order by id rows between unbounded preceding and current row) as running_amount').toRenderSql(
       'SELECT sum(orders.AMOUNT) OVER (ORDER BY orders.ID ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as running_amount FROM ORDERS as orders',
     )
   })
 
   it('renders Snowflake pXX partition windows', () => {
-    setConfig({dialect: 'snowflake', root: ''})
+    setGlobalConfig({dialect: 'snowflake', root: ''})
     expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id').toRenderSql(
       'SELECT orders.id as id, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY orders.amount) OVER (PARTITION BY orders.user_id) as p50_by_user FROM ORDERS as orders ORDER BY 1 asc NULLS LAST',
       {preserveCase: true},
@@ -1804,7 +1804,7 @@ describe('lang', () => {
   })
 
   it('renders clickhouse pXX aggregates and windows', () => {
-    setConfig({dialect: 'clickhouse', root: ''})
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
     expect('from orders select p50(amount) as median_amount').toRenderSql('SELECT quantile(0.5)(orders.amount) as median_amount FROM orders as orders')
     expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id').toRenderSql(
       'SELECT orders.id as id, quantile(0.5)(orders.amount) OVER (PARTITION BY orders.user_id) as p50_by_user FROM orders as orders ORDER BY 1 asc NULLS LAST',
@@ -1816,7 +1816,7 @@ describe('lang', () => {
     expect('from users select cast(age as float64)').toRenderSql('select CAST(users.age AS FLOAT64) as col_0 from users as users')
     expect('from users select cast(name as array<string>)').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
 
-    setConfig({dialect: 'clickhouse', root: ''})
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
     expect('from users select cast(age as float64)').toRenderSql('SELECT CAST(users.age AS Float64) as col_0 FROM users as users')
     expect('from users select cast(name as array<string>)').toRenderSql('SELECT CAST(users.name AS Array(VARCHAR)) as col_0 FROM users as users')
   })
@@ -1884,7 +1884,7 @@ describe('lang', () => {
 
   it('allows a single join many aggregate and a join one aggregate', () => {
     clearWorkspace()
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
     updateFile(
       `
       table customers (
@@ -2038,7 +2038,7 @@ describe('lang', () => {
 
   it('handles computed columns with chained joins', () => {
     clearWorkspace()
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
     updateFile(
       `
       table countries (id int, name string)
@@ -2057,7 +2057,7 @@ describe('lang', () => {
   // to a computed column uses the correct alias for that join instance.
   it('handles computed columns with multiple joins to same table', () => {
     clearWorkspace()
-    setConfig({root: ''})
+    setGlobalConfig({root: ''})
     updateFile(
       `
       table orders (id int, user_id int, amount int, discounted: amount * 0.9)

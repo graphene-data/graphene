@@ -1,3 +1,4 @@
+import {existsSync} from 'node:fs'
 import {readFile} from 'node:fs/promises'
 import path from 'path'
 
@@ -35,7 +36,8 @@ export interface Config {
   }
 }
 
-export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> & {
+export type ConfigInput = Omit<Config, 'root' | 'dialect' | 'ignoredFiles' | 'envFile'> & {
+  root?: string
   dialect?: Config['dialect']
   ignoredFiles?: Config['ignoredFiles']
   envFile?: string | string[]
@@ -44,7 +46,7 @@ export type ConfigInput = Omit<Config, 'dialect' | 'ignoredFiles' | 'envFile'> &
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
-export function setConfig(cfg: ConfigInput) {
+export function setGlobalConfig(cfg: ConfigInput) {
   Object.keys(config).forEach(key => delete config[key])
   Object.assign(config, normalizeConfig(cfg))
 }
@@ -65,33 +67,33 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd())
   return {
     ...cfg,
     dialect,
-    root: cfg.root || defaultRoot,
+    root: path.resolve(cfg.root || defaultRoot),
     port: cfg.port || Number(process.env.GRAPHENE_PORT) || 4000,
     ignoredFiles: cfg.ignoredFiles || ['**/agents.md', '**/claude.md'],
     envFile,
   } as Config
 }
 
-export async function readConfigInput(dir: string): Promise<ConfigInput | null> {
-  try {
-    let txt = await readFile(path.join(dir, 'package.json'), 'utf8')
-    let graphene = JSON.parse(txt).graphene
-    if (!graphene || typeof graphene != 'object' || Array.isArray(graphene)) return null
-    return graphene
-  } catch {
-    return null
+// Read graphene config from the nearest parent package.json.
+export async function loadConfig(dir: string, envLoader: (envFiles: string[]) => void): Promise<Config> {
+  // seek upwards from dir looking for package.json
+  let configDir = path.resolve(dir)
+  while (!existsSync(path.join(configDir, 'package.json'))) {
+    let parent = path.dirname(configDir)
+    if (parent == configDir) throw new Error(`No package.json found in ${path.resolve(dir)} or its parents`)
+    configDir = parent
   }
-}
 
-export async function readConfig(dir: string, envLoader?: (envFiles: string[] | string) => void, defaultRoot = dir): Promise<Config> {
-  let packageJsonObject = (await readConfigInput(dir)) || ({} as ConfigInput)
-  if (envLoader) envLoader(packageJsonObject.envFile || ['.env'])
-  return normalizeConfig({...packageJsonObject, root: packageJsonObject.root || defaultRoot}, defaultRoot)
-}
+  let txt = await readFile(path.join(configDir, 'package.json'), 'utf8')
+  let graphene = JSON.parse(txt).graphene
+  if (!graphene || typeof graphene != 'object' || Array.isArray(graphene)) {
+    throw new Error(`No graphene config found in ${path.join(configDir, 'package.json')}`)
+  }
 
-// Read graphene config out of package.json
-export async function loadConfig(dir: string, envLoader?: (envFiles: string[] | string) => void) {
-  if (config.root) return
-  Object.keys(config).forEach(key => delete config[key])
-  Object.assign(config, await readConfig(dir, envLoader, process.cwd()))
+  // config can provide 1 or more env files that Graphene should load. Default to just `.env`
+  let envFiles = Array.isArray(graphene.envFile) ? graphene.envFile : [graphene.envFile || '.env']
+  envLoader(envFiles.map(file => path.resolve(configDir, file)))
+
+  let cfg = normalizeConfig({...graphene, root: configDir}, configDir)
+  return cfg
 }
