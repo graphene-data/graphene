@@ -9,7 +9,7 @@ This is an analysis of FAA data covering roughly 345,000 U.S. commercial flights
 
 ## One factor dwarfs the rest
 
-```sql factor_importance
+```gsql factor_importance
 with
 info as (
   from flights where cancelled = 'N'
@@ -58,7 +58,7 @@ Hour of day is not even close. It explains **5.3%** of the variance in departure
 
 ## The compounding clock
 
-```sql hourly_delays
+```gsql hourly_delays
 from flights
 where cancelled = 'N' and extract(hour from dep_time)::integer between 5 and 23
 select
@@ -80,7 +80,7 @@ Flights at 6 a.m. escape this. They're departing on a clean slate: the plane jus
 
 ## The airline gap is real, just smaller
 
-```sql carrier_stats
+```gsql carrier_stats
 from flights where cancelled = 'N'
 select
   carriers.nickname as carrier,
@@ -91,50 +91,48 @@ order by avg_delay desc
 ```
 
 <ECharts data=carrier_stats height=400px>
-  {
-    title: {text: 'Avg departure delay by airline (minutes)'},
-    tooltip: {show: false},
-    grid: {left: 130},
-    xAxis: {
-      type: 'value',
-      min: 0,
-      max: 15,
-      axisLine: {show: false},
-      axisTick: {show: false},
+  title: {text: 'Avg departure delay by airline (minutes)'},
+  tooltip: {show: false},
+  grid: {left: 130},
+  xAxis: {
+    type: 'value',
+    min: 0,
+    max: 15,
+    axisLine: {show: false},
+    axisTick: {show: false},
+  },
+  yAxis: {
+    type: 'category',
+    inverse: true,
+    axisLine: {show: false},
+    axisTick: {show: false},
+    encode: {y: 'carrier'},
+  },
+  series: [
+    {
+      type: 'pictorialBar',
+      symbol: 'rect',
+      symbolRepeat: false,
+      symbolSize: ['100%', 2],
+      symbolAnchor: 'end',
+      symbolPosition: 'end',
+      encode: {x: 'avg_delay', y: 'carrier'},
+      itemStyle: {color: '#3D6B7E'},
     },
-    yAxis: {
-      type: 'category',
-      inverse: true,
-      axisLine: {show: false},
-      axisTick: {show: false},
-      encode: {y: 'carrier'},
-    },
-    series: [
-      {
-        type: 'pictorialBar',
-        symbol: 'rect',
-        symbolRepeat: false,
-        symbolSize: ['100%', 2],
-        symbolAnchor: 'end',
-        symbolPosition: 'end',
-        encode: {x: 'avg_delay', y: 'carrier'},
-        itemStyle: {color: '#3D6B7E'},
+    {
+      type: 'scatter',
+      symbolSize: 12,
+      encode: {x: 'avg_delay', y: 'carrier', itemName: 'delay_label'},
+      itemStyle: {color: '#3D6B7E', opacity: 1},
+      label: {
+        show: true,
+        position: 'right',
+        formatter: '{b}',
+        fontSize: 11,
+        color: '#555',
       },
-      {
-        type: 'scatter',
-        symbolSize: 12,
-        encode: {x: 'avg_delay', y: 'carrier', itemName: 'delay_label'},
-        itemStyle: {color: '#3D6B7E', opacity: 1},
-        label: {
-          show: true,
-          position: 'right',
-          formatter: '{b}',
-          fontSize: 11,
-          color: '#555',
-        },
-      }
-    ],
-  }
+    }
+  ],
 </ECharts>
 
 Alaska and Atlantic Southeast average about 12 minutes late; ATA and Continental Express average around 4. That 8-minute gap is meaningful — across a trip with a connection, it compounds — but notice the scale relative to the time-of-day chart. The worst airline is roughly as bad as flying at 3 p.m. instead of 6 a.m. The best airline can't fully compensate for a late-evening departure.
@@ -143,7 +141,7 @@ Part of the airline spread reflects _network structure_ rather than operational 
 
 ## Where you start matters — and where you land matters differently
 
-```sql airport_both
+```gsql airport_both
 with dep as (
   from flights where cancelled = 'N'
   select origin as code, origin_airport.city as city, avg(dep_delay) as dep_delay
@@ -163,50 +161,48 @@ from dep d inner join arr a on d.code = a.code
 ```
 
 <ECharts data=airport_both height=400px>
-  {
-    title: {text: 'Departure vs arrival delay by airport'},
-    tooltip: {trigger: 'item'},
-    grid: {left: 65, right: 30, bottom: 65},
-    xAxis: {
-      type: 'value',
-      name: 'Avg departure delay from this airport (min)',
-      nameLocation: 'middle',
-      nameGap: 40,
-      min: 0,
-      max: 15,
-      splitLine: {lineStyle: {color: '#f0f0f0'}},
-      axisLine: {show: false},
-      axisTick: {show: false},
+  title: {text: 'Departure vs arrival delay by airport'},
+  tooltip: {trigger: 'item'},
+  grid: {left: 65, right: 30, bottom: 65},
+  xAxis: {
+    type: 'value',
+    name: 'Avg departure delay from this airport (min)',
+    nameLocation: 'middle',
+    nameGap: 40,
+    min: 0,
+    max: 15,
+    splitLine: {lineStyle: {color: '#f0f0f0'}},
+    axisLine: {show: false},
+    axisTick: {show: false},
+  },
+  yAxis: {
+    type: 'value',
+    name: 'Avg arrival delay at this airport (min)',
+    nameLocation: 'middle',
+    nameGap: 40,
+    min: 0,
+    max: 15,
+    splitLine: {lineStyle: {color: '#f0f0f0'}},
+    axisLine: {show: false},
+    axisTick: {show: false},
+  },
+  series: [
+    {
+      type: 'line',
+      data: [[0, 0], [15, 15]],
+      showSymbol: false,
+      lineStyle: {color: '#ccc', width: 1, type: 'dashed'},
+      tooltip: {show: false},
+      z: 1,
     },
-    yAxis: {
-      type: 'value',
-      name: 'Avg arrival delay at this airport (min)',
-      nameLocation: 'middle',
-      nameGap: 40,
-      min: 0,
-      max: 15,
-      splitLine: {lineStyle: {color: '#f0f0f0'}},
-      axisLine: {show: false},
-      axisTick: {show: false},
+    {
+      type: 'scatter',
+      symbolSize: 9,
+      encode: {x: 'd_dep_delay', y: 'a_arr_delay', itemName: 'd_city'},
+      tooltip: {formatter: '{b}'},
+      z: 2,
     },
-    series: [
-      {
-        type: 'line',
-        data: [[0, 0], [15, 15]],
-        showSymbol: false,
-        lineStyle: {color: '#ccc', width: 1, type: 'dashed'},
-        tooltip: {show: false},
-        z: 1,
-      },
-      {
-        type: 'scatter',
-        symbolSize: 9,
-        encode: {x: 'd_dep_delay', y: 'a_arr_delay', itemName: 'd_city'},
-        tooltip: {formatter: '{b}'},
-        z: 2,
-      },
-    ],
-  }
+  ],
 </ECharts>
 
 Each dot is one airport. The dashed diagonal is where departure delay equals arrival delay — if you're above the line, you absorb delays; if you're below it, you amplify them.
