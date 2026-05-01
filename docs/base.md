@@ -6,6 +6,7 @@ GSQL extends ANSI SQL with dimensions, measures, and join relationships. Declare
 ```sql
 table orders (
   id bigint
+  created_at datetime
   user_id bigint
   amount float
   status string
@@ -68,13 +69,13 @@ layout: dashboard
 ---
 
 ```sql sales_by_status
-select status, revenue
+select extract(year from created_at) AS year, status, revenue
 from orders
 where status <> 'cancelled'
 ```
 
-<BigValue data="sales_by_status" value="revenue" />
-<BarChart data="sales_by_status" x="status" y="revenue" />
+<BigValue data="orders" value="revenue" />
+<BarChart data="sales_by_status" x="year" y="revenue" splitBy="status"/>
 ````
 
 Queries can be referenced by other queries in the `from` or `join` to form DAGs of data logic within the page.
@@ -106,15 +107,23 @@ Notes on common attributes:
 ### ECharts
 To create visualizations or customizations beyond Graphene's out-of-the-box components, specify an ECharts config via `<ECharts>`.
 
+This example creates a stacked bar chart with a purple x-axis.
+
 ```md
 <ECharts data="sales_by_status">
+  title: {text: "Annual Revenue by Status"},
   xAxis: {axisLine: {lineStyle: {color: 'purple'}}},
-  series: [{type: "bar", stack: "bar-stack", encode: {x: "month", y: "revenue", splitBy: "status"}],
+  series: [{type: "bar", stack: "bar-stack", encode: {x: "year", y: "revenue", splitBy: "status"}],
 </ECharts>
 ```
 
-Graphene introduces an `encode` property within `series` configs to map to columns in the data source.
-In addition to the regular fields `encode` takes, it also accepts `splitBy`, which automatically expands one template into multiple series. For bar charts, `splitBy` can be a two-item list (`[groupBy, stackBy]`) for grouped+stacked bars.
+Use `encode` to map objects to the columns of the data source. In Graphene, `encode` also accepts `splitBy` which automatically expands one template into multiple series. For bar charts, `splitBy` can be a two-item list (`[groupBy, stackBy]`) for grouped+stacked bars.
+
+Graphene will handle axes, layout, and styles for you, so you can omit those configurations unless you explicitly want to override them.
+
+Unsupported:
+- `{@colName}` formatter templates (but `{a}`, `{b}`, `{c}` work)
+- Javascript of any kind
 
 ## Input components
 - Dropdown: title, name, data, value (column to populate list with), label, defaultValue, multiple
