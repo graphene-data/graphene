@@ -102,6 +102,7 @@ Notes on common attributes:
 - Any attribute that accepts a column can also accept an arbitrary GSQL expression. These attributes are x, y, y2, splitBy, category, value, link, groupBy, scaleColumn
 - `splitBy` creates a series for each distinct value in the column (long format data).
 - `y` can take a comma-separated list of columns/expressions, to map multiple fields to the same y-axis as separate series (wide format data).
+- `sort` takes a column name followed by `asc` or `desc`, eg. `my_col desc`. Useful when you want something sorted differently than its inherent alphanumeric ordering.
 - `height` and `width` accept any CSS size units eg. `240px` or `50%`.
 
 ### `<ECharts>`
