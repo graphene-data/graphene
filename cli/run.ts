@@ -69,8 +69,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 
   errors.forEach((e: GrapheneError) => {
     if (e.file || e.frame) printDiagnostics([e], log)
-    else if (isComponentPropError(e)) log(`${e.queryId}: ${e.message}`)
-    else if (e.queryId) log(`Query (${e.queryId}): ${e.message}`)
+    else if (e.componentId) log(`${e.componentId}: ${e.message}`)
     else log(e.message)
   })
 
@@ -87,10 +86,6 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   return errors.length == 0 && !chartNotFound
-}
-
-function isComponentPropError(e: GrapheneError) {
-  return !!e.queryId?.match(/^[A-Z]\w*( \(data="[^"]+"\))?$/) && e.message.startsWith('Unsupported prop ')
 }
 
 export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry, log: (...args: any[]) => void = console.log): Promise<boolean> {
@@ -113,9 +108,9 @@ export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry,
   let resp = await sendSocketRequest({mdFile, action: 'list', log})
   if (!resp) return false
 
-  let queryIds = (resp.queryIds || []) as string[]
-  if (!queryIds.length) log('No chart queries found')
-  else queryIds.forEach(queryId => log(queryId))
+  let componentIds = (resp.componentIds || []) as string[]
+  if (!componentIds.length) log('No chart queries found')
+  else componentIds.forEach(componentId => log(componentId))
   return true
 }
 

@@ -1,7 +1,9 @@
 <script lang="ts">
+  import {untrack} from 'svelte'
   import QueryLoad from './QueryLoad.svelte'
   import {formatFromField} from '../component-utilities/format.ts'
   import type {QueryResult} from '../component-utilities/types.ts'
+  import {componentLogger} from '../internal/telemetry.ts'
 
   interface Props {
     data: string | QueryResult
@@ -10,6 +12,7 @@
   }
 
   let {data, value = undefined, title = undefined}: Props = $props()
+  let logger = untrack(() => componentLogger('BigValue', {data: typeof data == 'string' ? data : undefined, value}))
 
   function formatValue(input: any, loaded: QueryResult) {
     if (input === null || input === undefined) return '—'
@@ -25,7 +28,7 @@
   </div>
 {/snippet}
 
-<QueryLoad {data} fields={{value}} children={bigValueContent} />
+<QueryLoad {data} fields={{value}} children={bigValueContent} componentId={logger.id} />
 
 <style>
   .big-value {

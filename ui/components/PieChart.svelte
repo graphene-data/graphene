@@ -1,8 +1,8 @@
 <script lang="ts">
-  import {onMount} from 'svelte'
+  import {untrack} from 'svelte'
   import ECharts from './ECharts.svelte'
   import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
-  import {logExtraProps} from '../internal/telemetry.ts'
+  import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Props {
     data: string | QueryResult
@@ -23,7 +23,8 @@
     ...extraProps
   }: Props & Record<string, unknown> = $props()
 
-  onMount(() => logExtraProps('PieChart', data, extraProps))
+  let logger = untrack(() => componentLogger('PieChart', {data: typeof data == 'string' ? data : undefined, category, value}))
+  untrack(() => logExtraProps(logger, 'PieChart', extraProps))
 
   function buildConfig(): EChartsConfig {
     return {
@@ -33,4 +34,4 @@
   }
 </script>
 
-<ECharts data={data} config={buildConfig()} {height} {width} />
+<ECharts data={data} config={buildConfig()} {height} {width} componentId={logger.id} />
