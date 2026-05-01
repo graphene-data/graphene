@@ -1,8 +1,8 @@
 <script lang="ts">
   import {init} from 'echarts'
-  import {onDestroy, onMount} from 'svelte'
+  import {onDestroy, onMount, untrack} from 'svelte'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
-  import {logError, logExtraProps} from '../internal/telemetry.ts'
+  import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
   import {enrich, horizontalBarCount} from '../component-utilities/enrich.ts'
   import type {EChartsConfig, NormalConfig, QueryResult} from '../component-utilities/types.ts'
   import '../component-utilities/theme.ts'
@@ -14,18 +14,25 @@
     height?: string | number
     width?: string | number
     renderer?: 'canvas' | 'svg'
+    componentId?: string
   }
 
   let {
-    config,
+    config = {},
     data,
     height = undefined,
     width = '100%',
     renderer = 'svg',
+    componentId = undefined,
     ...extraProps
   }: Props & Record<string, unknown> = $props()
 
-  onMount(() => logExtraProps('ECharts', data, extraProps))
+  config ||= {}
+
+  let queryFieldsForLogger = untrack(() => typeof data == 'string' ? queryFields(config) : {})
+  let chartLogger = untrack(() => componentLogger(componentId || 'ECharts', componentId ? {} : {data: typeof data == 'string' ? data : undefined, ...queryFieldsForLogger}))
+  let displayId = untrack(() => componentId || chartLogger.id)
+  untrack(() => logExtraProps(chartLogger, 'ECharts', extraProps))
 
   // not state, because we don't want `$effect` to run when they change
   let node: HTMLDivElement | null = null
@@ -35,13 +42,14 @@
   // Use `raw` because data can be big, and there's little upside to making it reactive
   let loaded = $state.raw<QueryResult | null>(null)
   let chartError: Error | null = $state(null)
-  let queryId: string | null = $state(null)
+  let mountedComponentId: string | null = $state(displayId)
   let chartTitle: string | undefined = $state(undefined)
   let chartSizeStyle: string = $state(calculateChartSize())
 
   function handleResults (res: QueryResult) {
     chartError = null
     loaded = res
+    if (res?.error) chartLogger.error(res.error, {...res.error, componentId: displayId})
   }
 
   // If `data` is just a string, kick off a query to fetch the data.
@@ -52,7 +60,7 @@
 
     if (typeof data == 'string') {
       try {
-        queryId = window.$GRAPHENE.query(data, queryFields(config), handleResults)
+        mountedComponentId = window.$GRAPHENE.query(data, queryFieldsForLogger, handleResults, displayId)
       } catch (error) {
         chartError = error instanceof Error ? error : new Error(String(error))
       }
@@ -89,7 +97,7 @@
     } catch (error) {
       console.error('Chart failed to render', error)
       chartError = error instanceof Error ? error : new Error(String(error))
-      logError(chartError, queryId ? {queryId} : undefined)
+      chartLogger.error(chartError, {componentId: displayId})
       window.$GRAPHENE?.renderComplete?.(`chart:${chart.id}`)
       destroyChart()
     }
@@ -167,7 +175,7 @@
 
 </script>
 
-<div class="echarts" bind:this={node} style={chartSizeStyle} data-query-id={queryId} data-chart-title={chartTitle}>
+<div class="echarts" bind:this={node} style={chartSizeStyle} data-component-id={mountedComponentId} data-chart-title={chartTitle}>
   {#if loaded?.error || chartError}
     <ErrorDisplay error={loaded?.error || chartError} />
   {:else if !loaded}

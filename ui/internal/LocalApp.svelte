@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onDestroy, onMount, tick} from 'svelte'
-  import {errorProvider} from './telemetry.ts'
+  import {setErrorFor} from './telemetry.ts'
   import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
   import navFiles from 'virtual:nav'
   import Sidebar from './Sidebar.svelte'
@@ -9,6 +9,7 @@
   import ErrorDisplay from './ErrorDisplay.svelte'
   import ChartGallery from './ChartGallery.svelte'
   import StyleGallery from './StyleGallery.svelte'
+  import {type GrapheneError} from '../../lang/index.js'
 
   let pageInputs = activatePageInputs(new PageInputs())
   setPageInputsContext(pageInputs)
@@ -19,9 +20,7 @@
   import.meta.hot?.accept('virtual:nav', mod => navData = mod.default)
 
   // Track compile errors from both initial load and subsequent HMR failures.
-  // Uses errorProvider so `check` can report compilation errors.
-  let compileError = $state(null)
-  errorProvider('compile', () => compileError ? [compileError] : [])
+  let compileError = $state<GrapheneError | null>(null)
   import.meta.hot?.on('vite:error', (payload) => {
     let line = Math.max(0, (payload.err.loc?.line || 1) - 1)
     let col = Math.max(0, payload.err.loc?.column || 0)
@@ -34,6 +33,7 @@
       from: {line, col, offset: 0},
       to: {line, col: col + 1, offset: 0},
     }
+    setErrorFor('compile', compileError)
     Page = null
   })
 
@@ -63,6 +63,7 @@
       Page = mod.default
       pageMeta = mod.metadata || {}
       compileError = null
+      setErrorFor('compile', null)
     }
     await tick()
     pageReadyResolve?.()

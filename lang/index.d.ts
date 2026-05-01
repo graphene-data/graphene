@@ -46,7 +46,7 @@ export interface GrapheneError {
   stack?: string
   cause?: unknown
   severity?: 'error' | 'warn'
-  queryId?: string
+  componentId?: string
   file?: string
   from?: Position
   to?: Position

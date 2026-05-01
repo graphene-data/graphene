@@ -105,7 +105,7 @@ test('cli run with md file reports dynamic unsupported chart wrapper props', asy
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart.
+    BarChart (data="chart_data" x="carrier" y="distance"): Unsupported prop "yFmt" on BarChart.
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
@@ -134,7 +134,7 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props',
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts.
+    ECharts (data="chart_data" x="carrier" y="distance"): Unsupported prop "chartAreaHeight" on ECharts.
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
@@ -158,8 +158,7 @@ test('cli run with md file reports multiple dynamic unsupported chart props', as
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    BarChart (data="chart_data"): Unsupported prop "yFmt" on BarChart.
-    BarChart (data="chart_data"): Unsupported prop "emptySet" on BarChart.
+    BarChart (data="chart_data" x="carrier" y="distance"): Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
@@ -189,8 +188,7 @@ test('cli run with md file reports runtime chart prop and render errors together
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    ECharts (data="chart_data"): Unsupported prop "chartAreaHeight" on ECharts.
-    Query (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
+    ECharts (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
@@ -214,7 +212,7 @@ test('cli run with md file reports runtime query errors', async ({server, page})
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    Query (data="runtime_error_query" x="origin" y="explode"): Out of Range Error: cannot take square root of a negative number
+    BarChart (data="runtime_error_query" x="origin" y="explode"): Out of Range Error: cannot take square root of a negative number
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
@@ -243,7 +241,7 @@ test('cli run with md file reports runtime chart configuration errors', async ({
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    Query (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
+    ECharts (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
   `),
   )
@@ -266,7 +264,31 @@ test('cli run with md file reports table configuration errors', async ({server, 
   expect(outputLines()).toEqual(
     trimIndentation(`
     Runtime errors in index.md:
-    Query (DataTable): not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
+    DataTable: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
+    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+`),
+  )
+})
+
+test('cli run with md file reports big value query errors', async ({server, page}) => {
+  expectConsoleError('Failed to load resource')
+  server.mockFile(
+    '/index.md',
+    `
+    # Runtime BigValue Query Error
+    \`\`\`sql big_value_data
+    from flights select sqrt(dep_delay) as value
+    \`\`\`
+    <BigValue data="big_value_data" value="value" title="Runtime BigValue Query Error" />
+  `,
+  )
+
+  await page.goto(server.url())
+  await runMdFile({mdArg: 'index.md', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Runtime errors in index.md:
+    BigValue (data="big_value_data" value="value"): Out of Range Error: cannot take square root of a negative number
     Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
 `),
   )
@@ -343,7 +365,7 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({ser
   )
 })
 
-test('cli list prints chart query IDs', async ({server, page}) => {
+test('cli list prints chart component IDs', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -358,10 +380,10 @@ test('cli list prints chart query IDs', async ({server, page}) => {
   await page.goto(server.url())
   let result = await listMdFileQueries('index.md', undefined, log)
   expect(result).toBe(true)
-  expect(outputLines()).toEqual('data="chart_data" x="carrier" y="total_distance"')
+  expect(outputLines()).toEqual('BarChart (data="chart_data" x="carrier" y="total_distance")')
 })
 
-test('cli run with --chart captures a chart screenshot by query ID', async ({server, page}) => {
+test('cli run with --chart captures a chart screenshot by component ID', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -374,7 +396,7 @@ test('cli run with --chart captures a chart screenshot by query ID', async ({ser
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', chart: 'data="chart_data" x="carrier" y="total_distance"', log})
+  await runMdFile({mdArg: 'index.md', chart: 'BarChart (data="chart_data" x="carrier" y="total_distance")', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
     No errors found 💎
