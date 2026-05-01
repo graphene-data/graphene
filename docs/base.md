@@ -88,7 +88,7 @@ You can add YAML frontmatter at the top of a page. The following attributes are 
 ## Viz and display components
 - LineChart: title, data, x, y, y2, splitBy, sort, height, width
 - AreaChart: title, data, x, y, y2, splitBy, arrange (`stack` (default) or `stack100`), sort, height, width
-- BarChart: title, data, x, y, y2, splitBy, arrange, label (true or false (default); shows labels above bars), sort, height, width
+- BarChart: title, data, x, y, y2, splitBy, arrange (`stack` (default), `group`, or `stack100`), label (true or false (default); shows labels above bars), sort, height, width
 - PieChart: title, data, category, value, height, width
 - ECharts: data, height, width, renderer
 - BigValue: title, data, value
