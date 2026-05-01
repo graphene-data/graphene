@@ -16,7 +16,7 @@
   import type {QueryResult} from '../component-utilities/types.ts'
 
   interface Props {
-    data?: QueryResult, rows?: number | string, title?: string, subtitle?: string, rowNumbers?: boolean | string
+    data?: QueryResult, rows?: number | string, title?: string, rowNumbers?: boolean | string
     sort?: string, sortable?: boolean | string, groupBy?: string, groupsOpen?: boolean | string
     groupType?: 'accordion' | 'section', accordionRowColor?: string, groupNamePosition?: 'top' | 'middle' | 'bottom'
     subtotals?: boolean | string, subtotalRowColor?: string, subtotalFontColor?: string
@@ -30,7 +30,7 @@
   const {resolveColor} = getThemeStores()
 
   let {
-    data = {rows: [], fields: []}, rows = 10, title = undefined, subtitle = undefined, rowNumbers = false, sort = undefined,
+    data = {rows: [], fields: []}, rows = 10, title = undefined, rowNumbers = false, sort = undefined,
     sortable = true, groupBy = undefined, groupsOpen = true, groupType = 'accordion',
     accordionRowColor = undefined, groupNamePosition = 'middle', subtotals = false,
     subtotalRowColor = undefined, subtotalFontColor = undefined, rowShading = false, rowLines = true,
@@ -374,10 +374,9 @@
     class={`table-container ${paginated ? 'table-container--has-pagination' : ''}`}
     data-testid={isFullPageBool ? undefined : `DataTable-${dataTestId ?? 'no-id'}`}
   >
-    {#if title || subtitle}
+    {#if title}
       <div class="table-title">
-        {#if title}<div class="table-title__headline">{title}</div>{/if}
-        {#if subtitle}<div class="table-title__subhead">{subtitle}</div>{/if}
+        <div class="table-title__headline">{title}</div>
       </div>
     {/if}
 
@@ -517,12 +516,6 @@
     font-weight: 600;
     font-size: 14px;
     line-height: 1.3;
-  }
-
-  .table-title__subhead {
-    color: var(--color-base-content-muted, #6b7280);
-    font-size: 13px;
-    margin-top: 2px;
   }
 
   .scrollbox {

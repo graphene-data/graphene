@@ -79,7 +79,7 @@ Attributes like `x`, `y`, `y2`, and `splitBy` are the names of columns within th
 - PieChart: Fields: [category,value]
 
 - BigValue: data, value, title, fmt, comparison, comparisonFmt, comparisonTitle, downIsGood, sparkline, sparklineType, sparklineColor
-- Table: data, rows, title, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
+- Table: data, rows, title, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
   - Column (sub-component of Table): id, title, fmt, align, wrap, contentType, totalAgg, redNegatives
 - Value: data, column, row
 

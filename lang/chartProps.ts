@@ -8,7 +8,7 @@ export const CHART_COMPONENT_PROPS: Record<string, readonly string[]> = {
   BarChart: ['data', 'x', 'y', 'y2', 'splitBy', 'arrange', 'label', 'sort', 'title', 'height', 'width'],
   LineChart: ['data', 'x', 'y', 'y2', 'splitBy', 'sort', 'title', 'height', 'width'],
   AreaChart: ['data', 'x', 'y', 'y2', 'splitBy', 'arrange', 'sort', 'title', 'height', 'width'],
-  PieChart: ['data', 'category', 'value', 'title', 'subtitle', 'height', 'width'],
+  PieChart: ['data', 'category', 'value', 'title', 'height', 'width'],
   ECharts: ['data', 'config', 'height', 'width', 'renderer'],
 }
 
@@ -19,7 +19,6 @@ const OBSOLETE_PROP_MESSAGES: Record<string, string> = {
   xFmt: 'Use field metadata or ECharts for custom formatting.',
   yFmt: 'Use field metadata or ECharts for custom formatting.',
   y2Fmt: 'Use field metadata or ECharts for custom formatting.',
-  subtitle: 'subtitle is only valid on PieChart. Use ECharts for chart subtext.',
   emptySet: 'emptySet is not supported on chart wrappers.',
   emptyMessage: 'emptyMessage is not supported on chart wrappers.',
 }

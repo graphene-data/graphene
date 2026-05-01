@@ -9,10 +9,9 @@
     data: string | QueryResult
     value?: string
     title?: string
-    subtitle?: string
   }
 
-  let {data, value = undefined, title = undefined, subtitle = undefined}: Props = $props()
+  let {data, value = undefined, title = undefined}: Props = $props()
   let logger = untrack(() => componentLogger('BigValue', {data: typeof data == 'string' ? data : undefined, value}))
 
   function formatValue(input: any, loaded: QueryResult) {
@@ -25,7 +24,6 @@
 {#snippet bigValueContent(loaded: QueryResult)}
   <div class="big-value">
     {#if title}<div class="big-value__title">{title}</div>{/if}
-    {#if subtitle}<div class="big-value__subtitle">{subtitle}</div>{/if}
     <div class="big-value__value">{formatValue(loaded?.rows?.[0]?.[value], loaded)}</div>
   </div>
 {/snippet}
@@ -47,11 +45,6 @@
     color: #aaa;
     text-transform: uppercase;
     letter-spacing: 0.07em;
-  }
-
-  .big-value__subtitle {
-    font-size: 13px;
-    color: var(--graphene-big-value-subtitle, #4b5563);
   }
 
   .big-value__value {
