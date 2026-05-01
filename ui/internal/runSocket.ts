@@ -15,7 +15,7 @@ async function loadHtml2Canvas() {
 async function captureChart(chart: string) {
   let escaped = window.CSS.escape(chart)
   let chartEl = document.querySelector(`[data-chart-title="${escaped}"]`) as HTMLElement | null
-  chartEl ||= document.querySelector(`[data-query-id="${escaped}"]`) as HTMLElement | null
+  chartEl ||= document.querySelector(`[data-component-id="${escaped}"]`) as HTMLElement | null
   if (!chartEl) return undefined
 
   await loadHtml2Canvas()
@@ -23,10 +23,10 @@ async function captureChart(chart: string) {
   return canvas?.toDataURL('image/png')
 }
 
-function listQueryIds() {
-  return Array.from(document.querySelectorAll('[data-query-id]'))
-    .map(el => el.getAttribute('data-query-id') || '')
-    .filter(queryId => queryId.trim().length > 0)
+function listComponentIds() {
+  return Array.from(document.querySelectorAll('[data-component-id]'))
+    .map(el => el.getAttribute('data-component-id') || '')
+    .filter(componentId => componentId.trim().length > 0)
 }
 
 async function takeScreenshot() {
@@ -46,8 +46,9 @@ function connect() {
     if (type !== 'check') return
 
     if (action === 'list') {
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-      socket!.send(JSON.stringify({type: 'checkResponse', requestId, queryIds: listQueryIds()}))
+      await window.$GRAPHENE.pageReady
+      await new Promise(resolve => requestAnimationFrame(resolve))
+      socket!.send(JSON.stringify({type: 'checkResponse', requestId, componentIds: listComponentIds()}))
       return
     }
 

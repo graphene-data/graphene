@@ -4,6 +4,7 @@ import fs from 'fs-extra'
 // import sveltePreprocess from 'svelte-preprocess' // this would be nice, but it breaks sourcemaps by default
 import {type IncomingMessage, type ServerResponse} from 'http'
 import {mdsvex} from 'mdsvex'
+import {createRequire} from 'module'
 import path from 'path'
 import {fileURLToPath} from 'url'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
@@ -29,6 +30,7 @@ export function clearSvelteWarnings() {
 const QUERY_VERSION = 1
 
 let uiRoot: string
+let nodeRequire = createRequire(import.meta.url)
 
 export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
   let server = await createServer(await createConfig(telemetry))
@@ -45,6 +47,11 @@ export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
 async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = Number(process.env.GRAPHENE_PORT) || 4000
+  let svelteRoot = path.dirname(nodeRequire.resolve('svelte/package.json'))
+  let sveltePackage = nodeRequire('svelte/package.json')
+  let svelteDependencyRoot = path.dirname(svelteRoot)
+  let svelteExport = (name: string) => path.join(svelteRoot, sveltePackage.exports[name].browser || sveltePackage.exports[name].default)
+  let packaged = path.basename(path.dirname(uiRoot)) == 'dist'
   await fs.ensureDir(path.resolve(config.root, 'node_modules/.graphene'))
 
   // Bind to 0.0.0.0 when running in a container so port forwarding works from the host
@@ -92,27 +99,50 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
       hmr: {overlay: false}, // we handle compilation errors ourselves (see LocalApp.svelte)
     },
     resolve: {
-      alias: {
-        graphene: path.resolve(uiRoot, 'web.js'),
-      },
+      alias: [
+        {find: /^graphene$/, replacement: path.resolve(uiRoot, 'web.js')},
+        // Vite runs in a user project, but svelte is a direct dependency of the cli, and thus transitive to the user project.
+        // So when Vite tries to resolve `svelte` from a compiled md page, it can't find it without these aliases.
+        {find: /^svelte$/, replacement: svelteExport('.')},
+        {find: /^svelte\/animate$/, replacement: svelteExport('./animate')},
+        {find: /^svelte\/attachments$/, replacement: svelteExport('./attachments')},
+        {find: /^svelte\/easing$/, replacement: svelteExport('./easing')},
+        {find: /^svelte\/events$/, replacement: svelteExport('./events')},
+        {find: /^svelte\/internal$/, replacement: svelteExport('./internal')},
+        {find: /^svelte\/internal\/client$/, replacement: svelteExport('./internal/client')},
+        {find: /^svelte\/internal\/disclose-version$/, replacement: svelteExport('./internal/disclose-version')},
+        {find: /^svelte\/internal\/flags\/async$/, replacement: svelteExport('./internal/flags/async')},
+        {find: /^svelte\/internal\/flags\/legacy$/, replacement: svelteExport('./internal/flags/legacy')},
+        {find: /^svelte\/internal\/flags\/tracing$/, replacement: svelteExport('./internal/flags/tracing')},
+        {find: /^svelte\/legacy$/, replacement: svelteExport('./legacy')},
+        {find: /^svelte\/motion$/, replacement: svelteExport('./motion')},
+        {find: /^svelte\/reactivity$/, replacement: svelteExport('./reactivity')},
+        {find: /^svelte\/reactivity\/window$/, replacement: svelteExport('./reactivity/window')},
+        {find: /^svelte\/store$/, replacement: svelteExport('./store')},
+        {find: /^svelte\/transition$/, replacement: svelteExport('./transition')},
+        {find: /^clsx$/, replacement: path.join(svelteDependencyRoot, 'clsx/dist/clsx.mjs')},
+      ],
     },
 
-    // vite's pre-bundling won't naturally discover these dependencies since they're transitive.
-    // Instead, we need to list them out here so vite knows where they are.
     optimizeDeps: {
       noDiscovery: process.env.NODE_ENV == 'test', // tests manually optimize before starting test workers
-      exclude: ['virtual:nav'],
+      exclude: ['virtual:nav'], // provided by a plugin, so don't try and optimize it
+      // Vite running in a user project will not naturally discover and optimize these transitive deps.
+      // When you launch the server, your first page load will automatically refresh after a second or two as Vite now sees and optimizes these.
+      // This line makes it do that up-front, avoiding that reload jank. The packaged CLI also pre-bundles the `graphene` alias itself;
+      // doing that from source causes trouble in examples/tests because the alias points outside node_modules.
+      // `graphene` here is a special case: when packaged up it is considered a dependency, but in examples/tests, including it would cause errors.
+      // oxfmt-ignore
       include: [
-        // Svelte 5 has multiple entry points that need to be pre-bundled together
-        'svelte',
-        'svelte/internal/client',
-        'svelte/internal/disclose-version',
+        ...(packaged ? ['graphene'] : []),
         '@graphenedata/cli > svelte',
-        '@graphenedata/cli > ssf',
-        '@graphenedata/cli > @tidyjs/tidy',
         '@graphenedata/cli > chroma-js',
-        '@graphenedata/cli > echarts/dist/echarts.esm.js',
+        '@graphenedata/cli > echarts',
         '@graphenedata/cli > @graphenedata/html2canvas',
+        '@graphenedata/cli > @graphenedata/ui > svelte',
+        '@graphenedata/cli > @graphenedata/ui > chroma-js',
+        '@graphenedata/cli > @graphenedata/ui > echarts/dist/echarts.esm.js',
+        '@graphenedata/cli > @graphenedata/ui > @graphenedata/html2canvas',
       ],
     },
   }
@@ -125,7 +155,10 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
-  let result = analyzeWorkspace({config, files: [...workspaceFiles, {path: 'input', contents: gsql}]})
+
+  // queries should not analyze md files
+  let gsqlFiles = workspaceFiles.filter(file => !file.path.endsWith('.md'))
+  let result = analyzeWorkspace({config, files: [...gsqlFiles, {path: 'input', contents: gsql}]})
   updateParsedFiles(result)
 
   let diagnostics = result.diagnostics

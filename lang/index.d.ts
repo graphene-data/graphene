@@ -25,6 +25,7 @@ export type FieldMeta = {
   timeGrain?: TimeGrain // resolution when the field is a date or timestamp
   timePart?: string // extracted temporal part, normalized across backend spellings
   timeOrdinal?: TimeOrdinal // if the value represents something special like day_of_week, week_of_year, etc
+  defaultName?: string // preferred output column name when an expression is selected without an alias
   [key: string]: string | true | undefined
 }
 
@@ -46,7 +47,7 @@ export interface GrapheneError {
   stack?: string
   cause?: unknown
   severity?: 'error' | 'warn'
-  queryId?: string
+  componentId?: string
   file?: string
   from?: Position
   to?: Position

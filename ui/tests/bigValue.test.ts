@@ -17,11 +17,9 @@ test('big value percent formatting', async ({mount, sharedPage}) => {
     data: percentData(),
     value: 'ratio',
     title: 'Conversion',
-    subtitle: 'This month',
   })
 
   await expect(sharedPage.getByText('Conversion')).toBeVisible()
-  await expect(sharedPage.getByText('This month')).toBeVisible()
   await expect(sharedPage.getByText('31%')).toBeVisible()
   await expect(sharedPage.locator('#component-test')).screenshot('big-value-percent')
 })

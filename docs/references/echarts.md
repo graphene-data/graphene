@@ -159,4 +159,4 @@ Combine a `pictorialBar` series (the stem) with a `scatter` series (the dot) on 
 </ECharts>
 ```
 
-For common chart types, prefer `BarChart`, `LineChart`, `AreaChart`, and `PieChart`. Use `ECharts` when you need deeper customization.
+For common chart types, prefer `BarChart`, `LineChart`, `AreaChart`, `ScatterPlot`, and `PieChart`. Use `ECharts` when you need deeper customization.

@@ -6,7 +6,6 @@ import type {GrapheneError} from '../../lang/index.d.ts'
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs, type ParamSnapshot} from './pageInputs.svelte.ts'
-import {errorProvider} from './telemetry.ts'
 
 type ResultHandler = (res: QueryResult | void) => void
 
@@ -17,7 +16,7 @@ interface QueryNode {
   callback?: ResultHandler
   loading: boolean
   fields: Map<string, string | string[]>
-  queryId?: string
+  componentId?: string
   error?: GrapheneError
 }
 
@@ -37,18 +36,6 @@ let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 let queryFetcher: QueryFetcher = fetchWithCache
 export const setQueryFetcher = f => (queryFetcher = f)
 
-// QueryId is a string we construct to make it easier to figure out which chart in the md is associated with which chart in the ui
-// Right now it's just a combination of the data and any field attributes, but that seems to be good enough.
-function buildQueryId(source: string | undefined, fields: Map<string, string | string[]>) {
-  let fieldIds = Array.from(fields.entries()).flatMap(([name, value]) => {
-    if (Array.isArray(value)) return value.length ? [`${name}="${value.join(', ')}"`] : []
-    if (value == null) return []
-    if (typeof value === 'string' && value.trim().length === 0) return []
-    return [`${name}="${value}"`]
-  })
-  return `data="${source}"${fieldIds.length ? ` ${fieldIds.join(' ')}` : ''}`
-}
-
 // Called by GrapheneQuery tags to register a named query on the page
 function registerQuery(name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
@@ -56,7 +43,7 @@ function registerQuery(name: string, contents: string) {
 }
 
 // Called by viz components to request a particular query of data
-function query(source: string, fields: Record<string, string | string[]>, callback: ResultHandler) {
+function query(source: string, fields: Record<string, string | string[]>, callback: ResultHandler, componentId?: string) {
   // using Map here because it preserves the order in which we add fields to the select, which we use when we get the result.
   let map = new Map(Object.entries(fields))
   let exprs: string[] = []
@@ -69,10 +56,9 @@ function query(source: string, fields: Record<string, string | string[]>, callba
     exprs = ['*']
   }
   let contents = `from ${source} select ${exprs.join(', ')}`
-  let queryId = buildQueryId(source, map)
-  queries.push({contents, callback, loading: false, fields: map, source, queryId})
+  queries.push({contents, callback, loading: false, fields: map, source, componentId})
   runAll()
-  return queryId
+  return componentId
 }
 
 function unsubscribe(callback: ResultHandler) {
@@ -109,7 +95,7 @@ async function runNode(n: QueryNode) {
   } catch (e) {
     let err = typeof e == 'string' ? new Error(e) : (e as Error)
     let grapheneError = err as GrapheneError
-    n.error = {...grapheneError, queryId: n.queryId || grapheneError.queryId, message: err.message, stack: err.stack}
+    n.error = {...grapheneError, componentId: n.componentId || grapheneError.componentId, message: err.message, stack: err.stack}
     n.callback({rows: [], fields: [], error: n.error, sql: ''})
   } finally {
     n.loading = false
@@ -160,45 +146,28 @@ async function _runAll() {
 export function translateData(data: any, node: QueryNode): QueryResult {
   let rows = data.rows || []
   let fields: Field[] = []
-  rows.dataLoaded = true // evidence components need this to be set
-  let requestFields: string[] = []
-  node.fields.forEach(value => {
-    if (Array.isArray(value)) requestFields.push(...value)
-    else requestFields.push(value)
-  })
+
+  let requestFields = Array.from(node.fields.values()).flatMap(f => f)
 
   data.fields.forEach((field, index) => {
-    let name = field.name
     let requested = requestFields[index]
+    let name = requested || field.name
 
-    // server gives names like `col_1` to unnamed expressions but we translate it back into the original expression like `avg(price)`
-    if (field.name.match(/col_\d+/)) {
-      name = requested
+    // The key in row objects usually matches field.name, except in snowflake where it gets auto-capitalized
+    let rowKey = field.name
+    if (rows[0] && !Object.hasOwn(rows[0], field.name)) {
+      rowKey = Object.keys(rows[0]).find(k => k.toLowerCase() == field.name.toLowerCase())
+    }
+
+    // Result fields come back in select order, so we can map them back to the requested field names by index.
+    // Row objects are still keyed by the warehouse result name, which may differ by alias or by Snowflake uppercasing.
+    if (requested && rowKey && rowKey != requested) {
       rows.forEach(r => {
-        r[name] = r[field.name]
-        delete r[field.name]
+        r[requested] = r[rowKey]
+        delete r[rowKey]
       })
     }
 
-    // Snowflake may return unquoted identifiers uppercased in row objects. If the requested
-    // field is a simple identifier and only differs by case, remap row keys back to requested case.
-    let isSimpleIdentifier = typeof requested == 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(requested)
-    if (isSimpleIdentifier && rows.length > 0) {
-      let current = name
-      if (rows[0][current] === undefined) {
-        let matched = Object.keys(rows[0]).find(k => k.toLowerCase() == requested.toLowerCase())
-        if (matched) current = matched
-      }
-      if (current != requested && rows[0][current] !== undefined) {
-        name = requested
-        rows.forEach(r => {
-          r[name] = r[current]
-          delete r[current]
-        })
-      }
-    }
-
-    // Return fields for the new ECharts config but with the name mapped back to what was requested
     fields.push({...field, name})
   })
 
@@ -206,17 +175,6 @@ export function translateData(data: any, node: QueryNode): QueryResult {
 }
 
 const isQueryLoading = () => !!queries.find(q => q.loading)
-
-errorProvider('queryEngine', () => {
-  let unique: Record<string, GrapheneError> = {}
-  queries
-    .map(q => q.error)
-    .filter(e => !!e)
-    .forEach(error => {
-      unique[`${error.queryId}|${error.message}|${error.frame || ''}`] = error
-    })
-  return Object.values(unique)
-})
 
 if (typeof window !== 'undefined') {
   Object.assign(window.$GRAPHENE, {

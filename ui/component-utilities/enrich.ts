@@ -20,8 +20,9 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   ensureTooltip(normalized)
   ensureColors(normalized)
 
-  // Resolve axis types/fields up front so row shaping (like explicit sorting) can use axis metadata.
-  inferAxisTypesFromEncodedFields(normalized, fields)
+  // Resolve axis metadata up front so row shaping (like explicit sorting) can use it.
+  inferAxesFromEncodedFields(normalized, fields, rows)
+  extendValueAxisDomainsForBars(normalized)
 
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
   applyMissingPointDefaults(normalized, rows)
@@ -43,7 +44,6 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, fields)
   timeFormatting(normalized)
-  ordinalFormatting(normalized)
   styleSecondaryAxisForSimpleBarLineLayout(normalized, fields)
   applyIntegerYAxisTicks(normalized, rows, fields)
   barLabelPositioning(normalized)
@@ -265,28 +265,44 @@ function ensureColors(config: NormalConfig) {
   config.color ||= paletteForPath()
 }
 
-// Infer axis types from encoded field metadata.
-function inferAxisTypesFromEncodedFields(config: NormalConfig, fields: Field[]) {
+// Infer axis config from encoded field metadata.
+function inferAxesFromEncodedFields(config: NormalConfig, fields: Field[], rows: Record<string, any>[]) {
   for (let [axisIndex, axis] of config.xAxis.entries()) {
     if (!axis) continue
-    let encoded = config.series
-      .filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
-      .map(entry => getEncodeField(entry, fields, 'x'))
-      .filter((f): f is Field => !!f)
+    let seriesOnAxis = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
+    let field = seriesOnAxis.map(entry => getEncodeField(entry, fields, 'x')).find(Boolean)
+    let inferred = inferAxisFromField(field, rows)
 
-    axis.field ||= encoded[0]
-    axis.type ||= inferAxisTypeFromFields(encoded)
+    config.xAxis[axisIndex] = {...inferred, ...axis, axisLabel: {...inferred.axisLabel, ...axis.axisLabel}, axisPointer: {...inferred.axisPointer, ...axis.axisPointer}}
   }
 
   for (let [axisIndex, axis] of config.yAxis.entries()) {
     if (!axis) continue
-    let encoded = config.series
-      .filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
-      .map(entry => getSeriesValueField(entry, fields))
-      .filter((f): f is Field => !!f)
+    let seriesOnAxis = config.series.filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
+    let field = seriesOnAxis.map(entry => getSeriesValueField(entry, fields)).find(Boolean)
+    let inferred = inferAxisFromField(field, rows)
 
-    axis.field ||= encoded[0]
-    axis.type ||= inferAxisTypeFromFields(encoded)
+    config.yAxis[axisIndex] = {...inferred, ...axis, axisLabel: {...inferred.axisLabel, ...axis.axisLabel}, axisPointer: {...inferred.axisPointer, ...axis.axisPointer}}
+  }
+}
+
+// Value-axis bars are centered on their x/y value, so explicit min/max domains clip edge bars.
+// Expand only already-set value domains to give bars half a bucket of breathing room.
+function extendValueAxisDomainsForBars(config: NormalConfig) {
+  for (let [dimension, axes] of [
+    ['x', config.xAxis],
+    ['y', config.yAxis],
+  ] as const) {
+    for (let [axisIndex, axis] of axes.entries()) {
+      let mutable = axis as Record<string, any>
+      if (mutable?.type !== 'value' || mutable.min == null || mutable.max == null) continue
+
+      let hasBarSeries = config.series.some(series => series?.type === 'bar' && Number(series?.[`${dimension}AxisIndex`] ?? 0) === axisIndex)
+      if (!hasBarSeries) continue
+
+      mutable.min -= 0.5
+      mutable.max += 0.5
+    }
   }
 }
 
@@ -309,41 +325,22 @@ function timeFormatting(config: NormalConfig) {
   }
 }
 
-// Format categorical time ordinals like hour_of_day and day_of_week using field metadata.
-function ordinalFormatting(config: NormalConfig) {
-  let axes = [...config.xAxis, ...config.yAxis]
-  for (let axis of axes) {
-    if (!axis || axis.type !== 'category') continue
-    if (!axis.field?.metadata?.timeOrdinal) continue
-
-    if (axis.axisLabel?.formatter == null) {
-      axis.axisLabel = {...axis.axisLabel, formatter: (input: unknown) => formatTimeOrdinal(axis.field, input)}
-    }
-
-    if (axis.axisPointer?.label?.formatter == null) {
-      axis.axisPointer ||= {}
-      axis.axisPointer.label ||= {}
-      axis.axisPointer.label.formatter = (input: unknown) => formatTimeOrdinal(axis.field, input)
-    }
-  }
-}
-
 // Keep line/area markers readable by default.
 // - Respect explicit `showSymbol` from users.
-// - Category/time axes: show markers for small series (< 30 points).
-// - Value axes: hide markers by default.
+// - Category/time/ordinal axes: show markers for small series (< 30 points).
+// - Other value axes: hide markers by default.
 function lineSeriesMarkerVisibility(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   for (let series of config.series) {
     if (series?.type !== 'line' || series.showSymbol != null) continue
 
     let axisIndex = Number(series.xAxisIndex ?? 0)
-    let axisType = config.xAxis[axisIndex]?.type
-    if (axisType === 'value') {
+    let axis = config.xAxis[axisIndex]
+    if (axis?.type === 'value' && !axis.field?.metadata?.timeOrdinal) {
       series.showSymbol = false
       continue
     }
 
-    if (axisType !== 'category' && axisType !== 'time') {
+    if (axis?.type !== 'category' && axis?.type !== 'time' && axis?.type !== 'value') {
       series.showSymbol = false
       continue
     }
@@ -392,7 +389,7 @@ function applyLegendSelection(config: NormalConfig) {
 // Set default value formatting for value axes and series tooltips.
 // We derive one formatter per field so axis labels and hover values stay consistent.
 function valueFormatting(config: NormalConfig, fields: Field[]) {
-  let valueAxes = [...config.xAxis, ...config.yAxis].filter(axis => axis?.type === 'value')
+  let valueAxes = [...config.xAxis, ...config.yAxis].filter(axis => axis?.type === 'value' && !axis.field?.metadata?.timeOrdinal)
   for (let axis of valueAxes) {
     if (axis.axisLabel?.formatter != null) continue
     axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [])}
@@ -650,17 +647,64 @@ function horizontalBarGuard(config: NormalConfig, fields: Field[]) {
   if (hasInvalidCategoryField) throw new Error('Horizontal charts do not support a value or time-based x-axis')
 }
 
-function inferAxisTypeFromFields(resolved: Field[]) {
-  if (resolved.some(field => field?.metadata?.timeOrdinal)) return 'category'
+// Build axis defaults from field metadata, including temporal domains and formatters.
+function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[]) {
+  if (!field) return {type: 'category'}
+  if (typeof field.type !== 'string') throw new Error(`Field ${field.name} has unsupported non-scalar type: array`)
 
-  let types = resolved.map(field => {
-    if (typeof field.type !== 'string') throw new Error(`Field ${field.name} has unsupported non-scalar type: array`)
-    return field.type
-  })
+  let type: 'time' | 'value' | 'category' = 'category'
+  if (field.type === 'date' || field.type === 'timestamp') type = 'time'
+  if (field.type === 'number') type = 'value'
+  let axis: Record<string, any> = {field, type}
 
-  if (types.some(type => type === 'date' || type === 'timestamp')) return 'time'
-  if (types.some(type => type === 'number')) return 'value'
-  return 'category'
+  if (type === 'value') {
+    let domain = temporalValueDomain(field, rows)
+    if (domain) {
+      axis.min = domain[0]
+      axis.max = domain[1]
+    }
+
+    if (field.metadata?.timeOrdinal) {
+      axis.minInterval = 1
+      if (field.metadata.timeOrdinal === 'dow_0s' || field.metadata.timeOrdinal === 'dow_1s' || field.metadata.timeOrdinal === 'dow_1m' || field.metadata.timeOrdinal === 'quarter_of_year') {
+        axis.splitNumber = Math.max(1, domain ? domain[1] - domain[0] + 1 : 5)
+      }
+      axis.axisLabel = {formatter: (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value))}
+      axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
+      return axis
+    }
+
+    if (field.metadata?.timePart === 'year') {
+      axis.minInterval = 1
+      axis.axisLabel = {formatter: (value: unknown) => (Number.isInteger(Number(value)) ? String(Number(value)) : '')}
+    }
+  }
+
+  if (type === 'category' && field.metadata?.timeOrdinal) {
+    axis.axisLabel = {formatter: (value: unknown) => formatTimeOrdinal(field, value)}
+    axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
+  }
+
+  return axis
+}
+
+// Return the natural numeric domain for temporal values that are encoded as numbers.
+function temporalValueDomain(field: Field, rows: Record<string, any>[]): [number, number] | undefined {
+  let ordinal = field.metadata?.timeOrdinal
+  if (ordinal === 'hour_of_day') return [0, 23]
+  if (ordinal === 'day_of_month') return [1, 31]
+  if (ordinal === 'day_of_year') return [1, 366]
+  if (ordinal === 'week_of_year') return [1, 53]
+  if (ordinal === 'month_of_year') return [1, 12]
+  if (ordinal === 'quarter_of_year') return [1, 4]
+  if (ordinal === 'dow_0s') return [0, 6]
+  if (ordinal === 'dow_1s' || ordinal === 'dow_1m') return [1, 7]
+
+  if (field.metadata?.timePart == 'year') {
+    let values = rows.map(row => Number(row?.[field.name])).filter(value => Number.isFinite(value))
+    if (values.length === 0) return undefined
+    return [Math.min(...values), Math.max(...values)]
+  }
 }
 
 // Series sometimes encode their value field as `y` and sometimes as `value` (pie, funnel, etc).

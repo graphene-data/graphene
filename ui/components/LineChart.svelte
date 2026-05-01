@@ -1,5 +1,7 @@
 <script lang="ts">
+  import {untrack} from 'svelte'
   import ECharts from './ECharts.svelte'
+  import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
   import type {EChartsConfig, QueryResult, SeriesWithGroupingHint} from '../component-utilities/types.ts'
 
@@ -25,7 +27,11 @@
     title = undefined,
     height = undefined,
     width = undefined,
-  }: Props = $props()
+    ...extraProps
+  }: Props & Record<string, unknown> = $props()
+
+  let logger = untrack(() => componentLogger('LineChart', {data: typeof data == 'string' ? data : undefined, x, y}))
+  untrack(() => logExtraProps(logger, 'LineChart', extraProps))
 
   function buildConfig(): EChartsConfig {
     let yFields = parseCommaList(y)
@@ -56,4 +62,4 @@
 
 </script>
 
-<ECharts data={data} config={buildConfig()} {height} {width} />
+<ECharts data={data} config={buildConfig()} {height} {width} componentId={logger.id} />

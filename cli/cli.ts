@@ -6,7 +6,7 @@ import fs from 'fs-extra'
 import path from 'path'
 import {fileURLToPath} from 'url'
 
-import {config, loadConfig} from '../lang/config.ts'
+import {config, loadConfig, setGlobalConfig} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
@@ -26,9 +26,10 @@ const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(
 const libPkg = fs.readJsonSync(pkgPath)
 program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
 
-await loadConfig(process.cwd(), envFiles => {
-  dotenv.config({quiet: true, path: envFiles || '.env'})
+let cfg = await loadConfig(process.cwd(), envFiles => {
+  dotenv.config({quiet: true, path: envFiles})
 })
+setGlobalConfig(cfg)
 
 const telemetry = new CliTelemetry(config, libPkg.version)
 await telemetry.init(process.cwd())
@@ -52,7 +53,7 @@ program
   .command('run')
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
-  .option('-c, --chart <chartTitleOrQueryId>', 'Title or query ID of a specific chart to capture')
+  .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
   .action(
     withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string}) => {
@@ -90,7 +91,7 @@ program
 
 program
   .command('list')
-  .description('List the query IDs for charts on a markdown page')
+  .description('List the component IDs for charts on a markdown page')
   .argument('<file>', 'Markdown file to inspect')
   .action(
     withTelemetry('list', async (exit, fileArg: string) => {

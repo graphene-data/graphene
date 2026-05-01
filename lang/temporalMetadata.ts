@@ -46,12 +46,12 @@ export function inferTemporalGrain(rawPart?: string): TimeGrain | undefined {
 
 export function inferTemporalGrainMetadata(rawPart?: string): FieldMeta | undefined {
   let timeGrain = inferTemporalGrain(rawPart)
-  return timeGrain ? {timeGrain} : undefined
+  return timeGrain ? {timeGrain, defaultName: timeGrain} : undefined
 }
 
 export function inferTemporalPartMetadata(rawPart?: string): FieldMeta | undefined {
   let timePart = inferTemporalPart(rawPart)
-  return timePart ? {timePart} : undefined
+  return timePart ? {timePart, defaultName: timePart} : undefined
 }
 
 export function inferTemporalOrdinal(rawPart: string | undefined, dialect: string): TimeOrdinal | undefined {
@@ -84,7 +84,7 @@ export function inferTemporalExtractionMetadata(rawPart: string | undefined, dia
   let timeOrdinal = inferTemporalOrdinal(rawPart, dialect)
   if (!timePart && !timeOrdinal) return
   return {
-    ...(timePart ? {timePart} : {}),
+    ...(timePart ? {timePart, defaultName: timePart} : {}),
     ...(timeOrdinal ? {timeOrdinal} : {}),
   }
 }

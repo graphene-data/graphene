@@ -1,5 +1,6 @@
 import type {ParsedFileArtifacts, ParsedFileDiagnostic, WorkspaceFileInput} from './types.ts'
 
+import {unsupportedChartProps} from './chartProps.ts'
 import {parser} from './parser.js'
 import {extractSveltishAttributes, type SveltishAttribute} from './sveltish.ts'
 
@@ -25,29 +26,11 @@ const COMPONENT_FIELD_ATTRIBUTE_KEYS: Record<string, ComponentAttributeKey[]> = 
   AreaChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
   PieChart: ['category', 'value'],
   LineChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
+  ScatterPlot: ['x', 'y', 'splitBy'],
 }
 
 const FENCE = /^([ \t]*)(`{3,})([^\n]*)\n([\s\S]*?)^\1\2[ \t]*$/gim
 const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+(?:[^>"']|"[^"]*"|'[^']*')*\/>/g
-
-const CHART_PROPS: Record<string, Set<string>> = {
-  BarChart: new Set(['data', 'x', 'y', 'y2', 'splitBy', 'arrange', 'label', 'sort', 'title', 'height', 'width']),
-  LineChart: new Set(['data', 'x', 'y', 'y2', 'splitBy', 'sort', 'title', 'height', 'width']),
-  AreaChart: new Set(['data', 'x', 'y', 'y2', 'splitBy', 'arrange', 'sort', 'title', 'height', 'width']),
-  PieChart: new Set(['data', 'category', 'value', 'title', 'subtitle', 'height', 'width']),
-}
-
-const OBSOLETE_PROP_MESSAGES: Record<string, string> = {
-  series: 'Use splitBy instead.',
-  chartAreaHeight: 'Use height instead.',
-  swapXY: 'Swap the x and y mappings for horizontal bars instead.',
-  xFmt: 'Use field metadata or ECharts for custom formatting.',
-  yFmt: 'Use field metadata or ECharts for custom formatting.',
-  y2Fmt: 'Use field metadata or ECharts for custom formatting.',
-  subtitle: 'subtitle is only valid on PieChart. Use ECharts for chart subtext.',
-  emptySet: 'emptySet is not supported on chart wrappers.',
-  emptyMessage: 'emptyMessage is not supported on chart wrappers.',
-}
 
 interface FenceMatch {
   start: number
@@ -253,21 +236,11 @@ function normalizeFieldAttribute(key: ComponentAttributeKey, attr: SveltishAttri
 }
 
 function validateChartProps(componentName: string, attrs: Record<string, SveltishAttribute>): ParsedFileDiagnostic[] {
-  let allowed = CHART_PROPS[componentName]
-  if (!allowed) return []
-
-  let diagnostics: ParsedFileDiagnostic[] = []
-  for (let attr of Object.values(attrs)) {
-    if (allowed.has(attr.key)) continue
-    let message = `Unsupported prop "${attr.key}" on ${componentName}. ${unsupportedPropHint(attr)}`
-    diagnostics.push({message, from: attr.keyStart, to: attr.keyEnd})
-  }
-  return diagnostics
-}
-
-function unsupportedPropHint(attr: SveltishAttribute) {
-  if (attr.key == 'type' && attr.value == 'stacked100') return 'Use arrange="stack100" instead.'
-  return OBSOLETE_PROP_MESSAGES[attr.key] || 'Use ECharts for custom chart configuration.'
+  let propValues = Object.fromEntries(Object.values(attrs).map(attr => [attr.key, attr.value]))
+  return unsupportedChartProps(componentName, propValues).map(unsupported => {
+    let attr = attrs[unsupported.prop]
+    return {message: unsupported.message, from: attr.keyStart, to: attr.keyEnd}
+  })
 }
 
 function isInsideFence(offset: number, fences: FenceMatch[]) {

@@ -30,6 +30,27 @@ function timeseriesWithMultipleY() {
   return data
 }
 
+function scatterData() {
+  let rows = [
+    {segment: 'SMB', efficiency: 42, growth: 28, quality: 55},
+    {segment: 'SMB', efficiency: 48, growth: 32, quality: 57},
+    {segment: 'Mid Market', efficiency: 58, growth: 35, quality: 62},
+    {segment: 'Mid Market', efficiency: 61, growth: 39, quality: 65},
+    {segment: 'Enterprise', efficiency: 66, growth: 48, quality: 70},
+    {segment: 'Enterprise', efficiency: 72, growth: 54, quality: 74},
+    {segment: 'Public Sector', efficiency: 51, growth: 31, quality: 58},
+    {segment: 'Healthcare', efficiency: 63, growth: 44, quality: 68},
+    {segment: 'Retail', efficiency: 47, growth: 30, quality: 53},
+  ]
+  let fields = [
+    {name: 'segment', type: scalarType('string')},
+    {name: 'efficiency', type: scalarType('number')},
+    {name: 'growth', type: scalarType('number')},
+    {name: 'quality', type: scalarType('number')},
+  ]
+  return {rows, fields}
+}
+
 test.beforeEach(async ({sharedPage}) => {
   await sharedPage.setViewportSize({width: 680, height: 400})
 })
@@ -43,13 +64,12 @@ test('echarts query error state', async ({mount, chart}) => {
   await expect(chart.el).screenshot('echarts-query-error-state')
 })
 
-test('echarts chart configuration error state', async ({mount, chart}) => {
+test('echarts defaults missing config to empty config', async ({mount, chart}) => {
   await mount('components/ECharts.svelte', {
     config: null as any,
-    data: 'from flights select carrier limit 5',
+    data: singleDim(),
   })
-  await expect(chart.el.getByRole('alert')).toBeVisible()
-  await expect(chart.el).screenshot('echarts-chart-config-error-state')
+  await expect(chart.el).screenshot('echarts-empty-config')
 })
 
 test('echarts expands encode.splitBy', async ({mount, chart}) => {
@@ -132,6 +152,28 @@ test('bar chart grouped + stacked fills missing points and sorts x', async ({mou
   await expect(chart.el).screenshot('bar-chart-stacked-missing-sort')
 })
 
+test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}) => {
+  let rows = [
+    {year: 2022, status: 'Cancelled', flights: 5},
+    {year: 2022, status: 'Delayed', flights: 14},
+    {year: 2022, status: 'On Time', flights: 80},
+    {year: 2021, status: 'Cancelled', flights: 4},
+    {year: 2021, status: 'Delayed', flights: 10},
+    {year: 2021, status: 'On Time', flights: 90},
+    {year: 2024, status: 'Cancelled', flights: 6},
+    {year: 2024, status: 'Delayed', flights: 18},
+    {year: 2024, status: 'On Time', flights: 76},
+  ]
+  let fields = [
+    {name: 'year', type: scalarType('number'), metadata: {timePart: 'year'}},
+    {name: 'status', type: scalarType('string')},
+    {name: 'flights', type: scalarType('number'), metadata: {units: 'count'}},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'year', y: 'flights', splitBy: 'status', arrange: 'stack', title: 'Flight Status by Year'})
+  await expect(chart.el).screenshot('bar-chart-numeric-year-domain')
+})
+
 test('horizontal bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: singleDim(), x: 'value', y: 'category'})
   await expect(chart.el).screenshot('horizontal-bar-chart')
@@ -180,6 +222,16 @@ test('area chart supports secondary y axis line', async ({mount, chart}) => {
   data.fields.push({name: 'profit_usd0k', type: scalarType('number'), metadata: {units: 'usd'}})
   await mount('components/AreaChart.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
   await expect(chart.el).screenshot('area-chart-secondary-axis-line')
+})
+
+test('scatter plot', async ({mount, chart}) => {
+  await mount('components/ScatterPlot.svelte', {data: scatterData(), x: 'efficiency', y: 'growth', title: 'Efficiency vs Growth'})
+  await expect(chart.el).screenshot('scatter-plot')
+})
+
+test('scatter plot supports splitBy', async ({mount, chart}) => {
+  await mount('components/ScatterPlot.svelte', {data: scatterData(), x: 'efficiency', y: 'growth', splitBy: 'segment'})
+  await expect(chart.el).screenshot('scatter-plot-split-by')
 })
 
 test('line chart timeseries', async ({mount, chart}) => {
@@ -273,13 +325,12 @@ test('day_of_week ordinal axis labels and tooltip formatting', async ({mount, ch
     {day_of_week: 1, flights: 35},
     {day_of_week: 2, flights: 12},
     {day_of_week: 3, flights: 21},
-    {day_of_week: 4, flights: 17},
     {day_of_week: 5, flights: 33},
     {day_of_week: 6, flights: 25},
     {day_of_week: 7, flights: 19},
   ]
   let fields = [
-    {name: 'day_of_week', type: scalarType('number'), metadata: {timeOrdinal: 'dow_1s'}},
+    {name: 'day_of_week', type: scalarType('number'), metadata: {timeOrdinal: 'dow_1m'}},
     {name: 'flights', type: scalarType('number'), metadata: {units: 'count'}},
   ]
 

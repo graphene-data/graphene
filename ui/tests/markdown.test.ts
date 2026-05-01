@@ -83,6 +83,31 @@ test('parses inline echarts config body in markdown', async ({server, page}) => 
   await expect(page).screenshot('echarts-inline-config-markdown')
 })
 
+test('decodes html entities in inline echarts config strings', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Inline ECharts Config
+
+    \`\`\`gsql delays
+    select carrier, avg(dep_delay) as delay from flights
+    \`\`\`
+
+    <ECharts data="delays">
+      title: {text: "This & That"},
+      xAxis: {type: "category"},
+      yAxis: {type: "value"},
+      series: [{type: "bar", encode: {x: "carrier", y: "delay"}}],
+    </ECharts>
+  `,
+  )
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page.locator('.echarts')).toHaveAttribute('data-chart-title', 'This & That')
+  await expect(page.locator('.echarts')).not.toHaveAttribute('data-chart-title', 'This &amp; That')
+})
+
 test('charts resize when shrunk', async ({server, page}) => {
   server.mockFile(
     '/index.md',
@@ -144,7 +169,7 @@ test('renders gsql query errors clearly with file context', async ({server, page
   await expect(page.getByText('Unknown function: not_a_function')).toBeVisible()
   let details = page.locator('.g-error__details').first()
   await expect(details).not.toContainText('input')
-  await expect(details).toContainText('Query (data="broken_query" x="origin" y="boom")')
+  await expect(details).toContainText('BarChart (data="broken_query" x="origin" y="boom")')
   await expect(details).toContainText('^')
   await expect(details).not.toContainText('"message"')
   await expect(page).screenshot('reports-analysis-query-errors')

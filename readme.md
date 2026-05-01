@@ -1,15 +1,16 @@
 <div align="center">
+  <br/>
   <a href="https://graphenedata.com">
-      <img width="150" height="150" alt="Graphene Logo" src="/logo.png" />
+      <img height="125" alt="Graphene Logo" src="./assets/logo.png" />
   </a>
+  <br/>
+  <br/>
 </div>
 
 <p align="center">
-  <br/>
   <b>Graphene</b> is a data analytics framework built for agents.
   <br/>
   Ask questions and build visualizations 10x faster when agents do the work.
-  <br/>
 </p>
 
 <div align="center">
@@ -46,7 +47,7 @@ Importantly, Graphene is **open**. You can use this project for internal purpose
 
 Graphene pages support visualizations, input components for filtering and dynamic behaviors, and layout modes for monitoring-oriented dashboards vs. narrative-oriented notebooks.
 
-<img alt="Graphene Screenshots" src="/page_examples.png"/>
+<img alt="Graphene Screenshots" src="./assets/page_examples.png"/>
 
 ### Powerful workflows
 
