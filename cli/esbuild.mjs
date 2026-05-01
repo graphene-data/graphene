@@ -67,6 +67,7 @@ await rm(path.resolve(__dirname, 'dist/ui/package.json'))
 await rm(path.resolve(__dirname, 'dist/ui/tests'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/cli/cli.js.map'))
 await stageNpmPackage({repoRoot: path.resolve(__dirname, '..'), cliRoot: __dirname})
+await cp(path.resolve(__dirname, '../readme.md'), path.resolve(__dirname, 'dist/npm/README.md'))
 
 async function transpileSvelteModules(root) {
   let files = await collectFiles(root)
