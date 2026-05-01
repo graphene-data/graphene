@@ -1495,11 +1495,11 @@ class AnalysisSession implements Analyzer {
     })
   }
 
-  private recordParsedDiagnostics(fi: FileInfo, diagnostics: {message: string; from: number; to: number}[]) {
+  private recordParsedDiagnostics(fi: FileInfo, diagnostics: {message: string; from: number; to: number; severity?: 'error' | 'warn'}[]) {
     for (let diagnostic of diagnostics) {
       let from = this.sourcePosition(diagnostic.from, fi)
       let to = this.sourcePosition(diagnostic.to, fi)
-      this.diagnostics.push({severity: 'error', message: diagnostic.message, file: toRelativePath(fi.path), from, to, frame: buildFrame(from, to)})
+      this.diagnostics.push({severity: diagnostic.severity || 'error', message: diagnostic.message, file: toRelativePath(fi.path), from, to, frame: buildFrame(from, to)})
     }
   }
 

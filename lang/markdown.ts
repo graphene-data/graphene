@@ -238,7 +238,7 @@ function validateChartProps(componentName: string, attrs: Record<string, Sveltis
   let propValues = Object.fromEntries(Object.values(attrs).map(attr => [attr.key, attr.value]))
   return unsupportedChartProps(componentName, propValues).map(unsupported => {
     let attr = attrs[unsupported.prop]
-    return {message: unsupported.message, from: attr.keyStart, to: attr.keyEnd}
+    return {severity: 'warn', message: unsupported.message, from: attr.keyStart, to: attr.keyEnd}
   })
 }
 

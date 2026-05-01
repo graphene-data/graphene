@@ -159,9 +159,10 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   updateParsedFiles(result)
 
   let diagnostics = result.diagnostics
-  if (diagnostics.length) {
+  let errors = diagnostics.filter(diag => diag.severity !== 'warn')
+  if (errors.length) {
     res.statusCode = 400
-    res.end(JSON.stringify(diagnostics[0]))
+    res.end(JSON.stringify(errors[0]))
     return
   }
 

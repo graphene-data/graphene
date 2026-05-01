@@ -23,12 +23,16 @@ export function logError(error: unknown, ctx?: Partial<GrapheneError>) {
   staticErrors.push({message: err.message, stack: err.stack, ...ctx})
 }
 
+export function logWarning(message: string, ctx?: Partial<GrapheneError>) {
+  staticErrors.push({severity: 'warn', message, ...ctx})
+}
+
 // Shared helper for logging when a svelte component is given props it did not expect.
 export function logExtraProps(componentName: string, data: unknown, props: Record<string, unknown>) {
   let queryId = typeof data == 'string' ? `${componentName} (data="${data}")` : componentName
   let internalProps = new Set(['children', '$$slots', '$$events', '$$legacy'])
   for (let prop of Object.keys(props)) {
-    if (!internalProps.has(prop)) logError(`Unsupported prop "${prop}" on ${componentName}.`, {queryId})
+    if (!internalProps.has(prop)) logWarning(`Unsupported prop "${prop}" on ${componentName}.`, {queryId})
   }
 }
 

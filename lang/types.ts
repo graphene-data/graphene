@@ -45,6 +45,7 @@ export interface ParsedFileDiagnostic {
   message: string
   from: number
   to: number
+  severity?: 'error' | 'warn'
 }
 
 export type {FieldType, FieldMeta, GrapheneError, Position, ScalarField, ArrayField, TimeGrain, TimeOrdinal}

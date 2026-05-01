@@ -44,11 +44,13 @@ export async function check(options: CheckOptions): Promise<boolean> {
   }
 
   let result = analyzeWorkspace({config, files})
-  if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics, log)
+  let errors = result.diagnostics.filter(diag => diag.severity !== 'warn')
+  if (errors.length) {
+    printDiagnostics(errors, log)
     return false
   }
 
+  if (result.diagnostics.length > 0) printDiagnostics(result.diagnostics, log)
   log('No errors found 💎')
   return true
 }

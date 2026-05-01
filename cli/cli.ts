@@ -241,10 +241,12 @@ function getExistingPath(arg: string | undefined): string | null {
 }
 
 function validateInputQuery(analysis: AnalysisResult, exit: (code?: number) => never): Query[] {
-  if (analysis.diagnostics.length) {
-    printDiagnostics(analysis.diagnostics)
+  let errors = analysis.diagnostics.filter(diag => diag.severity !== 'warn')
+  if (errors.length) {
+    printDiagnostics(errors)
     return exit(1)
   }
+  if (analysis.diagnostics.length) printDiagnostics(analysis.diagnostics)
 
   let queries = getFile(analysis, 'input')?.queries || []
   if (queries.length == 0) {

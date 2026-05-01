@@ -49,30 +49,33 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdFile).concat({path: mdFile, contents: mdContents, kind: 'md'})}, mdFile)
-  if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics, log)
+  let analysisErrors = result.diagnostics.filter(diag => diag.severity !== 'warn')
+  if (analysisErrors.length) {
+    printDiagnostics(analysisErrors, log)
     return false
   }
+  if (result.diagnostics.length > 0) printDiagnostics(result.diagnostics, log)
 
   let resp = await sendSocketRequest({mdFile, action: 'check', chart: options.chart, log})
   if (!resp) return false
 
-  let errors = Array.from(resp.errors || []) as GrapheneError[]
+  let reports = Array.from(resp.errors || []) as GrapheneError[]
+  let errors = reports.filter(e => e.severity !== 'warn')
+  let warnings = reports.filter(e => e.severity === 'warn')
   let chartNotFound = !!options.chart && !resp.screenshot
   if (chartNotFound) log(`Could not find chart "${options.chart}" on ${mdFile}`)
 
   if (errors.length) {
     log(styleText('red', 'Runtime errors') + ` in ${mdFile}:`)
-  } else if (!chartNotFound) {
-    log('No errors found 💎')
+    errors.forEach((e: GrapheneError) => printRuntimeReport(e, log))
   }
 
-  errors.forEach((e: GrapheneError) => {
-    if (e.file || e.frame) printDiagnostics([e], log)
-    else if (isComponentPropError(e)) log(`${e.queryId}: ${e.message}`)
-    else if (e.queryId) log(`Query (${e.queryId}): ${e.message}`)
-    else log(e.message)
-  })
+  if (warnings.length) {
+    log(styleText('yellow', 'Runtime warnings') + ` in ${mdFile}:`)
+    warnings.forEach((e: GrapheneError) => printRuntimeReport(e, log))
+  } else if (!errors.length && !chartNotFound) {
+    log('No errors found 💎')
+  }
 
   if (resp?.stillLoading) {
     log('Warning: Queries were still loading when the screenshot was taken')
@@ -87,6 +90,13 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   return errors.length == 0 && !chartNotFound
+}
+
+function printRuntimeReport(e: GrapheneError, log: (...args: any[]) => void) {
+  if (e.file || e.frame) printDiagnostics([e], log)
+  else if (isComponentPropError(e)) log(`${e.queryId}: ${e.message}`)
+  else if (e.queryId) log(`Query (${e.queryId}): ${e.message}`)
+  else log(e.message)
 }
 
 function isComponentPropError(e: GrapheneError) {
@@ -105,8 +115,9 @@ export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry,
   let mdContents = process.env.NODE_ENV == 'test' && mockFileMap[mdFile] ? mockFileMap[mdFile] : readFileSync(path.resolve(config.root, mdFile), 'utf-8')
 
   let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdFile).concat({path: mdFile, contents: mdContents, kind: 'md'})}, mdFile)
-  if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics, log)
+  let errors = result.diagnostics.filter(diag => diag.severity !== 'warn')
+  if (errors.length) {
+    printDiagnostics(errors, log)
     return false
   }
 
@@ -126,16 +137,18 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
 
   let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdRelativePath).concat({path: mdRelativePath, contents: mdContents, kind: 'md'})}, mdRelativePath)
-  if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics)
+  let errors = result.diagnostics.filter(diag => diag.severity !== 'warn')
+  if (errors.length) {
+    printDiagnostics(errors)
     return false
   }
 
   let runQueryFence = [mdContents, '', '```sql', `from ${queryName} select *`, '```'].join('\n')
   let queryFiles = toWorkspaceFiles(result)
   let queryResult = analyzeWorkspace({config, files: queryFiles.filter(file => file.path != 'input.md').concat({path: 'input.md', contents: runQueryFence, kind: 'md'})}, 'input.md')
-  if (queryResult.diagnostics.length > 0) {
-    printDiagnostics(queryResult.diagnostics)
+  let queryErrors = queryResult.diagnostics.filter(diag => diag.severity !== 'warn')
+  if (queryErrors.length) {
+    printDiagnostics(queryErrors)
     return false
   }
 
