@@ -1695,6 +1695,11 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
+  it('allows ScatterPlot in markdown', () => {
+    analyze('<ScatterPlot data=users x=age y=total_orders splitBy=name />', 'md')
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+  })
+
   it('allows LineChart y2 in markdown', () => {
     analyze('<LineChart data=users x=name y=age y2=total_orders />', 'md')
     expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
