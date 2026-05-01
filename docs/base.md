@@ -94,7 +94,7 @@ You can add YAML frontmatter at the top of a page. The following attributes are 
 - BigValue: title, data, value
 - Table: title, data, rows, sortable, sort, groupBy, groupType, subtotals, totalRow, link, showLinkCol, rowShading, rowLines, rowNumbers, compact, headerColor, headerFontColor, totalRowColor, totalFontColor, backgroundColor, emptyMessage
   - Column (sub-component of Table): id (column name), title, description, align, wrap, wrapTitle, colGroup, contentType, totalAgg, redNegatives
-- Value (for inlining dynamic numbers within markdown text): data, column, row.
+- Value: data, column, row
 - Row (layout container, distributes children horizontally): No attributes
 
 Notes on common attributes:
@@ -104,7 +104,7 @@ Notes on common attributes:
 - `y` can take a comma-separated list of columns/expressions, to map multiple fields to the same y-axis as separate series (wide format data).
 - `height` and `width` accept any CSS size units eg. `240px` or `50%`.
 
-### ECharts
+### `<ECharts>`
 To create visualizations or customizations beyond Graphene's out-of-the-box components, specify an ECharts config via `<ECharts>`.
 
 This example creates a stacked bar chart with a purple x-axis.
@@ -124,6 +124,14 @@ Graphene will handle axes, layout, and styles for you, so you can omit those con
 Unsupported:
 - `{@colName}` formatter templates (but `{a}`, `{b}`, `{c}` work)
 - Javascript of any kind
+
+### `<Value>`
+`<Value>` is used for inlining SQL-derived values within markdown text. You can place them anywhere in markdown, including headers, and they can be styled with `**` or `_`.
+
+```md
+### Top 3 Most Active Airplane Models
+1. **<Value data=top_airplane_models column=manufacturer_model row=0 />** ...
+```
 
 ## Input components
 - Dropdown: title, name, data, value (column to populate list with), label, defaultValue, multiple

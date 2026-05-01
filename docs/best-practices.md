@@ -5,8 +5,3 @@
 - Leverage models - Use modeled joins, dimensions, and measures rather than raw SQL
 - Don't format in SQL - Rely on `fmt` instead. Do not multiply percentages by 100.
 - Use the `<Value/>` component to avoid hard-coding data in prose. It renders inline and can be styled like prose, e.g.
-
-```md
-### Top 3 Most Active Airplane Models
-1. **<Value data=top_airplane_models column=manufacturer_model row=0 />** ...
-```
