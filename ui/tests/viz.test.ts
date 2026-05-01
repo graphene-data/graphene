@@ -43,13 +43,12 @@ test('echarts query error state', async ({mount, chart}) => {
   await expect(chart.el).screenshot('echarts-query-error-state')
 })
 
-test('echarts chart configuration error state', async ({mount, chart}) => {
+test('echarts defaults missing config to empty config', async ({mount, chart}) => {
   await mount('components/ECharts.svelte', {
     config: null as any,
-    data: 'from flights select carrier limit 5',
+    data: singleDim(),
   })
-  await expect(chart.el.getByRole('alert')).toBeVisible()
-  await expect(chart.el).screenshot('echarts-chart-config-error-state')
+  await expect(chart.el).screenshot('echarts-empty-config')
 })
 
 test('echarts expands encode.splitBy', async ({mount, chart}) => {

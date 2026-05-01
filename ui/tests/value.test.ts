@@ -43,7 +43,7 @@ describe('<Value/>', () => {
   }
 
   function errorData() {
-    let error = {message: 'Could not resolve column "value"', queryId: 'broken_value'} as any
+    let error = {message: 'Could not resolve column "value"', componentId: 'broken_value'} as any
     return {rows: [], fields: [], error}
   }
 })

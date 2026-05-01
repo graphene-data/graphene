@@ -285,7 +285,6 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
     tableProps: {
       rows: 'all',
       title: 'Carrier delay profile',
-      subtitle: 'Grouped headers, wrapped titles, and compact rows',
       rowShading: true,
       rowLines: false,
       wrapTitles: true,

@@ -15,7 +15,6 @@ Here's an example:
 | data | GSQL query or table name | true | query name | - |
 | rows | Number of rows to show in the table before paginating results. Use `"rows=all"` to show all rows in the table. | false | number, `all` | `10` |
 | title | Title for the table | false | string | - |
-| subtitle | Subtitle - appears under the title | false | string | - |
 | headerColor | Background color of the header row | false | Hex color code, css color name | - |
 | headerFontColor | Font color of the header row | false | Hex color code, css color name | - |
 | totalRow | Show a total row at the bottom of the table, defaults to sum of all numeric columns | false | `true`, `false` | `false` |

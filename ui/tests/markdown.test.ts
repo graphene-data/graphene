@@ -169,7 +169,7 @@ test('renders gsql query errors clearly with file context', async ({server, page
   await expect(page.getByText('Unknown function: not_a_function')).toBeVisible()
   let details = page.locator('.g-error__details').first()
   await expect(details).not.toContainText('input')
-  await expect(details).toContainText('Query (data="broken_query" x="origin" y="boom")')
+  await expect(details).toContainText('BarChart (data="broken_query" x="origin" y="boom")')
   await expect(details).toContainText('^')
   await expect(details).not.toContainText('"message"')
   await expect(page).screenshot('reports-analysis-query-errors')
