@@ -728,14 +728,13 @@ function getSeriesValueFields(series: SeriesWithGroupingHint, fields: Field[]) {
   }
 }
 
-// The props on series.encode can either be a string, an array, or a comma-delimited string.
+// The props on series.encode can either be a string, or an array.
 // In all cases, this returns the corresponding fields for each item.
 function getEncodeFields(series: SeriesWithGroupingHint | undefined, fields: Field[], encodeProp: string): Field[] {
   let raw = series?.encode?.[encodeProp]
-
   let names: string[] = []
   if (Array.isArray(raw)) names = raw.filter((v): v is string => typeof v === 'string')
-  if (typeof raw === 'string') names = raw.split(',')
+  if (typeof raw === 'string') names = [raw]
 
   return names.map(name => fields.find(f => f.name === name)).filter((f): f is Field => !!f)
 }
