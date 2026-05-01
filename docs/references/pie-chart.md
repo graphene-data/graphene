@@ -21,7 +21,6 @@ Here's an example:
 | category | Category field shown in legend/labels | true | column/expression name | - |
 | value | Numeric field used for slice size | true | column/expression name | - |
 | title | Chart title | false | string | - |
-| subtitle | Chart subtitle | false | string | - |
 | height | Chart height in px or CSS size string | false | number, string | `240px` |
 | width | Chart width in px or CSS size string | false | number, string | `100%` |
 

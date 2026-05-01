@@ -9,7 +9,6 @@
     category: string
     value: string
     title?: string
-    subtitle?: string
     height?: string | number
     width?: string | number
   }
@@ -19,7 +18,6 @@
     category,
     value,
     title = undefined,
-    subtitle = undefined,
     height = undefined,
     width = undefined,
     ...extraProps
@@ -29,7 +27,7 @@
 
   function buildConfig(): EChartsConfig {
     return {
-      title: title ? {text: title, subtext: subtitle} : undefined,
+      title: title ? {text: title} : undefined,
       series: [{type: 'pie', encode: {itemName: category, value}}],
     }
   }
