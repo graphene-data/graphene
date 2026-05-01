@@ -123,10 +123,10 @@ table orders (
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
 
   /* Agg expressions */
-  revenue: sum(case when revenue_recognized then amount else 0 end)
-  cogs: sum(case when revenue_recognized then cost else 0 end)
-  profit: revenue - cogs -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
-  profit_margin: profit / revenue
+  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
+  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
+  profit: revenue - cogs #units=usd -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
+  profit_margin: profit / revenue #ratio
 )
 ```
 
@@ -241,16 +241,16 @@ table orders (
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT -- Amount paid by customer
-  cost FLOAT -- Cost of materials
+  amount FLOAT -- Amount paid by customer #units=usd
+  cost FLOAT -- Cost of materials #units=usd
 
   join one users on user_id = users.id
 
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
-  revenue: sum(case when revenue_recognized then amount else 0 end)
-  cogs: sum(case when revenue_recognized then cost else 0 end)
-  profit: revenue - cogs
-  profit_margin: profit / revenue
+  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
+  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
+  profit: revenue - cogs #units=usd
+  profit_margin: profit / revenue #ratio
 )
 ```
 
@@ -330,16 +330,16 @@ table orders (
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT -- Amount paid by customer
-  cost FLOAT -- Cost of materials
+  amount FLOAT -- Amount paid by customer #units=usd
+  cost FLOAT -- Cost of materials #units=usd
 
   join one users on user_id = users.id
 
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
-  revenue: sum(case when revenue_recognized then amount else 0 end)
-  cogs: sum(case when revenue_recognized then cost else 0 end)
-  profit: revenue - cogs
-  profit_margin: profit / revenue
+  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
+  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
+  profit: revenue - cogs #units=usd
+  profit_margin: profit / revenue #ratio
 )
 
 table users (
@@ -351,7 +351,7 @@ table users (
   join many orders on id = orders.user_id
   join one user_facts on id = user_facts.id
 
-  ltv: user_facts.ltv
+  ltv: user_facts.ltv #units=usd
   lifetime_orders: user_facts.lifetime_orders
 )
 
@@ -388,6 +388,6 @@ We can extend this table to add measures or joins:
 extend regional_orders (
   join one regions on region = regions.name
 
-  avg_order_value: total_revenue / num_orders
+  avg_order_value: total_revenue / num_orders #units=usd
 )
 ```
