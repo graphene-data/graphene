@@ -9,6 +9,7 @@ export const CHART_COMPONENT_PROPS: Record<string, readonly string[]> = {
   LineChart: ['data', 'x', 'y', 'y2', 'splitBy', 'sort', 'title', 'height', 'width'],
   AreaChart: ['data', 'x', 'y', 'y2', 'splitBy', 'arrange', 'sort', 'title', 'height', 'width'],
   PieChart: ['data', 'category', 'value', 'title', 'height', 'width'],
+  ScatterPlot: ['data', 'x', 'y', 'splitBy', 'title', 'height', 'width'],
   ECharts: ['data', 'config', 'height', 'width', 'renderer'],
 }
 

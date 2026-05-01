@@ -75,6 +75,7 @@ Attributes like `x`, `y`, `y2`, and `splitBy` are the names of columns within th
 `title` - shown above the viz
 - BarChart: Fields [x,y,y2,splitBy,arrange]. `arrange` can be `stack`, `group`, or `stack100` (default `stack`). `label` shows labels above bars.
 - LineChart: Fields [x,y,y2,splitBy]
+- ScatterPlot: Fields [x,y,splitBy]
 - AreaChart: Fields [x,y,y2,splitBy,arrange]. `arrange` can be `stack` or `stack100` (default `stack`).
 - PieChart: Fields: [category,value]
 

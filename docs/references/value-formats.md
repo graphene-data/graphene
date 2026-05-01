@@ -15,7 +15,7 @@ For example, you can use the `fmt` attribute to format values inside a BigValue 
 
 For charts, use the `ECharts` component for custom formatting logic (axis labels, tooltips, and series labels) via ECharts formatters in `config`.
 
-For convenience charts (`BarChart`, `LineChart`, `AreaChart`, `PieChart`), Graphene applies sensible defaults and uses field metadata (for example, currency units) when formatting inferred value axes.
+For convenience charts (`BarChart`, `LineChart`, `AreaChart`, `ScatterPlot`, `PieChart`), Graphene applies sensible defaults and uses field metadata (for example, currency units) when formatting inferred value axes.
 
 # Built-in Formats
 

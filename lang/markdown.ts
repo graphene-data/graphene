@@ -26,6 +26,7 @@ const COMPONENT_FIELD_ATTRIBUTE_KEYS: Record<string, ComponentAttributeKey[]> = 
   AreaChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
   PieChart: ['category', 'value'],
   LineChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
+  ScatterPlot: ['x', 'y', 'splitBy'],
 }
 
 const FENCE = /^([ \t]*)(`{3,})([^\n]*)\n([\s\S]*?)^\1\2[ \t]*$/gim
