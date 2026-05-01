@@ -36,6 +36,26 @@ function getOutput(res: RunResult) {
   return lines.join('\n').trim()
 }
 
+function expectServeOutput(packageManager: PackageManagerTest, result: RunResult, projectDir: string, port: number) {
+  let output = getOutput(result).replace(/^\d{1,2}:\d{2}:\d{2} [AP]M /gm, '')
+  let expected = {
+    npm: `> demo-app@0.0.1 graphene
+> graphene serve
+
+[vite] (client) Forced re-optimization of dependencies
+Server running at http://localhost:${port}`,
+    pnpm: `> demo-app@0.0.1 graphene ${projectDir}
+> graphene -- serve
+
+[vite] (client) Forced re-optimization of dependencies
+Server running at http://localhost:${port}
+ ELIFECYCLE  Command failed with exit code 143.`,
+    yarn: `[vite] (client) Forced re-optimization of dependencies
+Server running at http://localhost:${port}`,
+  }
+  expect(output).toBe(expected[packageManager.name])
+}
+
 interface PackageManagerTest {
   name: 'npm' | 'pnpm' | 'yarn'
   create: (tarball: string) => [string, string[]]
@@ -79,6 +99,8 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
   let port = await getAvailablePort()
   let childEnv = {...process.env, GRAPHENE_PORT: String(port)} as any
   delete childEnv.NODE_ENV
+
+  let serveResult: Promise<RunResult> | undefined
 
   try {
     await page.setViewportSize({width: 1800, height: 1200})
@@ -136,7 +158,7 @@ limit 10
     // `serve` wont return until we kill the server.
     // We could run this in the background with `--bg`, but then have to worry about zombie servers if the test fails
     let [serveCommand, serveArgs] = packageManager.graphene(['serve'])
-    void run(serveCommand, serveArgs, projectDir, childEnv)
+    serveResult = run(serveCommand, serveArgs, projectDir, childEnv)
 
     // we need to wait until the server has started up, but it's hard to know exactly when that is, unless we were to watch the output
     await page.waitForTimeout(3000)
@@ -156,7 +178,6 @@ limit 10
     let checkResult = await run(checkCommand, checkArgs, projectDir, childEnv)
     expectSuccess('graphene check', checkResult)
     expect(getOutput(checkResult)).toContain('No errors found 💎')
-    console.log('checked')
 
     let [runCommand, runArgs] = packageManager.graphene(['run', 'chart.md'])
     let runResult = await run(runCommand, runArgs, projectDir, childEnv)
@@ -164,6 +185,10 @@ limit 10
     let runOutput = getOutput(runResult).replace(/graphene-screenshot-.*\.png/, 'graphene-screenshot.png')
     expect(runOutput).toContain('No errors found 💎')
     expect(runOutput).toContain('Screenshot saved to /tmp/graphene-screenshot.png')
+
+    let [stopCommand, stopArgs] = packageManager.graphene(['stop'])
+    await run(stopCommand, stopArgs, projectDir, childEnv)
+    if (serveResult) expectServeOutput(packageManager, await serveResult, projectDir, port)
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
     let [stopCommand, stopArgs] = packageManager.graphene(['stop'])
