@@ -83,6 +83,31 @@ test('parses inline echarts config body in markdown', async ({server, page}) => 
   await expect(page).screenshot('echarts-inline-config-markdown')
 })
 
+test('decodes html entities in inline echarts config strings', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Inline ECharts Config
+
+    \`\`\`gsql delays
+    select carrier, avg(dep_delay) as delay from flights
+    \`\`\`
+
+    <ECharts data="delays">
+      title: {text: "This & That"},
+      xAxis: {type: "category"},
+      yAxis: {type: "value"},
+      series: [{type: "bar", encode: {x: "carrier", y: "delay"}}],
+    </ECharts>
+  `,
+  )
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page.locator('.echarts')).toHaveAttribute('data-chart-title', 'This & That')
+  await expect(page.locator('.echarts')).not.toHaveAttribute('data-chart-title', 'This &amp; That')
+})
+
 test('charts resize when shrunk', async ({server, page}) => {
   server.mockFile(
     '/index.md',
