@@ -124,6 +124,23 @@ test('bar chart supports multiple y fields', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-multiple-y')
 })
 
+test('bar chart supports expression fields with commas', async ({mount, chart}) => {
+  let data = {
+    rows: [
+      {"date_trunc('month', dep_time)": '2024-01-01', 'count()': 10},
+      {"date_trunc('month', dep_time)": '2024-02-01', 'count()': 14},
+      {"date_trunc('month', dep_time)": '2024-03-01', 'count()': 8},
+    ],
+    fields: [
+      {name: "date_trunc('month', dep_time)", type: scalarType('date'), metadata: {timeGrain: 'month'}},
+      {name: 'count()', type: scalarType('number'), metadata: {units: 'count'}},
+    ],
+  }
+
+  await mount('components/BarChart.svelte', {data, x: "date_trunc('month', dep_time)", y: 'count()', title: 'Monthly Flights'})
+  await expect(chart.el).screenshot('bar-chart-expression-fields-with-commas')
+})
+
 test('bar chart formats very small values on y axis', async ({mount, chart}) => {
   let data = singleDim()
   data.rows = data.rows.map(row => ({...row, value: row.value / 1e12}))
