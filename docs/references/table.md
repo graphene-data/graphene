@@ -34,6 +34,15 @@ Here's an example:
 | showLinkCol | Whether to show the column supplied to the `link` attribute | false | `true`, `false` | `false` |
 | emptyMessage | Text to display when the table has no rows or fails to render | false | string | `"Unable to render table"` |
 
+### Semantic colors
+
+Any color attribute on `<Table>` or `<Column>` (e.g. `headerColor`, `barColor`, `colorScale`) accepts the semantic names `primary`, `positive`, `negative`, and `warning` in addition to hex codes and CSS color names. They resolve to the current theme's colors so they stay consistent if the theme changes.
+
+```markdown
+<Column id=growth contentType=colorscale colorScale=positive />
+<Column id=churn contentType=colorscale colorScale=negative />
+```
+
 ## Groups
 
 | Attribute | Description | Required | Options | Default |
