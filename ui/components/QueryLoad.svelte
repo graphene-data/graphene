@@ -1,8 +1,9 @@
 <script lang="ts">
-  import {onDestroy, onMount, type Snippet} from 'svelte'
+  import {onDestroy, onMount, untrack, type Snippet} from 'svelte'
   import type {GrapheneError} from '../../lang/index.d.ts'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import type {QueryResult} from '../component-utilities/types.ts'
+  import {componentLogger} from '../internal/telemetry.ts'
   import Skeleton from './Skeleton.svelte'
 
   interface Props {
@@ -10,10 +11,12 @@
     height?: number
     fields?: Record<string, string | string[]>
     inline?: boolean
+    componentId?: string
     children?: Snippet<[QueryResult]>
   }
 
-  let {data, height = 200, fields = {}, inline = false, children}: Props = $props()
+  let {data, height = 200, fields = {}, inline = false, componentId = undefined, children}: Props = $props()
+  let logger = untrack(() => componentLogger(componentId || 'QueryLoad', componentId ? {} : {data: typeof data == 'string' ? data : undefined, ...fields}))
 
   let error: GrapheneError | null = $state(null)
   let loaded: QueryResult | null = $state(null)
@@ -22,6 +25,7 @@
   let handleResults = (result: QueryResult) => {
     error = result?.error || null
     loaded = {rows: result?.rows ?? [], fields: result?.fields ?? [], error: result?.error, sql: result?.sql}
+    if (result?.error) logger.error(result.error, {...result.error, componentId: logger.id})
   }
 
   onMount(() => {
@@ -30,7 +34,7 @@
       loaded = {rows: data.rows ?? [], fields: data.fields ?? [], error: data.error, sql: data.sql}
     } else {
       let usedFields = Object.fromEntries(Object.entries(fields).filter(e => !!e[1]))
-      window.$GRAPHENE.query(data, usedFields, handleResults)
+      window.$GRAPHENE.query(data, usedFields, handleResults, logger.id)
     }
   })
 

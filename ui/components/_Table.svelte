@@ -12,7 +12,7 @@
   import Column from './Column.svelte'
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/inputUtils'
-  import {logError} from '../internal/telemetry.js'
+  import {componentLogger} from '../internal/telemetry.js'
   import type {QueryResult} from '../component-utilities/types.ts'
 
   interface Props {
@@ -82,6 +82,7 @@
   let headerFontColorStore = $derived(resolveColor(headerFontColor))
   let backgroundColorStore = $derived(resolveColor(backgroundColor))
 
+  let logger = untrack(() => componentLogger('DataTable'))
   let priorityColumns = $derived<(string | undefined)[]>([groupBy])
 
   $effect(() => {
@@ -162,9 +163,9 @@
       resultNormalizedData = inputRows
     } catch(thrown) {
       let message = thrown instanceof Error ? thrown.message : 'Unable to prepare dataset'
-      logError(thrown, {queryId: 'DataTable'})
       resultError = message
     }
+    logger.error(resultError)
 
     return {
       error: resultError,

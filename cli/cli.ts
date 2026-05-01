@@ -53,7 +53,7 @@ program
   .command('run')
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
-  .option('-c, --chart <chartTitleOrQueryId>', 'Title or query ID of a specific chart to capture')
+  .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
   .action(
     withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string}) => {
@@ -91,7 +91,7 @@ program
 
 program
   .command('list')
-  .description('List the query IDs for charts on a markdown page')
+  .description('List the component IDs for charts on a markdown page')
   .argument('<file>', 'Markdown file to inspect')
   .action(
     withTelemetry('list', async (exit, fileArg: string) => {
