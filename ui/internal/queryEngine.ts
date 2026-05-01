@@ -146,45 +146,28 @@ async function _runAll() {
 export function translateData(data: any, node: QueryNode): QueryResult {
   let rows = data.rows || []
   let fields: Field[] = []
-  rows.dataLoaded = true // evidence components need this to be set
-  let requestFields: string[] = []
-  node.fields.forEach(value => {
-    if (Array.isArray(value)) requestFields.push(...value)
-    else requestFields.push(value)
-  })
+
+  let requestFields = Array.from(node.fields.values()).flatMap(f => f)
 
   data.fields.forEach((field, index) => {
-    let name = field.name
     let requested = requestFields[index]
+    let name = requested || field.name
 
-    // server gives names like `col_1` to unnamed expressions but we translate it back into the original expression like `avg(price)`
-    if (field.name.match(/col_\d+/)) {
-      name = requested
+    // The key in row objects usually matches field.name, except in snowflake where it gets auto-capitalized
+    let rowKey = field.name
+    if (rows[0] && !Object.hasOwn(rows[0], field.name)) {
+      rowKey = Object.keys(rows[0]).find(k => k.toLowerCase() == field.name.toLowerCase())
+    }
+
+    // Result fields come back in select order, so we can map them back to the requested field names by index.
+    // Row objects are still keyed by the warehouse result name, which may differ by alias or by Snowflake uppercasing.
+    if (requested && rowKey && rowKey != requested) {
       rows.forEach(r => {
-        r[name] = r[field.name]
-        delete r[field.name]
+        r[requested] = r[rowKey]
+        delete r[rowKey]
       })
     }
 
-    // Snowflake may return unquoted identifiers uppercased in row objects. If the requested
-    // field is a simple identifier and only differs by case, remap row keys back to requested case.
-    let isSimpleIdentifier = typeof requested == 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(requested)
-    if (isSimpleIdentifier && rows.length > 0) {
-      let current = name
-      if (rows[0][current] === undefined) {
-        let matched = Object.keys(rows[0]).find(k => k.toLowerCase() == requested.toLowerCase())
-        if (matched) current = matched
-      }
-      if (current != requested && rows[0][current] !== undefined) {
-        name = requested
-        rows.forEach(r => {
-          r[name] = r[current]
-          delete r[current]
-        })
-      }
-    }
-
-    // Return fields for the new ECharts config but with the name mapped back to what was requested
     fields.push({...field, name})
   })
 
