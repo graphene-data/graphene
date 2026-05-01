@@ -465,7 +465,7 @@ class AnalysisSession implements Analyzer {
         let aliasNode = select.getChild('Alias')
         let expr = this.analyzeExpr(exprNode, scope)
         if (isScalarType(expr.type, 'interval') && expr.interval?.form == 'scaled') this.diag(exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
-        let {name, disambiguatedName} = aliasNode ? {name: txt(aliasNode), disambiguatedName: undefined} : this.inferName(exprNode, scope)
+        let {name, disambiguatedName} = aliasNode ? {name: txt(aliasNode), disambiguatedName: undefined} : this.inferName(exprNode, scope, expr)
         isAgg ||= !!expr.isAgg
         this.addQueryField(query, {
           name,
@@ -515,7 +515,7 @@ class AnalysisSession implements Analyzer {
         // If it's not in there, add it to the select.
         if (!existing) {
           let field = {
-            ...(groupBy.getChild('Alias') ? {name: txt(groupBy.getChild('Alias')), disambiguatedName: undefined} : this.inferName(exprNode, scope)),
+            ...(groupBy.getChild('Alias') ? {name: txt(groupBy.getChild('Alias')), disambiguatedName: undefined} : this.inferName(exprNode, scope, expr)),
             sql: expr.sql,
             type: expr.type,
             metadata: expr.metadata,
@@ -830,6 +830,7 @@ class AnalysisSession implements Analyzer {
           return {
             sql: `count(distinct ${expr.sql})`,
             type: scalarType('number'),
+            metadata: {defaultName: 'count'},
             isAgg: true,
             canWindow: true,
             fanout: normalizeExprFanout({sensitivePaths: mergeSensitiveFanouts(expr.fanout?.sensitivePaths), conflict: expr.fanout?.conflict}),
@@ -838,6 +839,7 @@ class AnalysisSession implements Analyzer {
         return {
           sql: 'count(1)',
           type: scalarType('number'),
+          metadata: {defaultName: 'count'},
           isAgg: true,
           canWindow: true,
           fanout: normalizeExprFanout({sensitivePaths: [extendFanoutPath(scope.fanoutPath)]}),
@@ -1134,7 +1136,7 @@ class AnalysisSession implements Analyzer {
   private preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType): FieldMeta | undefined {
     if (!expr.metadata?.timeGrain) return undefined
     if (!isScalarType(resultType, 'date') && !isScalarType(resultType, 'timestamp')) return undefined
-    return {timeGrain: expr.metadata.timeGrain}
+    return {timeGrain: expr.metadata.timeGrain, ...(expr.metadata.defaultName ? {defaultName: expr.metadata.defaultName} : {})}
   }
 
   private sameFieldMetadata(left?: FieldMeta, right?: FieldMeta) {
@@ -1145,7 +1147,7 @@ class AnalysisSession implements Analyzer {
 
   private withoutTimeGrain(metadata?: FieldMeta): FieldMeta | undefined {
     if (!metadata?.timeGrain && !metadata?.timePart && !metadata?.timeOrdinal) return metadata
-    let {timeGrain: _timeGrain, timePart: _timePart, timeOrdinal: _timeOrdinal, ...next} = metadata
+    let {timeGrain: _timeGrain, timePart: _timePart, timeOrdinal: _timeOrdinal, defaultName: _defaultName, ...next} = metadata
     return Object.keys(next).length ? next : undefined
   }
 
@@ -1471,12 +1473,12 @@ class AnalysisSession implements Analyzer {
     return true
   }
 
-  private inferName(exprNode: SyntaxNode, scope: Scope): Pick<Query['fields'][number], 'name' | 'disambiguatedName'> {
+  private inferName(exprNode: SyntaxNode, scope: Scope, expr?: Expr): Pick<Query['fields'][number], 'name' | 'disambiguatedName'> {
     if (exprNode.name == 'Ref') {
       let names = exprNode.getChildren('Identifier').map(i => txt(i))
       return {name: names.at(-1)!, disambiguatedName: names.join('_')}
     }
-    let name = `col_${scope.query?.fields.length || 0}`
+    let name = expr?.metadata?.defaultName || `col_${scope.query?.fields.length || 0}`
     return {name, disambiguatedName: name}
   }
 

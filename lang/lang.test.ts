@@ -708,7 +708,7 @@ describe('lang', () => {
   })
 
   it('coun(distinct)', () => {
-    expect('from users select count(distinct name)').toRenderSql('select count(distinct users.name) as col_0 from users as users')
+    expect('from users select count(distinct name)').toRenderSql('select count(distinct users.name) as count from users as users')
   })
 
   it('adds groupBy to select if needed', () => {
@@ -719,7 +719,7 @@ describe('lang', () => {
 
   it('doesnt duplicate groupBys', () => {
     expect('from users select name, count(orders.id) group by name').toRenderSql(
-      'select users.name as name, count(distinct orders.id) as col_1 from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
+      'select users.name as name, count(distinct orders.id) as count from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
     )
   })
 
@@ -990,7 +990,7 @@ describe('lang', () => {
   })
 
   it('can correctly count through a join', () => {
-    expect('from orders select count(users.id)').toRenderSql('select count(distinct users.id) as col_0 from orders as orders left join users as users on users.id=orders.user_id')
+    expect('from orders select count(users.id)').toRenderSql('select count(distinct users.id) as count from orders as orders left join users as users on users.id=orders.user_id')
   })
 
   it('handles min/max through a join', () => {
@@ -1028,7 +1028,7 @@ describe('lang', () => {
   })
 
   it.skip('supports malloy date functions', () => {
-    expect('from users select name, month(created_at)').toRenderSql('select users.name as name, extract(month from users.created_at) as col_1 from users as users')
+    expect('from users select name, month(created_at)').toRenderSql('select users.name as name, extract(month from users.created_at) as month from users as users')
   })
 
   it('allows queries with semicolons', () => {
@@ -1038,7 +1038,7 @@ describe('lang', () => {
   it('allows trailing commas in select/group/order/in lists and function args', () => {
     expect('select id, name, from users').toRenderSql('select users.id as id, users.name as name from users as users')
 
-    expect('from users select count() group by name,').toRenderSql('select users.name as name, count(1) as col_0 from users as users group by 1 order by 2 desc nulls last')
+    expect('from users select count() group by name,').toRenderSql('select users.name as name, count(1) as count from users as users group by 1 order by 2 desc nulls last')
 
     expect('from users select name order by name asc,').toRenderSql('select users.name as name from users as users order by 1 asc nulls last')
 
@@ -1109,19 +1109,23 @@ describe('lang', () => {
 
     expect('from calendar select timestamp_diff(created_at, created_at, week)').toRenderSql('select timestamp_diff(calendar.created_at,calendar.created_at,week) as col_0 from `calendar` as calendar')
 
-    expect('from calendar select date_trunc(created_at, week)').toRenderSql('select date_trunc(calendar.created_at,week) as col_0 from `calendar` as calendar')
+    expect('from calendar select date_trunc(created_at, week)').toRenderSql('select date_trunc(calendar.created_at,week) as week from `calendar` as calendar')
   })
 
   it('supports date_trunc on date columns (as opposed to timestamp)', () => {
     setGlobalConfig({root: '', bigquery: {}})
     updateFile('table events (event_date date)', 'events.gsql')
-    expect('from events select date_trunc(event_date, month)').toRenderSql('select date_trunc(events.event_date,month) as col_0 from `events` as events')
+    expect('from events select date_trunc(event_date, month)').toRenderSql('select date_trunc(events.event_date,month) as month from `events` as events')
 
     setGlobalConfig({root: ''}) // duckdb (default)
-    expect("from events select date_trunc('month', event_date)").toRenderSql("select date_trunc('month',events.event_date) as col_0 from events as events")
+    expect("from events select date_trunc('month', event_date)").toRenderSql("select date_trunc('month',events.event_date) as month from events as events")
 
     setGlobalConfig({dialect: 'snowflake', root: ''})
-    expect("from events select date_trunc('month', event_date)").toRenderSql("select DATE_TRUNC('month',EVENTS.EVENT_DATE) as COL_0 from EVENTS as EVENTS")
+    expect("from events select date_trunc('month', event_date)").toRenderSql("select DATE_TRUNC('month',EVENTS.EVENT_DATE) as MONTH from EVENTS as EVENTS")
+
+    setGlobalConfig({root: ''})
+    updateFile('table flown (dep_time timestamp)', 'flown.gsql')
+    expect("```gsql monthly_trend\nfrom flown select date_trunc('month', dep_time), count() as flights\n```\n<AreaChart data=monthly_trend x=month y=flights />").toHaveNoErrors()
   })
 
   it('infers temporal grain from date_trunc across dialects', () => {
@@ -1129,19 +1133,19 @@ describe('lang', () => {
 
     setGlobalConfig({root: '', bigquery: {}})
     let [bigQuery] = analyze('from events select date_trunc(event_date, month) as month_start')
-    expect(bigQuery.fields[0].metadata).toEqual({timeGrain: 'month'})
+    expect(bigQuery.fields[0].metadata).toEqual({timeGrain: 'month', defaultName: 'month'})
 
     setGlobalConfig({root: ''})
     let [duckDb] = analyze("from events select date_trunc('quarter', event_date) as quarter_start")
-    expect(duckDb.fields[0].metadata).toEqual({timeGrain: 'quarter'})
+    expect(duckDb.fields[0].metadata).toEqual({timeGrain: 'quarter', defaultName: 'quarter'})
 
     setGlobalConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze("from events select date_trunc('year', event_date) as year_start")
-    expect(snowflake.fields[0].metadata).toEqual({timeGrain: 'year'})
+    expect(snowflake.fields[0].metadata).toEqual({timeGrain: 'year', defaultName: 'year'})
 
     setGlobalConfig({dialect: 'clickhouse', root: ''})
     let [clickhouse] = analyze("from events select date_trunc('week', event_date) as week_start")
-    expect(clickhouse.fields[0].metadata).toEqual({timeGrain: 'week'})
+    expect(clickhouse.fields[0].metadata).toEqual({timeGrain: 'week', defaultName: 'week'})
   })
 
   it('propagates temporal grain through refs and replaces it with extraction metadata for reshaping expressions', () => {
@@ -1156,13 +1160,13 @@ describe('lang', () => {
     )
 
     let [throughRef] = analyze('from events select month_start')
-    expect(throughRef.fields[0].metadata).toEqual({timeGrain: 'month'})
+    expect(throughRef.fields[0].metadata).toEqual({timeGrain: 'month', defaultName: 'month'})
 
     let [throughCast] = analyze('from events select cast(month_start as date) as month_date')
-    expect(throughCast.fields[0].metadata).toEqual({timeGrain: 'month'})
+    expect(throughCast.fields[0].metadata).toEqual({timeGrain: 'month', defaultName: 'month'})
 
     let [reshaped] = analyze('from events select extract(year from month_start) as year_num')
-    expect(reshaped.fields[0].metadata).toEqual({timePart: 'year'})
+    expect(reshaped.fields[0].metadata).toEqual({timePart: 'year', defaultName: 'year'})
   })
 
   it('drops temporal grain on set operations when branches disagree', () => {
@@ -1178,7 +1182,7 @@ describe('lang', () => {
   })
 
   it('supports extract expressions', () => {
-    expect('from users select extract(hour from created_at)').toRenderSql('select extract(hour from users.created_at) as col_0 from users as users')
+    expect('from users select extract(hour from created_at)').toRenderSql('select extract(hour from users.created_at) as hour from users as users')
   })
 
   it('supports backend-native temporal extraction shorthands', () => {
@@ -1201,29 +1205,29 @@ describe('lang', () => {
 
     setGlobalConfig({root: '', bigquery: {}})
     let [bigQuery] = analyze('from events select extract(dayofweek from event_date) as dow')
-    expect(bigQuery.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_1s'})
+    expect(bigQuery.fields[0].metadata).toEqual({timePart: 'dayofweek', defaultName: 'dayofweek', timeOrdinal: 'dow_1s'})
 
     setGlobalConfig({root: ''})
     let [duckDbDow] = analyze("from events select date_part('dow', event_date) as dow")
-    expect(duckDbDow.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_0s'})
+    expect(duckDbDow.fields[0].metadata).toEqual({timePart: 'dayofweek', defaultName: 'dayofweek', timeOrdinal: 'dow_0s'})
     let [duckDbIsoDow] = analyze('from events select extract(isodow from event_date) as iso_dow')
-    expect(duckDbIsoDow.fields[0].metadata).toEqual({timePart: 'isodow', timeOrdinal: 'dow_1m'})
+    expect(duckDbIsoDow.fields[0].metadata).toEqual({timePart: 'isodow', defaultName: 'isodow', timeOrdinal: 'dow_1m'})
     let [duckDbQuarter] = analyze('from events select quarter(event_date) as quarter_num')
-    expect(duckDbQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
+    expect(duckDbQuarter.fields[0].metadata).toEqual({timePart: 'quarter', defaultName: 'quarter', timeOrdinal: 'quarter_of_year'})
 
     setGlobalConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze('from events select dayofweek(event_date) as dow')
-    expect(snowflake.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_0s'})
+    expect(snowflake.fields[0].metadata).toEqual({timePart: 'dayofweek', defaultName: 'dayofweek', timeOrdinal: 'dow_0s'})
     let [snowflakeQuarter] = analyze('from events select quarter(event_date) as quarter_num')
-    expect(snowflakeQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
+    expect(snowflakeQuarter.fields[0].metadata).toEqual({timePart: 'quarter', defaultName: 'quarter', timeOrdinal: 'quarter_of_year'})
 
     setGlobalConfig({dialect: 'clickhouse', root: ''})
     let [clickhouse] = analyze('from events select to_day_of_week(created_at) as dow')
-    expect(clickhouse.fields[0].metadata).toEqual({timePart: 'dayofweek', timeOrdinal: 'dow_1m'})
+    expect(clickhouse.fields[0].metadata).toEqual({timePart: 'dayofweek', defaultName: 'dayofweek', timeOrdinal: 'dow_1m'})
     let [clickhouseHour] = analyze('from events select to_hour(created_at) as hour_num')
-    expect(clickhouseHour.fields[0].metadata).toEqual({timePart: 'hour', timeOrdinal: 'hour_of_day'})
+    expect(clickhouseHour.fields[0].metadata).toEqual({timePart: 'hour', defaultName: 'hour', timeOrdinal: 'hour_of_day'})
     let [clickhouseQuarter] = analyze('from events select to_quarter(created_at) as quarter_num')
-    expect(clickhouseQuarter.fields[0].metadata).toEqual({timePart: 'quarter', timeOrdinal: 'quarter_of_year'})
+    expect(clickhouseQuarter.fields[0].metadata).toEqual({timePart: 'quarter', defaultName: 'quarter', timeOrdinal: 'quarter_of_year'})
 
     setGlobalConfig({root: ''})
   })
@@ -1737,7 +1741,7 @@ describe('lang', () => {
     `,
       'cycle.gsql',
     )
-    expect('from alpha select count(*)').toRenderSql('select count(1) as col_0 from alpha as alpha')
+    expect('from alpha select count(*)').toRenderSql('select count(1) as count from alpha as alpha')
     expect('from alpha select avg_num').toRenderSql('select (avg(beta.num)) as avg_num from alpha as alpha left join beta as beta on beta.alpha_id=alpha.id')
     // expect('from beta select alpha.avg_num').toRenderSql('')
   })
