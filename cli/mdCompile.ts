@@ -1,5 +1,6 @@
 import type {Plugin} from 'unified'
 
+import {decodeHTML} from 'entities'
 import fs from 'fs'
 import yaml from 'js-yaml'
 import JSON5 from 'json5'
@@ -18,24 +19,9 @@ export function liftInlineEChartsConfig(content: string) {
     if (!inline) return match
     if (/\sconfig\s*=/.test(attrs)) return match
     let source = inline.startsWith('{') ? inline : `{${inline}}`
-    let parsed = decodeHtmlEntities(JSON5.parse(source))
-    return `<ECharts${attrs} config={${JSON.stringify(parsed)}}></ECharts>`
+    let config = JSON.stringify(JSON5.parse(source), (_key, value) => (typeof value == 'string' ? decodeHTML(value) : value))
+    return `<ECharts${attrs} config={${config}}></ECharts>`
   })
-}
-
-function decodeHtmlEntities(value: any): any {
-  if (typeof value == 'string') {
-    return value
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/&apos;/g, "'")
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-  }
-  if (Array.isArray(value)) return value.map(decodeHtmlEntities)
-  if (!value || typeof value != 'object') return value
-  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, decodeHtmlEntities(entry)]))
 }
 
 // Turn code fences into <GrapheneQuery> tags, which register those queries
