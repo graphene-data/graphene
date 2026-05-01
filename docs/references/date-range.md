@@ -38,7 +38,6 @@ Date range selections sync into the page URL query string as `{name}_start` and 
 | presetRanges | List of preset range labels to show in the dropdown. Accepts a comma-separated string or an array. | false | preset labels | See defaults below |
 | title | Title to display above the input | false | string | - |
 | description | Subtitle text displayed below the title | false | string | - |
-| hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 
 # Preset ranges
 

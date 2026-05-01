@@ -26,5 +26,4 @@ Text input values also sync into the page URL query string so a reload or shared
 | name | Name of the text input, used to reference the selected value elsewhere as `"$name"` | true | string | - |
 | title | Title displayed above the text input | false | string | - |
 | placeholder | Alternative placeholder text displayed in the text input | false | string | `"Type to search"` |
-| hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
