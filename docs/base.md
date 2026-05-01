@@ -86,20 +86,20 @@ You can add YAML frontmatter at the top of a page. The following attributes are 
 - `layout`: `notebook` is the default, good for prose interspersed with charts. `dashboard` has a wider max-width, for chart-heavy pages with lots of `<Row>`s.
 
 ## Viz and display components
-- LineChart: title, data, x, y, y2, splitBy, height, width
-- AreaChart: title, data, x, y, y2, splitBy, arrange (`stack` (default), `group`, or `stack100`), height, width
-- BarChart: title, data, x, y, y2, splitBy, arrange, label (true or false (default); shows labels above bars), height, width
+- LineChart: title, data, x, y, y2, splitBy, sort, height, width
+- AreaChart: title, data, x, y, y2, splitBy, arrange (`stack` (default) or `stack100`), sort, height, width
+- BarChart: title, data, x, y, y2, splitBy, arrange, label (true or false (default); shows labels above bars), sort, height, width
 - PieChart: title, data, category, value, height, width
 - ECharts: data, height, width, renderer
-- BigValue: title, data, value, comparison, comparisonTitle, downIsGood, sparkline, sparklineType, sparklineColor
-- Table: title, data, rows, subtitle, groupBy, groupType, subtotals, totalRow, search, sort, link, rowShading, rowNumbers, compact, headerColor
-  - Column (sub-component of Table): id (column name), title, fmt, align, wrap, contentType, totalAgg, redNegatives
+- BigValue: title, data, value
+- Table: title, data, rows, sortable, sort, groupBy, groupType, subtotals, totalRow, link, showLinkCol, rowShading, rowLines, rowNumbers, compact, headerColor, headerFontColor, totalRowColor, totalFontColor, backgroundColor, emptyMessage
+  - Column (sub-component of Table): id (column name), title, description, align, wrap, wrapTitle, colGroup, contentType, totalAgg, redNegatives
 - Value (for inlining dynamic numbers within markdown text): data, column, row.
 - Row (layout container, distributes children horizontally): No attributes
 
 Notes on common attributes:
 - `data` can also point at a modeled GSQL table.
-- Any attribute that accepts a column can also accept an arbitrary GSQL expression. These attributes are x, y, y2, splitBy, category, value, comparison, sparkline, link, groupBy, weightCol, scaleColumn
+- Any attribute that accepts a column can also accept an arbitrary GSQL expression. These attributes are x, y, y2, splitBy, category, value, link, groupBy, scaleColumn
 - `splitBy` creates a series for each distinct value in the column (long format data).
 - `y` can take a comma-separated list of columns/expressions, to map multiple fields to the same y-axis as separate series (wide format data).
 - `height` and `width` accept any CSS size units eg. `240px` or `50%`.
