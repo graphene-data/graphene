@@ -20,6 +20,7 @@ import LineChart from './components/LineChart.svelte'
 import PieChart from './components/PieChart.svelte'
 import QueryLoad from './components/QueryLoad.svelte'
 import Row from './components/Row.svelte'
+import ScatterPlot from './components/ScatterPlot.svelte'
 import SortIcon from './components/SortIcon.svelte'
 import Table from './components/Table.svelte'
 import TableCell from './components/TableCell.svelte'
@@ -90,6 +91,7 @@ window.$GRAPHENE.components = {
   PieChart,
   QueryLoad,
   Row,
+  ScatterPlot,
   SortIcon,
   Table,
   TableCell,

@@ -30,6 +30,27 @@ function timeseriesWithMultipleY() {
   return data
 }
 
+function scatterData() {
+  let rows = [
+    {segment: 'SMB', efficiency: 42, growth: 28, quality: 55},
+    {segment: 'SMB', efficiency: 48, growth: 32, quality: 57},
+    {segment: 'Mid Market', efficiency: 58, growth: 35, quality: 62},
+    {segment: 'Mid Market', efficiency: 61, growth: 39, quality: 65},
+    {segment: 'Enterprise', efficiency: 66, growth: 48, quality: 70},
+    {segment: 'Enterprise', efficiency: 72, growth: 54, quality: 74},
+    {segment: 'Public Sector', efficiency: 51, growth: 31, quality: 58},
+    {segment: 'Healthcare', efficiency: 63, growth: 44, quality: 68},
+    {segment: 'Retail', efficiency: 47, growth: 30, quality: 53},
+  ]
+  let fields = [
+    {name: 'segment', type: scalarType('string')},
+    {name: 'efficiency', type: scalarType('number')},
+    {name: 'growth', type: scalarType('number')},
+    {name: 'quality', type: scalarType('number')},
+  ]
+  return {rows, fields}
+}
+
 test.beforeEach(async ({sharedPage}) => {
   await sharedPage.setViewportSize({width: 680, height: 400})
 })
@@ -201,6 +222,16 @@ test('area chart supports secondary y axis line', async ({mount, chart}) => {
   data.fields.push({name: 'profit_usd0k', type: scalarType('number'), metadata: {units: 'usd'}})
   await mount('components/AreaChart.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
   await expect(chart.el).screenshot('area-chart-secondary-axis-line')
+})
+
+test('scatter plot', async ({mount, chart}) => {
+  await mount('components/ScatterPlot.svelte', {data: scatterData(), x: 'efficiency', y: 'growth', title: 'Efficiency vs Growth'})
+  await expect(chart.el).screenshot('scatter-plot')
+})
+
+test('scatter plot supports splitBy', async ({mount, chart}) => {
+  await mount('components/ScatterPlot.svelte', {data: scatterData(), x: 'efficiency', y: 'growth', splitBy: 'segment'})
+  await expect(chart.el).screenshot('scatter-plot-split-by')
 })
 
 test('line chart timeseries', async ({mount, chart}) => {

@@ -80,4 +80,4 @@ Examples:
 />
 ```
 
-For common chart types, prefer `BarChart`, `LineChart`, `AreaChart`, and `PieChart`. Use `ECharts` when you need deeper customization.
+For common chart types, prefer `BarChart`, `LineChart`, `AreaChart`, `ScatterPlot`, and `PieChart`. Use `ECharts` when you need deeper customization.
