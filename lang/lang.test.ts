@@ -1675,12 +1675,12 @@ describe('lang', () => {
     expect(getDiagnostics().some(d => /Unsupported prop "emptySet" on PieChart\. emptySet is not supported/.test(d.message))).toBe(true)
   })
 
-  it('allows PieChart subtitle but rejects subtitle on other chart wrappers', () => {
+  it('rejects subtitle on chart wrappers', () => {
     analyze('<PieChart data=users category=name value=age subtitle="Age split" />', 'md')
-    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+    expect(getDiagnostics().some(d => /Unsupported prop "subtitle"/.test(d.message))).toBe(true)
 
     analyze('<BarChart data=users x=name y=age subtitle="Age split" />', 'md')
-    expect(getDiagnostics().some(d => /subtitle is only valid on PieChart/.test(d.message))).toBe(true)
+    expect(getDiagnostics().some(d => /Unsupported prop "subtitle"/.test(d.message))).toBe(true)
   })
 
   it('ignores chart-looking tags inside fenced code blocks', () => {
