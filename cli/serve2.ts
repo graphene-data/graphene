@@ -155,7 +155,10 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
-  let result = analyzeWorkspace({config, files: [...workspaceFiles, {path: 'input', contents: gsql}]})
+
+  // queries should not analyze md files
+  let gsqlFiles = workspaceFiles.filter(file => !file.path.endsWith('.md'))
+  let result = analyzeWorkspace({config, files: [...gsqlFiles, {path: 'input', contents: gsql}]})
   updateParsedFiles(result)
 
   let diagnostics = result.diagnostics
