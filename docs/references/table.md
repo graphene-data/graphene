@@ -26,16 +26,21 @@ Here's an example:
 | backgroundColor | Background color of the table | false | Hex color code, css color name | - |
 | sortable | Enable sort for each column - click the column title to sort | false | `true`, `false` | `true` |
 | sort | Column to sort by on initial page load. Sort direction is asc if unspecified. Can only sort by one column using this prop. If you need multi-column sort, use the order by clause in your sql in combination with this prop. | false | 'column name + asc/desc' | - |
-| search | Add a search bar to the top of your table | false | `true`, `false` | `false` |
-| downloadable | Enable download data button below the table on hover | false | `true`, `false` | `true` |
 | formatColumnTitles | Enable auto-formatting of column titles. Turn off to show raw SQL column names | false | `true`, `false` | `true` |
 | wrapTitles | Wrap column titles | false | `true`, `false` | `false` |
 | compact | Enable a more compact table view that allows more content vertically and horizontally | false | `true`, `false` | `false` |
 | link | Makes each row of your table a clickable link. Accepts a column or expression containing the link to use for each row in your table | false | column name, stored expression name, GSQL expression | - |
 | showLinkCol | Whether to show the column supplied to the `link` attribute | false | `true`, `false` | `false` |
-| generateMarkdown | Helper for writing Table syntax with many columns. When set to true, markdown for the Table including each `Column` contained within the query will be generated and displayed below the table. | false | `true`, `false` | `false` |
-| emptySet | Sets behaviour for empty datasets. Can throw an error, a warning, or allow empty. When set to 'error', empty datasets will block builds in `build:strict`. Note this only applies to initial page load - empty datasets caused by input component changes (dropdowns, etc.) are allowed. | false | `error`, `warn`, `pass` | `error` |
-| emptyMessage | Text to display when an empty dataset is received - only applies when `emptySet` is 'warn' or 'pass', or when the empty dataset is a result of an input component change (dropdowns, etc.). | false | string | "No records" |
+| emptyMessage | Text to display when the table has no rows or fails to render | false | string | `"Unable to render table"` |
+
+### Semantic colors
+
+Any color attribute on `<Table>` or `<Column>` (e.g. `headerColor`, `barColor`, `colorScale`) accepts the semantic names `primary`, `positive`, `negative`, and `warning` in addition to hex codes and CSS color names. They resolve to the current theme's colors so they stay consistent if the theme changes.
+
+```markdown
+<Column id=growth contentType=colorscale colorScale=positive />
+<Column id=churn contentType=colorscale colorScale=negative />
+```
 
 ## Groups
 
@@ -71,8 +76,7 @@ Here's an example:
 | title | Override title of column | false | string | column name (formatted) |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 | align | Align column text | false | `left`, `center`, `right` | `left` |
-| totalAgg | Specify an aggregation function to use for the total row. Accepts predefined functions, custom strings or values | false | `sum`, `mean`, `weightedMean`, `median`, `min`, `max`, `count`, `countDistinct`, custom string or value | `sum` |
-| weightCol | Column or expression to use as the weight values for weighted mean aggregation. If not specified, a weight of 1 for each value will be used and the result will be the same as the `mean` aggregation. | false | column name, stored expression name, GSQL expression | - |
+| totalAgg | Specify an aggregation function to use for the total row. Accepts predefined functions, custom strings or values | false | `sum`, `mean`, `median`, `min`, `max`, `count`, `countDistinct`, custom string or value | `sum` |
 | wrap | Wrap column text | false | `true`, `false` | `false` |
 | wrapTitle | Wrap column title | false | `true`, `false` | `false` |
 | contentType | Lets you specify how to treat the content within a column. See below for contentType-specific options. | false | `link`, `image`, `delta`, `colorscale`, `html` | - |

@@ -40,9 +40,6 @@ Dropdown selections also sync into the page URL query string. Single-select drop
 | disableSelectAll | Removes the `"Select all"` button. Recommended for large datasets. | false | boolean | `false` |
 | label | Column name from the query containing labels to display instead of the values (e.g., you may want to have the drop-down use `customer_id` as the value, but show `customer_name` to your users) | false | column name | Uses the column in value |
 | title | Title to display above the dropdown | false | string | - |
-| order | Column to sort options by, with optional ordering keyword | false | column name [ `asc`, `desc` ] | Ascending based on dropdown value (or label, if specified) |
-| where | SQL where fragment to filter options by (e.g., where sales > 40000) | false | SQL where clause | - |
-| hideDuringPrint | Hide the component when the report is printed | false | `true`, `false` | `true` |
 | description | Adds an info icon with description tooltip on hover | false | string | - |
 
 # DropdownOption sub-component

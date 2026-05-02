@@ -17,8 +17,8 @@ table orders (
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT -- Amount paid by customer
-  cost FLOAT -- Cost of materials
+  amount FLOAT -- Amount paid by customer #units=usd
+  cost FLOAT -- Cost of materials #units=usd
 
   -- Join relationships
 
@@ -30,10 +30,10 @@ table orders (
   
   -- Measures
   
-  revenue: sum(case when revenue_recognized then amount else 0 end)
-  cogs: sum(case when revenue_recognized then cost else 0 end)
-  profit: revenue - cogs
-  profit_margin: profit / revenue
+  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
+  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
+  profit: revenue - cogs #units=usd
+  profit_margin: profit / revenue #ratio
 )
 
 table users (
@@ -123,12 +123,32 @@ table orders (
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
 
   /* Agg expressions */
-  revenue: sum(case when revenue_recognized then amount else 0 end)
-  cogs: sum(case when revenue_recognized then cost else 0 end)
-  profit: revenue - cogs -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
-  profit_margin: profit / revenue
+  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
+  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
+  profit: revenue - cogs #units=usd -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
+  profit_margin: profit / revenue #ratio
 )
 ```
+
+### Metadata annotations
+
+Certain GSQL expressions will create field-level metadata that Graphene uses for better formatting and visualizations defaults. For example, `date_trunc('month', created_at)` will attach `timeGrain=month` metadata to the resulting column, which informs Graphene that the values represent months and not just days that happen to land on the first of every month. Graphene leverages this information to make sure that value formatting and chart axes look good by default.
+
+There isn't always a SQL expression that can tip Graphene to the semantic meaning of a field, however:
+- The field could be a base column that has no source expression
+- There might not be enough information in the expression (eg. what currency a float is tied to)
+
+For this reason, some metadata should be set explicitly in the GSQL model, using annotations. Metadata annotations resemble hashtags (eg. `#ratio`, `#units=usd`) that can be inlined or written above the object they decorate.
+
+#### Recognized metadata
+
+| Key | Inferrable? | Effect |
+|---|---|---|
+| `#ratio` | no | Value is 0–1; rendered as `value × 100%` (e.g. `0.42` → `42%`) |
+| `#pct` | no | Value is already 0–100; rendered as `value%` (e.g. `42` → `42%`) |
+| `#units=<currency>` | no | Adds currency symbol and compacts to K/M/B. Accepted values: `usd`, `eur`, `gbp`, `cad`, `aud`, `jpy` |
+| `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
+| `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats values as ordinal positions on a categorical axis. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
 
 ## `select` statements
 
@@ -221,16 +241,16 @@ table orders (
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT -- Amount paid by customer
-  cost FLOAT -- Cost of materials
+  amount FLOAT -- Amount paid by customer #units=usd
+  cost FLOAT -- Cost of materials #units=usd
 
   join one users on user_id = users.id
 
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
-  revenue: sum(case when revenue_recognized then amount else 0 end)
-  cogs: sum(case when revenue_recognized then cost else 0 end)
-  profit: revenue - cogs
-  profit_margin: profit / revenue
+  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
+  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
+  profit: revenue - cogs #units=usd
+  profit_margin: profit / revenue #ratio
 )
 ```
 
@@ -296,7 +316,7 @@ Another way of thinking about this is that measures are "self-aggregating."
 - `group by all` is implied if aggregative and scalar expressions are both present in the `select` clause. This means that `group by` can be omitted and the query will still effectively execute the `group by all`.
 - Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
 - `count` is a reserved word. Do not alias your columns as `count`.
-- Inline window functions are supported using ANSI-style `OVER (...)` clauses. Query-level named windows (`WINDOW w AS (...)`) and set operations (`union [all]`, `intersect`, `except`) are not supported.
+- Inline window functions are supported using ANSI-style `OVER (...)` clauses. Query-level named windows (`WINDOW w AS (...)`) are not supported.
 - Percentiles can be computed easily using Graphene's special functions `pXX(col)` (e.g., p50, p975, p9999).
 - Graphene supports almost all functions of the connected data warehouse. Check package.json to see which database you're connected to.
 
@@ -310,16 +330,16 @@ table orders (
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT -- Amount paid by customer
-  cost FLOAT -- Cost of materials
+  amount FLOAT -- Amount paid by customer #units=usd
+  cost FLOAT -- Cost of materials #units=usd
 
   join one users on user_id = users.id
 
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
-  revenue: sum(case when revenue_recognized then amount else 0 end)
-  cogs: sum(case when revenue_recognized then cost else 0 end)
-  profit: revenue - cogs
-  profit_margin: profit / revenue
+  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
+  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
+  profit: revenue - cogs #units=usd
+  profit_margin: profit / revenue #ratio
 )
 
 table users (
@@ -331,7 +351,7 @@ table users (
   join many orders on id = orders.user_id
   join one user_facts on id = user_facts.id
 
-  ltv: user_facts.ltv
+  ltv: user_facts.ltv #units=usd
   lifetime_orders: user_facts.lifetime_orders
 )
 
@@ -368,6 +388,6 @@ We can extend this table to add measures or joins:
 extend regional_orders (
   join one regions on region = regions.name
 
-  avg_order_value: total_revenue / num_orders
+  avg_order_value: total_revenue / num_orders #units=usd
 )
 ```
