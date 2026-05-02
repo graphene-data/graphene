@@ -23,6 +23,8 @@ Conventions and patterns for writing production-quality `.gsql` semantic models.
 - Add synonyms only if provided. Do not guess them.
 - Descriptions can be inlined or placed as a block comment on the line above.
 
+6. Add GSQL metadata annotations where applicable eg. `#ratio`, `#pct`, `#timeGrain=day`, etc. 
+
 ## File structure
 
 Every `.gsql` file follows this section order:
@@ -34,9 +36,9 @@ table DATABASE.SCHEMA.TABLE_NAME (
 
   /* Sub-section headers as needed, to group up fields if there are many columns */
 
-  column_name TYPE -- Description if necessary
+  column_name TYPE -- Description/metadata if necessary
 
-  -- OR, descriptions for a field/dimension/measure can be on the lines above it
+  -- OR, descriptions/metadata for a field/dimension/measure can be on the lines above it
   -- as long as there is NOT an empty line separating
   column_name2 TYPE
 
@@ -46,14 +48,14 @@ table DATABASE.SCHEMA.TABLE_NAME (
 
   /* Dimensions */
 
-  dim_name: expression -- Description if necessary
+  dim_name: expression -- Description/metadata if necessary
 
   /* Measures */
 
-  measure_name: aggregate_expression -- Description if necessary
+  measure_name: aggregate_expression -- Description/metadata if necessary
 )
 
-/* Example queries */ -- Only if not obvious
+/* Example queries */ -- Only if correct query usage patterns are not obvious
 
 -- Description of query
 select ...
@@ -68,6 +70,3 @@ Always verify after changes. A parse error in any `.gsql` file prevents all tabl
 
 You can syntax check the whole project with `npx graphene check`.
 
-## Issue tracking
-
-Keep track of issues you run into in a new file.
