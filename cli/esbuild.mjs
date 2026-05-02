@@ -54,7 +54,7 @@ Consult the reference documentation for more detailed information on using Graph
 For semantic modeling with GSQL references, read \`references/model-gsql.md\`.
 
 ${(await readdir(path.resolve(__dirname, '../docs/references'))).map(f => `- references/${f}`).join('\n')}
-`,
+`.trimStart(),
 )
 await cp(path.resolve(__dirname, '../docs/references'), path.resolve(skillDir, 'references'), {recursive: true})
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
