@@ -9,6 +9,32 @@ env:
   CI: true
 
 jobs:
+  check-commit-authors:
+    if: github.event_name == 'pull_request' && github.repository == 'graphene-data/graphene'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check commit authors
+        run: |
+          bad_commits=$(git log HEAD^1..HEAD^2 --format='%H%x09%an <%ae>%x09%s' | awk -F '\t' '
+            $2 != "Grant <grant@graphenedata.com>" &&
+            $2 != "Dylan Scott <dylan@graphenedata.com>" &&
+            $2 != "Kevin Marr <kevin@graphenedata.com>" { print }
+          ')
+
+          if [ -n "$bad_commits" ]; then
+            echo "Found commits with unexpected authors:"
+            echo "$bad_commits"
+            echo ""
+            echo "Expected one of:"
+            echo "  Grant <grant@graphenedata.com>"
+            echo "  Dylan Scott <dylan@graphenedata.com>"
+            echo "  Kevin Marr <kevin@graphenedata.com>"
+            exit 1
+          fi
+
   lint:
     runs-on: ubuntu-latest
     steps:
