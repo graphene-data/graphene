@@ -9,9 +9,13 @@ import {$, fs} from 'zx'
 $.verbose = true
 $.shell = 'bash'
 
-// Require all credentials up front so we fail before creating tags or publishing anything.
+// Require and verify all credentials up front so we fail before creating tags or publishing anything.
 if (!process.env.VSCE_PAT) throw new Error('VSCE_PAT required')
 if (!process.env.OVSX_PAT) throw new Error('OVSX_PAT required')
+
+let vscodePublisher = await readPublisher('vscode/package.json')
+await $`npx vsce verify-pat ${vscodePublisher}`
+await $`npx ovsx verify-pat ${vscodePublisher}`
 
 // package.json is authoritative for release version; cli/vscode must match exactly.
 let rootVersion = await readVersion('package.json')
@@ -59,6 +63,13 @@ async function readVersion(path: string) {
   let version = json.version
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`Invalid semver in ${path}: ${version}`)
   return version
+}
+
+async function readPublisher(path: string) {
+  // Marketplace namespace is shared between VS Code Marketplace and Open VSX.
+  let json = JSON.parse(await fs.readFile(path, 'utf8'))
+  if (!json.publisher) throw new Error(`Missing publisher in ${path}`)
+  return json.publisher
 }
 
 function getChangelogSection(changelog: string, version: string) {
