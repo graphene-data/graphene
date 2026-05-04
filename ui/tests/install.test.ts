@@ -68,6 +68,12 @@ async function expectNoSvelteDependency(projectDir: string) {
   expect(pkg.dependencies?.svelte).toBeUndefined()
 }
 
+async function disablePnpmMinimumReleaseAge(projectDir: string, packageManager: PackageManagerTest) {
+  // This smoke test installs freshly packed local artifacts; keep the repo-wide pnpm safety policy out of the temp project.
+  if (packageManager.name !== 'pnpm') return
+  await fsp.writeFile(path.join(projectDir, '.npmrc'), 'minimum-release-age=0\n')
+}
+
 async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page: Page) {
   let testsDir = path.dirname(fileURLToPath(import.meta.url))
   let coreDir = path.resolve(testsDir, '../..')
@@ -99,6 +105,7 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
     let scaffold = await run(createCommand, createArgs, tempRoot, childEnv)
     expectSuccess(`${packageManager.name} create-graphene`, scaffold)
     await expectNoSvelteDependency(projectDir)
+    await disablePnpmMinimumReleaseAge(projectDir, packageManager)
 
     let [installCommand, installArgs] = packageManager.install(cliTarball)
     let installResult = await run(installCommand, installArgs, projectDir, childEnv)
