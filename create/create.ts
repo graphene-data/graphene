@@ -285,7 +285,7 @@ export async function writeTemplate(targetDir: string, files: TemplateFiles): Pr
 function printHelp(stdout: Writable): void {
   stdout.write(
     [
-      'Usage: npm create @graphenedata [target-dir] [-- --yes] [--name <project-name>] [--no-install]',
+      'Usage: npm create graphene [target-dir] [-- --yes] [--name <project-name>] [--no-install]',
       '',
       'Options:',
       '  -y, --yes        Skip prompts and accept defaults',

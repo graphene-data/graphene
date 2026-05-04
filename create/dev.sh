@@ -21,7 +21,7 @@ echo "Running packed initializer interactively..."
 
 if ! (
   cd "$temp_root" &&
-    npm exec --yes --package "$tarball_path" -- create-graphenedata "$@"
+    npm exec --yes --package "$tarball_path" -- create-graphene "$@"
 ); then
   rm -f "$tarball_path"
   echo ""
