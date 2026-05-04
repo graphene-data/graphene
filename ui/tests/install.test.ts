@@ -161,9 +161,12 @@ limit 10
     let [runCommand, runArgs] = packageManager.graphene(['run', 'chart.md'])
     let runResult = await run(runCommand, runArgs, projectDir, childEnv)
     expectSuccess('graphene run chart.md', runResult)
-    let runOutput = getOutput(runResult).replace(/graphene-screenshot-.*\.png/, 'graphene-screenshot.png')
+    let runOutput = getOutput(runResult).replace(
+      /Screenshot saved to[^\n]*node_modules\/\.graphene\/screenshots\/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.png/,
+      'Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png',
+    )
     expect(runOutput).toContain('No errors found 💎')
-    expect(runOutput).toContain('Screenshot saved to /tmp/graphene-screenshot.png')
+    expect(runOutput).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
     let [stopCommand, stopArgs] = packageManager.graphene(['stop'])
