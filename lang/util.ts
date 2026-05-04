@@ -107,6 +107,13 @@ export function buildFrame(from: {line: number; col: number; lineText?: string},
   return `${lineText}\n${' '.repeat(from.col)}${'^'.repeat(caretLen)}`
 }
 
+export function formatSourceLocation(contents: string, path: string, offset: number) {
+  let before = contents.slice(0, offset)
+  let line = before.split('\n').length
+  let col = before.length - before.lastIndexOf('\n')
+  return `${path}:${line}:${col}`
+}
+
 export async function pollFor<T>(fn: () => T, timeoutMs: number, interval?: number): Promise<T | null> {
   let end = Date.now() + timeoutMs
   while (Date.now() < end) {

@@ -7,6 +7,19 @@ export interface SveltishAttribute {
   end: number
 }
 
+export interface SveltishIgnoredRange {
+  start: number
+  end: number
+}
+
+export interface SveltishTag {
+  name: string
+  fragment: string
+  start: number
+}
+
+const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\b(?:[^>"']|"[^"]*"|'[^']*')*(?:\/>|>)/g
+
 /**
  * Extract attributes from the self-closing Svelte-ish component tags we support in markdown.
  *
@@ -54,6 +67,22 @@ export function extractSveltishAttributes(fragment: string, baseStart: number): 
     }
   }
   return attrs
+}
+
+export function sveltishAttributeValues(attrs: Record<string, SveltishAttribute | undefined>): Record<string, string | undefined> {
+  return Object.fromEntries(Object.entries(attrs).map(([key, attr]) => [key, attr?.value]))
+}
+
+export function collectSveltishOpeningTags(contents: string, ignoredRanges: SveltishIgnoredRange[] = []): SveltishTag[] {
+  let tags: SveltishTag[] = []
+  COMPONENT_TAG.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = COMPONENT_TAG.exec(contents))) {
+    let start = match.index || 0
+    if (ignoredRanges.some(range => start >= range.start && start < range.end)) continue
+    tags.push({name: match[1], fragment: match[0], start})
+  }
+  return tags
 }
 
 function skipWhitespace(fragment: string, i: number) {

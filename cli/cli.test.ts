@@ -54,6 +54,20 @@ async function createTelemetryProject(prefix: string) {
   return tmpDir
 }
 
+async function createFlightProject(prefix: string) {
+  let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), prefix))
+  let pkg = {
+    name: prefix,
+    graphene: {
+      dialect: 'duckdb',
+      duckdb: {path: path.join(flightDir, 'flights.duckdb')},
+    },
+  }
+  await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n')
+  await fsp.cp(path.join(flightDir, 'tables'), path.join(tmpDir, 'tables'), {recursive: true})
+  return tmpDir
+}
+
 describe('cli compile', () => {
   it('compiles a basic query (happy path)', async () => {
     let res = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir})
@@ -140,6 +154,82 @@ describe('cli run', () => {
     let res = await runCli(['run', 'index.md', '--query', 'performance_by_year'], {cwd: flightDir})
     expectCliSuccess(res, 'run markdown query')
     expect(res.stdout.toLowerCase()).toContain('flight_count')
+  })
+
+  it('runs a named markdown query with static page input defaults', async () => {
+    let res = await runCli(['run', 'carrier_detail.md', '--query', 'carrier_info'], {cwd: flightDir})
+    expectCliSuccess(res, 'run markdown query with input default')
+    expect(res.stdout).toContain('Southwest')
+    expect(res.stdout).toContain('WN')
+  })
+
+  it('overrides static page input defaults with --input', async () => {
+    let res = await runCli(['run', 'carrier_detail.md', '--query', 'carrier_info', '--input', 'carrier=AA'], {cwd: flightDir})
+    expectCliSuccess(res, 'run markdown query with input override')
+    expect(res.stdout).toContain('American')
+    expect(res.stdout).toContain('AA')
+  })
+
+  it('lists static markdown page inputs', async () => {
+    let res = await runCli(['run', 'carrier_detail.md', '--list-inputs'], {cwd: flightDir})
+    expectCliSuccess(res, 'list markdown inputs')
+    expect(res.stdout).toContain('carrier (Dropdown)')
+    expect(res.stdout).toContain('keys: carrier')
+    expect(res.stdout).toContain('default: WN')
+    expect(res.stdout).toContain('value: WN')
+  })
+
+  it('runs all static component data queries from a markdown file', async () => {
+    let res = await runCli(['run', 'carrier_detail.md', '--all-queries'], {cwd: flightDir})
+    expectCliSuccess(res, 'run all markdown component queries')
+    expect(res.stdout).toContain('All component queries ran successfully')
+  })
+
+  it('uses repeated --input flags as array params', async () => {
+    let tmpDir = await createFlightProject('graphene-cli-input-array-')
+    try {
+      await fsp.writeFile(
+        path.join(tmpDir, 'index.md'),
+        `
+        \`\`\`sql selected_carriers
+        from carriers
+        where code in ($carrier_multi)
+        select code, nickname
+        order by code
+        \`\`\`
+      `,
+      )
+      let res = await runCli(['run', 'index.md', '-q', 'selected_carriers', '--input', 'carrier_multi=AA', '--input', 'carrier_multi=UA'], {cwd: tmpDir})
+      expectCliSuccess(res, 'run markdown query with repeated input')
+      expect(res.stdout).toContain('AA')
+      expect(res.stdout).toContain('UA')
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
+
+  it('reports component context for all-query failures', async () => {
+    let tmpDir = await createFlightProject('graphene-cli-all-queries-error-')
+    try {
+      await fsp.writeFile(
+        path.join(tmpDir, 'index.md'),
+        `
+        \`\`\`sql chart_data
+        from flights select carrier
+        \`\`\`
+
+        <BarChart data=chart_data x=carrier y=missing title="Broken" />
+      `,
+      )
+      let res = await runCli(['run', 'index.md', '--all-queries'], {cwd: tmpDir})
+      expect(res.code).toBe(1)
+      expect(res.stdout).toContain('BarChart (data="chart_data" x="carrier" y="missing")')
+      expect(res.stdout).toContain('index.md:')
+      expect(res.stdout).toContain('data="chart_data" fields="carrier, missing"')
+      expect(res.stdout.toLowerCase()).toContain('missing')
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
   })
 
   it('uses a configured duckdb path when present', async () => {

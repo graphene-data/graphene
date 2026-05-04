@@ -11,13 +11,14 @@ import type {GrapheneError} from '../lang/index.d.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql} from '../lang/core.ts'
-import {type AnalysisResult, type WorkspaceFileInput} from '../lang/types.ts'
+import {type WorkspaceFileInput} from '../lang/types.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
 import {isServerRunning, runServeInBackground} from './background.ts'
 import {runQuery} from './connections/index.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
+import {buildPageRuntime, type PageInput} from './pageRuntime.ts'
 import {printDiagnostics, printTable} from './printer.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
@@ -25,6 +26,13 @@ export interface RunMdFileOptions {
   mdArg: string
   chart?: string
   log?: (...args: any[]) => void
+  telemetry?: CliTelemetry
+}
+
+interface RunPageQueryOptions {
+  inputs?: string[]
+  allQueries?: boolean
+  listInputs?: boolean
   telemetry?: CliTelemetry
 }
 
@@ -114,32 +122,114 @@ export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry,
   return true
 }
 
-export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, telemetry?: CliTelemetry): Promise<boolean> {
+export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, options: RunPageQueryOptions = {}): Promise<boolean> {
+  let log = console.log
   let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-  telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
+  options.telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
 
+  let page: ReturnType<typeof buildPageRuntime>
+  try {
+    page = buildPageRuntime(mdContents, mdRelativePath, parseInputOverrides(options.inputs || []))
+  } catch (err: any) {
+    log(err.message || String(err))
+    return false
+  }
+
+  if (options.listInputs) {
+    printPageInputs(page.inputs, log)
+    return true
+  }
+
+  if (options.allQueries) return await runComponentQueries({files, page, log})
+
   let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdRelativePath).concat({path: mdRelativePath, contents: mdContents, kind: 'md'})}, mdRelativePath)
   if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics)
+    printDiagnostics(result.diagnostics, log)
     return false
   }
 
-  let runQueryFence = [mdContents, '', '```sql', `from ${queryName} select *`, '```'].join('\n')
-  let queryFiles = toWorkspaceFiles(result)
-  let queryResult = analyzeWorkspace({config, files: queryFiles.filter(file => file.path != 'input.md').concat({path: 'input.md', contents: runQueryFence, kind: 'md'})}, 'input.md')
-  if (queryResult.diagnostics.length > 0) {
-    printDiagnostics(queryResult.diagnostics)
+  try {
+    let sql = compilePageRequest(files, page, `from ${queryName} select *`)
+    let res = await runQuery(sql)
+    printTable(res.rows)
+    return true
+  } catch (err: any) {
+    log(err.message || String(err))
     return false
   }
+}
 
-  let input = getFile(queryResult, 'input.md')
-  if (!input?.queries.length) return false
-  let sql = toSql(input.queries[input.queries.length - 1])
-  let res = await runQuery(sql)
-  printTable(res.rows)
-  return true
+async function runComponentQueries({files, page, log}: {files: WorkspaceFileInput[]; page: ReturnType<typeof buildPageRuntime>; log: (...args: any[]) => void}) {
+  if (!page.componentRequests.length) {
+    log('No component queries found')
+    return true
+  }
+
+  let failed = false
+  for (let request of page.componentRequests) {
+    let fields = request.fields.length ? Array.from(new Set(request.fields.filter(Boolean))) : ['*']
+    let gsql = `from ${request.source} select ${fields.join(', ')}`
+    try {
+      let sql = compilePageRequest(files, page, gsql)
+      await runQuery(sql)
+    } catch (err: any) {
+      failed = true
+      log(`${request.componentId} (${request.location})`)
+      log(`  data="${request.source}" fields="${fields.join(', ')}"`)
+      log(`  ${err.message || String(err)}`)
+    }
+  }
+
+  if (!failed) log(`All component queries ran successfully (${page.componentRequests.length})`)
+  return !failed
+}
+
+function compilePageRequest(files: WorkspaceFileInput[], page: ReturnType<typeof buildPageRuntime>, query: string) {
+  let gsql = [...page.fences.map(f => `table ${f.name} as (\n${f.contents}\n)`), query].join('\n')
+  let result = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: gsql})}, 'input')
+  if (result.diagnostics.length > 0) throw new Error(result.diagnostics.map(d => d.message).join('\n'))
+
+  let input = getFile(result, 'input')
+  if (!input?.queries.length) throw new Error('No query found to run')
+  return toSql(input.queries[input.queries.length - 1], page.params)
+}
+
+function printPageInputs(inputs: PageInput[], log: (...args: any[]) => void) {
+  if (!inputs.length) {
+    log('No page inputs found')
+    return
+  }
+  inputs.forEach(input => {
+    log(`${input.name} (${input.component})`)
+    log(`  keys: ${input.keys.join(', ')}`)
+    log(`  default: ${formatParamValue(input.defaultValue)}`)
+    log(`  value: ${formatParamValue(input.effectiveValue)}`)
+    log(`  location: ${input.location}`)
+  })
+}
+
+function parseInputOverrides(inputs: string[]) {
+  let params: Record<string, any> = {}
+  inputs.forEach(input => {
+    let idx = input.indexOf('=')
+    if (idx <= 0) throw new Error(`Invalid --input "${input}". Use --input name=value.`)
+    let key = input.slice(0, idx)
+    let value = input.slice(idx + 1)
+    let existing = params[key]
+    if (existing === undefined) params[key] = value
+    else if (Array.isArray(existing)) existing.push(value)
+    else params[key] = [existing, value]
+  })
+  return params
+}
+
+function formatParamValue(value: any) {
+  if (value === null || value === undefined) return 'null'
+  if (Array.isArray(value)) return `[${value.map(formatParamValue).join(', ')}]`
+  if (typeof value == 'object') return JSON.stringify(value)
+  return String(value)
 }
 
 async function sendSocketRequest({mdFile, action, chart, log}: {mdFile: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
@@ -225,15 +315,6 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
 
   conn.socket.send(JSON.stringify({type: 'check', action, chart, requestId: id}))
   pendingRequests[id] = {response: res}
-}
-
-function toWorkspaceFiles(analysis: AnalysisResult): WorkspaceFileInput[] {
-  return analysis.files.map(file => ({
-    path: file.path,
-    contents: file.contents,
-    kind: file.path.endsWith('.md') ? 'md' : 'gsql',
-    parsed: {tree: file.tree!, virtualContents: file.virtualContents, virtualToMarkdownOffset: file.virtualToMarkdownOffset},
-  }))
 }
 
 export function runVitePlugin(): PluginOption {

@@ -1,6 +1,7 @@
 import type {ParsedFileArtifacts, ParsedFileDiagnostic, WorkspaceFileInput} from './types.ts'
 
 import {unsupportedChartProps} from './chartProps.ts'
+import {MARKDOWN_COMPONENT_ATTRIBUTE_KEYS, markdownComponentFieldKeys, type ComponentQueryAttributeKey} from './componentQueries.ts'
 import {parser} from './parser.js'
 import {extractSveltishAttributes, type SveltishAttribute} from './sveltish.ts'
 
@@ -17,17 +18,6 @@ import {extractSveltishAttributes, type SveltishAttribute} from './sveltish.ts'
 // from test_table select name, avg(age)
 //
 // Only components with a `data` attribute get turned into queries, and only attributes in a static list are fields to select.
-
-const COMPONENT_ATTRIBUTE_KEYS = ['x', 'y', 'y2', 'value', 'category', 'splitBy', 'sort'] as const
-type ComponentAttributeKey = (typeof COMPONENT_ATTRIBUTE_KEYS)[number]
-const DEFAULT_FIELD_ATTRIBUTE_KEYS: ComponentAttributeKey[] = ['x', 'y', 'y2', 'value', 'category']
-const COMPONENT_FIELD_ATTRIBUTE_KEYS: Record<string, ComponentAttributeKey[]> = {
-  BarChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
-  AreaChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
-  PieChart: ['category', 'value'],
-  LineChart: ['x', 'y', 'y2', 'splitBy', 'sort'],
-  ScatterPlot: ['x', 'y', 'splitBy'],
-}
 
 const FENCE = /^([ \t]*)(`{3,})([^\n]*)\n([\s\S]*?)^\1\2[ \t]*$/gim
 const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+(?:[^>"']|"[^"]*"|'[^']*')*\/>/g
@@ -47,7 +37,7 @@ interface ComponentMatch {
   start: number
   end: number
   data: SveltishAttribute | null
-  attributes: Partial<Record<ComponentAttributeKey, SveltishAttribute>>
+  attributes: Partial<Record<ComponentQueryAttributeKey, SveltishAttribute>>
   diagnostics: ParsedFileDiagnostic[]
 }
 
@@ -131,7 +121,7 @@ export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
 
     let component = event as ComponentMatch
     let {data, attributes} = component
-    let hasComponentAttribute = COMPONENT_ATTRIBUTE_KEYS.some(key => attributes[key] !== undefined)
+    let hasComponentAttribute = MARKDOWN_COMPONENT_ATTRIBUTE_KEYS.some(key => attributes[key] !== undefined)
     if (data && hasComponentAttribute) {
       appendMapped('from ', () => component.start, {reset: component.start - 1})
       appendMapped(data.value, (i: number) => data.start + i, {reset: data.start - 1})
@@ -139,7 +129,7 @@ export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
 
       let previousAttr: SveltishAttribute | null = null
       let selectedValues = new Set<string>()
-      for (let key of COMPONENT_ATTRIBUTE_KEYS) {
+      for (let key of MARKDOWN_COMPONENT_ATTRIBUTE_KEYS) {
         let attribute = attributes[key]
         if (!attribute) continue
         if (selectedValues.has(attribute.value)) continue
@@ -208,17 +198,13 @@ function collectComponents(source: string, fences: FenceMatch[]): ComponentMatch
     if (isInsideFence(start, fences)) continue
     let componentName = match[1]
     let attrs = extractSveltishAttributes(match[0], start)
-    let attributeMatches: Partial<Record<ComponentAttributeKey, SveltishAttribute>> = {}
-    for (let key of fieldAttributeKeys(componentName)) {
+    let attributeMatches: Partial<Record<ComponentQueryAttributeKey, SveltishAttribute>> = {}
+    for (let key of markdownComponentFieldKeys(componentName)) {
       if (attrs[key]) attributeMatches[key] = normalizeFieldAttribute(key, attrs[key])
     }
     matches.push({start, end, data: attrs.data || null, attributes: attributeMatches, diagnostics: validateChartProps(componentName, attrs)})
   }
   return matches
-}
-
-function fieldAttributeKeys(componentName: string): ComponentAttributeKey[] {
-  return COMPONENT_FIELD_ATTRIBUTE_KEYS[componentName] || DEFAULT_FIELD_ATTRIBUTE_KEYS
 }
 
 function extractFenceName(header: string): {name?: string; index?: number} {
@@ -227,7 +213,7 @@ function extractFenceName(header: string): {name?: string; index?: number} {
   return {}
 }
 
-function normalizeFieldAttribute(key: ComponentAttributeKey, attr: SveltishAttribute): SveltishAttribute {
+function normalizeFieldAttribute(key: ComponentQueryAttributeKey, attr: SveltishAttribute): SveltishAttribute {
   if (key != 'sort') return attr
   let match = attr.value.match(/\S+/)
   if (!match) return attr

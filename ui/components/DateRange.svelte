@@ -1,6 +1,7 @@
 <script lang="ts">
   import {onMount} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
+  import {DEFAULT_DATE_PRESETS, addDays, computeDatePresetRange, formatDate, normalizeDateInput} from '../component-utilities/pageInputDefaults.ts'
   import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
 
   interface Props {
@@ -23,8 +24,6 @@
     dates = undefined, hideDuringPrint = true,
   }: Props = $props()
 
-  const DEFAULT_PRESETS = ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last 365 Days', 'Last Month', 'Last Year', 'Month to Date', 'Month to Today', 'Year to Date', 'Year to Today', 'All Time']
-
   let mounted = false
   let queryKey = ''
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
@@ -43,14 +42,14 @@
   let presetList = $derived((() => {
     if (Array.isArray(presetRanges)) return presetRanges
     if (presetRanges) return [presetRanges]
-    return DEFAULT_PRESETS
+    return DEFAULT_DATE_PRESETS
   })())
   let displayLabel = $derived(title || label)
 
   onMount(() => {
     mounted = true
-    currentStart = field.hasExternalValue ? field.value.start : normalizeInput(start)
-    currentEnd = field.hasExternalValue ? field.value.end : normalizeInput(end)
+    currentStart = field.hasExternalValue ? field.value.start : normalizeDateInput(start)
+    currentEnd = field.hasExternalValue ? field.value.end : normalizeDateInput(end)
     currentPreset = inferPreset(currentStart, currentEnd)
     if (field.hasExternalValue) updateParams()
     else if (defaultValue && presetList.includes(defaultValue)) applyPreset(defaultValue, false)
@@ -89,7 +88,7 @@
     let handler = (res: {rows?: any[]; error?: any}) => {
       if (!res || res.error || !res.rows?.length) return
       let values = res.rows
-        .map(row => normalizeInput(row[dates]))
+        .map(row => normalizeDateInput(row[dates]))
         .filter((val): val is string => !!val)
       if (!values.length) return
       values.sort()
@@ -113,51 +112,10 @@
     }
   }
 
-  function normalizeInput(value: string | Date | null | undefined): string | null {
-    if (value === null || value === undefined) return null
-    if (value instanceof Date) return formatDate(value)
-    let parsed = new Date(value)
-    if (Number.isNaN(parsed.getTime())) return null
-    return formatDate(parsed)
-  }
-
-  function formatDate(value: Date): string {
-    let year = value.getFullYear()
-    let month = String(value.getMonth() + 1).padStart(2, '0')
-    let day = String(value.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-  }
-
-  function addDays(value: Date, days: number): Date {
-    let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
-    copy.setDate(copy.getDate() + days)
-    return copy
-  }
-
   function addDaysString(value: string, days: number): string {
     let parsed = new Date(value)
     if (Number.isNaN(parsed.getTime())) return value
     return formatDate(addDays(parsed, days))
-  }
-
-  function startOfMonth(value: Date): Date {
-    return new Date(value.getFullYear(), value.getMonth(), 1)
-  }
-
-  function startOfYear(value: Date): Date {
-    return new Date(value.getFullYear(), 0, 1)
-  }
-
-  function addMonths(value: Date, months: number): Date {
-    let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
-    copy.setMonth(copy.getMonth() + months)
-    return copy
-  }
-
-  function addYears(value: Date, years: number): Date {
-    let copy = new Date(value) // eslint-disable-line svelte/prefer-svelte-reactivity
-    copy.setFullYear(copy.getFullYear() + years)
-    return copy
   }
 
   // We only persist start/end in URL state, so the preset label is inferred by matching
@@ -174,7 +132,7 @@
     })()
     if (Number.isNaN(baseEnd.getTime())) return null
     for (let preset of presetList) {
-      let range = computePresetRange(preset, baseEnd)
+      let range = computeDatePresetRange(preset, baseEnd, {domainStart, domainEnd})
       let presetStart = range?.start ? formatDate(range.start) : null
       let presetEnd = range?.end ? formatDate(range.end) : null
       if (presetStart === startValue && presetEnd === endValue) return preset
@@ -211,79 +169,11 @@
       return new Date()
     })()
     if (Number.isNaN(baseEnd.getTime())) baseEnd = new Date()
-    let range = computePresetRange(preset, baseEnd)
+    let range = computeDatePresetRange(preset, baseEnd, {domainStart, domainEnd})
     if (!range) return
     let startVal = range.start ? formatDate(range.start) : null
     let endVal = range.end ? formatDate(range.end) : null
     setRange(startVal, endVal, preset, {markTouched, persist: true})
-  }
-
-  function computePresetRange(preset: string, baseEndInclusive: Date): {start: Date | null; end: Date | null} | null {
-    let label = preset.trim()
-    let today = new Date()
-    let endExclusive = addDays(baseEndInclusive, 1)
-
-    let lastDaysMatch = label.match(/^Last (\d+) Days$/i)
-    if (lastDaysMatch) {
-      let days = parseInt(lastDaysMatch[1], 10)
-      let startDate = addDays(endExclusive, -days)
-      return {start: startDate, end: endExclusive}
-    }
-
-    let lastMonthsMatch = label.match(/^Last (\d+) Months$/i)
-    if (lastMonthsMatch) {
-      let months = parseInt(lastMonthsMatch[1], 10)
-      let monthEnd = startOfMonth(endExclusive)
-      let startDate = addMonths(monthEnd, -months)
-      return {start: startDate, end: monthEnd}
-    }
-
-    if (label === 'Last Month') {
-      let monthEnd = startOfMonth(endExclusive)
-      let startDate = addMonths(monthEnd, -1)
-      return {start: startDate, end: monthEnd}
-    }
-
-    if (label === 'Last Year') {
-      let yearEnd = startOfYear(endExclusive)
-      let startDate = addYears(yearEnd, -1)
-      return {start: startDate, end: yearEnd}
-    }
-
-    if (label === 'Last 365 Days') {
-      let startDate = addDays(endExclusive, -365)
-      return {start: startDate, end: endExclusive}
-    }
-
-    if (label === 'Month to Date') {
-      let startDate = startOfMonth(endExclusive)
-      return {start: startDate, end: endExclusive}
-    }
-
-    if (label === 'Month to Today') {
-      let startDate = startOfMonth(today)
-      let endDate = addDays(today, 1)
-      return {start: startDate, end: endDate}
-    }
-
-    if (label === 'Year to Date') {
-      let startDate = startOfYear(endExclusive)
-      return {start: startDate, end: endExclusive}
-    }
-
-    if (label === 'Year to Today') {
-      let startDate = startOfYear(today)
-      let endDate = addDays(today, 1)
-      return {start: startDate, end: endDate}
-    }
-
-    if (label === 'All Time') {
-      let startDate = domainStart ? new Date(domainStart) : null
-      let endDate = domainEnd ? addDays(new Date(domainEnd), 1) : endExclusive
-      return {start: startDate, end: endDate}
-    }
-
-    return null
   }
 
   function onPresetChange(event: Event) {

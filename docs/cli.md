@@ -18,6 +18,12 @@ graphene run path/to/page.md -c 'Query (data="query_name" x="category" y="total"
 
 # `-q/--query` can target anything usable in a chart `data` prop (for example, a gsql table or a named code-fenced query in the markdown file).
 graphene run path/to/page.md -q query_name # Run a named query/table from the markdown context and print results
+# `--input` can be repeated; repeating the same input name sends an array value.
+graphene run path/to/page.md -q query_name --input carrier=WN # Override a page input for a named query
+
+# `--list-inputs` and `--all-queries` are headless and understand static Dropdown, TextInput, and DateRange defaults.
+graphene run path/to/page.md --list-inputs # List static page inputs and their defaults
+graphene run path/to/page.md --all-queries # Run every statically discoverable component data query
 
 graphene compile "[GSQL]" # Show the compiled, dialect-specific SQL
 

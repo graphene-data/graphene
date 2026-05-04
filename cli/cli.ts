@@ -55,21 +55,37 @@ program
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
+  .option('--input <name=value>', 'Input value for markdown page queries; repeat for arrays', (value, previous: string[]) => previous.concat(value), [])
+  .option('--list-inputs', 'List static markdown page inputs and defaults')
+  .option('--all-queries', 'Run all static component data queries from a markdown page')
   .action(
-    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string}) => {
-      if (options.chart && options.query) {
-        console.error('Cannot use --chart and --query together')
+    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string; input?: string[]; listInputs?: boolean; allQueries?: boolean}) => {
+      let pageQueryModeCount = [options.query, options.allQueries, options.listInputs].filter(Boolean).length
+      if (options.chart && pageQueryModeCount > 0) {
+        console.error('Cannot use --chart with --query, --all-queries, or --list-inputs')
+        return exit(1)
+      }
+      if (pageQueryModeCount > 1) {
+        console.error('Use only one of --query, --all-queries, or --list-inputs')
         return exit(1)
       }
 
       let inputPath = getExistingPath(input)
       if (inputPath && inputPath.endsWith('.md')) {
-        let res = options.query ? await runNamedQueryFromMd(inputPath, options.query, telemetry) : await runMdFile({mdArg: inputPath, chart: options.chart, telemetry})
+        if (options.input?.length && pageQueryModeCount == 0) {
+          console.error('--input requires --query, --all-queries, or --list-inputs')
+          return exit(1)
+        }
+        let pageOptions = {inputs: options.input || [], allQueries: options.allQueries, listInputs: options.listInputs, telemetry}
+        let res =
+          options.query || options.allQueries || options.listInputs
+            ? await runNamedQueryFromMd(inputPath, options.query || '', pageOptions)
+            : await runMdFile({mdArg: inputPath, chart: options.chart, telemetry})
         return exit(res ? 0 : 1)
       }
 
-      if (options.chart || options.query) {
-        console.error('--chart and --query can only be used with a markdown file path')
+      if (options.chart || pageQueryModeCount > 0 || options.input?.length) {
+        console.error('--chart, --query, --all-queries, --list-inputs, and --input can only be used with a markdown file path')
         return exit(1)
       }
 
