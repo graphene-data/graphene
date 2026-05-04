@@ -124,7 +124,7 @@ To set up Graphene on a BigQuery connection you will need the following:
 Run the Graphene installer with npm, yarn, or pnpm:
 
 ```bash
-npm create @graphenedata
+npm create graphene
 ```
 
 The installer will walk you through a short series of prompts:

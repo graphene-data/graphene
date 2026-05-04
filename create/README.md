@@ -1,7 +1,7 @@
-# `@graphenedata/create`
+# `create-graphene`
 
 Scaffolds a new Graphene project.
 
 ```bash
-npm create @graphenedata
+npm create graphene
 ```

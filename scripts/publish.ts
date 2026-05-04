@@ -17,12 +17,13 @@ let vscodePublisher = await readPublisher('vscode/package.json')
 await $`npx vsce verify-pat ${vscodePublisher}`
 await $`npx ovsx verify-pat ${vscodePublisher}`
 
-// package.json is authoritative for release version; cli/vscode must match exactly.
+// package.json is authoritative for release version; published packages must match exactly.
 let rootVersion = await readVersion('package.json')
 let cliVersion = await readVersion('cli/package.json')
 let vscodeVersion = await readVersion('vscode/package.json')
-if (rootVersion !== cliVersion || rootVersion !== vscodeVersion) {
-  throw new Error(`Version mismatch: package=${rootVersion}, cli=${cliVersion}, vscode=${vscodeVersion}`)
+let createVersion = await readVersion('create/package.json')
+if (rootVersion !== cliVersion || rootVersion !== vscodeVersion || rootVersion !== createVersion) {
+  throw new Error(`Version mismatch: package=${rootVersion}, cli=${cliVersion}, vscode=${vscodeVersion}, create=${createVersion}`)
 }
 
 let tag = `v${rootVersion}`
@@ -39,6 +40,9 @@ if (remoteTag) throw new Error(`Tag ${tag} already exists on origin`)
 let existingRelease = (await $`gh release view ${tag}`.nothrow()).exitCode === 0
 if (existingRelease) throw new Error(`GitHub release ${tag} already exists`)
 
+let existingCreatePackage = (await $`npm view create-graphene@${rootVersion} version`.nothrow()).exitCode === 0
+if (existingCreatePackage) throw new Error(`create-graphene@${rootVersion} already exists on npm`)
+
 // Tag first so package registries and GitHub release all point to the same immutable version marker.
 await $`git tag ${tag}`
 await $`git push origin ${tag}`
@@ -46,6 +50,8 @@ await $`git push origin ${tag}`
 // Publish package artifacts.
 await $`pnpm -C cli build`
 await $`npm publish cli/dist/npm --access public`
+await $`pnpm -C create build`
+await $`npm publish ./create`
 await $`(cd vscode && npx vsce publish --no-dependencies)`
 await $`(cd vscode && npx ovsx publish --no-dependencies)`
 

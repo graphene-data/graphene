@@ -4,7 +4,7 @@ name: Publish
 # commit has been merged to main. I chose to run this on push instead of on pull_request close to make it a bit
 # safer, but it means our logic to detect publishes is a little more complex.
 # In a nutshell, we need the commit to have [release] in the message, and then we check if there is a tag already for
-# the version in cli/package.json.
+# the version in package.json.
 # The publish runs on the exact sha in the PR, _not_ whatever is on main, ensuring we don't inadvertantly publish changes.
 
 on:
@@ -51,16 +51,16 @@ jobs:
             if (!pr) throw new Error('Missing PR')
 
             core.setOutput('pr_number', String(pr.number))
-            let pkg = await github.rest.repos.getContent({owner: context.repo.owner, repo: context.repo.repo, path: 'cli/package.json', ref: `refs/pull/${pr.number}/head`})
+            let pkg = await github.rest.repos.getContent({owner: context.repo.owner, repo: context.repo.repo, path: 'package.json', ref: `refs/pull/${pr.number}/head`})
 
             if (Array.isArray(pkg.data) || pkg.data.type !== 'file' || !pkg.data.content) {
-              throw new Error('Could not read cli/package.json from PR head commit')
+              throw new Error('Could not read package.json from PR head commit')
             }
 
             let raw = Buffer.from(pkg.data.content, 'base64').toString('utf8')
             let version = JSON.parse(raw).version
             if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
-              throw new Error(`Invalid version in cli/package.json: ${version}`)
+              throw new Error(`Invalid version in package.json: ${version}`)
             }
 
             let tagName = `v${version}`
@@ -79,7 +79,7 @@ jobs:
             let shouldRelease = !tagExists
             // core.info(`changed files: ${changed.join(', ')}`)
             core.info(`merged PR: #${pr.number}`)
-            core.info(`cli version: ${version}`)
+            core.info(`release version: ${version}`)
             core.info(`tag ${tagName} exists: ${tagExists}`)
             core.info(`should release: ${shouldRelease}`)
             core.setOutput('should_release', shouldRelease ? 'true' : 'false')

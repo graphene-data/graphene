@@ -97,7 +97,7 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
 
     let [createCommand, createArgs] = packageManager.create(createTarball)
     let scaffold = await run(createCommand, createArgs, tempRoot, childEnv)
-    expectSuccess(`${packageManager.name} create-graphenedata`, scaffold)
+    expectSuccess(`${packageManager.name} create-graphene`, scaffold)
     await expectNoSvelteDependency(projectDir)
 
     let [installCommand, installArgs] = packageManager.install(cliTarball)
@@ -176,7 +176,7 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with npm', {tim
   await installGrapheneAndUseIt(
     {
       name: 'npm',
-      create: tarball => ['npm', ['exec', '--yes', '--package', tarball, '--', 'create-graphenedata', 'demo-app', '--yes', '--no-install']],
+      create: tarball => ['npm', ['exec', '--yes', '--package', tarball, '--', 'create-graphene', 'demo-app', '--yes', '--no-install']],
       install: tarball => ['npm', ['install', tarball]],
       graphene: args => ['npm', ['run', 'graphene', '--', ...args]],
     },
@@ -188,8 +188,8 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with pnpm', {ti
   await installGrapheneAndUseIt(
     {
       name: 'pnpm',
-      create: tarball => ['pnpm', ['dlx', '--package', tarball, 'create-graphenedata', 'demo-app', '--yes', '--no-install']],
-      install: tarball => ['pnpm', ['add', tarball]],
+      create: tarball => ['pnpm', ['dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
+      install: tarball => ['pnpm', ['add', '--config.minimumReleaseAge=0', tarball]],
       graphene: args => ['pnpm', ['run', 'graphene', '--', ...args]],
     },
     page,
@@ -200,7 +200,7 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with yarn', {ti
   await installGrapheneAndUseIt(
     {
       name: 'yarn',
-      create: tarball => ['corepack', ['yarn@4.12.0', 'dlx', '--package', tarball, 'create-graphenedata', 'demo-app', '--yes', '--no-install']],
+      create: tarball => ['corepack', ['yarn@4.12.0', 'dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
       install: tarball => ['corepack', ['yarn@4.12.0', 'add', tarball]],
       graphene: args => ['corepack', ['yarn@4.12.0', 'run', 'graphene', ...args]],
     },
