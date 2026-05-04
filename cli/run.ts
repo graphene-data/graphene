@@ -2,7 +2,6 @@ import fs from 'fs-extra'
 import {type IncomingMessage, type ServerResponse} from 'http'
 import {readFileSync} from 'node:fs'
 import {styleText} from 'node:util'
-import os from 'os'
 import path from 'path'
 import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
@@ -14,7 +13,7 @@ import {analyzeWorkspace, getFile, loadWorkspace, toSql} from '../lang/core.ts'
 import {type AnalysisResult, type WorkspaceFileInput} from '../lang/types.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
-import {isServerRunning, runServeInBackground} from './background.ts'
+import {getGrapheneCache, isServerRunning, runServeInBackground} from './background.ts'
 import {runQuery} from './connections/index.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
@@ -78,9 +77,11 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   if (resp?.screenshot) {
-    let filename = `graphene-screenshot-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
-    let screenshotPath = path.join(os.tmpdir(), filename)
+    let filename = `${new Date().toISOString().replace(/[:.]/g, '-')}.png`
+    let screenshotDir = path.join(getGrapheneCache(config.root), 'screenshots')
+    let screenshotPath = path.join(screenshotDir, filename)
     let base64Data = resp.screenshot.replace(/^data:image\/png;base64,/, '')
+    await fs.ensureDir(screenshotDir)
     await fs.writeFile(screenshotPath, base64Data, 'base64')
     log('Screenshot saved to', screenshotPath)
   }

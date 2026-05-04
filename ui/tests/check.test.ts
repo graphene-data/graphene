@@ -14,8 +14,11 @@ function log(...args: any[]) {
 }
 
 function outputLines() {
-  let normalized = logs.replace(/graphene-screenshot-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.png/g, 'graphene-screenshot-<timestamp>.png')
-  normalized = normalized.replace(/Screenshot saved to[^\n]*graphene-screenshot-<timestamp>\.png/g, 'Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png')
+  let normalized = logs.replace(/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.png/g, '<timestamp>.png')
+  normalized = normalized.replace(
+    /Screenshot saved to[^\n]*node_modules\/\.graphene\/screenshots\/<timestamp>\.png/g,
+    'Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png',
+  )
   return stripAnsi(normalized.trim())
 }
 
@@ -106,7 +109,7 @@ test('cli run with md file reports dynamic unsupported chart wrapper props', asy
     trimIndentation(`
     Runtime errors in index.md:
     BarChart (data="chart_data" x="carrier" y="distance"): Unsupported prop "yFmt" on BarChart.
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
@@ -135,7 +138,7 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props',
     trimIndentation(`
     Runtime errors in index.md:
     ECharts (data="chart_data" x="carrier" y="distance"): Unsupported prop "chartAreaHeight" on ECharts.
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
@@ -159,7 +162,7 @@ test('cli run with md file reports multiple dynamic unsupported chart props', as
     trimIndentation(`
     Runtime errors in index.md:
     BarChart (data="chart_data" x="carrier" y="distance"): Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
@@ -189,7 +192,7 @@ test('cli run with md file reports runtime chart prop and render errors together
     trimIndentation(`
     Runtime errors in index.md:
     ECharts (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
@@ -213,7 +216,7 @@ test('cli run with md file reports runtime query errors', async ({server, page})
     trimIndentation(`
     Runtime errors in index.md:
     BarChart (data="runtime_error_query" x="origin" y="explode"): Out of Range Error: cannot take square root of a negative number
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
@@ -242,7 +245,7 @@ test('cli run with md file reports runtime chart configuration errors', async ({
     trimIndentation(`
     Runtime errors in index.md:
     ECharts (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
@@ -265,7 +268,7 @@ test('cli run with md file reports table configuration errors', async ({server, 
     trimIndentation(`
     Runtime errors in index.md:
     DataTable: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
 `),
   )
 })
@@ -289,7 +292,7 @@ test('cli run with md file reports big value query errors', async ({server, page
     trimIndentation(`
     Runtime errors in index.md:
     BigValue (data="big_value_data" value="value"): Out of Range Error: cannot take square root of a negative number
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
 `),
   )
 })
@@ -333,7 +336,7 @@ test('cli run with --chart captures a single chart screenshot', async ({server, 
   expect(outputLines()).toEqual(
     trimIndentation(`
     No errors found 💎
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
@@ -360,7 +363,7 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({ser
   expect(outputLines()).toEqual(
     trimIndentation(`
     No errors found 💎
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
@@ -400,7 +403,7 @@ test('cli run with --chart captures a chart screenshot by component ID', async (
   expect(outputLines()).toEqual(
     trimIndentation(`
     No errors found 💎
-    Screenshot saved to /tmp/graphene-screenshot-<timestamp>.png
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
 })
