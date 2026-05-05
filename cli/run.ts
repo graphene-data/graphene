@@ -23,9 +23,12 @@ import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 export interface RunMdFileOptions {
   mdArg: string
   chart?: string
+  inputs?: RunInputs
   log?: (...args: any[]) => void
   telemetry?: CliTelemetry
 }
+
+type RunInputs = Record<string, string | string[]>
 
 let browserConnections: {url: string; socket: WebSocket}[] = []
 let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {}
@@ -53,7 +56,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  let resp = await sendSocketRequest({mdFile, action: 'check', chart: options.chart, log})
+  let resp = await sendSocketRequest({mdFile, action: 'check', chart: options.chart, inputs: options.inputs, log})
   if (!resp) return false
 
   let errors = Array.from(resp.errors || []) as GrapheneError[]
@@ -115,9 +118,9 @@ export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry,
   return true
 }
 
-export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, telemetry?: CliTelemetry): Promise<boolean> {
+export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, options: {inputs?: RunInputs; telemetry?: CliTelemetry} = {}): Promise<boolean> {
   let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-  telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
+  options.telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
   let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
 
@@ -137,15 +140,22 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
 
   let input = getFile(queryResult, 'input.md')
   if (!input?.queries.length) return false
-  let sql = toSql(input.queries[input.queries.length - 1])
+  let sql: string
+  try {
+    sql = toSql(input.queries[input.queries.length - 1], options.inputs || {})
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err))
+    return false
+  }
   let res = await runQuery(sql)
   printTable(res.rows)
   return true
 }
 
-async function sendSocketRequest({mdFile, action, chart, log}: {mdFile: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
+async function sendSocketRequest({mdFile, action, chart, inputs, log}: {mdFile: string; action: 'check' | 'list'; chart?: string; inputs?: RunInputs; log: (...args: any[]) => void}) {
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
   if (pageUrl === '/index') pageUrl = '/'
+  pageUrl = appendInputsToUrl(pageUrl, inputs)
 
   if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
     log('Starting Graphene server...')
@@ -178,6 +188,17 @@ async function sendSocketRequest({mdFile, action, chart, log}: {mdFile: string; 
   }
 
   return resp
+}
+
+function appendInputsToUrl(pageUrl: string, inputs: RunInputs = {}) {
+  let search = new URLSearchParams()
+  Object.entries(inputs).forEach(([name, value]) => {
+    if (Array.isArray(value)) value.forEach(item => search.append(name, item))
+    else search.append(name, value)
+  })
+  let rendered = search.toString()
+  if (!rendered) return pageUrl
+  return `${pageUrl}?${rendered}`
 }
 
 async function fetchSocketRequest({host, pageUrl, action, chart}: {host: string; pageUrl: string; action: 'check' | 'list'; chart?: string}) {

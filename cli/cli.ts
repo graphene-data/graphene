@@ -55,16 +55,18 @@ program
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
+  .option('--input <key=value>', 'Input value to use for parameters; repeat for multiple values', collectInputOption, [])
   .action(
-    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string}) => {
+    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string; input?: string[]}) => {
       if (options.chart && options.query) {
         console.error('Cannot use --chart and --query together')
         return exit(1)
       }
 
+      let inputs = parseRunInputs(options.input || [], exit)
       let inputPath = getExistingPath(input)
       if (inputPath && inputPath.endsWith('.md')) {
-        let res = options.query ? await runNamedQueryFromMd(inputPath, options.query, telemetry) : await runMdFile({mdArg: inputPath, chart: options.chart, telemetry})
+        let res = options.query ? await runNamedQueryFromMd(inputPath, options.query, {inputs, telemetry}) : await runMdFile({mdArg: inputPath, chart: options.chart, inputs, telemetry})
         return exit(res ? 0 : 1)
       }
 
@@ -83,7 +85,7 @@ program
       let gsql = await readInput(input)
       let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: gsql})}, 'input')
       let [query] = validateInputQuery(analysis, exit)
-      let sql = toSql(query)
+      let sql = renderSql(query, inputs, exit)
       let res = await runQuery(sql)
       printTable(res.rows)
     }),
@@ -252,6 +254,40 @@ function validateInputQuery(analysis: AnalysisResult, exit: (code?: number) => n
     return exit(1)
   }
   return queries
+}
+
+function collectInputOption(value: string, previous: string[]) {
+  previous.push(value)
+  return previous
+}
+
+function parseRunInputs(values: string[], exit: (code?: number) => never): Record<string, string | string[]> {
+  let inputs = {} as Record<string, string | string[]>
+  for (let value of values) {
+    let index = value.indexOf('=')
+    let key = index >= 0 ? value.slice(0, index) : ''
+    if (index < 0 || !key) {
+      console.error(`Invalid --input "${value}". Expected key=value.`)
+      return exit(1)
+    }
+
+    let next = value.slice(index + 1)
+    let existing = inputs[key]
+    if (existing === undefined) inputs[key] = next
+    else if (Array.isArray(existing)) existing.push(next)
+    else inputs[key] = [existing, next]
+  }
+  return inputs
+}
+
+function renderSql(query: Query, inputs: Record<string, string | string[]>, exit: (code?: number) => never): string {
+  try {
+    return toSql(query, inputs)
+  } catch (err) {
+    if (err instanceof Error) console.error(err.message)
+    else console.error(String(err))
+    return exit(1)
+  }
 }
 
 function findCaseInsensitive(values: string[], needle: string): string | null {

@@ -116,6 +116,13 @@ describe('cli run', () => {
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
+  it('runs an inline parameterized query with --input', async () => {
+    let res = await runCli(['run', 'from flights where carrier = $carrier select carrier, count() as total group by 1', '--input', 'carrier=AA'], {cwd: flightDir})
+    expectCliSuccess(res, 'run parameterized query')
+    expect(res.stdout).toContain('AA')
+    expect(res.stdout.toLowerCase()).toContain('total')
+  })
+
   it('loads the project config when running from a nested directory', async () => {
     let res = await runCli(['run', 'from flights select count() as total'], {cwd: path.join(flightDir, 'tables')})
     expectCliSuccess(res, 'run query from nested directory')
@@ -140,6 +147,37 @@ describe('cli run', () => {
     let res = await runCli(['run', 'index.md', '--query', 'performance_by_year'], {cwd: flightDir})
     expectCliSuccess(res, 'run markdown query')
     expect(res.stdout.toLowerCase()).toContain('flight_count')
+  })
+
+  it('runs a parameterized named query from a markdown file with --input', async () => {
+    let res = await runCli(['run', 'carrier_detail.md', '--query', 'carrier_info', '--input', 'carrier=AA'], {cwd: flightDir})
+    expectCliSuccess(res, 'run parameterized markdown query')
+    expect(res.stdout).toContain('AA')
+  })
+
+  it('prints a clean error for a missing markdown query input', async () => {
+    let res = await runCli(['run', 'carrier_detail.md', '--query', 'carrier_info'], {cwd: flightDir})
+    expect(res.code).toBe(1)
+    expect(res.stderr.trim()).toBe('Missing param $carrier')
+  })
+
+  it('treats repeated --input values as an array', async () => {
+    let res = await runCli(['run', 'from flights where carrier in ($carrier) select carrier group by 1 order by 1', '--input', 'carrier=AA', '--input', 'carrier=DL'], {cwd: flightDir})
+    expectCliSuccess(res, 'run repeated input query')
+    expect(res.stdout).toContain('AA')
+    expect(res.stdout).toContain('DL')
+  })
+
+  it('rejects --input without key=value syntax', async () => {
+    let res = await runCli(['run', 'from flights select count()', '--input', 'carrier'], {cwd: flightDir})
+    expect(res.code).toBe(1)
+    expect(res.stderr).toContain('Invalid --input "carrier". Expected key=value.')
+  })
+
+  it('rejects --input with an empty key', async () => {
+    let res = await runCli(['run', 'from flights select count()', '--input', '=AA'], {cwd: flightDir})
+    expect(res.code).toBe(1)
+    expect(res.stderr).toContain('Invalid --input "=AA". Expected key=value.')
   })
 
   it('uses a configured duckdb path when present', async () => {
