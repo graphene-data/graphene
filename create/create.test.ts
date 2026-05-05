@@ -347,6 +347,8 @@ describe('runCreate', () => {
 
     let linkTarget = await readlink(path.join(root, 'demo-app/.claude/skills/graphene'))
     expect(linkTarget).toBe('../../node_modules/@graphenedata/cli/dist/skills/graphene')
+    expect(await readFile(path.join(root, 'demo-app/CLAUDE.md'), 'utf8')).toContain('npx graphene check')
+    expect(await lstat(path.join(root, 'demo-app/AGENTS.md')).catch(() => null)).toBeNull()
   })
 
   it('skips dependency installation with --no-install', async () => {

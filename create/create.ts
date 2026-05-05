@@ -226,7 +226,7 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   let files: TemplateFiles = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
     '.gitignore': ['node_modules', '.env', '*.duckdb'].join('\n') + '\n',
-    'AGENTS.md': renderAgents(answers),
+    [agentsFileName(answers.skillLinkTarget)]: renderAgents(answers),
     'index.md': renderIndex(answers),
   }
   if (answers.packageManager?.name === 'yarn') files['.yarnrc.yml'] = 'nodeLinker: node-modules\n'
@@ -242,6 +242,11 @@ function grapheneCommand(packageManager: PackageManager | undefined, args: strin
   if (packageManager?.name === 'yarn') return `yarn graphene ${args}`
   if (packageManager?.name === 'bun') return `bun run graphene ${args}`
   return `npx graphene ${args}`
+}
+
+function agentsFileName(skillLinkTarget: SkillLinkTarget): 'AGENTS.md' | 'CLAUDE.md' {
+  if (skillLinkTarget === '.claude') return 'CLAUDE.md'
+  return 'AGENTS.md'
 }
 
 function renderAgents(answers: ScaffoldAnswers): string {
