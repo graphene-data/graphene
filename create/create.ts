@@ -15,13 +15,15 @@ interface CliPackageJson {
   peerDependencies?: Partial<Record<WarehouseClient, string>>
 }
 
-type Database = 'duckdb' | 'snowflake' | 'bigquery'
-type WarehouseClient = '@duckdb/node-api' | '@google-cloud/bigquery' | 'snowflake-sdk'
+type Database = 'duckdb' | 'snowflake' | 'bigquery' | 'clickhouse'
+type WarehouseClient = '@clickhouse/client' | '@duckdb/node-api' | '@google-cloud/bigquery' | 'snowflake-sdk'
 type SkillLinkTarget = '.agents' | '.claude' | 'none'
+type CredentialFailureAction = 'edit' | 'continue'
 
 interface CreateOptions {
   yes: boolean
   install: boolean
+  skipCredentialValidation: boolean
   name: string | undefined
   targetDir: string | undefined
   help: boolean
@@ -40,12 +42,18 @@ interface BigQueryConfig {
   projectId: string
 }
 
+interface ClickHouseConfig {
+  url: string
+  username: string
+}
+
 interface GrapheneTemplateConfig {
   dialect: Database
   defaultNamespace?: string
   duckdb?: DuckDbConfig
   snowflake?: SnowflakeConfig
   bigquery?: BigQueryConfig
+  clickhouse?: ClickHouseConfig
 }
 
 interface TemplatePackageJson {
@@ -89,6 +97,9 @@ interface ScaffoldAnswers {
   snowflakePassphrase?: string
   bigqueryProjectId?: string
   bigqueryKeyPath?: string
+  clickhouseUrl?: string
+  clickhouseUsername?: string
+  clickhousePassword?: string
   skillLinkTarget: SkillLinkTarget
 }
 
@@ -119,7 +130,7 @@ class CreateCancelled extends Error {
 
 // Parse the small CLI surface directly so the initializer stays dependency-light.
 export function parseArgs(argv: string[]): CreateOptions {
-  let options: CreateOptions = {yes: false, install: true, name: undefined, targetDir: undefined, help: false}
+  let options: CreateOptions = {yes: false, install: true, skipCredentialValidation: false, name: undefined, targetDir: undefined, help: false}
   for (let i = 0; i < argv.length; i++) {
     let arg = argv[i]
     if (arg === '--yes' || arg === '-y') {
@@ -128,6 +139,10 @@ export function parseArgs(argv: string[]): CreateOptions {
     }
     if (arg === '--no-install') {
       options.install = false
+      continue
+    }
+    if (arg === '--skip-credential-validation') {
+      options.skipCredentialValidation = true
       continue
     }
     if (arg === '--help' || arg === '-h') {
@@ -183,8 +198,10 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
     if (answers.duckdbPath) graphene.duckdb = {path: answers.duckdbPath}
   } else if (answers.database === 'snowflake') {
     graphene.snowflake = {account: answers.snowflakeAccount || '', username: answers.snowflakeUsername || ''}
-  } else {
+  } else if (answers.database === 'bigquery') {
     graphene.bigquery = {projectId: answers.bigqueryProjectId || ''}
+  } else {
+    graphene.clickhouse = {url: answers.clickhouseUrl || '', username: answers.clickhouseUsername || ''}
   }
 
   let pkg: TemplatePackageJson = {
@@ -246,6 +263,7 @@ function renderAgents(answers: ScaffoldAnswers): string {
 function databaseLabel(database: Database) {
   if (database === 'snowflake') return 'Snowflake'
   if (database === 'bigquery') return 'BigQuery'
+  if (database === 'clickhouse') return 'ClickHouse'
   return 'DuckDB'
 }
 
@@ -260,6 +278,8 @@ function renderEnvFile(answers: ScaffoldAnswers): string | null {
     if (answers.snowflakePassphrase) lines.push(`SNOWFLAKE_PRI_PASSPHRASE=${answers.snowflakePassphrase}`)
   } else if (answers.database === 'bigquery') {
     lines.push(`GOOGLE_APPLICATION_CREDENTIALS=${answers.bigqueryKeyPath || ''}`)
+  } else if (answers.database === 'clickhouse') {
+    lines.push(`CLICKHOUSE_PASSWORD=${answers.clickhousePassword || ''}`)
   }
   return lines.length ? lines.join('\n') + '\n' : null
 }
@@ -288,9 +308,10 @@ function printHelp(stdout: Writable): void {
       'Usage: npm create graphene [target-dir] [-- --yes] [--name <project-name>] [--no-install]',
       '',
       'Options:',
-      '  -y, --yes        Skip prompts and accept defaults',
-      '  --name <name>    Set the generated package name',
-      '  --no-install     Skip dependency installation',
+      '  -y, --yes                      Skip prompts and accept defaults',
+      '  --name <name>                  Set the generated package name',
+      '  --no-install                   Skip dependency installation',
+      '  --skip-credential-validation   Skip warehouse credential validation',
     ].join('\n') + '\n',
   )
 }
@@ -315,11 +336,24 @@ function validateFileExtension(filePath: string | undefined, expectedExtension: 
   if (!filePath.endsWith(expectedExtension)) return `File must end with ${expectedExtension}`
 }
 
-async function promptExistingFilePath({message, expectedExtension, input, output}: {message: string; expectedExtension: string; input: Readable; output: Writable}): Promise<string> {
+async function promptExistingFilePath({
+  message,
+  expectedExtension,
+  initialValue,
+  input,
+  output,
+}: {
+  message: string
+  expectedExtension: string
+  initialValue?: string
+  input: Readable
+  output: Writable
+}): Promise<string> {
   while (true) {
     let filePath = unwrapPrompt(
       await clack.path({
         message,
+        initialValue,
         validate: value => validateFileExtension(value, expectedExtension),
         ...promptOptions(input, output),
       }),
@@ -336,12 +370,14 @@ async function promptExistingFilePath({message, expectedExtension, input, output
 function namespacePlaceholder(database: Database) {
   if (database === 'snowflake') return 'MY_DB.ANALYTICS'
   if (database === 'bigquery') return 'my-project.analytics'
+  if (database === 'clickhouse') return 'default'
   return 'analytics'
 }
 
 function getWarehouseClient(database: Database): WarehouseClient {
   if (database === 'snowflake') return 'snowflake-sdk'
   if (database === 'bigquery') return '@google-cloud/bigquery'
+  if (database === 'clickhouse') return '@clickhouse/client'
   return '@duckdb/node-api'
 }
 
@@ -349,6 +385,188 @@ function getWarehouseClientVersion(packageName: WarehouseClient): string {
   let version = cliManifest.peerDependencies?.[packageName]
   if (!version) throw new Error(`Missing ${packageName} peerDependency in cli/package.json`)
   return version
+}
+
+async function promptWarehouseCredentials(answers: ScaffoldAnswers, input: Readable, output: Writable): Promise<void> {
+  if (answers.database === 'snowflake') {
+    answers.snowflakeAccount = unwrapPrompt(
+      await clack.text({
+        message: 'Snowflake account ID',
+        placeholder: 'myorg-myaccount',
+        initialValue: answers.snowflakeAccount,
+        validate: validateRequired('Snowflake account ID is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.snowflakeUsername = unwrapPrompt(
+      await clack.text({
+        message: 'Snowflake username',
+        placeholder: 'graphene_user',
+        initialValue: answers.snowflakeUsername,
+        validate: validateRequired('Snowflake username is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.snowflakeKeyPath = await promptExistingFilePath({message: 'Path to .p8 key file', expectedExtension: '.p8', initialValue: answers.snowflakeKeyPath, input, output})
+    answers.snowflakePassphrase = unwrapPrompt(await clack.password({message: 'Key passphrase', ...promptOptions(input, output)}))
+    return
+  }
+
+  if (answers.database === 'bigquery') {
+    answers.bigqueryProjectId = unwrapPrompt(
+      await clack.text({
+        message: 'GCP project ID',
+        placeholder: 'my-project-123',
+        initialValue: answers.bigqueryProjectId,
+        validate: validateRequired('GCP project ID is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.bigqueryKeyPath = await promptExistingFilePath({
+      message: 'Path to service account .json key file',
+      expectedExtension: '.json',
+      initialValue: answers.bigqueryKeyPath,
+      input,
+      output,
+    })
+    return
+  }
+
+  if (answers.database === 'clickhouse') {
+    answers.clickhouseUrl = unwrapPrompt(
+      await clack.text({
+        message: 'ClickHouse URL',
+        placeholder: 'https://example.clickhouse.cloud:8443',
+        initialValue: answers.clickhouseUrl,
+        validate: validateRequired('ClickHouse URL is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.clickhouseUsername = unwrapPrompt(
+      await clack.text({
+        message: 'ClickHouse username',
+        placeholder: 'default',
+        initialValue: answers.clickhouseUsername,
+        validate: validateRequired('ClickHouse username is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.clickhousePassword = unwrapPrompt(
+      await clack.password({
+        message: 'ClickHouse password',
+        validate: validateRequired('ClickHouse password is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+  }
+}
+
+async function collectWarehouseCredentials(answers: ScaffoldAnswers, options: CreateOptions, input: Readable, output: Writable): Promise<void> {
+  while (true) {
+    await promptWarehouseCredentials(answers, input, output)
+    if (options.skipCredentialValidation) return
+
+    let result = await testWarehouseCredentials(answers, output)
+    if (result.ok) return
+
+    clack.log.error(`${databaseLabel(answers.database)} credential validation failed: ${result.error}`, {output})
+    let action = unwrapPrompt(
+      await clack.select<CredentialFailureAction>({
+        message: 'How would you like to continue?',
+        options: [
+          {value: 'edit', label: 'Edit credentials'},
+          {value: 'continue', label: 'Continue anyway'},
+        ],
+        ...promptOptions(input, output),
+      }),
+    )
+    if (action === 'continue') return
+  }
+}
+
+async function testWarehouseCredentials(answers: ScaffoldAnswers, output: Writable): Promise<{ok: true} | {ok: false; error: string}> {
+  let task = clack.taskLog({title: `Testing ${databaseLabel(answers.database)} credentials...`, retainLog: true, output})
+  try {
+    await withTimeout(runWarehouseCredentialTest(answers), 15_000, `${databaseLabel(answers.database)} credential validation timed out`)
+    task.success('Credentials validated')
+    return {ok: true}
+  } catch (err) {
+    task.error('Credential validation failed', {showLog: true})
+    return {ok: false, error: formatCredentialError(err)}
+  }
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let timeout: NodeJS.Timeout | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timeout = setTimeout(() => reject(new Error(message)), ms)
+      }),
+    ])
+  } finally {
+    if (timeout) clearTimeout(timeout)
+  }
+}
+
+function runWarehouseCredentialTest(answers: ScaffoldAnswers): Promise<void> {
+  if (answers.database === 'snowflake') return testSnowflakeCredentials(answers)
+  if (answers.database === 'bigquery') return testBigQueryCredentials(answers)
+  if (answers.database === 'clickhouse') return testClickHouseCredentials(answers)
+  return Promise.resolve()
+}
+
+async function testSnowflakeCredentials(answers: ScaffoldAnswers): Promise<void> {
+  let snowflake = (await import('snowflake-sdk')).default
+  snowflake.configure({logLevel: 'WARN', logFilePath: '/dev/null'})
+  let connection = snowflake.createConnection({
+    account: answers.snowflakeAccount,
+    username: answers.snowflakeUsername,
+    privateKeyPath: answers.snowflakeKeyPath,
+    privateKeyPass: answers.snowflakePassphrase,
+    authenticator: 'SNOWFLAKE_JWT',
+    application: 'Graphene',
+  })
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      connection.connect(err => (err ? reject(err) : resolve()))
+    })
+  } finally {
+    await new Promise<void>(resolve => {
+      connection.destroy(() => resolve())
+    }).catch(() => {})
+  }
+}
+
+async function testBigQueryCredentials(answers: ScaffoldAnswers): Promise<void> {
+  let {BigQuery} = await import('@google-cloud/bigquery')
+  let credentials = JSON.parse(await readFile(answers.bigqueryKeyPath || '', 'utf8'))
+  let client = new BigQuery({projectId: answers.bigqueryProjectId, credentials, userAgent: 'Graphene'})
+  await client.createQueryJob({query: 'select 1', useLegacySql: false, dryRun: true})
+}
+
+async function testClickHouseCredentials(answers: ScaffoldAnswers): Promise<void> {
+  let {createClient} = await import('@clickhouse/client')
+  let client = createClient({
+    url: answers.clickhouseUrl,
+    username: answers.clickhouseUsername,
+    password: answers.clickhousePassword,
+    database: answers.defaultNamespace || 'default',
+    application: 'Graphene',
+  })
+  try {
+    let result = await client.query({query: 'SELECT 1', format: 'JSONEachRow'})
+    await result.json()
+  } finally {
+    await client.close()
+  }
+}
+
+function formatCredentialError(err: unknown): string {
+  if (err instanceof Error && err.message) return err.message
+  return String(err || 'Unknown error')
 }
 
 async function collectAnswers({options, packageManager, input, output}: {options: CreateOptions; packageManager: PackageManager; input: Readable; output: Writable}): Promise<ScaffoldAnswers> {
@@ -381,9 +599,10 @@ async function collectAnswers({options, packageManager, input, output}: {options
     await clack.select<Database>({
       message: 'Database',
       options: [
-        {value: 'duckdb', label: 'DuckDB (local file)'},
         {value: 'snowflake', label: 'Snowflake'},
         {value: 'bigquery', label: 'BigQuery'},
+        {value: 'clickhouse', label: 'ClickHouse'},
+        {value: 'duckdb', label: 'DuckDB (local file)'},
       ],
       ...promptOptions(input, output),
     }),
@@ -396,6 +615,7 @@ async function collectAnswers({options, packageManager, input, output}: {options
       ...promptOptions(input, output),
     }),
   ).trim()
+  if (!defaultNamespace && database === 'clickhouse') defaultNamespace = 'default'
 
   let answers: ScaffoldAnswers = {
     targetDir,
@@ -419,40 +639,8 @@ async function collectAnswers({options, packageManager, input, output}: {options
           ...promptOptions(input, output),
         }),
       ).trim() || undefined
-  } else if (database === 'snowflake') {
-    answers.snowflakeAccount = unwrapPrompt(
-      await clack.text({
-        message: 'Snowflake account ID',
-        placeholder: 'myorg-myaccount',
-        validate: validateRequired('Snowflake account ID is required'),
-        ...promptOptions(input, output),
-      }),
-    )
-    answers.snowflakeUsername = unwrapPrompt(
-      await clack.text({
-        message: 'Snowflake username',
-        placeholder: 'graphene_user',
-        validate: validateRequired('Snowflake username is required'),
-        ...promptOptions(input, output),
-      }),
-    )
-    answers.snowflakeKeyPath = await promptExistingFilePath({message: 'Path to .p8 key file', expectedExtension: '.p8', input, output})
-    answers.snowflakePassphrase = unwrapPrompt(
-      await clack.password({
-        message: 'Key passphrase',
-        ...promptOptions(input, output),
-      }),
-    )
   } else {
-    answers.bigqueryProjectId = unwrapPrompt(
-      await clack.text({
-        message: 'GCP project ID',
-        placeholder: 'my-project-123',
-        validate: validateRequired('GCP project ID is required'),
-        ...promptOptions(input, output),
-      }),
-    )
-    answers.bigqueryKeyPath = await promptExistingFilePath({message: 'Path to service account .json key file', expectedExtension: '.json', input, output})
+    await collectWarehouseCredentials(answers, options, input, output)
   }
 
   if (options.install) {
