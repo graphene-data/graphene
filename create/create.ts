@@ -367,13 +367,6 @@ async function promptExistingFilePath({
   }
 }
 
-function namespacePlaceholder(database: Database) {
-  if (database === 'snowflake') return 'MY_DB.ANALYTICS'
-  if (database === 'bigquery') return 'my-project.analytics'
-  if (database === 'clickhouse') return 'default'
-  return 'analytics'
-}
-
 function getWarehouseClient(database: Database): WarehouseClient {
   if (database === 'snowflake') return 'snowflake-sdk'
   if (database === 'bigquery') return '@google-cloud/bigquery'
@@ -608,21 +601,11 @@ async function collectAnswers({options, packageManager, input, output}: {options
     }),
   )
 
-  let defaultNamespace = unwrapPrompt(
-    await clack.text({
-      message: 'Default namespace (optional)',
-      placeholder: namespacePlaceholder(database),
-      ...promptOptions(input, output),
-    }),
-  ).trim()
-  if (!defaultNamespace && database === 'clickhouse') defaultNamespace = 'default'
-
   let answers: ScaffoldAnswers = {
     targetDir,
     projectName,
     packageManager,
     database,
-    defaultNamespace: defaultNamespace || undefined,
     skillLinkTarget: 'none',
   }
 
