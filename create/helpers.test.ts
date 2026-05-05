@@ -8,8 +8,17 @@ describe('create helpers', () => {
       help: false,
       install: false,
       name: 'demo-app',
+      skipCredentialValidation: false,
       targetDir: 'demo',
       yes: true,
+    })
+    expect(parseArgs(['demo', '--skip-credential-validation'])).toEqual({
+      help: false,
+      install: true,
+      name: undefined,
+      skipCredentialValidation: true,
+      targetDir: 'demo',
+      yes: false,
     })
   })
 
@@ -141,5 +150,32 @@ describe('create helpers', () => {
     expect(files['AGENTS.md']).toContain('Assume all BigQuery functions are available when writing GSQL.')
     expect(pkg.dependencies['@google-cloud/bigquery']).toBe('^8.2.0')
     expect(files['.env']).toContain('GOOGLE_APPLICATION_CREDENTIALS=/Users/me/.ssh/graphene-bq-key.json')
+  })
+
+  it('renders a clickhouse project with a password env file', () => {
+    let files = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {
+        targetDir: 'clickhouse-app',
+        projectName: 'clickhouse-app',
+        database: 'clickhouse',
+        defaultNamespace: 'default',
+        clickhouseUrl: 'https://example.clickhouse.cloud:8443',
+        clickhouseUsername: 'default',
+        clickhousePassword: 'secret',
+        skillLinkTarget: 'none',
+      },
+    })
+    let pkg = JSON.parse(files['package.json'])
+
+    expect(pkg.graphene).toEqual({
+      dialect: 'clickhouse',
+      defaultNamespace: 'default',
+      clickhouse: {url: 'https://example.clickhouse.cloud:8443', username: 'default'},
+    })
+    expect(files['AGENTS.md']).toContain('Assume all ClickHouse functions are available when writing GSQL.')
+    expect(pkg.dependencies['@clickhouse/client']).toBe('^1.18.2')
+    expect(files['.env']).toContain('CLICKHOUSE_PASSWORD=secret')
+    expect(files['index.md']).toContain('configured for ClickHouse')
   })
 })
