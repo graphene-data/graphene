@@ -55,7 +55,7 @@ program
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
-  .option('--input <key=value>', 'Input value to use for parameters; repeat for multiple values', collectInputOption, [])
+  .option('--input <key=value>', 'Input value to use for parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .action(
     withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string; input?: string[]}) => {
       if (options.chart && options.query) {
@@ -254,11 +254,6 @@ function validateInputQuery(analysis: AnalysisResult, exit: (code?: number) => n
     return exit(1)
   }
   return queries
-}
-
-function collectInputOption(value: string, previous: string[]) {
-  previous.push(value)
-  return previous
 }
 
 function parseRunInputs(values: string[], exit: (code?: number) => never): Record<string, string | string[]> {
