@@ -1,4 +1,5 @@
 /// <reference types="vitest/globals" />
+import {Buffer} from 'buffer'
 import {compile} from 'mdsvex'
 
 import {extractFrontmatter, remarkPlugins, rehypePlugins} from './mdCompile.ts'
@@ -19,6 +20,24 @@ describe('extractFrontmatter', () => {
 })
 
 describe('markdown sanitization', () => {
+  it('keeps query code braces inside string literals', async () => {
+    let src = `
+\`\`\`sql repro
+select
+  format('{:.1%}', 0.5) as pct
+from flights
+\`\`\`
+`
+
+    let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+    if (!out) throw new Error('Expected mdsvex compile output')
+    let code = String(out.code)
+
+    let expectedCode = Buffer.from("select\n  format('{:.1%}', 0.5) as pct\nfrom flights", 'utf-8').toString('base64')
+    expect(code).toContain(`<GrapheneQuery encodedName="cmVwcm8=" encodedCode="${expectedCode}"></GrapheneQuery>`)
+    expect(code).not.toContain('{:.1%}')
+  })
+
   it('keeps wrapper components intact across blank lines', async () => {
     let src = `
 <Row>
