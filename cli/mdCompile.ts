@@ -32,7 +32,7 @@ export function extractQueries() {
       if (index === null) return
       let name = typeof node.meta === 'string' ? node.meta : ''
       let code = typeof node.value === 'string' ? node.value.trim() : ''
-      parent.children[index] = {type: 'html', value: `<GrapheneQuery encodedName="${base64Attr(name)}" encodedCode="${base64Attr(code)}" />`}
+      parent.children[index] = {type: 'html', value: `<GrapheneQuery name="${base64Attr(name)}" code="${base64Attr(code)}" />`}
     })
   }
 }

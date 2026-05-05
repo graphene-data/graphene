@@ -2,13 +2,11 @@
   import {onMount} from 'svelte'
 
   interface Props {
-    name?: string
-    code?: string
-    encodedName?: string
-    encodedCode?: string
+    name: string
+    code: string
   }
 
-  let {name = '', code = '', encodedName, encodedCode}: Props = $props()
+  let {name, code}: Props = $props()
 
   // Fenced markdown queries are base64-encoded so SQL syntax never has to survive Svelte's HTML parser.
   function decodeBase64QueryAttr(value: string) {
@@ -19,7 +17,7 @@
 
   onMount(() => {
     if (typeof window !== 'undefined' && window.$GRAPHENE) {
-      window.$GRAPHENE.registerQuery(encodedName ? decodeBase64QueryAttr(encodedName) : name, encodedCode ? decodeBase64QueryAttr(encodedCode) : code)
+      window.$GRAPHENE.registerQuery(decodeBase64QueryAttr(name), decodeBase64QueryAttr(code))
     }
   })
 </script>

@@ -34,7 +34,7 @@ from flights
     let code = String(out.code)
 
     let expectedCode = Buffer.from("select\n  format('{:.1%}', 0.5) as pct\nfrom flights", 'utf-8').toString('base64')
-    expect(code).toContain(`<GrapheneQuery encodedName="cmVwcm8=" encodedCode="${expectedCode}"></GrapheneQuery>`)
+    expect(code).toContain(`<GrapheneQuery name="cmVwcm8=" code="${expectedCode}"></GrapheneQuery>`)
     expect(code).not.toContain('{:.1%}')
   })
 
