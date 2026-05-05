@@ -233,11 +233,11 @@ describe('runCreate', () => {
     await expect(runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('Target directory is not empty')
   })
 
-  it('leaves duckdb config unset when the path prompt is blank', async () => {
+  it('leaves duckdb config unset and explains how to add the file', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('')
+    textMock.mockResolvedValueOnce('demo-app')
     selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('none')
     spawnMock.mockImplementation(() => createChild())
 
@@ -247,6 +247,12 @@ describe('runCreate', () => {
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
     expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
     expect(await readFile(path.join(root, 'demo-app', 'AGENTS.md'), 'utf8')).toContain('npx graphene check')
+    expect(textMock).not.toHaveBeenCalledWith(expect.objectContaining({message: 'Path to .duckdb file'}))
+    let message = outroMock.mock.calls.at(-1)?.[0]
+    expect(message).toContain('\u001b[36m.duckdb\u001b[39m')
+    expect(message).toContain('"graphene": {')
+    expect(message).toContain('"duckdb": {')
+    expect(message).toContain('"path": "/path/to/example')
   })
 
   it('streams install output into the task log and keeps line breaks on success', async () => {
@@ -304,7 +310,7 @@ describe('runCreate', () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('')
+    textMock.mockResolvedValueOnce('demo-app')
     selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('none')
     spawnMock.mockImplementation(() => createChild())
 
@@ -325,7 +331,7 @@ describe('runCreate', () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('')
+    textMock.mockResolvedValueOnce('demo-app')
     selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.agents')
     spawnMock.mockImplementation(() => createChild())
 
@@ -339,7 +345,7 @@ describe('runCreate', () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('')
+    textMock.mockResolvedValueOnce('demo-app')
     selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.claude')
     spawnMock.mockImplementation(() => createChild())
 
