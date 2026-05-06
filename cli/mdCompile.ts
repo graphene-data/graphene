@@ -8,14 +8,14 @@ import path from 'path'
 import sanitizeHtml from 'sanitize-html'
 import {visit} from 'unist-util-visit'
 
-function escapeHtmlAttr(str: string) {
+function escapeHtml(str: string) {
   return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 // Keep SQL inside a Svelte expression string while still surviving HTML attribute parsing.
 function svelteStringAttr(str: string) {
   let literal = str.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/\r/g, '\\r').replace(/\n/g, '\\n')
-  return escapeHtmlAttr(`{\`${literal}\`}`)
+  return escapeHtml(`{\`${literal}\`}`)
 }
 
 // Takes the contents of a <ECharts> tag, and json5 parses it
