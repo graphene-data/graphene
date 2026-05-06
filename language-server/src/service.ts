@@ -50,6 +50,11 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
       let projects = new Map<ProjectRoot, ProjectState>()
       let dirtyRoots = new Set<ProjectRoot>()
       let reportedDiagnosticUris = new Set<string>()
+      let log = (...args: unknown[]) => {
+        let message = args.map(arg => (typeof arg == 'string' ? arg : JSON.stringify(arg))).join(' ')
+        console.log(message)
+        server.connection.console.log(message)
+      }
       let analysis = createWorkspaceAnalysis({
         load: loadProjects,
         analyze: analyzeDirtyProjects,
@@ -110,28 +115,42 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
 
         projects = next
         dirtyRoots = new Set(next.keys())
-        console.log('started Graphene language server', [...projects.keys()])
+        log('[graphene] started language server', [...projects.values()].map(project => ({root: project.root, files: project.files.length})))
       }
 
       function watchWorkspace(): Disposable {
         let fileWatcher: Disposable | undefined
         let changeWatchedFiles: Disposable | undefined
+        let directChangeWatchedFiles: Disposable | undefined
         let changeContent: Disposable | undefined
 
         server.onInitialized(async () => {
-          fileWatcher = await server.fileWatcher.watchFiles(['**/*.{md,gsql}'])
+          log('[graphene] registering file watcher for **/*.gsql and **/*.md')
+          fileWatcher = await server.fileWatcher.watchFiles(['**/*.gsql', '**/*.md'])
+          log('[graphene] file watcher registered')
         })
 
         changeWatchedFiles = server.fileWatcher.onDidChangeWatchedFiles(({changes}) => {
+          log('[graphene] volar watched files changed', changes.map(change => ({type: fileChangeTypeName(change.type), uri: change.uri})))
+          void applyFileChanges(changes)
+        })
+
+        directChangeWatchedFiles = server.connection.onDidChangeWatchedFiles(({changes}) => {
+          log('[graphene] direct watched files changed', changes.map(change => ({type: fileChangeTypeName(change.type), uri: change.uri})))
           void applyFileChanges(changes)
         })
 
         changeContent = server.documents.onDidChangeContent(({document}) => {
+          log('[graphene] document content changed', document.uri)
           let target = projectFromUri(document.uri)
-          if (!target) return
+          if (!target) {
+            log('[graphene] document change ignored because no project owns it', document.uri)
+            return
+          }
 
           target.project.files = upsertFile(target.project.files, {path: target.path, contents: document.getText()})
           dirtyRoots.add(target.project.root)
+          log('[graphene] queued analysis from document change', {root: target.project.root, path: target.path, files: target.project.files.length})
           analysis.invalidate()
         })
 
@@ -139,6 +158,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
           dispose() {
             fileWatcher?.dispose()
             changeWatchedFiles?.dispose()
+            directChangeWatchedFiles?.dispose()
             changeContent?.dispose()
           },
         }
@@ -149,22 +169,35 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
 
         for (let change of changes) {
           let target = projectFromUri(change.uri)
-          if (!target) continue
+          if (!target) {
+            log('[graphene] watched file ignored because no project owns it', {type: fileChangeTypeName(change.type), uri: change.uri})
+            continue
+          }
 
           if (change.type === FileChangeType.Deleted) {
             target.project.files = target.project.files.filter(file => file.path != target.path)
+            log('[graphene] deleted workspace file', {root: target.project.root, path: target.path, files: target.project.files.length})
           } else {
             let document = server.documents.get(URI.parse(change.uri))
             let contents = document?.getText() || (await readWorkspaceFile(target.absolutePath))
-            if (contents == null) continue
+            if (contents == null) {
+              log('[graphene] watched file changed but could not be read', {type: fileChangeTypeName(change.type), uri: change.uri})
+              continue
+            }
             target.project.files = upsertFile(target.project.files, {path: target.path, contents})
+            log('[graphene] upserted workspace file', {type: fileChangeTypeName(change.type), root: target.project.root, path: target.path, bytes: contents.length, source: document ? 'open document' : 'disk', files: target.project.files.length})
           }
 
           dirtyRoots.add(target.project.root)
           touched = true
         }
 
-        if (touched) analysis.invalidate()
+        if (touched) {
+          log('[graphene] queued analysis from watched file change', [...dirtyRoots])
+          analysis.invalidate()
+        } else {
+          log('[graphene] watched file changes did not touch any projects')
+        }
       }
 
       function projectFromUri(uri: DocumentUri) {
@@ -192,8 +225,10 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
           if (!project) continue
 
           try {
+            log('[graphene] analyzing project', {root, files: project.files.length})
             project.analysis = analyzeWorkspace({config: project.config, files: project.files})
             project.files = updateParsedFiles(project.files, project.analysis)
+            log('[graphene] analyzed project', {root, diagnostics: project.analysis.diagnostics.length})
             changed = true
           } catch (err) {
             let message = err instanceof Error ? err.stack || err.message : String(err)
@@ -202,7 +237,10 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         }
 
         dirtyRoots.clear()
-        if (changed) await server.languageFeatures.requestRefresh(false)
+        if (changed) {
+          log('[graphene] requesting diagnostic refresh')
+          await server.languageFeatures.requestRefresh(false)
+        }
       }
 
       function diagnosticsFor(project: ProjectState, filePath: string) {
@@ -249,6 +287,8 @@ export async function discoverGrapheneProjects(workspaceFolders: readonly URI[])
   let projects = new Map<ProjectRoot, DiscoveredGrapheneProject>()
 
   for (let workspace of workspaceFolders) {
+    await addGrapheneProject(projects, workspace.fsPath)
+
     let packageJsonPaths = await glob('**/package.json', {
       cwd: workspace.fsPath,
       ignore: ['node_modules/**', '**/.*/**'],
@@ -256,16 +296,20 @@ export async function discoverGrapheneProjects(workspaceFolders: readonly URI[])
     })
 
     for (let packageJsonPath of packageJsonPaths) {
-      let root = path.join(workspace.fsPath, path.dirname(packageJsonPath))
-      try {
-        projects.set(root, {root, config: await loadConfig(root, () => {})})
-      } catch (err) {
-        if (!String(err).includes('No graphene config found')) throw err
-      }
+      await addGrapheneProject(projects, path.join(workspace.fsPath, path.dirname(packageJsonPath)))
     }
   }
 
   return [...projects.values()].sort((left, right) => left.root.localeCompare(right.root))
+}
+
+async function addGrapheneProject(projects: Map<ProjectRoot, DiscoveredGrapheneProject>, searchRoot: string) {
+  try {
+    let config = await loadConfig(searchRoot, () => {})
+    projects.set(config.root, {root: config.root, config})
+  } catch (err) {
+    if (!String(err).includes('No graphene config found') && !String(err).includes('No package.json found')) throw err
+  }
 }
 
 export function findOwningProjectRoot(filePath: string, projectRoots: Iterable<ProjectRoot>): ProjectRoot | null {
@@ -292,6 +336,13 @@ function fileUriPath(uri: DocumentUri): string | null {
   let parsed = URI.parse(uri)
   if (parsed.scheme !== 'file') return null
   return parsed.fsPath
+}
+
+function fileChangeTypeName(type: FileChangeType) {
+  if (type === FileChangeType.Created) return 'created'
+  if (type === FileChangeType.Changed) return 'changed'
+  if (type === FileChangeType.Deleted) return 'deleted'
+  return String(type)
 }
 
 function upsertFile(files: WorkspaceFileInput[], next: WorkspaceFileInput) {

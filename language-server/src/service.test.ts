@@ -8,6 +8,22 @@ import {URI} from 'vscode-uri'
 import {discoverGrapheneProjects, findOwningProjectRoot} from './service.ts'
 
 describe('Graphene project discovery', () => {
+  it('finds the parent Graphene project when VS Code opens a subfolder', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-lsp-subfolder-'))
+
+    try {
+      await mkdir(path.join(root, 'tables'), {recursive: true})
+      await writeFile(path.join(root, 'package.json'), JSON.stringify({name: 'app', graphene: {defaultNamespace: 'analytics'}}))
+
+      let projects = await discoverGrapheneProjects([URI.file(path.join(root, 'tables'))])
+
+      expect(projects.map(project => project.root)).toEqual([root])
+      expect(projects[0].config.root).toBe(root)
+    } finally {
+      await rm(root, {recursive: true, force: true})
+    }
+  })
+
   it('finds package.json files with a top-level graphene config and ignores other packages', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-lsp-'))
 
