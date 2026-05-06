@@ -1,6 +1,7 @@
 **/node_modules/**
 **/out/**
 **/dist/**
+**/.vscode-test/**
 ui/tests/results
 
 cli/*.tgz

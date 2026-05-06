@@ -13,6 +13,8 @@
   "main": "./dist/extension.js",
   "scripts": {
     "build": "node ./esbuild.mjs",
+    "build:e2e": "node ./tests/e2e/build.mjs",
+    "test:e2e": "pnpm run build && pnpm run build:e2e && vscode-test",
     "vscode:prepublish": "pnpm run build",
     "package": "rm -f -- *.vsix && npx vsce package --no-dependencies",
     "publish-extension": "npx vsce publish && npx ovsx publish",
@@ -24,6 +26,8 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.110.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
     "esbuild": "^0.27.2",
     "graphene-language-server": "workspace:*",
     "vscode-oniguruma": "^2.0.1",
