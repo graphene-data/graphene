@@ -35,6 +35,25 @@ from flights
     expect(code).toContain('<GrapheneQuery name="{`repro`}" code="{`select\\n  format(\'{:.1%}\', 0.5) as pct\\nfrom flights`}"></GrapheneQuery>')
   })
 
+  it('keeps query comparison operators as JavaScript escapes instead of HTML entities', async () => {
+    let src = `
+\`\`\`sql repro
+select * from products
+where created_at >= coalesce($daterange_start, created_at)
+  and created_at <= coalesce($daterange_end, created_at)
+\`\`\`
+`
+
+    let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+    if (!out) throw new Error('Expected mdsvex compile output')
+    let code = String(out.code)
+
+    expect(code).toContain('created_at \\u003e= coalesce')
+    expect(code).toContain('created_at \\u003c= coalesce')
+    expect(code).not.toContain('&gt;')
+    expect(code).not.toContain('&lt;')
+  })
+
   it('keeps wrapper components intact across blank lines', async () => {
     let src = `
 <Row>
