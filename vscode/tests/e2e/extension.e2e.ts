@@ -83,10 +83,7 @@ async function replaceDocument(document: vscode.TextDocument, text: string) {
 async function closeDocument(document: vscode.TextDocument) {
   await vscode.window.showTextDocument(document)
   await vscode.commands.executeCommand('workbench.action.closeActiveEditor')
-  await waitFor(() => {
-    let uri = document.uri.toString()
-    return !vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() == uri) && !vscode.workspace.textDocuments.some(openDocument => openDocument.uri.toString() == uri)
-  })
+  await waitFor(() => !vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() == document.uri.toString()))
 }
 
 async function waitForDiagnostics(uri: vscode.Uri, ready: (diagnostics: readonly vscode.Diagnostic[]) => boolean) {
