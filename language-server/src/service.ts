@@ -117,9 +117,11 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
         let fileWatcher: Disposable | undefined
         let changeWatchedFiles: Disposable | undefined
         let changeContent: Disposable | undefined
+        let disposed = false
 
-        server.onInitialized(async () => {
-          fileWatcher = await server.fileWatcher.watchFiles(['**/*.{md,gsql}'])
+        void server.fileWatcher.watchFiles(['**/*.{md,gsql}']).then(watcher => {
+          if (disposed) return watcher.dispose()
+          fileWatcher = watcher
         })
 
         changeWatchedFiles = server.fileWatcher.onDidChangeWatchedFiles(({changes}) => {
@@ -137,6 +139,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
 
         return {
           dispose() {
+            disposed = true
             fileWatcher?.dispose()
             changeWatchedFiles?.dispose()
             changeContent?.dispose()
