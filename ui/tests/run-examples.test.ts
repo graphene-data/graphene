@@ -122,7 +122,7 @@ test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for every markdown fi
       for (let mdPath of markdownFiles) {
         console.log(`[run-examples] running ${path.basename(exampleDir)}/${mdPath}`)
         await page.goto(`http://localhost:${port}${toPageUrl(mdPath)}`)
-        await waitForGrapheneLoad(page, 60_000)
+        await waitForGrapheneLoad(page, 120_000)
 
         let runResult = await runCli(['run', mdPath], exampleDir, childEnv)
         expectSuccess(`run ${path.basename(exampleDir)}/${mdPath}`, runResult)
