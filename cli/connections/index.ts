@@ -35,6 +35,7 @@ export async function getConnection(): Promise<QueryConnection> {
       username,
       password,
       database: config.clickhouse?.database || config.defaultNamespace || 'default',
+      requestTimeout: config.clickhouse?.requestTimeout,
     })
   } else if (config.dialect === 'snowflake') {
     let mod = await importConnection(() => import('./snowflake.ts'), 'snowflake-sdk', 'Snowflake')

@@ -29,6 +29,7 @@ export interface Config {
     url?: string
     username?: string
     database?: string
+    requestTimeout?: number
   }
 
   duckdb?: {
