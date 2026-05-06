@@ -2,10 +2,10 @@
 import {mkdtemp, mkdir, rm, writeFile} from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
-import {expect} from 'vitest'
+import {expect, vi} from 'vitest'
 import {URI} from 'vscode-uri'
 
-import {discoverGrapheneProjects, findOwningProjectRoot} from './service.ts'
+import {createGrapheneService, discoverGrapheneProjects, findOwningProjectRoot} from './service.ts'
 
 describe('Graphene project discovery', () => {
   it('finds package.json files with a top-level graphene config and ignores other packages', async () => {
@@ -81,5 +81,37 @@ describe('project ownership', () => {
     expect(findOwningProjectRoot(path.join(nestedRoot, 'report.md'), [appRoot, nestedRoot])).toBe(nestedRoot)
     expect(findOwningProjectRoot(path.join(appRoot, 'tables', 'users.gsql'), [appRoot, nestedRoot])).toBe(appRoot)
     expect(findOwningProjectRoot(path.join(root, 'notes.md'), [appRoot, nestedRoot])).toBeNull()
+  })
+})
+
+describe('workspace file watching', () => {
+  it('registers md and gsql file watchers when the service plugin is created', async () => {
+    let disposeFileWatcher = vi.fn()
+    let disposeWatchedFiles = vi.fn()
+    let disposeContent = vi.fn()
+    let server = {
+      fileWatcher: {
+        watchFiles: vi.fn(() => Promise.resolve({dispose: disposeFileWatcher})),
+        onDidChangeWatchedFiles: vi.fn(() => ({dispose: disposeWatchedFiles})),
+      },
+      documents: {
+        onDidChangeContent: vi.fn(() => ({dispose: disposeContent})),
+        get: vi.fn(),
+      },
+      languageFeatures: {
+        requestRefresh: vi.fn(),
+      },
+    }
+
+    let instance = createGrapheneService(server as any).create({env: {workspaceFolders: []}} as any)
+    await Promise.resolve()
+
+    expect(server.fileWatcher.watchFiles).toHaveBeenCalledWith(['**/*.{md,gsql}'])
+    expect(server.fileWatcher.onDidChangeWatchedFiles).toHaveBeenCalled()
+
+    instance.dispose?.()
+    expect(disposeFileWatcher).toHaveBeenCalled()
+    expect(disposeWatchedFiles).toHaveBeenCalled()
+    expect(disposeContent).toHaveBeenCalled()
   })
 })
