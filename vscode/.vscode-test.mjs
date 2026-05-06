@@ -11,11 +11,24 @@ rmSync(workspaceRoot, {recursive: true, force: true})
 mkdirSync(workspaceRoot, {recursive: true})
 writeFileSync(path.join(workspaceRoot, 'package.json'), JSON.stringify({name: 'graphene-vscode-e2e', version: '0.0.0', type: 'module', graphene: {duckdb: {}}}, null, 2))
 writeFileSync(path.join(workspaceRoot, 'query.gsql'), 'from users select id\n')
+writeFileSync(
+  path.join(workspaceRoot, 'flights-model.gsql'),
+  `
+table flights (
+  aircraft_id int
+  join one aircrafts on aircrafts.id = aircraft_id
+)
+`.trimStart(),
+)
+writeFileSync(path.join(workspaceRoot, 'aircrafts.gsql'), 'table aircrafts (id int)\n')
 
 export default defineConfig({
   files: 'dist/e2e/**/*.js',
   workspaceFolder: workspaceRoot,
-  launchArgs: ['--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes'],
+  launchArgs: ['--disable-extensions', '--disable-workspace-trust', '--skip-welcome', '--skip-release-notes', path.join(workspaceRoot, 'query.gsql'), path.join(workspaceRoot, 'flights-model.gsql')],
+  mocha: {
+    timeout: 10_000,
+  },
   env: {
     GRAPHENE_VSCODE_E2E_WORKSPACE: workspaceRoot,
   },

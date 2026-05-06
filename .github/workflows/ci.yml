@@ -101,7 +101,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
       - name: Install VS Code runtime dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgbm1 libgtk-3-0 libnss3 xvfb
+        run: sudo apt-get update && sudo apt-get install -y libgbm1 libgtk-3-0 libnss3 libxss1 xvfb
       - name: VS Code extension e2e tests
         run: xvfb-run -a pnpm -C vscode test:e2e
 
