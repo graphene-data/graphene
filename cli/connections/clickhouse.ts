@@ -7,6 +7,7 @@ export interface ClickHouseOptions {
   username: string
   password: string
   database?: string
+  requestTimeout?: number
 }
 
 export class ClickHouseConnection implements QueryConnection {
@@ -21,6 +22,7 @@ export class ClickHouseConnection implements QueryConnection {
       password: options.password,
       database: this.defaultDatabase,
       application: 'Graphene',
+      request_timeout: options.requestTimeout,
     })
   }
 
