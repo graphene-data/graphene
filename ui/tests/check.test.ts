@@ -4,7 +4,7 @@ import {check} from '../../cli/check.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 import {listMdFileQueries, runMdFile} from '../../cli/run.ts'
 import {trimIndentation} from '../../lang/util.ts'
-import {test, expect} from './fixtures.ts'
+import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
 let logs = ''
@@ -333,6 +333,40 @@ test('cli run with --chart captures a single chart screenshot', async ({server, 
 
   await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    No errors found 💎
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with --input applies inputs to a full page run', async ({server, page}) => {
+  let queryBodies: any[] = []
+  server.mockFile(
+    '/index.md',
+    `
+    # Input Page
+    <TextInput name="carrier" title="Carrier" defaultValue="WN" />
+
+    \`\`\`sql filtered
+    from flights where carrier = $carrier select carrier, count() as total group by 1
+    \`\`\`
+    <Table data="filtered" />
+  `,
+  )
+
+  await page.route('**/_api/query', async route => {
+    queryBodies.push(route.request().postDataJSON())
+    await route.continue()
+  })
+
+  await page.goto(server.url() + '/?carrier=AA')
+  await waitForGrapheneLoad(page)
+  let result = await runMdFile({mdArg: 'index.md', inputs: {carrier: 'AA'}, log})
+
+  expect(result).toBe(true)
+  expect(queryBodies.some(body => JSON.stringify(body.params) == JSON.stringify({carrier: 'AA'}))).toBe(true)
   expect(outputLines()).toEqual(
     trimIndentation(`
     No errors found 💎
