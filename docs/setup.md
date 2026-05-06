@@ -2,11 +2,14 @@ This document describes the process for creating a new Graphene project from scr
 
 # Prepare database access
 
-## Local data
+<details>
+<summary><h2>XLSX, CSV, etc. via DuckDB</h2></summary>
 
 Graphene can operate over any local data as long as it is converted into a single `.duckdb` file. If your data isn’t already in this format, it’s very easy these days to tell your coding agent to do it, eg. “convert these 3 .xslx files into a single DuckDB database.” 
+</details>
 
-## Snowflake
+<details>
+<summary><h2>Snowflake</h2></summary>
 
 To set up Graphene on a Snowflake connection you will need the following:
 
@@ -62,8 +65,10 @@ To set up Graphene on a Snowflake connection you will need the following:
     grant select on future views in database YOUR_DATABASE to role graphene_role;
     ```
     
+</details>
 
-## BigQuery
+<details>
+<summary><h2>BigQuery</h2></summary>
 
 To set up Graphene on a BigQuery connection you will need the following:
 
@@ -118,32 +123,18 @@ To set up Graphene on a BigQuery connection you will need the following:
     ```
     
 6. Finally, download the key file by clicking the **three-dot menu (⋮)** in the Cloud Shell header and then clicking **Download.** You will need to unzip the archive. Move the `.json` file into a dedicated location and make note of the absolute path.
+</details>
 
 # Set up your Graphene project
 
-Run the Graphene installer with npm, yarn, or pnpm:
+1. In the terminal, navigate to where you want the Graphene project to live. It can be a standalone project or a folder within an existing repo.
+2. Run the Graphene installer with npm, yarn, or pnpm:
 
-```bash
-npm create graphene
-```
+   ```bash
+   npm create graphene
+   ```
 
-The installer will walk you through a short series of prompts:
-
-1. **Project name** — the directory name to use for your project (e.g. `my-analytics`)
-2. **Database** — the type of database the source data lives in
-3. **Default namespace** — optional; the database/schema to use when none is specified in a query (e.g. `my_db.my_schema`)
-4. **Database-specific connection details:**
-   - *DuckDB:* path to your `.duckdb` file
-   - *Snowflake:* account ID, username, path to your `.p8` key file, and key passphrase
-   - *BigQuery:* GCP project ID and path to your service account `.json` key file
-5. **Install dependencies** — whether to run `npm install` immediately - choose 'No' if you want to use a different package manager such as `pnpm` or `yarn`.
-
-Once it finishes, `cd` into your project directory and start the dev server:
-
-```bash
-cd my-analytics
-npx graphene serve
-```
+The installer will walk you through a short series of prompts, create your Graphene project, and test to make sure the database connection is working.
 
 # Install the IDE extension (optional)
 
@@ -151,37 +142,49 @@ Graphene has extensions for VSCode and Cursor which add syntax highlighting, lin
 
 The extension is called **Graphene VSCode Language Support** which you can search for and install in **View > Extensions** for both VSCode and Cursor.
 
-# Set up your coding agent
-
-Add the following to your AGENTS.md (or CLAUDE.md):
-  - Short description of your business/use case
-  - Short description of the scope of the data available in the project, and where the .gsql files are located
-  - What package manager the project uses (so the agent knows what to prepend to CLI commands): `npm`, `pnpm`, `yarn`, etc.
-  - What database the project is connected to, so the agent knows what GSQL functions are available, eg. "Assume all [database] functions are available when writing GSQL."
-  - A glossary of internal jargon and acronyms
-  - If your schema is highly denormalized, describe the [ontology](https://en.wikipedia.org/wiki/Ontology_(information_science)) of the entities and relationships in the data.
-
-Then add the Graphene agent skills by symlinking to them. From your coding agent's skills directory (eg. .claude/skills):
-
-```bash
-ln -s ../../node_modules/@graphenedata/cli/dist/skills/graphene graphene
-ln -s ../../node_modules/@graphenedata/cli/dist/skills/model-gsql model-gsql
-```
-
-Symlinking allows the skill to update whenever you upgrade the package version, so that your agent is always aware of the latest features.
-
 # Create your semantic model
 
-Tell your agent to use the `model-gsql` skill to create .gsql files for a small group of tables. Review its work, correct it as necessary, and then tell it to tackle the remaining tables you want modeled. Encourage it to delegate the work to subagents.
+Start a new agent session within the Graphene project. Tell your agent:
 
-For best results, point the agent at your dbt repo so that it can deeply understand the meaning of the data and synthesize it into descriptions in GSQL files.
+>Add .gsql files in a new folder ./tables for [tables you want exposed in Graphene] following the best practices outlined in model-gsql.md and gsql.md (in the Graphene skill).
 
-If you have an existing semantic model from another tool, you can add that file/project as context and tell the agent to migrate it over. If it's really big, you should migrate it in chunks so that you can review and revise the agent's approach as it goes.
+Consider adding the following to the prompt when applicable:
+- A link or path to a dbt project
+- A link or path to a semantic model eg. LookML
+- An entity-relationship diagram (ERD)
+- This can be a token-heavy process, so consider working on a small batch first, reviewing the output, and then having your agent delegate to parallel subagents for the remainder. This way, you can catch any errors or stylistic preferences up front.
 
-# Add auxiliary agent context
+# Add additional context
 
-Finally, consider adding the following content as agent skills:
-- Descriptions of various departments within the company and how they operate 
-- Analytical "cookbooks" or preferences that are unique to your business, eg. how to perform cohort analysis in a particular way, how the company expects financial reports to look, etc.
+For best results, we recommend that you add the following to your agent context.
 
-Sometimes the easiest way to author these is to tell an agent to summarize what it learned from a session into a new skill.
+## AGENTS.md (or CLAUDE.md)
+In addition to the information that the Graphene installer adds, consider adding the following:
+  - Short description of your business/use case
+  - Short description of the scope of the data available in the project, and where the .gsql files are located
+  - A glossary of internal jargon and acronyms
+  - If your schema is highly denormalized, describe the conceptual [ontology](https://en.wikipedia.org/wiki/Ontology_(information_science)) of the entities and relationships in the data with a mermaid-like diagram. For example:
+
+````
+# Ontology
+
+Our Salesforce schema is highly denormalized. The following is a conceptual ontology of the data it describes.
+
+```
+erDiagram
+   ACCOUNT ||--o{ OPPORTUNITY : "has | snapshot at close_date | opportunities.account_id, opportunities.account_name, opportunities.account_industry, opportunities.account_arr, opportunities.account_segment"
+   CONTACT }o--o{ OPPORTUNITY : "primary contact on | snapshot at close_date | opportunities.contact_id, opportunities.contact_name, opportunities.contact_title, opportunities.contact_email"
+   REP ||--o{ OPPORTUNITY : "owns | closing owner, not current | opportunities.owner_id, opportunities.owner_name, opportunities.owner_team, opportunities.owner_region"
+   TERRITORY ||--o{ OPPORTUNITY : "assigned to | at time of close | opportunities.territory_id, opportunities.territory_name, opportunities.territory_region"
+   REP }o--|| TERRITORY : "belongs to | opportunities.owner_region = opportunities.territory_region"
+   OPPORTUNITY }o--|| dim_date : "opportunities.close_date → dim_date.date"
+```
+````
+
+## Skills
+
+Agent skills are great for context that's helpful situationally, but not always, like:
+- Context about a particular department, how it's structured, and how it operates
+- Analytical "cookbooks" that are unique to your business, eg. how to perform cohort analysis in a particular way, how the company expects financial reports to look, etc.
+
+If you aren't familiar with writing agent skills, we recommend you read the excellent guide [here](https://agentskills.io/skill-creation/best-practices).
