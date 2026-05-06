@@ -1,9 +1,12 @@
 .vscode
+.vscode-test
 node_modules
 out/
 src/
+tests/
 esbuild.mjs
 dist/*.map
+dist/e2e/
 
 # Only include this directory, not our whole monorepo
 ../../**
