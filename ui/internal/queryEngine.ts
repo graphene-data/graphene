@@ -15,7 +15,7 @@ interface QueryNode {
   contents: string
   callback?: ResultHandler
   loading: boolean
-  fields: Map<string, string | string[]>
+  fields: string[]
   componentId?: string
   error?: GrapheneError
 }
@@ -39,24 +39,22 @@ export const setQueryFetcher = f => (queryFetcher = f)
 // Called by GrapheneQuery tags to register a named query on the page
 function registerQuery(name: string, contents: string) {
   queries = queries.filter(q => q.name !== name)
-  queries.push({name, contents, loading: false, fields: new Map()})
+  queries.push({name, contents, loading: false, fields: []})
 }
 
 // Called by viz components to request a particular query of data
 function query(source: string, fields: Record<string, string | string[]>, callback: ResultHandler, componentId?: string) {
-  // using Map here because it preserves the order in which we add fields to the select, which we use when we get the result.
-  let map = new Map(Object.entries(fields))
-  let exprs: string[] = []
-  if (map.size > 0) {
-    map.forEach(value => {
-      if (Array.isArray(value)) exprs.push(...value)
-      else exprs.push(value)
+  // Preserve field order because translateData maps result fields back to requested expressions by index.
+  let seen = new Set<string>()
+  let exprs = Object.values(fields)
+    .flatMap(value => (Array.isArray(value) ? value : [value]))
+    .filter(field => {
+      if (seen.has(field)) return false
+      seen.add(field)
+      return true
     })
-  } else {
-    exprs = ['*']
-  }
-  let contents = `from ${source} select ${exprs.join(', ')}`
-  queries.push({contents, callback, loading: false, fields: map, source, componentId})
+  let contents = `from ${source} select ${(exprs.length ? exprs : ['*']).join(', ')}`
+  queries.push({contents, callback, loading: false, fields: exprs, source, componentId})
   runAll()
   return componentId
 }
@@ -147,7 +145,7 @@ export function translateData(data: any, node: QueryNode): QueryResult {
   let rows = data.rows || []
   let fields: Field[] = []
 
-  let requestFields = Array.from(node.fields.values()).flatMap(f => f)
+  let requestFields = node.fields
 
   data.fields.forEach((field, index) => {
     let requested = requestFields[index]

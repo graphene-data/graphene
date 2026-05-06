@@ -3,14 +3,18 @@ import {beforeAll, test, expect} from 'vitest'
 import {scalarType} from '../../lang/types.ts'
 
 let translateData: (data: any, node: any) => {rows: any[]; fields?: any[]}
+let setQueryFetcher: (fetcher: any) => void
 
 beforeAll(async () => {
+  ;(globalThis as any).$state = {raw: value => value}
+  ;(globalThis as any).caches = {open: () => Promise.resolve({keys: () => Promise.resolve([])})}
   ;(globalThis as any).window = {
     $GRAPHENE: {},
     addEventListener: () => {},
     removeEventListener: () => {},
+    location: {search: ''},
   }
-  ;({translateData} = await import('../internal/queryEngine.ts'))
+  ;({translateData, setQueryFetcher} = await import('../internal/queryEngine.ts'))
 })
 
 test('translateData remaps Snowflake-style uppercase row keys to requested field casing', () => {
@@ -21,12 +25,7 @@ test('translateData remaps Snowflake-style uppercase row keys to requested field
       {name: 'num', type: scalarType('number')},
     ],
   }
-  let node = {
-    fields: new Map([
-      ['x', 'location_state_code'],
-      ['y', 'num'],
-    ]),
-  }
+  let node = {fields: ['location_state_code', 'num']}
 
   let result = translateData(data, node)
 
@@ -42,12 +41,7 @@ test('translateData remaps default-named expressions to requested expression key
       {name: 'count', type: scalarType('number'), metadata: {defaultName: 'count'}},
     ],
   }
-  let node = {
-    fields: new Map([
-      ['x', "date_trunc('month', created_at)"],
-      ['y', 'count()'],
-    ]),
-  }
+  let node = {fields: ["date_trunc('month', created_at)", 'count()']}
 
   let result = translateData(data, node)
 
@@ -63,14 +57,33 @@ test('translateData preserves field metadata for downstream table rendering', ()
       {name: 'sales', type: scalarType('number')},
     ],
   }
-  let node = {
-    fields: new Map([
-      ['x', 'month_start'],
-      ['y', 'sales'],
-    ]),
-  }
+  let node = {fields: ['month_start', 'sales']}
 
   let result = translateData(data, node)
 
   expect(result.fields?.[0].metadata).toEqual({timeGrain: 'month'})
+})
+
+test('query deduplicates fields before building gsql', async () => {
+  ;(window as any).$GRAPHENE.resetQueryEngine()
+  let gsql = ''
+  setQueryFetcher((req: any) => {
+    gsql = req.gsql
+    return Promise.resolve({
+      rows: [{name: 'Alaska Airlines', avg_delay: 12}],
+      fields: [
+        {name: 'name', type: scalarType('string')},
+        {name: 'avg_delay', type: scalarType('number')},
+      ],
+    })
+  })
+
+  let result = await new Promise<any>(resolve => {
+    ;(window as any).$GRAPHENE.query('delays_by_carrier', {x: 'name', y: 'avg_delay', sort: 'avg_delay'}, (res: any) => {
+      if (res) resolve(res)
+    })
+  })
+
+  expect(gsql).toBe('from delays_by_carrier select name, avg_delay')
+  expect(result.fields.map((field: any) => field.name)).toEqual(['name', 'avg_delay'])
 })
