@@ -1,6 +1,5 @@
 import type {Plugin} from 'unified'
 
-import {Buffer} from 'buffer'
 import {decodeHTML} from 'entities'
 import fs from 'fs'
 import yaml from 'js-yaml'
@@ -9,8 +8,14 @@ import path from 'path'
 import sanitizeHtml from 'sanitize-html'
 import {visit} from 'unist-util-visit'
 
-function base64Attr(str: string) {
-  return Buffer.from(str, 'utf-8').toString('base64')
+function escapeHtmlAttr(str: string) {
+  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// Keep SQL inside a Svelte expression string while still surviving HTML attribute parsing.
+function svelteStringAttr(str: string) {
+  let literal = str.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/\r/g, '\\r').replace(/\n/g, '\\n')
+  return escapeHtmlAttr(`{\`${literal}\`}`)
 }
 
 // Takes the contents of a <ECharts> tag, and json5 parses it
@@ -32,7 +37,7 @@ export function extractQueries() {
       if (index === null) return
       let name = typeof node.meta === 'string' ? node.meta : ''
       let code = typeof node.value === 'string' ? node.value.trim() : ''
-      parent.children[index] = {type: 'html', value: `<GrapheneQuery name="${base64Attr(name)}" code="${base64Attr(code)}" />`}
+      parent.children[index] = {type: 'html', value: `<GrapheneQuery name="${svelteStringAttr(name)}" code="${svelteStringAttr(code)}" />`}
     })
   }
 }

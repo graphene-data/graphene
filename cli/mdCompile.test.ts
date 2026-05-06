@@ -1,5 +1,4 @@
 /// <reference types="vitest/globals" />
-import {Buffer} from 'buffer'
 import {compile} from 'mdsvex'
 
 import {extractFrontmatter, remarkPlugins, rehypePlugins} from './mdCompile.ts'
@@ -33,9 +32,7 @@ from flights
     if (!out) throw new Error('Expected mdsvex compile output')
     let code = String(out.code)
 
-    let expectedCode = Buffer.from("select\n  format('{:.1%}', 0.5) as pct\nfrom flights", 'utf-8').toString('base64')
-    expect(code).toContain(`<GrapheneQuery name="cmVwcm8=" code="${expectedCode}"></GrapheneQuery>`)
-    expect(code).not.toContain('{:.1%}')
+    expect(code).toContain('<GrapheneQuery name="{`repro`}" code="{`select\\n  format(\'{:.1%}\', 0.5) as pct\\nfrom flights`}"></GrapheneQuery>')
   })
 
   it('keeps wrapper components intact across blank lines', async () => {
