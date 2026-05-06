@@ -1,3 +1,4 @@
+import {scalarType} from '../../lang/types.ts'
 import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
@@ -81,6 +82,47 @@ test('parses inline echarts config body in markdown', async ({server, page}) => 
   await waitForGrapheneLoad(page)
   await expect(page.getByRole('heading', {level: 1, name: 'Inline ECharts Config'})).toBeVisible()
   await expect(page).screenshot('echarts-inline-config-markdown')
+})
+
+test('remaps Snowflake-style uppercase query result keys to requested field casing', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql snowflake_case
+    select 3 as num
+    \`\`\`
+
+    <Value data="snowflake_case" column="num" />
+  `,
+  )
+
+  // We don't have ui tests that hit snowflake yet, so fake the response
+  await page.route('**/_api/query', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({rows: [{NUM: 3}], fields: [{name: 'num', type: scalarType('number')}], sql: ''}),
+    })
+  })
+
+  await page.goto(server.url() + '/')
+  await expect(page).screenshot('markdown-snowflake-uppercase-result-keys')
+})
+
+test('deduplicates chart query fields already used for sort', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql delays_by_carrier
+    select 'Alaska Airlines' as name, 12 as avg_delay
+    \`\`\`
+
+    <BarChart data="delays_by_carrier" x="name" y="avg_delay" sort="avg_delay desc" />
+  `,
+  )
+
+  await page.goto(server.url() + '/')
+  await expect(page).screenshot('markdown-deduplicates-chart-sort-field')
 })
 
 test('decodes html entities in inline echarts config strings', async ({server, page}) => {
