@@ -4,6 +4,7 @@ import * as clack from '@clack/prompts'
 import {spawn} from 'node:child_process'
 import {access, mkdir, readFile, readlink, readdir, symlink, writeFile} from 'node:fs/promises'
 import path from 'node:path'
+import {styleText} from 'node:util'
 
 import cliPackageJson from '../cli/package.json' with {type: 'json'}
 
@@ -226,7 +227,7 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   let files: TemplateFiles = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
     '.gitignore': ['node_modules', '.env', '*.duckdb'].join('\n') + '\n',
-    'AGENTS.md': renderAgents(answers),
+    [agentsFileName(answers.skillLinkTarget)]: renderAgents(answers),
     'index.md': renderIndex(answers),
   }
   if (answers.packageManager?.name === 'yarn') files['.yarnrc.yml'] = 'nodeLinker: node-modules\n'
@@ -242,6 +243,11 @@ function grapheneCommand(packageManager: PackageManager | undefined, args: strin
   if (packageManager?.name === 'yarn') return `yarn graphene ${args}`
   if (packageManager?.name === 'bun') return `bun run graphene ${args}`
   return `npx graphene ${args}`
+}
+
+function agentsFileName(skillLinkTarget: SkillLinkTarget): 'AGENTS.md' | 'CLAUDE.md' {
+  if (skillLinkTarget === '.claude') return 'CLAUDE.md'
+  return 'AGENTS.md'
 }
 
 function renderAgents(answers: ScaffoldAnswers): string {
@@ -365,13 +371,6 @@ async function promptExistingFilePath({
       clack.log.error(`File not found: ${filePath}`, {output})
     }
   }
-}
-
-function namespacePlaceholder(database: Database) {
-  if (database === 'snowflake') return 'MY_DB.ANALYTICS'
-  if (database === 'bigquery') return 'my-project.analytics'
-  if (database === 'clickhouse') return 'default'
-  return 'analytics'
 }
 
 function getWarehouseClient(database: Database): WarehouseClient {
@@ -608,38 +607,15 @@ async function collectAnswers({options, packageManager, input, output}: {options
     }),
   )
 
-  let defaultNamespace = unwrapPrompt(
-    await clack.text({
-      message: 'Default namespace (optional)',
-      placeholder: namespacePlaceholder(database),
-      ...promptOptions(input, output),
-    }),
-  ).trim()
-  if (!defaultNamespace && database === 'clickhouse') defaultNamespace = 'default'
-
   let answers: ScaffoldAnswers = {
     targetDir,
     projectName,
     packageManager,
     database,
-    defaultNamespace: defaultNamespace || undefined,
     skillLinkTarget: 'none',
   }
 
-  if (database === 'duckdb') {
-    answers.duckdbPath =
-      unwrapPrompt(
-        await clack.text({
-          message: 'Path to .duckdb file',
-          placeholder: './data.duckdb',
-          validate(value) {
-            if (typeof value !== 'string' || !value.trim()) return
-            if (!value.endsWith('.duckdb')) return 'DuckDB path must end with .duckdb'
-          },
-          ...promptOptions(input, output),
-        }),
-      ).trim() || undefined
-  } else {
+  if (database !== 'duckdb') {
     await collectWarehouseCredentials(answers, options, input, output)
   }
 
@@ -761,7 +737,7 @@ export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateCont
       await symlinkGrapheneSkill(targetDir, answers.skillLinkTarget)
     }
 
-    clack.outro('Done!', {output: stdout})
+    clack.outro(completionMessage(answers), {output: stdout})
   } catch (err) {
     if (err instanceof CreateCancelled) {
       clack.cancel('Operation cancelled.', {output: stdout})
@@ -769,4 +745,25 @@ export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateCont
     }
     throw err
   }
+}
+
+function completionMessage(answers: ScaffoldAnswers): string {
+  if (answers.database !== 'duckdb') return 'Done!'
+  return [
+    'Done!',
+    '',
+    `For DuckDB, copy your ${color('cyan', '.duckdb')} file into the ${color('magenta', answers.projectName)} folder so Graphene can discover it.`,
+    '',
+    `If the duckdb file lives elsewhere, set the path in ${color('magenta', 'package.json')}:`,
+    '',
+    color('gray', '"graphene": {'),
+    color('gray', '  "duckdb": {'),
+    color('gray', '    "path": "/path/to/example.duckdb"'),
+    color('gray', '  }'),
+    color('gray', '}'),
+  ].join('\n')
+}
+
+function color(style: Parameters<typeof styleText>[0], text: string): string {
+  return styleText(style, text, {validateStream: false})
 }

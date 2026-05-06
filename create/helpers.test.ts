@@ -99,6 +99,17 @@ describe('create helpers', () => {
     expect(bunFiles['.yarnrc.yml']).toBeUndefined()
   })
 
+  it('renders CLAUDE.md when the Claude skill target is selected', () => {
+    let files = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'pnpm', version: '10.1.0'}, database: 'duckdb', skillLinkTarget: '.claude'},
+    })
+
+    expect(files['CLAUDE.md']).toContain('pnpm graphene check')
+    expect(files['CLAUDE.md']).toContain('Assume all DuckDB functions are available when writing GSQL.')
+    expect(files['AGENTS.md']).toBeUndefined()
+  })
+
   it('renders a snowflake project with .env auth vars', () => {
     let files = renderTemplate({
       cliVersion: '0.0.15',

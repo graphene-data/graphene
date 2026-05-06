@@ -121,7 +121,7 @@ describe('runCreate', () => {
     let stdout = streamSink()
     let stderr = streamSink()
 
-    textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('MY_DB.ANALYTICS').mockResolvedValueOnce('myorg-myaccount').mockResolvedValueOnce('graphene_user')
+    textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('myorg-myaccount').mockResolvedValueOnce('graphene_user')
     selectMock.mockResolvedValueOnce('snowflake').mockResolvedValueOnce('none')
     pathMock.mockResolvedValue(keyPath)
     passwordMock.mockResolvedValue('secret')
@@ -132,9 +132,9 @@ describe('runCreate', () => {
     let pkg = JSON.parse(await readFile(path.join(root, 'my-analytics', 'package.json'), 'utf8'))
     expect(pkg.graphene).toEqual({
       dialect: 'snowflake',
-      defaultNamespace: 'MY_DB.ANALYTICS',
       snowflake: {account: 'myorg-myaccount', username: 'graphene_user'},
     })
+    expect(textMock).not.toHaveBeenCalledWith(expect.objectContaining({message: 'Default namespace (optional)'}))
     expect(pkg.dependencies['snowflake-sdk']).toBeTruthy()
     expect(await readFile(path.join(root, 'my-analytics', '.env'), 'utf8')).toContain(`SNOWFLAKE_PRI_KEY_PATH=${keyPath}`)
     expect(snowflakeCreateConnectionMock).toHaveBeenCalledWith(expect.objectContaining({account: 'myorg-myaccount', username: 'graphene_user', privateKeyPath: keyPath}))
@@ -149,13 +149,7 @@ describe('runCreate', () => {
     await writeFile(goodKeyPath, 'good private key')
     let {runCreate} = await import('./create.ts')
 
-    textMock
-      .mockResolvedValueOnce('my-analytics')
-      .mockResolvedValueOnce('MY_DB.ANALYTICS')
-      .mockResolvedValueOnce('bad-account')
-      .mockResolvedValueOnce('bad_user')
-      .mockResolvedValueOnce('good-account')
-      .mockResolvedValueOnce('good_user')
+    textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('bad-account').mockResolvedValueOnce('bad_user').mockResolvedValueOnce('good-account').mockResolvedValueOnce('good_user')
     selectMock.mockResolvedValueOnce('snowflake').mockResolvedValueOnce('edit').mockResolvedValueOnce('none')
     pathMock.mockResolvedValueOnce(badKeyPath).mockResolvedValueOnce(goodKeyPath)
     passwordMock.mockResolvedValueOnce('bad-secret').mockResolvedValueOnce('good-secret')
@@ -176,7 +170,7 @@ describe('runCreate', () => {
     await writeFile(keyPath, 'private key')
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('MY_DB.ANALYTICS').mockResolvedValueOnce('myorg-myaccount').mockResolvedValueOnce('graphene_user')
+    textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('myorg-myaccount').mockResolvedValueOnce('graphene_user')
     selectMock.mockResolvedValueOnce('snowflake').mockResolvedValueOnce('continue').mockResolvedValueOnce('none')
     pathMock.mockResolvedValue(keyPath)
     passwordMock.mockResolvedValue('secret')
@@ -196,7 +190,7 @@ describe('runCreate', () => {
     await writeFile(keyPath, 'private key')
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('MY_DB.ANALYTICS').mockResolvedValueOnce('myorg-myaccount').mockResolvedValueOnce('graphene_user')
+    textMock.mockResolvedValueOnce('my-analytics').mockResolvedValueOnce('myorg-myaccount').mockResolvedValueOnce('graphene_user')
     selectMock.mockResolvedValueOnce('snowflake').mockResolvedValueOnce('none')
     pathMock.mockResolvedValue(keyPath)
     passwordMock.mockResolvedValue('secret')
@@ -212,7 +206,7 @@ describe('runCreate', () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('clickhouse-app').mockResolvedValueOnce('').mockResolvedValueOnce('https://example.clickhouse.cloud:8443').mockResolvedValueOnce('default')
+    textMock.mockResolvedValueOnce('clickhouse-app').mockResolvedValueOnce('https://example.clickhouse.cloud:8443').mockResolvedValueOnce('default')
     selectMock.mockResolvedValueOnce('clickhouse').mockResolvedValueOnce('none')
     passwordMock.mockResolvedValue('secret')
     spawnMock.mockImplementation(() => createChild())
@@ -222,7 +216,6 @@ describe('runCreate', () => {
     let pkg = JSON.parse(await readFile(path.join(root, 'clickhouse-app', 'package.json'), 'utf8'))
     expect(pkg.graphene).toEqual({
       dialect: 'clickhouse',
-      defaultNamespace: 'default',
       clickhouse: {url: 'https://example.clickhouse.cloud:8443', username: 'default'},
     })
     expect(pkg.dependencies['@clickhouse/client']).toBe('^1.18.2')
@@ -240,11 +233,11 @@ describe('runCreate', () => {
     await expect(runCreate({argv: ['demo-app', '--yes'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})).rejects.toThrow('Target directory is not empty')
   })
 
-  it('leaves duckdb config unset when the path prompt is blank', async () => {
+  it('leaves duckdb config unset and explains how to add the file', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    textMock.mockResolvedValueOnce('demo-app')
     selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('none')
     spawnMock.mockImplementation(() => createChild())
 
@@ -254,6 +247,12 @@ describe('runCreate', () => {
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
     expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
     expect(await readFile(path.join(root, 'demo-app', 'AGENTS.md'), 'utf8')).toContain('npx graphene check')
+    expect(textMock).not.toHaveBeenCalledWith(expect.objectContaining({message: 'Path to .duckdb file'}))
+    let message = outroMock.mock.calls.at(-1)?.[0]
+    expect(message).toContain('\u001b[36m.duckdb\u001b[39m')
+    expect(message).toContain('"graphene": {')
+    expect(message).toContain('"duckdb": {')
+    expect(message).toContain('"path": "/path/to/example')
   })
 
   it('streams install output into the task log and keeps line breaks on success', async () => {
@@ -311,7 +310,7 @@ describe('runCreate', () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    textMock.mockResolvedValueOnce('demo-app')
     selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('none')
     spawnMock.mockImplementation(() => createChild())
 
@@ -332,7 +331,7 @@ describe('runCreate', () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    textMock.mockResolvedValueOnce('demo-app')
     selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.agents')
     spawnMock.mockImplementation(() => createChild())
 
@@ -346,7 +345,7 @@ describe('runCreate', () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
-    textMock.mockResolvedValueOnce('demo-app').mockResolvedValueOnce('').mockResolvedValueOnce('')
+    textMock.mockResolvedValueOnce('demo-app')
     selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.claude')
     spawnMock.mockImplementation(() => createChild())
 
@@ -354,6 +353,8 @@ describe('runCreate', () => {
 
     let linkTarget = await readlink(path.join(root, 'demo-app/.claude/skills/graphene'))
     expect(linkTarget).toBe('../../node_modules/@graphenedata/cli/dist/skills/graphene')
+    expect(await readFile(path.join(root, 'demo-app/CLAUDE.md'), 'utf8')).toContain('npx graphene check')
+    expect(await lstat(path.join(root, 'demo-app/AGENTS.md')).catch(() => null)).toBeNull()
   })
 
   it('skips dependency installation with --no-install', async () => {
