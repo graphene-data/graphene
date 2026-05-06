@@ -284,6 +284,20 @@ function inferAxesFromEncodedFields(config: NormalConfig, fields: Field[], rows:
 
     config.yAxis[axisIndex] = {...inferred, ...axis, axisLabel: {...inferred.axisLabel, ...axis.axisLabel}, axisPointer: {...inferred.axisPointer, ...axis.axisPointer}}
   }
+
+  // Ordinal x axes already use labels to communicate the bucket boundaries, so
+  // the y-axis line reads like an extra vertical grid line at the left edge.
+  // Hide the paired y-axis line unless the caller explicitly configured it.
+  for (let [axisIndex, axis] of config.xAxis.entries()) {
+    if (!axis?.field?.metadata?.timeOrdinal) continue
+
+    let yAxisIndexes = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex).map(entry => Number(entry?.yAxisIndex ?? 0))
+    for (let yAxisIndex of yAxisIndexes) {
+      let yAxis = config.yAxis[yAxisIndex]
+      if (!yAxis || yAxis.axisLine?.show != null) continue
+      yAxis.axisLine = {...yAxis.axisLine, show: false}
+    }
+  }
 }
 
 // Value-axis bars are centered on their x/y value, so explicit min/max domains clip edge bars.
@@ -666,10 +680,26 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
 
     if (field.metadata?.timeOrdinal) {
       axis.minInterval = 1
-      if (field.metadata.timeOrdinal === 'dow_0s' || field.metadata.timeOrdinal === 'dow_1s' || field.metadata.timeOrdinal === 'dow_1m' || field.metadata.timeOrdinal === 'quarter_of_year') {
-        axis.splitNumber = Math.max(1, domain ? domain[1] - domain[0] + 1 : 5)
-      }
-      axis.axisLabel = {formatter: (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value))}
+
+      // Ordinal values are numeric so we use a value axis with a fixed domain, but
+      // visually they are discrete buckets. Hide value-axis grid lines by default
+      // and ask ECharts for denser integer ticks than its generic value defaults.
+      axis.axisLine = {show: false}
+      axis.splitLine = {show: false}
+      axis.axisLabel = {hideOverlap: true, formatter: (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value))}
+
+      // splitNumber is a hint rather than an exact spacing, but it works better
+      // with value-axis bars because interval can fight the half-bucket padding we
+      // add later. These defaults keep compact ordinals readable without forcing
+      // every possible day/week label.
+      let ordinal = field.metadata.timeOrdinal
+      if (ordinal === 'month_of_year' || ordinal === 'quarter_of_year' || ordinal === 'dow_0s' || ordinal === 'dow_1s' || ordinal === 'dow_1m')
+        axis.splitNumber = domain ? domain[1] - domain[0] + 1 : 5
+      if (ordinal === 'hour_of_day') axis.splitNumber = 8
+      if (ordinal === 'day_of_month') axis.splitNumber = 6
+      if (ordinal === 'week_of_year') axis.splitNumber = 13
+      if (ordinal === 'day_of_year') axis.splitNumber = 12
+
       axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
       return axis
     }
