@@ -4,6 +4,10 @@
   "private": true,
   "license": "Elastic-2.0",
   "author": "Graphene Systems Inc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/graphene-data/graphene.git"
+  },
   "bin": {
     "graphene": "./bin.js"
   },
