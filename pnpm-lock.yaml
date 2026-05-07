@@ -291,9 +291,6 @@ importers:
         specifier: 5.55.3
         version: 5.55.3(@typescript-eslint/types@8.56.1)
     devDependencies:
-      '@graphenedata/cli':
-        specifier: workspace:*
-        version: link:../cli
       '@graphenedata/lang':
         specifier: workspace:*
         version: link:../lang
