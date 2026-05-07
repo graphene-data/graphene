@@ -1,3 +1,24 @@
+## 0.0.17
+
+### Breaking changes
+
+None.
+
+### Added
+
+- Added `graphene run --input` for setting input values from the CLI (`82ec2fa7`).
+- Added credential validation, ClickHouse setup, and improved prompting to `create-graphene` (`4afd2ac5`, `d7209250`).
+- Added the `create-graphene` package name and `npm create graphene` installer command (`0b1cc954`).
+- Added configurable ClickHouse request timeouts (`95d4bb81`).
+
+### Fixed
+
+- Fixed ordinal chart axes by hiding grid lines and improving tick rendering (`6ddb3602`).
+- Fixed `<GrapheneQuery />` prop escaping to avoid accidental Svelte interpolation (`f2b966f8`).
+- Fixed language-server file watching registration in editors (`69d09cec`).
+- Fixed chart-generated queries that reused the same column for multiple attributes, like `y` and `sort` (`465b3ae0`).
+- Fixed `graphene run` screenshots to be written inside the project directory (`8e11f8ad`).
+
 ## 0.0.16
 
 ### Breaking changes
