@@ -8,8 +8,19 @@ import path from 'path'
 import sanitizeHtml from 'sanitize-html'
 import {visit} from 'unist-util-visit'
 
-function escapeHtml(str: string) {
-  return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+// Use JS escapes for HTML-sensitive chars so Svelte restores them before query registration.
+function svelteStringAttr(str: string) {
+  let literal = str
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$\{/g, '\\${')
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n')
+    .replace(/&/g, '\\u0026')
+    .replace(/"/g, '\\u0022')
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+  return `{\`${literal}\`}`
 }
 
 // Takes the contents of a <ECharts> tag, and json5 parses it
@@ -31,7 +42,7 @@ export function extractQueries() {
       if (index === null) return
       let name = typeof node.meta === 'string' ? node.meta : ''
       let code = typeof node.value === 'string' ? node.value.trim() : ''
-      parent.children[index] = {type: 'html', value: `<GrapheneQuery name="${escapeHtml(name)}" code="${escapeHtml(code)}" />`}
+      parent.children[index] = {type: 'html', value: `<GrapheneQuery name="${svelteStringAttr(name)}" code="${svelteStringAttr(code)}" />`}
     })
   }
 }
