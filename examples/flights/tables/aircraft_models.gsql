@@ -1,16 +1,19 @@
+-- Aircraft model specifications from the FAA registry.
+-- Each row is one model (aircraft_model_code).
 table aircraft_models (
-  aircraft_model_code VARCHAR -- Unique code identifying the aircraft model
-  manufacturer VARCHAR -- Name of the aircraft manufacturer (e.g., 'BOEING', 'AIRBUS', 'CESSNA')
-  model VARCHAR -- Model name or designation (e.g., '737', 'A320', '172')
-  aircraft_type_id BIGINT -- Identifier for the aircraft type category
-  aircraft_engine_type_id BIGINT -- Identifier for the engine type category
-  aircraft_category_id BIGINT -- Identifier for the aircraft category
-  amateur BIGINT -- Whether this is an amateur-built aircraft (0 = no, 1 = yes)
-  engines BIGINT -- Number of engines on the aircraft
-  seats BIGINT -- Number of passenger seats (0 for cargo-only or single-seat aircraft)
-  weight BIGINT -- Maximum takeoff weight in pounds
-  speed BIGINT -- Maximum speed in knots
+  aircraft_model_code VARCHAR
+  manufacturer VARCHAR -- e.g., 'BOEING', 'AIRBUS', 'CESSNA'
+  model VARCHAR -- Model designation, e.g., '737', 'A320', '172'
+  aircraft_type_id BIGINT
+  aircraft_engine_type_id BIGINT
+  aircraft_category_id BIGINT
+  amateur BIGINT -- Amateur-built indicator (0 = no, 1 = yes)
+  engines BIGINT -- Number of engines
+  seats BIGINT -- Number of passenger seats (0 for cargo-only or single-seat)
+  weight BIGINT -- Maximum takeoff weight, in pounds
+  speed BIGINT -- Maximum speed, in knots
+
+  /* Join relationships */
 
   join many aircraft on aircraft_model_code = aircraft.aircraft_model_code
-);
-
+)
