@@ -155,6 +155,16 @@ describe('cli run', () => {
     expect(res.stdout).toContain('AA')
   })
 
+  it('stops an owned markdown server after a no-browser run', async () => {
+    await stopGrapheneIfRunning()
+
+    let res = await runCli(['run', 'index.md'], {cwd: flightDir})
+    expect(res.code).toBe(1)
+    expect(res.stdout).toContain('Starting Graphene server')
+    expect(res.stdout).toContain('Failed to open a new tab')
+    expect(await isServerRunning(TEST_PORT)).toBe(false)
+  })
+
   it('prints a clean error for a missing markdown query input', async () => {
     let res = await runCli(['run', 'carrier_detail.md', '--query', 'carrier_info'], {cwd: flightDir})
     expect(res.code).toBe(1)

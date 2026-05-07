@@ -13,7 +13,7 @@ import {analyzeWorkspace, getFile, loadWorkspace, toSql} from '../lang/core.ts'
 import {type AnalysisResult, type WorkspaceFileInput} from '../lang/types.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
-import {getGrapheneCache, isServerRunning, runServeInBackground} from './background.ts'
+import {getGrapheneCache} from './background.ts'
 import {runQuery} from './connections/index.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
@@ -56,7 +56,7 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  let resp = await sendSocketRequest({mdFile, action: 'check', chart: options.chart, inputs: options.inputs, log})
+  let resp = await sendSocketRequest({mdFile, action: 'check', chart: options.chart, inputs: options.inputs, log, telemetry: options.telemetry})
   if (!resp) return false
 
   let errors = Array.from(resp.errors || []) as GrapheneError[]
@@ -109,7 +109,7 @@ export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry,
     return false
   }
 
-  let resp = await sendSocketRequest({mdFile, action: 'list', log})
+  let resp = await sendSocketRequest({mdFile, action: 'list', log, telemetry})
   if (!resp) return false
 
   let componentIds = (resp.componentIds || []) as string[]
@@ -152,42 +152,70 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
   return true
 }
 
-async function sendSocketRequest({mdFile, action, chart, inputs, log}: {mdFile: string; action: 'check' | 'list'; chart?: string; inputs?: RunInputs; log: (...args: any[]) => void}) {
+async function sendSocketRequest({
+  mdFile,
+  action,
+  chart,
+  inputs,
+  log,
+  telemetry,
+}: {
+  mdFile: string
+  action: 'check' | 'list'
+  chart?: string
+  inputs?: RunInputs
+  log: (...args: any[]) => void
+  telemetry?: CliTelemetry
+}) {
   let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
   if (pageUrl === '/index') pageUrl = '/'
   pageUrl = appendInputsToUrl(pageUrl, inputs)
 
-  if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
-    log('Starting Graphene server...')
-    await runServeInBackground()
-  }
+  let serverHost = `http://127.0.0.1:${config.port}`
+  let pageHost = `http://localhost:${config.port}`
+  let ownedServer: ViteDevServer | null = null
 
-  let host = `http://localhost:${config.port}`
-  let resp = await fetchSocketRequest({host, pageUrl, action, chart})
+  try {
+    let resp = await fetchSocketRequest({host: serverHost, pageHost, pageUrl, action, chart})
 
-  if (resp.error == 'no_server') {
+    if (resp.error == 'no_server') {
+      log('Starting Graphene server...')
+      let mod = await import('./serve2.ts')
+      ownedServer = await mod.serve2(telemetry, {host: '127.0.0.1', log})
+      resp = await fetchSocketRequest({host: serverHost, pageHost, pageUrl, action, chart})
+    }
+
+    if (resp.error == 'no_server') {
+      log('Failed to start Graphene server')
+      return null
+    }
+
+    if (resp.error == 'no_tab' && process.env.NODE_ENV !== 'test') {
+      log(`Opening page ${pageHost}${pageUrl}`)
+      openInBrowser(pageHost + pageUrl)
+      await new Promise(resolve => setTimeout(resolve, 500))
+      resp = await fetchSocketRequest({host: serverHost, pageHost, pageUrl, action, chart})
+    }
+
+    if (resp.error == 'no_tab') {
+      log('Failed to open a new tab')
+      return null
+    }
+
+    if (resp.error) {
+      log(`Failed to ${action == 'check' ? 'run check' : 'list queries'}: ${resp.error}`)
+      return null
+    }
+
+    return resp
+  } catch (err) {
     log('Failed to start Graphene server')
+    if (err instanceof Error) log(err.message)
+    else log(String(err))
     return null
+  } finally {
+    await ownedServer?.close()
   }
-
-  if (resp.error == 'no_tab' && process.env.NODE_ENV !== 'test') {
-    log(`Opening page ${host}${pageUrl}`)
-    openInBrowser(host + pageUrl)
-    await new Promise(resolve => setTimeout(resolve, 500))
-    resp = await fetchSocketRequest({host, pageUrl, action, chart})
-  }
-
-  if (resp.error == 'no_tab') {
-    log('Failed to open a new tab')
-    return null
-  }
-
-  if (resp.error) {
-    log(`Failed to ${action == 'check' ? 'run check' : 'list queries'}: ${resp.error}`)
-    return null
-  }
-
-  return resp
 }
 
 function appendInputsToUrl(pageUrl: string, inputs: RunInputs = {}) {
@@ -201,15 +229,14 @@ function appendInputsToUrl(pageUrl: string, inputs: RunInputs = {}) {
   return `${pageUrl}?${rendered}`
 }
 
-async function fetchSocketRequest({host, pageUrl, action, chart}: {host: string; pageUrl: string; action: 'check' | 'list'; chart?: string}) {
+async function fetchSocketRequest({host, pageHost, pageUrl, action, chart}: {host: string; pageHost: string; pageUrl: string; action: 'check' | 'list'; chart?: string}) {
   let abort = new AbortController()
   let timeout = setTimeout(() => abort.abort(), 30_000)
-  let browserHost = host.replace('127.0.0.1', 'localhost')
   try {
     let response = await fetch(`${host}/_api/check`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({pageUrl: browserHost + pageUrl, action, chart}),
+      body: JSON.stringify({pageUrl: pageHost + pageUrl, action, chart}),
       signal: abort.signal,
     })
     clearTimeout(timeout)
