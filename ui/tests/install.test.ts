@@ -39,7 +39,7 @@ function getOutput(res: RunResult) {
 interface PackageManagerTest {
   name: 'npm' | 'pnpm' | 'yarn'
   create: (tarball: string) => [string, string[]]
-  install: (tarball: string) => [string, string[]]
+  install: () => [string, string[]]
   graphene: (args: string[]) => [string, string[]]
 }
 
@@ -66,6 +66,13 @@ async function copyTarballToTemp(tarball: string, tempRoot: string) {
 async function expectNoSvelteDependency(projectDir: string) {
   let pkg = JSON.parse(await fsp.readFile(path.join(projectDir, 'package.json'), 'utf8'))
   expect(pkg.dependencies?.svelte).toBeUndefined()
+}
+
+async function usePackedCliDependency(projectDir: string, cliTarball: string) {
+  let packageJsonPath = path.join(projectDir, 'package.json')
+  let pkg = JSON.parse(await fsp.readFile(packageJsonPath, 'utf8'))
+  pkg.dependencies['@graphenedata/cli'] = `file:${path.relative(projectDir, cliTarball)}`
+  await fsp.writeFile(packageJsonPath, JSON.stringify(pkg, null, 2) + '\n')
 }
 
 async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page: Page) {
@@ -98,11 +105,12 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
     let [createCommand, createArgs] = packageManager.create(createTarball)
     let scaffold = await run(createCommand, createArgs, tempRoot, childEnv)
     expectSuccess(`${packageManager.name} create-graphene`, scaffold)
+    await usePackedCliDependency(projectDir, cliTarball)
     await expectNoSvelteDependency(projectDir)
 
-    let [installCommand, installArgs] = packageManager.install(cliTarball)
+    let [installCommand, installArgs] = packageManager.install()
     let installResult = await run(installCommand, installArgs, projectDir, childEnv)
-    expectSuccess(`${packageManager.name} install tarball`, installResult)
+    expectSuccess(`${packageManager.name} install`, installResult)
     await expectNoSvelteDependency(projectDir)
 
     // add actual data and a page with a real chart, so our smoke test will
@@ -180,7 +188,7 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with npm', {tim
     {
       name: 'npm',
       create: tarball => ['npm', ['exec', '--yes', '--package', tarball, '--', 'create-graphene', 'demo-app', '--yes', '--no-install']],
-      install: tarball => ['npm', ['install', tarball]],
+      install: () => ['npm', ['install']],
       graphene: args => ['npm', ['run', 'graphene', '--', ...args]],
     },
     page,
@@ -192,7 +200,7 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with pnpm', {ti
     {
       name: 'pnpm',
       create: tarball => ['pnpm', ['dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
-      install: tarball => ['pnpm', ['add', '--config.minimumReleaseAge=0', tarball]],
+      install: () => ['pnpm', ['install', '--config.minimumReleaseAge=0']],
       graphene: args => ['pnpm', ['run', 'graphene', '--', ...args]],
     },
     page,
@@ -204,7 +212,7 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with yarn', {ti
     {
       name: 'yarn',
       create: tarball => ['corepack', ['yarn@4.12.0', 'dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
-      install: tarball => ['corepack', ['yarn@4.12.0', 'add', tarball]],
+      install: () => ['corepack', ['yarn@4.12.0', 'install']],
       graphene: args => ['corepack', ['yarn@4.12.0', 'run', 'graphene', ...args]],
     },
     page,
