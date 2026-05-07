@@ -25,14 +25,16 @@
 
 ## Why Graphene?
 
-Graphene provides two critical pieces that allow agents to do better data work:
-1. **A semantic layer**, which yields more accurate queries. GSQL introduces metrics and modeled joins without losing the power of ANSI SQL.
+Graphene is an everything-as-code analytics framework for SQL-based data exploration, visualization, and reporting. It is designed with coding agents in mind as the primary user persona.
+
+It provides two critical pieces that allow coding agents to do better data work:
+1. **A semantic layer**, which yields more accurate queries. GSQL combines the power of SQL with the governance of metrics and modeled joins.
 2. **A dashboard file type**, which yields more consistent and polished visuals compared to raw Python or Javascript.
 
-Both are designed with the following in mind:
+**Design goals**
 - Token efficiency. Languages are designed to be brief with minimal boilerplate.
 - Agent ergonomics. Graphene is controlled entirely via CLI. All documentation is inside our agent skill.
-- High ceilings. GSQL is close to ANSI SQL and supports over 170 functions; Graphene's visualizations support anything that can be expressed with ECharts.
+- High ceilings. GSQL follows ANSI and supports over 170 functions; Graphene's visualizations support anything that can be expressed with ECharts.
 
 ### Versus traditional BI
 We believe coding agents coupled with an everything-as-code analytics stack beats traditional BI in several ways:
@@ -47,13 +49,21 @@ We believe coding agents coupled with an everything-as-code analytics stack beat
 
 ### Open, forever
 
-Importantly, Graphene is **open**. You can use this project for internal purposes for free, forever, and aren't locked in to a contract with us. More details [below](#faq).
+Graphene is free to use, forever. Your business logic lives in your repo and is never locked into a contract with us.
 
 ### Rich visualizations
 
 Graphene pages support visualizations, input components for filtering and dynamic behaviors, and layout modes for monitoring-oriented dashboards vs. narrative-oriented notebooks.
 
 <img alt="Graphene Screenshots" src="./assets/page_examples.png"/>
+
+### Powerful, next-generation semantic layer
+
+Traditional semantic layers give you governance at the expense of capability. They tend to expose niche query APIs that agents aren't familiar with.
+
+GSQL's goal is to bring governance _without_ sacrificing capability. It behaves like regular SQL—with CTEs, subqueries, window functions, set operators, and more—but also adds in the concepts of measures and modeled joins from semantic layers.
+
+GSQL is inspired by [Malloy](https://github.com/malloydata/malloy), from the creator of LookML Lloyd Tabb, but implements it as good old SQL for agent familiarity.
 
 ## Get started
 
@@ -66,12 +76,9 @@ Once your project is set up, simply start the dev server via `npm exec graphene 
 
 ## How it works
 
-A Graphene project can either be a standalone repo or a directory within a larger codebase (such as dbt). It is comprised of:
-
-- **Semantic models**, via .gsql files. GSQL is both a modeling language and a query language, in the same way that SQL has both DDL and DML.
-- **Pages**, via .md files. Pages are typically used for dashboards, but can also contain notebook-style narratives, documentation, and other visual content.
-
 Graphene itself is a CLI which can be installed via npm (or pnpm, yarn, etc.). The CLI can run and compile GSQL queries, render pages in the browser, check syntax, print screenshots, and more.
+
+A Graphene project can either be a standalone repo or a directory within a larger codebase (such as dbt). It is comprised of _semantic models_ via .gsql files and _pages_ via .md files.
 
 ### GSQL and Graphene markdown
 
@@ -122,12 +129,42 @@ Graphene's entire documentation ships as an agent skill in the Graphene npm pack
 
 ## FAQ
 
-<details>
-<summary><b>So does everyone have to use git and a coding agent to use Graphene for BI?</b></summary>
-If you just want to use this project and nothing more, yes. Our managed service, Graphene Cloud, offers a Slack agent, MCP server, and browser-based SaaS experience.
+<details><summary><b>Why coding agents?</b></summary>
+  <br/>
+  Context, mostly. If your BI stack lives in a folder right next to the rest of your company’s data and code, an agent can make smarter decisions on what it should be analyzing and why it matters.
+  <br/><br/>
+  The reverse is also true. If you’re working on building out some new feature or a recommendation for a new client, the agent doing that work can ground it’s approach in real data and past analytical insights.
+  <br/><br/>
+  Lock-in is the other big reason we hear. Folks post-SaaS are wary of having their data and dashboards locked away in some proprietary tool, or forced to use a single LLM provider. With Graphene, you own all the files in your repo. You can use whatever agent or LLM you’d like.
 </details>
 
-<details>
-<summary><b>What software license does this use?</b></summary>
-Graphene is licensed under the Elastic License 2.0 which allows you to use it for internal use cases for free, forever. If you would like to use the Graphene Cloud services above, or if you would like a commercial license, please contact us <a href="https://graphenedata.com/contact-us">here</a>.
+<details><summary><b>How do you make money?</b></summary>
+  <br/>
+  We’re building out Graphene Cloud as a turnkey solution to host the dashboards and reports your agent builds. We also host an MCP server and Slack bot that you can use for quick questions. If you'd like to pilot it, contact us <a href="https://graphenedata.com/contact-us">here</a>.
+</details>
+
+<details><summary><b>So does everyone have to use git and a coding agent to use Graphene for BI?</b></summary>
+  <br/>
+  If you just want to use this project and nothing more, yes. Our managed service, Graphene Cloud, offers a Slack agent, MCP server, and browser-based SaaS experience.
+</details>
+
+<details><summary><b>Is my data team out of a job?</b></summary>
+  <br/>
+  No, but we think the nature of the work is going to change. Instead of manually building out reports, data experts are going to be shaping the skills, models, and tools that the rest of their team uses to answer data questions.
+  <br/><br/>
+  Data teams are going to be focused on guiding agents on how to approach the trickiest and most nebulous data questions at a company. Questions that still require a data expert’s taste to get a good solution.
+</details>
+
+<details><summary><b>Can’t I just vibe code dashboards?</b></summary>
+  <br/>
+  You could! In fact a lot of the folks we’ve talked to have started down this route. The main problem you’ll run into is consistency. The look and feel of your dashboards and reports are all over the place, and in the worst case they end up using different formula to compute the same key metric.
+  <br/><br/>
+  GSQL codifies metrics into deterministic objects you can directly invoke in queries. Not only does this ensure that every use of "EBITDA" will be the same, the metadata tags we attach can hint our charts into formatting data correctly.
+  <br/><br/>
+  Graphene raises the floor so that pages you generate with the help of an agent look beautiful by default, so you can move faster with less tokens.
+</details>
+
+<details><summary><b>What software license does this use?</b></summary>
+  <br/>
+  Graphene is licensed under the Elastic License 2.0 which allows you to use it for internal use cases for free, forever. If you would like to build your own commercial application with Graphene, please contact us <a href="https://graphenedata.com/contact-us">here</a>.
 </details>
