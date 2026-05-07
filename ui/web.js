@@ -41,6 +41,7 @@ import LocalApp from './internal/LocalApp.svelte'
 // code only has to load once.
 // In theory we could do this with Vite splitting, but then we have a hard dependency on the exact format vite uses. Plus I find the easier to understand.
 window.$GRAPHENE = window.$GRAPHENE || {}
+window.$GRAPHENE.appLoading = false
 
 let nextRenderId = 0
 let pendingRenders = new Set()
@@ -64,11 +65,11 @@ window.$GRAPHENE.waitForLoad = async (timeout = 20_000) => {
   let g = window.$GRAPHENE
   let end = Date.now() + timeout
   while (Date.now() < end) {
-    if (!g.isQueryLoading() && pendingRenders.size == 0) {
+    if (!g.appLoading && !g.isQueryLoading() && pendingRenders.size == 0) {
       if (document.fonts?.ready) await document.fonts.ready
       await new Promise(resolve => setTimeout(resolve, 300))
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-      if (!g.isQueryLoading() && pendingRenders.size == 0) return true
+      if (!g.appLoading && !g.isQueryLoading() && pendingRenders.size == 0) return true
     }
     await new Promise(resolve => setTimeout(resolve, 100))
   }
@@ -109,5 +110,6 @@ window.$GRAPHENE.components = {
 window.$GRAPHENE.svelte = {mount, unmount}
 
 if (window.location.pathname.replace(/\/+$/, '') !== '/__ct') {
+  window.$GRAPHENE.appLoading = true
   mount(LocalApp, {target: document.body})
 }

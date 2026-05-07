@@ -245,7 +245,7 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
     return
   }
 
-  conn.socket.send(JSON.stringify({type: 'check', action, chart, requestId: id}))
+  conn.socket.send(JSON.stringify({action, chart, requestId: id}))
   pendingRequests[id] = {response: res}
 }
 
