@@ -42,17 +42,14 @@ function connect() {
   socket.onopen = () => socket!.send(JSON.stringify({type: 'register', url: window.location.href}))
 
   socket.onmessage = async event => {
-    let {type, requestId, action, chart} = JSON.parse(event.data)
-    if (type !== 'check') return
+    let {requestId, action, chart} = JSON.parse(event.data)
+    let finished = await window.$GRAPHENE.waitForLoad(20_000)
 
     if (action === 'list') {
-      await window.$GRAPHENE.pageReady
-      await new Promise(resolve => requestAnimationFrame(resolve))
       socket!.send(JSON.stringify({type: 'checkResponse', requestId, componentIds: listComponentIds()}))
       return
     }
 
-    let finished = await window.$GRAPHENE.waitForLoad(20_000)
     let screenshot = chart ? await captureChart(chart) : await takeScreenshot()
     socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors: getErrors(), stillLoading: !finished, screenshot}))
   }
