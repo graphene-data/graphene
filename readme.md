@@ -28,16 +28,20 @@
 Graphene is an everything-as-code analytics framework for SQL-based data exploration, visualization, and reporting. It is designed with coding agents in mind as the primary user persona.
 
 It provides two critical pieces that allow coding agents to do better data work:
+
 1. **A semantic layer**, which yields more accurate queries. GSQL combines the power of SQL with the governance of metrics and modeled joins.
 2. **A dashboard file type**, which yields more consistent and polished visuals compared to raw Python or Javascript.
 
 **Design goals**
+
 - Token efficiency. Languages are designed to be brief with minimal boilerplate.
 - Agent ergonomics. Graphene is controlled entirely via CLI. All documentation is inside our agent skill.
 - High ceilings. GSQL follows ANSI and supports over 170 functions; Graphene's visualizations support anything that can be expressed with ECharts.
 
 ### Versus traditional BI
+
 We believe coding agents coupled with an everything-as-code analytics stack beats traditional BI in several ways:
+
 - Broad ecosystem of SOTA LLMs, harnesses, skills, and tools
 - Leverage business-wide context from other tools or repos
 - Perform end-to-end tasks across tools, where analytics is just one step
