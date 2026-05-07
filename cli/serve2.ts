@@ -32,21 +32,28 @@ const QUERY_VERSION = 1
 let uiRoot: string
 let nodeRequire = createRequire(import.meta.url)
 
-export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
-  let server = await createServer(await createConfig(telemetry))
+interface ServeOptions {
+  host?: string
+  log?: (...args: any[]) => void
+}
+
+export async function serve2(telemetry?: CliTelemetry, options: ServeOptions = {}): Promise<ViteDevServer> {
+  let server = await createServer(await createConfig(telemetry, options))
   // I originally added this to avoid the page refreshing immediately on load.
   // We def don't want to run it in tests, because its not safe to do in parallel.
   // I'm not sure it's still needed, now that we explicitly list out `optimizeDeps.includes`, refreshes should be rare
   // await optimizeDeps(server.config, true)
   await server.listen()
-  console.log(`Server running at http://localhost:${server.config.server.port}`)
+  let displayHost = options.host || 'localhost'
+  let log = options.log || console.log
+  log(`Server running at http://${displayHost}:${server.config.server.port}`)
 
   return server
 }
 
-async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
+async function createConfig(telemetry?: CliTelemetry, options: ServeOptions = {}): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
-  let port = Number(process.env.GRAPHENE_PORT) || 4000
+  let port = config.port || Number(process.env.GRAPHENE_PORT) || 4000
   let svelteRoot = path.dirname(nodeRequire.resolve('svelte/package.json'))
   let sveltePackage = nodeRequire('svelte/package.json')
   let svelteDependencyRoot = path.dirname(svelteRoot)
@@ -56,7 +63,7 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
 
   // Bind to 0.0.0.0 when running in a container so port forwarding works from the host
   let inContainer = fs.existsSync('/.dockerenv')
-  let host = inContainer ? '0.0.0.0' : '127.0.0.1'
+  let host = options.host || (inContainer ? '0.0.0.0' : '127.0.0.1')
 
   return {
     root: config.root,

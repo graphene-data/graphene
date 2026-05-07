@@ -1,11 +1,19 @@
+import {spawn, type ChildProcessWithoutNullStreams} from 'node:child_process'
+import path from 'path'
 import stripAnsi from 'strip-ansi'
+import {fileURLToPath} from 'url'
 
+import {isServerRunning} from '../../cli/background.ts'
 import {check} from '../../cli/check.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 import {listMdFileQueries, runMdFile} from '../../cli/run.ts'
 import {trimIndentation} from '../../lang/util.ts'
-import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
+import {test, expect, getAvailablePort, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const cliEntry = path.join(repoRoot, 'cli/cli.ts')
+const flightDir = path.join(repoRoot, 'examples/flights')
 
 let logs = ''
 function log(...args: any[]) {
@@ -20,6 +28,23 @@ function outputLines() {
     'Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png',
   )
   return stripAnsi(normalized.trim())
+}
+
+function waitForOutput(read: () => string, text: string, timeoutMs = 5000) {
+  let deadline = Date.now() + timeoutMs
+  return new Promise<void>((resolve, reject) => {
+    let poll = () => {
+      if (read().includes(text)) return resolve()
+      if (Date.now() >= deadline) return reject(new Error(`Timed out waiting for "${text}"`))
+      setTimeout(poll, 50)
+    }
+    poll()
+  })
+}
+
+function waitForCli(child: ChildProcessWithoutNullStreams): Promise<number> {
+  if (child.exitCode !== null) return Promise.resolve(child.exitCode)
+  return new Promise(resolve => child.on('close', code => resolve(code ?? 0)))
 }
 
 test.beforeEach(() => {
@@ -112,6 +137,34 @@ test('cli run with md file reports dynamic unsupported chart wrapper props', asy
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
   )
+})
+
+test('cli run with md file owns and stops a transient server', async ({page}) => {
+  let port = await getAvailablePort()
+  let child = spawn('node', [cliEntry, 'run', 'index.md'], {
+    cwd: flightDir,
+    env: {...process.env, GRAPHENE_PORT: String(port), GRAPHENE_TELEMETRY_DISABLED: '1', NODE_ENV: 'test'},
+  })
+  let stdout = ''
+  let stderr = ''
+  child.stdout.on('data', d => (stdout += d.toString()))
+  child.stderr.on('data', d => (stderr += d.toString()))
+  expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws'/)
+
+  try {
+    await waitForOutput(() => stdout, 'Server running at')
+    await page.goto(`http://localhost:${port}/`)
+    await waitForGrapheneLoad(page)
+
+    let code = await waitForCli(child)
+    if (code !== 0) console.error(`[check.test] graphene run failed (code ${code})\nstdout:\n${stdout}\nstderr:\n${stderr}`)
+    expect(code).toBe(0)
+    expect(stdout).toContain('No errors found')
+    expect(stdout).toContain('Screenshot saved to')
+    expect(await isServerRunning(port)).toBe(false)
+  } finally {
+    if (child.exitCode === null) child.kill()
+  }
 })
 
 test('cli run with md file reports dynamic unsupported ECharts top-level props', async ({server, page}) => {
