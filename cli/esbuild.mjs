@@ -44,6 +44,7 @@ await writeFile(
 ---
 name: graphene
 description: How to use Graphene, our framework for data modeling, analysis, and visualization.
+allowed-tools: Bash(npx graphene:*) Bash(pnpm graphene:*) Bash(yarn graphene:*) Bash(bun run graphene:*)
 ---
 
 ${await readFile(path.resolve(__dirname, '../docs/base.md'), 'utf8')}
