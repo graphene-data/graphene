@@ -139,10 +139,6 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
         '@graphenedata/cli > chroma-js',
         '@graphenedata/cli > echarts',
         '@graphenedata/cli > @graphenedata/html2canvas',
-        '@graphenedata/cli > @graphenedata/ui > svelte',
-        '@graphenedata/cli > @graphenedata/ui > chroma-js',
-        '@graphenedata/cli > @graphenedata/ui > echarts/dist/echarts.esm.js',
-        '@graphenedata/cli > @graphenedata/ui > @graphenedata/html2canvas',
       ],
     },
   }

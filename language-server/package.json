@@ -4,7 +4,6 @@
   "version": "0.0.15",
   "type": "module",
   "dependencies": {
-    "@graphenedata/lang": "workspace:*",
     "@volar/language-core": "^2.4.28",
     "@volar/language-server": "^2.4.28",
     "@volar/language-service": "^2.4.28",

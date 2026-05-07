@@ -87,13 +87,9 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
     expectSuccess('pnpm pack create', packCreate)
     let createTarball = await copyTarballToTemp(parseTarballPath(packCreate, createDir), tempRoot)
 
-    let buildCli = await run('pnpm', ['build'], cliDir)
-    expectSuccess('pnpm build cli', buildCli)
-
-    let cliNpmDir = path.join(cliDir, 'dist/npm')
-    let packCli = await run('pnpm', ['pack'], cliNpmDir)
-    expectSuccess('pnpm pack cli/dist/npm', packCli)
-    let cliTarball = await copyTarballToTemp(parseTarballPath(packCli, cliNpmDir), tempRoot)
+    let packCli = await run('pnpm', ['pack'], cliDir)
+    expectSuccess('pnpm pack cli', packCli)
+    let cliTarball = await copyTarballToTemp(parseTarballPath(packCli, cliDir), tempRoot)
 
     let [createCommand, createArgs] = packageManager.create(createTarball)
     let scaffold = await run(createCommand, createArgs, tempRoot, childEnv)
