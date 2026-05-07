@@ -212,7 +212,7 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with yarn', {ti
     {
       name: 'yarn',
       create: tarball => ['corepack', ['yarn@4.12.0', 'dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
-      install: () => ['corepack', ['yarn@4.12.0', 'install']],
+      install: () => ['corepack', ['yarn@4.12.0', 'install', '--no-immutable']],
       graphene: args => ['corepack', ['yarn@4.12.0', 'run', 'graphene', ...args]],
     },
     page,
