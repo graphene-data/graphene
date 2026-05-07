@@ -25,19 +25,25 @@
 
 ## Why Graphene?
 
-In the future, we believe **most low-level data analytics work will be done by agents**, allowing humans to focus on insights and decision-making. However, today's tools weren't built with agents in mind:
+Graphene provides two critical pieces that allow agents to do better data work:
+1. **A semantic layer**, which yields more accurate queries. GSQL introduces metrics and modeled joins without losing the power of ANSI SQL.
+2. **A dashboard file type**, which yields more consistent and polished visuals compared to raw Python or Javascript.
 
-- They are GUI centric. Lots of actions can only be done via GUI and aren't accessible to external agents like Claude.
-- They focus on raising the floor at the expense of lowering the ceiling (limited viz types, simplified querying APIs).
-- They assume the human user has the tribal knowledge and business context necessary for analysis.
+Both are designed with the following in mind:
+- Token efficiency. Languages are designed to be brief with minimal boilerplate.
+- Agent ergonomics. Graphene is controlled entirely via CLI. All documentation is inside our agent skill.
+- High ceilings. GSQL is close to ANSI SQL and supports over 170 functions; Graphene's visualizations support anything that can be expressed with ECharts.
 
-If we really want agents to be more productive with data, an entirely new toolset is needed.
-
-Graphene is:
-
-- [x] **Built for agents**. Everything is code, written only in languages that are prevalent in training data (SQL, Markdown, HTML). All actions are CLIs; nothing is trapped in a button.
-- [x] **High-ceiling**. Agents can create any visualization that's supported by ECharts, one of the most feature-complete visualization libraries. And Graphene's query language is as powerful as ANSI SQL, which supports 170+ functions, CTEs, subqueries, set operations, window functions, arrays, and more.
-- [x] **Optimized for agent context**. Graphene's SQL language contains a semantic layer which allows metrics and join relationships to be invoked in queries. When combined with [agent skills](https://agentskills.io/home) for general business context and best practices, agents perform at human levels of competency.
+### Versus traditional BI
+We believe coding agents coupled with an everything-as-code analytics stack beats traditional BI in several ways:
+- Broad ecosystem of SOTA LLMs, harnesses, skills, and tools
+- Leverage business-wide context from other tools or repos
+- Perform end-to-end tasks across tools, where analytics is just one step
+- More graceful change management and bulk refactors
+- Easily promote/demote logic into or out of the semantic layer
+- Version control and CI. Revert agent mistakes. Run tests on mission-critical dashboards.
+- Tight, complete iteration loops. Agents can validate before running, view dashboards, and iterate locally
+- Leverage continuous agents for self-healing codebases
 
 ### Open, forever
 
@@ -48,17 +54,6 @@ Importantly, Graphene is **open**. You can use this project for internal purpose
 Graphene pages support visualizations, input components for filtering and dynamic behaviors, and layout modes for monitoring-oriented dashboards vs. narrative-oriented notebooks.
 
 <img alt="Graphene Screenshots" src="./assets/page_examples.png"/>
-
-### Powerful workflows
-
-When you deconstruct data analytics into code, CLIs, and coding agents, things that used to be hard become easy:
-
-- Promote metrics from pages into the model, or demote metrics out of the model back into pages
-- Bulk refactors in a single atomic commit/PR
-- Ability to use extensive skill/MCP ecosystem to augment agent behavior
-- Iterate on a dashboard (edit, run, view) without needing to push up to some API or open a SaaS portal
-- Validate SQL and page syntax instantaneously as you type
-- Set up a recurring agent that de-bloats, consolidates your model over time
 
 ## Get started
 
