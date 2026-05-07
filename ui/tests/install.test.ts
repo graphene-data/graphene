@@ -192,7 +192,10 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with pnpm', {ti
     {
       name: 'pnpm',
       create: tarball => ['pnpm', ['dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
-      install: tarball => ['pnpm', ['add', '--config.minimumReleaseAge=0', tarball]],
+      // pnpm resolves the existing package.json before applying `add <tarball>`, so an unpublished
+      // release version scaffolded by create-graphene would fail to resolve from npm. Naming the
+      // dependency in the add spec lets pnpm replace the manifest entry directly with the local tarball.
+      install: tarball => ['pnpm', ['add', '--config.minimumReleaseAge=0', `@graphenedata/cli@file:${tarball}`]],
       graphene: args => ['pnpm', ['run', 'graphene', '--', ...args]],
     },
     page,
