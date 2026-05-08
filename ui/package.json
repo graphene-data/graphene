@@ -20,7 +20,6 @@
     "svelte": "5.55.3"
   },
   "devDependencies": {
-    "@graphenedata/cli": "workspace:*",
     "@graphenedata/lang": "workspace:*",
     "@playwright/test": "1.58.2",
     "@sveltejs/vite-plugin-svelte": "6.2.4",
