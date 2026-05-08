@@ -67,7 +67,7 @@ Traditional semantic layers give you governance at the expense of capability. Th
 
 GSQL's goal is to bring governance _without_ sacrificing capability. It behaves like regular SQL—with CTEs, subqueries, window functions, set operators, and more—but also adds in the concepts of measures and modeled joins from semantic layers.
 
-GSQL is inspired by [Malloy](https://github.com/malloydata/malloy), from the creator of LookML Lloyd Tabb, but implements it as good old SQL for agent familiarity.
+GSQL is inspired by [Malloy](https://github.com/malloydata/malloy), from the creators of LookML Lloyd Tabb and Michael Toy, but implements it as good old SQL for agent familiarity.
 
 ## Get started
 
