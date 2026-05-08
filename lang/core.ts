@@ -14,7 +14,7 @@ export type {GrapheneError} from './index.d.ts'
 export type {AnalysisResult, AnalysisWorkspace, FileInfo, Query, Table, WorkspaceFileInput} from './types.ts'
 
 export async function loadWorkspace(dir: string, includeMd: boolean, ignoredFiles: string[] = []): Promise<WorkspaceFileInput[]> {
-  let ignore = ['node_modules/**', '**/.*/**', ...ignoredFiles]
+  let ignore = ['node_modules/**', '**/.*/**', '**/agents.md', '**/claude.md', ...ignoredFiles]
   let paths = await glob(includeMd ? '**/*.{gsql,md}' : '**/*.gsql', {cwd: dir, ignore, follow: false, nocase: true})
   let files: WorkspaceFileInput[] = []
 
