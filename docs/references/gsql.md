@@ -138,7 +138,7 @@ There isn't always a SQL expression that can tip Graphene to the semantic meanin
 - The field could be a base column that has no source expression
 - There might not be enough information in the expression (eg. what currency a float is tied to)
 
-For this reason, some metadata should be set explicitly in the GSQL model, using annotations. Metadata annotations resemble hashtags (eg. `#ratio`, `#units=usd`) that can be inlined or written above the object they decorate.
+For this reason, some metadata should be set explicitly in the GSQL model, using annotations. Metadata annotations resemble hashtags (eg. `#ratio`, `#units=usd`) that can be inlined or written above the object they decorate. `graphene check` validates metadata keys and values.
 
 #### Recognized metadata
 
@@ -146,9 +146,11 @@ For this reason, some metadata should be set explicitly in the GSQL model, using
 |---|---|---|
 | `#ratio` | no | Value is 0–1; rendered as `value × 100%` (e.g. `0.42` → `42%`) |
 | `#pct` | no | Value is already 0–100; rendered as `value%` (e.g. `42` → `42%`) |
-| `#units=<currency>` | no | Adds currency symbol and compacts to K/M/B. Accepted values: `usd`, `eur`, `gbp`, `cad`, `aud`, `jpy` |
+| `#units=<unit>` | no | Adds currency symbol and compacts to K/M/B for currencies. Accepted values: `usd`, `eur`, `gbp`, `cad`, `aud`, `jpy`, `count`, `seconds` |
 | `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats values as ordinal positions on a categorical axis. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
+
+The conventional table and field annotations `#description=<text>`, `#format=<text>`, `#color=<text>`, `#hide`, and `#pii` are also valid. Flag annotations accept either bare usage (for example `#ratio`) or `=true`.
 
 ## `select` statements
 

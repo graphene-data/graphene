@@ -5,6 +5,37 @@ import {getFile} from './util.ts'
 let embeddedMetadataPair = /(^|\s)(#)([A-Za-z0-9_-]+)(?:\s*=\s*("(?:[^"\\]|\\.)*"|[^\s#]+)|(?=(?:\s*(?:#|--|$))))/g
 
 type CommentKind = 'dash' | 'hash'
+export type MetadataEntry = {
+  key: string
+  value: string
+  rawValue?: string
+  from: number
+  to: number
+  valueFrom?: number
+  valueTo?: number
+  hasValue: boolean
+}
+
+export type MetadataDiagnostic = {
+  message: string
+  from: number
+  to: number
+}
+
+let metadataKeyRules = {
+  ratio: {kind: 'flag'},
+  pct: {kind: 'flag'},
+  hide: {kind: 'flag'},
+  pii: {kind: 'flag'},
+  units: {kind: 'enum', values: ['usd', 'eur', 'gbp', 'cad', 'aud', 'jpy', 'count', 'seconds']},
+  timeGrain: {kind: 'enum', values: ['year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second']},
+  timeOrdinal: {kind: 'enum', values: ['hour_of_day', 'day_of_month', 'day_of_year', 'week_of_year', 'month_of_year', 'quarter_of_year', 'dow_0s', 'dow_1s', 'dow_1m']},
+  description: {kind: 'string'},
+  format: {kind: 'string'},
+  color: {kind: 'string'},
+} as const
+
+let validMetadataKeys = Object.keys(metadataKeyRules)
 
 // Extract metadata from comments that appear directly above a syntax node.
 // Rules:
@@ -14,8 +45,12 @@ type CommentKind = 'dash' | 'hash'
 // - Adjacency required: we scan upward; a blank or non-comment line stops the scan.
 // - If the node is not the first token on its line, ignore leading comments.
 export function extractLeadingMetadata(node: SyntaxNode): Record<string, string> {
+  return extractLeadingMetadataDetails(node).metadata
+}
+
+export function extractLeadingMetadataDetails(node: SyntaxNode): {metadata: Record<string, string>; entries: MetadataEntry[]} {
   let src = getFile(node).contents
-  if (!src) return {}
+  if (!src) return {metadata: {}, entries: []}
 
   let pos = node.from
   let currentLineStart = src.lastIndexOf('\n', Math.max(0, pos - 1)) + 1
@@ -23,14 +58,15 @@ export function extractLeadingMetadata(node: SyntaxNode): Record<string, string>
   let beforeOnLine = src.slice(currentLineStart, pos)
   let isFirstTokenOnLine = !/[^\s]/.test(beforeOnLine)
 
-  let comments: {kind: CommentKind; text: string}[] = []
+  let comments: {kind: CommentKind; text: string; from: number; markerFrom: number}[] = []
   if (isFirstTokenOnLine && endOfPrevLine >= 0) {
     let cursor = endOfPrevLine
     while (cursor >= 0) {
       let startOfLine = src.lastIndexOf('\n', Math.max(0, cursor - 1)) + 1
-      let trimmed = src.slice(startOfLine, cursor).trim()
+      let line = src.slice(startOfLine, cursor)
+      let trimmed = line.trim()
       if (!trimmed) break
-      let comment = parseCommentLine(trimmed)
+      let comment = parseCommentLine(line, startOfLine)
       if (!comment) break
       comments.push(comment)
       cursor = startOfLine - 1
@@ -40,25 +76,72 @@ export function extractLeadingMetadata(node: SyntaxNode): Record<string, string>
 
   let metadata: Record<string, string> = {}
   let descriptionLines: string[] = []
-  for (let comment of comments) consumeComment(comment, metadata, descriptionLines)
+  let entries: MetadataEntry[] = []
+  for (let comment of comments) consumeComment(comment, metadata, descriptionLines, entries)
 
   let endPos = node.to
   let endOfLine = src.indexOf('\n', endPos)
   if (endOfLine === -1) endOfLine = src.length
   let after = src.slice(endPos, endOfLine)
-  let trailing = parseTrailingComment(after)
-  if (trailing) consumeComment(trailing, metadata, descriptionLines)
+  let trailing = parseTrailingComment(after, endPos)
+  if (trailing) consumeComment(trailing, metadata, descriptionLines, entries)
 
   if (descriptionLines.length) metadata.description = descriptionLines.join(' ')
-  return metadata
+  return {metadata, entries}
 }
 
-function parseCommentLine(trimmed: string): {kind: CommentKind; text: string} | undefined {
-  if (trimmed.startsWith('--')) return {kind: 'dash', text: trimmed.slice(2).trimStart()}
-  if (trimmed.startsWith('#')) return {kind: 'hash', text: trimmed.slice(1).trimStart()}
+export function validateMetadataEntries(entries: MetadataEntry[]): MetadataDiagnostic[] {
+  let diagnostics: MetadataDiagnostic[] = []
+  for (let entry of entries) {
+    let rule = metadataKeyRules[entry.key as keyof typeof metadataKeyRules]
+    if (!rule) {
+      diagnostics.push({
+        message: `Unknown metadata key "#${entry.key}". Expected one of: ${validMetadataKeys.join(', ')}`,
+        from: entry.from,
+        to: entry.to,
+      })
+      continue
+    }
+
+    if (rule.kind == 'flag') {
+      if (!entry.hasValue || entry.rawValue == 'true') continue
+      diagnostics.push({
+        message: `Metadata "#${entry.key}" is a flag; use "#${entry.key}" or "#${entry.key}=true".`,
+        from: entry.valueFrom ?? entry.from,
+        to: entry.valueTo ?? entry.to,
+      })
+      continue
+    }
+
+    if (rule.kind == 'string') {
+      if (entry.hasValue && entry.value.trim()) continue
+      diagnostics.push({
+        message: `Metadata "#${entry.key}" requires a value.`,
+        from: entry.from,
+        to: entry.to,
+      })
+      continue
+    }
+
+    if (rule.values.includes(entry.value as never)) continue
+    diagnostics.push({
+      message: `Invalid value "${entry.value}" for "#${entry.key}". Expected one of: ${rule.values.join(', ')}`,
+      from: entry.valueFrom ?? entry.from,
+      to: entry.valueTo ?? entry.to,
+    })
+  }
+  return diagnostics
 }
 
-function parseTrailingComment(after: string): {kind: CommentKind; text: string} | undefined {
+function parseCommentLine(line: string, lineStart: number): {kind: CommentKind; text: string; from: number; markerFrom: number} | undefined {
+  let leading = line.match(/^\s*/)?.[0].length || 0
+  let markerFrom = lineStart + leading
+  let trimmed = line.slice(leading)
+  if (trimmed.startsWith('--')) return withTrimmedText('dash', line, lineStart, markerFrom, leading + 2)
+  if (trimmed.startsWith('#')) return withTrimmedText('hash', line, lineStart, markerFrom, leading + 1)
+}
+
+function parseTrailingComment(after: string, afterStart: number): {kind: CommentKind; text: string; from: number; markerFrom: number} | undefined {
   let dashIdx = after.indexOf('--')
   let hashIdx = after.indexOf('#')
   let commentIdx = minNonNegative(dashIdx, hashIdx)
@@ -67,13 +150,19 @@ function parseTrailingComment(after: string): {kind: CommentKind; text: string} 
   let between = after.slice(0, commentIdx)
   if (!/^[\s,]*$/.test(between)) return undefined
 
-  if (hashIdx !== -1 && hashIdx === commentIdx) return {kind: 'hash', text: after.slice(hashIdx + 1).trimStart()}
-  return {kind: 'dash', text: after.slice(dashIdx + 2).trimStart()}
+  let markerFrom = afterStart + commentIdx
+  if (hashIdx !== -1 && hashIdx === commentIdx) return withTrimmedText('hash', after, afterStart, markerFrom, hashIdx + 1)
+  return withTrimmedText('dash', after, afterStart, markerFrom, dashIdx + 2)
 }
 
-function consumeComment(comment: {kind: CommentKind; text: string}, metadata: Record<string, string>, descriptionLines: string[]) {
+function withTrimmedText(kind: CommentKind, raw: string, rawFrom: number, markerFrom: number, textStart: number) {
+  let whitespace = raw.slice(textStart).match(/^\s*/)?.[0].length || 0
+  return {kind, text: raw.slice(textStart + whitespace), from: rawFrom + textStart + whitespace, markerFrom}
+}
+
+function consumeComment(comment: {kind: CommentKind; text: string; from: number; markerFrom: number}, metadata: Record<string, string>, descriptionLines: string[], entries: MetadataEntry[]) {
   if (comment.kind === 'hash') {
-    let cleaned = extractHashMetadata(comment.text, metadata)
+    let cleaned = extractHashMetadata(comment, metadata, entries)
     let trailingDescription = parseHashCommentDescription(cleaned)
     if (trailingDescription) descriptionLines.push(trailingDescription)
     return
@@ -82,34 +171,68 @@ function consumeComment(comment: {kind: CommentKind; text: string}, metadata: Re
   // `--# ...` was the old metadata syntax. Do not keep it working.
   if (comment.text.startsWith('#')) return
 
-  let description = extractMetadataPairs(comment.text, metadata)
+  let description = extractMetadataPairs(comment.text, comment.from, metadata, entries)
   if (description) descriptionLines.push(description)
 }
 
-function extractHashMetadata(text: string, metadata: Record<string, string>) {
+function extractHashMetadata(comment: {text: string; from: number; markerFrom: number}, metadata: Record<string, string>, entries: MetadataEntry[]) {
+  let text = comment.text
   let cursor = skipWhitespace(text, 0)
-  let pair = matchMetadataToken(text, cursor, false)
+  let pair = matchMetadataToken(text, cursor, false, comment.from, comment.markerFrom)
   if (!pair) return text.trim()
 
-  metadata[pair.key] = parseMetadataValue(pair.rawValue)
+  consumePair(pair, metadata, entries)
   cursor = pair.end
 
   while (true) {
     let nextStart = skipWhitespace(text, cursor)
     if (text[nextStart] !== '#') return text.slice(nextStart).trim()
-    let nextPair = matchMetadataToken(text, nextStart, true)
+    let nextPair = matchMetadataToken(text, nextStart, true, comment.from)
     if (!nextPair) return text.slice(nextStart).trim()
-    metadata[nextPair.key] = parseMetadataValue(nextPair.rawValue)
+    consumePair(nextPair, metadata, entries)
     cursor = nextPair.end
   }
 }
 
-function extractMetadataPairs(text: string, metadata: Record<string, string>) {
-  let cleaned = text.replace(embeddedMetadataPair, (_match, leadingSpace, _hash, key, rawValue) => {
-    if (key) metadata[key] = parseMetadataValue(rawValue)
+function extractMetadataPairs(text: string, textFrom: number, metadata: Record<string, string>, entries: MetadataEntry[]) {
+  let cleaned = text.replace(embeddedMetadataPair, (match, leadingSpace, _hash, key, rawValue, offset) => {
+    if (key) {
+      let hashStart = textFrom + offset + leadingSpace.length
+      let valueOffset = rawValue ? match.indexOf(rawValue) : -1
+      consumePair(
+        {
+          key,
+          rawValue,
+          keyFrom: hashStart + 1,
+          keyTo: hashStart + 1 + key.length,
+          from: hashStart,
+          to: hashStart + 1 + key.length,
+          valueFrom: valueOffset >= 0 ? textFrom + offset + valueOffset : undefined,
+          valueTo: valueOffset >= 0 ? textFrom + offset + valueOffset + rawValue.length : undefined,
+          end: offset + match.length,
+        },
+        metadata,
+        entries,
+      )
+    }
     return leadingSpace ? ' ' : ''
   })
   return cleaned.replace(/\s+/g, ' ').trim()
+}
+
+function consumePair(pair: MetadataToken, metadata: Record<string, string>, entries: MetadataEntry[]) {
+  let value = parseMetadataValue(pair.rawValue)
+  metadata[pair.key] = value
+  entries.push({
+    key: pair.key,
+    value,
+    rawValue: pair.rawValue,
+    from: pair.from,
+    to: pair.to,
+    valueFrom: pair.valueFrom,
+    valueTo: pair.valueTo,
+    hasValue: pair.rawValue != null,
+  })
 }
 
 function parseMetadataValue(rawValue?: string) {
@@ -124,23 +247,38 @@ function parseHashCommentDescription(cleaned: string) {
   return description || undefined
 }
 
-function matchMetadataToken(text: string, start: number, hasHashPrefix: boolean) {
+type MetadataToken = {
+  key: string
+  rawValue?: string
+  keyFrom: number
+  keyTo: number
+  from: number
+  to: number
+  valueFrom?: number
+  valueTo?: number
+  end: number
+}
+
+function matchMetadataToken(text: string, start: number, hasHashPrefix: boolean, textFrom: number, firstHashFrom?: number): MetadataToken | undefined {
   let cursor = hasHashPrefix ? start + 1 : start
   let keyStart = cursor
   while (/[A-Za-z0-9_-]/.test(text[cursor] || '')) cursor++
   if (cursor === keyStart) return undefined
 
   let key = text.slice(keyStart, cursor)
+  let from = hasHashPrefix ? textFrom + start : (firstHashFrom ?? textFrom + keyStart)
+  let keyFrom = textFrom + keyStart
+  let keyTo = textFrom + cursor
   let afterKey = skipWhitespace(text, cursor)
   if (text[afterKey] === '=') {
     let valueStart = skipWhitespace(text, afterKey + 1)
     let value = readMetadataValue(text, valueStart)
     if (!value) return undefined
-    return {key, rawValue: value.rawValue, end: value.end}
+    return {key, rawValue: value.rawValue, keyFrom, keyTo, from, to: keyTo, valueFrom: textFrom + valueStart, valueTo: textFrom + value.end, end: value.end}
   }
 
   if (afterKey >= text.length || text[afterKey] === '#' || text.startsWith('--', afterKey)) {
-    return {key, rawValue: undefined, end: afterKey}
+    return {key, rawValue: undefined, keyFrom, keyTo, from, to: keyTo, end: afterKey}
   }
 }
 

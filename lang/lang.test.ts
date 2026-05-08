@@ -861,14 +861,55 @@ describe('lang', () => {
   it('treats trailing dash comments in hash metadata lines as description', () => {
     analyze(`
       table foo (
-        #hide #key=value -- More comment
+        #hide #color=green -- More comment
         name text
       )
     `)
 
     let table = getTable('foo')!
     let name = table.columns.find(c => c.name === 'name')!
-    expect(name.metadata).toMatchObject({hide: 'true', key: 'value', description: 'More comment'})
+    expect(name.metadata).toMatchObject({hide: 'true', color: 'green', description: 'More comment'})
+  })
+
+  it('reports diagnostics for unknown metadata keys', () => {
+    expect(`
+      table foo (
+        #unknown=value
+        name text
+      )
+    `).toHaveDiagnostic(/Unknown metadata key "#unknown"/)
+  })
+
+  it('reports diagnostics for invalid metadata enum values', () => {
+    expect(`
+      table foo (
+        day date #timeGrain=mont
+        amount int -- revenue #units=dollars
+        dow int #timeOrdinal=dow
+      )
+    `).toHaveDiagnostic(/Invalid value "mont" for "#timeGrain"/)
+    expect(getDiagnostics().some(d => /Invalid value "dollars" for "#units"/.test(d.message))).toBe(true)
+    expect(getDiagnostics().some(d => /Invalid value "dow" for "#timeOrdinal"/.test(d.message))).toBe(true)
+  })
+
+  it('reports diagnostics for invalid flag metadata values', () => {
+    expect(`
+      table foo (
+        ratio number #ratio=false
+        hidden number #hide="true"
+      )
+    `).toHaveDiagnostic(/Metadata "#ratio" is a flag/)
+    expect(getDiagnostics().some(d => /Metadata "#hide" is a flag/.test(d.message))).toBe(true)
+  })
+
+  it('reports diagnostics for user-authored internal metadata keys', () => {
+    expect(`
+      table foo (
+        year_num int #timePart=year
+        month date #defaultName=month
+      )
+    `).toHaveDiagnostic(/Unknown metadata key "#timePart"/)
+    expect(getDiagnostics().some(d => /Unknown metadata key "#defaultName"/.test(d.message))).toBe(true)
   })
 
   it('does not parse legacy dash-hash metadata comments', () => {
