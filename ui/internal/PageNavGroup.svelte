@@ -115,8 +115,8 @@
     return nodes
       .map(n => n.type === 'folder' && n.children?.length ? {...n, children: sortNodes(n.children)} : n)
       .sort((a, b) => {
-        if (a.label === 'Home') return -1
-        if (b.label === 'Home') return 1
+        if (a.path?.toLowerCase() === 'index.md') return -1
+        if (b.path?.toLowerCase() === 'index.md') return 1
         if (a.type !== b.type) return a.type === 'folder' ? -1 : 1
         return a.label.localeCompare(b.label)
       })
