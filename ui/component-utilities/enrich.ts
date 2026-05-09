@@ -285,11 +285,13 @@ function inferAxesFromEncodedFields(config: NormalConfig, fields: Field[], rows:
     config.yAxis[axisIndex] = {...inferred, ...axis, axisLabel: {...inferred.axisLabel, ...axis.axisLabel}, axisPointer: {...inferred.axisPointer, ...axis.axisPointer}}
   }
 
-  // Ordinal x axes already use labels to communicate the bucket boundaries, so
-  // the y-axis line reads like an extra vertical grid line at the left edge.
-  // Hide the paired y-axis line unless the caller explicitly configured it.
+  // Temporal x axes (ordinal buckets, or numeric extracts like year) use labels
+  // to communicate the bucket boundaries, so the y-axis line reads like an extra
+  // vertical grid line at the left edge. Hide the paired y-axis line unless the
+  // caller explicitly configured it.
   for (let [axisIndex, axis] of config.xAxis.entries()) {
-    if (!axis?.field?.metadata?.timeOrdinal) continue
+    let meta = axis?.field?.metadata
+    if (!meta?.timeOrdinal && !meta?.timePart) continue
 
     let yAxisIndexes = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex).map(entry => Number(entry?.yAxisIndex ?? 0))
     for (let yAxisIndex of yAxisIndexes) {
@@ -704,8 +706,13 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       return axis
     }
 
-    if (field.metadata?.timePart === 'year') {
+    if (field.metadata?.timePart) {
+      // Numeric temporal extracts (year, decade, century, ...) are buckets, not a
+      // continuous numeric scale. Match the timeOrdinal treatment: integer ticks
+      // and no value-axis grid lines.
       axis.minInterval = 1
+      axis.axisLine = {show: false}
+      axis.splitLine = {show: false}
       axis.axisLabel = {formatter: (value: unknown) => (Number.isInteger(Number(value)) ? String(Number(value)) : '')}
     }
   }
@@ -730,7 +737,7 @@ function temporalValueDomain(field: Field, rows: Record<string, any>[]): [number
   if (ordinal === 'dow_0s') return [0, 6]
   if (ordinal === 'dow_1s' || ordinal === 'dow_1m') return [1, 7]
 
-  if (field.metadata?.timePart == 'year') {
+  if (field.metadata?.timePart) {
     let values = rows.map(row => Number(row?.[field.name])).filter(value => Number.isFinite(value))
     if (values.length === 0) return undefined
     return [Math.min(...values), Math.max(...values)]
