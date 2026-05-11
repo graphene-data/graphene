@@ -406,7 +406,7 @@ function valueFormatting(config: NormalConfig, fields: Field[]) {
   let valueAxes = [...config.xAxis, ...config.yAxis].filter(axis => axis?.type === 'value' && !axis.field?.metadata?.timeOrdinal)
   for (let axis of valueAxes) {
     if (axis.axisLabel?.formatter != null) continue
-    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [])}
+    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [], {unitStyle: 'axis'})}
   }
 
   for (let series of config.series) {
@@ -508,22 +508,24 @@ function barLabelPositioning(config: NormalConfig) {
   }
 }
 
-// Match series data labels to the assigned y-axis formatter when labels are enabled.
-// This keeps label formatting in sync with the y-axis without asking callers to repeat it.
-// labelsUseYAxisFormat depends on valueAxisFormatting running first so labels inherit axis formatting.
+// Match series data labels to the assigned value field when labels are enabled.
+// This keeps label formatting in sync with tooltips without asking callers to repeat it.
+// labelsUseYAxisFormat depends on valueFormatting running first so labels inherit axis formatting.
 function labelsUseYAxisFormat(config: NormalConfig, fields: Field[]) {
   for (let series of config.series) {
     // No-op when labels are off or already explicitly formatted.
     if (!series?.label || series.label.show !== true || series.label.formatter != null) continue
 
-    let yField = getSeriesValueField(series, fields)?.name
+    let valueField = getSeriesValueField(series, fields)
+    let yField = valueField?.name
     let axisIndex = Number(series.yAxisIndex ?? 0)
     let axisFormatter = config.yAxis[axisIndex]?.axisLabel?.formatter
-    if (typeof axisFormatter !== 'function') continue
+    let labelFormatter = valueField ? makeValueFormatter([valueField]) : axisFormatter
+    if (typeof labelFormatter !== 'function') continue
 
     // ECharts can pass different value shapes depending on series/transform shape.
     // We resolve the numeric value in a few fallback steps so labels always use the
-    // same value the y-axis is formatting.
+    // same field that tooltips format.
     series.label.formatter = (params: unknown) => {
       let typed = params as {value?: unknown; data?: Record<string, unknown>}
       let value = typed?.value
@@ -535,7 +537,7 @@ function labelsUseYAxisFormat(config: NormalConfig, fields: Field[]) {
         }
       }
 
-      return formatAxisValue(axisFormatter, value)
+      return formatAxisValue(labelFormatter, value)
     }
   }
 }

@@ -16,12 +16,13 @@ export type Field = {
 }
 
 // Metadata attached to fields.
-// There are a few built-in ones that Graphene already uses, but you can always attach your own metadata:
-// `price: cogs * 1.15 #ratio #format="US Dollar"` -> {ratio: true, format: 'US Dollar'}
+// Graphene validates user-authored metadata annotations, while inferred metadata may add internal keys.
+// `price: cogs * 1.15 #ratio #currency=USD` -> {ratio: true, currency: 'USD'}
 export type FieldMeta = {
   ratio?: true // 0 to 1 value
   pct?: true // 0 to 100 value
-  units?: string
+  currency?: string // ISO 4217 currency code
+  unit?: string // physical unit label
   timeGrain?: TimeGrain // resolution when the field is a date or timestamp
   timePart?: string // extracted temporal part, normalized across backend spellings
   timeOrdinal?: TimeOrdinal // if the value represents something special like day_of_week, week_of_year, etc

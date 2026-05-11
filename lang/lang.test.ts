@@ -808,9 +808,9 @@ describe('lang', () => {
       table t (
         id int,
         -- a description
-        #format=first_last
+        #pii
         name text,
-        another_field text, -- this is another field #units=seconds
+        another_field text, -- this is another field #unit=seconds
       )
       from t select name
     `)
@@ -818,70 +818,142 @@ describe('lang', () => {
     expect(String(table.metadata?.description || '').toLowerCase()).toContain('this is my test table')
     let name = table.columns.find(c => c.name === 'name')!
     expect(String(name.metadata!.description || '').toLowerCase()).toContain('a description')
-    expect(name.metadata!.format).toBe('first_last')
+    expect(name.metadata!.pii).toBe('true')
     let another = table.columns.find(c => c.name === 'another_field')!
     expect(String(another.metadata!.description || '').toLowerCase()).toContain('this is another field')
-    expect(another.metadata!.units).toBe('seconds')
+    expect(another.metadata!.unit).toBe('seconds')
   })
 
   it('parses quoted values and multiple hash metadata comments', () => {
     analyze(`
       -- currency metrics
-      #color=green #hide #format="US Dollar"
+      #pii #unit=dollars
       table revenue (
         amount int,
-        -- gross revenue #units=usd #hide #format="US Dollar"
+        -- gross revenue #currency=USD #pii
         gross int,
-        net int #units=usd #hide #format="US Dollar"
+        net int #currency=USD #pii
       )
       from revenue select gross, net
     `)
 
     let table = getTable('revenue')!
-    expect(table.metadata).toMatchObject({description: 'currency metrics', color: 'green', hide: 'true', format: 'US Dollar'})
+    expect(table.metadata).toMatchObject({description: 'currency metrics', pii: 'true', unit: 'dollars'})
     let gross = table.columns.find(c => c.name === 'gross')!
-    expect(gross.metadata).toMatchObject({description: 'gross revenue', units: 'usd', hide: 'true', format: 'US Dollar'})
+    expect(gross.metadata).toMatchObject({description: 'gross revenue', currency: 'USD', pii: 'true'})
     let net = table.columns.find(c => c.name === 'net')!
-    expect(net.metadata).toMatchObject({units: 'usd', hide: 'true', format: 'US Dollar'})
+    expect(net.metadata).toMatchObject({currency: 'USD', pii: 'true'})
   })
 
   it('keeps literal hash signs in descriptions while parsing trailing metadata pairs', () => {
     analyze(`
       table foo (
-        -- Description with # sign #hide #pii
+        -- Description with # sign #ratio #pii
         name text
       )
     `)
 
     let table = getTable('foo')!
     let name = table.columns.find(c => c.name === 'name')!
-    expect(name.metadata).toMatchObject({description: 'Description with # sign', hide: 'true', pii: 'true'})
+    expect(name.metadata).toMatchObject({description: 'Description with # sign', ratio: 'true', pii: 'true'})
   })
 
   it('treats trailing dash comments in hash metadata lines as description', () => {
     analyze(`
       table foo (
-        #hide #key=value -- More comment
+        #pii #unit=parsecs -- More comment
         name text
       )
     `)
 
     let table = getTable('foo')!
     let name = table.columns.find(c => c.name === 'name')!
-    expect(name.metadata).toMatchObject({hide: 'true', key: 'value', description: 'More comment'})
+    expect(name.metadata).toMatchObject({pii: 'true', unit: 'parsecs', description: 'More comment'})
+  })
+
+  it('reports diagnostics for unknown metadata keys', () => {
+    expect(`
+      table foo (
+        #unknown=value
+        name text
+      )
+    `).toHaveDiagnostic(/Unknown metadata key "#unknown"/)
+  })
+
+  it('reports diagnostics for invalid metadata enum values', () => {
+    expect(`
+      table foo (
+        day date #timeGrain=mont
+        amount int -- revenue #currency=ZZZ
+        dow int #timeOrdinal=dow
+        weight int #unit=parsecs
+      )
+    `).toHaveDiagnostic(/Invalid value "mont" for "#timeGrain"/)
+    expect(getDiagnostics().some(d => /Invalid value "ZZZ" for "#currency"/.test(d.message))).toBe(true)
+    expect(getDiagnostics().some(d => /Invalid value "dow" for "#timeOrdinal"/.test(d.message))).toBe(true)
+  })
+
+  it('accepts ISO currency codes and arbitrary unit metadata values', () => {
+    analyze(`
+      table foo (
+        revenue int #currency=eur
+        distance int #unit=lightyears
+      )
+    `)
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+
+    let table = getTable('foo')!
+    expect(table.columns.find(c => c.name === 'revenue')!.metadata).toMatchObject({currency: 'eur'})
+    expect(table.columns.find(c => c.name === 'distance')!.metadata).toMatchObject({unit: 'lightyears'})
+  })
+
+  it('reports diagnostics for legacy plural units metadata', () => {
+    expect(`
+      table foo (
+        amount int -- revenue #units=usd
+      )
+    `).toHaveDiagnostic(/Unknown metadata key "#units"/)
+  })
+
+  it('reports diagnostics for invalid flag metadata values', () => {
+    expect(`
+      table foo (
+        ratio number #ratio=false
+        pii text #pii="true"
+      )
+    `).toHaveDiagnostic(/Metadata "#ratio" is a flag/)
+    expect(getDiagnostics().some(d => /Metadata "#pii" is a flag/.test(d.message))).toBe(true)
+  })
+
+  it('reports diagnostics for unimplemented hide metadata', () => {
+    expect(`
+      table foo (
+        hidden number #hide
+      )
+    `).toHaveDiagnostic(/Unknown metadata key "#hide"/)
+  })
+
+  it('reports diagnostics for user-authored internal metadata keys', () => {
+    expect(`
+      table foo (
+        year_num int #timePart=year
+        month date #defaultName=month
+      )
+    `).toHaveDiagnostic(/Unknown metadata key "#timePart"/)
+    expect(getDiagnostics().some(d => /Unknown metadata key "#defaultName"/.test(d.message))).toBe(true)
   })
 
   it('does not parse legacy dash-hash metadata comments', () => {
     analyze(`
       table foo (
-        --# format=first_last
+        --# unit=seconds
         name text
       )
     `)
 
     let table = getTable('foo')!
     let name = table.columns.find(c => c.name === 'name')!
-    expect(name.metadata?.format).toBeUndefined()
+    expect(name.metadata?.unit).toBeUndefined()
     expect(name.metadata?.description).toBeUndefined()
   })
 
@@ -901,13 +973,13 @@ describe('lang', () => {
   it('propagates field metadata from table columns to query output fields', () => {
     updateFile(
       `table revenue (
-      amount int -- gross revenue #units=usd
+      amount int -- gross revenue #currency=USD
     )`,
       'revenue.gsql',
     )
 
     let [query] = analyze('from revenue select amount')
-    expect(query.fields[0].metadata).toMatchObject({units: 'usd'})
+    expect(query.fields[0].metadata).toMatchObject({currency: 'USD'})
   })
 
   it('reports diagnostics for duplicate table definitions', () => {
@@ -1901,7 +1973,7 @@ describe('lang', () => {
       id INT64
       computed: id / 2
       -- this is a comment
-      #units=usd
+      #currency=USD
       name STRING
     ); from test select id`).toRenderSql('select test.id as id from test as test')
   })

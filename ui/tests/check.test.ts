@@ -90,6 +90,18 @@ test('check with mdFile reports unsupported chart wrapper props', async () => {
   expect(outputLines()).toContain('ERROR: mock.md line 4: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.')
 })
 
+test('check reports invalid metadata annotations', async () => {
+  mockFileMap['tmp_bad_metadata.gsql'] = trimIndentation(`
+    table tmp_bad_metadata (
+      rate number #ratio=false
+    )
+  `)
+
+  let result = await check({fileArg: 'tmp_bad_metadata.gsql', log})
+  expect(result).toBe(false)
+  expect(outputLines()).toContain('ERROR: tmp_bad_metadata.gsql line 2: Metadata "#ratio" is a flag; use "#ratio" or "#ratio=true".')
+})
+
 test('cli run with md file reports dynamic unsupported chart wrapper props', async ({server, page}) => {
   server.mockFile(
     '/index.md',

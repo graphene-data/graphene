@@ -35,7 +35,6 @@ table order_items (
 
 -- Workaround due to aggregate locality ambiguity problem. See https://graphenedata.slack.com/archives/C095V84GQPR/p1760648883764849
 -- Do not query this directly
-#hide
 table order_items_facts as (
   from order_items select
     id,

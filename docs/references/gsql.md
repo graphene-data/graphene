@@ -17,8 +17,8 @@ table orders (
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT -- Amount paid by customer #units=usd
-  cost FLOAT -- Cost of materials #units=usd
+  amount FLOAT -- Amount paid by customer #currency=USD
+  cost FLOAT -- Cost of materials #currency=USD
 
   -- Join relationships
 
@@ -30,9 +30,9 @@ table orders (
   
   -- Measures
   
-  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
-  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
-  profit: revenue - cogs #units=usd
+  revenue: sum(case when revenue_recognized then amount else 0 end) #currency=USD
+  cogs: sum(case when revenue_recognized then cost else 0 end) #currency=USD
+  profit: revenue - cogs #currency=USD
   profit_margin: profit / revenue #ratio
 )
 
@@ -123,9 +123,9 @@ table orders (
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
 
   /* Agg expressions */
-  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
-  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
-  profit: revenue - cogs #units=usd -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
+  revenue: sum(case when revenue_recognized then amount else 0 end) #currency=USD
+  cogs: sum(case when revenue_recognized then cost else 0 end) #currency=USD
+  profit: revenue - cogs #currency=USD -- even though there are no agg functions here, this is still aggregative as it references other aggregative expressions
   profit_margin: profit / revenue #ratio
 )
 ```
@@ -138,7 +138,7 @@ There isn't always a SQL expression that can tip Graphene to the semantic meanin
 - The field could be a base column that has no source expression
 - There might not be enough information in the expression (eg. what currency a float is tied to)
 
-For this reason, some metadata should be set explicitly in the GSQL model, using annotations. Metadata annotations resemble hashtags (eg. `#ratio`, `#units=usd`) that can be inlined or written above the object they decorate.
+For this reason, some metadata should be set explicitly in the GSQL model, using annotations. Metadata annotations resemble hashtags (eg. `#ratio`, `#currency=USD`) that can be inlined or written above the object they decorate.
 
 #### Recognized metadata
 
@@ -146,9 +146,12 @@ For this reason, some metadata should be set explicitly in the GSQL model, using
 |---|---|---|
 | `#ratio` | no | Value is 0–1; rendered as `value × 100%` (e.g. `0.42` → `42%`) |
 | `#pct` | no | Value is already 0–100; rendered as `value%` (e.g. `42` → `42%`) |
-| `#units=<currency>` | no | Adds currency symbol and compacts to K/M/B. Accepted values: `usd`, `eur`, `gbp`, `cad`, `aud`, `jpy` |
+| `#currency=<code>` | no | Adds currency symbol and compacts to K/M/B. Accepts ISO 4217 currency codes like `USD`, `EUR`, and `JPY` |
+| `#unit=<unit>` | no | Appends the provided value to the end of labels in visualizations (e.g. `unit=minutes` appends "minutes", or "(minutes)" on axes). Any non-empty value is accepted |
 | `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats values as ordinal positions on a categorical axis. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
+| `#description=<text>` | no | Description text for a table or field. `--` comments are also collected as descriptions |
+| `#pii` | no | Marks a field as containing personally identifiable information. |
 
 ## `select` statements
 
@@ -241,15 +244,15 @@ table orders (
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT -- Amount paid by customer #units=usd
-  cost FLOAT -- Cost of materials #units=usd
+  amount FLOAT -- Amount paid by customer #currency=USD
+  cost FLOAT -- Cost of materials #currency=USD
 
   join one users on user_id = users.id
 
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
-  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
-  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
-  profit: revenue - cogs #units=usd
+  revenue: sum(case when revenue_recognized then amount else 0 end) #currency=USD
+  cogs: sum(case when revenue_recognized then cost else 0 end) #currency=USD
+  profit: revenue - cogs #currency=USD
   profit_margin: profit / revenue #ratio
 )
 ```
@@ -330,15 +333,15 @@ table orders (
   user_id BIGINT
   created_at DATETIME
   status STRING -- One of 'Processing', 'Shipped', 'Complete', 'Cancelled', 'Returned'
-  amount FLOAT -- Amount paid by customer #units=usd
-  cost FLOAT -- Cost of materials #units=usd
+  amount FLOAT -- Amount paid by customer #currency=USD
+  cost FLOAT -- Cost of materials #currency=USD
 
   join one users on user_id = users.id
 
   revenue_recognized: status in ('Processing', 'Shipped', 'Complete')
-  revenue: sum(case when revenue_recognized then amount else 0 end) #units=usd
-  cogs: sum(case when revenue_recognized then cost else 0 end) #units=usd
-  profit: revenue - cogs #units=usd
+  revenue: sum(case when revenue_recognized then amount else 0 end) #currency=USD
+  cogs: sum(case when revenue_recognized then cost else 0 end) #currency=USD
+  profit: revenue - cogs #currency=USD
   profit_margin: profit / revenue #ratio
 )
 
@@ -351,7 +354,7 @@ table users (
   join many orders on id = orders.user_id
   join one user_facts on id = user_facts.id
 
-  ltv: user_facts.ltv #units=usd
+  ltv: user_facts.ltv #currency=USD
   lifetime_orders: user_facts.lifetime_orders
 )
 
@@ -388,6 +391,6 @@ We can extend this table to add measures or joins:
 extend regional_orders (
   join one regions on region = regions.name
 
-  avg_order_value: total_revenue / num_orders #units=usd
+  avg_order_value: total_revenue / num_orders #currency=USD
 )
 ```
