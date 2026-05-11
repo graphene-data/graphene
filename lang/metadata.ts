@@ -27,7 +27,6 @@ let isoCurrencyCodes = new Set(Intl.supportedValuesOf('currency').map(code => co
 let metadataKeyRules = {
   ratio: {kind: 'flag'},
   pct: {kind: 'flag'},
-  hide: {kind: 'flag'},
   pii: {kind: 'flag'},
   currency: {kind: 'currency'},
   unit: {kind: 'string'},

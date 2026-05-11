@@ -151,10 +151,7 @@ For this reason, some metadata should be set explicitly in the GSQL model, using
 | `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats values as ordinal positions on a categorical axis. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
 | `#description=<text>` | no | Description text for a table or field. `--` comments are also collected as descriptions |
-| `#hide` | no | Marks a table or field as hidden. |
 | `#pii` | no | Marks a field as containing personally identifiable information. |
-
-Flag annotations (`#ratio`, `#pct`, `#hide`, `#pii`) accept either bare usage or `=true`.
 
 ## `select` statements
 

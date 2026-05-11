@@ -827,48 +827,48 @@ describe('lang', () => {
   it('parses quoted values and multiple hash metadata comments', () => {
     analyze(`
       -- currency metrics
-      #hide #unit=dollars
+      #pii #unit=dollars
       table revenue (
         amount int,
-        -- gross revenue #currency=USD #hide
+        -- gross revenue #currency=USD #pii
         gross int,
-        net int #currency=USD #hide
+        net int #currency=USD #pii
       )
       from revenue select gross, net
     `)
 
     let table = getTable('revenue')!
-    expect(table.metadata).toMatchObject({description: 'currency metrics', hide: 'true', unit: 'dollars'})
+    expect(table.metadata).toMatchObject({description: 'currency metrics', pii: 'true', unit: 'dollars'})
     let gross = table.columns.find(c => c.name === 'gross')!
-    expect(gross.metadata).toMatchObject({description: 'gross revenue', currency: 'USD', hide: 'true'})
+    expect(gross.metadata).toMatchObject({description: 'gross revenue', currency: 'USD', pii: 'true'})
     let net = table.columns.find(c => c.name === 'net')!
-    expect(net.metadata).toMatchObject({currency: 'USD', hide: 'true'})
+    expect(net.metadata).toMatchObject({currency: 'USD', pii: 'true'})
   })
 
   it('keeps literal hash signs in descriptions while parsing trailing metadata pairs', () => {
     analyze(`
       table foo (
-        -- Description with # sign #hide #pii
+        -- Description with # sign #ratio #pii
         name text
       )
     `)
 
     let table = getTable('foo')!
     let name = table.columns.find(c => c.name === 'name')!
-    expect(name.metadata).toMatchObject({description: 'Description with # sign', hide: 'true', pii: 'true'})
+    expect(name.metadata).toMatchObject({description: 'Description with # sign', ratio: 'true', pii: 'true'})
   })
 
   it('treats trailing dash comments in hash metadata lines as description', () => {
     analyze(`
       table foo (
-        #hide #unit=parsecs -- More comment
+        #pii #unit=parsecs -- More comment
         name text
       )
     `)
 
     let table = getTable('foo')!
     let name = table.columns.find(c => c.name === 'name')!
-    expect(name.metadata).toMatchObject({hide: 'true', unit: 'parsecs', description: 'More comment'})
+    expect(name.metadata).toMatchObject({pii: 'true', unit: 'parsecs', description: 'More comment'})
   })
 
   it('reports diagnostics for unknown metadata keys', () => {
@@ -919,10 +919,18 @@ describe('lang', () => {
     expect(`
       table foo (
         ratio number #ratio=false
-        hidden number #hide="true"
+        pii text #pii="true"
       )
     `).toHaveDiagnostic(/Metadata "#ratio" is a flag/)
-    expect(getDiagnostics().some(d => /Metadata "#hide" is a flag/.test(d.message))).toBe(true)
+    expect(getDiagnostics().some(d => /Metadata "#pii" is a flag/.test(d.message))).toBe(true)
+  })
+
+  it('reports diagnostics for unimplemented hide metadata', () => {
+    expect(`
+      table foo (
+        hidden number #hide
+      )
+    `).toHaveDiagnostic(/Unknown metadata key "#hide"/)
   })
 
   it('reports diagnostics for user-authored internal metadata keys', () => {

@@ -147,7 +147,7 @@ select tag
     let lines = await tokenize(
       `
 table revenue (
-  #currency=USD #hide #description="Gross revenue"
+  #currency=USD #pii #description="Gross revenue"
   amount int
 )
 `.trim(),
@@ -155,7 +155,7 @@ table revenue (
 
     expect(findToken(lines[1], 'currency').scopes).toContain('entity.other.attribute-name.metadata.gsql')
     expect(findToken(lines[1], 'USD').scopes).toContain('string.other.metadata.gsql')
-    expect(findToken(lines[1], 'hide').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'pii').scopes).toContain('entity.other.attribute-name.metadata.gsql')
     expect(findToken(lines[1], 'description').scopes).toContain('entity.other.attribute-name.metadata.gsql')
     expect(findToken(lines[1], 'Gross revenue').scopes).toContain('string.other.metadata.gsql')
   })
@@ -164,13 +164,13 @@ table revenue (
     let lines = await tokenize(
       `
 table revenue (
-  amount int -- gross revenue #hide #currency=USD
+  amount int -- gross revenue #pii #currency=USD
 )
 `.trim(),
     )
 
     expect(findToken(lines[1], 'gross').scopes).toContain('comment.line.double-dash.gsql')
-    expect(findToken(lines[1], 'hide').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'pii').scopes).toContain('entity.other.attribute-name.metadata.gsql')
     expect(findToken(lines[1], 'currency').scopes).toContain('entity.other.attribute-name.metadata.gsql')
   })
 })
