@@ -138,7 +138,7 @@ There isn't always a SQL expression that can tip Graphene to the semantic meanin
 - The field could be a base column that has no source expression
 - There might not be enough information in the expression (eg. what currency a float is tied to)
 
-For this reason, some metadata should be set explicitly in the GSQL model, using annotations. Metadata annotations resemble hashtags (eg. `#ratio`, `#units=usd`) that can be inlined or written above the object they decorate. `graphene check` validates metadata keys and values.
+For this reason, some metadata should be set explicitly in the GSQL model, using annotations. Metadata annotations resemble hashtags (eg. `#ratio`, `#units=usd`) that can be inlined or written above the object they decorate.
 
 #### Recognized metadata
 
