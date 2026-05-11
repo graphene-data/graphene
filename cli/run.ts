@@ -210,20 +210,33 @@ function appendInputsToUrl(pageUrl: string, inputs: RunInputs = {}) {
 }
 
 async function launchHeadlessBrowser(log: (...args: any[]) => void) {
-  try {
-    return await chromium.launch({
-      headless: true,
-      args: ['--font-render-hinting=none', '--disable-font-subpixel-positioning', '--disable-lcd-text', '--force-color-profile=srgb', '--lang=en-US'],
-    })
-  } catch (err) {
-    let message = err instanceof Error ? err.message : String(err)
-    if (message.includes('Executable doesn') || message.includes('browserType.launch')) {
-      log('Failed to launch headless browser. Run `graphene install-browser` and try again.')
-    } else {
-      log(`Failed to launch headless browser: ${message}`)
-    }
-    return null
+  let launchOptions = {
+    headless: true,
+    args: ['--font-render-hinting=none', '--disable-font-subpixel-positioning', '--disable-lcd-text', '--force-color-profile=srgb', '--lang=en-US'],
   }
+  let lastError: unknown
+
+  try {
+    return await chromium.launch(launchOptions)
+  } catch (err) {
+    lastError = err
+  }
+
+  for (let channel of ['chrome', 'msedge'] as const) {
+    try {
+      return await chromium.launch({...launchOptions, channel})
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  let message = lastError instanceof Error ? lastError.message : String(lastError)
+  if (message.includes('Executable doesn') || message.includes('browserType.launch')) {
+    log('Failed to launch headless browser. Run `graphene install-browser` and try again.')
+  } else {
+    log(`Failed to launch headless browser: ${message}`)
+  }
+  return null
 }
 
 async function captureChart(page: Page, chart: string) {
