@@ -810,7 +810,7 @@ describe('lang', () => {
         -- a description
         #format=first_last
         name text,
-        another_field text, -- this is another field #units=seconds
+        another_field text, -- this is another field #unit=seconds
       )
       from t select name
     `)
@@ -821,7 +821,7 @@ describe('lang', () => {
     expect(name.metadata!.format).toBe('first_last')
     let another = table.columns.find(c => c.name === 'another_field')!
     expect(String(another.metadata!.description || '').toLowerCase()).toContain('this is another field')
-    expect(another.metadata!.units).toBe('seconds')
+    expect(another.metadata!.unit).toBe('seconds')
   })
 
   it('parses quoted values and multiple hash metadata comments', () => {
@@ -830,9 +830,9 @@ describe('lang', () => {
       #color=green #hide #format="US Dollar"
       table revenue (
         amount int,
-        -- gross revenue #units=usd #hide #format="US Dollar"
+        -- gross revenue #currency=USD #hide #format="US Dollar"
         gross int,
-        net int #units=usd #hide #format="US Dollar"
+        net int #currency=USD #hide #format="US Dollar"
       )
       from revenue select gross, net
     `)
@@ -840,9 +840,9 @@ describe('lang', () => {
     let table = getTable('revenue')!
     expect(table.metadata).toMatchObject({description: 'currency metrics', color: 'green', hide: 'true', format: 'US Dollar'})
     let gross = table.columns.find(c => c.name === 'gross')!
-    expect(gross.metadata).toMatchObject({description: 'gross revenue', units: 'usd', hide: 'true', format: 'US Dollar'})
+    expect(gross.metadata).toMatchObject({description: 'gross revenue', currency: 'USD', hide: 'true', format: 'US Dollar'})
     let net = table.columns.find(c => c.name === 'net')!
-    expect(net.metadata).toMatchObject({units: 'usd', hide: 'true', format: 'US Dollar'})
+    expect(net.metadata).toMatchObject({currency: 'USD', hide: 'true', format: 'US Dollar'})
   })
 
   it('keeps literal hash signs in descriptions while parsing trailing metadata pairs', () => {
@@ -884,12 +884,35 @@ describe('lang', () => {
     expect(`
       table foo (
         day date #timeGrain=mont
-        amount int -- revenue #units=dollars
+        amount int -- revenue #currency=ZZZ
         dow int #timeOrdinal=dow
+        weight int #unit=parsecs
       )
     `).toHaveDiagnostic(/Invalid value "mont" for "#timeGrain"/)
-    expect(getDiagnostics().some(d => /Invalid value "dollars" for "#units"/.test(d.message))).toBe(true)
+    expect(getDiagnostics().some(d => /Invalid value "ZZZ" for "#currency"/.test(d.message))).toBe(true)
     expect(getDiagnostics().some(d => /Invalid value "dow" for "#timeOrdinal"/.test(d.message))).toBe(true)
+  })
+
+  it('accepts ISO currency codes and arbitrary unit metadata values', () => {
+    analyze(`
+      table foo (
+        revenue int #currency=eur
+        distance int #unit=lightyears
+      )
+    `)
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+
+    let table = getTable('foo')!
+    expect(table.columns.find(c => c.name === 'revenue')!.metadata).toMatchObject({currency: 'eur'})
+    expect(table.columns.find(c => c.name === 'distance')!.metadata).toMatchObject({unit: 'lightyears'})
+  })
+
+  it('reports diagnostics for legacy plural units metadata', () => {
+    expect(`
+      table foo (
+        amount int -- revenue #units=usd
+      )
+    `).toHaveDiagnostic(/Unknown metadata key "#units"/)
   })
 
   it('reports diagnostics for invalid flag metadata values', () => {
@@ -942,13 +965,13 @@ describe('lang', () => {
   it('propagates field metadata from table columns to query output fields', () => {
     updateFile(
       `table revenue (
-      amount int -- gross revenue #units=usd
+      amount int -- gross revenue #currency=USD
     )`,
       'revenue.gsql',
     )
 
     let [query] = analyze('from revenue select amount')
-    expect(query.fields[0].metadata).toMatchObject({units: 'usd'})
+    expect(query.fields[0].metadata).toMatchObject({currency: 'USD'})
   })
 
   it('reports diagnostics for duplicate table definitions', () => {
@@ -1942,7 +1965,7 @@ describe('lang', () => {
       id INT64
       computed: id / 2
       -- this is a comment
-      #units=usd
+      #currency=USD
       name STRING
     ); from test select id`).toRenderSql('select test.id as id from test as test')
   })

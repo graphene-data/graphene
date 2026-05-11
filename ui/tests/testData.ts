@@ -11,7 +11,7 @@ export function singleDim(): TableRows {
   let rows = Object.keys(result).map(category => ({category, value: result[category]}))
   let fields: Field[] = [
     {name: 'category', type: 'string'},
-    {name: 'value', type: 'number', metadata: {units: 'usd'}},
+    {name: 'value', type: 'number', metadata: {currency: 'USD'}},
   ]
   return withFields(rows, fields)
 }
@@ -25,7 +25,7 @@ export function timeseries(): TableRows {
   let rows = Object.keys(result).map(month => ({month: new Date(month), sales_usd0k: result[month]}))
   let fields: Field[] = [
     {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
-    {name: 'sales_usd0k', type: 'number', metadata: {units: 'usd'}},
+    {name: 'sales_usd0k', type: 'number', metadata: {currency: 'USD'}},
   ]
   return withFields(rows, fields)
 }
@@ -35,7 +35,7 @@ export function timeseriesGrouped(): TableRows {
   let fields: Field[] = [
     {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
     {name: 'category', type: 'string'},
-    {name: 'sales_usd0k', type: 'number', metadata: {units: 'usd'}},
+    {name: 'sales_usd0k', type: 'number', metadata: {currency: 'USD'}},
   ]
   return withFields(rows, fields)
 }
@@ -58,7 +58,7 @@ export function sparseGroupedMonthRows(): TableRows {
   let fields: Field[] = [
     {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
     {name: 'metric', type: 'string'},
-    {name: 'value', type: 'number', metadata: {units: 'count'}},
+    {name: 'value', type: 'number', metadata: {unit: 'count'}},
   ]
   return withFields(rows, fields)
 }
@@ -75,7 +75,7 @@ export function timeseriesWithDateSeries(): TableRows {
   let fields: Field[] = [
     {name: 'quarter', type: 'date', metadata: {timeGrain: 'quarter'}},
     {name: 'category', type: 'string'},
-    {name: 'sales', type: 'number', metadata: {units: 'usd'}},
+    {name: 'sales', type: 'number', metadata: {currency: 'USD'}},
   ]
   return withFields(rows, fields)
 }
@@ -91,7 +91,7 @@ export function yearlyCounts(): TableRows {
   ]
   let fields: Field[] = [
     {name: 'year', type: 'number', metadata: {timeGrain: 'year'}},
-    {name: 'flights', type: 'number', metadata: {units: 'count'}},
+    {name: 'flights', type: 'number', metadata: {unit: 'count'}},
   ]
   return withFields(rows, fields)
 }
@@ -109,7 +109,7 @@ export function denseTimeseries(points = 365): TableRows {
 
   let fields: Field[] = [
     {name: 'ts', type: 'date', metadata: {timeGrain: 'day'}},
-    {name: 'value', type: 'number', metadata: {units: 'count'}},
+    {name: 'value', type: 'number', metadata: {unit: 'count'}},
   ]
   return withFields(rows, fields)
 }
@@ -118,7 +118,7 @@ export function categoricalSeries(count: number): TableRows {
   let rows = Array.from({length: count}, (_, index) => ({category: `Bucket ${index + 1}`, value: 100 + Math.sin(index / 2) * 20}))
   let fields: Field[] = [
     {name: 'category', type: 'string'},
-    {name: 'value', type: 'number', metadata: {units: 'count'}},
+    {name: 'value', type: 'number', metadata: {unit: 'count'}},
   ]
   return withFields(rows, fields)
 }
@@ -144,7 +144,7 @@ export function tableDataWithDates(): TableRows {
   ]
   let fields: Field[] = [
     {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
-    {name: 'sales', type: 'number', metadata: {units: 'usd'}},
+    {name: 'sales', type: 'number', metadata: {currency: 'USD'}},
   ]
   return withFields(rows, fields)
 }
@@ -156,7 +156,7 @@ export function tableDataForPagination(count = 15): TableRows {
   }))
   let fields: Field[] = [
     {name: 'item', type: 'string'},
-    {name: 'value', type: 'number', metadata: {units: 'count'}},
+    {name: 'value', type: 'number', metadata: {unit: 'count'}},
   ]
   return withFields(rows, fields)
 }
@@ -173,7 +173,7 @@ export function groupedDataForSection(): TableRows {
   let fields: Field[] = [
     {name: 'time_horizon', type: 'string'},
     {name: 'sku', type: 'string'},
-    {name: 'units', type: 'number', metadata: {units: 'count'}},
+    {name: 'units', type: 'number', metadata: {unit: 'count'}},
   ]
   return withFields(rows, fields)
 }

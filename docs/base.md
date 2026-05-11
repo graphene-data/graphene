@@ -8,12 +8,12 @@ table orders (
   id bigint
   created_at datetime
   user_id bigint
-  amount float                          #units=usd
+  amount float                          #currency=USD
   status string
   join one users on user_id = users.id  -- many orders per user
   is_complete: status = 'Complete'      -- dimension (scalar expression)
-  revenue: sum(amount)                  -- measure (agg expression) #units=usd
-  avg_order: revenue / count(*)         -- measures can compose #units=usd
+  revenue: sum(amount)                  -- measure (agg expression) #currency=USD
+  avg_order: revenue / count(*)         -- measures can compose #currency=USD
 )
 table users (
   id bigint

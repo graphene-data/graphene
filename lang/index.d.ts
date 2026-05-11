@@ -21,7 +21,8 @@ export type Field = {
 export type FieldMeta = {
   ratio?: true // 0 to 1 value
   pct?: true // 0 to 100 value
-  units?: string
+  currency?: string // ISO 4217 currency code
+  unit?: string // physical unit label
   timeGrain?: TimeGrain // resolution when the field is a date or timestamp
   timePart?: string // extracted temporal part, normalized across backend spellings
   timeOrdinal?: TimeOrdinal // if the value represents something special like day_of_week, week_of_year, etc

@@ -1,6 +1,6 @@
 import type {Field} from './types.ts'
 
-const currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
+const supportedCurrencyCodes = new Set(Intl.supportedValuesOf('currency'))
 const percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0})
 const currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 const monthYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'})
@@ -31,7 +31,7 @@ export function makeValueFormatter(fields: Field[] = []) {
   }
 }
 
-// Formats one numeric value with field metadata (units, ratio/pct, compact notation).
+// Formats one numeric value with field metadata (currency, ratio/pct, compact notation).
 export function formatSingleValue(value: any, field?: Field) {
   let amount = Number(value)
   if (!Number.isFinite(amount)) return String(value ?? '')
@@ -39,12 +39,11 @@ export function formatSingleValue(value: any, field?: Field) {
   if (field?.metadata?.ratio) return `${percent.format(amount * 100)}%`
   if (field?.metadata?.pct) return `${percent.format(amount)}%`
 
-  let unit = field?.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
-  let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
-  if (currencyUnit) {
+  let currency = field?.metadata?.currency?.toUpperCase()
+  if (currency && supportedCurrencyCodes.has(currency)) {
     let sign = amount < 0 ? '-' : ''
     let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
-    return `${sign}${currencySymbols[currencyUnit]}${formatted}`
+    return `${sign}${formatCurrencySymbol(currency)}${formatted}`
   }
 
   if (amount === 0) return '0'
@@ -61,6 +60,11 @@ export function formatSingleValue(value: any, field?: Field) {
   if (absolute >= 1e-9) return `${sign}${compactValue(absolute * 1e6)}u`
   if (absolute >= 1e-12) return `${sign}${compactValue(absolute * 1e9)}n`
   return `${sign}${compactValue(absolute)}`
+}
+
+function formatCurrencySymbol(currency: string) {
+  let parts = new Intl.NumberFormat('en-US', {style: 'currency', currency, currencyDisplay: 'symbol', maximumFractionDigits: 0}).formatToParts(0)
+  return parts.find(part => part.type === 'currency')?.value || currency
 }
 
 // Creates a formatter function that renders date/timestamp values based on field metadata.timeGrain.

@@ -22,12 +22,15 @@ export type MetadataDiagnostic = {
   to: number
 }
 
+let isoCurrencyCodes = new Set(Intl.supportedValuesOf('currency').map(code => code.toLowerCase()))
+
 let metadataKeyRules = {
   ratio: {kind: 'flag'},
   pct: {kind: 'flag'},
   hide: {kind: 'flag'},
   pii: {kind: 'flag'},
-  units: {kind: 'enum', values: ['usd', 'eur', 'gbp', 'cad', 'aud', 'jpy', 'count', 'seconds']},
+  currency: {kind: 'currency'},
+  unit: {kind: 'string'},
   timeGrain: {kind: 'enum', values: ['year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second']},
   timeOrdinal: {kind: 'enum', values: ['hour_of_day', 'day_of_month', 'day_of_year', 'week_of_year', 'month_of_year', 'quarter_of_year', 'dow_0s', 'dow_1s', 'dow_1m']},
   description: {kind: 'string'},
@@ -119,6 +122,24 @@ export function validateMetadataEntries(entries: MetadataEntry[]): MetadataDiagn
         message: `Metadata "#${entry.key}" requires a value.`,
         from: entry.from,
         to: entry.to,
+      })
+      continue
+    }
+
+    if (rule.kind == 'currency') {
+      if (!entry.hasValue || !entry.value.trim()) {
+        diagnostics.push({
+          message: 'Metadata "#currency" requires a value.',
+          from: entry.from,
+          to: entry.to,
+        })
+        continue
+      }
+      if (isoCurrencyCodes.has(entry.value.toLowerCase())) continue
+      diagnostics.push({
+        message: `Invalid value "${entry.value}" for "#currency". Expected an ISO 4217 currency code.`,
+        from: entry.valueFrom ?? entry.from,
+        to: entry.valueTo ?? entry.to,
       })
       continue
     }
