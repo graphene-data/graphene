@@ -1,18 +1,18 @@
 <script>
-  // Content-agnostic sidebar shell. The panel slides in as an overlay when the
-  // user hovers the paired SidebarToggle button (rendered separately by the host)
-  // or the panel itself. Styling values are ported from shadcn-svelte's sidebar registry.
+  // Content-agnostic sidebar shell. By default the panel slides in as an overlay
+  // when the user hovers the paired SidebarToggle button or the panel itself;
+  // alwaysOpen keeps the same shell visible for persistent navigation.
   import {sidebar} from './sidebar.svelte.ts'
-  let {children, width = '16rem'} = $props()
+  let {children, width = '16rem', alwaysOpen = false} = $props()
 </script>
 
 <nav
   id="nav"
   class="sb-panel pretty-scrollbar"
   style="--sb-w:{width}"
-  data-open={sidebar.open}
-  onmouseenter={sidebar.enter}
-  onmouseleave={sidebar.leave}
+  data-open={alwaysOpen || sidebar.open}
+  onmouseenter={() => { if (!alwaysOpen) sidebar.enter() }}
+  onmouseleave={() => { if (!alwaysOpen) sidebar.leave() }}
 >
   <div class="sb-inner">
     {@render children?.()}
