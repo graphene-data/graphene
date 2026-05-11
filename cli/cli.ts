@@ -26,6 +26,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(__dirname, 'package.json') : path.join(__dirname, '../../package.json')
 const libPkg = fs.readJsonSync(pkgPath)
 program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
+registerInstallBrowserCommand(program)
+
+// install-browser is a recovery/setup command for the CLI package itself, not a project command.
+// It needs to work before a browser exists, from outside a Graphene project, and from installer
+// contexts where there may be no project config to load.
+if (process.argv[2] === 'install-browser') {
+  await program.parseAsync(process.argv)
+  process.exit(0)
+}
 
 let cfg = await loadConfig(process.cwd(), envFiles => {
   dotenv.config({quiet: true, path: envFiles})
@@ -108,15 +117,6 @@ program
       return exit(res ? 0 : 1)
     }),
   )
-
-program
-  .command('install-browser')
-  .description('Install the headless browser used by graphene run screenshots')
-  .option('--with-deps', 'Also install browser system dependencies where supported')
-  .action(async (options: {withDeps?: boolean}) => {
-    let ok = await installBrowser({withDeps: options.withDeps})
-    process.exit(ok ? 0 : 1)
-  })
 
 program
   .command('schema')
@@ -226,6 +226,17 @@ program
   )
 
 program.parse(process.argv)
+
+function registerInstallBrowserCommand(program: Command) {
+  program
+    .command('install-browser')
+    .description('Install the headless browser used by graphene run screenshots')
+    .option('--with-deps', 'Also install browser system dependencies where supported')
+    .action(async (options: {withDeps?: boolean}) => {
+      let ok = await installBrowser({withDeps: options.withDeps})
+      process.exit(ok ? 0 : 1)
+    })
+}
 
 async function readInput(arg): Promise<string> {
   if (!arg || arg === '-') {
