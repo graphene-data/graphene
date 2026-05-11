@@ -131,7 +131,6 @@ test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for every markdown fi
         expect(output).toContain('No errors found')
       }
     } finally {
-      expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
       await runCli(['stop'], exampleDir, childEnv)
     }
   }

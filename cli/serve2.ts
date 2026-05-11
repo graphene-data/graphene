@@ -16,7 +16,6 @@ import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
 import {runQuery} from './connections/index.ts'
 import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
-import {runVitePlugin} from './run.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
 // Collect Svelte compiler warnings for test assertions
@@ -83,7 +82,6 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
       }),
       fixSvelteDepsInTests(),
       fixHmrForFailedModules(),
-      runVitePlugin(),
       handleRequestPlugin,
       updateWorkspacePlugin(telemetry),
       mockFilesForTests(),
@@ -138,11 +136,9 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
         '@graphenedata/cli > svelte',
         '@graphenedata/cli > chroma-js',
         '@graphenedata/cli > echarts',
-        '@graphenedata/cli > @graphenedata/html2canvas',
         '@graphenedata/cli > @graphenedata/ui > svelte',
         '@graphenedata/cli > @graphenedata/ui > chroma-js',
         '@graphenedata/cli > @graphenedata/ui > echarts/dist/echarts.esm.js',
-        '@graphenedata/cli > @graphenedata/ui > @graphenedata/html2canvas',
       ],
     },
   }

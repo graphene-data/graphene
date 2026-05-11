@@ -13,6 +13,7 @@ import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
+import {installBrowser} from './installBrowser.ts'
 import {printDiagnostics, printTable} from './printer.ts'
 import {listMdFileQueries, runMdFile, runNamedQueryFromMd} from './run.ts'
 import {CliTelemetry, getPresentFlags, getWorkspaceScanCounts, type TelemetryCommand} from './telemetry/index.ts'
@@ -107,6 +108,15 @@ program
       return exit(res ? 0 : 1)
     }),
   )
+
+program
+  .command('install-browser')
+  .description('Install the headless browser used by graphene run screenshots')
+  .option('--with-deps', 'Also install browser system dependencies where supported')
+  .action(async (options: {withDeps?: boolean}) => {
+    let ok = await installBrowser({withDeps: options.withDeps})
+    process.exit(ok ? 0 : 1)
+  })
 
 program
   .command('schema')

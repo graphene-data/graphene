@@ -19,7 +19,7 @@ let makeAllPackagesExternalPlugin = {
 
 await build({
   // cli build
-  entryPoints: [path.resolve(__dirname, 'cli.ts')],
+  entryPoints: [path.resolve(__dirname, 'cli.ts'), path.resolve(__dirname, 'installBrowser.ts')], // installBrowser is also a standalone postinstall target in the published package.
   outdir: path.resolve(__dirname, 'dist/cli'), // the extra `/cli/` keeps deployed dev relative paths the same between cli and ui
   entryNames: '[name]',
   chunkNames: '[name]-[hash]',

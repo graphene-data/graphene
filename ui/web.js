@@ -1,6 +1,5 @@
 import './internal/telemetry.ts'
 import './internal/queryEngine.ts'
-import './internal/runSocket.ts'
 import {getInstanceByDom} from 'echarts'
 
 import './app.css'
