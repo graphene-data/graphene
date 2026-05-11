@@ -150,8 +150,11 @@ For this reason, some metadata should be set explicitly in the GSQL model, using
 | `#unit=<unit>` | no | Physical unit label. Any non-empty value is accepted |
 | `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats values as ordinal positions on a categorical axis. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
+| `#description=<text>` | no | Description text for a table or field. `--` comments are also collected as descriptions |
+| `#hide` | no | Marks a table or field as hidden. |
+| `#pii` | no | Marks a field as containing personally identifiable information. |
 
-The conventional table and field annotations `#description=<text>`, `#format=<text>`, `#color=<text>`, `#hide`, and `#pii` are also valid. Flag annotations accept either bare usage (for example `#ratio`) or `=true`.
+Flag annotations (`#ratio`, `#pct`, `#hide`, `#pii`) accept either bare usage or `=true`.
 
 ## `select` statements
 

@@ -147,30 +147,30 @@ select tag
     let lines = await tokenize(
       `
 table revenue (
-  #color=green #hide #format="US Dollar"
+  #currency=USD #hide #description="Gross revenue"
   amount int
 )
 `.trim(),
     )
 
-    expect(findToken(lines[1], 'color').scopes).toContain('entity.other.attribute-name.metadata.gsql')
-    expect(findToken(lines[1], 'green').scopes).toContain('string.other.metadata.gsql')
+    expect(findToken(lines[1], 'currency').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'USD').scopes).toContain('string.other.metadata.gsql')
     expect(findToken(lines[1], 'hide').scopes).toContain('entity.other.attribute-name.metadata.gsql')
-    expect(findToken(lines[1], 'format').scopes).toContain('entity.other.attribute-name.metadata.gsql')
-    expect(findToken(lines[1], 'US Dollar').scopes).toContain('string.other.metadata.gsql')
+    expect(findToken(lines[1], 'description').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'Gross revenue').scopes).toContain('string.other.metadata.gsql')
   })
 
   it('highlights metadata pairs embedded in dash comments', async () => {
     let lines = await tokenize(
       `
 table revenue (
-  amount int -- gross revenue #hide #format="US Dollar"
+  amount int -- gross revenue #hide #currency=USD
 )
 `.trim(),
     )
 
     expect(findToken(lines[1], 'gross').scopes).toContain('comment.line.double-dash.gsql')
     expect(findToken(lines[1], 'hide').scopes).toContain('entity.other.attribute-name.metadata.gsql')
-    expect(findToken(lines[1], 'format').scopes).toContain('entity.other.attribute-name.metadata.gsql')
+    expect(findToken(lines[1], 'currency').scopes).toContain('entity.other.attribute-name.metadata.gsql')
   })
 })

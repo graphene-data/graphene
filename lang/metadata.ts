@@ -34,8 +34,6 @@ let metadataKeyRules = {
   timeGrain: {kind: 'enum', values: ['year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second']},
   timeOrdinal: {kind: 'enum', values: ['hour_of_day', 'day_of_month', 'day_of_year', 'week_of_year', 'month_of_year', 'quarter_of_year', 'dow_0s', 'dow_1s', 'dow_1m']},
   description: {kind: 'string'},
-  format: {kind: 'string'},
-  color: {kind: 'string'},
 } as const
 
 let validMetadataKeys = Object.keys(metadataKeyRules)
