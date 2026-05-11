@@ -279,7 +279,7 @@ test('line chart uses ratio metadata for axis and tooltip percentage formatting'
   await expect(chart.el).screenshot('line-chart-ratio-metadata-percent-axis')
 })
 
-test('line chart uses unit metadata for axis and tooltip formatting', async ({mount, sharedPage}) => {
+test('line chart uses unit metadata for axis and tooltip formatting', async ({mount, sharedPage, chart}) => {
   let rows = [
     {month: 'Jan', duration: 42},
     {month: 'Feb', duration: 58},
@@ -303,6 +303,8 @@ test('line chart uses unit metadata for axis and tooltip formatting', async ({mo
   })
 
   expect(formatted).toEqual({axis: '42 (minutes)', tooltip: '42 minutes'})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  await expect(chart.el).screenshot('line-chart-unit-metadata-axis-tooltip')
 })
 
 test('time tooltip uses readable timeGrain formatting', async ({mount, chart}) => {

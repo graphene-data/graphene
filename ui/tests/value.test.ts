@@ -17,9 +17,10 @@ describe('<Value/>', () => {
     await expect(sharedPage.getByText('31%')).toBeVisible()
   })
 
-  test('unit formatting', async ({mount, sharedPage}) => {
+  test('unit formatting', async ({mount, sharedPage, chart}) => {
     await mount('components/Value.svelte', {data: unitData(), column: 'duration'})
     await expect(sharedPage.getByText('42 minutes')).toBeVisible()
+    await expect(chart.el).screenshot('unit-formatting')
   })
 
   test('null renders em dash', async ({mount, sharedPage}) => {
