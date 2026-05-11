@@ -147,7 +147,7 @@ For this reason, some metadata should be set explicitly in the GSQL model, using
 | `#ratio` | no | Value is 0–1; rendered as `value × 100%` (e.g. `0.42` → `42%`) |
 | `#pct` | no | Value is already 0–100; rendered as `value%` (e.g. `42` → `42%`) |
 | `#currency=<code>` | no | Adds currency symbol and compacts to K/M/B. Accepts ISO 4217 currency codes like `USD`, `EUR`, and `JPY` |
-| `#unit=<unit>` | no | Physical unit label. Any non-empty value is accepted |
+| `#unit=<unit>` | no | Appends the provided value to the end of labels in visualizations (e.g. `unit=minutes` appends "minutes", or "(minutes)" on axes). Any non-empty value is accepted |
 | `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats values as ordinal positions on a categorical axis. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
 | `#description=<text>` | no | Description text for a table or field. `--` comments are also collected as descriptions |

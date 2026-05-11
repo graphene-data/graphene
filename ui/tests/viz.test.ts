@@ -133,7 +133,7 @@ test('bar chart supports expression fields with commas', async ({mount, chart}) 
     ],
     fields: [
       {name: "date_trunc('month', dep_time)", type: scalarType('date'), metadata: {timeGrain: 'month'}},
-      {name: 'count()', type: scalarType('number'), metadata: {unit: 'count'}},
+      {name: 'count()', type: scalarType('number')},
     ],
   }
 
@@ -158,7 +158,7 @@ test('bar chart with just 0,1 has sensible y axis ticks', async ({mount, chart})
   ]
   let fields = [
     {name: 'category', type: scalarType('string')},
-    {name: 'count', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'count', type: scalarType('number')},
   ]
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'category', y: 'count'})
   await expect(chart.el).screenshot('bar-chart-0-to-1')
@@ -184,7 +184,7 @@ test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}
   let fields = [
     {name: 'year', type: scalarType('number'), metadata: {timePart: 'year'}},
     {name: 'status', type: scalarType('string')},
-    {name: 'flights', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'flights', type: scalarType('number')},
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'year', y: 'flights', splitBy: 'status', arrange: 'stack', title: 'Flight Status by Year'})
@@ -200,7 +200,7 @@ test('horizontal bar chart auto-expands height for many categories', async ({mou
   let rows = Array.from({length: 14}, (_, index) => ({category: `Category ${index + 1}`, value: (index + 1) * 10}))
   let fields = [
     {name: 'category', type: scalarType('string')},
-    {name: 'value', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'value', type: scalarType('number')},
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'value', y: 'category'})
@@ -215,8 +215,8 @@ test('horizontal bar chart supports multiple x fields', async ({mount, chart}) =
   ]
   let fields = [
     {name: 'category', type: scalarType('string')},
-    {name: 'current', type: scalarType('number'), metadata: {unit: 'count'}},
-    {name: 'previous', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'current', type: scalarType('number')},
+    {name: 'previous', type: scalarType('number')},
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'current,previous', y: 'category'})
@@ -279,6 +279,32 @@ test('line chart uses ratio metadata for axis and tooltip percentage formatting'
   await expect(chart.el).screenshot('line-chart-ratio-metadata-percent-axis')
 })
 
+test('line chart uses unit metadata for axis and tooltip formatting', async ({mount, sharedPage}) => {
+  let rows = [
+    {month: 'Jan', duration: 42},
+    {month: 'Feb', duration: 58},
+  ]
+
+  let fields = [
+    {name: 'month', type: scalarType('string')},
+    {name: 'duration', type: scalarType('number'), metadata: {unit: 'minutes'}},
+  ]
+
+  await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'duration', title: 'Duration'})
+  let formatted = await sharedPage.evaluate(() => {
+    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
+    let option = window.$GRAPHENE.getChart(domNode).getOption()
+    let yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    return {
+      axis: yAxis.axisLabel.formatter(42),
+      tooltip: series.tooltip.valueFormatter(42),
+    }
+  })
+
+  expect(formatted).toEqual({axis: '42 (minutes)', tooltip: '42 minutes'})
+})
+
 test('time tooltip uses readable timeGrain formatting', async ({mount, chart}) => {
   let rows = [
     {period: '2023-01-01', value: 10},
@@ -324,7 +350,7 @@ test('hour_of_day ordinal axis labels and tooltip formatting', async ({mount, ch
   ]
   let fields = [
     {name: 'hour_of_day', type: scalarType('number'), metadata: {timeOrdinal: 'hour_of_day'}},
-    {name: 'flights', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'flights', type: scalarType('number')},
   ]
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'hour_of_day', y: 'flights', title: 'Hour Ordinal'})
@@ -348,7 +374,7 @@ test('day_of_week ordinal axis labels and tooltip formatting', async ({mount, ch
   ]
   let fields = [
     {name: 'day_of_week', type: scalarType('number'), metadata: {timeOrdinal: 'dow_1m'}},
-    {name: 'flights', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'flights', type: scalarType('number')},
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'day_of_week', y: 'flights', title: 'Weekday Ordinal'})
@@ -394,7 +420,7 @@ test('quarter_of_year ordinal axis labels and tooltip formatting', async ({mount
   ]
   let fields = [
     {name: 'quarter_of_year', type: scalarType('number'), metadata: {timeOrdinal: 'quarter_of_year'}},
-    {name: 'value', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'value', type: scalarType('number')},
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'quarter_of_year', y: 'value', title: 'Quarter Ordinal'})
@@ -483,7 +509,7 @@ test('categorical stacked bar charts sort by total value descending', async ({mo
   let fields = [
     {name: 'segment', type: scalarType('string')},
     {name: 'metric', type: scalarType('string')},
-    {name: 'value', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'value', type: scalarType('number')},
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'segment', y: 'value', splitBy: 'metric', arrange: 'stack', title: 'Stacked Category Sort'})
@@ -503,7 +529,7 @@ test('bar chart explicit sort orders categories by another column', async ({moun
   let fields = [
     {name: 'segment', type: scalarType('string')},
     {name: 'metric', type: scalarType('string')},
-    {name: 'value', type: scalarType('number'), metadata: {unit: 'count'}},
+    {name: 'value', type: scalarType('number')},
     {name: 'sort_rank', type: scalarType('number')},
   ]
 

@@ -17,6 +17,11 @@ describe('<Value/>', () => {
     await expect(sharedPage.getByText('31%')).toBeVisible()
   })
 
+  test('unit formatting', async ({mount, sharedPage}) => {
+    await mount('components/Value.svelte', {data: unitData(), column: 'duration'})
+    await expect(sharedPage.getByText('42 minutes')).toBeVisible()
+  })
+
   test('null renders em dash', async ({mount, sharedPage}) => {
     await mount('components/Value.svelte', {data: nullValueData(), column: 'value'})
     await expect(sharedPage.getByText('—')).toBeVisible()
@@ -39,6 +44,12 @@ describe('<Value/>', () => {
   function nullValueData() {
     let rows = [{value: null}] as any
     let fields = [{name: 'value', type: 'number'}] as any
+    return {rows, fields}
+  }
+
+  function unitData() {
+    let rows = [{duration: 42}] as any
+    let fields = [{name: 'duration', type: 'number', metadata: {unit: 'minutes'}}] as any
     return {rows, fields}
   }
 
