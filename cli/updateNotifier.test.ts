@@ -155,6 +155,54 @@ describe('cli update notifier', () => {
     }
   })
 
+  it('stores default update state in the project node_modules cache', async () => {
+    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-update-cache-'))
+    let stderr = testStderr()
+
+    try {
+      await writePackageJson(tmpDir, {name: 'tmp-graphene', graphene: {duckdb: {}}})
+      await fsp.mkdir(path.join(tmpDir, 'node_modules'))
+      await checkForUpdate({
+        config: testConfig(tmpDir),
+        currentVersion: '0.0.17',
+        env: {},
+        stderr,
+        now: 1_000,
+        fetchLatestVersion: () => Promise.resolve('0.0.18'),
+      })
+
+      let state = JSON.parse(await fsp.readFile(path.join(tmpDir, 'node_modules/.graphene/update-check.json'), 'utf-8'))
+      expect(state.latestVersion).toBe('0.0.18')
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
+
+  it('does not create node_modules just to persist update state', async () => {
+    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-update-no-node-modules-'))
+    let fetchCalls = 0
+
+    try {
+      await writePackageJson(tmpDir, {name: 'tmp-graphene', graphene: {duckdb: {}}})
+      await checkForUpdate({
+        config: testConfig(tmpDir),
+        currentVersion: '0.0.17',
+        env: {},
+        stderr: testStderr(),
+        now: 1_000,
+        fetchLatestVersion: () => {
+          fetchCalls++
+          return Promise.resolve('0.0.18')
+        },
+      })
+
+      expect(fetchCalls).toBe(0)
+      await expect(fsp.access(path.join(tmpDir, 'node_modules'))).rejects.toBeTruthy()
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
+
   it('detects package managers and preserves dev dependency installs', async () => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-package-manager-'))
     let projectDir = path.join(tmpDir, 'packages/app')

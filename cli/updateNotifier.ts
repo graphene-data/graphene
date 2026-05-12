@@ -1,16 +1,15 @@
 import ci from 'ci-info'
 import {randomUUID} from 'node:crypto'
 import * as fs from 'node:fs/promises'
-import os from 'node:os'
 import path from 'node:path'
 
 import type {Config} from '../lang/config.ts'
 
 // The update notifier periodically checks for the latest Graphene version and caches
-// that state in `${XDG_CONFIG_HOME || ~/.config}/graphene/update-check.json`. We keep
-// state so every command can avoid a network request and so users only see one notice
-// per newer version each week. Cached notices are shown before command output, while
-// refreshes happen after the command finishes and fail silently.
+// that state in `node_modules/.graphene/update-check.json`. We keep state so every
+// command can avoid a network request and so users only see one notice per newer
+// version each week. Cached notices are shown before command output, while refreshes
+// happen after the command finishes and fail silently.
 
 const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 const NOTICE_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000
@@ -37,6 +36,10 @@ interface UpdateState {
 }
 
 type PackageManager = 'npm' | 'pnpm' | 'yarn' | 'bun'
+interface StateTarget {
+  filePath: string
+  requiredDir?: string
+}
 
 export async function notifyAboutUpdate(options: UpdateNotifierOptions) {
   await showCachedUpdateNotice(options)
@@ -50,15 +53,17 @@ export async function showCachedUpdateNotice(options: UpdateNotifierOptions) {
   if (!isUpdateNotifierEnabled(options.config, env, stderr, options.packageIsPrivate)) return
 
   let now = options.now || Date.now()
-  let statePath = options.statePath || getUpdateStatePath(env)
-  let state = await readUpdateState(statePath)
+  let stateTarget = await getUpdateStateTarget(options)
+  if (!stateTarget) return
+
+  let state = await readUpdateState(stateTarget.filePath)
   if (state.latestVersion && isNewerVersion(state.latestVersion, options.currentVersion) && shouldShowNotice(state, now)) {
     let command = await getUpgradeCommand(options.config.root, env)
     stderr.write(`Graphene ${state.latestVersion} is available. You are using ${options.currentVersion}.\n`)
     stderr.write(`Update: ${command}\n`)
     stderr.write(`Release notes: ${GITHUB_RELEASE_URL}/v${state.latestVersion}\n`)
     state = {...state, lastNoticeVersion: state.latestVersion, lastNoticeAt: now}
-    await writeUpdateState(statePath, state)
+    await writeUpdateState(stateTarget, state)
   }
 }
 
@@ -69,14 +74,16 @@ export async function checkForUpdate(options: UpdateNotifierOptions) {
   if (!isUpdateNotifierEnabled(options.config, env, stderr, options.packageIsPrivate)) return
 
   let now = options.now || Date.now()
-  let statePath = options.statePath || getUpdateStatePath(env)
-  let state = await readUpdateState(statePath)
+  let stateTarget = await getUpdateStateTarget(options)
+  if (!stateTarget) return
+
+  let state = await readUpdateState(stateTarget.filePath)
 
   if (!shouldCheckForUpdate(state, now)) return
-  await writeUpdateState(statePath, {...state, lastCheckedAt: now})
+  await writeUpdateState(stateTarget, {...state, lastCheckedAt: now})
 
   let latestVersion = await (options.fetchLatestVersion || fetchLatestVersion)(env.GRAPHENE_UPDATE_CHECK_URL || DEFAULT_UPDATE_CHECK_URL)
-  if (latestVersion && isStrictSemver(latestVersion)) await writeUpdateState(statePath, {...state, lastCheckedAt: now, latestVersion})
+  if (latestVersion && isStrictSemver(latestVersion)) await writeUpdateState(stateTarget, {...state, lastCheckedAt: now, latestVersion})
 }
 
 export function isUpdateNotifierEnabled(config: Config, env: NodeJS.ProcessEnv = process.env, stderr: Pick<NodeJS.WriteStream, 'isTTY'> = process.stderr, packageIsPrivate = false) {
@@ -145,9 +152,17 @@ async function fetchLatestVersion(url: string) {
   }
 }
 
-function getUpdateStatePath(env: NodeJS.ProcessEnv = process.env) {
-  let configDir = env.XDG_CONFIG_HOME || path.join(os.homedir(), '.config')
-  return path.join(configDir, 'graphene', 'update-check.json')
+async function getUpdateStateTarget(options: UpdateNotifierOptions): Promise<StateTarget | null> {
+  if (options.statePath) return {filePath: options.statePath}
+
+  let nodeModulesPath = path.join(options.config.root, 'node_modules')
+  try {
+    if (!(await fs.stat(nodeModulesPath)).isDirectory()) return null
+  } catch {
+    return null
+  }
+
+  return {filePath: path.join(nodeModulesPath, '.graphene', 'update-check.json'), requiredDir: nodeModulesPath}
 }
 
 async function readUpdateState(filePath: string): Promise<UpdateState> {
@@ -158,9 +173,11 @@ async function readUpdateState(filePath: string): Promise<UpdateState> {
   }
 }
 
-async function writeUpdateState(filePath: string, state: UpdateState) {
+async function writeUpdateState(target: StateTarget, state: UpdateState) {
+  let filePath = target.filePath
   let tmpPath = `${filePath}.tmp-${randomUUID()}`
   try {
+    if (target.requiredDir && !(await fs.stat(target.requiredDir)).isDirectory()) return
     await fs.mkdir(path.dirname(filePath), {recursive: true})
     await fs.writeFile(tmpPath, JSON.stringify(state, null, 2) + '\n')
     await fs.rename(tmpPath, filePath)
