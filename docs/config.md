@@ -8,7 +8,8 @@ Graphene reads its configuration from the `graphene` object in your project's `p
     "duckdb": {"path": "./data.duckdb"},
     "defaultNamespace": "main",
     "ignoredFiles": ["**/readme.md", "**/agents.md", "**/claude.md"],
-    "envFile": [".env", "../../.env"]
+    "envFile": [".env", "../../.env"],
+    "updateNotifier": false
   }
 }
 ```
@@ -50,6 +51,10 @@ Hostname the dev server binds to. Defaults to `localhost`.
 ## `telemetry`
 
 Set to `false` to opt out of anonymous usage telemetry.
+
+## `updateNotifier`
+
+Set to `false` to opt out of CLI update notices. You can also set `GRAPHENE_NO_UPDATE_NOTIFIER=1` in the environment.
 
 # Database connections
 

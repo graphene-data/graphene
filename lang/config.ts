@@ -8,6 +8,7 @@ export interface Config {
   defaultNamespace?: string
   ignoredFiles: string[]
   telemetry?: boolean
+  updateNotifier?: boolean
   port?: number
   host?: string
   envFile: string[] // array of paths where we can look for the env file
