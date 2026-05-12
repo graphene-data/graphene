@@ -182,7 +182,7 @@ test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}
     {year: 2024, status: 'On Time', flights: 76},
   ]
   let fields = [
-    {name: 'year', type: scalarType('number'), metadata: {timePart: 'year'}},
+    {name: 'year', type: scalarType('number'), metadata: {timeGrain: 'year'}},
     {name: 'status', type: scalarType('string')},
     {name: 'flights', type: scalarType('number')},
   ]

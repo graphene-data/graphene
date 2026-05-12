@@ -6,7 +6,7 @@
 
 import type {FunctionDef} from './functionTypes.ts'
 
-import {inferTemporalExtractionMetadata, inferTemporalGrainMetadata} from './temporalMetadata.ts'
+import {inferTimeOrdinal, inferGrain} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const sf = 'https://docs.snowflake.com/en/sql-reference/functions'
@@ -1827,7 +1827,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       {name: 'date_expr', type: ['date', 'timestamp']},
     ],
     returns: 'number',
-    metadata: args => inferTemporalExtractionMetadata(args[0]?.sql, 'snowflake'),
+    metadata: args => inferTimeOrdinal(args[0]?.sql, 'snowflake'),
   },
   {
     name: 'dateadd',
@@ -1967,7 +1967,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       {name: 'date_or_time_part', type: 'string'},
     ],
     returns: 'timestamp',
-    metadata: args => inferTemporalGrainMetadata(args[2]?.sql),
+    metadata: args => inferGrain(args[2]?.sql),
   },
   {
     name: 'timestamp_from_parts',
@@ -2015,7 +2015,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/year`,
     args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('year', 'snowflake'),
+    metadata: inferTimeOrdinal('year', 'snowflake'),
   },
   {
     name: 'month',
@@ -2027,7 +2027,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/year`,
     args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('month', 'snowflake'),
+    metadata: inferTimeOrdinal('month', 'snowflake'),
   },
   {
     name: 'day',
@@ -2041,7 +2041,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
     aliases: ['dayofmonth'],
-    metadata: inferTemporalExtractionMetadata('day', 'snowflake'),
+    metadata: inferTimeOrdinal('day', 'snowflake'),
   },
   {
     name: 'dayofweek',
@@ -2053,7 +2053,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/year`,
     args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('dayofweek', 'snowflake'),
+    metadata: inferTimeOrdinal('dayofweek', 'snowflake'),
   },
   {
     name: 'dayofyear',
@@ -2065,7 +2065,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/year`,
     args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('dayofyear', 'snowflake'),
+    metadata: inferTimeOrdinal('dayofyear', 'snowflake'),
   },
   {
     name: 'week',
@@ -2079,7 +2079,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
     aliases: ['weekofyear'],
-    metadata: inferTemporalExtractionMetadata('week', 'snowflake'),
+    metadata: inferTimeOrdinal('week', 'snowflake'),
   },
   {
     name: 'quarter',
@@ -2091,7 +2091,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/year`,
     args: [{name: 'date_expr', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('quarter', 'snowflake'),
+    metadata: inferTimeOrdinal('quarter', 'snowflake'),
   },
   {
     name: 'hour',
@@ -2103,7 +2103,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/hour-minute-second`,
     args: [{name: 'time_expr', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('hour', 'snowflake'),
+    metadata: inferTimeOrdinal('hour', 'snowflake'),
   },
   {
     name: 'minute',
@@ -2115,7 +2115,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/hour-minute-second`,
     args: [{name: 'time_expr', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('minute', 'snowflake'),
+    metadata: inferTimeOrdinal('minute', 'snowflake'),
   },
   {
     name: 'second',
@@ -2127,7 +2127,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     url: `${sf}/hour-minute-second`,
     args: [{name: 'time_expr', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('second', 'snowflake'),
+    metadata: inferTimeOrdinal('second', 'snowflake'),
   },
 
   // ============================================================================
@@ -2380,7 +2380,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       {name: 'date_expr', type: ['date', 'timestamp']},
     ],
     returns: 'timestamp',
-    metadata: args => inferTemporalGrainMetadata(args[0]?.sql),
+    metadata: args => inferGrain(args[0]?.sql),
     sqlTemplate: 'DATE_TRUNC(${part}, ${date_expr})',
   },
   {

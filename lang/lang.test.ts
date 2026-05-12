@@ -1238,7 +1238,7 @@ describe('lang', () => {
     expect(throughCast.fields[0].metadata).toEqual({timeGrain: 'month', defaultName: 'month'})
 
     let [reshaped] = analyze('from events select extract(year from month_start) as year_num')
-    expect(reshaped.fields[0].metadata).toEqual({timePart: 'year', defaultName: 'year'})
+    expect(reshaped.fields[0].metadata).toEqual({timeGrain: 'year', defaultName: 'year'})
   })
 
   it('drops temporal grain on set operations when branches disagree', () => {
@@ -1272,34 +1272,34 @@ describe('lang', () => {
     setGlobalConfig({root: ''})
   })
 
-  it('infers time part and ordinal metadata for extract, date_part, and native shorthands', () => {
+  it('infers time ordinal metadata for extract, date_part, and native shorthands', () => {
     updateFile('table events (event_date date, created_at timestamp)', 'events.gsql')
 
     setGlobalConfig({root: '', bigquery: {}})
     let [bigQuery] = analyze('from events select extract(dayofweek from event_date) as dow')
-    expect(bigQuery.fields[0].metadata).toEqual({timePart: 'dayofweek', defaultName: 'dayofweek', timeOrdinal: 'dow_1s'})
+    expect(bigQuery.fields[0].metadata).toEqual({timeOrdinal: 'dow_1s', defaultName: 'dayofweek'})
 
     setGlobalConfig({root: ''})
     let [duckDbDow] = analyze("from events select date_part('dow', event_date) as dow")
-    expect(duckDbDow.fields[0].metadata).toEqual({timePart: 'dayofweek', defaultName: 'dayofweek', timeOrdinal: 'dow_0s'})
+    expect(duckDbDow.fields[0].metadata).toEqual({timeOrdinal: 'dow_0s', defaultName: 'dayofweek'})
     let [duckDbIsoDow] = analyze('from events select extract(isodow from event_date) as iso_dow')
-    expect(duckDbIsoDow.fields[0].metadata).toEqual({timePart: 'isodow', defaultName: 'isodow', timeOrdinal: 'dow_1m'})
+    expect(duckDbIsoDow.fields[0].metadata).toEqual({timeOrdinal: 'dow_1m', defaultName: 'isodow'})
     let [duckDbQuarter] = analyze('from events select quarter(event_date) as quarter_num')
-    expect(duckDbQuarter.fields[0].metadata).toEqual({timePart: 'quarter', defaultName: 'quarter', timeOrdinal: 'quarter_of_year'})
+    expect(duckDbQuarter.fields[0].metadata).toEqual({timeOrdinal: 'quarter_of_year', defaultName: 'quarter'})
 
     setGlobalConfig({dialect: 'snowflake', root: ''})
     let [snowflake] = analyze('from events select dayofweek(event_date) as dow')
-    expect(snowflake.fields[0].metadata).toEqual({timePart: 'dayofweek', defaultName: 'dayofweek', timeOrdinal: 'dow_0s'})
+    expect(snowflake.fields[0].metadata).toEqual({timeOrdinal: 'dow_0s', defaultName: 'dayofweek'})
     let [snowflakeQuarter] = analyze('from events select quarter(event_date) as quarter_num')
-    expect(snowflakeQuarter.fields[0].metadata).toEqual({timePart: 'quarter', defaultName: 'quarter', timeOrdinal: 'quarter_of_year'})
+    expect(snowflakeQuarter.fields[0].metadata).toEqual({timeOrdinal: 'quarter_of_year', defaultName: 'quarter'})
 
     setGlobalConfig({dialect: 'clickhouse', root: ''})
     let [clickhouse] = analyze('from events select to_day_of_week(created_at) as dow')
-    expect(clickhouse.fields[0].metadata).toEqual({timePart: 'dayofweek', defaultName: 'dayofweek', timeOrdinal: 'dow_1m'})
+    expect(clickhouse.fields[0].metadata).toEqual({timeOrdinal: 'dow_1m', defaultName: 'dayofweek'})
     let [clickhouseHour] = analyze('from events select to_hour(created_at) as hour_num')
-    expect(clickhouseHour.fields[0].metadata).toEqual({timePart: 'hour', defaultName: 'hour', timeOrdinal: 'hour_of_day'})
+    expect(clickhouseHour.fields[0].metadata).toEqual({timeOrdinal: 'hour_of_day', defaultName: 'hour'})
     let [clickhouseQuarter] = analyze('from events select to_quarter(created_at) as quarter_num')
-    expect(clickhouseQuarter.fields[0].metadata).toEqual({timePart: 'quarter', defaultName: 'quarter', timeOrdinal: 'quarter_of_year'})
+    expect(clickhouseQuarter.fields[0].metadata).toEqual({timeOrdinal: 'quarter_of_year', defaultName: 'quarter'})
 
     setGlobalConfig({root: ''})
   })
