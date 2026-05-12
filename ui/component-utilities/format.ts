@@ -1,6 +1,6 @@
 import type {Field} from './types.ts'
 
-const currencySymbols = {usd: '$', eur: '€', gbp: '£', cad: 'C$', aud: 'A$', jpy: '¥'} as const
+const supportedCurrencyCodes = new Set(Intl.supportedValuesOf('currency'))
 const percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0})
 const currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 const monthYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'})
@@ -10,6 +10,8 @@ const mondayWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const
 const yearMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
 const titleCaseAcronyms = ['id', 'gdp']
 const titleCaseLowerWords = ['of', 'the', 'and', 'in', 'on']
+
+type ValueFormatterOptions = {unitStyle?: 'label' | 'axis'}
 
 // Formats a raw column name into a readable title.
 export function formatTitle(column: string) {
@@ -24,43 +26,56 @@ export function formatTitle(column: string) {
 // ECharts valueFormatter will take different arguments depending on the chart type.
 // For bar/line/area it's just a number
 // for scatter, it's [x,y], for candlestick [open, close, low, high], etc
-export function makeValueFormatter(fields: Field[] = []) {
+export function makeValueFormatter(fields: Field[] = [], options: ValueFormatterOptions = {}) {
   return (value: unknown) => {
-    if (Array.isArray(value)) return value.map((entry, index) => formatSingleValue(entry, fields[index] || fields[0])).join(', ')
-    return formatSingleValue(value, fields[0])
+    if (Array.isArray(value)) return value.map((entry, index) => formatSingleValue(entry, fields[index] || fields[0], options)).join(', ')
+    return formatSingleValue(value, fields[0], options)
   }
 }
 
-// Formats one numeric value with field metadata (units, ratio/pct, compact notation).
-export function formatSingleValue(value: any, field?: Field) {
+// Formats one numeric value with field metadata (currency, ratio/pct, compact notation).
+export function formatSingleValue(value: any, field?: Field, options: ValueFormatterOptions = {}) {
   let amount = Number(value)
   if (!Number.isFinite(amount)) return String(value ?? '')
 
   if (field?.metadata?.ratio) return `${percent.format(amount * 100)}%`
   if (field?.metadata?.pct) return `${percent.format(amount)}%`
 
-  let unit = field?.metadata?.units?.toLowerCase() as keyof typeof currencySymbols | undefined
-  let currencyUnit = unit != null && unit in currencySymbols ? unit : undefined
-  if (currencyUnit) {
+  let currency = field?.metadata?.currency?.toUpperCase()
+  if (currency && supportedCurrencyCodes.has(currency)) {
     let sign = amount < 0 ? '-' : ''
     let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
-    return `${sign}${currencySymbols[currencyUnit]}${formatted}`
+    return `${sign}${formatCurrencySymbol(currency)}${formatted}`
   }
 
-  if (amount === 0) return '0'
+  if (amount === 0) return addUnit('0', field, options)
   let sign = amount < 0 ? '-' : ''
   let absolute = Math.abs(amount)
+  let formatted = ''
 
-  if (absolute >= 1e12) return `${sign}${compactValue(absolute / 1e12)}T`
-  if (absolute >= 1e9) return `${sign}${compactValue(absolute / 1e9)}B`
-  if (absolute >= 1e6) return `${sign}${compactValue(absolute / 1e6)}M`
-  if (absolute >= 1e3) return `${sign}${compactValue(absolute / 1e3)}k`
-  if (absolute >= 1) return `${sign}${compactValue(absolute)}`
-  if (absolute >= 1e-3) return `${sign}${compactValue(absolute)}`
-  if (absolute >= 1e-6) return `${sign}${compactValue(absolute * 1e3)}m`
-  if (absolute >= 1e-9) return `${sign}${compactValue(absolute * 1e6)}u`
-  if (absolute >= 1e-12) return `${sign}${compactValue(absolute * 1e9)}n`
-  return `${sign}${compactValue(absolute)}`
+  if (absolute >= 1e12) formatted = `${compactValue(absolute / 1e12)}T`
+  else if (absolute >= 1e9) formatted = `${compactValue(absolute / 1e9)}B`
+  else if (absolute >= 1e6) formatted = `${compactValue(absolute / 1e6)}M`
+  else if (absolute >= 1e3) formatted = `${compactValue(absolute / 1e3)}k`
+  else if (absolute >= 1) formatted = compactValue(absolute)
+  else if (absolute >= 1e-3) formatted = compactValue(absolute)
+  else if (absolute >= 1e-6) formatted = `${compactValue(absolute * 1e3)}m`
+  else if (absolute >= 1e-9) formatted = `${compactValue(absolute * 1e6)}u`
+  else if (absolute >= 1e-12) formatted = `${compactValue(absolute * 1e9)}n`
+  else formatted = compactValue(absolute)
+
+  return addUnit(`${sign}${formatted}`, field, options)
+}
+
+function formatCurrencySymbol(currency: string) {
+  let parts = new Intl.NumberFormat('en-US', {style: 'currency', currency, currencyDisplay: 'symbol', maximumFractionDigits: 0}).formatToParts(0)
+  return parts.find(part => part.type === 'currency')?.value || currency
+}
+
+function addUnit(value: string, field: Field | undefined, options: ValueFormatterOptions) {
+  let unit = field?.metadata?.unit?.trim()
+  if (!unit) return value
+  return options.unitStyle === 'axis' ? `${value} (${unit})` : `${value} ${unit}`
 }
 
 // Creates a formatter function that renders date/timestamp values based on field metadata.timeGrain.

@@ -289,7 +289,7 @@ function inferAxesFromEncodedFields(config: NormalConfig, fields: Field[], rows:
   // the y-axis line reads like an extra vertical grid line at the left edge.
   // Hide the paired y-axis line unless the caller explicitly configured it.
   for (let [axisIndex, axis] of config.xAxis.entries()) {
-    if (!axis?.field?.metadata?.timeOrdinal) continue
+    if (!axis?.field?.metadata?.timeOrdinal && axis?.field?.metadata?.timeGrain !== 'year') continue
 
     let yAxisIndexes = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex).map(entry => Number(entry?.yAxisIndex ?? 0))
     for (let yAxisIndex of yAxisIndexes) {
@@ -406,7 +406,7 @@ function valueFormatting(config: NormalConfig, fields: Field[]) {
   let valueAxes = [...config.xAxis, ...config.yAxis].filter(axis => axis?.type === 'value' && !axis.field?.metadata?.timeOrdinal)
   for (let axis of valueAxes) {
     if (axis.axisLabel?.formatter != null) continue
-    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [])}
+    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [], {unitStyle: 'axis'})}
   }
 
   for (let series of config.series) {
@@ -508,22 +508,24 @@ function barLabelPositioning(config: NormalConfig) {
   }
 }
 
-// Match series data labels to the assigned y-axis formatter when labels are enabled.
-// This keeps label formatting in sync with the y-axis without asking callers to repeat it.
-// labelsUseYAxisFormat depends on valueAxisFormatting running first so labels inherit axis formatting.
+// Match series data labels to the assigned value field when labels are enabled.
+// This keeps label formatting in sync with tooltips without asking callers to repeat it.
+// labelsUseYAxisFormat depends on valueFormatting running first so labels inherit axis formatting.
 function labelsUseYAxisFormat(config: NormalConfig, fields: Field[]) {
   for (let series of config.series) {
     // No-op when labels are off or already explicitly formatted.
     if (!series?.label || series.label.show !== true || series.label.formatter != null) continue
 
-    let yField = getSeriesValueField(series, fields)?.name
+    let valueField = getSeriesValueField(series, fields)
+    let yField = valueField?.name
     let axisIndex = Number(series.yAxisIndex ?? 0)
     let axisFormatter = config.yAxis[axisIndex]?.axisLabel?.formatter
-    if (typeof axisFormatter !== 'function') continue
+    let labelFormatter = valueField ? makeValueFormatter([valueField]) : axisFormatter
+    if (typeof labelFormatter !== 'function') continue
 
     // ECharts can pass different value shapes depending on series/transform shape.
     // We resolve the numeric value in a few fallback steps so labels always use the
-    // same value the y-axis is formatting.
+    // same field that tooltips format.
     series.label.formatter = (params: unknown) => {
       let typed = params as {value?: unknown; data?: Record<string, unknown>}
       let value = typed?.value
@@ -535,7 +537,7 @@ function labelsUseYAxisFormat(config: NormalConfig, fields: Field[]) {
         }
       }
 
-      return formatAxisValue(axisFormatter, value)
+      return formatAxisValue(labelFormatter, value)
     }
   }
 }
@@ -678,35 +680,33 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       axis.max = domain[1]
     }
 
-    if (field.metadata?.timeOrdinal) {
-      axis.minInterval = 1
-
-      // Ordinal values are numeric so we use a value axis with a fixed domain, but
-      // visually they are discrete buckets. Hide value-axis grid lines by default
-      // and ask ECharts for denser integer ticks than its generic value defaults.
+    if (field.metadata?.timeGrain === 'year') {
+      // Pin year ticks to evenly-spaced integers so a domain like [2000, 2005]
+      // doesn't end up with the 2000/2002/2004/2005 stub-label pattern.
+      let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
+      axis.axisLabel = {customValues: ticks, formatter: (value: unknown) => (Number.isInteger(Number(value)) ? String(Number(value)) : '')}
+      axis.axisTick = {customValues: ticks}
       axis.axisLine = {show: false}
       axis.splitLine = {show: false}
-      axis.axisLabel = {hideOverlap: true, formatter: (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value))}
-
-      // splitNumber is a hint rather than an exact spacing, but it works better
-      // with value-axis bars because interval can fight the half-bucket padding we
-      // add later. These defaults keep compact ordinals readable without forcing
-      // every possible day/week label.
-      let ordinal = field.metadata.timeOrdinal
-      if (ordinal === 'month_of_year' || ordinal === 'quarter_of_year' || ordinal === 'dow_0s' || ordinal === 'dow_1s' || ordinal === 'dow_1m')
-        axis.splitNumber = domain ? domain[1] - domain[0] + 1 : 5
-      if (ordinal === 'hour_of_day') axis.splitNumber = 8
-      if (ordinal === 'day_of_month') axis.splitNumber = 6
-      if (ordinal === 'week_of_year') axis.splitNumber = 13
-      if (ordinal === 'day_of_year') axis.splitNumber = 12
-
-      axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
       return axis
     }
 
-    if (field.metadata?.timePart === 'year') {
-      axis.minInterval = 1
-      axis.axisLabel = {formatter: (value: unknown) => (Number.isInteger(Number(value)) ? String(Number(value)) : '')}
+    if (field.metadata?.timeOrdinal) {
+      // Ordinal values are numeric so we use a value axis with a fixed domain, but
+      // visually they are discrete buckets. Hide value-axis grid lines by default
+      // and pin tick positions to evenly-spaced integers so we never get a stub
+      // boundary label (e.g. weeks 1, 14, 27, 40, 53 instead of 1, 11, 21, 31, 41, 51, 53).
+      let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
+      axis.axisLine = {show: false}
+      axis.splitLine = {show: false}
+      axis.axisLabel = {
+        hideOverlap: true,
+        customValues: ticks,
+        formatter: (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value)),
+      }
+      axis.axisTick = {customValues: ticks}
+      axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
+      return axis
     }
   }
 
@@ -718,9 +718,50 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
   return axis
 }
 
+// Pick evenly-spaced integer tick positions across [min, max] for ordinal/year value axes.
+// Strategy:
+//   1. If the range is small enough that labeling every value is readable
+//      (≤ denseLimit, sized to cover the 12-month ordinal), label every value.
+//   2. Otherwise prefer step sizes that divide the range exactly so the last tick
+//      lands on max (avoiding the stub-label problem where ECharts' auto-picked step
+//      doesn't reach max).
+//   3. If no candidate divides the range cleanly, fall back to the smallest step that
+//      fits inside targetMax ticks; the final tick may fall short of max, but the chart's
+//      domain still extends visually via half-bucket padding.
+function niceIntegerTicks(min: number, max: number, targetMin = 4, targetMax = 8, denseLimit = 13): number[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max < min) return []
+  let range = max - min
+  if (range === 0) return [min]
+  if (range + 1 <= denseLimit) return tickRange(min, max, 1)
+
+  let candidates = [1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 5000]
+  for (let step of candidates) {
+    if (range % step !== 0) continue
+    let count = range / step + 1
+    if (count >= targetMin && count <= targetMax) return tickRange(min, max, step)
+  }
+  for (let step of candidates) {
+    let count = Math.floor(range / step) + 1
+    if (count >= targetMin && count <= targetMax) return tickRange(min, max, step)
+  }
+  return [min, max]
+}
+
+function tickRange(min: number, max: number, step: number): number[] {
+  let values: number[] = []
+  for (let v = min; v <= max + 1e-9; v += step) values.push(Math.round(v))
+  return values
+}
+
 // Return the natural numeric domain for temporal values that are encoded as numbers.
 function temporalValueDomain(field: Field, rows: Record<string, any>[]): [number, number] | undefined {
   let ordinal = field.metadata?.timeOrdinal
+  if (field.metadata?.timeGrain === 'year') {
+    let values = rows.map(row => Number(row?.[field.name])).filter(value => Number.isFinite(value))
+    if (values.length === 0) return undefined
+    return [Math.min(...values), Math.max(...values)]
+  }
+
   if (ordinal === 'hour_of_day') return [0, 23]
   if (ordinal === 'day_of_month') return [1, 31]
   if (ordinal === 'day_of_year') return [1, 366]
@@ -729,12 +770,6 @@ function temporalValueDomain(field: Field, rows: Record<string, any>[]): [number
   if (ordinal === 'quarter_of_year') return [1, 4]
   if (ordinal === 'dow_0s') return [0, 6]
   if (ordinal === 'dow_1s' || ordinal === 'dow_1m') return [1, 7]
-
-  if (field.metadata?.timePart == 'year') {
-    let values = rows.map(row => Number(row?.[field.name])).filter(value => Number.isFinite(value))
-    if (values.length === 0) return undefined
-    return [Math.min(...values), Math.max(...values)]
-  }
 }
 
 // Series sometimes encode their value field as `y` and sometimes as `value` (pie, funnel, etc).

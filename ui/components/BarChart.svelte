@@ -75,7 +75,7 @@
       tooltip: {trigger: 'axis'},
       legend: {show: Boolean(splitBy || y2 || (!horizontal && yFields.length > 1) || (horizontal && xFields.length > 1))},
       xAxis: {},
-      yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{}] : [])],
+      yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{alignTicks: true}] : [])],
       series,
     }
   }

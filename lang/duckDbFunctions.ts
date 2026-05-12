@@ -6,7 +6,7 @@
 
 import type {FunctionDef} from './functionTypes.ts'
 
-import {inferTemporalExtractionMetadata, inferTemporalGrainMetadata} from './temporalMetadata.ts'
+import {inferTimeOrdinal, inferGrain} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const duck = 'https://duckdb.org/docs/stable/sql/functions'
@@ -1792,7 +1792,7 @@ export const duckDbFunctions: FunctionDef[] = [
       {name: 'date', type: ['date', 'timestamp']},
     ],
     returns: 'number',
-    metadata: args => inferTemporalExtractionMetadata(args[0]?.sql, 'duckdb'),
+    metadata: args => inferTimeOrdinal(args[0]?.sql, 'duckdb'),
   },
   {
     name: 'year',
@@ -1804,7 +1804,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('year', 'duckdb'),
+    metadata: inferTimeOrdinal('year', 'duckdb'),
   },
   {
     name: 'quarter',
@@ -1816,7 +1816,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('quarter', 'duckdb'),
+    metadata: inferTimeOrdinal('quarter', 'duckdb'),
   },
   {
     name: 'month',
@@ -1828,7 +1828,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('month', 'duckdb'),
+    metadata: inferTimeOrdinal('month', 'duckdb'),
   },
   {
     name: 'week',
@@ -1840,7 +1840,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('week', 'duckdb'),
+    metadata: inferTimeOrdinal('week', 'duckdb'),
   },
   {
     name: 'weekofyear',
@@ -1852,7 +1852,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('weekofyear', 'duckdb'),
+    metadata: inferTimeOrdinal('weekofyear', 'duckdb'),
   },
   {
     name: 'day',
@@ -1864,7 +1864,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('day', 'duckdb'),
+    metadata: inferTimeOrdinal('day', 'duckdb'),
   },
   {
     name: 'dayofmonth',
@@ -1876,7 +1876,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('dayofmonth', 'duckdb'),
+    metadata: inferTimeOrdinal('dayofmonth', 'duckdb'),
   },
   {
     name: 'dayofweek',
@@ -1888,7 +1888,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('dayofweek', 'duckdb'),
+    metadata: inferTimeOrdinal('dayofweek', 'duckdb'),
   },
   {
     name: 'weekday',
@@ -1900,7 +1900,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('weekday', 'duckdb'),
+    metadata: inferTimeOrdinal('weekday', 'duckdb'),
   },
   {
     name: 'dayofyear',
@@ -1912,7 +1912,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('dayofyear', 'duckdb'),
+    metadata: inferTimeOrdinal('dayofyear', 'duckdb'),
   },
   {
     name: 'hour',
@@ -1924,7 +1924,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('hour', 'duckdb'),
+    metadata: inferTimeOrdinal('hour', 'duckdb'),
   },
   {
     name: 'minute',
@@ -1936,7 +1936,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('minute', 'duckdb'),
+    metadata: inferTimeOrdinal('minute', 'duckdb'),
   },
   {
     name: 'second',
@@ -1948,7 +1948,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('second', 'duckdb'),
+    metadata: inferTimeOrdinal('second', 'duckdb'),
   },
   {
     name: 'isodow',
@@ -1960,7 +1960,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('isodow', 'duckdb'),
+    metadata: inferTimeOrdinal('isodow', 'duckdb'),
   },
   {
     name: 'isoyear',
@@ -1972,7 +1972,7 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/datepart.html`,
     args: [{name: 'date', type: ['date', 'timestamp']}],
     returns: 'number',
-    metadata: inferTemporalExtractionMetadata('isoyear', 'duckdb'),
+    metadata: inferTimeOrdinal('isoyear', 'duckdb'),
   },
   {
     name: 'date_sub',
@@ -2278,7 +2278,7 @@ export const duckDbFunctions: FunctionDef[] = [
       {name: 'timestamp', type: ['date', 'timestamp']},
     ],
     returns: 'timestamp',
-    metadata: args => inferTemporalGrainMetadata(args[0]?.sql),
+    metadata: args => inferGrain(args[0]?.sql),
     sqlTemplate: 'DATE_TRUNC(${part}, ${timestamp})',
   },
   {

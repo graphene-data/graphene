@@ -8,6 +8,9 @@ packages:
   - vscode
   - examples/*
 
+allowBuilds:
+  esbuild: true
+
 # avoid using a package that was released in the last 3 days, for security.
 # Use minimumReleaseAgeExclude to bump past a known vulnerability
 minimumReleaseAge: 4320

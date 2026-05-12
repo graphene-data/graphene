@@ -1,7 +1,7 @@
 {
   "name": "graphene-data-vscode",
   "displayName": "Graphene VSCode Language Support",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "private": true,
   "description": "",
   "categories": [

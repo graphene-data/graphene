@@ -18,10 +18,10 @@ import {
 } from './fanout.ts'
 import {analyzeBareFunction, analyzeFunction} from './functions.ts'
 import {parseMarkdown} from './markdown.ts'
-import {extractLeadingMetadata} from './metadata.ts'
+import {extractLeadingMetadataDetails, validateMetadataEntries} from './metadata.ts'
 import {parser} from './parser.js'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval} from './temporal.ts'
-import {inferTemporalExtractionMetadata} from './temporalMetadata.ts'
+import {inferTimeOrdinal} from './temporalMetadata.ts'
 import {
   scalarType,
   type AnalysisConfig,
@@ -151,6 +151,15 @@ class AnalysisSession implements Analyzer {
     return `${kind}:${location.file}:${location.from.offset}:${location.to.offset}${suffix}`
   }
 
+  private extractMetadata(node: SyntaxNode) {
+    let details = extractLeadingMetadataDetails(node)
+    let file = getFile(node)
+    for (let diagnostic of validateMetadataEntries(details.entries)) {
+      this.diagRange(file, diagnostic.from, diagnostic.to, diagnostic.message)
+    }
+    return details.metadata
+  }
+
   private renderTableHover(table: Table) {
     let desc = table.metadata?.description ? `\n\n${table.metadata.description}` : ''
     return `#### ${table.name}${desc}`
@@ -193,7 +202,7 @@ class AnalysisSession implements Analyzer {
       let hasNamespace = name.includes('.')
       let tablePath = !hasNamespace && this.config.defaultNamespace ? `${this.config.defaultNamespace}.${name}` : name
       let type = syntaxNode.getChild('QueryExpression') ? 'view' : ('table' as const)
-      let table = {name, type, tablePath, filePath: fi.path, columns: [], joins: [], metadata: extractLeadingMetadata(syntaxNode), syntaxNode} as Table
+      let table = {name, type, tablePath, filePath: fi.path, columns: [], joins: [], metadata: this.extractMetadata(syntaxNode), syntaxNode} as Table
       Object.assign(table, this.addSymbol('table', refNode, name, {hover: this.renderTableHover(table)}))
 
       syntaxNode.getChildren('ColumnDef').forEach(node => this.addColumn(table, node))
@@ -221,7 +230,7 @@ class AnalysisSession implements Analyzer {
     if (parsed.error) return this.diag(node, parsed.error)
     if (!parsed.type) return this.diag(node, `Unsupported data type: ${txt(node.getChild('DataType'))}`)
     let type = parsed.type
-    let col: Column = {name, type, metadata: extractLeadingMetadata(node)}
+    let col: Column = {name, type, metadata: this.extractMetadata(node)}
     Object.assign(col, this.addSymbol('column', nameNode, name, {tableId: table.symbolId, hover: this.renderFieldHover(table, col)}))
     if (this.getField(name, table)) return this.diag(node, `Table already has a field called "${name}"`)
     table.columns.push(col)
@@ -247,7 +256,7 @@ class AnalysisSession implements Analyzer {
   private addComputedColumn(table: Table, node: SyntaxNode) {
     let nameNode = node.getChild('Alias')!
     let name = txt(nameNode)
-    let col: Column = {name, type: scalarType('string'), exprNode: node.getChild('Expression')!, metadata: extractLeadingMetadata(node)}
+    let col: Column = {name, type: scalarType('string'), exprNode: node.getChild('Expression')!, metadata: this.extractMetadata(node)}
     Object.assign(col, this.addSymbol('column', nameNode, name, {tableId: table.symbolId, hover: this.renderFieldHover(table, col)}))
     if (this.getField(name, table)) return this.diag(node, `Table already has a field called "${name}"`)
     table.columns.push(col)
@@ -1029,7 +1038,7 @@ class AnalysisSession implements Analyzer {
         return {
           sql: `EXTRACT(${unit} FROM ${expr.sql})`,
           type: scalarType('number'),
-          metadata: inferTemporalExtractionMetadata(unit, this.config.dialect),
+          metadata: inferTimeOrdinal(unit, this.config.dialect),
           isAgg: expr.isAgg,
           fanout: expr.fanout,
         }
@@ -1142,12 +1151,12 @@ class AnalysisSession implements Analyzer {
   private sameFieldMetadata(left?: FieldMeta, right?: FieldMeta) {
     if (!left && !right) return true
     if (!left || !right) return false
-    return left.timeGrain == right.timeGrain && left.timePart == right.timePart && left.timeOrdinal == right.timeOrdinal
+    return left.timeGrain == right.timeGrain && left.timeOrdinal == right.timeOrdinal
   }
 
   private withoutTimeGrain(metadata?: FieldMeta): FieldMeta | undefined {
-    if (!metadata?.timeGrain && !metadata?.timePart && !metadata?.timeOrdinal) return metadata
-    let {timeGrain: _timeGrain, timePart: _timePart, timeOrdinal: _timeOrdinal, defaultName: _defaultName, ...next} = metadata
+    if (!metadata?.timeGrain && !metadata?.timeOrdinal) return metadata
+    let {timeGrain: _timeGrain, timeOrdinal: _timeOrdinal, defaultName: _defaultName, ...next} = metadata
     return Object.keys(next).length ? next : undefined
   }
 
@@ -1522,10 +1531,14 @@ class AnalysisSession implements Analyzer {
 
   diag<T>(node: SyntaxNode | SyntaxNodeRef, message: string, defaultReturn?: T): T {
     let file = getFile(node)
-    let from = getPosition(node.from, file)
-    let to = getPosition(node.to, file)
-    this.diagnostics.push({severity: 'error', message, file: toRelativePath(file.path), from, to, frame: buildFrame(from, to)})
+    this.diagRange(file, node.from, node.to, message)
     return defaultReturn as T
+  }
+
+  private diagRange(file: FileInfo, fromOffset: number, toOffset: number, message: string) {
+    let from = getPosition(fromOffset, file)
+    let to = getPosition(toOffset, file)
+    this.diagnostics.push({severity: 'error', message, file: toRelativePath(file.path), from, to, frame: buildFrame(from, to)})
   }
 
   checkTypes(expr: Expr, expected: TypeKind[], node: SyntaxNode) {

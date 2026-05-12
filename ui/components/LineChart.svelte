@@ -55,7 +55,7 @@
       tooltip: {trigger: 'axis'},
       legend: {show: Boolean(splitBy || y2 || yFields.length > 1)},
       xAxis: {},
-      yAxis: [{}, ...(y2 ? [{}] : [])],
+      yAxis: [{}, ...(y2 ? [{alignTicks: true}] : [])],
       series,
     }
   }

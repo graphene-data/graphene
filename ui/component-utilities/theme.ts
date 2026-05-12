@@ -111,7 +111,6 @@ registerTheme('graphene-theme', {
     containLabel: false,
   },
   line: {
-    smooth: true,
     symbol: 'emptyCircle',
     symbolSize: 6,
     lineStyle: {width: 2},
