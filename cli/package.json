@@ -1,6 +1,6 @@
 {
   "name": "@graphenedata/cli",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "private": true,
   "license": "Elastic-2.0",
   "author": "Graphene Systems Inc",

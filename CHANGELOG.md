@@ -1,3 +1,23 @@
+## 0.0.18
+
+### Breaking changes
+
+- Renamed currency metadata from `#units` to `#currency` and now report unknown or invalid metadata during `graphene check` (`3854bf40`).
+- Removed `timePart` from field metadata in favor of `timeGrain` and `timeOrdinal` (`6feee73a`).
+
+### Added
+
+- Added `#unit` metadata for appending units to visualization labels (`3854bf40`).
+- Added an API for pinning the sidebar open (`b06a1f55`).
+- Added Graphene config documentation and always ignore `agents.md` and `claude.md` files when discovering pages (`b8dcede5`).
+
+### Fixed
+
+- Fixed year and time-ordinal chart axes to use evenly spaced ticks (`23ff1309`).
+- Fixed secondary y-axis tick alignment in dual-axis charts (`79c874c5`).
+- Fixed root `index.md` pages with custom titles sorting incorrectly in sidebar nav (`10485958`).
+- Removed default ECharts line smoothing so line and area charts reflect source data more directly (`88784679`).
+
 ## 0.0.17
 
 ### Breaking changes
