@@ -22,6 +22,6 @@ export async function installBrowser(options: {withDeps?: boolean; postinstall?:
   if (!options.postinstall) return false
 
   console.warn('Graphene could not install its headless browser during package install.')
-  console.warn('Run `graphene install-browser` before using `graphene run` screenshots.')
+  console.warn('Run `graphene install-browser` before using `graphene run --headless` screenshots.')
   return true
 }

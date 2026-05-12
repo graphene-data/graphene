@@ -328,7 +328,7 @@ async function launchHeadlessBrowser(log: (...args: any[]) => void) {
 
   let message = lastError instanceof Error ? lastError.message : String(lastError)
   if (message.includes('Executable doesn') || message.includes('browserType.launch')) {
-    log('Failed to launch headless browser. Run `graphene install-browser` and try again.')
+    log('Failed to launch headless browser. Run `graphene install-browser` before using `graphene run --headless`.')
   } else {
     log(`Failed to launch headless browser: ${message}`)
   }

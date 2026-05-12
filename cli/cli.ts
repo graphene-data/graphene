@@ -238,7 +238,7 @@ program.parse(process.argv)
 function registerInstallBrowserCommand(program: Command) {
   program
     .command('install-browser')
-    .description('Install the headless browser used by graphene run screenshots')
+    .description('Install the browser used by graphene run --headless screenshots')
     .option('--with-deps', 'Also install browser system dependencies where supported')
     .action(async (options: {withDeps?: boolean}) => {
       let ok = await installBrowser({withDeps: options.withDeps})
