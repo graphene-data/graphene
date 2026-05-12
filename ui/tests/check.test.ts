@@ -4,7 +4,7 @@ import {check} from '../../cli/check.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 import {listMdFileQueries, runMdFile} from '../../cli/run.ts'
 import {trimIndentation} from '../../lang/util.ts'
-import {test, expect} from './fixtures.ts'
+import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
 let logs = ''
@@ -102,7 +102,7 @@ test('check reports invalid metadata annotations', async () => {
   expect(outputLines()).toContain('ERROR: tmp_bad_metadata.gsql line 2: Metadata "#ratio" is a flag; use "#ratio" or "#ratio=true".')
 })
 
-test('cli run with md file reports dynamic unsupported chart wrapper props', async ({server}) => {
+test('cli run with md file reports dynamic unsupported chart wrapper props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -114,7 +114,7 @@ test('cli run with md file reports dynamic unsupported chart wrapper props', asy
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', log})
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
@@ -126,7 +126,7 @@ test('cli run with md file reports dynamic unsupported chart wrapper props', asy
   )
 })
 
-test('cli run with md file reports dynamic unsupported ECharts top-level props', async ({server}) => {
+test('cli run with md file reports dynamic unsupported ECharts top-level props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -143,7 +143,7 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props',
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', log})
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
@@ -155,7 +155,7 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props',
   )
 })
 
-test('cli run with md file reports multiple dynamic unsupported chart props', async ({server}) => {
+test('cli run with md file reports multiple dynamic unsupported chart props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -167,7 +167,7 @@ test('cli run with md file reports multiple dynamic unsupported chart props', as
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', log})
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
@@ -179,7 +179,7 @@ test('cli run with md file reports multiple dynamic unsupported chart props', as
   )
 })
 
-test('cli run with md file reports runtime chart prop and render errors together', async ({server}) => {
+test('cli run with md file reports runtime chart prop and render errors together', async ({server, page}) => {
   expectConsoleError('Chart failed to render')
   server.mockFile(
     '/index.md',
@@ -197,7 +197,7 @@ test('cli run with md file reports runtime chart prop and render errors together
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', log})
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
@@ -209,7 +209,7 @@ test('cli run with md file reports runtime chart prop and render errors together
   )
 })
 
-test('cli run with md file reports runtime query errors', async ({server}) => {
+test('cli run with md file reports runtime query errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(
     '/index.md',
@@ -222,7 +222,7 @@ test('cli run with md file reports runtime query errors', async ({server}) => {
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
@@ -233,7 +233,7 @@ test('cli run with md file reports runtime query errors', async ({server}) => {
   )
 })
 
-test('cli run with md file reports runtime chart configuration errors', async ({server}) => {
+test('cli run with md file reports runtime chart configuration errors', async ({server, page}) => {
   expectConsoleError('Chart failed to render')
   server.mockFile(
     '/index.md',
@@ -251,7 +251,7 @@ test('cli run with md file reports runtime chart configuration errors', async ({
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
@@ -262,7 +262,7 @@ test('cli run with md file reports runtime chart configuration errors', async ({
   )
 })
 
-test('cli run with md file reports table configuration errors', async ({server}) => {
+test('cli run with md file reports table configuration errors', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -274,7 +274,7 @@ test('cli run with md file reports table configuration errors', async ({server})
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
@@ -285,7 +285,7 @@ test('cli run with md file reports table configuration errors', async ({server})
   )
 })
 
-test('cli run with md file reports big value query errors', async ({server}) => {
+test('cli run with md file reports big value query errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(
     '/index.md',
@@ -298,7 +298,7 @@ test('cli run with md file reports big value query errors', async ({server}) => 
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
@@ -309,7 +309,7 @@ test('cli run with md file reports big value query errors', async ({server}) => 
   )
 })
 
-test('cli run with md file reports html compilation errors', async ({server}) => {
+test('cli run with md file reports html compilation errors', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
@@ -321,7 +321,7 @@ test('cli run with md file reports html compilation errors', async ({server}) =>
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', log})
   expect(result).toBe(false)
   let output = outputLines()
@@ -331,7 +331,7 @@ test('cli run with md file reports html compilation errors', async ({server}) =>
   expect(output).toContain('^')
 })
 
-test('cli run with --chart captures a single chart screenshot', async ({server}) => {
+test('cli run with --chart captures a single chart screenshot', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -343,7 +343,7 @@ test('cli run with --chart captures a single chart screenshot', async ({server})
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
@@ -353,7 +353,30 @@ test('cli run with --chart captures a single chart screenshot', async ({server})
   )
 })
 
-test('cli run with --input applies inputs to a full page run', async ({server}) => {
+test('cli run with --headless captures a screenshot without an open page', async ({server}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Headless Screenshot
+    \`\`\`sql chart_data
+    from flights select carrier, sum(distance) as total_distance
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
+  `,
+  )
+
+  server.url()
+  await runMdFile({mdArg: 'index.md', headless: true, chart: 'Carrier Distance', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    No errors found 💎
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with --input applies inputs to a full page run', async ({server, page}) => {
+  let queryBodies: any[] = []
   server.mockFile(
     '/index.md',
     `
@@ -367,10 +390,17 @@ test('cli run with --input applies inputs to a full page run', async ({server}) 
   `,
   )
 
-  server.url()
+  await page.route('**/_api/query', async route => {
+    queryBodies.push(route.request().postDataJSON())
+    await route.continue()
+  })
+
+  await page.goto(server.url() + '/?carrier=AA')
+  await waitForGrapheneLoad(page)
   let result = await runMdFile({mdArg: 'index.md', inputs: {carrier: 'AA'}, log})
 
   expect(result).toBe(true)
+  expect(queryBodies.some(body => JSON.stringify(body.params) == JSON.stringify({carrier: 'AA'}))).toBe(true)
   expect(outputLines()).toEqual(
     trimIndentation(`
     No errors found 💎
@@ -379,7 +409,7 @@ test('cli run with --input applies inputs to a full page run', async ({server}) 
   )
 })
 
-test('cli run with --chart captures an ECharts screenshot by title', async ({server}) => {
+test('cli run with --chart captures an ECharts screenshot by title', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -396,7 +426,7 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({ser
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
@@ -406,7 +436,7 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({ser
   )
 })
 
-test('cli list prints chart component IDs', async ({server}) => {
+test('cli list prints chart component IDs', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -418,13 +448,13 @@ test('cli list prints chart component IDs', async ({server}) => {
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   let result = await listMdFileQueries('index.md', undefined, log)
   expect(result).toBe(true)
   expect(outputLines()).toEqual('BarChart (data="chart_data" x="carrier" y="total_distance")')
 })
 
-test('cli run with --chart captures a chart screenshot by component ID', async ({server}) => {
+test('cli run with --chart captures a chart screenshot by component ID', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -436,7 +466,7 @@ test('cli run with --chart captures a chart screenshot by component ID', async (
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', chart: 'BarChart (data="chart_data" x="carrier" y="total_distance")', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
@@ -446,7 +476,7 @@ test('cli run with --chart captures a chart screenshot by component ID', async (
   )
 })
 
-test('cli run with --chart reports when no chart title matches', async ({server}) => {
+test('cli run with --chart reports when no chart title matches', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -458,7 +488,7 @@ test('cli run with --chart reports when no chart title matches', async ({server}
   `,
   )
 
-  server.url()
+  await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', chart: 'Missing Chart', log})
   expect(result).toBe(false)
   expect(outputLines()).toEqual('Could not find chart "Missing Chart" on index.md')

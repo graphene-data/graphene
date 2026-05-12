@@ -11,7 +11,8 @@ graphene run "from flights select count() as total" # Run inline GSQL and print 
 graphene run 'from flights where carrier = $carrier select count() as total' --input carrier=AA # Provide parameter input values
 graphene run - # Read GSQL from stdin and print results
 
-graphene run path/to/page.md # Run the page and save a full-page screenshot
+graphene run path/to/page.md # Open the page in your system browser and save a full-page screenshot
+graphene run path/to/page.md --headless # Run the page in a headless browser and save a full-page screenshot
 graphene run path/to/page.md --input carrier=AA # Run the page with input values, overriding page defaults
 
 # `-c/--chart` can target either a chart title or the chart's `queryId`. For charts without titles use `graphene list` to see the exact IDs for charts on a page.

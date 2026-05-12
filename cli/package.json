@@ -51,7 +51,8 @@
     "svelte": "5.55.3",
     "unified": "^11.0.5",
     "unist-util-visit": "4.1.2",
-    "vite": "7.3.2"
+    "vite": "7.3.2",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@clickhouse/client": "^1.18.2",
@@ -60,6 +61,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.0.0",
     "@types/sanitize-html": "^2.16.0",
+    "@types/ws": "^8.18.1",
     "esbuild": "^0.27.2",
     "snowflake-sdk": "2.4.0",
     "vitest": "4.0.18",

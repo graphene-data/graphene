@@ -155,6 +155,17 @@ describe('cli run', () => {
     expect(res.stdout).toContain('AA')
   })
 
+  it('runs a markdown page in headless mode', async () => {
+    try {
+      let res = await runCli(['run', 'index.md', '--headless', '--chart', 'Flight Status by Year'], {cwd: flightDir, env: {NODE_ENV: 'development'}})
+      expectCliSuccess(res, 'run markdown page headless')
+      expect(res.stdout).toContain('No errors found')
+      expect(res.stdout).toContain('Screenshot saved to')
+    } finally {
+      await stopGrapheneIfRunning()
+    }
+  })
+
   it('prints a clean error for a missing markdown query input', async () => {
     let res = await runCli(['run', 'carrier_detail.md', '--query', 'carrier_info'], {cwd: flightDir})
     expect(res.code).toBe(1)
