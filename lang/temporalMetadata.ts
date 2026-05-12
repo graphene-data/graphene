@@ -1,4 +1,4 @@
-import type {FieldMeta, TimeGrain, TimeOrdinal} from './types.ts'
+import type {FieldMeta, TimeOrdinal} from './types.ts'
 
 function normalizeTemporalPart(rawPart?: string) {
   return String(rawPart || '')
@@ -7,13 +7,53 @@ function normalizeTemporalPart(rawPart?: string) {
     .toLowerCase()
 }
 
-export function inferTemporalPart(rawPart?: string): string | undefined {
+// Metadata for truncation/binning functions. The result remains temporal (date/timestamp),
+// so the part describes display resolution rather than an extracted number.
+export function inferGrain(rawPart?: string): FieldMeta | undefined {
   let normalized = normalizeTemporalPart(rawPart)
   if (!normalized) return
 
-  if (/^week(?:\([a-z]+\))?$/.test(normalized)) return 'week'
+  if (/^week(?:\([a-z]+\))?$/.test(normalized) || normalized == 'isoweek') return {timeGrain: 'week', defaultName: 'week'}
+  if (normalized == 'isoyear') return {timeGrain: 'year', defaultName: 'year'}
 
-  let parts: Record<string, string> = {
+  switch (normalized) {
+    case 'year':
+    case 'quarter':
+    case 'month':
+    case 'day':
+    case 'hour':
+    case 'minute':
+    case 'second':
+      return {timeGrain: normalized, defaultName: normalized}
+  }
+}
+
+// Metadata for extraction functions like extract/date_part/hour(...). Most extracted
+// values are bounded ordinals (month-of-year, day-of-week, etc). Year is the exception:
+// it is unbounded, so we treat it as a numeric value at year grain instead of an ordinal.
+export function inferTimeOrdinal(rawPart: string | undefined, dialect: string): FieldMeta | undefined {
+  let normalized = normalizeTemporalPart(rawPart)
+  if (normalized == 'year' || normalized == 'isoyear') return {timeGrain: 'year', defaultName: 'year'}
+
+  let timeOrdinal: TimeOrdinal | undefined
+  if (normalized == 'hour') timeOrdinal = 'hour_of_day'
+  if (normalized == 'day' || normalized == 'dayofmonth') timeOrdinal = 'day_of_month'
+  if (normalized == 'dayofyear' || normalized == 'doy') timeOrdinal = 'day_of_year'
+  if (normalized == 'week' || normalized == 'weekofyear' || normalized == 'isoweek' || /^week(?:\([a-z]+\))?$/.test(normalized)) timeOrdinal = 'week_of_year'
+  if (normalized == 'month') timeOrdinal = 'month_of_year'
+  if (normalized == 'quarter') timeOrdinal = 'quarter_of_year'
+  if (normalized == 'isodow' || normalized == 'dayofweekiso' || normalized == 'iso_dayofweek') timeOrdinal = 'dow_1m'
+
+  if (normalized == 'dayofweek' || normalized == 'dow' || normalized == 'weekday') {
+    if (dialect == 'bigquery') timeOrdinal = 'dow_1s'
+    else if (dialect == 'clickhouse') timeOrdinal = 'dow_1m'
+    else timeOrdinal = 'dow_0s'
+  }
+
+  if (!timeOrdinal) return
+  if (/^week(?:\([a-z]+\))?$/.test(normalized)) return {timeOrdinal, defaultName: 'week'}
+
+  let defaultNames: Record<string, string> = {
     dow: 'dayofweek',
     weekday: 'dayofweek',
     dayofmonth: 'day',
@@ -22,69 +62,5 @@ export function inferTemporalPart(rawPart?: string): string | undefined {
     dayofweekiso: 'isodow',
     iso_dayofweek: 'isodow',
   }
-  return parts[normalized] || normalized
-}
-
-export function inferTemporalGrain(rawPart?: string): TimeGrain | undefined {
-  let normalized = normalizeTemporalPart(rawPart)
-  if (!normalized) return
-
-  if (/^week(?:\([a-z]+\))?$/.test(normalized) || normalized == 'isoweek') return 'week'
-  if (normalized == 'isoyear') return 'year'
-
-  let grains: Record<string, TimeGrain> = {
-    year: 'year',
-    quarter: 'quarter',
-    month: 'month',
-    day: 'day',
-    hour: 'hour',
-    minute: 'minute',
-    second: 'second',
-  }
-  return grains[normalized]
-}
-
-export function inferTemporalGrainMetadata(rawPart?: string): FieldMeta | undefined {
-  let timeGrain = inferTemporalGrain(rawPart)
-  return timeGrain ? {timeGrain, defaultName: timeGrain} : undefined
-}
-
-export function inferTemporalPartMetadata(rawPart?: string): FieldMeta | undefined {
-  let timePart = inferTemporalPart(rawPart)
-  return timePart ? {timePart, defaultName: timePart} : undefined
-}
-
-export function inferTemporalOrdinal(rawPart: string | undefined, dialect: string): TimeOrdinal | undefined {
-  let normalized = normalizeTemporalPart(rawPart)
-  if (!normalized) return
-
-  if (normalized == 'hour') return 'hour_of_day'
-  if (normalized == 'day' || normalized == 'dayofmonth') return 'day_of_month'
-  if (normalized == 'dayofyear' || normalized == 'doy') return 'day_of_year'
-  if (normalized == 'week' || normalized == 'weekofyear' || normalized == 'isoweek') return 'week_of_year'
-  if (normalized == 'month') return 'month_of_year'
-  if (normalized == 'quarter') return 'quarter_of_year'
-
-  if (normalized == 'isodow' || normalized == 'dayofweekiso' || normalized == 'iso_dayofweek') return 'dow_1m'
-
-  if (normalized == 'dayofweek' || normalized == 'dow' || normalized == 'weekday') {
-    if (dialect == 'bigquery') return 'dow_1s'
-    if (dialect == 'clickhouse') return 'dow_1m'
-    return 'dow_0s'
-  }
-}
-
-export function inferTemporalOrdinalMetadata(rawPart: string | undefined, dialect: string): FieldMeta | undefined {
-  let timeOrdinal = inferTemporalOrdinal(rawPart, dialect)
-  return timeOrdinal ? {timeOrdinal} : undefined
-}
-
-export function inferTemporalExtractionMetadata(rawPart: string | undefined, dialect: string): FieldMeta | undefined {
-  let timePart = inferTemporalPart(rawPart)
-  let timeOrdinal = inferTemporalOrdinal(rawPart, dialect)
-  if (!timePart && !timeOrdinal) return
-  return {
-    ...(timePart ? {timePart, defaultName: timePart} : {}),
-    ...(timeOrdinal ? {timeOrdinal} : {}),
-  }
+  return {timeOrdinal, defaultName: defaultNames[normalized] || normalized}
 }

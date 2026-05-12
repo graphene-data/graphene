@@ -21,7 +21,7 @@ import {parseMarkdown} from './markdown.ts'
 import {extractLeadingMetadataDetails, validateMetadataEntries} from './metadata.ts'
 import {parser} from './parser.js'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval} from './temporal.ts'
-import {inferTemporalExtractionMetadata} from './temporalMetadata.ts'
+import {inferTimeOrdinal} from './temporalMetadata.ts'
 import {
   scalarType,
   type AnalysisConfig,
@@ -1038,7 +1038,7 @@ class AnalysisSession implements Analyzer {
         return {
           sql: `EXTRACT(${unit} FROM ${expr.sql})`,
           type: scalarType('number'),
-          metadata: inferTemporalExtractionMetadata(unit, this.config.dialect),
+          metadata: inferTimeOrdinal(unit, this.config.dialect),
           isAgg: expr.isAgg,
           fanout: expr.fanout,
         }
@@ -1151,12 +1151,12 @@ class AnalysisSession implements Analyzer {
   private sameFieldMetadata(left?: FieldMeta, right?: FieldMeta) {
     if (!left && !right) return true
     if (!left || !right) return false
-    return left.timeGrain == right.timeGrain && left.timePart == right.timePart && left.timeOrdinal == right.timeOrdinal
+    return left.timeGrain == right.timeGrain && left.timeOrdinal == right.timeOrdinal
   }
 
   private withoutTimeGrain(metadata?: FieldMeta): FieldMeta | undefined {
-    if (!metadata?.timeGrain && !metadata?.timePart && !metadata?.timeOrdinal) return metadata
-    let {timeGrain: _timeGrain, timePart: _timePart, timeOrdinal: _timeOrdinal, defaultName: _defaultName, ...next} = metadata
+    if (!metadata?.timeGrain && !metadata?.timeOrdinal) return metadata
+    let {timeGrain: _timeGrain, timeOrdinal: _timeOrdinal, defaultName: _defaultName, ...next} = metadata
     return Object.keys(next).length ? next : undefined
   }
 

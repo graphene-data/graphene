@@ -289,7 +289,7 @@ function inferAxesFromEncodedFields(config: NormalConfig, fields: Field[], rows:
   // the y-axis line reads like an extra vertical grid line at the left edge.
   // Hide the paired y-axis line unless the caller explicitly configured it.
   for (let [axisIndex, axis] of config.xAxis.entries()) {
-    if (!axis?.field?.metadata?.timeOrdinal) continue
+    if (!axis?.field?.metadata?.timeOrdinal && axis?.field?.metadata?.timeGrain !== 'year') continue
 
     let yAxisIndexes = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex).map(entry => Number(entry?.yAxisIndex ?? 0))
     for (let yAxisIndex of yAxisIndexes) {
@@ -680,6 +680,14 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       axis.max = domain[1]
     }
 
+    if (field.metadata?.timeGrain === 'year') {
+      axis.minInterval = 1
+      axis.axisLine = {show: false}
+      axis.splitLine = {show: false}
+      axis.axisLabel = {formatter: (value: unknown) => (Number.isInteger(Number(value)) ? String(Number(value)) : '')}
+      return axis
+    }
+
     if (field.metadata?.timeOrdinal) {
       axis.minInterval = 1
 
@@ -705,11 +713,6 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
       return axis
     }
-
-    if (field.metadata?.timePart === 'year') {
-      axis.minInterval = 1
-      axis.axisLabel = {formatter: (value: unknown) => (Number.isInteger(Number(value)) ? String(Number(value)) : '')}
-    }
   }
 
   if (type === 'category' && field.metadata?.timeOrdinal) {
@@ -723,6 +726,12 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
 // Return the natural numeric domain for temporal values that are encoded as numbers.
 function temporalValueDomain(field: Field, rows: Record<string, any>[]): [number, number] | undefined {
   let ordinal = field.metadata?.timeOrdinal
+  if (field.metadata?.timeGrain === 'year') {
+    let values = rows.map(row => Number(row?.[field.name])).filter(value => Number.isFinite(value))
+    if (values.length === 0) return undefined
+    return [Math.min(...values), Math.max(...values)]
+  }
+
   if (ordinal === 'hour_of_day') return [0, 23]
   if (ordinal === 'day_of_month') return [1, 31]
   if (ordinal === 'day_of_year') return [1, 366]
@@ -731,12 +740,6 @@ function temporalValueDomain(field: Field, rows: Record<string, any>[]): [number
   if (ordinal === 'quarter_of_year') return [1, 4]
   if (ordinal === 'dow_0s') return [0, 6]
   if (ordinal === 'dow_1s' || ordinal === 'dow_1m') return [1, 7]
-
-  if (field.metadata?.timePart == 'year') {
-    let values = rows.map(row => Number(row?.[field.name])).filter(value => Number.isFinite(value))
-    if (values.length === 0) return undefined
-    return [Math.min(...values), Math.max(...values)]
-  }
 }
 
 // Series sometimes encode their value field as `y` and sometimes as `value` (pie, funnel, etc).
