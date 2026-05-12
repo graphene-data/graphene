@@ -689,7 +689,6 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       axis.axisLine = {show: false}
       axis.splitLine = {show: false}
       return axis
-
     }
 
     if (field.metadata?.timeOrdinal) {
@@ -700,7 +699,11 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
       axis.axisLine = {show: false}
       axis.splitLine = {show: false}
-      axis.axisLabel = {hideOverlap: true, customValues: ticks, formatter: (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value))}
+      axis.axisLabel = {
+        hideOverlap: true,
+        customValues: ticks,
+        formatter: (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value)),
+      }
       axis.axisTick = {customValues: ticks}
       axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
       return axis
