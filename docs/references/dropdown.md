@@ -24,6 +24,18 @@ from orders
 where status = $status_dropdown
 ```
 
+For multi-select dropdowns, filter with `in ($name)`:
+
+````markdown
+<Dropdown name=selected_statuses data=statuses value=status multiple=true />
+
+```sql
+select *
+from orders
+where status in ($selected_statuses)
+```
+````
+
 Dropdown selections also sync into the page URL query string. Single-select dropdowns use one key, and multi-select dropdowns repeat the key for each selected value.
 
 # Attributes
