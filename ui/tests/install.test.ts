@@ -7,7 +7,6 @@ import * as path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 import {test, expect, waitForGrapheneLoad, getAvailablePort} from './fixtures.ts'
-import {expectConsoleError} from './logWatcher.ts'
 
 interface RunResult {
   code: number
@@ -142,8 +141,7 @@ limit 10
     await page.waitForTimeout(3000)
 
     // Snapshot the live page with Playwright while the packaged server is running.
-    // The ideal here would actually be to test the screenshot we got back from `run`, but that's currently differs between local and
-    // ci because html2canvas does not preserve chart svg fonts, meaning we fall back to system ui fonts.
+    // This verifies the packaged UI independently from the CLI screenshot file path smoke test below.
     await page.goto(`http://localhost:${port}/chart`)
     await waitForGrapheneLoad(page)
     await page.evaluate(async () => {
@@ -169,7 +167,6 @@ limit 10
     expect(runOutput).toContain(`Page available at http://localhost:${port}/chart`)
     expect(runOutput).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   } finally {
-    expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
     let [stopCommand, stopArgs] = packageManager.graphene(['stop'])
     await run(stopCommand, stopArgs, projectDir, childEnv) // extra stop, in case the test failed before the regular `stop` above
     await fsp.rm(tempRoot, {recursive: true, force: true})

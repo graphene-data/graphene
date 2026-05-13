@@ -3,6 +3,7 @@ import {type IncomingMessage, type ServerResponse} from 'http'
 import {readFileSync} from 'node:fs'
 import {styleText} from 'node:util'
 import path from 'path'
+import {chromium, type Page} from 'playwright-core'
 import {type PluginOption, type ViteDevServer} from 'vite'
 import {WebSocketServer, type WebSocket} from 'ws'
 
@@ -23,6 +24,7 @@ import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 export interface RunMdFileOptions {
   mdArg: string
   chart?: string
+  headless?: boolean
   inputs?: RunInputs
   log?: (...args: any[]) => void
   telemetry?: CliTelemetry
@@ -57,10 +59,10 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   let pageUrl = markdownPageUrl(mdFile, options.inputs)
-  let host = runHost()
-  let resp = await sendSocketRequest({pageUrl, action: 'check', chart: options.chart, log})
+  let request = {pageUrl, action: 'check' as const, chart: options.chart, log}
+  let resp = options.headless ? await runHeadlessPageRequest(request) : await sendSocketRequest(request)
   if (!resp) return false
-  log('Page available at', host + pageUrl)
+  log('Page available at', runHost() + pageUrl)
 
   let errors = Array.from(resp.errors || []) as GrapheneError[]
   let chartNotFound = !!options.chart && !resp.screenshot
@@ -86,9 +88,8 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     let filename = `${new Date().toISOString().replace(/[:.]/g, '-')}.png`
     let screenshotDir = path.join(getGrapheneCache(config.root), 'screenshots')
     let screenshotPath = path.join(screenshotDir, filename)
-    let base64Data = resp.screenshot.replace(/^data:image\/png;base64,/, '')
     await fs.ensureDir(screenshotDir)
-    await fs.writeFile(screenshotPath, base64Data, 'base64')
+    await fs.writeFile(screenshotPath, resp.screenshot)
     log('Screenshot saved to', screenshotPath)
   }
 
@@ -200,17 +201,6 @@ function runHost() {
   return `http://localhost:${config.port}`
 }
 
-function appendInputsToUrl(pageUrl: string, inputs: RunInputs = {}) {
-  let search = new URLSearchParams()
-  Object.entries(inputs).forEach(([name, value]) => {
-    if (Array.isArray(value)) value.forEach(item => search.append(name, item))
-    else search.append(name, value)
-  })
-  let rendered = search.toString()
-  if (!rendered) return pageUrl
-  return `${pageUrl}?${rendered}`
-}
-
 async function fetchSocketRequest({host, pageUrl, action, chart}: {host: string; pageUrl: string; action: 'check' | 'list'; chart?: string}) {
   let abort = new AbortController()
   let timeout = setTimeout(() => abort.abort(), 30_000)
@@ -257,6 +247,108 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
 
   conn.socket.send(JSON.stringify({action, chart, requestId: id}))
   pendingRequests[id] = {response: res}
+}
+
+async function runHeadlessPageRequest({pageUrl, action, chart, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
+  if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
+    log('Starting Graphene server...')
+    await runServeInBackground()
+  }
+
+  let host = runHost()
+  let browser = await launchHeadlessBrowser(log)
+  if (!browser) return null
+
+  try {
+    let context = await browser.newContext({
+      viewport: {width: 1280, height: 720},
+      deviceScaleFactor: 1,
+      locale: 'en-US',
+      timezoneId: 'UTC',
+      colorScheme: 'light',
+      reducedMotion: 'reduce',
+    })
+    let page = await context.newPage()
+    await page.goto(host + pageUrl)
+
+    let finished = await page.evaluate(async () => {
+      let graphene = (window as any).$GRAPHENE
+      if (typeof graphene?.waitForLoad === 'function') return await graphene.waitForLoad(20_000)
+      return false
+    })
+
+    if (action === 'list') {
+      let componentIds = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('[data-component-id]'))
+          .map(el => el.getAttribute('data-component-id') || '')
+          .filter(componentId => componentId.trim().length > 0),
+      )
+      await context.close()
+      return {componentIds}
+    }
+
+    let errors = await page.evaluate(() => ((window as any).$GRAPHENE?.getErrors?.() || []) as GrapheneError[])
+    let screenshot = chart ? await captureChart(page, chart) : await page.screenshot({fullPage: true, animations: 'disabled', scale: 'css'})
+    await context.close()
+    return {errors, stillLoading: !finished, screenshot}
+  } catch (err) {
+    log(`Failed to ${action == 'check' ? 'run check' : 'list queries'}: ${err instanceof Error ? err.message : String(err)}`)
+    return null
+  } finally {
+    await browser.close()
+  }
+}
+
+function appendInputsToUrl(pageUrl: string, inputs: RunInputs = {}) {
+  let search = new URLSearchParams()
+  Object.entries(inputs).forEach(([name, value]) => {
+    if (Array.isArray(value)) value.forEach(item => search.append(name, item))
+    else search.append(name, value)
+  })
+  let rendered = search.toString()
+  if (!rendered) return pageUrl
+  return `${pageUrl}?${rendered}`
+}
+
+async function launchHeadlessBrowser(log: (...args: any[]) => void) {
+  let launchOptions = {
+    headless: true,
+    args: ['--font-render-hinting=none', '--disable-font-subpixel-positioning', '--disable-lcd-text', '--force-color-profile=srgb', '--lang=en-US'],
+  }
+  let lastError: unknown
+
+  try {
+    return await chromium.launch(launchOptions)
+  } catch (err) {
+    lastError = err
+  }
+
+  for (let channel of ['chrome', 'msedge'] as const) {
+    try {
+      return await chromium.launch({...launchOptions, channel})
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  let message = lastError instanceof Error ? lastError.message : String(lastError)
+  if (message.includes('Executable doesn') || message.includes('browserType.launch')) {
+    log('Failed to launch headless browser. Run `graphene install-browser` before using `graphene run --headless`.')
+  } else {
+    log(`Failed to launch headless browser: ${message}`)
+  }
+  return null
+}
+
+async function captureChart(page: Page, chart: string) {
+  let selector = await page.evaluate(chart => {
+    let escaped = window.CSS.escape(chart)
+    if (document.querySelector(`[data-chart-title="${escaped}"]`)) return `[data-chart-title="${escaped}"]`
+    if (document.querySelector(`[data-component-id="${escaped}"]`)) return `[data-component-id="${escaped}"]`
+    return null
+  }, chart)
+  if (!selector) return undefined
+  return await page.locator(selector).screenshot({animations: 'disabled', scale: 'css'})
 }
 
 function toWorkspaceFiles(analysis: AnalysisResult): WorkspaceFileInput[] {
