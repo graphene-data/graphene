@@ -17,6 +17,7 @@ import {installBrowser} from './installBrowser.ts'
 import {printDiagnostics, printTable} from './printer.ts'
 import {listMdFileQueries, runMdFile, runNamedQueryFromMd} from './run.ts'
 import {CliTelemetry, getPresentFlags, getWorkspaceScanCounts, type TelemetryCommand} from './telemetry/index.ts'
+import {checkForUpdate, showCachedUpdateNotice} from './updateNotifier.ts'
 
 const program = new Command()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -327,6 +328,7 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
     let caughtError: unknown
 
     telemetry.event('cli_command_started', {command, flags: getPresentFlags(command, process.argv.slice(2))})
+    await showCachedUpdateNotice({config, currentVersion: libPkg.version, packageIsPrivate: libPkg.private})
 
     let exit = (code: number = 0): never => {
       exitCalled = true
@@ -348,6 +350,7 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
         if (fromVersion) telemetry.event('cli_upgraded', {from_version: fromVersion, to_version: libPkg.version})
       }
       telemetry.event('cli_command_completed', {command, success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
+      await checkForUpdate({config, currentVersion: libPkg.version, packageIsPrivate: libPkg.private})
     }
 
     if (caughtError) throw caughtError
