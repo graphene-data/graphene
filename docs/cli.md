@@ -3,14 +3,15 @@
 Invoke the CLI via your project's package manager (e.g. `pnpm graphene check`, `npm exec graphene run`).
 
 ```bash
-graphene check # Check diagnostics across all .gsql files in the project
-graphene check path/to/file.gsql # Check diagnostics for one specific gsql file
-graphene check path/to/page.md # Check diagnostics for one specific markdown file
+# `check` is a linter and mainly used when editing .gsql files
+graphene check # Check across all .gsql files in the project
+graphene check path/to/file.gsql # Check for one specific gsql file
+graphene check path/to/page.md # Check for one specific markdown file
 
+# `run` is the primary command for iterating on queries and pages
 graphene run "from flights select count() as total" # Run inline GSQL and print results
 graphene run 'from flights where carrier = $carrier select count() as total' --input carrier=AA # Provide parameter input values
 graphene run - # Read GSQL from stdin and print results
-
 graphene run path/to/page.md # Open the page in your system browser and save a full-page screenshot
 graphene run path/to/page.md --headless # Run the page in a headless browser and save a full-page screenshot
 graphene install-browser # Install the browser used by `graphene run --headless`
