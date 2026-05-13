@@ -353,6 +353,28 @@ test('cli run with --chart captures a single chart screenshot', async ({server, 
   )
 })
 
+test('cli run with --headless captures a screenshot without an open page', async ({server}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Headless Screenshot
+    \`\`\`sql chart_data
+    from flights select carrier, sum(distance) as total_distance
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
+  `,
+  )
+
+  server.url()
+  await runMdFile({mdArg: 'index.md', headless: true, chart: 'Carrier Distance', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    No errors found 💎
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  `),
+  )
+})
+
 test('cli run with --input applies inputs to a full page run', async ({server, page}) => {
   let queryBodies: any[] = []
   server.mockFile(

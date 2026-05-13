@@ -104,6 +104,9 @@ importers:
       mdsvex:
         specifier: ^0.12.6
         version: 0.12.7(svelte@5.55.3(@typescript-eslint/types@8.56.1))
+      playwright-core:
+        specifier: 1.58.2
+        version: 1.58.2
       sanitize-html:
         specifier: ^2.17.0
         version: 2.17.1
@@ -120,8 +123,8 @@ importers:
         specifier: 7.3.2
         version: 7.3.2(@types/node@20.19.37)(yaml@2.8.3)
       ws:
-        specifier: ^8.18.0
-        version: 8.19.0
+        specifier: ^8.20.0
+        version: 8.20.0
     devDependencies:
       '@clickhouse/client':
         specifier: ^1.18.2
@@ -3337,8 +3340,8 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
-  ws@8.19.0:
-    resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
+  ws@8.20.0:
+    resolution: {integrity: sha512-sAt8BhgNbzCtgGbt2OxmpuryO63ZoDk/sqaB/znQm94T4fCEsy/yV+7CdC1kJhOU9lboAEU7R3kquuycDoibVA==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -6938,7 +6941,7 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  ws@8.19.0: {}
+  ws@8.20.0: {}
 
   wsl-utils@0.1.0:
     dependencies:

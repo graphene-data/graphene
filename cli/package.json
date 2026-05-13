@@ -46,12 +46,13 @@
     "js-yaml": "^3.14.2",
     "json5": "^2.2.3",
     "mdsvex": "^0.12.6",
+    "playwright-core": "1.58.2",
     "sanitize-html": "^2.17.0",
     "svelte": "5.55.3",
     "unified": "^11.0.5",
     "unist-util-visit": "4.1.2",
     "vite": "7.3.2",
-    "ws": "^8.18.0"
+    "ws": "^8.20.0"
   },
   "devDependencies": {
     "@clickhouse/client": "^1.18.2",

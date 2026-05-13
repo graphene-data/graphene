@@ -15,6 +15,7 @@ describe('cli npm publish package', () => {
       '@graphenedata/lang': 'workspace:*',
       '@graphenedata/ui': 'workspace:*',
       chalk: '^5.3.0',
+      'playwright-core': '1.58.2',
     },
     devDependencies: {
       esbuild: '^0.27.2',
@@ -33,7 +34,6 @@ describe('cli npm publish package', () => {
     },
     '@graphenedata/ui': {
       dependencies: {
-        '@graphenedata/html2canvas': '^1.4.1',
         echarts: '^6.0.0',
         svelte: '5.55.3',
       },
@@ -56,13 +56,19 @@ describe('cli npm publish package', () => {
     let staged = createPublishPackageJson(sourcePackage, workspacePackages)
 
     expect(staged.dependencies).toMatchObject({
-      '@graphenedata/html2canvas': '^1.4.1',
       '@lezer/common': '^1.2.3',
       chalk: '^5.3.0',
       echarts: '^6.0.0',
       glob: '^13.0.1',
+      'playwright-core': '1.58.2',
       svelte: '5.55.3',
     })
+  })
+
+  it('adds a postinstall browser installer to the staged manifest', () => {
+    let staged = createPublishPackageJson(sourcePackage, workspacePackages)
+
+    expect(staged.scripts).toEqual({postinstall: 'node dist/cli/installBrowser.js --postinstall'})
   })
 
   it('does not merge dev-only dependencies', () => {

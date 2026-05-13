@@ -13,6 +13,7 @@ import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
+import {installBrowser} from './installBrowser.ts'
 import {printDiagnostics, printTable} from './printer.ts'
 import {listMdFileQueries, runMdFile, runNamedQueryFromMd} from './run.ts'
 import {CliTelemetry, getPresentFlags, getWorkspaceScanCounts, type TelemetryCommand} from './telemetry/index.ts'
@@ -26,6 +27,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(__dirname, 'package.json') : path.join(__dirname, '../../package.json')
 const libPkg = fs.readJsonSync(pkgPath)
 program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
+registerInstallBrowserCommand(program)
+
+// install-browser is a recovery/setup command for the CLI package itself, not a project command.
+// It needs to work before a browser exists, from outside a Graphene project, and from installer
+// contexts where there may be no project config to load.
+if (process.argv[2] === 'install-browser') {
+  await program.parseAsync(process.argv)
+  process.exit(0)
+}
 
 let cfg = await loadConfig(process.cwd(), envFiles => {
   dotenv.config({quiet: true, path: envFiles})
@@ -55,24 +65,32 @@ program
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
+  .option('--headless', 'Run markdown pages in a headless browser instead of opening the system browser')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
   .option('--input <key=value>', 'Input value to use for parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .action(
-    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; query?: string; input?: string[]}) => {
+    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; headless?: boolean; query?: string; input?: string[]}) => {
       if (options.chart && options.query) {
         console.error('Cannot use --chart and --query together')
+        return exit(1)
+      }
+
+      if (options.headless && options.query) {
+        console.error('Cannot use --headless and --query together')
         return exit(1)
       }
 
       let inputs = parseRunInputs(options.input || [], exit)
       let inputPath = getExistingPath(input)
       if (inputPath && inputPath.endsWith('.md')) {
-        let res = options.query ? await runNamedQueryFromMd(inputPath, options.query, {inputs, telemetry}) : await runMdFile({mdArg: inputPath, chart: options.chart, inputs, telemetry})
+        let res = options.query
+          ? await runNamedQueryFromMd(inputPath, options.query, {inputs, telemetry})
+          : await runMdFile({mdArg: inputPath, chart: options.chart, headless: options.headless, inputs, telemetry})
         return exit(res ? 0 : 1)
       }
 
-      if (options.chart || options.query) {
-        console.error('--chart and --query can only be used with a markdown file path')
+      if (options.chart || options.headless || options.query) {
+        console.error('--chart, --headless, and --query can only be used with a markdown file path')
         return exit(1)
       }
 
@@ -217,6 +235,17 @@ program
   )
 
 program.parse(process.argv)
+
+function registerInstallBrowserCommand(program: Command) {
+  program
+    .command('install-browser')
+    .description('Install the browser used by graphene run --headless screenshots')
+    .option('--with-deps', 'Also install browser system dependencies where supported')
+    .action(async (options: {withDeps?: boolean}) => {
+      let ok = await installBrowser({withDeps: options.withDeps})
+      process.exit(ok ? 0 : 1)
+    })
+}
 
 async function readInput(arg): Promise<string> {
   if (!arg || arg === '-') {
