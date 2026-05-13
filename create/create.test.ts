@@ -304,6 +304,7 @@ describe('runCreate', () => {
     expect(spawnMock).toHaveBeenCalled()
     expect(await lstat(path.join(root, 'demo-app/.agents/skills/graphene')).catch(() => null)).toBeNull()
     expect(await lstat(path.join(root, 'demo-app/.claude/skills/graphene')).catch(() => null)).toBeNull()
+    expect(await lstat(path.join(root, 'demo-app/.codex/config.toml')).catch(() => null)).toBeNull()
   })
 
   it('does not prompt before installing dependencies', async () => {
@@ -324,21 +325,51 @@ describe('runCreate', () => {
     })
 
     expect(confirmMock).not.toHaveBeenCalled()
+    expect(selectMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        message: 'Configure which agent?',
+        options: [
+          {value: 'codex', label: 'Codex'},
+          {value: 'claude', label: 'Claude'},
+          {value: 'other', label: 'Other agent'},
+          {value: 'none', label: 'Skip extra setup'},
+        ],
+      }),
+    )
     expect(spawnMock).toHaveBeenCalledWith('yarn', ['install'], expect.any(Object))
   })
 
-  it('symlinks the Graphene skill into the selected agent folder', async () => {
+  it('symlinks the Graphene skill and writes Codex config when Codex is selected', async () => {
     let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
     let {runCreate} = await import('./create.ts')
 
     textMock.mockResolvedValueOnce('demo-app')
-    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.agents')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('codex')
     spawnMock.mockImplementation(() => createChild())
 
     await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
 
     let linkTarget = await readlink(path.join(root, 'demo-app/.agents/skills/graphene'))
     expect(linkTarget).toBe('../../node_modules/@graphenedata/cli/dist/skills/graphene')
+    expect(await readFile(path.join(root, 'demo-app/.codex/config.toml'), 'utf8')).toBe(`# Enable Graphene page screenshots in Codex by allowing the local dev server.
+default_permissions = "graphene"
+
+[permissions.graphene.filesystem]
+":root" = "read"
+":project_roots" = { "." = "write" }
+":tmpdir" = "write"
+
+[permissions.graphene.network]
+enabled = true
+mode = "full"
+allow_local_binding = true
+
+[permissions.graphene.network.domains]
+"localhost" = "allow"
+"127.0.0.1" = "allow"
+"::1" = "allow"
+`)
   })
 
   it('symlinks the Graphene skill into the selected Claude folder', async () => {
@@ -346,7 +377,7 @@ describe('runCreate', () => {
     let {runCreate} = await import('./create.ts')
 
     textMock.mockResolvedValueOnce('demo-app')
-    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('.claude')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('claude')
     spawnMock.mockImplementation(() => createChild())
 
     await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
@@ -355,6 +386,23 @@ describe('runCreate', () => {
     expect(linkTarget).toBe('../../node_modules/@graphenedata/cli/dist/skills/graphene')
     expect(await readFile(path.join(root, 'demo-app/CLAUDE.md'), 'utf8')).toContain('npx graphene check')
     expect(await lstat(path.join(root, 'demo-app/AGENTS.md')).catch(() => null)).toBeNull()
+    expect(await lstat(path.join(root, 'demo-app/.codex/config.toml')).catch(() => null)).toBeNull()
+  })
+
+  it('symlinks the Graphene skill into .agents for other agents without Codex config', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    textMock.mockResolvedValueOnce('demo-app')
+    selectMock.mockResolvedValueOnce('duckdb').mockResolvedValueOnce('other')
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    let linkTarget = await readlink(path.join(root, 'demo-app/.agents/skills/graphene'))
+    expect(linkTarget).toBe('../../node_modules/@graphenedata/cli/dist/skills/graphene')
+    expect(await readFile(path.join(root, 'demo-app/AGENTS.md'), 'utf8')).toContain('npx graphene check')
+    expect(await lstat(path.join(root, 'demo-app/.codex/config.toml')).catch(() => null)).toBeNull()
   })
 
   it('skips dependency installation with --no-install', async () => {
@@ -364,6 +412,23 @@ describe('runCreate', () => {
     await runCreate({argv: ['demo-app', '--yes', '--no-install'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
 
     expect(spawnMock).not.toHaveBeenCalled()
+    expect(await lstat(path.join(root, 'demo-app/.agents/skills/graphene')).catch(() => null)).toBeNull()
+    expect(await lstat(path.join(root, 'demo-app/.codex/config.toml')).catch(() => null)).toBeNull()
+  })
+
+  it('does not prompt for agent setup with --no-install', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    selectMock.mockResolvedValueOnce('duckdb')
+
+    await runCreate({argv: ['demo-app', '--no-install'], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    expect(selectMock).toHaveBeenCalledTimes(1)
+    expect(selectMock).toHaveBeenCalledWith(expect.objectContaining({message: 'Database'}))
+    expect(spawnMock).not.toHaveBeenCalled()
+    expect(await lstat(path.join(root, 'demo-app/.agents/skills/graphene')).catch(() => null)).toBeNull()
+    expect(await lstat(path.join(root, 'demo-app/.codex/config.toml')).catch(() => null)).toBeNull()
   })
 
   it('marks install failures without clearing the log', async () => {
