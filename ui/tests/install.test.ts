@@ -166,6 +166,7 @@ limit 10
       'Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png',
     )
     expect(runOutput).toContain('No errors found 💎')
+    expect(runOutput).toContain(`Page available at http://localhost:${port}/chart`)
     expect(runOutput).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/(localhost|127\.0\.0\.1):\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)

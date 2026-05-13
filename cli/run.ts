@@ -56,8 +56,11 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
     return false
   }
 
-  let resp = await sendSocketRequest({mdFile, action: 'check', chart: options.chart, inputs: options.inputs, log})
+  let pageUrl = markdownPageUrl(mdFile, options.inputs)
+  let host = runHost()
+  let resp = await sendSocketRequest({pageUrl, action: 'check', chart: options.chart, log})
   if (!resp) return false
+  log('Page available at', host + pageUrl)
 
   let errors = Array.from(resp.errors || []) as GrapheneError[]
   let chartNotFound = !!options.chart && !resp.screenshot
@@ -109,7 +112,7 @@ export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry,
     return false
   }
 
-  let resp = await sendSocketRequest({mdFile, action: 'list', log})
+  let resp = await sendSocketRequest({pageUrl: markdownPageUrl(mdFile), action: 'list', log})
   if (!resp) return false
 
   let componentIds = (resp.componentIds || []) as string[]
@@ -152,17 +155,13 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
   return true
 }
 
-async function sendSocketRequest({mdFile, action, chart, inputs, log}: {mdFile: string; action: 'check' | 'list'; chart?: string; inputs?: RunInputs; log: (...args: any[]) => void}) {
-  let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
-  if (pageUrl === '/index') pageUrl = '/'
-  pageUrl = appendInputsToUrl(pageUrl, inputs)
-
+async function sendSocketRequest({pageUrl, action, chart, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
+  let host = runHost()
   if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
     log('Starting Graphene server...')
     await runServeInBackground()
   }
 
-  let host = `http://localhost:${config.port}`
   let resp = await fetchSocketRequest({host, pageUrl, action, chart})
 
   if (resp.error == 'no_server') {
@@ -188,6 +187,17 @@ async function sendSocketRequest({mdFile, action, chart, inputs, log}: {mdFile: 
   }
 
   return resp
+}
+
+function markdownPageUrl(mdFile: string, inputs?: RunInputs) {
+  let pageUrl = '/' + mdFile.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
+  if (pageUrl === '/index') pageUrl = '/'
+  pageUrl = appendInputsToUrl(pageUrl, inputs)
+  return pageUrl
+}
+
+function runHost() {
+  return `http://localhost:${config.port}`
 }
 
 function appendInputsToUrl(pageUrl: string, inputs: RunInputs = {}) {
