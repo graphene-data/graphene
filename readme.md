@@ -84,6 +84,8 @@ Graphene itself is a CLI which can be installed via npm (or pnpm, yarn, etc.). T
 
 A Graphene project can either be a standalone repo or a directory within a larger codebase (such as dbt). It is comprised of _semantic models_ via .gsql files and _pages_ via .md files.
 
+<img alt="Architecture Diagram" src="./assets/marketecture.png"/>
+
 ### GSQL and Graphene markdown
 
 Semantic models are defined like so:
