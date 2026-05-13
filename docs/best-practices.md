@@ -1,9 +1,8 @@
 # Best practices
 - **Leverage models** - Use modeled joins, dimensions, and measures whenever possible
-- Use `check` after editing .gsql files to catch syntax errors
-- Use `run path/to/page.md` after editing a page to catch runtime errors and to review the screenshot
-- Use `run path/to/page.md -c "[Chart Title | Query ID]"` after editing an ECharts component to view the screenshot
-- When iterating on code-fenced GSQL queries, use `run path/to/page.md -q query_name` instead of `run "[GSQL]"`
+- Use `check` when iterating on models, use `run` when iterating on pages
+- Use the `-c` flag on `run` after editing an ECharts component to view the screenshot
+- Use the `-q` flag on `run` for GSQL queries that live in pages, instead of `run "[GSQL]"`
 - Rely on Graphene's defaults for value formatting and chart styles before trying to override in SQL or ECharts
 - Keep numbers grounded - Use the `<Value/>` component in prose instead of hard-coding numbers 
 - When adding viz, think like Edward Tufte. What is _the_ most effective way to illustrate the data? 

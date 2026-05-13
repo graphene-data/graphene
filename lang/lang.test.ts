@@ -993,6 +993,21 @@ describe('lang', () => {
     expect('table dup (id int, id text)').toHaveDiagnostic(/Table already has a field called "id"/i)
   })
 
+  it('reports diagnostics for duplicate join definitions', () => {
+    expect(`
+      table airports (
+        code text
+        join many flights on code = flights.origin
+        join many flights on code = flights.destination
+      )
+
+      table flights (
+        origin text
+        destination text
+      )
+    `).toHaveDiagnostic(/Table already has a field called "flights"/i)
+  })
+
   it('reports diagnostics for unsupported data types', () => {
     expect('table invalid (id int, value hyperthing)').toHaveDiagnostic(/Unsupported data type: hyperthing/i)
   })

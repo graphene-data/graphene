@@ -83,6 +83,7 @@ Queries can be referenced by other queries in the `from` or `join` to form DAGs 
 ## Page frontmatter
 You can add YAML frontmatter at the top of a page. The following attributes are supported:
 - `title`: title displayed at the top of the page
+  - DO NOT(!) put an h1 at the top of the page if you already set a title via frontmatter.
 - `layout`: `notebook` is the default, good for prose interspersed with charts. `dashboard` has a wider max-width, for chart-heavy pages with lots of `<Row>`s.
 
 ## Viz and display components

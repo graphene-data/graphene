@@ -47,7 +47,7 @@ describe('create helpers', () => {
         packageManager: {name: 'pnpm', version: '10.1.0'},
         database: 'duckdb',
         duckdbPath: './data.duckdb',
-        skillLinkTarget: 'none',
+        agentSetup: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -73,7 +73,7 @@ describe('create helpers', () => {
         targetDir: 'demo-app',
         projectName: 'demo-app',
         database: 'duckdb',
-        skillLinkTarget: 'none',
+        agentSetup: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -86,11 +86,11 @@ describe('create helpers', () => {
   it('renders AGENTS.md commands for yarn and bun projects', () => {
     let yarnFiles = renderTemplate({
       cliVersion: '0.0.15',
-      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'yarn', version: '4.12.0'}, database: 'duckdb', skillLinkTarget: 'none'},
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'yarn', version: '4.12.0'}, database: 'duckdb', agentSetup: 'none'},
     })
     let bunFiles = renderTemplate({
       cliVersion: '0.0.15',
-      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'bun', version: '1.3.0'}, database: 'duckdb', skillLinkTarget: 'none'},
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'bun', version: '1.3.0'}, database: 'duckdb', agentSetup: 'none'},
     })
 
     expect(yarnFiles['AGENTS.md']).toContain('yarn graphene check')
@@ -99,15 +99,60 @@ describe('create helpers', () => {
     expect(bunFiles['.yarnrc.yml']).toBeUndefined()
   })
 
-  it('renders CLAUDE.md when the Claude skill target is selected', () => {
+  it('renders Codex setup files when Codex is selected', () => {
     let files = renderTemplate({
       cliVersion: '0.0.15',
-      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'pnpm', version: '10.1.0'}, database: 'duckdb', skillLinkTarget: '.claude'},
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'pnpm', version: '10.1.0'}, database: 'duckdb', agentSetup: 'codex'},
+    })
+
+    expect(files['AGENTS.md']).toContain('pnpm graphene check')
+    expect(files['.codex/config.toml']).toBe(`# Enable Graphene page screenshots in Codex by allowing the local dev server.
+default_permissions = "graphene"
+
+[permissions.graphene.filesystem]
+":root" = "read"
+":project_roots" = { "." = "write" }
+":tmpdir" = "write"
+
+[permissions.graphene.network]
+enabled = true
+mode = "full"
+allow_local_binding = true
+
+[permissions.graphene.network.domains]
+"localhost" = "allow"
+"127.0.0.1" = "allow"
+"::1" = "allow"
+`)
+    expect(files['CLAUDE.md']).toBeUndefined()
+  })
+
+  it('renders CLAUDE.md when Claude is selected', () => {
+    let files = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'pnpm', version: '10.1.0'}, database: 'duckdb', agentSetup: 'claude'},
     })
 
     expect(files['CLAUDE.md']).toContain('pnpm graphene check')
     expect(files['CLAUDE.md']).toContain('Assume all DuckDB functions are available when writing GSQL.')
     expect(files['AGENTS.md']).toBeUndefined()
+    expect(files['.codex/config.toml']).toBeUndefined()
+  })
+
+  it('renders AGENTS.md without Codex config for other agents and skipped setup', () => {
+    let otherFiles = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'pnpm', version: '10.1.0'}, database: 'duckdb', agentSetup: 'other'},
+    })
+    let skippedFiles = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {targetDir: 'demo-app', projectName: 'demo-app', packageManager: {name: 'pnpm', version: '10.1.0'}, database: 'duckdb', agentSetup: 'none'},
+    })
+
+    expect(otherFiles['AGENTS.md']).toContain('pnpm graphene check')
+    expect(otherFiles['.codex/config.toml']).toBeUndefined()
+    expect(skippedFiles['AGENTS.md']).toContain('pnpm graphene check')
+    expect(skippedFiles['.codex/config.toml']).toBeUndefined()
   })
 
   it('renders a snowflake project with .env auth vars', () => {
@@ -122,7 +167,7 @@ describe('create helpers', () => {
         snowflakeUsername: 'graphene_user',
         snowflakeKeyPath: '/Users/me/.ssh/graphene_snowflake_key.p8',
         snowflakePassphrase: 'secret',
-        skillLinkTarget: 'none',
+        agentSetup: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -148,7 +193,7 @@ describe('create helpers', () => {
         defaultNamespace: 'my-project.analytics',
         bigqueryProjectId: 'my-project-123',
         bigqueryKeyPath: '/Users/me/.ssh/graphene-bq-key.json',
-        skillLinkTarget: 'none',
+        agentSetup: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])
@@ -174,7 +219,7 @@ describe('create helpers', () => {
         clickhouseUrl: 'https://example.clickhouse.cloud:8443',
         clickhouseUsername: 'default',
         clickhousePassword: 'secret',
-        skillLinkTarget: 'none',
+        agentSetup: 'none',
       },
     })
     let pkg = JSON.parse(files['package.json'])

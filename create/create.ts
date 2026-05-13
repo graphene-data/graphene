@@ -18,7 +18,7 @@ interface CliPackageJson {
 
 type Database = 'duckdb' | 'snowflake' | 'bigquery' | 'clickhouse'
 type WarehouseClient = '@clickhouse/client' | '@duckdb/node-api' | '@google-cloud/bigquery' | 'snowflake-sdk'
-type SkillLinkTarget = '.agents' | '.claude' | 'none'
+type AgentSetup = 'codex' | 'claude' | 'other' | 'none'
 type CredentialFailureAction = 'edit' | 'continue'
 
 interface CreateOptions {
@@ -101,7 +101,7 @@ interface ScaffoldAnswers {
   clickhouseUrl?: string
   clickhouseUsername?: string
   clickhousePassword?: string
-  skillLinkTarget: SkillLinkTarget
+  agentSetup: AgentSetup
 }
 
 interface InstallResult {
@@ -227,9 +227,10 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   let files: TemplateFiles = {
     'package.json': JSON.stringify(pkg, null, 2) + '\n',
     '.gitignore': ['node_modules', '.env', '*.duckdb'].join('\n') + '\n',
-    [agentsFileName(answers.skillLinkTarget)]: renderAgents(answers),
+    [agentsFileName(answers.agentSetup)]: renderAgents(answers),
     'index.md': renderIndex(answers),
   }
+  if (answers.agentSetup === 'codex') files['.codex/config.toml'] = renderCodexConfig()
   if (answers.packageManager?.name === 'yarn') files['.yarnrc.yml'] = 'nodeLinker: node-modules\n'
 
   let envFile = renderEnvFile(answers)
@@ -245,8 +246,8 @@ function grapheneCommand(packageManager: PackageManager | undefined, args: strin
   return `npx graphene ${args}`
 }
 
-function agentsFileName(skillLinkTarget: SkillLinkTarget): 'AGENTS.md' | 'CLAUDE.md' {
-  if (skillLinkTarget === '.claude') return 'CLAUDE.md'
+function agentsFileName(agentSetup: AgentSetup): 'AGENTS.md' | 'CLAUDE.md' {
+  if (agentSetup === 'claude') return 'CLAUDE.md'
   return 'AGENTS.md'
 }
 
@@ -262,6 +263,30 @@ function renderAgents(answers: ScaffoldAnswers): string {
       `- ${grapheneCommand(answers.packageManager, 'check')} - check the project for syntax and analysis errors`,
       `- ${grapheneCommand(answers.packageManager, 'run index.md')} - execute the index page`,
       `- ${grapheneCommand(answers.packageManager, 'serve --bg')} - start or restart the local dev server`,
+    ].join('\n') + '\n'
+  )
+}
+
+function renderCodexConfig(): string {
+  return (
+    [
+      '# Enable Graphene page screenshots in Codex by allowing the local dev server.',
+      'default_permissions = "graphene"',
+      '',
+      '[permissions.graphene.filesystem]',
+      '":root" = "read"',
+      '":project_roots" = { "." = "write" }',
+      '":tmpdir" = "write"',
+      '',
+      '[permissions.graphene.network]',
+      'enabled = true',
+      'mode = "full"',
+      'allow_local_binding = true',
+      '',
+      '[permissions.graphene.network.domains]',
+      '"localhost" = "allow"',
+      '"127.0.0.1" = "allow"',
+      '"::1" = "allow"',
     ].join('\n') + '\n'
   )
 }
@@ -576,7 +601,7 @@ async function collectAnswers({options, packageManager, input, output}: {options
       projectName: options.name || defaultProjectName(targetDir),
       packageManager,
       database: 'duckdb',
-      skillLinkTarget: 'none',
+      agentSetup: 'none',
     }
   }
 
@@ -612,7 +637,7 @@ async function collectAnswers({options, packageManager, input, output}: {options
     projectName,
     packageManager,
     database,
-    skillLinkTarget: 'none',
+    agentSetup: 'none',
   }
 
   if (database !== 'duckdb') {
@@ -620,13 +645,14 @@ async function collectAnswers({options, packageManager, input, output}: {options
   }
 
   if (options.install) {
-    answers.skillLinkTarget = unwrapPrompt(
-      await clack.select<SkillLinkTarget>({
-        message: 'Add the Graphene skill for agents?',
+    answers.agentSetup = unwrapPrompt(
+      await clack.select<AgentSetup>({
+        message: 'Configure which agent?',
         options: [
-          {value: '.agents', label: '.agents/skills/graphene'},
-          {value: '.claude', label: '.claude/skills/graphene'},
-          {value: 'none', label: 'Skip'},
+          {value: 'codex', label: 'Codex'},
+          {value: 'claude', label: 'Claude'},
+          {value: 'other', label: 'Other agent'},
+          {value: 'none', label: 'Skip extra setup'},
         ],
         ...promptOptions(input, output),
       }),
@@ -694,11 +720,18 @@ async function installDeps(targetDir: string, packageManager: PackageManager, en
   return {code, stderr}
 }
 
-async function symlinkGrapheneSkill(targetDir: string, skillLinkTarget: SkillLinkTarget): Promise<void> {
-  if (skillLinkTarget === 'none') return
+function skillLinkDirectory(agentSetup: AgentSetup): '.agents' | '.claude' | null {
+  if (agentSetup === 'codex' || agentSetup === 'other') return '.agents'
+  if (agentSetup === 'claude') return '.claude'
+  return null
+}
+
+async function symlinkGrapheneSkill(targetDir: string, agentSetup: AgentSetup): Promise<void> {
+  let linkDirectory = skillLinkDirectory(agentSetup)
+  if (!linkDirectory) return
 
   let sourcePath = path.join(targetDir, 'node_modules/@graphenedata/cli/dist/skills/graphene')
-  let linkPath = path.join(targetDir, skillLinkTarget, 'skills/graphene')
+  let linkPath = path.join(targetDir, linkDirectory, 'skills/graphene')
   let relativeSourcePath = path.relative(path.dirname(linkPath), sourcePath)
 
   await mkdir(path.dirname(linkPath), {recursive: true})
@@ -734,7 +767,7 @@ export async function runCreate({argv, cwd, env = {}, stdin, stdout}: CreateCont
     if (options.install) {
       let install = await installDeps(targetDir, packageManager, env)
       if (install.code !== 0) throw new Error(install.stderr.trim() || `${packageManager.name} install failed with code ${install.code}`)
-      await symlinkGrapheneSkill(targetDir, answers.skillLinkTarget)
+      await symlinkGrapheneSkill(targetDir, answers.agentSetup)
     }
 
     clack.outro(completionMessage(answers), {output: stdout})
