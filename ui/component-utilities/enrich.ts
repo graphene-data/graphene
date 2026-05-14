@@ -22,6 +22,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
 
   // Resolve axis metadata up front so row shaping (like explicit sorting) can use it.
   inferAxesFromEncodedFields(normalized, fields, rows)
+  hideValueAxisChromeForLineAndBar(normalized)
   extendValueAxisDomainsForBars(normalized)
 
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
@@ -292,6 +293,32 @@ function inferAxesFromEncodedFields(config: NormalConfig, fields: Field[], rows:
     if (!axis?.field?.metadata?.timeOrdinal && axis?.field?.metadata?.timeGrain !== 'year') continue
 
     let yAxisIndexes = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex).map(entry => Number(entry?.yAxisIndex ?? 0))
+    for (let yAxisIndex of yAxisIndexes) {
+      let yAxis = config.yAxis[yAxisIndex]
+      if (!yAxis || yAxis.axisLine?.show != null) continue
+      yAxis.axisLine = {...yAxis.axisLine, show: false}
+    }
+  }
+}
+
+// Numeric x-axes that drive line/bar series read like discrete dimensions, so the
+// value-axis chrome (vertical splitLines, x-axis line, ticks, paired y-axis line)
+// looks noisy. Hide it whenever the caller hasn't set it explicitly. Horizontal
+// bars are excluded by the value-typed y-axis check.
+function hideValueAxisChromeForLineAndBar(config: NormalConfig) {
+  for (let [axisIndex, xAxis] of config.xAxis.entries()) {
+    if (xAxis?.type !== 'value') continue
+    let seriesOnAxis = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex && (entry?.type === 'line' || entry?.type === 'bar'))
+    if (seriesOnAxis.length === 0) continue
+
+    let yAxisIndexes = seriesOnAxis.map(entry => Number(entry?.yAxisIndex ?? 0))
+    let pairedAreAllValue = yAxisIndexes.every(idx => config.yAxis[idx]?.type === 'value')
+    if (!pairedAreAllValue) continue
+
+    if (xAxis.splitLine?.show == null) xAxis.splitLine = {...xAxis.splitLine, show: false}
+    if (xAxis.axisLine?.show == null) xAxis.axisLine = {...xAxis.axisLine, show: false}
+    if (xAxis.axisTick?.show == null) xAxis.axisTick = {...xAxis.axisTick, show: false}
+
     for (let yAxisIndex of yAxisIndexes) {
       let yAxis = config.yAxis[yAxisIndex]
       if (!yAxis || yAxis.axisLine?.show != null) continue
