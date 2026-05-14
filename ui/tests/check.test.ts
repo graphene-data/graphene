@@ -19,6 +19,7 @@ function outputLines() {
     /Screenshot saved to[^\n]*node_modules\/\.graphene\/screenshots\/<timestamp>\.png/g,
     'Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png',
   )
+  normalized = normalized.replace(/Page available at http:\/\/localhost:\d+/g, 'Page available at http://localhost:<port>')
   return stripAnsi(normalized.trim())
 }
 
@@ -119,6 +120,7 @@ test('cli run with md file reports dynamic unsupported chart wrapper props', asy
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     Runtime errors in index.md:
     BarChart (data="chart_data" x="carrier" y="distance"): Unsupported prop "yFmt" on BarChart.
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
@@ -148,6 +150,7 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props',
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     Runtime errors in index.md:
     ECharts (data="chart_data" x="carrier" y="distance"): Unsupported prop "chartAreaHeight" on ECharts.
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
@@ -172,6 +175,7 @@ test('cli run with md file reports multiple dynamic unsupported chart props', as
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     Runtime errors in index.md:
     BarChart (data="chart_data" x="carrier" y="distance"): Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
@@ -202,6 +206,7 @@ test('cli run with md file reports runtime chart prop and render errors together
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     Runtime errors in index.md:
     ECharts (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
@@ -226,6 +231,7 @@ test('cli run with md file reports runtime query errors', async ({server, page})
   await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     Runtime errors in index.md:
     BarChart (data="runtime_error_query" x="origin" y="explode"): Out of Range Error: cannot take square root of a negative number
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
@@ -255,6 +261,7 @@ test('cli run with md file reports runtime chart configuration errors', async ({
   await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     Runtime errors in index.md:
     ECharts (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
@@ -278,6 +285,7 @@ test('cli run with md file reports table configuration errors', async ({server, 
   await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     Runtime errors in index.md:
     DataTable: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
@@ -302,6 +310,7 @@ test('cli run with md file reports big value query errors', async ({server, page
   await runMdFile({mdArg: 'index.md', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     Runtime errors in index.md:
     BigValue (data="big_value_data" value="value"): Out of Range Error: cannot take square root of a negative number
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
@@ -347,6 +356,7 @@ test('cli run with --chart captures a single chart screenshot', async ({server, 
   await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     No errors found 💎
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
@@ -369,6 +379,7 @@ test('cli run with --headless captures a screenshot without an open page', async
   await runMdFile({mdArg: 'index.md', headless: true, chart: 'Carrier Distance', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     No errors found 💎
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
@@ -403,6 +414,7 @@ test('cli run with --input applies inputs to a full page run', async ({server, p
   expect(queryBodies.some(body => JSON.stringify(body.params) == JSON.stringify({carrier: 'AA'}))).toBe(true)
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/?carrier=AA
     No errors found 💎
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
@@ -430,6 +442,7 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({ser
   await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     No errors found 💎
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
@@ -470,6 +483,7 @@ test('cli run with --chart captures a chart screenshot by component ID', async (
   await runMdFile({mdArg: 'index.md', chart: 'BarChart (data="chart_data" x="carrier" y="total_distance")', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
+    Page available at http://localhost:<port>/
     No errors found 💎
     Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
   `),
@@ -491,5 +505,10 @@ test('cli run with --chart reports when no chart title matches', async ({server,
   await page.goto(server.url())
   let result = await runMdFile({mdArg: 'index.md', chart: 'Missing Chart', log})
   expect(result).toBe(false)
-  expect(outputLines()).toEqual('Could not find chart "Missing Chart" on index.md')
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Page available at http://localhost:<port>/
+    Could not find chart "Missing Chart" on index.md
+  `),
+  )
 })

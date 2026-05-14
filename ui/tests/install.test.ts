@@ -164,6 +164,7 @@ limit 10
       'Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png',
     )
     expect(runOutput).toContain('No errors found 💎')
+    expect(runOutput).toContain(`Page available at http://localhost:${port}/chart`)
     expect(runOutput).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   } finally {
     let [stopCommand, stopArgs] = packageManager.graphene(['stop'])

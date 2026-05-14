@@ -17,6 +17,10 @@ graphene run path/to/page.md --headless # Run the page in a headless browser and
 graphene install-browser # Install the browser used by `graphene run --headless`
 graphene run path/to/page.md --input carrier=AA # Run the page with input values, overriding page defaults
 
+# Running a markdown page starts the local dev server in a persistent background process if one is not already running.
+# The command prints the live page URL, e.g. http://localhost:4000/path/to/page, and the server keeps running for hot reloads.
+# After iterating until the screenshot looks acceptable, agents can link users directly to that localhost URL.
+
 # `-c/--chart` can target either a chart title or the chart's `queryId`. For charts without titles use `graphene list` to see the exact IDs for charts on a page.
 graphene run path/to/page.md -c "Chart Title" # Run the page and screenshot one chart by title
 graphene run path/to/page.md -c 'Query (data="query_name" x="category" y="total")' # Run the page and screenshot one chart by queryId
