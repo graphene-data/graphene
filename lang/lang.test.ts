@@ -1622,6 +1622,41 @@ describe('lang', () => {
     }
   })
 
+  it('supports postgres function coverage and dialect-specific lowering', () => {
+    setGlobalConfig({dialect: 'postgres', root: ''})
+    try {
+      expect(`
+        from users select
+          current_date(),
+          current_timestamp,
+          local_timestamp
+      `).toRenderSql('SELECT CURRENT_DATE as col_0, CURRENT_TIMESTAMP as current_timestamp, LOCALTIMESTAMP as local_timestamp FROM users as users', {preserveCase: true})
+
+      expect("from users select date_trunc('month', created_at) as month_start, month(created_at) as month_num, date_part('dow', created_at)").toRenderSql(
+        "SELECT DATE_TRUNC('month',users.created_at) as month_start, EXTRACT(month FROM users.created_at) as month_num, date_part('dow',users.created_at) as dayofweek FROM users as users",
+        {preserveCase: true},
+      )
+
+      updateFile('table events (id int, tags array<string>)', 'events.gsql')
+      expect('from events cross join unnest(tags) as tag select id, tag').toRenderSql('SELECT events.id as id, tag as tag FROM events as events CROSS JOIN unnest(events.tags) AS tag(tag)')
+      expect('from users select p50(age) as median_age').toRenderSql('SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY users.age) as median_age FROM users as users', {preserveCase: true})
+      expect('from users select p50(age) over (partition by name)').toHaveDiagnostic(/Postgres does not support pXX as a window function/i)
+      expect('from users select cast(name as array<string>)').toRenderSql('SELECT CAST(users.name AS VARCHAR[]) as col_0 FROM users as users')
+      expect('from users select created_at - interval age minute as shifted').toRenderSql("SELECT users.created_at - (users.age * INTERVAL '1 minute') as shifted FROM users as users", {
+        preserveCase: true,
+      })
+      expect('from users select created_at - created_at as seconds').toRenderSql('SELECT EXTRACT(EPOCH FROM (users.created_at - users.created_at)) as seconds FROM users as users', {
+        preserveCase: true,
+      })
+      expect("from users select date '2024-01-01' - created_at as seconds").toRenderSql("SELECT EXTRACT(EPOCH FROM (DATE '2024-01-01' - users.created_at)) as seconds FROM users as users", {
+        preserveCase: true,
+      })
+      expect('from users select list(name) as names').toRenderSql('SELECT array_agg(users.name) as names FROM users as users')
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
   it('supports broader clickhouse function coverage', () => {
     setGlobalConfig({dialect: 'clickhouse', root: ''})
     try {

@@ -7,6 +7,7 @@ import {bigQueryFunctions} from './bigQueryFunctions.ts'
 import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
+import {postgresFunctions} from './postgresFunctions.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {arrayOf, scalarType, type Expr, type FieldMeta, type FieldType, isArrayType, isScalarType, type Scope, type TypeKind} from './types.ts'
 import {txt} from './util.ts'
@@ -17,6 +18,7 @@ interface Overload {
   returnType: {type: FieldType | 'generic' | 'array'; expressionType?: 'aggregate' | 'scalar' | 'window'}
   fanoutSafe?: boolean
   sqlName?: string
+  sqlTemplate?: string
   supportsBareInvocation?: boolean
   bareSqlName?: string
   metadata?: FunctionDef['metadata']
@@ -65,6 +67,7 @@ function convertDef(def: FunctionDef): Overload[] {
     returnType: {type: returnType, expressionType},
     fanoutSafe: def.fanoutSafe,
     sqlName: def.sqlName,
+    sqlTemplate: def.sqlTemplate,
     supportsBareInvocation: def.supportsBareInvocation && args.length == 0,
     bareSqlName: def.bareSqlName,
     metadata: def.metadata,
@@ -95,6 +98,7 @@ let dialectMaps: Record<string, Record<string, Overload[]>> = {
   bigquery: buildMap(bigQueryFunctions),
   clickhouse: buildMap(clickHouseFunctions),
   duckdb: buildMap(duckDbFunctions),
+  postgres: buildMap(postgresFunctions),
   snowflake: buildMap(snowflakeFunctions),
 }
 
@@ -180,7 +184,7 @@ function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[],
     fanoutSensitivePaths = mergeSensitiveFanouts(fanoutSensitivePaths, [fanout.path || extendFanoutPath(scope.fanoutPath)])
   }
   let fnName = opts.bare ? overload.bareSqlName || overload.sqlName || name : overload.sqlName || name
-  let sql = opts.bare ? fnName : `${fnName}(${args.map(a => a.sql).join(',')})`
+  let sql = opts.bare ? fnName : renderFunctionSql(fnName, overload, args)
   let metadata = inferFunctionFieldMetadata(overload, args)
   return {
     sql,
@@ -192,11 +196,18 @@ function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[],
   }
 }
 
+function renderFunctionSql(fnName: string, overload: Overload, args: Expr[]) {
+  if (!overload.sqlTemplate) return `${fnName}(${args.map(a => a.sql).join(',')})`
+  let argSqlByName = new Map(overload.params.map((param, idx) => [param.name, args[idx]?.sql || 'NULL']))
+  return overload.sqlTemplate.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, name) => argSqlByName.get(name) || 'NULL').replace(/,\s+/g, ',')
+}
+
 function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
   let frac = Number(`0.${digits}`)
   if (Number(digits) == 100) return analyzer.diag(node, 'p100 is not allowed', {sql: 'NULL', type: scalarType('error')})
   if (Number(digits) == 0) return analyzer.diag(node, 'p0 is not allowed', {sql: 'NULL', type: scalarType('error')})
   if (analyzer.config.dialect == 'bigquery' && frac > 0.99) return analyzer.diag(node, 'BigQuery only supports up to p99', {sql: 'NULL', type: scalarType('error')})
+  if (analyzer.config.dialect == 'postgres' && opts.isWindow) return analyzer.diag(node, 'Postgres does not support pXX as a window function', {sql: 'NULL', type: scalarType('error')})
 
   let inner = args[0]?.sql || 'NULL'
   let sql: string
@@ -215,6 +226,9 @@ function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], d
       sql = `quantile(${frac})(${inner})`
       break
     case 'snowflake':
+      sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`
+      break
+    case 'postgres':
       sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`
       break
     default:

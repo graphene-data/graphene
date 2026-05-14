@@ -33,6 +33,22 @@ export interface Config {
     requestTimeout?: number
   }
 
+  postgres?: {
+    connectionString?: string
+    host?: string
+    port?: number
+    database?: string
+    user?: string
+    username?: string
+    schema?: string
+    ssl?: boolean | {rejectUnauthorized?: boolean}
+    max?: number
+    idleTimeoutMillis?: number
+    connectionTimeoutMillis?: number
+    queryTimeout?: number
+    statementTimeout?: number
+  }
+
   duckdb?: {
     path?: string
   }
@@ -61,6 +77,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd())
   if (cfg.bigquery) dialect = 'bigquery'
   else if (cfg.snowflake) dialect = 'snowflake'
   else if (cfg.clickhouse) dialect = 'clickhouse'
+  else if (cfg.postgres) dialect = 'postgres'
   else if (cfg.duckdb) dialect = 'duckdb'
   let envFile = ['.env']
   if (Array.isArray(cfg.envFile)) envFile = cfg.envFile

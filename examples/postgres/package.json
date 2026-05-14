@@ -1,0 +1,32 @@
+{
+  "name": "postgres-example",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "graphene": "node ../../cli/cli.ts",
+    "dev": "npm run graphene serve",
+    "compile": "npm run graphene compile",
+    "run": "npm run graphene run",
+    "seed": "node seed.mjs",
+    "serve": "npm run dev"
+  },
+  "dependencies": {
+    "@graphenedata/cli": "workspace:*",
+    "pg": "8.13.3"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "graphene": {
+    "dialect": "postgres",
+    "defaultNamespace": "public",
+    "postgres": {
+      "schema": "public"
+    },
+    "envFile": [
+      ".env",
+      "../../.env",
+      "../../../.env"
+    ]
+  }
+}

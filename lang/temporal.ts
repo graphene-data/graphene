@@ -143,6 +143,10 @@ export function renderTemporalArithmetic(dialect: string, leftSql: string, leftT
 }
 
 export function renderStandaloneInterval(dialect: string, intervalExpr: NonNullable<Expr['interval']>) {
+  if (dialect == 'postgres') {
+    if (intervalExpr.form == 'constant') return `INTERVAL '${intervalExpr.quantitySql} ${intervalExpr.unit}'`
+    return `(${intervalExpr.quantitySql} * INTERVAL '1 ${intervalExpr.unit}')`
+  }
   if (dialect == 'duckdb') {
     if (intervalExpr.form == 'constant') return `interval ${intervalExpr.quantitySql} ${intervalExpr.unit}`
     return `(${intervalExpr.quantitySql} * (interval 1 ${intervalExpr.unit}))`
