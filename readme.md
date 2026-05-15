@@ -74,7 +74,7 @@ GSQL is inspired by [Malloy](https://github.com/malloydata/malloy), from the cre
 - [Try the demo project](https://github.com/graphene-data/example-flights)
 - [Create a new Graphene project](/docs/setup.md)
 
-Graphene currently supports Snowflake, BigQuery, ClickHouse, and local data (via DuckDB) as data sources. It is easy for us to add more - just ask.
+Graphene currently supports Snowflake, BigQuery, ClickHouse, Postgres, and local data (via DuckDB) as data sources. It is easy for us to add more - just ask.
 
 Once your project is set up, simply start the dev server via `npm exec graphene serve` (or `pnpm graphene serve`, etc. based on your package manager) and then prompt your coding agent to do analytics work: answer a data question, build a dashboard, edit the model, etc.
 

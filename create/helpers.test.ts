@@ -234,4 +234,34 @@ allow_local_binding = true
     expect(files['.env']).toContain('CLICKHOUSE_PASSWORD=secret')
     expect(files['index.md']).toContain('configured for ClickHouse')
   })
+
+  it('renders a postgres project with password env and schema config', () => {
+    let files = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {
+        targetDir: 'postgres-app',
+        projectName: 'postgres-app',
+        database: 'postgres',
+        defaultNamespace: 'reporting',
+        postgresHost: 'localhost',
+        postgresPort: '5432',
+        postgresDatabase: 'analytics',
+        postgresUsername: 'graphene_user',
+        postgresPassword: 'secret',
+        postgresSsl: true,
+        agentSetup: 'none',
+      },
+    })
+    let pkg = JSON.parse(files['package.json'])
+
+    expect(pkg.graphene).toEqual({
+      dialect: 'postgres',
+      defaultNamespace: 'reporting',
+      postgres: {host: 'localhost', port: 5432, database: 'analytics', user: 'graphene_user', ssl: true},
+    })
+    expect(files['AGENTS.md']).toContain('Assume all Postgres functions are available when writing GSQL.')
+    expect(pkg.dependencies['pg']).toBe('8.13.3')
+    expect(files['.env']).toContain('POSTGRES_PASSWORD=secret')
+    expect(files['index.md']).toContain('configured for Postgres')
+  })
 })

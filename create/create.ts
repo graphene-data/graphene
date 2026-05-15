@@ -16,8 +16,8 @@ interface CliPackageJson {
   peerDependencies?: Partial<Record<WarehouseClient, string>>
 }
 
-type Database = 'duckdb' | 'snowflake' | 'bigquery' | 'clickhouse'
-type WarehouseClient = '@clickhouse/client' | '@duckdb/node-api' | '@google-cloud/bigquery' | 'snowflake-sdk'
+type Database = 'duckdb' | 'snowflake' | 'bigquery' | 'clickhouse' | 'postgres'
+type WarehouseClient = '@clickhouse/client' | '@duckdb/node-api' | '@google-cloud/bigquery' | 'pg' | 'snowflake-sdk'
 type AgentSetup = 'codex' | 'claude' | 'other' | 'none'
 type CredentialFailureAction = 'edit' | 'continue'
 
@@ -48,6 +48,14 @@ interface ClickHouseConfig {
   username: string
 }
 
+interface PostgresConfig {
+  host: string
+  port: number
+  database: string
+  user: string
+  ssl?: boolean
+}
+
 interface GrapheneTemplateConfig {
   dialect: Database
   defaultNamespace?: string
@@ -55,6 +63,7 @@ interface GrapheneTemplateConfig {
   snowflake?: SnowflakeConfig
   bigquery?: BigQueryConfig
   clickhouse?: ClickHouseConfig
+  postgres?: PostgresConfig
 }
 
 interface TemplatePackageJson {
@@ -101,6 +110,12 @@ interface ScaffoldAnswers {
   clickhouseUrl?: string
   clickhouseUsername?: string
   clickhousePassword?: string
+  postgresHost?: string
+  postgresPort?: string
+  postgresDatabase?: string
+  postgresUsername?: string
+  postgresPassword?: string
+  postgresSsl?: boolean
   agentSetup: AgentSetup
 }
 
@@ -201,8 +216,16 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
     graphene.snowflake = {account: answers.snowflakeAccount || '', username: answers.snowflakeUsername || ''}
   } else if (answers.database === 'bigquery') {
     graphene.bigquery = {projectId: answers.bigqueryProjectId || ''}
-  } else {
+  } else if (answers.database === 'clickhouse') {
     graphene.clickhouse = {url: answers.clickhouseUrl || '', username: answers.clickhouseUsername || ''}
+  } else {
+    graphene.postgres = {
+      host: answers.postgresHost || '',
+      port: Number(answers.postgresPort || 5432),
+      database: answers.postgresDatabase || '',
+      user: answers.postgresUsername || '',
+    }
+    if (answers.postgresSsl) graphene.postgres.ssl = true
   }
 
   let pkg: TemplatePackageJson = {
@@ -295,6 +318,7 @@ function databaseLabel(database: Database) {
   if (database === 'snowflake') return 'Snowflake'
   if (database === 'bigquery') return 'BigQuery'
   if (database === 'clickhouse') return 'ClickHouse'
+  if (database === 'postgres') return 'Postgres'
   return 'DuckDB'
 }
 
@@ -311,6 +335,8 @@ function renderEnvFile(answers: ScaffoldAnswers): string | null {
     lines.push(`GOOGLE_APPLICATION_CREDENTIALS=${answers.bigqueryKeyPath || ''}`)
   } else if (answers.database === 'clickhouse') {
     lines.push(`CLICKHOUSE_PASSWORD=${answers.clickhousePassword || ''}`)
+  } else if (answers.database === 'postgres') {
+    lines.push(`POSTGRES_PASSWORD=${answers.postgresPassword || ''}`)
   }
   return lines.length ? lines.join('\n') + '\n' : null
 }
@@ -402,6 +428,7 @@ function getWarehouseClient(database: Database): WarehouseClient {
   if (database === 'snowflake') return 'snowflake-sdk'
   if (database === 'bigquery') return '@google-cloud/bigquery'
   if (database === 'clickhouse') return '@clickhouse/client'
+  if (database === 'postgres') return 'pg'
   return '@duckdb/node-api'
 }
 
@@ -482,6 +509,72 @@ async function promptWarehouseCredentials(answers: ScaffoldAnswers, input: Reada
         ...promptOptions(input, output),
       }),
     )
+    return
+  }
+
+  if (answers.database === 'postgres') {
+    answers.postgresHost = unwrapPrompt(
+      await clack.text({
+        message: 'Postgres host',
+        placeholder: 'localhost',
+        initialValue: answers.postgresHost || 'localhost',
+        validate: validateRequired('Postgres host is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.postgresPort = unwrapPrompt(
+      await clack.text({
+        message: 'Postgres port',
+        placeholder: '5432',
+        initialValue: answers.postgresPort || '5432',
+        validate: value => {
+          if (!value) return 'Postgres port is required'
+          if (!/^\d+$/.test(value)) return 'Postgres port must be a number'
+        },
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.postgresDatabase = unwrapPrompt(
+      await clack.text({
+        message: 'Postgres database',
+        placeholder: 'analytics',
+        initialValue: answers.postgresDatabase,
+        validate: validateRequired('Postgres database is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.postgresUsername = unwrapPrompt(
+      await clack.text({
+        message: 'Postgres username',
+        placeholder: 'graphene_user',
+        initialValue: answers.postgresUsername,
+        validate: validateRequired('Postgres username is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.postgresPassword = unwrapPrompt(
+      await clack.password({
+        message: 'Postgres password',
+        validate: validateRequired('Postgres password is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.defaultNamespace = unwrapPrompt(
+      await clack.text({
+        message: 'Postgres schema',
+        placeholder: 'public',
+        initialValue: answers.defaultNamespace || 'public',
+        validate: validateRequired('Postgres schema is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.postgresSsl = unwrapPrompt(
+      await clack.confirm({
+        message: 'Use SSL for Postgres?',
+        initialValue: answers.postgresSsl || false,
+        ...promptOptions(input, output),
+      }),
+    )
   }
 }
 
@@ -538,6 +631,7 @@ function runWarehouseCredentialTest(answers: ScaffoldAnswers): Promise<void> {
   if (answers.database === 'snowflake') return testSnowflakeCredentials(answers)
   if (answers.database === 'bigquery') return testBigQueryCredentials(answers)
   if (answers.database === 'clickhouse') return testClickHouseCredentials(answers)
+  if (answers.database === 'postgres') return testPostgresCredentials(answers)
   return Promise.resolve()
 }
 
@@ -588,6 +682,25 @@ async function testClickHouseCredentials(answers: ScaffoldAnswers): Promise<void
   }
 }
 
+async function testPostgresCredentials(answers: ScaffoldAnswers): Promise<void> {
+  let pg = (await import('pg')).default
+  let client = new pg.Client({
+    host: answers.postgresHost,
+    port: Number(answers.postgresPort || 5432),
+    database: answers.postgresDatabase,
+    user: answers.postgresUsername,
+    password: answers.postgresPassword,
+    ssl: answers.postgresSsl,
+    application_name: 'Graphene',
+  })
+  try {
+    await client.connect()
+    await client.query('SELECT 1')
+  } finally {
+    await client.end().catch(() => {})
+  }
+}
+
 function formatCredentialError(err: unknown): string {
   if (err instanceof Error && err.message) return err.message
   return String(err || 'Unknown error')
@@ -626,6 +739,7 @@ async function collectAnswers({options, packageManager, input, output}: {options
         {value: 'snowflake', label: 'Snowflake'},
         {value: 'bigquery', label: 'BigQuery'},
         {value: 'clickhouse', label: 'ClickHouse'},
+        {value: 'postgres', label: 'Postgres'},
         {value: 'duckdb', label: 'DuckDB (local file)'},
       ],
       ...promptOptions(input, output),

@@ -28,6 +28,14 @@ let clickHouseJsonMock = vi.fn().mockResolvedValue([])
 let clickHouseQueryMock = vi.fn().mockResolvedValue({json: clickHouseJsonMock})
 let clickHouseCloseMock = vi.fn().mockResolvedValue(undefined)
 let clickHouseCreateClientMock = vi.fn(() => ({query: clickHouseQueryMock, close: clickHouseCloseMock}))
+let postgresConnectMock = vi.fn().mockResolvedValue(undefined)
+let postgresQueryMock = vi.fn().mockResolvedValue({rows: [{'?column?': 1}]})
+let postgresEndMock = vi.fn().mockResolvedValue(undefined)
+let postgresClientMock = vi.fn(function (this: any) {
+  this.connect = postgresConnectMock
+  this.query = postgresQueryMock
+  this.end = postgresEndMock
+})
 
 vi.mock('@clack/prompts', () => ({
   text: textMock,
@@ -46,6 +54,7 @@ vi.mock('node:child_process', () => ({spawn: spawnMock}))
 vi.mock('snowflake-sdk', () => ({default: {configure: snowflakeConfigureMock, createConnection: snowflakeCreateConnectionMock}}))
 vi.mock('@google-cloud/bigquery', () => ({BigQuery: bigQueryMock}))
 vi.mock('@clickhouse/client', () => ({createClient: clickHouseCreateClientMock}))
+vi.mock('pg', () => ({default: {Client: postgresClientMock}}))
 
 afterEach(() => {
   textMock.mockReset()
@@ -81,6 +90,18 @@ afterEach(() => {
   clickHouseCloseMock.mockResolvedValue(undefined)
   clickHouseCreateClientMock.mockReset()
   clickHouseCreateClientMock.mockImplementation(() => ({query: clickHouseQueryMock, close: clickHouseCloseMock}))
+  postgresConnectMock.mockReset()
+  postgresConnectMock.mockResolvedValue(undefined)
+  postgresQueryMock.mockReset()
+  postgresQueryMock.mockResolvedValue({rows: [{'?column?': 1}]})
+  postgresEndMock.mockReset()
+  postgresEndMock.mockResolvedValue(undefined)
+  postgresClientMock.mockReset()
+  postgresClientMock.mockImplementation(function (this: any) {
+    this.connect = postgresConnectMock
+    this.query = postgresQueryMock
+    this.end = postgresEndMock
+  })
   vi.resetModules()
 })
 
@@ -221,6 +242,36 @@ describe('runCreate', () => {
     expect(pkg.dependencies['@clickhouse/client']).toBe('^1.18.2')
     expect(await readFile(path.join(root, 'clickhouse-app', '.env'), 'utf8')).toContain('CLICKHOUSE_PASSWORD=secret')
     expect(clickHouseCreateClientMock).toHaveBeenCalledWith(expect.objectContaining({database: 'default', password: 'secret'}))
+  })
+
+  it('writes a postgres project from interactive answers', async () => {
+    let root = await mkdtemp(path.join(os.tmpdir(), 'graphene-create-'))
+    let {runCreate} = await import('./create.ts')
+
+    textMock
+      .mockResolvedValueOnce('postgres-app')
+      .mockResolvedValueOnce('localhost')
+      .mockResolvedValueOnce('5432')
+      .mockResolvedValueOnce('analytics')
+      .mockResolvedValueOnce('graphene_user')
+      .mockResolvedValueOnce('reporting')
+    selectMock.mockResolvedValueOnce('postgres').mockResolvedValueOnce('none')
+    passwordMock.mockResolvedValue('secret')
+    confirmMock.mockResolvedValue(false)
+    spawnMock.mockImplementation(() => createChild())
+
+    await runCreate({argv: [], cwd: root, stdin: process.stdin, stdout: streamSink().stream, stderr: streamSink().stream})
+
+    let pkg = JSON.parse(await readFile(path.join(root, 'postgres-app', 'package.json'), 'utf8'))
+    expect(pkg.graphene).toEqual({
+      dialect: 'postgres',
+      defaultNamespace: 'reporting',
+      postgres: {host: 'localhost', port: 5432, database: 'analytics', user: 'graphene_user'},
+    })
+    expect(pkg.dependencies['pg']).toBe('8.13.3')
+    expect(await readFile(path.join(root, 'postgres-app', '.env'), 'utf8')).toContain('POSTGRES_PASSWORD=secret')
+    expect(postgresClientMock).toHaveBeenCalledWith(expect.objectContaining({host: 'localhost', port: 5432, database: 'analytics', user: 'graphene_user', password: 'secret', ssl: false}))
+    expect(postgresQueryMock).toHaveBeenCalledWith('SELECT 1')
   })
 
   it('refuses to write into a non-empty directory', async () => {

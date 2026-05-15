@@ -177,6 +177,9 @@ importers:
       '@google-cloud/bigquery':
         specifier: ^8.2.0
         version: 8.2.0
+      pg:
+        specifier: 8.13.3
+        version: 8.13.3
       snowflake-sdk:
         specifier: 2.4.0
         version: 2.4.0(asn1.js@5.4.1)
