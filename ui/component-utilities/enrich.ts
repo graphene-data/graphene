@@ -1,7 +1,7 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
-import {formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
+import {formatTimeOrdinal, formatTitle, makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {paletteForPath} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -28,6 +28,10 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   applyMissingPointDefaults(normalized, rows)
   applyStackPercentage(normalized, rows, fields)
   applySorting(normalized, rows, fields)
+
+  // Format wrapper-set axis names and wide-form series names before splitBy expansion,
+  // so generated splitBy series names (which carry raw data values) aren't rewritten.
+  titleCaseFieldLabels(normalized)
 
   let baseDatasetId = ensureDataset(normalized, rows, fields)
   expandSeriesSplitBy(normalized, rows, fields, baseDatasetId)
@@ -239,6 +243,18 @@ function buildSplitSeries(template: SeriesWithGroupingHint, datasetId: string, n
     delete next.encode.splitBy
   }
   return next
+}
+
+// Convert snake_case field names (used as axis/series labels) into Title Case so
+// chart labels stay consistent regardless of how the underlying column is named.
+// Runs before splitBy expansion so generated series names (raw data values) are left alone.
+function titleCaseFieldLabels(config: NormalConfig) {
+  for (let axis of [...config.xAxis, ...config.yAxis]) {
+    if (typeof axis?.name === 'string' && axis.name.length > 0) axis.name = formatTitle(axis.name)
+  }
+  for (let series of config.series) {
+    if (typeof series?.name === 'string' && series.name.length > 0) series.name = formatTitle(series.name)
+  }
 }
 
 // Ensure cartesian series always have at least one x/y axis object.
