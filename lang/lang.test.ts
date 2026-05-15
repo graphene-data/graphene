@@ -1641,6 +1641,7 @@ describe('lang', () => {
       expect('from events cross join unnest(tags) as tag select id, tag').toRenderSql('SELECT events.id as id, tag as tag FROM events as events CROSS JOIN unnest(events.tags) AS tag(tag)')
       expect('from users select p50(age) as median_age').toRenderSql('SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY users.age) as median_age FROM users as users', {preserveCase: true})
       expect('from users select p50(age) over (partition by name)').toHaveDiagnostic(/Postgres does not support pXX as a window function/i)
+      expect('from users select count_if(age > 18) as adults').toRenderSql('SELECT COUNT(*) FILTER (WHERE users.age>18) as adults FROM users as users', {preserveCase: true})
       expect('from users select cast(name as array<string>)').toRenderSql('SELECT CAST(users.name AS VARCHAR[]) as col_0 FROM users as users')
       expect('from users select created_at - interval age minute as shifted').toRenderSql("SELECT users.created_at - (users.age * INTERVAL '1 minute') as shifted FROM users as users", {
         preserveCase: true,

@@ -80,6 +80,7 @@ export const postgresFunctions: FunctionDef[] = [
   aggregate('bool_and', [{name: 'arg', type: 'boolean'}], 'boolean', {fanoutSafe: true, aliases: ['every']}),
   aggregate('bool_or', [{name: 'arg', type: 'boolean'}], 'boolean', {fanoutSafe: true}),
   aggregate('count', [{name: 'arg', type: 'any?'}], 'number'),
+  aggregate('count_if', [{name: 'condition', type: 'boolean'}], 'number', {sqlTemplate: 'COUNT(*) FILTER (WHERE ${condition})'}),
   aggregate('max', [{name: 'arg', type: 'T'}], 'T', {fanoutSafe: true}),
   aggregate('min', [{name: 'arg', type: 'T'}], 'T', {fanoutSafe: true}),
   aggregate('sum', [{name: 'arg', type: 'number'}], 'number'),
