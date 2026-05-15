@@ -9,6 +9,48 @@ Graphene can operate over any local data as long as it is converted into a singl
 </details>
 
 <details>
+<summary><h2>Postgres</h2></summary>
+
+Graphene can connect to any Postgres-compatible database that is reachable from your machine over the standard Postgres protocol. This includes local databases, databases reached through an SSH tunnel or proxy, and hosted Postgres services like Neon, AWS RDS, or Supabase when you already have the host, port, database, user, password, schema, and SSL setting needed to connect.
+
+Provider-specific setup, such as creating an RDS security group rule, starting a tunnel, configuring a cloud SQL proxy, or setting up IAM-based database authentication, should be handled before running the Graphene installer. Graphene stores non-secret connection settings in `package.json` and writes the password to `.env`.
+
+To set up Graphene on a Postgres connection you will need the following:
+
+- A database host and port, or a local tunnel that exposes one
+- A database name and schema, usually `public`
+- A user with permission to inspect schemas and query the tables/views you want Graphene to use
+- A password for that user
+- Whether the connection requires SSL
+
+### Step-by-step instructions
+
+1. Create a read-only user for Graphene. Adjust the database, schema, and password values before running:
+
+    ```sql
+    create user graphene_user with password 'REPLACE_WITH_A_STRONG_PASSWORD';
+    grant connect on database YOUR_DATABASE to graphene_user;
+    grant usage on schema YOUR_SCHEMA to graphene_user;
+    grant select on all tables in schema YOUR_SCHEMA to graphene_user;
+    grant select on all sequences in schema YOUR_SCHEMA to graphene_user;
+    alter default privileges in schema YOUR_SCHEMA grant select on tables to graphene_user;
+    alter default privileges in schema YOUR_SCHEMA grant select on sequences to graphene_user;
+    ```
+
+2. Confirm that the database is reachable from the machine where Graphene will run. For local or tunneled databases, this is often `localhost:5432`. For hosted databases, use the provider’s hostname and SSL requirement.
+3. Run `npm create graphene` and choose **Postgres**. The installer will validate the connection with `SELECT 1`.
+
+### Hosted Postgres notes
+
+Hosted Postgres providers usually work with the same Graphene Postgres connector once their provider-specific prerequisites are handled:
+
+- **AWS RDS/Aurora**: configure networking/security groups or a tunnel first. If you use IAM database authentication, generate the auth token before starting Graphene and expose it as the Postgres password. RDS connections commonly require TLS; when your connection string uses `sslmode=require`, Node may need the AWS RDS CA bundle in its trust store, for example `NODE_EXTRA_CA_CERTS=/path/to/aws-rds-ca-bundle.pem pnpm graphene check`.
+- **Neon**: use the pooled or direct Postgres hostname from Neon and enable SSL. Put the Neon password in `.env`, or use `DATABASE_URL`/`POSTGRES_URL` if you prefer a full connection string.
+- **Supabase, Crunchy Bridge, Cloud SQL, and similar providers**: use the provider's Postgres host, port, database, user, password, and SSL requirement. If the provider requires a proxy or custom CA certificate, start the proxy or configure Node's CA trust before running Graphene.
+
+</details>
+
+<details>
 <summary><h2>Snowflake</h2></summary>
 
 To set up Graphene on a Snowflake connection you will need the following:

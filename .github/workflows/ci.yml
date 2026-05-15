@@ -124,10 +124,32 @@ jobs:
   test-schema:
     runs-on: ubuntu-latest
     environment: test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: graphene
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d graphene"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
         with: {lfs: true}
       - uses: ./.github/actions/setup
+      - name: Seed Postgres example
+        run: pnpm -C examples/postgres seed
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: '5432'
+          POSTGRES_DATABASE: graphene
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
       - run: pnpm test cli/schema.test.ts
         env:
           SLOW_TEST: '1'
@@ -135,6 +157,11 @@ jobs:
           SNOWFLAKE_PRI_KEY: ${{ secrets.SNOWFLAKE_PRI_KEY }}
           SNOWFLAKE_PRI_PASSPHRASE: graphenedata
           CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: '5432'
+          POSTGRES_DATABASE: graphene
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
       - name: Upload failures
         if: failure()
         uses: actions/upload-artifact@v4
@@ -146,10 +173,32 @@ jobs:
   test-examples:
     runs-on: ubuntu-latest
     environment: test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: graphene
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d graphene"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
         with: {lfs: true}
       - uses: ./.github/actions/setup
+      - name: Seed Postgres example
+        run: pnpm -C examples/postgres seed
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: '5432'
+          POSTGRES_DATABASE: graphene
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
       - run: pnpm test ui/tests/run-examples.test.ts
         env:
           SLOW_TEST: '1'
@@ -157,6 +206,11 @@ jobs:
           SNOWFLAKE_PRI_KEY: ${{ secrets.SNOWFLAKE_PRI_KEY }}
           SNOWFLAKE_PRI_PASSPHRASE: graphenedata
           CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: '5432'
+          POSTGRES_DATABASE: graphene
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
       - name: Upload failures
         if: failure()
         uses: actions/upload-artifact@v4

@@ -37,6 +37,24 @@ export async function getConnection(): Promise<QueryConnection> {
       database: config.clickhouse?.database || config.defaultNamespace || 'default',
       requestTimeout: config.clickhouse?.requestTimeout,
     })
+  } else if (config.dialect === 'postgres') {
+    let mod = await importConnection(() => import('./postgres.ts'), 'pg', 'Postgres')
+    let connectionString = config.postgres?.connectionString || process.env.POSTGRES_URL || process.env.DATABASE_URL
+    let host = config.postgres?.host || process.env.PGHOST || process.env.POSTGRES_HOST
+    let database = config.postgres?.database || process.env.PGDATABASE || process.env.POSTGRES_DATABASE
+    let user = config.postgres?.user || config.postgres?.username || process.env.PGUSER || process.env.POSTGRES_USER
+    let password = process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD
+    if (!connectionString && (!host || !database || !user)) throw new Error('Postgres requires connectionString/POSTGRES_URL/DATABASE_URL or host, database, and user in config or env')
+    return new mod.PostgresConnection({
+      ...config.postgres,
+      connectionString,
+      host,
+      database,
+      user,
+      password,
+      schema: config.postgres?.schema || config.defaultNamespace,
+      port: config.postgres?.port || Number(process.env.PGPORT || process.env.POSTGRES_PORT) || undefined,
+    })
   } else if (config.dialect === 'snowflake') {
     let mod = await importConnection(() => import('./snowflake.ts'), 'snowflake-sdk', 'Snowflake')
     return new mod.SnowflakeConnection({
