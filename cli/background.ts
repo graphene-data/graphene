@@ -8,13 +8,13 @@ import {config} from '../lang/config.ts'
 
 const execAsync = promisify(exec)
 
-export async function runServeInBackground(): Promise<void> {
+export async function runServeInBackground(options: {entryPoint?: string; log?: (chunk: string) => void} = {}): Promise<void> {
   let grapheneCache = getGrapheneCache(config.root)
   let logFile = path.join(grapheneCache, 'serve.log')
   await fs.ensureDir(grapheneCache)
 
   let log = fs.openSync(logFile, 'w')
-  let entryPoint = process.argv[1] || fileURLToPath(import.meta.url)
+  let entryPoint = options.entryPoint || process.argv[1] || fileURLToPath(import.meta.url)
   let childArgs = [...process.execArgv, entryPoint, 'serve']
   let child = spawn(process.execPath, childArgs, {
     cwd: config.root,
@@ -27,23 +27,48 @@ export async function runServeInBackground(): Promise<void> {
 
   await new Promise<void>((resolve, reject) => {
     let buffer = ''
+    let settled = false
+    let close = () => {
+      if (settled) return false
+      settled = true
+      fs.unwatchFile(logFile)
+      fs.closeSync(log)
+      return true
+    }
+
     fs.watchFile(logFile, {interval: 200}, (curr, prev) => {
       if (curr.size > prev.size) {
-        // File has grown, read the new data
-        let stream = fs.createReadStream(logFile, {start: 0, end: curr.size - 1})
+        let stream = fs.createReadStream(logFile, {start: prev.size, end: curr.size - 1})
         stream.on('data', d => {
-          process.stdout.write(d)
+          if (options.log) options.log(d.toString())
+          else process.stdout.write(d)
           buffer = (buffer + d.toString()).slice(-200)
-          if (buffer.includes('Server running at http://localhost:')) resolve()
+          if (buffer.includes('Server running at http://localhost:') && close()) resolve()
         })
       }
     })
 
-    child.once('exit', () => {
-      reject(new Error('Exited before server started'))
+    child.once('exit', async (code, signal) => {
+      if (!close()) return
+      reject(new Error(await serverStartupErrorMessage({logFile, code, signal})))
     })
-    child.once('error', e => reject(e))
+    child.once('error', async e => {
+      if (!close()) return
+      reject(new Error(await serverStartupErrorMessage({logFile, err: e})))
+    })
   })
+}
+
+async function serverStartupErrorMessage({logFile, code = null, signal = null, err}: {logFile: string; code?: number | null; signal?: NodeJS.Signals | null; err?: Error}): Promise<string> {
+  let status = err ? err.message : `exited before startup finished${code === null ? '' : ` (code ${code})`}${signal ? ` (signal ${signal})` : ''}`
+  let logTail = await readLogTail(logFile)
+  return `Graphene server ${status}.\n\nLast output from ${logFile}:\n${logTail}`
+}
+
+async function readLogTail(logFile: string): Promise<string> {
+  let contents = await fs.readFile(logFile, 'utf8').catch(() => '')
+  let lines = contents.trimEnd().split('\n').slice(-20).join('\n').trim()
+  return lines || '<no output>'
 }
 
 export function getGrapheneCache(root: string): string {
