@@ -343,6 +343,10 @@ const handleRequestPlugin = {
         if (!pathName || pathName == '/') pathName = 'index'
         let relativeMdPath = pathName.replace(/^\//, '') + '.md'
         let mdPath = path.join(config.root, relativeMdPath)
+        if (!mockFileMap[relativeMdPath] && !(await fs.exists(mdPath))) {
+          relativeMdPath = pathName.replace(/^\//, '') + '/index.md'
+          mdPath = path.join(config.root, relativeMdPath)
+        }
 
         if (mockFileMap[relativeMdPath] || (await fs.exists(mdPath))) {
           await handlePage(s, res)
