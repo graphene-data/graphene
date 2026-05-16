@@ -41,6 +41,7 @@
   }: Props = $props()
 
   let rowsNum = $derived.by(() => {
+    if (String(rows).toLowerCase() === 'all') return Infinity
     let parsed = Number.parseInt(String(rows), 10)
     return (!Number.isFinite(parsed) || parsed <= 0) ? 10 : parsed
   })
