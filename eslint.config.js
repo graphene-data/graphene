@@ -110,4 +110,16 @@ export default [
       'no-case-declarations': 'off',
     },
   },
+  {
+    files: ['.github/scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {...globals.node},
+    },
+    rules: {
+      'no-console': 'off',
+      'require-await': 'off', // vitest mocks are routinely async-typed without awaiting
+    },
+  },
 ]

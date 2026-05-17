@@ -64,6 +64,13 @@ export default defineConfig({
           include: ['language-server/**/*.test.ts'],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'scripts',
+          include: ['.github/scripts/*.test.mjs'],
+        },
+      },
     ],
   },
 })
