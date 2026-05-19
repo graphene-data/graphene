@@ -15,6 +15,12 @@ allowBuilds:
 # Use minimumReleaseAgeExclude to bump past a known vulnerability
 minimumReleaseAge: 4320
 
+minimumReleaseAgeExclude:
+  - serialize-javascript
+
+overrides:
+  serialize-javascript: 7.0.3
+
 onlyBuiltDependencies:
   - '@vscode/vsce-sign'
   - duckdb
