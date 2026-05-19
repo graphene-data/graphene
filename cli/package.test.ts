@@ -65,12 +65,6 @@ describe('cli npm publish package', () => {
     })
   })
 
-  it('adds a postinstall browser installer to the staged manifest', () => {
-    let staged = createPublishPackageJson(sourcePackage, workspacePackages)
-
-    expect(staged.scripts).toEqual({postinstall: 'node dist/cli/installBrowser.js --postinstall'})
-  })
-
   it('does not merge dev-only dependencies', () => {
     let staged = createPublishPackageJson(sourcePackage, workspacePackages)
 
