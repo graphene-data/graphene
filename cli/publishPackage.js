@@ -56,7 +56,6 @@ export function createPublishPackageJson(sourcePackage, workspacePackages) {
 
   mergeDependencies(sourcePackage.dependencies, 'source package')
   if (Object.keys(dependencies).length) staged.dependencies = sortObject(dependencies)
-  staged.scripts = {postinstall: 'node dist/cli/installBrowser.js --postinstall'}
   return staged
 }
 
