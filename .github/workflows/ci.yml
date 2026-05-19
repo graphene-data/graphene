@@ -8,6 +8,9 @@ on:
 env:
   CI: true
 
+permissions:
+  contents: read
+
 jobs:
   check-commit-authors:
     if: github.event_name == 'pull_request' && github.repository == 'graphene-data/graphene'

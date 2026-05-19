@@ -30,7 +30,6 @@ const COMPONENT_FIELD_ATTRIBUTE_KEYS: Record<string, ComponentAttributeKey[]> = 
 }
 
 const FENCE = /^([ \t]*)(`{3,})([^\n]*)\n([\s\S]*?)^\1\2[ \t]*$/gim
-const COMPONENT_TAG = /<([A-Z][A-Za-z0-9]*)\s+(?:[^>"']|"[^"]*"|'[^']*')*\/>/g
 
 interface FenceMatch {
   start: number
@@ -200,21 +199,36 @@ function collectFences(source: string): FenceMatch[] {
 
 function collectComponents(source: string, fences: FenceMatch[]): ComponentMatch[] {
   let matches: ComponentMatch[] = []
-  COMPONENT_TAG.lastIndex = 0
-  let match: RegExpExecArray | null
-  while ((match = COMPONENT_TAG.exec(source))) {
-    let start = match.index ?? 0
-    let end = start + match[0].length
-    if (isInsideFence(start, fences)) continue
-    let componentName = match[1]
-    let attrs = extractSveltishAttributes(match[0], start)
+  let start = 0
+  while ((start = source.indexOf('<', start)) != -1) {
+    let tagStart = start
+    let end = findTagEnd(source, tagStart)
+    if (!end) break
+
+    let fragment = source.slice(tagStart, end)
+    let componentName = fragment.match(/^<([A-Z][A-Za-z0-9]*)\s/)?.[1]
+    start = end
+    if (!componentName || !fragment.endsWith('/>') || isInsideFence(tagStart, fences)) continue
+
+    let attrs = extractSveltishAttributes(fragment, tagStart)
     let attributeMatches: Partial<Record<ComponentAttributeKey, SveltishAttribute>> = {}
     for (let key of fieldAttributeKeys(componentName)) {
       if (attrs[key]) attributeMatches[key] = normalizeFieldAttribute(key, attrs[key])
     }
-    matches.push({start, end, data: attrs.data || null, attributes: attributeMatches, diagnostics: validateChartProps(componentName, attrs)})
+    matches.push({start: tagStart, end, data: attrs.data || null, attributes: attributeMatches, diagnostics: validateChartProps(componentName, attrs)})
   }
   return matches
+}
+
+function findTagEnd(source: string, start: number) {
+  let quote = ''
+  for (let i = start; i < source.length; i++) {
+    let ch = source[i]
+    if (quote && ch == quote) quote = ''
+    else if (!quote && (ch == '"' || ch == "'")) quote = ch
+    else if (!quote && ch == '>') return i + 1
+  }
+  return 0
 }
 
 function fieldAttributeKeys(componentName: string): ComponentAttributeKey[] {
