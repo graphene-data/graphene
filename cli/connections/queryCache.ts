@@ -29,7 +29,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
 
   if (!conn.retrieveCachedQuery) {
     let res = await conn.runQuery(sql, {...options, queryCache: options.queryCache || 'read-write'})
-    return withCacheStatus(res, res.cache || {status: 'delegated', provider})
+    return withCacheStatus(res, res.cache || {provider})
   }
 
   let store = new LocalQueryCacheStore(config.root)
@@ -44,13 +44,13 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
       if (entry && entry.expiresAt > now && entry.contextHash == contextHash && entry.provider == provider) {
         try {
           let res = await conn.retrieveCachedQuery(entry)
-          return withCacheStatus(res, {status: 'hit', provider, createdAt: entry.createdAt, expiresAt: entry.expiresAt})
+          return withCacheStatus(res, {provider, createdAt: entry.createdAt, expiresAt: entry.expiresAt})
         } catch (err) {
           await store.delete(key)
           throw err
         }
       }
-      if (entry) return withCacheStatus(await runFreshAndStore(conn, store, key, contextHash, sql, params, provider, now), {status: 'miss', provider})
+      if (entry) return withCacheStatus(await runFreshAndStore(conn, store, key, contextHash, sql, params, provider, now), {provider})
     } catch (err) {
       logCacheFallback(err)
       return await conn.runQuery(sql, {params})
@@ -59,7 +59,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
 
   try {
     let res = await runFreshAndStore(conn, store, key, contextHash, sql, params, provider, now)
-    return withCacheStatus(res, {status: 'miss', provider})
+    return withCacheStatus(res, {provider})
   } catch (err) {
     logCacheFallback(err)
     return await conn.runQuery(sql, {params})

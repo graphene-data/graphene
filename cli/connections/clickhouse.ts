@@ -87,7 +87,7 @@ function escapeClickHouseString(value: string) {
 }
 
 function clickHouseCacheStatus(headers: Record<string, string | string[] | undefined>): QueryCacheStatus {
-  let cache: QueryCacheStatus = {status: 'delegated', provider: 'clickhouse'}
+  let cache: QueryCacheStatus = {provider: 'clickhouse'}
   let age = Number(headerValue(headers, 'age'))
   if (Number.isFinite(age)) {
     cache.createdAt = Date.now() - age * 1000

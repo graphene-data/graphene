@@ -13,7 +13,7 @@ export interface SchemaColumn {
 export type QueryParams = unknown[] | Record<string, unknown>
 
 export type QueryCacheProvider = 'snowflake' | 'bigquery' | 'clickhouse'
-export type QueryCacheStatus = {status: 'hit' | 'miss' | 'delegated'; provider?: QueryCacheProvider; createdAt?: number; expiresAt?: number}
+export type QueryCacheStatus = {provider?: QueryCacheProvider; createdAt?: number; expiresAt?: number}
 export type QueryCacheRef = {provider: QueryCacheProvider; [key: string]: unknown}
 export type QueryCacheIdentity = QueryCacheRef
 export type QueryCacheMode = 'read-write' | 'refresh' | 'none'

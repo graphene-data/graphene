@@ -48,7 +48,7 @@ class DelegatedCacheConnection implements QueryConnection {
   runQuery(sql: string, options: QueryOptions = {}): Promise<QueryResult> {
     this.lastOptions = options
     this.lastSql = sql
-    return Promise.resolve({rows: [{source: 'fresh'}], totalRows: 1, cache: {status: 'delegated', provider: 'clickhouse'}})
+    return Promise.resolve({rows: [{source: 'fresh'}], totalRows: 1, cache: {provider: 'clickhouse'}})
   }
 
   lastSql?: string
@@ -138,8 +138,8 @@ describe('runWithQueryCache', () => {
     let first = await runWithQueryCache(conn, 'select 1')
     let second = await runWithQueryCache(conn, 'select 1')
 
-    expect(first.cache).toEqual({status: 'miss', provider: 'snowflake'})
-    expect(second.cache).toEqual(expect.objectContaining({status: 'hit', provider: 'snowflake', createdAt: expect.any(Number), expiresAt: expect.any(Number)}))
+    expect(first.cache).toEqual({provider: 'snowflake'})
+    expect(second.cache).toEqual(expect.objectContaining({provider: 'snowflake', createdAt: expect.any(Number), expiresAt: expect.any(Number)}))
     expect(second.rows).toEqual([{source: 'cache'}])
     expect(conn.freshRuns).toBe(1)
     expect(conn.cachedRuns).toBe(1)
@@ -183,7 +183,7 @@ describe('runWithQueryCache', () => {
     let refreshed = await runWithQueryCache(conn, 'select 1', {queryCache: 'refresh'})
     let cached = await runWithQueryCache(conn, 'select 1')
 
-    expect(refreshed.cache).toEqual({status: 'miss', provider: 'snowflake'})
+    expect(refreshed.cache).toEqual({provider: 'snowflake'})
     expect(cached.rows).toEqual([{source: 'cache'}])
     expect(conn.freshRuns).toBe(2)
     expect(conn.cachedRuns).toBe(1)
@@ -198,6 +198,6 @@ describe('runWithQueryCache', () => {
 
     expect(conn.lastSql).toBe('select 1')
     expect(conn.lastOptions).toEqual({queryCache: 'read-write'})
-    expect(res.cache).toEqual({status: 'delegated', provider: 'clickhouse'})
+    expect(res.cache).toEqual({provider: 'clickhouse'})
   })
 })

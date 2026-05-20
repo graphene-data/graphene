@@ -185,7 +185,7 @@ test('uses warehouse cache age when browser-cached warehouse results are reused'
         rows: [{num: 3}],
         fields: [{name: 'num', type: scalarType('number')}],
         sql: '',
-        cache: {status: 'hit', provider: 'snowflake', createdAt: Date.now() - 125 * 60 * 1000},
+        cache: {provider: 'snowflake', createdAt: Date.now() - 125 * 60 * 1000},
       }),
     })
   })
@@ -221,7 +221,7 @@ test('expires browser cache entries no later than warehouse cache expiration', a
         rows: [{num: 3}],
         fields: [{name: 'num', type: scalarType('number')}],
         sql: '',
-        cache: {status: 'hit', provider: 'snowflake', createdAt: Date.now() - 125 * 60 * 1000, expiresAt: Date.now() - 1},
+        cache: {provider: 'snowflake', createdAt: Date.now() - 125 * 60 * 1000, expiresAt: Date.now() - 1},
       }),
     })
   })

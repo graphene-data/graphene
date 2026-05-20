@@ -9,7 +9,7 @@ export interface QueryResult {
   cache?: QueryCacheStatus
 }
 
-export type QueryCacheStatus = {status: 'hit' | 'miss' | 'delegated'; provider?: 'snowflake' | 'bigquery' | 'clickhouse'; createdAt?: number; expiresAt?: number}
+export type QueryCacheStatus = {provider?: 'snowflake' | 'bigquery' | 'clickhouse'; createdAt?: number; expiresAt?: number}
 
 // A single output column in a query result.
 export type Field = {
