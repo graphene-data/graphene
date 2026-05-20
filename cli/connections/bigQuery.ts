@@ -38,7 +38,7 @@ export class BigQueryConnection implements QueryConnection {
     return {rows, totalRows, queryCacheRef: {provider: 'bigquery', projectId: this.projectId, jobId: job.id, location: job.location || this.location}}
   }
 
-  async runCachedQuery(entry: QueryCacheEntry): Promise<QueryResult> {
+  async retrieveCachedQuery(entry: QueryCacheEntry): Promise<QueryResult> {
     let jobId = String(entry.ref.jobId || '')
     if (!jobId) throw new Error('BigQuery cache entry is missing jobId')
 

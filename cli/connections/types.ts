@@ -35,7 +35,7 @@ export interface QueryConnection {
   runQuery(sql: string, options?: QueryOptions): Promise<QueryResult>
   queryCacheProvider?: QueryCacheProvider
   queryCacheIdentity?(): unknown
-  runCachedQuery?(entry: QueryCacheEntry): Promise<QueryResult>
+  retrieveCachedQuery?(entry: QueryCacheEntry): Promise<QueryResult>
   listDatasets(): Promise<string[]>
   listSchemas?(dataset: string): Promise<string[]>
   listTables(dataset?: string): Promise<string[]>

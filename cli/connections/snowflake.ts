@@ -90,7 +90,7 @@ export class SnowflakeConnection implements QueryConnection {
     })
   }
 
-  async runCachedQuery(entry: QueryCacheEntry): Promise<QueryResult> {
+  async retrieveCachedQuery(entry: QueryCacheEntry): Promise<QueryResult> {
     let queryId = String(entry.ref.queryId || '')
     if (!queryId) throw new Error('Snowflake cache entry is missing queryId')
     return await this.runQuery(`select * from table(result_scan('${queryId.replace(/'/g, "''")}'))`)

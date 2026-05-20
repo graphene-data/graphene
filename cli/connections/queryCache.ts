@@ -25,7 +25,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
   let provider = conn.queryCacheProvider
   if (!provider || config.queryCache === false) return await conn.runQuery(sql, {params})
 
-  if (!conn.runCachedQuery) {
+  if (!conn.retrieveCachedQuery) {
     let res = await conn.runQuery(sql, {...options, queryCache: options.queryCache || 'read-write'})
     return withCacheStatus(res, res.cache || {status: 'delegated', provider})
   }
@@ -41,7 +41,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
       let entry = await store.get(key)
       if (entry && entry.expiresAt > now && entry.contextHash == contextHash && entry.provider == provider) {
         try {
-          let res = await conn.runCachedQuery(entry)
+          let res = await conn.retrieveCachedQuery(entry)
           return withCacheStatus(res, {status: 'hit', provider})
         } catch (err) {
           await store.delete(key)

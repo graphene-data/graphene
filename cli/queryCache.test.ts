@@ -19,7 +19,7 @@ class StoredCacheConnection implements QueryConnection {
     return Promise.resolve({rows: [{source: 'fresh', n: this.freshRuns}], totalRows: 1, queryCacheRef: {provider: 'snowflake', queryId: `query-${this.freshRuns}`}})
   }
 
-  runCachedQuery(_entry: QueryCacheEntry): Promise<QueryResult> {
+  retrieveCachedQuery(_entry: QueryCacheEntry): Promise<QueryResult> {
     this.cachedRuns += 1
     if (this.failCached) throw new Error('cached result expired')
     return Promise.resolve({rows: [{source: 'cache'}], totalRows: 1})
