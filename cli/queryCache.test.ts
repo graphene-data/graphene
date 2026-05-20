@@ -108,6 +108,25 @@ describe('query cache store', () => {
     await fs.writeFile(file, '{not json')
     expect(await store.get('old')).toBeNull()
   })
+
+  it('preserves concurrent in-process metadata writes', async () => {
+    let root = await cacheProject()
+    let entries = Array.from({length: 20}, (_, i) => ({
+      key: `key-${i}`,
+      provider: 'snowflake' as const,
+      contextHash: 'ctx',
+      createdAt: i,
+      expiresAt: Date.now() + 1000,
+      ref: {provider: 'snowflake' as const, queryId: `query-${i}`},
+    }))
+
+    await Promise.all(entries.map(entry => new LocalQueryCacheStore(root).set(entry)))
+
+    let store = new LocalQueryCacheStore(root)
+    for (let entry of entries) {
+      expect(await store.get(entry.key)).toMatchObject({ref: {queryId: entry.ref.queryId}})
+    }
+  })
 })
 
 describe('runWithQueryCache', () => {

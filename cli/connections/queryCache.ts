@@ -7,6 +7,7 @@ import {type QueryCacheEntry, type QueryConnection, type QueryOptions, type Quer
 
 const CACHE_VERSION = 1
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
+const fileLocks = new Map<string, Promise<void>>()
 
 interface QueryCacheFile {
   version: number
@@ -118,28 +119,34 @@ export class LocalQueryCacheStore implements QueryCacheStore {
     let filePath = await this.filePath()
     if (!filePath) return
 
-    let state = await this.read()
-    state.entries[entry.key] = entry
-    await this.write(filePath, state)
+    await withFileLock(filePath, async () => {
+      let state = await this.read()
+      state.entries[entry.key] = entry
+      await this.write(filePath, state)
+    })
   }
 
   async delete(key: string): Promise<void> {
     let filePath = await this.filePath()
     if (!filePath) return
 
-    let state = await this.read()
-    delete state.entries[key]
-    await this.write(filePath, state)
+    await withFileLock(filePath, async () => {
+      let state = await this.read()
+      delete state.entries[key]
+      await this.write(filePath, state)
+    })
   }
 
   async prune(now = Date.now()): Promise<void> {
     let filePath = await this.filePath()
     if (!filePath) return
 
-    let state = await this.read()
-    let entries = Object.fromEntries(Object.entries(state.entries).filter(([, entry]) => entry.expiresAt > now))
-    if (Object.keys(entries).length == Object.keys(state.entries).length) return
-    await this.write(filePath, {...state, entries})
+    await withFileLock(filePath, async () => {
+      let state = await this.read()
+      let entries = Object.fromEntries(Object.entries(state.entries).filter(([, entry]) => entry.expiresAt > now))
+      if (Object.keys(entries).length == Object.keys(state.entries).length) return
+      await this.write(filePath, {...state, entries})
+    })
   }
 
   private async read(): Promise<QueryCacheFile> {
@@ -175,6 +182,17 @@ export class LocalQueryCacheStore implements QueryCacheStore {
 
 function defaultState(): QueryCacheFile {
   return {version: CACHE_VERSION, entries: {}}
+}
+
+async function withFileLock(filePath: string, fn: () => Promise<void>) {
+  let previous = fileLocks.get(filePath) || Promise.resolve()
+  let current = previous.catch(() => {}).then(fn)
+  fileLocks.set(filePath, current)
+  try {
+    await current
+  } finally {
+    if (fileLocks.get(filePath) === current) fileLocks.delete(filePath)
+  }
 }
 
 function hashValue(value: unknown) {
