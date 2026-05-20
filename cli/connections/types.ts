@@ -1,7 +1,6 @@
 export interface QueryResult {
   rows: Array<Record<string, unknown>>
   totalRows?: number
-  queryCacheRef?: QueryCacheRef
   cache?: QueryCacheStatus
 }
 
@@ -13,8 +12,8 @@ export interface SchemaColumn {
 export type QueryParams = unknown[] | Record<string, unknown>
 
 export type QueryCacheProvider = 'snowflake' | 'bigquery' | 'clickhouse'
-export type QueryCacheStatus = {provider?: QueryCacheProvider; createdAt?: number; expiresAt?: number}
 export type QueryCacheRef = {provider: QueryCacheProvider; [key: string]: unknown}
+export type QueryCacheStatus = {provider?: QueryCacheProvider; createdAt?: number; expiresAt?: number; ref?: QueryCacheRef}
 export type QueryCacheIdentity = QueryCacheRef
 export type QueryCacheMode = 'read-write' | 'refresh' | 'none'
 

@@ -31,7 +31,13 @@ export class BigQueryConnection implements QueryConnection {
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
     normalizeBigQueryRows(rows)
 
-    return {rows, totalRows, queryCacheRef: {provider: 'bigquery', projectId: this.projectId, jobId: job.id, location: job.location}}
+    return {
+      rows,
+      totalRows,
+      ...(options.queryCache && options.queryCache != 'none'
+        ? {cache: {provider: 'bigquery' as const, ref: {provider: 'bigquery' as const, projectId: this.projectId, jobId: job.id, location: job.location}}}
+        : {}),
+    }
   }
 
   async retrieveCachedQuery(entry: QueryCacheEntry): Promise<QueryResult> {

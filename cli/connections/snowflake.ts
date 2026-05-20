@@ -82,7 +82,11 @@ export class SnowflakeConnection implements QueryConnection {
           })
           stream.on('end', () => {
             let totalRows = Number(statement.getNumRows())
-            resolve({rows, totalRows, queryCacheRef: {provider: 'snowflake', queryId: statement.getQueryId()}})
+            resolve({
+              rows,
+              totalRows,
+              ...(options.queryCache && options.queryCache != 'none' ? {cache: {provider: 'snowflake' as const, ref: {provider: 'snowflake' as const, queryId: statement.getQueryId()}}} : {}),
+            })
           })
         },
       })

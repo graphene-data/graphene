@@ -15,7 +15,11 @@ class StoredCacheConnection implements QueryConnection {
 
   runQuery(_sql: string, _options?: QueryOptions): Promise<QueryResult> {
     this.freshRuns += 1
-    return Promise.resolve({rows: [{source: 'fresh', n: this.freshRuns}], totalRows: 1, queryCacheRef: {provider: 'snowflake', queryId: `query-${this.freshRuns}`}})
+    return Promise.resolve({
+      rows: [{source: 'fresh', n: this.freshRuns}],
+      totalRows: 1,
+      ...(_options?.queryCache && _options.queryCache != 'none' ? {cache: {provider: 'snowflake' as const, ref: {provider: 'snowflake' as const, queryId: `query-${this.freshRuns}`}}} : {}),
+    })
   }
 
   retrieveCachedQuery(_entry: QueryCacheEntry): Promise<QueryResult> {
@@ -138,7 +142,7 @@ describe('runWithQueryCache', () => {
     let first = await runWithQueryCache(conn, 'select 1')
     let second = await runWithQueryCache(conn, 'select 1')
 
-    expect(first.cache).toEqual({provider: 'snowflake'})
+    expect(first.cache).toEqual({provider: 'snowflake', ref: {provider: 'snowflake', queryId: 'query-1'}})
     expect(second.cache).toEqual(expect.objectContaining({provider: 'snowflake', createdAt: expect.any(Number), expiresAt: expect.any(Number)}))
     expect(second.rows).toEqual([{source: 'cache'}])
     expect(conn.freshRuns).toBe(1)
@@ -183,7 +187,7 @@ describe('runWithQueryCache', () => {
     let refreshed = await runWithQueryCache(conn, 'select 1', {queryCache: 'refresh'})
     let cached = await runWithQueryCache(conn, 'select 1')
 
-    expect(refreshed.cache).toEqual({provider: 'snowflake'})
+    expect(refreshed.cache).toEqual({provider: 'snowflake', ref: {provider: 'snowflake', queryId: 'query-2'}})
     expect(cached.rows).toEqual([{source: 'cache'}])
     expect(conn.freshRuns).toBe(2)
     expect(conn.cachedRuns).toBe(1)

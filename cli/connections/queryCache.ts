@@ -44,13 +44,13 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
       if (entry && entry.expiresAt > now && entry.contextHash == contextHash && entry.provider == provider) {
         try {
           let res = await conn.retrieveCachedQuery(entry)
-          return withCacheStatus(res, {provider, createdAt: entry.createdAt, expiresAt: entry.expiresAt})
+          return withCacheStatus(res, {provider, createdAt: entry.createdAt, expiresAt: entry.expiresAt, ref: entry.ref})
         } catch (err) {
           await store.delete(key)
           throw err
         }
       }
-      if (entry) return withCacheStatus(await runFreshAndStore(conn, store, key, contextHash, sql, params, provider, now), {provider})
+      if (entry) return withCacheStatus(await runFreshAndStore(conn, store, key, contextHash, sql, params, provider, now, options.queryCache || 'read-write'), {provider})
     } catch (err) {
       logCacheFallback(err)
       return await conn.runQuery(sql, {params})
@@ -58,7 +58,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
   }
 
   try {
-    let res = await runFreshAndStore(conn, store, key, contextHash, sql, params, provider, now)
+    let res = await runFreshAndStore(conn, store, key, contextHash, sql, params, provider, now, options.queryCache || 'read-write')
     return withCacheStatus(res, {provider})
   } catch (err) {
     logCacheFallback(err)
@@ -75,9 +75,10 @@ async function runFreshAndStore(
   params: QueryParams | undefined,
   provider: QueryCacheEntry['provider'],
   now: number,
+  queryCache: QueryOptions['queryCache'],
 ) {
-  let res = await conn.runQuery(sql, {params})
-  if (!res.queryCacheRef) return res
+  let res = await conn.runQuery(sql, {params, queryCache})
+  if (!res.cache?.ref) return res
 
   try {
     await store.set({
@@ -86,7 +87,7 @@ async function runFreshAndStore(
       contextHash,
       createdAt: now,
       expiresAt: now + CACHE_TTL_MS,
-      ref: res.queryCacheRef,
+      ref: res.cache.ref,
     })
   } catch (err) {
     logCacheFallback(err)
@@ -95,7 +96,7 @@ async function runFreshAndStore(
 }
 
 function withCacheStatus(res: QueryResult, cache: QueryResult['cache']): QueryResult {
-  return {...res, cache}
+  return {...res, cache: {...res.cache, ...cache}}
 }
 
 function logCacheFallback(err: unknown) {
