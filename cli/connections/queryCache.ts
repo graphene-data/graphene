@@ -23,7 +23,7 @@ export interface QueryCacheStore {
 export async function runWithQueryCache(conn: QueryConnection, sql: string, options: QueryOptions = {}): Promise<QueryResult> {
   let {params} = options
   let identity = conn.queryCacheIdentity?.()
-  if (!identity || config.queryCache === false) return await conn.runQuery(sql, {params})
+  if (!identity || config.queryCache !== true) return await conn.runQuery(sql, {params})
   let provider = identity.provider
 
   if (!conn.retrieveCachedQuery) {

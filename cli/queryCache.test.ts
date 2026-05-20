@@ -113,7 +113,7 @@ describe('query cache store', () => {
 describe('runWithQueryCache', () => {
   it('stores a fresh provider reference and replays it on the next matching query', async () => {
     let root = await cacheProject()
-    setGlobalConfig({root, dialect: 'snowflake', snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
+    setGlobalConfig({root, dialect: 'snowflake', queryCache: true, snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
     let conn = new StoredCacheConnection()
 
     let first = await runWithQueryCache(conn, 'select 1')
@@ -126,9 +126,9 @@ describe('runWithQueryCache', () => {
     expect(conn.cachedRuns).toBe(1)
   })
 
-  it('opts out when queryCache is false', async () => {
+  it('does not cache unless queryCache is true', async () => {
     let root = await cacheProject()
-    setGlobalConfig({root, dialect: 'snowflake', queryCache: false, snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
+    setGlobalConfig({root, dialect: 'snowflake', snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
     let conn = new StoredCacheConnection()
 
     let res = await runWithQueryCache(conn, 'select 1')
@@ -141,7 +141,7 @@ describe('runWithQueryCache', () => {
 
   it('logs and falls back to a direct query when replay fails', async () => {
     let root = await cacheProject()
-    setGlobalConfig({root, dialect: 'snowflake', snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
+    setGlobalConfig({root, dialect: 'snowflake', queryCache: true, snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
     let warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     let conn = new StoredCacheConnection()
 
@@ -157,7 +157,7 @@ describe('runWithQueryCache', () => {
 
   it('refreshes stored metadata without reading an existing cache entry', async () => {
     let root = await cacheProject()
-    setGlobalConfig({root, dialect: 'snowflake', snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
+    setGlobalConfig({root, dialect: 'snowflake', queryCache: true, snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
     let conn = new StoredCacheConnection()
 
     await runWithQueryCache(conn, 'select 1')
@@ -172,7 +172,7 @@ describe('runWithQueryCache', () => {
 
   it('delegates cache settings for providers without stored references', async () => {
     let root = await cacheProject()
-    setGlobalConfig({root, dialect: 'clickhouse', clickhouse: {url: 'https://example.com', username: 'default'}})
+    setGlobalConfig({root, dialect: 'clickhouse', queryCache: true, clickhouse: {url: 'https://example.com', username: 'default'}})
     let conn = new DelegatedCacheConnection()
 
     let res = await runWithQueryCache(conn, 'select 1')
