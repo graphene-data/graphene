@@ -28,6 +28,7 @@
       ".env",
       "../../.env",
       "../../../.env"
-    ]
+    ],
+    "queryCache": true
   }
 }
