@@ -105,7 +105,7 @@ program
       let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: gsql})}, 'input')
       let [query] = validateInputQuery(analysis, exit)
       let sql = renderSql(query, inputs, exit)
-      let res = await runQuery(sql, {cache: true})
+      let res = await runQuery(sql, {queryCache: 'read-write'})
       printTable(res.rows)
     }),
   )

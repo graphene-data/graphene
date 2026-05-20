@@ -77,7 +77,7 @@ export async function runQuery(sql: string, options: QueryOptions = {}): Promise
 
   let conn = await getConnection()
   try {
-    if (options.cache) return await runWithQueryCache(conn, sql, options)
+    if (options.queryCache && options.queryCache != 'none') return await runWithQueryCache(conn, sql, options)
     return await conn.runQuery(sql, options)
   } finally {
     await conn.close()

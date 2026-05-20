@@ -14,6 +14,7 @@ import type {AnalysisResult, WorkspaceFileInput} from '../lang/types.ts'
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
 import {runQuery} from './connections/index.ts'
+import {type QueryCacheMode} from './connections/types.ts'
 import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {runVitePlugin} from './run.ts'
@@ -180,7 +181,8 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
     return res.end()
   }
 
-  let queryResults = await runQuery(sql, {cache: true, bypassCache: req.headers['cache-control'] == 'no-cache'})
+  let queryCache: QueryCacheMode = req.headers['cache-control'] == 'no-cache' ? 'refresh' : 'read-write'
+  let queryResults = await runQuery(sql, {params, queryCache})
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
   let fields = queries[0].fields.map(field => ({name: field.name, type: field.type, metadata: field.metadata || {}}))

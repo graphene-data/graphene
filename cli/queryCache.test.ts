@@ -153,6 +153,21 @@ describe('runWithQueryCache', () => {
     warn.mockRestore()
   })
 
+  it('refreshes stored metadata without reading an existing cache entry', async () => {
+    let root = await cacheProject()
+    setGlobalConfig({root, dialect: 'snowflake', snowflake: {account: 'acct', username: 'user', privateKeyPath: 'key'}})
+    let conn = new StoredCacheConnection()
+
+    await runWithQueryCache(conn, 'select 1')
+    let refreshed = await runWithQueryCache(conn, 'select 1', {queryCache: 'refresh'})
+    let cached = await runWithQueryCache(conn, 'select 1')
+
+    expect(refreshed.cache).toEqual({status: 'miss', provider: 'snowflake'})
+    expect(cached.rows).toEqual([{source: 'cache'}])
+    expect(conn.freshRuns).toBe(2)
+    expect(conn.cachedRuns).toBe(1)
+  })
+
   it('delegates cache settings for providers without stored references', async () => {
     let root = await cacheProject()
     setGlobalConfig({root, dialect: 'clickhouse', clickhouse: {url: 'https://example.com', username: 'default'}})
@@ -161,7 +176,7 @@ describe('runWithQueryCache', () => {
     let res = await runWithQueryCache(conn, 'select 1')
 
     expect(conn.lastSql).toBe('select 1')
-    expect(conn.lastOptions).toEqual({cache: true})
+    expect(conn.lastOptions).toEqual({queryCache: 'read-write'})
     expect(res.cache).toEqual({status: 'delegated', provider: 'clickhouse'})
   })
 })

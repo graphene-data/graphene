@@ -26,7 +26,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
   if (!provider || config.queryCache === false) return await conn.runQuery(sql, {params})
 
   if (!conn.runCachedQuery) {
-    let res = await conn.runQuery(sql, {...options, cache: true})
+    let res = await conn.runQuery(sql, {...options, queryCache: options.queryCache || 'read-write'})
     return withCacheStatus(res, res.cache || {status: 'delegated', provider})
   }
 
@@ -35,7 +35,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
   let key = hashValue({version: CACHE_VERSION, dialect: config.dialect, root: config.root, sql, params: params || null, contextHash})
   let now = Date.now()
 
-  if (!options.bypassCache) {
+  if (options.queryCache != 'refresh') {
     try {
       await store.prune(now)
       let entry = await store.get(key)

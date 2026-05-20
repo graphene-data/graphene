@@ -15,6 +15,7 @@ export type QueryParams = unknown[] | Record<string, unknown>
 export type QueryCacheProvider = 'snowflake' | 'bigquery' | 'clickhouse'
 export type QueryCacheStatus = {status: 'hit' | 'miss' | 'delegated'; provider?: QueryCacheProvider}
 export type QueryCacheRef = {provider: QueryCacheProvider; [key: string]: unknown}
+export type QueryCacheMode = 'read-write' | 'refresh' | 'none'
 
 export interface QueryCacheEntry {
   key: string
@@ -27,8 +28,7 @@ export interface QueryCacheEntry {
 
 export interface QueryOptions {
   params?: QueryParams
-  cache?: boolean
-  bypassCache?: boolean
+  queryCache?: QueryCacheMode
 }
 
 export interface QueryConnection {

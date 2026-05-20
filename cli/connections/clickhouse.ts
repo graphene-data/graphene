@@ -28,14 +28,14 @@ export class ClickHouseConnection implements QueryConnection {
   }
 
   async runQuery(sql: string, options: QueryOptions = {}): Promise<QueryResult> {
-    let {cache} = options
+    let useQueryCache = options.queryCache && options.queryCache != 'none'
     let result = await this.client.query({
       query: sql,
       format: 'JSONEachRow',
-      ...(cache ? {clickhouse_settings: {use_query_cache: 1, query_cache_ttl: 86400}} : {}),
+      ...(useQueryCache ? {clickhouse_settings: {use_query_cache: 1, query_cache_ttl: 86400}} : {}),
     })
     let rows = (await result.json()) as Array<Record<string, unknown>>
-    return {rows, totalRows: rows.length, ...(cache ? {cache: {status: 'delegated' as const, provider: 'clickhouse' as const}} : {})}
+    return {rows, totalRows: rows.length, ...(useQueryCache ? {cache: {status: 'delegated' as const, provider: 'clickhouse' as const}} : {})}
   }
 
   async listDatasets(): Promise<string[]> {
