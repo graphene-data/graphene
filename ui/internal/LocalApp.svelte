@@ -9,17 +9,18 @@
   import ErrorDisplay from './ErrorDisplay.svelte'
   import ChartGallery from './ChartGallery.svelte'
   import StyleGallery from './StyleGallery.svelte'
+  import {pageCacheState, refreshQueries} from './queryEngine.ts'
   import {type GrapheneError} from '../../lang/index.js'
 
   let pageInputs = activatePageInputs(new PageInputs())
   setPageInputsContext(pageInputs)
-  onDestroy(() => releasePageInputs(pageInputs))
 
   // Nav sidebar with HMR support for the virtual file list
   let navData = $state(navFiles)
   import.meta.hot?.accept('virtual:nav', mod => navData = mod.default)
 
   let pathName = window.location.pathname.replace(/^\//, '') || 'index'
+  let ageTimer: number | undefined
 
   // Track compile errors from both initial load and subsequent HMR failures.
   let compileError = $state<GrapheneError | null>(null)
@@ -43,8 +44,12 @@
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
   let Page = $state<any>(null)
   let pageMeta = $state<any>({})
+  let now = $state(Date.now())
+  let cacheAge = $derived(formatCacheAge($pageCacheState.oldestCreatedAt, now))
 
   onMount(async () => {
+    ageTimer = window.setInterval(() => now = Date.now(), 60_000)
+
     try {
       // force fonts to load before we mount the component.
       // This is important for echarts, as it measures text and if done with the wrong font, then
@@ -70,12 +75,38 @@
       window.$GRAPHENE.appLoading = false
     }
   })
+
+  onDestroy(() => {
+    releasePageInputs(pageInputs)
+    if (ageTimer) window.clearInterval(ageTimer)
+  })
+
+  function formatCacheAge(createdAt: number | undefined, timestamp: number) {
+    if (!createdAt) return ''
+
+    let ageMs = Math.max(0, timestamp - createdAt)
+    let minutes = Math.floor(ageMs / 60_000)
+    if (minutes < 1) return 'under 1m old'
+    if (minutes < 60) return `${minutes}m old`
+
+    let hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h old`
+
+    return `${Math.floor(hours / 24)}d old`
+  }
 </script>
 
 <SidebarToggle style='position:fixed;top:2rem;left:2rem;opacity:0.3;' />
 <Sidebar>
   <PageNavGroup files={navData} />
 </Sidebar>
+
+{#if cacheAge}
+  <div class="query-cache-status" aria-live="polite">
+    <span>Oldest cached result {cacheAge}</span>
+    <button type="button" onclick={() => refreshQueries()} disabled={$pageCacheState.loading}>Refresh</button>
+  </div>
+{/if}
 
 <main id="content" class={{pageContent: compileError || !!Page, dashboardLayout: pageMeta.layout == 'dashboard'}}>
   {#if compileError}
@@ -102,6 +133,55 @@
   }
 
   .page-error-heading { margin-top: 0; }
+
+  .query-cache-status {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: calc(100vw - 4rem);
+    padding: 6px 8px 6px 10px;
+    border: 1px solid #d9dee7;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    color: #475569;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .query-cache-status button {
+    flex: 0 0 auto;
+    min-height: 26px;
+    padding: 4px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    background: #fff;
+    color: #1f2937;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .query-cache-status button:hover:not(:disabled) {
+    border-color: #94a3b8;
+    background: #f8fafc;
+  }
+
+  .query-cache-status button:disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+
+  @media (max-width: 720px) {
+    .query-cache-status {
+      top: 1.25rem;
+      right: 1rem;
+      max-width: calc(100vw - 5rem);
+    }
+  }
 
   /* want to control this margin so it lines up with the SidebarToggle */
   main h1:first-child {

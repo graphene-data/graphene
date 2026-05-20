@@ -109,6 +109,45 @@ test('remaps Snowflake-style uppercase query result keys to requested field casi
   await expect(page).screenshot('markdown-snowflake-uppercase-result-keys')
 })
 
+test('shows page cache age and refreshes queries without cache', async ({server, page}) => {
+  let cacheControlHeaders: string[] = []
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql cached_count
+    select 3 as num
+    \`\`\`
+
+    <Value data="cached_count" column="num" />
+  `,
+  )
+
+  await page.route('**/_api/query', async route => {
+    let cacheControl = route.request().headers()['cache-control'] || ''
+    cacheControlHeaders.push(cacheControl)
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: {ETag: `cache-status-${cacheControlHeaders.length}`},
+      body: JSON.stringify({
+        rows: [{num: 3}],
+        fields: [{name: 'num', type: scalarType('number')}],
+        sql: '',
+        cache: cacheControl == 'no-cache' ? undefined : {status: 'hit', provider: 'snowflake', createdAt: Date.now() - 125 * 60 * 1000},
+      }),
+    })
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page.getByText('Oldest cached result 2h old')).toBeVisible()
+  await expect(page).screenshot('markdown-query-cache-status')
+
+  await page.getByRole('button', {name: 'Refresh'}).click()
+  await expect.poll(() => cacheControlHeaders.at(-1)).toBe('no-cache')
+  await expect(page.getByText('Oldest cached result')).not.toBeVisible()
+})
+
 test('deduplicates chart query fields already used for sort', async ({server, page}) => {
   server.mockFile(
     '/index.md',

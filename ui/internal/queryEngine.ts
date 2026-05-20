@@ -1,6 +1,8 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
+import {writable} from 'svelte/store'
+
 import type {GrapheneError} from '../../lang/index.d.ts'
 
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
@@ -27,14 +29,22 @@ export interface QueryRequest {
   repoId: string
 }
 
-export type QueryFetcher = (req: QueryRequest) => Promise<QueryResult>
+export interface PageCacheState {
+  oldestCreatedAt?: number
+  loading: boolean
+}
+
+export type QueryFetcher = (req: QueryRequest, options?: {refresh?: boolean}) => Promise<QueryResult>
 
 let runPending: Promise<void> | null = null
+let refreshNextRun = false
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
+let cachedQueryTimestamps = new Map<QueryNode, number>()
 
 let queryFetcher: QueryFetcher = fetchWithCache
 export const setQueryFetcher = f => (queryFetcher = f)
+export const pageCacheState = writable<PageCacheState>({loading: false})
 
 // Called by GrapheneQuery tags to register a named query on the page
 function registerQuery(name: string, contents: string) {
@@ -60,23 +70,28 @@ function query(source: string, fields: Record<string, string | string[]>, callba
 }
 
 function unsubscribe(callback: ResultHandler) {
+  queries.filter(q => q.callback === callback).forEach(q => cachedQueryTimestamps.delete(q))
   queries = queries.filter(q => q.callback !== callback)
+  updatePageCacheState()
 }
 
 function resetQueryEngine() {
   queries = []
   Object.keys(queryResults).forEach(key => delete queryResults[key])
+  cachedQueryTimestamps.clear()
+  updatePageCacheState()
   getActivePageInputs().reset()
 }
 
 // Actually runs a given query that some frontend component is listening to.
 // This is pretty dumb at the moment, it simply concats all code fenced queries as table statements, then appends the actual query at the end.
-async function runNode(n: QueryNode) {
+async function runNode(n: QueryNode, refresh = false) {
   if (!n.callback) throw new Error('running node nobody is listening to')
 
   n.callback() // notifies listeners we're back in the loading state
   n.loading = true
   n.error = undefined
+  updatePageCacheState()
 
   // build up the request body. Hashes is the list of ETag hashes currently in our browser cache. We send all of them,
   // letting the server determine the hash of this particular query, and whether data we already have is acceptable.
@@ -86,24 +101,27 @@ async function runNode(n: QueryNode) {
   let params = getActivePageInputs().getParams()
 
   try {
-    let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId})
+    let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh})
+    updateQueryCacheTimestamp(n, res)
     let result = translateData(res, n)
     if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
     n.callback(result)
   } catch (e) {
+    cachedQueryTimestamps.delete(n)
     let err = typeof e == 'string' ? new Error(e) : (e as Error)
     let grapheneError = err as GrapheneError
     n.error = {...grapheneError, componentId: n.componentId || grapheneError.componentId, message: err.message, stack: err.stack}
     n.callback({rows: [], fields: [], error: n.error, sql: ''})
   } finally {
     n.loading = false
+    updatePageCacheState()
   }
 }
 
-async function fetchWithCache(req: QueryRequest): Promise<QueryResult> {
+async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}): Promise<QueryResult> {
   let response = await fetch('/_api/query', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', ...(options.refresh ? {'Cache-Control': 'no-cache'} : {})},
     body: JSON.stringify(req),
   })
   let hash = response.headers.get('ETag') || ''
@@ -129,13 +147,23 @@ function runAll() {
   runPending = Promise.resolve()
     .then(_runAll)
     .finally(() => (runPending = null))
+  return runPending
+}
+
+export async function refreshQueries() {
+  refreshNextRun = true
+  if (runPending) await runPending
+  return runAll()
 }
 
 async function _runAll() {
+  let refresh = refreshNextRun
+  refreshNextRun = false
+
   await Promise.all(
     queries.map(async n => {
       if (!n.callback) return
-      await runNode(n)
+      await runNode(n, refresh)
     }),
   )
 }
@@ -174,6 +202,24 @@ export function translateData(data: any, node: QueryNode): QueryResult {
 
 const isQueryLoading = () => !!queries.find(q => q.loading)
 
+function updateQueryCacheTimestamp(n: QueryNode, res: QueryResult) {
+  let createdAt = res.cache?.createdAt
+  if (createdAt) {
+    cachedQueryTimestamps.set(n, createdAt)
+  } else {
+    cachedQueryTimestamps.delete(n)
+  }
+  updatePageCacheState()
+}
+
+function updatePageCacheState() {
+  let timestamps = [...cachedQueryTimestamps.values()]
+  pageCacheState.set({
+    oldestCreatedAt: timestamps.length ? Math.min(...timestamps) : undefined,
+    loading: isQueryLoading(),
+  })
+}
+
 if (typeof window !== 'undefined') {
   Object.assign(window.$GRAPHENE, {
     getParam: (name: string) => getActivePageInputs().getParam(name),
@@ -186,6 +232,7 @@ if (typeof window !== 'undefined') {
     unsubscribe,
     resetQueryEngine,
     rerunQueries: runAll,
+    refreshQueries,
     isQueryLoading,
     queryResults,
   })
