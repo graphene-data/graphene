@@ -43,7 +43,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
       if (entry && entry.expiresAt > now && entry.contextHash == contextHash && entry.provider == provider) {
         try {
           let res = await conn.retrieveCachedQuery(entry)
-          return withCacheStatus(res, {status: 'hit', provider})
+          return withCacheStatus(res, {status: 'hit', provider, createdAt: entry.createdAt, expiresAt: entry.expiresAt})
         } catch (err) {
           await store.delete(key)
           throw err

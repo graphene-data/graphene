@@ -1,6 +1,6 @@
 import {createClient, type ClickHouseClient} from '@clickhouse/client'
 
-import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryOptions, type QueryCacheStatus} from './types.ts'
 
 export interface ClickHouseOptions {
   url: string
@@ -34,7 +34,7 @@ export class ClickHouseConnection implements QueryConnection {
       ...(useQueryCache ? {clickhouse_settings: {use_query_cache: 1, query_cache_ttl: 86400}} : {}),
     })
     let rows = (await result.json()) as Array<Record<string, unknown>>
-    return {rows, totalRows: rows.length, ...(useQueryCache ? {cache: {status: 'delegated' as const, provider: 'clickhouse' as const}} : {})}
+    return {rows, totalRows: rows.length, ...(useQueryCache ? {cache: clickHouseCacheStatus(result.response_headers)} : {})}
   }
 
   queryCacheIdentity() {
@@ -84,4 +84,21 @@ export class ClickHouseConnection implements QueryConnection {
 
 function escapeClickHouseString(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+function clickHouseCacheStatus(headers: Record<string, string | string[] | undefined>): QueryCacheStatus {
+  let cache: QueryCacheStatus = {status: 'delegated', provider: 'clickhouse'}
+  let age = Number(headerValue(headers, 'age'))
+  if (Number.isFinite(age)) {
+    cache.createdAt = Date.now() - age * 1000
+  }
+
+  let expiresAt = Date.parse(headerValue(headers, 'expires') || '')
+  if (Number.isFinite(expiresAt)) cache.expiresAt = expiresAt
+  return cache
+}
+
+function headerValue(headers: Record<string, string | string[] | undefined>, name: string) {
+  let value = headers[name] || headers[name.toLowerCase()] || headers[name.toUpperCase()]
+  return Array.isArray(value) ? value[0] : value
 }

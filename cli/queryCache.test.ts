@@ -120,7 +120,7 @@ describe('runWithQueryCache', () => {
     let second = await runWithQueryCache(conn, 'select 1')
 
     expect(first.cache).toEqual({status: 'miss', provider: 'snowflake'})
-    expect(second.cache).toEqual({status: 'hit', provider: 'snowflake'})
+    expect(second.cache).toEqual(expect.objectContaining({status: 'hit', provider: 'snowflake', createdAt: expect.any(Number), expiresAt: expect.any(Number)}))
     expect(second.rows).toEqual([{source: 'cache'}])
     expect(conn.freshRuns).toBe(1)
     expect(conn.cachedRuns).toBe(1)
