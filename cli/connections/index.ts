@@ -2,7 +2,8 @@ import {readFileSync} from 'fs'
 
 import {config} from '../../lang/config.ts'
 import {authenticatedFetch} from '../auth.ts'
-import {type QueryResult, type QueryConnection, type QueryParams} from './types.ts'
+import {runWithQueryCache} from './queryCache.ts'
+import {type QueryResult, type QueryConnection, type QueryOptions} from './types.ts'
 
 // Reads credentials from environment variables and passes them to the connection constructors.
 // The connection classes themselves have no env-reading logic — this keeps the cloud server
@@ -18,7 +19,7 @@ export async function getConnection(): Promise<QueryConnection> {
     } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
       // env var is the path of a json cred file
       let parsed = JSON.parse(readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, {encoding: 'utf-8'}))
-      options = {projectId: parsed.project_id}
+      options = {projectId: parsed.project_id, credentials: parsed}
     }
     return new mod.BigQueryConnection(options)
   } else if (config.dialect === 'duckdb') {
@@ -64,19 +65,20 @@ async function importConnection<T>(load: () => Promise<T>, packageName: string, 
   }
 }
 
-export async function runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
+export async function runQuery(sql: string, options: QueryOptions = {}): Promise<QueryResult> {
   if (config.host) {
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({sql, params}),
+      body: JSON.stringify({sql, ...options}),
     })
     return await resp.json()
   }
 
   let conn = await getConnection()
   try {
-    return await conn.runQuery(sql, params)
+    if (options.cache) return await runWithQueryCache(conn, sql, options)
+    return await conn.runQuery(sql, options)
   } finally {
     await conn.close()
   }

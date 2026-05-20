@@ -1,6 +1,6 @@
 import {createClient, type ClickHouseClient} from '@clickhouse/client'
 
-import {type QueryConnection, type QueryResult, type QueryParams, type SchemaColumn} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
 
 export interface ClickHouseOptions {
   url: string
@@ -11,6 +11,7 @@ export interface ClickHouseOptions {
 }
 
 export class ClickHouseConnection implements QueryConnection {
+  queryCacheProvider = 'clickhouse' as const
   private client: ClickHouseClient
   private defaultDatabase: string
 
@@ -26,10 +27,15 @@ export class ClickHouseConnection implements QueryConnection {
     })
   }
 
-  async runQuery(sql: string, _params?: QueryParams): Promise<QueryResult> {
-    let result = await this.client.query({query: sql, format: 'JSONEachRow'})
+  async runQuery(sql: string, options: QueryOptions = {}): Promise<QueryResult> {
+    let {cache} = options
+    let result = await this.client.query({
+      query: sql,
+      format: 'JSONEachRow',
+      ...(cache ? {clickhouse_settings: {use_query_cache: 1, query_cache_ttl: 86400}} : {}),
+    })
     let rows = (await result.json()) as Array<Record<string, unknown>>
-    return {rows, totalRows: rows.length}
+    return {rows, totalRows: rows.length, ...(cache ? {cache: {status: 'delegated' as const, provider: 'clickhouse' as const}} : {})}
   }
 
   async listDatasets(): Promise<string[]> {

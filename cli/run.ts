@@ -151,7 +151,7 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
     console.error(err instanceof Error ? err.message : String(err))
     return false
   }
-  let res = await runQuery(sql)
+  let res = await runQuery(sql, {cache: true})
   printTable(res.rows)
   return true
 }

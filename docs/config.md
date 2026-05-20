@@ -9,6 +9,7 @@ Graphene reads its configuration from the `graphene` object in your project's `p
     "defaultNamespace": "main",
     "ignoredFiles": ["**/readme.md", "**/agents.md", "**/claude.md"],
     "envFile": [".env", "../../.env"],
+    "queryCache": false,
     "updateNotifier": false
   }
 }
@@ -56,6 +57,12 @@ Set to `false` to opt out of anonymous usage telemetry.
 
 Set to `false` to opt out of CLI update notices. You can also set `GRAPHENE_NO_UPDATE_NOTIFIER=1` in the environment.
 
+## `queryCache`
+
+Set to `false` to opt out of warehouse query result caching. Query caching is enabled by default for supported warehouse connections.
+
+Graphene stores only small metadata references in `node_modules/.graphene/query-cache.json`; query result rows stay in the warehouse result cache. Snowflake and BigQuery reuse recent result references for up to 24 hours. ClickHouse uses its warehouse query cache settings with a 24 hour TTL. If the cache path fails for any reason, Graphene logs a warning and runs the query normally.
+
 # Database connections
 
 Exactly one of the following blocks should be present. The dialect is inferred from whichever one you set.
@@ -92,11 +99,13 @@ The matching passphrase env var is `SNOWFLAKE_PRI_PASSPHRASE`.
 ```json
 "bigquery": {
   "projectId": "my-project-123",
+  "location": "US",
   "keyPath": "/Users/me/.ssh/graphene-bq-key.json"
 }
 ```
 
 - `projectId` — Google Cloud project ID for billing/jobs.
+- `location` — optional geographic location for BigQuery jobs.
 - `keyPath` — absolute path to the service account JSON key. Usually set via the `GOOGLE_APPLICATION_CREDENTIALS` env var instead.
 
 ## `clickhouse`

@@ -9,6 +9,7 @@ export interface Config {
   ignoredFiles: string[]
   telemetry?: boolean
   updateNotifier?: boolean
+  queryCache?: boolean
   port?: number
   host?: string
   envFile: string[] // array of paths where we can look for the env file
@@ -16,6 +17,7 @@ export interface Config {
   bigquery?: {
     projectId?: string
     keyPath?: string
+    location?: string
   }
 
   snowflake?: {

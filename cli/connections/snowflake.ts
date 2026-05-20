@@ -2,7 +2,7 @@ import {createPrivateKey} from 'node:crypto'
 import snowflake from 'snowflake-sdk'
 
 import {config} from '../../lang/config.ts'
-import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryCacheEntry, type QueryOptions} from './types.ts'
 
 interface SnowflakeOptions {
   username?: string
@@ -22,10 +22,13 @@ interface SnowflakeOptions {
 // Instructions for generating private/public keys: https://docs.snowflake.com/en/user-guide/key-pair-auth#generate-the-private-keys
 
 export class SnowflakeConnection implements QueryConnection {
+  queryCacheProvider = 'snowflake' as const
   private ready: Promise<void>
   private connection!: snowflake.Connection
+  private opts: SnowflakeOptions
 
   constructor(opts: SnowflakeOptions) {
+    this.opts = opts || {}
     this.ready = this.initialize(opts || {})
   }
 
@@ -56,7 +59,8 @@ export class SnowflakeConnection implements QueryConnection {
     })
   }
 
-  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
+  async runQuery(sql: string, options: QueryOptions = {}): Promise<QueryResult> {
+    let {params} = options
     await this.ready
     return await new Promise<QueryResult>((resolve, reject) => {
       let rows: any[] = []
@@ -79,11 +83,29 @@ export class SnowflakeConnection implements QueryConnection {
           })
           stream.on('end', () => {
             let totalRows = Number(statement.getNumRows())
-            resolve({rows, totalRows})
+            resolve({rows, totalRows, queryCacheRef: {provider: 'snowflake', queryId: statement.getQueryId()}})
           })
         },
       })
     })
+  }
+
+  async runCachedQuery(entry: QueryCacheEntry): Promise<QueryResult> {
+    let queryId = String(entry.ref.queryId || '')
+    if (!queryId) throw new Error('Snowflake cache entry is missing queryId')
+    return await this.runQuery(`select * from table(result_scan('${queryId.replace(/'/g, "''")}'))`)
+  }
+
+  queryCacheIdentity() {
+    let cfg = config.snowflake || ({} as any)
+    return {
+      account: this.opts.account || cfg.account || '',
+      username: this.opts.username || cfg.username || '',
+      role: cfg.role || '',
+      warehouse: cfg.warehouse || '',
+      database: cfg.database || '',
+      schema: cfg.schema || '',
+    }
   }
 
   async listDatasets(): Promise<string[]> {
@@ -114,7 +136,7 @@ export class SnowflakeConnection implements QueryConnection {
       where table_type in ('BASE TABLE', 'VIEW') and upper(table_schema) = upper(?)
       order by table_name
     `,
-      [schema],
+      {params: [schema]},
     )
     return res.rows.map(row => `${String(row['table_schema']).toLowerCase()}.${String(row['table_name']).toLowerCase()}`)
   }
@@ -132,7 +154,7 @@ export class SnowflakeConnection implements QueryConnection {
       where upper(table_schema) = upper(?) and upper(table_name) = upper(?)
       order by ordinal_position
     `,
-      [schema, table],
+      {params: [schema, table]},
     )
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}

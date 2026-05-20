@@ -6,7 +6,10 @@ export interface QueryResult {
   error?: GrapheneError
   hash?: string // hash of the compiled sql for caching
   sql?: string
+  cache?: QueryCacheStatus
 }
+
+export type QueryCacheStatus = {status: 'hit' | 'miss' | 'delegated'; provider?: 'snowflake' | 'bigquery' | 'clickhouse'}
 
 // A single output column in a query result.
 export type Field = {

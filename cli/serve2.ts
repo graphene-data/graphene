@@ -151,7 +151,7 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
 async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMessage>) {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
-  let {gsql, params, hashes} = JSON.parse(Buffer.concat(chunks).toString())
+  let {gsql, params, hashes = []} = JSON.parse(Buffer.concat(chunks).toString())
   res.setHeader('Content-Type', 'application/json')
 
   await workspaceLoadPromise
@@ -180,11 +180,11 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
     return res.end()
   }
 
-  let queryResults = await runQuery(sql)
+  let queryResults = await runQuery(sql, {cache: true, bypassCache: req.headers['cache-control'] == 'no-cache'})
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
   let fields = queries[0].fields.map(field => ({name: field.name, type: field.type, metadata: field.metadata || {}}))
-  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
+  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql, cache: queryResults.cache}))
 }
 
 async function handlePage(server: ViteDevServer, res: ServerResponse<IncomingMessage>) {
