@@ -109,8 +109,9 @@ test('remaps Snowflake-style uppercase query result keys to requested field casi
   await expect(page).screenshot('markdown-snowflake-uppercase-result-keys')
 })
 
-test('shows page cache age and refreshes queries without cache', async ({server, page}) => {
+test('shows browser cache age and refreshes queries without cache', async ({server, page}) => {
   let cacheControlHeaders: string[] = []
+  let requestCount = 0
   server.mockFile(
     '/index.md',
     `
@@ -125,15 +126,66 @@ test('shows page cache age and refreshes queries without cache', async ({server,
   await page.route('**/_api/query', async route => {
     let cacheControl = route.request().headers()['cache-control'] || ''
     cacheControlHeaders.push(cacheControl)
+    requestCount += 1
+    if (requestCount == 2) {
+      await route.fulfill({status: 304, headers: {ETag: 'browser-cache-status'}})
+      return
+    }
+
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      headers: {ETag: `cache-status-${cacheControlHeaders.length}`},
+      headers: {ETag: 'browser-cache-status'},
       body: JSON.stringify({
         rows: [{num: 3}],
         fields: [{name: 'num', type: scalarType('number')}],
         sql: '',
-        cache: cacheControl == 'no-cache' ? undefined : {status: 'hit', provider: 'snowflake', createdAt: Date.now() - 125 * 60 * 1000},
+      }),
+    })
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page.getByText('Oldest cached result')).not.toBeVisible()
+
+  await page.evaluate(() => window.$GRAPHENE.rerunQueries())
+  await expect(page.getByText('Oldest cached result under 1m old')).toBeVisible()
+  await expect(page).screenshot('markdown-query-cache-status')
+
+  await page.getByRole('button', {name: 'Refresh'}).click()
+  await expect.poll(() => cacheControlHeaders.at(-1)).toBe('no-cache')
+  await expect(page.getByText('Oldest cached result')).not.toBeVisible()
+})
+
+test('uses warehouse cache age when browser-cached warehouse results are reused', async ({server, page}) => {
+  let requestCount = 0
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql cached_count
+    select 3 as num
+    \`\`\`
+
+    <Value data="cached_count" column="num" />
+  `,
+  )
+
+  await page.route('**/_api/query', async route => {
+    requestCount += 1
+    if (requestCount == 2) {
+      await route.fulfill({status: 304, headers: {ETag: 'warehouse-cache-status'}})
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: {ETag: 'warehouse-cache-status'},
+      body: JSON.stringify({
+        rows: [{num: 3}],
+        fields: [{name: 'num', type: scalarType('number')}],
+        sql: '',
+        cache: {status: 'hit', provider: 'snowflake', createdAt: Date.now() - 125 * 60 * 1000},
       }),
     })
   })
@@ -141,11 +193,44 @@ test('shows page cache age and refreshes queries without cache', async ({server,
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
   await expect(page.getByText('Oldest cached result 2h old')).toBeVisible()
-  await expect(page).screenshot('markdown-query-cache-status')
 
-  await page.getByRole('button', {name: 'Refresh'}).click()
-  await expect.poll(() => cacheControlHeaders.at(-1)).toBe('no-cache')
-  await expect(page.getByText('Oldest cached result')).not.toBeVisible()
+  await page.evaluate(() => window.$GRAPHENE.rerunQueries())
+  await expect(page.getByText('Oldest cached result 2h old')).toBeVisible()
+})
+
+test('expires browser cache entries no later than warehouse cache expiration', async ({server, page}) => {
+  let requestBodies: any[] = []
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql cached_count
+    select 3 as num
+    \`\`\`
+
+    <Value data="cached_count" column="num" />
+  `,
+  )
+
+  await page.route('**/_api/query', async route => {
+    requestBodies.push(route.request().postDataJSON())
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      headers: {ETag: 'expired-warehouse-cache-status'},
+      body: JSON.stringify({
+        rows: [{num: 3}],
+        fields: [{name: 'num', type: scalarType('number')}],
+        sql: '',
+        cache: {status: 'hit', provider: 'snowflake', createdAt: Date.now() - 125 * 60 * 1000, expiresAt: Date.now() - 1},
+      }),
+    })
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await page.evaluate(() => window.$GRAPHENE.rerunQueries())
+
+  await expect.poll(() => requestBodies[1]?.hashes).toEqual([])
 })
 
 test('deduplicates chart query fields already used for sort', async ({server, page}) => {

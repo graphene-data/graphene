@@ -6,7 +6,7 @@ import {writable} from 'svelte/store'
 import type {GrapheneError} from '../../lang/index.d.ts'
 
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
-import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
+import {type BrowserCacheMetadata, cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs, type ParamSnapshot} from './pageInputs.svelte.ts'
 
 type ResultHandler = (res: QueryResult | void) => void
@@ -34,7 +34,12 @@ export interface PageCacheState {
   loading: boolean
 }
 
-export type QueryFetcher = (req: QueryRequest, options?: {refresh?: boolean}) => Promise<QueryResult>
+interface QueryFetchResult {
+  result: QueryResult
+  browserCache?: BrowserCacheMetadata
+}
+
+export type QueryFetcher = (req: QueryRequest, options?: {refresh?: boolean}) => Promise<QueryFetchResult>
 
 let runPending: Promise<void> | null = null
 let refreshNextRun = false
@@ -103,7 +108,7 @@ async function runNode(n: QueryNode, refresh = false) {
   try {
     let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh})
     updateQueryCacheTimestamp(n, res)
-    let result = translateData(res, n)
+    let result = translateData(res.result, n)
     if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
     n.callback(result)
   } catch (e) {
@@ -118,7 +123,7 @@ async function runNode(n: QueryNode, refresh = false) {
   }
 }
 
-async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}): Promise<QueryResult> {
+async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}): Promise<QueryFetchResult> {
   let response = await fetch('/_api/query', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', ...(options.refresh ? {'Cache-Control': 'no-cache'} : {})},
@@ -128,7 +133,9 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
 
   // cache hit. Read data out of the browser cache and return it
   if (response.status == 304) {
-    return await cacheRead(hash)
+    let cached = await cacheRead<QueryResult>(hash)
+    if (cached) return {result: cached.result, browserCache: cached.cache}
+    throw new Error('Browser cache entry was missing for query result')
   }
 
   if (!response.ok) {
@@ -139,7 +146,7 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
   }
 
   cacheWrite(hash, response.clone())
-  return await response.json()
+  return {result: await response.json()}
 }
 
 function runAll() {
@@ -202,8 +209,8 @@ export function translateData(data: any, node: QueryNode): QueryResult {
 
 const isQueryLoading = () => !!queries.find(q => q.loading)
 
-function updateQueryCacheTimestamp(n: QueryNode, res: QueryResult) {
-  let createdAt = res.cache?.createdAt
+function updateQueryCacheTimestamp(n: QueryNode, res: QueryFetchResult) {
+  let createdAt = res.result.cache?.createdAt || res.browserCache?.createdAt
   if (createdAt) {
     cachedQueryTimestamps.set(n, createdAt)
   } else {

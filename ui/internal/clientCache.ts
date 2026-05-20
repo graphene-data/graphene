@@ -4,6 +4,23 @@
 
 const TTL_MS = 1000 * 60 * 60 * 2
 
+export interface BrowserCachedResult<T> {
+  result: T
+  cache: BrowserCacheMetadata
+}
+
+export interface BrowserCacheMetadata {
+  createdAt: number
+  expiresAt: number
+}
+
+interface QueryResultCacheMetadata {
+  cache?: {
+    createdAt?: number
+    expiresAt?: number
+  }
+}
+
 let cache: Cache | null = null
 async function getCache() {
   cache ||= await caches.open('graphene-data')
@@ -15,21 +32,25 @@ export async function getHashes(): Promise<string[]> {
   let keys = await store.keys()
   return keys
     .map(k => {
-      let url = new URL(k.url)
-      let expires = Number(url.searchParams.get('expires') || 0)
-      if (expires < Date.now()) {
+      let entry = parseCacheKey(k)
+      if (!entry || entry.expiresAt < Date.now()) {
         store.delete(k)
         return null
       }
-      return url.pathname.replace(/^\//, '')
+      return entry.hash
     })
     .filter(Boolean) as string[]
 }
 
-export async function cacheRead(hash: string): Promise<any | null> {
+export async function cacheRead<T>(hash: string): Promise<BrowserCachedResult<T> | null> {
   let store = await getCache()
-  let resp = await store.match(`https://graphene-cache/${hash}`, {ignoreSearch: true})
-  return await resp?.clone().json()
+  let entry = await findCacheEntry(store, hash)
+  if (!entry) return null
+
+  let resp = await store.match(entry.request)
+  let result = (await resp?.clone().json()) as T | undefined
+  if (!result) return null
+  return {result, cache: {createdAt: entry.createdAt, expiresAt: entry.expiresAt}}
 }
 
 export async function cacheWrite(hash: string, response: Response) {
@@ -40,6 +61,40 @@ export async function cacheWrite(hash: string, response: Response) {
   let existing = await store.keys(`https://graphene-cache/${hash}`, {ignoreSearch: true})
   existing.forEach(key => store.delete(key))
 
-  let expiresAt = Date.now() + TTL_MS
-  await store.put(`https://graphene-cache/${hash}?expires=${expiresAt}`, response)
+  let now = Date.now()
+  let body: QueryResultCacheMetadata = await response
+    .clone()
+    .json()
+    .catch(() => ({}))
+  let createdAt = Number(body?.cache?.createdAt || now)
+  let browserExpiresAt = now + TTL_MS
+  let serverExpiresAt = Number(body?.cache?.expiresAt || browserExpiresAt)
+  let expiresAt = Math.min(browserExpiresAt, serverExpiresAt)
+  await store.put(cacheUrl(hash, createdAt, expiresAt), response)
+}
+
+async function findCacheEntry(store: Cache, hash: string) {
+  let keys = await store.keys(`https://graphene-cache/${hash}`, {ignoreSearch: true})
+  let now = Date.now()
+  for (let request of keys) {
+    let entry = parseCacheKey(request)
+    if (!entry) continue
+    if (entry.expiresAt >= now) return {...entry, request}
+    store.delete(request)
+  }
+  return null
+}
+
+function parseCacheKey(request: Request) {
+  let url = new URL(request.url)
+  let hash = url.pathname.replace(/^\//, '')
+  let expiresAt = Number(url.searchParams.get('expires') || 0)
+  if (!hash || !expiresAt) return null
+
+  let createdAt = Number(url.searchParams.get('createdAt') || 0) || expiresAt - TTL_MS
+  return {hash, createdAt, expiresAt}
+}
+
+function cacheUrl(hash: string, createdAt: number, expiresAt: number) {
+  return `https://graphene-cache/${hash}?createdAt=${createdAt}&expires=${expiresAt}`
 }
