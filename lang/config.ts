@@ -17,7 +17,6 @@ export interface Config {
   bigquery?: {
     projectId?: string
     keyPath?: string
-    location?: string
   }
 
   snowflake?: {

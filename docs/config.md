@@ -99,13 +99,11 @@ The matching passphrase env var is `SNOWFLAKE_PRI_PASSPHRASE`.
 ```json
 "bigquery": {
   "projectId": "my-project-123",
-  "location": "US",
   "keyPath": "/Users/me/.ssh/graphene-bq-key.json"
 }
 ```
 
 - `projectId` — Google Cloud project ID for billing/jobs.
-- `location` — optional geographic location for BigQuery jobs.
 - `keyPath` — absolute path to the service account JSON key. Usually set via the `GOOGLE_APPLICATION_CREDENTIALS` env var instead.
 
 ## `clickhouse`

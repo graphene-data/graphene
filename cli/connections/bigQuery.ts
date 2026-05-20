@@ -13,15 +13,12 @@ export class BigQueryConnection implements QueryConnection {
   private readonly client: BigQuery
   private readonly projectId: string
   private readonly defaultNamespace?: string
-  private readonly location?: string
   private readonly clientEmail?: string
 
   constructor(options: BigQueryOptions = {}) {
     options.projectId ||= config.bigquery?.projectId
-    options.location ||= config.bigquery?.location
     if (!options.projectId) throw new Error('projectId must be set in config or provided in service account credentials')
     this.projectId = options.projectId
-    this.location = options.location
     this.clientEmail = (options.credentials as any)?.client_email
     this.client = new BigQuery({...options, userAgent: 'Graphene'})
     this.defaultNamespace = config.defaultNamespace
@@ -29,20 +26,20 @@ export class BigQueryConnection implements QueryConnection {
 
   async runQuery(sql: string, options: QueryOptions = {}): Promise<QueryResult> {
     let {params} = options
-    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params, location: this.location})
+    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params})
     let [rows] = await job.getQueryResults({maxResults: 10000})
     let metadata = job.metadata || (await job.getMetadata())[0]
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
     normalizeBigQueryRows(rows)
 
-    return {rows, totalRows, queryCacheRef: {provider: 'bigquery', projectId: this.projectId, jobId: job.id, location: job.location || this.location}}
+    return {rows, totalRows, queryCacheRef: {provider: 'bigquery', projectId: this.projectId, jobId: job.id, location: job.location}}
   }
 
   async retrieveCachedQuery(entry: QueryCacheEntry): Promise<QueryResult> {
     let jobId = String(entry.ref.jobId || '')
     if (!jobId) throw new Error('BigQuery cache entry is missing jobId')
 
-    let job = this.client.job(jobId, {location: String(entry.ref.location || this.location || '') || undefined})
+    let job = this.client.job(jobId, {location: String(entry.ref.location || '') || undefined})
     let [rows] = await job.getQueryResults({maxResults: 10000})
     let metadata = job.metadata || (await job.getMetadata())[0]
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
@@ -51,7 +48,7 @@ export class BigQueryConnection implements QueryConnection {
   }
 
   queryCacheIdentity() {
-    return {projectId: this.projectId, location: this.location || '', clientEmail: this.clientEmail || '', defaultNamespace: this.defaultNamespace || ''}
+    return {projectId: this.projectId, clientEmail: this.clientEmail || '', defaultNamespace: this.defaultNamespace || ''}
   }
 
   async listDatasets(): Promise<string[]> {
