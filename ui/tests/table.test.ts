@@ -366,6 +366,7 @@ test('total row renders for ungrouped tables', async ({mount, sharedPage}) => {
   let table = component.locator('table')
   let totalRow = table.locator('tr.total-row')
   await expect(totalRow).toBeVisible()
+  await expect(table.locator('tr.table-row').first().locator('td.index')).toHaveText('1')
   await expect(totalRow).toContainText('10')
   await expect(component.locator('.table-container')).screenshot('total-row-basic')
 })
@@ -386,6 +387,7 @@ test('row-level link behavior opens external destinations and hides link column'
 
   let table = component.locator('table')
   await expect(table).toBeVisible()
+  await expect(table.locator('tr.table-row').first().locator('td.index')).toHaveText('1')
   await expect(table.getByRole('columnheader', {name: 'Url'})).toHaveCount(0)
 
   let noPopupPromise = sharedPage
