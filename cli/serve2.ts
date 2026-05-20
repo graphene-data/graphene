@@ -182,7 +182,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   }
 
   let queryCache: QueryCacheMode = req.headers['cache-control'] == 'no-cache' ? 'refresh' : 'read-write'
-  let queryResults = await runQuery(sql, {params, queryCache})
+  let queryResults = await runQuery(sql, {queryCache})
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
   let fields = queries[0].fields.map(field => ({name: field.name, type: field.type, metadata: field.metadata || {}}))
