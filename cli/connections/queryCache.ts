@@ -22,8 +22,9 @@ export interface QueryCacheStore {
 
 export async function runWithQueryCache(conn: QueryConnection, sql: string, options: QueryOptions = {}): Promise<QueryResult> {
   let {params} = options
-  let provider = conn.queryCacheProvider
-  if (!provider || config.queryCache === false) return await conn.runQuery(sql, {params})
+  let identity = conn.queryCacheIdentity?.()
+  if (!identity || config.queryCache === false) return await conn.runQuery(sql, {params})
+  let provider = identity.provider
 
   if (!conn.retrieveCachedQuery) {
     let res = await conn.runQuery(sql, {...options, queryCache: options.queryCache || 'read-write'})
@@ -31,7 +32,7 @@ export async function runWithQueryCache(conn: QueryConnection, sql: string, opti
   }
 
   let store = new LocalQueryCacheStore(config.root)
-  let contextHash = hashValue(conn.queryCacheIdentity?.() || {})
+  let contextHash = hashValue(identity)
   let key = hashValue({version: CACHE_VERSION, dialect: config.dialect, root: config.root, sql, params: params || null, contextHash})
   let now = Date.now()
 

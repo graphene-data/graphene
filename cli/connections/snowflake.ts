@@ -22,7 +22,6 @@ interface SnowflakeOptions {
 // Instructions for generating private/public keys: https://docs.snowflake.com/en/user-guide/key-pair-auth#generate-the-private-keys
 
 export class SnowflakeConnection implements QueryConnection {
-  queryCacheProvider = 'snowflake' as const
   private ready: Promise<void>
   private connection!: snowflake.Connection
   private opts: SnowflakeOptions
@@ -99,6 +98,7 @@ export class SnowflakeConnection implements QueryConnection {
   queryCacheIdentity() {
     let cfg = config.snowflake || ({} as any)
     return {
+      provider: 'snowflake' as const,
       account: this.opts.account || cfg.account || '',
       username: this.opts.username || cfg.username || '',
       role: cfg.role || '',

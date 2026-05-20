@@ -11,7 +11,6 @@ export interface ClickHouseOptions {
 }
 
 export class ClickHouseConnection implements QueryConnection {
-  queryCacheProvider = 'clickhouse' as const
   private client: ClickHouseClient
   private defaultDatabase: string
 
@@ -36,6 +35,10 @@ export class ClickHouseConnection implements QueryConnection {
     })
     let rows = (await result.json()) as Array<Record<string, unknown>>
     return {rows, totalRows: rows.length, ...(useQueryCache ? {cache: {status: 'delegated' as const, provider: 'clickhouse' as const}} : {})}
+  }
+
+  queryCacheIdentity() {
+    return {provider: 'clickhouse' as const, database: this.defaultDatabase}
   }
 
   async listDatasets(): Promise<string[]> {

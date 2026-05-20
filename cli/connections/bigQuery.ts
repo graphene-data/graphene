@@ -9,7 +9,6 @@ function validateBigQueryIdent(ident: string) {
 }
 
 export class BigQueryConnection implements QueryConnection {
-  queryCacheProvider = 'bigquery' as const
   private readonly client: BigQuery
   private readonly projectId: string
   private readonly defaultNamespace?: string
@@ -48,7 +47,7 @@ export class BigQueryConnection implements QueryConnection {
   }
 
   queryCacheIdentity() {
-    return {projectId: this.projectId, clientEmail: this.clientEmail || '', defaultNamespace: this.defaultNamespace || ''}
+    return {provider: 'bigquery' as const, projectId: this.projectId, clientEmail: this.clientEmail || '', defaultNamespace: this.defaultNamespace || ''}
   }
 
   async listDatasets(): Promise<string[]> {

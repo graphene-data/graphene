@@ -9,7 +9,6 @@ import {LocalQueryCacheStore, runWithQueryCache} from './connections/queryCache.
 import {type QueryCacheEntry, type QueryConnection, type QueryOptions, type QueryResult} from './connections/types.ts'
 
 class StoredCacheConnection implements QueryConnection {
-  queryCacheProvider = 'snowflake' as const
   freshRuns = 0
   cachedRuns = 0
   failCached = false
@@ -26,7 +25,7 @@ class StoredCacheConnection implements QueryConnection {
   }
 
   queryCacheIdentity() {
-    return {account: 'acct', username: 'user', role: 'role'}
+    return {provider: 'snowflake' as const, account: 'acct', username: 'user', role: 'role'}
   }
 
   listDatasets() {
@@ -44,7 +43,6 @@ class StoredCacheConnection implements QueryConnection {
 }
 
 class DelegatedCacheConnection implements QueryConnection {
-  queryCacheProvider = 'clickhouse' as const
   lastOptions?: QueryOptions
 
   runQuery(sql: string, options: QueryOptions = {}): Promise<QueryResult> {
@@ -54,6 +52,10 @@ class DelegatedCacheConnection implements QueryConnection {
   }
 
   lastSql?: string
+
+  queryCacheIdentity() {
+    return {provider: 'clickhouse' as const, database: 'default'}
+  }
 
   listDatasets() {
     return Promise.resolve([])
