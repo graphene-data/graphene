@@ -61,7 +61,7 @@ Set to `false` to opt out of CLI update notices. You can also set `GRAPHENE_NO_U
 
 Set to `true` to opt in to warehouse query result caching. Query caching is disabled by default.
 
-Graphene stores only small metadata references in `node_modules/.graphene/query-cache.json`; query result rows stay in the warehouse result cache. Snowflake and BigQuery reuse recent result references for up to 24 hours. ClickHouse uses its warehouse query cache settings with a 24 hour TTL. If the cache path fails for any reason, Graphene logs a warning and runs the query normally.
+Graphene stores only small metadata references in `node_modules/.graphene/query-cache.json`; query result rows stay in the warehouse result cache. If enabled, results are eligible to be reused for 24 hours.
 
 # Database connections
 
