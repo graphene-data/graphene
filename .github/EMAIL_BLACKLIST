@@ -1,0 +1,9 @@
+# One email pattern per line. Matching is case-insensitive and supports * and ? wildcards.
+caseymarr@gmail.com
+me@grantmarvin.com
+dylan.scott@gmail.com
+
+noreply@anthropic.com
+cursoragent@cursor.com
+pi-agent@*
+pi-bot@*
