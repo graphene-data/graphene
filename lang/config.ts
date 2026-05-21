@@ -51,6 +51,14 @@ export interface Config {
     statementTimeout?: number
   }
 
+  athena?: {
+    region?: string
+    catalog?: string
+    database?: string
+    workGroup?: string
+    outputLocation?: string
+  }
+
   duckdb?: {
     path?: string
   }
@@ -80,6 +88,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd())
   else if (cfg.snowflake) dialect = 'snowflake'
   else if (cfg.clickhouse) dialect = 'clickhouse'
   else if (cfg.postgres) dialect = 'postgres'
+  else if (cfg.athena) dialect = 'athena'
   else if (cfg.duckdb) dialect = 'duckdb'
   let envFile = ['.env']
   if (Array.isArray(cfg.envFile)) envFile = cfg.envFile

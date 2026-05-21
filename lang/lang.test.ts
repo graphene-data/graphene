@@ -190,6 +190,14 @@ describe('lang', () => {
     expect('from nyc_taxi select trip_id').toRenderSql('SELECT nyc_taxi.trip_id as trip_id FROM default.nyc_taxi as nyc_taxi')
   })
 
+  it('renders Athena SQL with its configured namespace', () => {
+    setGlobalConfig({dialect: 'athena', root: '', defaultNamespace: 'graphene_test'})
+    updateFile('table flights (carrier string, dep_delay int)', 'athena.gsql')
+    expect('from flights select carrier, sum(dep_delay) as total_delay order by 2 desc').toRenderSql(
+      'SELECT flights.carrier as carrier, sum(flights.dep_delay) as total_delay FROM graphene_test.flights as flights GROUP BY 1 ORDER BY 2 desc NULLS LAST',
+    )
+  })
+
   it('excludes agents.md from workspace by default', async () => {
     let root = path.join(import.meta.dirname, '../examples/flights')
     clearWorkspace()

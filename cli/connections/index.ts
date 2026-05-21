@@ -69,6 +69,16 @@ export async function getConnection(): Promise<QueryConnection> {
       privateKeyPass: process.env.SNOWFLAKE_PRI_PASSPHRASE,
       logLevel: process.env.SNOWFLAKE_LOG_LEVEL,
     })
+  } else if (config.dialect === 'athena') {
+    let mod = await importConnection(() => import('./athena.ts'), '@aws-sdk/client-athena', 'Athena')
+    return new mod.AthenaConnection({
+      ...config.athena,
+      region: config.athena?.region || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION,
+      database: config.athena?.database || config.defaultNamespace,
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      sessionToken: process.env.AWS_SESSION_TOKEN,
+    })
   } else {
     throw new Error(`Unsupported dialect: ${config.dialect}`)
   }

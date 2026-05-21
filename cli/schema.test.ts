@@ -17,6 +17,7 @@ const snowflakeDir = path.resolve(dir, '../examples/snowflake')
 const ecommDir = path.resolve(dir, '../examples/ecomm')
 const clickhouseDir = path.resolve(dir, '../examples/clickhouse')
 const postgresDir = path.resolve(dir, '../examples/postgres')
+const athenaDir = path.resolve(dir, '../examples/athena')
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
@@ -114,6 +115,24 @@ describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table food__beverage_establishment__menu_data.v02.menus (')
     expect(output).toContain('menu_id')
+  })
+})
+
+describe.skipIf(!process.env.ATHENA_TEST)('athena', {timeout: 30_000}, () => {
+  it('lists available tables in the configured database', async () => {
+    let res = await runCli(['schema', 'graphene_test'], athenaDir)
+    expectCliSuccess(res, 'schema list tables (athena)')
+    let tables = parseSchemaOutput(res.stdout)
+    expect(tables).toContain('graphene_test.flights')
+  })
+
+  it('describes an athena table from the configured database', async () => {
+    let res = await runCli(['schema', 'flights'], athenaDir)
+    expectCliSuccess(res, 'schema describe table (athena)')
+    let output = res.stdout.toLowerCase()
+    expect(output).toContain('table flights (')
+    expect(output).toContain('carrier varchar')
+    expect(output).toContain('dep_delay int')
   })
 })
 

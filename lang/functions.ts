@@ -3,6 +3,7 @@ import {type SyntaxNode} from '@lezer/common'
 import type {Analyzer} from './analyze.ts'
 import type {FunctionDef, ArgDef} from './functionTypes.ts'
 
+import {athenaFunctions} from './athenaFunctions.ts'
 import {bigQueryFunctions} from './bigQueryFunctions.ts'
 import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
@@ -95,6 +96,7 @@ function buildMap(defs: FunctionDef[]): Record<string, Overload[]> {
 }
 
 let dialectMaps: Record<string, Record<string, Overload[]>> = {
+  athena: buildMap(athenaFunctions),
   bigquery: buildMap(bigQueryFunctions),
   clickhouse: buildMap(clickHouseFunctions),
   duckdb: buildMap(duckDbFunctions),
@@ -230,6 +232,9 @@ function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], d
       break
     case 'postgres':
       sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`
+      break
+    case 'athena':
+      sql = `approx_percentile(${inner}, ${frac})`
       break
     default:
       return analyzer.diag(node, `Percentile not supported for ${analyzer.config.dialect}`, {sql: 'NULL', type: scalarType('error')})
