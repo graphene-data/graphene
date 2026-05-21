@@ -3,6 +3,7 @@
   import ECharts from './ECharts.svelte'
   import type {EChartsConfig, QueryResult} from '../component-utilities/types.ts'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
+  import {formatTitle} from '../component-utilities/format.ts'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   interface Props {
@@ -49,10 +50,10 @@
       series = [{type: 'line' as const, areaStyle: {opacity: 0.2}, stack, stackPercentage, encode: {x, y: yFields[0], splitBy, ...sortHint}}]
     } else {
       // "wide" data, one area series per field listed in y
-      series = yFields.map(field => ({type: 'line' as const, name: field, areaStyle: {opacity: 0.2}, encode: {x, y: field, ...sortHint}}))
+      series = yFields.map(field => ({type: 'line' as const, name: formatTitle(field), areaStyle: {opacity: 0.2}, encode: {x, y: field, ...sortHint}}))
     }
 
-    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
+    if (y2) series.push({type: 'line' as const, name: formatTitle(y2), yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
 
     return {
       title: title ? {text: title} : undefined,
