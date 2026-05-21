@@ -116,3 +116,20 @@ The matching passphrase env var is `SNOWFLAKE_PRI_PASSPHRASE`.
 - `requestTimeout` — per-request timeout in milliseconds.
 
 The matching password env var is `CLICKHOUSE_PASSWORD`.
+
+## `postgres`
+
+```json
+"postgres": {
+  "host": "localhost",
+  "port": 5432,
+  "database": "analytics",
+  "user": "graphene_user",
+  "schema": "public"
+}
+```
+
+- `connectionString` — full Postgres connection string. If omitted, Graphene also checks `POSTGRES_URL` and `DATABASE_URL`.
+- `host`, `port`, `database`, `user`/`username` — connection fields used when no connection string is set. These can also come from the matching `PG*` or `POSTGRES_*` env vars.
+- `schema` — default schema for unqualified table names. Falls back to `defaultNamespace`, then `public`.
+- `ssl`, `max`, `idleTimeoutMillis`, `connectionTimeoutMillis`, `queryTimeout`, `statementTimeout` — passed through to `node-postgres`.

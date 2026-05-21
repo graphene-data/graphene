@@ -41,6 +41,8 @@ export interface Config {
     user?: string
     username?: string
     schema?: string
+    inMemory?: boolean
+    seedSql?: string
     ssl?: boolean | {rejectUnauthorized?: boolean}
     max?: number
     idleTimeoutMillis?: number

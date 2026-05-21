@@ -19,6 +19,7 @@ export interface PostgresOptions {
   queryTimeout?: number
   statementTimeout?: number
   pool?: PostgresPool
+  onClose?: () => Promise<void>
 }
 
 interface PostgresPool {
@@ -34,9 +35,11 @@ const {Pool} = pg
 export class PostgresConnection implements QueryConnection {
   private pool: PostgresPool
   private defaultSchema: string
+  private onClose?: () => Promise<void>
 
   constructor(options: PostgresOptions = {}) {
     this.defaultSchema = options.schema || config.postgres?.schema || config.defaultNamespace || 'public'
+    this.onClose = options.onClose
     this.pool =
       options.pool ||
       new Pool({
@@ -103,7 +106,11 @@ export class PostgresConnection implements QueryConnection {
   }
 
   async close(): Promise<void> {
-    await this.pool.end()
+    try {
+      await this.pool.end()
+    } finally {
+      await this.onClose?.()
+    }
   }
 }
 
