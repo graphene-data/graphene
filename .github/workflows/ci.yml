@@ -25,7 +25,7 @@ jobs:
             $2 != "Grant <grant@graphenedata.com>" &&
             $2 != "Dylan Scott <dylan@graphenedata.com>" &&
             $2 != "Kevin Marr <kevin@graphenedata.com>" &&
-            $2 != "Demitri Nava <demitri@boltz.bio>" { print }
+            $2 != "Demitri Nava <navademitri@gmail.com>" { print }
           ')
 
           if [ -n "$bad_commits" ]; then
@@ -36,7 +36,7 @@ jobs:
             echo "  Grant <grant@graphenedata.com>"
             echo "  Dylan Scott <dylan@graphenedata.com>"
             echo "  Kevin Marr <kevin@graphenedata.com>"
-            echo "  Demitri Nava <demitri@boltz.bio>"
+            echo "  Demitri Nava <navademitri@gmail.com>"
             exit 1
           fi
 

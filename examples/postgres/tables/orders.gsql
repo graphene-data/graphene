@@ -1,0 +1,13 @@
+table orders (
+  id int
+  customer_id int
+  order_date timestamp
+  status text
+  total numeric
+
+  join one customers on customers.id = customer_id
+  join many order_items on order_items.order_id = id
+
+  item_count: sum(order_items.quantity)
+  completed: status = 'completed'
+)

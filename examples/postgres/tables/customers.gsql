@@ -1,0 +1,12 @@
+table customers (
+  id int
+  name text
+  region text
+  signup_date date
+  tags array<string>
+
+  join many orders on orders.customer_id = id
+
+  total_revenue: sum(orders.total)
+  completed_revenue: sum(case when orders.status = 'completed' then orders.total else 0 end)
+)
