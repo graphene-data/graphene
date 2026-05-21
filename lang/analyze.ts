@@ -1049,10 +1049,11 @@ class AnalysisSession implements Analyzer {
         if (stringNode) {
           let parsed = parseIntervalLiteral(txt(stringNode).slice(1, -1))
           if (!parsed) return this.diag(stringNode, 'Could not parse interval', {sql: 'NULL', type: scalarType('error')})
+          let interval = {quantitySql: String(parsed.quantity), unit: parsed.unit, form: 'constant'} as const
           return {
-            sql: `interval ${parsed.quantity} ${parsed.unit}`,
+            sql: renderStandaloneInterval(this.config.dialect, interval),
             type: scalarType('interval'),
-            interval: {quantitySql: String(parsed.quantity), unit: parsed.unit, form: 'constant'},
+            interval,
           }
         }
         let quantityNode = node.getChild('Number') || node.getChild('Ref')
@@ -1061,11 +1062,12 @@ class AnalysisSession implements Analyzer {
         this.checkTypes(quantity, ['number'], quantityNode)
         let unit = parseIntervalUnit(txt(node.getChild('IntervalUnit')!).toLowerCase())
         if (!unit) return this.diag(node, 'Invalid interval unit', {sql: 'NULL', type: scalarType('error')})
+        let interval = {quantitySql: quantity.sql, unit, form: quantityNode.name == 'Number' ? 'constant' : 'dynamic'} as const
         return {
           ...quantity,
-          sql: `INTERVAL ${quantity.sql} ${unit}`,
+          sql: renderStandaloneInterval(this.config.dialect, interval),
           type: scalarType('interval'),
-          interval: {quantitySql: quantity.sql, unit, form: quantityNode.name == 'Number' ? 'constant' : 'dynamic'},
+          interval,
         }
       }
 
@@ -1089,9 +1091,13 @@ class AnalysisSession implements Analyzer {
     // date - date = interval
     if ((isScalarType(left.type, 'date') || isScalarType(left.type, 'timestamp')) && (isScalarType(right.type, 'date') || isScalarType(right.type, 'timestamp'))) {
       if (op != '-') return this.diag(node, 'Can only subtract dates', {sql: 'NULL', type: scalarType('error')})
-      let unit = isScalarType(left.type, 'timestamp') ? 'SECOND' : 'DAY'
+      let unit = isScalarType(left.type, 'timestamp') || isScalarType(right.type, 'timestamp') ? 'SECOND' : 'DAY'
       if (this.config.dialect == 'bigquery') return {...merged, sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: scalarType('number')}
       if (this.config.dialect == 'snowflake') return {...merged, sql: `TIMESTAMPDIFF(${unit}, ${right.sql}, ${left.sql})`, type: scalarType('number')}
+      if (this.config.dialect == 'postgres') {
+        let sql = unit == 'DAY' ? `(${left.sql} - ${right.sql})` : `EXTRACT(EPOCH FROM (${left.sql} - ${right.sql}))`
+        return {...merged, sql, type: scalarType('number')}
+      }
       return {...merged, sql: `DATE_DIFF('${unit.toLowerCase()}', ${right.sql}, ${left.sql})`, type: scalarType('number')}
     }
 
@@ -1548,6 +1554,16 @@ class AnalysisSession implements Analyzer {
   }
 
   private renderCastType(rawType: string): string {
+    if (this.config.dialect == 'postgres') {
+      let normalized = rawType.trim().toLowerCase()
+      let arrayMatch = normalized.match(/^array\s*<(.+)>$/s)
+      if (arrayMatch) return `${this.renderCastType(arrayMatch[1])}[]`
+      if (normalized == 'string') return 'VARCHAR'
+      if (normalized == 'float64' || normalized == 'double') return 'DOUBLE PRECISION'
+      if (normalized == 'float32') return 'REAL'
+      return rawType.toUpperCase()
+    }
+
     if (this.config.dialect != 'clickhouse') return rawType.toUpperCase()
 
     // ClickHouse accepts the shared Graphene type names in analysis, but some CAST

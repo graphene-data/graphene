@@ -1,0 +1,11 @@
+table order_items (
+  id int
+  order_id int
+  sku text
+  quantity int
+  unit_price numeric
+
+  join one orders on orders.id = order_id
+
+  line_total: quantity * unit_price
+)

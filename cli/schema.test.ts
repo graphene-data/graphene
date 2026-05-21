@@ -16,6 +16,7 @@ const flightDir = path.resolve(dir, '../examples/flights')
 const snowflakeDir = path.resolve(dir, '../examples/snowflake')
 const ecommDir = path.resolve(dir, '../examples/ecomm')
 const clickhouseDir = path.resolve(dir, '../examples/clickhouse')
+const postgresDir = path.resolve(dir, '../examples/postgres')
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
@@ -136,6 +137,34 @@ describe.skipIf(!process.env.SLOW_TEST)('bigquery', () => {
     expectCliSuccess(res, 'schema describe table (bigquery)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('tables in demo_dataset:')
+  })
+})
+
+describe.skipIf(!process.env.SLOW_TEST)('postgres', () => {
+  it('lists available tables in the configured schema', async () => {
+    let res = await runCli(['schema'], postgresDir)
+    expectCliSuccess(res, 'schema list tables (postgres)')
+    let tables = parseSchemaOutput(res.stdout)
+    expect(tables).toContain('customers')
+    expect(tables).toContain('orders')
+    expect(tables).toContain('order_items')
+  })
+
+  it('describes a postgres table from the configured schema', async () => {
+    let res = await runCli(['schema', 'orders'], postgresDir)
+    expectCliSuccess(res, 'schema describe table (postgres)')
+    let output = res.stdout.toLowerCase()
+    expect(output).toContain('table orders (')
+    expect(output).toContain('order_date timestamp')
+    expect(output).toContain('total numeric')
+  })
+
+  it('describes a postgres schema-qualified table', async () => {
+    let res = await runCli(['schema', 'public.customers'], postgresDir)
+    expectCliSuccess(res, 'schema describe schema-qualified table (postgres)')
+    let output = res.stdout.toLowerCase()
+    expect(output).toContain('table public.customers (')
+    expect(output).toContain('tags array<string>')
   })
 })
 
