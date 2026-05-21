@@ -25,6 +25,7 @@ function run(command: string, args: string[], cwd: string, env: NodeJS.ProcessEn
     child.stderr.on('data', data => {
       stderr += data.toString()
     })
+    child.on('error', err => resolve({code: 1, stdout, stderr: stderr + err.message}))
     child.on('close', code => resolve({code: code ?? 0, stdout, stderr}))
   })
 }
@@ -76,7 +77,7 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
   let tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-install-'))
   let projectDir = path.join(tempRoot, 'demo-app')
   let port = await getAvailablePort()
-  let childEnv = {...process.env, GRAPHENE_PORT: String(port)} as any
+  let childEnv = {...process.env, GRAPHENE_PORT: String(port), COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'} as any
   delete childEnv.NODE_ENV
 
   try {
@@ -193,7 +194,7 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with pnpm', {ti
       // pnpm resolves the existing package.json before applying `add <tarball>`, so an unpublished
       // release version scaffolded by create-graphene would fail to resolve from npm. Naming the
       // dependency in the add spec lets pnpm replace the manifest entry directly with the local tarball.
-      install: tarball => ['pnpm', ['add', '--config.minimumReleaseAge=0', `@graphenedata/cli@file:${tarball}`]],
+      install: tarball => ['pnpm', ['add', '--config.minimumReleaseAge=0', '--allow-build=esbuild', `@graphenedata/cli@file:${tarball}`]],
       graphene: args => ['pnpm', ['run', 'graphene', '--', ...args]],
     },
     page,

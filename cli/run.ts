@@ -158,10 +158,7 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
 
 async function sendSocketRequest({pageUrl, action, chart, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
   let host = runHost()
-  if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
-    log('Starting Graphene server...')
-    await runServeInBackground()
-  }
+  if (!(await ensureBackgroundServer(log))) return null
 
   let resp = await fetchSocketRequest({host, pageUrl, action, chart})
 
@@ -188,6 +185,20 @@ async function sendSocketRequest({pageUrl, action, chart, log}: {pageUrl: string
   }
 
   return resp
+}
+
+async function ensureBackgroundServer(log: (...args: any[]) => void) {
+  if (process.env.NODE_ENV === 'test' || (await isServerRunning())) return true
+
+  log('Starting Graphene server...')
+  try {
+    await runServeInBackground()
+    return true
+  } catch (err) {
+    log('Failed to start Graphene server')
+    log(err instanceof Error ? err.message : String(err))
+    return false
+  }
 }
 
 function markdownPageUrl(mdFile: string, inputs?: RunInputs) {
@@ -250,10 +261,7 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
 }
 
 async function runHeadlessPageRequest({pageUrl, action, chart, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
-  if (process.env.NODE_ENV !== 'test' && !(await isServerRunning())) {
-    log('Starting Graphene server...')
-    await runServeInBackground()
-  }
+  if (!(await ensureBackgroundServer(log))) return null
 
   let host = runHost()
   let browser = await launchHeadlessBrowser(log)
