@@ -41,6 +41,7 @@
   }: Props = $props()
 
   let rowsNum = $derived.by(() => {
+    if (String(rows).toLowerCase() === 'all') return Infinity
     let parsed = Number.parseInt(String(rows), 10)
     return (!Number.isFinite(parsed) || parsed <= 0) ? 10 : parsed
   })
@@ -269,6 +270,7 @@
   let displayedPageLength = $derived(paginated
     ? Math.min(rowsNum, (dataForDisplay?.length ?? 0) - rowsNum * (currentPage - 1))
     : dataForDisplay?.length ?? 0)
+  let rowNumberOffset = $derived(paginated ? rowsNum * (currentPage - 1) : 0)
 
   const goToPage = (page: number) => {
     if (!paginated) return
@@ -457,7 +459,7 @@
             groupNamePosition={groupNamePosition}
             orderedColumns={orderedColumns}
             columnLookup={columnLookup}
-            index={rowsNum * (currentPage - 1)}
+            index={rowNumberOffset}
           />
         {/if}
 

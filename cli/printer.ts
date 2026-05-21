@@ -26,6 +26,19 @@ export function printDiagnostics(diags: GrapheneError[], log?: any) {
   if (parts.length) log(parts.join('\n\n'))
 }
 
+function formatValue(v: unknown): string {
+  if (v instanceof Date) {
+    if (v.getUTCHours() === 0 && v.getUTCMinutes() === 0 && v.getUTCSeconds() === 0 && v.getUTCMilliseconds() === 0) {
+      let y = v.getUTCFullYear()
+      let m = String(v.getUTCMonth() + 1).padStart(2, '0')
+      let d = String(v.getUTCDate()).padStart(2, '0')
+      return `${y}-${m}-${d}`
+    }
+    return v.toUTCString()
+  }
+  return v?.toString() ?? ''
+}
+
 export function printTable(rows: any[]) {
   if (!rows || rows.length === 0) {
     console.log(chalk.yellow('No results returned'))
@@ -36,7 +49,7 @@ export function printTable(rows: any[]) {
   let table = new Table({head: headers.map(h => chalk.blue(h))})
   let MAX_DISPLAY_ROWS = 200
   let displayRows = rows.slice(0, MAX_DISPLAY_ROWS)
-  displayRows.forEach(row => table.push(headers.map(h => row[h]?.toString() || '')))
+  displayRows.forEach(row => table.push(headers.map(h => formatValue(row[h]))))
   console.log(table.toString())
   if (rows.length > MAX_DISPLAY_ROWS) {
     console.log(chalk.yellow(`Displayed first ${MAX_DISPLAY_ROWS} rows (of ${rows.length} total).`))
