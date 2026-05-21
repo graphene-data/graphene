@@ -24,7 +24,8 @@ jobs:
           bad_commits=$(git log HEAD^1..HEAD^2 --format='%H%x09%an <%ae>%x09%s' | awk -F '\t' '
             $2 != "Grant <grant@graphenedata.com>" &&
             $2 != "Dylan Scott <dylan@graphenedata.com>" &&
-            $2 != "Kevin Marr <kevin@graphenedata.com>" { print }
+            $2 != "Kevin Marr <kevin@graphenedata.com>" &&
+            $2 != "Demitri Nava <demitri@boltz.bio>" { print }
           ')
 
           if [ -n "$bad_commits" ]; then
@@ -35,6 +36,7 @@ jobs:
             echo "  Grant <grant@graphenedata.com>"
             echo "  Dylan Scott <dylan@graphenedata.com>"
             echo "  Kevin Marr <kevin@graphenedata.com>"
+            echo "  Demitri Nava <demitri@boltz.bio>"
             exit 1
           fi
 
