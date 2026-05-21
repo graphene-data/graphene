@@ -2,6 +2,7 @@
   import {untrack} from 'svelte'
   import ECharts from './ECharts.svelte'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
+  import {formatTitle} from '../component-utilities/format.ts'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
   import type {EChartsConfig, QueryResult, SeriesWithGroupingHint} from '../component-utilities/types.ts'
 
@@ -45,10 +46,10 @@
       series = [{type: 'line' as const, encode: {x, y: yFields[0], splitBy, ...sortHint}}]
     } else {
       // "wide" data, one line per field listed in y
-      series = yFields.map(field => ({type: 'line' as const, name: field, encode: {x, y: field, ...sortHint}}))
+      series = yFields.map(field => ({type: 'line' as const, name: formatTitle(field), encode: {x, y: field, ...sortHint}}))
     }
 
-    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
+    if (y2) series.push({type: 'line' as const, name: formatTitle(y2), yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
 
     return {
       title: title ? {text: title} : undefined,

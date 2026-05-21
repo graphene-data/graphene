@@ -3,6 +3,7 @@
   import ECharts from './ECharts.svelte'
   import type {EChartsConfig, QueryResult, SeriesWithGroupingHint} from '../component-utilities/types.ts'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
+  import {formatTitle} from '../component-utilities/format.ts'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   interface Props {
@@ -61,14 +62,14 @@
     } else {
       // "wide" data, series are created for field listed in the y (or x, for horizontal) attribute
       if (horizontal) {
-        series = xFields.map(field => ({type: 'bar' as const, name: field, encode: {x: field, y, ...sortHint}, label: barLabel}))
+        series = xFields.map(field => ({type: 'bar' as const, name: formatTitle(field), encode: {x: field, y, ...sortHint}, label: barLabel}))
       } else {
-        series = yFields.map(field => ({type: 'bar' as const, name: field, encode: {x, y: field, ...sortHint}, label: barLabel}))
+        series = yFields.map(field => ({type: 'bar' as const, name: formatTitle(field), encode: {x, y: field, ...sortHint}, label: barLabel}))
       }
     }
 
     // y2 is a special shortcut for adding a line on top of a bar chart
-    if (y2) series.push({type: 'line' as const, name: y2, yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
+    if (y2) series.push({type: 'line' as const, name: formatTitle(y2), yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
 
     return {
       title: title ? {text: title} : undefined,

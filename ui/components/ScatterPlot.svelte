@@ -1,5 +1,6 @@
 <script lang="ts">
   import ECharts from './ECharts.svelte'
+  import {formatTitle} from '../component-utilities/format.ts'
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
   import type {EChartsConfig, QueryResult, SeriesWithGroupingHint} from '../component-utilities/types.ts'
 
@@ -34,7 +35,7 @@
       series = [{type: 'scatter' as const, encode: {x, y: yFields[0], splitBy}}]
     } else {
       // "wide" data, one scatter series per field listed in y
-      series = yFields.map(field => ({type: 'scatter' as const, name: field, encode: {x, y: field}}))
+      series = yFields.map(field => ({type: 'scatter' as const, name: formatTitle(field), encode: {x, y: field}}))
     }
 
     return {
@@ -42,8 +43,8 @@
       tooltip: {trigger: 'item'},
       legend: {show: Boolean(splitBy || yFields.length > 1)},
       grid: {left: 56, bottom: 52},
-      xAxis: {name: x, nameLocation: 'middle', nameGap: 28},
-      yAxis: {name: y, nameLocation: 'middle', nameGap: 40},
+      xAxis: {name: formatTitle(x), nameLocation: 'middle', nameGap: 28},
+      yAxis: {name: formatTitle(y), nameLocation: 'middle', nameGap: 40},
       series,
     }
   }
