@@ -1,4 +1,8 @@
 import {readFileSync} from 'fs'
+import {readFile} from 'fs/promises'
+import {createRequire} from 'module'
+import * as net from 'net'
+import path from 'path'
 
 import {config} from '../../lang/config.ts'
 import {authenticatedFetch} from '../auth.ts'
@@ -39,6 +43,8 @@ export async function getConnection(): Promise<QueryConnection> {
     })
   } else if (config.dialect === 'postgres') {
     let mod = await importConnection(() => import('./postgres.ts'), 'pg', 'Postgres')
+    if (config.postgres?.inMemory) return new mod.PostgresConnection(await inMemoryPostgresOptions())
+
     let connectionString = config.postgres?.connectionString || process.env.POSTGRES_URL || process.env.DATABASE_URL
     let host = config.postgres?.host || process.env.PGHOST || process.env.POSTGRES_HOST
     let database = config.postgres?.database || process.env.PGDATABASE || process.env.POSTGRES_DATABASE
@@ -66,6 +72,74 @@ export async function getConnection(): Promise<QueryConnection> {
   } else {
     throw new Error(`Unsupported dialect: ${config.dialect}`)
   }
+}
+
+async function inMemoryPostgresOptions() {
+  let [{PGlite}, {PGLiteSocketServer}] = await Promise.all([
+    importProjectDependency('@electric-sql/pglite', 'in-memory Postgres support'),
+    importProjectDependency('@electric-sql/pglite-socket', 'in-memory Postgres support'),
+  ])
+  let host = '127.0.0.1'
+  let port = await getAvailablePort(host)
+  let db = await PGlite.create({dataDir: 'memory://', database: 'postgres', username: 'postgres'})
+  let server = new PGLiteSocketServer({db, host, port})
+  let started = false
+
+  try {
+    if (config.postgres?.seedSql) {
+      let seedPath = path.resolve(config.root, config.postgres.seedSql)
+      await db.exec(await readFile(seedPath, 'utf8'))
+    }
+    await server.start()
+    started = true
+  } catch (err) {
+    if (started) await server.stop()
+    await db.close()
+    throw err
+  }
+
+  return {
+    ...config.postgres,
+    host,
+    port,
+    database: 'postgres',
+    user: 'postgres',
+    ssl: false,
+    max: 1,
+    onClose: async () => {
+      try {
+        await server.stop()
+      } finally {
+        await db.close()
+      }
+    },
+  }
+}
+
+async function importProjectDependency(packageName: string, label: string): Promise<any> {
+  try {
+    let require = createRequire(path.join(config.root, 'package.json'))
+    return await import(require.resolve(packageName))
+  } catch (err: any) {
+    let depMissing = err.code == 'MODULE_NOT_FOUND' || err.code == 'ERR_MODULE_NOT_FOUND' || (err.message || '').includes(packageName)
+    if (depMissing) {
+      throw new Error(`${label} requires installing ${packageName}.\nAdd it to your project dependencies, for example:\nnpm install ${packageName}`, {cause: err})
+    }
+    throw err
+  }
+}
+
+async function getAvailablePort(host: string): Promise<number> {
+  return await new Promise((resolve, reject) => {
+    let srv = net.createServer()
+    srv.unref()
+    srv.on('error', reject)
+    srv.listen(0, host, () => {
+      let address = srv.address()
+      if (!address || typeof address == 'string') return reject(new Error('Failed to find an available port'))
+      srv.close(() => resolve(address.port))
+    })
+  })
 }
 
 // Import connection, with a nice error message about what to do if a peer dep is missing.

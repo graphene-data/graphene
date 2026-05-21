@@ -226,6 +226,12 @@ importers:
 
   examples/postgres:
     dependencies:
+      '@electric-sql/pglite':
+        specifier: 0.4.5
+        version: 0.4.5
+      '@electric-sql/pglite-socket':
+        specifier: 0.1.5
+        version: 0.1.5(@electric-sql/pglite@0.4.5)
       '@graphenedata/cli':
         specifier: workspace:*
         version: link:../../cli
@@ -656,6 +662,15 @@ packages:
 
   '@duckdb/node-bindings@1.3.2-alpha.26':
     resolution: {integrity: sha512-066o5XrzesZnF/qhNlpmFwDxvIXNYQWr48bjw/ecyLfUcpcvqE0MyL1/zV5oScfcf7hSd/dSntRVzUnQmJCwXg==}
+
+  '@electric-sql/pglite-socket@0.1.5':
+    resolution: {integrity: sha512-/RAye+3EPKfO9nY4tljzxXmkT7yIpFDm0L3F+c28b+Z6uxPOjy/Zz/QEHYHXcrfuUC88/a9S72EO0+3E0j97wQ==}
+    hasBin: true
+    peerDependencies:
+      '@electric-sql/pglite': 0.4.5
+
+  '@electric-sql/pglite@0.4.5':
+    resolution: {integrity: sha512-aGG2zGEyZzGWKy8P+9ZoNUV0jxt1+hgbeTf+bVAYyxVZZLXg3/9aFlfLxb08AYZVAfAkQlQIysmWjhc5hwDG8g==}
 
   '@esbuild/aix-ppc64@0.27.3':
     resolution: {integrity: sha512-9fJMTNFTWZMh5qwrBItuziu834eOCUcEqymSH7pY+zoMVEZg3gcPuBNxH1EvfVYe9h0x/Ptw8KBzv7qxb7l8dg==}
@@ -4187,6 +4202,12 @@ snapshots:
       '@duckdb/node-bindings-linux-arm64': 1.3.2-alpha.26
       '@duckdb/node-bindings-linux-x64': 1.3.2-alpha.26
       '@duckdb/node-bindings-win32-x64': 1.3.2-alpha.26
+
+  '@electric-sql/pglite-socket@0.1.5(@electric-sql/pglite@0.4.5)':
+    dependencies:
+      '@electric-sql/pglite': 0.4.5
+
+  '@electric-sql/pglite@0.4.5': {}
 
   '@esbuild/aix-ppc64@0.27.3':
     optional: true
