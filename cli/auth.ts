@@ -6,8 +6,9 @@ import path from 'path'
 
 import {config} from '../lang/config.ts'
 
-export const AUTH_CLIENT_ID =
-  process.env.AUTH_CLIENT_ID || (process.env.NODE_ENV == 'test' ? 'connected-app-test-1e207553-009e-4382-9bc1-27aceac2a7a0' : 'connected-app-live-8264d0af-df18-4021-af96-157482d17856')
+export function authClientId() {
+  return process.env.AUTH_CLIENT_ID || (process.env.NODE_ENV == 'test' ? 'connected-app-test-1e207553-009e-4382-9bc1-27aceac2a7a0' : 'connected-app-live-8264d0af-df18-4021-af96-157482d17856')
+}
 
 export const AUTH_SCOPES = 'offline_access'
 
@@ -116,7 +117,7 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
     redirect_uri,
     code_challenge,
     state,
-    client_id: AUTH_CLIENT_ID,
+    client_id: authClientId(),
     response_type: 'code',
     code_challenge_method: 'S256',
     scope: AUTH_SCOPES,
@@ -136,7 +137,7 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
       grant_type: 'authorization_code',
       code: result.code,
       redirect_uri,
-      client_id: AUTH_CLIENT_ID,
+      client_id: authClientId(),
       code_verifier: verifier,
     }),
   })
@@ -150,7 +151,7 @@ async function refreshAccessToken() {
   let res = await fetch(new URL('/_api/oauth2/token', config.host).toString(), {
     method: 'POST',
     headers: {'content-type': 'application/json'},
-    body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: AUTH_CLIENT_ID}),
+    body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: authClientId()}),
   })
   if (!res.ok) throw new Error(`refresh failed: ${res.status}`)
   let json = await res.json()
