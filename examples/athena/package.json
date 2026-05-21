@@ -1,0 +1,27 @@
+{
+  "name": "graphene-athena-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "graphene": "graphene"
+  },
+  "dependencies": {
+    "@aws-sdk/client-athena": "^3.1049.0",
+    "@graphenedata/cli": "workspace:*"
+  },
+  "graphene": {
+    "athena": {
+      "region": "us-east-1",
+      "catalog": "AwsDataCatalog",
+      "database": "graphene_test",
+      "workGroup": "graphene-test",
+      "outputLocation": "s3://graphene-athena-results-staging-025223626139/"
+    },
+    "defaultNamespace": "graphene_test",
+    "envFile": [
+      ".env",
+      "../../.env",
+      "../../../.env"
+    ]
+  }
+}

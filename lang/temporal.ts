@@ -151,5 +151,9 @@ export function renderStandaloneInterval(dialect: string, intervalExpr: NonNulla
     if (intervalExpr.form == 'constant') return `interval ${intervalExpr.quantitySql} ${intervalExpr.unit}`
     return `(${intervalExpr.quantitySql} * (interval 1 ${intervalExpr.unit}))`
   }
+  if (dialect == 'athena') {
+    if (intervalExpr.form == 'constant') return `INTERVAL '${intervalExpr.quantitySql}' ${intervalExpr.unit}`
+    return `(${intervalExpr.quantitySql} * INTERVAL '1' ${intervalExpr.unit})`
+  }
   return `interval ${intervalExpr.quantitySql} ${intervalExpr.unit}`
 }

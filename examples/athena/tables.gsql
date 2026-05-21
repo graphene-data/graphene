@@ -1,0 +1,10 @@
+table flights (
+  carrier VARCHAR
+  dep_delay BIGINT
+  arr_delay BIGINT
+  origin VARCHAR
+  dest VARCHAR
+  flight_date DATE
+
+  refund_eligible: dep_delay > 180
+)
