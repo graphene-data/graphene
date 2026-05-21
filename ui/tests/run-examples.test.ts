@@ -1,6 +1,6 @@
+import {type Page} from '@playwright/test'
 import {spawn} from 'node:child_process'
 import fs from 'node:fs'
-import * as fsp from 'node:fs/promises'
 import * as net from 'node:net'
 import * as path from 'node:path'
 import {fileURLToPath} from 'node:url'
@@ -42,16 +42,16 @@ function toPageUrl(mdPath: string) {
   return '/' + normalized.replace(/\.md$/, '')
 }
 
-async function listMarkdownFiles(dir: string): Promise<string[]> {
+function listMarkdownFiles(dir: string): string[] {
   let files: string[] = []
 
-  async function walk(currentDir: string) {
-    let entries = await fsp.readdir(currentDir, {withFileTypes: true})
+  function walk(currentDir: string) {
+    let entries = fs.readdirSync(currentDir, {withFileTypes: true})
     for (let entry of entries) {
       if (entry.name === 'node_modules') continue
       let fullPath = path.join(currentDir, entry.name)
       if (entry.isDirectory()) {
-        await walk(fullPath)
+        walk(fullPath)
         continue
       }
       if (!entry.isFile() || !entry.name.endsWith('.md')) continue
@@ -59,17 +59,8 @@ async function listMarkdownFiles(dir: string): Promise<string[]> {
     }
   }
 
-  await walk(dir)
+  walk(dir)
   return files.sort()
-}
-
-async function getExampleDirs(examplesDir: string): Promise<string[]> {
-  let entries = await fsp.readdir(examplesDir, {withFileTypes: true})
-  return entries
-    .filter(entry => entry.isDirectory())
-    .map(entry => path.join(examplesDir, entry.name))
-    .filter(dir => fs.existsSync(path.join(dir, 'package.json')))
-    .sort()
 }
 
 async function getAvailablePort(): Promise<number> {
@@ -84,58 +75,57 @@ async function getAvailablePort(): Promise<number> {
   })
 }
 
-test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for every markdown file in examples', {timeout: 900_000}, async ({page}) => {
-  let testsDir = path.dirname(fileURLToPath(import.meta.url))
-  let coreDir = path.resolve(testsDir, '../..')
-  let examplesDir = path.join(coreDir, 'examples')
-  let exampleDirs = await getExampleDirs(examplesDir)
+let testsDir = path.dirname(fileURLToPath(import.meta.url))
+let coreDir = path.resolve(testsDir, '../..')
+let examplesDir = path.join(coreDir, 'examples')
 
-  expect(exampleDirs.length).toBeGreaterThan(0)
-
+async function runExample(exampleName: string, page: Page) {
+  let exampleDir = path.join(examplesDir, exampleName)
+  let markdownFiles = listMarkdownFiles(exampleDir)
+  expect(markdownFiles.length).toBeGreaterThan(0)
   expectConsoleError(/\[ECharts\] The ticks may be not readable/)
+  console.log(`[run-examples] ${exampleName}: ${markdownFiles.length} markdown files`)
 
-  let runPlan = await Promise.all(exampleDirs.map(async exampleDir => ({exampleDir, markdownFiles: await listMarkdownFiles(exampleDir)})))
-  let plannedFiles = runPlan.flatMap(({exampleDir, markdownFiles}) => markdownFiles.map(mdPath => `${path.basename(exampleDir)}/${mdPath}`))
+  let port = await getAvailablePort()
+  let childEnv = {...process.env, NODE_ENV: 'test', GRAPHENE_PORT: String(port)}
 
-  console.log(`[run-examples] found ${exampleDirs.length} runnable example directories`)
-  console.log(`[run-examples] planned markdown files (${plannedFiles.length}):`)
-  plannedFiles.forEach(file => console.log(`[run-examples]   - ${file}`))
+  try {
+    let serveResult = await runCli(['serve', '--bg'], exampleDir, childEnv)
+    expectSuccess(`serve ${exampleName}`, serveResult)
 
-  let totalMdFiles = 0
+    for (let mdPath of markdownFiles) {
+      console.log(`[run-examples] running ${exampleName}/${mdPath}`)
+      await page.goto(`http://localhost:${port}${toPageUrl(mdPath)}`)
+      await waitForGrapheneLoad(page, 120_000)
 
-  for (let {exampleDir, markdownFiles} of runPlan) {
-    if (!markdownFiles.length) {
-      console.log(`[run-examples] ${path.basename(exampleDir)}: no markdown files, skipping`)
-      continue
+      let runResult = await runCli(['run', mdPath], exampleDir, childEnv)
+      expectSuccess(`run ${exampleName}/${mdPath}`, runResult)
+
+      let output = stripAnsi(runResult.stdout + runResult.stderr)
+      expect(output).toContain('No errors found')
     }
-
-    totalMdFiles += markdownFiles.length
-    console.log(`[run-examples] ${path.basename(exampleDir)}: ${markdownFiles.length} markdown files`)
-
-    let port = await getAvailablePort()
-    let childEnv = {...process.env, NODE_ENV: 'test', GRAPHENE_PORT: String(port)}
-
-    try {
-      let serveResult = await runCli(['serve', '--bg'], exampleDir, childEnv)
-      expectSuccess(`serve ${path.basename(exampleDir)}`, serveResult)
-
-      for (let mdPath of markdownFiles) {
-        console.log(`[run-examples] running ${path.basename(exampleDir)}/${mdPath}`)
-        await page.goto(`http://localhost:${port}${toPageUrl(mdPath)}`)
-        await waitForGrapheneLoad(page, 120_000)
-
-        let runResult = await runCli(['run', mdPath], exampleDir, childEnv)
-        expectSuccess(`run ${path.basename(exampleDir)}/${mdPath}`, runResult)
-
-        let output = stripAnsi(runResult.stdout + runResult.stderr)
-        expect(output).toContain('No errors found')
-      }
-    } finally {
-      expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
-      await runCli(['stop'], exampleDir, childEnv)
-    }
+  } finally {
+    expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
+    await runCli(['stop'], exampleDir, childEnv)
   }
+}
 
-  expect(totalMdFiles).toBeGreaterThan(0)
-  console.log(`[run-examples] processed ${totalMdFiles} markdown files total`)
+test.skipIf(!process.env.ATHENA_TEST)('graphene run succeeds for athena example', {timeout: 180_000}, async ({page}) => {
+  await runExample('athena', page)
+})
+
+test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for clickhouse example', {timeout: 180_000}, async ({page}) => {
+  await runExample('clickhouse', page)
+})
+
+test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for ecomm example', {timeout: 180_000}, async ({page}) => {
+  await runExample('ecomm', page)
+})
+
+test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for flights example', {timeout: 180_000}, async ({page}) => {
+  await runExample('flights', page)
+})
+
+test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for snowflake example', {timeout: 180_000}, async ({page}) => {
+  await runExample('snowflake', page)
 })
