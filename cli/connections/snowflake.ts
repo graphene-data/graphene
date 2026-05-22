@@ -2,7 +2,7 @@ import {createPrivateKey} from 'node:crypto'
 import snowflake from 'snowflake-sdk'
 
 import {config} from '../../lang/config.ts'
-import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
+import {type CacheableQueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
 
 interface SnowflakeOptions {
   username?: string
@@ -21,7 +21,8 @@ interface SnowflakeOptions {
 // You can get the `account` by looking at the bit before "snowflakecomputing" in the account url (which is found in the snowflake ui)
 // Instructions for generating private/public keys: https://docs.snowflake.com/en/user-guide/key-pair-auth#generate-the-private-keys
 
-export class SnowflakeConnection implements QueryConnection {
+export class SnowflakeConnection implements CacheableQueryConnection {
+  cacheProvider = 'snowflake' as const
   private ready: Promise<void>
   private connection!: snowflake.Connection
 
@@ -79,10 +80,28 @@ export class SnowflakeConnection implements QueryConnection {
           })
           stream.on('end', () => {
             let totalRows = Number(statement.getNumRows())
-            resolve({rows, totalRows})
+            resolve({rows, totalRows, cacheRef: {provider: 'snowflake', ref: {queryId: statement.getQueryId()}}})
           })
         },
       })
+    })
+  }
+
+  async retrieveQueryResults(ref: Record<string, unknown>): Promise<QueryResult> {
+    let queryId = String(ref.queryId || '')
+    if (!queryId) throw new Error('Snowflake cache ref is missing queryId')
+    return await this.runQuery(`select * from table(result_scan('${escapeSnowflakeString(queryId)}'))`)
+  }
+
+  cacheContext(): string {
+    let configOptions = (this.connection as any).getConfig()
+    return JSON.stringify({
+      account: configOptions.account,
+      username: configOptions.username,
+      database: configOptions.database,
+      schema: configOptions.schema,
+      warehouse: configOptions.warehouse,
+      role: configOptions.role,
     })
   }
 
@@ -155,4 +174,8 @@ export class SnowflakeConnection implements QueryConnection {
 function snowflakeIdent(value: string) {
   if (!value) throw new Error('Snowflake identifiers cannot be empty')
   return `"${value.replace(/"/g, '""')}"`
+}
+
+function escapeSnowflakeString(value: string) {
+  return value.replace(/'/g, "''")
 }
