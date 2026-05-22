@@ -1,7 +1,7 @@
 import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
 
 import {config} from '../../lang/config.ts'
-import {type CacheableQueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
+import {type CacheableQueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
 
 // BigQuery identifiers can contain letters, numbers, underscores, and hyphens
 function validateBigQueryIdent(ident: string) {
@@ -22,8 +22,8 @@ export class BigQueryConnection implements CacheableQueryConnection {
     this.defaultNamespace = config.defaultNamespace
   }
 
-  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
-    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params})
+  async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
+    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params: options?.params})
     let [rows] = await job.getQueryResults({maxResults: 10000})
     let metadata = job.metadata || (await job.getMetadata())[0]
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
@@ -90,7 +90,7 @@ export class BigQueryConnection implements CacheableQueryConnection {
       where lower(table_name) = lower(@table)
       order by ordinal_position
     `.trim()
-    let res = await this.runQuery(sql, {table})
+    let res = await this.runQuery(sql, {params: {table}})
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })
