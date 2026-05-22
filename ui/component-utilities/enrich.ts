@@ -22,7 +22,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
 
   // Resolve axis metadata up front so row shaping (like explicit sorting) can use it.
   inferAxesFromEncodedFields(normalized, fields, rows)
-  hideValueAxisChromeForLineAndBar(normalized)
+  hideDimensionAxisChrome(normalized)
   extendValueAxisDomainsForBars(normalized)
 
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
@@ -285,44 +285,31 @@ function inferAxesFromEncodedFields(config: NormalConfig, fields: Field[], rows:
 
     config.yAxis[axisIndex] = {...inferred, ...axis, axisLabel: {...inferred.axisLabel, ...axis.axisLabel}, axisPointer: {...inferred.axisPointer, ...axis.axisPointer}}
   }
-
-  // Ordinal x axes already use labels to communicate the bucket boundaries, so
-  // the y-axis line reads like an extra vertical grid line at the left edge.
-  // Hide the paired y-axis line unless the caller explicitly configured it.
-  for (let [axisIndex, axis] of config.xAxis.entries()) {
-    if (!axis?.field?.metadata?.timeOrdinal && axis?.field?.metadata?.timeGrain !== 'year') continue
-
-    let yAxisIndexes = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex).map(entry => Number(entry?.yAxisIndex ?? 0))
-    for (let yAxisIndex of yAxisIndexes) {
-      let yAxis = config.yAxis[yAxisIndex]
-      if (!yAxis || yAxis.axisLine?.show != null) continue
-      yAxis.axisLine = {...yAxis.axisLine, show: false}
-    }
-  }
 }
 
-// Numeric x-axes that drive line/bar series read like discrete dimensions, so the
-// value-axis chrome (vertical splitLines, x-axis line, ticks, paired y-axis line)
-// looks noisy. Hide it whenever the caller hasn't set it explicitly. Horizontal
-// bars are excluded by the value-typed y-axis check.
-function hideValueAxisChromeForLineAndBar(config: NormalConfig) {
-  for (let [axisIndex, xAxis] of config.xAxis.entries()) {
-    if (xAxis?.type !== 'value') continue
-    let seriesOnAxis = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex && (entry?.type === 'line' || entry?.type === 'bar'))
-    if (seriesOnAxis.length === 0) continue
+// Hide vertical grid lines for line/bar charts. For horizontal bar charts, hide the horizontal lines.
+// Other chart types (like scatter) keep the grid lines as they're helpful.
+function hideDimensionAxisChrome(config: NormalConfig) {
+  for (let series of config.series) {
+    let xAxis = config.xAxis[Number(series?.xAxisIndex ?? 0)]
+    let yAxis = config.yAxis[Number(series?.yAxisIndex ?? 0)]
 
-    let yAxisIndexes = seriesOnAxis.map(entry => Number(entry?.yAxisIndex ?? 0))
-    let pairedAreAllValue = yAxisIndexes.every(idx => config.yAxis[idx]?.type === 'value')
-    if (!pairedAreAllValue) continue
+    let isLineOrArea = series?.type === 'line'
+    let isVerticalBar = series?.type === 'bar' && yAxis?.type !== 'category'
+    let isHorizontalBar = series?.type === 'bar' && yAxis?.type === 'category'
 
-    if (xAxis.splitLine?.show == null) xAxis.splitLine = {...xAxis.splitLine, show: false}
-    if (xAxis.axisLine?.show == null) xAxis.axisLine = {...xAxis.axisLine, show: false}
-    if (xAxis.axisTick?.show == null) xAxis.axisTick = {...xAxis.axisTick, show: false}
+    if (isLineOrArea || isVerticalBar) {
+      if (xAxis?.type !== 'value') continue
+      if (xAxis.splitLine?.show == null) xAxis.splitLine = {...xAxis.splitLine, show: false}
+      if (xAxis.axisLine?.show == null) xAxis.axisLine = {...xAxis.axisLine, show: false}
+      if (xAxis.axisTick?.show == null) xAxis.axisTick = {...xAxis.axisTick, show: false}
+      if (yAxis && yAxis.axisLine?.show == null) yAxis.axisLine = {...yAxis.axisLine, show: false}
+    }
 
-    for (let yAxisIndex of yAxisIndexes) {
-      let yAxis = config.yAxis[yAxisIndex]
-      if (!yAxis || yAxis.axisLine?.show != null) continue
-      yAxis.axisLine = {...yAxis.axisLine, show: false}
+    if (isHorizontalBar) {
+      if (yAxis.splitLine?.show == null) yAxis.splitLine = {...yAxis.splitLine, show: false}
+      if (yAxis.axisLine?.show == null) yAxis.axisLine = {...yAxis.axisLine, show: false}
+      if (yAxis.axisTick?.show == null) yAxis.axisTick = {...yAxis.axisTick, show: false}
     }
   }
 }
@@ -713,19 +700,14 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
       axis.axisLabel = {customValues: ticks, formatter: (value: unknown) => (Number.isInteger(Number(value)) ? String(Number(value)) : '')}
       axis.axisTick = {customValues: ticks}
-      axis.axisLine = {show: false}
-      axis.splitLine = {show: false}
       return axis
     }
 
     if (field.metadata?.timeOrdinal) {
       // Ordinal values are numeric so we use a value axis with a fixed domain, but
-      // visually they are discrete buckets. Hide value-axis grid lines by default
-      // and pin tick positions to evenly-spaced integers so we never get a stub
-      // boundary label (e.g. weeks 1, 14, 27, 40, 53 instead of 1, 11, 21, 31, 41, 51, 53).
+      // visually they are discrete buckets. Pin tick positions to evenly-spaced
+      // integers so we never get a stub boundary label (e.g. weeks 1, 14, 27, 40, 53).
       let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
-      axis.axisLine = {show: false}
-      axis.splitLine = {show: false}
       axis.axisLabel = {
         hideOverlap: true,
         customValues: ticks,
@@ -735,11 +717,6 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
       return axis
     }
-  }
-
-  if (type === 'category' && field.metadata?.timeOrdinal) {
-    axis.axisLabel = {formatter: (value: unknown) => formatTimeOrdinal(field, value)}
-    axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
   }
 
   return axis
