@@ -1,3 +1,26 @@
+## 0.0.19
+
+### Breaking changes
+
+None.
+
+### Added
+
+- Added Postgres connector, dialect support, setup docs, installer support, and example project (`cecd5823` by [@demitrin](https://github.com/demitrin)).
+- Added Athena connector and dialect support (`2bed4a12`).
+- Added `graphene run --headless` for browserless screenshot/check runs (`fa82c5bf`).
+- Added a CLI update notifier with project-local update state (`97eacbad`).
+- Added Codex project configuration to generated `create-graphene` projects (`361baa05`).
+
+### Fixed
+
+- Fixed `rows=all` tables to disable pagination, DATE formatting in CLI output, and folder URL redirects to `index.md` pages (`a86b7751`).
+- Fixed snake-cased chart axis and wrapper series labels to render as title case (`807d4ff2`).
+- Fixed numeric x-axis styling for line and bar charts by hiding extra value-axis chrome (`e6e2bdf0` by [@lnoguera17](https://github.com/lnoguera17)).
+- Fixed `graphene run` background serve failures to tail the server log (`3ebbca26`).
+- Fixed markdown component parsing to avoid ReDoS-prone regexes and updated dependencies for security alerts (`06fc86a5`, `054f435e`, `f792d74f`).
+- Removed the CLI package postinstall browser download (`d70cc952`).
+
 ## 0.0.18
 
 ### Breaking changes
