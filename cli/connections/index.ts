@@ -171,7 +171,7 @@ export async function runQuery(sql: string, options?: QueryOptions): Promise<Que
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({sql, params: options?.params, queryCache: options?.queryCache}),
+      body: JSON.stringify({sql, params: options?.params}),
     })
     return await resp.json()
   }
