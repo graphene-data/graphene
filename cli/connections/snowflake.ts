@@ -2,7 +2,7 @@ import {createPrivateKey} from 'node:crypto'
 import snowflake from 'snowflake-sdk'
 
 import {config} from '../../lang/config.ts'
-import {type CacheableQueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
 
 interface SnowflakeOptions {
   username?: string
@@ -21,10 +21,9 @@ interface SnowflakeOptions {
 // You can get the `account` by looking at the bit before "snowflakecomputing" in the account url (which is found in the snowflake ui)
 // Instructions for generating private/public keys: https://docs.snowflake.com/en/user-guide/key-pair-auth#generate-the-private-keys
 
-export class SnowflakeConnection implements CacheableQueryConnection {
-  cacheProvider = 'snowflake' as const
-  private ready: Promise<void>
-  private connection!: snowflake.Connection
+export class SnowflakeConnection implements QueryConnection {
+  protected ready: Promise<void>
+  protected connection!: snowflake.Connection
 
   constructor(opts: SnowflakeOptions) {
     this.ready = this.initialize(opts || {})
@@ -58,8 +57,13 @@ export class SnowflakeConnection implements CacheableQueryConnection {
   }
 
   async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
+    let {rows, totalRows} = await this.executeQuery(sql, options)
+    return {rows, totalRows}
+  }
+
+  protected async executeQuery(sql: string, options?: QueryOptions): Promise<QueryResult & {queryId?: string}> {
     await this.ready
-    return await new Promise<QueryResult>((resolve, reject) => {
+    return await new Promise<QueryResult & {queryId?: string}>((resolve, reject) => {
       let rows: any[] = []
       this.connection.execute({
         sqlText: sql,
@@ -80,28 +84,10 @@ export class SnowflakeConnection implements CacheableQueryConnection {
           })
           stream.on('end', () => {
             let totalRows = Number(statement.getNumRows())
-            resolve({rows, totalRows, cacheRef: {provider: 'snowflake', ref: {queryId: statement.getQueryId()}}})
+            resolve({rows, totalRows, queryId: statement.getQueryId()})
           })
         },
       })
-    })
-  }
-
-  async retrieveQueryResults(ref: Record<string, unknown>): Promise<QueryResult> {
-    let queryId = String(ref.queryId || '')
-    if (!queryId) throw new Error('Snowflake cache ref is missing queryId')
-    return await this.runQuery(`select * from table(result_scan('${escapeSnowflakeString(queryId)}'))`)
-  }
-
-  cacheContext(): string {
-    let configOptions = (this.connection as any).getConfig()
-    return JSON.stringify({
-      account: configOptions.account,
-      username: configOptions.username,
-      database: configOptions.database,
-      schema: configOptions.schema,
-      warehouse: configOptions.warehouse,
-      role: configOptions.role,
     })
   }
 
@@ -176,6 +162,6 @@ function snowflakeIdent(value: string) {
   return `"${value.replace(/"/g, '""')}"`
 }
 
-function escapeSnowflakeString(value: string) {
+export function escapeSnowflakeString(value: string) {
   return value.replace(/'/g, "''")
 }
