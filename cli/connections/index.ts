@@ -173,7 +173,10 @@ export async function runQuery(sql: string, options?: QueryOptions): Promise<Que
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({sql, params: options?.params}),
     })
-    return await resp.json()
+    let json = await resp.json()
+    if (!resp.ok) throw new Error(json.message || json.error || `Query failed with HTTP ${resp.status}`)
+    if (!Array.isArray(json.rows)) throw new Error('Query response did not include rows')
+    return json
   }
 
   let conn = await getConnection()
