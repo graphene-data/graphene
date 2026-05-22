@@ -3,7 +3,7 @@ import {promises as fs} from 'fs'
 import path from 'path'
 
 import {config} from '../../lang/config.ts'
-import {type QueryResult, type QueryConnection, type SchemaColumn, type QueryParams} from './types.ts'
+import {type QueryResult, type QueryConnection, type SchemaColumn, type QueryOptions} from './types.ts'
 
 interface DuckDbOptions {
   path?: string
@@ -36,8 +36,9 @@ export class DuckDBConnection implements QueryConnection {
     await this.connection.run('use graphene_cli;')
   }
 
-  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
+  async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
     await this.ready
+    let params = options?.params
     let reader = params ? await this.connection!.runAndReadAll(sql, params as any) : await this.connection!.runAndReadAll(sql)
     let rows = reader.getRowObjects().map(record => {
       let out: Record<string, unknown> = {}
@@ -82,7 +83,7 @@ export class DuckDBConnection implements QueryConnection {
       order by ordinal_position
     `.trim()
     let params = schema ? [table, schema] : [table]
-    let res = await this.runQuery(sql, params)
+    let res = await this.runQuery(sql, {params})
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })

@@ -55,7 +55,7 @@ describe('PostgresConnection', () => {
     let pool = new FakePool(result([]))
     let conn = new PostgresConnection({pool, schema: 'public'})
 
-    await conn.runQuery("select $carrier as carrier, '$carrier' as literal, $carrier as again, $min_total as min_total", {carrier: 'AA', min_total: 10})
+    await conn.runQuery("select $carrier as carrier, '$carrier' as literal, $carrier as again, $min_total as min_total", {params: {carrier: 'AA', min_total: 10}})
 
     expect(pool.queries[0]).toEqual({
       sql: "select $1 as carrier, '$carrier' as literal, $1 as again, $2 as min_total",

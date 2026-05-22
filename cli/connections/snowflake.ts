@@ -2,7 +2,7 @@ import {createPrivateKey} from 'node:crypto'
 import snowflake from 'snowflake-sdk'
 
 import {config} from '../../lang/config.ts'
-import {type CacheableQueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
+import {type CacheableQueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
 
 interface SnowflakeOptions {
   username?: string
@@ -57,13 +57,13 @@ export class SnowflakeConnection implements CacheableQueryConnection {
     })
   }
 
-  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
+  async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
     await this.ready
     return await new Promise<QueryResult>((resolve, reject) => {
       let rows: any[] = []
       this.connection.execute({
         sqlText: sql,
-        binds: params as any,
+        binds: options?.params as any,
         streamResult: true,
         complete: (error, statement) => {
           if (error) {
@@ -133,7 +133,7 @@ export class SnowflakeConnection implements CacheableQueryConnection {
       where table_type in ('BASE TABLE', 'VIEW') and upper(table_schema) = upper(?)
       order by table_name
     `,
-      [schema],
+      {params: [schema]},
     )
     return res.rows.map(row => `${String(row['table_schema']).toLowerCase()}.${String(row['table_name']).toLowerCase()}`)
   }
@@ -151,7 +151,7 @@ export class SnowflakeConnection implements CacheableQueryConnection {
       where upper(table_schema) = upper(?) and upper(table_name) = upper(?)
       order by ordinal_position
     `,
-      [schema, table],
+      {params: [schema, table]},
     )
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}

@@ -1,6 +1,6 @@
 import {createClient, type ClickHouseClient} from '@clickhouse/client'
 
-import {type QueryConnection, type QueryResult, type QueryParams, type QueryOptions, type SchemaColumn} from './types.ts'
+import {type QueryConnection, type QueryResult, type QueryOptions, type SchemaColumn} from './types.ts'
 
 export interface ClickHouseOptions {
   url: string
@@ -26,7 +26,7 @@ export class ClickHouseConnection implements QueryConnection {
     })
   }
 
-  async runQuery(sql: string, _params?: QueryParams, options?: QueryOptions): Promise<QueryResult> {
+  async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
     let useNativeCache = !!options?.queryCache && options.queryCache != 'none'
     let result = await this.client.query({query: sql, format: 'JSONEachRow', clickhouse_settings: clickHouseCacheSettings(options)} as any)
     let rows = (await result.json()) as unknown as Array<Record<string, unknown>>

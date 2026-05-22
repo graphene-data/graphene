@@ -29,7 +29,7 @@ export interface NativeQueryCache {
 }
 
 export interface QueryConnection {
-  runQuery(sql: string, params?: QueryParams, options?: QueryOptions): Promise<QueryResult>
+  runQuery(sql: string, options?: QueryOptions): Promise<QueryResult>
   listDatasets(): Promise<string[]>
   listSchemas?(dataset: string): Promise<string[]>
   listTables(dataset?: string): Promise<string[]>
