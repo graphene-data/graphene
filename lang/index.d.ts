@@ -6,6 +6,14 @@ export interface QueryResult {
   error?: GrapheneError
   hash?: string // hash of the compiled sql for caching
   sql?: string
+  cache?: QueryCacheMetadata
+}
+
+export type QueryCacheMetadata = {
+  provider: 'bigquery' | 'snowflake' | 'clickhouse'
+  status: 'hit' | 'miss' | 'refresh' | 'native'
+  createdAt?: number
+  expiresAt?: number
 }
 
 // A single output column in a query result.
