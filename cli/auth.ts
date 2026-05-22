@@ -6,10 +6,16 @@ import path from 'path'
 
 import {config} from '../lang/config.ts'
 
-export const AUTH_CLIENT_ID =
-  process.env.AUTH_CLIENT_ID || (process.env.NODE_ENV == 'test' ? 'connected-app-test-1e207553-009e-4382-9bc1-27aceac2a7a0' : 'connected-app-live-8264d0af-df18-4021-af96-157482d17856')
+const TEST_AUTH_CLIENT_ID = 'connected-app-test-1e207553-009e-4382-9bc1-27aceac2a7a0'
+const LIVE_AUTH_CLIENT_ID = 'connected-app-live-8264d0af-df18-4021-af96-157482d17856'
 
 export const AUTH_SCOPES = 'offline_access'
+
+export function authClientId() {
+  if (process.env.AUTH_CLIENT_ID) return process.env.AUTH_CLIENT_ID
+  if (process.env.STYTCH_PROJECT_ID?.startsWith('project-test-')) return TEST_AUTH_CLIENT_ID
+  return process.env.NODE_ENV == 'test' ? TEST_AUTH_CLIENT_ID : LIVE_AUTH_CLIENT_ID
+}
 
 export interface Cred {
   access_token: string
@@ -40,7 +46,7 @@ async function readEntry(): Promise<Cred | null> {
 async function updateEntry(cred: Cred) {
   let store = await readStore()
   cred.refresh_token ||= store[config.root]?.refresh_token
-  cred.expires_at = Date.now() + cred.expires_in
+  cred.expires_at = Date.now() + cred.expires_in * 1000
   store[config.root] = cred
 
   await fs.mkdir(path.dirname(credsPath), {recursive: true, mode: 0o700})
@@ -116,7 +122,7 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
     redirect_uri,
     code_challenge,
     state,
-    client_id: AUTH_CLIENT_ID,
+    client_id: authClientId(),
     response_type: 'code',
     code_challenge_method: 'S256',
     scope: AUTH_SCOPES,
@@ -136,7 +142,7 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
       grant_type: 'authorization_code',
       code: result.code,
       redirect_uri,
-      client_id: AUTH_CLIENT_ID,
+      client_id: authClientId(),
       code_verifier: verifier,
     }),
   })
@@ -147,10 +153,11 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
 
 async function refreshAccessToken() {
   let refresh_token = (await readEntry())?.refresh_token
+  if (!refresh_token) throw new Error('No refresh token available; run `graphene login`')
   let res = await fetch(new URL('/_api/oauth2/token', config.host).toString(), {
     method: 'POST',
     headers: {'content-type': 'application/json'},
-    body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: AUTH_CLIENT_ID}),
+    body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: authClientId()}),
   })
   if (!res.ok) throw new Error(`refresh failed: ${res.status}`)
   let json = await res.json()
@@ -182,7 +189,7 @@ export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = 
     await refreshAccessToken()
     token = (await readEntry())?.access_token
     if (token) {
-      headers.set('cookie', `access_token=${token}`)
+      headers.set('authorization', `Bearer ${token}`)
       res = await fetch(url.toString(), {...init, headers})
     }
   }
