@@ -188,7 +188,8 @@ test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'year', y: 'flights', splitBy: 'status', arrange: 'stack', title: 'Flight Status by Year'})
-  await expect(chart.el).screenshot('bar-chart-numeric-year-domain')
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2})
+  await expect(chart.el).screenshot('bar-chart-numeric-year-domain-tooltip')
 })
 
 test('horizontal bar chart', async ({mount, chart}) => {

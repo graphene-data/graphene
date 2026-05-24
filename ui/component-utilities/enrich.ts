@@ -1,7 +1,7 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
-import {formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
+import {formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {paletteForPath} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -698,8 +698,10 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       // Pin year ticks to evenly-spaced integers so a domain like [2000, 2005]
       // doesn't end up with the 2000/2002/2004/2005 stub-label pattern.
       let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
-      axis.axisLabel = {customValues: ticks, formatter: (value: unknown) => (Number.isInteger(Number(value)) ? String(Number(value)) : '')}
+      let formatter = (value: unknown) => axisFormatter(value, field)
+      axis.axisLabel = {customValues: ticks, formatter}
       axis.axisTick = {customValues: ticks}
+      axis.axisPointer = {label: {formatter}}
       return axis
     }
 
@@ -755,6 +757,12 @@ function tickRange(min: number, max: number, step: number): number[] {
   let values: number[] = []
   for (let v = min; v <= max + 1e-9; v += step) values.push(Math.round(v))
   return values
+}
+
+function axisFormatter(input: unknown, field: Field) {
+  let value = input
+  if (value && typeof value === 'object' && 'value' in (value as Record<string, unknown>)) value = (value as Record<string, unknown>).value
+  return Number.isInteger(Number(value)) ? formatSingleValue(value, field) : ''
 }
 
 // Return the natural numeric domain for temporal values that are encoded as numbers.

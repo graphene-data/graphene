@@ -38,6 +38,7 @@ export function formatSingleValue(value: any, field?: Field, options: ValueForma
   let amount = Number(value)
   if (!Number.isFinite(amount)) return String(value ?? '')
 
+  if (field?.metadata?.timeGrain === 'year' && Number.isInteger(amount)) return String(amount)
   if (field?.metadata?.ratio) return `${percent.format(amount * 100)}%`
   if (field?.metadata?.pct) return `${percent.format(amount)}%`
 
