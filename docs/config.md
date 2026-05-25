@@ -7,7 +7,7 @@ Graphene reads its configuration from the `graphene` object in your project's `p
   "graphene": {
     "duckdb": {"path": "./data.duckdb"},
     "defaultNamespace": "main",
-    "ignoredFiles": ["**/readme.md", "**/agents.md", "**/claude.md"],
+    "ignoredFiles": ["drafts/**"],
     "envFile": [".env", "../../.env"],
     "updateNotifier": false
   }
@@ -27,10 +27,10 @@ The schema/database used to resolve unqualified table names in GSQL. For BigQuer
 An array of glob patterns for files that Graphene should skip when discovering `.gsql` and `.md` files. Patterns are matched relative to the project root using the [`glob`](https://www.npmjs.com/package/glob) package's syntax (case-insensitive).
 
 ```json
-"ignoredFiles": ["**/readme.md", "drafts/**"]
+"ignoredFiles": ["drafts/**"]
 ```
 
-`node_modules/**`, hidden directories (`.git/`, `.claude/`, etc.), and the agent-instruction files `agents.md` and `claude.md` are always ignored regardless of this setting.
+`node_modules/**`, hidden directories (`.git/`, `.claude/`, etc.), `readme.md`, and the agent-instruction files `agents.md` and `claude.md` are always ignored regardless of this setting.
 
 ## `envFile`
 
