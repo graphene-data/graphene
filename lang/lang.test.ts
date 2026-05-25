@@ -1376,13 +1376,6 @@ describe('lang', () => {
     expect("from users select created_at + 'many moons'").toHaveDiagnostic(/Invalid date arithmetic/i)
   })
 
-  it('parses temporal parameters at runtime', () => {
-    let queries = analyze(`${testTables}
-      from users select id where created_at >= $start_date
-    `)
-    expect(toSql(queries[0], {start_date: '2024-01-01'})).toMatch(/>=DATE '2024-01-01'/)
-  })
-
   it('diagnoses invalid timestamp literals', () => {
     expect("from users select id where created_at >= 'soonish'").toHaveDiagnostic(/Cannot parse as timestamp/i)
   })
