@@ -475,13 +475,15 @@ class AnalysisSession implements Analyzer {
         let expr = this.analyzeExpr(exprNode, scope)
         if (isScalarType(expr.type, 'interval') && expr.interval?.form == 'scaled') this.diag(exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
         let {name, disambiguatedName} = aliasNode ? {name: txt(aliasNode), disambiguatedName: undefined} : this.inferName(exprNode, scope, expr)
+        let metadata: FieldMeta | undefined = {...expr.metadata, ...this.extractMetadata(select)}
+        if (Object.keys(metadata).length === 0) metadata = undefined
         isAgg ||= !!expr.isAgg
         this.addQueryField(query, {
           name,
           disambiguatedName,
           sql: expr.sql,
           type: expr.type,
-          metadata: expr.metadata,
+          metadata,
           isAgg: expr.isAgg,
           fanout: expr.fanout,
           definitionLocation: this.locationForNode(aliasNode || exprNode),

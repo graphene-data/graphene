@@ -993,6 +993,16 @@ describe('lang', () => {
     expect(query.fields[0].metadata).toMatchObject({currency: 'USD'})
   })
 
+  it('parses field metadata from select items', () => {
+    updateFile('table scores (wins int, games int)', 'scores.gsql')
+
+    let [query] = analyze(`from scores select
+      #pct
+      wins / games * 100 as win_pct`)
+
+    expect(query.fields[0].metadata).toMatchObject({pct: 'true'})
+  })
+
   it('reports diagnostics for duplicate table definitions', () => {
     expect(`
       table foo (id int)

@@ -131,14 +131,19 @@ table orders (
 ```
 
 ### Metadata annotations
+Metadata can be attached to fields to aid with automatic formatting. It can be applied to fields in a `table`, or in a `select`.
+Functions like data_trunc and extract automatically add correct metadata, but in other cases you'll have to add it manually.
+Metadata cascades through selects, so you don't have to re-set metadata when selecting a field.
 
-Certain GSQL expressions will create field-level metadata that Graphene uses for better formatting and visualizations defaults. For example, `date_trunc('month', created_at)` will attach `timeGrain=month` metadata to the resulting column, which informs Graphene that the values represent months and not just days that happen to land on the first of every month. Graphene leverages this information to make sure that value formatting and chart axes look good by default.
+```gsql
+table foo (
+  thing_rate: avg(case when thing then 1 else 0 end) #ratio
+)
 
-There isn't always a SQL expression that can tip Graphene to the semantic meaning of a field, however:
-- The field could be a base column that has no source expression
-- There might not be enough information in the expression (eg. what currency a float is tied to)
-
-For this reason, some metadata should be set explicitly in the GSQL model, using annotations. Metadata annotations resemble hashtags (eg. `#ratio`, `#currency=USD`) that can be inlined or written above the object they decorate.
+select category,
+  avg(case when thing then 1 else 0 end) as thing_rate, #pct
+from othertable
+```
 
 #### Recognized metadata
 
