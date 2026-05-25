@@ -201,11 +201,12 @@ describe('lang', () => {
     )
   })
 
-  it('excludes agents.md from workspace by default', async () => {
+  it('excludes readme.md and agents.md from workspace by default', async () => {
     let root = path.join(import.meta.dirname, '../examples/flights')
     clearWorkspace()
     setGlobalConfig({root})
     await loadWorkspace(root, true)
+    expect(getFile('README.md')).toBeUndefined()
     expect(getFile('AGENTS.md')).toBeUndefined()
   })
 
