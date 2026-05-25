@@ -35,8 +35,6 @@ let metadataKeyRules = {
   description: {kind: 'string'},
 } as const
 
-let validMetadataKeys = Object.keys(metadataKeyRules)
-
 // Extract metadata from comments that appear directly above a syntax node.
 // Rules:
 // - `#` lines are metadata-only comments and may contain multiple `#key` / `#key=value` entries.
@@ -94,14 +92,7 @@ export function validateMetadataEntries(entries: MetadataEntry[]): MetadataDiagn
   let diagnostics: MetadataDiagnostic[] = []
   for (let entry of entries) {
     let rule = metadataKeyRules[entry.key as keyof typeof metadataKeyRules]
-    if (!rule) {
-      diagnostics.push({
-        message: `Unknown metadata key "#${entry.key}". Expected one of: ${validMetadataKeys.join(', ')}`,
-        from: entry.from,
-        to: entry.to,
-      })
-      continue
-    }
+    if (!rule) continue
 
     if (rule.kind == 'flag') {
       if (!entry.hasValue || entry.rawValue == 'true') continue

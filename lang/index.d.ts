@@ -16,7 +16,7 @@ export type Field = {
 }
 
 // Metadata attached to fields.
-// Graphene validates user-authored metadata annotations, while inferred metadata may add internal keys.
+// Graphene allows arbitrary metadata, but for the known fields below it ensures the values are expected.
 // `price: cogs * 1.15 #ratio #currency=USD` -> {ratio: true, currency: 'USD'}
 export type FieldMeta = {
   ratio?: true // 0 to 1 value
