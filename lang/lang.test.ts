@@ -883,13 +883,17 @@ describe('lang', () => {
     expect(name.metadata).toMatchObject({pii: 'true', unit: 'parsecs', description: 'More comment'})
   })
 
-  it('reports diagnostics for unknown metadata keys', () => {
-    expect(`
+  it('allows unknown metadata keys', () => {
+    analyze(`
       table foo (
         #unknown=value
         name text
       )
-    `).toHaveDiagnostic(/Unknown metadata key "#unknown"/)
+    `)
+    expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
+
+    let table = getTable('foo')!
+    expect(table.columns.find(c => c.name === 'name')!.metadata).toMatchObject({unknown: 'value'})
   })
 
   it('reports diagnostics for invalid metadata enum values', () => {
@@ -919,14 +923,6 @@ describe('lang', () => {
     expect(table.columns.find(c => c.name === 'distance')!.metadata).toMatchObject({unit: 'lightyears'})
   })
 
-  it('reports diagnostics for legacy plural units metadata', () => {
-    expect(`
-      table foo (
-        amount int -- revenue #units=usd
-      )
-    `).toHaveDiagnostic(/Unknown metadata key "#units"/)
-  })
-
   it('reports diagnostics for invalid flag metadata values', () => {
     expect(`
       table foo (
@@ -935,24 +931,6 @@ describe('lang', () => {
       )
     `).toHaveDiagnostic(/Metadata "#ratio" is a flag/)
     expect(getDiagnostics().some(d => /Metadata "#pii" is a flag/.test(d.message))).toBe(true)
-  })
-
-  it('reports diagnostics for unimplemented hide metadata', () => {
-    expect(`
-      table foo (
-        hidden number #hide
-      )
-    `).toHaveDiagnostic(/Unknown metadata key "#hide"/)
-  })
-
-  it('reports diagnostics for user-authored internal metadata keys', () => {
-    expect(`
-      table foo (
-        year_num int #timePart=year
-        month date #defaultName=month
-      )
-    `).toHaveDiagnostic(/Unknown metadata key "#timePart"/)
-    expect(getDiagnostics().some(d => /Unknown metadata key "#defaultName"/.test(d.message))).toBe(true)
   })
 
   it('does not parse legacy dash-hash metadata comments', () => {
