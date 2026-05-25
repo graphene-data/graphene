@@ -806,6 +806,8 @@ function getSeriesValueFields(series: SeriesWithGroupingHint, fields: Field[]) {
       let yField = getEncodeField(series, fields, 'y')
       return xField?.type == 'number' ? [xField] : [yField].filter((f): f is Field => !!f)
     }
+    case 'heatmap':
+      return [getEncodeField(series, fields, 'value')].filter((f): f is Field => !!f)
     default:
       return [getEncodeField(series, fields, 'y')].filter((f): f is Field => !!f)
   }

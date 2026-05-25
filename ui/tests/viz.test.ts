@@ -126,7 +126,7 @@ test('echarts heatmap supports numeric values on explicit category axis', async 
   let fields = [
     {name: 'season', type: scalarType('number'), metadata: {timeGrain: 'year'}},
     {name: 'team', type: scalarType('string')},
-    {name: 'win_pct', type: scalarType('number'), metadata: {pct: true}},
+    {name: 'win_pct', type: scalarType('number'), metadata: {pct: true as const}},
   ]
 
   await mount('components/ECharts.svelte', {
@@ -141,6 +141,7 @@ test('echarts heatmap supports numeric values on explicit category axis', async 
       series: [{type: 'heatmap', encode: {x: 'season', y: 'team', value: 'win_pct', sort: 'season asc'}}],
     },
   })
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
   await expect(chart.el).screenshot('echarts-heatmap-numeric-category-axis')
 })
 
