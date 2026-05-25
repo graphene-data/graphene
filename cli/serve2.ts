@@ -9,7 +9,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {createServer, type InlineConfig, optimizeDeps, resolveConfig, type ViteDevServer} from 'vite'
 
-import type {AnalysisResult, WorkspaceFileInput} from '../lang/types.ts'
+import type {AnalysisResult, QueryField, WorkspaceFileInput} from '../lang/types.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
@@ -27,7 +27,7 @@ export function clearSvelteWarnings() {
 }
 
 // Bump this whenever the query response shape changes so client caches invalidate.
-const QUERY_VERSION = 1
+const QUERY_VERSION = 2
 
 let uiRoot: string
 let nodeRequire = createRequire(import.meta.url)
@@ -171,9 +171,10 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let queries = result.files.find(file => file.path == 'input')?.queries || []
   if (queries.length > 1) throw new Error('Found multiple queries, which could be a parsing error')
   let sql = toSql(queries[0], params)
+  let fields = queries[0].fields.map(field => ({name: field.name, type: field.type, metadata: field.metadata || {}}))
 
   // If the client already has this data, dont run the query
-  let hash = crypto.createHash('SHA1').update(`query-v${QUERY_VERSION}|${sql}`).digest('hex')
+  let hash = computeQueryHash(sql, queries[0].fields)
   res.setHeader('ETag', hash)
   if (hashes.includes(hash) && req.headers['cache-control'] != 'no-cache') {
     res.statusCode = 304
@@ -183,8 +184,15 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let queryResults = await runQuery(sql)
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  let fields = queries[0].fields.map(field => ({name: field.name, type: field.type, metadata: field.metadata || {}}))
   res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
+}
+
+export function computeQueryHash(sql: string, fields: Pick<QueryField, 'name' | 'type' | 'metadata'>[]) {
+  let metadata = fields.map(field => ({name: field.name, type: field.type, metadata: field.metadata || {}}))
+  return crypto
+    .createHash('SHA1')
+    .update(`query-v${QUERY_VERSION}|${sql}|${JSON.stringify(metadata)}`)
+    .digest('hex')
 }
 
 async function handlePage(server: ViteDevServer, res: ServerResponse<IncomingMessage>) {
