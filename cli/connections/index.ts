@@ -166,11 +166,18 @@ async function importConnection<T>(load: () => Promise<T>, packageName: string, 
   }
 }
 
-export async function runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
+interface ProxyQueryOptions {
+  cacheControl?: string
+}
+
+export async function runQuery(sql: string, options?: QueryOptions, proxyOptions: ProxyQueryOptions = {}): Promise<QueryResult> {
   if (config.host) {
+    let headers: Record<string, string> = {'Content-Type': 'application/json'}
+    if (proxyOptions.cacheControl) headers['Cache-Control'] = proxyOptions.cacheControl
+
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers,
       body: JSON.stringify({sql, params: options?.params}),
     })
     let json = await resp.json()

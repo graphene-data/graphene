@@ -109,6 +109,209 @@ test('remaps Snowflake-style uppercase query result keys to requested field casi
   await expect(page).screenshot('markdown-snowflake-uppercase-result-keys')
 })
 
+test('shows browser-cached query staleness and refreshes without cache reads', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql cached_query
+    select 3 as num
+    \`\`\`
+
+    <Value data="cached_query" column="num" />
+  `,
+  )
+
+  let requestCount = 0
+  let lastCacheControl = ''
+  let hash = 'browser-cache-hash'
+  await page.route('**/_api/query', async route => {
+    requestCount++
+    lastCacheControl = route.request().headers()['cache-control'] || ''
+    let body = route.request().postDataJSON()
+    if (body.hashes?.includes(hash) && lastCacheControl != 'no-cache') {
+      await route.fulfill({status: 304, headers: {ETag: hash}})
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      headers: {ETag: hash},
+      contentType: 'application/json',
+      body: JSON.stringify({rows: [{num: requestCount}], fields: [{name: 'num', type: scalarType('number')}], sql: ''}),
+    })
+  })
+
+  await page.clock.install({time: new Date('2024-01-01T00:00:00Z')})
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page.getByText(/Oldest cached result/)).toHaveCount(0)
+
+  await page.evaluate(() => window.$GRAPHENE.rerunQueries())
+  await expect(page.getByText(/Oldest cached result/)).toHaveCount(0)
+  await page.clock.fastForward('01:00')
+  await expect(page.getByText(/Oldest cached result 1m ago/)).toBeVisible()
+  await expect(page).screenshot('markdown-browser-cache-status')
+
+  await page.getByRole('button', {name: 'Refresh'}).click()
+  await expect.poll(() => requestCount).toBe(3)
+  expect(lastCacheControl).toBe('no-cache')
+  await expect(page.getByText(/Oldest cached result/)).toHaveCount(0)
+})
+
+test('falls back to a fresh query when the browser cache entry is missing', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql cached_query
+    select 3 as num
+    \`\`\`
+
+    <Value data="cached_query" column="num" />
+  `,
+  )
+
+  let requestCount = 0
+  await page.route('**/_api/query', async route => {
+    requestCount++
+    if (requestCount == 1) {
+      await route.fulfill({status: 304, headers: {ETag: 'missing-browser-cache-hash'}})
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      headers: {ETag: 'missing-browser-cache-hash'},
+      contentType: 'application/json',
+      body: JSON.stringify({rows: [{num: 3}], fields: [{name: 'num', type: scalarType('number')}], sql: ''}),
+    })
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect.poll(() => requestCount).toBe(2)
+  await expect(page.getByText('3')).toBeVisible()
+  await expect(page).screenshot('markdown-missing-browser-cache-fallback')
+})
+
+test('disables browser query caching behind an internal query parameter', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql cached_query
+    select 3 as num
+    \`\`\`
+
+    <Value data="cached_query" column="num" />
+  `,
+  )
+
+  let requestBodies: any[] = []
+  await page.route('**/_api/query', async route => {
+    requestBodies.push(route.request().postDataJSON())
+    await route.fulfill({
+      status: 200,
+      headers: {ETag: 'disabled-browser-cache-hash'},
+      contentType: 'application/json',
+      body: JSON.stringify({
+        rows: [{num: requestBodies.length}],
+        fields: [{name: 'num', type: scalarType('number')}],
+        sql: '',
+        cache: {provider: 'clickhouse', status: 'hit', createdAt: Date.now() - 90_000},
+      }),
+    })
+  })
+
+  await page.goto(server.url() + '/?__graphene_no_browser_cache=1')
+  await waitForGrapheneLoad(page)
+  await page.evaluate(() => window.$GRAPHENE.rerunQueries())
+
+  expect(requestBodies).toHaveLength(2)
+  expect(requestBodies[0].hashes).toEqual([])
+  expect(requestBodies[1].hashes).toEqual([])
+  await expect(page.getByText(/Oldest cached result 1m ago/)).toBeVisible()
+  await expect(page).screenshot('markdown-browser-cache-disabled')
+})
+
+test('uses warehouse cache timestamps when browser cache serves the response', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql cached_query
+    select 3 as num
+    \`\`\`
+
+    <Value data="cached_query" column="num" />
+  `,
+  )
+
+  let hash = 'warehouse-cache-hash'
+  let createdAt = Date.now() - 125 * 60_000
+  await page.route('**/_api/query', async route => {
+    let body = route.request().postDataJSON()
+    if (body.hashes?.includes(hash)) {
+      await route.fulfill({status: 304, headers: {ETag: hash}})
+      return
+    }
+
+    await route.fulfill({
+      status: 200,
+      headers: {ETag: hash},
+      contentType: 'application/json',
+      body: JSON.stringify({
+        rows: [{num: 3}],
+        fields: [{name: 'num', type: scalarType('number')}],
+        sql: '',
+        cache: {provider: 'snowflake', status: 'hit', createdAt, expiresAt: Date.now() + 60 * 60_000},
+      }),
+    })
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page.getByText(/Oldest cached result 2h 5m ago/)).toBeVisible()
+
+  await page.evaluate(() => window.$GRAPHENE.rerunQueries())
+  await expect(page.getByText(/Oldest cached result 2h 5m ago/)).toBeVisible()
+  await expect(page).screenshot('markdown-warehouse-cache-status')
+})
+
+test('expires browser cache entries no later than the warehouse cache', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    \`\`\`gsql cached_query
+    select 3 as num
+    \`\`\`
+
+    <Value data="cached_query" column="num" />
+  `,
+  )
+
+  let requestBodies: any[] = []
+  await page.route('**/_api/query', async route => {
+    requestBodies.push(route.request().postDataJSON())
+    await route.fulfill({
+      status: 200,
+      headers: {ETag: 'expired-warehouse-cache-hash'},
+      contentType: 'application/json',
+      body: JSON.stringify({
+        rows: [{num: requestBodies.length}],
+        fields: [{name: 'num', type: scalarType('number')}],
+        sql: '',
+        cache: requestBodies.length == 1 ? {provider: 'bigquery', status: 'hit', createdAt: Date.now() - 60_000, expiresAt: Date.now() - 1} : undefined,
+      }),
+    })
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await page.evaluate(() => window.$GRAPHENE.rerunQueries())
+
+  expect(requestBodies).toHaveLength(2)
+  expect(requestBodies[1].hashes).toEqual([])
+  await expect(page).screenshot('markdown-expired-warehouse-cache-status')
+})
+
 test('deduplicates chart query fields already used for sort', async ({server, page}) => {
   server.mockFile(
     '/index.md',
