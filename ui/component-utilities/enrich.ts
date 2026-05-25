@@ -272,18 +272,14 @@ function inferAxesFromEncodedFields(config: NormalConfig, fields: Field[], rows:
     if (!axis) continue
     let seriesOnAxis = config.series.filter(entry => Number(entry?.xAxisIndex ?? 0) === axisIndex)
     let field = seriesOnAxis.map(entry => getEncodeField(entry, fields, 'x')).find(Boolean)
-    let inferred = inferAxisFromField(field, rows)
-
-    config.xAxis[axisIndex] = {...inferred, ...axis, axisLabel: {...inferred.axisLabel, ...axis.axisLabel}, axisPointer: {...inferred.axisPointer, ...axis.axisPointer}}
+    config.xAxis[axisIndex] = inferAxisFromField(field, rows, axis)
   }
 
   for (let [axisIndex, axis] of config.yAxis.entries()) {
     if (!axis) continue
     let seriesOnAxis = config.series.filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
     let field = seriesOnAxis.map(entry => getSeriesValueField(entry, fields)).find(Boolean)
-    let inferred = inferAxisFromField(field, rows)
-
-    config.yAxis[axisIndex] = {...inferred, ...axis, axisLabel: {...inferred.axisLabel, ...axis.axisLabel}, axisPointer: {...inferred.axisPointer, ...axis.axisPointer}}
+    config.yAxis[axisIndex] = inferAxisFromField(field, rows, axis)
   }
 }
 
@@ -678,20 +674,25 @@ function horizontalBarGuard(config: NormalConfig, fields: Field[]) {
 }
 
 // Build axis defaults from field metadata, including temporal domains and formatters.
-function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[]) {
-  if (!field) return {type: 'category'}
+function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[], axis: Record<string, any> = {}) {
+  if (!field) {
+    axis.type ||= 'category'
+    return axis
+  }
   if (typeof field.type !== 'string') throw new Error(`Field ${field.name} has unsupported non-scalar type: array`)
 
-  let type: 'time' | 'value' | 'category' = 'category'
-  if (field.type === 'date' || field.type === 'timestamp') type = 'time'
-  if (field.type === 'number') type = 'value'
-  let axis: Record<string, any> = {field, type}
+  let inferredType: 'time' | 'value' | 'category' = 'category'
+  if (field.type === 'date' || field.type === 'timestamp') inferredType = 'time'
+  if (field.type === 'number') inferredType = 'value'
 
-  if (type === 'value') {
+  axis.field = field
+  axis.type ||= inferredType
+
+  if (axis.type === 'value') {
     let domain = temporalValueDomain(field, rows)
     if (domain) {
-      axis.min = domain[0]
-      axis.max = domain[1]
+      axis.min ??= domain[0]
+      axis.max ??= domain[1]
     }
 
     if (field.metadata?.timeGrain === 'year') {
@@ -699,9 +700,13 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       // doesn't end up with the 2000/2002/2004/2005 stub-label pattern.
       let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
       let formatter = (value: unknown) => axisFormatter(value, field)
-      axis.axisLabel = {customValues: ticks, formatter}
-      axis.axisTick = {customValues: ticks}
-      axis.axisPointer = {label: {formatter}}
+      axis.axisLabel = {...axis.axisLabel}
+      axis.axisLabel.customValues ??= ticks
+      axis.axisLabel.formatter ??= formatter
+      axis.axisTick = {...axis.axisTick}
+      axis.axisTick.customValues ??= ticks
+      axis.axisPointer = {...axis.axisPointer, label: {...axis.axisPointer?.label}}
+      axis.axisPointer.label.formatter ??= formatter
       return axis
     }
 
@@ -710,13 +715,14 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       // visually they are discrete buckets. Pin tick positions to evenly-spaced
       // integers so we never get a stub boundary label (e.g. weeks 1, 14, 27, 40, 53).
       let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
-      axis.axisLabel = {
-        hideOverlap: true,
-        customValues: ticks,
-        formatter: (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value)),
-      }
-      axis.axisTick = {customValues: ticks}
-      axis.axisPointer = {label: {formatter: (value: unknown) => formatTimeOrdinal(field, value)}}
+      axis.axisLabel = {...axis.axisLabel}
+      axis.axisLabel.hideOverlap ??= true
+      axis.axisLabel.customValues ??= ticks
+      axis.axisLabel.formatter ??= (value: unknown) => (domain && (Number(value) < domain[0] || Number(value) > domain[1]) ? '' : formatTimeOrdinal(field, value))
+      axis.axisTick = {...axis.axisTick}
+      axis.axisTick.customValues ??= ticks
+      axis.axisPointer = {...axis.axisPointer, label: {...axis.axisPointer?.label}}
+      axis.axisPointer.label.formatter ??= (value: unknown) => formatTimeOrdinal(field, value)
       return axis
     }
   }

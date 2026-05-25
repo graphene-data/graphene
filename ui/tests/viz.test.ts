@@ -114,6 +114,36 @@ test('echarts supports splitBy=[group,stack] for grouped+stacked bars', async ({
   await expect(chart.el).screenshot('echarts-splitby-group-stack')
 })
 
+test('echarts heatmap supports numeric values on explicit category axis', async ({mount, chart}) => {
+  let rows = [
+    {season: 2021, team: 'Aces', win_pct: 71},
+    {season: 2022, team: 'Aces', win_pct: 65},
+    {season: 2023, team: 'Aces', win_pct: 82},
+    {season: 2021, team: 'Bears', win_pct: 48},
+    {season: 2022, team: 'Bears', win_pct: 55},
+    {season: 2023, team: 'Bears', win_pct: 43},
+  ]
+  let fields = [
+    {name: 'season', type: scalarType('number'), metadata: {timeGrain: 'year'}},
+    {name: 'team', type: scalarType('string')},
+    {name: 'win_pct', type: scalarType('number'), metadata: {pct: true}},
+  ]
+
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    height: '320px',
+    config: {
+      title: {text: 'Win Percentage by Season'},
+      tooltip: {trigger: 'item'},
+      visualMap: {min: 0, max: 100, dimension: 'win_pct', show: false, inRange: {color: ['#b4464b', '#f3efe7', '#2f7f6f']}},
+      xAxis: {type: 'category', position: 'top', axisLabel: {interval: 0}},
+      yAxis: {type: 'category', inverse: true},
+      series: [{type: 'heatmap', encode: {x: 'season', y: 'team', value: 'win_pct', sort: 'season asc'}}],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-heatmap-numeric-category-axis')
+})
+
 test('bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k', title: 'Monthly Sales'})
   await expect(chart.el).screenshot('bar-chart')
@@ -189,7 +219,7 @@ test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'year', y: 'flights', splitBy: 'status', arrange: 'stack', title: 'Flight Status by Year'})
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2})
-  await expect(chart.el).screenshot('bar-chart-numeric-year-domain-tooltip')
+  await expect(chart.el).screenshot('bar-chart-numeric-year-domain')
 })
 
 test('horizontal bar chart', async ({mount, chart}) => {
