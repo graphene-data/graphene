@@ -8,7 +8,7 @@ import {config} from '../lang/config.ts'
 
 const execAsync = promisify(exec)
 
-export async function runServeInBackground(options: {entryPoint?: string; log?: (chunk: string) => void} = {}): Promise<void> {
+export async function runServeInBackground(options: {entryPoint?: string; log?: (chunk: string) => void} = {}): Promise<string> {
   let grapheneCache = getGrapheneCache(config.root)
   let logFile = path.join(grapheneCache, 'serve.log')
   await fs.ensureDir(grapheneCache)
@@ -25,28 +25,34 @@ export async function runServeInBackground(options: {entryPoint?: string; log?: 
 
   if (!child.pid) throw new Error('Failed to start server process')
 
-  await new Promise<void>((resolve, reject) => {
-    let buffer = ''
+  return await new Promise<string>((resolve, reject) => {
+    let emittedLength = 0
     let settled = false
+    let logPoll: NodeJS.Timeout
     let close = () => {
       if (settled) return false
       settled = true
-      fs.unwatchFile(logFile)
+      clearInterval(logPoll)
       fs.closeSync(log)
       return true
     }
 
-    fs.watchFile(logFile, {interval: 200}, (curr, prev) => {
-      if (curr.size > prev.size) {
-        let stream = fs.createReadStream(logFile, {start: prev.size, end: curr.size - 1})
-        stream.on('data', d => {
-          if (options.log) options.log(d.toString())
-          else process.stdout.write(d)
-          buffer = (buffer + d.toString()).slice(-200)
-          if (buffer.includes('Server running at http://localhost:') && close()) resolve()
-        })
+    let readStartupLog = () => {
+      if (settled) return
+      let contents = fs.readFileSync(logFile, 'utf8')
+      if (contents.length > emittedLength) {
+        let chunk = contents.slice(emittedLength)
+        emittedLength = contents.length
+        if (options.log) options.log(chunk)
+        else process.stdout.write(chunk)
       }
-    })
+
+      let url = contents.match(/Server running at (http:\/\/localhost:\d+)/)?.[1]
+      if (url && close()) resolve(url)
+    }
+
+    logPoll = setInterval(readStartupLog, 100)
+    readStartupLog()
 
     child.once('exit', async (code, signal) => {
       if (!close()) return

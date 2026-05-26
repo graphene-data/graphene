@@ -72,7 +72,7 @@ program
   .action(
     withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; headless?: boolean; port?: string; query?: string; input?: string[]}) => {
       if (options.port) {
-        let port = parseRunPort(options.port, exit)
+        let port = parsePort(options.port, exit)
         config.port = port
         process.env.GRAPHENE_PORT = String(port)
       }
@@ -197,11 +197,19 @@ program
   .command('serve')
   .description('Run the local server')
   .option('--bg', 'Run the server in the background')
+  .option('--port <port>', 'Port for the local Graphene server')
   .action(
-    withTelemetry('serve', async (exit, options: {bg?: boolean}) => {
+    withTelemetry('serve', async (exit, options: {bg?: boolean; port?: string}) => {
+      if (options.port) {
+        let port = parsePort(options.port, exit)
+        config.port = port
+        process.env.GRAPHENE_PORT = String(port)
+      }
+
       await stopGrapheneIfRunning()
       if (options.bg) {
-        await runServeInBackground()
+        let url = await runServeInBackground({log: () => undefined})
+        console.log(`Server running at ${url}`)
         return exit(0)
       } else {
         let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
@@ -312,7 +320,7 @@ function parseRunInputs(values: string[], exit: (code?: number) => never): Recor
   return inputs
 }
 
-function parseRunPort(value: string, exit: (code?: number) => never): number {
+function parsePort(value: string, exit: (code?: number) => never): number {
   let port = Number(value)
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     console.error(`Invalid --port "${value}". Expected an integer from 1 to 65535.`)

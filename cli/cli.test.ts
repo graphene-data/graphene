@@ -93,7 +93,7 @@ describe('cli serve (background)', () => {
   it('starts the server in the background and restarts cleanly', async () => {
     let first = await runCli(['serve', '--bg'], {cwd: flightDir})
     expectCliSuccess(first, 'serve start')
-    expect(first.stdout).toContain('Server running at')
+    expect(first.stdout).toContain(`Server running at http://localhost:${TEST_PORT}`)
     expect(await isServerRunning(TEST_PORT)).toBe(true)
 
     // running `serve` again should restart it
@@ -106,6 +106,19 @@ describe('cli serve (background)', () => {
     expectCliSuccess(stop, 'serve stop')
     expect(stop.stdout).toContain('Stopping server')
     expect(await isServerRunning(TEST_PORT)).toBe(false)
+  })
+
+  it('prints the configured URL when starting the background server on a custom port', async () => {
+    let port = 4164
+
+    try {
+      let res = await runCli(['serve', '--bg', '--port', String(port)], {cwd: flightDir})
+      expectCliSuccess(res, 'serve start on custom port')
+      expect(res.stdout).toContain(`Server running at http://localhost:${port}`)
+      expect(await isServerRunning(port)).toBe(true)
+    } finally {
+      await runCli(['stop'], {cwd: flightDir, env: {GRAPHENE_PORT: String(port)}})
+    }
   })
 })
 

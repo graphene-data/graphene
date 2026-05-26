@@ -26,7 +26,7 @@ describe('cli telemetry', () => {
       'port',
       'query',
     ])
-    expect(getPresentFlags('serve', ['serve', '--bg'])).toEqual(['bg'])
+    expect(getPresentFlags('serve', ['serve', '--bg', '--port', '4170'])).toEqual(['bg', 'port'])
     expect(getPresentFlags('schema', ['schema', 'analytics.orders'])).toEqual([])
   })
 
