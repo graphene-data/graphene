@@ -6,6 +6,44 @@ import {trimIndentation} from './util.ts'
 const trim = trimIndentation
 const click = 'https://clickhouse.com/docs/en/sql-reference'
 
+const dateArithmeticUnits = [
+  {name: 'Days', returns: 'T'},
+  {name: 'Hours', returns: 'timestamp'},
+  {name: 'Microseconds', returns: 'timestamp'},
+  {name: 'Milliseconds', returns: 'timestamp'},
+  {name: 'Minutes', returns: 'timestamp'},
+  {name: 'Months', returns: 'T'},
+  {name: 'Nanoseconds', returns: 'timestamp'},
+  {name: 'Quarters', returns: 'T'},
+  {name: 'Seconds', returns: 'timestamp'},
+  {name: 'Weeks', returns: 'T'},
+  {name: 'Years', returns: 'T'},
+] satisfies {name: string; returns: string}[]
+
+// Builds ClickHouse's addDays/subtractDays family of fixed-unit date arithmetic functions.
+function dateArithmeticFunctions(prefix: 'add' | 'subtract'): FunctionDef[] {
+  return dateArithmeticUnits.map(unit => {
+    let sqlName = `${prefix}${unit.name}`
+    let lowerUnit = unit.name.toLowerCase()
+    return {
+      name: sqlName.toLowerCase(),
+      description: trim(`
+        ${sqlName}(datetime, num)
+
+        ${prefix == 'add' ? 'Adds' : 'Subtracts'} the specified number of ${lowerUnit} ${prefix == 'add' ? 'to' : 'from'} a date or timestamp.
+      `),
+      url: `${click}/functions/date-time-functions#${sqlName.toLowerCase()}`,
+      args: [
+        {name: 'datetime', type: ['date', 'timestamp']},
+        {name: 'num', type: 'number'},
+      ],
+      returns: unit.returns,
+      sqlName,
+      aliases: [`${prefix}_${lowerUnit}`],
+    }
+  })
+}
+
 // Keep the ClickHouse surface focused on mainstream analytics functions that map
 // cleanly to Graphene's type system and SQL lowering.
 export const clickHouseFunctions: FunctionDef[] = [
@@ -716,6 +754,8 @@ export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // Date and Time Functions
   // ============================================================================
+  ...dateArithmeticFunctions('add'),
+  ...dateArithmeticFunctions('subtract'),
   {
     name: 'current_date',
     description: trim(`
@@ -730,18 +770,18 @@ export const clickHouseFunctions: FunctionDef[] = [
   {
     name: 'current_timestamp',
     description: trim(`
-      current_timestamp()
+      current_timestamp([timezone])
 
       Returns the current timestamp.
     `),
     url: `${click}/functions/date-time-functions#now`,
-    args: [],
+    args: [{name: 'timezone', type: 'string?'}],
     returns: 'timestamp',
   },
   {
     name: 'date_diff',
     description: trim(`
-      date_diff(unit, start, end)
+      date_diff(unit, start, end[, timezone])
 
       Returns the difference between two dates or timestamps in the requested unit.
     `),
@@ -750,13 +790,14 @@ export const clickHouseFunctions: FunctionDef[] = [
       {name: 'unit', type: 'string'},
       {name: 'start', type: ['date', 'timestamp']},
       {name: 'end', type: ['date', 'timestamp']},
+      {name: 'timezone', type: 'string?'},
     ],
     returns: 'number',
   },
   {
     name: 'date_trunc',
     description: trim(`
-      date_trunc(unit, datetime)
+      date_trunc(unit, datetime[, timezone])
 
       Truncates a date or timestamp to the requested precision.
     `),
@@ -764,15 +805,17 @@ export const clickHouseFunctions: FunctionDef[] = [
     args: [
       {name: 'date_part', type: 'string'},
       {name: 'datetime', type: ['date', 'timestamp']},
+      {name: 'timezone', type: 'string?'},
     ],
     returns: 'timestamp',
     metadata: args => inferGrain(args[0]?.sql),
-    sqlTemplate: 'DATE_TRUNC(${date_part}, ${datetime})',
+    sqlName: 'dateTrunc',
+    aliases: ['datetrunc'],
   },
   {
     name: 'formatdatetime',
     description: trim(`
-      formatDateTime(datetime, format)
+      formatDateTime(datetime, format[, timezone])
 
       Formats a date or timestamp as a string.
     `),
@@ -780,6 +823,7 @@ export const clickHouseFunctions: FunctionDef[] = [
     args: [
       {name: 'datetime', type: ['date', 'timestamp']},
       {name: 'format', type: 'string'},
+      {name: 'timezone', type: 'string?'},
     ],
     returns: 'string',
     sqlName: 'formatDateTime',
@@ -788,23 +832,26 @@ export const clickHouseFunctions: FunctionDef[] = [
   {
     name: 'now',
     description: trim(`
-      now()
+      now([timezone])
 
       Returns the current timestamp.
     `),
     url: `${click}/functions/date-time-functions#now`,
-    args: [],
+    args: [{name: 'timezone', type: 'string?'}],
     returns: 'timestamp',
   },
   {
     name: 'parsedatetimebesteffort',
     description: trim(`
-      parseDateTimeBestEffort(text)
+      parseDateTimeBestEffort(text[, timezone])
 
       Parses a string into a timestamp using ClickHouse's best-effort parser.
     `),
     url: `${click}/functions/type-conversion-functions#parsedatetimebesteffort`,
-    args: [{name: 'text', type: 'string'}],
+    args: [
+      {name: 'text', type: 'string'},
+      {name: 'timezone', type: 'string?'},
+    ],
     returns: 'timestamp',
     sqlName: 'parseDateTimeBestEffort',
     aliases: ['parse_datetime_best_effort'],
@@ -823,12 +870,15 @@ export const clickHouseFunctions: FunctionDef[] = [
   {
     name: 'todate',
     description: trim(`
-      toDate(value)
+      toDate(value[, timezone])
 
       Converts the value to a date.
     `),
     url: `${click}/functions/type-conversion-functions#todate`,
-    args: [{name: 'value', type: ['string', 'date', 'timestamp', 'number']}],
+    args: [
+      {name: 'value', type: ['string', 'date', 'timestamp', 'number']},
+      {name: 'timezone', type: 'string?'},
+    ],
     returns: 'date',
     sqlName: 'toDate',
     aliases: ['to_date'],
@@ -836,12 +886,15 @@ export const clickHouseFunctions: FunctionDef[] = [
   {
     name: 'todatetime',
     description: trim(`
-      toDateTime(value)
+      toDateTime(value[, timezone])
 
       Converts the value to a timestamp.
     `),
     url: `${click}/functions/type-conversion-functions#todatetime`,
-    args: [{name: 'value', type: ['string', 'date', 'timestamp', 'number']}],
+    args: [
+      {name: 'value', type: ['string', 'date', 'timestamp', 'number']},
+      {name: 'timezone', type: 'string?'},
+    ],
     returns: 'timestamp',
     sqlName: 'toDateTime',
     aliases: ['to_datetime'],
@@ -877,12 +930,16 @@ export const clickHouseFunctions: FunctionDef[] = [
   {
     name: 'todayofweek',
     description: trim(`
-      toDayOfWeek(datetime)
+      toDayOfWeek(datetime[, mode[, timezone]])
 
       Extracts the day of the week.
     `),
     url: `${click}/functions/date-time-functions#todayofweek`,
-    args: [{name: 'datetime', type: ['date', 'timestamp']}],
+    args: [
+      {name: 'datetime', type: ['date', 'timestamp']},
+      {name: 'mode', type: 'number?'},
+      {name: 'timezone', type: 'string?'},
+    ],
     returns: 'number',
     metadata: inferTimeOrdinal('dayofweek', 'clickhouse'),
     sqlName: 'toDayOfWeek',
@@ -961,12 +1018,16 @@ export const clickHouseFunctions: FunctionDef[] = [
   {
     name: 'toweek',
     description: trim(`
-      toWeek(datetime)
+      toWeek(datetime[, mode[, timezone]])
 
       Extracts the week number.
     `),
     url: `${click}/functions/date-time-functions#toweek`,
-    args: [{name: 'datetime', type: ['date', 'timestamp']}],
+    args: [
+      {name: 'datetime', type: ['date', 'timestamp']},
+      {name: 'mode', type: 'number?'},
+      {name: 'timezone', type: 'string?'},
+    ],
     returns: 'number',
     metadata: inferTimeOrdinal('week', 'clickhouse'),
     sqlName: 'toWeek',
@@ -1017,12 +1078,16 @@ export const clickHouseFunctions: FunctionDef[] = [
   {
     name: 'tostartofweek',
     description: trim(`
-      toStartOfWeek(datetime)
+      toStartOfWeek(datetime[, mode[, timezone]])
 
       Truncates to the start of the week.
     `),
     url: `${click}/functions/date-time-functions#tostartofweek`,
-    args: [{name: 'datetime', type: ['date', 'timestamp']}],
+    args: [
+      {name: 'datetime', type: ['date', 'timestamp']},
+      {name: 'mode', type: 'number?'},
+      {name: 'timezone', type: 'string?'},
+    ],
     returns: 'timestamp',
     metadata: {timeGrain: 'week'},
     sqlName: 'toStartOfWeek',
