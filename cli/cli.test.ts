@@ -116,6 +116,12 @@ describe('cli run', () => {
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
+  it('accepts --port on run commands', async () => {
+    let res = await runCli(['run', 'from flights select count() as total', '--port', '4164'], {cwd: flightDir})
+    expectCliSuccess(res, 'run query with port')
+    expect(res.stdout.toLowerCase()).toContain('total')
+  })
+
   it('runs an inline parameterized query with --input', async () => {
     let res = await runCli(['run', 'from flights where carrier = $carrier select carrier, count() as total group by 1', '--input', 'carrier=AA'], {cwd: flightDir})
     expectCliSuccess(res, 'run parameterized query')
@@ -189,6 +195,12 @@ describe('cli run', () => {
     let res = await runCli(['run', 'from flights select count()', '--input', '=AA'], {cwd: flightDir})
     expect(res.code).toBe(1)
     expect(res.stderr).toContain('Invalid --input "=AA". Expected key=value.')
+  })
+
+  it('rejects invalid --port values', async () => {
+    let res = await runCli(['run', 'from flights select count()', '--port', 'abc'], {cwd: flightDir})
+    expect(res.code).toBe(1)
+    expect(res.stderr).toContain('Invalid --port "abc". Expected an integer from 1 to 65535.')
   })
 
   it('uses a configured duckdb path when present', async () => {

@@ -19,10 +19,11 @@ describe('cli telemetry', () => {
   })
 
   it('tracks only safe flag names, not values', () => {
-    expect(getPresentFlags('run', ['run', 'report.md', '--headless', '--query', 'weekly_trends', '--chart', 'Revenue by Region', '--input', 'carrier=AA'])).toEqual([
+    expect(getPresentFlags('run', ['run', 'report.md', '--headless', '--query', 'weekly_trends', '--chart', 'Revenue by Region', '--input', 'carrier=AA', '--port', '4170'])).toEqual([
       'chart',
       'headless',
       'input',
+      'port',
       'query',
     ])
     expect(getPresentFlags('serve', ['serve', '--bg'])).toEqual(['bg'])
