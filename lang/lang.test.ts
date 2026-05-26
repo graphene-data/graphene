@@ -1688,6 +1688,34 @@ describe('lang', () => {
       expect("from users select to_day_of_week(created_at, 1, 'UTC') as dow").toRenderSql("SELECT toDayOfWeek(users.created_at,1,'UTC') as dow FROM users as users")
       expect("from users select to_week(created_at, 1, 'UTC') as week_num").toRenderSql("SELECT toWeek(users.created_at,1,'UTC') as week_num FROM users as users")
       expect("from users select to_start_of_week(created_at, 1, 'UTC') as week_start").toRenderSql("SELECT toStartOfWeek(users.created_at,1,'UTC') as week_start FROM users as users")
+      for (let fn of [
+        'addDays',
+        'addHours',
+        'addMicroseconds',
+        'addMilliseconds',
+        'addMinutes',
+        'addMonths',
+        'addNanoseconds',
+        'addQuarters',
+        'addSeconds',
+        'addWeeks',
+        'addYears',
+        'subtractDays',
+        'subtractHours',
+        'subtractMicroseconds',
+        'subtractMilliseconds',
+        'subtractMinutes',
+        'subtractMonths',
+        'subtractNanoseconds',
+        'subtractQuarters',
+        'subtractSeconds',
+        'subtractWeeks',
+        'subtractYears',
+      ]) {
+        expect(`from users select ${fn}(created_at, 2) as shifted`).toRenderSql(`SELECT ${fn}(users.created_at,2) as shifted FROM users as users`)
+      }
+      expect('from users select add_days(created_at, 2) as shifted').toRenderSql('SELECT addDays(users.created_at,2) as shifted FROM users as users')
+      expect('from users select subtract_days(created_at, 2) as shifted').toRenderSql('SELECT subtractDays(users.created_at,2) as shifted FROM users as users')
     } finally {
       setGlobalConfig({root: ''})
     }
