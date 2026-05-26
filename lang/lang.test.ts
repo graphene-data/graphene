@@ -1677,6 +1677,17 @@ describe('lang', () => {
       expect("from users select startswith(name, 'A') as starts_a").toRenderSql("SELECT startsWith(users.name,'A') as starts_a FROM users as users")
       expect("from users select format_datetime(created_at, '%Y-%m') as month_label").toRenderSql("SELECT formatDateTime(users.created_at,'%Y-%m') as month_label FROM users as users")
       expect('from users select to_year(created_at) as year_num').toRenderSql('SELECT toYear(users.created_at) as year_num FROM users as users')
+      expect("from users select to_date(created_at, 'UTC') as d").toRenderSql("SELECT toDate(users.created_at,'UTC') as d FROM users as users")
+      expect("from users select to_datetime(created_at, 'UTC') as dt").toRenderSql("SELECT toDateTime(users.created_at,'UTC') as dt FROM users as users")
+      expect("from users select date_trunc('hour', created_at, 'UTC') as hour_start").toRenderSql("SELECT dateTrunc('hour',users.created_at,'UTC') as hour_start FROM users as users")
+      expect("from users select dateTrunc('hour', created_at, 'UTC') as hour_start").toRenderSql("SELECT dateTrunc('hour',users.created_at,'UTC') as hour_start FROM users as users")
+      expect("from users select format_datetime(created_at, '%Y-%m-%d', 'UTC') as day_label").toRenderSql("SELECT formatDateTime(users.created_at,'%Y-%m-%d','UTC') as day_label FROM users as users")
+      expect("from users select date_diff('hour', created_at, created_at, 'UTC') as hours").toRenderSql("SELECT date_diff('hour',users.created_at,users.created_at,'UTC') as hours FROM users as users")
+      expect("from users select parse_datetime_best_effort(name, 'UTC') as parsed").toRenderSql("SELECT parseDateTimeBestEffort(users.name,'UTC') as parsed FROM users as users")
+      expect("from users select now('UTC') as n").toRenderSql("SELECT now('UTC') as n FROM users as users")
+      expect("from users select to_day_of_week(created_at, 1, 'UTC') as dow").toRenderSql("SELECT toDayOfWeek(users.created_at,1,'UTC') as dow FROM users as users")
+      expect("from users select to_week(created_at, 1, 'UTC') as week_num").toRenderSql("SELECT toWeek(users.created_at,1,'UTC') as week_num FROM users as users")
+      expect("from users select to_start_of_week(created_at, 1, 'UTC') as week_start").toRenderSql("SELECT toStartOfWeek(users.created_at,1,'UTC') as week_start FROM users as users")
     } finally {
       setGlobalConfig({root: ''})
     }
