@@ -24,7 +24,7 @@ SimpleQuery {
 }
 
 SetOperator {
-  Kw<"union"> Kw<"all">? |
+  Kw<"union"> (Kw<"all"> | Kw<"distinct">)? |
   Kw<"intersect"> |
   Kw<"except">
 }

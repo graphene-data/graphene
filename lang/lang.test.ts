@@ -96,12 +96,15 @@ describe('lang', () => {
     await expect('select 1').toReturnRows([1])
   })
 
-  it('supports union and union all', async () => {
+  it('supports union, union all, and union distinct', async () => {
     expect('select 1 as id union select 1 as id').toRenderSql('SELECT 1 as id UNION SELECT 1 as id')
     await expect('select 1 as id union select 1 as id').toReturnRows([1])
 
     expect('select 1 as id union all select 1 as id').toRenderSql('SELECT 1 as id UNION ALL SELECT 1 as id')
     await expect('select 1 as id union all select 1 as id').toReturnRows([1], [1])
+
+    expect('select 1 as id union distinct select 1 as id').toRenderSql('SELECT 1 as id UNION DISTINCT SELECT 1 as id')
+    await expect('select 1 as id union distinct select 1 as id').toReturnRows([1])
   })
 
   it('supports intersect and except', async () => {
