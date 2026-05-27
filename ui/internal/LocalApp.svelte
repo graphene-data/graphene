@@ -9,7 +9,7 @@
   import ErrorDisplay from './ErrorDisplay.svelte'
   import ChartGallery from './ChartGallery.svelte'
   import StyleGallery from './StyleGallery.svelte'
-  import {pageCacheState, refreshQueries} from './queryEngine.ts'
+  import QueryCacheStatus from './QueryCacheStatus.svelte'
   import {type GrapheneError} from '../../lang/index.js'
 
   let pageInputs = activatePageInputs(new PageInputs())
@@ -47,13 +47,8 @@
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
   let Page = $state<any>(null)
   let pageMeta = $state<any>({})
-  let ageTimer: number | undefined
-  let now = $state(Date.now())
-  let cacheAge = $derived(formatCacheAge($pageCacheState.oldestCreatedAt, now))
 
   onMount(async () => {
-    ageTimer = window.setInterval(() => (now = Date.now()), 60_000)
-
     try {
       // force fonts to load before we mount the component.
       // This is important for echarts, as it measures text and if done with the wrong font, then
@@ -82,38 +77,14 @@
 
   onDestroy(() => {
     releasePageInputs(pageInputs)
-    if (ageTimer) window.clearInterval(ageTimer)
   })
-
-  function formatCacheAge(createdAt: number | undefined, currentTime: number) {
-    if (!createdAt) return ''
-
-    let minutes = Math.max(0, Math.floor((currentTime - createdAt) / 60_000))
-    if (minutes < 1) return ''
-    if (minutes < 60) return `${minutes}m ago`
-
-    let hours = Math.floor(minutes / 60)
-    let remainingMinutes = minutes % 60
-    return remainingMinutes ? `${hours}h ${remainingMinutes}m ago` : `${hours}h ago`
-  }
 </script>
 
 <SidebarToggle style='position:fixed;top:2rem;left:2rem;opacity:0.3;' />
 <Sidebar>
   <PageNavGroup files={navData} />
 </Sidebar>
-
-{#if cacheAge}
-  <div class="query-cache-status" aria-live="polite">
-    <span>{cacheAge}</span>
-    <button type="button" aria-label="Refresh cached queries" title="Refresh cached queries" onclick={() => refreshQueries()} disabled={$pageCacheState.loading}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
-        <path d="M21 3v5h-5" />
-      </svg>
-    </button>
-  </div>
-{/if}
+<QueryCacheStatus />
 
 <main id="content" class={{pageContent: compileError || !!Page, dashboardLayout: pageMeta.layout == 'dashboard'}}>
   {#if compileError}
@@ -144,49 +115,5 @@
   /* want to control this margin so it lines up with the SidebarToggle */
   main h1:first-child {
     margin-top: 12px;
-  }
-
-  .query-cache-status {
-    position: fixed;
-    right: 2rem;
-    top: 2rem;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: #6b7280;
-    font-size: 0.875rem;
-    line-height: 1;
-  }
-
-  .query-cache-status button {
-    display: grid;
-    place-items: center;
-    width: 1.5rem;
-    height: 1.5rem;
-    padding: 0;
-    color: #6b7280;
-    background: transparent;
-    border: 0;
-    cursor: pointer;
-  }
-
-  .query-cache-status button:hover:not(:disabled) {
-    color: #111827;
-  }
-
-  .query-cache-status button:disabled {
-    color: #9ca3af;
-    cursor: wait;
-  }
-
-  .query-cache-status svg {
-    width: 1rem;
-    height: 1rem;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
   }
 </style>
