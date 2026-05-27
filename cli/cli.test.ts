@@ -21,12 +21,13 @@ process.env.GRAPHENE_PORT = '4163'
 process.env.NODE_ENV = 'test'
 process.env.GRAPHENE_TELEMETRY_DISABLED = '1'
 
-function runCli(args: string[], options: {cwd?: string; env?: NodeJS.ProcessEnv} = {}): Promise<RunResult> {
+function runCli(args: string[], options: {cwd?: string; env?: NodeJS.ProcessEnv; stdin?: string} = {}): Promise<RunResult> {
   return new Promise(resolve => {
     let cliEntry = path.resolve(dir, 'cli.ts')
     let child = spawn('node', [cliEntry, ...args], {cwd: options.cwd, env: {...process.env, ...options.env}})
     let stdout = '',
       stderr = ''
+    if (options.stdin !== undefined) child.stdin.end(options.stdin)
     child.stdout.on('data', d => {
       stdout += d.toString()
     })
@@ -128,6 +129,12 @@ describe('cli run', () => {
     expectCliSuccess(res, 'run help with no input')
     expect(res.stdout).toContain('Usage: graphene run [options] [input]')
     expect(res.stdout).toContain('Path to file, a raw string, or "-" for stdin')
+  })
+
+  it('reads a query from stdin when input is "-"', async () => {
+    let res = await runCli(['run', '-'], {cwd: flightDir, stdin: 'from flights select count() as total'})
+    expectCliSuccess(res, 'run query from stdin')
+    expect(res.stdout.toLowerCase()).toContain('total')
   })
 
   it('runs a query against flights.duckdb (happy path)', async () => {
