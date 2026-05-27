@@ -66,10 +66,17 @@ program
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
   .option('--headless', 'Run markdown pages in a headless browser instead of opening the system browser')
+  .option('--port <port>', 'Port for the local Graphene server')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
   .option('--input <key=value>', 'Input value to use for parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .action(
-    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; headless?: boolean; query?: string; input?: string[]}) => {
+    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; headless?: boolean; port?: string; query?: string; input?: string[]}) => {
+      if (options.port) {
+        let port = parsePort(options.port, exit)
+        config.port = port
+        process.env.GRAPHENE_PORT = String(port)
+      }
+
       if (options.chart && options.query) {
         console.error('Cannot use --chart and --query together')
         return exit(1)
@@ -190,11 +197,19 @@ program
   .command('serve')
   .description('Run the local server')
   .option('--bg', 'Run the server in the background')
+  .option('--port <port>', 'Port for the local Graphene server')
   .action(
-    withTelemetry('serve', async (exit, options: {bg?: boolean}) => {
+    withTelemetry('serve', async (exit, options: {bg?: boolean; port?: string}) => {
+      if (options.port) {
+        let port = parsePort(options.port, exit)
+        config.port = port
+        process.env.GRAPHENE_PORT = String(port)
+      }
+
       await stopGrapheneIfRunning()
       if (options.bg) {
-        await runServeInBackground()
+        let url = await runServeInBackground({log: () => undefined})
+        console.log(`Server running at ${url}`)
         return exit(0)
       } else {
         let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
@@ -303,6 +318,15 @@ function parseRunInputs(values: string[], exit: (code?: number) => never): Recor
     else inputs[key] = [existing, next]
   }
   return inputs
+}
+
+function parsePort(value: string, exit: (code?: number) => never): number {
+  let port = Number(value)
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error(`Invalid --port "${value}". Expected an integer from 1 to 65535.`)
+    return exit(1)
+  }
+  return port
 }
 
 function renderSql(query: Query, inputs: Record<string, string | string[]>, exit: (code?: number) => never): string {

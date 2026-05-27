@@ -14,6 +14,7 @@ graphene run 'from flights where carrier = $carrier select count() as total' --i
 graphene run - # Read GSQL from stdin and print results
 graphene run path/to/page.md # Open the page in your system browser and save a full-page screenshot
 graphene run path/to/page.md --headless # Run the page in a headless browser and save a full-page screenshot
+graphene run path/to/page.md --port 4170 # Use a specific local dev server port
 graphene install-browser # Install the browser used by `graphene run --headless`
 graphene run path/to/page.md --input carrier=AA # Run the page with input values, overriding page defaults
 
@@ -41,5 +42,6 @@ graphene schema my_dataset.table # Print the GSQL table statement for a database
 
 graphene serve # Start the local dev server (foreground)
 graphene serve --bg # Start the local dev server in the background
+graphene serve --bg --port 4170 # Start the background dev server on a specific port
 graphene stop # Stop the background dev server
 ```

@@ -93,7 +93,7 @@ describe('cli serve (background)', () => {
   it('starts the server in the background and restarts cleanly', async () => {
     let first = await runCli(['serve', '--bg'], {cwd: flightDir})
     expectCliSuccess(first, 'serve start')
-    expect(first.stdout).toContain('Server running at')
+    expect(first.stdout).toContain(`Server running at http://localhost:${TEST_PORT}`)
     expect(await isServerRunning(TEST_PORT)).toBe(true)
 
     // running `serve` again should restart it
@@ -107,12 +107,31 @@ describe('cli serve (background)', () => {
     expect(stop.stdout).toContain('Stopping server')
     expect(await isServerRunning(TEST_PORT)).toBe(false)
   })
+
+  it('prints the configured URL when starting the background server on a custom port', async () => {
+    let port = 4164
+
+    try {
+      let res = await runCli(['serve', '--bg', '--port', String(port)], {cwd: flightDir})
+      expectCliSuccess(res, 'serve start on custom port')
+      expect(res.stdout).toContain(`Server running at http://localhost:${port}`)
+      expect(await isServerRunning(port)).toBe(true)
+    } finally {
+      await runCli(['stop'], {cwd: flightDir, env: {GRAPHENE_PORT: String(port)}})
+    }
+  })
 })
 
 describe('cli run', () => {
   it('runs a query against flights.duckdb (happy path)', async () => {
     let res = await runCli(['run', 'from flights select count() as total'], {cwd: flightDir})
     expectCliSuccess(res, 'run query')
+    expect(res.stdout.toLowerCase()).toContain('total')
+  })
+
+  it('accepts --port on run commands', async () => {
+    let res = await runCli(['run', 'from flights select count() as total', '--port', '4164'], {cwd: flightDir})
+    expectCliSuccess(res, 'run query with port')
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
@@ -189,6 +208,12 @@ describe('cli run', () => {
     let res = await runCli(['run', 'from flights select count()', '--input', '=AA'], {cwd: flightDir})
     expect(res.code).toBe(1)
     expect(res.stderr).toContain('Invalid --input "=AA". Expected key=value.')
+  })
+
+  it('rejects invalid --port values', async () => {
+    let res = await runCli(['run', 'from flights select count()', '--port', 'abc'], {cwd: flightDir})
+    expect(res.code).toBe(1)
+    expect(res.stderr).toContain('Invalid --port "abc". Expected an integer from 1 to 65535.')
   })
 
   it('uses a configured duckdb path when present', async () => {

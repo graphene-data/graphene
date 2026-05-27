@@ -12,8 +12,8 @@ export type {TelemetryCommand, TelemetryEventName, TelemetryPayloads} from './ty
 
 const DEFAULT_TELEMETRY_ENDPOINT = 'https://app.graphenedata.com/cli-telemetry'
 const SAFE_FLAG_NAMES: Partial<Record<TelemetryCommand, Record<string, string[]>>> = {
-  run: {chart: ['--chart', '-c'], headless: ['--headless'], input: ['--input'], query: ['--query', '-q']},
-  serve: {bg: ['--bg']},
+  run: {chart: ['--chart', '-c'], headless: ['--headless'], input: ['--input'], port: ['--port'], query: ['--query', '-q']},
+  serve: {bg: ['--bg'], port: ['--port']},
 }
 
 export class CliTelemetry {
