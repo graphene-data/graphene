@@ -190,7 +190,7 @@ export async function runQuery(sql: string, options: RunQueryOptions = {}): Prom
 
   let conn = await getConnection()
   try {
-    return await conn.runQuery(sql, params === undefined ? undefined : {params})
+    return await conn.runQuery(sql, {params})
   } finally {
     await conn.close()
   }
