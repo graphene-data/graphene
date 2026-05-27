@@ -115,7 +115,7 @@ async function runNode(n: QueryNode, refresh = false) {
   }
 }
 
-async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}, allowBrowserCacheRetry = true): Promise<QueryResult> {
+async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}): Promise<QueryResult> {
   let response = await fetch('/_api/query', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', ...(options.refresh ? {'Cache-Control': 'no-cache'} : {})},
@@ -125,10 +125,7 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
 
   // cache hit. Read data out of the browser cache and return it
   if (response.status == 304) {
-    let cached = await cacheRead(hash).catch(() => null)
-    if (cached) return cached
-    // A missing browser-cache entry means our advertised hash list was stale; retry without that hash.
-    if (allowBrowserCacheRetry) return fetchWithCache({...req, hashes: hash ? req.hashes.filter(h => h != hash) : []}, options, false)
+    return (await cacheRead(hash))! // client only sends hashes of things that are present in the cache
   }
 
   if (!response.ok) {
