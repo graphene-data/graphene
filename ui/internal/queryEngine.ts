@@ -30,8 +30,8 @@ export interface QueryRequest {
   repoId: string
 }
 
-export interface PageCacheState {
-  oldestCreatedAt?: number
+export interface QueryState {
+  oldestRunAt?: number
   loading: boolean
 }
 
@@ -44,7 +44,7 @@ let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 
 let queryFetcher: QueryFetcher = fetchWithCache
 export const setQueryFetcher = f => (queryFetcher = f)
-export const pageCacheState = writable<PageCacheState>({loading: false})
+export const queryState = writable<QueryState>({loading: false})
 
 // Called by GrapheneQuery tags to register a named query on the page
 function registerQuery(name: string, contents: string) {
@@ -205,8 +205,8 @@ const isQueryLoading = () => !!queries.find(q => q.loading)
 
 function updatePageCacheState() {
   let timestamps = queries.map(q => q.runAt).filter(Boolean) as number[]
-  pageCacheState.set({
-    oldestCreatedAt: timestamps.length ? Math.min(...timestamps) : undefined,
+  queryState.set({
+    oldestRunAt: timestamps.length ? Math.min(...timestamps) : undefined,
     loading: isQueryLoading(),
   })
 }
