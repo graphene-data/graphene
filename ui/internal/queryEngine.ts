@@ -6,7 +6,7 @@ import {writable} from 'svelte/store'
 import type {GrapheneError} from '../../lang/index.d.ts'
 
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
-import {type BrowserCacheMetadata, cacheRead, cacheWrite, getHashes} from './clientCache.ts'
+import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
 import {getActivePageInputs, type ParamSnapshot} from './pageInputs.svelte.ts'
 
 type ResultHandler = (res: QueryResult | void) => void
@@ -35,12 +35,7 @@ export interface PageCacheState {
   loading: boolean
 }
 
-interface QueryFetchResult {
-  result: QueryResult
-  browserCache?: BrowserCacheMetadata
-}
-
-export type QueryFetcher = (req: QueryRequest, options?: {refresh?: boolean}) => Promise<QueryFetchResult>
+export type QueryFetcher = (req: QueryRequest, options?: {refresh?: boolean}) => Promise<QueryResult>
 
 let runPending: Promise<void> | null = null
 let refreshNextRun = false
@@ -105,8 +100,8 @@ async function runNode(n: QueryNode, refresh = false) {
 
   try {
     let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh})
-    n.runAt = res.result.runAt
-    let result = translateData(res.result, n)
+    n.runAt = res.runAt
+    let result = translateData(res, n)
     if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
     n.callback(result)
   } catch (e) {
@@ -120,7 +115,7 @@ async function runNode(n: QueryNode, refresh = false) {
   }
 }
 
-async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}, allowBrowserCacheRetry = true): Promise<QueryFetchResult> {
+async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}, allowBrowserCacheRetry = true): Promise<QueryResult> {
   let response = await fetch('/_api/query', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', ...(options.refresh ? {'Cache-Control': 'no-cache'} : {})},
@@ -130,8 +125,8 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
 
   // cache hit. Read data out of the browser cache and return it
   if (response.status == 304) {
-    let cached = await cacheRead<QueryResult>(hash).catch(() => null)
-    if (cached) return {result: cached.result, browserCache: cached.cache}
+    let cached = await cacheRead(hash).catch(() => null)
+    if (cached) return cached
     // A missing browser-cache entry means our advertised hash list was stale; retry without that hash.
     if (allowBrowserCacheRetry) return fetchWithCache({...req, hashes: hash ? req.hashes.filter(h => h != hash) : []}, options, false)
   }
@@ -145,7 +140,7 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
 
   // Cache writes are best-effort and should not block rendering fresh query results.
   void cacheWrite(hash, response.clone())
-  return {result: await response.json()}
+  return await response.json()
 }
 
 function runAll() {
