@@ -20,6 +20,7 @@ interface QueryNode {
   fields: string[]
   componentId?: string
   error?: GrapheneError
+  cacheCreatedAt?: number
 }
 
 export interface QueryRequest {
@@ -45,7 +46,6 @@ let runPending: Promise<void> | null = null
 let refreshNextRun = false
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
-let cachedQueryTimestamps = new Map<QueryNode, number>()
 
 let queryFetcher: QueryFetcher = fetchWithCache
 export const setQueryFetcher = f => (queryFetcher = f)
@@ -75,7 +75,6 @@ function query(source: string, fields: Record<string, string | string[]>, callba
 }
 
 function unsubscribe(callback: ResultHandler) {
-  queries.filter(q => q.callback === callback).forEach(q => cachedQueryTimestamps.delete(q))
   queries = queries.filter(q => q.callback !== callback)
   updatePageCacheState()
 }
@@ -83,7 +82,6 @@ function unsubscribe(callback: ResultHandler) {
 function resetQueryEngine() {
   queries = []
   Object.keys(queryResults).forEach(key => delete queryResults[key])
-  cachedQueryTimestamps.clear()
   updatePageCacheState()
   getActivePageInputs().reset()
 }
@@ -112,7 +110,7 @@ async function runNode(n: QueryNode, refresh = false) {
     if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
     n.callback(result)
   } catch (e) {
-    cachedQueryTimestamps.delete(n)
+    n.cacheCreatedAt = undefined
     let err = typeof e == 'string' ? new Error(e) : (e as Error)
     let grapheneError = err as GrapheneError
     n.error = {...grapheneError, componentId: n.componentId || grapheneError.componentId, message: err.message, stack: err.stack}
@@ -210,17 +208,12 @@ export function translateData(data: any, node: QueryNode): QueryResult {
 const isQueryLoading = () => !!queries.find(q => q.loading)
 
 function updateQueryCacheTimestamp(n: QueryNode, res: QueryFetchResult) {
-  let createdAt = res.result.cache?.createdAt || res.browserCache?.createdAt
-  if (createdAt) {
-    cachedQueryTimestamps.set(n, createdAt)
-  } else {
-    cachedQueryTimestamps.delete(n)
-  }
+  n.cacheCreatedAt = res.result.cache?.createdAt || res.browserCache?.createdAt
   updatePageCacheState()
 }
 
 function updatePageCacheState() {
-  let timestamps = [...cachedQueryTimestamps.values()]
+  let timestamps = queries.map(q => q.cacheCreatedAt).filter(Boolean) as number[]
   pageCacheState.set({
     oldestCreatedAt: timestamps.length ? Math.min(...timestamps) : undefined,
     loading: isQueryLoading(),
