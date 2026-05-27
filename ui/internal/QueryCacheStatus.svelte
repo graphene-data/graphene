@@ -43,7 +43,7 @@
   .query-cache-status {
     position: fixed;
     right: 2rem;
-    top: 2rem;
+    top: 2.25rem;
     z-index: 20;
     display: flex;
     align-items: center;
