@@ -123,6 +123,13 @@ describe('cli serve (background)', () => {
 })
 
 describe('cli run', () => {
+  it('prints help instead of reading stdin when no input is provided', async () => {
+    let res = await runCli(['run'], {cwd: flightDir})
+    expectCliSuccess(res, 'run help with no input')
+    expect(res.stdout).toContain('Usage: graphene run [options] [input]')
+    expect(res.stdout).toContain('Path to file, a raw string, or "-" for stdin')
+  })
+
   it('runs a query against flights.duckdb (happy path)', async () => {
     let res = await runCli(['run', 'from flights select count() as total'], {cwd: flightDir})
     expectCliSuccess(res, 'run query')
