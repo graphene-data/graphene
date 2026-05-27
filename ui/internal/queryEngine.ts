@@ -133,6 +133,7 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
   if (response.status == 304) {
     let cached = await cacheRead<QueryResult>(hash).catch(() => null)
     if (cached) return {result: cached.result, browserCache: cached.cache}
+    // A missing browser-cache entry means our advertised hash list was stale; retry without that hash.
     if (allowBrowserCacheRetry) return fetchWithCache({...req, hashes: hash ? req.hashes.filter(h => h != hash) : []}, options, false)
   }
 
