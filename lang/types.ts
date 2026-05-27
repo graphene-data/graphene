@@ -56,26 +56,43 @@ let SCALAR_TYPE_ALIASES: Record<string, ScalarField> = {
   number: 'number',
   integer: 'number',
   numeric: 'number',
+  bignumeric: 'number',
   float: 'number',
   decimal: 'number',
   float32: 'number',
   float64: 'number',
   double: 'number',
+  double_precision: 'number',
   bigint: 'number',
   uint8: 'number',
   uint16: 'number',
   uint32: 'number',
   uint64: 'number',
+  uint128: 'number',
+  uint256: 'number',
+  int8: 'number',
+  int16: 'number',
+  int32: 'number',
+  int128: 'number',
+  int256: 'number',
   smallint: 'number',
   tinyint: 'number',
   byteint: 'number',
   bigdecimal: 'number',
   variant: 'string',
   object: 'json',
+  struct: 'record',
+  tuple: 'record',
+  map: 'json',
+  uuid: 'string',
+  ipv4: 'string',
+  ipv6: 'string',
   text: 'string',
   string: 'string',
   varchar: 'string',
   char: 'string',
+  character: 'string',
+  character_varying: 'string',
   fixedstring: 'string',
   geography: 'string',
   bool: 'boolean',
@@ -85,6 +102,8 @@ let SCALAR_TYPE_ALIASES: Record<string, ScalarField> = {
   time: 'timestamp',
   timestamp: 'timestamp',
   datetime64: 'timestamp',
+  timestamp_without_time_zone: 'timestamp',
+  timestamp_with_time_zone: 'timestamp',
   timestamp_ntz: 'timestamp',
   timestamp_tz: 'timestamp',
   timestamp_ltz: 'timestamp',
@@ -133,16 +152,19 @@ export function normalizeScalarType(rawType: string): ScalarField | null {
 }
 
 export function parseGsqlFieldType(rawType: string): {type: FieldType | null; error?: string} {
-  return parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: false, allowNamedArray: false})
+  return parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: false, allowNamedArray: false, allowParameterizedScalars: false})
 }
 
 export function parseWarehouseFieldType(rawType: string): {type: FieldType | null; error?: string; displayType?: string} {
-  let parsed = parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: true, allowNamedArray: true})
-  let displayType = parsed.type && shouldNormalizeWarehouseType(rawType) ? formatType(parsed.type) : rawType
+  let parsed = parseFieldType(rawType, {allowArrayKeyword: true, allowBracketArray: true, allowNamedArray: true, allowParameterizedScalars: true})
+  let displayType = parsed.type ? formatType(parsed.type) : rawType
   return {...parsed, displayType}
 }
 
-function parseFieldType(rawType: string, opts: {allowArrayKeyword: boolean; allowBracketArray: boolean; allowNamedArray: boolean}): {type: FieldType | null; error?: string} {
+function parseFieldType(
+  rawType: string,
+  opts: {allowArrayKeyword: boolean; allowBracketArray: boolean; allowNamedArray: boolean; allowParameterizedScalars: boolean},
+): {type: FieldType | null; error?: string} {
   let value = unwrapWarehouseType(rawType.trim())
   if (!value) return {type: null}
 
@@ -160,19 +182,31 @@ function parseFieldType(rawType: string, opts: {allowArrayKeyword: boolean; allo
     let typeName = normalizeTypeName(match[1])
     if (typeName == 'array' && opts.allowArrayKeyword) return parseArrayType(match[2], opts)
     if ((typeName == 'list' || typeName == 'array') && opts.allowNamedArray) return parseArrayType(match[2], opts)
+    if (opts.allowParameterizedScalars) {
+      let scalarType = normalizeScalarType(typeName)
+      if (scalarType) return {type: scalarType}
+    }
   }
 
   let callMatch = value.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\((.+)\)$/s)
   if (callMatch) {
     let typeName = normalizeTypeName(callMatch[1])
     if ((typeName == 'list' || typeName == 'array') && opts.allowNamedArray) return parseArrayType(callMatch[2], opts)
+    if (opts.allowParameterizedScalars) {
+      let scalarType = normalizeScalarType(typeName)
+      if (scalarType) return {type: scalarType}
+    }
   }
 
   let normalizedScalarType = normalizeScalarType(value)
+  if (!normalizedScalarType && opts.allowNamedArray && normalizeTypeName(value) == 'array') return {type: arrayOf(scalarType('sql native'))}
   return {type: normalizedScalarType}
 }
 
-function parseArrayType(innerType: string, opts: {allowArrayKeyword: boolean; allowBracketArray: boolean; allowNamedArray: boolean}): {type: FieldType | null; error?: string} {
+function parseArrayType(
+  innerType: string,
+  opts: {allowArrayKeyword: boolean; allowBracketArray: boolean; allowNamedArray: boolean; allowParameterizedScalars: boolean},
+): {type: FieldType | null; error?: string} {
   let parsed = parseFieldType(innerType, opts)
   if (!parsed.type) return parsed
   if (isArrayType(parsed.type)) return {type: null, error: 'Nested arrays are not supported'}
@@ -190,13 +224,6 @@ function unwrapWarehouseType(rawType: string): string {
     if (!wrapped) return value
     value = wrapped
   }
-}
-
-function shouldNormalizeWarehouseType(rawType: string) {
-  // Schema output usually preserves the warehouse's native type spelling, but these
-  // wrappers/syntax variants are mostly implementation detail and read better once
-  // normalized to Graphene's shared type vocabulary.
-  return /\[\]$/.test(rawType) || /^array\s*[<(]/i.test(rawType) || /^nullable\s*\(/i.test(rawType) || /^lowcardinality\s*\(/i.test(rawType) || /^enum(?:8|16)\s*\(/i.test(rawType)
 }
 
 function unwrapTypeCall(value: string, fn: string): string | null {

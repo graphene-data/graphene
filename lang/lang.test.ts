@@ -2016,10 +2016,14 @@ describe('lang', () => {
   })
 
   it('normalizes clickhouse warehouse types for schema output', () => {
-    expect(formatType(parseWarehouseFieldType('Nullable(Float64)').type)).toBe('number')
-    expect(formatType(parseWarehouseFieldType('LowCardinality(String)').type)).toBe('string')
-    expect(formatType(parseWarehouseFieldType("Enum8('CSH' = 1, 'CRE' = 2)").type)).toBe('string')
-    expect(formatType(parseWarehouseFieldType('Array(String)').type)).toBe('array<string>')
+    expect(parseWarehouseFieldType('Nullable(Float64)').displayType).toBe('number')
+    expect(parseWarehouseFieldType('LowCardinality(String)').displayType).toBe('string')
+    expect(parseWarehouseFieldType("Enum8('CSH' = 1, 'CRE' = 2)").displayType).toBe('string')
+    expect(parseWarehouseFieldType("DateTime64(3, 'UTC')").displayType).toBe('timestamp')
+    expect(parseWarehouseFieldType('Decimal(10, 2)').displayType).toBe('number')
+    expect(parseWarehouseFieldType('FixedString(16)').displayType).toBe('string')
+    expect(parseWarehouseFieldType('Array(DateTime64(3))').displayType).toBe('array<timestamp>')
+    expect(parseWarehouseFieldType('Array(String)').displayType).toBe('array<string>')
   })
 
   it('preserves array element types through computed fields, views, and generic array returns', () => {
