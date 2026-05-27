@@ -166,19 +166,21 @@ async function importConnection<T>(load: () => Promise<T>, packageName: string, 
   }
 }
 
-interface ProxyQueryOptions {
+interface RunQueryOptions extends QueryOptions {
   cacheControl?: string
 }
 
-export async function runQuery(sql: string, options?: QueryOptions, proxyOptions: ProxyQueryOptions = {}): Promise<QueryResult> {
+export async function runQuery(sql: string, options: RunQueryOptions = {}): Promise<QueryResult> {
+  let {cacheControl, params} = options
+
   if (config.host) {
     let headers: Record<string, string> = {'Content-Type': 'application/json'}
-    if (proxyOptions.cacheControl) headers['Cache-Control'] = proxyOptions.cacheControl
+    if (cacheControl) headers['Cache-Control'] = cacheControl
 
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
       headers,
-      body: JSON.stringify({sql, params: options?.params}),
+      body: JSON.stringify({sql, params}),
     })
     let json = await resp.json()
     if (!resp.ok) throw new Error(json.message || json.error || `Query failed with HTTP ${resp.status}`)
@@ -188,7 +190,7 @@ export async function runQuery(sql: string, options?: QueryOptions, proxyOptions
 
   let conn = await getConnection()
   try {
-    return await conn.runQuery(sql, options)
+    return await conn.runQuery(sql, params === undefined ? undefined : {params})
   } finally {
     await conn.close()
   }

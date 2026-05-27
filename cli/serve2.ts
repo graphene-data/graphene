@@ -183,7 +183,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
 
   if (config.host) console.log(`Proxying query to ${config.host}/_api/query`)
   let cacheControl = Array.isArray(req.headers['cache-control']) ? req.headers['cache-control'].join(',') : req.headers['cache-control']
-  let queryResults = await runQuery(sql, undefined, {cacheControl})
+  let queryResults = await runQuery(sql, {cacheControl})
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
   let cache = (queryResults as any).cache
