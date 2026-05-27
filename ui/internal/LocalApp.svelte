@@ -105,8 +105,13 @@
 
 {#if cacheAge}
   <div class="query-cache-status" aria-live="polite">
-    <span>Oldest cached result {cacheAge}</span>
-    <button type="button" onclick={() => refreshQueries()} disabled={$pageCacheState.loading}>Refresh</button>
+    <span>{cacheAge}</span>
+    <button type="button" aria-label="Refresh cached queries" title="Refresh cached queries" onclick={() => refreshQueries()} disabled={$pageCacheState.loading}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
+        <path d="M21 3v5h-5" />
+      </svg>
+    </button>
   </div>
 {/if}
 
@@ -144,36 +149,44 @@
   .query-cache-status {
     position: fixed;
     right: 2rem;
-    bottom: 2rem;
+    top: 2rem;
     z-index: 20;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    color: #374151;
+    gap: 0.4rem;
+    color: #6b7280;
     font-size: 0.875rem;
-    background: rgba(255, 255, 255, 0.94);
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+    line-height: 1;
   }
 
   .query-cache-status button {
-    border: 1px solid #9ca3af;
-    border-radius: 4px;
-    padding: 0.25rem 0.5rem;
-    color: #111827;
-    background: #fff;
-    font: inherit;
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    color: #6b7280;
+    background: transparent;
+    border: 0;
     cursor: pointer;
   }
 
   .query-cache-status button:hover:not(:disabled) {
-    background: #f3f4f6;
+    color: #111827;
   }
 
   .query-cache-status button:disabled {
     color: #9ca3af;
     cursor: wait;
+  }
+
+  .query-cache-status svg {
+    width: 1rem;
+    height: 1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 </style>
