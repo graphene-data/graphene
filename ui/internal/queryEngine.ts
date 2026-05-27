@@ -20,7 +20,7 @@ interface QueryNode {
   fields: string[]
   componentId?: string
   error?: GrapheneError
-  cacheCreatedAt?: number
+  runAt?: number
 }
 
 export interface QueryRequest {
@@ -105,12 +105,11 @@ async function runNode(n: QueryNode, refresh = false) {
 
   try {
     let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh})
-    updateQueryCacheTimestamp(n, res)
+    n.runAt = res.result.runAt
     let result = translateData(res.result, n)
     if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
     n.callback(result)
   } catch (e) {
-    n.cacheCreatedAt = undefined
     let err = typeof e == 'string' ? new Error(e) : (e as Error)
     let grapheneError = err as GrapheneError
     n.error = {...grapheneError, componentId: n.componentId || grapheneError.componentId, message: err.message, stack: err.stack}
@@ -208,13 +207,8 @@ export function translateData(data: any, node: QueryNode): QueryResult {
 
 const isQueryLoading = () => !!queries.find(q => q.loading)
 
-function updateQueryCacheTimestamp(n: QueryNode, res: QueryFetchResult) {
-  n.cacheCreatedAt = res.result.cache?.createdAt || res.browserCache?.createdAt
-  updatePageCacheState()
-}
-
 function updatePageCacheState() {
-  let timestamps = queries.map(q => q.cacheCreatedAt).filter(Boolean) as number[]
+  let timestamps = queries.map(q => q.runAt).filter(Boolean) as number[]
   pageCacheState.set({
     oldestCreatedAt: timestamps.length ? Math.min(...timestamps) : undefined,
     loading: isQueryLoading(),
