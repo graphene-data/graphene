@@ -1,3 +1,23 @@
+## 0.0.20
+
+### Breaking changes
+
+None.
+
+### Added
+
+- Added support for metadata annotations in `select` columns and arbitrary custom metadata keys (`dda4600d`, `fc8ead8d`).
+- Added `graphene dev --port`/`graphene run --port` support for choosing the local server port (`0c2a1efe`).
+- Added ClickHouse support for `UNION DISTINCT`, optional timezone parameters, and date arithmetic functions (`0e43b6f1`).
+
+### Fixed
+
+- Fixed bare `graphene run` to match its help text by running against the current project instead of waiting for stdin (`21f00ce1`).
+- Fixed README files being included in page discovery by default (`dca5a817`).
+- Fixed string input parameters that look like dates being coerced into SQL dates or timestamps (`61aaab4c`).
+- Fixed heatmap, year-domain tooltip, and explicit category-axis formatting defaults (`66763879`, `ede76dc3`, `f74e215f`).
+- Fixed field metadata changes not invalidating the dev-server cache (`42721014`).
+
 ## 0.0.19
 
 ### Breaking changes
