@@ -70,7 +70,12 @@ program
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
   .option('--input <key=value>', 'Input value to use for parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .action(
-    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; headless?: boolean; port?: string; query?: string; input?: string[]}) => {
+    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; headless?: boolean; port?: string; query?: string; input?: string[]}, command: Command) => {
+      if (!input) {
+        command.outputHelp()
+        return exit(0)
+      }
+
       if (options.port) {
         let port = parsePort(options.port, exit)
         config.port = port
