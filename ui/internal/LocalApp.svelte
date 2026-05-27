@@ -14,6 +14,7 @@
 
   let pageInputs = activatePageInputs(new PageInputs())
   setPageInputsContext(pageInputs)
+  onDestroy(() => releasePageInputs(pageInputs))
 
   // Nav sidebar with HMR support for the virtual file list
   let navData = $state(navFiles)
@@ -73,10 +74,6 @@
       await tick()
       window.$GRAPHENE.appLoading = false
     }
-  })
-
-  onDestroy(() => {
-    releasePageInputs(pageInputs)
   })
 </script>
 
