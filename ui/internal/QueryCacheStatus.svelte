@@ -22,6 +22,12 @@
     if (minutes < 60) return `${minutes}m ago`
 
     let hours = Math.floor(minutes / 60)
+    if (hours >= 24) {
+      let days = Math.floor(hours / 24)
+      let remainingHours = hours % 24
+      return remainingHours ? `${days}d ${remainingHours}h ago` : `${days}d ago`
+    }
+
     let remainingMinutes = minutes % 60
     return remainingMinutes ? `${hours}h ${remainingMinutes}m ago` : `${hours}h ago`
   }
