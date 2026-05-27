@@ -144,18 +144,18 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
   await page.clock.install({time: new Date('2024-01-01T00:00:00Z')})
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.getByText(/Oldest cached result/)).toHaveCount(0)
+  await expect(page.locator('.query-cache-status')).toHaveCount(0)
 
   await page.evaluate(() => window.$GRAPHENE.rerunQueries())
-  await expect(page.getByText(/Oldest cached result/)).toHaveCount(0)
+  await expect(page.locator('.query-cache-status')).toHaveCount(0)
   await page.clock.fastForward('01:00')
-  await expect(page.getByText(/Oldest cached result 1m ago/)).toBeVisible()
+  await expect(page.locator('.query-cache-status')).toContainText('1m ago')
   await expect(page).screenshot('markdown-browser-cache-status')
 
-  await page.getByRole('button', {name: 'Refresh'}).click()
+  await page.getByRole('button', {name: 'Refresh cached queries'}).click()
   await expect.poll(() => requestCount).toBe(3)
   expect(lastCacheControl).toBe('no-cache')
-  await expect(page.getByText(/Oldest cached result/)).toHaveCount(0)
+  await expect(page.locator('.query-cache-status')).toHaveCount(0)
 })
 
 test('falls back to a fresh query when the browser cache entry is missing', async ({server, page}) => {
@@ -228,7 +228,7 @@ test('disables browser query caching behind an internal query parameter', async 
   expect(requestBodies).toHaveLength(2)
   expect(requestBodies[0].hashes).toEqual([])
   expect(requestBodies[1].hashes).toEqual([])
-  await expect(page.getByText(/Oldest cached result 1m ago/)).toBeVisible()
+  await expect(page.locator('.query-cache-status')).toContainText('1m ago')
   await expect(page).screenshot('markdown-browser-cache-disabled')
 })
 
@@ -268,10 +268,10 @@ test('uses warehouse cache timestamps when browser cache serves the response', a
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.getByText(/Oldest cached result 2h 5m ago/)).toBeVisible()
+  await expect(page.locator('.query-cache-status')).toContainText('2h 5m ago')
 
   await page.evaluate(() => window.$GRAPHENE.rerunQueries())
-  await expect(page.getByText(/Oldest cached result 2h 5m ago/)).toBeVisible()
+  await expect(page.locator('.query-cache-status')).toContainText('2h 5m ago')
   await expect(page).screenshot('markdown-warehouse-cache-status')
 })
 
