@@ -143,7 +143,8 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
     throw err
   }
 
-  await cacheWrite(hash, response.clone())
+  // Cache writes are best-effort and should not block rendering fresh query results.
+  void cacheWrite(hash, response.clone())
   return {result: await response.json()}
 }
 
