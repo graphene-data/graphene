@@ -261,7 +261,7 @@ test('uses warehouse cache timestamps when browser cache serves the response', a
         rows: [{num: 3}],
         fields: [{name: 'num', type: scalarType('number')}],
         sql: '',
-        cache: {provider: 'snowflake', status: 'hit', createdAt, expiresAt: Date.now() + 60 * 60_000},
+        cache: {provider: 'snowflake', status: 'hit', createdAt},
       }),
     })
   })
@@ -275,7 +275,7 @@ test('uses warehouse cache timestamps when browser cache serves the response', a
   await expect(page).screenshot('markdown-warehouse-cache-status')
 })
 
-test('expires browser cache entries no later than the warehouse cache', async ({server, page}) => {
+test('expires browser cache entries from the cached result creation time', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -288,6 +288,7 @@ test('expires browser cache entries no later than the warehouse cache', async ({
   )
 
   let requestBodies: any[] = []
+  let expiredCreatedAt = Date.now() - 3 * 60 * 60_000
   await page.route('**/_api/query', async route => {
     requestBodies.push(route.request().postDataJSON())
     await route.fulfill({
@@ -298,7 +299,7 @@ test('expires browser cache entries no later than the warehouse cache', async ({
         rows: [{num: requestBodies.length}],
         fields: [{name: 'num', type: scalarType('number')}],
         sql: '',
-        cache: requestBodies.length == 1 ? {provider: 'bigquery', status: 'hit', createdAt: Date.now() - 60_000, expiresAt: Date.now() - 1} : undefined,
+        cache: requestBodies.length == 1 ? {provider: 'bigquery', status: 'hit', createdAt: expiredCreatedAt} : undefined,
       }),
     })
   })

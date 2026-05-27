@@ -13,7 +13,6 @@ export type QueryCacheMetadata = {
   provider: 'bigquery' | 'snowflake' | 'clickhouse'
   status: 'hit' | 'miss' | 'refresh' | 'native'
   createdAt?: number
-  expiresAt?: number
 }
 
 // A single output column in a query result.
