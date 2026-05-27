@@ -94,7 +94,7 @@ async function runNode(n: QueryNode) {
     let err = typeof e == 'string' ? new Error(e) : (e as Error)
     let grapheneError = err as GrapheneError
     n.error = {...grapheneError, componentId: n.componentId || grapheneError.componentId, message: err.message, stack: err.stack}
-    n.callback({rows: [], fields: [], error: n.error, sql: ''})
+    n.callback({rows: [], fields: [], error: n.error, sql: '', runAt: Date.now()})
   } finally {
     n.loading = false
   }
@@ -169,7 +169,7 @@ export function translateData(data: any, node: QueryNode): QueryResult {
     fields.push({...field, name})
   })
 
-  return {rows, fields}
+  return {rows, fields, runAt: Date.now()}
 }
 
 const isQueryLoading = () => !!queries.find(q => q.loading)
