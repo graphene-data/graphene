@@ -5,7 +5,7 @@ import path from 'path'
 import {config} from '../../lang/config.ts'
 import {type QueryResult, type QueryConnection, type SchemaColumn, type QueryOptions} from './types.ts'
 
-interface DuckDbOptions {
+export interface DuckDbOptions {
   path?: string
 }
 
@@ -93,4 +93,8 @@ export class DuckDBConnection implements QueryConnection {
     await this.ready
     this.connection?.closeSync()
   }
+}
+
+export function localDbOptions(): DuckDbOptions {
+  return {...config.duckdb}
 }

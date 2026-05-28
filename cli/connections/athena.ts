@@ -8,6 +8,7 @@ import {
   StartQueryExecutionCommand,
 } from '@aws-sdk/client-athena'
 
+import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryOptions, type QueryParams, type QueryResult, type SchemaColumn} from './types.ts'
 
 export interface AthenaOptions {
@@ -164,4 +165,15 @@ function parseAthenaValue(value: string | undefined, type: string) {
   if (normalizedType == 'boolean') return value == 'true'
   if (/^(tinyint|smallint|integer|bigint|real|float|double|decimal)/.test(normalizedType)) return Number(value)
   return value
+}
+
+export function localDbOptions(): AthenaOptions {
+  return {
+    ...config.athena,
+    region: config.athena?.region || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION,
+    database: config.athena?.database || config.defaultNamespace,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    sessionToken: process.env.AWS_SESSION_TOKEN,
+  }
 }

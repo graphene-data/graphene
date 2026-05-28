@@ -1,5 +1,6 @@
 import {createClient, type ClickHouseClient} from '@clickhouse/client'
 
+import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryResult, type QueryOptions, type SchemaColumn} from './types.ts'
 
 export interface ClickHouseOptions {
@@ -75,4 +76,18 @@ export class ClickHouseConnection implements QueryConnection {
 
 function escapeClickHouseString(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")
+}
+
+export function localDbOptions(): ClickHouseOptions {
+  let url = config.clickhouse?.url || process.env.CLICKHOUSE_URL
+  let username = config.clickhouse?.username || process.env.CLICKHOUSE_USERNAME
+  let password = process.env.CLICKHOUSE_PASSWORD
+  if (!url || !username || !password) throw new Error('ClickHouse requires url and username in config or env, plus CLICKHOUSE_PASSWORD in env')
+  return {
+    url,
+    username,
+    password,
+    database: config.clickhouse?.database || config.defaultNamespace || 'default',
+    requestTimeout: config.clickhouse?.requestTimeout,
+  }
 }
