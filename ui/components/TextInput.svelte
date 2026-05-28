@@ -1,7 +1,8 @@
 <script lang="ts">
-  import {onMount} from 'svelte'
+  import {onMount, untrack} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
   import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
+  import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Props {
     name: string
@@ -17,7 +18,11 @@
   let {
     name, title = undefined, label = undefined, description = undefined,
     placeholder = 'Type to search', defaultValue = undefined, hideDuringPrint = true, unsafe = false,
-  }: Props = $props()
+    ...extraProps
+  }: Props & Record<string, unknown> = $props()
+
+  let logger = untrack(() => componentLogger('TextInput', {name}))
+  untrack(() => logExtraProps(logger, 'TextInput', extraProps))
 
   let pageInputs = getPageInputs()
   let field = captureInitial(() => pageInputs.text(name))

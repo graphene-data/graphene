@@ -3,7 +3,7 @@
   import QueryLoad from './QueryLoad.svelte'
   import {formatFromField} from '../component-utilities/format.ts'
   import type {QueryResult} from '../component-utilities/types.ts'
-  import {componentLogger} from '../internal/telemetry.ts'
+  import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Props {
     data: string | QueryResult
@@ -12,8 +12,9 @@
     row?: number
   }
 
-  let {data, value = undefined, title = undefined, row = 0}: Props = $props()
+  let {data, value = undefined, title = undefined, row = 0, ...extraProps}: Props & Record<string, unknown> = $props()
   let logger = untrack(() => componentLogger('BigValue', {data: typeof data == 'string' ? data : undefined, value}))
+  untrack(() => logExtraProps(logger, 'BigValue', extraProps))
 
   function formatValue(input: any, loaded: QueryResult) {
     if (input === null || input === undefined) return '—'
