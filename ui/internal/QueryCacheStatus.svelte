@@ -1,10 +1,10 @@
 <script lang="ts">
   import {onDestroy, onMount} from 'svelte'
-  import {pageCacheState, refreshQueries} from './queryEngine.ts'
+  import {queryState, refreshQueries} from './queryEngine.ts'
 
   let ageTimer: number | undefined
   let now = $state(Date.now())
-  let cacheAge = $derived(formatCacheAge($pageCacheState.oldestCreatedAt, now))
+  let cacheAge = $derived(formatCacheAge($queryState.oldestRunAt, now))
 
   onMount(() => {
     ageTimer = window.setInterval(() => (now = Date.now()), 60_000)
@@ -14,10 +14,10 @@
     if (ageTimer) window.clearInterval(ageTimer)
   })
 
-  function formatCacheAge(createdAt: number | undefined, currentTime: number) {
-    if (!createdAt) return ''
+  function formatCacheAge(runAt: number | undefined, currentTime: number) {
+    if (!runAt) return ''
 
-    let minutes = Math.max(0, Math.floor((currentTime - createdAt) / 60_000))
+    let minutes = Math.max(0, Math.floor((currentTime - runAt) / 60_000))
     if (minutes < 1) return ''
     if (minutes < 60) return `${minutes}m ago`
 
@@ -36,7 +36,7 @@
 {#if cacheAge}
   <div class="query-cache-status" aria-live="polite">
     <span>{cacheAge}</span>
-    <button type="button" aria-label="Refresh cached queries" title="Refresh cached queries" onclick={() => refreshQueries()} disabled={$pageCacheState.loading}>
+    <button type="button" aria-label="Refresh cached queries" title="Refresh cached queries" onclick={() => refreshQueries()} disabled={$queryState.loading}>
       <svg viewBox="0 0 24 24" aria-hidden="true">
         <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
         <path d="M21 3v5h-5" />

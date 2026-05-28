@@ -27,7 +27,7 @@ export function clearSvelteWarnings() {
 }
 
 // Bump this whenever the query response shape changes so client caches invalidate.
-const QUERY_VERSION = 2
+const QUERY_VERSION = 3
 
 let uiRoot: string
 let nodeRequire = createRequire(import.meta.url)
@@ -186,8 +186,8 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
   let queryResults = await runQuery(sql, {cacheControl})
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  let cache = (queryResults as any).cache
-  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql, ...(cache ? {cache} : {})}))
+  let runAt = queryResults.runAt || Date.now()
+  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql, runAt}))
 }
 
 export function computeQueryHash(sql: string, fields: Pick<QueryField, 'name' | 'type' | 'metadata'>[]) {

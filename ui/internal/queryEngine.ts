@@ -195,7 +195,7 @@ export function translateData(data: any, node: QueryNode): QueryResult {
     fields.push({...field, name})
   })
 
-  return {rows, fields, runAt: Date.now()}
+  return {rows, fields, runAt: data.runAt || Date.now()}
 }
 
 const isQueryLoading = () => !!queries.find(q => q.loading)

@@ -46,7 +46,11 @@ export async function cacheWrite(hash: string, response: Response) {
   let existing = await store.keys(`https://graphene-cache/${hash}`, {ignoreSearch: true})
   existing.forEach(key => store.delete(key))
 
-  let expiresAt = Date.now() + TTL_MS
+  let result: Partial<QueryResult> = await response
+    .clone()
+    .json()
+    .catch(() => ({}))
+  let expiresAt = Number(result.runAt || Date.now()) + TTL_MS
   await store.put(`https://graphene-cache/${hash}?expires=${expiresAt}`, response)
 }
 

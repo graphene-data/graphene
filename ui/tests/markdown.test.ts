@@ -124,6 +124,7 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
   let requestCount = 0
   let lastCacheControl = ''
   let hash = 'browser-cache-hash'
+  let runAt = new Date('2024-01-01T00:00:00Z').getTime()
   await page.route('**/_api/query', async route => {
     requestCount++
     lastCacheControl = route.request().headers()['cache-control'] || ''
@@ -137,7 +138,7 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
       status: 200,
       headers: {ETag: hash},
       contentType: 'application/json',
-      body: JSON.stringify({rows: [{num: requestCount}], fields: [{name: 'num', type: scalarType('number')}], sql: ''}),
+      body: JSON.stringify({rows: [{num: requestCount}], fields: [{name: 'num', type: scalarType('number')}], sql: '', runAt}),
     })
   })
 
@@ -216,7 +217,7 @@ test('disables browser query caching behind an internal query parameter', async 
         rows: [{num: requestBodies.length}],
         fields: [{name: 'num', type: scalarType('number')}],
         sql: '',
-        cache: {provider: 'clickhouse', status: 'hit', createdAt: Date.now() - 90_000},
+        runAt: Date.now() - 90_000,
       }),
     })
   })
@@ -245,7 +246,7 @@ test('uses warehouse cache timestamps when browser cache serves the response', a
   )
 
   let hash = 'warehouse-cache-hash'
-  let createdAt = Date.now() - 125 * 60_000
+  let runAt = Date.now() - 125 * 60_000
   await page.route('**/_api/query', async route => {
     let body = route.request().postDataJSON()
     if (body.hashes?.includes(hash)) {
@@ -261,7 +262,7 @@ test('uses warehouse cache timestamps when browser cache serves the response', a
         rows: [{num: 3}],
         fields: [{name: 'num', type: scalarType('number')}],
         sql: '',
-        cache: {provider: 'snowflake', status: 'hit', createdAt},
+        runAt,
       }),
     })
   })
@@ -288,7 +289,7 @@ test('expires browser cache entries from the cached result creation time', async
   )
 
   let requestBodies: any[] = []
-  let expiredCreatedAt = Date.now() - 3 * 60 * 60_000
+  let expiredRunAt = Date.now() - 25 * 60 * 60_000
   await page.route('**/_api/query', async route => {
     requestBodies.push(route.request().postDataJSON())
     await route.fulfill({
@@ -299,7 +300,7 @@ test('expires browser cache entries from the cached result creation time', async
         rows: [{num: requestBodies.length}],
         fields: [{name: 'num', type: scalarType('number')}],
         sql: '',
-        cache: requestBodies.length == 1 ? {provider: 'bigquery', status: 'hit', createdAt: expiredCreatedAt} : undefined,
+        runAt: requestBodies.length == 1 ? expiredRunAt : Date.now(),
       }),
     })
   })

@@ -1,6 +1,7 @@
 export interface QueryResult {
   rows: Array<Record<string, unknown>>
   totalRows?: number
+  runAt?: number
 }
 
 export interface SchemaColumn {
