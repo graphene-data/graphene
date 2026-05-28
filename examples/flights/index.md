@@ -136,11 +136,11 @@ order by flights desc
 
 <Table data=top_carriers title="Top Carriers" link=link showLinkCol=false rows=100>
   <Column id=carrier />
-  <Column id=flights fmt=num0 />
-  <Column id=on_time_arrival_rate title="On-Time Arr %" fmt=pct1 contentType=colorscale colorScale=positive />
-  <Column id=cancellation_rate title="Cancel %" fmt=pct2 contentType=colorscale colorScale=negative />
-  <Column id=avg_dep_delay title="Avg Delay (min)" fmt="0.0" />
-  <Column id=destinations title="Destinations" fmt=num0 />
-  <Column id=avg_aircraft_age title="Avg Aircraft Age (y)" fmt="0.0" />
-  <Column id=avg_distance title="Avg Distance (mi)" fmt=num0 />
+  <Column id=flights />
+  <Column id=on_time_arrival_rate title="On-Time Arr %" contentType=colorscale colorScale=positive />
+  <Column id=cancellation_rate title="Cancel %" contentType=colorscale colorScale=negative />
+  <Column id=avg_dep_delay title="Avg Delay (min)" />
+  <Column id=destinations title="Destinations" />
+  <Column id=avg_aircraft_age title="Avg Aircraft Age (y)" />
+  <Column id=avg_distance title="Avg Distance (mi)" />
 </Table>

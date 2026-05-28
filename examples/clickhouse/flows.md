@@ -27,10 +27,10 @@ from flow_sample
 ```
 
 <Row>
-  <BigValue data=flow_summary value=trips title="Sample Trips" fmt=num0 />
-  <BigValue data=flow_summary value=routes title="Sample Routes" fmt=num0 />
-  <BigValue data=flow_summary value=pickup_neighborhoods title="Pickup Areas" fmt=num0 />
-  <BigValue data=flow_summary value=dropoff_neighborhoods title="Dropoff Areas" fmt=num0 />
+  <BigValue data=flow_summary value=trips title="Sample Trips" />
+  <BigValue data=flow_summary value=routes title="Sample Routes" />
+  <BigValue data=flow_summary value=pickup_neighborhoods title="Pickup Areas" />
+  <BigValue data=flow_summary value=dropoff_neighborhoods title="Dropoff Areas" />
 </Row>
 
 ```sql flow_edges
@@ -126,8 +126,8 @@ limit 25
 <Table data=top_routes title="Top Origin-Destination Routes" rows=25 compact=true search=true totalRow=true>
   <Column id=pickup title="Pickup" />
   <Column id=dropoff title="Dropoff" />
-  <Column id=trips title="Trips" fmt=num0 />
-  <Column id=avg_distance title="Avg Distance" fmt=num1 />
-  <Column id=avg_minutes title="Avg Minutes" fmt=num1 />
-  <Column id=avg_total_amount title="Avg Fare" fmt=usd2 />
+  <Column id=trips title="Trips" />
+  <Column id=avg_distance title="Avg Distance" />
+  <Column id=avg_minutes title="Avg Minutes" />
+  <Column id=avg_total_amount title="Avg Fare" />
 </Table>
