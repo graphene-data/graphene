@@ -4,7 +4,7 @@ import snowflake from 'snowflake-sdk'
 import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
 
-interface SnowflakeOptions {
+export interface SnowflakeOptions {
   username?: string
   account?: string
   privateKey?: string
@@ -164,4 +164,13 @@ function snowflakeIdent(value: string) {
 
 export function escapeSnowflakeString(value: string) {
   return value.replace(/'/g, "''")
+}
+
+export function localDbOptions(): SnowflakeOptions {
+  return {
+    privateKeyPath: process.env.SNOWFLAKE_PRI_KEY_PATH,
+    privateKey: process.env.SNOWFLAKE_PRI_KEY,
+    privateKeyPass: process.env.SNOWFLAKE_PRI_PASSPHRASE,
+    logLevel: process.env.SNOWFLAKE_LOG_LEVEL,
+  }
 }
