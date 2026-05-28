@@ -1,6 +1,8 @@
 // The query engine gathers query requests and inputs from components, and issues requests to the server.
 // When inputs change, it takes care of notifying affected components and requesting new data.
 
+import {writable} from 'svelte/store'
+
 import type {GrapheneError} from '../../lang/index.d.ts'
 
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
@@ -18,6 +20,7 @@ interface QueryNode {
   fields: string[]
   componentId?: string
   error?: GrapheneError
+  runAt?: number
 }
 
 export interface QueryRequest {
@@ -27,14 +30,21 @@ export interface QueryRequest {
   repoId: string
 }
 
-export type QueryFetcher = (req: QueryRequest) => Promise<QueryResult>
+export interface QueryState {
+  oldestRunAt?: number
+  loading: boolean
+}
+
+export type QueryFetcher = (req: QueryRequest, options?: {refresh?: boolean}) => Promise<QueryResult>
 
 let runPending: Promise<void> | null = null
+let refreshNextRun = false
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 
 let queryFetcher: QueryFetcher = fetchWithCache
 export const setQueryFetcher = f => (queryFetcher = f)
+export const queryState = writable<QueryState>({loading: false})
 
 // Called by GrapheneQuery tags to register a named query on the page
 function registerQuery(name: string, contents: string) {
@@ -61,22 +71,25 @@ function query(source: string, fields: Record<string, string | string[]>, callba
 
 function unsubscribe(callback: ResultHandler) {
   queries = queries.filter(q => q.callback !== callback)
+  updatePageCacheState()
 }
 
 function resetQueryEngine() {
   queries = []
   Object.keys(queryResults).forEach(key => delete queryResults[key])
+  updatePageCacheState()
   getActivePageInputs().reset()
 }
 
 // Actually runs a given query that some frontend component is listening to.
 // This is pretty dumb at the moment, it simply concats all code fenced queries as table statements, then appends the actual query at the end.
-async function runNode(n: QueryNode) {
+async function runNode(n: QueryNode, refresh = false) {
   if (!n.callback) throw new Error('running node nobody is listening to')
 
   n.callback() // notifies listeners we're back in the loading state
   n.loading = true
   n.error = undefined
+  updatePageCacheState()
 
   // build up the request body. Hashes is the list of ETag hashes currently in our browser cache. We send all of them,
   // letting the server determine the hash of this particular query, and whether data we already have is acceptable.
@@ -86,7 +99,8 @@ async function runNode(n: QueryNode) {
   let params = getActivePageInputs().getParams()
 
   try {
-    let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId})
+    let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh})
+    n.runAt = res.runAt
     let result = translateData(res, n)
     if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
     n.callback(result)
@@ -94,23 +108,24 @@ async function runNode(n: QueryNode) {
     let err = typeof e == 'string' ? new Error(e) : (e as Error)
     let grapheneError = err as GrapheneError
     n.error = {...grapheneError, componentId: n.componentId || grapheneError.componentId, message: err.message, stack: err.stack}
-    n.callback({rows: [], fields: [], error: n.error, sql: ''})
+    n.callback({rows: [], fields: [], error: n.error, sql: '', runAt: Date.now()})
   } finally {
     n.loading = false
+    updatePageCacheState()
   }
 }
 
-async function fetchWithCache(req: QueryRequest): Promise<QueryResult> {
+async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}): Promise<QueryResult> {
   let response = await fetch('/_api/query', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', ...(options.refresh ? {'Cache-Control': 'no-cache'} : {})},
     body: JSON.stringify(req),
   })
   let hash = response.headers.get('ETag') || ''
 
   // cache hit. Read data out of the browser cache and return it
   if (response.status == 304) {
-    return await cacheRead(hash)
+    return (await cacheRead(hash))! // client only sends hashes of things that are present in the cache
   }
 
   if (!response.ok) {
@@ -120,7 +135,8 @@ async function fetchWithCache(req: QueryRequest): Promise<QueryResult> {
     throw err
   }
 
-  cacheWrite(hash, response.clone())
+  // Cache writes are best-effort and should not block rendering fresh query results.
+  void cacheWrite(hash, response.clone())
   return await response.json()
 }
 
@@ -129,13 +145,23 @@ function runAll() {
   runPending = Promise.resolve()
     .then(_runAll)
     .finally(() => (runPending = null))
+  return runPending
+}
+
+export async function refreshQueries() {
+  refreshNextRun = true
+  if (runPending) await runPending
+  return runAll()
 }
 
 async function _runAll() {
+  let refresh = refreshNextRun
+  refreshNextRun = false
+
   await Promise.all(
     queries.map(async n => {
       if (!n.callback) return
-      await runNode(n)
+      await runNode(n, refresh)
     }),
   )
 }
@@ -169,10 +195,18 @@ export function translateData(data: any, node: QueryNode): QueryResult {
     fields.push({...field, name})
   })
 
-  return {rows, fields}
+  return {rows, fields, runAt: data.runAt || Date.now()}
 }
 
 const isQueryLoading = () => !!queries.find(q => q.loading)
+
+function updatePageCacheState() {
+  let timestamps = queries.map(q => q.runAt).filter(Boolean) as number[]
+  queryState.set({
+    oldestRunAt: timestamps.length ? Math.min(...timestamps) : undefined,
+    loading: isQueryLoading(),
+  })
+}
 
 if (typeof window !== 'undefined') {
   Object.assign(window.$GRAPHENE, {
@@ -186,6 +220,7 @@ if (typeof window !== 'undefined') {
     unsubscribe,
     resetQueryEngine,
     rerunQueries: runAll,
+    refreshQueries,
     isQueryLoading,
     queryResults,
   })

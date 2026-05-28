@@ -8,7 +8,7 @@ import {
   StartQueryExecutionCommand,
 } from '@aws-sdk/client-athena'
 
-import {type QueryConnection, type QueryParams, type QueryResult, type SchemaColumn} from './types.ts'
+import {type QueryConnection, type QueryOptions, type QueryParams, type QueryResult, type SchemaColumn} from './types.ts'
 
 export interface AthenaOptions {
   region?: string
@@ -44,8 +44,8 @@ export class AthenaConnection implements QueryConnection {
     this.outputLocation = opts.outputLocation
   }
 
-  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
-    let queryExecutionId = await this.startQuery(sql, params)
+  async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
+    let queryExecutionId = await this.startQuery(sql, options?.params)
     await this.waitForQuery(queryExecutionId)
     return await this.fetchResults(queryExecutionId)
   }

@@ -6,7 +6,7 @@ import path from 'path'
 
 import {config} from '../../lang/config.ts'
 import {authenticatedFetch} from '../auth.ts'
-import {type QueryResult, type QueryConnection, type QueryParams} from './types.ts'
+import {type QueryResult, type QueryConnection, type QueryOptions} from './types.ts'
 
 // Reads credentials from environment variables and passes them to the connection constructors.
 // The connection classes themselves have no env-reading logic — this keeps the cloud server
@@ -166,19 +166,31 @@ async function importConnection<T>(load: () => Promise<T>, packageName: string, 
   }
 }
 
-export async function runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
+interface RunQueryOptions extends QueryOptions {
+  cacheControl?: string
+}
+
+export async function runQuery(sql: string, options: RunQueryOptions = {}): Promise<QueryResult> {
+  let {cacheControl, params} = options
+
   if (config.host) {
+    let headers: Record<string, string> = {'Content-Type': 'application/json'}
+    if (cacheControl) headers['Cache-Control'] = cacheControl
+
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers,
       body: JSON.stringify({sql, params}),
     })
-    return await resp.json()
+    let json = await resp.json()
+    if (!resp.ok) throw new Error(json.message || json.error || `Query failed with HTTP ${resp.status}`)
+    if (!Array.isArray(json.rows)) throw new Error('Query response did not include rows')
+    return json
   }
 
   let conn = await getConnection()
   try {
-    return await conn.runQuery(sql, params)
+    return await conn.runQuery(sql, {params})
   } finally {
     await conn.close()
   }

@@ -1,7 +1,7 @@
 import pg, {type FieldDef, type PoolConfig, type QueryResult as PgQueryResult} from 'pg'
 
 import {config} from '../../lang/config.ts'
-import {type QueryConnection, type QueryParams, type QueryResult, type SchemaColumn} from './types.ts'
+import {type QueryConnection, type QueryOptions, type QueryParams, type QueryResult, type SchemaColumn} from './types.ts'
 
 export interface PostgresOptions {
   connectionString?: string
@@ -59,8 +59,8 @@ export class PostgresConnection implements QueryConnection {
       })
   }
 
-  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
-    let [preparedSql, preparedParams] = preparePostgresParams(sql, params)
+  async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
+    let [preparedSql, preparedParams] = preparePostgresParams(sql, options?.params)
     let result = await this.pool.query(preparedSql, preparedParams)
     let rows = result.rows.map(row => normalizeRow(row, result.fields))
     return {rows, totalRows: result.rowCount ?? rows.length}
@@ -86,7 +86,7 @@ export class PostgresConnection implements QueryConnection {
         and table_type in ('BASE TABLE', 'VIEW')
       order by table_name
     `.trim()
-    let res = await this.runQuery(sql, [schema])
+    let res = await this.runQuery(sql, {params: [schema]})
     return res.rows.map(row => String(row['table_name']).toLowerCase())
   }
 
@@ -101,7 +101,7 @@ export class PostgresConnection implements QueryConnection {
         and lower(table_name) = lower($2)
       order by ordinal_position
     `.trim()
-    let res = await this.runQuery(sql, [schema, table])
+    let res = await this.runQuery(sql, {params: [schema, table]})
     return res.rows.map(row => ({name: String(row['column_name']).toLowerCase(), dataType: postgresDisplayType(row)}))
   }
 

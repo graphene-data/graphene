@@ -27,7 +27,7 @@ export function clearSvelteWarnings() {
 }
 
 // Bump this whenever the query response shape changes so client caches invalidate.
-const QUERY_VERSION = 2
+const QUERY_VERSION = 3
 
 let uiRoot: string
 let nodeRequire = createRequire(import.meta.url)
@@ -181,10 +181,13 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
     return res.end()
   }
 
-  let queryResults = await runQuery(sql)
+  if (config.host) console.log(`Proxying query to ${config.host}/_api/query`)
+  let cacheControl = Array.isArray(req.headers['cache-control']) ? req.headers['cache-control'].join(',') : req.headers['cache-control']
+  let queryResults = await runQuery(sql, {cacheControl})
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
   if (totalRows > queryResults.rows.length) throw new Error('Query returns too many rows')
-  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql}))
+  let runAt = queryResults.runAt || Date.now()
+  res.end(JSON.stringify({rows: queryResults.rows, hash, fields, sql, runAt}))
 }
 
 export function computeQueryHash(sql: string, fields: Pick<QueryField, 'name' | 'type' | 'metadata'>[]) {

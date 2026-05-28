@@ -1,6 +1,7 @@
 export interface QueryResult {
   rows: Array<Record<string, unknown>>
   totalRows?: number
+  runAt?: number
 }
 
 export interface SchemaColumn {
@@ -10,8 +11,12 @@ export interface SchemaColumn {
 
 export type QueryParams = unknown[] | Record<string, unknown>
 
+export interface QueryOptions {
+  params?: QueryParams
+}
+
 export interface QueryConnection {
-  runQuery(sql: string, params?: QueryParams): Promise<QueryResult>
+  runQuery(sql: string, options?: QueryOptions): Promise<QueryResult>
   listDatasets(): Promise<string[]>
   listSchemas?(dataset: string): Promise<string[]>
   listTables(dataset?: string): Promise<string[]>

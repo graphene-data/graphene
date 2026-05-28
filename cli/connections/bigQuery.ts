@@ -1,7 +1,7 @@
 import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
 
 import {config} from '../../lang/config.ts'
-import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
 
 // BigQuery identifiers can contain letters, numbers, underscores, and hyphens
 function validateBigQueryIdent(ident: string) {
@@ -9,9 +9,9 @@ function validateBigQueryIdent(ident: string) {
 }
 
 export class BigQueryConnection implements QueryConnection {
-  private readonly client: BigQuery
-  private readonly projectId: string
-  private readonly defaultNamespace?: string
+  protected readonly client: BigQuery
+  protected readonly projectId: string
+  protected readonly defaultNamespace?: string
 
   constructor(options: BigQueryOptions = {}) {
     options.projectId ||= config.bigquery?.projectId
@@ -21,20 +21,19 @@ export class BigQueryConnection implements QueryConnection {
     this.defaultNamespace = config.defaultNamespace
   }
 
-  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
-    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params})
+  async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
+    let {rows, totalRows} = await this.executeQuery(sql, options)
+    return {rows, totalRows}
+  }
+
+  protected async executeQuery(sql: string, options?: QueryOptions): Promise<QueryResult & {metadata: any; job: any}> {
+    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params: options?.params})
     let [rows] = await job.getQueryResults({maxResults: 10000})
     let metadata = job.metadata || (await job.getMetadata())[0]
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
 
-    rows.forEach(r => {
-      Object.entries(r).forEach(([k, v]) => {
-        if (v instanceof BigQueryTimestamp) r[k] = v.value
-        if (v instanceof BigQueryDate) r[k] = v.value
-      })
-    })
-
-    return {rows, totalRows}
+    normalizeBigQueryRows(rows)
+    return {rows, totalRows, metadata, job}
   }
 
   async listDatasets(): Promise<string[]> {
@@ -67,7 +66,7 @@ export class BigQueryConnection implements QueryConnection {
       where lower(table_name) = lower(@table)
       order by ordinal_position
     `.trim()
-    let res = await this.runQuery(sql, {table})
+    let res = await this.runQuery(sql, {params: {table}})
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
     })
@@ -79,4 +78,13 @@ export class BigQueryConnection implements QueryConnection {
   }
 
   async close(): Promise<void> {}
+}
+
+export function normalizeBigQueryRows(rows: Record<string, any>[]) {
+  rows.forEach(r => {
+    Object.entries(r).forEach(([k, v]) => {
+      if (v instanceof BigQueryTimestamp) r[k] = v.value
+      if (v instanceof BigQueryDate) r[k] = v.value
+    })
+  })
 }

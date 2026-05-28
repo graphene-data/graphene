@@ -9,6 +9,7 @@
   import ErrorDisplay from './ErrorDisplay.svelte'
   import ChartGallery from './ChartGallery.svelte'
   import StyleGallery from './StyleGallery.svelte'
+  import QueryCacheStatus from './QueryCacheStatus.svelte'
   import {type GrapheneError} from '../../lang/index.js'
 
   let pageInputs = activatePageInputs(new PageInputs())
@@ -80,6 +81,7 @@
 <Sidebar>
   <PageNavGroup files={navData} />
 </Sidebar>
+<QueryCacheStatus />
 
 <main id="content" class={{pageContent: compileError || !!Page, dashboardLayout: pageMeta.layout == 'dashboard'}}>
   {#if compileError}

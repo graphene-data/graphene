@@ -3,6 +3,7 @@
 export interface QueryResult {
   rows: any[]
   fields: Field[]
+  runAt: number // timestamp of when the query was run
   error?: GrapheneError
   hash?: string // hash of the compiled sql for caching
   sql?: string

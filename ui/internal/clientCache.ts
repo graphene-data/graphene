@@ -2,7 +2,9 @@
 // Because the server does the compiling, we still need to make a request letting the server
 // know all the hashes we have cached. If one matches, the server 304s (just like an ETag).
 
-const TTL_MS = 1000 * 60 * 60 * 2
+import {type QueryResult} from '../component-utilities/types.ts'
+
+const TTL_MS = 1000 * 60 * 60 * 12 // 12hr
 
 let cache: Cache | null = null
 async function getCache() {
@@ -11,6 +13,8 @@ async function getCache() {
 }
 
 export async function getHashes(): Promise<string[]> {
+  if (browserCacheDisabled()) return []
+
   let store = await getCache()
   let keys = await store.keys()
   return keys
@@ -26,7 +30,9 @@ export async function getHashes(): Promise<string[]> {
     .filter(Boolean) as string[]
 }
 
-export async function cacheRead(hash: string): Promise<any | null> {
+export async function cacheRead(hash: string): Promise<QueryResult | null> {
+  if (browserCacheDisabled()) return null
+
   let store = await getCache()
   let resp = await store.match(`https://graphene-cache/${hash}`, {ignoreSearch: true})
   return await resp?.clone().json()
@@ -40,6 +46,17 @@ export async function cacheWrite(hash: string, response: Response) {
   let existing = await store.keys(`https://graphene-cache/${hash}`, {ignoreSearch: true})
   existing.forEach(key => store.delete(key))
 
-  let expiresAt = Date.now() + TTL_MS
+  let result: Partial<QueryResult> = await response
+    .clone()
+    .json()
+    .catch(() => ({}))
+  let expiresAt = Number(result.runAt || Date.now()) + TTL_MS
   await store.put(`https://graphene-cache/${hash}?expires=${expiresAt}`, response)
+}
+
+// disableable for testing
+function browserCacheDisabled() {
+  if (typeof window == 'undefined') return false
+  let value = new URLSearchParams(window.location.search).get('__graphene_no_browser_cache')
+  return value != null && value != '0' && value != 'false'
 }

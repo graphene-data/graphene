@@ -2,7 +2,7 @@ import {createPrivateKey} from 'node:crypto'
 import snowflake from 'snowflake-sdk'
 
 import {config} from '../../lang/config.ts'
-import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryParams} from './types.ts'
+import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
 
 interface SnowflakeOptions {
   username?: string
@@ -22,8 +22,8 @@ interface SnowflakeOptions {
 // Instructions for generating private/public keys: https://docs.snowflake.com/en/user-guide/key-pair-auth#generate-the-private-keys
 
 export class SnowflakeConnection implements QueryConnection {
-  private ready: Promise<void>
-  private connection!: snowflake.Connection
+  protected ready: Promise<void>
+  protected connection!: snowflake.Connection
 
   constructor(opts: SnowflakeOptions) {
     this.ready = this.initialize(opts || {})
@@ -56,13 +56,18 @@ export class SnowflakeConnection implements QueryConnection {
     })
   }
 
-  async runQuery(sql: string, params?: QueryParams): Promise<QueryResult> {
+  async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
+    let {rows, totalRows} = await this.executeQuery(sql, options)
+    return {rows, totalRows}
+  }
+
+  protected async executeQuery(sql: string, options?: QueryOptions): Promise<QueryResult & {queryId?: string}> {
     await this.ready
-    return await new Promise<QueryResult>((resolve, reject) => {
+    return await new Promise<QueryResult & {queryId?: string}>((resolve, reject) => {
       let rows: any[] = []
       this.connection.execute({
         sqlText: sql,
-        binds: params as any,
+        binds: options?.params as any,
         streamResult: true,
         complete: (error, statement) => {
           if (error) {
@@ -79,7 +84,7 @@ export class SnowflakeConnection implements QueryConnection {
           })
           stream.on('end', () => {
             let totalRows = Number(statement.getNumRows())
-            resolve({rows, totalRows})
+            resolve({rows, totalRows, queryId: statement.getQueryId()})
           })
         },
       })
@@ -114,7 +119,7 @@ export class SnowflakeConnection implements QueryConnection {
       where table_type in ('BASE TABLE', 'VIEW') and upper(table_schema) = upper(?)
       order by table_name
     `,
-      [schema],
+      {params: [schema]},
     )
     return res.rows.map(row => `${String(row['table_schema']).toLowerCase()}.${String(row['table_name']).toLowerCase()}`)
   }
@@ -132,7 +137,7 @@ export class SnowflakeConnection implements QueryConnection {
       where upper(table_schema) = upper(?) and upper(table_name) = upper(?)
       order by ordinal_position
     `,
-      [schema, table],
+      {params: [schema, table]},
     )
     return res.rows.map(row => {
       return {name: String(row['column_name']).toLowerCase(), dataType: String(row['data_type'])}
@@ -155,4 +160,8 @@ export class SnowflakeConnection implements QueryConnection {
 function snowflakeIdent(value: string) {
   if (!value) throw new Error('Snowflake identifiers cannot be empty')
   return `"${value.replace(/"/g, '""')}"`
+}
+
+export function escapeSnowflakeString(value: string) {
+  return value.replace(/'/g, "''")
 }

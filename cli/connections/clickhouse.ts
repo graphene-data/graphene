@@ -1,6 +1,6 @@
 import {createClient, type ClickHouseClient} from '@clickhouse/client'
 
-import {type QueryConnection, type QueryResult, type QueryParams, type SchemaColumn} from './types.ts'
+import {type QueryConnection, type QueryResult, type QueryOptions, type SchemaColumn} from './types.ts'
 
 export interface ClickHouseOptions {
   url: string
@@ -11,8 +11,8 @@ export interface ClickHouseOptions {
 }
 
 export class ClickHouseConnection implements QueryConnection {
-  private client: ClickHouseClient
-  private defaultDatabase: string
+  protected client: ClickHouseClient
+  protected defaultDatabase: string
 
   constructor(options: ClickHouseOptions) {
     this.defaultDatabase = options.database || 'default'
@@ -26,9 +26,9 @@ export class ClickHouseConnection implements QueryConnection {
     })
   }
 
-  async runQuery(sql: string, _params?: QueryParams): Promise<QueryResult> {
-    let result = await this.client.query({query: sql, format: 'JSONEachRow'})
-    let rows = (await result.json()) as Array<Record<string, unknown>>
+  async runQuery(sql: string, _options?: QueryOptions): Promise<QueryResult> {
+    let result = await this.client.query({query: sql, format: 'JSONEachRow'} as any)
+    let rows = (await result.json()) as unknown as Array<Record<string, unknown>>
     return {rows, totalRows: rows.length}
   }
 
