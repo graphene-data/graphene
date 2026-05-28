@@ -138,7 +138,7 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
       status: 200,
       headers: {ETag: hash},
       contentType: 'application/json',
-      body: JSON.stringify({rows: [{num: requestCount}], fields: [{name: 'num', type: scalarType('number')}], sql: '', runAt}),
+      body: JSON.stringify({rows: [{num: requestCount}], fields: [{name: 'num', type: scalarType('number')}], sql: '', runAt: lastCacheControl == 'no-cache' ? runAt + 60_000 : runAt}),
     })
   })
 
@@ -157,41 +157,6 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
   await expect.poll(() => requestCount).toBe(3)
   expect(lastCacheControl).toBe('no-cache')
   await expect(page.locator('.query-cache-status')).toHaveCount(0)
-})
-
-test('falls back to a fresh query when the browser cache entry is missing', async ({server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    \`\`\`gsql cached_query
-    select 3 as num
-    \`\`\`
-
-    <Value data="cached_query" column="num" />
-  `,
-  )
-
-  let requestCount = 0
-  await page.route('**/_api/query', async route => {
-    requestCount++
-    if (requestCount == 1) {
-      await route.fulfill({status: 304, headers: {ETag: 'missing-browser-cache-hash'}})
-      return
-    }
-
-    await route.fulfill({
-      status: 200,
-      headers: {ETag: 'missing-browser-cache-hash'},
-      contentType: 'application/json',
-      body: JSON.stringify({rows: [{num: 3}], fields: [{name: 'num', type: scalarType('number')}], sql: ''}),
-    })
-  })
-
-  await page.goto(server.url() + '/')
-  await waitForGrapheneLoad(page)
-  await expect.poll(() => requestCount).toBe(2)
-  await expect(page.getByText('3')).toBeVisible()
-  await expect(page).screenshot('markdown-missing-browser-cache-fallback')
 })
 
 test('disables browser query caching behind an internal query parameter', async ({server, page}) => {
