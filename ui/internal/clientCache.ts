@@ -4,7 +4,7 @@
 
 import {type QueryResult} from '../component-utilities/types.ts'
 
-const TTL_MS = 1000 * 60 * 60 * 24 // 24hr
+const TTL_MS = 1000 * 60 * 60 * 12 // 12hr
 
 let cache: Cache | null = null
 async function getCache() {
