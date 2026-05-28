@@ -17,4 +17,4 @@ Here's an example:
 | data | GSQL query or table name | true | query name | - |
 | value | Column or expression to pull the main value from | true | column name, stored expression name, GSQL expression | - |
 | title | Title displayed above the value | false | string | - |
-| subtitle | Subtitle displayed below the title | false | string | - |
+| row | Row index to pull the main value from | false | number | `0` |

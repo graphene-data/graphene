@@ -24,6 +24,20 @@ test('big value percent formatting', async ({mount, sharedPage}) => {
   await expect(sharedPage.locator('#component-test')).screenshot('big-value-percent')
 })
 
+test('big value can render a non-default row', async ({mount, sharedPage}) => {
+  await mount('components/BigValue.svelte', {
+    data: rowData(),
+    value: 'value',
+    row: 1,
+    title: 'Selected Row',
+  })
+
+  await expect(sharedPage.getByText('Selected Row')).toBeVisible()
+  await expect(sharedPage.getByText('$200')).toBeVisible()
+  await expect(sharedPage.getByText('$100')).not.toBeVisible()
+  await expect(sharedPage.locator('#component-test')).screenshot('big-value-row')
+})
+
 test('big value null renders em dash', async ({mount, sharedPage}) => {
   await mount('components/BigValue.svelte', {
     data: nullValueData(),
@@ -39,6 +53,12 @@ test('big value null renders em dash', async ({mount, sharedPage}) => {
 function percentData() {
   let rows = [{ratio: 0.314}] as any
   let fields = [{name: 'ratio', type: 'number', metadata: {ratio: true}}] as any
+  return {rows, fields}
+}
+
+function rowData() {
+  let rows = [{value: 100}, {value: 200}] as any
+  let fields = [{name: 'value', type: 'number', metadata: {currency: 'USD'}}] as any
   return {rows, fields}
 }
 
