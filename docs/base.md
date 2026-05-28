@@ -93,7 +93,7 @@ You can add YAML frontmatter at the top of a page. The following attributes are 
 - ScatterPlot: title, data, x, y, splitBy, height, width
 - PieChart: title, data, category, value, height, width
 - ECharts: data, height, width, renderer
-- BigValue: title, data, value
+- BigValue: title, data, value, row
 - Table: title, data, rows, sortable, sort, groupBy, groupType, subtotals, totalRow, link, showLinkCol, rowShading, rowLines, rowNumbers, compact, headerColor, headerFontColor, totalRowColor, totalFontColor, backgroundColor, emptyMessage
   - Column (sub-component of Table): id (column name), title, description, align, wrap, wrapTitle, colGroup, contentType, totalAgg, redNegatives
 - Value: data, column, row
