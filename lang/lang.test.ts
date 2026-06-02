@@ -1539,6 +1539,10 @@ describe('lang', () => {
     )
   })
 
+  it('type-checks duckdb date_trunc against time values', () => {
+    expect("select date_trunc('day', current_time)").toHaveDiagnostic(/Expected date or timestamp, got time/i)
+  })
+
   it('supports bigquery current datetime functions with optional args', () => {
     setGlobalConfig({root: '', bigquery: {}})
     try {
@@ -1574,6 +1578,27 @@ describe('lang', () => {
       `).toRenderSql(
         'select current_date as current_date, current_datetime as current_datetime, current_time as current_time, current_timestamp as current_timestamp, current_datetime as local_timestamp from `users` as users',
       )
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('infers bigquery time and datetime function types through aliases', () => {
+    setGlobalConfig({root: '', bigquery: {}})
+    try {
+      let [query] = analyze(`
+        from users select
+          current_time() as current_t,
+          time(1, 2, 3) as made_t,
+          time_add(current_time(), 1) as shifted_t,
+          current_datetime() as current_dt
+      `)
+      expect(query.fields.map(field => [field.name, formatType(field.type)])).toEqual([
+        ['current_t', 'time'],
+        ['made_t', 'time'],
+        ['shifted_t', 'time'],
+        ['current_dt', 'timestamp'],
+      ])
     } finally {
       setGlobalConfig({root: ''})
     }
@@ -2020,6 +2045,18 @@ describe('lang', () => {
     expect(formatType(parseWarehouseFieldType('LowCardinality(String)').type)).toBe('string')
     expect(formatType(parseWarehouseFieldType("Enum8('CSH' = 1, 'CRE' = 2)").type)).toBe('string')
     expect(formatType(parseWarehouseFieldType('Array(String)').type)).toBe('array<string>')
+  })
+
+  it('normalizes warehouse scalar aliases without merging time into timestamp', () => {
+    expect(formatType(parseWarehouseFieldType('TIME').type)).toBe('time')
+    expect(formatType(parseWarehouseFieldType('TIME(6)').type)).toBe('time')
+    expect(formatType(parseWarehouseFieldType('TIMETZ').type)).toBe('time')
+    expect(formatType(parseWarehouseFieldType('TIME WITH TIME ZONE').type)).toBe('time')
+    expect(formatType(parseWarehouseFieldType('TIMESTAMP WITH TIME ZONE').type)).toBe('timestamp')
+    expect(formatType(parseWarehouseFieldType('DECIMAL(10, 2)').type)).toBe('number')
+    expect(formatType(parseWarehouseFieldType('VARCHAR(255)').type)).toBe('string')
+    expect(formatType(parseWarehouseFieldType('VARIANT').type)).toBe('string')
+    expect(formatType(parseWarehouseFieldType('STRUCT').type)).toBe('unknown')
   })
 
   it('preserves array element types through computed fields, views, and generic array returns', () => {

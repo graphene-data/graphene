@@ -10,8 +10,10 @@ import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {postgresFunctions} from './postgresFunctions.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
-import {arrayOf, scalarType, type Expr, type FieldMeta, type FieldType, isArrayType, isScalarType, type Scope, type TypeKind} from './types.ts'
+import {arrayOf, normalizeScalarType, scalarType, type Expr, type FieldMeta, type FieldType, isArrayType, isScalarType, type Scope, type TypeKind} from './types.ts'
 import {txt} from './util.ts'
+
+const ANY_TYPES: TypeKind[] = ['string', 'number', 'boolean', 'date', 'time', 'timestamp', 'json', 'interval', 'record', 'array']
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
 interface Overload {
@@ -29,9 +31,9 @@ interface Overload {
 function parseArgType(typeStr: string): {type: TypeKind; rawType?: string}[] {
   let base = typeStr.replace(/[?.]/g, '')
   if (base === 'kw') return [{type: 'sql native', rawType: 'kw'}]
-  if (base === 'T' || base === 'any') return ['string', 'number', 'boolean', 'date', 'timestamp', 'json', 'array'].map(type => ({type: type as TypeKind}))
+  if (base === 'T' || base === 'any') return ANY_TYPES.map(type => ({type}))
   if (base === 'array') return [{type: 'array'}]
-  return [{type: base as TypeKind}]
+  return [{type: normalizeTypeKind(base)}]
 }
 
 function getArgInfo(arg: ArgDef): {name: string; type: string} {
@@ -41,7 +43,7 @@ function getArgInfo(arg: ArgDef): {name: string; type: string} {
 
 function parseArgTypes(arg: ArgDef): {type: TypeKind; rawType?: string}[] {
   let type = Array.isArray(arg) ? arg[1] : arg.type
-  if (Array.isArray(type)) return type.map(t => ({type: t as TypeKind}))
+  if (Array.isArray(type)) return type.map(t => ({type: normalizeTypeKind(t)}))
   return parseArgType(type)
 }
 
@@ -78,7 +80,11 @@ function convertDef(def: FunctionDef): Overload[] {
 function normalizeReturnType(type: string): FieldType | 'array' {
   if (type == 'array') return 'array'
   if (type == 'bytes') return scalarType('string')
-  return scalarType(type as Exclude<TypeKind, 'array'>)
+  return scalarType(normalizeTypeKind(type) as Exclude<TypeKind, 'array'>)
+}
+
+function normalizeTypeKind(type: string): TypeKind {
+  return normalizeScalarType(type) || (type as TypeKind)
 }
 
 // Build a name -> Overload[] map from a FunctionDef array
