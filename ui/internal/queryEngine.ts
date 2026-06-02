@@ -95,7 +95,7 @@ async function runNode(n: QueryNode, refresh = false) {
   // letting the server determine the hash of this particular query, and whether data we already have is acceptable.
   let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
-  let gsql = [...tables.map(q => `table ${q.name} as (${q.contents})`), n.contents].join('\n')
+  let gsql = [...tables.map(q => `table ${q.name} as (\n${q.contents}\n)`), n.contents].join('\n')
   let params = getActivePageInputs().getParams()
 
   try {
