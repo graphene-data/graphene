@@ -239,6 +239,32 @@ test('cli run with md file reports runtime query errors', async ({server, page})
   )
 })
 
+test('cli run handles page query with trailing column annotation', async ({server}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Page Query Column Annotations
+    \`\`\`sql annotated
+    from flights select carrier,
+      extract(month from dep_time) as month_num, #timeOrdinal=month_of_year
+      dep_delay / 100 as delay_drop_pct #ratio
+    \`\`\`
+    <BigValue data="annotated" value="delay_drop_pct" title="Delay Drop" />
+  `,
+  )
+
+  server.url()
+  let result = await runMdFile({mdArg: 'index.md', headless: true, log})
+  expect(result).toBe(true)
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Page available at http://localhost:<port>/
+    No errors found 💎
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  `),
+  )
+})
+
 test('cli run with md file reports runtime chart configuration errors', async ({server, page}) => {
   expectConsoleError('Chart failed to render')
   server.mockFile(
