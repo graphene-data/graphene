@@ -245,10 +245,18 @@ program
 
 program
   .command('login')
-  .description('Log in to Graphene Cloud')
+  .description('Log in to Graphene Cloud or the configured database')
   .action(
     withTelemetry('login', async exit => {
-      await loginPkce()
+      if (config.host) await loginPkce()
+      else if (config.dialect == 'snowflake') {
+        let conn = await getConnection() // connecting should automatically trigger auth via the sdk
+        await conn.close()
+      } else {
+        console.error('No Graphene Cloud host or database login is configured for this project')
+        return exit(1)
+      }
+
       console.log('Successfully logged in')
       return exit(0)
     }),

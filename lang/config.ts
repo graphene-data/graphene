@@ -21,7 +21,8 @@ export interface Config {
   snowflake?: {
     account: string
     username: string
-    privateKeyPath: string
+    privateKeyPath?: string
+    authenticator?: 'OAUTH_AUTHORIZATION_CODE' | 'EXTERNALBROWSER' | 'SNOWFLAKE_JWT'
     schema?: string
     database?: string
   }
