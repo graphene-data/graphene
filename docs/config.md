@@ -83,9 +83,10 @@ Exactly one of the following blocks should be present. The dialect is inferred f
 - `account` — Snowflake account identifier (`org-account`).
 - `username` — service account username.
 - `privateKeyPath` — absolute path to the `.p8` private key. Usually set via the `SNOWFLAKE_PRI_KEY_PATH` env var instead.
+- `authenticator` — optional Snowflake authenticator: `SNOWFLAKE_JWT`, `OAUTH_AUTHORIZATION_CODE`, or `EXTERNALBROWSER`. Defaults to `SNOWFLAKE_JWT` when `privateKeyPath` or `SNOWFLAKE_PRI_KEY_PATH` is set; otherwise `graphene login` defaults to `OAUTH_AUTHORIZATION_CODE`, using Snowflake's built-in local application OAuth flow.
 - `database`, `schema` — optional defaults applied to unqualified queries.
 
-The matching passphrase env var is `SNOWFLAKE_PRI_PASSPHRASE`.
+The matching private key passphrase env var is `SNOWFLAKE_PRI_PASSPHRASE`.
 
 ## `bigquery`
 

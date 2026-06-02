@@ -10,6 +10,7 @@ export interface SnowflakeOptions {
   privateKey?: string
   privateKeyPath?: string
   privateKeyPass?: string
+  authenticator?: 'OAUTH_AUTHORIZATION_CODE' | 'EXTERNALBROWSER' | 'SNOWFLAKE_JWT'
   logLevel?: string
 }
 
@@ -30,27 +31,29 @@ export class SnowflakeConnection implements QueryConnection {
   }
 
   async initialize(opts: SnowflakeOptions) {
-    let privateKeyPath = opts.privateKeyPath || config.snowflake?.privateKeyPath
+    let connOpts = {
+      ...opts,
+      application: 'Graphene',
+    } as snowflake.ConnectionOptions
+    connOpts.authenticator = opts.authenticator || 'SNOWFLAKE_JWT'
 
-    let authOptions: any = {}
-    if (privateKeyPath) {
-      authOptions = {privateKeyPath, privateKeyPass: opts.privateKeyPass}
+    if (opts.privateKeyPath) {
+      connOpts.privateKeyPath = opts.privateKeyPath
+      connOpts.privateKeyPass = opts.privateKeyPass
     } else if (opts.privateKey) {
       let privateKey = createPrivateKey({key: opts.privateKey, format: 'pem', passphrase: opts.privateKeyPass})
-      authOptions = {privateKey: privateKey.export({format: 'pem', type: 'pkcs8'})}
+      connOpts.privateKey = privateKey.export({format: 'pem', type: 'pkcs8'}).toString()
+    }
+
+    // for local login via browser, automatically store credentials
+    if (opts.authenticator == 'OAUTH_AUTHORIZATION_CODE' || opts.authenticator === 'EXTERNALBROWSER') {
+      connOpts.clientStoreTemporaryCredential = true
     }
 
     // default is info, which is kinda chatty on success. TRACE is super useful for debugging though
     snowflake.configure({logLevel: (opts.logLevel as any) || 'WARN', logFilePath: '/dev/null'})
 
-    this.connection = snowflake.createConnection({
-      ...opts,
-      ...(config.snowflake || {}),
-      ...authOptions,
-      authenticator: 'SNOWFLAKE_JWT',
-      application: 'Graphene',
-    })
-
+    this.connection = snowflake.createConnection(connOpts)
     await new Promise((resolve, reject) => {
       this.connection.connect((err, conn) => (err ? reject(err) : resolve(conn)))
     })
@@ -167,10 +170,21 @@ export function escapeSnowflakeString(value: string) {
 }
 
 export function localDbOptions(): SnowflakeOptions {
+  let snowflakeConfig = config.snowflake!
+  let {account, username} = snowflakeConfig
+  let privateKeyPath = process.env.SNOWFLAKE_PRI_KEY_PATH || snowflakeConfig.privateKeyPath
+  let privateKey = process.env.SNOWFLAKE_PRI_KEY
+  let authenticator = snowflakeConfig.authenticator || 'SNOWFLAKE_JWT'
+
+  // if you set a private key, we'll use that instead of the config
+  if (privateKeyPath || privateKey) authenticator = 'SNOWFLAKE_JWT'
+
   return {
-    privateKeyPath: process.env.SNOWFLAKE_PRI_KEY_PATH,
-    privateKey: process.env.SNOWFLAKE_PRI_KEY,
+    account,
+    username,
+    authenticator,
+    privateKeyPath,
+    privateKey,
     privateKeyPass: process.env.SNOWFLAKE_PRI_PASSPHRASE,
-    logLevel: process.env.SNOWFLAKE_LOG_LEVEL,
   }
 }
