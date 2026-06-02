@@ -239,7 +239,7 @@ test('cli run with md file reports runtime query errors', async ({server, page})
   )
 })
 
-test('cli run with --headless handles page query column annotations', async ({server}) => {
+test('cli run handles page query with trailing column annotation', async ({server}) => {
   server.mockFile(
     '/index.md',
     `
