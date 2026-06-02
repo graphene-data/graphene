@@ -6,8 +6,8 @@ layout: dashboard
 Select filters to explore product performance by category, brand, and time.
 
 <Row>
-  <Dropdown name="category" title="Category" data="category_options" allowDeselect="true"/>
-  <Dropdown name="brand" title="Brand" data="brand_options" allowDeselect="true"/>
+  <Dropdown name="category" title="Category" data="category_options"/>
+  <Dropdown name="brand" title="Brand" data="brand_options"/>
   <DateRange name="daterange" label="Date Range"/>
 </Row>
 

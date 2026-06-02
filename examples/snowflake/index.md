@@ -18,7 +18,7 @@ from contacts select count() as total_contacts
 <Row>
   <BigValue data=summary value=total_establishments title="Establishments" />
   <BigValue data=contact_count value=total_contacts title="Contacts" />
-  <BigValue data=summary value=avg_score title="Avg Rating" fmt="0.00" />
+  <BigValue data=summary value=avg_score title="Avg Rating" />
 </Row>
 
 ## Establishments by State

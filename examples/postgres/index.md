@@ -6,9 +6,9 @@ layout: dashboard
 Postgres sample dashboard over `public.customers`, `public.orders`, and `public.order_items`.
 
 <Row>
-  <BigValue data=orders value=count(*) title="Orders" fmt=num0 />
-  <BigValue data=orders value=sum(total) title="Revenue" fmt=usd2 />
-  <BigValue data=orders value=p50(total) title="Median Order" fmt=usd2 />
+  <BigValue data=orders value=count(*) title="Orders" />
+  <BigValue data=orders value=sum(total) title="Revenue" />
+  <BigValue data=orders value=p50(total) title="Median Order" />
 </Row>
 
 ```gsql revenue_by_week

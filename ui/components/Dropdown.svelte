@@ -1,7 +1,8 @@
 <script lang="ts">
-  import {onMount, setContext, tick, type Snippet} from 'svelte'
+  import {onMount, setContext, tick, untrack, type Snippet} from 'svelte'
   import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
   import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
+  import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Option {
     value: any
@@ -33,7 +34,11 @@
     labelField = undefined, title = undefined, placeholder = 'Select option', multiple = false,
     defaultValue = undefined, selectAllByDefault = false, noDefault = false, disableSelectAll = false,
     hideDuringPrint = true, description = undefined, disabled = false, children = undefined,
-  }: Props = $props()
+    ...extraProps
+  }: Props & Record<string, unknown> = $props()
+
+  let logger = untrack(() => componentLogger('Dropdown', {name}))
+  untrack(() => logExtraProps(logger, 'Dropdown', extraProps))
 
   let mounted = false
   let queryOptions: Option[] = $state([])

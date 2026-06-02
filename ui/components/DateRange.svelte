@@ -1,7 +1,8 @@
 <script lang="ts">
-  import {onMount} from 'svelte'
+  import {onMount, untrack} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
   import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
+  import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Props {
     name: string
@@ -21,7 +22,11 @@
     name, label = undefined, title = undefined, description = undefined, start = undefined,
     end = undefined, defaultValue = undefined, presetRanges = undefined, data = undefined,
     dates = undefined, hideDuringPrint = true,
-  }: Props = $props()
+    ...extraProps
+  }: Props & Record<string, unknown> = $props()
+
+  let logger = untrack(() => componentLogger('DateRange', {name}))
+  untrack(() => logExtraProps(logger, 'DateRange', extraProps))
 
   const DEFAULT_PRESETS = ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last 365 Days', 'Last Month', 'Last Year', 'Month to Date', 'Month to Today', 'Year to Date', 'Year to Today', 'All Time']
 

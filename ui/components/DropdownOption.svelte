@@ -1,12 +1,15 @@
 <script lang="ts">
-  import {getContext, onMount} from 'svelte'
+  import {getContext, onMount, untrack} from 'svelte'
+  import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Props {
     value: any
     valueLabel?: string
   }
 
-  let {value, valueLabel = undefined}: Props = $props()
+  let {value, valueLabel = undefined, ...extraProps}: Props & Record<string, unknown> = $props()
+  let logger = untrack(() => componentLogger('DropdownOption', {value}))
+  untrack(() => logExtraProps(logger, 'DropdownOption', extraProps))
 
   type RegisterFn = ((option: {value: any; label: string}) => (() => void) | void) | undefined
   const register = getContext<RegisterFn>('dropdown')

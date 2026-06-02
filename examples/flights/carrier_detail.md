@@ -49,7 +49,7 @@ select
 
 **<Value data=carrier_info column=nickname /> (<Value data=carrier_info column=code />)**
 has been operating since <Value data=kpis column=operating_since />,
-with <Value data=kpis column=total_flights fmt=num0 />
+with <Value data=kpis column=total_flights />
 flights to <Value data=kpis column=destinations /> destinations.
 
 <Row>
@@ -168,6 +168,6 @@ limit 100
   <Column id=manufacturer />
   <Column id=model />
   <Column id=year_built title="Year Built" />
-  <Column id=flights_flown title="Flights" fmt=num0 />
+  <Column id=flights_flown title="Flights" />
   <Column id=miles_flown />
 </Table>

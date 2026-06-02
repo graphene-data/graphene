@@ -6,9 +6,9 @@ layout: dashboard
 ClickHouse sample dashboard over `default.nyc_taxi`.
 
 <Row>
-  <BigValue data=nyc_taxi value=count(*) title="Trips" fmt=num0 />
-  <BigValue data=nyc_taxi value=avg(total_amount) title="Avg Fare" fmt=usd2 />
-  <BigValue data=nyc_taxi value=p50(total_amount) title="Median Fare" fmt=usd2 />
+  <BigValue data=nyc_taxi value=count(*) title="Trips" />
+  <BigValue data=nyc_taxi value=avg(total_amount) title="Avg Fare" />
+  <BigValue data=nyc_taxi value=p50(total_amount) title="Median Fare" />
 </Row>
 
 ```sql weekly_trips
