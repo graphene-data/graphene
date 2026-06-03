@@ -575,13 +575,7 @@ class AnalysisSession implements Analyzer {
   }
 
   private analyzeSetQuery(queryNode: SyntaxNode, scope: Scope, ctes: Map<string, CteTable>): Query | void {
-    let branches = [
-      {
-        query: this.analyzeSimpleQuery(queryNode.getChild('SimpleQuery')!, queryNode.getChild('SimpleQuery')!, scope, new Map(), {suppressImplicitOrderBy: true}),
-        parenthesized: false,
-      },
-      ...queryNode.getChildren('SetOperand').map(node => this.analyzeSetOperand(node, scope)),
-    ]
+    let branches = queryNode.getChildren('SetOperand').map(node => this.analyzeSetOperand(node, scope))
 
     let first = branches[0].query
     if (!first) return

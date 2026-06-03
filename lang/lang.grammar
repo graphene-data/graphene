@@ -12,7 +12,7 @@ QueryStatement {
 }
 
 QueryExpression {
-  WithClause? SimpleQuery (SetOperator SetOperand)* OrderByClause? LimitClause?
+  WithClause? (SimpleQuery | SetOperand SetOperator SetOperand (SetOperator SetOperand)*) OrderByClause? LimitClause?
 }
 
 SetOperand {

@@ -146,6 +146,11 @@ describe('lang', () => {
     )
   })
 
+  it('supports a leading parenthesized set-operation operand', async () => {
+    expect('(select 0 as id) union all (from users select id) order by id').toRenderSql('( SELECT 0 as id ) UNION ALL ( SELECT users.id as id FROM users as users ) ORDER BY 1 asc NULLS LAST')
+    await expect('(select 0 as id) union all (from users select id) order by id').toReturnRows([0], [1], [2])
+  })
+
   it('supports parenthesized set-operation operands in subqueries and ctes', () => {
     expect('from (select 1 as id union all select 2 as id) nums select id').toRenderSql('SELECT nums.id as id FROM ( SELECT 1 as id UNION ALL SELECT 2 as id ) as nums')
 
