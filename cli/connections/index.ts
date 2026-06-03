@@ -5,7 +5,8 @@ import {type QueryResult, type QueryConnection, type QueryOptions} from './types
 export async function getConnection(): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
     let mod = await importConnection(() => import('./bigQuery.ts'), '@google-cloud/bigquery', 'BigQuery')
-    return new mod.BigQueryConnection(mod.localDbOptions())
+    let opts = await mod.localDbOptions()
+    return new mod.BigQueryConnection(opts)
   } else if (config.dialect === 'duckdb') {
     let mod = await importConnection(() => import('./duckdb.ts'), '@duckdb/node-api', 'DuckDB')
     return new mod.DuckDBConnection(mod.localDbOptions())
