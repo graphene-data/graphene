@@ -348,6 +348,8 @@ function findCaseInsensitive(values: string[], needle: string): string | null {
   return values.find(value => value.toLowerCase() == needle.toLowerCase()) || null
 }
 
+class CliExit {}
+
 function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number) => never, ...args: any[]) => Promise<void>) {
   return async (...args: any[]) => {
     let startedAt = Date.now()
@@ -363,15 +365,17 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
       exitCalled = true
       exitCode = code
       success = exitCode == 0
-      return undefined as never
+      throw new CliExit()
     }
 
     try {
       await action(exit, ...args)
     } catch (err) {
-      exitCode = 1
-      success = false
-      caughtError = err
+      if (!(err instanceof CliExit)) {
+        exitCode = 1
+        success = false
+        caughtError = err
+      }
     } finally {
       if (success) {
         let {shouldSendInstallSeen, fromVersion} = await telemetry.markSuccessfulInvocation()

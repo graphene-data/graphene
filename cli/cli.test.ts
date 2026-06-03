@@ -143,6 +143,17 @@ describe('cli run', () => {
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
+  it('prints query diagnostics without a stack trace', async () => {
+    let res = await runCli(['run', 'from flights select carrier order by nope'], {cwd: flightDir})
+    let output = res.stdout + res.stderr
+
+    expect(res.code).toBe(1)
+    expect(output).toContain('Unknown field in ORDER BY: nope')
+    expect(output).not.toContain('TypeError')
+    expect(output).not.toContain('validateInputQuery')
+    expect(output).not.toContain('at file://')
+  })
+
   it('accepts --port on run commands', async () => {
     let res = await runCli(['run', 'from flights select count() as total', '--port', '4164'], {cwd: flightDir})
     expectCliSuccess(res, 'run query with port')
