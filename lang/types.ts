@@ -82,8 +82,14 @@ let SCALAR_TYPE_ALIASES: Record<string, ScalarField> = {
   boolean: 'boolean',
   date: 'date',
   datetime: 'timestamp',
-  time: 'timestamp',
+  time: 'time',
+  timetz: 'time',
+  time_tz: 'time',
+  time_with_time_zone: 'time',
+  time_without_time_zone: 'time',
   timestamp: 'timestamp',
+  timestamp_with_time_zone: 'timestamp',
+  timestamp_without_time_zone: 'timestamp',
   datetime64: 'timestamp',
   timestamp_ntz: 'timestamp',
   timestamp_tz: 'timestamp',
@@ -166,6 +172,8 @@ function parseFieldType(rawType: string, opts: {allowArrayKeyword: boolean; allo
   if (callMatch) {
     let typeName = normalizeTypeName(callMatch[1])
     if ((typeName == 'list' || typeName == 'array') && opts.allowNamedArray) return parseArrayType(callMatch[2], opts)
+    let normalizedScalarType = normalizeScalarType(typeName)
+    if (normalizedScalarType) return {type: normalizedScalarType}
   }
 
   let normalizedScalarType = normalizeScalarType(value)

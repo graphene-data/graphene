@@ -342,9 +342,9 @@ export const postgresFunctions: FunctionDef[] = [
   extractPart('isodow'),
   extractPart('isoyear'),
   fn({name: 'current_date', args: [], returns: 'date', sqlName: 'CURRENT_DATE', sqlTemplate: 'CURRENT_DATE', supportsBareInvocation: true, url: `${pg}-datetime.html`}),
-  fn({name: 'current_time', args: [], returns: 'timestamp', sqlName: 'CURRENT_TIME', sqlTemplate: 'CURRENT_TIME', supportsBareInvocation: true, url: `${pg}-datetime.html`}),
+  fn({name: 'current_time', args: [], returns: 'time', sqlName: 'CURRENT_TIME', sqlTemplate: 'CURRENT_TIME', supportsBareInvocation: true, url: `${pg}-datetime.html`}),
   fn({name: 'current_timestamp', args: [], returns: 'timestamp', sqlName: 'CURRENT_TIMESTAMP', sqlTemplate: 'CURRENT_TIMESTAMP', supportsBareInvocation: true, url: `${pg}-datetime.html`}),
-  fn({name: 'localtime', args: [], returns: 'timestamp', sqlName: 'LOCALTIME', sqlTemplate: 'LOCALTIME', supportsBareInvocation: true, url: `${pg}-datetime.html`}),
+  fn({name: 'localtime', args: [], returns: 'time', sqlName: 'LOCALTIME', sqlTemplate: 'LOCALTIME', supportsBareInvocation: true, url: `${pg}-datetime.html`}),
   fn({
     name: 'local_timestamp',
     args: [],

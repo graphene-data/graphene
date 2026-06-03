@@ -3,7 +3,7 @@
 
 import {type Expr, type FieldMeta} from './types.ts'
 
-export type SQLType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'any' | 'bytes'
+export type SQLType = 'string' | 'number' | 'boolean' | 'date' | 'time' | 'timestamp' | 'json' | 'any' | 'bytes'
 
 // Arg definition - can be a simple tuple or an object with description
 // Type patterns:

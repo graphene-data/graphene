@@ -2153,7 +2153,7 @@ export const duckDbFunctions: FunctionDef[] = [
       ['minute', 'number'],
       ['second', 'number'],
     ],
-    returns: 'timestamp',
+    returns: 'time',
   },
   {
     name: 'now',
@@ -2302,7 +2302,7 @@ export const duckDbFunctions: FunctionDef[] = [
     `),
     url: `${duck}/timestamp#current_time`,
     args: [],
-    returns: 'timestamp',
+    returns: 'time',
     supportsBareInvocation: true,
   },
   {
@@ -2340,7 +2340,7 @@ export const duckDbFunctions: FunctionDef[] = [
     `),
     url: `${duck}/timestamp#current_time`,
     args: [],
-    returns: 'timestamp',
+    returns: 'time',
     supportsBareInvocation: true,
   },
 

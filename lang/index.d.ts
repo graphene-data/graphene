@@ -31,7 +31,7 @@ export type FieldMeta = {
 }
 
 export type FieldType = ScalarField | ArrayField
-export type ScalarField = 'string' | 'number' | 'boolean' | 'date' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'record'
+export type ScalarField = 'string' | 'number' | 'boolean' | 'date' | 'time' | 'timestamp' | 'json' | 'sql native' | 'error' | 'null' | 'interval' | 'record'
 export type ArrayField = {type: 'array'; elementType: FieldType}
 
 export type TimeGrain = 'year' | 'quarter' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'

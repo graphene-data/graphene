@@ -2245,7 +2245,7 @@ export const bigQueryFunctions: FunctionDef[] = [
     `),
     url: `${bq}/time_functions#current_time`,
     args: [{name: 'time_zone', type: 'string?', description: 'The time zone to use. Defaults to UTC.'}],
-    returns: 'timestamp', // Graphene treats TIME as timestamp
+    returns: 'time',
     supportsBareInvocation: true,
   },
   {

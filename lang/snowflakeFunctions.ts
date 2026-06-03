@@ -1951,7 +1951,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       {name: 'second', type: 'number'},
       {name: 'nanosecond', type: 'number?'},
     ],
-    returns: 'timestamp',
+    returns: 'time',
   },
   {
     name: 'time_slice',
@@ -2404,7 +2404,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     `),
     url: `${sf}/current_time`,
     args: [],
-    returns: 'timestamp',
+    returns: 'time',
     supportsBareInvocation: true,
   },
   {
@@ -2428,7 +2428,7 @@ export const snowflakeFunctions: FunctionDef[] = [
     `),
     url: `${sf}/localtime`,
     args: [],
-    returns: 'timestamp',
+    returns: 'time',
     supportsBareInvocation: true,
   },
   {
