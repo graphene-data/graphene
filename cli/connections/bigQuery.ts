@@ -1,5 +1,5 @@
 import {BigQuery, BigQueryDate, BigQueryTimestamp, type BigQueryOptions} from '@google-cloud/bigquery'
-import {readFileSync} from 'fs'
+import {readFile} from 'fs/promises'
 
 import {config} from '../../lang/config.ts'
 import {type QueryConnection, type QueryResult, type SchemaColumn, type QueryOptions} from './types.ts'
@@ -90,13 +90,14 @@ export function normalizeBigQueryRows(rows: Record<string, any>[]) {
   })
 }
 
-export function localDbOptions(): BigQueryOptions {
+export async function localDbOptions(): Promise<BigQueryOptions> {
   if (process.env.GOOGLE_CREDENTIALS_CONTENT) {
     let credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_CONTENT)
     return {projectId: credentials.project_id, credentials}
   }
   if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    let credentials = JSON.parse(readFileSync(process.env.GOOGLE_APPLICATION_CREDENTIALS, {encoding: 'utf-8'}))
+    let body = await readFile(process.env.GOOGLE_APPLICATION_CREDENTIALS, {encoding: 'utf-8'})
+    let credentials = JSON.parse(body)
     return {projectId: credentials.project_id}
   }
   return {}
