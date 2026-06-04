@@ -12,6 +12,8 @@ export interface SnowflakeOptions {
   privateKeyPass?: string
   authenticator?: 'OAUTH_AUTHORIZATION_CODE' | 'EXTERNALBROWSER' | 'SNOWFLAKE_JWT'
   logLevel?: string
+  timeout?: number
+  sessionParameters?: Record<string, unknown>
 }
 
 // Raw notes on setting up a new user:
@@ -34,6 +36,8 @@ export class SnowflakeConnection implements QueryConnection {
     let connOpts = {
       ...opts,
       application: 'Graphene',
+      timeout: opts.timeout ?? 120_000,
+      sessionParameters: {STATEMENT_TIMEOUT_IN_SECONDS: 120, ...opts.sessionParameters},
     } as snowflake.ConnectionOptions
     connOpts.authenticator = opts.authenticator || 'SNOWFLAKE_JWT'
 
