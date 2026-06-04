@@ -28,8 +28,8 @@ export class BigQueryConnection implements QueryConnection {
   }
 
   protected async executeQuery(sql: string, options?: QueryOptions): Promise<QueryResult & {metadata: any; job: any}> {
-    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params: options?.params})
-    let [rows] = await job.getQueryResults({maxResults: 10000})
+    let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params: options?.params, jobTimeoutMs: 120_000})
+    let [rows] = await job.getQueryResults({maxResults: 10000, timeoutMs: 120_000})
     let metadata = job.metadata || (await job.getMetadata())[0]
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
 

@@ -110,7 +110,7 @@ export class AthenaConnection implements QueryConnection {
 
   private async waitForQuery(queryExecutionId: string) {
     let started = Date.now()
-    let timeoutMs = 5 * 60 * 1000
+    let timeoutMs = 2 * 60 * 1000
     while (Date.now() - started < timeoutMs) {
       let res = await this.client.send(new GetQueryExecutionCommand({QueryExecutionId: queryExecutionId}))
       let status = res.QueryExecution?.Status

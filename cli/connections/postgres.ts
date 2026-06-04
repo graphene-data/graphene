@@ -57,8 +57,8 @@ export class PostgresConnection implements QueryConnection {
         max: options.max,
         idleTimeoutMillis: options.idleTimeoutMillis,
         connectionTimeoutMillis: options.connectionTimeoutMillis,
-        query_timeout: options.queryTimeout,
-        statement_timeout: options.statementTimeout,
+        query_timeout: options.queryTimeout ?? 120_000,
+        statement_timeout: options.statementTimeout ?? 120_000,
         application_name: 'Graphene',
       })
   }
