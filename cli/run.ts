@@ -11,6 +11,7 @@ import type {GrapheneError} from '../lang/index.d.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql} from '../lang/core.ts'
+import {rowsToCsv} from '../lang/csv.ts'
 import {type AnalysisResult, type WorkspaceFileInput} from '../lang/types.ts'
 import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
@@ -24,6 +25,7 @@ import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 export interface RunMdFileOptions {
   mdArg: string
   chart?: string
+  format?: RunFormat
   headless?: boolean
   inputs?: RunInputs
   log?: (...args: any[]) => void
@@ -31,6 +33,7 @@ export interface RunMdFileOptions {
 }
 
 type RunInputs = Record<string, string | string[]>
+export type RunFormat = 'table' | 'csv'
 
 let browserConnections: {url: string; socket: WebSocket}[] = []
 let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}> = {}
@@ -59,9 +62,19 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   }
 
   let pageUrl = markdownPageUrl(mdFile, options.inputs)
-  let request = {pageUrl, action: 'check' as const, chart: options.chart, log}
+  let request = {pageUrl, action: 'check' as const, chart: options.chart, format: options.format || 'table', log}
   let resp = options.headless ? await runHeadlessPageRequest(request) : await sendSocketRequest(request)
   if (!resp) return false
+
+  if (options.format == 'csv') {
+    if (resp.csv === undefined) {
+      log(`Could not find chart "${options.chart}" on ${mdFile}`)
+      return false
+    }
+    console.log(resp.csv)
+    return true
+  }
+
   log('Page available at', runHost() + pageUrl)
 
   let errors = Array.from(resp.errors || []) as GrapheneError[]
@@ -122,7 +135,7 @@ export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry,
   return true
 }
 
-export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, options: {inputs?: RunInputs; telemetry?: CliTelemetry} = {}): Promise<boolean> {
+export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, options: {format?: RunFormat; inputs?: RunInputs; telemetry?: CliTelemetry} = {}): Promise<boolean> {
   let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
   options.telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
   let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
@@ -152,15 +165,16 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
     return false
   }
   let res = await runQuery(sql)
-  printTable(res.rows)
+  if (options.format == 'csv') console.log(rowsToCsv(res.rows, input.queries[input.queries.length - 1].fields))
+  else printTable(res.rows)
   return true
 }
 
-async function sendSocketRequest({pageUrl, action, chart, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
+async function sendSocketRequest({pageUrl, action, chart, format, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; format?: RunFormat; log: (...args: any[]) => void}) {
   let host = runHost()
   if (!(await ensureBackgroundServer(log))) return null
 
-  let resp = await fetchSocketRequest({host, pageUrl, action, chart})
+  let resp = await fetchSocketRequest({host, pageUrl, action, chart, format})
 
   if (resp.error == 'no_server') {
     log('Failed to start Graphene server')
@@ -171,7 +185,7 @@ async function sendSocketRequest({pageUrl, action, chart, log}: {pageUrl: string
     log(`Opening page ${host}${pageUrl}`)
     openInBrowser(host + pageUrl)
     await new Promise(resolve => setTimeout(resolve, 500))
-    resp = await fetchSocketRequest({host, pageUrl, action, chart})
+    resp = await fetchSocketRequest({host, pageUrl, action, chart, format})
   }
 
   if (resp.error == 'no_tab') {
@@ -212,7 +226,7 @@ function runHost() {
   return `http://localhost:${config.port}`
 }
 
-async function fetchSocketRequest({host, pageUrl, action, chart}: {host: string; pageUrl: string; action: 'check' | 'list'; chart?: string}) {
+async function fetchSocketRequest({host, pageUrl, action, chart, format}: {host: string; pageUrl: string; action: 'check' | 'list'; chart?: string; format?: RunFormat}) {
   let abort = new AbortController()
   let timeout = setTimeout(() => abort.abort(), 30_000)
   let browserHost = host.replace('127.0.0.1', 'localhost')
@@ -220,7 +234,7 @@ async function fetchSocketRequest({host, pageUrl, action, chart}: {host: string;
     let response = await fetch(`${host}/_api/check`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({pageUrl: browserHost + pageUrl, action, chart}),
+      body: JSON.stringify({pageUrl: browserHost + pageUrl, action, chart, format}),
       signal: abort.signal,
     })
     clearTimeout(timeout)
@@ -244,7 +258,7 @@ async function fetchSocketRequest({host, pageUrl, action, chart}: {host: string;
 export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<IncomingMessage>): Promise<void> {
   let chunks = [] as any[]
   for await (let chunk of req) chunks.push(chunk)
-  let {pageUrl, action, chart} = JSON.parse(Buffer.concat(chunks).toString())
+  let {pageUrl, action, chart, format} = JSON.parse(Buffer.concat(chunks).toString())
   let id = Math.random().toString(36).slice(2)
   res.setHeader('Content-Type', 'application/json')
 
@@ -256,11 +270,11 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
     return
   }
 
-  conn.socket.send(JSON.stringify({action, chart, requestId: id}))
+  conn.socket.send(JSON.stringify({action, chart, format, requestId: id}))
   pendingRequests[id] = {response: res}
 }
 
-async function runHeadlessPageRequest({pageUrl, action, chart, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; log: (...args: any[]) => void}) {
+async function runHeadlessPageRequest({pageUrl, action, chart, format, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; format?: RunFormat; log: (...args: any[]) => void}) {
   if (!(await ensureBackgroundServer(log))) return null
 
   let host = runHost()
@@ -293,6 +307,12 @@ async function runHeadlessPageRequest({pageUrl, action, chart, log}: {pageUrl: s
       )
       await context.close()
       return {componentIds}
+    }
+
+    if (format === 'csv') {
+      let csv = await exportChartCsv(page, chart || '')
+      await context.close()
+      return {csv}
     }
 
     let errors = await page.evaluate(() => ((window as any).$GRAPHENE?.getErrors?.() || []) as GrapheneError[])
@@ -357,6 +377,15 @@ async function captureChart(page: Page, chart: string) {
   }, chart)
   if (!selector) return undefined
   return await page.locator(selector).screenshot({animations: 'disabled', scale: 'css'})
+}
+
+async function exportChartCsv(page: Page, chart: string) {
+  if (!chart) return undefined
+  return await page.evaluate(chart => {
+    let graphene = (window as any).$GRAPHENE
+    if (typeof graphene?.exportChartCsv !== 'function') return undefined
+    return graphene.exportChartCsv(chart)
+  }, chart)
 }
 
 function toWorkspaceFiles(analysis: AnalysisResult): WorkspaceFileInput[] {
