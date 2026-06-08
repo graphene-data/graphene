@@ -20,7 +20,7 @@
     "dialect": "clickhouse",
     "defaultNamespace": "default",
     "clickhouse": {
-      "url": "https://kzo1vb16sa.us-east-1.aws.clickhouse.cloud:8443",
+      "url": "https://by0uey760h.us-east-1.aws.clickhouse.cloud:8443",
       "username": "default",
       "requestTimeout": 120000
     },
