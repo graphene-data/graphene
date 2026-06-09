@@ -240,12 +240,12 @@
     height: 1.75rem;
     padding: 0;
     color: #6b7280;
-    background: rgba(255, 255, 255, 0.88);
-    border: 1px solid rgba(209, 213, 219, 0.8);
+    background: transparent;
+    border: 0;
     border-radius: 0.375rem;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 120ms ease, color 120ms ease, background-color 120ms ease;
+    transition: opacity 120ms ease, color 120ms ease;
   }
 
   .echarts:hover .csv-download,
@@ -258,7 +258,6 @@
   .csv-download:hover,
   .csv-download:focus-visible {
     color: #111827;
-    background: rgba(255, 255, 255, 0.98);
   }
 
   .csv-download:focus-visible {
