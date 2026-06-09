@@ -493,6 +493,37 @@ test('cli list prints chart component IDs', async ({server, page}) => {
   expect(outputLines()).toEqual('BarChart (data="chart_data" x="carrier" y="total_distance")')
 })
 
+test('cli run with --chart exports chart data as csv', async ({server, page}) => {
+  let csv = ''
+  let originalLog = console.log
+  server.mockFile(
+    '/index.md',
+    `
+    # Chart CSV
+    \`\`\`sql chart_data
+    from flights where carrier in ('AA', 'DL') select carrier, count() as total_flights group by 1 order by carrier
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_flights" title="Carrier Flights" />
+  `,
+  )
+
+  try {
+    console.log = (...args: any[]) => {
+      csv += args.map(arg => String(arg)).join(' ') + '\n'
+    }
+
+    await page.goto(server.url())
+    let result = await runMdFile({mdArg: 'index.md', chart: 'Carrier Flights', format: 'csv', log})
+    expect(result).toBe(true)
+    expect(csv.startsWith('carrier,total_flights\n')).toBe(true)
+    expect(csv).toContain('AA,')
+    expect(csv).toContain('DL,')
+    expect(outputLines()).toEqual('')
+  } finally {
+    console.log = originalLog
+  }
+})
+
 test('cli run with --chart captures a chart screenshot by component ID', async ({server, page}) => {
   server.mockFile(
     '/index.md',

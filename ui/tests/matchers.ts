@@ -35,16 +35,28 @@ const extendedExpect = baseExpect.extend({
       return {message: () => `Screenshot ${snapshotName} is not a valid png (might need to LFS pull)`, pass: false}
     }
 
-    let result = await (page as any)._expectScreenshot({
-      animations: 'disabled',
-      caret: 'hide',
-      scale: 'css',
-      locator,
-      maxDiffPixelRatio: 0, // strict: no differing pixels allowed
-      threshold: 0.01, // strict per-pixel color matching
-      timeout: 5_000,
-      expected: expectedBuffer,
+    await (page as Page).evaluate(() => {
+      let style = document.createElement('style')
+      style.id = '__graphene_screenshot_hide_transient_ui'
+      style.textContent = '.csv-download { display: none !important; }'
+      document.head.appendChild(style)
     })
+
+    let result
+    try {
+      result = await (page as any)._expectScreenshot({
+        animations: 'disabled',
+        caret: 'hide',
+        scale: 'css',
+        locator,
+        maxDiffPixelRatio: 0, // strict: no differing pixels allowed
+        threshold: 0.01, // strict per-pixel color matching
+        timeout: 5_000,
+        expected: expectedBuffer,
+      })
+    } finally {
+      await (page as Page).evaluate(() => document.getElementById('__graphene_screenshot_hide_transient_ui')?.remove())
+    }
     if (!result) throw new Error('Playwright did not return screenshot result')
 
     // update snapshot if needed/allowed

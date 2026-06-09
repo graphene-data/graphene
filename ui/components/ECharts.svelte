@@ -6,6 +6,7 @@
   import {enrich, horizontalBarCount} from '../component-utilities/enrich.ts'
   import type {EChartsConfig, NormalConfig, QueryResult} from '../component-utilities/types.ts'
   import '../component-utilities/theme.ts'
+  import CsvDownload from './CsvDownload.svelte'
   import Skeleton from './Skeleton.svelte'
 
   interface Props {
@@ -111,8 +112,8 @@
     // clone config, since enriching mutates the config, and mutating a prop is weird
     // structuredClone doesn't like proxies, so use state.snapshot
     let cloned = structuredClone($state.snapshot(config)) as EChartsConfig
-    let rows = loaded.rows
-    let fields = loaded.fields || []
+    let rows = structuredClone(loaded.rows || [])
+    let fields = structuredClone(loaded.fields || [])
     cloned.legendSelection = chart.getOption()?.legend?.[0]?.selected
     let enriched = enrich(cloned, rows, fields)
 
@@ -176,6 +177,9 @@
 </script>
 
 <div class="echarts" bind:this={node} style={chartSizeStyle} data-component-id={mountedComponentId} data-chart-title={chartTitle}>
+  {#if loaded && !loaded.error && !chartError}
+    <CsvDownload data={loaded} exportId={displayId} title={chartTitle} />
+  {/if}
   {#if loaded?.error || chartError}
     <ErrorDisplay error={loaded?.error || chartError} />
   {:else if !loaded}

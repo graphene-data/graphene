@@ -8,6 +8,7 @@ import {fileURLToPath} from 'url'
 
 import {config, loadConfig, setGlobalConfig} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
+import {rowsToCsv} from '../lang/csv.ts'
 import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
 import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
@@ -65,16 +66,19 @@ program
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
+  .option('--format <format>', 'Output format for query or chart data: table or csv', 'table')
   .option('--headless', 'Run markdown pages in a headless browser instead of opening the system browser')
   .option('--port <port>', 'Port for the local Graphene server')
   .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
   .option('--input <key=value>', 'Input value to use for parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .action(
-    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; headless?: boolean; port?: string; query?: string; input?: string[]}, command: Command) => {
+    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; format?: string; headless?: boolean; port?: string; query?: string; input?: string[]}, command: Command) => {
       if (!input) {
         command.outputHelp()
         return exit(0)
       }
+
+      let format = parseRunFormat(options.format || 'table', exit)
 
       if (options.port) {
         let port = parsePort(options.port, exit)
@@ -92,12 +96,17 @@ program
         return exit(1)
       }
 
+      if (format == 'csv' && !options.chart && !options.query && getExistingPath(input)?.endsWith('.md')) {
+        console.error('--format csv for markdown files requires --query or --chart')
+        return exit(1)
+      }
+
       let inputs = parseRunInputs(options.input || [], exit)
       let inputPath = getExistingPath(input)
       if (inputPath && inputPath.endsWith('.md')) {
         let res = options.query
-          ? await runNamedQueryFromMd(inputPath, options.query, {inputs, telemetry})
-          : await runMdFile({mdArg: inputPath, chart: options.chart, headless: options.headless, inputs, telemetry})
+          ? await runNamedQueryFromMd(inputPath, options.query, {format, inputs, telemetry})
+          : await runMdFile({mdArg: inputPath, chart: options.chart, format, headless: options.headless, inputs, log: format == 'csv' ? console.error : console.log, telemetry})
         return exit(res ? 0 : 1)
       }
 
@@ -118,7 +127,8 @@ program
       let [query] = validateInputQuery(analysis, exit)
       let sql = renderSql(query, inputs, exit)
       let res = await runQuery(sql)
-      printTable(res.rows)
+      if (format == 'csv') console.log(rowsToCsv(res.rows, query.fields))
+      else printTable(res.rows)
     }),
   )
 
@@ -340,6 +350,12 @@ function parsePort(value: string, exit: (code?: number) => never): number {
     return exit(1)
   }
   return port
+}
+
+function parseRunFormat(value: string, exit: (code?: number) => never): 'table' | 'csv' {
+  if (value == 'table' || value == 'csv') return value
+  console.error(`Invalid --format "${value}". Expected table or csv.`)
+  return exit(1)
 }
 
 function renderSql(query: Query, inputs: Record<string, string | string[]>, exit: (code?: number) => never): string {
