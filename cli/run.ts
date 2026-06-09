@@ -40,35 +40,22 @@ let pendingRequests: Record<string, {response: ServerResponse<IncomingMessage>}>
 
 export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
   let log = options.log || console.log
-  let mdFile = normalizeFile(options.mdArg)
-  if (!mdFile) {
-    log(`Couldn't find ${options.mdArg}`)
+  let md = await analyzeMdFile(options.mdArg, log)
+  if (!md) return false
+  options.telemetry?.event('workspace_scanned', {command: 'run', ...md.scanCounts})
+  if (md.analysis.diagnostics.length > 0) {
+    printDiagnostics(md.analysis.diagnostics, log)
     return false
   }
 
-  let files = await loadWorkspace(config.root, false, config.ignoredFiles)
-  options.telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
-  let mdContents: string
-  if (process.env.NODE_ENV == 'test' && mockFileMap[mdFile]) {
-    mdContents = mockFileMap[mdFile]
-  } else {
-    mdContents = readFileSync(path.resolve(config.root, mdFile), 'utf-8')
-  }
-
-  let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdFile).concat({path: mdFile, contents: mdContents, kind: 'md'})}, mdFile)
-  if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics, log)
-    return false
-  }
-
-  let pageUrl = markdownPageUrl(mdFile, options.inputs)
+  let pageUrl = markdownPageUrl(md.path, options.inputs)
   let request = {pageUrl, action: 'check' as const, chart: options.chart, format: options.format || 'table', log}
   let resp = options.headless ? await runHeadlessPageRequest(request) : await sendSocketRequest(request)
   if (!resp) return false
 
   if (options.format == 'csv') {
     if (resp.csv === undefined) {
-      log(`Could not find chart "${options.chart}" on ${mdFile}`)
+      log(`Could not find chart "${options.chart}" on ${md.path}`)
       return false
     }
     console.log(resp.csv)
@@ -79,10 +66,10 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 
   let errors = Array.from(resp.errors || []) as GrapheneError[]
   let chartNotFound = !!options.chart && !resp.screenshot
-  if (chartNotFound) log(`Could not find chart "${options.chart}" on ${mdFile}`)
+  if (chartNotFound) log(`Could not find chart "${options.chart}" on ${md.path}`)
 
   if (errors.length) {
-    log(styleText('red', 'Runtime errors') + ` in ${mdFile}:`)
+    log(styleText('red', 'Runtime errors') + ` in ${md.path}:`)
   } else if (!chartNotFound) {
     log('No errors found 💎')
   }
@@ -110,23 +97,15 @@ export async function runMdFile(options: RunMdFileOptions): Promise<boolean> {
 }
 
 export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry, log: (...args: any[]) => void = console.log): Promise<boolean> {
-  let mdFile = normalizeFile(mdArg)
-  if (!mdFile) {
-    log(`Couldn't find ${mdArg}`)
+  let md = await analyzeMdFile(mdArg, log)
+  if (!md) return false
+  telemetry?.event('workspace_scanned', {command: 'list', ...md.scanCounts})
+  if (md.analysis.diagnostics.length > 0) {
+    printDiagnostics(md.analysis.diagnostics, log)
     return false
   }
 
-  let files = await loadWorkspace(config.root, false, config.ignoredFiles)
-  telemetry?.event('workspace_scanned', {command: 'list', ...getWorkspaceScanCounts(files)})
-  let mdContents = process.env.NODE_ENV == 'test' && mockFileMap[mdFile] ? mockFileMap[mdFile] : readFileSync(path.resolve(config.root, mdFile), 'utf-8')
-
-  let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdFile).concat({path: mdFile, contents: mdContents, kind: 'md'})}, mdFile)
-  if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics, log)
-    return false
-  }
-
-  let resp = await sendSocketRequest({pageUrl: markdownPageUrl(mdFile), action: 'list', log})
+  let resp = await sendSocketRequest({pageUrl: markdownPageUrl(md.path), action: 'list', log})
   if (!resp) return false
 
   let componentIds = (resp.componentIds || []) as string[]
@@ -135,20 +114,17 @@ export async function listMdFileQueries(mdArg: string, telemetry?: CliTelemetry,
   return true
 }
 
-export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: string, options: {format?: RunFormat; inputs?: RunInputs; telemetry?: CliTelemetry} = {}): Promise<boolean> {
-  let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-  options.telemetry?.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
-  let mdRelativePath = path.relative(process.cwd(), mdAbsolutePath)
-  let mdContents = await fs.promises.readFile(mdAbsolutePath, 'utf-8')
-
-  let result = analyzeWorkspace({config, files: files.filter(file => file.path != mdRelativePath).concat({path: mdRelativePath, contents: mdContents, kind: 'md'})}, mdRelativePath)
-  if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics)
+export async function runNamedQueryFromMd(mdArg: string, queryName: string, options: {format?: RunFormat; inputs?: RunInputs; telemetry?: CliTelemetry} = {}): Promise<boolean> {
+  let md = await analyzeMdFile(mdArg)
+  if (!md) return false
+  options.telemetry?.event('workspace_scanned', {command: 'run', ...md.scanCounts})
+  if (md.analysis.diagnostics.length > 0) {
+    printDiagnostics(md.analysis.diagnostics)
     return false
   }
 
-  let runQueryFence = [mdContents, '', '```sql', `from ${queryName} select *`, '```'].join('\n')
-  let queryFiles = toWorkspaceFiles(result)
+  let runQueryFence = [md.contents, '', '```sql', `from ${queryName} select *`, '```'].join('\n')
+  let queryFiles = toWorkspaceFiles(md.analysis)
   let queryResult = analyzeWorkspace({config, files: queryFiles.filter(file => file.path != 'input.md').concat({path: 'input.md', contents: runQueryFence, kind: 'md'})}, 'input.md')
   if (queryResult.diagnostics.length > 0) {
     printDiagnostics(queryResult.diagnostics)
@@ -168,6 +144,20 @@ export async function runNamedQueryFromMd(mdAbsolutePath: string, queryName: str
   if (options.format == 'csv') console.log(rowsToCsv(res.rows, input.queries[input.queries.length - 1].fields))
   else printTable(res.rows)
   return true
+}
+
+// Load a markdown file into the workspace and run the common static analysis used by run/list commands.
+async function analyzeMdFile(mdArg: string, log: (...args: any[]) => void = console.log) {
+  let mdFile = normalizeFile(mdArg)
+  if (!mdFile) {
+    log(`Couldn't find ${mdArg}`)
+    return null
+  }
+
+  let files = await loadWorkspace(config.root, false, config.ignoredFiles)
+  let contents = process.env.NODE_ENV == 'test' && mockFileMap[mdFile] ? mockFileMap[mdFile] : readFileSync(path.resolve(config.root, mdFile), 'utf-8')
+  let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != mdFile).concat({path: mdFile, contents, kind: 'md'})}, mdFile)
+  return {path: mdFile, contents, analysis, scanCounts: getWorkspaceScanCounts(files)}
 }
 
 async function sendSocketRequest({pageUrl, action, chart, format, log}: {pageUrl: string; action: 'check' | 'list'; chart?: string; format?: RunFormat; log: (...args: any[]) => void}) {
