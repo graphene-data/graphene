@@ -133,7 +133,7 @@ table orders (
 ### Metadata annotations
 Metadata can be attached to fields to aid with automatic formatting. It can be applied to fields in a `table`, or in a `select`.
 Functions like data_trunc and extract automatically add correct metadata, but in other cases you'll have to add it manually.
-Metadata cascades through selects, so you don't have to re-set metadata when selecting a field.
+Metadata cascades through selects and casts, so you don't have to re-set metadata when selecting or retyping a field. Temporal metadata is only preserved through casts when the result type still has compatible temporal or numeric semantics.
 
 ```gsql
 table foo (

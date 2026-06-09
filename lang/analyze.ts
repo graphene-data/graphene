@@ -1021,7 +1021,7 @@ class AnalysisSession implements Analyzer {
         if (!parsed.type) return this.diag(typeNode, `Unsupported cast type: ${rawType.toLowerCase()}`, {sql: 'NULL', type: scalarType('error')})
         let resultType = parsed.type
         let targetType = this.renderCastType(rawType)
-        return {...expr, sql: `CAST(${expr.sql} AS ${targetType})`, type: resultType, metadata: this.preserveTemporalMetadataThroughCast(expr, resultType)}
+        return {...expr, sql: `CAST(${expr.sql} AS ${targetType})`, type: resultType, metadata: this.preserveMetadataThroughCast(expr, resultType)}
       }
 
       case 'ExtractExpression': {
@@ -1144,10 +1144,24 @@ class AnalysisSession implements Analyzer {
     return {...expr, sql: `${targetType.toUpperCase()} '${parsed.literal}'`, type: scalarType(targetType)}
   }
 
-  private preserveTemporalMetadataThroughCast(expr: Expr, resultType: FieldType): FieldMeta | undefined {
-    if (!expr.metadata?.timeGrain) return undefined
-    if (!isScalarType(resultType, 'date') && !isScalarType(resultType, 'timestamp')) return undefined
-    return {timeGrain: expr.metadata.timeGrain, ...(expr.metadata.defaultName ? {defaultName: expr.metadata.defaultName} : {})}
+  private preserveMetadataThroughCast(expr: Expr, resultType: FieldType): FieldMeta | undefined {
+    if (!expr.metadata) return undefined
+    let metadata = {...expr.metadata}
+    let droppedTemporalMetadata = false
+
+    let resultIsTemporal = isScalarType(resultType, 'date') || isScalarType(resultType, 'timestamp')
+    let numericToNumeric = isScalarType(expr.type, 'number') && isScalarType(resultType, 'number')
+    if (metadata.timeGrain && !resultIsTemporal && !numericToNumeric) {
+      delete metadata.timeGrain
+      droppedTemporalMetadata = true
+    }
+    if (metadata.timeOrdinal && !numericToNumeric) {
+      delete metadata.timeOrdinal
+      droppedTemporalMetadata = true
+    }
+    if (droppedTemporalMetadata) delete metadata.defaultName
+
+    return Object.keys(metadata).length ? metadata : undefined
   }
 
   private sameFieldMetadata(left?: FieldMeta, right?: FieldMeta) {
