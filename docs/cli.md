@@ -10,6 +10,7 @@ graphene check path/to/page.md # Check for one specific markdown file
 
 # `run` is the primary command for iterating on queries and pages
 graphene run "from flights select count() as total" # Run inline GSQL and print results
+graphene run "from flights select count() as total" --format csv # Print query results as CSV
 graphene run 'from flights where carrier = $carrier select count() as total' --input carrier=AA # Provide parameter input values
 graphene run - # Read GSQL from stdin and print results
 graphene run path/to/page.md # Open the page in your system browser and save a full-page screenshot
@@ -24,10 +25,12 @@ graphene run path/to/page.md --input carrier=AA # Run the page with input values
 
 # `-c/--chart` can target either a chart title or the chart's `queryId`. For charts without titles use `graphene list` to see the exact IDs for charts on a page.
 graphene run path/to/page.md -c "Chart Title" # Run the page and screenshot one chart by title
+graphene run path/to/page.md -c "Chart Title" --format csv # Export the data backing one chart as CSV
 graphene run path/to/page.md -c 'Query (data="query_name" x="category" y="total")' # Run the page and screenshot one chart by queryId
 
 # `-q/--query` can target anything usable in a chart `data` prop (for example, a gsql table or a named code-fenced query in the markdown file).
 graphene run path/to/page.md -q query_name # Run a named query/table from the markdown context and print results
+graphene run path/to/page.md -q query_name --format csv # Run a named query/table and print results as CSV
 graphene run path/to/page.md -q query_name --input carrier=AA # Run a parameterized named query/table
 
 # `--input` values are strings. Repeat the flag to pass multiple values for one input.

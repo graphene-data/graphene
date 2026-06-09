@@ -154,6 +154,12 @@ describe('cli run', () => {
     expect(output).not.toContain('at file://')
   })
 
+  it('prints csv for an inline query with --format csv', async () => {
+    let res = await runCli(['run', "select 'a,b' as name, 2 as total", '--format', 'csv'], {cwd: flightDir})
+    expectCliSuccess(res, 'run query as csv')
+    expect(res.stdout).toBe('name,total\n"a,b",2\n')
+  })
+
   it('accepts --port on run commands', async () => {
     let res = await runCli(['run', 'from flights select count() as total', '--port', '4164'], {cwd: flightDir})
     expectCliSuccess(res, 'run query with port')
@@ -191,6 +197,13 @@ describe('cli run', () => {
     let res = await runCli(['run', 'index.md', '--query', 'performance_by_year'], {cwd: flightDir})
     expectCliSuccess(res, 'run markdown query')
     expect(res.stdout.toLowerCase()).toContain('flight_count')
+  })
+
+  it('prints csv for a named query from a markdown file with --format csv', async () => {
+    let res = await runCli(['run', 'index.md', '--query', 'performance_by_year', '--format', 'csv'], {cwd: flightDir})
+    expectCliSuccess(res, 'run markdown query as csv')
+    expect(res.stdout.startsWith('year,status,flight_count\n')).toBe(true)
+    expect(res.stdout).not.toContain('┌')
   })
 
   it('runs a parameterized named query from a markdown file with --input', async () => {
@@ -239,6 +252,18 @@ describe('cli run', () => {
     let res = await runCli(['run', 'from flights select count()', '--port', 'abc'], {cwd: flightDir})
     expect(res.code).toBe(1)
     expect(res.stderr).toContain('Invalid --port "abc". Expected an integer from 1 to 65535.')
+  })
+
+  it('rejects invalid --format values', async () => {
+    let res = await runCli(['run', 'from flights select count()', '--format', 'json'], {cwd: flightDir})
+    expect(res.code).toBe(1)
+    expect(res.stderr).toContain('Invalid --format "json". Expected table or csv.')
+  })
+
+  it('rejects markdown csv export without --query or --chart', async () => {
+    let res = await runCli(['run', 'index.md', '--format', 'csv'], {cwd: flightDir})
+    expect(res.code).toBe(1)
+    expect(res.stderr).toContain('--format csv for markdown files requires --query or --chart')
   })
 
   it('uses a configured duckdb path when present', async () => {

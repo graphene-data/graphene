@@ -1,6 +1,8 @@
 // Tests that various echarts render as expected.
 // When writing these tests, prefer just using a screenshot, and avoid adding assertions that check things already visible in the screenshot.
 
+import fs from 'node:fs/promises'
+
 import {scalarType} from '../../lang/types.ts'
 import {expect, test} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
@@ -53,6 +55,7 @@ function scatterData() {
 
 test.beforeEach(async ({sharedPage}) => {
   await sharedPage.setViewportSize({width: 680, height: 400})
+  await sharedPage.mouse.move(679, 399)
 })
 
 test('echarts query error state', async ({mount, chart}) => {
@@ -148,6 +151,40 @@ test('echarts heatmap supports numeric values on explicit category axis', async 
 test('bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: timeseries(), x: 'month', y: 'sales_usd0k', title: 'Monthly Sales'})
   await expect(chart.el).screenshot('bar-chart')
+})
+
+test('chart download button exports raw csv rows', async ({mount, chart, sharedPage}) => {
+  try {
+    await mount('components/BarChart.svelte', {
+      data: {
+        rows: [
+          {category: 'A, Inc', value: 10},
+          {category: 'B "Team"', value: 12},
+        ],
+        fields: [
+          {name: 'category', type: scalarType('string')},
+          {name: 'value', type: scalarType('number')},
+        ],
+      },
+      x: 'category',
+      y: 'value',
+      title: 'Download Test',
+    })
+
+    let button = chart.el.getByRole('button', {name: 'Download chart data as CSV'})
+    await button.hover()
+    await expect(button).toHaveCSS('opacity', '1')
+    let downloadPromise = sharedPage.waitForEvent('download')
+    await button.click()
+    let download = await downloadPromise
+    let csv = await fs.readFile((await download.path())!, 'utf-8')
+
+    expect(download.suggestedFilename()).toBe('download-test.csv')
+    expect(csv).toBe(['category,value', '"A, Inc",10', '"B ""Team""",12'].join('\n'))
+  } finally {
+    await sharedPage.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
+    await sharedPage.mouse.move(679, 399)
+  }
 })
 
 test('bar chart supports multiple y fields', async ({mount, chart}) => {
