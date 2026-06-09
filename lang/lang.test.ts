@@ -977,6 +977,24 @@ describe('lang', () => {
     expect(query.fields[0].metadata).toMatchObject({currency: 'USD'})
   })
 
+  it('preserves non-temporal field metadata through casts', () => {
+    updateFile(
+      `table revenue (
+        amount int -- gross revenue #currency=USD #unit=dollars #pii #source=warehouse
+      )`,
+      'revenue.gsql',
+    )
+
+    let [query] = analyze('from revenue select cast(amount as varchar) as amount_text')
+    expect(query.fields[0].metadata).toMatchObject({
+      description: 'gross revenue',
+      currency: 'USD',
+      unit: 'dollars',
+      pii: 'true',
+      source: 'warehouse',
+    })
+  })
+
   it('parses field metadata from select items', () => {
     updateFile('table scores (wins int, games int)', 'scores.gsql')
 
@@ -1259,6 +1277,36 @@ describe('lang', () => {
 
     let [reshaped] = analyze('from events select extract(year from month_start) as year_num')
     expect(reshaped.fields[0].metadata).toEqual({timeGrain: 'year', defaultName: 'year'})
+  })
+
+  it('drops temporal metadata through casts when the result type no longer has temporal semantics', () => {
+    updateFile(
+      `
+      table events (
+        event_date date
+        created_at timestamp
+        month_start: date_trunc('month', event_date)
+        month_number: extract(month from created_at)
+      )
+    `,
+      'events.gsql',
+    )
+
+    let [timeGrainToString] = analyze('from events select cast(month_start as varchar) as month_text')
+    expect(timeGrainToString.fields[0].metadata).toBeUndefined()
+
+    let [timeOrdinalToString] = analyze('from events select cast(month_number as varchar) as month_number_text')
+    expect(timeOrdinalToString.fields[0].metadata).toBeUndefined()
+  })
+
+  it('preserves numeric temporal metadata through numeric casts', () => {
+    updateFile('table events (created_at timestamp)', 'events.gsql')
+
+    let [timeOrdinal] = analyze('from events select cast(extract(month from created_at) as int) as month_number')
+    expect(timeOrdinal.fields[0].metadata).toEqual({timeOrdinal: 'month_of_year', defaultName: 'month'})
+
+    let [yearGrain] = analyze('from events select cast(extract(year from created_at) as int) as year_number')
+    expect(yearGrain.fields[0].metadata).toEqual({timeGrain: 'year', defaultName: 'year'})
   })
 
   it('drops temporal grain on set operations when branches disagree', () => {
