@@ -52,10 +52,13 @@ export async function runQuery(sql: string, options: RunQueryOptions = {}): Prom
     let headers: Record<string, string> = {'Content-Type': 'application/json'}
     if (cacheControl) headers['Cache-Control'] = cacheControl
 
+    // A Cloud host path selects the repo to query, e.g. https://example.graphenedata.com/nba proxies through the `nba` repo connection.
+    let repoId = new URL(config.host!).pathname.replace(/^\/+|\/+$/g, '')
+
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
       headers,
-      body: JSON.stringify({sql, params}),
+      body: JSON.stringify({sql, params, repoId}),
     })
     let json = await resp.json()
     if (!resp.ok) throw new Error(json.message || json.error || `Query failed with HTTP ${resp.status}`)

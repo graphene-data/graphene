@@ -117,7 +117,8 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
   let redirect_uri = `${loop.url}/callback`
 
   // Build authorize URL (merge with provided URL if present)
-  let authorizeUrl = new URL(`${config.host}/authenticate`)
+  let cloudOrigin = new URL(config.host!).origin
+  let authorizeUrl = new URL(`${cloudOrigin}/authenticate`)
   authorizeUrl.search = new URLSearchParams({
     redirect_uri,
     code_challenge,
@@ -135,7 +136,7 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
   if (!result.code) throw new Error('No authorization code received')
   if (result.state !== state) throw new Error('State mismatch')
 
-  let res = await fetch(`${config.host}/_api/oauth2/token`, {
+  let res = await fetch(`${cloudOrigin}/_api/oauth2/token`, {
     method: 'POST',
     headers: {'content-type': 'application/json'},
     body: JSON.stringify({
@@ -153,8 +154,9 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
 
 async function refreshAccessToken() {
   let refresh_token = (await readEntry())?.refresh_token
+  let cloudOrigin = new URL(config.host!).origin
   if (!refresh_token) throw new Error('No refresh token available; run `graphene login`')
-  let res = await fetch(new URL('/_api/oauth2/token', config.host).toString(), {
+  let res = await fetch(new URL('/_api/oauth2/token', cloudOrigin).toString(), {
     method: 'POST',
     headers: {'content-type': 'application/json'},
     body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: authClientId()}),
@@ -178,7 +180,8 @@ export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = 
   if (!token) throw new Error('Failed to obtain access token')
 
   // make a request with the authorization header set
-  let url = new URL(pathOrUrl, config.host)
+  let cloudOrigin = new URL(config.host!).origin
+  let url = new URL(pathOrUrl, cloudOrigin)
   let headers = new Headers(init.headers || {})
   headers.set('authorization', `Bearer ${token}`)
 
