@@ -11,7 +11,6 @@ import {visit} from 'unist-util-visit'
 const GLOBAL_HTML_ATTRS = ['class', 'id', 'role', 'aria-*', 'data-*']
 const BLOCKED_CSS_VALUE = /\b(?:url|image-set|cross-fade|element|paint|expression)\s*\(|javascript:/i
 const BLOCKED_CSS_PROP = /^(?:behavior|-moz-binding)$/i
-const STYLE_BLOCK = /<style(?:\s[^>]*)?>([\s\S]*?)<\/style>/gi
 const DIRECTIVE_ATTR = /\s(?:on|bind|use|transition|in|out|animate|class|style):[A-Za-z_-]/
 const SPREAD_ATTR = /\s\{\s*\.\.\./
 const EXPRESSION_ATTR = /\s[A-Za-z_][A-Za-z0-9_.:-]*\s*=\s*\{/
@@ -129,7 +128,8 @@ export function sanitizeMarkdown() {
 }
 
 export function validateStaticMarkup(content: string) {
-  content = content.replace(STYLE_BLOCK, '').replace(/(<ECharts\b[^>]*>)[\s\S]*?(<\/ECharts>)/g, '$1$2')
+  content = replaceTagBlocks(content, 'style', () => '')
+  content = replaceTagBlocks(content, 'ECharts', block => block.openTag + block.closeTag)
   if (hasTemplateBlockOutsideTags(content)) throw new Error('Dynamic markup expressions are not supported in Graphene markdown.')
   if (DIRECTIVE_ATTR.test(content)) throw new Error('Framework directives are not supported in Graphene markdown.')
   if (SPREAD_ATTR.test(content)) throw new Error('Attribute spreads are not supported in Graphene markdown.')
@@ -195,8 +195,8 @@ function escapeSvelteAttrValue(value: string) {
 
 export function extractPageStyles(content: string) {
   let styles: string[] = []
-  let html = content.replace(STYLE_BLOCK, (_match, css = '') => {
-    let sanitized = sanitizeCss(css)
+  let html = replaceTagBlocks(content, 'style', block => {
+    let sanitized = sanitizeCss(block.body)
     if (sanitized.trim()) styles.push(sanitized)
     return ''
   })
@@ -204,15 +204,158 @@ export function extractPageStyles(content: string) {
 }
 
 export function sanitizeCss(css: string) {
-  return css
+  css = css
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/@(?:import|namespace)\b[^;]*(?:;|$)/gi, '')
     .replace(/[<>]/g, '')
-    .replace(/(^|[;{])\s*([-\w]+)\s*:\s*((?:"[^"]*"|'[^']*'|\([^)]*\)|[^;}])*)(?=[;}])/g, (match, prefix: string, prop: string, value: string) => {
-      if (BLOCKED_CSS_PROP.test(prop) || BLOCKED_CSS_VALUE.test(value)) return prefix
-      return match
-    })
-    .replace(/;\s*;/g, ';')
+  return sanitizeCssDeclarations(css).replace(/;\s*;/g, ';')
+}
+
+function sanitizeCssDeclarations(css: string) {
+  let out = ''
+  let i = 0
+
+  while (i < css.length) {
+    let prefixIndex = findNextCssDeclarationPrefix(css, i)
+    if (prefixIndex == -1) return out + css.slice(i)
+
+    out += css.slice(i, prefixIndex)
+    let prefix = css[prefixIndex]
+    let propStart = prefixIndex + 1
+    while (/\s/.test(css[propStart] || '')) propStart++
+
+    let propEnd = propStart
+    while (/[-\w]/.test(css[propEnd] || '')) propEnd++
+    if (propEnd == propStart) {
+      out += prefix
+      i = prefixIndex + 1
+      continue
+    }
+
+    let colon = propEnd
+    while (/\s/.test(css[colon] || '')) colon++
+    if (css[colon] != ':') {
+      out += prefix
+      i = prefixIndex + 1
+      continue
+    }
+
+    let valueStart = colon + 1
+    let valueEnd = findCssValueEnd(css, valueStart)
+    let prop = css.slice(propStart, propEnd)
+    let value = css.slice(valueStart, valueEnd)
+    out += BLOCKED_CSS_PROP.test(prop) || BLOCKED_CSS_VALUE.test(value) ? prefix : css.slice(prefixIndex, valueEnd)
+    i = valueEnd
+  }
+
+  return out
+}
+
+function findNextCssDeclarationPrefix(css: string, from: number) {
+  for (let i = from; i < css.length; i++) {
+    if (css[i] == '{' || css[i] == ';') return i
+  }
+  return -1
+}
+
+function findCssValueEnd(css: string, from: number) {
+  let quote = ''
+  let depth = 0
+
+  for (let i = from; i < css.length; i++) {
+    let ch = css[i]
+    if (quote) {
+      if (ch == '\\') i++
+      else if (ch == quote) quote = ''
+      continue
+    }
+
+    if (ch == '"' || ch == "'") {
+      quote = ch
+      continue
+    }
+    if (ch == '(') depth++
+    else if (ch == ')' && depth > 0) depth--
+    else if (depth == 0 && (ch == ';' || ch == '}')) return i
+  }
+
+  return css.length
+}
+
+type TagBlock = {openTag: string; body: string; closeTag: string; raw: string; end: number}
+
+function replaceTagBlocks(content: string, tagName: string, replacer: (block: TagBlock) => string) {
+  let out = ''
+  let i = 0
+
+  while (i < content.length) {
+    let start = findTagOpen(content, tagName, i)
+    if (start == -1) return out + content.slice(i)
+
+    let block = readTagBlockAt(content, start, tagName)
+    if (!block) {
+      out += content.slice(i, start + 1)
+      i = start + 1
+      continue
+    }
+
+    out += content.slice(i, start) + replacer(block)
+    i = block.end
+  }
+
+  return out
+}
+
+function readTagBlockAt(content: string, start: number, tagName: string): TagBlock | null {
+  if (findTagOpen(content, tagName, start) != start) return null
+
+  let openEnd = findTagEnd(content, start)
+  if (openEnd == -1) return null
+
+  let closeStart = findTagClose(content, tagName, openEnd + 1)
+  if (closeStart == -1) return null
+
+  let closeEnd = findTagEnd(content, closeStart)
+  if (closeEnd == -1) return null
+
+  let end = closeEnd + 1
+  return {
+    openTag: content.slice(start, openEnd + 1),
+    body: content.slice(openEnd + 1, closeStart),
+    closeTag: content.slice(closeStart, end),
+    raw: content.slice(start, end),
+    end,
+  }
+}
+
+function findTagOpen(content: string, tagName: string, from: number) {
+  return findTag(content, `<${tagName.toLowerCase()}`, from)
+}
+
+function findTagClose(content: string, tagName: string, from: number) {
+  return findTag(content, `</${tagName.toLowerCase()}`, from)
+}
+
+function findTag(content: string, needle: string, from: number) {
+  let lower = content.toLowerCase()
+  for (let idx = lower.indexOf(needle, from); idx != -1; idx = lower.indexOf(needle, idx + 1)) {
+    let next = content[idx + needle.length] || ''
+    if (next == '>' || /\s/.test(next)) return idx
+  }
+  return -1
+}
+
+function findTagEnd(content: string, start: number) {
+  let quote = ''
+
+  for (let i = start; i < content.length; i++) {
+    let ch = content[i]
+    if (quote && ch == quote) quote = ''
+    else if (!quote && (ch == '"' || ch == "'")) quote = ch
+    else if (!quote && ch == '>') return i
+  }
+
+  return -1
 }
 
 function escapeSvelteTextExpressions(content: string) {
@@ -221,14 +364,11 @@ function escapeSvelteTextExpressions(content: string) {
   let inTag = false
 
   for (let i = 0; i < content.length; i++) {
-    if (!inTag && /^<script(?:\s|>)/i.test(content.slice(i))) {
-      let end = content.slice(i).search(/<\/script>/i)
-      if (end != -1) {
-        let closeEnd = i + end + content.slice(i + end).match(/^<\/script>/i)![0].length
-        out.push(content.slice(i, closeEnd))
-        i = closeEnd - 1
-        continue
-      }
+    let scriptBlock = !inTag ? readTagBlockAt(content, i, 'script') : null
+    if (scriptBlock) {
+      out.push(scriptBlock.raw)
+      i = scriptBlock.end - 1
+      continue
     }
 
     let ch = content[i]
@@ -267,7 +407,7 @@ export function injectComponentImports() {
     markup: ({content, filename}: {content: string; filename: string}) => {
       if (!filename.endsWith('.md')) return // only auto-import components for md files
       content = liftInlineEChartsConfig(content)
-      if (hasTemplateBlockOutsideTags(content.replace(/<script[\s\S]*?<\/script>/gi, ''))) throw new Error('Dynamic markup expressions are not supported in Graphene markdown.')
+      if (hasTemplateBlockOutsideTags(replaceTagBlocks(content, 'script', () => ''))) throw new Error('Dynamic markup expressions are not supported in Graphene markdown.')
       let pageStyles = extractPageStyles(content)
       content = escapeSvelteTextExpressions(pageStyles.html)
       if (pageStyles.css.trim()) content = `<svelte:head><style>${pageStyles.css}</style></svelte:head>\n${content}`

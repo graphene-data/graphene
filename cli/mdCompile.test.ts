@@ -90,7 +90,7 @@ where created_at >= coalesce($daterange_start, created_at)
     let code = await compileMarkdownPage(`
 <style>
   .hero { color: rgb(1, 2, 3); background: url("https://example.com/leak"); }
-</style>
+</style >
 <style>
   .card { display: grid; }
 </style>
@@ -153,6 +153,7 @@ select '\${literal}' as value
 
     expect(css).toContain('.a { color: red;')
     expect(css).toContain('.b { transform: translateX(2px);')
+    expect(sanitizeCss('.d { content: "a;b"; transform: translateX(2px); }')).toContain('content: "a;b"')
     expect(css).not.toContain('@import')
     expect(css).not.toContain('example.com')
     expect(css).not.toContain('behavior')
