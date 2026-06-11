@@ -296,7 +296,7 @@ describe('runCreate', () => {
 
     let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
-    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
+    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.5.3-r.3')
     expect(await readFile(path.join(root, 'demo-app', 'AGENTS.md'), 'utf8')).toContain('npx graphene check')
     expect(textMock).not.toHaveBeenCalledWith(expect.objectContaining({message: 'Path to .duckdb file'}))
     let message = outroMock.mock.calls.at(-1)?.[0]
