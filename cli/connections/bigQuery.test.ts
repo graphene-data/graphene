@@ -14,18 +14,10 @@ class TestBigQueryConnection extends BigQueryConnection {
 }
 
 describe('BigQueryConnection', () => {
-  it('waits for long-running query jobs to complete before reading rows', async () => {
-    let promiseResolved = false
+  it('waits for query results instead of accepting incomplete BigQuery responses', async () => {
     let job = {
       metadata: {statistics: {query: {totalRows: '1'}}},
-      promise: vi.fn().mockImplementation(() => {
-        promiseResolved = true
-        return Promise.resolve([{statistics: {query: {totalRows: '1'}}}])
-      }),
-      getQueryResults: vi.fn().mockImplementation(() => {
-        expect(promiseResolved).toBe(true)
-        return Promise.resolve([[{category: 'Jeans'}]])
-      }),
+      getQueryResults: vi.fn().mockResolvedValue([[{category: 'Jeans'}]]),
     }
     let conn = new TestBigQueryConnection(job)
 
@@ -34,7 +26,6 @@ describe('BigQueryConnection', () => {
       totalRows: 1,
     })
 
-    expect(job.promise).toHaveBeenCalledTimes(1)
-    expect(job.getQueryResults).toHaveBeenCalledWith({maxResults: 10000})
+    expect(job.getQueryResults).toHaveBeenCalledWith({maxResults: 10000, timeoutMs: 1000})
   })
 })

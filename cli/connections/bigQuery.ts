@@ -30,21 +30,12 @@ export class BigQueryConnection implements QueryConnection {
 
   protected async executeQuery(sql: string, options?: QueryOptions): Promise<QueryResult & {metadata: any; job: any}> {
     let [job] = await this.client.createQueryJob({query: sql, useLegacySql: false, params: options?.params})
-    let metadata = await this.waitForJob(job)
-    let [rows] = await job.getQueryResults({maxResults: 10000})
-    metadata ||= job.metadata || (await job.getMetadata())[0]
+    let [rows] = await job.getQueryResults({maxResults: 10000, timeoutMs: this.queryTimeoutMs})
+    let metadata = job.metadata || (await job.getMetadata())[0]
     let totalRows = Number(metadata?.statistics?.query?.totalRows ?? rows.length)
 
     normalizeBigQueryRows(rows)
     return {rows, totalRows, metadata, job}
-  }
-
-  protected async waitForJob(job: any) {
-    let timeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error(`BigQuery query timed out after ${Math.round(this.queryTimeoutMs / 1000)}s`)), this.queryTimeoutMs)
-    })
-    let [metadata] = (await Promise.race([job.promise(), timeout])) as any[]
-    return metadata
   }
 
   async listDatasets(): Promise<string[]> {
