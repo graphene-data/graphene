@@ -494,7 +494,8 @@ test('sanitizes unsafe html', async ({server, page}) => {
   expect(exprRan).toBeUndefined()
 })
 
-test('allows trusted visual html and style blocks without remote css resources', async ({server, page}) => {
+test('allows trusted visual html and style blocks with remote css resources', async ({server, page}) => {
+  expectConsoleError('Failed to load resource')
   let remoteRequests = 0
   await page.route('https://example.com/**', async route => {
     remoteRequests++
@@ -531,7 +532,7 @@ test('allows trusted visual html and style blocks without remote css resources',
   await expect(layout).not.toHaveAttribute('style')
   await expect(layout).toHaveCSS('display', 'grid')
   await expect(layout).toHaveCSS('color', 'rgb(12, 34, 56)')
-  await expect(layout).toHaveCSS('background-image', 'none')
+  await expect(layout).not.toHaveCSS('background-image', 'none')
   await expect(page.locator('.metric')).toHaveCSS('border-top-color', 'rgb(20, 120, 80)')
-  expect(remoteRequests).toBe(0)
+  await expect.poll(() => remoteRequests).toBeGreaterThan(0)
 })

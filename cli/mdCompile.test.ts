@@ -101,11 +101,11 @@ where created_at >= coalesce($daterange_start, created_at)
 
     expect(code).toContain('<svelte:head><style>')
     expect(code).toContain('@import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");')
-    expect(code).toContain('.hero { color: rgb(1, 2, 3); }')
+    expect(code).toContain('.hero { color: rgb(1, 2, 3); background: url("https://example.com/leak"); }')
     expect(code).toContain('.card { display: grid; }')
     expect(code).toContain('<div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region">Hello</div>')
     expect(code).not.toContain('style="color: red"')
-    expect(code).not.toContain('example.com/leak')
+    expect(code).toContain('example.com/leak')
   })
 
   it('renders plain braces as text', async () => {
@@ -146,25 +146,27 @@ select '\${literal}' as value
     await expect(compileMarkdownPage('<ECharts data="repro" config={alert(1)}></ECharts>')).rejects.toThrow('Dynamic attribute expressions are not supported')
   })
 
-  it('removes css resource and legacy execution hooks', () => {
+  it('allows css resources and removes legacy execution hooks', () => {
     let css = sanitizeCss(`
       @import url("https://example.com/base.css");
       .a { color: red; background: image-set(url("https://example.com/a.png") 1x); behavior: url(x.htc); }
       .b { transform: translateX(2px); -moz-binding: url("x.xml#x"); }
       .c { width: expression(alert(1)); }
+      .d { background: url("javascript:alert(1)"); }
     `)
 
     expect(css).toContain('.a { color: red;')
+    expect(css).toContain('@import url("https://example.com/base.css")')
+    expect(css).toContain('https://example.com/a.png')
     expect(css).toContain('.b { transform: translateX(2px);')
     expect(sanitizeCss('.d { content: "a;b"; transform: translateX(2px); }')).toContain('content: "a;b"')
-    expect(css).not.toContain('@import')
-    expect(css).not.toContain('example.com')
     expect(css).not.toContain('behavior')
     expect(css).not.toContain('-moz-binding')
     expect(css).not.toContain('expression')
+    expect(css).not.toContain('javascript:')
   })
 
-  it('only allows Google Fonts resource loading', () => {
+  it('allows arbitrary font resource loading', () => {
     let css = sanitizeCss(`
       @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");
       @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed&text=leak");
@@ -177,9 +179,9 @@ select '\${literal}' as value
 
     expect(css).toContain('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap')
     expect(css).toContain('https://fonts.gstatic.com/s/robotocondensed/v30/abc.woff2')
-    expect(css).not.toContain('text=leak')
-    expect(css).not.toContain('display=leak')
-    expect(css).not.toContain('https://example.com')
-    expect(css).not.toContain('background: url')
+    expect(css).toContain('text=leak')
+    expect(css).toContain('display=leak')
+    expect(css).toContain('https://example.com')
+    expect(css).toContain('background: url')
   })
 })

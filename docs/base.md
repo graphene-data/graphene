@@ -85,7 +85,7 @@ Queries can be referenced by other queries in the `from` or `join` to form DAGs 
 ## HTML and CSS
 Pages can use safe HTML markup for custom layout and styling. Common layout and text tags are supported, along with `class`, `id`, `role`, `aria-*`, and `data-*` attributes. Use `<style>` blocks to customize page visuals or target Graphene components.
 
-Graphene treats page CSS as visual customization, not executable code. CSS that automatically loads external resources is removed, including `@import` and declarations using `url(...)` or similar resource-loading functions. The exception is Google Fonts: `@import` URLs from `fonts.googleapis.com/css2` are allowed, along with `@font-face src` URLs from `fonts.gstatic.com`. These font imports make browser requests to Google. Inline `style=""` attributes are not supported; use classes and `<style>` blocks instead.
+Graphene treats page CSS as visual customization, not executable code. CSS can use external visual resources, including `@import`, font files, and image URLs. Inline `style=""` attributes are not supported; use classes and `<style>` blocks instead.
 
 Unsupported:
 - Javascript of any kind, including `<script>`, event handlers, framework directives, dynamic markup expressions, and raw HTML injection

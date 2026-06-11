@@ -1,11 +1,7 @@
 export const GLOBAL_HTML_ATTRS = ['class', 'id', 'role', 'aria-*', 'data-*']
 
-const BLOCKED_CSS_VALUE = /\b(?:url|image-set|cross-fade|element|paint|expression)\s*\(|javascript:/i
-const BLOCKED_FONT_SRC_VALUE = /\b(?:image-set|cross-fade|element|paint|expression)\s*\(|javascript:/i
+const BLOCKED_CSS_EXECUTION = /\bexpression\s*\(|javascript:/i
 const BLOCKED_CSS_PROP = /^(?:behavior|-moz-binding)$/i
-const GOOGLE_FONT_CSS = /^https:\/\/fonts\.googleapis\.com\/css2\?[A-Za-z0-9%+&=:_.,;@-]+$/
-const GOOGLE_FONT_ASSET = /^https:\/\/fonts\.gstatic\.com\/[A-Za-z0-9%+&=:_.,;@/-]+$/
-const GOOGLE_FONT_DISPLAY = new Set(['auto', 'block', 'swap', 'fallback', 'optional'])
 const DIRECTIVE_ATTR = /\s(?:on|bind|use|transition|in|out|animate|class|style):[A-Za-z_-]/
 const SPREAD_ATTR = /\s\{\s*\.\.\./
 const EXPRESSION_ATTR = /\s[A-Za-z_][A-Za-z0-9_.:-]*\s*=\s*\{/
@@ -43,7 +39,7 @@ export function extractPageStyles(content: string) {
 }
 
 export function sanitizeCss(css: string) {
-  css = sanitizeCssImports(css.replace(/\/\*[\s\S]*?\*\//g, '')).replace(/[<>]/g, '')
+  css = sanitizeCssAtRules(css.replace(/\/\*[\s\S]*?\*\//g, '')).replace(/[<>]/g, '')
   return sanitizeCssDeclarations(css).replace(/;\s*;/g, ';')
 }
 
@@ -134,7 +130,7 @@ function escapeSvelteAttrValue(value: string) {
   return value.replace(/\{/g, '&#123;')
 }
 
-function sanitizeCssImports(css: string) {
+function sanitizeCssAtRules(css: string) {
   let out = ''
   let i = 0
   let atRule = /@(import|namespace)\b/gi
@@ -147,32 +143,9 @@ function sanitizeCssImports(css: string) {
     out += css.slice(i, match.index)
     let end = findCssAtRuleEnd(css, match.index)
     let rule = css.slice(match.index, end)
-    if (match[1].toLowerCase() == 'import' && isAllowedGoogleFontImport(rule)) out += rule
+    if (!BLOCKED_CSS_EXECUTION.test(rule)) out += rule
     i = end
   }
-}
-
-function isAllowedGoogleFontImport(rule: string) {
-  let url = getCssImportUrl(rule)
-  if (!url || !GOOGLE_FONT_CSS.test(url)) return false
-
-  let parsed = new URL(url)
-  let hasFamily = false
-  for (let [param, value] of parsed.searchParams.entries()) {
-    if (param == 'family' && /^[A-Za-z0-9 +:,.@;-]+$/.test(value)) {
-      hasFamily = true
-      continue
-    }
-    if (param == 'display' && GOOGLE_FONT_DISPLAY.has(value)) continue
-    return false
-  }
-
-  return hasFamily
-}
-
-function getCssImportUrl(rule: string) {
-  let match = rule.match(/^@import\s+(?:url\(\s*)?["']?([^"')\s]+)["']?\s*\)?\s*;?$/i)
-  return match?.[1]
 }
 
 function findCssAtRuleEnd(css: string, from: number) {
@@ -229,55 +202,16 @@ function sanitizeCssDeclarations(css: string) {
     let valueEnd = findCssValueEnd(css, valueStart)
     let prop = css.slice(propStart, propEnd)
     let value = css.slice(valueStart, valueEnd)
-    out += isBlockedCssDeclaration(css, prefixIndex, prop, value) ? prefix : css.slice(prefixIndex, valueEnd)
+    out += isBlockedCssDeclaration(prop, value) ? prefix : css.slice(prefixIndex, valueEnd)
     i = valueEnd
   }
 
   return out
 }
 
-function isBlockedCssDeclaration(css: string, prefixIndex: number, prop: string, value: string) {
+function isBlockedCssDeclaration(prop: string, value: string) {
   if (BLOCKED_CSS_PROP.test(prop)) return true
-  if (prop.toLowerCase() == 'src' && isInFontFaceBlock(css, prefixIndex)) return BLOCKED_FONT_SRC_VALUE.test(value) || !allCssUrls(value, GOOGLE_FONT_ASSET)
-  return BLOCKED_CSS_VALUE.test(value)
-}
-
-function allCssUrls(value: string, allowed: RegExp) {
-  let urls = Array.from(value.matchAll(/\burl\(\s*["']?([^"')\s]+)["']?\s*\)/gi)).map(match => match[1])
-  return urls.length > 0 && urls.every(url => allowed.test(url))
-}
-
-function isInFontFaceBlock(css: string, prefixIndex: number) {
-  if (css[prefixIndex] == '{') return ruleNameBefore(css, prefixIndex) == '@font-face'
-
-  let stack: string[] = []
-  let quote = ''
-  let blockStart = 0
-
-  for (let i = 0; i < prefixIndex; i++) {
-    let ch = css[i]
-    if (quote) {
-      if (ch == '\\') i++
-      else if (ch == quote) quote = ''
-      continue
-    }
-
-    if (ch == '"' || ch == "'") quote = ch
-    else if (ch == '{') {
-      stack.push(css.slice(blockStart, i).trim().toLowerCase())
-      blockStart = i + 1
-    } else if (ch == '}') {
-      stack.pop()
-      blockStart = i + 1
-    }
-  }
-
-  return stack.at(-1) == '@font-face'
-}
-
-function ruleNameBefore(css: string, index: number) {
-  let start = Math.max(css.lastIndexOf('{', index - 1), css.lastIndexOf('}', index - 1), css.lastIndexOf(';', index - 1)) + 1
-  return css.slice(start, index).trim().toLowerCase()
+  return BLOCKED_CSS_EXECUTION.test(value)
 }
 
 function findNextCssDeclarationPrefix(css: string, from: number) {
