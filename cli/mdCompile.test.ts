@@ -2,7 +2,8 @@
 import {compile} from 'mdsvex'
 import {compile as compileSvelte} from 'svelte/compiler'
 
-import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins, sanitizeCss} from './mdCompile.ts'
+import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {sanitizeCss} from './sanitization.ts'
 
 async function compileMarkdownPage(src: string) {
   let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
