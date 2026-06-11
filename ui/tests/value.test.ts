@@ -28,7 +28,7 @@ describe('<Value/>', () => {
     await expect(sharedPage.getByText('—')).toBeVisible()
   })
 
-  test('renders loading state while query is pending', async ({sharedPage, server}) => {
+  test('renders loading state while query is pending', async ({sharedPage, server, chart}) => {
     await sharedPage.goto(`${server.url()}/__ct`)
     await sharedPage.evaluate(async () => {
       let g = window.$GRAPHENE
@@ -51,7 +51,7 @@ describe('<Value/>', () => {
       if (window.__inst) g.svelte.unmount(window.__inst)
       let container = document.getElementsByTagName('main')[0] || document.createElement('main')
       if (!container.isConnected) document.body.appendChild(container)
-      container.innerHTML = '<div id="component-test"></div>'
+      container.innerHTML = '<div id="component-test" style="width:240px"></div>'
       let target = document.getElementById('component-test')
       if (!target) throw new Error('component test target was not created')
       window.__inst = g.svelte.mount(g.components.Value, {target, props: {data: 'slow_query', column: 'value'}})
@@ -60,8 +60,7 @@ describe('<Value/>', () => {
 
     try {
       let component = sharedPage.locator('#component-test')
-      await expect(component.getByRole('status')).toBeVisible()
-      await expect(component.getByText('Dataset is empty')).toHaveCount(0)
+      await expect(chart.el).screenshot('value-loading-state')
 
       await sharedPage.evaluate(async () => {
         ;(window as any).__queryCallback({rows: [{value: 42}], fields: [{name: 'value', type: 'number'}]})
