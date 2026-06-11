@@ -89,6 +89,7 @@ where created_at >= coalesce($daterange_start, created_at)
   it('allows layout html attributes and page style blocks', async () => {
     let code = await compileMarkdownPage(`
 <style>
+  @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");
   .hero { color: rgb(1, 2, 3); background: url("https://example.com/leak"); }
 </style >
 <style>
@@ -98,6 +99,7 @@ where created_at >= coalesce($daterange_start, created_at)
 `)
 
     expect(code).toContain('<svelte:head><style>')
+    expect(code).toContain('@import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");')
     expect(code).toContain('.hero { color: rgb(1, 2, 3); }')
     expect(code).toContain('.card { display: grid; }')
     expect(code).toContain('<div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region">Hello</div>')
@@ -159,5 +161,24 @@ select '\${literal}' as value
     expect(css).not.toContain('behavior')
     expect(css).not.toContain('-moz-binding')
     expect(css).not.toContain('expression')
+  })
+
+  it('only allows Google Fonts resource loading', () => {
+    let css = sanitizeCss(`
+      @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed&text=leak");
+      @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed&display=leak");
+      @import url("https://example.com/base.css");
+      @font-face { src: url("https://fonts.gstatic.com/s/robotocondensed/v30/abc.woff2") format("woff2"); font-family: "Roboto Condensed"; }
+      @font-face { src: url("https://example.com/font.woff2"); font-family: "Bad Font"; }
+      .a { background: url("https://fonts.gstatic.com/s/robotocondensed/v30/abc.woff2"); }
+    `)
+
+    expect(css).toContain('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap')
+    expect(css).toContain('https://fonts.gstatic.com/s/robotocondensed/v30/abc.woff2')
+    expect(css).not.toContain('text=leak')
+    expect(css).not.toContain('display=leak')
+    expect(css).not.toContain('https://example.com')
+    expect(css).not.toContain('background: url')
   })
 })

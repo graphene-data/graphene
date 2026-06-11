@@ -4,7 +4,10 @@ layout: dashboard
 ---
 
 <style>
+  @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@600;700&display=swap");
+
   .control-room {
+    --display-font: "Roboto Condensed", var(--font-ui);
     --ink: #172026;
     --muted: #5e6a70;
     --line: #d5dde0;
@@ -55,7 +58,7 @@ layout: dashboard
 
   .eyebrow {
     color: var(--signal);
-    font-family: var(--font-ui);
+    font-family: var(--display-font);
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.14em;
@@ -65,8 +68,9 @@ layout: dashboard
 
   .tower-copy h2 {
     color: var(--ink);
-    font-family: var(--font-sans);
+    font-family: var(--display-font);
     font-size: 42px;
+    font-weight: 700;
     letter-spacing: 0;
     line-height: 1.02;
     margin: 0 0 14px;
@@ -150,7 +154,7 @@ layout: dashboard
 
   .ops-value {
     color: var(--ink);
-    font-family: var(--font-ui);
+    font-family: var(--display-font);
     font-size: 30px;
     font-weight: 700;
     line-height: 1;
@@ -237,7 +241,7 @@ layout: dashboard
   .route-rate {
     align-self: center;
     color: var(--signal);
-    font-family: var(--font-ui);
+    font-family: var(--display-font);
     font-size: 20px;
     font-weight: 700;
   }
@@ -267,7 +271,7 @@ layout: dashboard
 
   .bank-delay {
     color: var(--amber);
-    font-family: var(--font-ui);
+    font-family: var(--display-font);
     font-size: 26px;
     font-weight: 700;
     line-height: 1;
