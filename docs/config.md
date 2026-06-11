@@ -60,6 +60,20 @@ Set to `false` to opt out of CLI update notices. You can also set `GRAPHENE_NO_U
 
 Exactly one of the following blocks should be present. The dialect is inferred from whichever one you set.
 
+## `motherduck`
+
+```json
+"motherduck": {"database": "sample_data"}
+```
+
+- `database` — MotherDuck database name to open with `md:<database>`. If omitted, Graphene opens `md:` and attaches all databases available to the token.
+
+MotherDuck uses DuckDB SQL syntax, so Graphene analyzes GSQL with the DuckDB dialect. Store credentials in a `.env` file and include it with `envFile`:
+
+```env
+MOTHERDUCK_TOKEN=<your-token>
+```
+
 ## `duckdb`
 
 ```json

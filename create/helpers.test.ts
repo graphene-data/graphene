@@ -83,6 +83,26 @@ describe('create helpers', () => {
     expect(files['AGENTS.md']).toContain('npx graphene check')
   })
 
+  it('renders a motherduck project with token env vars', () => {
+    let files = renderTemplate({
+      cliVersion: '0.0.15',
+      answers: {
+        targetDir: 'demo-app',
+        projectName: 'demo-app',
+        database: 'motherduck',
+        motherduckDatabase: 'sample_data',
+        motherduckToken: 'secret',
+        agentSetup: 'none',
+      },
+    })
+    let pkg = JSON.parse(files['package.json'])
+
+    expect(pkg.graphene).toEqual({dialect: 'motherduck', motherduck: {database: 'sample_data'}})
+    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
+    expect(files['.env']).toBe('MOTHERDUCK_TOKEN=secret\n')
+    expect(files['index.md']).toContain('configured for MotherDuck')
+  })
+
   it('renders AGENTS.md commands for yarn and bun projects', () => {
     let yarnFiles = renderTemplate({
       cliVersion: '0.0.15',

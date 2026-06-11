@@ -16,7 +16,7 @@ interface CliPackageJson {
   peerDependencies?: Partial<Record<WarehouseClient, string>>
 }
 
-type Database = 'duckdb' | 'snowflake' | 'bigquery' | 'clickhouse' | 'postgres'
+type Database = 'duckdb' | 'motherduck' | 'snowflake' | 'bigquery' | 'clickhouse' | 'postgres'
 type WarehouseClient = '@clickhouse/client' | '@duckdb/node-api' | '@google-cloud/bigquery' | 'pg' | 'snowflake-sdk'
 type AgentSetup = 'codex' | 'claude' | 'other' | 'none'
 type CredentialFailureAction = 'edit' | 'continue'
@@ -32,6 +32,10 @@ interface CreateOptions {
 
 interface DuckDbConfig {
   path: string
+}
+
+interface MotherDuckConfig {
+  database: string
 }
 
 interface SnowflakeConfig {
@@ -60,6 +64,7 @@ interface GrapheneTemplateConfig {
   dialect: Database
   defaultNamespace?: string
   duckdb?: DuckDbConfig
+  motherduck?: MotherDuckConfig
   snowflake?: SnowflakeConfig
   bigquery?: BigQueryConfig
   clickhouse?: ClickHouseConfig
@@ -101,6 +106,8 @@ interface ScaffoldAnswers {
   database: Database
   defaultNamespace?: string
   duckdbPath?: string
+  motherduckDatabase?: string
+  motherduckToken?: string
   snowflakeAccount?: string
   snowflakeUsername?: string
   snowflakeKeyPath?: string
@@ -212,6 +219,8 @@ export function renderTemplate({answers, cliVersion}: {answers: ScaffoldAnswers;
   if (answers.defaultNamespace) graphene.defaultNamespace = answers.defaultNamespace
   if (answers.database === 'duckdb') {
     if (answers.duckdbPath) graphene.duckdb = {path: answers.duckdbPath}
+  } else if (answers.database === 'motherduck') {
+    graphene.motherduck = {database: answers.motherduckDatabase || 'sample_data'}
   } else if (answers.database === 'snowflake') {
     graphene.snowflake = {account: answers.snowflakeAccount || '', username: answers.snowflakeUsername || ''}
   } else if (answers.database === 'bigquery') {
@@ -315,6 +324,7 @@ function renderCodexConfig(): string {
 }
 
 function databaseLabel(database: Database) {
+  if (database === 'motherduck') return 'MotherDuck'
   if (database === 'snowflake') return 'Snowflake'
   if (database === 'bigquery') return 'BigQuery'
   if (database === 'clickhouse') return 'ClickHouse'
@@ -331,6 +341,8 @@ function renderEnvFile(answers: ScaffoldAnswers): string | null {
   if (answers.database === 'snowflake') {
     lines.push(`SNOWFLAKE_PRI_KEY_PATH=${answers.snowflakeKeyPath || ''}`)
     if (answers.snowflakePassphrase) lines.push(`SNOWFLAKE_PRI_PASSPHRASE=${answers.snowflakePassphrase}`)
+  } else if (answers.database === 'motherduck') {
+    lines.push(`MOTHERDUCK_TOKEN=${answers.motherduckToken || ''}`)
   } else if (answers.database === 'bigquery') {
     lines.push(`GOOGLE_APPLICATION_CREDENTIALS=${answers.bigqueryKeyPath || ''}`)
   } else if (answers.database === 'clickhouse') {
@@ -439,6 +451,26 @@ function getWarehouseClientVersion(packageName: WarehouseClient): string {
 }
 
 async function promptWarehouseCredentials(answers: ScaffoldAnswers, input: Readable, output: Writable): Promise<void> {
+  if (answers.database === 'motherduck') {
+    answers.motherduckDatabase = unwrapPrompt(
+      await clack.text({
+        message: 'MotherDuck database',
+        placeholder: 'sample_data',
+        initialValue: answers.motherduckDatabase || 'sample_data',
+        validate: validateRequired('MotherDuck database is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    answers.motherduckToken = unwrapPrompt(
+      await clack.password({
+        message: 'MotherDuck token',
+        validate: validateRequired('MotherDuck token is required'),
+        ...promptOptions(input, output),
+      }),
+    )
+    return
+  }
+
   if (answers.database === 'snowflake') {
     answers.snowflakeAccount = unwrapPrompt(
       await clack.text({
@@ -628,11 +660,24 @@ async function withTimeout<T>(promise: Promise<T>, ms: number, message: string):
 }
 
 function runWarehouseCredentialTest(answers: ScaffoldAnswers): Promise<void> {
+  if (answers.database === 'motherduck') return testMotherDuckCredentials(answers)
   if (answers.database === 'snowflake') return testSnowflakeCredentials(answers)
   if (answers.database === 'bigquery') return testBigQueryCredentials(answers)
   if (answers.database === 'clickhouse') return testClickHouseCredentials(answers)
   if (answers.database === 'postgres') return testPostgresCredentials(answers)
   return Promise.resolve()
+}
+
+async function testMotherDuckCredentials(answers: ScaffoldAnswers): Promise<void> {
+  let {DuckDBInstance} = await import('@duckdb/node-api')
+  let db = await DuckDBInstance.create(`md:${answers.motherduckDatabase || 'sample_data'}`, {motherduck_token: answers.motherduckToken || '', custom_user_agent: 'graphene'})
+  let conn = await db.connect()
+  try {
+    await conn.runAndReadAll('SELECT 1')
+  } finally {
+    conn.closeSync()
+    db.closeSync()
+  }
 }
 
 async function testSnowflakeCredentials(answers: ScaffoldAnswers): Promise<void> {
@@ -737,6 +782,7 @@ async function collectAnswers({options, packageManager, input, output}: {options
       message: 'Database',
       options: [
         {value: 'snowflake', label: 'Snowflake'},
+        {value: 'motherduck', label: 'MotherDuck'},
         {value: 'bigquery', label: 'BigQuery'},
         {value: 'clickhouse', label: 'ClickHouse'},
         {value: 'postgres', label: 'Postgres'},
