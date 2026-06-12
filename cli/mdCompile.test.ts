@@ -123,7 +123,7 @@ where created_at >= coalesce($daterange_start, created_at)
 select '\${literal}' as value
 \`\`\`
 
-<ECharts data="repro">
+<ECharts data="repro" title="A > B">
   title: {text: "{b}"},
   series: [{type: "bar"}],
 </ECharts>
@@ -131,7 +131,7 @@ select '\${literal}' as value
 
     expect(code).toContain('<GrapheneQuery name="{`repro`}" code="{`select')
     expect(code).toContain('\\${literal}')
-    expect(code).toContain('<ECharts data="repro" config={{"title":{"text":"{b}"},"series":[{"type":"bar"}]}}></ECharts>')
+    expect(code).toContain('<ECharts data="repro" title="A &gt; B" config={{"title":{"text":"{b}"},"series":[{"type":"bar"}]}}></ECharts>')
   })
 
   it('rejects authored component expression attributes', async () => {

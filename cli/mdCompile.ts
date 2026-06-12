@@ -8,7 +8,7 @@ import path from 'path'
 import sanitizeHtml from 'sanitize-html'
 import {visit} from 'unist-util-visit'
 
-import {extractPageStyles, GLOBAL_HTML_ATTRS, sanitizeComponentTag, validateSvelteMarkup, validateStaticMarkup} from './sanitization.ts'
+import {extractPageStyles, GLOBAL_HTML_ATTRS, replaceRawTagBlocks, sanitizeComponentTag, validateSvelteMarkup, validateStaticMarkup} from './sanitization.ts'
 
 // Use JS escapes for HTML-sensitive chars so Svelte restores them before query registration.
 function svelteStringAttr(str: string) {
@@ -27,10 +27,11 @@ function svelteStringAttr(str: string) {
 
 // Takes the contents of a <ECharts> tag, and json5 parses it
 export function liftInlineEChartsConfig(content: string) {
-  return content.replace(/<ECharts\b([^>]*)>([\s\S]*?)<\/ECharts>/g, (match: string, attrs = '', body = '') => {
-    let inline = body.trim()
-    if (!inline) return match
-    if (/\sconfig\s*=/.test(attrs)) return match
+  return replaceRawTagBlocks(content, 'ECharts', block => {
+    let attrs = block.openTag.slice('<ECharts'.length, -1)
+    let inline = block.body.trim()
+    if (!inline) return block.raw
+    if (/\sconfig\s*=/.test(attrs)) return block.raw
     let source = inline.startsWith('{') ? inline : `{${inline}}`
     let config = JSON.stringify(JSON5.parse(source), (_key, value) => (typeof value == 'string' ? decodeHTML(value) : value))
     return `<ECharts${attrs} config={${config}}></ECharts>`

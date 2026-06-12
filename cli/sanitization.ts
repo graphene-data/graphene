@@ -7,8 +7,8 @@ const BLOCKED_CSS_EXECUTION = /\bexpression\s*\(|javascript:/i
 const BLOCKED_CSS_PROP = /^(?:behavior|-moz-binding)$/i
 
 export function validateStaticMarkup(content: string) {
-  content = replaceTagBlocks(content, 'style', () => '')
-  content = replaceTagBlocks(content, 'ECharts', block => block.openTag + block.closeTag)
+  content = replaceRawTagBlocks(content, 'style', () => '')
+  content = replaceRawTagBlocks(content, 'ECharts', block => block.openTag + block.closeTag)
   validateSvelteMarkup(content, {allowSanitizableHtmlAttrs: true})
 }
 
@@ -37,7 +37,7 @@ export function sanitizeComponentTag(tagName: string, attribs: Record<string, st
 
 export function extractPageStyles(content: string) {
   let styles: string[] = []
-  let html = replaceTagBlocks(content, 'style', block => {
+  let html = replaceRawTagBlocks(content, 'style', block => {
     let sanitized = sanitizeCss(block.body)
     if (sanitized.trim()) styles.push(sanitized)
     return ''
@@ -175,9 +175,13 @@ function escapeSvelteAttrValue(value: string) {
   return value.replace(/\{/g, '&#123;')
 }
 
-type TagBlock = {openTag: string; body: string; closeTag: string; raw: string; end: number}
+export type RawTagBlock = {openTag: string; body: string; closeTag: string; raw: string; end: number}
 
-function replaceTagBlocks(content: string, tagName: string, replacer: (block: TagBlock) => string) {
+// Graphene has a few raw-body tags whose contents are not Svelte child markup
+// yet: inline ECharts configs and dashboard style blocks. This helper only
+// isolates those known paired tags; sanitize-html and the Svelte parser still
+// own general HTML sanitization and executable syntax validation.
+export function replaceRawTagBlocks(content: string, tagName: string, replacer: (block: RawTagBlock) => string) {
   let out = ''
   let i = 0
 
@@ -199,7 +203,7 @@ function replaceTagBlocks(content: string, tagName: string, replacer: (block: Ta
   return out
 }
 
-function readTagBlockAt(content: string, start: number, tagName: string): TagBlock | null {
+function readTagBlockAt(content: string, start: number, tagName: string): RawTagBlock | null {
   if (findTagOpen(content, tagName, start) != start) return null
 
   let openEnd = findTagEnd(content, start)
