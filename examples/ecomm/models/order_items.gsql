@@ -22,7 +22,7 @@ table order_items (
   fulfillment_time_days: timestamp_diff(shipped_at, created_at, minute) / 1440.0
   delivery_time_days: timestamp_diff(delivered_at, shipped_at, minute) / 1440.0
 
-  units_sold: count(case when is_rev_recognized then 1 else null end)
+  units_sold: count(distinct case when is_rev_recognized then 1 else null end)
   revenue: sum(case when is_rev_recognized then sale_price else 0 end) -- Aka net revenue/sales
   cogs: sum(case when is_rev_recognized then cost else 0 end) -- Cost of goods sold
   gross_profit: revenue - cogs
