@@ -28,7 +28,7 @@ order by 1
 from customers
 select
   region,
-  count(orders.id) as orders,
+  count(distinct orders.id) as orders,
   total_revenue
 group by 1
 order by 3 desc
@@ -41,7 +41,7 @@ from customers
 cross join unnest(tags) as tag
 select
   tag,
-  count(id) as customers
+  count(distinct id) as customers
 group by 1
 order by 2 desc
 ```
