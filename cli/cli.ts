@@ -181,6 +181,7 @@ program
         else if (!tableArg && datasets.length == 1)
           dsToList = datasets[0] // only one dataset, and no args
         else if (!tableArg && config.dialect == 'duckdb') dsToList = '<default>'
+        else if (tableArg && config.motherduck && parts.length == 2) dsToList = tableArg
         else if (tableArg && config.dialect == 'snowflake' && parts.length == 2) {
           let db = findCaseInsensitive(datasets, parts[0]) || parts[0]
           dsToList = `${db}.${parts.slice(1).join('.')}`

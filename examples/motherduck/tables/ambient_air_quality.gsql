@@ -1,0 +1,18 @@
+-- Ambient air quality measurements from MotherDuck's sample_data database.
+table ambient_air_quality (
+  who_region VARCHAR
+  iso3 VARCHAR
+  country_name VARCHAR
+  city VARCHAR
+  year INTEGER
+  pm10_concentration DOUBLE
+  pm25_concentration DOUBLE
+  no2_concentration DOUBLE
+  population BIGINT
+  latitude DOUBLE
+  longitude DOUBLE
+
+  has_pm25: pm25_concentration is not null
+  avg_pm25: avg(pm25_concentration)
+  avg_pm10: avg(pm10_concentration)
+)

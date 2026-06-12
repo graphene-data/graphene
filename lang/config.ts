@@ -60,6 +60,10 @@ export interface Config {
     outputLocation?: string
   }
 
+  motherduck?: {
+    database?: string
+  }
+
   duckdb?: {
     path?: string
   }
@@ -90,6 +94,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd())
   else if (cfg.clickhouse) dialect = 'clickhouse'
   else if (cfg.postgres) dialect = 'postgres'
   else if (cfg.athena) dialect = 'athena'
+  else if (cfg.motherduck) dialect = 'duckdb'
   else if (cfg.duckdb) dialect = 'duckdb'
   let envFile = ['.env']
   if (Array.isArray(cfg.envFile)) envFile = cfg.envFile
