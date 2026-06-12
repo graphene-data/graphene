@@ -55,7 +55,7 @@ describe('create helpers', () => {
     expect(pkg.name).toBe('demo-app')
     expect(pkg.packageManager).toBe('pnpm@10.1.0')
     expect(pkg.dependencies['@graphenedata/cli']).toBe('0.0.15')
-    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
+    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.5.3-r.3')
     expect(pkg.graphene).toEqual({dialect: 'duckdb', duckdb: {path: './data.duckdb'}})
     expect(files['AGENTS.md']).toContain('pnpm graphene check')
     expect(files['AGENTS.md']).toContain('pnpm graphene run index.md')
@@ -79,7 +79,7 @@ describe('create helpers', () => {
     let pkg = JSON.parse(files['package.json'])
 
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
-    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
+    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.5.3-r.3')
     expect(files['AGENTS.md']).toContain('npx graphene check')
   })
 
@@ -98,7 +98,7 @@ describe('create helpers', () => {
     let pkg = JSON.parse(files['package.json'])
 
     expect(pkg.graphene).toEqual({dialect: 'motherduck', motherduck: {database: 'sample_data'}})
-    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.3.2-alpha.26')
+    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.5.3-r.3')
     expect(files['.env']).toBe('MOTHERDUCK_TOKEN=secret\n')
     expect(files['index.md']).toContain('configured for MotherDuck')
   })
