@@ -440,7 +440,7 @@ describe('lang', () => {
 
   it('expands measures', async () => {
     expect('from users select name, total_orders').toRenderSql(
-      'select users.name as name, (count(distinct orders.id)) as total_orders from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
+      'select users.name as name, (count(orders.id)) as total_orders from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
     )
 
     await expect('from users select name, total_orders').toReturnRows(['Alice', 2], ['Bob', 1])
@@ -724,19 +724,23 @@ describe('lang', () => {
     expect('from users select distinct name, email').toRenderSql('select users.name as name, users.email as email from users as users group by 1,2 order by 1 asc nulls last')
   })
 
-  it('coun(distinct)', () => {
+  it('supports count(distinct)', () => {
     expect('from users select count(distinct name)').toRenderSql('select count(distinct users.name) as count from users as users')
+  })
+
+  it('supports count without implicit distinct', () => {
+    expect('from users select count(name)').toRenderSql('select count(users.name) as count from users as users')
   })
 
   it('adds groupBy to select if needed', () => {
     expect('from users select count(orders.id) as total group by name').toRenderSql(
-      'select users.name as name, count(distinct orders.id) as total from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
+      'select users.name as name, count(orders.id) as total from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
     )
   })
 
   it('doesnt duplicate groupBys', () => {
     expect('from users select name, count(orders.id) group by name').toRenderSql(
-      'select users.name as name, count(distinct orders.id) as count from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
+      'select users.name as name, count(orders.id) as count from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
     )
   })
 
@@ -1100,7 +1104,7 @@ describe('lang', () => {
   })
 
   it('can correctly count through a join', () => {
-    expect('from orders select count(users.id)').toRenderSql('select count(distinct users.id) as count from orders as orders left join users as users on users.id=orders.user_id')
+    expect('from orders select count(users.id)').toRenderSql('select count(users.id) as count from orders as orders left join users as users on users.id=orders.user_id')
   })
 
   it('handles min/max through a join', () => {
@@ -2237,8 +2241,12 @@ describe('lang', () => {
     `).toHaveNoErrors()
   })
 
-  it('treats count(id) as distinct-safe when it mixes with a fanout grain', () => {
-    expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveNoErrors()
+  it('reports fanout when count(id) mixes with a fanout grain', () => {
+    expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate expression `count\(id\)` is fanned out by join to table `order_items`/i)
+  })
+
+  it('treats count(distinct id) as distinct-safe when it mixes with a fanout grain', () => {
+    expect('from users select name, count(distinct id), sum(orders.order_items.quantity)').toHaveNoErrors()
   })
 
   it('reports fanout when count(*) mixes with a fanout grain', () => {
