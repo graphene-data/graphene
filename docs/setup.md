@@ -167,6 +167,30 @@ To set up Graphene on a BigQuery connection you will need the following:
 6. Finally, download the key file by clicking the **three-dot menu (⋮)** in the Cloud Shell header and then clicking **Download.** You will need to unzip the archive. Move the `.json` file into a dedicated location and make note of the absolute path.
 </details>
 
+<details>
+<summary><h2>MotherDuck</h2></summary>
+
+To set up Graphene on a MotherDuck connection you will need an access token.
+
+### Step-by-step instructions
+
+1. Go to [app.motherduck.com](https://app.motherduck.com/)
+
+2. Navigate to Settings > Integrations > Access Tokens
+
+3. Create a token with type "Read Scaling Token".
+
+4. Store it in your Graphene project `.env` file (or use `npm create graphene` to initialize the project, and it will create the `.env` file for you):
+
+    ```env
+    MOTHERDUCK_TOKEN=<your-token>
+    ```
+
+MotherDuck uses DuckDB SQL syntax, so GSQL functions and expressions should follow the same rules as local DuckDB projects.
+
+</details>
+
+
 # Set up your Graphene project
 
 1. In the terminal, navigate to where you want the Graphene project to live. It can be a standalone project or a folder within an existing repo.
