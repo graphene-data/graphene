@@ -59,7 +59,7 @@ export class DuckDBConnection implements QueryConnection {
       for (let [k, v] of Object.entries(record)) {
         if (typeof v === 'bigint') out[k] = Number(v)
         else if (v === null) out[k] = null
-        else if (v instanceof DuckDBTimestampValue) out[k] = new Date(Number(v.micros / 1000n)).toUTCString()
+        else if (v instanceof DuckDBTimestampValue) out[k] = new Date(Number(v.micros / 1000n)).toISOString()
         else if (v instanceof DuckDBDateValue) out[k] = v.toString()
         else if (v instanceof DuckDBDecimalValue) out[k] = v.toDouble()
         else if (typeof v === 'object') throw new Error(`Unsupported datatype ${v.constructor?.name}`)
