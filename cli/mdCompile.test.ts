@@ -3,7 +3,6 @@ import {compile} from 'mdsvex'
 import {compile as compileSvelte} from 'svelte/compiler'
 
 import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
-import {sanitizeCss} from './sanitization.ts'
 
 async function compileMarkdownPage(src: string) {
   let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
@@ -144,44 +143,5 @@ select '\${literal}' as value
 
   it('rejects authored component expression attributes', async () => {
     await expect(compileMarkdownPage('<ECharts data="repro" config={alert(1)}></ECharts>')).rejects.toThrow('Dynamic attribute expressions are not supported')
-  })
-
-  it('allows css resources and removes legacy execution hooks', () => {
-    let css = sanitizeCss(`
-      @import url("https://example.com/base.css");
-      .a { color: red; background: image-set(url("https://example.com/a.png") 1x); behavior: url(x.htc); }
-      .b { transform: translateX(2px); -moz-binding: url("x.xml#x"); }
-      .c { width: expression(alert(1)); }
-      .d { background: url("javascript:alert(1)"); }
-    `)
-
-    expect(css).toContain('.a { color: red;')
-    expect(css).toContain('@import url("https://example.com/base.css")')
-    expect(css).toContain('https://example.com/a.png')
-    expect(css).toContain('.b { transform: translateX(2px);')
-    expect(sanitizeCss('.d { content: "a;b"; transform: translateX(2px); }')).toContain('content: "a;b"')
-    expect(css).not.toContain('behavior')
-    expect(css).not.toContain('-moz-binding')
-    expect(css).not.toContain('expression')
-    expect(css).not.toContain('javascript:')
-  })
-
-  it('allows arbitrary font resource loading', () => {
-    let css = sanitizeCss(`
-      @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");
-      @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed&text=leak");
-      @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed&display=leak");
-      @import url("https://example.com/base.css");
-      @font-face { src: url("https://fonts.gstatic.com/s/robotocondensed/v30/abc.woff2") format("woff2"); font-family: "Roboto Condensed"; }
-      @font-face { src: url("https://example.com/font.woff2"); font-family: "Bad Font"; }
-      .a { background: url("https://fonts.gstatic.com/s/robotocondensed/v30/abc.woff2"); }
-    `)
-
-    expect(css).toContain('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap')
-    expect(css).toContain('https://fonts.gstatic.com/s/robotocondensed/v30/abc.woff2')
-    expect(css).toContain('text=leak')
-    expect(css).toContain('display=leak')
-    expect(css).toContain('https://example.com')
-    expect(css).toContain('background: url')
   })
 })

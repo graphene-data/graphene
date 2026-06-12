@@ -1,3 +1,5 @@
+import safeParse from 'postcss-safe-parser'
+
 export const GLOBAL_HTML_ATTRS = ['class', 'id', 'role', 'aria-*', 'data-*']
 
 const BLOCKED_CSS_EXECUTION = /\bexpression\s*\(|javascript:/i
@@ -39,8 +41,15 @@ export function extractPageStyles(content: string) {
 }
 
 export function sanitizeCss(css: string) {
-  css = sanitizeCssAtRules(css.replace(/\/\*[\s\S]*?\*\//g, '')).replace(/[<>]/g, '')
-  return sanitizeCssDeclarations(css).replace(/;\s*;/g, ';')
+  let root = safeParse(css.replace(/[<>]/g, ''))
+  root.walkComments(comment => comment.remove())
+  root.walkAtRules(rule => {
+    if (BLOCKED_CSS_EXECUTION.test(rule.params)) rule.remove()
+  })
+  root.walkDecls(decl => {
+    if (BLOCKED_CSS_PROP.test(decl.prop) || BLOCKED_CSS_EXECUTION.test(decl.value)) decl.remove()
+  })
+  return root.toString().replace(/;\s*;/g, ';')
 }
 
 export function escapeSvelteTextExpressions(content: string) {
@@ -128,121 +137,6 @@ function hasUnescapedInterpolation(value: string) {
 
 function escapeSvelteAttrValue(value: string) {
   return value.replace(/\{/g, '&#123;')
-}
-
-function sanitizeCssAtRules(css: string) {
-  let out = ''
-  let i = 0
-  let atRule = /@(import|namespace)\b/gi
-
-  while (true) {
-    atRule.lastIndex = i
-    let match = atRule.exec(css)
-    if (!match) return out + css.slice(i)
-
-    out += css.slice(i, match.index)
-    let end = findCssAtRuleEnd(css, match.index)
-    let rule = css.slice(match.index, end)
-    if (!BLOCKED_CSS_EXECUTION.test(rule)) out += rule
-    i = end
-  }
-}
-
-function findCssAtRuleEnd(css: string, from: number) {
-  let quote = ''
-  let depth = 0
-
-  for (let i = from; i < css.length; i++) {
-    let ch = css[i]
-    if (quote) {
-      if (ch == '\\') i++
-      else if (ch == quote) quote = ''
-      continue
-    }
-
-    if (ch == '"' || ch == "'") quote = ch
-    else if (ch == '(') depth++
-    else if (ch == ')' && depth > 0) depth--
-    else if (depth == 0 && ch == ';') return i + 1
-  }
-
-  return css.length
-}
-
-function sanitizeCssDeclarations(css: string) {
-  let out = ''
-  let i = 0
-
-  while (i < css.length) {
-    let prefixIndex = findNextCssDeclarationPrefix(css, i)
-    if (prefixIndex == -1) return out + css.slice(i)
-
-    out += css.slice(i, prefixIndex)
-    let prefix = css[prefixIndex]
-    let propStart = prefixIndex + 1
-    while (/\s/.test(css[propStart] || '')) propStart++
-
-    let propEnd = propStart
-    while (/[-\w]/.test(css[propEnd] || '')) propEnd++
-    if (propEnd == propStart) {
-      out += prefix
-      i = prefixIndex + 1
-      continue
-    }
-
-    let colon = propEnd
-    while (/\s/.test(css[colon] || '')) colon++
-    if (css[colon] != ':') {
-      out += prefix
-      i = prefixIndex + 1
-      continue
-    }
-
-    let valueStart = colon + 1
-    let valueEnd = findCssValueEnd(css, valueStart)
-    let prop = css.slice(propStart, propEnd)
-    let value = css.slice(valueStart, valueEnd)
-    out += isBlockedCssDeclaration(prop, value) ? prefix : css.slice(prefixIndex, valueEnd)
-    i = valueEnd
-  }
-
-  return out
-}
-
-function isBlockedCssDeclaration(prop: string, value: string) {
-  if (BLOCKED_CSS_PROP.test(prop)) return true
-  return BLOCKED_CSS_EXECUTION.test(value)
-}
-
-function findNextCssDeclarationPrefix(css: string, from: number) {
-  for (let i = from; i < css.length; i++) {
-    if (css[i] == '{' || css[i] == ';') return i
-  }
-  return -1
-}
-
-function findCssValueEnd(css: string, from: number) {
-  let quote = ''
-  let depth = 0
-
-  for (let i = from; i < css.length; i++) {
-    let ch = css[i]
-    if (quote) {
-      if (ch == '\\') i++
-      else if (ch == quote) quote = ''
-      continue
-    }
-
-    if (ch == '"' || ch == "'") {
-      quote = ch
-      continue
-    }
-    if (ch == '(') depth++
-    else if (ch == ')' && depth > 0) depth--
-    else if (depth == 0 && (ch == ';' || ch == '}')) return i
-  }
-
-  return css.length
 }
 
 type TagBlock = {openTag: string; body: string; closeTag: string; raw: string; end: number}
