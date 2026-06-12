@@ -107,15 +107,8 @@ where created_at >= coalesce($daterange_start, created_at)
     expect(code).toContain('example.com/leak')
   })
 
-  it('renders plain braces as text', async () => {
-    let code = await compileMarkdownPage(`
-Hello {window.mdExpr = true}
-`)
-
-    expect(code).toContain('&#123;window.mdExpr = true}')
-  })
-
   it('rejects executable framework syntax and component directives', async () => {
+    await expect(compileMarkdownPage('Hello {window.mdExpr = true}')).rejects.toThrow('Dynamic markup expressions are not supported')
     await expect(compileMarkdownPage('{@html "<img src=x onerror=alert(1)>"}')).rejects.toThrow('Dynamic markup expressions are not supported')
     await expect(compileMarkdownPage('{#if true}oops{/if}')).rejects.toThrow('Dynamic markup expressions are not supported')
     await expect(compileMarkdownPage('<div on:click={window.mdDiv = true}>Click</div>')).rejects.toThrow('Framework directives are not supported')

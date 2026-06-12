@@ -1,11 +1,12 @@
 /// <reference types="vitest/globals" />
 
-import {escapeSvelteTextExpressions, extractPageStyles, sanitizeComponentTag, sanitizeCss, validatePreprocessedMarkup, validateStaticMarkup} from './sanitization.ts'
+import {extractPageStyles, sanitizeComponentTag, sanitizeCss, validateStaticMarkup, validateSvelteMarkup} from './sanitization.ts'
 
 describe('markup sanitization policy', () => {
   it('rejects executable framework syntax in authored markup', () => {
     expect(() => validateStaticMarkup('{@html "<img src=x onerror=alert(1)>"}')).toThrow('Dynamic markup expressions are not supported')
     expect(() => validateStaticMarkup('{#if true}oops{/if}')).toThrow('Dynamic markup expressions are not supported')
+    expect(() => validateStaticMarkup('<p>{window.clicked = true}</p>')).toThrow('Dynamic markup expressions are not supported')
     expect(() => validateStaticMarkup('<div on:click={window.clicked = true}>Click</div>')).toThrow('Framework directives are not supported')
     expect(() => validateStaticMarkup('<BarChart data="x" {...window.props} />')).toThrow('Attribute spreads are not supported')
     expect(() => validateStaticMarkup('<BarChart data={window.data} />')).toThrow('Dynamic attribute expressions are not supported')
@@ -14,7 +15,22 @@ describe('markup sanitization policy', () => {
   it('ignores style and ECharts bodies while validating authored markup', () => {
     expect(() => validateStaticMarkup('<style>.a { color: red; }</style><div>ok</div>')).not.toThrow()
     expect(() => validateStaticMarkup('<ECharts data="x">title: {text: "{b}"}</ECharts>')).not.toThrow()
-    expect(() => validatePreprocessedMarkup('<script>let x = {a: 1}</script><div>ok</div>')).not.toThrow()
+  })
+
+  it('uses the Svelte parser to reject executable syntax in final markup', () => {
+    let safe = `
+      <svelte:head><style>.a { color: red; }</style></svelte:head>
+      <GrapheneQuery name={\`x\`} code={\`select 1\`} />
+      <ECharts config={{"series":[]}}></ECharts>
+      <div class="a">ok</div>
+    `
+
+    expect(() => validateSvelteMarkup(safe)).not.toThrow()
+    expect(() => validateSvelteMarkup('<p>{window.x = true}</p>')).toThrow('Dynamic markup expressions are not supported')
+    expect(() => validateSvelteMarkup('<div on:click={window.x = true}>Click</div>')).toThrow('Framework directives are not supported')
+    expect(() => validateSvelteMarkup('<BarChart data={window.data} />')).toThrow('Dynamic attribute expressions are not supported')
+    expect(() => validateSvelteMarkup('<BarChart {...window.props} />')).toThrow('Attribute spreads are not supported')
+    expect(() => validateSvelteMarkup('<svelte:component this={window.Component} />')).toThrow('Special Svelte elements are not supported')
   })
 
   it('filters component attributes before Svelte sees them', () => {
@@ -39,12 +55,6 @@ describe('markup sanitization policy', () => {
       name: '{`query_name`}',
       code: '{`select \\${literal} as value`}',
     })
-  })
-
-  it('escapes plain braces in text while preserving generated script blocks', () => {
-    let content = escapeSvelteTextExpressions('<script>let x = {a: 1}</script><p>{window.x = true}</p>')
-    expect(content).toContain('<script>let x = {a: 1}</script>')
-    expect(content).toContain('<p>&#123;window.x = true}</p>')
   })
 
   it('extracts page style blocks and removes them from body html', () => {

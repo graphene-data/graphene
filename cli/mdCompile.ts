@@ -8,7 +8,7 @@ import path from 'path'
 import sanitizeHtml from 'sanitize-html'
 import {visit} from 'unist-util-visit'
 
-import {escapeSvelteTextExpressions, extractPageStyles, GLOBAL_HTML_ATTRS, sanitizeComponentTag, validatePreprocessedMarkup, validateStaticMarkup} from './sanitization.ts'
+import {extractPageStyles, GLOBAL_HTML_ATTRS, sanitizeComponentTag, validateSvelteMarkup, validateStaticMarkup} from './sanitization.ts'
 
 // Use JS escapes for HTML-sensitive chars so Svelte restores them before query registration.
 function svelteStringAttr(str: string) {
@@ -130,15 +130,15 @@ export function injectComponentImports() {
     markup: ({content, filename}: {content: string; filename: string}) => {
       if (!filename.endsWith('.md')) return // only auto-import components for md files
       content = liftInlineEChartsConfig(content)
-      validatePreprocessedMarkup(content)
       let pageStyles = extractPageStyles(content)
-      content = escapeSvelteTextExpressions(pageStyles.html)
+      content = pageStyles.html
       if (pageStyles.css.trim()) content = `<svelte:head><style>${pageStyles.css}</style></svelte:head>\n${content}`
       if (content.includes('<script>')) {
         content = content.replace('<script>', `<script>\n${imp}`)
       } else {
         content = `<script>\n${imp}\n</script>\n${content}`
       }
+      validateSvelteMarkup(content)
       return {code: content}
     },
     style: () => {},

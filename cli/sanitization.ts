@@ -1,24 +1,29 @@
 import safeParse from 'postcss-safe-parser'
+import {parse as parseSvelte} from 'svelte/compiler'
 
 export const GLOBAL_HTML_ATTRS = ['class', 'id', 'role', 'aria-*', 'data-*']
 
 const BLOCKED_CSS_EXECUTION = /\bexpression\s*\(|javascript:/i
 const BLOCKED_CSS_PROP = /^(?:behavior|-moz-binding)$/i
-const DIRECTIVE_ATTR = /\s(?:on|bind|use|transition|in|out|animate|class|style):[A-Za-z_-]/
-const SPREAD_ATTR = /\s\{\s*\.\.\./
-const EXPRESSION_ATTR = /\s[A-Za-z_][A-Za-z0-9_.:-]*\s*=\s*\{/
 
 export function validateStaticMarkup(content: string) {
   content = replaceTagBlocks(content, 'style', () => '')
   content = replaceTagBlocks(content, 'ECharts', block => block.openTag + block.closeTag)
-  if (hasTemplateBlockOutsideTags(content)) throw new Error('Dynamic markup expressions are not supported in Graphene markdown.')
-  if (DIRECTIVE_ATTR.test(content)) throw new Error('Framework directives are not supported in Graphene markdown.')
-  if (SPREAD_ATTR.test(content)) throw new Error('Attribute spreads are not supported in Graphene markdown.')
-  if (EXPRESSION_ATTR.test(content)) throw new Error('Dynamic attribute expressions are not supported in Graphene markdown.')
+  validateSvelteMarkup(content, {allowSanitizableHtmlAttrs: true})
 }
 
-export function validatePreprocessedMarkup(content: string) {
-  if (hasTemplateBlockOutsideTags(replaceTagBlocks(content, 'script', () => ''))) throw new Error('Dynamic markup expressions are not supported in Graphene markdown.')
+// Validates the final Svelte source after markdown/HTML/CSS preprocessing. The
+// HTML sanitizer decides which tags survive; this parser pass rejects Svelte
+// syntax that would execute JavaScript if it reached the compiler.
+export function validateSvelteMarkup(content: string, opts: SvelteValidationOptions = {}) {
+  let ast
+  try {
+    ast = parseSvelte(content, {modern: true})
+  } catch (err) {
+    if (isSvelteDynamicMarkupParseError(err)) throw new Error('Dynamic markup expressions are not supported in Graphene markdown.', {cause: err})
+    throw err
+  }
+  validateSvelteFragment(ast.fragment, opts)
 }
 
 export function sanitizeComponentTag(tagName: string, attribs: Record<string, string>) {
@@ -52,66 +57,97 @@ export function sanitizeCss(css: string) {
   return root.toString().replace(/;\s*;/g, ';')
 }
 
-export function escapeSvelteTextExpressions(content: string) {
-  let out: string[] = []
-  let quote = ''
-  let inTag = false
+type SvelteValidationOptions = {allowSanitizableHtmlAttrs?: boolean}
 
-  for (let i = 0; i < content.length; i++) {
-    let scriptBlock = !inTag ? readTagBlockAt(content, i, 'script') : null
-    if (scriptBlock) {
-      out.push(scriptBlock.raw)
-      i = scriptBlock.end - 1
-      continue
-    }
-
-    let ch = content[i]
-    if (inTag) {
-      out.push(ch)
-      if (quote && ch == quote) quote = ''
-      else if (!quote && (ch == '"' || ch == "'")) quote = ch
-      else if (!quote && ch == '>') inTag = false
-      continue
-    }
-
-    if (ch == '{' && /[@#:/]/.test(content[i + 1] || '')) {
-      let end = content.indexOf('}', i + 2)
-      if (end != -1) throw new Error('Dynamic markup expressions are not supported in Graphene markdown.')
-    }
-
-    if (ch == '<' && /^[A-Za-z!/]/.test(content[i + 1] || '')) {
-      inTag = true
-      out.push(ch)
-      continue
-    }
-
-    out.push(ch == '{' ? '&#123;' : ch)
-  }
-
-  return out.join('')
+function isSvelteDynamicMarkupParseError(err: unknown) {
+  return typeof err == 'object' && err != null && 'code' in err && typeof err.code == 'string' && err.code.startsWith('block_')
 }
 
-function hasTemplateBlockOutsideTags(content: string) {
-  let quote = ''
-  let inTag = false
+function validateSvelteFragment(fragment: any, opts: SvelteValidationOptions) {
+  for (let node of fragment.nodes || []) validateSvelteNode(node, opts)
+}
 
-  for (let i = 0; i < content.length; i++) {
-    let ch = content[i]
-    if (inTag) {
-      if (quote && ch == quote) quote = ''
-      else if (!quote && (ch == '"' || ch == "'")) quote = ch
-      else if (!quote && ch == '>') inTag = false
-      continue
-    }
+function validateSvelteNode(node: any, opts: SvelteValidationOptions) {
+  if (node.type == 'Text' || node.type == 'Comment') return
 
-    if (ch == '<' && /^[A-Za-z!/]/.test(content[i + 1] || '')) {
-      inTag = true
-      continue
-    }
-    if (ch == '{' && /[@#:/]/.test(content[i + 1] || '')) return true
+  if (node.type == 'RegularElement' || node.type == 'Component') {
+    validateSvelteElement(node, opts)
+    return
   }
 
+  if (node.type == 'SvelteHead') {
+    validateSvelteHead(node, opts)
+    return
+  }
+
+  if (node.type == 'SpreadAttribute') throw new Error('Attribute spreads are not supported in Graphene markdown.')
+  if (node.type == 'ExpressionTag' || node.type == 'HtmlTag') throw new Error('Dynamic markup expressions are not supported in Graphene markdown.')
+  if (node.type?.endsWith('Block') || node.type?.endsWith('Tag')) throw new Error('Dynamic markup expressions are not supported in Graphene markdown.')
+  if (node.type?.endsWith('Directive')) throw new Error('Framework directives are not supported in Graphene markdown.')
+  if (node.type?.startsWith('Svelte') || node.type?.endsWith('Element')) throw new Error('Special Svelte elements are not supported in Graphene markdown.')
+
+  throw new Error(`Unsupported Svelte syntax in Graphene markdown: ${node.type}`)
+}
+
+function validateSvelteHead(node: any, opts: SvelteValidationOptions) {
+  validateSvelteAttributes(node, opts)
+
+  for (let child of node.fragment.nodes || []) {
+    if (child.type != 'RegularElement' || child.name != 'style') throw new Error('Special Svelte elements are not supported in Graphene markdown.')
+    validateSvelteAttributes(child, opts)
+    validateSvelteFragment(child.fragment, opts)
+  }
+}
+
+function validateSvelteElement(node: any, opts: SvelteValidationOptions) {
+  if (node.name?.toLowerCase() == 'script') throw new Error('Script tags are not supported in Graphene markdown.')
+  validateSvelteAttributes(node, opts)
+  validateSvelteFragment(node.fragment, opts)
+}
+
+function validateSvelteAttributes(node: any, opts: SvelteValidationOptions) {
+  for (let attr of node.attributes || []) {
+    if (attr.type == 'SpreadAttribute') throw new Error('Attribute spreads are not supported in Graphene markdown.')
+    if (attr.type != 'Attribute') throw new Error('Framework directives are not supported in Graphene markdown.')
+    if (!opts.allowSanitizableHtmlAttrs && (/^on/i.test(attr.name) || attr.name == 'style')) throw new Error('Unsafe HTML attributes are not supported in Graphene markdown.')
+    if (attr.name.includes(':')) throw new Error('Framework directives are not supported in Graphene markdown.')
+    validateSvelteAttributeValue(node, attr)
+  }
+}
+
+function validateSvelteAttributeValue(node: any, attr: any) {
+  let values: any[] = []
+  if (Array.isArray(attr.value)) values = attr.value
+  else if (attr.value) values = [attr.value]
+
+  for (let value of values) {
+    if (value.type == 'Text') continue
+    if (value.type == 'ExpressionTag' && isAllowedGeneratedExpressionAttr(node, attr, value.expression)) continue
+    throw new Error('Dynamic attribute expressions are not supported in Graphene markdown.')
+  }
+}
+
+function isAllowedGeneratedExpressionAttr(node: any, attr: any, expression: any) {
+  if (node.type != 'Component') return false
+  if (node.name == 'GrapheneQuery' && (attr.name == 'name' || attr.name == 'code')) return isStaticTemplateLiteral(expression)
+  if (node.name == 'ECharts' && attr.name == 'config') return isJsonLiteralExpression(expression)
   return false
+}
+
+function isStaticTemplateLiteral(expression: any) {
+  return expression.type == 'TemplateLiteral' && expression.expressions.length == 0
+}
+
+function isJsonLiteralExpression(expression: any): boolean {
+  if (expression.type == 'Literal') return true
+  if (expression.type == 'UnaryExpression') return expression.operator == '-' && expression.argument.type == 'Literal'
+  if (expression.type == 'ArrayExpression') return expression.elements.every((elem: any) => elem && isJsonLiteralExpression(elem))
+  if (expression.type != 'ObjectExpression') return false
+
+  return expression.properties.every((prop: any) => {
+    if (prop.type != 'Property' || prop.method || prop.computed || prop.kind != 'init') return false
+    return isJsonLiteralExpression(prop.value)
+  })
 }
 
 function isSafeComponentAttr(name: string) {

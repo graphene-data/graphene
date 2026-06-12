@@ -477,7 +477,6 @@ test('sanitizes unsafe html', async ({server, page}) => {
     `
     # Sanitized
     <script>window.__MD_SCRIPT__ = true</script>
-    <div id="expr">{window.__MD_EXPR__ = true}</div>
     <button id="danger" onclick="window.__MD_CLICK__ = true">Danger</button>
     <iframe id="embed" src="javascript:alert('boom')"></iframe>
   `,
@@ -489,9 +488,7 @@ test('sanitizes unsafe html', async ({server, page}) => {
   await expect(page.locator('iframe')).toHaveCount(0)
 
   let scriptRan = await page.evaluate(() => (window as any).__MD_SCRIPT__)
-  let exprRan = await page.evaluate(() => (window as any).__MD_EXPR__)
   expect(scriptRan).toBeUndefined()
-  expect(exprRan).toBeUndefined()
 })
 
 test('allows trusted visual html and style blocks with remote css resources', async ({server, page}) => {
