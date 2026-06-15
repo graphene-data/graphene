@@ -61,6 +61,8 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 Graphene pages extend Markdown with the following:
 - GSQL queries in code fences
 - Visualization and input components
+- Safe layout HTML such as `<div>`, `<span>`, semantic sections, lists, and tables
+- `<style>` blocks for page-level visual customization
 
 ````md
 ---
@@ -79,6 +81,16 @@ where status <> 'cancelled'
 ````
 
 Queries can be referenced by other queries in the `from` or `join` to form DAGs of data logic within the page.
+
+## HTML and CSS
+Pages can use safe HTML markup for custom layout and styling. Common layout and text tags are supported, along with `class`, `id`, `role`, `aria-*`, and `data-*` attributes. Use `<style>` blocks to customize page visuals or target Graphene components.
+
+Graphene treats page CSS as visual customization, not executable code. CSS can use external visual resources, including `@import`, font files, and image URLs. Inline `style=""` attributes are not supported; use classes and `<style>` blocks instead.
+
+Unsupported:
+- Javascript of any kind, including `<script>`, event handlers, framework directives, dynamic markup expressions, and raw HTML injection
+- Automatic embedded/resource tags such as `<iframe>`, `<object>`, `<embed>`, `<link>`, `<meta>`, `<img>`, `<video>`, `<audio>`, `<svg>`, and `<math>`
+- Form controls such as `<form>`, `<input>`, `<button>`, `<textarea>`, and `<select>`
 
 ## Page frontmatter
 You can add YAML frontmatter at the top of a page. The following attributes are supported:

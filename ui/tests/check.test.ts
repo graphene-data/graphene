@@ -103,7 +103,7 @@ test('check reports invalid metadata annotations', async () => {
   expect(outputLines()).toContain('ERROR: tmp_bad_metadata.gsql line 2: Metadata "#ratio" is a flag; use "#ratio" or "#ratio=true".')
 })
 
-test('cli run with md file reports dynamic unsupported chart wrapper props', async ({server, page}) => {
+test('cli run with md file reports unsupported chart wrapper props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -111,7 +111,7 @@ test('cli run with md file reports dynamic unsupported chart wrapper props', asy
     \`\`\`sql chart_data
     from flights select carrier, distance limit 25
     \`\`\`
-    <BarChart data="chart_data" x="carrier" y="distance" {...{yFmt: 'num0'}} />
+    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" />
   `,
   )
 
@@ -120,15 +120,14 @@ test('cli run with md file reports dynamic unsupported chart wrapper props', asy
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
-    Page available at http://localhost:<port>/
-    Runtime errors in index.md:
-    BarChart (data="chart_data" x="carrier" y="distance"): Unsupported prop "yFmt" on BarChart.
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+    ERROR: index.md line 6: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
+    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" />
+                                                         ^^^^
   `),
   )
 })
 
-test('cli run with md file reports dynamic unsupported ECharts top-level props', async ({server, page}) => {
+test('cli run with md file reports unsupported ECharts top-level props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -137,7 +136,7 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props',
     from flights select carrier, distance limit 25
     \`\`\`
 
-    <ECharts data="chart_data" {...{chartAreaHeight: 240}}>
+    <ECharts data="chart_data" chartAreaHeight="240">
       xAxis: {},
       yAxis: {},
       series: [{type: "bar", encode: {x: "carrier", y: "distance"}}],
@@ -158,7 +157,7 @@ test('cli run with md file reports dynamic unsupported ECharts top-level props',
   )
 })
 
-test('cli run with md file reports multiple dynamic unsupported chart props', async ({server, page}) => {
+test('cli run with md file reports multiple unsupported chart props', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -166,7 +165,7 @@ test('cli run with md file reports multiple dynamic unsupported chart props', as
     \`\`\`sql chart_data
     from flights select carrier, distance limit 25
     \`\`\`
-    <BarChart data="chart_data" x="carrier" y="distance" {...{yFmt: 'num0', emptySet: 'warn'}} />
+    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" emptySet="warn" />
   `,
   )
 
@@ -175,10 +174,13 @@ test('cli run with md file reports multiple dynamic unsupported chart props', as
   expect(result).toBe(false)
   expect(outputLines()).toEqual(
     trimIndentation(`
-    Page available at http://localhost:<port>/
-    Runtime errors in index.md:
-    BarChart (data="chart_data" x="carrier" y="distance"): Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+    ERROR: index.md line 6: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
+    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" emptySet="warn" />
+                                                         ^^^^
+
+    ERROR: index.md line 6: Unsupported prop "emptySet" on BarChart. emptySet is not supported on chart wrappers.
+    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" emptySet="warn" />
+                                                                     ^^^^^^^^
   `),
   )
 })
@@ -193,7 +195,7 @@ test('cli run with md file reports runtime chart prop and render errors together
     from flights select dep_delay as x_value, dep_delay as bad_category limit 25
     \`\`\`
 
-    <ECharts data="chart_data" {...{chartAreaHeight: 240}}>
+    <ECharts data="chart_data" chartAreaHeight="240">
       xAxis: {},
       yAxis: {type: "category"},
       series: [{type: "bar", encode: {x: "x_value", y: "bad_category"}}],
@@ -361,9 +363,7 @@ test('cli run with md file reports html compilation errors', async ({server, pag
   expect(result).toBe(false)
   let output = outputLines()
   expect(output).toContain('Runtime errors in index.md:')
-  expect(output).toMatch(/ERROR: .*index\.md line 7: Unexpected block closing tag/)
-  expect(output).toContain('<p>oops{/if}</p>')
-  expect(output).toContain('^')
+  expect(output).toMatch(/ERROR: .*index\.md line \d+: Error while preprocessing .* Dynamic markup expressions are not supported/)
 })
 
 test('cli run with --chart captures a single chart screenshot', async ({server, page}) => {
