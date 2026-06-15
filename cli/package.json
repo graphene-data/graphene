@@ -1,6 +1,6 @@
 {
   "name": "@graphenedata/cli",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "private": true,
   "license": "Elastic-2.0",
   "author": "Graphene Systems Inc",
@@ -47,6 +47,8 @@
     "json5": "^2.2.3",
     "mdsvex": "^0.12.6",
     "playwright-core": "1.58.2",
+    "postcss": "8.5.10",
+    "postcss-safe-parser": "7.0.1",
     "sanitize-html": "^2.17.4",
     "svelte": "5.55.7",
     "unified": "^11.0.5",

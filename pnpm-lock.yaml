@@ -110,6 +110,12 @@ importers:
       playwright-core:
         specifier: 1.58.2
         version: 1.58.2
+      postcss:
+        specifier: 8.5.10
+        version: 8.5.10
+      postcss-safe-parser:
+        specifier: 7.0.1
+        version: 7.0.1(postcss@8.5.10)
       sanitize-html:
         specifier: ^2.17.4
         version: 2.17.4
