@@ -24,7 +24,7 @@
     headerColor?: string, headerFontColor?: string, formatColumnTitles?: boolean | string
     backgroundColor?: string, compact?: boolean | string, link?: string, showLinkCol?: boolean | string
     totalRow?: boolean | string, totalRowColor?: string, totalFontColor?: string, emptyMessage?: string
-    isFullPage?: boolean | string, children?: Snippet
+    isFullPage?: boolean | string, componentId?: string, children?: Snippet
   }
 
   const {resolveColor} = getThemeStores()
@@ -37,7 +37,7 @@
     wrapTitles = false, headerColor = undefined, headerFontColor = undefined, formatColumnTitles = true,
     backgroundColor = undefined, compact = undefined, link = undefined, showLinkCol = false,
     totalRow = false, totalRowColor = undefined, totalFontColor = undefined, emptyMessage = undefined,
-    isFullPage = undefined, children,
+    isFullPage = undefined, componentId = undefined, children,
   }: Props = $props()
 
   let rowsNum = $derived.by(() => {
@@ -204,6 +204,15 @@
   let dataTestId = $derived(processedState.dataTestId)
 
   let error = $derived(processedState.error)
+
+  $effect(() => {
+    if (!componentId || error) return
+    window.$GRAPHENE.chartExports ||= {}
+    window.$GRAPHENE.chartExports[componentId] = {rows: data.rows || [], fields: data.fields || []}
+    return () => {
+      delete window.$GRAPHENE.chartExports?.[componentId]
+    }
+  })
 
   // Sorting helpers
   const normalizeForSort = (value: unknown) => {

@@ -23,10 +23,10 @@ graphene run path/to/page.md --input carrier=AA # Run the page with input values
 # The command prints the live page URL, e.g. http://localhost:4000/path/to/page, and the server keeps running for hot reloads.
 # After iterating until the screenshot looks acceptable, agents can link users directly to that localhost URL.
 
-# `-c/--chart` can target either a chart title or the chart's `queryId`. For charts without titles use `graphene list` to see the exact IDs for charts on a page.
-graphene run path/to/page.md -c "Chart Title" # Run the page and screenshot one chart by title
-graphene run path/to/page.md -c "Chart Title" --format csv # Export the data backing one chart as CSV
-graphene run path/to/page.md -c 'Query (data="query_name" x="category" y="total")' # Run the page and screenshot one chart by queryId
+# `-c/--chart` can target a chart or table title, or the component ID printed by `graphene list`.
+graphene run path/to/page.md -c "Chart Title" # Run the page and screenshot one chart/table by title
+graphene run path/to/page.md -c "Chart Title" --format csv # Export the data backing one chart/table as CSV
+graphene run path/to/page.md -c 'BarChart (data="query_name" x="category" y="total")' # Run the page and screenshot one chart/table by component ID
 
 # `-q/--query` can target anything usable in a chart `data` prop (for example, a gsql table or a named code-fenced query in the markdown file).
 graphene run path/to/page.md -q query_name # Run a named query/table from the markdown context and print results

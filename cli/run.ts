@@ -306,7 +306,7 @@ async function runHeadlessPageRequest({pageUrl, action, chart, format, log}: {pa
     }
 
     let errors = await page.evaluate(() => ((window as any).$GRAPHENE?.getErrors?.() || []) as GrapheneError[])
-    let screenshot = chart ? await captureChart(page, chart) : await page.screenshot({fullPage: true, animations: 'disabled', scale: 'css'})
+    let screenshot = chart ? await captureComponent(page, chart) : await page.screenshot({fullPage: true, animations: 'disabled', scale: 'css'})
     await context.close()
     return {errors, stillLoading: !finished, screenshot}
   } catch (err) {
@@ -358,13 +358,14 @@ async function launchHeadlessBrowser(log: (...args: any[]) => void) {
   return null
 }
 
-async function captureChart(page: Page, chart: string) {
-  let selector = await page.evaluate(chart => {
-    let escaped = window.CSS.escape(chart)
+async function captureComponent(page: Page, component: string) {
+  let selector = await page.evaluate(component => {
+    let escaped = window.CSS.escape(component)
     if (document.querySelector(`[data-chart-title="${escaped}"]`)) return `[data-chart-title="${escaped}"]`
+    if (document.querySelector(`[data-component-title="${escaped}"]`)) return `[data-component-title="${escaped}"]`
     if (document.querySelector(`[data-component-id="${escaped}"]`)) return `[data-component-id="${escaped}"]`
     return null
-  }, chart)
+  }, component)
   if (!selector) return undefined
   return await page.locator(selector).screenshot({animations: 'disabled', scale: 'css'})
 }
