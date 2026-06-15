@@ -1,3 +1,31 @@
+## 0.0.21
+
+### Breaking changes
+
+- Database queries now have a 2 minute default timeout (`c38f8ba8`).
+- Unsupported props on input and value components are now reported as errors (`d3c46f00`).
+
+### Added
+
+- Added cache staleness indicators for cached query results (`c44303bc`).
+- Added `row` prop support for `<BigValue />` (`414fce33`).
+- Added Snowflake OAuth login support (`4ee476d5`).
+- Added CSV export support for CLI runs and rendered visualizations (`5f48a0f0`).
+- Added support for multi-repo cloud auth hosts (`59d93cb5`).
+- Added MotherDuck connector and create-project support (`36ad2dc7`).
+
+### Fixed
+
+- Fixed query wrapping with comments and annotations (`7637944e`).
+- Fixed noisy CLI errors caused by exit behavior (`3c7834e3`).
+- Fixed `time` being treated as an alias for `timestamp` (`a711a9ea`).
+- Fixed set operation parsing (`bac60877`).
+- Fixed metadata being dropped through casts (`78c9869c`).
+- Fixed ignored files being omitted from exported projects (`4cd737dd`).
+- Fixed visualizations showing zero states while loading and BigQuery job polling (`4813ce45`).
+- Fixed DuckDB timestamp serialization and upgraded DuckDB (`47bc6338`).
+- Fixed normal counts compiling as distinct counts (`c37c0f45`).
+
 ## 0.0.20
 
 ### Breaking changes
