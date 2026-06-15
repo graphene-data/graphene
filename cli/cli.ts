@@ -65,7 +65,7 @@ program
   .command('run')
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
-  .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart to capture')
+  .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart or table to capture')
   .option('--format <format>', 'Output format for query or chart data: table or csv', 'table')
   .option('--headless', 'Run markdown pages in a headless browser instead of opening the system browser')
   .option('--port <port>', 'Port for the local Graphene server')
@@ -134,7 +134,7 @@ program
 
 program
   .command('list')
-  .description('List the component IDs for charts on a markdown page')
+  .description('List the component IDs for charts and tables on a markdown page')
   .argument('<file>', 'Markdown file to inspect')
   .action(
     withTelemetry('list', async (exit, fileArg: string) => {

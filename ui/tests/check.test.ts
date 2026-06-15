@@ -412,6 +412,52 @@ test('cli run with --headless captures a screenshot without an open page', async
   )
 })
 
+test('cli run with --chart captures a table screenshot by title', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Table Screenshot
+    \`\`\`sql table_data
+    from flights select carrier, count() as total_flights group by 1 order by carrier limit 5
+    \`\`\`
+    <Table data="table_data" title="Carrier Totals" rows=5 />
+  `,
+  )
+
+  await page.goto(server.url())
+  await runMdFile({mdArg: 'index.md', chart: 'Carrier Totals', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Page available at http://localhost:<port>/
+    No errors found 💎
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with --headless captures a table screenshot by title', async ({server}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Table Screenshot
+    \`\`\`sql table_data
+    from flights select carrier, count() as total_flights group by 1 order by carrier limit 5
+    \`\`\`
+    <Table data="table_data" title="Carrier Totals" rows=5 />
+  `,
+  )
+
+  server.url()
+  await runMdFile({mdArg: 'index.md', headless: true, chart: 'Carrier Totals', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Page available at http://localhost:<port>/
+    No errors found 💎
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  `),
+  )
+})
+
 test('cli run with --input applies inputs to a full page run', async ({server, page}) => {
   let queryBodies: any[] = []
   server.mockFile(
@@ -493,6 +539,24 @@ test('cli list prints chart component IDs', async ({server, page}) => {
   expect(outputLines()).toEqual('BarChart (data="chart_data" x="carrier" y="total_distance")')
 })
 
+test('cli list prints table component IDs', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Query List
+    \`\`\`sql table_data
+    from flights select carrier, count() as total_flights group by 1 order by carrier limit 5
+    \`\`\`
+    <Table data="table_data" title="Carrier Totals" rows=5 />
+  `,
+  )
+
+  await page.goto(server.url())
+  let result = await listMdFileQueries('index.md', undefined, log)
+  expect(result).toBe(true)
+  expect(outputLines()).toEqual('DataTable (data="table_data")')
+})
+
 test('cli run with --chart exports chart data as csv', async ({server, page}) => {
   let csv = ''
   let originalLog = console.log
@@ -524,6 +588,37 @@ test('cli run with --chart exports chart data as csv', async ({server, page}) =>
   }
 })
 
+test('cli run with --chart exports table data as csv', async ({server, page}) => {
+  let csv = ''
+  let originalLog = console.log
+  server.mockFile(
+    '/index.md',
+    `
+    # Table CSV
+    \`\`\`sql table_data
+    from flights where carrier in ('AA', 'DL') select carrier, count() as total_flights group by 1 order by carrier
+    \`\`\`
+    <Table data="table_data" title="Carrier Totals" />
+  `,
+  )
+
+  try {
+    console.log = (...args: any[]) => {
+      csv += args.map(arg => String(arg)).join(' ') + '\n'
+    }
+
+    await page.goto(server.url())
+    let result = await runMdFile({mdArg: 'index.md', chart: 'Carrier Totals', format: 'csv', log})
+    expect(result).toBe(true)
+    expect(csv.startsWith('carrier,total_flights\n')).toBe(true)
+    expect(csv).toContain('AA,')
+    expect(csv).toContain('DL,')
+    expect(outputLines()).toEqual('')
+  } finally {
+    console.log = originalLog
+  }
+})
+
 test('cli run with --chart captures a chart screenshot by component ID', async ({server, page}) => {
   server.mockFile(
     '/index.md',
@@ -538,6 +633,29 @@ test('cli run with --chart captures a chart screenshot by component ID', async (
 
   await page.goto(server.url())
   await runMdFile({mdArg: 'index.md', chart: 'BarChart (data="chart_data" x="carrier" y="total_distance")', log})
+  expect(outputLines()).toEqual(
+    trimIndentation(`
+    Page available at http://localhost:<port>/
+    No errors found 💎
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  `),
+  )
+})
+
+test('cli run with --chart captures a table screenshot by component ID', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Table Screenshot
+    \`\`\`sql table_data
+    from flights select carrier, count() as total_flights group by 1 order by carrier limit 5
+    \`\`\`
+    <Table data="table_data" title="Carrier Totals" rows=5 />
+  `,
+  )
+
+  await page.goto(server.url())
+  await runMdFile({mdArg: 'index.md', chart: 'DataTable (data="table_data")', log})
   expect(outputLines()).toEqual(
     trimIndentation(`
     Page available at http://localhost:<port>/

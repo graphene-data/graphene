@@ -13,28 +13,29 @@ async function loadHtml2Canvas() {
   html2canvas ||= (await import('@graphenedata/html2canvas'))?.default
 }
 
-async function captureChart(chart: string) {
-  let chartEl = findChartElement(chart)
-  if (!chartEl) return undefined
+async function captureComponent(component: string) {
+  let componentEl = findVisualComponentElement(component)
+  if (!componentEl) return undefined
 
   await loadHtml2Canvas()
-  let canvas = await html2canvas(chartEl, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
+  let canvas = await html2canvas(componentEl, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
   return canvas?.toDataURL('image/png')
 }
 
 function exportChartCsv(chart: string) {
-  let chartEl = findChartElement(chart)
-  let componentId = chartEl?.getAttribute('data-component-id') || ''
+  let componentEl = findVisualComponentElement(chart)
+  let componentId = componentEl?.getAttribute('data-component-id') || ''
   let data = componentId ? window.$GRAPHENE.chartExports?.[componentId] : undefined
   if (!data) return undefined
   return rowsToCsv(data.rows || [], data.fields || [])
 }
 
-function findChartElement(chart: string) {
-  let escaped = window.CSS.escape(chart)
-  let chartEl = document.querySelector(`[data-chart-title="${escaped}"]`) as HTMLElement | null
-  chartEl ||= document.querySelector(`[data-component-id="${escaped}"]`) as HTMLElement | null
-  return chartEl
+function findVisualComponentElement(component: string) {
+  let escaped = window.CSS.escape(component)
+  let componentEl = document.querySelector(`[data-chart-title="${escaped}"]`) as HTMLElement | null
+  componentEl ||= document.querySelector(`[data-component-title="${escaped}"]`) as HTMLElement | null
+  componentEl ||= document.querySelector(`[data-component-id="${escaped}"]`) as HTMLElement | null
+  return componentEl
 }
 
 function listComponentIds() {
@@ -69,7 +70,7 @@ function connect() {
       return
     }
 
-    let screenshot = chart ? await captureChart(chart) : await takeScreenshot()
+    let screenshot = chart ? await captureComponent(chart) : await takeScreenshot()
     socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors: getErrors(), stillLoading: !finished, screenshot}))
   }
 }
