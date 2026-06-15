@@ -200,6 +200,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.ATHENA_TEST_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.ATHENA_TEST_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
+          MOTHERDUCK_TOKEN: ${{ secrets.MOTHERDUCK_TOKEN }}
       - name: Upload failures
         if: failure()
         uses: actions/upload-artifact@v4

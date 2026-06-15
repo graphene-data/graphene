@@ -19,6 +19,7 @@ const ecommDir = path.resolve(dir, '../examples/ecomm')
 const clickhouseDir = path.resolve(dir, '../examples/clickhouse')
 const postgresDir = path.resolve(dir, '../examples/postgres')
 const athenaDir = path.resolve(dir, '../examples/athena')
+const motherduckDir = path.resolve(dir, '../examples/motherduck')
 
 function runCli(args: string[], cwd?: string): Promise<RunResult> {
   return new Promise(resolve => {
@@ -89,6 +90,23 @@ describe('duckdb', () => {
   })
 })
 
+describe.skipIf(!process.env.SLOW_TEST)('motherduck', {timeout: 30_000}, () => {
+  it('lists tables in the configured namespace', async () => {
+    let res = await runCli(['schema'], motherduckDir)
+    expectCliSuccess(res, 'schema list tables (motherduck)')
+    let tables = parseSchemaOutput(res.stdout)
+    expect(tables).toContain('ambient_air_quality')
+  })
+
+  it('describes a table from the configured namespace', async () => {
+    let res = await runCli(['schema', 'sample_data.who.ambient_air_quality'], motherduckDir)
+    expectCliSuccess(res, 'schema describe table (motherduck)')
+    let output = res.stdout.toLowerCase()
+    expect(output).toContain('table sample_data.who.ambient_air_quality (')
+    expect(output).toContain('pm25_concentration double')
+  })
+})
+
 describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
   // Snowflake has a 3-level hierarchy: DATABASE.SCHEMA.TABLE
   // The example is configured with namespace "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02"
@@ -125,7 +143,7 @@ describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
   })
 })
 
-describe.skipIf(!process.env.ATHENA_TEST)('athena', {timeout: 30_000}, () => {
+describe.skipIf(!process.env.SLOW_TEST)('athena', {timeout: 30_000}, () => {
   it('lists available tables in the configured database', async () => {
     let res = await runCli(['schema', 'graphene_test'], athenaDir)
     expectCliSuccess(res, 'schema list tables (athena)')
