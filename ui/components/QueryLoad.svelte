@@ -22,7 +22,13 @@
   let loaded: QueryResult | null = $state(null)
   let tooltipId = `query-error-${Math.random().toString(36).slice(2)}`
 
-  let handleResults = (result: QueryResult) => {
+  let handleResults = (result: QueryResult | void) => {
+    if (!result) {
+      error = null
+      loaded = null
+      return
+    }
+
     error = result?.error || null
     loaded = {rows: result?.rows ?? [], fields: result?.fields ?? [], error: result?.error, sql: result?.sql}
     if (result?.error) logger.error(result.error, {...result.error, componentId: logger.id})
@@ -57,7 +63,7 @@
     </div>
   {/if}
 {:else if !loaded}
-  <Skeleton />
+  <Skeleton height={inline ? 16 : height} />
 {:else if loaded.rows.length == 0}
   <div class="empty-chart" role="note">Dataset is empty - query ran successfully, but no data was returned from the database</div>
 {:else}

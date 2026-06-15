@@ -3,6 +3,7 @@ import {spawn} from 'node:child_process'
 import * as path from 'node:path'
 import {expect} from 'vitest'
 
+import {normalizeConfig} from '../lang/config.ts'
 import {formatType, parseWarehouseFieldType} from '../lang/types.ts'
 
 interface RunResult {
@@ -53,6 +54,12 @@ function parseSchemaOutput(stdout: string): string[] {
 }
 
 describe('duckdb', () => {
+  it('uses DuckDB SQL semantics for MotherDuck config', () => {
+    let cfg = normalizeConfig({motherduck: {database: 'sample_data'}, root: '/tmp/project'})
+    expect(cfg.dialect).toBe('duckdb')
+    expect(cfg.motherduck?.database).toBe('sample_data')
+  })
+
   it('lists available tables when no argument is provided', async () => {
     let res = await runCli(['schema'], flightDir)
     expectCliSuccess(res, 'schema list tables')

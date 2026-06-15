@@ -47,9 +47,9 @@
   let chartTitle: string | undefined = $state(undefined)
   let chartSizeStyle: string = $state(calculateChartSize())
 
-  function handleResults (res: QueryResult) {
+  function handleResults (res: QueryResult | void) {
     chartError = null
-    loaded = res
+    loaded = res || null
     if (res?.error) chartLogger.error(res.error, {...res.error, componentId: displayId})
   }
 

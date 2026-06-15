@@ -1,5 +1,5 @@
 {
-  "name": "example-flights",
+  "name": "motherduck-example",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
@@ -13,11 +13,13 @@
     "@graphenedata/cli": "workspace:*"
   },
   "engines": {
-    "node": ">=24.0.0",
-    "npm": ">=7.0.0"
+    "node": ">=24.0.0"
   },
   "graphene": {
-    "duckdb": {},
+    "motherduck": {
+      "database": "sample_data"
+    },
+    "defaultNamespace": "sample_data.who",
     "envFile": [
       ".env",
       "../../.env",

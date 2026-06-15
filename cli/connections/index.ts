@@ -7,6 +7,9 @@ export async function getConnection(): Promise<QueryConnection> {
     let mod = await importConnection(() => import('./bigQuery.ts'), '@google-cloud/bigquery', 'BigQuery')
     let opts = await mod.localDbOptions()
     return new mod.BigQueryConnection(opts)
+  } else if (config.motherduck) {
+    let mod = await importConnection(() => import('./duckdb.ts'), '@duckdb/node-api', 'MotherDuck')
+    return new mod.DuckDBConnection(mod.motherDuckOptions())
   } else if (config.dialect === 'duckdb') {
     let mod = await importConnection(() => import('./duckdb.ts'), '@duckdb/node-api', 'DuckDB')
     return new mod.DuckDBConnection(mod.localDbOptions())

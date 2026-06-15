@@ -832,13 +832,15 @@ class AnalysisSession implements Analyzer {
         let inner = node.getChild('Expression')
         if (inner) {
           let expr = this.analyzeExpr(inner, scope)
+          let isDistinct = node.getChildren('Kw').some(keyword => txt(keyword).toLowerCase() == 'distinct')
+          let sensitivePaths = isDistinct ? expr.fanout?.sensitivePaths : mergeSensitiveFanouts(expr.fanout?.sensitivePaths, [expr.fanout?.path || extendFanoutPath(scope.fanoutPath)])
           return {
-            sql: `count(distinct ${expr.sql})`,
+            sql: `count(${isDistinct ? 'distinct ' : ''}${expr.sql})`,
             type: scalarType('number'),
             metadata: {defaultName: 'count'},
             isAgg: true,
             canWindow: true,
-            fanout: normalizeExprFanout({sensitivePaths: mergeSensitiveFanouts(expr.fanout?.sensitivePaths), conflict: expr.fanout?.conflict}),
+            fanout: normalizeExprFanout({sensitivePaths, conflict: expr.fanout?.conflict}),
           }
         }
         return {

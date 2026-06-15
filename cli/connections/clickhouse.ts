@@ -23,7 +23,7 @@ export class ClickHouseConnection implements QueryConnection {
       password: options.password,
       database: this.defaultDatabase,
       application: 'Graphene',
-      request_timeout: options.requestTimeout,
+      request_timeout: options.requestTimeout ?? 120_000,
     })
   }
 
