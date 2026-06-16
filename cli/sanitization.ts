@@ -116,6 +116,8 @@ function validateSvelteAttributes(node: any, opts: SvelteValidationOptions) {
 }
 
 function validateSvelteAttributeValue(node: any, attr: any) {
+  if (attr.value === true) return
+
   let values: any[] = []
   if (Array.isArray(attr.value)) values = attr.value
   else if (attr.value) values = [attr.value]
@@ -123,7 +125,7 @@ function validateSvelteAttributeValue(node: any, attr: any) {
   for (let value of values) {
     if (value.type == 'Text') continue
     if (value.type == 'ExpressionTag' && isAllowedGeneratedExpressionAttr(node, attr, value.expression)) continue
-    throw new Error('Dynamic attribute expressions are not supported in Graphene markdown.')
+    throw new Error(`Dynamic attribute expressions are not supported in Graphene markdown: <${node.name} ${attr.name}>.`)
   }
 }
 
