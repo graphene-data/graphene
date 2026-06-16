@@ -197,6 +197,9 @@ jobs:
           SNOWFLAKE_PRI_KEY: ${{ secrets.SNOWFLAKE_PRI_KEY }}
           SNOWFLAKE_PRI_PASSPHRASE: graphenedata
           CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.ATHENA_TEST_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ATHENA_TEST_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
       - name: Upload failures
         if: failure()
         uses: actions/upload-artifact@v4
@@ -219,6 +222,9 @@ jobs:
           SNOWFLAKE_PRI_KEY: ${{ secrets.SNOWFLAKE_PRI_KEY }}
           SNOWFLAKE_PRI_PASSPHRASE: graphenedata
           CLICKHOUSE_PASSWORD: ${{ secrets.CLICKHOUSE_PASSWORD }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.ATHENA_TEST_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ATHENA_TEST_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
       - name: Upload failures
         if: failure()
         uses: actions/upload-artifact@v4
