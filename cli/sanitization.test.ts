@@ -29,8 +29,14 @@ describe('markup sanitization policy', () => {
     expect(() => validateSvelteMarkup('<p>{window.x = true}</p>')).toThrow('Dynamic markup expressions are not supported')
     expect(() => validateSvelteMarkup('<div on:click={window.x = true}>Click</div>')).toThrow('Framework directives are not supported')
     expect(() => validateSvelteMarkup('<BarChart data={window.data} />')).toThrow('Dynamic attribute expressions are not supported')
+    expect(() => validateSvelteMarkup('<BarChart data={window.data} />')).toThrow('<BarChart data>')
     expect(() => validateSvelteMarkup('<BarChart {...window.props} />')).toThrow('Attribute spreads are not supported')
     expect(() => validateSvelteMarkup('<svelte:component this={window.Component} />')).toThrow('Special Svelte elements are not supported')
+  })
+
+  it('allows bare boolean component attributes', () => {
+    expect(() => validateStaticMarkup('<BarChart data="x" label />')).not.toThrow()
+    expect(() => validateStaticMarkup('<Table data="x" sortable compact></Table>')).not.toThrow()
   })
 
   it('filters component attributes before Svelte sees them', () => {
