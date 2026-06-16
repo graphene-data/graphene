@@ -107,6 +107,7 @@ async function runExample(exampleName: string, page: Page) {
     }
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)
+    await page.goto('about:blank')
     await runCli(['stop'], exampleDir, childEnv)
   }
 }
