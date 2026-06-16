@@ -54,7 +54,7 @@ function listMarkdownFiles(dir: string): string[] {
         walk(fullPath)
         continue
       }
-      if (!entry.isFile() || !entry.name.endsWith('.md')) continue
+      if (!entry.isFile() || !entry.name.endsWith('.md') || entry.name == 'AGENTS.md') continue
       files.push(path.relative(dir, fullPath).replace(/\\/g, '/'))
     }
   }
@@ -97,6 +97,7 @@ async function runExample(exampleName: string, page: Page) {
       console.log(`[run-examples] running ${exampleName}/${mdPath}`)
       await page.goto(`http://localhost:${port}${toPageUrl(mdPath)}`)
       await waitForGrapheneLoad(page, 120_000)
+      await expect(page).screenshot(`example-${exampleName}-${mdPath.replace(/\.md$/, '').replace(/[^a-z0-9]+/gi, '-')}`)
 
       let runResult = await runCli(['run', mdPath], exampleDir, childEnv)
       expectSuccess(`run ${exampleName}/${mdPath}`, runResult)
@@ -110,7 +111,7 @@ async function runExample(exampleName: string, page: Page) {
   }
 }
 
-test.skipIf(!process.env.ATHENA_TEST)('graphene run succeeds for athena example', {timeout: 180_000}, async ({page}) => {
+test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for athena example', {timeout: 180_000}, async ({page}) => {
   await runExample('athena', page)
 })
 
