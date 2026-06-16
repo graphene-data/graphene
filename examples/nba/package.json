@@ -1,0 +1,27 @@
+{
+  "name": "nba-example",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run graphene serve",
+    "graphene": "node ../../cli/cli.ts"
+  },
+  "dependencies": {
+    "@google-cloud/bigquery": "^8.3.1",
+    "@graphenedata/cli": "workspace:*"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "graphene": {
+    "defaultNamespace": "intense-acumen-470417-u5.nba",
+    "bigquery": {
+      "projectId": "intense-acumen-470417-u5"
+    },
+    "envFile": [
+      ".env",
+      "../../.env",
+      "../../../.env"
+    ]
+  }
+}

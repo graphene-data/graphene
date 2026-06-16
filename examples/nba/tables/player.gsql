@@ -1,0 +1,14 @@
+table player (
+  id VARCHAR
+  full_name VARCHAR
+  first_name VARCHAR
+  last_name VARCHAR
+  is_active BIGINT
+  join one common_player_info on id = common_player_info.person_id
+  join many draft_history on id = draft_history.person_id
+  join many draft_combine_stats on id = draft_combine_stats.player_id
+  join many inactive_players on id = inactive_players.player_id
+  join many play_by_play as primary_events on id = primary_events.player1_id
+  join many play_by_play as secondary_events on id = secondary_events.player2_id
+  join many play_by_play as tertiary_events on id = tertiary_events.player3_id
+)

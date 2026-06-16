@@ -1,0 +1,37 @@
+table common_player_info (
+  person_id VARCHAR
+  first_name VARCHAR
+  last_name VARCHAR
+  display_first_last VARCHAR
+  display_last_comma_first VARCHAR
+  display_fi_last VARCHAR
+  player_slug VARCHAR
+  birthdate TIMESTAMP
+  school VARCHAR
+  country VARCHAR
+  last_affiliation VARCHAR
+  height VARCHAR
+  weight VARCHAR
+  season_exp DOUBLE
+  jersey VARCHAR
+  position VARCHAR
+  rosterstatus VARCHAR
+  games_played_current_season_flag VARCHAR
+  team_id BIGINT
+  team_name VARCHAR
+  team_abbreviation VARCHAR
+  team_code VARCHAR
+  team_city VARCHAR
+  playercode VARCHAR
+  from_year DOUBLE
+  to_year DOUBLE
+  dleague_flag VARCHAR
+  nba_flag VARCHAR
+  games_played_flag VARCHAR
+  draft_year VARCHAR
+  draft_round VARCHAR
+  draft_number VARCHAR
+  greatest_75_flag VARCHAR
+  join one player on person_id = player.id
+  join one team on team_id = team.id
+)

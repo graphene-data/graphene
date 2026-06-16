@@ -1,0 +1,109 @@
+-- Team-level game grain built from game's home/away columns.
+-- Use this for team-season reports, game logs, and opponent comparisons: each NBA game becomes two rows,
+-- one from the home team's perspective and one from the away team's perspective. Franchise names are normalized
+-- to the current team name in `team` / `opponent`, while `team_name_at_game` preserves the historical name.
+table team_game as (
+  select
+    game_id, -- NBA game id; appears twice in this table, once for each team
+    season_id, -- source season id, e.g. 22022
+    season, -- season start year, e.g. 2022 for 2022-23
+    season_type, -- Regular Season, Playoffs, etc.
+    game_date,
+    team_id_home as team_id,
+    team_abbreviation_home as team_abbreviation,
+    team_name_home_current as team, -- normalized franchise name, e.g. Brooklyn Nets for New Jersey/Brooklyn
+    team_name_home as team_name_at_game, -- name used in the source game row
+    team_id_away as opponent_id,
+    team_abbreviation_away as opponent_abbreviation,
+    team_name_away_current as opponent,
+    team_name_away as opponent_name_at_game,
+    'Home' as location,
+    wl_home as wl, -- W/L from this team's perspective
+    pts_home as for_points, -- points scored by this team
+    pts_away as against_points, -- points allowed by this team
+    fgm_home as fgm, -- field goals made
+    fga_home as fga, -- field goals attempted
+    fg_pct_home as fg_pct, -- field goal percentage
+    fg3m_home as fg3m, -- 3-point field goals made
+    fg3a_home as fg3a, -- 3-point field goals attempted
+    fg3_pct_home as fg3_pct, -- 3-point field goal percentage
+    ftm_home as ftm, -- free throws made
+    fta_home as fta, -- free throws attempted
+    ft_pct_home as ft_pct, -- free throw percentage
+    oreb_home as oreb, -- offensive rebounds
+    dreb_home as dreb, -- defensive rebounds
+    reb_home as reb, -- total rebounds
+    ast_home as ast, -- assists
+    stl_home as stl, -- steals
+    blk_home as blk, -- blocks
+    tov_home as tov, -- turnovers
+    pf_home as pf, -- personal fouls
+    fgm_away as opp_fgm, -- opponent field goals made
+    fga_away as opp_fga, -- opponent field goals attempted
+    fg3m_away as opp_fg3m, -- opponent 3-point field goals made
+    fg3a_away as opp_fg3a, -- opponent 3-point field goals attempted
+    ftm_away as opp_ftm, -- opponent free throws made
+    fta_away as opp_fta, -- opponent free throws attempted
+    oreb_away as opp_oreb, -- opponent offensive rebounds
+    dreb_away as opp_dreb, -- opponent defensive rebounds
+    reb_away as opp_reb, -- opponent total rebounds
+    ast_away as opp_ast, -- opponent assists
+    stl_away as opp_stl, -- opponent steals
+    blk_away as opp_blk, -- opponent blocks
+    tov_away as opp_tov, -- opponent turnovers
+    pf_away as opp_pf -- opponent personal fouls
+  from game
+
+  union all
+
+  select
+    game_id,
+    season_id,
+    season,
+    season_type,
+    game_date,
+    team_id_away as team_id,
+    team_abbreviation_away as team_abbreviation,
+    team_name_away_current as team,
+    team_name_away as team_name_at_game,
+    team_id_home as opponent_id,
+    team_abbreviation_home as opponent_abbreviation,
+    team_name_home_current as opponent,
+    team_name_home as opponent_name_at_game,
+    'Away' as location,
+    wl_away as wl,
+    pts_away as for_points,
+    pts_home as against_points,
+    fgm_away as fgm,
+    fga_away as fga,
+    fg_pct_away as fg_pct,
+    fg3m_away as fg3m,
+    fg3a_away as fg3a,
+    fg3_pct_away as fg3_pct,
+    ftm_away as ftm,
+    fta_away as fta,
+    ft_pct_away as ft_pct,
+    oreb_away as oreb,
+    dreb_away as dreb,
+    reb_away as reb,
+    ast_away as ast,
+    stl_away as stl,
+    blk_away as blk,
+    tov_away as tov,
+    pf_away as pf,
+    fgm_home as opp_fgm,
+    fga_home as opp_fga,
+    fg3m_home as opp_fg3m,
+    fg3a_home as opp_fg3a,
+    ftm_home as opp_ftm,
+    fta_home as opp_fta,
+    oreb_home as opp_oreb,
+    dreb_home as opp_dreb,
+    reb_home as opp_reb,
+    ast_home as opp_ast,
+    stl_home as opp_stl,
+    blk_home as opp_blk,
+    tov_home as opp_tov,
+    pf_home as opp_pf
+  from game
+)

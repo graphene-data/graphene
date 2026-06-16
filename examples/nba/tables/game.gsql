@@ -1,0 +1,85 @@
+-- Raw game-level source table: one row per game with separate home and away team columns.
+-- For team-level analysis, prefer team_game, which normalizes this into one row per team per game.
+table game (
+  season_id VARCHAR
+  team_id_home VARCHAR
+  team_abbreviation_home VARCHAR
+  team_name_home VARCHAR
+  game_id VARCHAR
+  game_date TIMESTAMP
+  matchup_home VARCHAR
+  wl_home VARCHAR
+  min BIGINT
+  fgm_home DOUBLE
+  fga_home DOUBLE
+  fg_pct_home DOUBLE
+  fg3m_home DOUBLE
+  fg3a_home DOUBLE
+  fg3_pct_home DOUBLE
+  ftm_home DOUBLE
+  fta_home DOUBLE
+  ft_pct_home DOUBLE
+  oreb_home DOUBLE
+  dreb_home DOUBLE
+  reb_home DOUBLE
+  ast_home DOUBLE
+  stl_home DOUBLE
+  blk_home DOUBLE
+  tov_home DOUBLE
+  pf_home DOUBLE
+  pts_home DOUBLE
+  plus_minus_home BIGINT
+  video_available_home BIGINT
+  team_id_away VARCHAR
+  team_abbreviation_away VARCHAR
+  team_name_away VARCHAR
+  matchup_away VARCHAR
+  wl_away VARCHAR
+  fgm_away DOUBLE
+  fga_away DOUBLE
+  fg_pct_away DOUBLE
+  fg3m_away DOUBLE
+  fg3a_away DOUBLE
+  fg3_pct_away DOUBLE
+  ftm_away DOUBLE
+  fta_away DOUBLE
+  ft_pct_away DOUBLE
+  oreb_away DOUBLE
+  dreb_away DOUBLE
+  reb_away DOUBLE
+  ast_away DOUBLE
+  stl_away DOUBLE
+  blk_away DOUBLE
+  tov_away DOUBLE
+  pf_away DOUBLE
+  pts_away DOUBLE
+  plus_minus_away BIGINT
+  video_available_away BIGINT
+  season_type VARCHAR
+  season: cast(substr(season_id, 2, 4) as int64) #timeGrain=year
+  home_win: wl_home = 'W'
+  home_win_flag: case when wl_home = 'W' then 1.0 else 0.0 end
+  three_point_rate: (fg3a_home + fg3a_away) / nullif(fga_home + fga_away, 0)
+  team_3pa_per_game: (fg3a_home + fg3a_away) / 2
+  team_pts_per_game: (pts_home + pts_away) / 2
+  home_fta_diff: fta_home - fta_away
+  away_minus_home_pf: pf_away - pf_home
+  team_name_home_current: coalesce(home_team.full_name, team_name_home)
+  team_name_away_current: coalesce(away_team.full_name, team_name_away)
+  games: count(*)
+  home_win_pct: avg(home_win_flag)
+  avg_three_point_rate: avg(three_point_rate)
+  avg_team_3pa_per_game: avg(team_3pa_per_game)
+  avg_team_pts_per_game: avg(team_pts_per_game)
+  avg_home_fta_diff: avg(home_fta_diff)
+  avg_away_minus_home_pf: avg(away_minus_home_pf)
+  join one team as home_team on team_id_home = home_team.id
+  join one team as away_team on team_id_away = away_team.id
+  join many game_info on game_id = game_info.game_id
+  join many game_summary on game_id = game_summary.game_id
+  join many line_score on game_id = line_score.game_id
+  join many other_stats on game_id = other_stats.game_id
+  join many play_by_play on game_id = play_by_play.game_id
+  join many officials on game_id = officials.game_id
+  join many inactive_players on game_id = inactive_players.game_id
+)

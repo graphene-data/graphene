@@ -1,0 +1,48 @@
+table line_score (
+  game_date_est TIMESTAMP
+  game_sequence BIGINT
+  game_id VARCHAR
+  team_id_home VARCHAR
+  team_abbreviation_home VARCHAR
+  team_city_name_home VARCHAR
+  team_nickname_home VARCHAR
+  team_wins_losses_home VARCHAR
+  pts_qtr1_home VARCHAR
+  pts_qtr2_home VARCHAR
+  pts_qtr3_home VARCHAR
+  pts_qtr4_home VARCHAR
+  pts_ot1_home BIGINT
+  pts_ot2_home BIGINT
+  pts_ot3_home BIGINT
+  pts_ot4_home BIGINT
+  pts_ot5_home BIGINT
+  pts_ot6_home BIGINT
+  pts_ot7_home BIGINT
+  pts_ot8_home BIGINT
+  pts_ot9_home BIGINT
+  pts_ot10_home BIGINT
+  pts_home DOUBLE
+  team_id_away VARCHAR
+  team_abbreviation_away VARCHAR
+  team_city_name_away VARCHAR
+  team_nickname_away VARCHAR
+  team_wins_losses_away VARCHAR
+  pts_qtr1_away BIGINT
+  pts_qtr2_away VARCHAR
+  pts_qtr3_away VARCHAR
+  pts_qtr4_away BIGINT
+  pts_ot1_away BIGINT
+  pts_ot2_away BIGINT
+  pts_ot3_away BIGINT
+  pts_ot4_away BIGINT
+  pts_ot5_away BIGINT
+  pts_ot6_away BIGINT
+  pts_ot7_away BIGINT
+  pts_ot8_away BIGINT
+  pts_ot9_away BIGINT
+  pts_ot10_away BIGINT
+  pts_away DOUBLE
+  join many game on game_id = game.game_id
+  join one team as home_team on team_id_home = home_team.id
+  join one team as away_team on team_id_away = away_team.id
+)

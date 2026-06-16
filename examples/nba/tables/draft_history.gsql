@@ -1,0 +1,18 @@
+table draft_history (
+  person_id VARCHAR
+  player_name VARCHAR
+  season VARCHAR
+  round_number BIGINT
+  round_pick BIGINT
+  overall_pick BIGINT
+  draft_type VARCHAR
+  team_id VARCHAR
+  team_city VARCHAR
+  team_name VARCHAR
+  team_abbreviation VARCHAR
+  organization VARCHAR
+  organization_type VARCHAR
+  player_profile_flag VARCHAR
+  join one player on person_id = player.id
+  join one team on team_id = team.id
+)

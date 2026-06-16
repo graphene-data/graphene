@@ -1,0 +1,7 @@
+table game_info (
+  game_id VARCHAR
+  game_date TIMESTAMP
+  attendance BIGINT
+  game_time VARCHAR
+  join many game on game_id = game.game_id
+)

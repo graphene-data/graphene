@@ -1,0 +1,8 @@
+table team_history (
+  team_id VARCHAR
+  city VARCHAR
+  nickname VARCHAR
+  year_founded BIGINT
+  year_active_till BIGINT
+  join one team on team_id = team.id
+)

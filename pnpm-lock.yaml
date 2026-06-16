@@ -257,6 +257,15 @@ importers:
         specifier: workspace:*
         version: link:../../cli
 
+  examples/nba:
+    dependencies:
+      '@google-cloud/bigquery':
+        specifier: ^8.3.1
+        version: 8.3.1
+      '@graphenedata/cli':
+        specifier: workspace:*
+        version: link:../../cli
+
   examples/postgres:
     dependencies:
       '@electric-sql/pglite':

@@ -1,0 +1,8 @@
+table officials (
+  game_id VARCHAR
+  official_id VARCHAR
+  first_name VARCHAR
+  last_name VARCHAR
+  jersey_num VARCHAR
+  join many game on game_id = game.game_id
+)

@@ -1,0 +1,14 @@
+table inactive_players (
+  game_id VARCHAR
+  player_id VARCHAR
+  first_name VARCHAR
+  last_name VARCHAR
+  jersey_num VARCHAR
+  team_id VARCHAR
+  team_city VARCHAR
+  team_name VARCHAR
+  team_abbreviation VARCHAR
+  join many game on game_id = game.game_id
+  join one player on player_id = player.id
+  join one team on team_id = team.id
+)

@@ -1,0 +1,19 @@
+table game_summary (
+  game_date_est TIMESTAMP
+  game_sequence BIGINT
+  game_id VARCHAR
+  game_status_id BIGINT
+  game_status_text VARCHAR
+  gamecode VARCHAR
+  home_team_id VARCHAR
+  visitor_team_id VARCHAR
+  season VARCHAR
+  live_period BIGINT
+  live_pc_time VARCHAR
+  natl_tv_broadcaster_abbreviation VARCHAR
+  live_period_time_bcast VARCHAR
+  wh_status BIGINT
+  join many game on game_id = game.game_id
+  join one team as home_team on home_team_id = home_team.id
+  join one team as visitor_team on visitor_team_id = visitor_team.id
+)
