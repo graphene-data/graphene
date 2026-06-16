@@ -1,0 +1,17 @@
+table team_details (
+  team_id VARCHAR
+  abbreviation VARCHAR
+  nickname VARCHAR
+  yearfounded DOUBLE
+  city VARCHAR
+  arena VARCHAR
+  arenacapacity DOUBLE
+  owner VARCHAR
+  generalmanager VARCHAR
+  headcoach VARCHAR
+  dleagueaffiliation VARCHAR
+  facebook VARCHAR
+  instagram VARCHAR
+  twitter VARCHAR
+  join one team on team_id = team.id
+)

@@ -1,0 +1,30 @@
+table team_info_common (
+  team_id VARCHAR
+  season_year VARCHAR
+  team_city VARCHAR
+  team_name VARCHAR
+  team_abbreviation VARCHAR
+  team_conference VARCHAR
+  team_division VARCHAR
+  team_code VARCHAR
+  team_slug VARCHAR
+  w BIGINT
+  l BIGINT
+  pct DOUBLE
+  conf_rank BIGINT
+  div_rank BIGINT
+  min_year BIGINT
+  max_year BIGINT
+  league_id VARCHAR
+  season_id VARCHAR
+  season: cast(substr(season_year, 1, 4) as int64) #timeGrain=year
+  pts_rank BIGINT
+  pts_pg DOUBLE
+  reb_rank BIGINT
+  reb_pg DOUBLE
+  ast_rank BIGINT
+  ast_pg DOUBLE
+  opp_pts_rank BIGINT
+  opp_pts_pg DOUBLE
+  join one team on team_id = team.id
+)

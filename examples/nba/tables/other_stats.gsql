@@ -1,0 +1,31 @@
+table other_stats (
+  game_id VARCHAR
+  league_id VARCHAR
+  team_id_home VARCHAR
+  team_abbreviation_home VARCHAR
+  team_city_home VARCHAR
+  pts_paint_home BIGINT
+  pts_2nd_chance_home BIGINT
+  pts_fb_home BIGINT
+  largest_lead_home BIGINT
+  lead_changes BIGINT
+  times_tied BIGINT
+  team_turnovers_home BIGINT
+  total_turnovers_home BIGINT
+  team_rebounds_home BIGINT
+  pts_off_to_home BIGINT
+  team_id_away VARCHAR
+  team_abbreviation_away VARCHAR
+  team_city_away VARCHAR
+  pts_paint_away BIGINT
+  pts_2nd_chance_away BIGINT
+  pts_fb_away BIGINT
+  largest_lead_away BIGINT
+  team_turnovers_away BIGINT
+  total_turnovers_away BIGINT
+  team_rebounds_away BIGINT
+  pts_off_to_away BIGINT
+  join many game on game_id = game.game_id
+  join one team as home_team on team_id_home = home_team.id
+  join one team as away_team on team_id_away = away_team.id
+)

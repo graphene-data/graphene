@@ -1,0 +1,46 @@
+table play_by_play (
+  game_id VARCHAR
+  eventnum BIGINT
+  eventmsgtype BIGINT
+  eventmsgactiontype BIGINT
+  period BIGINT
+  wctimestring VARCHAR
+  pctimestring VARCHAR
+  homedescription VARCHAR
+  neutraldescription VARCHAR
+  visitordescription VARCHAR
+  score VARCHAR
+  scoremargin VARCHAR
+  person1type DOUBLE
+  player1_id VARCHAR
+  player1_name VARCHAR
+  player1_team_id VARCHAR
+  player1_team_city VARCHAR
+  player1_team_nickname VARCHAR
+  player1_team_abbreviation VARCHAR
+  person2type DOUBLE
+  player2_id VARCHAR
+  player2_name VARCHAR
+  player2_team_id VARCHAR
+  player2_team_city VARCHAR
+  player2_team_nickname VARCHAR
+  player2_team_abbreviation VARCHAR
+  person3type DOUBLE
+  player3_id VARCHAR
+  player3_name VARCHAR
+  player3_team_id VARCHAR
+  player3_team_city VARCHAR
+  player3_team_nickname VARCHAR
+  player3_team_abbreviation VARCHAR
+  video_available_flag VARCHAR
+  player1_team_key: replace(player1_team_id, '.0', '')
+  player2_team_key: replace(player2_team_id, '.0', '')
+  player3_team_key: replace(player3_team_id, '.0', '')
+  join many game on game_id = game.game_id
+  join one player as player1 on player1_id = player1.id
+  join one player as player2 on player2_id = player2.id
+  join one player as player3 on player3_id = player3.id
+  join one team as player1_team on player1_team_key = player1_team.id
+  join one team as player2_team on player2_team_key = player2_team.id
+  join one team as player3_team on player3_team_key = player3_team.id
+)

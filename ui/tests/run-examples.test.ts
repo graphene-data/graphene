@@ -126,6 +126,10 @@ test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for flights example',
   await runExample('flights', page)
 })
 
+test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for nba example', {timeout: 180_000}, async ({page}) => {
+  await runExample('nba', page)
+})
+
 test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for snowflake example', {timeout: 180_000}, async ({page}) => {
   await runExample('snowflake', page)
 })

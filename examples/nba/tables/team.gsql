@@ -1,0 +1,22 @@
+table team (
+  id VARCHAR
+  full_name VARCHAR
+  abbreviation VARCHAR
+  nickname VARCHAR
+  city VARCHAR
+  state VARCHAR
+  year_founded DOUBLE
+  join one team_details as details on id = details.team_id
+  join many team_history as history on id = history.team_id
+  join many team_info_common as season_info on id = season_info.team_id
+  join many common_player_info as current_players on id = current_players.team_id
+  join many draft_history as drafted_players on id = drafted_players.team_id
+  join many game as home_games on id = home_games.team_id_home
+  join many game as away_games on id = away_games.team_id_away
+  join many game_summary as home_game_summaries on id = home_game_summaries.home_team_id
+  join many game_summary as visitor_game_summaries on id = visitor_game_summaries.visitor_team_id
+  join many inactive_players on id = inactive_players.team_id
+  join many play_by_play as player1_team_events on id = player1_team_events.player1_team_key
+  join many play_by_play as player2_team_events on id = player2_team_events.player2_team_key
+  join many play_by_play as player3_team_events on id = player3_team_events.player3_team_key
+)
