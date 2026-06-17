@@ -427,7 +427,11 @@ ExtractUnit {
 }
 
 FunctionCall {
-  Identifier "(" (expression ("," expression)* ","?)? ")"
+  FunctionName "(" (expression ("," expression)* ","?)? ")"
+}
+
+FunctionName {
+  Identifier | Kw<"row">
 }
 
 literal {

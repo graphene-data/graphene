@@ -78,6 +78,7 @@ let SCALAR_TYPE_ALIASES: Record<string, ScalarField> = {
   char: 'string',
   fixedstring: 'string',
   geography: 'string',
+  map: 'map',
   bool: 'boolean',
   boolean: 'boolean',
   date: 'date',

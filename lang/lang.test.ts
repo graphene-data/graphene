@@ -1181,6 +1181,89 @@ describe('lang', () => {
     )
   })
 
+  it('supports callable duckdb list and array functions', () => {
+    expect(`
+      select
+        list_value(1, 2, 3) as values,
+        list_pack('a', 'b') as packed,
+        array_value(1, 2) as array_values,
+        list_concat(list_value(1), list_value(2)) as concat_values,
+        array_concat(array_value(1), array_value(2)) as array_concat_values,
+        list_append(list_value(1), 2) as appended,
+        list_prepend(0, list_value(1)) as prepended,
+        array_pop_back(array_value(1, 2)) as pop_back,
+        array_pop_front(array_value(1, 2)) as pop_front,
+        list_reverse(list_value(1, 2)) as reversed,
+        list_distinct(list_value(1, 1, 2)) as distinct_values,
+        list_sort(list_value(2, 1)) as sorted,
+        list_reverse_sort(list_value(1, 2)) as reverse_sorted,
+        list_grade_up(list_value(2, 1)) as grade,
+        list_slice(list_value(1, 2, 3), 1, 2) as sliced,
+        list_resize(list_value(1), 3, 0) as resized,
+        list_select(list_value('a', 'b'), list_value(2)) as selected,
+        list_where(list_value('a', 'b'), list_value(true, false)) as masked,
+        list_intersect(list_value(1, 2), list_value(2, 3)) as intersected,
+        list_extract(list_value('a', 'b'), 1) as extracted,
+        list_contains(list_value(1, 2), 2) as contains_value,
+        list_has_all(list_value(1, 2), list_value(1)) as has_all,
+        list_has_any(list_value(1, 2), list_value(3, 2)) as has_any,
+        list_position(list_value('a', 'b'), 'b') as position_value,
+        list_unique(list_value(1, 1, 2)) as unique_count,
+        list_first(list_value('a', 'b')) as first_value,
+        list_last(list_value('a', 'b')) as last_value,
+        list_avg(list_value(1, 2)) as avg_value,
+        list_bool_and(list_value(true, false)) as bool_and_value,
+        list_string_agg(list_value('a', 'b')) as string_agg_value,
+        list_histogram(list_value('a', 'b', 'a')) as histogram_value,
+        list_aggregate(list_value(1, 2), 'sum') as aggregate_value,
+        list_dot_product(list_value(1, 2), list_value(3, 4)) as dot_value,
+        array_cross_product(array_value(1, 0, 0), array_value(0, 1, 0)) as cross_value
+    `).toHaveNoErrors()
+  })
+
+  it('supports callable duckdb map and struct functions', () => {
+    expect(`
+      select
+        map() as empty_map_value,
+        map(list_value('a', 'b'), list_value(1, 2)) as map_value,
+        cardinality(map(list_value('a'), list_value(1))) as map_size,
+        map_concat(map(list_value('a'), list_value(1)), map(list_value('b'), list_value(2))) as merged_map,
+        map_contains(map(list_value('a'), list_value(1)), 'a') as has_key,
+        map_contains_entry(map(list_value('a'), list_value(1)), 'a', 1) as has_entry,
+        map_contains_value(map(list_value('a'), list_value(1)), 1) as has_value,
+        element_at(map(list_value('a'), list_value(1)), 'a') as element_value,
+        map_extract(map(list_value('a'), list_value(1)), 'a') as extracted_value,
+        map_extract_value(map(list_value('a'), list_value(1)), 'a') as extracted_scalar,
+        map_entries(map(list_value('a'), list_value(1))) as entries_value,
+        map_from_entries(map_entries(map(list_value('a'), list_value(1)))) as map_from_entries_value,
+        map_keys(map(list_value('a'), list_value(1))) as keys_value,
+        map_values(map(list_value('a'), list_value(1))) as values_value,
+        row(1, 'a') as row_value,
+        struct_concat(row(1), row('a')) as struct_concat_value,
+        struct_contains(row(1, 'a'), 'a') as struct_contains_value,
+        struct_extract(row(1, 'a'), 1) as struct_extract_value,
+        struct_extract_at(row(1, 'a'), 1) as struct_extract_at_value,
+        struct_position(row(1, 'a'), 'a') as struct_position_value,
+        struct_keys(row(1, 'a')) as struct_keys_value,
+        struct_values(row(1, 'a')) as struct_values_value
+    `).toHaveNoErrors()
+  })
+
+  it('tracks duckdb nested return types at graphenes current granularity', () => {
+    let [query] = analyze(`
+      select
+        list_value(1, 2) as values,
+        list_extract(list_value(1, 2), 1) as extracted,
+        map(list_value('a'), list_value(1)) as mapped,
+        map_entries(map(list_value('a'), list_value(1))) as entries,
+        map_extract_value(map(list_value('a'), list_value(1)), 'a') as mapped_value,
+        row(1, 'a') as row_value,
+        struct_extract(row(1, 'a'), 1) as struct_value,
+        array_cross_product(array_value(1, 0, 0), array_value(0, 1, 0)) as cross_value
+    `)
+    expect(query.fields.map(field => formatType(field.type))).toEqual(['array<number>', 'number', 'map', 'array<record>', 'sql native', 'record', 'sql native', 'array<number>'])
+  })
+
   it('rejects variadic functions called with 0 args', () => {
     expect('from users select coalesce() as empty').toHaveDiagnostic(/wrong number of arguments/i)
   })

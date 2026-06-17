@@ -11,6 +11,9 @@ import {trimIndentation} from './util.ts'
 
 const duck = 'https://duckdb.org/docs/stable/sql/functions'
 const duckJson = 'https://duckdb.org/docs/stable/data/json'
+const duckList = 'https://duckdb.org/docs/stable/sql/functions/list'
+const duckMap = 'https://duckdb.org/docs/stable/sql/functions/map'
+const duckStruct = 'https://duckdb.org/docs/stable/sql/functions/struct'
 
 // Helper to trim and dedent multiline strings
 const trim = trimIndentation
@@ -20,6 +23,17 @@ function jsonFunction(name: string, args: FunctionDef['args'], returns: string, 
     name,
     description: trim(description),
     url: opts.url || `${duckJson}/json_functions`,
+    args,
+    returns,
+    ...opts,
+  }
+}
+
+function nestedFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name,
+    description: trim(description),
+    url: opts.url || duckList,
     args,
     returns,
     ...opts,
@@ -2603,6 +2617,397 @@ export const duckDbFunctions: FunctionDef[] = [
   `,
     {url: `${duckJson}/sql_to_and_from_json`},
   ),
+
+  // ============================================================================
+  // Nested List, Array, Struct, and Map Functions
+  // https://duckdb.org/docs/stable/sql/functions/list
+  // https://duckdb.org/docs/stable/sql/functions/struct
+  // https://duckdb.org/docs/stable/sql/functions/map
+  // ============================================================================
+
+  nestedFunction(
+    'array_agg',
+    [{name: 'arg', type: 'T'}],
+    'array',
+    `
+      array_agg(arg)
+
+      Returns a LIST containing all the values of a column. This function is affected by ordering.
+    `,
+    {aggregate: true, url: `${duck}/aggregates#array_aggarg`},
+  ),
+  ...['list_value', 'list_pack', 'array_value'].map(name =>
+    nestedFunction(name, [], 'array', `${name}(any, ...)\n\nCreates a list from the supplied values.`, {
+      overloads: [
+        {args: [], returns: 'array'},
+        {args: [{name: 'values', type: 'any...'}], returns: 'array'},
+      ],
+    }),
+  ),
+  ...['list_concat', 'list_cat', 'array_concat', 'array_cat'].map(name =>
+    nestedFunction(name, [], 'array', `${name}(list, ...)\n\nConcatenates lists.`, {
+      overloads: [
+        {args: [], returns: 'array'},
+        {args: [{name: 'lists', type: 'array...'}], returns: 'array'},
+      ],
+    }),
+  ),
+  ...['list_append', 'array_append', 'array_push_back'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'element', type: 'any'},
+      ],
+      'array',
+      `${name}(list, element)\n\nAppends element to list.`,
+    ),
+  ),
+  ...['list_prepend', 'array_prepend', 'array_push_front'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'element', type: 'any'},
+        {name: 'list', type: 'array'},
+      ],
+      'array',
+      `${name}(element, list)\n\nPrepends element to list.`,
+    ),
+  ),
+  ...['array_pop_back', 'array_pop_front', 'list_reverse', 'array_reverse', 'list_distinct', 'array_distinct'].map(name =>
+    nestedFunction(name, [{name: 'list', type: 'array'}], 'array', `${name}(list)\n\nReturns a transformed list.`),
+  ),
+  ...['list_sort', 'array_sort', 'list_reverse_sort', 'array_reverse_sort', 'list_grade_up', 'array_grade_up'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'col1', type: 'string?'},
+        {name: 'col2', type: 'string?'},
+      ],
+      'array',
+      `${name}(list[, col1][, col2])\n\nReturns a reordered list.`,
+    ),
+  ),
+  ...['list_slice', 'array_slice'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'begin', type: 'number'},
+        {name: 'end', type: 'number'},
+        {name: 'step', type: 'number?'},
+      ],
+      'array',
+      `${name}(list, begin, end[, step])\n\nExtracts a sublist.`,
+    ),
+  ),
+  ...['list_resize', 'array_resize'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'size', type: 'number'},
+        {name: 'value', type: 'any?'},
+      ],
+      'array',
+      `${name}(list, size[, value])\n\nResizes a list.`,
+    ),
+  ),
+  ...['list_select', 'array_select'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'value_list', type: 'array'},
+        {name: 'index_list', type: 'array'},
+      ],
+      'array',
+      `${name}(value_list, index_list)\n\nReturns values at the supplied indexes.`,
+    ),
+  ),
+  ...['list_where', 'array_where'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'value_list', type: 'array'},
+        {name: 'mask_list', type: 'array'},
+      ],
+      'array',
+      `${name}(value_list, mask_list)\n\nReturns values selected by a boolean mask list.`,
+    ),
+  ),
+  ...['list_intersect', 'array_intersect'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list1', type: 'array'},
+        {name: 'list2', type: 'array'},
+      ],
+      'array',
+      `${name}(list1, list2)\n\nReturns the intersection of two lists.`,
+    ),
+  ),
+  ...['list_extract', 'list_element', 'array_extract'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'index', type: 'number'},
+      ],
+      'array_element',
+      `${name}(list, index)\n\nExtracts the indexth, 1-based value from the list.`,
+    ),
+  ),
+  ...['list_contains', 'list_has', 'array_contains', 'array_has'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'element', type: 'any'},
+      ],
+      'boolean',
+      `${name}(list, element)\n\nReturns true if list contains element.`,
+    ),
+  ),
+  ...['list_has_all', 'array_has_all', 'list_has_any', 'array_has_any'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list1', type: 'array'},
+        {name: 'list2', type: 'array'},
+      ],
+      'boolean',
+      `${name}(list1, list2)\n\nCompares list membership between two lists.`,
+    ),
+  ),
+  ...['list_position', 'list_indexof', 'array_position', 'array_indexof'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'element', type: 'any'},
+      ],
+      'number',
+      `${name}(list, element)\n\nReturns the 1-based position of element in list.`,
+    ),
+  ),
+  ...['list_unique', 'array_unique', 'list_approx_count_distinct', 'list_count'].map(name =>
+    nestedFunction(name, [{name: 'list', type: 'array'}], 'number', `${name}(list)\n\nReturns a numeric summary for the list.`),
+  ),
+  ...[
+    'list_avg',
+    'list_sum',
+    'list_product',
+    'list_median',
+    'list_entropy',
+    'list_kurtosis',
+    'list_kurtosis_pop',
+    'list_mad',
+    'list_sem',
+    'list_skewness',
+    'list_stddev_pop',
+    'list_stddev_samp',
+    'list_var_pop',
+    'list_var_samp',
+  ].map(name => nestedFunction(name, [{name: 'list', type: 'array'}], 'number', `${name}(list)\n\nApplies the corresponding aggregate to the list.`)),
+  ...['list_first', 'list_last', 'list_any_value', 'list_min', 'list_max', 'list_mode'].map(name =>
+    nestedFunction(name, [{name: 'list', type: 'array'}], 'array_element', `${name}(list)\n\nReturns one element from the list.`),
+  ),
+  ...['list_bool_and', 'list_bool_or'].map(name => nestedFunction(name, [{name: 'list', type: 'array'}], 'boolean', `${name}(list)\n\nApplies a boolean aggregate to the list.`)),
+  nestedFunction('list_string_agg', [{name: 'list', type: 'array'}], 'string', 'list_string_agg(list)\n\nConcatenates the list values into a string.'),
+  nestedFunction(
+    'list_histogram',
+    [{name: 'list', type: 'array'}],
+    'map',
+    `
+      list_histogram(list)
+
+      Applies histogram to the list and returns a map.
+    `,
+  ),
+  ...['list_aggregate', 'list_aggr', 'array_aggregate', 'array_aggr', 'aggregate'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'function_name', type: 'string'},
+        {name: 'arguments', type: 'any...'},
+      ],
+      'sql native',
+      `${name}(list, function_name, ...)\n\nExecutes the named aggregate on the elements of list.`,
+    ),
+  ),
+  ...[
+    'list_cosine_distance',
+    'array_cosine_distance',
+    'list_cosine_similarity',
+    'array_cosine_similarity',
+    'list_distance',
+    'array_distance',
+    'list_dot_product',
+    'array_dot_product',
+    'list_inner_product',
+    'array_inner_product',
+    'list_negative_dot_product',
+    'array_negative_dot_product',
+    'list_negative_inner_product',
+    'array_negative_inner_product',
+  ].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list1', type: 'array'},
+        {name: 'list2', type: 'array'},
+      ],
+      'number',
+      `${name}(list1, list2)\n\nComputes a numeric vector comparison between two lists.`,
+    ),
+  ),
+  nestedFunction(
+    'array_cross_product',
+    [
+      {name: 'array1', type: 'array'},
+      {name: 'array2', type: 'array'},
+    ],
+    'array<number>',
+    `
+      array_cross_product(array1, array2)
+
+      Computes the cross product of two 3-element numeric arrays.
+    `,
+  ),
+
+  nestedFunction(
+    'row',
+    [{name: 'values', type: 'any...'}],
+    'record',
+    `
+      row(any, ...)
+
+      Creates an unnamed STRUCT containing the argument values.
+    `,
+    {url: duckStruct},
+  ),
+  nestedFunction('struct_concat', [{name: 'structs', type: 'record...'}], 'record', 'struct_concat(structs...)\n\nMerges structs into a single struct.', {url: duckStruct}),
+  ...['struct_contains', 'struct_has'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'struct', type: 'record'},
+        {name: 'entry', type: 'any'},
+      ],
+      'boolean',
+      `${name}(struct, entry)\n\nChecks if the struct contains entry.`,
+      {url: duckStruct},
+    ),
+  ),
+  ...['struct_extract', 'struct_extract_at'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'struct', type: 'record'},
+        {name: 'entry', type: ['string', 'number']},
+      ],
+      'sql native',
+      `${name}(struct, entry)\n\nExtracts an entry from a struct.`,
+      {url: duckStruct},
+    ),
+  ),
+  ...['struct_position', 'struct_indexof'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'struct', type: 'record'},
+        {name: 'entry', type: 'any'},
+      ],
+      'number',
+      `${name}(struct, entry)\n\nReturns the 1-based position of entry in the struct.`,
+      {url: duckStruct},
+    ),
+  ),
+  nestedFunction('struct_keys', [{name: 'struct', type: 'record'}], 'array<string>', 'struct_keys(struct)\n\nReturns the struct keys.', {url: duckStruct}),
+  nestedFunction('struct_values', [{name: 'struct', type: 'record'}], 'record', 'struct_values(struct)\n\nReturns the struct values as an unnamed struct.', {url: duckStruct}),
+
+  nestedFunction(
+    'map',
+    [],
+    'map',
+    `
+      map([keys, values])
+
+      Creates a map from key and value lists, or an empty map when called with no arguments.
+    `,
+    {
+      url: duckMap,
+      overloads: [
+        {args: [], returns: 'map'},
+        {
+          args: [
+            {name: 'keys', type: 'array'},
+            {name: 'values', type: 'array'},
+          ],
+          returns: 'map',
+        },
+      ],
+    },
+  ),
+  nestedFunction('cardinality', [{name: 'map', type: 'map'}], 'number', 'cardinality(map)\n\nReturns the number of entries in the map.', {url: duckMap}),
+  nestedFunction('map_concat', [], 'map', 'map_concat(maps...)\n\nMerges maps, taking later values on key collisions.', {
+    url: duckMap,
+    overloads: [
+      {args: [], returns: 'map'},
+      {args: [{name: 'maps', type: 'map...'}], returns: 'map'},
+    ],
+  }),
+  ...['map_contains', 'map_contains_value'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'map', type: 'map'},
+        {name: name == 'map_contains' ? 'key' : 'value', type: 'any'},
+      ],
+      'boolean',
+      `${name}(map, value)\n\nChecks map membership.`,
+      {url: duckMap},
+    ),
+  ),
+  nestedFunction(
+    'map_contains_entry',
+    [
+      {name: 'map', type: 'map'},
+      {name: 'key', type: 'any'},
+      {name: 'value', type: 'any'},
+    ],
+    'boolean',
+    'map_contains_entry(map, key, value)\n\nChecks if a map contains a key/value pair.',
+    {url: duckMap},
+  ),
+  ...['element_at', 'map_extract'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'map', type: 'map'},
+        {name: 'key', type: 'any'},
+      ],
+      'array',
+      `${name}(map, key)\n\nReturns the value for key as a list.`,
+      {url: duckMap},
+    ),
+  ),
+  nestedFunction(
+    'map_extract_value',
+    [
+      {name: 'map', type: 'map'},
+      {name: 'key', type: 'any'},
+    ],
+    'sql native',
+    'map_extract_value(map, key)\n\nReturns the value for key, or NULL if the key is absent.',
+    {url: duckMap},
+  ),
+  nestedFunction('map_entries', [{name: 'map', type: 'map'}], 'array<record>', 'map_entries(map)\n\nReturns a list of key/value structs.', {url: duckMap}),
+  nestedFunction('map_from_entries', [{name: 'entries', type: 'array'}], 'map', 'map_from_entries(entries)\n\nCreates a map from key/value struct entries.', {url: duckMap}),
+  nestedFunction('map_keys', [{name: 'map', type: 'map'}], 'array', 'map_keys(map)\n\nReturns the map keys as a list.', {url: duckMap}),
+  nestedFunction('map_values', [{name: 'map', type: 'map'}], 'array', 'map_values(map)\n\nReturns the map values as a list.', {url: duckMap}),
 
   // ============================================================================
   // Utility Functions

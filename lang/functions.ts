@@ -13,12 +13,12 @@ import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {arrayOf, normalizeScalarType, scalarType, type Expr, type FieldMeta, type FieldType, isArrayType, isScalarType, type Scope, type TypeKind} from './types.ts'
 import {txt} from './util.ts'
 
-const ANY_TYPES: TypeKind[] = ['string', 'number', 'boolean', 'date', 'time', 'timestamp', 'json', 'interval', 'record', 'array']
+const ANY_TYPES: TypeKind[] = ['string', 'number', 'boolean', 'date', 'time', 'timestamp', 'json', 'interval', 'record', 'map', 'array']
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
 interface Overload {
   params: {name: string; allowedTypes: {type: TypeKind; rawType?: string}[]; isVariadic?: boolean}[]
-  returnType: {type: FieldType | 'generic' | 'array'; expressionType?: 'aggregate' | 'scalar' | 'window'}
+  returnType: {type: FieldType | 'generic' | 'array' | 'array_element'; expressionType?: 'aggregate' | 'scalar' | 'window'}
   fanoutSafe?: boolean
   sqlName?: string
   sqlTemplate?: string
@@ -80,8 +80,9 @@ function convertDef(def: FunctionDef): Overload[] {
   })
 }
 
-function normalizeReturnType(type: string): FieldType | 'array' {
+function normalizeReturnType(type: string): FieldType | 'array' | 'array_element' {
   if (type == 'array') return 'array'
+  if (type == 'array_element') return 'array_element'
   let arrayMatch = type.match(/^array<(.+)>$/)
   if (arrayMatch) return arrayOf(scalarType(normalizeTypeKind(arrayMatch[1]) as Exclude<TypeKind, 'array'>))
   if (type == 'bytes') return scalarType('string')
@@ -125,7 +126,7 @@ function findOverloads(name: string, dialect: string): Overload[] {
 // ============================================================================
 
 export function analyzeFunction(analyzer: Analyzer, node: SyntaxNode, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
-  let name = txt(node.getChild('Identifier')).toLowerCase()
+  let name = txt(node.getChild('FunctionName') || node.getChild('Identifier')).toLowerCase()
   let argNodes = node.getChildren('Expression')
   return analyzeNamedFunction(analyzer, node, name, argNodes, scope, opts)
 }
@@ -186,6 +187,7 @@ function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[],
   let returnType: FieldType = overload.returnType.type as FieldType
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || scalarType('string')
   if (overload.returnType.type == 'array') returnType = inferArrayReturnType(args)
+  if (overload.returnType.type == 'array_element') returnType = inferArrayElementReturnType(args)
 
   let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
   let canWindow = overload.returnType.expressionType == 'aggregate' || overload.returnType.expressionType == 'window'
@@ -276,4 +278,10 @@ function inferArrayReturnType(args: Expr[]): FieldType {
   if (scalarArg) return arrayOf(scalarArg.type)
 
   return arrayOf(scalarType('sql native'))
+}
+
+function inferArrayElementReturnType(args: Expr[]): FieldType {
+  let arrayArg = args.find(arg => isArrayType(arg.type))
+  if (arrayArg && isArrayType(arrayArg.type)) return arrayArg.type.elementType
+  return scalarType('sql native')
 }
