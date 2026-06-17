@@ -10,9 +10,21 @@ import {inferTimeOrdinal, inferGrain} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const duck = 'https://duckdb.org/docs/stable/sql/functions'
+const duckJson = 'https://duckdb.org/docs/stable/data/json'
 
 // Helper to trim and dedent multiline strings
 const trim = trimIndentation
+
+function jsonFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name,
+    description: trim(description),
+    url: opts.url || `${duckJson}/json_functions`,
+    args,
+    returns,
+    ...opts,
+  }
+}
 
 export const duckDbFunctions: FunctionDef[] = [
   // ============================================================================
@@ -2194,6 +2206,403 @@ export const duckDbFunctions: FunctionDef[] = [
     ],
     returns: 'timestamp',
   },
+
+  // ============================================================================
+  // JSON Functions
+  // https://duckdb.org/docs/stable/data/json/json_functions
+  // https://duckdb.org/docs/stable/data/json/creating_json
+  // https://duckdb.org/docs/stable/data/json/json_aggregates
+  // https://duckdb.org/docs/stable/data/json/sql_to_and_from_json
+  // ============================================================================
+
+  jsonFunction(
+    'json',
+    [{name: 'json', type: ['json', 'string']}],
+    'json',
+    `
+    json(json)
+
+    Parse and minify json. Throws an error if the supplied value is invalid JSON.
+  `,
+  ),
+  jsonFunction(
+    'json_valid',
+    [{name: 'json', type: ['json', 'string']}],
+    'boolean',
+    `
+    json_valid(json)
+
+    Returns true if the supplied value is valid JSON.
+  `,
+  ),
+  jsonFunction(
+    'json_exists',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: 'string'},
+    ],
+    'boolean',
+    `
+      json_exists(json, path)
+
+      Returns true if the path exists in the JSON value.
+    `,
+  ),
+  jsonFunction(
+    'json_extract',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'json',
+    `
+      json_extract(json, path)
+
+      Extracts JSON from the supplied path.
+    `,
+  ),
+  jsonFunction(
+    'json_extract_path',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'json',
+    `
+      json_extract_path(json, path)
+
+      Alias-compatible DuckDB spelling for extracting JSON from the supplied path.
+    `,
+  ),
+  jsonFunction(
+    'json_extract_string',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'string',
+    `
+      json_extract_string(json, path)
+
+      Extracts a value from JSON and returns it as VARCHAR.
+    `,
+  ),
+  jsonFunction(
+    'json_extract_path_text',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'string',
+    `
+      json_extract_path_text(json, path)
+
+      Alias-compatible DuckDB spelling for extracting a JSON value as VARCHAR.
+    `,
+  ),
+  jsonFunction(
+    'json_value',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'string',
+    `
+      json_value(json, path)
+
+      Extracts a scalar JSON value as VARCHAR. Returns NULL when the selected value is not scalar.
+    `,
+  ),
+  jsonFunction(
+    'json_array_length',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: 'string?'},
+    ],
+    'number',
+    `
+      json_array_length(json[, path])
+
+      Returns the number of elements in the JSON array, or 0 if the value is not a JSON array.
+    `,
+  ),
+  jsonFunction(
+    'json_contains',
+    [
+      {name: 'json_haystack', type: ['json', 'string']},
+      {name: 'json_needle', type: ['json', 'string', 'number']},
+    ],
+    'boolean',
+    `
+      json_contains(json_haystack, json_needle)
+
+      Returns true if json_needle is contained in json_haystack.
+    `,
+  ),
+  jsonFunction(
+    'json_keys',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: 'string?'},
+    ],
+    'array<string>',
+    `
+      json_keys(json[, path])
+
+      Returns the keys of a JSON object as a LIST of VARCHAR.
+    `,
+  ),
+  jsonFunction(
+    'json_structure',
+    [{name: 'json', type: ['json', 'string']}],
+    'json',
+    `
+    json_structure(json)
+
+    Returns the structure of a JSON value.
+  `,
+  ),
+  jsonFunction(
+    'json_type',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: 'string?'},
+    ],
+    'string',
+    `
+      json_type(json[, path])
+
+      Returns the type of the JSON value, or the type of the value at path.
+    `,
+  ),
+  jsonFunction(
+    'json_transform',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'structure', type: 'string'},
+    ],
+    'record',
+    `
+      json_transform(json, structure)
+
+      Transforms JSON according to the supplied structure.
+    `,
+  ),
+  jsonFunction(
+    'json_transform_strict',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'structure', type: 'string'},
+    ],
+    'record',
+    `
+      json_transform_strict(json, structure)
+
+      Strictly transforms JSON according to the supplied structure and errors when casts fail.
+    `,
+  ),
+  jsonFunction(
+    'from_json',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'structure', type: 'string'},
+    ],
+    'record',
+    `
+      from_json(json, structure)
+
+      Alias-compatible DuckDB spelling for json_transform.
+    `,
+  ),
+  jsonFunction(
+    'from_json_strict',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'structure', type: 'string'},
+    ],
+    'record',
+    `
+      from_json_strict(json, structure)
+
+      Alias-compatible DuckDB spelling for json_transform_strict.
+    `,
+  ),
+  jsonFunction(
+    'to_json',
+    [{name: 'value', type: 'any'}],
+    'json',
+    `
+    to_json(value)
+
+    Creates JSON from any value.
+  `,
+  ),
+  jsonFunction(
+    'json_quote',
+    [{name: 'value', type: 'any'}],
+    'json',
+    `
+    json_quote(value)
+
+    Alias-compatible DuckDB spelling for to_json.
+  `,
+  ),
+  jsonFunction(
+    'array_to_json',
+    [{name: 'array', type: 'array'}],
+    'json',
+    `
+    array_to_json(array)
+
+    Creates JSON from a LIST value.
+  `,
+  ),
+  jsonFunction(
+    'row_to_json',
+    [{name: 'row', type: 'record'}],
+    'json',
+    `
+    row_to_json(row)
+
+    Creates JSON from a STRUCT value.
+  `,
+  ),
+  jsonFunction(
+    'json_array',
+    [],
+    'json',
+    `
+    json_array(any, ...)
+
+    Creates a JSON array from the supplied values.
+  `,
+    {
+      overloads: [
+        {args: [], returns: 'json'},
+        {args: [{name: 'values', type: 'any...'}], returns: 'json'},
+      ],
+    },
+  ),
+  jsonFunction(
+    'json_object',
+    [],
+    'json',
+    `
+    json_object(key, value, ...)
+
+    Creates a JSON object from the supplied key/value pairs.
+  `,
+    {
+      overloads: [
+        {args: [], returns: 'json'},
+        {args: [{name: 'key_value_pairs', type: 'any...'}], returns: 'json'},
+      ],
+    },
+  ),
+  jsonFunction(
+    'json_merge_patch',
+    [
+      {name: 'json1', type: ['json', 'string']},
+      {name: 'json2', type: ['json', 'string']},
+    ],
+    'json',
+    `
+      json_merge_patch(json1, json2)
+
+      Merges two JSON documents using merge-patch semantics.
+    `,
+  ),
+  jsonFunction(
+    'json_pretty',
+    [{name: 'json', type: ['json', 'string']}],
+    'string',
+    `
+    json_pretty(json)
+
+    Pretty-prints a JSON value.
+  `,
+  ),
+  jsonFunction(
+    'json_group_array',
+    [{name: 'value', type: 'any'}],
+    'json',
+    `
+    json_group_array(value)
+
+    Aggregates values into a JSON array.
+  `,
+    {aggregate: true},
+  ),
+  jsonFunction(
+    'json_group_object',
+    [
+      {name: 'key', type: 'any'},
+      {name: 'value', type: 'any'},
+    ],
+    'json',
+    `
+      json_group_object(key, value)
+
+      Aggregates key/value pairs into a JSON object.
+    `,
+    {aggregate: true},
+  ),
+  jsonFunction(
+    'json_group_structure',
+    [{name: 'json', type: ['json', 'string']}],
+    'json',
+    `
+    json_group_structure(json)
+
+    Aggregates JSON values into a combined structure.
+  `,
+    {aggregate: true},
+  ),
+  jsonFunction(
+    'json_serialize_sql',
+    [
+      {name: 'sql', type: 'string'},
+      {name: 'skip_null', type: 'boolean?'},
+      {name: 'skip_empty', type: 'boolean?'},
+      {name: 'skip_default', type: 'boolean?'},
+      {name: 'format', type: 'boolean?'},
+    ],
+    'json',
+    `
+      json_serialize_sql(sql[, skip_null, skip_empty, skip_default, format])
+
+      Serializes a SQL query to JSON.
+    `,
+    {url: `${duckJson}/sql_to_and_from_json`},
+  ),
+  jsonFunction(
+    'json_serialize_plan',
+    [
+      {name: 'sql', type: 'string'},
+      {name: 'skip_null', type: 'boolean?'},
+      {name: 'skip_empty', type: 'boolean?'},
+      {name: 'skip_default', type: 'boolean?'},
+      {name: 'format', type: 'boolean?'},
+    ],
+    'json',
+    `
+      json_serialize_plan(sql[, skip_null, skip_empty, skip_default, format])
+
+      Serializes a SQL query plan to JSON.
+    `,
+    {url: `${duckJson}/sql_to_and_from_json`},
+  ),
+  jsonFunction(
+    'json_deserialize_sql',
+    [{name: 'serialized_sql', type: 'json'}],
+    'string',
+    `
+    json_deserialize_sql(serialized_sql)
+
+    Deserializes a serialized SQL JSON object back to SQL text.
+  `,
+    {url: `${duckJson}/sql_to_and_from_json`},
+  ),
 
   // ============================================================================
   // Utility Functions

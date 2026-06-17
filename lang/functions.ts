@@ -52,33 +52,38 @@ function convertDef(def: FunctionDef): Overload[] {
   let expressionType: 'aggregate' | 'window' | 'scalar' = 'scalar'
   if (def.aggregate) expressionType = 'aggregate'
   else if (def.window) expressionType = 'window'
-  let returnType = def.returns === 'T' ? ('generic' as const) : normalizeReturnType(def.returns)
 
-  let argSets: ArgDef[][] = [def.args]
-  // If any args are optional (type ends with '?'), expand into multiple overloads
-  let optIdx = def.args.findIndex(a => getArgInfo(a).type.endsWith('?'))
-  if (optIdx >= 0) {
-    argSets = []
-    for (let i = optIdx; i <= def.args.length; i++) argSets.push(def.args.slice(0, i))
-  }
+  let signatures = def.overloads || [{args: def.args, returns: def.returns}]
+  return signatures.flatMap(signature => {
+    let returnType = signature.returns === 'T' ? ('generic' as const) : normalizeReturnType(signature.returns)
+    let argSets: ArgDef[][] = [signature.args]
+    // If any args are optional (type ends with '?'), expand into multiple overloads
+    let optIdx = signature.args.findIndex(a => getArgInfo(a).type.endsWith('?'))
+    if (optIdx >= 0) {
+      argSets = []
+      for (let i = optIdx; i <= signature.args.length; i++) argSets.push(signature.args.slice(0, i))
+    }
 
-  return argSets.map(args => ({
-    params: args.map(a => {
-      let {name, type} = getArgInfo(a)
-      return {name, allowedTypes: parseArgTypes(a), isVariadic: type.endsWith('...')}
-    }),
-    returnType: {type: returnType, expressionType},
-    fanoutSafe: def.fanoutSafe,
-    sqlName: def.sqlName,
-    sqlTemplate: def.sqlTemplate,
-    supportsBareInvocation: def.supportsBareInvocation && args.length == 0,
-    bareSqlName: def.bareSqlName,
-    metadata: def.metadata,
-  }))
+    return argSets.map(args => ({
+      params: args.map(a => {
+        let {name, type} = getArgInfo(a)
+        return {name, allowedTypes: parseArgTypes(a), isVariadic: type.endsWith('...')}
+      }),
+      returnType: {type: returnType, expressionType},
+      fanoutSafe: def.fanoutSafe,
+      sqlName: def.sqlName,
+      sqlTemplate: def.sqlTemplate,
+      supportsBareInvocation: def.supportsBareInvocation && args.length == 0,
+      bareSqlName: def.bareSqlName,
+      metadata: def.metadata,
+    }))
+  })
 }
 
 function normalizeReturnType(type: string): FieldType | 'array' {
   if (type == 'array') return 'array'
+  let arrayMatch = type.match(/^array<(.+)>$/)
+  if (arrayMatch) return arrayOf(scalarType(normalizeTypeKind(arrayMatch[1]) as Exclude<TypeKind, 'array'>))
   if (type == 'bytes') return scalarType('string')
   return scalarType(normalizeTypeKind(type) as Exclude<TypeKind, 'array'>)
 }

@@ -1121,8 +1121,64 @@ describe('lang', () => {
     expect("from users select coalesce(name, 'Unknown') as name2").toRenderSql("select coalesce(users.name,'Unknown') as name2 from users as users")
   })
 
+  it('supports duckdb json functions', () => {
+    expect(`
+      select
+        json('{"a": [1, 2], "b": "x"}') as parsed,
+        json_valid('{"a": 1}') as valid,
+        json_exists(json('{"a": 1}'), '$.a') as exists_json,
+        json_extract(json('{"a": 1}'), '$.a') as extracted,
+        json_extract_path(json('{"a": 1}'), 'a') as extracted_path,
+        json_extract_string(json('{"a": 1}'), '$.a') as extracted_string,
+        json_extract_path_text(json('{"a": 1}'), 'a') as extracted_path_text,
+        json_value(json('{"a": 1}'), '$.a') as value,
+        json_array_length(json('[1, 2]')) as array_len,
+        json_array_length(json('{"items": [1, 2]}'), '$.items') as path_array_len,
+        json_contains(json('{"a": 1}'), json('{"a": 1}')) as contains,
+        json_keys(json('{"a": 1}')) as keys,
+        json_structure(json('{"a": 1}')) as structure,
+        json_type(json('{"a": 1}')) as type_name,
+        json_type(json('{"a": 1}'), '$.a') as path_type,
+        json_transform(json('{"a": 1}'), '{"a": "INTEGER"}') as transformed,
+        json_transform_strict(json('{"a": 1}'), '{"a": "INTEGER"}') as transformed_strict,
+        from_json(json('{"a": 1}'), '{"a": "INTEGER"}') as from_json_value,
+        from_json_strict(json('{"a": 1}'), '{"a": "INTEGER"}') as from_json_strict_value,
+        to_json(1) as to_json_value,
+        json_quote('x') as quoted,
+        json_array() as empty_array_value,
+        json_array(1, 'x') as array_value,
+        json_object() as empty_object_value,
+        json_object('a', 1) as object_value,
+        json_merge_patch(json('{"a": 1}'), json('{"b": 2}')) as merged,
+        json_pretty(json('{"a": 1}')) as pretty,
+        json_serialize_sql('select 1') as serialized_sql,
+        json_serialize_plan('select 1') as serialized_plan,
+        json_deserialize_sql(json_serialize_sql('select 1')) as deserialized_sql
+    `).toHaveNoErrors()
+  })
+
+  it('tracks duckdb json return types at graphenes current granularity', () => {
+    let [query] = analyze(`
+      select
+        json_extract(json('{"a": 1}'), '$.a') as extracted,
+        json_extract_string(json('{"a": 1}'), '$.a') as extracted_string,
+        json_keys(json('{"a": 1}')) as keys,
+        json_transform(json('{"a": 1}'), '{"a": "INTEGER"}') as transformed
+    `)
+    expect(formatType(query.fields[0].type)).toBe('json')
+    expect(formatType(query.fields[1].type)).toBe('string')
+    expect(formatType(query.fields[2].type)).toBe('array<string>')
+    expect(formatType(query.fields[3].type)).toBe('record')
+  })
+
   it('supports agg function calling', () => {
     expect('from users select age, string_agg(name)').toRenderSql('select users.age as age, string_agg(users.name) as col_1 from users as users group by 1 order by 2 desc nulls last')
+  })
+
+  it('supports duckdb json aggregate functions', () => {
+    expect("from users select json_group_array(name), json_group_object(id, name), json_group_structure(json_object('age', age))").toRenderSql(
+      "select json_group_array(users.name) as col_0, json_group_object(users.id,users.name) as col_1, json_group_structure(json_object('age',users.age)) as col_2 from users as users",
+    )
   })
 
   it('rejects variadic functions called with 0 args', () => {
