@@ -79,7 +79,7 @@ let testsDir = path.dirname(fileURLToPath(import.meta.url))
 let coreDir = path.resolve(testsDir, '../..')
 let examplesDir = path.join(coreDir, 'examples')
 
-async function runExample(exampleName: string, page: Page) {
+async function runExample(exampleName: string, page: Page, {suppressScreenshot = false}: {suppressScreenshot?: boolean} = {}) {
   let exampleDir = path.join(examplesDir, exampleName)
   let markdownFiles = listMarkdownFiles(exampleDir)
   expect(markdownFiles.length).toBeGreaterThan(0)
@@ -97,7 +97,9 @@ async function runExample(exampleName: string, page: Page) {
       console.log(`[run-examples] running ${exampleName}/${mdPath}`)
       await page.goto(`http://localhost:${port}${toPageUrl(mdPath)}`)
       await waitForGrapheneLoad(page, 120_000)
-      await expect(page).screenshot(`example-${exampleName}-${mdPath.replace(/\.md$/, '').replace(/[^a-z0-9]+/gi, '-')}`)
+      if (!suppressScreenshot) {
+        await expect(page).screenshot(`example-${exampleName}-${mdPath.replace(/\.md$/, '').replace(/[^a-z0-9]+/gi, '-')}`)
+      }
 
       let runResult = await runCli(['run', mdPath], exampleDir, childEnv)
       expectSuccess(`run ${exampleName}/${mdPath}`, runResult)
@@ -121,7 +123,7 @@ test.skipIf(!process.env.SLOW_TEST || true)('graphene run succeeds for clickhous
 })
 
 test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for ecomm example', {timeout: 180_000}, async ({page}) => {
-  await runExample('ecomm', page)
+  await runExample('ecomm', page, {suppressScreenshot: true /* dataset is continuously updated */})
 })
 
 test.skipIf(!process.env.SLOW_TEST)('graphene run succeeds for flights example', {timeout: 180_000}, async ({page}) => {
