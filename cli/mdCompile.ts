@@ -130,7 +130,7 @@ export function preprocessMarkdownSvelte(content: string, filename: string, opts
   content = liftInlineEChartsConfig(content)
   let pageStyles = extractPageStyles(content)
   content = pageStyles.html
-  if (pageStyles.css.trim()) content = `<GraphenePageStyle css=${svelteStringAttr(pageStyles.css)} />\n${content}`
+  if (pageStyles.css.trim()) content = `<svelte:head><style>${pageStyles.css}</style></svelte:head>\n${content}`
 
   if (opts.injectImports ?? true) {
     let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`

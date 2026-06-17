@@ -132,7 +132,6 @@ function validateSvelteAttributeValue(node: any, attr: any) {
 function isAllowedGeneratedExpressionAttr(node: any, attr: any, expression: any) {
   if (node.type != 'Component') return false
   if (node.name == 'GrapheneQuery' && (attr.name == 'name' || attr.name == 'code')) return isStaticTemplateLiteral(expression)
-  if (node.name == 'GraphenePageStyle' && attr.name == 'css') return isStaticTemplateLiteral(expression)
   if (node.name == 'ECharts' && attr.name == 'config') return isJsonLiteralExpression(expression)
   return false
 }

@@ -14,7 +14,6 @@ import DateRange from './components/DateRange.svelte'
 import Dropdown from './components/Dropdown.svelte'
 import DropdownOption from './components/DropdownOption.svelte'
 import ECharts from './components/ECharts.svelte'
-import GraphenePageStyle from './components/GraphenePageStyle.svelte'
 import GrapheneQuery from './components/GrapheneQuery.svelte'
 import InlineDelta from './components/InlineDelta.svelte'
 import LineChart from './components/LineChart.svelte'
@@ -87,7 +86,6 @@ window.$GRAPHENE.components = {
   DropdownOption,
   ECharts,
   ErrorChart,
-  GraphenePageStyle,
   GrapheneQuery,
   InlineDelta,
   LineChart,

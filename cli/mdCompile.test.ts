@@ -98,10 +98,9 @@ where created_at >= coalesce($daterange_start, created_at)
 <div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region" style="color: red">Hello</div>
 `)
 
-    expect(code).toContain('<GraphenePageStyle css=')
-    expect(code).not.toContain('<svelte:head><style>')
-    expect(code).toContain('@import url(\\u0022https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700\\u0026display=swap\\u0022);')
-    expect(code).toContain('.hero { color: rgb(1, 2, 3); background: url(\\u0022https://example.com/leak\\u0022); }')
+    expect(code).toContain('<svelte:head><style>')
+    expect(code).toContain('@import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");')
+    expect(code).toContain('.hero { color: rgb(1, 2, 3); background: url("https://example.com/leak"); }')
     expect(code).toContain('.card { display: grid; }')
     expect(code).toContain('<div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region">Hello</div>')
     expect(code).not.toContain('style="color: red"')
