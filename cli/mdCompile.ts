@@ -124,23 +124,33 @@ export function sanitizeMarkdown() {
 }
 
 // We don't want users to have to manually import components in their md files, so we auto-import them.
-export function injectComponentImports() {
-  let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`
+export function preprocessMarkdownSvelte(content: string, filename: string, opts: {injectImports?: boolean} = {}) {
+  if (!filename.endsWith('.md')) return
 
+  content = liftInlineEChartsConfig(content)
+  let pageStyles = extractPageStyles(content)
+  content = pageStyles.html
+  if (pageStyles.css.trim()) content = `<GraphenePageStyle css=${svelteStringAttr(pageStyles.css)} />\n${content}`
+
+  if (opts.injectImports ?? true) {
+    let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`
+    if (content.includes('<script>')) {
+      content = content.replace('<script>', `<script>\n${imp}`)
+    } else {
+      content = `<script>\n${imp}\n</script>\n${content}`
+    }
+  }
+
+  validateSvelteMarkup(content)
+  return content
+}
+
+// We don't want users to have to manually import components in their md files, so we auto-import them.
+export function injectComponentImports() {
   return {
     markup: ({content, filename}: {content: string; filename: string}) => {
-      if (!filename.endsWith('.md')) return // only auto-import components for md files
-      content = liftInlineEChartsConfig(content)
-      let pageStyles = extractPageStyles(content)
-      content = pageStyles.html
-      if (pageStyles.css.trim()) content = `<svelte:head><style>${pageStyles.css}</style></svelte:head>\n${content}`
-      if (content.includes('<script>')) {
-        content = content.replace('<script>', `<script>\n${imp}`)
-      } else {
-        content = `<script>\n${imp}\n</script>\n${content}`
-      }
-      validateSvelteMarkup(content)
-      return {code: content}
+      let code = preprocessMarkdownSvelte(content, filename)
+      if (code) return {code}
     },
     style: () => {},
     script: () => {},
