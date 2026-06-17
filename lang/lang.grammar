@@ -449,7 +449,7 @@ Alias { Identifier }
   whitespace { @whitespace+ }
   comment { "--" ![\n]* | "#" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
 
-  Identifier { @asciiLetter (@asciiLetter | @digit | "_")* }
+  Identifier { (@asciiLetter | "_") (@asciiLetter | @digit | "_")* }
   Param { "$" (@asciiLetter | @digit | "_")+ }
   Number { @digit+ ("." @digit+)? }
   String { "'" ![']* "'" | '"' !["]* '"' }

@@ -91,6 +91,12 @@ describe('lang', () => {
     await expect('from users select id, name where id = 1').toReturnRows([1, 'Alice'])
   })
 
+  it('supports columns with leading underscores', () => {
+    updateFile('table events (_id int, _source text)', 'underscore.gsql')
+
+    expect('from events select _id, events._source').toRenderSql('select events._id as _id, events._source as _source from events as events')
+  })
+
   it('handles select 1 without from', async () => {
     expect('select 1').toRenderSql('SELECT 1 as col_0')
     await expect('select 1').toReturnRows([1])
