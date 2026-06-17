@@ -1806,6 +1806,69 @@ describe('lang', () => {
     `).toRenderSql('select current_date() as col_0, current_time() as col_1, current_timestamp() as col_2, current_timestamp(3) as col_3, localtimestamp() as col_4 from users as users')
   })
 
+  it('supports broader duckdb date and time functions', () => {
+    expect(`
+      select
+        datediff('day', date '2024-01-01', date '2024-01-03') as datediff_days,
+        datesub('month', date '2024-01-01', date '2024-03-15') as datesub_months,
+        datepart('year', date '2024-01-01') as datepart_year,
+        datetrunc('month', timestamp '2024-01-15 12:00:00') as datetrunc_month,
+        decade(date '2024-01-01') as decade_part,
+        era(date '2024-01-01') as era_part,
+        julian(date '2024-01-01') as julian_day,
+        millennium(date '2024-01-01') as millennium_part,
+        yearweek(date '2024-01-01') as yearweek_part,
+        microsecond(timestamp '2024-01-01 12:34:56') as microsecond_part,
+        millisecond(timestamp '2024-01-01 12:34:56') as millisecond_part,
+        nanosecond(timestamp '2024-01-01 12:34:56') as nanosecond_part,
+        timezone(timestamp '2024-01-01 12:34:56') as timezone_part,
+        timezone_hour(timestamp '2024-01-01 12:34:56') as timezone_hour_part,
+        timezone_minute(timestamp '2024-01-01 12:34:56') as timezone_minute_part,
+        timezone('UTC', current_timestamp()) as utc_timestamp,
+        current_localtime() as current_local_time,
+        current_localtimestamp() as current_local_timestamp,
+        transaction_timestamp() as transaction_ts,
+        make_time(12, 34, 56) as made_time,
+        make_timestamp(2024, 1, 1, 12, 34, 56) as made_timestamp,
+        make_timestamp_ms(0) as made_timestamp_ms,
+        make_timestamp_us(0) as made_timestamp_us,
+        make_timestamp_ns(0) as made_timestamp_ns,
+        make_timestamptz(2024, 1, 1, 12, 34, 56, 'UTC') as made_timestamptz,
+        to_timestamp(0) as epoch_timestamp,
+        strptime('2024-01-01', list_value('%Y-%m-%d')) as parsed_timestamp,
+        try_strptime('2024-01-01', '%Y-%m-%d') as try_parsed_timestamp,
+        time_bucket(to_days(1), date '2024-01-02', date '2000-01-01') as bucketed_date,
+        to_days(1) as days_interval,
+        to_decades(1) as decades_interval,
+        to_hours(1) as hours_interval,
+        to_microseconds(1) as microseconds_interval,
+        to_milliseconds(1) as milliseconds_interval,
+        to_minutes(1) as minutes_interval,
+        to_months(1) as months_interval,
+        to_quarters(1) as quarters_interval,
+        to_seconds(1) as seconds_interval,
+        to_weeks(1) as weeks_interval,
+        to_years(1) as years_interval
+    `).toHaveNoErrors()
+  })
+
+  it('tracks duckdb date and time helper return types', () => {
+    let [query] = analyze(`
+      select
+        make_time(12, 34, 56) as made_time,
+        make_timestamp(2024, 1, 1, 12, 34, 56) as made_timestamp,
+        make_timestamp_ms(0) as made_timestamp_ms,
+        current_localtime() as current_local_time,
+        current_localtimestamp() as current_local_timestamp,
+        transaction_timestamp() as transaction_ts,
+        to_days(1) as days_interval,
+        datediff('day', date '2024-01-01', date '2024-01-03') as datediff_days,
+        try_strptime('2024-01-01', '%Y-%m-%d') as parsed_timestamp,
+        timezone('UTC', current_timestamp()) as utc_timestamp
+    `)
+    expect(query.fields.map(field => formatType(field.type))).toEqual(['time', 'timestamp', 'timestamp', 'time', 'timestamp', 'timestamp', 'interval', 'number', 'timestamp', 'sql native'])
+  })
+
   it('supports duckdb bare current datetime functions', () => {
     expect(`
       from users select

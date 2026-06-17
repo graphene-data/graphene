@@ -18,6 +18,11 @@ const duckStruct = 'https://duckdb.org/docs/stable/sql/functions/struct'
 // Helper to trim and dedent multiline strings
 const trim = trimIndentation
 
+const dateTimestampTypes = ['date', 'timestamp']
+const dateTimeTimestampTypes = ['date', 'time', 'timestamp']
+const dateTimestampIntervalTypes = ['date', 'timestamp', 'interval']
+const temporalPartTypes = ['date', 'time', 'timestamp', 'interval']
+
 function jsonFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
   return {
     name,
@@ -45,6 +50,17 @@ function textFunction(name: string, args: FunctionDef['args'], returns: string, 
     name,
     description: trim(description),
     url: opts.url || `${duck}/text`,
+    args,
+    returns,
+    ...opts,
+  }
+}
+
+function dateTimeFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name,
+    description: trim(description),
+    url: opts.url || `${duck}/timestamp`,
     args,
     returns,
     ...opts,
@@ -2058,11 +2074,26 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_diffpart-startdate-enddate`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'startdate', type: ['date', 'timestamp']},
-      {name: 'enddate', type: ['date', 'timestamp']},
+      {name: 'startdate', type: dateTimeTimestampTypes},
+      {name: 'enddate', type: dateTimeTimestampTypes},
     ],
     returns: 'number',
   },
+  dateTimeFunction(
+    'datediff',
+    [
+      {name: 'part', type: 'string'},
+      {name: 'startdate', type: dateTimeTimestampTypes},
+      {name: 'enddate', type: dateTimeTimestampTypes},
+    ],
+    'number',
+    `
+      datediff(part, startdate, enddate)
+
+      Alias for date_diff.
+    `,
+    {url: `${duck}/date#date_diffpart-startdate-enddate`},
+  ),
   {
     name: 'date_part',
     description: trim(`
@@ -2073,11 +2104,25 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_partpart-date`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'date', type: ['date', 'timestamp']},
+      {name: 'date', type: temporalPartTypes},
     ],
     returns: 'number',
     metadata: args => inferTimeOrdinal(args[0]?.sql, 'duckdb'),
   },
+  dateTimeFunction(
+    'datepart',
+    [
+      {name: 'part', type: 'string'},
+      {name: 'date', type: temporalPartTypes},
+    ],
+    'number',
+    `
+      datepart(part, date)
+
+      Alias for date_part.
+    `,
+    {url: `${duck}/date#date_partpart-date`, metadata: args => inferTimeOrdinal(args[0]?.sql, 'duckdb')},
+  ),
   {
     name: 'year',
     description: trim(`
@@ -2086,7 +2131,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the year.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('year', 'duckdb'),
   },
@@ -2098,7 +2143,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the quarter.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('quarter', 'duckdb'),
   },
@@ -2110,7 +2155,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the month.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('month', 'duckdb'),
   },
@@ -2122,7 +2167,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the week number.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('week', 'duckdb'),
   },
@@ -2134,7 +2179,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the ISO week number.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('weekofyear', 'duckdb'),
   },
@@ -2146,7 +2191,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of month.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('day', 'duckdb'),
   },
@@ -2158,7 +2203,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of month.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('dayofmonth', 'duckdb'),
   },
@@ -2170,7 +2215,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of week.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('dayofweek', 'duckdb'),
   },
@@ -2182,7 +2227,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of week.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('weekday', 'duckdb'),
   },
@@ -2194,7 +2239,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of year.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('dayofyear', 'duckdb'),
   },
@@ -2206,7 +2251,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the hour.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: temporalPartTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('hour', 'duckdb'),
   },
@@ -2218,7 +2263,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the minute.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: temporalPartTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('minute', 'duckdb'),
   },
@@ -2230,7 +2275,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the second.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: temporalPartTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('second', 'duckdb'),
   },
@@ -2242,7 +2287,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the ISO day of week.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('isodow', 'duckdb'),
   },
@@ -2254,10 +2299,44 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the ISO year.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('isoyear', 'duckdb'),
   },
+  ...['decade', 'era', 'millennium', 'yearweek'].map(name =>
+    dateTimeFunction(name, [{name: 'date', type: dateTimestampIntervalTypes}], 'number', `${name}(date)\n\nExtracts the ${name} part.`, {url: `${duck}/datepart.html`}),
+  ),
+  dateTimeFunction('julian', [{name: 'date', type: dateTimestampTypes}], 'number', 'julian(date)\n\nExtracts the Julian day number.', {url: `${duck}/datepart.html`}),
+  ...['microsecond', 'millisecond', 'nanosecond'].map(name =>
+    dateTimeFunction(name, [{name: 'date', type: temporalPartTypes}], 'number', `${name}(date)\n\nExtracts the ${name} part.`, {url: `${duck}/datepart.html`}),
+  ),
+  dateTimeFunction(
+    'timezone',
+    [],
+    'number',
+    `
+      timezone(timestamp)
+      timezone(timezone, timestamp)
+
+      Extracts the timezone part or converts a temporal value to a timezone.
+    `,
+    {
+      url: `${duck}/datepart.html`,
+      overloads: [
+        {args: [{name: 'date', type: dateTimestampIntervalTypes}], returns: 'number'},
+        {
+          args: [
+            {name: 'timezone', type: ['string', 'interval']},
+            {name: 'timestamp', type: ['time', 'timestamp']},
+          ],
+          returns: 'sql native',
+        },
+      ],
+    },
+  ),
+  ...['timezone_hour', 'timezone_minute'].map(name =>
+    dateTimeFunction(name, [{name: 'date', type: dateTimestampIntervalTypes}], 'number', `${name}(date)\n\nExtracts the ${name.replaceAll('_', ' ')} part.`, {url: `${duck}/datepart.html`}),
+  ),
   {
     name: 'date_sub',
     description: trim(`
@@ -2268,11 +2347,26 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_subpart-startdate-enddate`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'startdate', type: ['date', 'timestamp']},
-      {name: 'enddate', type: ['date', 'timestamp']},
+      {name: 'startdate', type: dateTimeTimestampTypes},
+      {name: 'enddate', type: dateTimeTimestampTypes},
     ],
     returns: 'number',
   },
+  dateTimeFunction(
+    'datesub',
+    [
+      {name: 'part', type: 'string'},
+      {name: 'startdate', type: dateTimeTimestampTypes},
+      {name: 'enddate', type: dateTimeTimestampTypes},
+    ],
+    'number',
+    `
+      datesub(part, startdate, enddate)
+
+      Alias for date_sub.
+    `,
+    {url: `${duck}/date#date_subpart-startdate-enddate`},
+  ),
   {
     name: 'dayname',
     description: trim(`
@@ -2311,6 +2405,21 @@ export const duckDbFunctions: FunctionDef[] = [
     returns: 'date',
   },
   {
+    name: 'make_time',
+    description: trim(`
+      make_time(hour, minute, second)
+
+      The time for the given parts.
+    `),
+    url: `${duck}/time#make_timebigint-bigint-double`,
+    args: [
+      ['hour', 'number'],
+      ['minute', 'number'],
+      ['second', 'number'],
+    ],
+    returns: 'time',
+  },
+  {
     name: 'monthname',
     description: trim(`
       monthname(date)
@@ -2329,10 +2438,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Converts a timestamp to a string according to the format string.
     `),
     url: `${duck}/date#strftimedate-format`,
-    args: [
-      ['timestamp', 'timestamp'],
-      ['format', 'string'],
-    ],
+    args: [{name: 'timestamp', type: dateTimestampTypes}, ['format', 'string']],
     returns: 'string',
   },
   {
@@ -2422,6 +2528,17 @@ export const duckDbFunctions: FunctionDef[] = [
     returns: 'number',
   },
   {
+    name: 'to_timestamp',
+    description: trim(`
+      to_timestamp(seconds)
+
+      Converts seconds since the Unix epoch to a timestamp.
+    `),
+    url: `${duck}/timestamp#to_timestampdouble`,
+    args: [['seconds', 'number']],
+    returns: 'timestamp',
+  },
+  {
     name: 'make_timestamp',
     description: trim(`
       make_timestamp(year, month, day, hour, minute, second)
@@ -2437,8 +2554,64 @@ export const duckDbFunctions: FunctionDef[] = [
       ['minute', 'number'],
       ['second', 'number'],
     ],
-    returns: 'time',
+    returns: 'timestamp',
   },
+  ...[
+    ['make_timestamp_ms', 'milliseconds'],
+    ['make_timestamp_us', 'microseconds'],
+    ['make_timestamp_ns', 'nanoseconds'],
+  ].map(([name, unit]) =>
+    dateTimeFunction(
+      name,
+      [['value', 'number']],
+      'timestamp',
+      `
+        ${name}(value)
+
+        Converts ${unit} since the Unix epoch to a timestamp.
+      `,
+      {url: `${duck}/timestamp#${name}bigint`},
+    ),
+  ),
+  dateTimeFunction(
+    'make_timestamptz',
+    [],
+    'timestamp',
+    `
+      make_timestamptz(...)
+
+      Creates a timestamp with time zone from epoch microseconds or timestamp parts.
+    `,
+    {
+      url: `${duck}/timestamp#make_timestamptzbigint-bigint-bigint-bigint-bigint-double-string`,
+      overloads: [
+        {args: [['microseconds', 'number']], returns: 'timestamp'},
+        {
+          args: [
+            ['year', 'number'],
+            ['month', 'number'],
+            ['day', 'number'],
+            ['hour', 'number'],
+            ['minute', 'number'],
+            ['second', 'number'],
+          ],
+          returns: 'timestamp',
+        },
+        {
+          args: [
+            ['year', 'number'],
+            ['month', 'number'],
+            ['day', 'number'],
+            ['hour', 'number'],
+            ['minute', 'number'],
+            ['second', 'number'],
+            ['timezone', 'string'],
+          ],
+          returns: 'timestamp',
+        },
+      ],
+    },
+  ),
   {
     name: 'now',
     description: trim(`
@@ -2458,10 +2631,18 @@ export const duckDbFunctions: FunctionDef[] = [
       Converts the string text to timestamp according to the format string.
     `),
     url: `${duck}/timestamp#strptimetext-format`,
-    args: [
-      ['text', 'string'],
-      ['format', 'string'],
-    ],
+    args: [['text', 'string'], {name: 'format', type: ['string', 'array']}],
+    returns: 'timestamp',
+  },
+  {
+    name: 'try_strptime',
+    description: trim(`
+      try_strptime(text, format)
+
+      Converts text to a timestamp according to the format string, returning NULL on failure.
+    `),
+    url: `${duck}/timestamp#try_strptimetext-format`,
+    args: [['text', 'string'], {name: 'format', type: ['string', 'array']}],
     returns: 'timestamp',
   },
   {
@@ -2472,12 +2653,22 @@ export const duckDbFunctions: FunctionDef[] = [
       Truncate timestamp to a grid of width bucket_width.
     `),
     url: `${duck}/timestamp#time_bucketbucket_width-timestamp-offset`,
-    args: [
-      ['bucket_width', 'interval'],
-      ['timestamp', 'timestamp'],
-    ],
+    args: [['bucket_width', 'interval'], {name: 'timestamp', type: dateTimestampTypes}],
     returns: 'timestamp',
+    overloads: [
+      {
+        args: [['bucket_width', 'interval'], {name: 'timestamp', type: dateTimestampTypes}],
+        returns: 'timestamp',
+      },
+      {
+        args: [['bucket_width', 'interval'], {name: 'timestamp', type: dateTimestampTypes}, {name: 'offset', type: ['date', 'timestamp', 'interval', 'string']}],
+        returns: 'timestamp',
+      },
+    ],
   },
+  ...['to_days', 'to_decades', 'to_hours', 'to_microseconds', 'to_milliseconds', 'to_minutes', 'to_months', 'to_quarters', 'to_seconds', 'to_weeks', 'to_years'].map(name =>
+    dateTimeFunction(name, [['value', 'number']], 'interval', `${name}(value)\n\nCreates an interval value.`, {url: `${duck}/interval`}),
+  ),
 
   // ============================================================================
   // JSON Functions
@@ -3361,6 +3552,21 @@ export const duckDbFunctions: FunctionDef[] = [
     sqlTemplate: 'DATE_TRUNC(${part}, ${timestamp})',
   },
   {
+    name: 'datetrunc',
+    description: trim(`
+      datetrunc(part, timestamp)
+
+      Alias for date_trunc.
+    `),
+    url: `${duck}/timestamp#date_truncpart-timestamp`,
+    args: [
+      {name: 'part', type: 'string'},
+      {name: 'timestamp', type: ['date', 'timestamp']},
+    ],
+    returns: 'timestamp',
+    metadata: args => inferGrain(args[0]?.sql),
+  },
+  {
     name: 'current_date',
     description: trim(`
       current_date
@@ -3385,6 +3591,17 @@ export const duckDbFunctions: FunctionDef[] = [
     supportsBareInvocation: true,
   },
   {
+    name: 'current_localtime',
+    description: trim(`
+      current_localtime()
+
+      Returns the current local time.
+    `),
+    url: `${duck}/time#current_localtime`,
+    args: [],
+    returns: 'time',
+  },
+  {
     name: 'current_timestamp',
     description: trim(`
       current_timestamp([precision])
@@ -3395,6 +3612,28 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'precision', type: 'number?'}],
     returns: 'timestamp',
     supportsBareInvocation: true,
+  },
+  {
+    name: 'current_localtimestamp',
+    description: trim(`
+      current_localtimestamp()
+
+      Returns the current local timestamp.
+    `),
+    url: `${duck}/timestamp#current_localtimestamp`,
+    args: [],
+    returns: 'timestamp',
+  },
+  {
+    name: 'transaction_timestamp',
+    description: trim(`
+      transaction_timestamp()
+
+      Returns the current timestamp at the start of the transaction.
+    `),
+    url: `${duck}/timestamp#transaction_timestamp`,
+    args: [],
+    returns: 'timestamp',
   },
   {
     name: 'local_timestamp',
