@@ -40,6 +40,17 @@ function nestedFunction(name: string, args: FunctionDef['args'], returns: string
   }
 }
 
+function textFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name,
+    description: trim(description),
+    url: opts.url || `${duck}/text`,
+    args,
+    returns,
+    ...opts,
+  }
+}
+
 export const duckDbFunctions: FunctionDef[] = [
   // ============================================================================
   // Window Functions
@@ -1481,9 +1492,19 @@ export const duckDbFunctions: FunctionDef[] = [
       Returns the MD5 hash of the string as a VARCHAR.
     `),
     url: `${duck}/text#md5string`,
-    args: [['string', 'string']],
+    args: [['value', ['string', 'bytes']]],
     returns: 'string',
   },
+  textFunction('md5_number', [{name: 'value', type: ['string', 'bytes']}], 'number', 'md5_number(value)\n\nReturns the MD5 hash as a huge integer.', {url: `${duck}/text#md5_numberstring`}),
+  textFunction('md5_number_lower', [{name: 'value', type: ['string', 'bytes']}], 'number', 'md5_number_lower(value)\n\nReturns the lower 64 bits of the MD5 hash as an integer.', {
+    url: `${duck}/text#md5_number_lowerstring`,
+  }),
+  textFunction('md5_number_upper', [{name: 'value', type: ['string', 'bytes']}], 'number', 'md5_number_upper(value)\n\nReturns the upper 64 bits of the MD5 hash as an integer.', {
+    url: `${duck}/text#md5_number_upperstring`,
+  }),
+  ...['sha1', 'sha256'].map(name =>
+    textFunction(name, [{name: 'value', type: ['string', 'bytes']}], 'string', `${name}(value)\n\nReturns a cryptographic hash as text.`, {url: `${duck}/text#${name}value`}),
+  ),
   {
     name: 'printf',
     description: trim(`
@@ -1498,6 +1519,17 @@ export const duckDbFunctions: FunctionDef[] = [
     ],
     returns: 'string',
   },
+  textFunction(
+    'regexp_escape',
+    [{name: 'string', type: 'string'}],
+    'string',
+    `
+      regexp_escape(string)
+
+      Escapes special regex characters in a string.
+    `,
+    {url: `${duck}/text#regexp_escapestring`},
+  ),
   {
     name: 'regexp_extract',
     description: trim(`
@@ -1510,9 +1542,41 @@ export const duckDbFunctions: FunctionDef[] = [
       {name: 'string', type: 'string'},
       {name: 'regex', type: 'string'},
       {name: 'group', type: 'number?'},
+      {name: 'options', type: 'string?'},
     ],
     returns: 'string',
   },
+  textFunction(
+    'regexp_extract_all',
+    [
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'group', type: 'number?'},
+      {name: 'options', type: 'string?'},
+    ],
+    'array<string>',
+    `
+      regexp_extract_all(string, regex[, group][, options])
+
+      Returns all non-overlapping regex matches or capturing groups as a list.
+    `,
+    {url: `${duck}/text#regexp_extract_allstring-regex-group-options`},
+  ),
+  textFunction(
+    'regexp_full_match',
+    [
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'options', type: 'string?'},
+    ],
+    'boolean',
+    `
+      regexp_full_match(string, regex[, options])
+
+      Returns true if the whole string matches the regex.
+    `,
+    {url: `${duck}/text#regexp_full_matchstring-regex-options`},
+  ),
   {
     name: 'regexp_matches',
     description: trim(`
@@ -1522,8 +1586,9 @@ export const duckDbFunctions: FunctionDef[] = [
     `),
     url: `${duck}/text#regexp_matchesstring-regex-options`,
     args: [
-      ['string', 'string'],
-      ['regex', 'string'],
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'options', type: 'string?'},
     ],
     returns: 'boolean',
   },
@@ -1536,12 +1601,28 @@ export const duckDbFunctions: FunctionDef[] = [
     `),
     url: `${duck}/text#regexp_replacestring-regex-replacement-options`,
     args: [
-      ['string', 'string'],
-      ['regex', 'string'],
-      ['replacement', 'string'],
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'replacement', type: 'string'},
+      {name: 'options', type: 'string?'},
     ],
     returns: 'string',
   },
+  textFunction(
+    'regexp_split_to_array',
+    [
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'options', type: 'string?'},
+    ],
+    'array<string>',
+    `
+      regexp_split_to_array(string, regex[, options])
+
+      Splits string by regex into a list of strings.
+    `,
+    {url: `${duck}/text#regexp_split_to_arraystring-regex-options`},
+  ),
   {
     name: 'repeat',
     description: trim(`
@@ -1666,8 +1747,33 @@ export const duckDbFunctions: FunctionDef[] = [
       ['string', 'string'],
       ['separator', 'string'],
     ],
-    returns: 'array',
+    returns: 'array<string>',
   },
+  ...['split', 'str_split', 'string_to_array'].map(name =>
+    textFunction(
+      name,
+      [
+        {name: 'string', type: 'string'},
+        {name: 'separator', type: 'string'},
+      ],
+      'array<string>',
+      `${name}(string, separator)\n\nSplits the string along the separator.`,
+      {url: `${duck}/text#string_splitstring-separator`},
+    ),
+  ),
+  ...['string_split_regex', 'str_split_regex'].map(name =>
+    textFunction(
+      name,
+      [
+        {name: 'string', type: 'string'},
+        {name: 'regex', type: 'string'},
+        {name: 'options', type: 'string?'},
+      ],
+      'array<string>',
+      `${name}(string, regex[, options])\n\nSplits string by regex into a list of strings.`,
+      {url: `${duck}/text#string_split_regexstring-regex-options`},
+    ),
+  ),
   {
     name: 'strip_accents',
     description: trim(`
@@ -1759,6 +1865,158 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [['string', 'string']],
     returns: 'number',
   },
+  textFunction(
+    'damerau_levenshtein',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'damerau_levenshtein(s1, s2)\n\nReturns the Damerau-Levenshtein distance between two strings.',
+    {url: `${duck}/text#damerau_levenshteins1-s2`},
+  ),
+  textFunction(
+    'editdist3',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'editdist3(s1, s2)\n\nReturns the Levenshtein distance between two strings.',
+    {url: `${duck}/text#editdist3s1-s2`},
+  ),
+  textFunction(
+    'hamming',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'hamming(s1, s2)\n\nReturns the Hamming distance between two strings.',
+    {url: `${duck}/text#hammings1-s2`},
+  ),
+  textFunction(
+    'levenshtein',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'levenshtein(s1, s2)\n\nReturns the Levenshtein distance between two strings.',
+    {url: `${duck}/text#levenshteins1-s2`},
+  ),
+  textFunction(
+    'mismatches',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'mismatches(s1, s2)\n\nReturns the number of positions where two strings differ.',
+    {url: `${duck}/text#mismatchess1-s2`},
+  ),
+  ...['jaro_similarity', 'jaro_winkler_similarity'].map(name =>
+    textFunction(
+      name,
+      [
+        {name: 's1', type: 'string'},
+        {name: 's2', type: 'string'},
+        {name: 'score_cutoff', type: 'number?'},
+      ],
+      'number',
+      `${name}(s1, s2[, score_cutoff])\n\nReturns a string similarity score.`,
+      {url: `${duck}/text#${name}s1-s2-score_cutoff`},
+    ),
+  ),
+  ...['like_escape', 'ilike_escape', 'not_like_escape', 'not_ilike_escape'].map(name =>
+    textFunction(
+      name,
+      [
+        {name: 'string', type: 'string'},
+        {name: 'like_specifier', type: 'string'},
+        {name: 'escape_character', type: 'string'},
+      ],
+      'boolean',
+      `${name}(string, like_specifier, escape_character)\n\nEvaluates a LIKE-style comparison with an escape character.`,
+      {url: `${duck}/text#${name}string-like_specifier-escape_character`},
+    ),
+  ),
+  textFunction(
+    'prefix',
+    [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
+    'boolean',
+    'prefix(string, search_string)\n\nReturns true if string begins with search_string.',
+    {url: `${duck}/text#prefixstring-search_string`},
+  ),
+  textFunction(
+    'suffix',
+    [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
+    'boolean',
+    'suffix(string, search_string)\n\nReturns true if string ends with search_string.',
+    {url: `${duck}/text#suffixstring-search_string`},
+  ),
+  textFunction(
+    'bar',
+    [
+      {name: 'x', type: 'number'},
+      {name: 'min', type: 'number'},
+      {name: 'max', type: 'number'},
+      {name: 'width', type: 'number?'},
+    ],
+    'string',
+    'bar(x, min, max[, width])\n\nDraws a proportional text bar.',
+    {url: `${duck}/text#barx-min-max-width`},
+  ),
+  textFunction('format_bytes', [['integer', 'number']], 'string', 'format_bytes(integer)\n\nFormats bytes as a human-readable string.', {url: `${duck}/text#format_bytesinteger`}),
+  textFunction('formatreadablesize', [['integer', 'number']], 'string', 'formatReadableSize(integer)\n\nFormats bytes as a human-readable string.', {
+    url: `${duck}/text#formatreadablesizeinteger`,
+    sqlName: 'formatReadableSize',
+  }),
+  textFunction('formatreadabledecimalsize', [['integer', 'number']], 'string', 'formatReadableDecimalSize(integer)\n\nFormats bytes as a human-readable decimal-size string.', {
+    url: `${duck}/text#formatreadabledecimalsizeinteger`,
+    sqlName: 'formatReadableDecimalSize',
+  }),
+  textFunction('parse_formatted_bytes', [['string', 'string']], 'number', 'parse_formatted_bytes(string)\n\nParses a human-readable byte string into bytes.', {
+    url: `${duck}/text#parse_formatted_bytesstring`,
+  }),
+  ...['hex', 'to_hex', 'bin', 'to_binary'].map(name => textFunction(name, [{name: 'value', type: 'any'}], 'string', `${name}(value)\n\nEncodes a value as text.`, {url: `${duck}/text#${name}value`})),
+  ...['unhex', 'from_hex', 'unbin', 'from_binary'].map(name =>
+    textFunction(name, [{name: 'value', type: 'string'}], 'string', `${name}(value)\n\nDecodes text into bytes.`, {url: `${duck}/text#${name}value`}),
+  ),
+  ...['base64', 'to_base64'].map(name =>
+    textFunction(name, [{name: 'blob', type: ['string', 'bytes']}], 'string', `${name}(blob)\n\nEncodes bytes as base64 text.`, {url: `${duck}/text#${name}blob`}),
+  ),
+  textFunction('from_base64', [['string', 'string']], 'string', 'from_base64(string)\n\nDecodes base64 text into bytes.', {url: `${duck}/text#from_base64string`}),
+  textFunction('encode', [['string', 'string']], 'string', 'encode(string)\n\nEncodes a string as bytes.', {url: `${duck}/text#encodestring`}),
+  textFunction(
+    'decode',
+    [
+      {name: 'blob', type: ['string', 'bytes']},
+      {name: 'encoding', type: 'string?'},
+    ],
+    'string',
+    'decode(blob[, encoding])\n\nDecodes bytes to text.',
+    {url: `${duck}/text#decodeblob`},
+  ),
+  textFunction(
+    'to_base',
+    [
+      {name: 'number', type: 'number'},
+      {name: 'radix', type: 'number'},
+      {name: 'min_length', type: 'number?'},
+    ],
+    'string',
+    'to_base(number, radix[, min_length])\n\nConverts a number to text in the supplied base.',
+    {url: `${duck}/text#to_basenumber-radix-min_length`},
+  ),
+  textFunction('url_encode', [['string', 'string']], 'string', 'url_encode(string)\n\nURL-encodes a string.', {url: `${duck}/text#url_encodestring`}),
+  textFunction('url_decode', [['string', 'string']], 'string', 'url_decode(string)\n\nURL-decodes a string.', {url: `${duck}/text#url_decodestring`}),
   {
     name: 'upper',
     description: trim(`
@@ -3074,6 +3332,13 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'value', type: 'any'}],
     returns: 'number',
   },
+  ...['uuid', 'uuidv4', 'uuidv7', 'gen_random_uuid'].map(name =>
+    textFunction(name, [], 'string', `${name}()\n\nGenerates a UUID.`, {
+      url: `${duck}/utility`,
+    }),
+  ),
+  textFunction('uuid_extract_timestamp', [{name: 'uuid', type: 'string'}], 'timestamp', 'uuid_extract_timestamp(uuid)\n\nExtracts the timestamp from a UUID v7 value.', {url: `${duck}/utility`}),
+  textFunction('uuid_extract_version', [{name: 'uuid', type: 'string'}], 'number', 'uuid_extract_version(uuid)\n\nExtracts the UUID version.', {url: `${duck}/utility`}),
 
   // ============================================================================
   // Date/Time Functions (additional)

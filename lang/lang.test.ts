@@ -1264,6 +1264,85 @@ describe('lang', () => {
     expect(query.fields.map(field => formatType(field.type))).toEqual(['array<number>', 'number', 'map', 'array<record>', 'sql native', 'record', 'sql native', 'array<number>'])
   })
 
+  it('supports broader duckdb regex, fuzzy matching, uuid, hash, and encoding functions', () => {
+    expect(`
+      select
+        regexp_escape('a.b') as escaped_regex,
+        regexp_extract('abc123', '([a-z]+)([0-9]+)', 1, 'c') as extracted_regex,
+        regexp_extract_all('a1 b2', '([a-z])([0-9])', 1) as extracted_all_regex,
+        regexp_full_match('abc', '[a-z]+') as full_match_regex,
+        regexp_matches('abc', 'b', 'c') as matches_regex,
+        regexp_replace('abc', 'b', 'x', 'g') as replaced_regex,
+        regexp_split_to_array('a,b', ',') as regexp_split_values,
+        string_split_regex('a,b', ',') as string_regex_split_values,
+        str_split_regex('a,b', ',') as str_regex_split_values,
+        split('a,b', ',') as split_values,
+        str_split('a,b', ',') as str_split_values,
+        string_to_array('a,b', ',') as string_array_values,
+        levenshtein('kitten', 'sitting') as levenshtein_distance,
+        damerau_levenshtein('abc', 'acb') as damerau_distance,
+        editdist3('abc', 'abd') as edit_distance,
+        hamming('abc', 'abd') as hamming_distance,
+        mismatches('abc', 'abd') as mismatch_count,
+        jaro_similarity('abc', 'abd') as jaro_score,
+        jaro_winkler_similarity('abc', 'abd', 0.1) as jaro_winkler_score,
+        md5('abc') as md5_hash,
+        md5_number('abc') as md5_number_hash,
+        md5_number_lower('abc') as md5_lower_hash,
+        md5_number_upper('abc') as md5_upper_hash,
+        sha1('abc') as sha1_hash,
+        sha256('abc') as sha256_hash,
+        hash('abc') as hash_value,
+        uuid() as uuid_value,
+        uuidv4() as uuidv4_value,
+        uuidv7() as uuidv7_value,
+        gen_random_uuid() as random_uuid_value,
+        uuid_extract_timestamp(uuidv7()) as uuid_timestamp,
+        uuid_extract_version(uuidv7()) as uuid_version,
+        hex('abc') as hex_value,
+        to_hex('abc') as to_hex_value,
+        unhex('616263') as unhex_value,
+        from_hex('616263') as from_hex_value,
+        bin(5) as bin_value,
+        to_binary(5) as binary_value,
+        unbin('101') as unbin_value,
+        from_binary('101') as from_binary_value,
+        base64('abc') as base64_value,
+        to_base64('abc') as to_base64_value,
+        from_base64('YWJj') as from_base64_value,
+        encode('abc') as encoded_value,
+        decode('abc') as decoded_value,
+        to_base(255, 16, 2) as base_value,
+        url_encode('a b') as encoded_url,
+        url_decode('a%20b') as decoded_url,
+        like_escape('a_b', 'a$_b', '$') as like_escaped,
+        ilike_escape('A_B', 'a$_b', '$') as ilike_escaped,
+        not_like_escape('a_b', 'z%', '$') as not_like_escaped,
+        not_ilike_escape('A_B', 'z%', '$') as not_ilike_escaped,
+        prefix('abc', 'a') as prefix_match,
+        suffix('abc', 'c') as suffix_match,
+        bar(5, 0, 10, 20) as bar_value,
+        format_bytes(1024) as byte_label,
+        formatreadablesize(1024) as readable_size,
+        formatreadabledecimalsize(1024) as readable_decimal_size,
+        parse_formatted_bytes('1 KiB') as parsed_bytes
+    `).toHaveNoErrors()
+  })
+
+  it('tracks duckdb easy string helper return types', () => {
+    let [query] = analyze(`
+      select
+        regexp_extract_all('a1 b2', '([a-z])([0-9])', 1) as regex_matches,
+        split('a,b', ',') as split_values,
+        levenshtein('kitten', 'sitting') as distance,
+        regexp_full_match('abc', '[a-z]+') as full_match,
+        uuid_extract_timestamp(uuidv7()) as uuid_time,
+        sha256('abc') as sha,
+        encode('abc') as encoded
+    `)
+    expect(query.fields.map(field => formatType(field.type))).toEqual(['array<string>', 'array<string>', 'number', 'boolean', 'timestamp', 'string', 'string'])
+  })
+
   it('rejects variadic functions called with 0 args', () => {
     expect('from users select coalesce() as empty').toHaveDiagnostic(/wrong number of arguments/i)
   })
