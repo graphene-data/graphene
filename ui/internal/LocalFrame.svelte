@@ -3,23 +3,28 @@
   import {rowsToCsv} from '../../lang/csv.ts'
   import {type GrapheneError} from '../../lang/index.js'
   import {GrapheneFrameChild} from './frameBridge.ts'
-  import {setErrorFor, getErrors} from './telemetry.ts'
-  import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
-  import {refreshQueries, setQueryFetcher} from './queryEngine.ts'
+  import {setErrorFor} from './telemetry.ts'
+  import {setPageInputsContext} from './pageInputs.svelte.ts'
+  import {createChildFrameRuntime} from './frameRuntime.ts'
   import ErrorDisplay from './ErrorDisplay.svelte'
 
   let search = new URLSearchParams(window.location.search)
   let parentOrigin = search.get('parentOrigin') || window.location.origin
   let bridge = new GrapheneFrameChild(parentOrigin)
 
-  let pageInputs = activatePageInputs(new PageInputs({
-    syncUrl: false,
-    delegateUpdate: nextParams => void bridge.request('params.update', {params: nextParams}),
-  }))
+  let childRuntime = createChildFrameRuntime({
+    bridge,
+    waitForLoad: timeout => window.$GRAPHENE.waitForLoad(timeout),
+    handlers: {
+      'components.list': () => listComponentIds(),
+      'exports.csv': payload => exportChartCsv(payload?.chart || ''),
+      'components.screenshot': payload => captureComponent(payload?.component || ''),
+      'page.screenshot': () => takeScreenshot(),
+    },
+  })
+  let pageInputs = childRuntime.pageInputs
   setPageInputsContext(pageInputs)
-  onDestroy(() => releasePageInputs(pageInputs))
-
-  setQueryFetcher((req, options) => bridge.request('query.run', {req, options}))
+  onDestroy(() => childRuntime.destroy())
 
   let pathName = window.location.pathname.replace(/^\/_graphene\/frame\/?/, '').replace(/\/$/, '') || 'index'
 
@@ -33,16 +38,6 @@
     window.$GRAPHENE.appLoading = false
     bridge.notify('render.ready')
   })
-
-  bridge.on('params.changed', payload => pageInputs.applyExternalParams(payload.params || {}))
-  bridge.on('render.waitForLoad', payload => window.$GRAPHENE.waitForLoad(payload?.timeout || 20_000))
-  bridge.on('queries.rerun', () => window.$GRAPHENE.rerunQueries())
-  bridge.on('queries.refresh', () => refreshQueries())
-  bridge.on('errors.list', () => getErrors())
-  bridge.on('components.list', () => listComponentIds())
-  bridge.on('exports.csv', payload => exportChartCsv(payload?.chart || ''))
-  bridge.on('components.screenshot', payload => captureComponent(payload?.component || ''))
-  bridge.on('page.screenshot', () => takeScreenshot())
 
   onMount(async () => {
     try {

@@ -2,8 +2,7 @@
   import {onDestroy, onMount} from 'svelte'
   import {setErrorFor} from './telemetry.ts'
   import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
-  import {GrapheneFrameParent} from './frameBridge.ts'
-  import {resetParentQueries, runParentQuery} from './queryEngine.ts'
+  import {createParentFrameRuntime, type ParentFrameRuntime} from './frameRuntime.ts'
   import navFiles from 'virtual:nav'
   import Sidebar from './Sidebar.svelte'
   import SidebarToggle from './SidebarToggle.svelte'
@@ -31,53 +30,37 @@
   let compileError = $state<GrapheneError | null>(null)
   let pageMeta = $state<any>({})
   let frameEl = $state<HTMLIFrameElement | null>(null)
-  let frameBridge: GrapheneFrameParent | null = null
+  let frameRuntime: ParentFrameRuntime | null = null
   let frameSrc = $derived(`/_graphene/frame/${pathName}?parentOrigin=${encodeURIComponent(window.location.origin)}`)
 
   let InternalPage = $state<any>(null)
 
   $effect(() => {
     if (!frameEl || pathName == '_charts' || pathName == '_styles') return
-    frameBridge?.destroy()
-    resetParentQueries()
-    frameBridge = new GrapheneFrameParent(frameEl)
-    frameBridge.on('query.run', payload => runParentQuery(payload.req, payload.options))
-    frameBridge.on('params.get', () => pageInputs.getParams())
-    frameBridge.on('params.update', payload => {
-      pageInputs.updateParams(payload.params || {})
-      return pageInputs.getParams()
+    frameRuntime?.destroy()
+    frameRuntime = createParentFrameRuntime({
+      frame: frameEl,
+      pageInputs,
+      getCompileError: () => compileError,
+      onMeta: payload => pageMeta = payload || {},
+      onError: payload => {
+        compileError = payload
+        setErrorFor('compile', compileError)
+      },
+      onReady: () => {
+        window.$GRAPHENE.appLoading = false
+      },
+      hooks: runtime => ({
+        listComponentIds: () => runtime.requestFrame('components.list'),
+        exportChartCsv: (chart: string) => runtime.requestFrame('exports.csv', {chart}),
+        captureComponent: (component: string) => compileError ? undefined : runtime.requestFrame('components.screenshot', {component}),
+        capturePage: () => compileError ? undefined : runtime.requestFrame('page.screenshot'),
+      }),
     })
-    frameBridge.on('page.meta', payload => pageMeta = payload || {})
-    frameBridge.on('page.error', payload => {
-      compileError = payload
-      setErrorFor('compile', compileError)
-    })
-    frameBridge.on('render.ready', () => {
-      window.$GRAPHENE.appLoading = false
-    })
-
-    window.$GRAPHENE.frameWaitForLoad = (timeout = 20_000) => compileError ? true : requestFrame('render.waitForLoad', {timeout}, timeout + 1000)
-    window.$GRAPHENE.rerunQueries = () => frameBridge?.request('queries.rerun')
-    window.$GRAPHENE.refreshQueries = () => frameBridge?.request('queries.refresh')
-    window.$GRAPHENE.getErrors = async () => compileError ? [compileError] : await requestFrame('errors.list') || []
-    window.$GRAPHENE.listComponentIds = () => requestFrame('components.list')
-    window.$GRAPHENE.exportChartCsv = (chart: string) => requestFrame('exports.csv', {chart})
-    window.$GRAPHENE.captureComponent = (component: string) => compileError ? undefined : requestFrame('components.screenshot', {component})
-    window.$GRAPHENE.capturePage = () => compileError ? undefined : requestFrame('page.screenshot')
-  })
-
-  async function requestFrame(type: string, payload?: any, timeout?: number) {
-    if (!frameBridge) return undefined
-    return await frameBridge.request(type, payload, timeout)
-  }
-
-  let unsubscribeParams = pageInputs.subscribeParams(params => {
-    frameBridge?.notify('params.changed', {params})
   })
 
   onDestroy(() => {
-    unsubscribeParams()
-    frameBridge?.destroy()
+    frameRuntime?.destroy()
   })
 
   onMount(() => {
