@@ -305,8 +305,8 @@ async function runHeadlessPageRequest({pageUrl, action, chart, format, log}: {pa
       return {csv}
     }
 
-    let errors = await page.evaluate(() => ((window as any).$GRAPHENE?.getErrors?.() || []) as GrapheneError[])
-    let screenshot = chart ? await captureComponent(page, chart) : await page.screenshot({fullPage: true, animations: 'disabled', scale: 'css'})
+    let errors = await page.evaluate(async () => (await (window as any).$GRAPHENE?.getErrors?.()) || ([] as GrapheneError[]))
+    let screenshot = chart ? await captureComponent(page, chart) : await capturePage(page)
     await context.close()
     return {errors, stillLoading: !finished, screenshot}
   } catch (err) {
@@ -359,24 +359,35 @@ async function launchHeadlessBrowser(log: (...args: any[]) => void) {
 }
 
 async function captureComponent(page: Page, component: string) {
-  let selector = await page.evaluate(component => {
-    let escaped = window.CSS.escape(component)
-    if (document.querySelector(`[data-chart-title="${escaped}"]`)) return `[data-chart-title="${escaped}"]`
-    if (document.querySelector(`[data-component-title="${escaped}"]`)) return `[data-component-title="${escaped}"]`
-    if (document.querySelector(`[data-component-id="${escaped}"]`)) return `[data-component-id="${escaped}"]`
-    return null
+  let dataUrl = await page.evaluate(async component => {
+    let graphene = (window as any).$GRAPHENE
+    if (typeof graphene?.captureComponent !== 'function') return undefined
+    return await graphene.captureComponent(component)
   }, component)
-  if (!selector) return undefined
-  return await page.locator(selector).screenshot({animations: 'disabled', scale: 'css'})
+  return dataUrlToPngBuffer(dataUrl)
+}
+
+async function capturePage(page: Page) {
+  let dataUrl = await page.evaluate(async () => {
+    let graphene = (window as any).$GRAPHENE
+    if (typeof graphene?.capturePage !== 'function') return undefined
+    return await graphene.capturePage()
+  })
+  return dataUrlToPngBuffer(dataUrl)
 }
 
 async function exportChartCsv(page: Page, chart: string) {
   if (!chart) return undefined
-  return await page.evaluate(chart => {
+  return await page.evaluate(async chart => {
     let graphene = (window as any).$GRAPHENE
     if (typeof graphene?.exportChartCsv !== 'function') return undefined
-    return graphene.exportChartCsv(chart)
+    return await graphene.exportChartCsv(chart)
   }, chart)
+}
+
+function dataUrlToPngBuffer(dataUrl: string | undefined) {
+  if (!dataUrl) return undefined
+  return Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ''), 'base64')
 }
 
 function toWorkspaceFiles(analysis: AnalysisResult): WorkspaceFileInput[] {

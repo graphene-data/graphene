@@ -45,6 +45,7 @@ let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 let queryFetcher: QueryFetcher = fetchWithCache
 export const setQueryFetcher = f => (queryFetcher = f)
 export const queryState = writable<QueryState>({loading: false})
+let bridgeQueryRunAt: Record<string, number> = {}
 
 // Called by GrapheneQuery tags to register a named query on the page
 function registerQuery(name: string, contents: string) {
@@ -93,7 +94,7 @@ async function runNode(n: QueryNode, refresh = false) {
 
   // build up the request body. Hashes is the list of ETag hashes currently in our browser cache. We send all of them,
   // letting the server determine the hash of this particular query, and whether data we already have is acceptable.
-  let hashes = await getHashes()
+  let hashes = window.$GRAPHENE?.disableClientCache ? [] : await getHashes()
   let tables = queries.filter(q => q.name)
   let gsql = [...tables.map(q => `table ${q.name} as (\n${q.contents}\n)`), n.contents].join('\n')
   let params = getActivePageInputs().getParams()
@@ -115,7 +116,7 @@ async function runNode(n: QueryNode, refresh = false) {
   }
 }
 
-async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}): Promise<QueryResult> {
+export async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}): Promise<QueryResult> {
   let response = await fetch('/_api/query', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', ...(options.refresh ? {'Cache-Control': 'no-cache'} : {})},
@@ -138,6 +139,28 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
   // Cache writes are best-effort and should not block rendering fresh query results.
   void cacheWrite(hash, response.clone())
   return await response.json()
+}
+
+export async function runParentQuery(req: QueryRequest, options: {refresh?: boolean} = {}) {
+  queryState.set({oldestRunAt: oldestBridgeRunAt(), loading: true})
+  try {
+    let hashes = await getHashes()
+    let res = await fetchWithCache({...req, hashes, repoId: window.$GRAPHENE?.repoId}, options)
+    bridgeQueryRunAt[req.gsql] = res.runAt || Date.now()
+    return res
+  } finally {
+    queryState.set({oldestRunAt: oldestBridgeRunAt(), loading: false})
+  }
+}
+
+export function resetParentQueries() {
+  bridgeQueryRunAt = {}
+  queryState.set({loading: false})
+}
+
+function oldestBridgeRunAt() {
+  let timestamps = Object.values(bridgeQueryRunAt)
+  return timestamps.length ? Math.min(...timestamps) : undefined
 }
 
 function runAll() {

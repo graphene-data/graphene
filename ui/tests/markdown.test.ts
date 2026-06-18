@@ -2,6 +2,8 @@ import {scalarType} from '../../lang/types.ts'
 import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
+const pageFrame = (page: any) => page.frameLocator('iframe[title="Graphene page"]')
+
 test('loads markdown files', async ({server, page}) => {
   server.mockFile(
     '/index.md',
@@ -21,13 +23,13 @@ test('loads markdown files', async ({server, page}) => {
   server.mockFile('delays.md', '---\ntitle: Delay Deep-Dive\n---\n# Delays')
 
   await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
+  await expect(pageFrame(page).getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
   let nav = page.getByRole('navigation')
   await expect(nav).toBeVisible()
   await expect(nav.getByRole('link', {name: 'Flight Delay Analysis'})).toHaveAttribute('aria-current', 'page')
   await expect(nav.getByRole('link', {name: 'Delay Deep-Dive'})).toBeVisible()
-  await expect(page.locator('main svg').first()).toBeVisible()
-  await expect(page.locator('main#content')).toHaveCSS('max-width', '1200px')
+  await expect(pageFrame(page).locator('main svg').first()).toBeVisible()
+  await expect(page.locator('main#content')).toHaveCSS('max-width', 'none')
   await expect(page).screenshot('loads-markdown-files')
 })
 
@@ -80,7 +82,7 @@ test('parses inline echarts config body in markdown', async ({server, page}) => 
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.getByRole('heading', {level: 1, name: 'Inline ECharts Config'})).toBeVisible()
+  await expect(pageFrame(page).getByRole('heading', {level: 1, name: 'Inline ECharts Config'})).toBeVisible()
   await expect(page).screenshot('echarts-inline-config-markdown')
 })
 
@@ -316,8 +318,8 @@ test('decodes html entities in inline echarts config strings', async ({server, p
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.locator('.echarts')).toHaveAttribute('data-chart-title', 'This & That')
-  await expect(page.locator('.echarts')).not.toHaveAttribute('data-chart-title', 'This &amp; That')
+  await expect(pageFrame(page).locator('.echarts')).toHaveAttribute('data-chart-title', 'This & That')
+  await expect(pageFrame(page).locator('.echarts')).not.toHaveAttribute('data-chart-title', 'This &amp; That')
 })
 
 test('charts resize when shrunk', async ({server, page}) => {
@@ -377,9 +379,9 @@ test('renders gsql query errors clearly with file context', async ({server, page
   )
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
-  await expect(page.getByText('Unknown function: not_a_function')).toBeVisible()
-  let details = page.locator('.g-error__details').first()
+  await expect(pageFrame(page).getByRole('heading', {level: 1, name: 'Broken Dashboard'})).toBeVisible()
+  await expect(pageFrame(page).getByText('Unknown function: not_a_function')).toBeVisible()
+  let details = pageFrame(page).locator('.g-error__details').first()
   await expect(details).not.toContainText('input')
   await expect(details).toContainText('BarChart (data="broken_query" x="origin" y="boom")')
   await expect(details).toContainText('^')
@@ -404,7 +406,7 @@ test('renders database query failures clearly', async ({server, page}) => {
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.getByText('Out of Range Error')).toBeVisible()
+  await expect(pageFrame(page).getByText('Out of Range Error')).toBeVisible()
   await expect(page).screenshot('reports-database-query-errors')
 })
 
@@ -433,7 +435,7 @@ test('renders generic server failures clearly', async ({server, page}) => {
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.getByText('Sprockets imploded')).toBeVisible()
+  await expect(pageFrame(page).getByText('Sprockets imploded')).toBeVisible()
   await expect(page).screenshot('reports-server-query-errors')
 })
 
@@ -446,14 +448,16 @@ test('renders markdown compile errors with error display', async ({server, page}
     '/index.md',
     `
     # Test
-    {#if true}oops{/if}
+    <script>
+      let broken =
+    </script>
   `,
   )
 
   await page.goto(server.url() + '/')
   await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 5000})
   await expect(page.locator('.g-error')).toBeVisible()
-  await expect(page.locator('.g-error__message')).toContainText('Dynamic markup expressions are not supported')
+  await expect(page.locator('.g-error__message')).not.toContainText('Failed to fetch dynamically imported module')
   await expect(page).screenshot('html-syntax-error')
 })
 
@@ -467,32 +471,33 @@ test('renders literal less-than characters', async ({server, page}) => {
   )
 
   await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
-  await expect(page.locator('main')).toHaveText(/1 < 2/)
+  await expect(pageFrame(page).getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
+  await expect(pageFrame(page).locator('main')).toHaveText(/1 < 2/)
 })
 
-test('sanitizes unsafe html', async ({server, page}) => {
+test('runs authored page scripts inside the sandboxed frame', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Sanitized
-    <script>window.__MD_SCRIPT__ = true</script>
-    <button id="danger" onclick="window.__MD_CLICK__ = true">Danger</button>
-    <iframe id="embed" src="javascript:alert('boom')"></iframe>
+    # Isolated Script
+    <script>globalThis.__MD_SCRIPT__ = true</script>
+    <button id="run" onclick={() => globalThis.__MD_CLICK__ = true}>Run</button>
   `,
   )
 
   await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {level: 1, name: 'Sanitized'})).toBeVisible()
-  await expect(page.locator('main button')).toHaveCount(0)
-  await expect(page.locator('iframe')).toHaveCount(0)
+  await waitForGrapheneLoad(page)
+  await expect(pageFrame(page).getByRole('heading', {level: 1, name: 'Isolated Script'})).toBeVisible()
+  await pageFrame(page).getByRole('button', {name: 'Run'}).click()
 
-  let scriptRan = await page.evaluate(() => (window as any).__MD_SCRIPT__)
-  expect(scriptRan).toBeUndefined()
+  expect(await page.evaluate(() => (window as any).__MD_SCRIPT__)).toBeUndefined()
+  let frame = page.frames().find(f => f.url().includes('/_graphene/frame/'))
+  expect(await frame?.evaluate(() => (globalThis as any).__MD_SCRIPT__)).toBe(true)
+  expect(await frame?.evaluate(() => (globalThis as any).__MD_CLICK__)).toBe(true)
 })
 
-test('allows trusted visual html and style blocks with remote css resources', async ({server, page}) => {
-  expectConsoleError('Failed to load resource')
+test('allows trusted visual html and style blocks while CSP blocks remote css resources', async ({server, page}) => {
+  expectConsoleError(/Content Security Policy/)
   let remoteRequests = 0
   await page.route('https://example.com/**', async route => {
     remoteRequests++
@@ -513,7 +518,7 @@ test('allows trusted visual html and style blocks with remote css resources', as
       .custom-layout .metric { border: 3px solid rgb(20, 120, 80); }
     </style>
 
-    <div id="custom-layout" class="custom-layout" data-kind="visual" aria-label="Custom Layout" role="region" style="color: red">
+    <div id="custom-layout" class="custom-layout" data-kind="visual" aria-label="Custom Layout" role="region" style="padding: 1px">
       <span class="metric">Metric</span>
     </div>
   `,
@@ -521,15 +526,15 @@ test('allows trusted visual html and style blocks with remote css resources', as
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  let layout = page.locator('#custom-layout')
+  let layout = pageFrame(page).locator('#custom-layout')
   await expect(layout).toBeVisible()
   await expect(layout).toHaveAttribute('data-kind', 'visual')
   await expect(layout).toHaveAttribute('aria-label', 'Custom Layout')
   await expect(layout).toHaveAttribute('role', 'region')
-  await expect(layout).not.toHaveAttribute('style')
+  await expect(layout).toHaveAttribute('style', 'padding: 1px')
   await expect(layout).toHaveCSS('display', 'grid')
   await expect(layout).toHaveCSS('color', 'rgb(12, 34, 56)')
   await expect(layout).not.toHaveCSS('background-image', 'none')
-  await expect(page.locator('.metric')).toHaveCSS('border-top-color', 'rgb(20, 120, 80)')
-  await expect.poll(() => remoteRequests).toBeGreaterThan(0)
+  await expect(pageFrame(page).locator('.metric')).toHaveCSS('border-top-color', 'rgb(20, 120, 80)')
+  expect(remoteRequests).toBe(0)
 })

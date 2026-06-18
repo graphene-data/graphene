@@ -94,6 +94,7 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
     server: {
       port,
       host,
+      headers: {'Access-Control-Allow-Origin': '*'},
       fs: {strict: false},
       strictPort: true,
       hmr: {overlay: false}, // we handle compilation errors ourselves (see LocalApp.svelte)
@@ -222,6 +223,38 @@ async function handlePage(server: ViteDevServer, res: ServerResponse<IncomingMes
   return res.end(html)
 }
 
+function handleFramePage(res: ServerResponse<IncomingMessage>) {
+  res.setHeader('Content-Type', 'text/html')
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'none'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      'connect-src ws://localhost:* ws://127.0.0.1:*',
+      "base-uri 'none'",
+      "form-action 'none'",
+      "frame-ancestors 'self'",
+    ].join('; '),
+  )
+
+  let frameScript = `/@fs/${path.resolve(uiRoot, 'frame.js').replace(/\\/g, '/')}`
+  return res.end(`<!doctype html>
+  <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>Graphene Page</title>
+      <link rel="icon" href="/favicon.ico" />
+    </head>
+    <body>
+      <script type="module" src="${frameScript}"></script>
+    </body>
+  </html>`)
+}
+
 // Runs vite's pre-bundling of dependencies. Used by tests to do this once, instead of for each worker.
 export async function prepareDeps() {
   let cfg = await resolveConfig(await createConfig(), 'serve')
@@ -347,8 +380,10 @@ const handleRequestPlugin = {
   configureServer: (s: ViteDevServer) => {
     s.middlewares.use(async function handleRequest(req, res, next) {
       try {
+        res.setHeader('Access-Control-Allow-Origin', '*')
         let [pathName] = (req.url || '').split('?')
         if (pathName == '/_api/query') return await handleQuery(req, res)
+        if (pathName?.startsWith('/_graphene/frame/')) return handleFramePage(res)
         if (pathName) if (pathName == '/__ct' || pathName == '/_charts' || pathName == '/_styles') return await handlePage(s, res)
 
         if (!pathName || pathName == '/') pathName = 'index'

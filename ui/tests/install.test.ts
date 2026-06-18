@@ -168,6 +168,7 @@ limit 10
     expect(runOutput).toContain(`Page available at http://localhost:${port}/chart`)
     expect(runOutput).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   } finally {
+    await page.goto('about:blank').catch(() => {})
     let [stopCommand, stopArgs] = packageManager.graphene(['stop'])
     await run(stopCommand, stopArgs, projectDir, childEnv) // extra stop, in case the test failed before the regular `stop` above
     await fsp.rm(tempRoot, {recursive: true, force: true})

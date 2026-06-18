@@ -1,6 +1,5 @@
 import './internal/telemetry.ts'
 import './internal/queryEngine.ts'
-import './internal/runSocket.ts'
 import {getInstanceByDom} from 'echarts'
 
 import './app.css'
@@ -34,14 +33,11 @@ import TableTotalRow from './components/TableTotalRow.svelte'
 import TextInput from './components/TextInput.svelte'
 import Value from './components/Value.svelte'
 import ErrorChart from './internal/ErrorDisplay.svelte'
-import LocalApp from './internal/LocalApp.svelte'
+import LocalFrame from './internal/LocalFrame.svelte'
 
-// Having a global $GRAPHENE allows us to provide an api that pages can use without having to import and bundle a bunch of components.
-// That means that as you navigate around, we only have to a very small amount of js for the page itself, and the bulk of the container and component
-// code only has to load once.
-// In theory we could do this with Vite splitting, but then we have a hard dependency on the exact format vite uses. Plus I find the easier to understand.
 window.$GRAPHENE = window.$GRAPHENE || {}
-window.$GRAPHENE.appLoading = false
+window.$GRAPHENE.appLoading = true
+window.$GRAPHENE.disableClientCache = true
 
 let nextRenderId = 0
 let pendingRenders = new Set()
@@ -63,11 +59,6 @@ window.$GRAPHENE.renderComplete = id => {
 
 window.$GRAPHENE.waitForLoad = async (timeout = 20_000) => {
   let g = window.$GRAPHENE
-  if (typeof g.frameWaitForLoad === 'function') {
-    if (document.fonts?.ready) await document.fonts.ready
-    return await g.frameWaitForLoad(timeout)
-  }
-
   let end = Date.now() + timeout
   while (Date.now() < end) {
     if (!g.appLoading && !g.isQueryLoading() && pendingRenders.size == 0) {
@@ -114,7 +105,4 @@ window.$GRAPHENE.components = {
 
 window.$GRAPHENE.svelte = {mount, unmount}
 
-if (window.location.pathname.replace(/\/+$/, '') !== '/__ct') {
-  window.$GRAPHENE.appLoading = true
-  mount(LocalApp, {target: document.body})
-}
+mount(LocalFrame, {target: document.body})

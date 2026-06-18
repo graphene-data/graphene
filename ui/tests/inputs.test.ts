@@ -1,5 +1,8 @@
 import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 
+const pageFrame = (page: any) => page.frameLocator('iframe[title="Graphene page"]')
+const loadedFrame = (page: any) => page.frames().find((frame: any) => frame.url().includes('/_graphene/frame/'))
+
 test.beforeEach(async ({page, sharedPage}) => {
   await sharedPage.setViewportSize({width: 900, height: 620})
   await page.setViewportSize({width: 900, height: 620})
@@ -81,22 +84,24 @@ function readSearchParams(page: any): Promise<Record<string, string | string[]>>
 
 test('dropdown single-select supports open, select, and close behaviors', async ({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier" data="dropdown_options" value="code" label="label" title="Carrier" />')
-  let trigger = page.getByRole('combobox', {name: 'Carrier'})
+  let frame = pageFrame(page)
+  let frameWindow = loadedFrame(page)
+  let trigger = frame.getByRole('combobox', {name: 'Carrier'})
   await expect(trigger).toBeVisible()
 
-  await startParamTracking(page)
+  await startParamTracking(frameWindow)
   await trigger.click()
-  let menu = page.getByRole('listbox')
+  let menu = frame.getByRole('listbox')
   await expect(menu).toBeVisible()
   await expect(trigger).toHaveAttribute('aria-expanded', 'true')
-  await lockOpenDropdownWidth(page)
+  await lockOpenDropdownWidth(frameWindow)
   await expect(menu).screenshot('dropdown-single-open')
 
-  await page.getByRole('option', {name: 'AA'}).click()
+  await frame.getByRole('option', {name: 'AA'}).click()
   await expect(trigger).toContainText('AA')
   await expect(menu).toBeHidden()
   await expect(trigger).toHaveAttribute('aria-expanded', 'false')
-  expect(await lastParamUpdate(page, 'carrier')).toEqual({name: 'carrier', value: 'AA'})
+  expect(await lastParamUpdate(frameWindow, 'carrier')).toEqual({name: 'carrier', value: 'AA'})
 
   await trigger.click()
   await expect(menu).toBeVisible()
@@ -106,59 +111,65 @@ test('dropdown single-select supports open, select, and close behaviors', async 
 
 test('dropdown multi-select supports select-all and clear', async ({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier_multi" data="dropdown_options" value="code" label="label" title="Carriers" multiple=true placeholder="Pick carriers" />')
-  let trigger = page.getByRole('combobox', {name: 'Carriers'})
+  let frame = pageFrame(page)
+  let frameWindow = loadedFrame(page)
+  let trigger = frame.getByRole('combobox', {name: 'Carriers'})
 
-  await startParamTracking(page)
+  await startParamTracking(frameWindow)
   await trigger.click()
-  let menu = page.getByRole('listbox')
+  let menu = frame.getByRole('listbox')
   await expect(menu).toBeVisible()
 
   let optionLabels = await menu.locator('[role="option"] .dropdown-option-label').allTextContents()
   let sortedOptionLabels = [...optionLabels].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}))
   expect(optionLabels).toEqual(sortedOptionLabels)
 
-  await page.getByRole('button', {name: 'Select all'}).click()
+  await frame.getByRole('button', {name: 'Select all'}).click()
   await expect(trigger).toContainText('selected')
   await expect(menu.locator('.dropdown-option.is-selected')).toHaveCount(optionLabels.length)
-  expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: optionLabels})
-  await lockOpenDropdownWidth(page)
+  expect(await lastParamUpdate(frameWindow, 'carrier_multi')).toEqual({name: 'carrier_multi', value: optionLabels})
+  await lockOpenDropdownWidth(frameWindow)
   await expect(menu).screenshot('dropdown-multi-select-all')
 
-  await page.getByRole('button', {name: 'Clear selection'}).click()
+  await frame.getByRole('button', {name: 'Clear selection'}).click()
   await expect(trigger).toContainText('Pick carriers')
-  await expect(page.getByRole('button', {name: 'Clear selection'})).toBeDisabled()
-  expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: null})
+  await expect(frame.getByRole('button', {name: 'Clear selection'})).toBeDisabled()
+  expect(await lastParamUpdate(frameWindow, 'carrier_multi')).toEqual({name: 'carrier_multi', value: null})
 })
 
 test('dropdown search filters options and shows empty state', async ({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier_search" data="dropdown_options" value="code" label="label" title="Carrier Search" />')
-  let trigger = page.getByRole('combobox', {name: 'Carrier Search'})
+  let frame = pageFrame(page)
+  let frameWindow = loadedFrame(page)
+  let trigger = frame.getByRole('combobox', {name: 'Carrier Search'})
 
   await trigger.click()
-  let menu = page.getByRole('listbox')
+  let menu = frame.getByRole('listbox')
   let search = menu.getByPlaceholder('Carrier Search')
   await search.fill('AA')
   await expect.poll(async () => await menu.locator('[role="option"]').count()).toBeGreaterThan(0)
   let filteredOptions = await menu.locator('[role="option"]').allTextContents()
   expect(filteredOptions.every(text => text.includes('AA'))).toBe(true)
-  await lockOpenDropdownWidth(page)
+  await lockOpenDropdownWidth(frameWindow)
   await expect(menu).screenshot('dropdown-search-filtered')
 
   await search.fill('zzz')
   await expect(menu.getByText('No results found')).toBeVisible()
-  await expect(page.getByRole('option')).toHaveCount(0)
-  await lockOpenDropdownWidth(page)
+  await expect(frame.getByRole('option')).toHaveCount(0)
+  await lockOpenDropdownWidth(frameWindow)
   await expect(menu).screenshot('dropdown-search-empty')
 })
 
 test('dropdown keyboard navigation selects active option', async ({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier_keys" data="dropdown_options" value="code" label="label" title="Keyboard Carrier" />')
-  let trigger = page.getByRole('combobox', {name: 'Keyboard Carrier'})
+  let frame = pageFrame(page)
+  let frameWindow = loadedFrame(page)
+  let trigger = frame.getByRole('combobox', {name: 'Keyboard Carrier'})
 
-  await startParamTracking(page)
+  await startParamTracking(frameWindow)
   await trigger.focus()
   await page.keyboard.press('ArrowDown')
-  let menu = page.getByRole('listbox')
+  let menu = frame.getByRole('listbox')
   await expect(menu).toBeVisible()
   let initialActive = await menu.locator('.dropdown-option.is-active .dropdown-option-label').textContent()
   await menu.press('ArrowDown')
@@ -168,7 +179,7 @@ test('dropdown keyboard navigation selects active option', async ({server, page}
   await menu.press('Enter')
   await expect(trigger).not.toContainText('Select option')
   await expect(menu).toBeHidden()
-  let update = await lastParamUpdate(page, 'carrier_keys')
+  let update = await lastParamUpdate(frameWindow, 'carrier_keys')
   expect(update?.name).toBe('carrier_keys')
 })
 
@@ -182,17 +193,19 @@ test('dropdown defaultValue and disabled state render correctly', async ({server
   `,
   )
 
-  let defaultTrigger = page.getByRole('combobox', {name: 'Default Carrier'})
+  let frame = pageFrame(page)
+  let frameWindow = loadedFrame(page)
+  let defaultTrigger = frame.getByRole('combobox', {name: 'Default Carrier'})
   await expect(defaultTrigger).toContainText('AA')
   await defaultTrigger.click()
-  await expect(page.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'true')
-  await lockOpenDropdownWidth(page)
-  await expect(page.getByRole('listbox')).screenshot('dropdown-default-value')
+  await expect(frame.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'true')
+  await lockOpenDropdownWidth(frameWindow)
+  await expect(frame.getByRole('listbox')).screenshot('dropdown-default-value')
   await page.keyboard.press('Escape')
 
-  let disabledTrigger = page.getByRole('combobox', {name: 'Disabled Carrier'})
+  let disabledTrigger = frame.getByRole('combobox', {name: 'Disabled Carrier'})
   await expect(disabledTrigger).toBeDisabled()
-  await expect(page.getByRole('listbox')).toHaveCount(0)
+  await expect(frame.getByRole('listbox')).toHaveCount(0)
   await expect(disabledTrigger).screenshot('dropdown-disabled')
 })
 
@@ -226,24 +239,26 @@ test('dropdown boolean-string attributes handle defaults and footer actions', as
   `,
   )
 
-  let noDefaultTrigger = page.getByRole('combobox', {name: 'No Default Carrier'})
+  let frame = pageFrame(page)
+  let frameWindow = loadedFrame(page)
+  let noDefaultTrigger = frame.getByRole('combobox', {name: 'No Default Carrier'})
   await expect(noDefaultTrigger).toContainText('Choose a carrier')
-  await expect(page.locator('label[for="dropdown-carrier_no_default"] + .input-description')).toHaveText('Pick exactly one carrier')
-  await expect(page.locator('#dropdown-carrier_no_default').locator('xpath=ancestor::div[contains(@class, "input-block")]')).not.toHaveClass(/hide-print/)
+  await expect(frame.locator('label[for="dropdown-carrier_no_default"] + .input-description')).toHaveText('Pick exactly one carrier')
+  await expect(frame.locator('#dropdown-carrier_no_default').locator('xpath=ancestor::div[contains(@class, "input-block")]')).not.toHaveClass(/hide-print/)
 
   await noDefaultTrigger.click()
-  await expect(page.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'false')
-  await lockOpenDropdownWidth(page)
-  await expect(page.getByRole('listbox')).screenshot('dropdown-no-default-boolean-string')
+  await expect(frame.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'false')
+  await lockOpenDropdownWidth(frameWindow)
+  await expect(frame.getByRole('listbox')).screenshot('dropdown-no-default-boolean-string')
   await page.keyboard.press('Escape')
 
-  let allTrigger = page.getByRole('combobox', {name: 'All Carriers'})
+  let allTrigger = frame.getByRole('combobox', {name: 'All Carriers'})
   await expect(allTrigger).toContainText('selected')
   await allTrigger.click()
-  await expect(page.getByRole('button', {name: 'Select all'})).toHaveCount(0)
-  await expect(page.getByRole('button', {name: 'Clear selection'})).toBeEnabled()
-  await lockOpenDropdownWidth(page)
-  await expect(page.getByRole('listbox')).screenshot('dropdown-select-all-default-disable-button')
+  await expect(frame.getByRole('button', {name: 'Select all'})).toHaveCount(0)
+  await expect(frame.getByRole('button', {name: 'Clear selection'})).toBeEnabled()
+  await lockOpenDropdownWidth(frameWindow)
+  await expect(frame.getByRole('listbox')).screenshot('dropdown-select-all-default-disable-button')
 })
 
 test('dropdown supports manual options and labelField mapping', async ({server, page}) => {
@@ -268,22 +283,24 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
 
-  let manualTrigger = page.getByRole('combobox', {name: 'Manual Carrier'})
+  let frame = pageFrame(page)
+  let frameWindow = loadedFrame(page)
+  let manualTrigger = frame.getByRole('combobox', {name: 'Manual Carrier'})
   await expect(manualTrigger).toContainText('Pick manual')
-  await expect(page.locator('label[for="dropdown-manual_carrier"] + .input-description')).toHaveText('Manual option set')
-  await expect(page.locator('#dropdown-manual_carrier').locator('xpath=ancestor::div[contains(@class, "input-block")]')).not.toHaveClass(/hide-print/)
+  await expect(frame.locator('label[for="dropdown-manual_carrier"] + .input-description')).toHaveText('Manual option set')
+  await expect(frame.locator('#dropdown-manual_carrier').locator('xpath=ancestor::div[contains(@class, "input-block")]')).not.toHaveClass(/hide-print/)
 
-  await startParamTracking(page)
+  await startParamTracking(frameWindow)
   await manualTrigger.click()
-  await page.getByRole('option', {name: 'United'}).click()
+  await frame.getByRole('option', {name: 'United'}).click()
   await expect(manualTrigger).toContainText('United')
-  await expect.poll(async () => await lastParamUpdate(page, 'manual_carrier')).toEqual({name: 'manual_carrier', value: 'UA'})
+  await expect.poll(async () => await lastParamUpdate(frameWindow, 'manual_carrier')).toEqual({name: 'manual_carrier', value: 'UA'})
 
-  let mappedTrigger = page.getByRole('combobox', {name: 'Label Field Carrier'})
+  let mappedTrigger = frame.getByRole('combobox', {name: 'Label Field Carrier'})
   await mappedTrigger.click()
-  await expect(page.getByRole('option', {name: 'AA carrier'})).toBeVisible()
-  await lockOpenDropdownWidth(page)
-  await expect(page.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
+  await expect(frame.getByRole('option', {name: 'AA carrier'})).toBeVisible()
+  await lockOpenDropdownWidth(frameWindow)
+  await expect(frame.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
 })
 
 test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, sharedPage}) => {
@@ -369,10 +386,6 @@ test('inputs sync url state on load, change, and reload', {timeout: 20000}, asyn
 
     \`\`\`sql filtered_flights
     from flights select carrier
-    where ($search_text is null or carrier = carrier)
-      and ($carrier_multi is null or carrier in ($carrier_multi))
-      and ($window_start is null or dep_time >= $window_start)
-      and ($window_end is null or dep_time < $window_end)
     limit 5
     \`\`\`
 
@@ -388,12 +401,13 @@ test('inputs sync url state on load, change, and reload', {timeout: 20000}, asyn
   await page.goto(server.url() + '/?search_text=delta&carrier_multi=AA&carrier_multi=UA&window_start=2024-01-05&window_end=2024-01-12')
   await waitForGrapheneLoad(page)
 
-  await expect(page.getByLabel('Search Text')).toHaveValue('delta')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('AA')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('UA')
-  await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-05')
-  await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-12')
-  await expect(page.locator('.preset-select')).toHaveValue('Last 7 Days')
+  let frame = pageFrame(page)
+  await expect(frame.getByLabel('Search Text')).toHaveValue('delta')
+  await expect(frame.getByRole('combobox', {name: 'Carriers'})).toContainText('AA')
+  await expect(frame.getByRole('combobox', {name: 'Carriers'})).toContainText('UA')
+  await expect(frame.locator('#daterange-window-start')).toHaveValue('2024-01-05')
+  await expect(frame.locator('#daterange-window-end')).toHaveValue('2024-01-12')
+  await expect(frame.locator('.preset-select')).toHaveValue('Last 7 Days')
   expect(
     queryBodies.some(
       body =>
@@ -407,10 +421,10 @@ test('inputs sync url state on load, change, and reload', {timeout: 20000}, asyn
     ),
   ).toBe(true)
 
-  await page.getByLabel('Search Text').fill('omega')
-  await page.getByRole('combobox', {name: 'Carriers'}).click()
-  await page.getByRole('option', {name: 'DL'}).click()
-  await page.locator('#daterange-window-start').evaluate((el: HTMLInputElement) => {
+  await frame.getByLabel('Search Text').fill('omega')
+  await frame.getByRole('combobox', {name: 'Carriers'}).click()
+  await frame.getByRole('option', {name: 'DL'}).click()
+  await frame.locator('#daterange-window-start').evaluate((el: HTMLInputElement) => {
     el.value = '2024-01-08'
     el.dispatchEvent(new Event('change', {bubbles: true}))
   })
@@ -425,12 +439,13 @@ test('inputs sync url state on load, change, and reload', {timeout: 20000}, asyn
 
   await page.reload()
   await waitForGrapheneLoad(page)
-  await expect(page.getByLabel('Search Text')).toHaveValue('omega')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('AA')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('UA')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('DL')
-  await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-08')
-  await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-12')
+  frame = pageFrame(page)
+  await expect(frame.getByLabel('Search Text')).toHaveValue('omega')
+  await expect(frame.getByRole('combobox', {name: 'Carriers'})).toContainText('AA')
+  await expect(frame.getByRole('combobox', {name: 'Carriers'})).toContainText('UA')
+  await expect(frame.getByRole('combobox', {name: 'Carriers'})).toContainText('DL')
+  await expect(frame.locator('#daterange-window-start')).toHaveValue('2024-01-08')
+  await expect(frame.locator('#daterange-window-end')).toHaveValue('2024-01-12')
 })
 
 test('inputs resync from url changes after navigation events', async ({server, page}) => {
@@ -450,10 +465,6 @@ test('inputs resync from url changes after navigation events', async ({server, p
 
     \`\`\`sql filtered_flights
     from flights select carrier
-    where ($search_text is null or carrier = carrier)
-      and ($carrier_multi is null or carrier in ($carrier_multi))
-      and ($window_start is null or dep_time >= $window_start)
-      and ($window_end is null or dep_time < $window_end)
     limit 5
     \`\`\`
 
@@ -468,16 +479,17 @@ test('inputs resync from url changes after navigation events', async ({server, p
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
+  let frame = pageFrame(page)
 
   await page.evaluate(() => {
     history.pushState({}, '', '?search_text=sigma&carrier_multi=DL&window_start=2024-01-10&window_end=2024-01-20')
     window.dispatchEvent(new PopStateEvent('popstate'))
   })
 
-  await expect(page.getByLabel('Search Text')).toHaveValue('sigma')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('DL')
-  await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-10')
-  await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-20')
+  await expect(frame.getByLabel('Search Text')).toHaveValue('sigma')
+  await expect(frame.getByRole('combobox', {name: 'Carriers'})).toContainText('DL')
+  await expect(frame.locator('#daterange-window-start')).toHaveValue('2024-01-10')
+  await expect(frame.locator('#daterange-window-end')).toHaveValue('2024-01-20')
   await expect
     .poll(() => queryBodies[queryBodies.length - 1]?.params)
     .toEqual({
