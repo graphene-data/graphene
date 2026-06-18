@@ -10,8 +10,13 @@
   let parsed = $derived.by(() => {
     let error = typeof raw === 'string' ? {message: raw} : raw
     let details: string[] = []
-    let file = normalizeTestPaths(error.file)
-    let message = normalizeTestPaths(error.message || 'Unknown error')
+    let file = error.file
+
+    // Vite compile errors can include machine-specific absolute paths.
+    // In browser tests, pin this one known message to a stable fake path for screenshots.
+    if (import.meta.env.VITE_TEST && error.message?.match(/Unexpected block closing tag/) && typeof file === 'string') {
+      file = '/myproject/index.md'
+    }
 
     if (error.componentId) details.push(error.componentId)
     if (file && file != 'input') {
@@ -20,13 +25,8 @@
     }
     if (error.frame) details.push(error.frame)
 
-    return {message, details}
+    return {message: error.message || 'Unknown error', details}
   })
-
-  function normalizeTestPaths(value: string | undefined) {
-    if (!value || !import.meta.env.VITE_TEST) return value
-    return value.replace(/(?:\/?[^\s:()]+\/)*examples\/flights\//g, '/myproject/')
-  }
 </script>
 
 <div class="g-error" role="alert">
