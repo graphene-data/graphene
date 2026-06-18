@@ -1121,8 +1121,226 @@ describe('lang', () => {
     expect("from users select coalesce(name, 'Unknown') as name2").toRenderSql("select coalesce(users.name,'Unknown') as name2 from users as users")
   })
 
+  it('supports duckdb json functions', () => {
+    expect(`
+      select
+        json('{"a": [1, 2], "b": "x"}') as parsed,
+        json_valid('{"a": 1}') as valid,
+        json_exists(json('{"a": 1}'), '$.a') as exists_json,
+        json_extract(json('{"a": 1}'), '$.a') as extracted,
+        json_extract_path(json('{"a": 1}'), 'a') as extracted_path,
+        json_extract_string(json('{"a": 1}'), '$.a') as extracted_string,
+        json_extract_path_text(json('{"a": 1}'), 'a') as extracted_path_text,
+        json_value(json('{"a": 1}'), '$.a') as value,
+        json_array_length(json('[1, 2]')) as array_len,
+        json_array_length(json('{"items": [1, 2]}'), '$.items') as path_array_len,
+        json_contains(json('{"a": 1}'), json('{"a": 1}')) as contains,
+        json_keys(json('{"a": 1}')) as keys,
+        json_structure(json('{"a": 1}')) as structure,
+        json_type(json('{"a": 1}')) as type_name,
+        json_type(json('{"a": 1}'), '$.a') as path_type,
+        json_transform(json('{"a": 1}'), '{"a": "INTEGER"}') as transformed,
+        json_transform_strict(json('{"a": 1}'), '{"a": "INTEGER"}') as transformed_strict,
+        from_json(json('{"a": 1}'), '{"a": "INTEGER"}') as from_json_value,
+        from_json_strict(json('{"a": 1}'), '{"a": "INTEGER"}') as from_json_strict_value,
+        to_json(1) as to_json_value,
+        json_quote('x') as quoted,
+        json_array() as empty_array_value,
+        json_array(1, 'x') as array_value,
+        json_object() as empty_object_value,
+        json_object('a', 1) as object_value,
+        json_merge_patch(json('{"a": 1}'), json('{"b": 2}')) as merged,
+        json_pretty(json('{"a": 1}')) as pretty,
+        json_serialize_sql('select 1') as serialized_sql,
+        json_serialize_plan('select 1') as serialized_plan,
+        json_deserialize_sql(json_serialize_sql('select 1')) as deserialized_sql
+    `).toHaveNoErrors()
+  })
+
+  it('tracks duckdb json return types at graphenes current granularity', () => {
+    let [query] = analyze(`
+      select
+        json_extract(json('{"a": 1}'), '$.a') as extracted,
+        json_extract_string(json('{"a": 1}'), '$.a') as extracted_string,
+        json_keys(json('{"a": 1}')) as keys,
+        json_transform(json('{"a": 1}'), '{"a": "INTEGER"}') as transformed
+    `)
+    expect(formatType(query.fields[0].type)).toBe('json')
+    expect(formatType(query.fields[1].type)).toBe('string')
+    expect(formatType(query.fields[2].type)).toBe('array<string>')
+    expect(formatType(query.fields[3].type)).toBe('record')
+  })
+
   it('supports agg function calling', () => {
     expect('from users select age, string_agg(name)').toRenderSql('select users.age as age, string_agg(users.name) as col_1 from users as users group by 1 order by 2 desc nulls last')
+  })
+
+  it('supports duckdb json aggregate functions', () => {
+    expect("from users select json_group_array(name), json_group_object(id, name), json_group_structure(json_object('age', age))").toRenderSql(
+      "select json_group_array(users.name) as col_0, json_group_object(users.id,users.name) as col_1, json_group_structure(json_object('age',users.age)) as col_2 from users as users",
+    )
+  })
+
+  it('supports callable duckdb list and array functions', () => {
+    expect(`
+      select
+        list_value(1, 2, 3) as values,
+        list_pack('a', 'b') as packed,
+        array_value(1, 2) as array_values,
+        list_concat(list_value(1), list_value(2)) as concat_values,
+        array_concat(array_value(1), array_value(2)) as array_concat_values,
+        list_append(list_value(1), 2) as appended,
+        list_prepend(0, list_value(1)) as prepended,
+        array_pop_back(array_value(1, 2)) as pop_back,
+        array_pop_front(array_value(1, 2)) as pop_front,
+        list_reverse(list_value(1, 2)) as reversed,
+        list_distinct(list_value(1, 1, 2)) as distinct_values,
+        list_sort(list_value(2, 1)) as sorted,
+        list_reverse_sort(list_value(1, 2)) as reverse_sorted,
+        list_grade_up(list_value(2, 1)) as grade,
+        list_slice(list_value(1, 2, 3), 1, 2) as sliced,
+        list_resize(list_value(1), 3, 0) as resized,
+        list_select(list_value('a', 'b'), list_value(2)) as selected,
+        list_where(list_value('a', 'b'), list_value(true, false)) as masked,
+        list_intersect(list_value(1, 2), list_value(2, 3)) as intersected,
+        list_extract(list_value('a', 'b'), 1) as extracted,
+        list_contains(list_value(1, 2), 2) as contains_value,
+        list_has_all(list_value(1, 2), list_value(1)) as has_all,
+        list_has_any(list_value(1, 2), list_value(3, 2)) as has_any,
+        list_position(list_value('a', 'b'), 'b') as position_value,
+        list_unique(list_value(1, 1, 2)) as unique_count,
+        list_first(list_value('a', 'b')) as first_value,
+        list_last(list_value('a', 'b')) as last_value,
+        list_avg(list_value(1, 2)) as avg_value,
+        list_bool_and(list_value(true, false)) as bool_and_value,
+        list_string_agg(list_value('a', 'b')) as string_agg_value,
+        list_histogram(list_value('a', 'b', 'a')) as histogram_value,
+        list_aggregate(list_value(1, 2), 'sum') as aggregate_value,
+        list_dot_product(list_value(1, 2), list_value(3, 4)) as dot_value,
+        array_cross_product(array_value(1, 0, 0), array_value(0, 1, 0)) as cross_value
+    `).toHaveNoErrors()
+  })
+
+  it('supports callable duckdb map and struct functions', () => {
+    expect(`
+      select
+        map() as empty_map_value,
+        map(list_value('a', 'b'), list_value(1, 2)) as map_value,
+        cardinality(map(list_value('a'), list_value(1))) as map_size,
+        map_concat(map(list_value('a'), list_value(1)), map(list_value('b'), list_value(2))) as merged_map,
+        map_contains(map(list_value('a'), list_value(1)), 'a') as has_key,
+        map_contains_entry(map(list_value('a'), list_value(1)), 'a', 1) as has_entry,
+        map_contains_value(map(list_value('a'), list_value(1)), 1) as has_value,
+        element_at(map(list_value('a'), list_value(1)), 'a') as element_value,
+        map_extract(map(list_value('a'), list_value(1)), 'a') as extracted_value,
+        map_extract_value(map(list_value('a'), list_value(1)), 'a') as extracted_scalar,
+        map_entries(map(list_value('a'), list_value(1))) as entries_value,
+        map_from_entries(map_entries(map(list_value('a'), list_value(1)))) as map_from_entries_value,
+        map_keys(map(list_value('a'), list_value(1))) as keys_value,
+        map_values(map(list_value('a'), list_value(1))) as values_value,
+        row(1, 'a') as row_value,
+        struct_concat(row(1), row('a')) as struct_concat_value,
+        struct_contains(row(1, 'a'), 'a') as struct_contains_value,
+        struct_extract(row(1, 'a'), 1) as struct_extract_value,
+        struct_extract_at(row(1, 'a'), 1) as struct_extract_at_value,
+        struct_position(row(1, 'a'), 'a') as struct_position_value,
+        struct_keys(row(1, 'a')) as struct_keys_value,
+        struct_values(row(1, 'a')) as struct_values_value
+    `).toHaveNoErrors()
+  })
+
+  it('tracks duckdb nested return types at graphenes current granularity', () => {
+    let [query] = analyze(`
+      select
+        list_value(1, 2) as values,
+        list_extract(list_value(1, 2), 1) as extracted,
+        map(list_value('a'), list_value(1)) as mapped,
+        map_entries(map(list_value('a'), list_value(1))) as entries,
+        map_extract_value(map(list_value('a'), list_value(1)), 'a') as mapped_value,
+        row(1, 'a') as row_value,
+        struct_extract(row(1, 'a'), 1) as struct_value,
+        array_cross_product(array_value(1, 0, 0), array_value(0, 1, 0)) as cross_value
+    `)
+    expect(query.fields.map(field => formatType(field.type))).toEqual(['array<number>', 'number', 'map', 'array<record>', 'sql native', 'record', 'sql native', 'array<number>'])
+  })
+
+  it('supports broader duckdb regex, fuzzy matching, uuid, hash, and encoding functions', () => {
+    expect(`
+      select
+        regexp_escape('a.b') as escaped_regex,
+        regexp_extract('abc123', '([a-z]+)([0-9]+)', 1, 'c') as extracted_regex,
+        regexp_extract_all('a1 b2', '([a-z])([0-9])', 1) as extracted_all_regex,
+        regexp_full_match('abc', '[a-z]+') as full_match_regex,
+        regexp_matches('abc', 'b', 'c') as matches_regex,
+        regexp_replace('abc', 'b', 'x', 'g') as replaced_regex,
+        regexp_split_to_array('a,b', ',') as regexp_split_values,
+        string_split_regex('a,b', ',') as string_regex_split_values,
+        str_split_regex('a,b', ',') as str_regex_split_values,
+        split('a,b', ',') as split_values,
+        str_split('a,b', ',') as str_split_values,
+        string_to_array('a,b', ',') as string_array_values,
+        levenshtein('kitten', 'sitting') as levenshtein_distance,
+        damerau_levenshtein('abc', 'acb') as damerau_distance,
+        editdist3('abc', 'abd') as edit_distance,
+        hamming('abc', 'abd') as hamming_distance,
+        mismatches('abc', 'abd') as mismatch_count,
+        jaro_similarity('abc', 'abd') as jaro_score,
+        jaro_winkler_similarity('abc', 'abd', 0.1) as jaro_winkler_score,
+        md5('abc') as md5_hash,
+        md5_number('abc') as md5_number_hash,
+        md5_number_lower('abc') as md5_lower_hash,
+        md5_number_upper('abc') as md5_upper_hash,
+        sha1('abc') as sha1_hash,
+        sha256('abc') as sha256_hash,
+        hash('abc') as hash_value,
+        uuid() as uuid_value,
+        uuidv4() as uuidv4_value,
+        uuidv7() as uuidv7_value,
+        gen_random_uuid() as random_uuid_value,
+        uuid_extract_timestamp(uuidv7()) as uuid_timestamp,
+        uuid_extract_version(uuidv7()) as uuid_version,
+        hex('abc') as hex_value,
+        to_hex('abc') as to_hex_value,
+        unhex('616263') as unhex_value,
+        from_hex('616263') as from_hex_value,
+        bin(5) as bin_value,
+        to_binary(5) as binary_value,
+        unbin('101') as unbin_value,
+        from_binary('101') as from_binary_value,
+        base64('abc') as base64_value,
+        to_base64('abc') as to_base64_value,
+        from_base64('YWJj') as from_base64_value,
+        encode('abc') as encoded_value,
+        decode('abc') as decoded_value,
+        to_base(255, 16, 2) as base_value,
+        url_encode('a b') as encoded_url,
+        url_decode('a%20b') as decoded_url,
+        like_escape('a_b', 'a$_b', '$') as like_escaped,
+        ilike_escape('A_B', 'a$_b', '$') as ilike_escaped,
+        not_like_escape('a_b', 'z%', '$') as not_like_escaped,
+        not_ilike_escape('A_B', 'z%', '$') as not_ilike_escaped,
+        prefix('abc', 'a') as prefix_match,
+        suffix('abc', 'c') as suffix_match,
+        bar(5, 0, 10, 20) as bar_value,
+        format_bytes(1024) as byte_label,
+        formatreadablesize(1024) as readable_size,
+        formatreadabledecimalsize(1024) as readable_decimal_size,
+        parse_formatted_bytes('1 KiB') as parsed_bytes
+    `).toHaveNoErrors()
+  })
+
+  it('tracks duckdb easy string helper return types', () => {
+    let [query] = analyze(`
+      select
+        regexp_extract_all('a1 b2', '([a-z])([0-9])', 1) as regex_matches,
+        split('a,b', ',') as split_values,
+        levenshtein('kitten', 'sitting') as distance,
+        regexp_full_match('abc', '[a-z]+') as full_match,
+        uuid_extract_timestamp(uuidv7()) as uuid_time,
+        sha256('abc') as sha,
+        encode('abc') as encoded
+    `)
+    expect(query.fields.map(field => formatType(field.type))).toEqual(['array<string>', 'array<string>', 'number', 'boolean', 'timestamp', 'string', 'string'])
   })
 
   it('rejects variadic functions called with 0 args', () => {
@@ -1586,6 +1804,69 @@ describe('lang', () => {
         current_timestamp(3),
         local_timestamp()
     `).toRenderSql('select current_date() as col_0, current_time() as col_1, current_timestamp() as col_2, current_timestamp(3) as col_3, localtimestamp() as col_4 from users as users')
+  })
+
+  it('supports broader duckdb date and time functions', () => {
+    expect(`
+      select
+        datediff('day', date '2024-01-01', date '2024-01-03') as datediff_days,
+        datesub('month', date '2024-01-01', date '2024-03-15') as datesub_months,
+        datepart('year', date '2024-01-01') as datepart_year,
+        datetrunc('month', timestamp '2024-01-15 12:00:00') as datetrunc_month,
+        decade(date '2024-01-01') as decade_part,
+        era(date '2024-01-01') as era_part,
+        julian(date '2024-01-01') as julian_day,
+        millennium(date '2024-01-01') as millennium_part,
+        yearweek(date '2024-01-01') as yearweek_part,
+        microsecond(timestamp '2024-01-01 12:34:56') as microsecond_part,
+        millisecond(timestamp '2024-01-01 12:34:56') as millisecond_part,
+        nanosecond(timestamp '2024-01-01 12:34:56') as nanosecond_part,
+        timezone(timestamp '2024-01-01 12:34:56') as timezone_part,
+        timezone_hour(timestamp '2024-01-01 12:34:56') as timezone_hour_part,
+        timezone_minute(timestamp '2024-01-01 12:34:56') as timezone_minute_part,
+        timezone('UTC', current_timestamp()) as utc_timestamp,
+        current_localtime() as current_local_time,
+        current_localtimestamp() as current_local_timestamp,
+        transaction_timestamp() as transaction_ts,
+        make_time(12, 34, 56) as made_time,
+        make_timestamp(2024, 1, 1, 12, 34, 56) as made_timestamp,
+        make_timestamp_ms(0) as made_timestamp_ms,
+        make_timestamp_us(0) as made_timestamp_us,
+        make_timestamp_ns(0) as made_timestamp_ns,
+        make_timestamptz(2024, 1, 1, 12, 34, 56, 'UTC') as made_timestamptz,
+        to_timestamp(0) as epoch_timestamp,
+        strptime('2024-01-01', list_value('%Y-%m-%d')) as parsed_timestamp,
+        try_strptime('2024-01-01', '%Y-%m-%d') as try_parsed_timestamp,
+        time_bucket(to_days(1), date '2024-01-02', date '2000-01-01') as bucketed_date,
+        to_days(1) as days_interval,
+        to_decades(1) as decades_interval,
+        to_hours(1) as hours_interval,
+        to_microseconds(1) as microseconds_interval,
+        to_milliseconds(1) as milliseconds_interval,
+        to_minutes(1) as minutes_interval,
+        to_months(1) as months_interval,
+        to_quarters(1) as quarters_interval,
+        to_seconds(1) as seconds_interval,
+        to_weeks(1) as weeks_interval,
+        to_years(1) as years_interval
+    `).toHaveNoErrors()
+  })
+
+  it('tracks duckdb date and time helper return types', () => {
+    let [query] = analyze(`
+      select
+        make_time(12, 34, 56) as made_time,
+        make_timestamp(2024, 1, 1, 12, 34, 56) as made_timestamp,
+        make_timestamp_ms(0) as made_timestamp_ms,
+        current_localtime() as current_local_time,
+        current_localtimestamp() as current_local_timestamp,
+        transaction_timestamp() as transaction_ts,
+        to_days(1) as days_interval,
+        datediff('day', date '2024-01-01', date '2024-01-03') as datediff_days,
+        try_strptime('2024-01-01', '%Y-%m-%d') as parsed_timestamp,
+        timezone('UTC', current_timestamp()) as utc_timestamp
+    `)
+    expect(query.fields.map(field => formatType(field.type))).toEqual(['time', 'timestamp', 'timestamp', 'time', 'timestamp', 'timestamp', 'interval', 'number', 'timestamp', 'sql native'])
   })
 
   it('supports duckdb bare current datetime functions', () => {

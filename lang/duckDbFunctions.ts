@@ -10,9 +10,62 @@ import {inferTimeOrdinal, inferGrain} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const duck = 'https://duckdb.org/docs/stable/sql/functions'
+const duckJson = 'https://duckdb.org/docs/stable/data/json'
+const duckList = 'https://duckdb.org/docs/stable/sql/functions/list'
+const duckMap = 'https://duckdb.org/docs/stable/sql/functions/map'
+const duckStruct = 'https://duckdb.org/docs/stable/sql/functions/struct'
 
 // Helper to trim and dedent multiline strings
 const trim = trimIndentation
+
+const dateTimestampTypes = ['date', 'timestamp']
+const dateTimeTimestampTypes = ['date', 'time', 'timestamp']
+const dateTimestampIntervalTypes = ['date', 'timestamp', 'interval']
+const temporalPartTypes = ['date', 'time', 'timestamp', 'interval']
+
+function jsonFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name,
+    description: trim(description),
+    url: opts.url || `${duckJson}/json_functions`,
+    args,
+    returns,
+    ...opts,
+  }
+}
+
+function nestedFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name,
+    description: trim(description),
+    url: opts.url || duckList,
+    args,
+    returns,
+    ...opts,
+  }
+}
+
+function textFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name,
+    description: trim(description),
+    url: opts.url || `${duck}/text`,
+    args,
+    returns,
+    ...opts,
+  }
+}
+
+function dateTimeFunction(name: string, args: FunctionDef['args'], returns: string, description: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name,
+    description: trim(description),
+    url: opts.url || `${duck}/timestamp`,
+    args,
+    returns,
+    ...opts,
+  }
+}
 
 export const duckDbFunctions: FunctionDef[] = [
   // ============================================================================
@@ -1455,9 +1508,19 @@ export const duckDbFunctions: FunctionDef[] = [
       Returns the MD5 hash of the string as a VARCHAR.
     `),
     url: `${duck}/text#md5string`,
-    args: [['string', 'string']],
+    args: [['value', ['string', 'bytes']]],
     returns: 'string',
   },
+  textFunction('md5_number', [{name: 'value', type: ['string', 'bytes']}], 'number', 'md5_number(value)\n\nReturns the MD5 hash as a huge integer.', {url: `${duck}/text#md5_numberstring`}),
+  textFunction('md5_number_lower', [{name: 'value', type: ['string', 'bytes']}], 'number', 'md5_number_lower(value)\n\nReturns the lower 64 bits of the MD5 hash as an integer.', {
+    url: `${duck}/text#md5_number_lowerstring`,
+  }),
+  textFunction('md5_number_upper', [{name: 'value', type: ['string', 'bytes']}], 'number', 'md5_number_upper(value)\n\nReturns the upper 64 bits of the MD5 hash as an integer.', {
+    url: `${duck}/text#md5_number_upperstring`,
+  }),
+  ...['sha1', 'sha256'].map(name =>
+    textFunction(name, [{name: 'value', type: ['string', 'bytes']}], 'string', `${name}(value)\n\nReturns a cryptographic hash as text.`, {url: `${duck}/text#${name}value`}),
+  ),
   {
     name: 'printf',
     description: trim(`
@@ -1472,6 +1535,17 @@ export const duckDbFunctions: FunctionDef[] = [
     ],
     returns: 'string',
   },
+  textFunction(
+    'regexp_escape',
+    [{name: 'string', type: 'string'}],
+    'string',
+    `
+      regexp_escape(string)
+
+      Escapes special regex characters in a string.
+    `,
+    {url: `${duck}/text#regexp_escapestring`},
+  ),
   {
     name: 'regexp_extract',
     description: trim(`
@@ -1484,9 +1558,41 @@ export const duckDbFunctions: FunctionDef[] = [
       {name: 'string', type: 'string'},
       {name: 'regex', type: 'string'},
       {name: 'group', type: 'number?'},
+      {name: 'options', type: 'string?'},
     ],
     returns: 'string',
   },
+  textFunction(
+    'regexp_extract_all',
+    [
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'group', type: 'number?'},
+      {name: 'options', type: 'string?'},
+    ],
+    'array<string>',
+    `
+      regexp_extract_all(string, regex[, group][, options])
+
+      Returns all non-overlapping regex matches or capturing groups as a list.
+    `,
+    {url: `${duck}/text#regexp_extract_allstring-regex-group-options`},
+  ),
+  textFunction(
+    'regexp_full_match',
+    [
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'options', type: 'string?'},
+    ],
+    'boolean',
+    `
+      regexp_full_match(string, regex[, options])
+
+      Returns true if the whole string matches the regex.
+    `,
+    {url: `${duck}/text#regexp_full_matchstring-regex-options`},
+  ),
   {
     name: 'regexp_matches',
     description: trim(`
@@ -1496,8 +1602,9 @@ export const duckDbFunctions: FunctionDef[] = [
     `),
     url: `${duck}/text#regexp_matchesstring-regex-options`,
     args: [
-      ['string', 'string'],
-      ['regex', 'string'],
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'options', type: 'string?'},
     ],
     returns: 'boolean',
   },
@@ -1510,12 +1617,28 @@ export const duckDbFunctions: FunctionDef[] = [
     `),
     url: `${duck}/text#regexp_replacestring-regex-replacement-options`,
     args: [
-      ['string', 'string'],
-      ['regex', 'string'],
-      ['replacement', 'string'],
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'replacement', type: 'string'},
+      {name: 'options', type: 'string?'},
     ],
     returns: 'string',
   },
+  textFunction(
+    'regexp_split_to_array',
+    [
+      {name: 'string', type: 'string'},
+      {name: 'regex', type: 'string'},
+      {name: 'options', type: 'string?'},
+    ],
+    'array<string>',
+    `
+      regexp_split_to_array(string, regex[, options])
+
+      Splits string by regex into a list of strings.
+    `,
+    {url: `${duck}/text#regexp_split_to_arraystring-regex-options`},
+  ),
   {
     name: 'repeat',
     description: trim(`
@@ -1640,8 +1763,33 @@ export const duckDbFunctions: FunctionDef[] = [
       ['string', 'string'],
       ['separator', 'string'],
     ],
-    returns: 'array',
+    returns: 'array<string>',
   },
+  ...['split', 'str_split', 'string_to_array'].map(name =>
+    textFunction(
+      name,
+      [
+        {name: 'string', type: 'string'},
+        {name: 'separator', type: 'string'},
+      ],
+      'array<string>',
+      `${name}(string, separator)\n\nSplits the string along the separator.`,
+      {url: `${duck}/text#string_splitstring-separator`},
+    ),
+  ),
+  ...['string_split_regex', 'str_split_regex'].map(name =>
+    textFunction(
+      name,
+      [
+        {name: 'string', type: 'string'},
+        {name: 'regex', type: 'string'},
+        {name: 'options', type: 'string?'},
+      ],
+      'array<string>',
+      `${name}(string, regex[, options])\n\nSplits string by regex into a list of strings.`,
+      {url: `${duck}/text#string_split_regexstring-regex-options`},
+    ),
+  ),
   {
     name: 'strip_accents',
     description: trim(`
@@ -1733,6 +1881,158 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [['string', 'string']],
     returns: 'number',
   },
+  textFunction(
+    'damerau_levenshtein',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'damerau_levenshtein(s1, s2)\n\nReturns the Damerau-Levenshtein distance between two strings.',
+    {url: `${duck}/text#damerau_levenshteins1-s2`},
+  ),
+  textFunction(
+    'editdist3',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'editdist3(s1, s2)\n\nReturns the Levenshtein distance between two strings.',
+    {url: `${duck}/text#editdist3s1-s2`},
+  ),
+  textFunction(
+    'hamming',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'hamming(s1, s2)\n\nReturns the Hamming distance between two strings.',
+    {url: `${duck}/text#hammings1-s2`},
+  ),
+  textFunction(
+    'levenshtein',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'levenshtein(s1, s2)\n\nReturns the Levenshtein distance between two strings.',
+    {url: `${duck}/text#levenshteins1-s2`},
+  ),
+  textFunction(
+    'mismatches',
+    [
+      ['s1', 'string'],
+      ['s2', 'string'],
+    ],
+    'number',
+    'mismatches(s1, s2)\n\nReturns the number of positions where two strings differ.',
+    {url: `${duck}/text#mismatchess1-s2`},
+  ),
+  ...['jaro_similarity', 'jaro_winkler_similarity'].map(name =>
+    textFunction(
+      name,
+      [
+        {name: 's1', type: 'string'},
+        {name: 's2', type: 'string'},
+        {name: 'score_cutoff', type: 'number?'},
+      ],
+      'number',
+      `${name}(s1, s2[, score_cutoff])\n\nReturns a string similarity score.`,
+      {url: `${duck}/text#${name}s1-s2-score_cutoff`},
+    ),
+  ),
+  ...['like_escape', 'ilike_escape', 'not_like_escape', 'not_ilike_escape'].map(name =>
+    textFunction(
+      name,
+      [
+        {name: 'string', type: 'string'},
+        {name: 'like_specifier', type: 'string'},
+        {name: 'escape_character', type: 'string'},
+      ],
+      'boolean',
+      `${name}(string, like_specifier, escape_character)\n\nEvaluates a LIKE-style comparison with an escape character.`,
+      {url: `${duck}/text#${name}string-like_specifier-escape_character`},
+    ),
+  ),
+  textFunction(
+    'prefix',
+    [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
+    'boolean',
+    'prefix(string, search_string)\n\nReturns true if string begins with search_string.',
+    {url: `${duck}/text#prefixstring-search_string`},
+  ),
+  textFunction(
+    'suffix',
+    [
+      ['string', 'string'],
+      ['search_string', 'string'],
+    ],
+    'boolean',
+    'suffix(string, search_string)\n\nReturns true if string ends with search_string.',
+    {url: `${duck}/text#suffixstring-search_string`},
+  ),
+  textFunction(
+    'bar',
+    [
+      {name: 'x', type: 'number'},
+      {name: 'min', type: 'number'},
+      {name: 'max', type: 'number'},
+      {name: 'width', type: 'number?'},
+    ],
+    'string',
+    'bar(x, min, max[, width])\n\nDraws a proportional text bar.',
+    {url: `${duck}/text#barx-min-max-width`},
+  ),
+  textFunction('format_bytes', [['integer', 'number']], 'string', 'format_bytes(integer)\n\nFormats bytes as a human-readable string.', {url: `${duck}/text#format_bytesinteger`}),
+  textFunction('formatreadablesize', [['integer', 'number']], 'string', 'formatReadableSize(integer)\n\nFormats bytes as a human-readable string.', {
+    url: `${duck}/text#formatreadablesizeinteger`,
+    sqlName: 'formatReadableSize',
+  }),
+  textFunction('formatreadabledecimalsize', [['integer', 'number']], 'string', 'formatReadableDecimalSize(integer)\n\nFormats bytes as a human-readable decimal-size string.', {
+    url: `${duck}/text#formatreadabledecimalsizeinteger`,
+    sqlName: 'formatReadableDecimalSize',
+  }),
+  textFunction('parse_formatted_bytes', [['string', 'string']], 'number', 'parse_formatted_bytes(string)\n\nParses a human-readable byte string into bytes.', {
+    url: `${duck}/text#parse_formatted_bytesstring`,
+  }),
+  ...['hex', 'to_hex', 'bin', 'to_binary'].map(name => textFunction(name, [{name: 'value', type: 'any'}], 'string', `${name}(value)\n\nEncodes a value as text.`, {url: `${duck}/text#${name}value`})),
+  ...['unhex', 'from_hex', 'unbin', 'from_binary'].map(name =>
+    textFunction(name, [{name: 'value', type: 'string'}], 'string', `${name}(value)\n\nDecodes text into bytes.`, {url: `${duck}/text#${name}value`}),
+  ),
+  ...['base64', 'to_base64'].map(name =>
+    textFunction(name, [{name: 'blob', type: ['string', 'bytes']}], 'string', `${name}(blob)\n\nEncodes bytes as base64 text.`, {url: `${duck}/text#${name}blob`}),
+  ),
+  textFunction('from_base64', [['string', 'string']], 'string', 'from_base64(string)\n\nDecodes base64 text into bytes.', {url: `${duck}/text#from_base64string`}),
+  textFunction('encode', [['string', 'string']], 'string', 'encode(string)\n\nEncodes a string as bytes.', {url: `${duck}/text#encodestring`}),
+  textFunction(
+    'decode',
+    [
+      {name: 'blob', type: ['string', 'bytes']},
+      {name: 'encoding', type: 'string?'},
+    ],
+    'string',
+    'decode(blob[, encoding])\n\nDecodes bytes to text.',
+    {url: `${duck}/text#decodeblob`},
+  ),
+  textFunction(
+    'to_base',
+    [
+      {name: 'number', type: 'number'},
+      {name: 'radix', type: 'number'},
+      {name: 'min_length', type: 'number?'},
+    ],
+    'string',
+    'to_base(number, radix[, min_length])\n\nConverts a number to text in the supplied base.',
+    {url: `${duck}/text#to_basenumber-radix-min_length`},
+  ),
+  textFunction('url_encode', [['string', 'string']], 'string', 'url_encode(string)\n\nURL-encodes a string.', {url: `${duck}/text#url_encodestring`}),
+  textFunction('url_decode', [['string', 'string']], 'string', 'url_decode(string)\n\nURL-decodes a string.', {url: `${duck}/text#url_decodestring`}),
   {
     name: 'upper',
     description: trim(`
@@ -1774,11 +2074,26 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_diffpart-startdate-enddate`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'startdate', type: ['date', 'timestamp']},
-      {name: 'enddate', type: ['date', 'timestamp']},
+      {name: 'startdate', type: dateTimeTimestampTypes},
+      {name: 'enddate', type: dateTimeTimestampTypes},
     ],
     returns: 'number',
   },
+  dateTimeFunction(
+    'datediff',
+    [
+      {name: 'part', type: 'string'},
+      {name: 'startdate', type: dateTimeTimestampTypes},
+      {name: 'enddate', type: dateTimeTimestampTypes},
+    ],
+    'number',
+    `
+      datediff(part, startdate, enddate)
+
+      Alias for date_diff.
+    `,
+    {url: `${duck}/date#date_diffpart-startdate-enddate`},
+  ),
   {
     name: 'date_part',
     description: trim(`
@@ -1789,11 +2104,25 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_partpart-date`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'date', type: ['date', 'timestamp']},
+      {name: 'date', type: temporalPartTypes},
     ],
     returns: 'number',
     metadata: args => inferTimeOrdinal(args[0]?.sql, 'duckdb'),
   },
+  dateTimeFunction(
+    'datepart',
+    [
+      {name: 'part', type: 'string'},
+      {name: 'date', type: temporalPartTypes},
+    ],
+    'number',
+    `
+      datepart(part, date)
+
+      Alias for date_part.
+    `,
+    {url: `${duck}/date#date_partpart-date`, metadata: args => inferTimeOrdinal(args[0]?.sql, 'duckdb')},
+  ),
   {
     name: 'year',
     description: trim(`
@@ -1802,7 +2131,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the year.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('year', 'duckdb'),
   },
@@ -1814,7 +2143,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the quarter.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('quarter', 'duckdb'),
   },
@@ -1826,7 +2155,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the month.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('month', 'duckdb'),
   },
@@ -1838,7 +2167,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the week number.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('week', 'duckdb'),
   },
@@ -1850,7 +2179,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the ISO week number.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('weekofyear', 'duckdb'),
   },
@@ -1862,7 +2191,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of month.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('day', 'duckdb'),
   },
@@ -1874,7 +2203,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of month.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('dayofmonth', 'duckdb'),
   },
@@ -1886,7 +2215,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of week.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('dayofweek', 'duckdb'),
   },
@@ -1898,7 +2227,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of week.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('weekday', 'duckdb'),
   },
@@ -1910,7 +2239,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the day of year.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('dayofyear', 'duckdb'),
   },
@@ -1922,7 +2251,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the hour.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: temporalPartTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('hour', 'duckdb'),
   },
@@ -1934,7 +2263,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the minute.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: temporalPartTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('minute', 'duckdb'),
   },
@@ -1946,7 +2275,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the second.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: temporalPartTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('second', 'duckdb'),
   },
@@ -1958,7 +2287,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the ISO day of week.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('isodow', 'duckdb'),
   },
@@ -1970,10 +2299,44 @@ export const duckDbFunctions: FunctionDef[] = [
       Extracts the ISO year.
     `),
     url: `${duck}/datepart.html`,
-    args: [{name: 'date', type: ['date', 'timestamp']}],
+    args: [{name: 'date', type: dateTimestampIntervalTypes}],
     returns: 'number',
     metadata: inferTimeOrdinal('isoyear', 'duckdb'),
   },
+  ...['decade', 'era', 'millennium', 'yearweek'].map(name =>
+    dateTimeFunction(name, [{name: 'date', type: dateTimestampIntervalTypes}], 'number', `${name}(date)\n\nExtracts the ${name} part.`, {url: `${duck}/datepart.html`}),
+  ),
+  dateTimeFunction('julian', [{name: 'date', type: dateTimestampTypes}], 'number', 'julian(date)\n\nExtracts the Julian day number.', {url: `${duck}/datepart.html`}),
+  ...['microsecond', 'millisecond', 'nanosecond'].map(name =>
+    dateTimeFunction(name, [{name: 'date', type: temporalPartTypes}], 'number', `${name}(date)\n\nExtracts the ${name} part.`, {url: `${duck}/datepart.html`}),
+  ),
+  dateTimeFunction(
+    'timezone',
+    [],
+    'number',
+    `
+      timezone(timestamp)
+      timezone(timezone, timestamp)
+
+      Extracts the timezone part or converts a temporal value to a timezone.
+    `,
+    {
+      url: `${duck}/datepart.html`,
+      overloads: [
+        {args: [{name: 'date', type: dateTimestampIntervalTypes}], returns: 'number'},
+        {
+          args: [
+            {name: 'timezone', type: ['string', 'interval']},
+            {name: 'timestamp', type: ['time', 'timestamp']},
+          ],
+          returns: 'sql native',
+        },
+      ],
+    },
+  ),
+  ...['timezone_hour', 'timezone_minute'].map(name =>
+    dateTimeFunction(name, [{name: 'date', type: dateTimestampIntervalTypes}], 'number', `${name}(date)\n\nExtracts the ${name.replaceAll('_', ' ')} part.`, {url: `${duck}/datepart.html`}),
+  ),
   {
     name: 'date_sub',
     description: trim(`
@@ -1984,11 +2347,26 @@ export const duckDbFunctions: FunctionDef[] = [
     url: `${duck}/date#date_subpart-startdate-enddate`,
     args: [
       {name: 'part', type: 'string'},
-      {name: 'startdate', type: ['date', 'timestamp']},
-      {name: 'enddate', type: ['date', 'timestamp']},
+      {name: 'startdate', type: dateTimeTimestampTypes},
+      {name: 'enddate', type: dateTimeTimestampTypes},
     ],
     returns: 'number',
   },
+  dateTimeFunction(
+    'datesub',
+    [
+      {name: 'part', type: 'string'},
+      {name: 'startdate', type: dateTimeTimestampTypes},
+      {name: 'enddate', type: dateTimeTimestampTypes},
+    ],
+    'number',
+    `
+      datesub(part, startdate, enddate)
+
+      Alias for date_sub.
+    `,
+    {url: `${duck}/date#date_subpart-startdate-enddate`},
+  ),
   {
     name: 'dayname',
     description: trim(`
@@ -2027,6 +2405,21 @@ export const duckDbFunctions: FunctionDef[] = [
     returns: 'date',
   },
   {
+    name: 'make_time',
+    description: trim(`
+      make_time(hour, minute, second)
+
+      The time for the given parts.
+    `),
+    url: `${duck}/time#make_timebigint-bigint-double`,
+    args: [
+      ['hour', 'number'],
+      ['minute', 'number'],
+      ['second', 'number'],
+    ],
+    returns: 'time',
+  },
+  {
     name: 'monthname',
     description: trim(`
       monthname(date)
@@ -2045,10 +2438,7 @@ export const duckDbFunctions: FunctionDef[] = [
       Converts a timestamp to a string according to the format string.
     `),
     url: `${duck}/date#strftimedate-format`,
-    args: [
-      ['timestamp', 'timestamp'],
-      ['format', 'string'],
-    ],
+    args: [{name: 'timestamp', type: dateTimestampTypes}, ['format', 'string']],
     returns: 'string',
   },
   {
@@ -2138,6 +2528,17 @@ export const duckDbFunctions: FunctionDef[] = [
     returns: 'number',
   },
   {
+    name: 'to_timestamp',
+    description: trim(`
+      to_timestamp(seconds)
+
+      Converts seconds since the Unix epoch to a timestamp.
+    `),
+    url: `${duck}/timestamp#to_timestampdouble`,
+    args: [['seconds', 'number']],
+    returns: 'timestamp',
+  },
+  {
     name: 'make_timestamp',
     description: trim(`
       make_timestamp(year, month, day, hour, minute, second)
@@ -2153,8 +2554,64 @@ export const duckDbFunctions: FunctionDef[] = [
       ['minute', 'number'],
       ['second', 'number'],
     ],
-    returns: 'time',
+    returns: 'timestamp',
   },
+  ...[
+    ['make_timestamp_ms', 'milliseconds'],
+    ['make_timestamp_us', 'microseconds'],
+    ['make_timestamp_ns', 'nanoseconds'],
+  ].map(([name, unit]) =>
+    dateTimeFunction(
+      name,
+      [['value', 'number']],
+      'timestamp',
+      `
+        ${name}(value)
+
+        Converts ${unit} since the Unix epoch to a timestamp.
+      `,
+      {url: `${duck}/timestamp#${name}bigint`},
+    ),
+  ),
+  dateTimeFunction(
+    'make_timestamptz',
+    [],
+    'timestamp',
+    `
+      make_timestamptz(...)
+
+      Creates a timestamp with time zone from epoch microseconds or timestamp parts.
+    `,
+    {
+      url: `${duck}/timestamp#make_timestamptzbigint-bigint-bigint-bigint-bigint-double-string`,
+      overloads: [
+        {args: [['microseconds', 'number']], returns: 'timestamp'},
+        {
+          args: [
+            ['year', 'number'],
+            ['month', 'number'],
+            ['day', 'number'],
+            ['hour', 'number'],
+            ['minute', 'number'],
+            ['second', 'number'],
+          ],
+          returns: 'timestamp',
+        },
+        {
+          args: [
+            ['year', 'number'],
+            ['month', 'number'],
+            ['day', 'number'],
+            ['hour', 'number'],
+            ['minute', 'number'],
+            ['second', 'number'],
+            ['timezone', 'string'],
+          ],
+          returns: 'timestamp',
+        },
+      ],
+    },
+  ),
   {
     name: 'now',
     description: trim(`
@@ -2174,10 +2631,18 @@ export const duckDbFunctions: FunctionDef[] = [
       Converts the string text to timestamp according to the format string.
     `),
     url: `${duck}/timestamp#strptimetext-format`,
-    args: [
-      ['text', 'string'],
-      ['format', 'string'],
-    ],
+    args: [['text', 'string'], {name: 'format', type: ['string', 'array']}],
+    returns: 'timestamp',
+  },
+  {
+    name: 'try_strptime',
+    description: trim(`
+      try_strptime(text, format)
+
+      Converts text to a timestamp according to the format string, returning NULL on failure.
+    `),
+    url: `${duck}/timestamp#try_strptimetext-format`,
+    args: [['text', 'string'], {name: 'format', type: ['string', 'array']}],
     returns: 'timestamp',
   },
   {
@@ -2188,12 +2653,810 @@ export const duckDbFunctions: FunctionDef[] = [
       Truncate timestamp to a grid of width bucket_width.
     `),
     url: `${duck}/timestamp#time_bucketbucket_width-timestamp-offset`,
-    args: [
-      ['bucket_width', 'interval'],
-      ['timestamp', 'timestamp'],
-    ],
+    args: [['bucket_width', 'interval'], {name: 'timestamp', type: dateTimestampTypes}],
     returns: 'timestamp',
+    overloads: [
+      {
+        args: [['bucket_width', 'interval'], {name: 'timestamp', type: dateTimestampTypes}],
+        returns: 'timestamp',
+      },
+      {
+        args: [['bucket_width', 'interval'], {name: 'timestamp', type: dateTimestampTypes}, {name: 'offset', type: ['date', 'timestamp', 'interval', 'string']}],
+        returns: 'timestamp',
+      },
+    ],
   },
+  ...['to_days', 'to_decades', 'to_hours', 'to_microseconds', 'to_milliseconds', 'to_minutes', 'to_months', 'to_quarters', 'to_seconds', 'to_weeks', 'to_years'].map(name =>
+    dateTimeFunction(name, [['value', 'number']], 'interval', `${name}(value)\n\nCreates an interval value.`, {url: `${duck}/interval`}),
+  ),
+
+  // ============================================================================
+  // JSON Functions
+  // https://duckdb.org/docs/stable/data/json/json_functions
+  // https://duckdb.org/docs/stable/data/json/creating_json
+  // https://duckdb.org/docs/stable/data/json/json_aggregates
+  // https://duckdb.org/docs/stable/data/json/sql_to_and_from_json
+  // ============================================================================
+
+  jsonFunction(
+    'json',
+    [{name: 'json', type: ['json', 'string']}],
+    'json',
+    `
+    json(json)
+
+    Parse and minify json. Throws an error if the supplied value is invalid JSON.
+  `,
+  ),
+  jsonFunction(
+    'json_valid',
+    [{name: 'json', type: ['json', 'string']}],
+    'boolean',
+    `
+    json_valid(json)
+
+    Returns true if the supplied value is valid JSON.
+  `,
+  ),
+  jsonFunction(
+    'json_exists',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: 'string'},
+    ],
+    'boolean',
+    `
+      json_exists(json, path)
+
+      Returns true if the path exists in the JSON value.
+    `,
+  ),
+  jsonFunction(
+    'json_extract',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'json',
+    `
+      json_extract(json, path)
+
+      Extracts JSON from the supplied path.
+    `,
+  ),
+  jsonFunction(
+    'json_extract_path',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'json',
+    `
+      json_extract_path(json, path)
+
+      Alias-compatible DuckDB spelling for extracting JSON from the supplied path.
+    `,
+  ),
+  jsonFunction(
+    'json_extract_string',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'string',
+    `
+      json_extract_string(json, path)
+
+      Extracts a value from JSON and returns it as VARCHAR.
+    `,
+  ),
+  jsonFunction(
+    'json_extract_path_text',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'string',
+    `
+      json_extract_path_text(json, path)
+
+      Alias-compatible DuckDB spelling for extracting a JSON value as VARCHAR.
+    `,
+  ),
+  jsonFunction(
+    'json_value',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: ['string', 'number']},
+    ],
+    'string',
+    `
+      json_value(json, path)
+
+      Extracts a scalar JSON value as VARCHAR. Returns NULL when the selected value is not scalar.
+    `,
+  ),
+  jsonFunction(
+    'json_array_length',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: 'string?'},
+    ],
+    'number',
+    `
+      json_array_length(json[, path])
+
+      Returns the number of elements in the JSON array, or 0 if the value is not a JSON array.
+    `,
+  ),
+  jsonFunction(
+    'json_contains',
+    [
+      {name: 'json_haystack', type: ['json', 'string']},
+      {name: 'json_needle', type: ['json', 'string', 'number']},
+    ],
+    'boolean',
+    `
+      json_contains(json_haystack, json_needle)
+
+      Returns true if json_needle is contained in json_haystack.
+    `,
+  ),
+  jsonFunction(
+    'json_keys',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: 'string?'},
+    ],
+    'array<string>',
+    `
+      json_keys(json[, path])
+
+      Returns the keys of a JSON object as a LIST of VARCHAR.
+    `,
+  ),
+  jsonFunction(
+    'json_structure',
+    [{name: 'json', type: ['json', 'string']}],
+    'json',
+    `
+    json_structure(json)
+
+    Returns the structure of a JSON value.
+  `,
+  ),
+  jsonFunction(
+    'json_type',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'path', type: 'string?'},
+    ],
+    'string',
+    `
+      json_type(json[, path])
+
+      Returns the type of the JSON value, or the type of the value at path.
+    `,
+  ),
+  jsonFunction(
+    'json_transform',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'structure', type: 'string'},
+    ],
+    'record',
+    `
+      json_transform(json, structure)
+
+      Transforms JSON according to the supplied structure.
+    `,
+  ),
+  jsonFunction(
+    'json_transform_strict',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'structure', type: 'string'},
+    ],
+    'record',
+    `
+      json_transform_strict(json, structure)
+
+      Strictly transforms JSON according to the supplied structure and errors when casts fail.
+    `,
+  ),
+  jsonFunction(
+    'from_json',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'structure', type: 'string'},
+    ],
+    'record',
+    `
+      from_json(json, structure)
+
+      Alias-compatible DuckDB spelling for json_transform.
+    `,
+  ),
+  jsonFunction(
+    'from_json_strict',
+    [
+      {name: 'json', type: ['json', 'string']},
+      {name: 'structure', type: 'string'},
+    ],
+    'record',
+    `
+      from_json_strict(json, structure)
+
+      Alias-compatible DuckDB spelling for json_transform_strict.
+    `,
+  ),
+  jsonFunction(
+    'to_json',
+    [{name: 'value', type: 'any'}],
+    'json',
+    `
+    to_json(value)
+
+    Creates JSON from any value.
+  `,
+  ),
+  jsonFunction(
+    'json_quote',
+    [{name: 'value', type: 'any'}],
+    'json',
+    `
+    json_quote(value)
+
+    Alias-compatible DuckDB spelling for to_json.
+  `,
+  ),
+  jsonFunction(
+    'array_to_json',
+    [{name: 'array', type: 'array'}],
+    'json',
+    `
+    array_to_json(array)
+
+    Creates JSON from a LIST value.
+  `,
+  ),
+  jsonFunction(
+    'row_to_json',
+    [{name: 'row', type: 'record'}],
+    'json',
+    `
+    row_to_json(row)
+
+    Creates JSON from a STRUCT value.
+  `,
+  ),
+  jsonFunction(
+    'json_array',
+    [],
+    'json',
+    `
+    json_array(any, ...)
+
+    Creates a JSON array from the supplied values.
+  `,
+    {
+      overloads: [
+        {args: [], returns: 'json'},
+        {args: [{name: 'values', type: 'any...'}], returns: 'json'},
+      ],
+    },
+  ),
+  jsonFunction(
+    'json_object',
+    [],
+    'json',
+    `
+    json_object(key, value, ...)
+
+    Creates a JSON object from the supplied key/value pairs.
+  `,
+    {
+      overloads: [
+        {args: [], returns: 'json'},
+        {args: [{name: 'key_value_pairs', type: 'any...'}], returns: 'json'},
+      ],
+    },
+  ),
+  jsonFunction(
+    'json_merge_patch',
+    [
+      {name: 'json1', type: ['json', 'string']},
+      {name: 'json2', type: ['json', 'string']},
+    ],
+    'json',
+    `
+      json_merge_patch(json1, json2)
+
+      Merges two JSON documents using merge-patch semantics.
+    `,
+  ),
+  jsonFunction(
+    'json_pretty',
+    [{name: 'json', type: ['json', 'string']}],
+    'string',
+    `
+    json_pretty(json)
+
+    Pretty-prints a JSON value.
+  `,
+  ),
+  jsonFunction(
+    'json_group_array',
+    [{name: 'value', type: 'any'}],
+    'json',
+    `
+    json_group_array(value)
+
+    Aggregates values into a JSON array.
+  `,
+    {aggregate: true},
+  ),
+  jsonFunction(
+    'json_group_object',
+    [
+      {name: 'key', type: 'any'},
+      {name: 'value', type: 'any'},
+    ],
+    'json',
+    `
+      json_group_object(key, value)
+
+      Aggregates key/value pairs into a JSON object.
+    `,
+    {aggregate: true},
+  ),
+  jsonFunction(
+    'json_group_structure',
+    [{name: 'json', type: ['json', 'string']}],
+    'json',
+    `
+    json_group_structure(json)
+
+    Aggregates JSON values into a combined structure.
+  `,
+    {aggregate: true},
+  ),
+  jsonFunction(
+    'json_serialize_sql',
+    [
+      {name: 'sql', type: 'string'},
+      {name: 'skip_null', type: 'boolean?'},
+      {name: 'skip_empty', type: 'boolean?'},
+      {name: 'skip_default', type: 'boolean?'},
+      {name: 'format', type: 'boolean?'},
+    ],
+    'json',
+    `
+      json_serialize_sql(sql[, skip_null, skip_empty, skip_default, format])
+
+      Serializes a SQL query to JSON.
+    `,
+    {url: `${duckJson}/sql_to_and_from_json`},
+  ),
+  jsonFunction(
+    'json_serialize_plan',
+    [
+      {name: 'sql', type: 'string'},
+      {name: 'skip_null', type: 'boolean?'},
+      {name: 'skip_empty', type: 'boolean?'},
+      {name: 'skip_default', type: 'boolean?'},
+      {name: 'format', type: 'boolean?'},
+    ],
+    'json',
+    `
+      json_serialize_plan(sql[, skip_null, skip_empty, skip_default, format])
+
+      Serializes a SQL query plan to JSON.
+    `,
+    {url: `${duckJson}/sql_to_and_from_json`},
+  ),
+  jsonFunction(
+    'json_deserialize_sql',
+    [{name: 'serialized_sql', type: 'json'}],
+    'string',
+    `
+    json_deserialize_sql(serialized_sql)
+
+    Deserializes a serialized SQL JSON object back to SQL text.
+  `,
+    {url: `${duckJson}/sql_to_and_from_json`},
+  ),
+
+  // ============================================================================
+  // Nested List, Array, Struct, and Map Functions
+  // https://duckdb.org/docs/stable/sql/functions/list
+  // https://duckdb.org/docs/stable/sql/functions/struct
+  // https://duckdb.org/docs/stable/sql/functions/map
+  // ============================================================================
+
+  nestedFunction(
+    'array_agg',
+    [{name: 'arg', type: 'T'}],
+    'array',
+    `
+      array_agg(arg)
+
+      Returns a LIST containing all the values of a column. This function is affected by ordering.
+    `,
+    {aggregate: true, url: `${duck}/aggregates#array_aggarg`},
+  ),
+  ...['list_value', 'list_pack', 'array_value'].map(name =>
+    nestedFunction(name, [], 'array', `${name}(any, ...)\n\nCreates a list from the supplied values.`, {
+      overloads: [
+        {args: [], returns: 'array'},
+        {args: [{name: 'values', type: 'any...'}], returns: 'array'},
+      ],
+    }),
+  ),
+  ...['list_concat', 'list_cat', 'array_concat', 'array_cat'].map(name =>
+    nestedFunction(name, [], 'array', `${name}(list, ...)\n\nConcatenates lists.`, {
+      overloads: [
+        {args: [], returns: 'array'},
+        {args: [{name: 'lists', type: 'array...'}], returns: 'array'},
+      ],
+    }),
+  ),
+  ...['list_append', 'array_append', 'array_push_back'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'element', type: 'any'},
+      ],
+      'array',
+      `${name}(list, element)\n\nAppends element to list.`,
+    ),
+  ),
+  ...['list_prepend', 'array_prepend', 'array_push_front'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'element', type: 'any'},
+        {name: 'list', type: 'array'},
+      ],
+      'array',
+      `${name}(element, list)\n\nPrepends element to list.`,
+    ),
+  ),
+  ...['array_pop_back', 'array_pop_front', 'list_reverse', 'array_reverse', 'list_distinct', 'array_distinct'].map(name =>
+    nestedFunction(name, [{name: 'list', type: 'array'}], 'array', `${name}(list)\n\nReturns a transformed list.`),
+  ),
+  ...['list_sort', 'array_sort', 'list_reverse_sort', 'array_reverse_sort', 'list_grade_up', 'array_grade_up'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'col1', type: 'string?'},
+        {name: 'col2', type: 'string?'},
+      ],
+      'array',
+      `${name}(list[, col1][, col2])\n\nReturns a reordered list.`,
+    ),
+  ),
+  ...['list_slice', 'array_slice'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'begin', type: 'number'},
+        {name: 'end', type: 'number'},
+        {name: 'step', type: 'number?'},
+      ],
+      'array',
+      `${name}(list, begin, end[, step])\n\nExtracts a sublist.`,
+    ),
+  ),
+  ...['list_resize', 'array_resize'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'size', type: 'number'},
+        {name: 'value', type: 'any?'},
+      ],
+      'array',
+      `${name}(list, size[, value])\n\nResizes a list.`,
+    ),
+  ),
+  ...['list_select', 'array_select'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'value_list', type: 'array'},
+        {name: 'index_list', type: 'array'},
+      ],
+      'array',
+      `${name}(value_list, index_list)\n\nReturns values at the supplied indexes.`,
+    ),
+  ),
+  ...['list_where', 'array_where'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'value_list', type: 'array'},
+        {name: 'mask_list', type: 'array'},
+      ],
+      'array',
+      `${name}(value_list, mask_list)\n\nReturns values selected by a boolean mask list.`,
+    ),
+  ),
+  ...['list_intersect', 'array_intersect'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list1', type: 'array'},
+        {name: 'list2', type: 'array'},
+      ],
+      'array',
+      `${name}(list1, list2)\n\nReturns the intersection of two lists.`,
+    ),
+  ),
+  ...['list_extract', 'list_element', 'array_extract'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'index', type: 'number'},
+      ],
+      'array_element',
+      `${name}(list, index)\n\nExtracts the indexth, 1-based value from the list.`,
+    ),
+  ),
+  ...['list_contains', 'list_has', 'array_contains', 'array_has'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'element', type: 'any'},
+      ],
+      'boolean',
+      `${name}(list, element)\n\nReturns true if list contains element.`,
+    ),
+  ),
+  ...['list_has_all', 'array_has_all', 'list_has_any', 'array_has_any'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list1', type: 'array'},
+        {name: 'list2', type: 'array'},
+      ],
+      'boolean',
+      `${name}(list1, list2)\n\nCompares list membership between two lists.`,
+    ),
+  ),
+  ...['list_position', 'list_indexof', 'array_position', 'array_indexof'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'element', type: 'any'},
+      ],
+      'number',
+      `${name}(list, element)\n\nReturns the 1-based position of element in list.`,
+    ),
+  ),
+  ...['list_unique', 'array_unique', 'list_approx_count_distinct', 'list_count'].map(name =>
+    nestedFunction(name, [{name: 'list', type: 'array'}], 'number', `${name}(list)\n\nReturns a numeric summary for the list.`),
+  ),
+  ...[
+    'list_avg',
+    'list_sum',
+    'list_product',
+    'list_median',
+    'list_entropy',
+    'list_kurtosis',
+    'list_kurtosis_pop',
+    'list_mad',
+    'list_sem',
+    'list_skewness',
+    'list_stddev_pop',
+    'list_stddev_samp',
+    'list_var_pop',
+    'list_var_samp',
+  ].map(name => nestedFunction(name, [{name: 'list', type: 'array'}], 'number', `${name}(list)\n\nApplies the corresponding aggregate to the list.`)),
+  ...['list_first', 'list_last', 'list_any_value', 'list_min', 'list_max', 'list_mode'].map(name =>
+    nestedFunction(name, [{name: 'list', type: 'array'}], 'array_element', `${name}(list)\n\nReturns one element from the list.`),
+  ),
+  ...['list_bool_and', 'list_bool_or'].map(name => nestedFunction(name, [{name: 'list', type: 'array'}], 'boolean', `${name}(list)\n\nApplies a boolean aggregate to the list.`)),
+  nestedFunction('list_string_agg', [{name: 'list', type: 'array'}], 'string', 'list_string_agg(list)\n\nConcatenates the list values into a string.'),
+  nestedFunction(
+    'list_histogram',
+    [{name: 'list', type: 'array'}],
+    'map',
+    `
+      list_histogram(list)
+
+      Applies histogram to the list and returns a map.
+    `,
+  ),
+  ...['list_aggregate', 'list_aggr', 'array_aggregate', 'array_aggr', 'aggregate'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list', type: 'array'},
+        {name: 'function_name', type: 'string'},
+        {name: 'arguments', type: 'any...'},
+      ],
+      'sql native',
+      `${name}(list, function_name, ...)\n\nExecutes the named aggregate on the elements of list.`,
+    ),
+  ),
+  ...[
+    'list_cosine_distance',
+    'array_cosine_distance',
+    'list_cosine_similarity',
+    'array_cosine_similarity',
+    'list_distance',
+    'array_distance',
+    'list_dot_product',
+    'array_dot_product',
+    'list_inner_product',
+    'array_inner_product',
+    'list_negative_dot_product',
+    'array_negative_dot_product',
+    'list_negative_inner_product',
+    'array_negative_inner_product',
+  ].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'list1', type: 'array'},
+        {name: 'list2', type: 'array'},
+      ],
+      'number',
+      `${name}(list1, list2)\n\nComputes a numeric vector comparison between two lists.`,
+    ),
+  ),
+  nestedFunction(
+    'array_cross_product',
+    [
+      {name: 'array1', type: 'array'},
+      {name: 'array2', type: 'array'},
+    ],
+    'array<number>',
+    `
+      array_cross_product(array1, array2)
+
+      Computes the cross product of two 3-element numeric arrays.
+    `,
+  ),
+
+  nestedFunction(
+    'row',
+    [{name: 'values', type: 'any...'}],
+    'record',
+    `
+      row(any, ...)
+
+      Creates an unnamed STRUCT containing the argument values.
+    `,
+    {url: duckStruct},
+  ),
+  nestedFunction('struct_concat', [{name: 'structs', type: 'record...'}], 'record', 'struct_concat(structs...)\n\nMerges structs into a single struct.', {url: duckStruct}),
+  ...['struct_contains', 'struct_has'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'struct', type: 'record'},
+        {name: 'entry', type: 'any'},
+      ],
+      'boolean',
+      `${name}(struct, entry)\n\nChecks if the struct contains entry.`,
+      {url: duckStruct},
+    ),
+  ),
+  ...['struct_extract', 'struct_extract_at'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'struct', type: 'record'},
+        {name: 'entry', type: ['string', 'number']},
+      ],
+      'sql native',
+      `${name}(struct, entry)\n\nExtracts an entry from a struct.`,
+      {url: duckStruct},
+    ),
+  ),
+  ...['struct_position', 'struct_indexof'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'struct', type: 'record'},
+        {name: 'entry', type: 'any'},
+      ],
+      'number',
+      `${name}(struct, entry)\n\nReturns the 1-based position of entry in the struct.`,
+      {url: duckStruct},
+    ),
+  ),
+  nestedFunction('struct_keys', [{name: 'struct', type: 'record'}], 'array<string>', 'struct_keys(struct)\n\nReturns the struct keys.', {url: duckStruct}),
+  nestedFunction('struct_values', [{name: 'struct', type: 'record'}], 'record', 'struct_values(struct)\n\nReturns the struct values as an unnamed struct.', {url: duckStruct}),
+
+  nestedFunction(
+    'map',
+    [],
+    'map',
+    `
+      map([keys, values])
+
+      Creates a map from key and value lists, or an empty map when called with no arguments.
+    `,
+    {
+      url: duckMap,
+      overloads: [
+        {args: [], returns: 'map'},
+        {
+          args: [
+            {name: 'keys', type: 'array'},
+            {name: 'values', type: 'array'},
+          ],
+          returns: 'map',
+        },
+      ],
+    },
+  ),
+  nestedFunction('cardinality', [{name: 'map', type: 'map'}], 'number', 'cardinality(map)\n\nReturns the number of entries in the map.', {url: duckMap}),
+  nestedFunction('map_concat', [], 'map', 'map_concat(maps...)\n\nMerges maps, taking later values on key collisions.', {
+    url: duckMap,
+    overloads: [
+      {args: [], returns: 'map'},
+      {args: [{name: 'maps', type: 'map...'}], returns: 'map'},
+    ],
+  }),
+  ...['map_contains', 'map_contains_value'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'map', type: 'map'},
+        {name: name == 'map_contains' ? 'key' : 'value', type: 'any'},
+      ],
+      'boolean',
+      `${name}(map, value)\n\nChecks map membership.`,
+      {url: duckMap},
+    ),
+  ),
+  nestedFunction(
+    'map_contains_entry',
+    [
+      {name: 'map', type: 'map'},
+      {name: 'key', type: 'any'},
+      {name: 'value', type: 'any'},
+    ],
+    'boolean',
+    'map_contains_entry(map, key, value)\n\nChecks if a map contains a key/value pair.',
+    {url: duckMap},
+  ),
+  ...['element_at', 'map_extract'].map(name =>
+    nestedFunction(
+      name,
+      [
+        {name: 'map', type: 'map'},
+        {name: 'key', type: 'any'},
+      ],
+      'array',
+      `${name}(map, key)\n\nReturns the value for key as a list.`,
+      {url: duckMap},
+    ),
+  ),
+  nestedFunction(
+    'map_extract_value',
+    [
+      {name: 'map', type: 'map'},
+      {name: 'key', type: 'any'},
+    ],
+    'sql native',
+    'map_extract_value(map, key)\n\nReturns the value for key, or NULL if the key is absent.',
+    {url: duckMap},
+  ),
+  nestedFunction('map_entries', [{name: 'map', type: 'map'}], 'array<record>', 'map_entries(map)\n\nReturns a list of key/value structs.', {url: duckMap}),
+  nestedFunction('map_from_entries', [{name: 'entries', type: 'array'}], 'map', 'map_from_entries(entries)\n\nCreates a map from key/value struct entries.', {url: duckMap}),
+  nestedFunction('map_keys', [{name: 'map', type: 'map'}], 'array', 'map_keys(map)\n\nReturns the map keys as a list.', {url: duckMap}),
+  nestedFunction('map_values', [{name: 'map', type: 'map'}], 'array', 'map_values(map)\n\nReturns the map values as a list.', {url: duckMap}),
 
   // ============================================================================
   // Utility Functions
@@ -2260,6 +3523,13 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'value', type: 'any'}],
     returns: 'number',
   },
+  ...['uuid', 'uuidv4', 'uuidv7', 'gen_random_uuid'].map(name =>
+    textFunction(name, [], 'string', `${name}()\n\nGenerates a UUID.`, {
+      url: `${duck}/utility`,
+    }),
+  ),
+  textFunction('uuid_extract_timestamp', [{name: 'uuid', type: 'string'}], 'timestamp', 'uuid_extract_timestamp(uuid)\n\nExtracts the timestamp from a UUID v7 value.', {url: `${duck}/utility`}),
+  textFunction('uuid_extract_version', [{name: 'uuid', type: 'string'}], 'number', 'uuid_extract_version(uuid)\n\nExtracts the UUID version.', {url: `${duck}/utility`}),
 
   // ============================================================================
   // Date/Time Functions (additional)
@@ -2280,6 +3550,21 @@ export const duckDbFunctions: FunctionDef[] = [
     returns: 'timestamp',
     metadata: args => inferGrain(args[0]?.sql),
     sqlTemplate: 'DATE_TRUNC(${part}, ${timestamp})',
+  },
+  {
+    name: 'datetrunc',
+    description: trim(`
+      datetrunc(part, timestamp)
+
+      Alias for date_trunc.
+    `),
+    url: `${duck}/timestamp#date_truncpart-timestamp`,
+    args: [
+      {name: 'part', type: 'string'},
+      {name: 'timestamp', type: ['date', 'timestamp']},
+    ],
+    returns: 'timestamp',
+    metadata: args => inferGrain(args[0]?.sql),
   },
   {
     name: 'current_date',
@@ -2306,6 +3591,17 @@ export const duckDbFunctions: FunctionDef[] = [
     supportsBareInvocation: true,
   },
   {
+    name: 'current_localtime',
+    description: trim(`
+      current_localtime()
+
+      Returns the current local time.
+    `),
+    url: `${duck}/time#current_localtime`,
+    args: [],
+    returns: 'time',
+  },
+  {
     name: 'current_timestamp',
     description: trim(`
       current_timestamp([precision])
@@ -2316,6 +3612,28 @@ export const duckDbFunctions: FunctionDef[] = [
     args: [{name: 'precision', type: 'number?'}],
     returns: 'timestamp',
     supportsBareInvocation: true,
+  },
+  {
+    name: 'current_localtimestamp',
+    description: trim(`
+      current_localtimestamp()
+
+      Returns the current local timestamp.
+    `),
+    url: `${duck}/timestamp#current_localtimestamp`,
+    args: [],
+    returns: 'timestamp',
+  },
+  {
+    name: 'transaction_timestamp',
+    description: trim(`
+      transaction_timestamp()
+
+      Returns the current timestamp at the start of the transaction.
+    `),
+    url: `${duck}/timestamp#transaction_timestamp`,
+    args: [],
+    returns: 'timestamp',
   },
   {
     name: 'local_timestamp',

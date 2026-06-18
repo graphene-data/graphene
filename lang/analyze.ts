@@ -1180,7 +1180,7 @@ class AnalysisSession implements Analyzer {
 
   private isPercentileFunctionCall(node: SyntaxNode): boolean {
     if (node.name != 'FunctionCall') return false
-    let name = txt(node.getChild('Identifier')).toLowerCase()
+    let name = txt(node.getChild('FunctionName') || node.getChild('Identifier')).toLowerCase()
     return /^p\d+$/.test(name)
   }
 
