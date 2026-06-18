@@ -1,18 +1,21 @@
+import {type DuckDBInstance} from '@duckdb/node-api'
+
 import {config} from '../../lang/config.ts'
 import {authenticatedFetch} from '../auth.ts'
 import {type QueryResult, type QueryConnection, type QueryOptions} from './types.ts'
+
+let duckdbInst: Promise<DuckDBInstance> | undefined
 
 export async function getConnection(): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
     let mod = await importConnection(() => import('./bigQuery.ts'), '@google-cloud/bigquery', 'BigQuery')
     let opts = await mod.localDbOptions()
     return new mod.BigQueryConnection(opts)
-  } else if (config.motherduck) {
-    let mod = await importConnection(() => import('./duckdb.ts'), '@duckdb/node-api', 'MotherDuck')
-    return new mod.DuckDBConnection(mod.motherDuckOptions())
-  } else if (config.dialect === 'duckdb') {
-    let mod = await importConnection(() => import('./duckdb.ts'), '@duckdb/node-api', 'DuckDB')
-    return new mod.DuckDBConnection(mod.localDbOptions())
+  } else if (config.motherduck || config.dialect === 'duckdb') {
+    let mod = await importConnection(() => import('./duckdb.ts'), '@duckdb/node-api', config.motherduck ? 'Motherduck' : 'DuckDB')
+    let opts = mod.localDbOptions()
+    duckdbInst ||= mod.createInstance(opts)
+    return new mod.DuckDBConnection({...opts, instance: await duckdbInst})
   } else if (config.dialect === 'clickhouse') {
     let mod = await importConnection(() => import('./clickhouse.ts'), '@clickhouse/client', 'ClickHouse')
     return new mod.ClickHouseConnection(mod.localDbOptions())

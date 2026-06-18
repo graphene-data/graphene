@@ -5,8 +5,11 @@ import path from 'path'
 import {config} from '../../lang/config.ts'
 import {type QueryResult, type QueryConnection, type SchemaColumn, type QueryOptions} from './types.ts'
 
+// DuckDB has two layers: an instance owns the database/catalog, and connections run queries against it.
+// Local DuckDB attaches the project file once per instance; MotherDuck uses the instance as the remote session root.
 export interface DuckDbOptions {
   path?: string
+  instance?: DuckDBInstance
   motherduck?: {
     database?: string
     token: string
@@ -19,37 +22,18 @@ export class DuckDBConnection implements QueryConnection {
   connection: InnerConnection | null = null
 
   constructor(options?: DuckDbOptions) {
-    this.options = options || {}
-    this.ready = this.initialize()
+    let opts = options || {}
+    this.options = opts
+    this.ready = (async () => {
+      if (!opts.instance) throw new Error('DuckDB connections require a DuckDB instance')
+
+      this.connection = await opts.instance.connect()
+      // Local DuckDB attaches the project file at the instance level, but the active catalog is per-connection.
+      if (!opts.motherduck) await this.connection.run('use graphene_cli;')
+    })()
   }
 
-  private async initialize() {
-    if (this.options.motherduck) return this.initializeMotherDuck()
-
-    let dbPath = this.options.path || config.duckdb?.path
-    if (!dbPath) {
-      let files = await fs.readdir(config.root)
-      dbPath = files.find(f => f.endsWith('.duckdb'))
-      if (!dbPath) throw new Error('No .duckdb file found in current directory')
-    }
-    if (!path.isAbsolute(dbPath)) dbPath = path.resolve(config.root, dbPath)
-
-    let db = await DuckDBInstance.create(':memory:')
-    this.connection = await db.connect()
-    let escapedPath = dbPath.replace(/'/g, "''")
-    // Attach the project DuckDB file in read-only mode and make it the active schema
-    await this.connection.run(`attach '${escapedPath}' as graphene_cli (READ_ONLY);`)
-    await this.connection.run('use graphene_cli;')
-  }
-
-  private async initializeMotherDuck() {
-    let opts = this.options.motherduck!
-    let database = opts.database || ''
-
-    let db = await DuckDBInstance.create(`md:${database}`, {motherduck_token: opts.token, custom_user_agent: 'graphene'})
-    this.connection = await db.connect()
-  }
-
+  /** Run a query and normalize DuckDB-specific values into JSON-friendly values. */
   async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {
     await this.ready
     let params = options?.params
@@ -141,12 +125,36 @@ export class DuckDBConnection implements QueryConnection {
   }
 }
 
+/** Build DuckDB options from the global Graphene config and env vars. */
 export function localDbOptions(): DuckDbOptions {
+  if (config.motherduck) {
+    let token = process.env.MOTHERDUCK_TOKEN
+    if (!token) throw new Error('MotherDuck requires MOTHERDUCK_TOKEN.')
+    return {motherduck: {...config.motherduck, token}}
+  }
   return {...config.duckdb}
 }
 
-export function motherDuckOptions(): DuckDbOptions {
-  let token = process.env.MOTHERDUCK_TOKEN
-  if (!token) throw new Error('MotherDuck requires MOTHERDUCK_TOKEN.')
-  return {motherduck: {...config.motherduck, token}}
+/** Create the shared DuckDB instance that one or more DuckDBConnections can connect to. */
+export async function createInstance(options: DuckDbOptions = {}) {
+  if (options.motherduck) {
+    let database = options.motherduck.database || ''
+    return await DuckDBInstance.create(`md:${database}`, {motherduck_token: options.motherduck.token, custom_user_agent: 'graphene'})
+  }
+
+  let dbPath = options.path || config.duckdb?.path
+  if (!dbPath) {
+    let files = await fs.readdir(config.root)
+    dbPath = files.find(f => f.endsWith('.duckdb'))
+    if (!dbPath) throw new Error('No .duckdb file found in current directory')
+  }
+  if (!path.isAbsolute(dbPath)) dbPath = path.resolve(config.root, dbPath)
+
+  // Attach the project DuckDB file once per instance. Each connection still needs `use graphene_cli` for unqualified table names.
+  let instance = await DuckDBInstance.create(':memory:')
+  let connection = await instance.connect()
+  let escapedPath = dbPath.replace(/'/g, "''")
+  await connection.run(`attach '${escapedPath}' as graphene_cli (READ_ONLY);`)
+  connection.closeSync()
+  return instance
 }
