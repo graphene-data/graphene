@@ -1,3 +1,22 @@
+## 0.0.22
+
+### Breaking changes
+
+None.
+
+### Added
+
+- Added support for safe custom HTML/CSS styling in Markdown pages (`1fe1c705`).
+- Added screenshot support for tables in `graphene run -c` (`d73de871`).
+- Added an NBA example project (`aa2fef15`).
+- Expanded DuckDB function support for JSON, nested types, regex, fuzzy matching, hash/UUID, string/encoding, and date/time functions (`8ae38645`).
+
+### Fixed
+
+- Fixed GSQL parsing for identifiers with leading underscores (`069629db`).
+- Fixed sanitization of bare boolean props in Markdown components (`2178e132`).
+- Improved DuckDB connection reuse by sharing DuckDB instances across connections (`843907a8`).
+
 ## 0.0.21
 
 ### Breaking changes
