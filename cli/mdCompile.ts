@@ -82,6 +82,10 @@ export function mergeAdjacentHtml() {
   }
 }
 
+// Layout/identifier attributes allowed on any HTML element so page CSS can target it.
+// Executable attributes (style="", on*) are intentionally left out.
+const GLOBAL_HTML_ATTRS = ['class', 'id', 'role', 'aria-*', 'data-*']
+
 // Restrict allowed components in markdown files to avoid xss issues.
 // This uses sanitize-html rather than rehype-sanitize because the latter had lots of issues with preserving tag casing,
 // as well as allowing all attributes on our allowlisted components.
@@ -98,9 +102,14 @@ export function sanitizeMarkdown() {
 
       let sanitized = sanitizeHtml(expanded, {
         ...sanitizeHtml.defaults,
-        allowedTags: [...sanitizeHtml.defaults.allowedTags, ...componentNames()],
+        // Allow <style> through untouched. It reaches the Svelte compiler as an ordinary
+        // component style and is scoped to the page. allowVulnerableTags only silences
+        // sanitize-html's warning about allowing <style>.
+        allowedTags: [...sanitizeHtml.defaults.allowedTags, ...componentNames(), 'style'],
+        allowVulnerableTags: true,
         allowedAttributes: {
           ...sanitizeHtml.defaults.allowedAttributes,
+          '*': GLOBAL_HTML_ATTRS,
           ...Object.fromEntries(componentNames().map(n => [n, ['*']])),
         },
         parser: {

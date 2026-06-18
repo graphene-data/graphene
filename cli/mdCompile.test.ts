@@ -1,7 +1,17 @@
 /// <reference types="vitest/globals" />
 import {compile} from 'mdsvex'
+import {compile as compileSvelte} from 'svelte/compiler'
 
-import {extractFrontmatter, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+
+async function compileMarkdownPage(src: string) {
+  let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+  if (!out) throw new Error('Expected mdsvex compile output')
+  let preprocessed = injectComponentImports().markup({content: String(out.code), filename: '/tmp/repro.md'})
+  if (!preprocessed) throw new Error('Expected preprocess output')
+  let compiled = compileSvelte(preprocessed.code, {filename: '/tmp/repro.svelte', generate: 'client'})
+  return {code: preprocessed.code, css: compiled.css?.code ?? ''}
+}
 
 describe('extractFrontmatter', () => {
   it('parses title', () => {
@@ -74,5 +84,27 @@ where created_at >= coalesce($daterange_start, created_at)
 
     expect(code.indexOf('<BarChart')).toBeLessThan(code.indexOf('<PieChart'))
     expect(code.indexOf('<PieChart')).toBeLessThan(code.indexOf('</Row>'))
+  })
+})
+
+describe('page styling', () => {
+  it('passes a <style> block and layout html through to Svelte for scoping', async () => {
+    let {code, css} = await compileMarkdownPage(`
+<style>
+  .hero { color: rgb(1, 2, 3); }
+  .card { display: grid; }
+</style>
+<div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region" style="color: red">Hello</div>
+`)
+
+    // The <style> stays inline as an ordinary component style (not lifted into <svelte:head>).
+    expect(code).toContain('<style>')
+    expect(code).not.toContain('<svelte:head>')
+    // Layout/identifier attributes survive so CSS can target them; inline style="" does not.
+    expect(code).toContain('<div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region">Hello</div>')
+    expect(code).not.toContain('style="color: red"')
+    // Svelte scopes the rules to the page (hashed class on the emitted selectors).
+    expect(css).toMatch(/\.hero\.svelte-\w+/)
+    expect(css).toMatch(/\.card\.svelte-\w+/)
   })
 })

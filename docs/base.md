@@ -61,6 +61,8 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 Graphene pages extend Markdown with the following:
 - GSQL queries in code fences
 - Visualization and input components
+- Layout HTML such as `<div>`, `<span>`, semantic sections, lists, and tables
+- A `<style>` block for page-level visual customization
 
 ````md
 ---
@@ -79,6 +81,23 @@ where status <> 'cancelled'
 ````
 
 Queries can be referenced by other queries in the `from` or `join` to form DAGs of data logic within the page.
+
+## HTML and CSS
+Pages can use layout HTML for custom layouts. Common layout and text tags are supported, along with `class`, `id`, `role`, `aria-*`, and `data-*` attributes. Inline `style=""` attributes are not supported; use classes and a `<style>` block instead.
+
+Add a single `<style>` block to a page to customize its visuals. Styles are scoped to the page by Svelte, so a rule applies to the elements you author on the page (and inherits into the components nested inside them). Because of that scoping, a selector that reaches into the DOM a component renders for itself (for example a table cell or chart internals) will not take effect.
+
+```md
+<style>
+  .hero { display: grid; gap: 12px; }
+  .hero h2 { font-size: 42px; }
+</style>
+
+<div class="hero">
+  <h2>Custom layout</h2>
+  <BigValue data="orders" value="revenue" />
+</div>
+```
 
 ## Page frontmatter
 You can add YAML frontmatter at the top of a page. The following attributes are supported:
