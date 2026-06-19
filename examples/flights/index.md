@@ -40,6 +40,7 @@ select
     when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat'
   end as day_label,
   round(avg(dep_delay), 1) as avg_delay
+order by day_label, hour_label
 ```
 
 ```sql airport_scatter
