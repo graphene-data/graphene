@@ -328,20 +328,3 @@ select {
 .pageContent > div + :is(p, ul, ol, blockquote, hr, table, pre) {
   margin-top: 1rem;
 }
-
-/* Layout for standalone page views (local dev + cloud PageView). */
-main.pageContent {
-  margin: 0 auto;
-  min-width: 0;
-  padding: 44px 6rem 80px;
-  max-width: 720px;
-}
-main.pageContent.dashboardLayout {
-  max-width: 1200px;
-}
-main.pageContent h1:first-child {
-  margin-top: 12px;
-}
-.page-error-heading {
-  margin-top: 0;
-}

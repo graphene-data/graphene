@@ -1,10 +1,8 @@
 <script lang="ts">
   import {onDestroy, onMount, tick} from 'svelte'
-  import {slide} from 'svelte/transition'
-  import {ChevronDown} from '@lucide/svelte'
   import {setErrorFor} from './telemetry.ts'
   import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
-  import navFiles, {project} from 'virtual:nav'
+  import navFiles from 'virtual:nav'
   import Sidebar from './Sidebar.svelte'
   import SidebarToggle from './SidebarToggle.svelte'
   import PageNavGroup from './PageNavGroup.svelte'
@@ -18,18 +16,15 @@
   setPageInputsContext(pageInputs)
   onDestroy(() => releasePageInputs(pageInputs))
 
-  // Nav sidebar with HMR support for the virtual file list + project name (sidebar eyebrow)
+  // Nav sidebar with HMR support for the virtual file list.
   let navData = $state(navFiles)
-  let projectLabel = $state(project)
-  import.meta.hot?.accept('virtual:nav', mod => { navData = mod.default; projectLabel = mod.project })
+  import.meta.hot?.accept('virtual:nav', mod => navData = mod.default)
 
-  let navOpen = $state(true) // project eyebrow collapse toggle
-
-  let pathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'index'
   // Mirror the server-side folder redirect: if /foo.md doesn't exist but /foo/index.md does, load that.
-  if (pathName != 'index' && !navFiles.some(f => f.path == pathName + '.md') && navFiles.some(f => f.path == pathName + '/index.md')) {
-    pathName += '/index'
-  }
+  let rawPathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'index'
+  let pathName = rawPathName != 'index' && !navFiles.some(f => f.path == rawPathName + '.md') && navFiles.some(f => f.path == rawPathName + '/index.md')
+    ? rawPathName + '/index'
+    : rawPathName
 
   // Track compile errors from both initial load and subsequent HMR failures.
   let compileError = $state<GrapheneError | null>(null)
@@ -85,21 +80,7 @@
 <SidebarToggle />
 
 <Sidebar>
-  <div class="sb-content">
-    <div class="sb-nav-pages">
-      {#if projectLabel}
-        <button class="sb-eyebrow" onclick={() => navOpen = !navOpen} aria-expanded={navOpen}>
-          {projectLabel}
-          <ChevronDown class="sb-eyebrow-chevron" size={12} strokeWidth={2} />
-        </button>
-      {/if}
-      {#if navOpen}
-        <div transition:slide={{duration: 150}}>
-          <PageNavGroup files={navData} />
-        </div>
-      {/if}
-    </div>
-  </div>
+  <PageNavGroup files={navData} currentFile={pathName + '.md'} />
 </Sidebar>
 <QueryCacheStatus />
 
@@ -114,4 +95,23 @@
     <Page />
   {/if}
 </main>
+
+<style>
+  main.pageContent {
+    margin: 0 auto;
+    min-width: 0;
+    padding: 44px 6rem 80px;
+    max-width: 720px;
+  }
+
+  main.pageContent.dashboardLayout {
+    max-width: 1200px;
+  }
+
+  .page-error-heading { margin-top: 0; }
+
+  main h1:first-child {
+    margin-top: 12px;
+  }
+</style>
 

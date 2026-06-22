@@ -2,7 +2,7 @@
   import {Folder, FolderOpen, FileChartColumnIncreasing} from '@lucide/svelte'
   import {SvelteSet, SvelteMap} from 'svelte/reactivity'
 
-  let {currentFile = '', files = [], onNavigate = undefined, baseRoute = ''} = $props()
+  let {currentFile = '', files = [], onNavigate = undefined, baseRoute = '', projectName = ''} = $props()
 
   let tree = $state([])
   // eslint-disable-next-line svelte/no-unnecessary-state-wrap -- reassigned, needs $state
@@ -14,18 +14,7 @@
   let normalizedFiles = $derived(navFiles.map(f => f.path))
   let titlesByPath = $derived(Object.fromEntries(navFiles.filter(f => !!f.title).map(f => [f.path, f.title])))
 
-  // Track the current route as reactive state so $derived re-runs on SPA navigation.
-  let locationRoute = $state(getLocationRoute())
-  let normalizedCurrent = $derived(deriveCurrentFile(currentFile, normalizedFiles, locationRoute))
-
-  function deriveCurrentFile(_currentFile, _normalizedFiles, _locationRoute) {
-    let fromProp = normalizeFilePath(_currentFile)
-    if (_locationRoute && _normalizedFiles) {
-      let match = _normalizedFiles.find(f => pathToRoute(f) === _locationRoute)
-      if (match) return match
-    }
-    return fromProp
-  }
+  let normalizedCurrent = $derived(normalizeFilePath(currentFile))
 
   function normalizeNavFile(file) {
     if (!file || typeof file.path !== 'string') throw new Error('PageNavGroup files must be {path, title?} objects')
@@ -36,10 +25,6 @@
     return (filePath || '').replace(/^\.\//, '').replace(/\\/g, '/').replace(/^\/+/, '')
   }
 
-  function getLocationRoute() {
-    if (typeof window === 'undefined') return null
-    return (window.location.pathname || '/').replace(/\/+$/, '') || '/'
-  }
 
   $effect(() => {
     let nextSignature = navFiles.map(f => `${f.path}:${f.title || ''}`).join('|')
@@ -151,13 +136,13 @@
     if (href.startsWith('http') || href.startsWith('//')) return
     event.preventDefault()
     onNavigate(href)
-    locationRoute = href.replace(/\/+$/, '') || '/'
   }
 </script>
 
-<svelte:window onpopstate={() => locationRoute = getLocationRoute()} />
-
 <div class="sb-group">
+  {#if projectName}
+    <div class="sb-group-label">{projectName}</div>
+  {/if}
   <ul class="sb-menu">
     {#each tree as node (node.path)}
       {@render Row(node)}

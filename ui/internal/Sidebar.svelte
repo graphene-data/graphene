@@ -27,7 +27,7 @@
   data-open={sidebar.open}
   onmouseenter={sidebar.enter}
 >
-  <div class="sb-inner">
+  <div class="sb-content pretty-scrollbar">
     {@render children?.()}
   </div>
 </nav>
@@ -61,14 +61,18 @@
     pointer-events: auto;
   }
 
-  .sb-inner {
+  .sb-content {
     flex: 1;
     min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 0;
     margin-top: 10px;
+    padding: 0.25rem 0;
+    overflow-y: auto;
     font-family: var(--font-ui);
+    -webkit-mask-image: var(--fade-edges);
+    mask-image: var(--fade-edges);
   }
 
   /* ============================================================
@@ -78,52 +82,6 @@
 
   /* Group: `p-2`. Items fill the width inside this padding, with `rounded-md`,
      matching shadcn exactly. */
-  /* Flex column that fills the card and lets inner regions manage their own overflow. */
-  .sb-panel :global(.sb-content) {
-    flex: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Scrollable nav area with feathered top/bottom edges. */
-  .sb-panel :global(.sb-nav-pages) {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    padding: 0.25rem 0;
-    -webkit-mask-image: var(--fade-edges);
-    mask-image: var(--fade-edges);
-  }
-
-  /* Uppercase collapse-toggle eyebrow above a nav section. */
-  .sb-panel :global(.sb-eyebrow) {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    width: 100%;
-    padding: 0.375rem 1rem 0.25rem;
-    border: none;
-    background: transparent;
-    color: var(--color-muted);
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    cursor: pointer;
-    text-align: left;
-  }
-  .sb-panel :global(.sb-eyebrow:hover) { color: var(--color-body); }
-  .sb-panel :global(.sb-eyebrow-chevron) {
-    flex-shrink: 0;
-    transition: transform 150ms ease;
-  }
-  .sb-panel :global(.sb-eyebrow[aria-expanded='false'] .sb-eyebrow-chevron) {
-    transform: rotate(-90deg);
-  }
-
   .sb-panel :global(.sb-group) {
     display: flex;
     flex-direction: column;
@@ -131,17 +89,16 @@
     min-width: 0;
   }
 
-  /* Group label: `h-8 px-2 text-xs font-medium` at 70% foreground */
+  /* Uppercase label above a nav section. */
   .sb-panel :global(.sb-group-label) {
-    display: flex;
-    align-items: center;
-    height: 2rem;
-    padding: 0 0.5rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--color-body);
-    opacity: 0.7;
-    border-radius: 0.375rem;
+    width: 100%;
+    padding: 0.375rem 0.5rem 0.25rem;
+    color: var(--color-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: left;
   }
 
   /* Menu (ul): `flex flex-col gap-1 w-full min-w-0`.
