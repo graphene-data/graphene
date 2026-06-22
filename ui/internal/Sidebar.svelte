@@ -1,18 +1,31 @@
 <script>
-  // Content-agnostic sidebar shell. By default the panel slides in as an overlay
-  // when the user hovers the paired SidebarToggle button or the panel itself;
-  // alwaysOpen keeps the same shell visible for persistent navigation.
+  // Floating sidebar shell — renders as an inset, rounded card that slides in when the
+  // user hovers the paired SidebarToggle or the panel itself. top/inset set the clearance
+  // below a top bar and the margin from the screen edges.
   import {sidebar} from './sidebar.svelte.ts'
-  let {children, width = '16rem', alwaysOpen = false} = $props()
+  let {children, width = '18rem', top = '44px', inset = '10px'} = $props()
+
+  let navEl = $state()
+
+  // Close when the cursor moves past the panel's right edge, even without entering it
+  // (e.g. opened via the hamburger button then moved right). Uses offsetLeft/offsetWidth
+  // rather than getBoundingClientRect, which animates during the slide-in and would flash
+  // the panel shut.
+  function onDocMouseMove(e) {
+    if (!sidebar.open || !navEl) return
+    if (e.clientX > navEl.offsetLeft + navEl.offsetWidth) sidebar.leave()
+  }
 </script>
 
+<svelte:document onmousemove={onDocMouseMove} />
+
 <nav
+  bind:this={navEl}
   id="nav"
   class="sb-panel pretty-scrollbar"
-  style="--sb-w:{width}"
-  data-open={alwaysOpen || sidebar.open}
-  onmouseenter={() => { if (!alwaysOpen) sidebar.enter() }}
-  onmouseleave={() => { if (!alwaysOpen) sidebar.leave() }}
+  style="--sb-w:{width}; --sb-top:{top}; --sb-inset:{inset}"
+  data-open={sidebar.open}
+  onmouseenter={sidebar.enter}
 >
   <div class="sb-inner">
     {@render children?.()}
@@ -20,23 +33,28 @@
 </nav>
 
 <style>
+  /* Inset rounded card that clears the top bar (--sb-top) and keeps equal margins
+     (--sb-inset) from the screen edges, matching the page/preview panels. */
   .sb-panel {
     position: fixed;
-    top: 0;
-    left: 0;
+    top: var(--sb-top, 0);
+    left: var(--sb-inset, 0);
+    bottom: var(--sb-inset, 0);
     z-index: 40;
-    height: 100vh;
     width: var(--sb-w);
-    background: var(--sidebar);
-    color: var(--sidebar-foreground);
-    border-right: 1px solid var(--sidebar-border);
-    transform: translateX(-102%);
+    background: var(--color-surface);
+    color: var(--color-body);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-panel);
+    /* Slides in from the left; fully hidden until data-open='true'. */
+    transform: translateX(calc(-100% - var(--sb-inset, 0px) - 12px));
     transition: transform 200ms ease;
-    overflow-y: auto;
-    overflow-x: hidden;
-    /* Prevent rubber-band over-scroll from revealing content behind the panel. */
-    overscroll-behavior: none;
     pointer-events: none;
+    /* The panel itself doesn't scroll; inner regions manage their own overflow. */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   .sb-panel[data-open='true'] {
     transform: translateX(0);
@@ -44,11 +62,13 @@
   }
 
   .sb-inner {
+    flex: 1;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     gap: 0;
-    margin-top: 24px;
-    font-family: var(--ui-font-family);
+    margin-top: 10px;
+    font-family: var(--font-ui);
   }
 
   /* ============================================================
@@ -58,6 +78,52 @@
 
   /* Group: `p-2`. Items fill the width inside this padding, with `rounded-md`,
      matching shadcn exactly. */
+  /* Flex column that fills the card and lets inner regions manage their own overflow. */
+  .sb-panel :global(.sb-content) {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Scrollable nav area with feathered top/bottom edges. */
+  .sb-panel :global(.sb-nav-pages) {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 0.25rem 0;
+    -webkit-mask-image: var(--fade-edges);
+    mask-image: var(--fade-edges);
+  }
+
+  /* Uppercase collapse-toggle eyebrow above a nav section. */
+  .sb-panel :global(.sb-eyebrow) {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.375rem 1rem 0.25rem;
+    border: none;
+    background: transparent;
+    color: var(--color-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: left;
+  }
+  .sb-panel :global(.sb-eyebrow:hover) { color: var(--color-body); }
+  .sb-panel :global(.sb-eyebrow-chevron) {
+    flex-shrink: 0;
+    transition: transform 150ms ease;
+  }
+  .sb-panel :global(.sb-eyebrow[aria-expanded='false'] .sb-eyebrow-chevron) {
+    transform: rotate(-90deg);
+  }
+
   .sb-panel :global(.sb-group) {
     display: flex;
     flex-direction: column;
@@ -73,7 +139,7 @@
     padding: 0 0.5rem;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--sidebar-foreground);
+    color: var(--color-body);
     opacity: 0.7;
     border-radius: 0.375rem;
   }
@@ -87,7 +153,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.125rem;
     min-width: 0;
   }
   /* Only the top-level menu fills its group; sub-menus let their width be
@@ -109,8 +175,8 @@
      icons, the line floats in empty space, so we drop it (and the paired
      translate-x-px trick that existed to cover it). */
   .sb-panel :global(.sb-sub) {
-    margin: 0 0.875rem;
-    padding: 0.125rem 0.625rem;
+    margin: 0;
+    padding: 0.125rem 0 0.125rem 1.5rem;
     gap: 0.25rem;
   }
 
@@ -121,13 +187,13 @@
     display: flex;
     width: 100%;
     align-items: center;
-    gap: 0.2rem;
-    height: 2rem;
+    gap: 0.5rem;
+    height: 1.75rem;
     padding: 0 0.5rem;
     border-radius: 0.375rem;
     font-size: 0.875rem;
     line-height: 1.25rem;
-    color: var(--sidebar-foreground);
+    color: var(--color-body);
     text-decoration: none;
     background: transparent;
     border: none;
@@ -138,17 +204,17 @@
     box-sizing: border-box;
   }
   .sb-panel :global(.sb-item:hover) {
-    background: var(--sidebar-accent);
-    color: var(--sidebar-accent-foreground);
+    background: var(--color-hover);
+    color: var(--color-primary-strong);
     text-decoration: none;
   }
   .sb-panel :global(.sb-item.active) {
-    background: var(--sidebar-accent);
-    color: var(--sidebar-accent-foreground);
+    background: var(--color-hover);
+    color: var(--color-primary-strong);
     font-weight: 500;
   }
   .sb-panel :global(.sb-item:focus-visible) {
-    outline: 2px solid var(--sidebar-ring);
+    outline: 2px solid var(--color-muted);
     outline-offset: -2px;
   }
 
@@ -165,14 +231,10 @@
     text-overflow: ellipsis;
   }
 
-  /* Chevron: 1rem Lucide SVG with 200ms rotate transition. */
-  .sb-panel :global(.sb-chevron) {
+  /* Leading row icon (folder/file in PageNavGroup): muted, fixed size. */
+  .sb-panel :global(.sb-icon) {
     flex-shrink: 0;
-    width: 1rem;
-    height: 1rem;
-    color: var(--sidebar-foreground);
-    opacity: 0.6;
-    transition: transform 200ms ease;
+    display: inline-flex;
+    color: var(--color-muted);
   }
-  .sb-panel :global(.sb-chevron.open) { transform: rotate(90deg); }
 </style>
