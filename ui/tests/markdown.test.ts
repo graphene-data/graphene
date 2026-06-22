@@ -349,8 +349,10 @@ test('allows collapsing and expanding folders', async ({server, page}) => {
   server.mockFile('/other/second/foo.md', 'Foo')
   await page.goto(server.url() + '/other/more')
   // Sidebar is hidden by default; reveal it by hovering the hamburger trigger.
-  await page.getByRole('button', {name: 'Toggle navigation'}).hover()
+  await page.getByRole('button', {name: 'Open navigation'}).hover()
   let nav = page.getByRole('navigation')
+  // The folder's index.md shows up as its own "Home" page routed to the folder path.
+  await expect(nav.getByRole('link', {name: 'Home'})).toHaveAttribute('href', /\/other$/)
   let otherToggle = nav.locator('[data-folder-toggle="other"]')
   await otherToggle.click()
   await expect(nav.getByRole('link', {name: 'Third'})).toBeHidden()
