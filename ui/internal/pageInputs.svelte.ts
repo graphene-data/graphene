@@ -20,6 +20,11 @@ interface ParamCodec<T> {
 }
 
 type UpdateSource = 'init' | 'local' | 'external'
+type PageInputOptions = {
+  initialParams?: ParamSnapshot
+  delegateUpdate?: (nextParams: Record<string, any>) => void
+  syncUrl?: boolean
+}
 
 class BoundField<T> {
   value: T
@@ -44,7 +49,7 @@ class BoundField<T> {
     let next = this.codec.read(params, this.name)
     this.value = next.value
     if (source === 'init') this.hasExternalValue = next.present
-    else if (source === 'external') this.hasExternalValue = true
+    else if (source === 'external') this.hasExternalValue = next.present
   }
 
   normalize(params: ParamSnapshot) {
@@ -166,12 +171,12 @@ export class PageInputs {
   private fieldsByKey: Map<string, Set<BoundField<any>>>
   private onPopState?: () => void
 
-  constructor() {
+  constructor(private options: PageInputOptions = {}) {
     this.params = $state.raw({}) as ParamSnapshot
     this.subscribers = new Set()
     this.fieldsByKey = new Map()
-    this.params = cloneParams(this.readFromUrl())
-    if (typeof window !== 'undefined') {
+    this.params = cloneParams(options.initialParams || this.readFromUrl())
+    if (typeof window !== 'undefined' && options.syncUrl !== false) {
       this.onPopState = () => this.syncFromUrl()
       window.addEventListener('popstate', this.onPopState)
     }
@@ -233,6 +238,10 @@ export class PageInputs {
   }
 
   updateParams(nextParams: Record<string, any>) {
+    if (this.options.delegateUpdate) {
+      this.options.delegateUpdate(nextParams)
+    }
+
     let merged = {...this.params} as ParamSnapshot
     Object.entries(nextParams).forEach(([name, value]) => {
       merged[name] = Array.isArray(value) ? [...value] : value
@@ -244,7 +253,7 @@ export class PageInputs {
     let changed = new Set(Object.keys(this.params))
     if (changed.size === 0) return
     this.params = {}
-    this.syncUrl()
+    if (this.options.syncUrl !== false) this.syncUrl()
     this.syncFields(changed, 'local')
     let snapshot = this.getParams()
     this.subscribers.forEach(subscriber => subscriber(snapshot, {changed}))
@@ -252,6 +261,10 @@ export class PageInputs {
 
   syncFromUrl() {
     this.applySnapshot(this.readFromUrl(), 'external')
+  }
+
+  applyExternalParams(nextParams: ParamSnapshot) {
+    this.applySnapshot(nextParams, 'external')
   }
 
   private applySnapshot(nextParams: ParamSnapshot, source: UpdateSource) {
@@ -262,7 +275,7 @@ export class PageInputs {
     let changed = getChangedKeys(this.params, cloned)
     if (changed.size === 0) return
     this.params = cloned
-    if (source !== 'external') this.syncUrl()
+    if (source !== 'external' && this.options.syncUrl !== false) this.syncUrl()
     this.syncFields(changed, source)
     let snapshot = this.getParams()
     this.subscribers.forEach(subscriber => subscriber(snapshot, {changed}))

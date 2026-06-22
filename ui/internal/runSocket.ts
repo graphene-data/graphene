@@ -1,53 +1,23 @@
 // WebSocket connection for the `graphene run` command.
 // Listens for run requests, waits for queries to finish, captures screenshots, and reports errors.
 
-import {rowsToCsv} from '../../lang/csv.ts'
-import {getErrors} from './telemetry.ts'
-
 let socket: WebSocket | null = null
-connect()
-
-// html2canvas is dynamically loaded so we don't include it on pages that don't need it.
-let html2canvas: any
-async function loadHtml2Canvas() {
-  html2canvas ||= (await import('@graphenedata/html2canvas'))?.default
-}
+if (window.top === window) connect()
 
 async function captureComponent(component: string) {
-  let componentEl = findVisualComponentElement(component)
-  if (!componentEl) return undefined
-
-  await loadHtml2Canvas()
-  let canvas = await html2canvas(componentEl, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
-  return canvas?.toDataURL('image/png')
+  return await window.$GRAPHENE.captureComponent?.(component)
 }
 
-function exportChartCsv(chart: string) {
-  let componentEl = findVisualComponentElement(chart)
-  let componentId = componentEl?.getAttribute('data-component-id') || ''
-  let data = componentId ? window.$GRAPHENE.chartExports?.[componentId] : undefined
-  if (!data) return undefined
-  return rowsToCsv(data.rows || [], data.fields || [])
+async function exportChartCsv(chart: string) {
+  return await window.$GRAPHENE.exportChartCsv?.(chart)
 }
 
-function findVisualComponentElement(component: string) {
-  let escaped = window.CSS.escape(component)
-  let componentEl = document.querySelector(`[data-chart-title="${escaped}"]`) as HTMLElement | null
-  componentEl ||= document.querySelector(`[data-component-title="${escaped}"]`) as HTMLElement | null
-  componentEl ||= document.querySelector(`[data-component-id="${escaped}"]`) as HTMLElement | null
-  return componentEl
-}
-
-function listComponentIds() {
-  return Array.from(document.querySelectorAll('[data-component-id]'))
-    .map(el => el.getAttribute('data-component-id') || '')
-    .filter(componentId => componentId.trim().length > 0)
+async function listComponentIds() {
+  return (await window.$GRAPHENE.listComponentIds?.()) || []
 }
 
 async function takeScreenshot() {
-  await loadHtml2Canvas()
-  let canvas = await html2canvas(document.body, {useCORS: true, allowTaint: true, scale: 1, liveDOM: true})
-  return canvas?.toDataURL('image/png')
+  return await window.$GRAPHENE.capturePage?.()
 }
 
 function connect() {
@@ -61,18 +31,17 @@ function connect() {
     let finished = await window.$GRAPHENE.waitForLoad(20_000)
 
     if (action === 'list') {
-      socket!.send(JSON.stringify({type: 'checkResponse', requestId, componentIds: listComponentIds()}))
+      socket!.send(JSON.stringify({type: 'checkResponse', requestId, componentIds: await listComponentIds()}))
       return
     }
 
     if (format === 'csv') {
-      socket!.send(JSON.stringify({type: 'checkResponse', requestId, csv: chart ? exportChartCsv(chart) : undefined, stillLoading: !finished}))
+      socket!.send(JSON.stringify({type: 'checkResponse', requestId, csv: chart ? await exportChartCsv(chart) : undefined, stillLoading: !finished}))
       return
     }
 
     let screenshot = chart ? await captureComponent(chart) : await takeScreenshot()
-    socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors: getErrors(), stillLoading: !finished, screenshot}))
+    let errors = (await window.$GRAPHENE.getErrors?.()) || []
+    socket!.send(JSON.stringify({type: 'checkResponse', requestId, errors, stillLoading: !finished, screenshot}))
   }
 }
-
-window.$GRAPHENE.exportChartCsv = exportChartCsv

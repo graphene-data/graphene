@@ -56,7 +56,12 @@
   // If `data` is just a string, kick off a query to fetch the data.
   // This maybe could be an effect, but we'd have to ensure we don't double-subscribe.
   onMount(() => {
-    resizeObserver = new ResizeObserver(() => chart?.resize())
+    resizeObserver = new ResizeObserver(() => {
+      if (!chart) return
+      let renderId = window.$GRAPHENE?.renderStart?.(`chart:${chart.id}:resize`)
+      chart.resize()
+      waitForChartPaint(renderId)
+    })
     if (node) resizeObserver.observe(node)
 
     if (typeof data == 'string') {
@@ -91,10 +96,10 @@
     }
 
     try {
-      window.$GRAPHENE?.renderStart?.(`chart:${chart.id}`)
+      let renderId = window.$GRAPHENE?.renderStart?.(`chart:${chart.id}`)
       renderChart()
       chartError = null
-      window.$GRAPHENE?.renderComplete?.(`chart:${chart.id}`)
+      waitForChartPaint(renderId)
     } catch (error) {
       console.error('Chart failed to render', error)
       chartError = error instanceof Error ? error : new Error(String(error))
@@ -109,11 +114,11 @@
   function renderChart() {
     if (!chart || !loaded) return
 
-    // clone config, since enriching mutates the config, and mutating a prop is weird
-    // structuredClone doesn't like proxies, so use state.snapshot
-    let cloned = structuredClone($state.snapshot(config)) as EChartsConfig
-    let rows = structuredClone(loaded.rows || [])
-    let fields = structuredClone(loaded.fields || [])
+    // clone config, since enriching mutates the config, and mutating a prop is weird.
+    // ECharts configs may include formatter callbacks, so this preserves functions.
+    let cloned = cloneConfig(config) as EChartsConfig
+    let rows = cloneConfig(loaded.rows || [])
+    let fields = cloneConfig(loaded.fields || [])
     cloned.legendSelection = chart.getOption()?.legend?.[0]?.selected
     let enriched = enrich(cloned, rows, fields)
 
@@ -127,6 +132,19 @@
     chart.off('legendselectchanged', renderChart)
     chart.dispose()
     chart = null
+  }
+
+  function waitForChartPaint(renderId: string | undefined) {
+    if (!renderId) return
+    let done = false
+    let complete = () => {
+      if (done) return
+      done = true
+      window.$GRAPHENE?.renderComplete?.(renderId)
+    }
+    let afterPaint = () => requestAnimationFrame(() => requestAnimationFrame(complete))
+    chart?.once?.('finished', afterPaint)
+    window.setTimeout(afterPaint, 1000)
   }
 
   function queryFields(config: EChartsConfig) {
@@ -174,6 +192,12 @@
     return dim
   }
 
+  function cloneConfig(value: any): any {
+    if (value == null || typeof value != 'object') return value
+    if (Array.isArray(value)) return value.map(cloneConfig)
+    if (Object.getPrototypeOf(value) !== Object.prototype) return value
+    return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, cloneConfig(child)]))
+  }
 </script>
 
 <div class="echarts" bind:this={node} style={chartSizeStyle} data-component-id={mountedComponentId} data-chart-title={chartTitle}>

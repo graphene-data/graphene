@@ -42,7 +42,7 @@ from flights
     if (!out) throw new Error('Expected mdsvex compile output')
     let code = String(out.code)
 
-    expect(code).toContain('<GrapheneQuery name="{`repro`}" code="{`select\\n  format(\'{:.1%}\', 0.5) as pct\\nfrom flights`}"></GrapheneQuery>')
+    expect(code).toContain('<GrapheneQuery name="{`repro`}" code="{`select\\n  format(\'{:.1%}\', 0.5) as pct\\nfrom flights`}" />')
   })
 
   it('keeps query comparison operators as JavaScript escapes instead of HTML entities', async () => {
@@ -78,8 +78,8 @@ where created_at >= coalesce($daterange_start, created_at)
     let code = String(out.code)
 
     expect(code).toContain('<Row>')
-    expect(code).toContain('<BarChart data="x" y="a"></BarChart>')
-    expect(code).toContain('<PieChart data="x" value="a"></PieChart>')
+    expect(code).toContain('<BarChart data="x" y="a" />')
+    expect(code).toContain('<PieChart data="x" value="a" />')
     expect(code).toContain('</Row>')
 
     expect(code.indexOf('<BarChart')).toBeLessThan(code.indexOf('<PieChart'))
@@ -102,19 +102,29 @@ where created_at >= coalesce($daterange_start, created_at)
     expect(code).toContain('@import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");')
     expect(code).toContain('.hero { color: rgb(1, 2, 3); background: url("https://example.com/leak"); }')
     expect(code).toContain('.card { display: grid; }')
-    expect(code).toContain('<div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region">Hello</div>')
-    expect(code).not.toContain('style="color: red"')
+    expect(code).toContain('<div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region" style="color: red">Hello</div>')
     expect(code).toContain('example.com/leak')
   })
 
-  it('rejects executable framework syntax and component directives', async () => {
-    await expect(compileMarkdownPage('Hello {window.mdExpr = true}')).rejects.toThrow('Dynamic markup expressions are not supported')
-    await expect(compileMarkdownPage('{@html "<img src=x onerror=alert(1)>"}')).rejects.toThrow('Dynamic markup expressions are not supported')
-    await expect(compileMarkdownPage('{#if true}oops{/if}')).rejects.toThrow('Dynamic markup expressions are not supported')
-    await expect(compileMarkdownPage('<div on:click={window.mdDiv = true}>Click</div>')).rejects.toThrow('Framework directives are not supported')
-    await expect(compileMarkdownPage('<BarChart data="x" bind:this={window.mdBind} />')).rejects.toThrow('Framework directives are not supported')
-    await expect(compileMarkdownPage('<BarChart data="x" {...window.mdSpread} />')).rejects.toThrow('Attribute spreads are not supported')
-    await expect(compileMarkdownPage('<BarChart data={window.mdData} />')).rejects.toThrow('Dynamic attribute expressions are not supported')
+  it('allows authored Svelte scripts, expressions, blocks, and event handlers', async () => {
+    let code = await compileMarkdownPage(`
+<script>
+  let mdExpr = 'dynamic'
+</script>
+
+{#if mdExpr}
+  <button onclick={() => window.mdClicked = true}>{mdExpr}</button>
+{/if}
+
+<BarChart data={window.mdData || 'x'} />
+`)
+
+    expect(code).toContain("let mdExpr = 'dynamic'")
+    expect(code).toContain('onclick={() => window.mdClicked = true}')
+    expect(code).toContain("<BarChart data={window.mdData || 'x'} />")
+
+    let inlineScript = await compileMarkdownPage('<script>window.mdInline = true</script>\n# Inline Script')
+    expect(inlineScript).toMatch(/components\nwindow\.mdInline = true/)
   })
 
   it('keeps generated query and echarts expressions', async () => {
@@ -125,16 +135,23 @@ select '\${literal}' as value
 
 <ECharts data="repro" title="A > B">
   title: {text: "{b}"},
+  tooltip: {formatter: params => "carrier: " + params.name},
   series: [{type: "bar"}],
 </ECharts>
 `)
 
     expect(code).toContain('<GrapheneQuery name="{`repro`}" code="{`select')
     expect(code).toContain('\\${literal}')
-    expect(code).toContain('<ECharts data="repro" title="A &gt; B" config={{"title":{"text":"{b}"},"series":[{"type":"bar"}]}}></ECharts>')
+    expect(code).toContain('title="A > B"')
+    expect(code).toContain('tooltip: {formatter: params => "carrier: " + params.name}')
   })
 
-  it('rejects authored component expression attributes', async () => {
-    await expect(compileMarkdownPage('<ECharts data="repro" config={alert(1)}></ECharts>')).rejects.toThrow('Dynamic attribute expressions are not supported')
+  it('allows authored component expression attributes', async () => {
+    let code = await compileMarkdownPage('<ECharts data="repro" config={{title: {text: window.chartTitle || "ok"}}}></ECharts>')
+    expect(code).toContain('config={{title: {text: window.chartTitle || "ok"}}}')
+  })
+
+  it('still rejects malformed Svelte', async () => {
+    await expect(compileMarkdownPage('<div>{#if true}</div>')).rejects.toThrow()
   })
 })

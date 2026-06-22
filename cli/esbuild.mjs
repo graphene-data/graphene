@@ -1,7 +1,9 @@
+import {vitePreprocess} from '@sveltejs/vite-plugin-svelte'
 import {build, transform} from 'esbuild'
 import {cp, mkdir, readdir, readFile, rm, writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {compile, preprocess} from 'svelte/compiler'
 
 import pkg from './package.json' with {type: 'json'}
 import {stageNpmPackage} from './publishPackage.js'
@@ -68,6 +70,7 @@ await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 
 await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 'dist/lang/index.d.ts'))
 await cp(path.resolve(__dirname, '../lang/csv.ts'), path.resolve(__dirname, 'dist/lang/csv.ts'))
 await transpileSvelteModules(path.resolve(__dirname, 'dist/ui'))
+await compileSvelteComponents(path.resolve(__dirname, 'dist/ui'))
 await rm(path.resolve(__dirname, 'dist/ui/node_modules'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))
 await rm(path.resolve(__dirname, 'dist/ui/tests'), {recursive: true, force: true})
@@ -97,6 +100,30 @@ async function transpileSvelteModules(root) {
       })
       await writeFile(file.replace(/\.ts$/, '.js'), output.code)
       await rm(file)
+    }),
+  )
+}
+
+async function compileSvelteComponents(root) {
+  let files = await collectFiles(root)
+  let svelteFiles = files.filter(file => file.endsWith('.svelte'))
+
+  await Promise.all(
+    svelteFiles.map(async file => {
+      let contents = await readFile(file, 'utf8')
+      let preprocessed = await preprocess(contents, vitePreprocess(), {filename: file})
+      let output = compile(preprocessed.code, {filename: file, generate: 'client', css: 'injected', dev: true})
+      await writeFile(file.replace(/\.svelte$/, '.js'), output.js.code)
+      await rm(file)
+    }),
+  )
+
+  files = await collectFiles(root)
+  await Promise.all(
+    files.map(async file => {
+      let contents = await readFile(file, 'utf8')
+      if (!contents.includes('.svelte')) return
+      await writeFile(file, contents.replaceAll(/\.svelte(?=['"])/g, '.js'))
     }),
   )
 }

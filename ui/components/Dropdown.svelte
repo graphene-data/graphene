@@ -107,6 +107,10 @@
   let filteredOptions = $derived(filterOptions(availableOptions, searchTerm))
   let selectedDisplayOptions = $derived(selection.map(val => valueMap.get(optionKey(val)) || {value: val, label: String(val ?? '')}))
 
+  let initialDefaults = captureInitial(() => ensureArray(defaultValue))
+  let initialNoDefault = captureInitial(() => toBoolean(noDefault))
+  if (!field.hasExternalValue && !initialNoDefault && initialDefaults.length) setSelection(initialDefaults, {persist: true})
+
   $effect(() => {
     if (isOpen) activeIndex = ensureActiveIndex(activeIndex, filteredOptions)
   })

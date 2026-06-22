@@ -3,12 +3,10 @@ import type {Plugin} from 'unified'
 import {decodeHTML} from 'entities'
 import fs from 'fs'
 import yaml from 'js-yaml'
-import JSON5 from 'json5'
 import path from 'path'
-import sanitizeHtml from 'sanitize-html'
 import {visit} from 'unist-util-visit'
 
-import {extractPageStyles, GLOBAL_HTML_ATTRS, replaceRawTagBlocks, sanitizeComponentTag, validateSvelteMarkup, validateStaticMarkup} from './sanitization.ts'
+import {extractPageStyles, replaceRawTagBlocks, validateSvelteMarkup} from './sanitization.ts'
 
 // Use JS escapes for HTML-sensitive chars so Svelte restores them before query registration.
 function svelteStringAttr(str: string) {
@@ -25,7 +23,8 @@ function svelteStringAttr(str: string) {
   return `{\`${literal}\`}`
 }
 
-// Takes the contents of a <ECharts> tag, and json5 parses it
+// Takes the contents of a <ECharts> tag and lifts it into a Svelte expression prop.
+// The body is JavaScript, not JSON, so formatter callbacks and other functions survive.
 export function liftInlineEChartsConfig(content: string) {
   return replaceRawTagBlocks(content, 'ECharts', block => {
     let attrs = block.openTag.slice('<ECharts'.length, -1)
@@ -33,7 +32,7 @@ export function liftInlineEChartsConfig(content: string) {
     if (!inline) return block.raw
     if (/\sconfig\s*=/.test(attrs)) return block.raw
     let source = inline.startsWith('{') ? inline : `{${inline}}`
-    let config = JSON.stringify(JSON5.parse(source), (_key, value) => (typeof value == 'string' ? decodeHTML(value) : value))
+    let config = decodeHTML(source)
     return `<ECharts${attrs} config={${config}}></ECharts>`
   })
 }
@@ -62,7 +61,7 @@ export function escapeAngles() {
 }
 
 // remark can split one html block into adjacent html nodes when self-closing tags are involved.
-// Merge those sibling html nodes so downstream rehype/sanitize work on the full block.
+// Merge those sibling html nodes so downstream mdsvex sees the full block.
 export function mergeAdjacentHtml() {
   return function transformer(tree: any) {
     visit(tree, (parent: any) => {
@@ -85,44 +84,6 @@ export function mergeAdjacentHtml() {
   }
 }
 
-// Restrict allowed components in markdown files to avoid xss issues.
-// This uses sanitize-html rather than rehype-sanitize because the latter had lots of issues with preserving tag casing,
-// as well as allowing all attributes on our allowlisted components.
-export function sanitizeMarkdown() {
-  return function transformer(tree: any) {
-    visit(tree, 'raw', (node: any) => {
-      if (typeof node.value !== 'string') return
-      validateStaticMarkup(node.value)
-
-      // sanitize-html doesn't like non-standard self-closing tags, so we need to rewrite them into open+close tags
-      let expanded = node.value.replace(/<(\w+)((?:\s[^<>]*?)?)\s*\/>/gi, (_: string, name: string, attrs = '') => {
-        let spacing = attrs
-        return `<${name}${spacing}></${name}>`
-      })
-
-      let sanitized = sanitizeHtml(expanded, {
-        ...sanitizeHtml.defaults,
-        allowedTags: [...sanitizeHtml.defaults.allowedTags, ...componentNames(), 'style'],
-        // Only suppresses sanitize-html's warning for allowing <style>. We extract style
-        // blocks later, sanitize their CSS ourselves, and remove the raw tags from page HTML.
-        allowVulnerableTags: true,
-        allowedAttributes: {
-          ...sanitizeHtml.defaults.allowedAttributes,
-          '*': GLOBAL_HTML_ATTRS,
-          ...Object.fromEntries(componentNames().map(n => [n, ['*']])),
-        },
-        transformTags: Object.fromEntries(componentNames().map(n => [n, sanitizeComponentTag])),
-        parser: {
-          ...((sanitizeHtml.defaults as any).parser || {}),
-          lowerCaseAttributeNames: false,
-          lowerCaseTags: false,
-        },
-      })
-      node.value = sanitized
-    })
-  }
-}
-
 // We don't want users to have to manually import components in their md files, so we auto-import them.
 export function injectComponentImports() {
   let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`
@@ -135,7 +96,7 @@ export function injectComponentImports() {
       content = pageStyles.html
       if (pageStyles.css.trim()) content = `<svelte:head><style>${pageStyles.css}</style></svelte:head>\n${content}`
       if (content.includes('<script>')) {
-        content = content.replace('<script>', `<script>\n${imp}`)
+        content = content.replace('<script>', `<script>\n${imp}\n`)
       } else {
         content = `<script>\n${imp}\n</script>\n${content}`
       }
@@ -153,7 +114,10 @@ export function componentNames() {
   if (cachedComponentNames) return cachedComponentNames
 
   let files = fs.readdirSync(path.join(import.meta.dirname, '../ui/components'))
-  cachedComponentNames = files.map(f => path.basename(f, '.svelte')).filter(f => !f.startsWith('_'))
+  cachedComponentNames = files
+    .filter(f => f.endsWith('.svelte') || f.endsWith('.js'))
+    .map(f => f.replace(/\.(?:svelte|js)$/, ''))
+    .filter(f => !f.startsWith('_'))
   return cachedComponentNames || []
 }
 
@@ -169,4 +133,4 @@ export function extractFrontmatter(contents: string): PageFrontmatter {
 }
 
 export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles, mergeAdjacentHtml]
-export const rehypePlugins: Array<Plugin> = [sanitizeMarkdown]
+export const rehypePlugins: Array<Plugin> = []
