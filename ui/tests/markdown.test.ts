@@ -145,18 +145,21 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
   await page.clock.install({time: new Date('2024-01-01T00:00:00Z')})
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.locator('.query-cache-status')).toHaveCount(0)
+  await expect(page.locator('.query-cache-status')).toHaveCount(1)
+  await expect(page.locator('.query-cache-status')).toHaveText('')
 
   await page.evaluate(() => window.$GRAPHENE.rerunQueries())
-  await expect(page.locator('.query-cache-status')).toHaveCount(0)
-  await page.clock.fastForward('01:00')
-  await expect(page.locator('.query-cache-status')).toContainText('1m ago')
+  await expect(page.locator('.query-cache-status')).toHaveCount(1)
+  await expect(page.locator('.query-cache-status')).toHaveText('')
+  await page.clock.fastForward('05:00')
+  await expect(page.locator('.query-cache-status')).toContainText('5m ago')
   await expect(page).screenshot('markdown-browser-cache-status')
 
-  await page.getByRole('button', {name: 'Refresh cached queries'}).click()
+  await page.getByRole('button', {name: /Click to re-run/}).click()
   await expect.poll(() => requestCount).toBe(3)
   expect(lastCacheControl).toBe('no-cache')
-  await expect(page.locator('.query-cache-status')).toHaveCount(0)
+  await expect(page.locator('.query-cache-status')).toHaveCount(1)
+  await expect(page.locator('.query-cache-status')).toHaveText('')
 })
 
 test('disables browser query caching behind an internal query parameter', async ({server, page}) => {
