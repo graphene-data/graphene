@@ -168,7 +168,7 @@
   .sb-panel :global(.sb-item.active) {
     background: var(--color-hover);
     color: var(--color-primary-strong);
-    font-weight: 500;
+    font-weight: 700;
   }
   .sb-panel :global(.sb-item:focus-visible) {
     outline: 2px solid var(--color-muted);

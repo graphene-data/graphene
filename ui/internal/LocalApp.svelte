@@ -20,11 +20,11 @@
   let navData = $state(navFiles)
   import.meta.hot?.accept('virtual:nav', mod => navData = mod.default)
 
+  let pathName = $state(window.location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'index')
   // Mirror the server-side folder redirect: if /foo.md doesn't exist but /foo/index.md does, load that.
-  let rawPathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'index'
-  let pathName = rawPathName != 'index' && !navFiles.some(f => f.path == rawPathName + '.md') && navFiles.some(f => f.path == rawPathName + '/index.md')
-    ? rawPathName + '/index'
-    : rawPathName
+  if (pathName != 'index' && !navFiles.some(f => f.path == pathName + '.md') && navFiles.some(f => f.path == pathName + '/index.md')) {
+    pathName += '/index'
+  }
 
   // Track compile errors from both initial load and subsequent HMR failures.
   let compileError = $state<GrapheneError | null>(null)
