@@ -16,6 +16,7 @@
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   --color-bg: #fafaf9;
+  --color-surface: #fff; /* raised surfaces (cards, floating controls) that sit above --color-bg */
   --color-primary-strong: #0c0a09;
   --color-body: #57534e;
   --color-muted: #a8a29e;
@@ -24,13 +25,17 @@
   --color-border-strong: #dfddd8;
   --color-code-bg: #f1f0ed;
   --color-code-text: #4a4541;
+  --color-danger: #b42318; /* warm, stone-aligned error/destructive red */
 
-  --sidebar: #ffffff;
-  --sidebar-foreground: #252525;
-  --sidebar-accent: #f4f4f5;
-  --sidebar-accent-foreground: #171717;
-  --sidebar-border: #e5e5e5;
-  --sidebar-ring: #b5b5b5;
+  /* Warm hover/active wash for sidebar rows, ghost buttons, segmented tracks. */
+  --color-hover: rgba(23, 19, 15, 0.045);
+  /* Soft lift for large floating surfaces (preview panel, overlay sidebar). */
+  --shadow-panel: 0 2px 4px rgba(40, 33, 22, 0.05), 0 16px 40px -16px rgba(40, 33, 22, 0.16);
+  /* Tighter lift for small floating controls (menu button, FAB). */
+  --shadow-card: 0 1px 2px rgba(40, 33, 22, 0.06), 0 6px 16px -8px rgba(40, 33, 22, 0.18);
+  /* Feathered scroll edges — use in mask-image to dissolve content at scroll boundaries. */
+  --fade-top: linear-gradient(to bottom, transparent 0, #000 14px);
+  --fade-edges: linear-gradient(to bottom, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
 }
 
 /* ============================================================
@@ -322,4 +327,21 @@ select {
 /* Extra breathing room when prose follows a viz */
 .pageContent > div + :is(p, ul, ol, blockquote, hr, table, pre) {
   margin-top: 1rem;
+}
+
+/* Layout for standalone page views (local dev + cloud PageView). */
+main.pageContent {
+  margin: 0 auto;
+  min-width: 0;
+  padding: 44px 6rem 80px;
+  max-width: 720px;
+}
+main.pageContent.dashboardLayout {
+  max-width: 1200px;
+}
+main.pageContent h1:first-child {
+  margin-top: 12px;
+}
+.page-error-heading {
+  margin-top: 0;
 }
