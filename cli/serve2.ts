@@ -298,7 +298,7 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
         }
       }
 
-      return `export default ${JSON.stringify(res)}`
+      return `export default ${JSON.stringify(res)}\nexport const project = ${JSON.stringify(readProjectName())}`
     },
     configureServer: (s: ViteDevServer) => {
       let refresh = async () => {
@@ -325,6 +325,12 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
       refresh()
     },
   }
+}
+
+// The project's package.json name, shown as the sidebar eyebrow in the local dev UI.
+function readProjectName(): string {
+  let name = fs.readJsonSync(path.join(config.root, 'package.json'), {throws: false})?.name
+  return typeof name == 'string' ? name : ''
 }
 
 function updateParsedFiles(analysis: AnalysisResult) {

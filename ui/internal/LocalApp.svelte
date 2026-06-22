@@ -1,8 +1,10 @@
 <script lang="ts">
   import {onDestroy, onMount, tick} from 'svelte'
+  import {slide} from 'svelte/transition'
+  import {ChevronDown} from '@lucide/svelte'
   import {setErrorFor} from './telemetry.ts'
   import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
-  import navFiles from 'virtual:nav'
+  import navFiles, {project} from 'virtual:nav'
   import Sidebar from './Sidebar.svelte'
   import SidebarToggle from './SidebarToggle.svelte'
   import PageNavGroup from './PageNavGroup.svelte'
@@ -16,9 +18,12 @@
   setPageInputsContext(pageInputs)
   onDestroy(() => releasePageInputs(pageInputs))
 
-  // Nav sidebar with HMR support for the virtual file list
+  // Nav sidebar with HMR support for the virtual file list + project name (sidebar eyebrow)
   let navData = $state(navFiles)
-  import.meta.hot?.accept('virtual:nav', mod => navData = mod.default)
+  let projectLabel = $state(project)
+  import.meta.hot?.accept('virtual:nav', mod => { navData = mod.default; projectLabel = mod.project })
+
+  let navOpen = $state(true) // project eyebrow collapse toggle
 
   let pathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'index'
   // Mirror the server-side folder redirect: if /foo.md doesn't exist but /foo/index.md does, load that.
@@ -77,9 +82,24 @@
   })
 </script>
 
-<SidebarToggle style='position:fixed;top:2rem;left:2rem;opacity:0.3;' />
+<SidebarToggle />
+
 <Sidebar>
-  <PageNavGroup files={navData} />
+  <div class="sb-content">
+    <div class="sb-nav-pages">
+      {#if projectLabel}
+        <button class="sb-eyebrow" onclick={() => navOpen = !navOpen} aria-expanded={navOpen}>
+          {projectLabel}
+          <ChevronDown class="sb-eyebrow-chevron" size={12} strokeWidth={2} />
+        </button>
+      {/if}
+      {#if navOpen}
+        <div transition:slide={{duration: 150}}>
+          <PageNavGroup files={navData} />
+        </div>
+      {/if}
+    </div>
+  </div>
 </Sidebar>
 <QueryCacheStatus />
 
@@ -95,22 +115,3 @@
   {/if}
 </main>
 
-<style>
-  main.pageContent {
-    margin: 0 auto;
-    min-width: 0;
-    padding: 20px 6rem 80px;
-    max-width: 720px;
-  }
-
-  main.pageContent.dashboardLayout {
-    max-width: 1200px;
-  }
-
-  .page-error-heading { margin-top: 0; }
-
-  /* want to control this margin so it lines up with the SidebarToggle */
-  main h1:first-child {
-    margin-top: 12px;
-  }
-</style>
