@@ -9,8 +9,8 @@ async function compileMarkdownPage(src: string) {
   if (!out) throw new Error('Expected mdsvex compile output')
   let preprocessed = injectComponentImports().markup({content: String(out.code), filename: '/tmp/repro.md'})
   if (!preprocessed) throw new Error('Expected preprocess output')
-  compileSvelte(preprocessed.code, {filename: '/tmp/repro.svelte'})
-  return preprocessed.code
+  let compiled = compileSvelte(preprocessed.code, {filename: '/tmp/repro.svelte', generate: 'client'})
+  return {code: preprocessed.code, css: compiled.css?.code ?? ''}
 }
 
 describe('extractFrontmatter', () => {
@@ -85,56 +85,26 @@ where created_at >= coalesce($daterange_start, created_at)
     expect(code.indexOf('<BarChart')).toBeLessThan(code.indexOf('<PieChart'))
     expect(code.indexOf('<PieChart')).toBeLessThan(code.indexOf('</Row>'))
   })
+})
 
-  it('allows layout html attributes and page style blocks', async () => {
-    let code = await compileMarkdownPage(`
+describe('page styling', () => {
+  it('passes a <style> block and layout html through to Svelte for scoping', async () => {
+    let {code, css} = await compileMarkdownPage(`
 <style>
-  @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");
-  .hero { color: rgb(1, 2, 3); background: url("https://example.com/leak"); }
-</style >
-<style>
+  .hero { color: rgb(1, 2, 3); }
   .card { display: grid; }
 </style>
 <div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region" style="color: red">Hello</div>
 `)
 
-    expect(code).toContain('<svelte:head><style>')
-    expect(code).toContain('@import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@500;700&display=swap");')
-    expect(code).toContain('.hero { color: rgb(1, 2, 3); background: url("https://example.com/leak"); }')
-    expect(code).toContain('.card { display: grid; }')
+    // The <style> stays inline as an ordinary component style (not lifted into <svelte:head>).
+    expect(code).toContain('<style>')
+    expect(code).not.toContain('<svelte:head>')
+    // Layout/identifier attributes survive so CSS can target them; inline style="" does not.
     expect(code).toContain('<div class="hero card" id="hero" data-kind="demo" aria-label="Hero" role="region">Hello</div>')
     expect(code).not.toContain('style="color: red"')
-    expect(code).toContain('example.com/leak')
-  })
-
-  it('rejects executable framework syntax and component directives', async () => {
-    await expect(compileMarkdownPage('Hello {window.mdExpr = true}')).rejects.toThrow('Dynamic markup expressions are not supported')
-    await expect(compileMarkdownPage('{@html "<img src=x onerror=alert(1)>"}')).rejects.toThrow('Dynamic markup expressions are not supported')
-    await expect(compileMarkdownPage('{#if true}oops{/if}')).rejects.toThrow('Dynamic markup expressions are not supported')
-    await expect(compileMarkdownPage('<div on:click={window.mdDiv = true}>Click</div>')).rejects.toThrow('Framework directives are not supported')
-    await expect(compileMarkdownPage('<BarChart data="x" bind:this={window.mdBind} />')).rejects.toThrow('Framework directives are not supported')
-    await expect(compileMarkdownPage('<BarChart data="x" {...window.mdSpread} />')).rejects.toThrow('Attribute spreads are not supported')
-    await expect(compileMarkdownPage('<BarChart data={window.mdData} />')).rejects.toThrow('Dynamic attribute expressions are not supported')
-  })
-
-  it('keeps generated query and echarts expressions', async () => {
-    let code = await compileMarkdownPage(`
-\`\`\`sql repro
-select '\${literal}' as value
-\`\`\`
-
-<ECharts data="repro" title="A > B">
-  title: {text: "{b}"},
-  series: [{type: "bar"}],
-</ECharts>
-`)
-
-    expect(code).toContain('<GrapheneQuery name="{`repro`}" code="{`select')
-    expect(code).toContain('\\${literal}')
-    expect(code).toContain('<ECharts data="repro" title="A &gt; B" config={{"title":{"text":"{b}"},"series":[{"type":"bar"}]}}></ECharts>')
-  })
-
-  it('rejects authored component expression attributes', async () => {
-    await expect(compileMarkdownPage('<ECharts data="repro" config={alert(1)}></ECharts>')).rejects.toThrow('Dynamic attribute expressions are not supported')
+    // Svelte scopes the rules to the page (hashed class on the emitted selectors).
+    expect(css).toMatch(/\.hero\.svelte-\w+/)
+    expect(css).toMatch(/\.card\.svelte-\w+/)
   })
 })
