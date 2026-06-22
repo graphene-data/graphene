@@ -18,7 +18,7 @@
     if (!runAt) return ''
 
     let minutes = Math.max(0, Math.floor((currentTime - runAt) / 60_000))
-    if (minutes < 1) return ''
+    if (minutes < 1) return 'Just now'
     if (minutes < 60) return `${minutes}m ago`
 
     let hours = Math.floor(minutes / 60)
@@ -46,46 +46,47 @@
 {/if}
 
 <style>
+  /* Top-right counterpart to the floating menu button (top-left). */
   .query-cache-status {
     position: fixed;
-    right: 2rem;
-    top: 2.25rem;
-    z-index: 20;
+    right: 12px;
+    top: 13px;
+    z-index: 30;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    color: #6b7280;
-    font-size: 0.875rem;
+    gap: 0.2rem;
+    color: var(--color-tertiary);
+    font-size: 12px;
     line-height: 1;
   }
 
   .query-cache-status button {
     display: grid;
     place-items: center;
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 1.125rem;
+    height: 1.125rem;
     padding: 0;
-    color: #6b7280;
+    color: var(--color-tertiary);
     background: transparent;
     border: 0;
     cursor: pointer;
   }
 
   .query-cache-status button:hover:not(:disabled) {
-    color: #111827;
+    color: var(--color-primary-strong);
   }
 
   .query-cache-status button:disabled {
-    color: #9ca3af;
+    color: var(--color-muted);
     cursor: wait;
   }
 
   .query-cache-status svg {
-    width: 1rem;
-    height: 1rem;
+    width: 13px;
+    height: 13px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2;
+    stroke-width: 1.5;
     stroke-linecap: round;
     stroke-linejoin: round;
   }
