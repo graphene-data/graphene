@@ -1,8 +1,9 @@
 <script>
   import {Folder, FolderOpen, FileChartColumnIncreasing} from '@lucide/svelte'
   import {SvelteSet, SvelteMap} from 'svelte/reactivity'
+  import {route} from './router.ts'
 
-  let {currentFile = '', files = [], onNavigate = undefined, baseRoute = '', projectName = ''} = $props()
+  let {files = [], onNavigate = undefined, baseRoute = '', projectName = ''} = $props()
 
   let tree = $state([])
   // eslint-disable-next-line svelte/no-unnecessary-state-wrap -- reassigned, needs $state
@@ -10,24 +11,13 @@
   let treeSignature = $state('')
   let lastCurrent = $state('')
 
-  let navFiles = $derived((files || []).map(normalizeNavFile))
-  let normalizedFiles = $derived(navFiles.map(f => f.path))
-  let titlesByPath = $derived(Object.fromEntries(navFiles.filter(f => !!f.title).map(f => [f.path, f.title])))
+  let normalizedFiles = $derived((files || []).map(f => f.path))
+  let titlesByPath = $derived(Object.fromEntries((files || []).filter(f => !!f.title).map(f => [f.path, f.title])))
 
-  let normalizedCurrent = $derived(normalizeFilePath(currentFile))
-
-  function normalizeNavFile(file) {
-    if (!file || typeof file.path !== 'string') throw new Error('PageNavGroup files must be {path, title?} objects')
-    return {path: normalizeFilePath(file.path), title: file.title || undefined}
-  }
-
-  function normalizeFilePath(filePath) {
-    return (filePath || '').replace(/^\.\//, '').replace(/\\/g, '/').replace(/^\/+/, '')
-  }
-
+  let normalizedCurrent = $derived(normalizedFiles.find(f => pathToRoute(f) === ($route.replace(/\/+$/, '') || '/')) || '')
 
   $effect(() => {
-    let nextSignature = navFiles.map(f => `${f.path}:${f.title || ''}`).join('|')
+    let nextSignature = (files || []).map(f => `${f.path}:${f.title || ''}`).join('|')
     if (nextSignature !== treeSignature) {
       treeSignature = nextSignature
       tree = buildTree(normalizedFiles, titlesByPath)
