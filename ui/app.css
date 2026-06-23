@@ -15,6 +15,9 @@
   --font-ui: 'Source Sans 3', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
+  --notebook-width: 720px;
+  --dashboard-width: 1200px;
+
   --color-bg: #fafaf9;
   --color-surface: #fff; /* raised surfaces (cards, floating controls) that sit above --color-bg */
   --color-primary-strong: #0c0a09;

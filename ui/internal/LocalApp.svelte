@@ -103,11 +103,11 @@
     margin: 0 auto;
     min-width: 0;
     padding: 44px 6rem 80px;
-    max-width: 720px;
+    max-width: var(--notebook-width);
   }
 
   main.pageContent.dashboardLayout {
-    max-width: 1200px;
+    max-width: var(--dashboard-width);
   }
 
   .page-error-heading { margin-top: 0; }
