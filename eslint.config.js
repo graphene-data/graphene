@@ -103,6 +103,8 @@ export default [
       '@stylistic/object-curly-spacing': ['error', 'never'],
       '@stylistic/space-infix-ops': ['error'],
       'no-duplicate-imports': ['error'],
+      // The Lucide barrel makes Vite dev/test load a huge icon graph before tree-shaking, which can timeout UI tests.
+      'no-restricted-imports': ['error', {paths: [{name: '@lucide/svelte', message: 'Import Lucide icons directly from @lucide/svelte/icons/<icon> so Vite tests do not load the full icon barrel.'}]}],
       'no-var': ['error'],
       'prefer-const': 'off',
       'prefer-let/prefer-let': ['error'],

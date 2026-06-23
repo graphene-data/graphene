@@ -1,5 +1,7 @@
 <script>
-  import {Folder, FolderOpen, FileChartColumnIncreasing} from '@lucide/svelte'
+  import Folder from '@lucide/svelte/icons/folder'
+  import FolderOpen from '@lucide/svelte/icons/folder-open'
+  import FileChartColumnIncreasing from '@lucide/svelte/icons/file-chart-column-increasing'
   import {SvelteSet, SvelteMap} from 'svelte/reactivity'
   import {route} from './router.ts'
 

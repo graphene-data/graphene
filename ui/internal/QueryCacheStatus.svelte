@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onDestroy, onMount} from 'svelte'
-  import {RefreshCw} from '@lucide/svelte'
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw'
   import {queryState, refreshQueries} from './queryEngine.ts'
 
   let oldestRunAt = $derived($queryState.oldestRunAt)

@@ -2,7 +2,7 @@
   // The persistent menu button: always fixed to the top-left corner of the viewport.
   // Opens the sidebar on hover/click/focus. The sidebar stays open until the cursor
   // crosses its right edge (onDocMouseMove in Sidebar.svelte), so no onmouseleave here.
-  import {Menu} from '@lucide/svelte'
+  import Menu from '@lucide/svelte/icons/menu'
   import {sidebar} from './sidebar.svelte.ts'
 </script>
 
