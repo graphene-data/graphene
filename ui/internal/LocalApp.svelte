@@ -80,7 +80,9 @@
 <SidebarToggle />
 
 <Sidebar>
-  <PageNavGroup files={navData} />
+  <div class="sb-content pretty-scrollbar">
+    <PageNavGroup files={navData} />
+  </div>
 </Sidebar>
 <QueryCacheStatus />
 

@@ -1,7 +1,7 @@
 <script>
   // Floating sidebar shell — renders as an inset, rounded card that slides in when the
-  // user hovers the paired SidebarToggle or the panel itself. top/inset set the clearance
-  // below a top bar and the margin from the screen edges.
+  // user hovers the paired SidebarToggle or the panel itself. Callers provide the inner
+  // .sb-content wrapper; this component scopes the sidebar primitive styles around it.
   import {sidebar} from './sidebar.svelte.ts'
   let {children, width = '18rem', top = '44px', inset = '10px'} = $props()
 
@@ -27,9 +27,7 @@
   data-open={sidebar.open}
   onmouseenter={sidebar.enter}
 >
-  <div class="sb-content pretty-scrollbar">
-    {@render children?.()}
-  </div>
+  {@render children?.()}
 </nav>
 
 <style>
@@ -61,7 +59,7 @@
     pointer-events: auto;
   }
 
-  .sb-content {
+  .sb-panel :global(.sb-content) {
     flex: 1;
     min-height: 0;
     display: flex;
