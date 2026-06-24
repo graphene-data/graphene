@@ -145,18 +145,21 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
   await page.clock.install({time: new Date('2024-01-01T00:00:00Z')})
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.locator('.query-cache-status')).toHaveCount(0)
+  await expect(page.locator('.query-cache-status')).toHaveCount(1)
+  await expect(page.locator('.query-cache-status')).toHaveText('')
 
   await page.evaluate(() => window.$GRAPHENE.rerunQueries())
-  await expect(page.locator('.query-cache-status')).toHaveCount(0)
-  await page.clock.fastForward('01:00')
-  await expect(page.locator('.query-cache-status')).toContainText('1m ago')
+  await expect(page.locator('.query-cache-status')).toHaveCount(1)
+  await expect(page.locator('.query-cache-status')).toHaveText('')
+  await page.clock.fastForward('05:00')
+  await expect(page.locator('.query-cache-status')).toContainText('5m ago')
   await expect(page).screenshot('markdown-browser-cache-status')
 
-  await page.getByRole('button', {name: 'Refresh cached queries'}).click()
+  await page.getByRole('button', {name: /Click to re-run/}).click()
   await expect.poll(() => requestCount).toBe(3)
   expect(lastCacheControl).toBe('no-cache')
-  await expect(page.locator('.query-cache-status')).toHaveCount(0)
+  await expect(page.locator('.query-cache-status')).toHaveCount(1)
+  await expect(page.locator('.query-cache-status')).toHaveText('')
 })
 
 test('disables browser query caching behind an internal query parameter', async ({server, page}) => {
@@ -194,7 +197,7 @@ test('disables browser query caching behind an internal query parameter', async 
   expect(requestBodies).toHaveLength(2)
   expect(requestBodies[0].hashes).toEqual([])
   expect(requestBodies[1].hashes).toEqual([])
-  await expect(page.locator('.query-cache-status')).toContainText('1m ago')
+  await expect(page.locator('.query-cache-status')).toHaveText('')
   await expect(page).screenshot('markdown-browser-cache-disabled')
 })
 
@@ -234,10 +237,10 @@ test('uses warehouse cache timestamps when browser cache serves the response', a
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
-  await expect(page.locator('.query-cache-status')).toContainText('2h 5m ago')
+  await expect(page.locator('.query-cache-status')).toContainText('2h ago')
 
   await page.evaluate(() => window.$GRAPHENE.rerunQueries())
-  await expect(page.locator('.query-cache-status')).toContainText('2h 5m ago')
+  await expect(page.locator('.query-cache-status')).toContainText('2h ago')
   await expect(page).screenshot('markdown-warehouse-cache-status')
 })
 
@@ -349,8 +352,10 @@ test('allows collapsing and expanding folders', async ({server, page}) => {
   server.mockFile('/other/second/foo.md', 'Foo')
   await page.goto(server.url() + '/other/more')
   // Sidebar is hidden by default; reveal it by hovering the hamburger trigger.
-  await page.getByRole('button', {name: 'Toggle navigation'}).hover()
+  await page.getByRole('button', {name: 'Open navigation'}).hover()
   let nav = page.getByRole('navigation')
+  // The folder's index.md shows up as its own "Home" page routed to the folder path.
+  await expect(nav.getByRole('link', {name: 'Home'})).toHaveAttribute('href', /\/other$/)
   let otherToggle = nav.locator('[data-folder-toggle="other"]')
   await otherToggle.click()
   await expect(nav.getByRole('link', {name: 'Third'})).toBeHidden()

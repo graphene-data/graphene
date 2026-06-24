@@ -1,47 +1,49 @@
 <script>
-  // Hamburger button that opens the paired <Sidebar>. Positioning is up to the
-  // host (typically fixed in a corner); hover state is shared via context so
-  // moving between the button and the panel keeps the sidebar open.
+  // The persistent menu button: always fixed to the top-left corner of the viewport.
+  // Opens the sidebar on hover/click/focus. The sidebar stays open until the cursor
+  // crosses its right edge (onDocMouseMove in Sidebar.svelte), so no onmouseleave here.
+  import Menu from '@lucide/svelte/icons/menu'
   import {sidebar} from './sidebar.svelte.ts'
-  let {style} = $props()
 </script>
 
 <button
   class="sb-trigger"
   type="button"
-  aria-label="Toggle navigation"
+  aria-label="Open navigation"
   aria-expanded={sidebar.open}
+  onclick={sidebar.enter}
   onmouseenter={sidebar.enter}
-  onmouseleave={sidebar.leave}
   onfocus={sidebar.enter}
   onblur={sidebar.leave}
-  style={style}
 >
-  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M4 6h16M4 12h16M4 18h16"/>
-  </svg>
+  <Menu size={16} strokeWidth={1.8} />
 </button>
 
 <style>
   .sb-trigger {
-    width: 2rem;
-    height: 2rem;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 30;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--sidebar-foreground);
-    background: transparent;
-    border: none;
-    border-radius: 0.375rem;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--color-border);
+    padding: 0;
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-tertiary);
     cursor: pointer;
-    opacity: 0.7;
-    transition: opacity 120ms ease, background-color 120ms ease;
-    z-index: 39;
+    box-shadow: var(--shadow-card);
   }
-  .sb-trigger:hover { opacity: 1; background: var(--sidebar-accent); }
+  .sb-trigger:hover {
+    color: var(--color-primary-strong);
+    border-color: var(--color-border-strong);
+  }
   .sb-trigger:focus-visible {
-    opacity: 1;
-    outline: 2px solid var(--sidebar-ring);
+    outline: 2px solid var(--color-muted);
     outline-offset: 2px;
   }
 </style>

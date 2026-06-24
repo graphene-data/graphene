@@ -16,7 +16,7 @@
   setPageInputsContext(pageInputs)
   onDestroy(() => releasePageInputs(pageInputs))
 
-  // Nav sidebar with HMR support for the virtual file list
+  // Nav sidebar with HMR support for the virtual file list.
   let navData = $state(navFiles)
   import.meta.hot?.accept('virtual:nav', mod => navData = mod.default)
 
@@ -77,9 +77,12 @@
   })
 </script>
 
-<SidebarToggle style='position:fixed;top:2rem;left:2rem;opacity:0.3;' />
+<SidebarToggle />
+
 <Sidebar>
-  <PageNavGroup files={navData} />
+  <div class="sb-content pretty-scrollbar">
+    <PageNavGroup files={navData} />
+  </div>
 </Sidebar>
 <QueryCacheStatus />
 
@@ -99,18 +102,18 @@
   main.pageContent {
     margin: 0 auto;
     min-width: 0;
-    padding: 20px 6rem 80px;
-    max-width: 720px;
+    padding: 44px 6rem 80px;
+    max-width: var(--notebook-width);
   }
 
   main.pageContent.dashboardLayout {
-    max-width: 1200px;
+    max-width: var(--dashboard-width);
   }
 
   .page-error-heading { margin-top: 0; }
 
-  /* want to control this margin so it lines up with the SidebarToggle */
   main h1:first-child {
     margin-top: 12px;
   }
 </style>
+

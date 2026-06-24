@@ -154,7 +154,7 @@
     return trimmed
   }
 
-  function calculateChartSize(config?: NormalConfig, rows: Record<string, any>[] = [], fields: any[] = []) {
+  function calculateChartSize(config: NormalConfig | undefined = undefined, rows: Record<string, any>[] = [], fields: any[] = []) {
     let threshold = 8 // over this many bars, start to grow
     let resolvedHeight: string | number = height ?? '320px'
     let barSeries = config?.series.find(s => s.type == 'bar')

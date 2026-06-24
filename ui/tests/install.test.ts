@@ -48,6 +48,25 @@ function expectSuccess(step: string, result: RunResult) {
   throw new Error(`[install.test] ${step} failed (code ${result.code})\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
 }
 
+// Poll the packaged dev server until Vite has finished its first dependency optimization pass.
+// A fixed sleep is flaky because a fresh install can spend several seconds optimizing dependencies before listening.
+async function gotoWhenServerReady(page: Page, url: string, timeout = 30_000) {
+  let started = Date.now()
+  let lastError: unknown
+
+  while (Date.now() - started < timeout) {
+    try {
+      await page.goto(url, {timeout: 2000})
+      return
+    } catch (err) {
+      lastError = err
+      await page.waitForTimeout(500)
+    }
+  }
+
+  throw lastError
+}
+
 function parseTarballPath(result: RunResult, cwd: string) {
   let matches = Array.from((result.stdout + result.stderr).matchAll(/([^\s]+\.tgz)/g), m => m[1])
   let tarball = matches.at(-1)
@@ -138,12 +157,9 @@ limit 10
     let [serveCommand, serveArgs] = packageManager.graphene(['serve'])
     void run(serveCommand, serveArgs, projectDir, childEnv)
 
-    // we need to wait until the server has started up, but it's hard to know exactly when that is, unless we were to watch the output
-    await page.waitForTimeout(3000)
-
     // Snapshot the live page with Playwright while the packaged server is running.
     // This verifies the packaged UI independently from the CLI screenshot file path smoke test below.
-    await page.goto(`http://localhost:${port}/chart`)
+    await gotoWhenServerReady(page, `http://localhost:${port}/chart`)
     await waitForGrapheneLoad(page)
     await page.evaluate(async () => {
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
@@ -168,6 +184,7 @@ limit 10
     expect(runOutput).toContain(`Page available at http://localhost:${port}/chart`)
     expect(runOutput).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   } finally {
+    await page.goto('about:blank')
     let [stopCommand, stopArgs] = packageManager.graphene(['stop'])
     await run(stopCommand, stopArgs, projectDir, childEnv) // extra stop, in case the test failed before the regular `stop` above
     await fsp.rm(tempRoot, {recursive: true, force: true})

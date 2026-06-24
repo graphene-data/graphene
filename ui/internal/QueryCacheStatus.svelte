@@ -1,92 +1,72 @@
 <script lang="ts">
   import {onDestroy, onMount} from 'svelte'
+  import RefreshCw from '@lucide/svelte/icons/refresh-cw'
   import {queryState, refreshQueries} from './queryEngine.ts'
 
+  let oldestRunAt = $derived($queryState.oldestRunAt)
+
+  // Update the age every minute
   let ageTimer: number | undefined
   let now = $state(Date.now())
-  let cacheAge = $derived(formatCacheAge($queryState.oldestRunAt, now))
+  onMount(() => ageTimer = window.setInterval(() => (now = Date.now()), 60_000))
+  onDestroy(() => window.clearInterval(ageTimer))
 
-  onMount(() => {
-    ageTimer = window.setInterval(() => (now = Date.now()), 60_000)
-  })
+  let ago = $derived.by(() => {
+    if (!oldestRunAt) return ''
 
-  onDestroy(() => {
-    if (ageTimer) window.clearInterval(ageTimer)
-  })
-
-  function formatCacheAge(runAt: number | undefined, currentTime: number) {
-    if (!runAt) return ''
-
-    let minutes = Math.max(0, Math.floor((currentTime - runAt) / 60_000))
-    if (minutes < 1) return ''
+    let minutes = Math.max(0, Math.floor((now - oldestRunAt) / 60_000))
+    if (minutes < 5) return '' // show nothing for queries in the last 5 minutes
     if (minutes < 60) return `${minutes}m ago`
 
-    let hours = Math.floor(minutes / 60)
-    if (hours >= 24) {
-      let days = Math.floor(hours / 24)
-      let remainingHours = hours % 24
-      return remainingHours ? `${days}d ${remainingHours}h ago` : `${days}d ago`
-    }
+    let hours = Math.round(minutes / 60)
+    if (hours >= 24 * 14) return new Intl.DateTimeFormat(undefined, {month: 'short', day: 'numeric'}).format(oldestRunAt)
+    if (hours >= 48) return `${Math.floor(hours / 24)}d ago`
 
-    let remainingMinutes = minutes % 60
-    return remainingMinutes ? `${hours}h ${remainingMinutes}m ago` : `${hours}h ago`
-  }
+    return `${hours}h ago`
+  })
+
+  let refreshLabel = $derived.by(() => {
+    let date = new Intl.DateTimeFormat(undefined, {month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'}).format(oldestRunAt)
+    return `Last run ${date}\nClick to re-run`
+  })
+
 </script>
 
-{#if cacheAge}
-  <div class="query-cache-status" aria-live="polite">
-    <span>{cacheAge}</span>
-    <button type="button" aria-label="Refresh cached queries" title="Refresh cached queries" onclick={() => refreshQueries()} disabled={$queryState.loading}>
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
-        <path d="M21 3v5h-5" />
-      </svg>
-    </button>
-  </div>
+<!-- oldestRunAt will be null if queries haven't finished yet -->
+{#if oldestRunAt}
+  <button class="query-cache-status" type="button" aria-label={refreshLabel} title={refreshLabel} aria-live="polite" onclick={() => refreshQueries()} disabled={$queryState.loading}>
+    <span>{ago}</span>
+    <RefreshCw size={12} strokeWidth={1.5} aria-hidden="true" />
+  </button>
 {/if}
 
 <style>
+  /* Top-right counterpart to the floating menu button (top-left). */
   .query-cache-status {
     position: fixed;
-    right: 2rem;
-    top: 2.25rem;
-    z-index: 20;
+    right: 10px;
+    top: 10px;
+    z-index: 30;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    color: #6b7280;
-    font-size: 0.875rem;
-    line-height: 1;
-  }
-
-  .query-cache-status button {
-    display: grid;
-    place-items: center;
-    width: 1.5rem;
-    height: 1.5rem;
+    gap: 0.25rem;
+    height: 28px;
     padding: 0;
-    color: #6b7280;
+    color: var(--color-tertiary);
+    font-size: 12px;
+    line-height: 1;
     background: transparent;
     border: 0;
     cursor: pointer;
   }
 
-  .query-cache-status button:hover:not(:disabled) {
-    color: #111827;
+  .query-cache-status:hover:not(:disabled) {
+    color: var(--color-primary-strong);
   }
 
-  .query-cache-status button:disabled {
-    color: #9ca3af;
+  .query-cache-status:disabled {
+    color: var(--color-muted);
     cursor: wait;
   }
 
-  .query-cache-status svg {
-    width: 1rem;
-    height: 1rem;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
 </style>
