@@ -631,6 +631,34 @@ test('bar chart explicit sort orders categories by another column', async ({moun
   await expect(chart.el).screenshot('bar-chart-explicit-sort-column')
 })
 
+test('bar chart explicit numeric category sort handles sparse split data', async ({mount, chart}) => {
+  let rows = [
+    {day_bucket: '4', bucket_order: 4, transition: 'Phase I > Phase II', deal_count: 3},
+    {day_bucket: '4', bucket_order: 4, transition: 'Phase II > Phase III', deal_count: 2},
+    {day_bucket: '4', bucket_order: 4, transition: 'Phase III > Closed', deal_count: 1},
+    {day_bucket: '10', bucket_order: 10, transition: 'Phase I > Phase II', deal_count: 3},
+    {day_bucket: '20+', bucket_order: 21, transition: 'Phase I > Phase II', deal_count: 1},
+  ]
+
+  let fields = [
+    {name: 'day_bucket', type: scalarType('string')},
+    {name: 'bucket_order', type: scalarType('number')},
+    {name: 'transition', type: scalarType('string')},
+    {name: 'deal_count', type: scalarType('number')},
+  ]
+
+  await mount('components/BarChart.svelte', {
+    data: {rows, fields},
+    x: 'day_bucket',
+    y: 'deal_count',
+    splitBy: 'transition',
+    arrange: 'group',
+    sort: 'bucket_order asc',
+    title: 'Sparse Explicit Category Sort',
+  })
+  await expect(chart.el).screenshot('bar-chart-explicit-numeric-category-sort-sparse-split')
+})
+
 test('line chart sorts time axis, and shows gap for missing points', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', splitBy: 'metric', title: 'Line Missing + Sort'})
   await expect(chart.el).screenshot('line-chart-grouped-missing-sort')

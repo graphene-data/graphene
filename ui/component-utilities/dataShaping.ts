@@ -122,7 +122,7 @@ export function applySorting(config: NormalConfig, rows: Record<string, any>[], 
   let categoryField = [...config.xAxis, ...config.yAxis].find(axis => axis?.type === 'category')?.field?.name
   if (explicitSort) {
     if (!categoryField) throw new Error('sort is only supported when the chart has a categorical axis')
-    sortCategoriesByField(rows, categoryField, explicitSort.field, explicitSort.direction, fields)
+    sortCategoriesByField(rows, categoryField, explicitSort.field, explicitSort.direction, fields, series)
     return
   }
 
@@ -268,12 +268,12 @@ function sortCategoriesByValue(rows: Record<string, any>[], categoryField: strin
   sortRowsByCategoryOrder(rows, categoryField, orderedCategoryKeys)
 }
 
-// Sort categories by a specific field.
-// Numeric fields are summed per category; non-numeric fields use first value seen.
-function sortCategoriesByField(rows: Record<string, any>[], categoryField: string, sortField: string, direction: 'asc' | 'desc', fields: Field[]) {
+// Sort categories by a specific field. Sorting by the value axis aggregates per category;
+// sorting by any other field uses the category's sort key directly.
+function sortCategoriesByField(rows: Record<string, any>[], categoryField: string, sortField: string, direction: 'asc' | 'desc', fields: Field[], series: SeriesWithGroupingHint[]) {
   let sortType = inferFieldType(fields, sortField)
 
-  if (sortType === 'number') {
+  if (sortType === 'number' && isValueAxisSort(categoryField, sortField, series)) {
     sortCategoriesByValue(rows, categoryField, row => Number(row?.[sortField]) || 0, direction)
     return
   }
@@ -289,6 +289,12 @@ function sortCategoriesByField(rows: Record<string, any>[], categoryField: strin
   orderedCategoryKeys.sort((left, right) => {
     let leftValue = sortValueByCategory.get(left)
     let rightValue = sortValueByCategory.get(right)
+
+    if (sortType === 'number') {
+      let leftNumber = sortableValue(leftValue, 'number')
+      let rightNumber = sortableValue(rightValue, 'number')
+      return direction === 'asc' ? leftNumber - rightNumber : rightNumber - leftNumber
+    }
 
     if (sortType === 'date') {
       let leftDate = sortableValue(leftValue, 'date')
@@ -400,6 +406,14 @@ function isHorizontalBar(config: NormalConfig) {
   let yAxis = config.yAxis[0]
   let hasBarSeries = config.series.some(series => series?.type === 'bar')
   return Boolean(hasBarSeries && xAxis?.type === 'value' && yAxis?.type === 'category')
+}
+
+function isValueAxisSort(categoryField: string, sortField: string, series: SeriesWithGroupingHint[]) {
+  return series.some(entry => {
+    let x = getSeriesXField(entry)
+    let y = getSeriesYField(entry)
+    return (x === categoryField && y === sortField) || (y === categoryField && x === sortField)
+  })
 }
 
 function getSeriesXField(series?: SeriesWithGroupingHint) {
