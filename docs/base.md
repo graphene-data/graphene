@@ -118,6 +118,7 @@ Notes on common attributes:
 - `y` can take a comma-separated list of columns/expressions, to map multiple fields to the same y-axis as separate series (wide format data).
 - `sort` takes a column name followed by `asc` or `desc`, eg. `my_col desc`. Useful when you want something sorted differently than its inherent alphanumeric ordering.
 - `height` and `width` accept any CSS size units eg. `240px` or `50%`.
+- There is no `swapXY`. To create horizontal bars, simply switch what is assigned to `x` and `y`.
 
 ### `<ECharts>`
 To create visualizations or customizations beyond Graphene's out-of-the-box components, specify an ECharts config via `<ECharts>`.

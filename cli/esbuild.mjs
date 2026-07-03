@@ -47,7 +47,7 @@ await writeFile(
   `
 ---
 name: graphene
-description: How to use Graphene, our framework for data modeling, analysis, and visualization.
+description: How to use Graphene, our framework for data modeling, analysis, and visualization. Read this before querying the data warehouse or editing any files within the Graphene project.
 allowed-tools: Bash(npx graphene:*) Bash(pnpm graphene:*) Bash(yarn graphene:*) Bash(bun run graphene:*)
 ---
 
