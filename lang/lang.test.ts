@@ -918,23 +918,25 @@ describe('lang', () => {
         amount int -- revenue #currency=ZZZ
         dow int #timeOrdinal=dow
         weight int #unit=parsecs
+        margin number #precision=1.5
       )
     `).toHaveDiagnostic(/Invalid value "mont" for "#timeGrain"/)
     expect(getDiagnostics().some(d => /Invalid value "ZZZ" for "#currency"/.test(d.message))).toBe(true)
     expect(getDiagnostics().some(d => /Invalid value "dow" for "#timeOrdinal"/.test(d.message))).toBe(true)
+    expect(getDiagnostics().some(d => /Invalid value "1.5" for "#precision"/.test(d.message))).toBe(true)
   })
 
   it('accepts ISO currency codes and arbitrary unit metadata values', () => {
     analyze(`
       table foo (
-        revenue int #currency=eur
+        revenue int #currency=eur #precision=0
         distance int #unit=lightyears
       )
     `)
     expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
 
     let table = getTable('foo')!
-    expect(table.columns.find(c => c.name === 'revenue')!.metadata).toMatchObject({currency: 'eur'})
+    expect(table.columns.find(c => c.name === 'revenue')!.metadata).toMatchObject({currency: 'eur', precision: '0'})
     expect(table.columns.find(c => c.name === 'distance')!.metadata).toMatchObject({unit: 'lightyears'})
   })
 
