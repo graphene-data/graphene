@@ -38,20 +38,22 @@ export function formatSingleValue(value: any, field?: Field, options: ValueForma
   let amount = Number(value)
   if (!Number.isFinite(amount)) return String(value ?? '')
 
+  let precision = getPrecision(field)
   if (field?.metadata?.timeGrain === 'year' && Number.isInteger(amount)) return String(amount)
-  if (field?.metadata?.ratio) return `${percent.format(amount * 100)}%`
-  if (field?.metadata?.pct) return `${percent.format(amount)}%`
+  if (field?.metadata?.ratio) return `${formatFixed(amount * 100, precision ?? 0)}%`
+  if (field?.metadata?.pct) return `${formatFixed(amount, precision ?? 0)}%`
 
   let currency = field?.metadata?.currency?.toUpperCase()
   if (currency && supportedCurrencyCodes.has(currency)) {
     let sign = amount < 0 ? '-' : ''
-    let formatted = currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b')
+    let formatted = precision == null ? currencyCompact.format(Math.abs(amount)).replace('K', 'k').replace('M', 'm').replace('B', 'b') : formatFixed(Math.abs(amount), precision)
     return `${sign}${formatCurrencySymbol(currency)}${formatted}`
   }
 
-  if (amount === 0) return addUnit('0', field, options)
+  if (amount === 0) return addUnit(formatFixed(0, precision), field, options)
   let sign = amount < 0 ? '-' : ''
   let absolute = Math.abs(amount)
+  if (precision != null) return addUnit(`${sign}${formatFixed(absolute, precision)}`, field, options)
   let formatted = ''
 
   if (absolute >= 1e12) formatted = `${compactValue(absolute / 1e12)}T`
@@ -71,6 +73,18 @@ export function formatSingleValue(value: any, field?: Field, options: ValueForma
 function formatCurrencySymbol(currency: string) {
   let parts = new Intl.NumberFormat('en-US', {style: 'currency', currency, currencyDisplay: 'symbol', maximumFractionDigits: 0}).formatToParts(0)
   return parts.find(part => part.type === 'currency')?.value || currency
+}
+
+function getPrecision(field?: Field) {
+  let raw = field?.metadata?.precision
+  if (raw == null) return undefined
+  let precision = Number(raw)
+  return Number.isInteger(precision) && precision >= 0 && precision <= 20 ? precision : undefined
+}
+
+function formatFixed(value: number, precision?: number) {
+  if (precision == null) return percent.format(value)
+  return new Intl.NumberFormat('en-US', {minimumFractionDigits: precision, maximumFractionDigits: precision}).format(value)
 }
 
 function addUnit(value: string, field: Field | undefined, options: ValueFormatterOptions) {

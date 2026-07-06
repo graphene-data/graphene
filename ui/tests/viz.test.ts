@@ -348,6 +348,29 @@ test('line chart uses ratio metadata for axis and tooltip percentage formatting'
   await expect(chart.el).screenshot('line-chart-ratio-metadata-percent-axis')
 })
 
+test('line chart respects precision metadata in tooltips', async ({mount, sharedPage, chart}) => {
+  let rows = [
+    {month: 'Jan', win_pct: 12.75},
+    {month: 'Feb', win_pct: 13.25},
+  ]
+  let fields = [
+    {name: 'month', type: scalarType('string')},
+    {name: 'win_pct', type: scalarType('number'), metadata: {pct: true, precision: '2'}},
+  ]
+
+  await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'win_pct', title: 'Win Rate'})
+  let tooltip = await sharedPage.evaluate(() => {
+    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
+    let option = window.$GRAPHENE.getChart(domNode).getOption()
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    return series.tooltip.valueFormatter(12.75)
+  })
+
+  expect(tooltip).toBe('12.75%')
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  await expect(chart.el).screenshot('line-chart-tooltip-percent-precision')
+})
+
 test('line chart uses unit metadata for axis and tooltip formatting', async ({mount, sharedPage, chart}) => {
   let rows = [
     {month: 'Jan', duration: 42},

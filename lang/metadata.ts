@@ -30,6 +30,7 @@ let metadataKeyRules = {
   pii: {kind: 'flag'},
   currency: {kind: 'currency'},
   unit: {kind: 'string'},
+  precision: {kind: 'integer'},
   timeGrain: {kind: 'enum', values: ['year', 'quarter', 'month', 'week', 'day', 'hour', 'minute', 'second']},
   timeOrdinal: {kind: 'enum', values: ['hour_of_day', 'day_of_month', 'day_of_year', 'week_of_year', 'month_of_year', 'quarter_of_year', 'dow_0s', 'dow_1s', 'dow_1m']},
   description: {kind: 'string'},
@@ -126,6 +127,17 @@ export function validateMetadataEntries(entries: MetadataEntry[]): MetadataDiagn
       if (isoCurrencyCodes.has(entry.value.toLowerCase())) continue
       diagnostics.push({
         message: `Invalid value "${entry.value}" for "#currency". Expected an ISO 4217 currency code.`,
+        from: entry.valueFrom ?? entry.from,
+        to: entry.valueTo ?? entry.to,
+      })
+      continue
+    }
+
+    if (rule.kind == 'integer') {
+      let value = Number(entry.value)
+      if (entry.hasValue && Number.isInteger(value) && value >= 0 && value <= 20) continue
+      diagnostics.push({
+        message: `Invalid value "${entry.value}" for "#${entry.key}". Expected an integer from 0 to 20.`,
         from: entry.valueFrom ?? entry.from,
         to: entry.valueTo ?? entry.to,
       })
