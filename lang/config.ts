@@ -10,7 +10,7 @@ export interface Config {
   telemetry?: boolean
   updateNotifier?: boolean
   port?: number
-  host?: string
+  cloud?: string
   envFile: string[] // array of paths where we can look for the env file
 
   bigquery?: {

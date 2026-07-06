@@ -54,12 +54,12 @@ interface RunQueryOptions extends QueryOptions {
 export async function runQuery(sql: string, options: RunQueryOptions = {}): Promise<QueryResult> {
   let {cacheControl, params} = options
 
-  if (config.host) {
+  if (config.cloud) {
     let headers: Record<string, string> = {'Content-Type': 'application/json'}
     if (cacheControl) headers['Cache-Control'] = cacheControl
 
-    // A Cloud host path selects the repo to query, e.g. https://example.graphenedata.com/nba proxies through the `nba` repo connection.
-    let repoId = new URL(config.host!).pathname.replace(/^\/+|\/+$/g, '')
+    // A Cloud URL path selects the repo to query, e.g. https://example.graphenedata.com/nba proxies through the `nba` repo connection.
+    let repoId = new URL(config.cloud).pathname.replace(/^\/+|\/+$/g, '')
 
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
