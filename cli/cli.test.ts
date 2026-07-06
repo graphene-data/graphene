@@ -168,6 +168,12 @@ describe('cli run', () => {
     expect(output).not.toContain('at file://')
   })
 
+  it('normalizes DuckDB timestamp with time zone values', async () => {
+    let res = await runCli(['run', 'select now() as ts'], {cwd: flightDir})
+    expectCliSuccess(res, 'run timestamptz query')
+    expect(res.stdout).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+  })
+
   it('prints csv for an inline query with --format csv', async () => {
     let res = await runCli(['run', "select 'a,b' as name, 2 as total", '--format', 'csv'], {cwd: flightDir})
     expectCliSuccess(res, 'run query as csv')
