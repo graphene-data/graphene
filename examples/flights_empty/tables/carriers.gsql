@@ -1,5 +1,0 @@
-table carriers (
-  code VARCHAR,
-  name VARCHAR,
-  nickname VARCHAR
-);
