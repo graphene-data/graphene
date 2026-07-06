@@ -1,3 +1,20 @@
+## 0.0.23
+
+### Breaking changes
+
+- Renamed the Graphene Cloud beta config key from `host` to `cloud` (`e339db22`).
+
+### Added
+
+- Added precision metadata for columns and measures to control preferred UI precision (`cb2036e9`).
+- Redesigned the sidebar and page navigation UI, including shared routing/layout primitives and cache-status styling updates (`ab67f0fa`).
+
+### Fixed
+
+- Fixed explicit bar-chart sorting when `splitBy` creates multiple rows per x-axis category (`d01ad851`).
+- Fixed DuckDB `TIMESTAMPTZ` value handling (`d67ecd8a`).
+- Fixed production builds failing on unstripped TypeScript in Svelte files loaded through Vite optimization (`b36929b1`).
+
 ## 0.0.22
 
 ### Breaking changes
