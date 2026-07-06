@@ -49,7 +49,7 @@ await $`git push origin ${tag}`
 
 // Publish package artifacts.
 await $`pnpm -C cli build`
-await $`npm publish cli/dist/npm --access public`
+await $`(cd cli && npm publish --access public)`
 await $`pnpm -C create build`
 await $`npm publish ./create`
 await $`(cd vscode && npx vsce publish --no-dependencies)`

@@ -55,6 +55,20 @@ async function createTelemetryProject(prefix: string) {
   return tmpDir
 }
 
+describe('cli package', () => {
+  it('directly includes every lang and ui runtime dependency with the exact same spec', async () => {
+    let cli = JSON.parse(await fsp.readFile(path.resolve(dir, '../cli/package.json'), 'utf8'))
+    let lang = JSON.parse(await fsp.readFile(path.resolve(dir, '../lang/package.json'), 'utf8'))
+    let ui = JSON.parse(await fsp.readFile(path.resolve(dir, '../ui/package.json'), 'utf8'))
+
+    for (let pkg of [lang, ui]) {
+      for (let [name, spec] of Object.entries(pkg.dependencies || {})) {
+        expect(cli.dependencies[name], `${name} from ${pkg.name}`).toBe(spec)
+      }
+    }
+  })
+})
+
 describe('cli compile', () => {
   it('compiles a basic query (happy path)', async () => {
     let res = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir})

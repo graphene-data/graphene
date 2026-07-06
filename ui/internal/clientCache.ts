@@ -56,6 +56,7 @@ export async function cacheWrite(hash: string, response: Response) {
 
 // disableable for testing
 function browserCacheDisabled() {
+  if (typeof caches == 'undefined') return true
   if (typeof window == 'undefined') return false
   let value = new URLSearchParams(window.location.search).get('__graphene_no_browser_cache')
   return value != null && value != '0' && value != 'false'

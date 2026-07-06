@@ -48,6 +48,17 @@ function expectSuccess(step: string, result: RunResult) {
   throw new Error(`[install.test] ${step} failed (code ${result.code})\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
 }
 
+function expectNoOptimizerErrors(step: string, result: RunResult) {
+  let output = result.stdout + result.stderr
+  let optimizerError = /Error during dependency optimization|Expected "\)" but found "\?"|\[ERROR\]/.exec(output)
+  if (!optimizerError) return
+  throw new Error(`[install.test] ${step} hit a Vite optimizer error\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
+}
+
+async function getRunResultIfFinished(result: Promise<RunResult>) {
+  return await Promise.race([result, Promise.resolve(undefined)])
+}
+
 // Poll the packaged dev server until Vite has finished its first dependency optimization pass.
 // A fixed sleep is flaky because a fresh install can spend several seconds optimizing dependencies before listening.
 async function gotoWhenServerReady(page: Page, url: string, timeout = 30_000) {
@@ -68,7 +79,7 @@ async function gotoWhenServerReady(page: Page, url: string, timeout = 30_000) {
 }
 
 function parseTarballPath(result: RunResult, cwd: string) {
-  let matches = Array.from((result.stdout + result.stderr).matchAll(/([^\s]+\.tgz)/g), m => m[1])
+  let matches = Array.from((result.stdout + result.stderr).matchAll(/([^\s*]+\.tgz)/g), m => m[1])
   let tarball = matches.at(-1)
   if (!tarball) throw new Error('Could not find packed .tgz path in pack output')
   return path.isAbsolute(tarball) ? tarball : path.resolve(cwd, tarball)
@@ -96,8 +107,9 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
   let tempRoot = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-install-'))
   let projectDir = path.join(tempRoot, 'demo-app')
   let port = await getAvailablePort()
-  let childEnv = {...process.env, GRAPHENE_PORT: String(port), COREPACK_ENABLE_DOWNLOAD_PROMPT: '0'} as any
+  let childEnv = {...process.env, GRAPHENE_PORT: String(port), COREPACK_ENABLE_DOWNLOAD_PROMPT: '0', YARN_NODE_LINKER: 'node-modules'} as any
   delete childEnv.NODE_ENV
+  let serveResult: Promise<RunResult> | undefined
 
   try {
     await page.setViewportSize({width: 1800, height: 1200})
@@ -106,13 +118,9 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
     expectSuccess('pnpm pack create', packCreate)
     let createTarball = await copyTarballToTemp(parseTarballPath(packCreate, createDir), tempRoot)
 
-    let buildCli = await run('pnpm', ['build'], cliDir)
-    expectSuccess('pnpm build cli', buildCli)
-
-    let cliNpmDir = path.join(cliDir, 'dist/npm')
-    let packCli = await run('pnpm', ['pack'], cliNpmDir)
-    expectSuccess('pnpm pack cli/dist/npm', packCli)
-    let cliTarball = await copyTarballToTemp(parseTarballPath(packCli, cliNpmDir), tempRoot)
+    let packCli = await run('pnpm', ['pack'], cliDir)
+    expectSuccess('pnpm pack cli', packCli)
+    let cliTarball = await copyTarballToTemp(parseTarballPath(packCli, cliDir), tempRoot)
 
     let [createCommand, createArgs] = packageManager.create(createTarball)
     let scaffold = await run(createCommand, createArgs, tempRoot, childEnv)
@@ -155,11 +163,22 @@ limit 10
     // `serve` wont return until we kill the server.
     // We could run this in the background with `--bg`, but then have to worry about zombie servers if the test fails
     let [serveCommand, serveArgs] = packageManager.graphene(['serve'])
-    void run(serveCommand, serveArgs, projectDir, childEnv)
+    serveResult = run(serveCommand, serveArgs, projectDir, childEnv)
+
+    // Force-load the packaged Graphene UI entry so a fresh install must run Vite's dependency optimizer over
+    // the raw packaged Svelte files. This catches optimizer-only failures that normal page rendering can miss.
+    await gotoWhenServerReady(page, `http://localhost:${port}/`)
+    await page.goto(`http://localhost:${port}/node_modules/@graphenedata/cli/dist/ui/web.js`)
+    await page.waitForTimeout(3000)
+    let earlyServeResult = await getRunResultIfFinished(serveResult)
+    if (earlyServeResult) {
+      expectNoOptimizerErrors('graphene serve', earlyServeResult)
+      expectSuccess('graphene serve', earlyServeResult)
+    }
 
     // Snapshot the live page with Playwright while the packaged server is running.
     // This verifies the packaged UI independently from the CLI screenshot file path smoke test below.
-    await gotoWhenServerReady(page, `http://localhost:${port}/chart`)
+    await page.goto(`http://localhost:${port}/chart`)
     await waitForGrapheneLoad(page)
     await page.evaluate(async () => {
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
@@ -187,6 +206,7 @@ limit 10
     await page.goto('about:blank')
     let [stopCommand, stopArgs] = packageManager.graphene(['stop'])
     await run(stopCommand, stopArgs, projectDir, childEnv) // extra stop, in case the test failed before the regular `stop` above
+    if (serveResult) expectNoOptimizerErrors('graphene serve', await serveResult)
     await fsp.rm(tempRoot, {recursive: true, force: true})
   }
 }
