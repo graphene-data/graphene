@@ -1,10 +1,9 @@
-import {build, transform} from 'esbuild'
+import {build as esbuild, transform} from 'esbuild'
 import {cp, mkdir, readdir, readFile, rm, writeFile} from 'node:fs/promises'
 import path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
 import pkg from './package.json' with {type: 'json'}
-import {stageNpmPackage} from './publishPackage.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -17,7 +16,7 @@ let makeAllPackagesExternalPlugin = {
   },
 }
 
-await build({
+await esbuild({
   // cli build
   entryPoints: {
     cli: path.resolve(__dirname, 'cli.ts'),
@@ -72,8 +71,6 @@ await rm(path.resolve(__dirname, 'dist/ui/node_modules'), {recursive: true, forc
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))
 await rm(path.resolve(__dirname, 'dist/ui/tests'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/cli/cli.js.map'))
-await stageNpmPackage({repoRoot: path.resolve(__dirname, '..'), cliRoot: __dirname})
-await cp(path.resolve(__dirname, '../readme.md'), path.resolve(__dirname, 'dist/npm/README.md'))
 
 async function transpileSvelteModules(root) {
   let files = await collectFiles(root)
