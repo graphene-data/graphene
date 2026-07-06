@@ -259,12 +259,12 @@ program
   .description('Log in to Graphene Cloud or the configured database')
   .action(
     withTelemetry('login', async exit => {
-      if (config.host) await loginPkce()
+      if (config.cloud) await loginPkce()
       else if (config.dialect == 'snowflake') {
         let conn = await getConnection() // connecting should automatically trigger auth via the sdk
         await conn.close()
       } else {
-        console.error('No Graphene Cloud host or database login is configured for this project')
+        console.error('No Graphene Cloud URL or database login is configured for this project')
         return exit(1)
       }
 

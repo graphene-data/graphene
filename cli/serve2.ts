@@ -177,7 +177,7 @@ async function handleQuery(req: IncomingMessage, res: ServerResponse<IncomingMes
     return res.end()
   }
 
-  if (config.host) console.log(`Proxying query to ${config.host}`)
+  if (config.cloud) console.log(`Proxying query to ${config.cloud}`)
   let cacheControl = Array.isArray(req.headers['cache-control']) ? req.headers['cache-control'].join(',') : req.headers['cache-control']
   let queryResults = await runQuery(sql, {cacheControl})
   let totalRows = queryResults.totalRows ?? queryResults.rows.length
