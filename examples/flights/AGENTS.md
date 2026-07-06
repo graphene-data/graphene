@@ -1,20 +1,13 @@
-# RULES
+## About the data
+- This is an example Graphene project to analyze FAA flight data from 2000-2005.
+- All available data is in `./tables`
 
-- Graphene contains languages and tools that you do not already know.
-- Before writing code in this directory, you MUST read `@../../docs/base.md` **in its entirety**.
-- You MUST also read relevant reference docs in `@../../docs/references/*.md` before implementing or editing related functionality.
-- Treat reference docs as required context, not optional reading.
-- If a task touches multiple areas (for example: GSQL + chart components), read all applicable reference files first.
-- If unsure which reference applies, start with `@../../docs/references/gsql.md`, then load additional references based on the components/functions used.
-- You will be docked for writing code here without completing the required documentation reading.
-
-## Reference docs
-
-- Core overview: `@../../docs/base.md`
-- CLI usage: `@../../docs/cli.md`
-- Best practices: `@../../docs/best-practices.md`
-- Detailed feature/component references: `@../../docs/references/*.md`
-
-# About this data
-
-This is a Graphene project covering FAA flight data from 2000 to 2005. You can find the Graphene tables in @./tables.
+## Instructions
+- ALWAYS read the following before using the graphene CLI or editing .gsql or .md:
+  - Core overview: `@../../docs/base.md`
+  - CLI usage: `@../../docs/cli.md`
+  - Best practices: `@../../docs/best-practices.md`
+- Additional reference documentation is available in the `@../../docs/references` folder.
+- Assume all DuckDB functions are available when writing GSQL.
+- This example project uses pnpm, so run the Graphene CLI using `pnpm graphene ...`.
+- If you have an in-app browser tool, use it to show the user any changes you make to a Graphene page.

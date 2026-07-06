@@ -6,24 +6,24 @@ table flights (
 
   id2 BIGINT
   carrier VARCHAR -- Airline carrier code, e.g., 'AA', 'UA', 'DL'
-  flight_num VARCHAR -- Flight number assigned by the carrier
-  tail_num VARCHAR -- Aircraft registration
+  flight_num VARCHAR
+  tail_num VARCHAR
 
   /* Route */
 
   origin VARCHAR -- IATA code of origin airport
   destination VARCHAR -- IATA code of destination airport
-  distance BIGINT -- Distance between origin and destination, in miles. Not to be confused with miles_flown
+  distance BIGINT -- Distance between origin and destination, in miles. Not to be confused with miles_flown #unit=miles
 
   /* Times & delays (minutes) */
 
-  dep_time TIMESTAMP -- Actual departure time
-  arr_time TIMESTAMP -- Actual arrival time
-  flight_time BIGINT -- Scheduled time in the air, excluding taxi
-  taxi_out BIGINT -- Taxi time before takeoff
-  taxi_in BIGINT -- Taxi time after landing
-  dep_delay BIGINT -- Departure delay; negative = early, positive = late
-  arr_delay BIGINT -- Arrival delay; negative = early, positive = late
+  dep_time TIMESTAMP -- Actual departure time after delay
+  arr_time TIMESTAMP -- Actual arrival time after delay
+  flight_time BIGINT -- Scheduled time in the air, excluding taxi #unit=minutes
+  taxi_out BIGINT -- Taxi time before takeoff #unit=minutes
+  taxi_in BIGINT -- Taxi time after landing #unit=minutes
+  dep_delay BIGINT -- Departure delay; negative = early, positive = late #unit=minutes
+  arr_delay BIGINT -- Arrival delay; negative = early, positive = late #unit=minutes
 
   /* Status */
 
@@ -43,8 +43,10 @@ table flights (
   is_cancelled: cancelled = 'Y'
   is_cancelled_or_diverted: cancelled = 'Y' or diverted = 'Y'
   -- Distance actually flown; cancelled/diverted flights count as 0
-  miles_flown: case when is_cancelled_or_diverted then 0 else distance end
-  aircraft_age: YEAR(dep_time)::float - aircraft.year_built
+  miles_flown: case when is_cancelled_or_diverted then 0 else distance end #unit=miles
+  aircraft_age: YEAR(dep_time)::float - aircraft.year_built #unit=years
+  scheduled_dep_time: dep_time - interval dep_delay minute
+  scheduled_arr_time: arr_time - interval arr_delay minute
 
   status: case
     when cancelled = 'Y' then 'Cancelled'

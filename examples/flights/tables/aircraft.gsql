@@ -15,7 +15,7 @@ table aircraft (
   aircraft_engine_code VARCHAR
   aircraft_type_id BIGINT
   aircraft_engine_type_id BIGINT
-  year_built BIGINT
+  year_built BIGINT -- Contains zeros when unknown; use year_built_safe instead #timeGrain=year #hide
 
   /* Registration & status */
 
@@ -44,4 +44,8 @@ table aircraft (
 
   join one aircraft_models on aircraft_model_code = aircraft_models.aircraft_model_code
   join many flights on tail_num = flights.tail_num
+
+  /* Dimensions */
+
+  year_built_safe: nullif(year_built, 0) #timeGrain=year
 )

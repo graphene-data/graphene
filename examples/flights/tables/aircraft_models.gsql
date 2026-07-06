@@ -10,8 +10,8 @@ table aircraft_models (
   amateur BIGINT -- Amateur-built indicator (0 = no, 1 = yes)
   engines BIGINT -- Number of engines
   seats BIGINT -- Number of passenger seats (0 for cargo-only or single-seat)
-  weight BIGINT -- Maximum takeoff weight, in pounds
-  speed BIGINT -- Maximum speed, in knots
+  weight BIGINT -- Maximum takeoff weight, in pounds #unit=pounds
+  speed BIGINT -- Maximum speed, in knots #unit=knots
 
   /* Join relationships */
 

@@ -24,8 +24,8 @@ table airports (
   state VARCHAR
   longitude DOUBLE
   latitude DOUBLE
-  elevation BIGINT -- Elevation above sea level, in feet
-  cbd_dist BIGINT -- Distance to central business district, in miles
+  elevation BIGINT -- Elevation above sea level, in feet #unit=feet
+  cbd_dist BIGINT -- Distance to central business district, in miles #unit=miles
   cbd_dir VARCHAR -- Compass direction to CBD (e.g., 'N', 'SW', 'SE')
 
   /* FAA / regulatory */

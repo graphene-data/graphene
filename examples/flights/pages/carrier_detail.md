@@ -157,7 +157,7 @@ select
   aircraft_models.manufacturer as manufacturer,
   aircraft_models.model as model,
   year_built::text as year_built,
-  count(distinct flights.id2) as flights_flown,
+  count(flights.id2) as flights_flown,
   sum(flights.miles_flown) as miles_flown
 order by flights_flown desc
 limit 100
