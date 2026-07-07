@@ -442,24 +442,18 @@ test('renders generic server failures clearly', async ({server, page}) => {
   await expect(page).screenshot('reports-server-query-errors')
 })
 
-test('renders markdown compile errors with error display', async ({server, page}) => {
-  expectConsoleError('Failed to load resource')
-  expectConsoleError('Internal Server Error')
-  expectConsoleError('Failed to fetch dynamically imported module')
-  expectConsoleError('vite:error')
+test('renders svelte control flow in markdown', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
     # Test
-    {#if true}oops{/if}
+    {#if true}<p>Visible</p>{/if}
   `,
   )
 
   await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 5000})
-  await expect(page.locator('.g-error')).toBeVisible()
-  await expect(page.locator('.g-error__message')).toContainText('Dynamic markup expressions are not supported')
-  await expect(page).screenshot('html-syntax-error')
+  await expect(page.getByRole('heading', {level: 1, name: 'Test'})).toBeVisible()
+  await expect(page.getByText('Visible')).toBeVisible()
 })
 
 test('renders literal less-than characters', async ({server, page}) => {
@@ -476,48 +470,31 @@ test('renders literal less-than characters', async ({server, page}) => {
   await expect(page.locator('main')).toHaveText(/1 < 2/)
 })
 
-test('sanitizes unsafe html', async ({server, page}) => {
+test('allows arbitrary html and framework directives', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Sanitized
-    <script>window.__MD_SCRIPT__ = true</script>
-    <button id="danger" onclick="window.__MD_CLICK__ = true">Danger</button>
-    <iframe id="embed" src="javascript:alert('boom')"></iframe>
+    # Unsanitized
+    <button id="danger" on:click={() => globalThis['__MD_CLICK__'] = true}>Danger</button>
+    <iframe id="embed" title="Embed" src="javascript:alert('boom')"></iframe>
   `,
   )
 
   await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {level: 1, name: 'Sanitized'})).toBeVisible()
-  await expect(page.locator('main button')).toHaveCount(0)
-  await expect(page.locator('iframe')).toHaveCount(0)
+  await expect(page.getByRole('heading', {level: 1, name: 'Unsanitized'})).toBeVisible()
+  await expect(page.locator('main button')).toBeVisible()
+  await expect(page.locator('iframe')).toBeAttached()
 
-  let scriptRan = await page.evaluate(() => (window as any).__MD_SCRIPT__)
-  expect(scriptRan).toBeUndefined()
+  await page.locator('main button').click()
+  let clicked = await page.evaluate(() => (globalThis as any).__MD_CLICK__)
+  expect(clicked).toBe(true)
 })
 
-test('allows trusted visual html and style blocks with remote css resources', async ({server, page}) => {
-  expectConsoleError('Failed to load resource')
-  let remoteRequests = 0
-  await page.route('https://example.com/**', async route => {
-    remoteRequests++
-    await route.abort()
-  })
-
+test('allows visual html attributes and inline styles', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
     # Styled
-    <style>
-      .custom-layout {
-        display: grid;
-        gap: 12px;
-        color: rgb(12, 34, 56);
-        background-image: url("https://example.com/leak.png");
-      }
-      .custom-layout .metric { border: 3px solid rgb(20, 120, 80); }
-    </style>
-
     <div id="custom-layout" class="custom-layout" data-kind="visual" aria-label="Custom Layout" role="region" style="color: red">
       <span class="metric">Metric</span>
     </div>
@@ -531,10 +508,6 @@ test('allows trusted visual html and style blocks with remote css resources', as
   await expect(layout).toHaveAttribute('data-kind', 'visual')
   await expect(layout).toHaveAttribute('aria-label', 'Custom Layout')
   await expect(layout).toHaveAttribute('role', 'region')
-  await expect(layout).not.toHaveAttribute('style')
-  await expect(layout).toHaveCSS('display', 'grid')
-  await expect(layout).toHaveCSS('color', 'rgb(12, 34, 56)')
-  await expect(layout).not.toHaveCSS('background-image', 'none')
-  await expect(page.locator('.metric')).toHaveCSS('border-top-color', 'rgb(20, 120, 80)')
-  await expect.poll(() => remoteRequests).toBeGreaterThan(0)
+  await expect(layout).toHaveAttribute('style', 'color: red')
+  await expect(layout).toHaveCSS('color', 'rgb(255, 0, 0)')
 })

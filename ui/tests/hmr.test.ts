@@ -12,7 +12,7 @@ test('valid → invalid → valid via HMR', {timeout: 20000}, async ({server, pa
   await expect(page.getByRole('heading', {name: 'Working Page'})).toBeVisible()
 
   // Break the file — should show error
-  await server.updateMockFile('/index.md', '# Broken\n{#if true}oops{/if}')
+  await server.updateMockFile('/index.md', '# Broken\n{#if true}<p>oops')
   await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 5000})
 
   // Fix the file — should recover via HMR
@@ -25,7 +25,7 @@ test('load broken page, fix via HMR', async ({server, page}) => {
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
   expectConsoleError('vite:error')
-  server.mockFile('/index.md', '# Broken\n{#if true}oops{/if}')
+  server.mockFile('/index.md', '# Broken\n{#if true}<p>oops')
 
   await page.goto(server.url())
   await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 5000})
@@ -62,7 +62,7 @@ test('editing unrelated md does not reload broken page', async ({server, page}) 
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
   expectConsoleError('vite:error')
-  server.mockFile('/index.md', '# Broken\n{#if true}oops{/if}')
+  server.mockFile('/index.md', '# Broken\n{#if true}<p>oops')
   server.mockFile('/other.md', '# Other Page')
 
   await page.goto(server.url())
@@ -97,7 +97,7 @@ test('compile errors in another tab do not affect current page', {timeout: 30000
   await otherPage.goto(server.url() + '/other')
   await expect(otherPage.getByRole('heading', {name: 'Other Page'})).toBeVisible()
 
-  await server.updateMockFile('/other.md', '# Broken Page\n{#if true}oops{/if}')
+  await server.updateMockFile('/other.md', '# Broken Page\n{#if true}<p>oops')
   await expect(otherPage.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 10000})
   await expect(page.getByRole('heading', {name: 'Main Page'})).toBeVisible()
   await expect(page.getByRole('heading', {name: 'Error loading page'})).toHaveCount(0)
