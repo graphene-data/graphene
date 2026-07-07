@@ -354,7 +354,7 @@ test('cli run with md file reports html compilation errors', async ({server, pag
     '/index.md',
     `
     # Test
-    {#if true}oops{/if}
+    {#if true}<p>oops
   `,
   )
 
@@ -363,7 +363,7 @@ test('cli run with md file reports html compilation errors', async ({server, pag
   expect(result).toBe(false)
   let output = outputLines()
   expect(output).toContain('Runtime errors in index.md:')
-  expect(output).toMatch(/ERROR: .*index\.md line \d+: Error while preprocessing .* Dynamic markup expressions are not supported/)
+  expect(output).toMatch(/ERROR: .*index\.md line \d+: `<p>` was left open/)
 })
 
 test('cli run with --chart captures a single chart screenshot', async ({server, page}) => {
