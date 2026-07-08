@@ -1,7 +1,6 @@
 <script lang="ts">
-  import {onMount, untrack} from 'svelte'
-  import {toBoolean} from '../component-utilities/inputUtils'
-  import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
+  import {untrack} from 'svelte'
+  import {toBoolean} from '../component-utilities/inputUtils.ts'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Props {
@@ -12,43 +11,28 @@
     placeholder?: string
     defaultValue?: string
     hideDuringPrint?: boolean | string
-    unsafe?: boolean | string
   }
 
-  let {
-    name, title = undefined, label = undefined, description = undefined,
-    placeholder = 'Type to search', defaultValue = undefined, hideDuringPrint = true, unsafe = false,
-    ...extraProps
-  }: Props & Record<string, unknown> = $props()
+  let {name, title, label, description, placeholder = 'Type to search', defaultValue, hideDuringPrint = true, ...extraProps}: Props & Record<string, unknown> = $props()
 
   let logger = untrack(() => componentLogger('TextInput', {name}))
   untrack(() => logExtraProps(logger, 'TextInput', extraProps))
 
-  let pageInputs = getPageInputs()
-  let field = captureInitial(() => pageInputs.text(name))
+  let value = $state('')
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
-  let allowUnsafe = $derived(toBoolean(unsafe))
   let displayLabel = $derived(title || label)
 
-  onMount(() => {
-    if (!field.hasExternalValue) field.set(defaultValue ?? '')
-    return () => field.destroy()
+  $effect(() => {
+    let unsub = window.$GRAPHENE.param(name, 'scalar', defaultValue ?? null, next => {
+      value = Array.isArray(next) ? String(next[0] ?? '') : String(next ?? '')
+    })
+    return unsub
   })
 
-  function sanitize(input: string): string {
-    if (allowUnsafe) return input
-    return input.replace(/'/g, "''")
-  }
-
-  function pushValue(input: string) {
-    let trimmed = input ?? ''
-    sanitize(trimmed)
-    field.set(trimmed)
-  }
-
   function onInput(event: Event) {
-    pushValue((event.currentTarget as HTMLInputElement).value)
+    let next = (event.currentTarget as HTMLInputElement).value
+    window.$GRAPHENE.updateParam(name, next === '' ? null : next)
   }
 </script>
 
@@ -63,7 +47,7 @@
     id={`text-input-${name}`}
     class="text-input"
     type="text"
-    value={field.value}
+    value={value}
     placeholder={placeholder}
     oninput={onInput}
   />

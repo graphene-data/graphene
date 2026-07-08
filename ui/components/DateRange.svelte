@@ -1,7 +1,6 @@
 <script lang="ts">
   import {onMount, untrack} from 'svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
-  import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Props {
@@ -33,8 +32,6 @@
   let mounted = false
   let queryKey = ''
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
-  let pageInputs = getPageInputs()
-  let field = captureInitial(() => pageInputs.dateRange(name))
 
   let domainStart: string | null = $state(null)
   let domainEnd: string | null = $state(null)
@@ -52,18 +49,27 @@
   })())
   let displayLabel = $derived(title || label)
 
+  $effect(() => {
+    let range = initialDefaultRange()
+    let unsubStart = window.$GRAPHENE.param(`${name}_start`, 'scalar', range.start, value => {
+      currentStart = readParamScalar(value)
+      currentPreset = inferPreset(currentStart, currentEnd)
+    })
+    let unsubEnd = window.$GRAPHENE.param(`${name}_end`, 'scalar', range.end, value => {
+      currentEnd = readParamScalar(value)
+      currentPreset = inferPreset(currentStart, currentEnd)
+    })
+    return () => {
+      unsubStart()
+      unsubEnd()
+    }
+  })
+
   onMount(() => {
     mounted = true
-    currentStart = field.hasExternalValue ? field.value.start : normalizeInput(start)
-    currentEnd = field.hasExternalValue ? field.value.end : normalizeInput(end)
-    currentPreset = inferPreset(currentStart, currentEnd)
-    if (field.hasExternalValue) updateParams()
-    else if (defaultValue && presetList.includes(defaultValue)) applyPreset(defaultValue, false)
-    else updateParams()
     refreshQuery()
     return () => {
       mounted = false
-      field.destroy()
       if (queryHandler) {
         window.$GRAPHENE?.unsubscribe?.(queryHandler)
         queryHandler = null
@@ -73,12 +79,6 @@
 
   $effect(() => {
     refreshQuery()
-  })
-
-  $effect(() => {
-    if (currentStart === field.value.start && currentEnd === field.value.end) return
-    if (!mounted) return
-    setRange(field.value.start, field.value.end, inferPreset(field.value.start, field.value.end), {persist: false})
   })
 
   function refreshQuery() {
@@ -100,21 +100,33 @@
       values.sort()
       domainStart = values[0]
       domainEnd = values[values.length - 1]
-      if (field.hasExternalValue) {
-        currentPreset = inferPreset(currentStart, currentEnd)
-      } else if (!touched) {
-        if (defaultValue && presetList.includes(defaultValue)) {
-          applyPreset(defaultValue, false)
-        } else {
-          let startCandidate = currentStart ?? domainStart
-          let endCandidate = currentEnd ?? (domainEnd ? addDaysString(domainEnd, 1) : null)
-          setRange(startCandidate, endCandidate, currentPreset, {markTouched: false, persist: true})
-        }
+      if (!touched && !currentStart && !currentEnd) {
+        let startCandidate = domainStart
+        let endCandidate = domainEnd ? addDaysString(domainEnd, 1) : null
+        setRange(startCandidate, endCandidate, currentPreset, {markTouched: false, persist: true})
       }
     }
     if (typeof window !== 'undefined' && window.$GRAPHENE?.query) {
       window.$GRAPHENE.query(data, [dates], handler)
       queryHandler = handler
+    }
+  }
+
+  function readParamScalar(value: any) {
+    if (value === undefined || value === null) return null
+    if (Array.isArray(value)) return value.length ? String(value[0] ?? '') : null
+    return String(value)
+  }
+
+  function initialDefaultRange() {
+    let startValue = normalizeInput(start)
+    let endValue = normalizeInput(end)
+    if (!defaultValue || !presetList.includes(defaultValue)) return {start: startValue, end: endValue}
+    let baseEnd = endValue ? new Date(endValue) : new Date()
+    let range = computePresetRange(defaultValue, baseEnd)
+    return {
+      start: range?.start ? formatDate(range.start) : startValue,
+      end: range?.end ? formatDate(range.end) : endValue,
     }
   }
 
@@ -196,7 +208,8 @@
   }
 
   function updateParams() {
-    field.set({start: currentStart, end: currentEnd})
+    window.$GRAPHENE.updateParam(`${name}_start`, currentStart)
+    window.$GRAPHENE.updateParam(`${name}_end`, currentEnd)
   }
 
   function onStartChange(event: Event) {

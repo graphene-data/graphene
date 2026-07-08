@@ -7,7 +7,7 @@ import type {GrapheneError} from '../../lang/index.d.ts'
 
 import {type QueryResult, type Field} from '../component-utilities/types.ts'
 import {cacheRead, cacheWrite, getHashes} from './clientCache.ts'
-import {getActivePageInputs, type ParamSnapshot} from './pageInputs.svelte.ts'
+import {getParams} from './params.ts'
 
 type ResultHandler = (res: QueryResult | void) => void
 
@@ -24,7 +24,7 @@ interface QueryNode {
 }
 
 export interface QueryRequest {
-  params: ParamSnapshot
+  params: Record<string, any>
   gsql: string
   hashes: string[]
   repoId: string
@@ -78,7 +78,6 @@ function resetQueryEngine() {
   queries = []
   Object.keys(queryResults).forEach(key => delete queryResults[key])
   updatePageCacheState()
-  getActivePageInputs().reset()
 }
 
 // Actually runs a given query that some frontend component is listening to.
@@ -96,7 +95,7 @@ async function runNode(n: QueryNode, refresh = false) {
   let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
   let gsql = [...tables.map(q => `table ${q.name} as (\n${q.contents}\n)`), n.contents].join('\n')
-  let params = getActivePageInputs().getParams()
+  let params = getParams()
 
   try {
     let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh})
@@ -208,20 +207,13 @@ function updatePageCacheState() {
   })
 }
 
-if (typeof window !== 'undefined') {
-  Object.assign(window.$GRAPHENE, {
-    getParam: (name: string) => getActivePageInputs().getParam(name),
-    registerQuery,
-    subscribeParams: subscriber => getActivePageInputs().subscribeParams(subscriber),
-    syncParamsFromUrl: () => getActivePageInputs().syncFromUrl(),
-    updateParam: (name: string, value: any) => getActivePageInputs().updateParam(name, value),
-    updateParams: (nextParams: Record<string, any>) => getActivePageInputs().updateParams(nextParams),
-    query,
-    unsubscribe,
-    resetQueryEngine,
-    rerunQueries: runAll,
-    refreshQueries,
-    isQueryLoading,
-    queryResults,
-  })
-}
+Object.assign(window.$GRAPHENE, {
+  registerQuery,
+  query,
+  unsubscribe,
+  resetQueryEngine,
+  rerunQueries: runAll,
+  refreshQueries,
+  isQueryLoading,
+  queryResults,
+})

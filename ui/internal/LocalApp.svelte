@@ -1,7 +1,6 @@
 <script lang="ts">
-  import {onDestroy, onMount, tick} from 'svelte'
+  import {onMount, tick} from 'svelte'
   import {setErrorFor} from './telemetry.ts'
-  import {PageInputs, activatePageInputs, releasePageInputs, setPageInputsContext} from './pageInputs.svelte.ts'
   import navFiles from 'virtual:nav'
   import Sidebar from './Sidebar.svelte'
   import SidebarToggle from './SidebarToggle.svelte'
@@ -11,10 +10,6 @@
   import StyleGallery from './StyleGallery.svelte'
   import QueryCacheStatus from './QueryCacheStatus.svelte'
   import {type GrapheneError} from '../../lang/index.js'
-
-  let pageInputs = activatePageInputs(new PageInputs())
-  setPageInputsContext(pageInputs)
-  onDestroy(() => releasePageInputs(pageInputs))
 
   // Nav sidebar with HMR support for the virtual file list.
   let navData = $state(navFiles)
