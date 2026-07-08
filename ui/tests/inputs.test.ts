@@ -37,18 +37,9 @@ async function startParamTracking(page: any) {
     let w = window as any
     w.__paramUpdates = []
     let originalUpdateParam = w.$GRAPHENE.updateParam.bind(w.$GRAPHENE)
-    let originalUpdateParams = w.$GRAPHENE.updateParams?.bind(w.$GRAPHENE)
     w.$GRAPHENE.updateParam = (name: string, value: unknown) => {
       w.__paramUpdates.push({name, value})
       return originalUpdateParam(name, value)
-    }
-    if (originalUpdateParams) {
-      w.$GRAPHENE.updateParams = (values: Record<string, unknown>) => {
-        Object.entries(values).forEach(([name, value]) => {
-          w.__paramUpdates.push({name, value})
-        })
-        return originalUpdateParams(values)
-      }
     }
   })
 }

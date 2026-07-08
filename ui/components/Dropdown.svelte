@@ -1,7 +1,6 @@
 <script lang="ts">
   import {onMount, setContext, tick, untrack, type Snippet} from 'svelte'
   import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
-  import {captureInitial, getPageInputs} from '../internal/pageInputs.svelte.ts'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Option {
@@ -47,8 +46,6 @@
   let touched = false
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
-  let pageInputs = getPageInputs()
-  let field = captureInitial(() => pageInputs.dropdown(name, toBoolean(multiple)))
 
   let isOpen = $state(false)
   let searchTerm = $state('')
@@ -109,12 +106,6 @@
 
   $effect(() => {
     if (isOpen) activeIndex = ensureActiveIndex(activeIndex, filteredOptions)
-  })
-
-  $effect(() => {
-    if (!sameSelection(selection, field.value)) {
-      setSelection(field.value, {persist: false})
-    }
   })
 
   function setupQuery() {
@@ -306,13 +297,18 @@
     if (isOpen && activeIndex >= 0) tick().then(scrollActiveIntoView)
   })
 
+  $effect(() => {
+    let defaults = ensureArray(defaultValue)
+    let defaultParam = !hasNoDefault && defaults.length ? writeSelection(defaults) : null
+    let unsub = window.$GRAPHENE.param(name, multi ? 'array' : 'scalar', defaultParam, value => {
+      let nextSelection = readSelection(value)
+      if (!sameSelection(selection, nextSelection)) setSelection(nextSelection, {persist: false})
+    })
+    return unsub
+  })
+
   onMount(() => {
     mounted = true
-    if (field.hasExternalValue) setSelection(field.value, {persist: false})
-    else {
-      let defaults = ensureArray(defaultValue)
-      if (!hasNoDefault && defaults.length) setSelection(defaults, {persist: true})
-    }
     syncSelection(false)
     setupQuery()
     if (typeof document !== 'undefined') {
@@ -321,7 +317,6 @@
     }
     return () => {
       mounted = false
-      field.destroy()
       if (queryHandler) {
         window.$GRAPHENE?.unsubscribe?.(queryHandler)
         queryHandler = null
@@ -344,8 +339,8 @@
   })
 
   function syncSelection(fromUser: boolean) {
-    // Reconcile persisted selection with the current option set, while keeping external values
-    // authoritative and only applying defaults/select-all before the user has interacted.
+    // Reconcile selection with the current option set. Query-derived defaults like
+    // select-all are applied once options are available and before the user interacts.
     let opts = availableOptions
     if (!opts.length) {
       // Keep the bound param initialized even before options load.
@@ -355,18 +350,7 @@
     }
     let nextSelection = selection.filter(val => valueMap.has(optionKey(val)))
     if (!fromUser) {
-      let defaults = ensureArray(defaultValue)
-      if (field.hasExternalValue) {
-        nextSelection = nextSelection
-      } else if (multi && selectAllDefault) {
-        nextSelection = opts.map(o => o.value)
-      } else if (!touched) {
-        if (defaults.length && !hasNoDefault) {
-          nextSelection = defaults.filter(val => valueMap.has(optionKey(val)))
-        } else if (!multi && !hasNoDefault) {
-          nextSelection = selection.length ? nextSelection : []
-        }
-      }
+      if (multi && selectAllDefault && !touched && !selection.length) nextSelection = opts.map(o => o.value)
     }
     setSelection(nextSelection, {fromUser, persist: true})
   }
@@ -375,6 +359,18 @@
     let leftKeys = left.map(optionKey)
     let rightKeys = right.map(optionKey)
     return leftKeys.length === rightKeys.length && leftKeys.every((key, index) => key === rightKeys[index])
+  }
+
+  function readSelection(raw: any) {
+    if (raw === undefined || raw === null) return []
+    if (!Array.isArray(raw)) return [raw]
+    if (multi) return [...raw]
+    return raw.length ? [raw[0]] : []
+  }
+
+  function writeSelection(values: any[]) {
+    if (multi) return values.length ? [...values] : null
+    return values.length ? values[0] : null
   }
 
   function setSelection(values: any[], {fromUser = false, persist = true}: {fromUser?: boolean; persist?: boolean} = {}) {
@@ -388,7 +384,7 @@
   }
 
   function updateInputPayload(values: any[]) {
-    field.set(values)
+    window.$GRAPHENE.updateParam(name, writeSelection(values))
   }
 
   function selectAll() {
