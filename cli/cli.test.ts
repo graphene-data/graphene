@@ -214,27 +214,27 @@ describe('cli run', () => {
   })
 
   it('runs a named query from a markdown file', async () => {
-    let res = await runCli(['run', 'index.md', '--query', 'performance_by_year'], {cwd: flightDir})
+    let res = await runCli(['run', 'pages/operations_overview.md', '--query', 'performance_by_year'], {cwd: flightDir})
     expectCliSuccess(res, 'run markdown query')
     expect(res.stdout.toLowerCase()).toContain('flight_count')
   })
 
   it('prints csv for a named query from a markdown file with --format csv', async () => {
-    let res = await runCli(['run', 'index.md', '--query', 'performance_by_year', '--format', 'csv'], {cwd: flightDir})
+    let res = await runCli(['run', 'pages/operations_overview.md', '--query', 'performance_by_year', '--format', 'csv'], {cwd: flightDir})
     expectCliSuccess(res, 'run markdown query as csv')
     expect(res.stdout.startsWith('year,status,flight_count\n')).toBe(true)
     expect(res.stdout).not.toContain('┌')
   })
 
   it('runs a parameterized named query from a markdown file with --input', async () => {
-    let res = await runCli(['run', 'carrier_detail.md', '--query', 'carrier_info', '--input', 'carrier=AA'], {cwd: flightDir})
+    let res = await runCli(['run', 'pages/carrier_detail.md', '--query', 'carrier_info', '--input', 'carrier=AA'], {cwd: flightDir})
     expectCliSuccess(res, 'run parameterized markdown query')
     expect(res.stdout).toContain('AA')
   })
 
   it('runs a markdown page in headless mode', async () => {
     try {
-      let res = await runCli(['run', 'index.md', '--headless', '--chart', 'Flight Status by Year'], {cwd: flightDir, env: {NODE_ENV: 'development'}})
+      let res = await runCli(['run', 'pages/operations_overview.md', '--headless', '--chart', 'Flight Status by Year'], {cwd: flightDir, env: {NODE_ENV: 'development'}})
       expectCliSuccess(res, 'run markdown page headless')
       expect(res.stdout).toContain('No errors found')
       expect(res.stdout).toContain('Screenshot saved to')
@@ -244,7 +244,7 @@ describe('cli run', () => {
   })
 
   it('prints a clean error for a missing markdown query input', async () => {
-    let res = await runCli(['run', 'carrier_detail.md', '--query', 'carrier_info'], {cwd: flightDir})
+    let res = await runCli(['run', 'pages/carrier_detail.md', '--query', 'carrier_info'], {cwd: flightDir})
     expect(res.code).toBe(1)
     expect(res.stderr.trim()).toBe('Missing param $carrier')
   })
