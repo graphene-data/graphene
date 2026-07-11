@@ -16,10 +16,10 @@ async function loginToSnowflakeOAuth(page: Page, url: string, opts: {username: s
     await inputs.nth(1).fill(opts.password)
   } else {
     await inputs.first().fill(opts.username)
-    await page.getByRole('button', {name: /continue|next|log in|sign in/i}).click()
+    await page.getByRole('button', {name: /^(continue|next|log in|sign in)$/i}).click()
     await page.locator('input[type="password"], input[autocomplete="current-password"]').first().fill(opts.password)
   }
-  await page.getByRole('button', {name: /continue|next|log in|sign in/i}).click()
+  await page.getByRole('button', {name: /^(continue|next|log in|sign in)$/i}).click()
 
   let mfaInput = page.locator('input[autocomplete="one-time-code"], input[name*="passcode" i], input[name*="code" i]').first()
   await mfaInput.waitFor({state: 'visible', timeout: 60_000})

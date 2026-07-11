@@ -160,8 +160,8 @@ program
         let datasets = await connection.listDatasets()
         let matchedDataset = tableArg ? findCaseInsensitive(datasets, tableArg) : null
 
-        // if there's no arg and more than one dataset, just list the datasets
-        if (!tableArg && datasets.length > 1) {
+        // If there's no configured namespace and more than one dataset, list the datasets.
+        if (!tableArg && !config.defaultNamespace && datasets.length > 1) {
           return console.log(`Datasets available:\n${datasets.join('\n')}`)
         }
 

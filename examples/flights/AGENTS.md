@@ -1,8 +1,10 @@
 ## About the data
+
 - This is an example Graphene project to analyze FAA flight data from 2000-2005.
 - All available data is in `./tables`
 
 ## Instructions
+
 - ALWAYS read the following before using the graphene CLI or editing .gsql or .md:
   - Core overview: `@../../docs/base.md`
   - CLI usage: `@../../docs/cli.md`

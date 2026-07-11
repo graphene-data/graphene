@@ -180,7 +180,7 @@ describe.skipIf(!process.env.SLOW_TEST)('bigquery', () => {
     let res = await runCli(['schema', tableName], ecommDir)
     expectCliSuccess(res, 'schema describe table (bigquery)')
     let output = res.stdout.toLowerCase()
-    expect(output).toContain('tables in demo_dataset:')
+    expect(output).toContain(`table ${tableName.toLowerCase()} (`)
   })
 })
 
