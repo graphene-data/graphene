@@ -34,7 +34,7 @@ export function updateParam(name: string, value: any) {
 // Updates the values, notifies listeners, and (optionally) writes this back to the url
 function applyParams(next: any, updateUrl = false) {
   Object.entries(subscribers).forEach(([name, sub]) => {
-    next[name] = normalizeParamValue(sub.type, next[name])
+    next[name] = normalizeParamValue(sub.type, next[name] ?? sub.defaultValue ?? null)
   })
   let changes = changedKeys(paramValues, next)
   paramValues = next

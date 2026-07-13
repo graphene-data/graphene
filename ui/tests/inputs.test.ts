@@ -70,6 +70,28 @@ function readSearchParams(page: any): Promise<Record<string, string | string[]>>
   })
 }
 
+test('query blocks can be defined after the component that uses them', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Query Registration Order
+
+    <Dropdown name="carrier" data="dropdown_options" value="code" label="label" title="Carrier" />
+
+    \`\`\`sql dropdown_options
+    from flights select carrier as code, carrier as label group by 1 order by 1
+    \`\`\`
+  `,
+  )
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await page.getByRole('combobox', {name: 'Carrier'}).click()
+  await expect(page.getByRole('option', {name: 'AA'})).toBeVisible()
+  await lockOpenDropdownWidth(page)
+  await expect(page.getByRole('listbox')).screenshot('query-block-after-component')
+})
+
 test('dropdown single-select supports open, select, and close behaviors', async ({server, page}) => {
   await loadDropdownPage(server, page, '<Dropdown name="carrier" data="dropdown_options" value="code" label="label" title="Carrier" />')
   let trigger = page.getByRole('combobox', {name: 'Carrier'})
@@ -477,4 +499,13 @@ test('inputs resync from url changes after navigation events', async ({server, p
       window_start: '2024-01-10',
       window_end: '2024-01-20',
     })
+
+  await page.evaluate(() => {
+    history.pushState({}, '', '/')
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  })
+
+  await expect(page.getByLabel('Search Text')).toHaveValue('alpha')
+  await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-01')
+  await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-31')
 })

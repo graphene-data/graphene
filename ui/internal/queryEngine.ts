@@ -21,6 +21,7 @@ interface QueryNode {
   componentId?: string
   error?: GrapheneError
   runAt?: number
+  controller?: AbortController
 }
 
 export interface QueryRequest {
@@ -35,10 +36,11 @@ export interface QueryState {
   loading: boolean
 }
 
-export type QueryFetcher = (req: QueryRequest, options?: {refresh?: boolean}) => Promise<QueryResult>
+export type QueryFetcher = (req: QueryRequest, options?: {refresh?: boolean; signal?: AbortSignal}) => Promise<QueryResult>
 
 let runPending: Promise<void> | null = null
 let refreshNextRun = false
+let queryGeneration = 0 // if we resetQueryEngine, we need to ignore any responses from previous queries
 let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 
@@ -64,8 +66,12 @@ function query(source: string, fields: Record<string, string | string[]>, callba
       return true
     })
   let contents = `from ${source} select ${(exprs.length ? exprs : ['*']).join(', ')}`
-  queries.push({contents, callback, loading: false, fields: exprs, source, componentId})
-  runAll()
+  let node: QueryNode = {contents, callback, loading: false, fields: exprs, source, componentId}
+  queries.push(node)
+
+  // The iframe bridge delivers component queries in separate tasks, so later queries may not exist yet.
+  // Run this node directly rather than relying on a page-wide run to pick them up.
+  void runNode(node)
   return componentId
 }
 
@@ -75,7 +81,10 @@ function unsubscribe(callback: ResultHandler) {
 }
 
 function resetQueryEngine() {
+  queries.forEach(query => query.controller?.abort())
   queries = []
+  runPending = null
+  queryGeneration++
   Object.keys(queryResults).forEach(key => delete queryResults[key])
   updatePageCacheState()
 }
@@ -85,6 +94,11 @@ function resetQueryEngine() {
 async function runNode(n: QueryNode, refresh = false) {
   if (!n.callback) throw new Error('running node nobody is listening to')
 
+  let generation = queryGeneration
+  n.controller?.abort()
+  let controller = new AbortController()
+  n.controller = controller
+
   n.callback() // notifies listeners we're back in the loading state
   n.loading = true
   n.error = undefined
@@ -92,33 +106,42 @@ async function runNode(n: QueryNode, refresh = false) {
 
   // build up the request body. Hashes is the list of ETag hashes currently in our browser cache. We send all of them,
   // letting the server determine the hash of this particular query, and whether data we already have is acceptable.
-  let hashes = await getHashes()
   let tables = queries.filter(q => q.name)
   let gsql = [...tables.map(q => `table ${q.name} as (\n${q.contents}\n)`), n.contents].join('\n')
   let params = getParams()
 
   try {
-    let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh})
+    let hashes = await getHashes()
+    if (controller.signal.aborted) return
+
+    let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh, signal: controller.signal})
+    if (generation !== queryGeneration) return
+
     n.runAt = res.runAt
     let result = translateData(res, n)
     if (n.source) queryResults[n.source] = result // TODO do we still need queryResults? Seems like a hack
     n.callback(result)
   } catch (e) {
+    if (controller.signal.aborted || generation !== queryGeneration) return
     let err = typeof e == 'string' ? new Error(e) : (e as Error)
     let grapheneError = err as GrapheneError
     n.error = {...grapheneError, componentId: n.componentId || grapheneError.componentId, message: err.message, stack: err.stack}
     n.callback({rows: [], fields: [], error: n.error, sql: '', runAt: Date.now()})
   } finally {
-    n.loading = false
-    updatePageCacheState()
+    if (n.controller === controller) {
+      n.controller = undefined
+      n.loading = false
+      updatePageCacheState()
+    }
   }
 }
 
-async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = {}): Promise<QueryResult> {
+async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean; signal?: AbortSignal} = {}): Promise<QueryResult> {
   let response = await fetch('/_api/query', {
     method: 'POST',
     headers: {'Content-Type': 'application/json', ...(options.refresh ? {'Cache-Control': 'no-cache'} : {})},
     body: JSON.stringify(req),
+    signal: options.signal,
   })
   let hash = response.headers.get('ETag') || ''
 
@@ -141,10 +164,13 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean} = 
 
 function runAll() {
   if (runPending) return runPending
-  runPending = Promise.resolve()
+  let pending = Promise.resolve()
     .then(_runAll)
-    .finally(() => (runPending = null))
-  return runPending
+    .finally(() => {
+      if (runPending === pending) runPending = null
+    })
+  runPending = pending
+  return pending
 }
 
 export async function refreshQueries() {
@@ -155,14 +181,10 @@ export async function refreshQueries() {
 
 async function _runAll() {
   let refresh = refreshNextRun
+  let nodes = queries.filter(q => q.callback)
   refreshNextRun = false
 
-  await Promise.all(
-    queries.map(async n => {
-      if (!n.callback) return
-      await runNode(n, refresh)
-    }),
-  )
+  await Promise.all(nodes.map(n => runNode(n, refresh)))
 }
 
 // This translates results we got back from the server into the format any frontend code expects.
