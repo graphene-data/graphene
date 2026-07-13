@@ -20,12 +20,12 @@ const extendedExpect = baseExpect.extend({
     let testPath = vitestExpect.getState().testPath || ''
     let testFile = path.basename(testPath)
 
-    // Wait for fonts to load to ensure consistent rendering across environments
+    // Wait for fonts, Graphene renders, and animations to settle before comparing pixels.
     await (page as Page).evaluate(async () => {
       await document.fonts.ready
       await (window as any).$GRAPHENE?.waitForLoad?.()
-      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
     })
+    await waitForAnimations(page as Page)
 
     let resultsDir = path.resolve(snapshotDir, '..', 'results', testFile)
     let snapshotPath = path.resolve(snapshotDir, testFile, snapshotName + '.png')
@@ -45,7 +45,7 @@ const extendedExpect = baseExpect.extend({
     let result
     try {
       result = await (page as any)._expectScreenshot({
-        animations: 'disabled',
+        animations: 'allow',
         caret: 'hide',
         scale: 'css',
         locator,
@@ -109,3 +109,30 @@ interface ExpectWithScreenshot {
 }
 
 export const playwrightExpect: ExpectWithScreenshot = extendedExpect as any
+
+export async function waitForAnimations(page: Page) {
+  await page.evaluate(async () => {
+    await nextPaint()
+
+    while (true) {
+      let animations = document.getAnimations().filter(animation => animation.playState === 'running' || animation.pending)
+      if (!animations.length) break
+
+      for (let animation of animations) {
+        if (Number.isFinite(animation.effect?.getComputedTiming().endTime)) animation.finish()
+        else {
+          animation.currentTime = 0
+          animation.pause()
+        }
+      }
+
+      // Let finish/cancel events and any animations they trigger run before checking again.
+      await new Promise(resolve => setTimeout(resolve))
+      await nextPaint()
+    }
+
+    function nextPaint() {
+      return new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    }
+  })
+}
