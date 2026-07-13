@@ -84,18 +84,22 @@ where created_at >= coalesce($daterange_start, created_at)
     expect(code).toContain('<PieChart data="x" value="a" />')
   })
 
-  it('allows arbitrary html, scripts, style attributes, and framework directives', async () => {
+  it('allows arbitrary html, scripts, style blocks, and framework directives', async () => {
     let code = await compileMarkdownPage(`
 <script>
   let count = 0
 </script>
 
-<div class="hero" style="color: red" on:click={() => count += 1}>{count}</div>
+<style>
+  .hero { color: red; }
+</style>
+
+<div class="hero" on:click={() => count += 1}>{count}</div>
 <iframe id="embed" src="javascript:alert('boom')"></iframe>
 `)
 
     expect(code).toContain('let count = 0')
-    expect(code).toContain('style="color: red"')
+    expect(code).toContain('.hero { color: red; }')
     expect(code).toContain('on:click={() => count += 1}')
     expect(code).toContain('<iframe id="embed" src="javascript:alert(\'boom\')"></iframe>')
   })
