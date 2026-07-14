@@ -6,6 +6,7 @@
   import SidebarToggle from './SidebarToggle.svelte'
   import PageNavGroup from './PageNavGroup.svelte'
   import ErrorDisplay from './ErrorDisplay.svelte'
+  import EmptyPage from './EmptyPage.svelte'
   import ChartGallery from './ChartGallery.svelte'
   import StyleGallery from './StyleGallery.svelte'
   import QueryCacheStatus from './QueryCacheStatus.svelte'
@@ -16,10 +17,12 @@
   import.meta.hot?.accept('virtual:nav', mod => navData = mod.default)
 
   let pathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'index'
+  let isRoot = pathName == 'index'
   // Mirror the server-side folder redirect: if /foo.md doesn't exist but /foo/index.md does, load that.
-  if (pathName != 'index' && !navFiles.some(f => f.path == pathName + '.md') && navFiles.some(f => f.path == pathName + '/index.md')) {
-    pathName += '/index'
-  }
+  if (!isRoot && !navFiles.some(f => f.path == pathName + '.md') && navFiles.some(f => f.path == pathName + '/index.md')) pathName += '/index'
+
+  // We don't get 404s when we attempt to load a page that doesnt exist, so check the nav to let us differentiate a 404 from a compile error
+  let pageExists = navFiles.some(f => f.path == pathName + '.md')
 
   // Track compile errors from both initial load and subsequent HMR failures.
   let compileError = $state<GrapheneError | null>(null)
@@ -43,6 +46,7 @@
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
   let Page = $state<any>(null)
   let pageMeta = $state<any>({})
+  let blankForTests = $state(pathName == '__ct')
 
   onMount(async () => {
     try {
@@ -53,17 +57,25 @@
       // c) screenshots taken by `graphene run` might have the wrong font
       document.fonts.load("12px 'Source Sans 3'")
       await document.fonts.ready
+      if (blankForTests) return
 
       if (pathName == '_charts') {
         Page = ChartGallery
       } else if (pathName == '_styles') {
         Page = StyleGallery
-      } else if (pathName !== '__ct') {
+      } else if (pageExists) {
         let mod = await import(/* @vite-ignore */ '/' + pathName + '.md')
         Page = mod.default
         pageMeta = mod.metadata || {}
         compileError = null
         setErrorFor('compile', null)
+      }
+    } catch {
+      // async imports give us zero details on error. If we have a compile error from vite, use that, otherwise show something generic
+      if (!compileError) {
+        let file = pathName + '.md'
+        compileError = {message: `Error loading ${file}`, file} as GrapheneError
+        setErrorFor('compile', compileError)
       }
     } finally {
       await tick()
@@ -81,15 +93,24 @@
 </Sidebar>
 <QueryCacheStatus />
 
-<main id="content" class={{pageContent: compileError || !!Page, dashboardLayout: pageMeta.layout == 'dashboard'}}>
-  {#if compileError}
-    <h1 class="page-error-heading">Error loading page</h1>
-    <ErrorDisplay error={compileError} />
+<main id="content" class={{pageContent: !pageExists || !!compileError || !!Page, dashboardLayout: pageMeta.layout == 'dashboard'}}>
+  {#if blankForTests}
+    <!-- render nothing, tests fill in this element -->
   {:else if Page}
     {#if pageMeta.title}
       <h1>{pageMeta.title}</h1>
     {/if}
     <Page />
+  {:else if compileError}
+    <h1 class="page-error-heading">Error loading page</h1>
+    <ErrorDisplay error={compileError} />
+  {:else}
+    <!-- page must not exist -->
+    {#if isRoot}
+      <EmptyPage title="No home page yet" message="Create an index.md file to control what appears here." />
+    {:else}
+      <EmptyPage title="Page not found" message="Use the menu to select another page." />
+    {/if}
   {/if}
 </main>
 
@@ -111,4 +132,3 @@
     margin-top: 12px;
   }
 </style>
-

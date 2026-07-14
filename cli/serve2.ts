@@ -15,7 +15,7 @@ import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
 import {runQuery} from './connections/index.ts'
 import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
-import {mockFileMap} from './mockFiles.ts'
+import {missingMockFiles, mockFileMap} from './mockFiles.ts'
 import {runVitePlugin} from './run.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
@@ -284,9 +284,10 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
       // in tests, inject mock files into the nav.
       // we do this on `load` as each test doesn't always refresh the workspace
       // TODO, we should prob inject these into `loadWorkspace`, then we wouldn't need this block at all
-      let res = [...mdFiles]
+      let res = mdFiles.filter(file => !missingMockFiles.has(file.path))
       if (process.env.NODE_ENV == 'test') {
         for (let [path, contents] of Object.entries(mockFileMap)) {
+          if (missingMockFiles.has(path)) continue
           let mockFile = {path, title: extractFrontmatter(contents).title}
           let idx = res.findIndex(file => file.path == path)
           if (idx >= 0) res.splice(idx, 1, mockFile)
@@ -355,11 +356,11 @@ const handleRequestPlugin = {
           mdPath = path.join(config.root, relativeMdPath)
         }
 
-        if (mockFileMap[relativeMdPath] || (await fs.exists(mdPath))) {
-          await handlePage(s, res)
-        } else {
-          next()
-        }
+        if (mockFileMap[relativeMdPath] || (await fs.exists(mdPath))) return await handlePage(s, res)
+
+        // Browser navigations still need the app shell so it can render a useful not-found state.
+        if (req.headers.accept?.includes('text/html')) return await handlePage(s, res)
+        next()
       } catch (err: any) {
         if (process.env.NODE_ENV != 'test') console.error(err) // ignore in tests because they're noisy, and any unexpected errors should be captured by browserConsole.
         res.statusCode = 500
@@ -381,14 +382,17 @@ function mockFilesForTests() {
     name: 'mock-files-for-tests',
     enforce: 'pre' as const,
     resolveId(id: any) {
-      if (!mockFileMap[toMockKey(id)]) return
+      let key = toMockKey(id)
+      if (!mockFileMap[key]) return
       // Always resolve to the absolute path so the module graph key matches
       // what updateMockFile emits via server.watcher (needed for HMR to work).
-      return path.join(config.root, toMockKey(id)) + '?mock'
+      return path.join(config.root, key) + '?mock'
     },
     load(id: any) {
       if (!id.endsWith('?mock')) return null
-      return mockFileMap[toMockKey(id.replace(/\?mock$/, ''))]
+      let key = toMockKey(id.replace(/\?mock$/, ''))
+      if (missingMockFiles.has(key)) throw new Error('Mock file not found')
+      return mockFileMap[key]
     },
   }
 }

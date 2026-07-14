@@ -29,6 +29,9 @@ test('load broken page, fix via HMR', async ({server, page}) => {
 
   await page.goto(server.url())
   await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 5000})
+  await expect(page.locator('.g-error')).toBeVisible()
+  await expect(page.locator('.g-error__details')).toContainText('index.md')
+  await expect(page).screenshot('initial-compile-error')
 
   // Fix the file — should recover via HMR
   await server.updateMockFile('/index.md', '# Now Working')

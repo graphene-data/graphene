@@ -4,7 +4,7 @@ import path from 'path'
 import {fileURLToPath} from 'url'
 import {test as base, onTestFinished} from 'vitest'
 
-import {mockFileMap} from '../../cli/mockFiles.ts'
+import {missingMockFiles, mockFileMap} from '../../cli/mockFiles.ts'
 import {clearSvelteWarnings, serve2, svelteWarnings} from '../../cli/serve2.ts'
 import {type Config, setGlobalConfig} from '../../lang/config.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
@@ -33,6 +33,7 @@ export interface ChartFixture {
 export interface ServerFixture {
   url: (options?: Config) => string
   mockFile: (path: string, content: string) => void
+  mockMissingFile: (path: string) => void
   /** Update a mock file and trigger HMR, simulating a real file edit */
   updateMockFile: (path: string, content: string) => void
 }
@@ -101,6 +102,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
 
       function cleanup() {
         Object.keys(mockFileMap).forEach(key => delete mockFileMap[key])
+        missingMockFiles.clear()
 
         // Vite caches our mocked files, so we need to clear them out after each test.
         // Vite 7 has separate module graphs for server.moduleGraph and environments.client — invalidate both.
@@ -122,6 +124,15 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
         },
         mockFile: (filePath: string, content: string) => {
           mockFileMap[filePath.replace(/^\//, '')] = trimIndentation(content)
+        },
+        mockMissingFile: (filePath: string) => {
+          let relativePath = filePath.replace(/^\//, '')
+          missingMockFiles.add(relativePath)
+          mockFileMap[relativePath] = 'Mock file not found'
+          for (let graph of [server.moduleGraph, server.environments.client.moduleGraph] as any[]) {
+            let navModule = graph?.getModuleById('\0virtual:nav')
+            if (navModule) graph.invalidateModule(navModule)
+          }
         },
         updateMockFile: (filePath: string, content: string) => {
           let relativePath = filePath.replace(/^\//, '')
