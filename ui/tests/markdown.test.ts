@@ -31,6 +31,27 @@ test('loads markdown files', async ({server, page}) => {
   await expect(page).screenshot('loads-markdown-files')
 })
 
+test('shows a placeholder when a repo has no index page', async ({server, page}) => {
+  expectConsoleError('Failed to load resource')
+  expectConsoleError('Mock file not found')
+  server.mockMissingFile('/index.md')
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page.getByRole('heading', {name: 'No home page yet'})).toBeVisible()
+  await expect(page.getByText('Create an index.md file to control what appears here.')).toBeVisible()
+  await expect(page).screenshot('repo-without-index')
+})
+
+test('shows a placeholder for a missing page', async ({server, page}) => {
+  expectConsoleError('Failed to load resource')
+  await page.goto(server.url() + '/missing')
+  await waitForGrapheneLoad(page)
+  await expect(page.getByRole('heading', {name: 'Page not found'})).toBeVisible()
+  await expect(page.getByText('Use the menu to select another page.')).toBeVisible()
+  await expect(page).screenshot('page-not-found')
+})
+
 test('flights simple stacked bar renders', async ({server, page}) => {
   server.mockFile(
     '/index.md',
