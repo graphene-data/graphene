@@ -21,6 +21,7 @@ test('loads markdown files', async ({server, page}) => {
   server.mockFile('delays.md', '---\ntitle: Delay Deep-Dive\n---\n# Delays')
 
   await page.goto(server.url() + '/')
+  await expect(page).toHaveTitle('Flight Delay Analysis - example-flights')
   await expect(page.getByRole('heading', {level: 1, name: 'Flight Delay Analysis'})).toBeVisible()
   let nav = page.getByRole('navigation')
   await expect(nav).toBeVisible()
@@ -77,6 +78,7 @@ test('flights simple stacked bar renders', async ({server, page}) => {
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
+  await expect(page).toHaveTitle('Home - example-flights')
   await expect(page).screenshot('flights-simple-stacked-bar')
 })
 

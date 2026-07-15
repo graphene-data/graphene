@@ -4,6 +4,7 @@ import path from 'path'
 
 export interface Config {
   root: string
+  projectName: string
   dialect: string
   defaultNamespace?: string
   ignoredFiles: string[]
@@ -69,7 +70,7 @@ export interface Config {
   }
 }
 
-export type ConfigInput = Omit<Config, 'root' | 'dialect' | 'ignoredFiles' | 'envFile'> & {
+export type ConfigInput = Omit<Config, 'root' | 'projectName' | 'dialect' | 'ignoredFiles' | 'envFile'> & {
   root?: string
   dialect?: Config['dialect']
   ignoredFiles?: Config['ignoredFiles']
@@ -79,13 +80,15 @@ export type ConfigInput = Omit<Config, 'root' | 'dialect' | 'ignoredFiles' | 'en
 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
-export function setGlobalConfig(cfg: ConfigInput) {
+export function setGlobalConfig(cfg: ConfigInput | Config, projectName?: string) {
   Object.keys(config).forEach(key => delete config[key])
-  Object.assign(config, normalizeConfig(cfg))
+  if ('projectName' in cfg) projectName ||= cfg.projectName
+  Object.assign(config, normalizeConfig(cfg, process.cwd(), projectName))
 }
 
-export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd()): Config {
+export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(), projectName?: string): Config {
   let cfg = {...input}
+  let root = path.resolve(cfg.root || defaultRoot)
   if (cfg.namespace && !cfg.defaultNamespace) cfg.defaultNamespace = cfg.namespace
 
   let dialect = cfg.dialect || 'duckdb'
@@ -103,7 +106,8 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd())
   return {
     ...cfg,
     dialect,
-    root: path.resolve(cfg.root || defaultRoot),
+    root,
+    projectName: projectName || path.basename(root),
     port: cfg.port || Number(process.env.GRAPHENE_PORT) || 4000,
     ignoredFiles: cfg.ignoredFiles || [],
     envFile,
@@ -121,7 +125,8 @@ export async function loadConfig(dir: string, envLoader: (envFiles: string[]) =>
   }
 
   let txt = await readFile(path.join(configDir, 'package.json'), 'utf8')
-  let graphene = JSON.parse(txt).graphene
+  let pkgJson = JSON.parse(txt)
+  let graphene = pkgJson.graphene
   if (!graphene || typeof graphene != 'object' || Array.isArray(graphene)) {
     throw new Error(`No graphene config found in ${path.join(configDir, 'package.json')}`)
   }
@@ -130,6 +135,6 @@ export async function loadConfig(dir: string, envLoader: (envFiles: string[]) =>
   let envFiles = Array.isArray(graphene.envFile) ? graphene.envFile : [graphene.envFile || '.env']
   envLoader(envFiles.map(file => path.resolve(configDir, file)))
 
-  let cfg = normalizeConfig({...graphene, root: configDir}, configDir)
+  let cfg = normalizeConfig({...graphene, root: configDir}, configDir, pkgJson.name)
   return cfg
 }

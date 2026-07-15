@@ -295,7 +295,10 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
         }
       }
 
-      return `export default ${JSON.stringify(res)}`
+      return `
+        export const projectName = ${JSON.stringify(config.projectName)};
+        export default ${JSON.stringify(res)}
+      `
     },
     configureServer: (s: ViteDevServer) => {
       let refresh = async () => {

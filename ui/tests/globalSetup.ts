@@ -8,7 +8,7 @@ import {setGlobalConfig} from '../../lang/config.ts'
 
 export default async function setup(project: TestProject) {
   let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
-  setGlobalConfig({root: viteRoot})
+  setGlobalConfig({root: viteRoot}, 'example-flights')
 
   await fs.rm(path.join(import.meta.dirname, 'results'), {force: true, recursive: true})
 

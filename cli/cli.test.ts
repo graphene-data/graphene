@@ -6,6 +6,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import {expect} from 'vitest'
 
+import {loadConfig, normalizeConfig} from '../lang/config.ts'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
 
 interface RunResult {
@@ -56,6 +57,11 @@ async function createTelemetryProject(prefix: string) {
 }
 
 describe('cli package', () => {
+  it('derives the project name from package.json with a directory fallback', async () => {
+    expect((await loadConfig(flightDir, () => {})).projectName).toBe('example-flights')
+    expect(normalizeConfig({root: '/tmp/project-without-package'}).projectName).toBe('project-without-package')
+  })
+
   it('directly includes every lang and ui runtime dependency with the exact same spec', async () => {
     let cli = JSON.parse(await fsp.readFile(path.resolve(dir, '../cli/package.json'), 'utf8'))
     let lang = JSON.parse(await fsp.readFile(path.resolve(dir, '../lang/package.json'), 'utf8'))
