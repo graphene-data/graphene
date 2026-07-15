@@ -97,7 +97,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
       let port = await getAvailablePort()
       let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
       process.env.GRAPHENE_PORT = String(port)
-      setGlobalConfig({port, root: viteRoot})
+      setGlobalConfig({port, root: viteRoot}, 'example-flights')
       let server = await serve2()
 
       function cleanup() {
@@ -118,7 +118,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
 
       await use({
         url: (options: Partial<Config> = {}) => {
-          setGlobalConfig({...options, root: options.root || viteRoot, port} as any)
+          setGlobalConfig({...options, root: options.root || viteRoot, port} as any, options.projectName || 'example-flights')
           onTestFinished(cleanup)
           return `http://localhost:${port}`
         },
@@ -221,7 +221,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
 
 test.beforeEach(() => {
   let root = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
-  setGlobalConfig({root})
+  setGlobalConfig({root}, 'example-flights')
   clearSvelteWarnings()
 })
 

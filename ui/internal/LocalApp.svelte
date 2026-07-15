@@ -1,7 +1,7 @@
 <script lang="ts">
   import {onMount, tick} from 'svelte'
   import {setErrorFor} from './telemetry.ts'
-  import navFiles from 'virtual:nav'
+  import navFiles, {projectName} from 'virtual:nav'
   import Sidebar from './Sidebar.svelte'
   import SidebarToggle from './SidebarToggle.svelte'
   import PageNavGroup from './PageNavGroup.svelte'
@@ -11,6 +11,7 @@
   import StyleGallery from './StyleGallery.svelte'
   import QueryCacheStatus from './QueryCacheStatus.svelte'
   import {type GrapheneError} from '../../lang/index.js'
+  import {prettyPrintFilename} from './utils.ts'
 
   // Nav sidebar with HMR support for the virtual file list.
   let navData = $state(navFiles)
@@ -47,6 +48,12 @@
   let Page = $state<any>(null)
   let pageMeta = $state<any>({})
   let blankForTests = $state(pathName == '__ct')
+  let fileName = pathName.split('/').at(-1) + '.md'
+  let pageTitle = $derived(pageMeta.title || prettyPrintFilename(fileName))
+
+  $effect(() => {
+    document.title = `${pageTitle} - ${projectName}`
+  })
 
   onMount(async () => {
     try {

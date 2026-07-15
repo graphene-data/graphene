@@ -4,6 +4,7 @@
   import FileChartColumnIncreasing from '@lucide/svelte/icons/file-chart-column-increasing'
   import {SvelteSet, SvelteMap} from 'svelte/reactivity'
   import {route} from './router.ts'
+  import {prettyPrintFilename} from './utils.ts'
 
   let {files = [], onNavigate = undefined, baseRoute = '', projectName = ''} = $props()
 
@@ -56,7 +57,7 @@
       for (let segment of segments) {
         parentPath = parentPath ? `${parentPath}/${segment}` : segment
         if (!folderMap.has(parentPath)) {
-          let folderNode = {type: 'folder', name: segment, label: formatLabel(segment, 'folder'), path: parentPath, children: []}
+          let folderNode = {type: 'folder', name: segment, label: prettyPrintFilename(segment), path: parentPath, children: []}
           folderMap.set(parentPath, folderNode)
           parentChildren.push(folderNode)
         }
@@ -72,7 +73,7 @@
       parentChildren.push({
         type: 'file',
         name: fileName,
-        label: formatLabel(fileName, 'file', titleLookup[fullPath]),
+        label: prettyPrintFilename(fileName, titleLookup[fullPath]),
         path: fullPath,
         route: pathToRoute(fullPath),
       })
@@ -105,14 +106,6 @@
       next.add(aggregate.join('/'))
     }
     return next
-  }
-
-  function formatLabel(value, type, explicitTitle = undefined) {
-    if (explicitTitle) return explicitTitle
-    let cleaned = type === 'file' ? value.replace(/\.md$/, '') : value
-    if (cleaned.toLowerCase() === 'index') return 'Home'
-    return cleaned.split(/[\s_-]+/).filter(Boolean)
-      .map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(' ')
   }
 
   function pathToRoute(path) {
