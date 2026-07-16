@@ -308,6 +308,27 @@ select {
   letter-spacing: -0.01em;
 }
 
+main.pageContent {
+  margin: 0 auto;
+  min-width: 0;
+  padding: 44px 6rem 80px;
+  max-width: var(--notebook-width);
+}
+
+main.pageContent.dashboardLayout {
+  max-width: var(--dashboard-width);
+}
+
+/* Embedded contexts such as chat previews and screenshots provide their own width and padding. */
+main.pageContent.fullWidth {
+  max-width: none;
+  padding: 0;
+}
+
+main.pageContent > .page-title:first-child {
+  margin-top: 12px;
+}
+
 /* Embedded images in rendered markdown */
 .pageContent img {
   display: block;
