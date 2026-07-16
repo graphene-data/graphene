@@ -105,7 +105,7 @@
     <!-- render nothing, tests fill in this element -->
   {:else if Page}
     {#if pageMeta.title}
-      <h1>{pageMeta.title}</h1>
+      <h1 class="page-title">{pageMeta.title}</h1>
     {/if}
     <Page />
   {:else if compileError}
@@ -122,17 +122,6 @@
 </main>
 
 <style>
-  main.pageContent {
-    margin: 0 auto;
-    min-width: 0;
-    padding: 44px 6rem 80px;
-    max-width: var(--notebook-width);
-  }
-
-  main.pageContent.dashboardLayout {
-    max-width: var(--dashboard-width);
-  }
-
   .page-error-heading { margin-top: 0; }
 
   main h1:first-child {
