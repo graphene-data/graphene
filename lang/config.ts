@@ -10,7 +10,7 @@ export interface Config {
   ignoredFiles: string[]
   telemetry?: boolean
   updateNotifier?: boolean
-  port?: number
+  port: number
   cloud?: string
   envFile: string[] // array of paths where we can look for the env file
 
@@ -70,11 +70,12 @@ export interface Config {
   }
 }
 
-export type ConfigInput = Omit<Config, 'root' | 'projectName' | 'dialect' | 'ignoredFiles' | 'envFile'> & {
+export type ConfigInput = Omit<Config, 'root' | 'projectName' | 'dialect' | 'ignoredFiles' | 'envFile' | 'port'> & {
   root?: string
   dialect?: Config['dialect']
   ignoredFiles?: Config['ignoredFiles']
   envFile?: string | string[]
+  port?: number
   namespace?: string
 }
 

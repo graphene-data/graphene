@@ -8,7 +8,7 @@ import type {Config} from '../lang/config.ts'
 import {checkForUpdate, detectPackageManager, getUpgradeCommand, isNewerVersion, isUpdateNotifierEnabled, showCachedUpdateNotice} from './updateNotifier.ts'
 
 function testConfig(root: string, overrides: Partial<Config> = {}): Config {
-  return {dialect: 'duckdb', envFile: ['.env'], ignoredFiles: [], root, ...overrides, projectName: overrides.projectName || path.basename(root)}
+  return {dialect: 'duckdb', envFile: ['.env'], ignoredFiles: [], root, port: 4000, ...overrides, projectName: overrides.projectName || path.basename(root)}
 }
 
 function testStderr() {
