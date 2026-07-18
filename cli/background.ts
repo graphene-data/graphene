@@ -97,7 +97,7 @@ function sendSignal(pid: number, signal: NodeJS.Signals): boolean {
 }
 
 export async function stopGrapheneIfRunning(): Promise<void> {
-  let port = Number(process.env.GRAPHENE_PORT) || 4000
+  let port = config.port
   let pid = await getPidOnPort(port)
   if (!pid) return
 
@@ -119,7 +119,7 @@ export async function stopGrapheneIfRunning(): Promise<void> {
 }
 
 export async function isServerRunning(portOverride?: number): Promise<boolean> {
-  let port = portOverride || Number(process.env.GRAPHENE_PORT) || 4000
+  let port = portOverride ?? config.port
   return !!(await getPidOnPort(port))
 }
 

@@ -50,10 +50,10 @@ describe('cli telemetry', () => {
     let env = process.env.GRAPHENE_TELEMETRY_DISABLED
     try {
       delete process.env.GRAPHENE_TELEMETRY_DISABLED
-      expect(isTelemetryEnabled({dialect: 'duckdb', envFile: ['.env'], ignoredFiles: [], root: '/tmp', projectName: 'tmp'}, 'https://example.com')).toBe(true)
-      expect(isTelemetryEnabled({dialect: 'duckdb', envFile: ['.env'], ignoredFiles: [], root: '/tmp', projectName: 'tmp', telemetry: false}, 'https://example.com')).toBe(false)
+      expect(isTelemetryEnabled({dialect: 'duckdb', envFile: ['.env'], ignoredFiles: [], root: '/tmp', projectName: 'tmp', port: 4000}, 'https://example.com')).toBe(true)
+      expect(isTelemetryEnabled({dialect: 'duckdb', envFile: ['.env'], ignoredFiles: [], root: '/tmp', projectName: 'tmp', port: 4000, telemetry: false}, 'https://example.com')).toBe(false)
       process.env.GRAPHENE_TELEMETRY_DISABLED = '1'
-      expect(isTelemetryEnabled({dialect: 'duckdb', envFile: ['.env'], ignoredFiles: [], root: '/tmp', projectName: 'tmp'}, 'https://example.com')).toBe(false)
+      expect(isTelemetryEnabled({dialect: 'duckdb', envFile: ['.env'], ignoredFiles: [], root: '/tmp', projectName: 'tmp', port: 4000}, 'https://example.com')).toBe(false)
     } finally {
       if (env === undefined) delete process.env.GRAPHENE_TELEMETRY_DISABLED
       else process.env.GRAPHENE_TELEMETRY_DISABLED = env

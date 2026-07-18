@@ -46,7 +46,7 @@ export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
 
 async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
-  let port = Number(process.env.GRAPHENE_PORT) || 4000
+  let port = config.port
   let svelteRoot = path.dirname(nodeRequire.resolve('svelte/package.json'))
   let sveltePackage = nodeRequire('svelte/package.json')
   let svelteDependencyRoot = path.dirname(svelteRoot)
