@@ -158,7 +158,10 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean; si
   }
 
   // Cache writes are best-effort and should not block rendering fresh query results.
-  void cacheWrite(hash, response.clone())
+  // In tests, browser teardown can abort Cache.put() after assertions have passed.
+  let write = cacheWrite(hash, response.clone())
+  if (import.meta.env.VITE_TEST) void write.catch(() => {})
+  else void write
   return await response.json()
 }
 
