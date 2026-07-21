@@ -2,13 +2,19 @@ import {onDestroy} from 'svelte'
 
 import type {GrapheneError} from '../../lang/index.d.ts'
 
+declare global {
+  interface Window {
+    $GRAPHENE: any
+  }
+}
+
 // In local development, the same page could have components hot reload many times.
 // A flat list of errors would start to accumulate duplicates, and calling `graphene run` would report many (possibly stale) errors.
 // The current solution is to key errors by their componentId, and remove them when the component is destroyed.
 // This mostly works, but it has the downside that you can only show a single error per component, and does not help with `staticErrors`.
 // The other possible solution is that any error should prevent HMR and force a full refresh.
 
-window.$GRAPHENE ||= {}
+window.$GRAPHENE ||= {} as typeof window.$GRAPHENE
 window.$GRAPHENE.getErrors = getErrors
 
 let staticErrors: GrapheneError[] = []

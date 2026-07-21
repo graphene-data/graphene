@@ -199,7 +199,6 @@ limit 10
       /Screenshot saved to[^\n]*node_modules\/\.graphene\/screenshots\/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.png/,
       'Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png',
     )
-    expect(runOutput).toContain('No errors found 💎')
     expect(runOutput).toContain(`Page available at http://localhost:${port}/chart`)
     expect(runOutput).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   } finally {

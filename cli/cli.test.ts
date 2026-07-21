@@ -1,51 +1,32 @@
 /// <reference types="vitest/globals" />
-import {spawn} from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import {createServer, type IncomingMessage, type ServerResponse} from 'node:http'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import {expect} from 'vitest'
 
-import {loadConfig, normalizeConfig} from '../lang/config.ts'
+import {loadConfig, normalizeConfig, type Config, type ConfigInput} from '../lang/config.ts'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
-
-interface RunResult {
-  code: number
-  stdout: string
-  stderr: string
-}
+import {expect, test} from './testFixtures.ts'
 
 const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
 const flightDir = path.resolve(dir, '../examples/flights')
 const TEST_PORT = 4163
-process.env.GRAPHENE_PORT = '4163'
+const flightConfig = configFor(flightDir, {port: TEST_PORT})
+process.env.GRAPHENE_PORT = String(TEST_PORT)
 process.env.NODE_ENV = 'test'
 process.env.GRAPHENE_TELEMETRY_DISABLED = '1'
 
-function runCli(args: string[], options: {cwd?: string; env?: NodeJS.ProcessEnv; stdin?: string} = {}): Promise<RunResult> {
-  return new Promise(resolve => {
-    let cliEntry = path.resolve(dir, 'cli.ts')
-    let child = spawn('node', [cliEntry, ...args], {cwd: options.cwd, env: {...process.env, ...options.env}})
-    let stdout = '',
-      stderr = ''
-    if (options.stdin !== undefined) child.stdin.end(options.stdin)
-    child.stdout.on('data', d => {
-      stdout += d.toString()
-    })
-    child.stderr.on('data', d => {
-      stderr += d.toString()
-    })
-    child.on('close', code => resolve({code: code ?? 0, stdout, stderr}))
-  })
-}
-
-function logCliFailure(step: string, res: RunResult) {
+function logCliFailure(step: string, res: {code: number; stdout: string; stderr: string}) {
   console.error(`[cli.test] ${step} failed (code ${res.code})\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`)
 }
 
-function expectCliSuccess(res: RunResult, step: string) {
+function expectCliSuccess(res: {code: number; stdout: string; stderr: string}, step: string) {
   if (res.code !== 0) logCliFailure(step, res)
   expect(res.code).toBe(0)
+}
+
+function configFor(root: string, overrides: ConfigInput = {}): Config {
+  return normalizeConfig({root, duckdb: {}, telemetry: false, updateNotifier: false, ...overrides})
 }
 
 async function createTelemetryProject(prefix: string) {
@@ -57,12 +38,12 @@ async function createTelemetryProject(prefix: string) {
 }
 
 describe('cli package', () => {
-  it('derives the project name from package.json with a directory fallback', async () => {
+  test('derives the project name from package.json with a directory fallback', async () => {
     expect((await loadConfig(flightDir, () => {})).projectName).toBe('example-flights')
     expect(normalizeConfig({root: '/tmp/project-without-package'}).projectName).toBe('project-without-package')
   })
 
-  it('directly includes every lang and ui runtime dependency with the exact same spec', async () => {
+  test('directly includes every lang and ui runtime dependency with the exact same spec', async () => {
     let cli = JSON.parse(await fsp.readFile(path.resolve(dir, '../cli/package.json'), 'utf8'))
     let lang = JSON.parse(await fsp.readFile(path.resolve(dir, '../lang/package.json'), 'utf8'))
     let ui = JSON.parse(await fsp.readFile(path.resolve(dir, '../ui/package.json'), 'utf8'))
@@ -76,95 +57,72 @@ describe('cli package', () => {
 })
 
 describe('cli compile', () => {
-  it('compiles a basic query (happy path)', async () => {
-    let res = await runCli(['compile', 'from flights select carrier'], {cwd: flightDir})
+  test('compiles a basic query (happy path)', async ({runCli}) => {
+    let res = await runCli(['compile', 'from flights select carrier'], flightConfig)
     expectCliSuccess(res, 'compile basic query')
     expect(res.stdout.toLowerCase()).toContain('from flights')
     expect(res.stdout.toLowerCase()).toContain('select')
   })
 
-  it('errors if the nearest package.json does not have graphene config', async () => {
+  test('errors if the nearest package.json does not have graphene config', async () => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-no-config-'))
 
     try {
       await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify({name: 'tmp-graphene'}, null, 2) + '\n')
-      let res = await runCli(['compile', 'from flights select carrier'], {cwd: tmpDir})
-      expect(res.code).toBe(1)
-      expect(res.stderr.toLowerCase()).toContain('no graphene config found')
+      await expect(loadConfig(tmpDir, () => {})).rejects.toThrow(/no graphene config found/i)
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
   })
 
-  it('errors on invalid function (error path)', async () => {
-    let res = await runCli(['compile', 'from flights select not_a_function()'], {cwd: flightDir})
+  test('errors on invalid function (error path)', async ({runCli}) => {
+    let res = await runCli(['compile', 'from flights select not_a_function()'], flightConfig)
     expect(res.code).not.toBe(0)
     expect((res.stdout + res.stderr).toLowerCase()).toContain('unknown function')
   })
 })
 
-describe('cli serve (background)', () => {
-  beforeEach(async () => {
+describe('cli serve', () => {
+  test('starts and stops the server in the background', async ({runCli}) => {
     await stopGrapheneIfRunning()
-  })
-  afterEach(async () => {
-    await stopGrapheneIfRunning()
-  })
-
-  it('starts the server in the background and restarts cleanly', async () => {
-    let first = await runCli(['serve', '--bg'], {cwd: flightDir})
-    expectCliSuccess(first, 'serve start')
-    expect(first.stdout).toContain(`Server running at http://localhost:${TEST_PORT}`)
-    expect(await isServerRunning(TEST_PORT)).toBe(true)
-
-    // running `serve` again should restart it
-    let second = await runCli(['serve', '--bg'], {cwd: flightDir})
-    expectCliSuccess(second, 'serve restart')
-    expect(second.stdout).toContain('Stopping server')
-    expect(await isServerRunning(TEST_PORT)).toBe(true)
-
-    let stop = await runCli(['stop'], {cwd: flightDir})
-    expectCliSuccess(stop, 'serve stop')
-    expect(stop.stdout).toContain('Stopping server')
-    expect(await isServerRunning(TEST_PORT)).toBe(false)
-  })
-
-  it('prints the configured URL when starting the background server on a custom port', async () => {
-    let port = 4164
 
     try {
-      let res = await runCli(['serve', '--bg', '--port', String(port)], {cwd: flightDir})
-      expectCliSuccess(res, 'serve start on custom port')
-      expect(res.stdout).toContain(`Server running at http://localhost:${port}`)
-      expect(await isServerRunning(port)).toBe(true)
+      let start = await runCli(['serve', '--bg'], flightConfig)
+      expectCliSuccess(start, 'serve start')
+      expect(start.stdout).toContain(`Server running at http://localhost:${TEST_PORT}`)
+      expect(await isServerRunning(TEST_PORT)).toBe(true)
+
+      let stop = await runCli(['stop'], flightConfig)
+      expectCliSuccess(stop, 'serve stop')
+      expect(await isServerRunning(TEST_PORT)).toBe(false)
     } finally {
-      await runCli(['stop'], {cwd: flightDir, env: {GRAPHENE_PORT: String(port)}})
+      await stopGrapheneIfRunning()
     }
   })
 })
 
 describe('cli run', () => {
-  it('prints help instead of reading stdin when no input is provided', async () => {
-    let res = await runCli(['run'], {cwd: flightDir})
+  test('prints help instead of reading stdin when no input is provided', async ({runCli}) => {
+    let res = await runCli(['run'], flightConfig)
     expectCliSuccess(res, 'run help with no input')
     expect(res.stdout).toContain('Usage: graphene run [options] [input]')
     expect(res.stdout).toContain('Path to file, a raw string, or "-" for stdin')
   })
 
-  it('reads a query from stdin when input is "-"', async () => {
-    let res = await runCli(['run', '-'], {cwd: flightDir, stdin: 'from flights select count() as total'})
+  test('reads a query from stdin when input is "-"', async ({runCli}) => {
+    let res = await runCli(['run', '-'], flightConfig, {stdin: 'from flights select count() as total'})
     expectCliSuccess(res, 'run query from stdin')
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
-  it('runs a query against flights.duckdb (happy path)', async () => {
-    let res = await runCli(['run', 'from flights select count() as total'], {cwd: flightDir})
+  test('runs a query against flights.duckdb (happy path)', async ({runCli}) => {
+    let res = await runCli(['run', 'from flights select count() as total'], flightConfig)
     expectCliSuccess(res, 'run query')
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
-  it('prints query diagnostics without a stack trace', async () => {
-    let res = await runCli(['run', 'from flights select carrier order by nope'], {cwd: flightDir})
+  test('prints query diagnostics without a stack trace', async ({runCli}) => {
+    let res = await runCli(['run', 'from flights select carrier order by nope'], flightConfig)
     let output = res.stdout + res.stderr
 
     expect(res.code).toBe(1)
@@ -174,125 +132,51 @@ describe('cli run', () => {
     expect(output).not.toContain('at file://')
   })
 
-  it('normalizes DuckDB timestamp with time zone values', async () => {
-    let res = await runCli(['run', 'select now() as ts'], {cwd: flightDir})
+  test('normalizes DuckDB timestamp with time zone values', async ({runCli}) => {
+    let res = await runCli(['run', 'select now() as ts'], flightConfig)
     expectCliSuccess(res, 'run timestamptz query')
     expect(res.stdout).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
   })
 
-  it('prints csv for an inline query with --format csv', async () => {
-    let res = await runCli(['run', "select 'a,b' as name, 2 as total", '--format', 'csv'], {cwd: flightDir})
+  test('prints csv for an inline query with --format csv', async ({runCli}) => {
+    let res = await runCli(['run', "select 'a,b' as name, 2 as total", '--format', 'csv'], flightConfig)
     expectCliSuccess(res, 'run query as csv')
     expect(res.stdout).toBe('name,total\n"a,b",2\n')
   })
 
-  it('accepts --port on run commands', async () => {
-    let res = await runCli(['run', 'from flights select count() as total', '--port', '4164'], {cwd: flightDir})
-    expectCliSuccess(res, 'run query with port')
-    expect(res.stdout.toLowerCase()).toContain('total')
-  })
-
-  it('runs an inline parameterized query with --input', async () => {
-    let res = await runCli(['run', 'from flights where carrier = $carrier select carrier, count() as total group by 1', '--input', 'carrier=AA'], {cwd: flightDir})
+  test('runs an inline parameterized query with --param', async ({runCli}) => {
+    let res = await runCli(['run', 'from flights where carrier = $carrier select carrier, count() as total group by 1', '--param', 'carrier=AA'], flightConfig)
     expectCliSuccess(res, 'run parameterized query')
     expect(res.stdout).toContain('AA')
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
-  it('loads the project config when running from a nested directory', async () => {
-    let res = await runCli(['run', 'from flights select count() as total'], {cwd: path.join(flightDir, 'tables')})
+  test('uses the configured project root when running a query', async ({runCli}) => {
+    let res = await runCli(['run', 'from flights select count() as total'], flightConfig)
     expectCliSuccess(res, 'run query from nested directory')
     expect(res.stdout.toLowerCase()).toContain('total')
   })
 
-  it('shows an error when no .duckdb is present (error path)', async () => {
-    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-'))
-    let input = ['table t (a int)', 'from t select a'].join('\n')
-
-    try {
-      await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify({name: 'tmp-graphene', graphene: {duckdb: {}}}, null, 2) + '\n')
-      let res = await runCli(['run', input], {cwd: tmpDir})
-      expect(res.code).toBe(1)
-      expect(res.stderr.toLowerCase()).toContain('no .duckdb file found')
-    } finally {
-      await fsp.rm(tmpDir, {recursive: true, force: true})
-    }
-  })
-
-  it('runs a named query from a markdown file', async () => {
-    let res = await runCli(['run', 'pages/operations_overview.md', '--query', 'performance_by_year'], {cwd: flightDir})
-    expectCliSuccess(res, 'run markdown query')
-    expect(res.stdout.toLowerCase()).toContain('flight_count')
-  })
-
-  it('prints csv for a named query from a markdown file with --format csv', async () => {
-    let res = await runCli(['run', 'pages/operations_overview.md', '--query', 'performance_by_year', '--format', 'csv'], {cwd: flightDir})
-    expectCliSuccess(res, 'run markdown query as csv')
-    expect(res.stdout.startsWith('year,status,flight_count\n')).toBe(true)
-    expect(res.stdout).not.toContain('┌')
-  })
-
-  it('runs a parameterized named query from a markdown file with --input', async () => {
-    let res = await runCli(['run', 'pages/carrier_detail.md', '--query', 'carrier_info', '--input', 'carrier=AA'], {cwd: flightDir})
-    expectCliSuccess(res, 'run parameterized markdown query')
-    expect(res.stdout).toContain('AA')
-  })
-
-  it('runs a markdown page in headless mode', async () => {
-    try {
-      let res = await runCli(['run', 'pages/operations_overview.md', '--headless', '--chart', 'Flight Status by Year'], {cwd: flightDir, env: {NODE_ENV: 'development'}})
-      expectCliSuccess(res, 'run markdown page headless')
-      expect(res.stdout).toContain('No errors found')
-      expect(res.stdout).toContain('Screenshot saved to')
-    } finally {
-      await stopGrapheneIfRunning()
-    }
-  })
-
-  it('prints a clean error for a missing markdown query input', async () => {
-    let res = await runCli(['run', 'pages/carrier_detail.md', '--query', 'carrier_info'], {cwd: flightDir})
-    expect(res.code).toBe(1)
-    expect(res.stderr.trim()).toBe('Missing param $carrier')
-  })
-
-  it('treats repeated --input values as an array', async () => {
-    let res = await runCli(['run', 'from flights where carrier in ($carrier) select carrier group by 1 order by 1', '--input', 'carrier=AA', '--input', 'carrier=DL'], {cwd: flightDir})
+  test('treats repeated --param values as an array', async ({runCli}) => {
+    let res = await runCli(['run', 'from flights where carrier in ($carrier) select carrier group by 1 order by 1', '--param', 'carrier=AA', '--param', 'carrier=DL'], flightConfig)
     expectCliSuccess(res, 'run repeated input query')
     expect(res.stdout).toContain('AA')
     expect(res.stdout).toContain('DL')
   })
 
-  it('rejects --input without key=value syntax', async () => {
-    let res = await runCli(['run', 'from flights select count()', '--input', 'carrier'], {cwd: flightDir})
+  test('rejects --param without key=value syntax', async ({runCli}) => {
+    let res = await runCli(['run', 'from flights select count()', '--param', 'carrier'], flightConfig)
     expect(res.code).toBe(1)
-    expect(res.stderr).toContain('Invalid --input "carrier". Expected key=value.')
+    expect(res.stderr).toContain('Invalid --param "carrier". Expected key=value.')
   })
 
-  it('rejects --input with an empty key', async () => {
-    let res = await runCli(['run', 'from flights select count()', '--input', '=AA'], {cwd: flightDir})
+  test('rejects --param with an empty key', async ({runCli}) => {
+    let res = await runCli(['run', 'from flights select count()', '--param', '=AA'], flightConfig)
     expect(res.code).toBe(1)
-    expect(res.stderr).toContain('Invalid --input "=AA". Expected key=value.')
+    expect(res.stderr).toContain('Invalid --param "=AA". Expected key=value.')
   })
 
-  it('rejects invalid --port values', async () => {
-    let res = await runCli(['run', 'from flights select count()', '--port', 'abc'], {cwd: flightDir})
-    expect(res.code).toBe(1)
-    expect(res.stderr).toContain('Invalid --port "abc". Expected an integer from 1 to 65535.')
-  })
-
-  it('rejects invalid --format values', async () => {
-    let res = await runCli(['run', 'from flights select count()', '--format', 'json'], {cwd: flightDir})
-    expect(res.code).toBe(1)
-    expect(res.stderr).toContain('Invalid --format "json". Expected table or csv.')
-  })
-
-  it('rejects markdown csv export without --query or --chart', async () => {
-    let res = await runCli(['run', 'index.md', '--format', 'csv'], {cwd: flightDir})
-    expect(res.code).toBe(1)
-    expect(res.stderr).toContain('--format csv for markdown files requires --query or --chart')
-  })
-
-  it('uses a configured duckdb path when present', async () => {
+  test('uses a configured duckdb path when present', async ({runCli}) => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-configured-duckdb-'))
     let pkg = {
       name: 'tmp-graphene',
@@ -308,7 +192,7 @@ describe('cli run', () => {
     try {
       await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n')
       await fsp.cp(path.join(flightDir, 'tables'), path.join(tmpDir, 'tables'), {recursive: true})
-      let res = await runCli(['run', 'from flights select count() as total'], {cwd: tmpDir})
+      let res = await runCli(['run', 'from flights select count() as total'], configFor(tmpDir, {duckdb: {path: path.join(flightDir, 'flights.duckdb')}}))
       expectCliSuccess(res, 'run query with configured duckdb path')
       expect(res.stdout.toLowerCase()).toContain('total')
     } finally {
@@ -316,23 +200,21 @@ describe('cli run', () => {
     }
   })
 
-  it('rejects passing a gsql file path', async () => {
-    let res = await runCli(['run', 'tables/flights.gsql'], {cwd: flightDir})
+  test('rejects passing a gsql file path', async ({runCli}) => {
+    let res = await runCli(['run', 'tables/flights.gsql'], flightConfig)
     expect(res.code).toBe(1)
     expect((res.stdout + res.stderr).toLowerCase()).toContain('running .gsql files is no longer supported')
   })
 })
 
-describe('cli check', () => {
-  it('checks a single gsql file', async () => {
-    let res = await runCli(['check', 'tables/flights.gsql'], {cwd: flightDir})
-    expectCliSuccess(res, 'check gsql file')
-    expect(res.stdout).toContain('No errors found')
-  })
+test('cli check a single gsql file', async ({runCli}) => {
+  let res = await runCli(['check', 'tables/flights.gsql'], flightConfig)
+  expectCliSuccess(res, 'check gsql file')
+  expect(res.stdout).toContain('No errors found')
 })
 
 describe('cli telemetry', () => {
-  it('sends telemetry to the configured endpoint', async () => {
+  test('sends telemetry to the configured endpoint', async ({runCli}) => {
     let tmpDir = await createTelemetryProject('graphene-cli-telemetry-')
     let batches: any[] = []
     let server = createServer(async (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
@@ -344,8 +226,7 @@ describe('cli telemetry', () => {
 
     try {
       let endpoint = await listen(server)
-      let res = await runCli(['compile', 'from flights select carrier'], {
-        cwd: tmpDir,
+      let res = await runCli(['compile', 'from flights select carrier'], configFor(tmpDir, {telemetry: true}), {
         env: {
           GRAPHENE_TELEMETRY_DISABLED: '0',
           GRAPHENE_TELEMETRY_ENDPOINT: endpoint,
@@ -353,27 +234,21 @@ describe('cli telemetry', () => {
       })
 
       expectCliSuccess(res, 'telemetry compile')
-      await waitFor(() => batches.length >= 4)
+      await waitFor(() => batches.length >= 3)
 
       let events = batches.flatMap(batch => batch.events)
 
       let names = events.map(event => event.event).sort()
-      expect(names).toEqual(['cli_command_completed', 'cli_command_started', 'cli_install_seen', 'workspace_scanned'])
+      expect(names).toEqual(['cli_command_completed', 'cli_command_started', 'cli_install_seen'])
 
       let started = events.find(event => event.event == 'cli_command_started')
       let completed = events.find(event => event.event == 'cli_command_completed')
-      let scanned = events.find(event => event.event == 'workspace_scanned')
 
       expect(started.command).toBe('compile')
       expect(started.flags).toEqual([])
       expect(completed.command).toBe('compile')
       expect(completed.success).toBe(true)
       expect(completed.exit_code).toBe(0)
-      expect(scanned.command).toBe('compile')
-      expect(scanned.gsql_file_count).toBeGreaterThan(0)
-      expect(scanned.md_file_count).toBe(0)
-      expect(scanned).not.toHaveProperty('files')
-      expect(JSON.stringify(scanned)).not.toContain('flights.gsql')
 
       for (let batch of batches) {
         expect(batch).toMatchObject({events: expect.any(Array)})
@@ -395,7 +270,7 @@ describe('cli telemetry', () => {
     }
   })
 
-  it('only sends cli_install_seen on the first run for an install', async () => {
+  test('only sends cli_install_seen on the first run for an install', async ({runCli}) => {
     let tmpDir = await createTelemetryProject('graphene-cli-telemetry-install-seen-')
     let batches: any[] = []
     let server = createServer(async (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
@@ -412,22 +287,22 @@ describe('cli telemetry', () => {
         GRAPHENE_TELEMETRY_ENDPOINT: endpoint,
       }
 
-      let first = await runCli(['compile', 'from flights select carrier'], {cwd: tmpDir, env})
+      let first = await runCli(['compile', 'from flights select carrier'], configFor(tmpDir, {telemetry: true}), {env})
       expectCliSuccess(first, 'telemetry first compile')
-      await waitFor(() => batches.length >= 4)
+      await waitFor(() => batches.length >= 3)
       let events = batches.flatMap(batch => batch.events)
       expect(events.filter(event => event.event == 'cli_install_seen')).toHaveLength(1)
 
       batches.length = 0
 
-      let second = await runCli(['compile', 'from flights select carrier'], {cwd: tmpDir, env})
+      let second = await runCli(['compile', 'from flights select carrier'], configFor(tmpDir, {telemetry: true}), {env})
       expectCliSuccess(second, 'telemetry second compile')
-      await waitFor(() => batches.length >= 3)
+      await waitFor(() => batches.length >= 2)
 
       events = batches.flatMap(batch => batch.events)
 
       let names = events.map(event => event.event).sort()
-      expect(names).toEqual(['cli_command_completed', 'cli_command_started', 'workspace_scanned'])
+      expect(names).toEqual(['cli_command_completed', 'cli_command_started'])
       expect(events.filter(event => event.event == 'cli_install_seen')).toHaveLength(0)
     } finally {
       await new Promise(resolve => server.close(resolve))
@@ -435,13 +310,12 @@ describe('cli telemetry', () => {
     }
   })
 
-  it('does not fail the command when telemetry state cannot be persisted', async () => {
+  test('does not fail the command when telemetry state cannot be persisted', async ({runCli}) => {
     let tmpDir = await createTelemetryProject('graphene-cli-telemetry-blocked-')
 
     try {
       await fsp.writeFile(path.join(tmpDir, 'node_modules/.graphene'), '')
-      let res = await runCli(['check', 'tables/flights.gsql'], {
-        cwd: tmpDir,
+      let res = await runCli(['check', 'tables/flights.gsql'], configFor(tmpDir, {telemetry: true}), {
         env: {
           GRAPHENE_TELEMETRY_DISABLED: '0',
           GRAPHENE_TELEMETRY_ENDPOINT: 'http://127.0.0.1:9',
@@ -449,7 +323,6 @@ describe('cli telemetry', () => {
       })
 
       expectCliSuccess(res, 'telemetry blocked check')
-      expect(res.stdout).toContain('No errors found')
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }

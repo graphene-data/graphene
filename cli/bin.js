@@ -9,7 +9,9 @@ const devCli = join(__dirname, 'cli.ts')
 
 // If Graphene has been npm-linked in, we can run cli.ts directly to avoid the build step
 if (existsSync(devCli)) {
-  await import('./cli.ts')
+  let {main} = await import('./cli.ts')
+  await main()
 } else {
-  await import('./dist/cli/cli.js')
+  let {main} = await import('./dist/cli/cli.js')
+  await main()
 }

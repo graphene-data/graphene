@@ -8,14 +8,20 @@ import {config} from '../lang/config.ts'
 
 const execAsync = promisify(exec)
 
-export async function runServeInBackground(options: {entryPoint?: string; log?: (chunk: string) => void} = {}): Promise<string> {
+export async function ensureBackgroundServer() {
+  if (process.env.NODE_ENV === 'test' || (await isServerRunning())) return true
+  console.log('Starting Graphene server...')
+  await runServeInBackground()
+}
+
+export async function runServeInBackground(options: {entryPoint?: string} = {}): Promise<string> {
   let grapheneCache = getGrapheneCache(config.root)
   let logFile = path.join(grapheneCache, 'serve.log')
   await fs.ensureDir(grapheneCache)
 
   let log = fs.openSync(logFile, 'w')
   let entryPoint = options.entryPoint || process.argv[1] || fileURLToPath(import.meta.url)
-  let childArgs = [...process.execArgv, entryPoint, 'serve']
+  let childArgs = [entryPoint, 'serve']
   let child = spawn(process.execPath, childArgs, {
     cwd: config.root,
     detached: true,
@@ -26,7 +32,6 @@ export async function runServeInBackground(options: {entryPoint?: string; log?: 
   if (!child.pid) throw new Error('Failed to start server process')
 
   return await new Promise<string>((resolve, reject) => {
-    let emittedLength = 0
     let settled = false
     let logPoll: NodeJS.Timeout
     let close = () => {
@@ -40,13 +45,6 @@ export async function runServeInBackground(options: {entryPoint?: string; log?: 
     let readStartupLog = () => {
       if (settled) return
       let contents = fs.readFileSync(logFile, 'utf8')
-      if (contents.length > emittedLength) {
-        let chunk = contents.slice(emittedLength)
-        emittedLength = contents.length
-        if (options.log) options.log(chunk)
-        else process.stdout.write(chunk)
-      }
-
       let url = contents.match(/Server running at (http:\/\/localhost:\d+)/)?.[1]
       if (url && close()) resolve(url)
     }

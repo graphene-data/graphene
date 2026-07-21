@@ -1,16 +1,9 @@
 /// <reference types="vitest/globals" />
-import {spawn} from 'node:child_process'
 import * as path from 'node:path'
-import {expect} from 'vitest'
 
-import {normalizeConfig} from '../lang/config.ts'
+import {loadConfig, normalizeConfig, type Config} from '../lang/config.ts'
 import {formatType, parseWarehouseFieldType} from '../lang/types.ts'
-
-interface RunResult {
-  code: number
-  stdout: string
-  stderr: string
-}
+import {expect, test} from './testFixtures.ts'
 
 const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
 const flightDir = path.resolve(dir, '../examples/flights')
@@ -20,28 +13,17 @@ const clickhouseDir = path.resolve(dir, '../examples/clickhouse')
 const postgresDir = path.resolve(dir, '../examples/postgres')
 const athenaDir = path.resolve(dir, '../examples/athena')
 const motherduckDir = path.resolve(dir, '../examples/motherduck')
-
-function runCli(args: string[], cwd?: string): Promise<RunResult> {
-  return new Promise(resolve => {
-    let cliEntry = path.resolve(dir, 'cli.ts')
-    let child = spawn('node', [cliEntry, ...args], {cwd, env: process.env})
-    let stdout = '',
-      stderr = ''
-    child.stdout.on('data', d => {
-      stdout += d.toString()
-    })
-    child.stderr.on('data', d => {
-      stderr += d.toString()
-    })
-    child.on('close', code => resolve({code: code ?? 0, stdout, stderr}))
-  })
+let configs = new Map<string, Config>()
+async function configFor(root: string) {
+  if (!configs.has(root)) configs.set(root, await loadConfig(root, () => {}))
+  return configs.get(root)!
 }
 
-function logCliFailure(step: string, res: RunResult) {
+function logCliFailure(step: string, res: {code: number; stdout: string; stderr: string}) {
   console.error(`[schema.test] ${step} failed (code ${res.code})\nstdout:\n${res.stdout}\nstderr:\n${res.stderr}`)
 }
 
-function expectCliSuccess(res: RunResult, step: string) {
+function expectCliSuccess(res: {code: number; stdout: string; stderr: string}, step: string) {
   if (res.code !== 0) logCliFailure(step, res)
   expect(res.code).toBe(0)
 }
@@ -55,14 +37,14 @@ function parseSchemaOutput(stdout: string): string[] {
 }
 
 describe('duckdb', () => {
-  it('uses DuckDB SQL semantics for MotherDuck config', () => {
+  test('uses DuckDB SQL semantics for MotherDuck config', () => {
     let cfg = normalizeConfig({motherduck: {database: 'sample_data'}, root: '/tmp/project'})
     expect(cfg.dialect).toBe('duckdb')
     expect(cfg.motherduck?.database).toBe('sample_data')
   })
 
-  it('lists available tables when no argument is provided', async () => {
-    let res = await runCli(['schema'], flightDir)
+  test('lists available tables when no argument is provided', async ({runCli}) => {
+    let res = await runCli(['schema'], await configFor(flightDir))
     expectCliSuccess(res, 'schema list tables')
     let lines = res.stdout.trim().split(/\r?\n/).filter(Boolean)
     expect(lines.length).toBeGreaterThan(0)
@@ -70,8 +52,8 @@ describe('duckdb', () => {
     expect(normalized.some(line => line === 'flights')).toBe(true)
   })
 
-  it('describes the requested table columns', async () => {
-    let res = await runCli(['schema', 'flights'], flightDir)
+  test('describes the requested table columns', async ({runCli}) => {
+    let res = await runCli(['schema', 'flights'], await configFor(flightDir))
     expectCliSuccess(res, 'schema describe table')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table flights (')
@@ -79,7 +61,7 @@ describe('duckdb', () => {
     expect(output.trim().endsWith(')')).toBe(true)
   })
 
-  it('normalizes warehouse array types for schema output', () => {
+  test('normalizes warehouse array types for schema output', () => {
     expect(formatType(parseWarehouseFieldType('VARCHAR[]').type)).toBe('array<string>')
     expect(formatType(parseWarehouseFieldType('INTEGER[]').type)).toBe('array<number>')
     expect(formatType(parseWarehouseFieldType('ARRAY<STRING>').type)).toBe('array<string>')
@@ -91,15 +73,15 @@ describe('duckdb', () => {
 })
 
 describe.skipIf(!process.env.SLOW_TEST)('motherduck', {timeout: 30_000}, () => {
-  it('lists tables in the configured namespace', async () => {
-    let res = await runCli(['schema'], motherduckDir)
+  test('lists tables in the configured namespace', async ({runCli}) => {
+    let res = await runCli(['schema'], await configFor(motherduckDir))
     expectCliSuccess(res, 'schema list tables (motherduck)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables).toContain('ambient_air_quality')
   })
 
-  it('describes a table from the configured namespace', async () => {
-    let res = await runCli(['schema', 'sample_data.who.ambient_air_quality'], motherduckDir)
+  test('describes a table from the configured namespace', async ({runCli}) => {
+    let res = await runCli(['schema', 'sample_data.who.ambient_air_quality'], await configFor(motherduckDir))
     expectCliSuccess(res, 'schema describe table (motherduck)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table sample_data.who.ambient_air_quality (')
@@ -111,31 +93,31 @@ describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
   // Snowflake has a 3-level hierarchy: DATABASE.SCHEMA.TABLE
   // The example is configured with namespace "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02"
 
-  it('lists available databases', async () => {
-    let res = await runCli(['schema'], snowflakeDir)
+  test('lists available databases', async ({runCli}) => {
+    let res = await runCli(['schema'], await configFor(snowflakeDir))
     expectCliSuccess(res, 'schema list databases (snowflake)')
     let databases = parseSchemaOutput(res.stdout)
     expect(databases.length).toBeGreaterThan(0)
   })
 
-  it('lists schemas when given a database name', async () => {
-    let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA'], snowflakeDir)
+  test('lists schemas when given a database name', async ({runCli}) => {
+    let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA'], await configFor(snowflakeDir))
     expectCliSuccess(res, 'schema list schemas (snowflake)')
     let schemas = parseSchemaOutput(res.stdout)
     expect(schemas.length).toBeGreaterThan(0)
     expect(schemas).toContain('v02')
   })
 
-  it('lists tables in the configured namespace using case-insensitive input', async () => {
-    let res = await runCli(['schema', 'food__beverage_establishment__menu_data.v02'], snowflakeDir)
+  test('lists tables in the configured namespace using case-insensitive input', async ({runCli}) => {
+    let res = await runCli(['schema', 'food__beverage_establishment__menu_data.v02'], await configFor(snowflakeDir))
     expectCliSuccess(res, 'schema list tables (snowflake)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables.length).toBeGreaterThan(0)
     expect(tables.every(table => table == table.toLowerCase())).toBe(true)
   })
 
-  it('describes a table from the namespace using case-insensitive input', async () => {
-    let res = await runCli(['schema', 'food__beverage_establishment__menu_data.v02.menus'], snowflakeDir)
+  test('describes a table from the namespace using case-insensitive input', async ({runCli}) => {
+    let res = await runCli(['schema', 'food__beverage_establishment__menu_data.v02.menus'], await configFor(snowflakeDir))
     expectCliSuccess(res, 'schema describe table (snowflake)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table food__beverage_establishment__menu_data.v02.menus (')
@@ -144,15 +126,15 @@ describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
 })
 
 describe.skipIf(!process.env.SLOW_TEST)('athena', {timeout: 30_000}, () => {
-  it('lists available tables in the configured database', async () => {
-    let res = await runCli(['schema', 'graphene_test'], athenaDir)
+  test('lists available tables in the configured database', async ({runCli}) => {
+    let res = await runCli(['schema', 'graphene_test'], await configFor(athenaDir))
     expectCliSuccess(res, 'schema list tables (athena)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables).toContain('graphene_test.flights')
   })
 
-  it('describes an athena table from the configured database', async () => {
-    let res = await runCli(['schema', 'flights'], athenaDir)
+  test('describes an athena table from the configured database', async ({runCli}) => {
+    let res = await runCli(['schema', 'flights'], await configFor(athenaDir))
     expectCliSuccess(res, 'schema describe table (athena)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table flights (')
@@ -162,22 +144,22 @@ describe.skipIf(!process.env.SLOW_TEST)('athena', {timeout: 30_000}, () => {
 })
 
 describe.skipIf(!process.env.SLOW_TEST)('bigquery', () => {
-  it('lists available tables in the configured namespace', async () => {
-    let res = await runCli(['schema'], ecommDir)
+  test('lists available tables in the configured namespace', async ({runCli}) => {
+    let res = await runCli(['schema'], await configFor(ecommDir))
     expectCliSuccess(res, 'schema list tables (bigquery)')
     let lines = res.stdout.trim().split(/\r?\n/).filter(Boolean)
     expect(lines.length).toBeGreaterThan(0)
   })
 
-  it('describes a table from the namespace', async () => {
+  test('describes a table from the namespace', async ({runCli}) => {
     // First get a table name from the list
-    let listRes = await runCli(['schema'], ecommDir)
+    let listRes = await runCli(['schema'], await configFor(ecommDir))
     expectCliSuccess(listRes, 'schema list for describe')
     let tables = parseSchemaOutput(listRes.stdout)
     if (tables.length === 0) throw new Error('No tables found in bigquery namespace')
 
     let tableName = tables[0]
-    let res = await runCli(['schema', tableName], ecommDir)
+    let res = await runCli(['schema', tableName], await configFor(ecommDir))
     expectCliSuccess(res, 'schema describe table (bigquery)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain(`table ${tableName.toLowerCase()} (`)
@@ -185,8 +167,8 @@ describe.skipIf(!process.env.SLOW_TEST)('bigquery', () => {
 })
 
 describe.skipIf(!process.env.SLOW_TEST)('postgres', () => {
-  it('lists available tables in the configured schema', async () => {
-    let res = await runCli(['schema'], postgresDir)
+  test('lists available tables in the configured schema', async ({runCli}) => {
+    let res = await runCli(['schema'], await configFor(postgresDir))
     expectCliSuccess(res, 'schema list tables (postgres)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables).toContain('customers')
@@ -194,8 +176,8 @@ describe.skipIf(!process.env.SLOW_TEST)('postgres', () => {
     expect(tables).toContain('order_items')
   })
 
-  it('describes a postgres table from the configured schema', async () => {
-    let res = await runCli(['schema', 'orders'], postgresDir)
+  test('describes a postgres table from the configured schema', async ({runCli}) => {
+    let res = await runCli(['schema', 'orders'], await configFor(postgresDir))
     expectCliSuccess(res, 'schema describe table (postgres)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table orders (')
@@ -203,8 +185,8 @@ describe.skipIf(!process.env.SLOW_TEST)('postgres', () => {
     expect(output).toContain('total numeric')
   })
 
-  it('describes a postgres schema-qualified table', async () => {
-    let res = await runCli(['schema', 'public.customers'], postgresDir)
+  test('describes a postgres schema-qualified table', async ({runCli}) => {
+    let res = await runCli(['schema', 'public.customers'], await configFor(postgresDir))
     expectCliSuccess(res, 'schema describe schema-qualified table (postgres)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table public.customers (')
@@ -215,15 +197,15 @@ describe.skipIf(!process.env.SLOW_TEST)('postgres', () => {
 // retry to work around clickhouse connection instability, see scripts/clickhouseRepoConnectError.js
 // just disabled entirely because it still flakes
 describe.skipIf(!process.env.SLOW_TEST || true)('clickhouse', {retry: 3, timeout: 20_000}, () => {
-  it('lists available tables in the configured database', async () => {
-    let res = await runCli(['schema'], clickhouseDir)
+  test('lists available tables in the configured database', async ({runCli}) => {
+    let res = await runCli(['schema'], await configFor(clickhouseDir))
     expectCliSuccess(res, 'schema list tables (clickhouse)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables).toContain('default.nyc_taxi')
   })
 
-  it('describes a clickhouse table from the configured database', async () => {
-    let res = await runCli(['schema', 'nyc_taxi'], clickhouseDir)
+  test('describes a clickhouse table from the configured database', async ({runCli}) => {
+    let res = await runCli(['schema', 'nyc_taxi'], await configFor(clickhouseDir))
     expectCliSuccess(res, 'schema describe table (clickhouse)')
     let output = res.stdout.toLowerCase()
     expect(output).toContain('table nyc_taxi (')
