@@ -15,7 +15,7 @@
     if (!oldestRunAt) return ''
 
     let minutes = Math.max(0, Math.floor((now - oldestRunAt) / 60_000))
-    if (minutes < 5) return '' // show nothing for queries in the last 5 minutes
+    if (minutes < 5) return 'Just now'
     if (minutes < 60) return `${minutes}m ago`
 
     let hours = Math.round(minutes / 60)
@@ -51,7 +51,7 @@
     align-items: center;
     gap: 0.25rem;
     height: 28px;
-    padding: 0;
+    padding: 0 6px 0 0;
     color: var(--color-tertiary);
     font-size: 12px;
     line-height: 1;

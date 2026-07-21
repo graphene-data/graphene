@@ -169,11 +169,11 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
   await expect(page.locator('.query-cache-status')).toHaveCount(1)
-  await expect(page.locator('.query-cache-status')).toHaveText('')
+  await expect(page.locator('.query-cache-status')).toContainText('Just now')
 
   await page.evaluate(() => window.$GRAPHENE.rerunQueries())
   await expect(page.locator('.query-cache-status')).toHaveCount(1)
-  await expect(page.locator('.query-cache-status')).toHaveText('')
+  await expect(page.locator('.query-cache-status')).toContainText('Just now')
   await page.clock.fastForward('05:00')
   await expect(page.locator('.query-cache-status')).toContainText('5m ago')
   await expect(page).screenshot('markdown-browser-cache-status')
@@ -182,7 +182,7 @@ test('shows browser-cached query staleness and refreshes without cache reads', a
   await expect.poll(() => requestCount).toBe(3)
   expect(lastCacheControl).toBe('no-cache')
   await expect(page.locator('.query-cache-status')).toHaveCount(1)
-  await expect(page.locator('.query-cache-status')).toHaveText('')
+  await expect(page.locator('.query-cache-status')).toContainText('Just now')
 })
 
 test('disables browser query caching behind an internal query parameter', async ({server, page}) => {
@@ -220,7 +220,7 @@ test('disables browser query caching behind an internal query parameter', async 
   expect(requestBodies).toHaveLength(2)
   expect(requestBodies[0].hashes).toEqual([])
   expect(requestBodies[1].hashes).toEqual([])
-  await expect(page.locator('.query-cache-status')).toHaveText('')
+  await expect(page.locator('.query-cache-status')).toContainText('Just now')
   await expect(page).screenshot('markdown-browser-cache-disabled')
 })
 
