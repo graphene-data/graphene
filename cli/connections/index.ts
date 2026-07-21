@@ -6,6 +6,11 @@ import {type QueryResult, type QueryConnection, type QueryOptions} from './types
 
 let duckdbInst: Promise<DuckDBInstance> | undefined
 
+// In-process CLI tests change project configs between runs, unlike the real CLI process.
+export function resetDuckDbInstanceForTests() {
+  duckdbInst = undefined
+}
+
 export async function getConnection(): Promise<QueryConnection> {
   if (config.dialect === 'bigquery') {
     let mod = await importConnection(() => import('./bigQuery.ts'), '@google-cloud/bigquery', 'BigQuery')

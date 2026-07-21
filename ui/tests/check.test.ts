@@ -1,20 +1,26 @@
+import {readFile} from 'node:fs/promises'
 import stripAnsi from 'strip-ansi'
 
 import {check} from '../../cli/check.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
-import {listMdFileQueries, runMdFile} from '../../cli/run.ts'
+import {config} from '../../lang/config.ts'
 import {trimIndentation} from '../../lang/util.ts'
 import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
 let logs = ''
 function log(...args: any[]) {
-  // console.log(...args) // useful for debugging, but pollutes test outputs
   logs += args.map(a => String(a)).join(' ') + '\n'
 }
 
-function outputLines() {
-  let normalized = logs.replace(/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.png/g, '<timestamp>.png')
+async function expectPngScreenshot(output: string) {
+  let screenshotPath = output.match(/Screenshot saved to ([^\n]+)/)?.[1] || ''
+  let screenshot = await readFile(screenshotPath)
+  expect(screenshot.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+}
+
+function outputLines(output = logs) {
+  let normalized = output.replace(/\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.png/g, '<timestamp>.png')
   normalized = normalized.replace(
     /Screenshot saved to[^\n]*node_modules\/\.graphene\/screenshots\/<timestamp>\.png/g,
     'Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png',
@@ -103,7 +109,7 @@ test('check reports invalid metadata annotations', async () => {
   expect(outputLines()).toContain('ERROR: tmp_bad_metadata.gsql line 2: Metadata "#ratio" is a flag; use "#ratio" or "#ratio=true".')
 })
 
-test('cli run with md file reports unsupported chart wrapper props', async ({server, page}) => {
+test('cli run with md file reports unsupported chart wrapper props', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -116,18 +122,12 @@ test('cli run with md file reports unsupported chart wrapper props', async ({ser
   )
 
   await page.goto(server.url())
-  let result = await runMdFile({mdArg: 'index.md', log})
-  expect(result).toBe(false)
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    ERROR: index.md line 6: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
-    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" />
-                                                         ^^^^
-  `),
-  )
+  let result = await runCli(['run', 'index.md'], config)
+  expect(result.code).toBe(1)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "yFmt" on BarChart.')
 })
 
-test('cli run with md file reports unsupported ECharts top-level props', async ({server, page}) => {
+test('cli run with md file reports unsupported ECharts top-level props', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -145,19 +145,12 @@ test('cli run with md file reports unsupported ECharts top-level props', async (
   )
 
   await page.goto(server.url())
-  let result = await runMdFile({mdArg: 'index.md', log})
-  expect(result).toBe(false)
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    Runtime errors in index.md:
-    ECharts (data="chart_data" x="carrier" y="distance"): Unsupported prop "chartAreaHeight" on ECharts.
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md'], config)
+  expect(result.code).toBe(1)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "chartAreaHeight" on ECharts.')
 })
 
-test('cli run with md file reports multiple unsupported chart props', async ({server, page}) => {
+test('cli run with md file reports multiple unsupported chart props', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -170,22 +163,12 @@ test('cli run with md file reports multiple unsupported chart props', async ({se
   )
 
   await page.goto(server.url())
-  let result = await runMdFile({mdArg: 'index.md', log})
-  expect(result).toBe(false)
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    ERROR: index.md line 6: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
-    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" emptySet="warn" />
-                                                         ^^^^
-
-    ERROR: index.md line 6: Unsupported prop "emptySet" on BarChart. emptySet is not supported on chart wrappers.
-    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" emptySet="warn" />
-                                                                     ^^^^^^^^
-  `),
-  )
+  let result = await runCli(['run', 'index.md'], config)
+  expect(result.code).toBe(1)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.')
 })
 
-test('cli run with md file reports runtime chart prop and render errors together', async ({server, page}) => {
+test('cli run with md file reports runtime chart prop and render errors together', async ({runCli, server, page}) => {
   expectConsoleError('Chart failed to render')
   server.mockFile(
     '/index.md',
@@ -204,19 +187,12 @@ test('cli run with md file reports runtime chart prop and render errors together
   )
 
   await page.goto(server.url())
-  let result = await runMdFile({mdArg: 'index.md', log})
-  expect(result).toBe(false)
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    Runtime errors in index.md:
-    ECharts (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md'], config)
+  expect(result.code).toBe(1)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Horizontal charts do not support a value or time-based x-axis')
 })
 
-test('cli run with md file reports runtime query errors', async ({server, page}) => {
+test('cli run with md file reports runtime query errors', async ({runCli, server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(
     '/index.md',
@@ -230,18 +206,11 @@ test('cli run with md file reports runtime query errors', async ({server, page})
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    Runtime errors in index.md:
-    BarChart (data="runtime_error_query" x="origin" y="explode"): Out of Range Error: cannot take square root of a negative number
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('cannot take square root of a negative number')
 })
 
-test('cli run handles page query with trailing column annotation', async ({server}) => {
+test('cli run handles page query with trailing column annotation', async ({runCli, server}) => {
   server.mockFile(
     '/index.md',
     `
@@ -256,18 +225,13 @@ test('cli run handles page query with trailing column annotation', async ({serve
   )
 
   server.url()
-  let result = await runMdFile({mdArg: 'index.md', headless: true, log})
-  expect(result).toBe(true)
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--headless'], config)
+  expect(result.code).toBe(0)
+  await expectPngScreenshot(result.stdout)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli run with md file reports runtime chart configuration errors', async ({server, page}) => {
+test('cli run with md file reports runtime chart configuration errors', async ({runCli, server, page}) => {
   expectConsoleError('Chart failed to render')
   server.mockFile(
     '/index.md',
@@ -286,18 +250,11 @@ test('cli run with md file reports runtime chart configuration errors', async ({
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    Runtime errors in index.md:
-    ECharts (data="chart_data" x="x_value" y="bad_category"): Horizontal charts do not support a value or time-based x-axis
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Horizontal charts do not support a value or time-based x-axis')
 })
 
-test('cli run with md file reports table configuration errors', async ({server, page}) => {
+test('cli run with md file reports table configuration errors', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -310,18 +267,11 @@ test('cli run with md file reports table configuration errors', async ({server, 
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    Runtime errors in index.md:
-    DataTable: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-`),
-  )
+  let result = await runCli(['run', 'index.md'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('not_a_column is not a column in the dataset')
 })
 
-test('cli run with md file reports big value query errors', async ({server, page}) => {
+test('cli run with md file reports big value query errors', async ({runCli, server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(
     '/index.md',
@@ -335,18 +285,11 @@ test('cli run with md file reports big value query errors', async ({server, page
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    Runtime errors in index.md:
-    BigValue (data="big_value_data" value="value"): Out of Range Error: cannot take square root of a negative number
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-`),
-  )
+  let result = await runCli(['run', 'index.md'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('cannot take square root of a negative number')
 })
 
-test('cli run with md file reports html compilation errors', async ({server, page}) => {
+test('cli run with md file reports html compilation errors', async ({runCli, server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')
   expectConsoleError('Failed to fetch dynamically imported module')
@@ -359,14 +302,13 @@ test('cli run with md file reports html compilation errors', async ({server, pag
   )
 
   await page.goto(server.url())
-  let result = await runMdFile({mdArg: 'index.md', log})
-  expect(result).toBe(false)
-  let output = outputLines()
-  expect(output).toContain('Runtime errors in index.md:')
+  let result = await runCli(['run', 'index.md'], config)
+  expect(result.code).toBe(1)
+  let output = outputLines(result.stdout + result.stderr)
   expect(output).toMatch(/ERROR: .*index\.md line \d+: `<p>` was left open/)
 })
 
-test('cli run with --chart captures a single chart screenshot', async ({server, page}) => {
+test('cli run with --chart captures a single chart screenshot', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -379,17 +321,13 @@ test('cli run with --chart captures a single chart screenshot', async ({server, 
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Distance'], config)
+  await expectPngScreenshot(result.stdout)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli run with --headless captures a screenshot without an open page', async ({server}) => {
+test('cli run with --headless captures a screenshot without an open page', async ({runCli, server}) => {
   server.mockFile(
     '/index.md',
     `
@@ -402,17 +340,13 @@ test('cli run with --headless captures a screenshot without an open page', async
   )
 
   server.url()
-  await runMdFile({mdArg: 'index.md', headless: true, chart: 'Carrier Distance', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--headless', '--chart', 'Carrier Distance'], config)
+  await expectPngScreenshot(result.stdout)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli run with --chart captures a table screenshot by title', async ({server, page}) => {
+test('cli run with --chart captures a table screenshot by title', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -425,17 +359,12 @@ test('cli run with --chart captures a table screenshot by title', async ({server
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', chart: 'Carrier Totals', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Totals'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli run with --headless captures a table screenshot by title', async ({server}) => {
+test('cli run with --headless captures a table screenshot by title', async ({runCli, server}) => {
   server.mockFile(
     '/index.md',
     `
@@ -448,17 +377,12 @@ test('cli run with --headless captures a table screenshot by title', async ({ser
   )
 
   server.url()
-  await runMdFile({mdArg: 'index.md', headless: true, chart: 'Carrier Totals', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--headless', '--chart', 'Carrier Totals'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli run with --input applies inputs to a full page run', async ({server, page}) => {
+test('cli run with --input applies inputs to a full page run', async ({runCli, server, page}) => {
   let queryBodies: any[] = []
   server.mockFile(
     '/index.md',
@@ -480,20 +404,15 @@ test('cli run with --input applies inputs to a full page run', async ({server, p
 
   await page.goto(server.url() + '/?carrier=AA')
   await waitForGrapheneLoad(page)
-  let result = await runMdFile({mdArg: 'index.md', inputs: {carrier: 'AA'}, log})
+  let result = await runCli(['run', 'index.md', '--param', 'carrier=AA'], config)
 
-  expect(result).toBe(true)
+  expect(result.code).toBe(0)
   expect(queryBodies.some(body => JSON.stringify(body.params) == JSON.stringify({carrier: 'AA'}))).toBe(true)
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/?carrier=AA
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>/?carrier=AA')
 })
 
-test('cli run with --chart captures an ECharts screenshot by title', async ({server, page}) => {
+test('cli run with --chart captures an ECharts screenshot by title', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -511,17 +430,12 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({ser
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', chart: 'Carrier Distance', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Distance'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli list prints chart component IDs', async ({server, page}) => {
+test('cli list prints chart component IDs', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -534,12 +448,12 @@ test('cli list prints chart component IDs', async ({server, page}) => {
   )
 
   await page.goto(server.url())
-  let result = await listMdFileQueries('index.md', undefined, log)
-  expect(result).toBe(true)
-  expect(outputLines()).toEqual('BarChart (data="chart_data" x="carrier" y="total_distance")')
+  let result = await runCli(['list', 'index.md'], config)
+  expect(result.code).toBe(0)
+  expect(outputLines(result.stdout + result.stderr)).toEqual('BarChart (data="chart_data" x="carrier" y="total_distance")')
 })
 
-test('cli list prints table component IDs', async ({server, page}) => {
+test('cli list prints table component IDs', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -552,14 +466,12 @@ test('cli list prints table component IDs', async ({server, page}) => {
   )
 
   await page.goto(server.url())
-  let result = await listMdFileQueries('index.md', undefined, log)
-  expect(result).toBe(true)
-  expect(outputLines()).toEqual('DataTable (data="table_data")')
+  let result = await runCli(['list', 'index.md'], config)
+  expect(result.code).toBe(0)
+  expect(outputLines(result.stdout + result.stderr)).toEqual('DataTable (data="table_data")')
 })
 
-test('cli run with --chart exports chart data as csv', async ({server, page}) => {
-  let csv = ''
-  let originalLog = console.log
+test('cli run with --chart exports chart data as csv', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -571,26 +483,35 @@ test('cli run with --chart exports chart data as csv', async ({server, page}) =>
   `,
   )
 
-  try {
-    console.log = (...args: any[]) => {
-      csv += args.map(arg => String(arg)).join(' ') + '\n'
-    }
-
-    await page.goto(server.url())
-    let result = await runMdFile({mdArg: 'index.md', chart: 'Carrier Flights', format: 'csv', log})
-    expect(result).toBe(true)
-    expect(csv.startsWith('carrier,total_flights\n')).toBe(true)
-    expect(csv).toContain('AA,')
-    expect(csv).toContain('DL,')
-    expect(outputLines()).toEqual('')
-  } finally {
-    console.log = originalLog
-  }
+  await page.goto(server.url())
+  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Flights', '--format', 'csv'], config)
+  expect(result.code).toBe(0)
+  expect(result.stdout).toContain('carrier,total_flights\n')
+  expect(result.stdout).toContain('AA,')
+  expect(result.stdout).toContain('DL,')
 })
 
-test('cli run with --chart exports table data as csv', async ({server, page}) => {
-  let csv = ''
-  let originalLog = console.log
+test('cli run with --headless formats chart data as csv', async ({runCli, server}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Headless Chart CSV
+    \`\`\`sql chart_data
+    from flights where carrier in ('AA', 'DL') select carrier, count() as total_flights group by 1 order by carrier
+    \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_flights" title="Carrier Flights" />
+  `,
+  )
+
+  server.url()
+  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Flights', '--format', 'csv', '--headless'], config)
+  expect(result.code).toBe(0)
+  expect(result.stdout).toContain('carrier,total_flights\n')
+  expect(result.stdout).toContain('AA,')
+  expect(result.stdout).toContain('DL,')
+})
+
+test('cli run with --chart exports table data as csv', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -602,24 +523,15 @@ test('cli run with --chart exports table data as csv', async ({server, page}) =>
   `,
   )
 
-  try {
-    console.log = (...args: any[]) => {
-      csv += args.map(arg => String(arg)).join(' ') + '\n'
-    }
-
-    await page.goto(server.url())
-    let result = await runMdFile({mdArg: 'index.md', chart: 'Carrier Totals', format: 'csv', log})
-    expect(result).toBe(true)
-    expect(csv.startsWith('carrier,total_flights\n')).toBe(true)
-    expect(csv).toContain('AA,')
-    expect(csv).toContain('DL,')
-    expect(outputLines()).toEqual('')
-  } finally {
-    console.log = originalLog
-  }
+  await page.goto(server.url())
+  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Totals', '--format', 'csv'], config)
+  expect(result.code).toBe(0)
+  expect(result.stdout).toContain('carrier,total_flights\n')
+  expect(result.stdout).toContain('AA,')
+  expect(result.stdout).toContain('DL,')
 })
 
-test('cli run with --chart captures a chart screenshot by component ID', async ({server, page}) => {
+test('cli run with --chart captures a chart screenshot by component ID', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -632,17 +544,12 @@ test('cli run with --chart captures a chart screenshot by component ID', async (
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', chart: 'BarChart (data="chart_data" x="carrier" y="total_distance")', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--chart', 'BarChart (data="chart_data" x="carrier" y="total_distance")'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli run with --chart captures a table screenshot by component ID', async ({server, page}) => {
+test('cli run with --chart captures a table screenshot by component ID', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -655,17 +562,12 @@ test('cli run with --chart captures a table screenshot by component ID', async (
   )
 
   await page.goto(server.url())
-  await runMdFile({mdArg: 'index.md', chart: 'DataTable (data="table_data")', log})
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    No errors found 💎
-    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--chart', 'DataTable (data="table_data")'], config)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli run with --chart reports when no chart title matches', async ({server, page}) => {
+test('cli run with --chart reports when no chart title matches', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -678,12 +580,7 @@ test('cli run with --chart reports when no chart title matches', async ({server,
   )
 
   await page.goto(server.url())
-  let result = await runMdFile({mdArg: 'index.md', chart: 'Missing Chart', log})
-  expect(result).toBe(false)
-  expect(outputLines()).toEqual(
-    trimIndentation(`
-    Page available at http://localhost:<port>/
-    Could not find chart "Missing Chart" on index.md
-  `),
-  )
+  let result = await runCli(['run', 'index.md', '--chart', 'Missing Chart'], config)
+  expect(result.code).toBe(1)
+  expect(outputLines(result.stdout + result.stderr)).toContain('Could not find chart "Missing Chart"')
 })

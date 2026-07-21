@@ -2,10 +2,11 @@ import {type Page, chromium, type Browser, type Locator} from '@playwright/test'
 import net from 'net'
 import path from 'path'
 import {fileURLToPath} from 'url'
-import {test as base, onTestFinished} from 'vitest'
+import {onTestFinished} from 'vitest'
 
 import {missingMockFiles, mockFileMap} from '../../cli/mockFiles.ts'
 import {clearSvelteWarnings, serve2, svelteWarnings} from '../../cli/serve2.ts'
+import {test as base} from '../../cli/testFixtures.ts'
 import {type Config, setGlobalConfig} from '../../lang/config.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
 import {playwrightExpect as expect} from './matchers.ts'
@@ -263,7 +264,6 @@ function trimIndentation(str: string) {
 
 declare global {
   interface Window {
-    $GRAPHENE: any
     __props: any
   }
 }

@@ -105,7 +105,8 @@ async function runExample(exampleName: string, page: Page, {suppressScreenshot =
       expectSuccess(`run ${exampleName}/${mdPath}`, runResult)
 
       let output = stripAnsi(runResult.stdout + runResult.stderr)
-      expect(output).toContain('No errors found')
+      expect(output).toContain('Screenshot saved to')
+      expect(output).toContain('Page available at')
     }
   } finally {
     expectConsoleError(/WebSocket connection to 'ws:\/\/localhost:\d+\/_api\/ws' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED/)

@@ -11,16 +11,16 @@ import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../la
 import {rowsToCsv} from '../lang/csv.ts'
 import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
 import {loginPkce} from './auth.ts'
-import {runServeInBackground, stopGrapheneIfRunning} from './background.ts'
+import {getGrapheneCache, runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {installBrowser} from './installBrowser.ts'
 import {printDiagnostics, printTable} from './printer.ts'
-import {listMdFileQueries, runMdFile, runNamedQueryFromMd} from './run.ts'
-import {CliTelemetry, getPresentFlags, getWorkspaceScanCounts, type TelemetryCommand} from './telemetry/index.ts'
+import {pageUrlForMd, sendToPage} from './run.ts'
+import {CliTelemetry, getPresentFlags, type TelemetryCommand} from './telemetry/index.ts'
 import {checkForUpdate, showCachedUpdateNotice} from './updateNotifier.ts'
 
-const program = new Command()
+export const program = new Command()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Look at the graphene library's package.json (as opposed to the project using graphene) to get the version
@@ -30,21 +30,7 @@ const libPkg = fs.readJsonSync(pkgPath)
 program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
 registerInstallBrowserCommand(program)
 
-// install-browser is a recovery/setup command for the CLI package itself, not a project command.
-// It needs to work before a browser exists, from outside a Graphene project, and from installer
-// contexts where there may be no project config to load.
-if (process.argv[2] === 'install-browser') {
-  await program.parseAsync(process.argv)
-  process.exit(0)
-}
-
-let cfg = await loadConfig(process.cwd(), envFiles => {
-  dotenv.config({quiet: true, path: envFiles})
-})
-setGlobalConfig(cfg)
-
-const telemetry = new CliTelemetry(config, libPkg.version)
-await telemetry.init(process.cwd())
+let telemetry: CliTelemetry
 
 program
   .command('compile')
@@ -52,10 +38,9 @@ program
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(
     withTelemetry('compile', async (exit, input: string | undefined) => {
-      let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-      telemetry.event('workspace_scanned', {command: 'compile', ...getWorkspaceScanCounts(files)})
-      let sql = await readInput(input)
-      let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: sql})}, 'input')
+      let files = await loadWorkspace(config.root, false, config.ignoredFiles)
+      let cliInput = await readInput(input)
+      let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: cliInput.contents})}, 'input')
       let [query] = validateInputQuery(analysis, exit)
       console.log(toSql(query))
     }),
@@ -66,69 +51,65 @@ program
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart or table to capture')
+  .option('--param <key=value>', 'Query parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .option('--format <format>', 'Output format for query or chart data: table or csv', 'table')
   .option('--headless', 'Run markdown pages in a headless browser instead of opening the system browser')
-  .option('--port <port>', 'Port for the local Graphene server')
-  .option('-q, --query <queryName>', 'Query or table name to run from a markdown page')
-  .option('--input <key=value>', 'Input value to use for parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .action(
-    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; format?: string; headless?: boolean; port?: string; query?: string; input?: string[]}, command: Command) => {
+    withTelemetry('run', async (exit, input: string | undefined, options: {chart?: string; format?: string; headless?: boolean; param?: string[]}, command: Command) => {
       if (!input) {
         command.outputHelp()
         return exit(0)
       }
 
-      let format = parseRunFormat(options.format || 'table', exit)
+      let cliInput = await readInput(input)
+      let params = parseRunInputs(options.param || [], exit)
+      let files = await loadWorkspace(config.root, false, config.ignoredFiles)
 
-      if (options.port) {
-        let port = parsePort(options.port, exit)
-        config.port = port
-        process.env.GRAPHENE_PORT = String(port)
-      }
-
-      if (options.chart && options.query) {
-        console.error('Cannot use --chart and --query together')
+      if (cliInput.kind == 'file' && cliInput.path.endsWith('.gsql')) {
+        console.error('Running .gsql files is no longer supported')
         return exit(1)
       }
 
-      if (options.headless && options.query) {
-        console.error('Cannot use --headless and --query together')
-        return exit(1)
-      }
+      if (cliInput.kind == 'file' && cliInput.path.endsWith('.md')) {
+        // First, analyze the specificed md file. If it has errors, no point spinning up a browser tab
+        let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != cliInput.path)}, cliInput.path)
+        if (analysis.diagnostics.length > 0) {
+          printDiagnostics(analysis.diagnostics)
+          return exit(1)
+        }
 
-      if (format == 'csv' && !options.chart && !options.query && getExistingPath(input)?.endsWith('.md')) {
-        console.error('--format csv for markdown files requires --query or --chart')
-        return exit(1)
-      }
+        // If `run` is requesting a md page, we need to run it in a browser
+        let resp = await sendToPage(cliInput.path, {params, chart: options.chart}, !!options.headless)
+        printDiagnostics(resp.errors || [])
+        if (resp.errors?.length) exit(1)
 
-      let inputs = parseRunInputs(options.input || [], exit)
-      let inputPath = getExistingPath(input)
-      if (inputPath && inputPath.endsWith('.md')) {
-        let res = options.query
-          ? await runNamedQueryFromMd(inputPath, options.query, {format, inputs, telemetry})
-          : await runMdFile({mdArg: inputPath, chart: options.chart, format, headless: options.headless, inputs, log: format == 'csv' ? console.error : console.log, telemetry})
-        return exit(res ? 0 : 1)
-      }
+        if (resp.screenshot) {
+          if (resp.stillLoading) console.warn('Warning: Queries were still loading when the screenshot was taken')
 
-      if (options.chart || options.headless || options.query) {
-        console.error('--chart, --headless, and --query can only be used with a markdown file path')
-        return exit(1)
-      }
+          let screenshotDir = path.join(getGrapheneCache(config.root), 'screenshots')
+          let screenshotPath = path.join(screenshotDir, `${new Date().toISOString().replace(/[:.]/g, '-')}.png`)
+          let base64Data = resp.screenshot.replace(/^data:image\/png;base64,/, '')
+          await fs.ensureDir(screenshotDir)
+          await fs.writeFile(screenshotPath, base64Data, 'base64')
+          console.log('Screenshot saved to', screenshotPath)
+        }
 
-      if (inputPath && inputPath.endsWith('.gsql')) {
-        console.error('Running .gsql files is no longer supported. Pass inline GSQL or use a markdown file path with --query.')
-        return exit(1)
-      }
+        if (resp.data) {
+          if (options.format == 'csv') console.log(rowsToCsv(resp.data.rows, resp.data.fields))
+          else printTable(resp.data.rows)
+        }
 
-      let files = await loadWorkspace(process.cwd(), false, config.ignoredFiles)
-      telemetry.event('workspace_scanned', {command: 'run', ...getWorkspaceScanCounts(files)})
-      let gsql = await readInput(input)
-      let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: gsql})}, 'input')
-      let [query] = validateInputQuery(analysis, exit)
-      let sql = renderSql(query, inputs, exit)
-      let res = await runQuery(sql)
-      if (format == 'csv') console.log(rowsToCsv(res.rows, query.fields))
-      else printTable(res.rows)
+        console.log('Page available at', pageUrlForMd(cliInput.path, params))
+      } else {
+        // otherwise, if we're just `run`ing a plain query, we can do it directly in this process, no browser needed.
+        let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: cliInput.contents})}, 'input')
+        let [query] = validateInputQuery(analysis, exit)
+        let sql = renderSql(query, params, exit)
+        let res = await runQuery(sql)
+
+        if (options.format == 'csv') console.log(rowsToCsv(res.rows, query.fields))
+        else printTable(res.rows)
+      }
     }),
   )
 
@@ -138,14 +119,11 @@ program
   .argument('<file>', 'Markdown file to inspect')
   .action(
     withTelemetry('list', async (exit, fileArg: string) => {
-      let inputPath = getExistingPath(fileArg)
-      if (!inputPath || !inputPath.endsWith('.md')) {
-        console.error('list requires a markdown file path')
-        return exit(1)
-      }
+      let cliInput = await readInput(fileArg)
+      if (cliInput.kind != 'file' || !cliInput.path.endsWith('.md')) throw new Error('list requires a markdown file path')
 
-      let res = await listMdFileQueries(inputPath, telemetry)
-      return exit(res ? 0 : 1)
+      let {componentIds = []} = await sendToPage(cliInput.path, {params: {}}, false)
+      componentIds.forEach(componentId => console.log(componentId))
     }),
   )
 
@@ -213,18 +191,11 @@ program
   .command('serve')
   .description('Run the local server')
   .option('--bg', 'Run the server in the background')
-  .option('--port <port>', 'Port for the local Graphene server')
   .action(
     withTelemetry('serve', async (exit, options: {bg?: boolean; port?: string}) => {
-      if (options.port) {
-        let port = parsePort(options.port, exit)
-        config.port = port
-        process.env.GRAPHENE_PORT = String(port)
-      }
-
       await stopGrapheneIfRunning()
       if (options.bg) {
-        let url = await runServeInBackground({log: () => undefined})
+        let url = await runServeInBackground({entryPoint: fileURLToPath(import.meta.url)})
         console.log(`Server running at ${url}`)
         return exit(0)
       } else {
@@ -273,8 +244,6 @@ program
     }),
   )
 
-program.parse(process.argv)
-
 function registerInstallBrowserCommand(program: Command) {
   program
     .command('install-browser')
@@ -286,29 +255,26 @@ function registerInstallBrowserCommand(program: Command) {
     })
 }
 
-async function readInput(arg): Promise<string> {
-  if (!arg || arg === '-') {
-    return await new Promise<string>(resolve => {
+type CliInput = {kind: 'file'; path: string; contents: string} | {kind: 'query'; contents: string}
+
+// Interprets CLI input as stdin, a file relative to cwd or the project root, or an inline query.
+async function readInput(arg: string | undefined): Promise<CliInput> {
+  if (!arg) return {kind: 'query', contents: ''}
+
+  if (arg === '-') {
+    let contents = await new Promise<string>(resolve => {
       let data = ''
       process.stdin.setEncoding('utf-8')
       process.stdin.on('data', chunk => (data += chunk))
       process.stdin.on('end', () => resolve(data))
       process.stdin.resume()
     })
+    return {kind: 'query', contents}
   }
 
-  let absolutePath = path.resolve(arg)
-  if (fs.existsSync(absolutePath)) {
-    return await fs.promises.readFile(absolutePath, 'utf-8')
-  }
-
-  return arg
-}
-
-function getExistingPath(arg: string | undefined): string | null {
-  if (!arg || arg === '-') return null
-  let absolutePath = path.resolve(arg)
-  return fs.existsSync(absolutePath) ? absolutePath : null
+  let absolutePath = [path.resolve(process.cwd(), arg), path.resolve(config.root, arg)].find(p => fs.existsSync(p))
+  if (!absolutePath) return {kind: 'query', contents: arg}
+  return {kind: 'file', path: path.relative(config.root, absolutePath), contents: await fs.promises.readFile(absolutePath, 'utf-8')}
 }
 
 function validateInputQuery(analysis: AnalysisResult, exit: (code?: number) => never): Query[] {
@@ -331,7 +297,7 @@ function parseRunInputs(values: string[], exit: (code?: number) => never): Recor
     let index = value.indexOf('=')
     let key = index >= 0 ? value.slice(0, index) : ''
     if (index < 0 || !key) {
-      console.error(`Invalid --input "${value}". Expected key=value.`)
+      console.error(`Invalid --param "${value}". Expected key=value.`)
       return exit(1)
     }
 
@@ -342,21 +308,6 @@ function parseRunInputs(values: string[], exit: (code?: number) => never): Recor
     else inputs[key] = [existing, next]
   }
   return inputs
-}
-
-function parsePort(value: string, exit: (code?: number) => never): number {
-  let port = Number(value)
-  if (!Number.isInteger(port) || port < 1 || port > 65535) {
-    console.error(`Invalid --port "${value}". Expected an integer from 1 to 65535.`)
-    return exit(1)
-  }
-  return port
-}
-
-function parseRunFormat(value: string, exit: (code?: number) => never): 'table' | 'csv' {
-  if (value == 'table' || value == 'csv') return value
-  console.error(`Invalid --format "${value}". Expected table or csv.`)
-  return exit(1)
 }
 
 function renderSql(query: Query, inputs: Record<string, string | string[]>, exit: (code?: number) => never): string {
@@ -377,13 +328,16 @@ class CliExit {}
 
 function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number) => never, ...args: any[]) => Promise<void>) {
   return async (...args: any[]) => {
+    telemetry = new CliTelemetry(config, libPkg.version)
+    await telemetry.init(config.root)
+
     let startedAt = Date.now()
     let exitCode = 0
     let success = true
     let exitCalled = false
     let caughtError: unknown
 
-    telemetry.event('cli_command_started', {command, flags: getPresentFlags(command, process.argv.slice(2))})
+    telemetry.event('cli_command_started', {command, flags: getPresentFlags(command, (program as any).rawArgs || process.argv.slice(2))})
     await showCachedUpdateNotice({config, currentVersion: libPkg.version, packageIsPrivate: libPkg.private})
 
     let exit = (code: number = 0): never => {
@@ -415,3 +369,22 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
     else if (exitCalled) process.exit(exitCode)
   }
 }
+
+// Loads project config and runs the public CLI. bin.js calls this in packages, while direct source execution calls it below.
+export async function main() {
+  // install-browser must work outside a Graphene project, including before a browser exists.
+  if (process.argv[2] != 'install-browser') {
+    let cfg = await loadConfig(process.cwd(), envFiles => dotenv.config({quiet: true, path: envFiles}))
+    setGlobalConfig(cfg)
+  }
+
+  try {
+    await program.parseAsync(process.argv)
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err))
+    process.exit(1)
+  }
+}
+
+// Loading this module gives tests the user-facing program without executing it.
+if (process.argv[1] && path.resolve(process.argv[1]) == fileURLToPath(import.meta.url)) await main()

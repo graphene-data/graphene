@@ -27,7 +27,7 @@ describe('background server', () => {
 
       let error: unknown
       try {
-        await runServeInBackground({entryPoint, log: () => undefined})
+        await runServeInBackground({entryPoint})
       } catch (err) {
         error = err
       }
