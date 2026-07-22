@@ -37,6 +37,25 @@ await esbuild({
   plugins: [makeAllPackagesExternalPlugin],
 })
 
+// Keep the generated skill's reference list useful for agents, and fail the build when a new reference lacks a description.
+let referenceDocs = {
+  'big-value.md': 'BigValue component options for displaying one prominent metric.',
+  'config.md': 'Project package.json configuration, including database connections, ignored files, env files, telemetry, and dev server settings.',
+  'date-range.md': 'DateRange input component options for filtering queries by date intervals.',
+  'dropdown.md': 'Dropdown input component options for selecting values from static options or query results.',
+  'echarts.md': 'ECharts component usage for custom charts beyond the built-in Graphene chart components.',
+  'gsql.md': 'GSQL query syntax reference for pages, including selects, filters, joins, aggregations, parameters, and SQL passthrough.',
+  'model-gsql.md': 'Semantic model GSQL reference for tables, dimensions, measures, joins, namespaces, and database-specific types.',
+  'table.md': 'Table component options for rendering query results in pages.',
+  'text-input.md': 'TextInput component options for collecting freeform parameter values.',
+}
+let referencesDir = path.resolve(__dirname, '../docs/references')
+let referenceFiles = (await readdir(referencesDir)).sort()
+let missingDescriptions = referenceFiles.filter(f => !referenceDocs[f])
+if (missingDescriptions.length) throw new Error(`Missing Graphene skill reference descriptions for: ${missingDescriptions.join(', ')}`)
+let missingFiles = Object.keys(referenceDocs).filter(f => !referenceFiles.includes(f))
+if (missingFiles.length) throw new Error(`Graphene skill reference descriptions point at missing files: ${missingFiles.join(', ')}`)
+
 let distSkillsDir = path.resolve(__dirname, 'dist/skills')
 await rm(distSkillsDir, {recursive: true, force: true})
 let skillDir = path.resolve(distSkillsDir, 'graphene')
@@ -57,10 +76,10 @@ ${await readFile(path.resolve(__dirname, '../docs/best-practices.md'), 'utf8')}
 Consult the reference documentation for more detailed information on using Graphene.
 For semantic modeling with GSQL references, read \`references/model-gsql.md\`.
 
-${(await readdir(path.resolve(__dirname, '../docs/references'))).map(f => `- references/${f}`).join('\n')}
+${referenceFiles.map(f => `- references/${f} — ${referenceDocs[f]}`).join('\n')}
 `.trimStart(),
 )
-await cp(path.resolve(__dirname, '../docs/references'), path.resolve(skillDir, 'references'), {recursive: true})
+await cp(referencesDir, path.resolve(skillDir, 'references'), {recursive: true})
 await cp(path.resolve(__dirname, '../ui'), path.resolve(__dirname, 'dist/ui'), {recursive: true})
 await mkdir(path.resolve(__dirname, 'dist/lang'), {recursive: true})
 await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 'dist/index.d.ts'))
