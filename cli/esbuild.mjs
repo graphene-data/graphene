@@ -39,15 +39,11 @@ await esbuild({
 
 // Keep the generated skill's reference list useful for agents, and fail the build when a new reference lacks a description.
 let referenceDocs = {
-  'big-value.md': 'BigValue component options for displaying one prominent metric.',
   'config.md': 'Project package.json configuration, including database connections, ignored files, env files, telemetry, and dev server settings.',
-  'date-range.md': 'DateRange input component options for filtering queries by date intervals.',
-  'dropdown.md': 'Dropdown input component options for selecting values from static options or query results.',
   'echarts.md': 'ECharts component usage for custom charts beyond the built-in Graphene chart components.',
   'gsql.md': 'GSQL query syntax reference for pages, including selects, filters, joins, aggregations, parameters, and SQL passthrough.',
   'model-gsql.md': 'Semantic model GSQL reference for tables, dimensions, measures, joins, namespaces, and database-specific types.',
   'table.md': 'Table component options for rendering query results in pages.',
-  'text-input.md': 'TextInput component options for collecting freeform parameter values.',
 }
 let referencesDir = path.resolve(__dirname, '../docs/references')
 let referenceFiles = (await readdir(referencesDir)).sort()
