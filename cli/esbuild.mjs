@@ -41,8 +41,8 @@ await esbuild({
 let referenceDocs = {
   'config.md': 'Project package.json configuration, including database connections, ignored files, env files, telemetry, and dev server settings.',
   'echarts.md': 'ECharts component usage for custom charts beyond the built-in Graphene chart components.',
-  'gsql.md': 'GSQL query syntax reference for pages, including selects, filters, joins, aggregations, parameters, and SQL passthrough.',
-  'model-gsql.md': 'Semantic model GSQL reference for tables, dimensions, measures, joins, namespaces, and database-specific types.',
+  'gsql.md': 'GSQL syntax reference for queries and tables.',
+  'model-gsql.md': 'Data modeling best practices when creating new GSQL tables.',
   'table.md': 'Table component options for rendering query results in pages.',
 }
 let referencesDir = path.resolve(__dirname, '../docs/references')
