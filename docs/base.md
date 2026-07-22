@@ -120,6 +120,13 @@ Notes on common attributes:
 - `height` and `width` accept any CSS size units eg. `240px` or `50%`.
 - There is no `swapXY`. To create horizontal bars, simply switch what is assigned to `x` and `y`.
 
+### `<BigValue>`
+Displays one prominent value from a query or modeled table. `data` and `value` are required; `title` is optional and `row` selects a result row (default `0`).
+
+```md
+<BigValue data=orders value=num_orders title="Total Orders" />
+```
+
 ### `<ECharts>`
 To create visualizations or customizations beyond Graphene's out-of-the-box components, specify an ECharts config via `<ECharts>`.
 
@@ -150,21 +157,38 @@ Unsupported:
 ```
 
 ## Input components
-- Dropdown: title, name, data, value (column to populate list with), label, defaultValue, multiple
-- TextInput: title, name, placeholder
-- DateRange: title, name, data, dates, start, end, defaultValue, presetRanges, description
+Input values are referenced by their `name` as `$name` in GSQL and sync into the page URL query string, preserving state across reloads and shared links.
 
-Inject input values into queries by referring to their `name` attribute as `$name` in GSQL. 
+### `<Dropdown>`
+Build options from a query using `data` and `value`; optionally use `label` as the displayed column. Other attributes are `title`, `description`, `defaultValue`, `multiple`, `selectAllByDefault`, `noDefault`, and `disableSelectAll`. `name` is required.
 
 ````md
-<Dropdown name=status .../>
+```sql statuses
+select distinct status from orders
+```
+<Dropdown name=status data=statuses value=status defaultValue="Complete" />
 
-```sql my_query
-select ...
-where status = $status
+```sql filtered_orders
+select * from orders where status = $status
 ```
 ````
 
-DateRange components emit two referenceable values via `${name}_start` and `${name}_end`.
+For `multiple=true`, the input produces a list; filter with `where status in ($status)`. Static options can be nested inside the dropdown as `<DropdownOption value="complete" valueLabel="Complete" />`; `value` is required and `valueLabel` defaults to it.
 
-Input values also sync into the page URL query string (eg. `localhost:4000/my_dashboard?status=cancelled`), so reloads and shared links preserve the same dashboard state.
+### `<TextInput>`
+Collects freeform text. `name` is required; optional attributes are `title`, `placeholder` (default `"Type to search"`), and `description`.
+
+```md
+<TextInput name=search title="Search" />
+```
+
+For example, filter with `where email ilike concat('%', $search, '%')`.
+
+### `<DateRange>`
+Collects start and end dates. `name` is required; optional attributes are `title`, `description`, `data` and `dates` (to infer the available date domain), `start`, `end`, `defaultValue`, and `presetRanges`.
+
+```md
+<DateRange name=date_filter data=sales dates=date defaultValue="Last 30 Days" />
+```
+
+Use the selected bounds as `$date_filter_start` and `$date_filter_end`, for example `where date >= $date_filter_start and date < $date_filter_end`. Built-in presets include the last 7/30/90/365 days, last month/year, month/year to date or today, and all time. Custom `Last N Days` and `Last N Months` presets are supported; override the menu with a comma-separated `presetRanges` value.
