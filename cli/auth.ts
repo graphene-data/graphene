@@ -166,12 +166,30 @@ async function refreshAccessToken() {
   await updateEntry(json)
 }
 
-// Makes a request to your Graphene cloud server with credentials stored from `graphene login`
+// Refreshes the saved login and returns a full-lifetime access token for short-lived delegation.
+export async function makeAccessToken(): Promise<string> {
+  await refreshAccessToken()
+  let token = (await readEntry())?.access_token
+  if (!token) throw new Error('Failed to obtain access token')
+  return token
+}
+
+// Makes an authenticated request using an explicitly delegated token or credentials from `graphene login`.
 export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
+  let cloudOrigin = new URL(config.cloud!).origin
+  let url = new URL(pathOrUrl, cloudOrigin)
+  let headers = new Headers(init.headers || {})
+
+  let delegatedToken = process.env.GRAPHENE_TOKEN
+  if (delegatedToken) {
+    headers.set('authorization', `Bearer ${delegatedToken}`)
+    return fetch(url.toString(), {...init, headers})
+  }
+
   let entry = await readEntry()
   if (!entry) throw new Error('Not logged in; run `graphene login`')
 
-  // if we know the access token is no good, refresh it now
+  // If we know the access token is no good, refresh it now.
   if (!entry.access_token || entry.expires_at < Date.now()) {
     await refreshAccessToken()
     entry = await readEntry()
@@ -179,15 +197,10 @@ export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = 
   let token = entry?.access_token
   if (!token) throw new Error('Failed to obtain access token')
 
-  // make a request with the authorization header set
-  let cloudOrigin = new URL(config.cloud!).origin
-  let url = new URL(pathOrUrl, cloudOrigin)
-  let headers = new Headers(init.headers || {})
   headers.set('authorization', `Bearer ${token}`)
-
   let res = await fetch(url.toString(), {...init, headers})
 
-  // if the request failed, try refreshing our access token
+  // If the request failed, try refreshing our saved access token.
   if (res.status === 401 || res.status === 403) {
     await refreshAccessToken()
     token = (await readEntry())?.access_token

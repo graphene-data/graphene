@@ -10,7 +10,7 @@ import {config, loadConfig, setGlobalConfig} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import {rowsToCsv} from '../lang/csv.ts'
 import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
-import {loginPkce} from './auth.ts'
+import {loginPkce, makeAccessToken} from './auth.ts'
 import {getGrapheneCache, runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
@@ -222,6 +222,14 @@ program
       return exit(res ? 0 : 1) // if we started the server in the background, just returning won't actually exit the process.
     }),
   )
+
+program
+  .command('make-token')
+  .description('Print a fresh short-lived Graphene Cloud access token')
+  .action(async () => {
+    if (!config.cloud) throw new Error('No Graphene Cloud URL is configured for this project')
+    console.log(await makeAccessToken())
+  })
 
 program
   .command('login')
