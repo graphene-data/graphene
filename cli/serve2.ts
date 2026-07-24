@@ -278,8 +278,10 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
     resolveId(id: string) {
       if (id == 'virtual:nav') return '\0virtual:nav'
     },
-    load(id: string) {
+    async load(id: string) {
       if (id != '\0virtual:nav') return
+      // LocalApp uses this list to distinguish missing pages from broken ones, so never serve a partial startup scan.
+      await workspaceLoadPromise
 
       // in tests, inject mock files into the nav.
       // we do this on `load` as each test doesn't always refresh the workspace
