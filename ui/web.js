@@ -2,10 +2,9 @@ import './internal/telemetry.ts'
 import './internal/queryEngine.ts'
 import './internal/runPage.ts'
 import {getInstanceByDom} from 'echarts'
-
-import './app.css'
 import {mount, unmount} from 'svelte'
 
+import './app.css'
 import AreaChart from './components/AreaChart.svelte'
 import BarChart from './components/BarChart.svelte'
 import BigValue from './components/BigValue.svelte'
@@ -35,6 +34,7 @@ import TextInput from './components/TextInput.svelte'
 import Value from './components/Value.svelte'
 import ErrorChart from './internal/ErrorDisplay.svelte'
 import LocalApp from './internal/LocalApp.svelte'
+import './internal/waitForLoad.ts'
 
 // Having a global $GRAPHENE allows us to provide an api that pages can use without having to import and bundle a bunch of components.
 // That means that as you navigate around, we only have to a very small amount of js for the page itself, and the bulk of the container and component
@@ -43,37 +43,8 @@ import LocalApp from './internal/LocalApp.svelte'
 window.$GRAPHENE = window.$GRAPHENE || {}
 window.$GRAPHENE.appLoading = false
 
-let nextRenderId = 0
-let pendingRenders = new Set()
-
 window.$GRAPHENE.getChart = domNode => {
   return getInstanceByDom(domNode)
-}
-
-window.$GRAPHENE.renderStart = id => {
-  let renderId = id == null ? `render:${++nextRenderId}` : String(id)
-  pendingRenders.add(renderId)
-  return renderId
-}
-
-window.$GRAPHENE.renderComplete = id => {
-  if (id == null) return
-  pendingRenders.delete(String(id))
-}
-
-window.$GRAPHENE.waitForLoad = async (timeout = 20_000) => {
-  let g = window.$GRAPHENE
-  let end = Date.now() + timeout
-  while (Date.now() < end) {
-    if (!g.appLoading && !g.isQueryLoading() && pendingRenders.size == 0) {
-      if (document.fonts?.ready) await document.fonts.ready
-      await new Promise(resolve => setTimeout(resolve, 300))
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-      if (!g.appLoading && !g.isQueryLoading() && pendingRenders.size == 0) return true
-    }
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-  return false
 }
 
 window.$GRAPHENE.components = {

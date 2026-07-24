@@ -81,11 +81,9 @@ program
         // If `run` is requesting a md page, we need to run it in a browser
         let resp = await sendToPage(cliInput.path, {params, chart: options.chart}, !!options.headless)
         printDiagnostics(resp.errors || [])
-        if (resp.errors?.length) exit(1)
+        if (resp.errors?.some(error => error.severity !== 'warn')) exit(1)
 
         if (resp.screenshot) {
-          if (resp.stillLoading) console.warn('Warning: Queries were still loading when the screenshot was taken')
-
           let screenshotDir = path.join(getGrapheneCache(config.root), 'screenshots')
           let screenshotPath = path.join(screenshotDir, `${new Date().toISOString().replace(/[:.]/g, '-')}.png`)
           let base64Data = resp.screenshot.replace(/^data:image\/png;base64,/, '')

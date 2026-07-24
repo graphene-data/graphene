@@ -223,6 +223,7 @@ export function translateData(data: any, node: QueryNode): QueryResult {
 }
 
 const isQueryLoading = () => !!queries.find(q => q.loading)
+const getLoadingQueries = () => queries.filter(q => q.loading).map(q => q.componentId || q.source || q.name || q.contents)
 
 function updatePageCacheState() {
   let timestamps = queries.map(q => q.runAt).filter(Boolean) as number[]
@@ -240,5 +241,6 @@ Object.assign(window.$GRAPHENE, {
   rerunQueries: runAll,
   refreshQueries,
   isQueryLoading,
+  getLoadingQueries,
   queryResults,
 })

@@ -88,13 +88,12 @@
     if (!chart) {
       chart = init(node, 'graphene-theme', {renderer})
       chart.on('legendselectchanged', renderChart)
+      chart.on('finished', completeChartRender)
     }
 
     try {
-      window.$GRAPHENE?.renderStart?.(`chart:${chart.id}`)
       renderChart()
       chartError = null
-      window.$GRAPHENE?.renderComplete?.(`chart:${chart.id}`)
     } catch (error) {
       console.error('Chart failed to render', error)
       chartError = error instanceof Error ? error : new Error(String(error))
@@ -104,10 +103,10 @@
     }
   })
 
-  // Build a fresh enriched option each render so legend-driven stack rounding
-  // always reflects the currently visible series.
+  // Build a fresh enriched option and track it until ECharts fires finished, including legend-driven rerenders.
   function renderChart() {
     if (!chart || !loaded) return
+    window.$GRAPHENE?.renderStart?.(`chart:${chart.id}`)
 
     // clone config, since enriching mutates the config, and mutating a prop is weird
     // structuredClone doesn't like proxies, so use state.snapshot
@@ -122,9 +121,15 @@
     chart.setOption({...enriched, animation: false, animationDuration: 0, animationDurationUpdate: 0}, true)
   }
 
+  function completeChartRender() {
+    window.$GRAPHENE?.renderComplete?.(`chart:${chart.id}`)
+  }
+
   function destroyChart() {
     if (!chart) return
+    completeChartRender()
     chart.off('legendselectchanged', renderChart)
+    chart.off('finished', completeChartRender)
     chart.dispose()
     chart = null
   }
