@@ -152,18 +152,31 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
   await updateEntry(tokenResp)
 }
 
-async function refreshAccessToken() {
-  let refresh_token = (await readEntry())?.refresh_token
-  let cloudOrigin = new URL(config.cloud!).origin
-  if (!refresh_token) throw new Error('No refresh token available; run `graphene login`')
-  let res = await fetch(new URL('/_api/oauth2/token', cloudOrigin).toString(), {
-    method: 'POST',
-    headers: {'content-type': 'application/json'},
-    body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: authClientId()}),
+let refreshPromise: Promise<void> | undefined
+
+// Refresh tokens rotate after use, so all concurrent requests must share one refresh and persist its replacement.
+async function refreshAccessToken(staleAccessToken?: string) {
+  if (refreshPromise) return await refreshPromise
+
+  refreshPromise = (async () => {
+    let entry = await readEntry()
+    if (staleAccessToken && entry?.access_token != staleAccessToken) return
+
+    let refresh_token = entry?.refresh_token
+    let cloudOrigin = new URL(config.cloud!).origin
+    if (!refresh_token) throw new Error('No refresh token available; run `graphene login`')
+    let res = await fetch(new URL('/_api/oauth2/token', cloudOrigin).toString(), {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: authClientId()}),
+    })
+    if (!res.ok) throw new Error(`refresh failed: ${res.status}`)
+    await updateEntry(await res.json())
+  })().finally(() => {
+    refreshPromise = undefined
   })
-  if (!res.ok) throw new Error(`refresh failed: ${res.status}`)
-  let json = await res.json()
-  await updateEntry(json)
+
+  await refreshPromise
 }
 
 // Makes a request to your Graphene cloud server with credentials stored from `graphene login`
@@ -189,7 +202,7 @@ export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = 
 
   // if the request failed, try refreshing our access token
   if (res.status === 401 || res.status === 403) {
-    await refreshAccessToken()
+    await refreshAccessToken(token)
     token = (await readEntry())?.access_token
     if (token) {
       headers.set('authorization', `Bearer ${token}`)
