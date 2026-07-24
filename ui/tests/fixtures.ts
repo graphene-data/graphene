@@ -175,8 +175,9 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
           container.appendChild(el)
           window.__inst = window.$GRAPHENE.svelte.mount(window.$GRAPHENE.components[compName], {target: el, props})
 
-          // Wait for load
-          await window.$GRAPHENE?.waitForLoad?.()
+          // Wait for load and fail tests with the specific work that timed out.
+          let stillLoading = await window.$GRAPHENE?.waitForLoad?.()
+          if (stillLoading?.length) throw new Error(`Timed out waiting for Graphene: ${stillLoading.join(', ')}`)
           await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
         },
         {compName, props: modifiedProps},
@@ -270,9 +271,9 @@ declare global {
 
 export async function waitForGrapheneLoad(page: Page, timeout = 20_000) {
   await page.waitForFunction(() => Boolean((window as any).$GRAPHENE), null, {timeout})
-  let loaded = await page.evaluate(ms => {
+  let stillLoading = await page.evaluate(ms => {
     let graphene = (window as any).$GRAPHENE
     return typeof graphene?.waitForLoad === 'function' ? graphene.waitForLoad(ms) : null
   }, timeout)
-  if (!loaded) throw new Error(`Timed out waiting for Graphene to finish loading after ${timeout}ms`)
+  if (stillLoading?.length) throw new Error(`Timed out waiting for Graphene after ${timeout}ms: ${stillLoading.join(', ')}`)
 }

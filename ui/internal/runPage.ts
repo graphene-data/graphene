@@ -22,7 +22,6 @@ export interface PageRequest {
 export interface PageResponse {
   requestId?: string
   errors?: GrapheneError[]
-  stillLoading?: boolean
   screenshot?: string
   componentIds?: string[]
   data?: {
@@ -40,8 +39,9 @@ connect()
 
 // Waits for a stable page and executes the requested check, listing, or data export.
 export async function runPageRequest(request: PageRequest): Promise<PageResponse> {
-  let finished = await window.$GRAPHENE.waitForLoad(20_000)
+  let stillLoading = await window.$GRAPHENE.waitForLoad(20_000)
   let errors = getErrors()
+  errors.push(...(stillLoading || []).map(loading => ({severity: 'warn' as const, message: `Still loading when the screenshot was taken: ${loading}`})))
 
   // --chart tells us to focus on a single viz
   let componentEl = request.chart ? findVisualComponentElement(request.chart) : undefined
@@ -59,7 +59,7 @@ export async function runPageRequest(request: PageRequest): Promise<PageResponse
     .map(el => el.getAttribute('data-component-id') || '')
     .filter(componentId => componentId.trim().length > 0)
 
-  return {requestId: request.requestId, errors, stillLoading: !finished, screenshot, componentIds, data}
+  return {requestId: request.requestId, errors, screenshot, componentIds, data}
 }
 
 // Registers this tab with the local server and forwards CLI requests to runPageRequest.

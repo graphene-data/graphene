@@ -21,10 +21,11 @@ const extendedExpect = baseExpect.extend({
     let testFile = path.basename(testPath)
 
     // Wait for fonts, Graphene renders, and animations to settle before comparing pixels.
-    await (page as Page).evaluate(async () => {
+    let stillLoading = await (page as Page).evaluate(async () => {
       await document.fonts.ready
-      await (window as any).$GRAPHENE?.waitForLoad?.()
+      return await (window as any).$GRAPHENE?.waitForLoad?.()
     })
+    if (stillLoading?.length) throw new Error(`Timed out waiting for Graphene: ${stillLoading.join(', ')}`)
     await waitForAnimations(page as Page)
 
     let resultsDir = path.resolve(snapshotDir, '..', 'results', testFile)
