@@ -289,6 +289,13 @@ test('cli run with md file reports big value query errors', async ({runCli, serv
   expect(outputLines(result.stdout + result.stderr)).toContain('cannot take square root of a negative number')
 })
 
+test('cli run reports a missing markdown file', async ({runCli}) => {
+  let result = await runCli(['run', 'missing.md'], config)
+
+  expect(result.code).toBe(1)
+  expect(outputLines(result.stdout + result.stderr)).toBe("Couldn't find missing.md")
+})
+
 test('cli run with md file reports html compilation errors', async ({runCli, server, page}) => {
   expectConsoleError('Failed to load resource')
   expectConsoleError('Internal Server Error')

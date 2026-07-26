@@ -38,6 +38,17 @@ test('load broken page, fix via HMR', async ({server, page}) => {
   await expect(page.getByRole('heading', {name: 'Now Working'})).toBeVisible({timeout: 5000})
 })
 
+test('shows an error when a page uses an unknown component', async ({server, page}) => {
+  expectConsoleError('DataTable is not defined')
+  server.mockFile('/broken.md', '# Broken\n<DataTable />')
+
+  await page.goto(server.url() + '/broken')
+  await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible()
+  await expect(page.getByText('DataTable is not defined')).toBeVisible()
+  await expect(page.locator('.g-error__details')).toContainText('broken.md')
+  await expect(page).screenshot('unknown-page-component')
+})
+
 test('editing unrelated md does not reload current page', async ({server, page}) => {
   server.mockFile('/index.md', '# Main Page')
   server.mockFile('/other.md', '# Other Page')
@@ -101,15 +112,11 @@ test('compile errors in another tab do not affect current page', {timeout: 30000
   await expect(otherPage.getByRole('heading', {name: 'Other Page'})).toBeVisible()
 
   await server.updateMockFile('/other.md', '# Broken Page\n{#if true}<p>oops')
-  await expect(otherPage.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 10000})
   await expect(page.getByRole('heading', {name: 'Main Page'})).toBeVisible()
   await expect(page.getByRole('heading', {name: 'Error loading page'})).toHaveCount(0)
 
-  let failingPage = await browser.newPage()
-  await failingPage.goto(server.url() + '/other', {waitUntil: 'domcontentloaded'})
-  await expect(failingPage.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 10000})
-  await expect(failingPage).screenshot('hmr-other-tab-compile-error')
+  await expect(otherPage.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 10000})
+  await expect(otherPage).screenshot('hmr-other-tab-compile-error')
 
-  await failingPage.close()
   await otherPage.close()
 })

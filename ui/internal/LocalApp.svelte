@@ -47,7 +47,14 @@
   // The md file is dynamically imported, so even if there's a compile error, we'll still load LocalApp and can show the user the issue
   let Page = $state<any>(null)
   let pageMeta = $state<any>({})
+  let runtimeError = $state<GrapheneError | null>(null)
   let blankForTests = $state(pathName == '__ct')
+
+  // Convert errors thrown while creating the page component into the same useful display as compilation failures.
+  function handlePageError(error: Error) {
+    runtimeError = {message: error.message, file: pathName + '.md'} as GrapheneError
+    setErrorFor('compile', runtimeError)
+  }
   let fileName = pathName.split('/').at(-1) + '.md'
   let pageTitle = $derived(pageMeta.title || prettyPrintFilename(fileName))
 
@@ -107,7 +114,13 @@
     {#if pageMeta.title}
       <h1 class="page-title">{pageMeta.title}</h1>
     {/if}
-    <Page />
+    <svelte:boundary onerror={handlePageError}>
+      <Page />
+      {#snippet failed()}
+        <h1 class="page-error-heading">Error loading page</h1>
+        <ErrorDisplay error={runtimeError!} />
+      {/snippet}
+    </svelte:boundary>
   {:else if compileError}
     <h1 class="page-error-heading">Error loading page</h1>
     <ErrorDisplay error={compileError} />
