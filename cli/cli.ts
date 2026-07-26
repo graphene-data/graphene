@@ -279,6 +279,7 @@ async function readInput(arg: string | undefined): Promise<CliInput> {
   }
 
   let absolutePath = [path.resolve(process.cwd(), arg), path.resolve(config.root, arg)].find(p => fs.existsSync(p))
+  if (!absolutePath && arg.endsWith('.md')) throw new Error(`Couldn't find ${arg}`)
   if (!absolutePath) return {kind: 'query', contents: arg}
   return {kind: 'file', path: path.relative(config.root, absolutePath), contents: await fs.promises.readFile(absolutePath, 'utf-8')}
 }
