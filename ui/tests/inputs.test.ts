@@ -209,6 +209,38 @@ test('dropdown defaultValue and disabled state render correctly', async ({server
   await expect(disabledTrigger).screenshot('dropdown-disabled')
 })
 
+test('dropdown validates single and multiple defaults against loaded options', async ({server, page}) => {
+  let browserWarnings: string[] = []
+  page.on('console', message => {
+    if (message.type() === 'warning' && message.text().startsWith('[Graphene] ')) browserWarnings.push(message.text())
+  })
+
+  await loadDropdownPage(
+    server,
+    page,
+    `
+    <Dropdown name="invalid_default" data="dropdown_options" value="code" label="label" title="Invalid Default" multiple=true defaultValue="AA, AS" />
+    <Dropdown name="valid_defaults" data="dropdown_options" value="code" label="label" title="Valid Defaults" multiple=true defaultValue={['AA', 'AS']} />
+  `,
+  )
+
+  await expect(page.getByRole('combobox', {name: 'Valid Defaults'})).toContainText('AA')
+  await expect(page.getByRole('combobox', {name: 'Valid Defaults'})).toContainText('AS')
+
+  await expect
+    .poll(() => page.evaluate(() => window.$GRAPHENE.getErrors().map(({message, componentId, severity}) => ({message, componentId, severity}))))
+    .toEqual([
+      {
+        message: 'Dropdown "invalid_default" default value is not present in its options: "AA, AS". For multiple defaults, pass an array rather than a comma-separated string.',
+        componentId: 'Dropdown defaultValue (name="invalid_default")',
+        severity: 'warn',
+      },
+    ])
+  expect(browserWarnings).toContain(
+    '[Graphene] Dropdown defaultValue (name="invalid_default"): Dropdown "invalid_default" default value is not present in its options: "AA, AS". For multiple defaults, pass an array rather than a comma-separated string.',
+  )
+})
+
 test('dropdown boolean-string attributes handle defaults and footer actions', async ({server, page}) => {
   await loadDropdownPage(
     server,

@@ -47,8 +47,16 @@ export function componentLogger(componentName: string, identifiers: Record<strin
     id,
     error(error: unknown, ctx: Partial<GrapheneError> = {}) {
       if (!error) return componentErrors.delete(id)
-      let err = error instanceof Error ? error : new Error(String(error))
-      componentErrors.set(id, {message: err.message, stack: err.stack, componentId: id, ...ctx})
+      let message = ctx.message || (error instanceof Error ? error.message : String(error))
+      let err = error instanceof Error ? error : new Error(message)
+      console.error(`[Graphene] ${id}: ${message}`, err)
+      componentErrors.set(id, {message, stack: err.stack, componentId: id, ...ctx})
+    },
+    warn(warning: unknown, ctx: Partial<GrapheneError> = {}) {
+      if (!warning) return componentErrors.delete(id)
+      let err = warning instanceof Error ? warning : new Error(String(warning))
+      console.warn(`[Graphene] ${id}: ${err.message}`)
+      componentErrors.set(id, {message: err.message, stack: err.stack, componentId: id, severity: 'warn', ...ctx})
     },
   }
 }
