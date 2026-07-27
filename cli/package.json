@@ -51,15 +51,15 @@
     "entities": "^4.5.0",
     "fs-extra": "11.2.0",
     "glob": "^13.0.1",
-    "js-yaml": "^3.14.2",
+    "js-yaml": "^3.15.0",
     "json5": "^2.2.3",
     "mdsvex": "^0.12.6",
     "playwright-core": "1.58.2",
     "svelte": "5.55.7",
     "unified": "^11.0.5",
     "unist-util-visit": "4.1.2",
-    "vite": "7.3.2",
-    "ws": "^8.20.1"
+    "vite": "7.3.6",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@aws-sdk/client-athena": "^3.1049.0",
@@ -70,10 +70,10 @@
     "@types/node": "^20.0.0",
     "@types/pg": "8.11.11",
     "@types/ws": "^8.18.1",
-    "esbuild": "^0.27.2",
+    "esbuild": "^0.28.1",
     "pg": "8.13.3",
-    "snowflake-sdk": "2.4.0",
-    "vitest": "4.0.18",
+    "snowflake-sdk": "3.1.0",
+    "vitest": "4.1.10",
     "vscode-languageserver-types": "^3.17.0"
   },
   "peerDependencies": {

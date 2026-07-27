@@ -13,8 +13,8 @@ export default async function setup(project: TestProject) {
   await fs.rm(path.join(import.meta.dirname, 'results'), {force: true, recursive: true})
 
   // we only need to prepareDeps if we're running ui tests
-  let files = project.testFilesList || []
-  if (!files.find(f => f.match(/\/ui\/tests\//))) return
+  let {testFiles} = await project.globTestFiles()
+  if (!testFiles.find(f => f.match(/\/ui\/tests\//))) return
 
   await prepareDeps()
 }

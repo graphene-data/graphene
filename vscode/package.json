@@ -22,13 +22,13 @@
     "install-vscode": "pnpm run package && code --install-extension *.vsix"
   },
   "dependencies": {
-    "vscode-languageclient": "^9.0.1"
+    "vscode-languageclient": "^10.1.0"
   },
   "devDependencies": {
     "@types/vscode": "^1.110.0",
-    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^2.5.2",
-    "esbuild": "^0.27.2",
+    "esbuild": "^0.28.1",
     "graphene-language-server": "workspace:*",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"
