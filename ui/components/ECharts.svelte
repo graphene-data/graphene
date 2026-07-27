@@ -95,7 +95,6 @@
       renderChart()
       chartError = null
     } catch (error) {
-      console.error('Chart failed to render', error)
       chartError = error instanceof Error ? error : new Error(String(error))
       chartLogger.error(chartError, {componentId: displayId})
       window.$GRAPHENE?.renderComplete?.(`chart:${chart.id}`)

@@ -173,7 +173,9 @@ select * from orders where status = $status
 ```
 ````
 
-For `multiple=true`, the input produces a list; filter with `where status in ($status)`. Static options can be nested inside the dropdown as `<DropdownOption value="complete" valueLabel="Complete" />`; `value` is required and `valueLabel` defaults to it.
+For `multiple=true`, the input produces a list; filter with `where status in ($status)`. Multiple defaults must be passed as an array, not a comma-separated string: `<Dropdown name=status multiple=true defaultValue={['Complete', 'Pending']} />`.
+
+Static options can be nested inside the dropdown as `<DropdownOption value="complete" valueLabel="Complete" />`; `value` is required and `valueLabel` defaults to it.
 
 ### `<TextInput>`
 Collects freeform text. `name` is required; optional attributes are `title`, `placeholder` (default `"Type to search"`), and `description`.

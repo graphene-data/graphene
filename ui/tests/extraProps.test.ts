@@ -6,6 +6,11 @@ test.beforeEach(async ({sharedPage}) => {
 })
 
 test('display components report unsupported props', async ({mount, sharedPage}) => {
+  let browserErrors: string[] = []
+  sharedPage.on('console', message => {
+    if (message.type() === 'error' && message.text().startsWith('[Graphene] ')) browserErrors.push(message.text())
+  })
+
   await mount('components/Value.svelte', {data: singleDim(), column: 'value', fmt: 'usd'})
   await expectUnsupportedProp(sharedPage, 'Unsupported prop "fmt" on Value.')
 
@@ -14,6 +19,7 @@ test('display components report unsupported props', async ({mount, sharedPage}) 
 
   await mount('components/ScatterPlot.svelte', {data: singleDim(), x: 'category', y: 'value', subtitle: 'Ignored'})
   await expectUnsupportedProp(sharedPage, 'Unsupported prop "subtitle" on ScatterPlot.')
+  expect(browserErrors.some(message => message.startsWith('[Graphene] Value (column="value"): Unsupported prop "fmt" on Value.'))).toBe(true)
 })
 
 test('input components report unsupported props', async ({mount, sharedPage}) => {

@@ -38,6 +38,7 @@ export function trackBrowserConsole(page: Page) {
   page.on('console', msg => {
     if (msg.type() !== 'warning' && msg.type() !== 'error') return
     let text = msg.text()
+    if (text.startsWith('[Graphene] ')) return // Telemetry logs are intentional and asserted through getErrors or CLI output.
     if (isExpected(text)) return
 
     let location = msg.location()

@@ -37,6 +37,7 @@
   }: Props & Record<string, unknown> = $props()
 
   let logger = untrack(() => componentLogger('Dropdown', {name}))
+  let defaultLogger = untrack(() => componentLogger('Dropdown defaultValue', {name}))
   untrack(() => logExtraProps(logger, 'Dropdown', extraProps))
 
   let mounted = false
@@ -132,6 +133,7 @@
         label: resolvedLabelField ? row[resolvedLabelField] : row[value],
       }))
       syncSelection(false)
+      validateDefaultValue()
     }
     if (typeof window !== 'undefined' && window.$GRAPHENE?.query) {
       window.$GRAPHENE.query(data, columns, handler)
@@ -311,6 +313,7 @@
     mounted = true
     syncSelection(false)
     setupQuery()
+    if (!data) void tick().then(validateDefaultValue)
     if (typeof document !== 'undefined') {
       document.addEventListener('pointerdown', handlePointerDown)
       window.addEventListener('resize', updateTriggerWidth)
@@ -353,6 +356,17 @@
       if (multi && selectAllDefault && !touched && !selection.length) nextSelection = opts.map(o => o.value)
     }
     setSelection(nextSelection, {fromUser, persist: true})
+  }
+
+  // Warn once the complete queried or manual option set proves an authored default is invalid.
+  function validateDefaultValue() {
+    let missing = ensureArray(defaultValue).filter(defaultItem => !valueMap.has(optionKey(defaultItem)))
+    if (!missing.length) return defaultLogger.warn(null)
+
+    let values = missing.map(item => `"${String(item)}"`).join(', ')
+    let noun = missing.length === 1 ? 'value is' : 'values are'
+    let hint = multi && typeof defaultValue === 'string' && defaultValue.includes(',') ? ' For multiple defaults, pass an array rather than a comma-separated string.' : ''
+    defaultLogger.warn(`Dropdown "${name}" default ${noun} not present in its options: ${values}.${hint}`)
   }
 
   function sameSelection(left: any[], right: any[]) {
