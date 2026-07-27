@@ -16,10 +16,10 @@ allowBuilds:
 minimumReleaseAge: 4320
 
 minimumReleaseAgeExclude:
-  - serialize-javascript
+  - serialize-javascript@7.0.5
 
 overrides:
-  serialize-javascript: 7.0.3
+  serialize-javascript: 7.0.5
 
 onlyBuiltDependencies:
   - '@vscode/vsce-sign'
