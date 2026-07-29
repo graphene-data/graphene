@@ -13,7 +13,7 @@ export {analyzeWorkspace}
 export type {GrapheneError} from './index.d.ts'
 export type {AnalysisResult, AnalysisWorkspace, FileInfo, Query, Table, WorkspaceFileInput} from './types.ts'
 
-export const defaultIgnoredFiles = ['node_modules/**', '**/.*/**', '**/readme.md', '**/agents.md', '**/claude.md']
+export const defaultIgnoredFiles = ['node_modules/**', '**/.*/**', '**/readme.md', '**/agents.md', '**/claude.md', '**/slack.md', '**/web.md']
 
 export async function loadWorkspace(dir: string, includeMd: boolean, ignoredFiles: string[] = []): Promise<WorkspaceFileInput[]> {
   let ignore = [...defaultIgnoredFiles, ...ignoredFiles]
