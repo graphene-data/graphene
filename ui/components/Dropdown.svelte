@@ -601,6 +601,8 @@
   .dropdown {
     position: relative;
     display: inline-block;
+    width: 400px;
+    max-width: 100%;
   }
   .dropdown.is-disabled {
     opacity: 0.6;
@@ -611,7 +613,9 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    min-width: 200px;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 80px;
     min-height: 36px;
     padding: 0 12px;
     border-radius: 8px;

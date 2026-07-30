@@ -331,6 +331,30 @@ test('dropdown supports manual options and labelField mapping', async ({server, 
   await expect(page.getByRole('listbox')).screenshot('dropdown-manual-and-label-field')
 })
 
+test('renders a crowded input row', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Crowded input row
+
+    <Row>
+      <TextInput name="origin" title="Origin" />
+      <TextInput name="destination" title="Destination" />
+      <TextInput name="carrier" title="Carrier" />
+      <TextInput name="flight" title="Flight number" />
+      <TextInput name="tail" title="Tail number" />
+    </Row>
+  `,
+  )
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect(page.locator('main#content')).screenshot('inputs-crowded-row')
+
+  await page.setViewportSize({width: 500, height: 620})
+  await expect(page.locator('main#content')).screenshot('inputs-crowded-row-wrapped')
+})
+
 test('text input and date range render label, description, placeholder, and print visibility attrs', async ({mount, sharedPage}) => {
   await mount('components/TextInput.svelte', {
     name: 'search_label',

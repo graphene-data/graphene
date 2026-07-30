@@ -76,7 +76,10 @@
     color: rgba(55, 65, 81, 0.8);
   }
   .text-input {
-    min-width: 200px;
+    box-sizing: border-box;
+    width: 400px;
+    max-width: 100%;
+    min-width: 80px;
     padding: 6px 8px;
     border-radius: 6px;
     border: 1px solid rgba(107, 114, 128, 0.4);
