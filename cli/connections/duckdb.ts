@@ -130,9 +130,9 @@ export function localDbOptions(): DuckDbOptions {
   if (config.motherduck) {
     let token = process.env.MOTHERDUCK_TOKEN
     if (!token) throw new Error('MotherDuck requires MOTHERDUCK_TOKEN.')
-    return {motherduck: {...config.motherduck, token}}
+    return {motherduck: {...config.motherduck, database: process.env.MOTHERDUCK_DATABASE || config.motherduck.database, token}}
   }
-  return {...config.duckdb}
+  return {...config.duckdb, path: process.env.DUCKDB_PATH || config.duckdb?.path}
 }
 
 /** Create the shared DuckDB instance that one or more DuckDBConnections can connect to. */

@@ -22,6 +22,8 @@ Changes to `package.json` are read once at startup, so restart the dev server (`
 
 The schema/database used to resolve unqualified table names in GSQL. For BigQuery this is typically `project.dataset`; for Snowflake `DATABASE.SCHEMA`; for DuckDB usually `main`. Also accepted as `namespace`.
 
+Set `GRAPHENE_DEFAULT_NAMESPACE` to override this value temporarily. Connection environment variables are separate: for example, `CLICKHOUSE_DATABASE` changes the ClickHouse connection database but does not change GSQL table resolution.
+
 ## `ignoredFiles`
 
 An array of glob patterns for files that Graphene should skip when discovering `.gsql` and `.md` files. Patterns are matched relative to the project root using the [`glob`](https://www.npmjs.com/package/glob) package's syntax (case-insensitive).
@@ -66,7 +68,7 @@ Exactly one of the following blocks should be present. The dialect is inferred f
 "motherduck": {"database": "sample_data"}
 ```
 
-- `database` — MotherDuck database name to open with `md:<database>`. If omitted, Graphene opens `md:` and attaches all databases available to the token.
+- `database` — MotherDuck database name to open with `md:<database>`. If omitted, Graphene opens `md:` and attaches all databases available to the token. Override with `MOTHERDUCK_DATABASE`.
 
 MotherDuck uses DuckDB SQL syntax, so Graphene analyzes GSQL with the DuckDB dialect. Store credentials in a `.env` file and include it with `envFile`:
 
@@ -80,7 +82,7 @@ MOTHERDUCK_TOKEN=<your-token>
 "duckdb": {"path": "./data.duckdb"}
 ```
 
-- `path` — path to the `.duckdb` file, relative to the project root. If omitted, Graphene runs in-memory.
+- `path` — path to the `.duckdb` file, relative to the project root. If omitted, Graphene discovers a `.duckdb` file in the project directory. Override with `DUCKDB_PATH`.
 
 ## `snowflake`
 
@@ -100,7 +102,7 @@ MOTHERDUCK_TOKEN=<your-token>
 - `authenticator` — optional Snowflake authenticator: `SNOWFLAKE_JWT`, `OAUTH_AUTHORIZATION_CODE`, or `EXTERNALBROWSER`. Defaults to `SNOWFLAKE_JWT` when `privateKeyPath` or `SNOWFLAKE_PRI_KEY_PATH` is set; otherwise `graphene login` defaults to `OAUTH_AUTHORIZATION_CODE`, using Snowflake's built-in local application OAuth flow.
 - `database`, `schema` — optional defaults applied to unqualified queries.
 
-The matching private key passphrase env var is `SNOWFLAKE_PRI_PASSPHRASE`.
+Connection fields can be overridden with `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USERNAME`, `SNOWFLAKE_DATABASE`, `SNOWFLAKE_SCHEMA`, `SNOWFLAKE_AUTHENTICATOR`, and `SNOWFLAKE_PRI_KEY_PATH`. The matching inline key and passphrase variables are `SNOWFLAKE_PRI_KEY` and `SNOWFLAKE_PRI_PASSPHRASE`.
 
 ## `bigquery`
 
@@ -111,8 +113,10 @@ The matching private key passphrase env var is `SNOWFLAKE_PRI_PASSPHRASE`.
 }
 ```
 
-- `projectId` — Google Cloud project ID for billing/jobs.
-- `keyPath` — absolute path to the service account JSON key. Usually set via the `GOOGLE_APPLICATION_CREDENTIALS` env var instead.
+- `projectId` — Google Cloud project ID for billing/jobs. Override with `BIGQUERY_PROJECT_ID`, `GOOGLE_CLOUD_PROJECT`, or `GCLOUD_PROJECT`.
+- `keyPath` — absolute path to the service account JSON key. Override with `BIGQUERY_KEY_PATH` or `GOOGLE_APPLICATION_CREDENTIALS`.
+
+`GOOGLE_CREDENTIALS_CONTENT` can contain the service account JSON directly.
 
 ## `clickhouse`
 
@@ -130,7 +134,7 @@ The matching private key passphrase env var is `SNOWFLAKE_PRI_PASSPHRASE`.
 - `database` — default database for unqualified queries.
 - `requestTimeout` — per-request timeout in milliseconds.
 
-The matching password env var is `CLICKHOUSE_PASSWORD`.
+Override connection fields with `CLICKHOUSE_URL`, `CLICKHOUSE_USERNAME`, `CLICKHOUSE_DATABASE`, and `CLICKHOUSE_REQUEST_TIMEOUT`. `CLICKHOUSE_PASSWORD` supplies the password. Use `GRAPHENE_DEFAULT_NAMESPACE` separately when unqualified GSQL should also point at a different namespace.
 
 ## `postgres`
 
@@ -144,7 +148,23 @@ The matching password env var is `CLICKHOUSE_PASSWORD`.
 }
 ```
 
-- `connectionString` — full Postgres connection string. If omitted, Graphene also checks `POSTGRES_URL` and `DATABASE_URL`.
-- `host`, `port`, `database`, `user`/`username` — connection fields used when no connection string is set. These can also come from the matching `PG*` or `POSTGRES_*` env vars.
-- `schema` — default schema for unqualified table names. Falls back to `defaultNamespace`, then `public`.
+- `connectionString` — full Postgres connection string. Override with `POSTGRES_URL` or `DATABASE_URL`.
+- `host`, `port`, `database`, `user`/`username` — connection fields used when no connection string is set. Override with `PGHOST`/`POSTGRES_HOST`, `PGPORT`/`POSTGRES_PORT`, `PGDATABASE`/`POSTGRES_DATABASE`, and `PGUSER`/`POSTGRES_USER`.
+- `schema` — default schema used by schema inspection. Override with `PGSCHEMA` or `POSTGRES_SCHEMA`. Falls back to `defaultNamespace`, then `public`.
 - `ssl`, `max`, `idleTimeoutMillis`, `connectionTimeoutMillis`, `queryTimeout`, `statementTimeout` — passed through to `node-postgres`.
+
+Supply the password with `PGPASSWORD` or `POSTGRES_PASSWORD`.
+
+## `athena`
+
+```json
+"athena": {
+  "region": "us-east-1",
+  "catalog": "AwsDataCatalog",
+  "database": "analytics",
+  "workGroup": "primary",
+  "outputLocation": "s3://my-query-results/"
+}
+```
+
+Override fields with `AWS_REGION`/`AWS_DEFAULT_REGION`, `ATHENA_CATALOG`, `ATHENA_DATABASE`, `ATHENA_WORK_GROUP`, and `ATHENA_OUTPUT_LOCATION`. The AWS SDK also reads `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN`.
