@@ -1,8 +1,9 @@
 /// <reference types="vitest/globals" />
 import * as path from 'node:path'
 
-import {loadConfig, normalizeConfig, type Config} from '../lang/config.ts'
+import {config, loadConfig, normalizeConfig, setGlobalConfig, type Config} from '../lang/config.ts'
 import {formatType, parseWarehouseFieldType} from '../lang/types.ts'
+import {localDbOptions as clickHouseOptions} from './connections/clickhouse.ts'
 import {expect, test} from './testFixtures.ts'
 
 const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
@@ -41,6 +42,26 @@ describe('duckdb', () => {
     let cfg = normalizeConfig({motherduck: {database: 'sample_data'}, root: '/tmp/project'})
     expect(cfg.dialect).toBe('duckdb')
     expect(cfg.motherduck?.database).toBe('sample_data')
+  })
+
+  test('lets ClickHouse environment variables override its connection without changing the namespace', () => {
+    let previousConfig = {...config}
+    setGlobalConfig({clickhouse: {url: 'https://prod.clickhouse.test', username: 'prod-user', database: 'analytics'}, defaultNamespace: 'analytics', root: '/tmp/project'})
+    vi.stubEnv('CLICKHOUSE_URL', 'https://dev.clickhouse.test')
+    vi.stubEnv('CLICKHOUSE_USERNAME', 'dev-user')
+    vi.stubEnv('CLICKHOUSE_PASSWORD', 'password')
+    vi.stubEnv('CLICKHOUSE_DATABASE', 'dbt_dev')
+    vi.stubEnv('CLICKHOUSE_REQUEST_TIMEOUT', '30000')
+
+    expect(clickHouseOptions()).toEqual({url: 'https://dev.clickhouse.test', username: 'dev-user', password: 'password', database: 'dbt_dev', requestTimeout: 30000})
+    expect(config.defaultNamespace).toBe('analytics')
+    vi.unstubAllEnvs()
+    setGlobalConfig(previousConfig)
+  })
+
+  test('supports a connector-independent namespace override', () => {
+    let cfg = normalizeConfig({postgres: {database: 'analytics', schema: 'public'}, root: '/tmp/project'}, process.cwd(), undefined, {GRAPHENE_DEFAULT_NAMESPACE: 'dbt_alice'})
+    expect(cfg.defaultNamespace).toBe('dbt_alice')
   })
 
   test('lists available tables when no argument is provided', async ({runCli}) => {

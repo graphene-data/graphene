@@ -11,6 +11,8 @@ export interface SnowflakeOptions {
   privateKeyPath?: string
   privateKeyPass?: string
   authenticator?: 'OAUTH_AUTHORIZATION_CODE' | 'EXTERNALBROWSER' | 'SNOWFLAKE_JWT'
+  database?: string
+  schema?: string
   logLevel?: string
   timeout?: number
   sessionParameters?: Record<string, unknown>
@@ -175,10 +177,13 @@ export function escapeSnowflakeString(value: string) {
 
 export function localDbOptions(): SnowflakeOptions {
   let snowflakeConfig = config.snowflake!
-  let {account, username} = snowflakeConfig
+  let account = process.env.SNOWFLAKE_ACCOUNT || snowflakeConfig.account
+  let username = process.env.SNOWFLAKE_USERNAME || snowflakeConfig.username
+  let database = process.env.SNOWFLAKE_DATABASE || snowflakeConfig.database
+  let schema = process.env.SNOWFLAKE_SCHEMA || snowflakeConfig.schema
   let privateKeyPath = process.env.SNOWFLAKE_PRI_KEY_PATH || snowflakeConfig.privateKeyPath
   let privateKey = process.env.SNOWFLAKE_PRI_KEY
-  let authenticator = snowflakeConfig.authenticator || 'SNOWFLAKE_JWT'
+  let authenticator = (process.env.SNOWFLAKE_AUTHENTICATOR as SnowflakeOptions['authenticator']) || snowflakeConfig.authenticator || 'SNOWFLAKE_JWT'
 
   // if you set a private key, we'll use that instead of the config
   if (privateKeyPath || privateKey) authenticator = 'SNOWFLAKE_JWT'
@@ -187,6 +192,8 @@ export function localDbOptions(): SnowflakeOptions {
     account,
     username,
     authenticator,
+    database,
+    schema,
     privateKeyPath,
     privateKey,
     privateKeyPass: process.env.SNOWFLAKE_PRI_PASSPHRASE,

@@ -91,14 +91,17 @@ export function normalizeBigQueryRows(rows: Record<string, any>[]) {
 }
 
 export async function localDbOptions(): Promise<BigQueryOptions> {
+  let projectId = process.env.BIGQUERY_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || config.bigquery?.projectId
   if (process.env.GOOGLE_CREDENTIALS_CONTENT) {
     let credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS_CONTENT)
-    return {projectId: credentials.project_id, credentials}
+    return {projectId: projectId || credentials.project_id, credentials}
   }
-  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    let body = await readFile(process.env.GOOGLE_APPLICATION_CREDENTIALS, {encoding: 'utf-8'})
+
+  let keyPath = process.env.BIGQUERY_KEY_PATH || process.env.GOOGLE_APPLICATION_CREDENTIALS || config.bigquery?.keyPath
+  if (keyPath) {
+    let body = await readFile(keyPath, {encoding: 'utf-8'})
     let credentials = JSON.parse(body)
-    return {projectId: credentials.project_id}
+    return {projectId: projectId || credentials.project_id, credentials}
   }
-  return {}
+  return {projectId}
 }

@@ -87,7 +87,7 @@ export function setGlobalConfig(cfg: ConfigInput | Config, projectName?: string)
   Object.assign(config, normalizeConfig(cfg, process.cwd(), projectName))
 }
 
-export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(), projectName?: string): Config {
+export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(), projectName?: string, env: NodeJS.ProcessEnv = process.env): Config {
   let cfg = {...input}
   let root = path.resolve(cfg.root || defaultRoot)
   if (cfg.namespace && !cfg.defaultNamespace) cfg.defaultNamespace = cfg.namespace
@@ -100,6 +100,10 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(),
   else if (cfg.athena) dialect = 'athena'
   else if (cfg.motherduck) dialect = 'duckdb'
   else if (cfg.duckdb) dialect = 'duckdb'
+
+  // Unlike connector-specific environment variables, this affects GSQL table resolution.
+  cfg.defaultNamespace = env.GRAPHENE_DEFAULT_NAMESPACE || cfg.defaultNamespace
+
   let envFile = ['.env']
   if (Array.isArray(cfg.envFile)) envFile = cfg.envFile
   else if (cfg.envFile) envFile = [cfg.envFile]
@@ -109,7 +113,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(),
     dialect,
     root,
     projectName: projectName || path.basename(root),
-    port: cfg.port || Number(process.env.GRAPHENE_PORT) || 4000,
+    port: cfg.port || Number(env.GRAPHENE_PORT) || 4000,
     ignoredFiles: cfg.ignoredFiles || [],
     envFile,
   } as Config

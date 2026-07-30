@@ -79,15 +79,15 @@ function escapeClickHouseString(value: string) {
 }
 
 export function localDbOptions(): ClickHouseOptions {
-  let url = config.clickhouse?.url || process.env.CLICKHOUSE_URL
-  let username = config.clickhouse?.username || process.env.CLICKHOUSE_USERNAME
+  let url = process.env.CLICKHOUSE_URL || config.clickhouse?.url
+  let username = process.env.CLICKHOUSE_USERNAME || config.clickhouse?.username
   let password = process.env.CLICKHOUSE_PASSWORD
   if (!url || !username || !password) throw new Error('ClickHouse requires url and username in config or env, plus CLICKHOUSE_PASSWORD in env')
   return {
     url,
     username,
     password,
-    database: config.clickhouse?.database || config.defaultNamespace || 'default',
-    requestTimeout: config.clickhouse?.requestTimeout,
+    database: process.env.CLICKHOUSE_DATABASE || config.clickhouse?.database || config.defaultNamespace || 'default',
+    requestTimeout: Number(process.env.CLICKHOUSE_REQUEST_TIMEOUT) || config.clickhouse?.requestTimeout,
   }
 }

@@ -190,10 +190,10 @@ function postgresDisplayType(row: Record<string, unknown>) {
 export async function localDbOptions(): Promise<PostgresOptions> {
   if (config.postgres?.inMemory) return await inMemoryPostgresOptions()
 
-  let connectionString = config.postgres?.connectionString || process.env.POSTGRES_URL || process.env.DATABASE_URL
-  let host = config.postgres?.host || process.env.PGHOST || process.env.POSTGRES_HOST
-  let database = config.postgres?.database || process.env.PGDATABASE || process.env.POSTGRES_DATABASE
-  let user = config.postgres?.user || config.postgres?.username || process.env.PGUSER || process.env.POSTGRES_USER
+  let connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL || config.postgres?.connectionString
+  let host = process.env.PGHOST || process.env.POSTGRES_HOST || config.postgres?.host
+  let database = process.env.PGDATABASE || process.env.POSTGRES_DATABASE || config.postgres?.database
+  let user = process.env.PGUSER || process.env.POSTGRES_USER || config.postgres?.user || config.postgres?.username
   let password = process.env.PGPASSWORD || process.env.POSTGRES_PASSWORD
   if (!connectionString && (!host || !database || !user)) throw new Error('Postgres requires connectionString/POSTGRES_URL/DATABASE_URL or host, database, and user in config or env')
   return {
@@ -203,8 +203,8 @@ export async function localDbOptions(): Promise<PostgresOptions> {
     database,
     user,
     password,
-    schema: config.postgres?.schema || config.defaultNamespace,
-    port: config.postgres?.port || Number(process.env.PGPORT || process.env.POSTGRES_PORT) || undefined,
+    schema: process.env.PGSCHEMA || process.env.POSTGRES_SCHEMA || config.postgres?.schema || config.defaultNamespace,
+    port: Number(process.env.PGPORT || process.env.POSTGRES_PORT) || config.postgres?.port,
   }
 }
 
