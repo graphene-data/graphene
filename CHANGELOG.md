@@ -1,3 +1,29 @@
+## 0.0.24
+
+### Breaking changes
+
+- Simplified `graphene run`: renamed `--input` to `--param` and removed `-q`/`--query` and per-command `--port` options (`23d3f1d3`).
+- Markdown files named `slack.md` or `web.md` are now excluded from workspace discovery and navigation by default (`26eee723`).
+
+### Added
+
+- Added support for arbitrary HTML, CSS, and JavaScript in Markdown pages (`95d65050`).
+- Added `graphene make-token` and `GRAPHENE_TOKEN` support for short-lived Graphene Cloud access tokens (`820e3541`).
+- Added environment variable overrides for database connections and the default GSQL namespace (`4edd8c02`).
+- Updated browser tab titles to use the current page and project titles (`66ef4393`).
+
+### Fixed
+
+- Fixed page queries arriving asynchronously and stopped stale queries after navigation (`45f82ee0`).
+- Added clear empty states for missing pages and useful errors for page rendering failures (`c458d94e`, `448bf274`).
+- Fixed configured ports being ignored by some CLI and dev-server operations (`bf351da7`).
+- Fixed page-load tracking to identify unfinished work and wait for ECharts rendering (`9cd2d079`).
+- Fixed parallel Graphene Cloud credential refreshes invalidating rotated refresh tokens (`853abff5`).
+- Added warnings for dropdown defaults that are not present in their options (`7eb720c9`).
+- Improved text input and dropdown sizing, including responsive wrapping for crowded rows (`33f2cebd`).
+- Improved the cache freshness indicator's label and alignment (`9c6ce625`).
+- Updated vulnerable CLI, create-project, VS Code, lint, and test dependencies (`d775a308`).
+
 ## 0.0.23
 
 ### Breaking changes
