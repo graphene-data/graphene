@@ -8,7 +8,7 @@
   // Update the age every minute
   let ageTimer: number | undefined
   let now = $state(Date.now())
-  onMount(() => ageTimer = window.setInterval(() => (now = Date.now()), 60_000))
+  onMount(() => ageTimer = window.setInterval(() => now = Date.now(), 60_000))
   onDestroy(() => window.clearInterval(ageTimer))
 
   let ago = $derived.by(() => {

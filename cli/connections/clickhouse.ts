@@ -29,7 +29,7 @@ export class ClickHouseConnection implements QueryConnection {
 
   async runQuery(sql: string, _options?: QueryOptions): Promise<QueryResult> {
     let result = await this.client.query({query: sql, format: 'JSONEachRow'} as any)
-    let rows = (await result.json()) as unknown as Array<Record<string, unknown>>
+    let rows = await result.json() as unknown as Array<Record<string, unknown>>
     return {rows, totalRows: rows.length}
   }
 

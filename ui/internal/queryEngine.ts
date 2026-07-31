@@ -45,7 +45,7 @@ let queries = [] as QueryNode[]
 let queryResults = {} as Record<string, {rows: any[]; fields?: Field[]}>
 
 let queryFetcher: QueryFetcher = fetchWithCache
-export const setQueryFetcher = f => (queryFetcher = f)
+export const setQueryFetcher = f => queryFetcher = f
 export const queryState = writable<QueryState>({loading: false})
 
 // Called by GrapheneQuery tags to register a named query on the page
@@ -151,7 +151,7 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean; si
   }
 
   if (!response.ok) {
-    let body = (await response.json()) as GrapheneError
+    let body = await response.json() as GrapheneError
     let err = new Error(body.message)
     Object.assign(err, body)
     throw err

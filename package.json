@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "eslint . && oxfmt --check && tsc",
-    "lint:fix": "eslint . --fix && oxfmt",
+    "lint": "eslint . && tsc",
+    "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test-one": "node scripts/turboTest.js",
     "check-examples": "pnpm -C examples/flights graphene check && pnpm -C examples/ecomm graphene check && pnpm -C examples/snowflake graphene check && pnpm -C examples/clickhouse graphene check"
@@ -23,7 +23,6 @@
     "eslint-plugin-svelte": "^3.22.0",
     "glob": "^13.0.6",
     "globals": "^16.5.0",
-    "oxfmt": "^0.36.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
     "vitest": "4.1.10",

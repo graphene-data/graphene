@@ -732,16 +732,11 @@ class AnalysisSession implements Analyzer {
     if (node.type.isError) return this.diag(node, 'Invalid expression', {sql: 'NULL', type: scalarType('error')})
 
     switch (node.name) {
-      case 'Number':
-        return {sql: txt(node), type: scalarType('number')}
-      case 'Boolean':
-        return {sql: txt(node).toLowerCase(), type: scalarType('boolean')}
-      case 'Null':
-        return {sql: 'NULL', type: scalarType('null')}
-      case 'String':
-        return {sql: `'${txt(node).slice(1, -1).replace(/'/g, "''")}'`, type: scalarType('string')}
-      case 'Param':
-        return {sql: txt(node), type: scalarType('string')} // $param - type inferred later
+      case 'Number': return {sql: txt(node), type: scalarType('number')}
+      case 'Boolean': return {sql: txt(node).toLowerCase(), type: scalarType('boolean')}
+      case 'Null': return {sql: 'NULL', type: scalarType('null')}
+      case 'String': return {sql: `'${txt(node).slice(1, -1).replace(/'/g, "''")}'`, type: scalarType('string')}
+      case 'Param': return {sql: txt(node), type: scalarType('string')} // $param - type inferred later
 
       case 'Ref': {
         let pathNodes = node.getChildren('Identifier')

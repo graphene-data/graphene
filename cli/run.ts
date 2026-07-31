@@ -58,7 +58,9 @@ async function sendRequestToVite(pageUrl: string, request: PageRequest): Promise
       body: JSON.stringify({pageUrl, request}),
       signal: AbortSignal.timeout(30_000),
     })
-    let body = response.headers.get('content-type')?.includes('application/json') ? await response.json() : {errors: [{message: await response.text()}]}
+    let body = response.headers.get('content-type')?.includes('application/json')
+      ? await response.json()
+      : {errors: [{message: await response.text()}]}
     if (body.error) return {errors: [{message: body.error}]}
 
     if (response.ok) return body

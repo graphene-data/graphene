@@ -25,15 +25,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Look at the graphene library's package.json (as opposed to the project using graphene) to get the version
 // in dev: cli/cli.ts -> cli/package.json. in dist: cli/dist/cli/cli.js -> cli/package.json
-const pkgPath = fs.existsSync(path.join(__dirname, 'package.json')) ? path.join(__dirname, 'package.json') : path.join(__dirname, '../../package.json')
+const pkgPath = fs.existsSync(path.join(__dirname, 'package.json'))
+  ? path.join(__dirname, 'package.json')
+  : path.join(__dirname, '../../package.json')
 const libPkg = fs.readJsonSync(pkgPath)
 program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
 registerInstallBrowserCommand(program)
 
 let telemetry: CliTelemetry
 
-program
-  .command('compile')
+program.command('compile')
   .description('Translate a query to SQL and print it')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .action(
@@ -46,8 +47,7 @@ program
     }),
   )
 
-program
-  .command('run')
+program.command('run')
   .description('Run a query or screenshot a Graphene page')
   .argument('[input]', 'Path to file, a raw string, or "-" for stdin')
   .option('-c, --chart <chartTitleOrComponentId>', 'Title or component ID of a specific chart or table to capture')
@@ -111,8 +111,7 @@ program
     }),
   )
 
-program
-  .command('list')
+program.command('list')
   .description('List the component IDs for charts and tables on a markdown page')
   .argument('<file>', 'Markdown file to inspect')
   .action(
@@ -125,8 +124,7 @@ program
     }),
   )
 
-program
-  .command('schema')
+program.command('schema')
   .description('Inspect database tables or describe a table')
   .argument('[schema | table]', 'Optional schema or table name to describe')
   .action(
@@ -185,8 +183,7 @@ program
     }),
   )
 
-program
-  .command('serve')
+program.command('serve')
   .description('Run the local server')
   .option('--bg', 'Run the server in the background')
   .action(
@@ -203,8 +200,7 @@ program
     }),
   )
 
-program
-  .command('stop')
+program.command('stop')
   .description('Stop the local server')
   .action(
     withTelemetry('stop', async _exit => {
@@ -212,8 +208,7 @@ program
     }),
   )
 
-program
-  .command('check')
+program.command('check')
   .description('Check the project for diagnostics')
   .argument('[file]', 'Optional markdown or gsql file to check')
   .action(
@@ -223,16 +218,14 @@ program
     }),
   )
 
-program
-  .command('make-token')
+program.command('make-token')
   .description('Print a fresh short-lived Graphene Cloud access token')
   .action(async () => {
     if (!config.cloud) throw new Error('No Graphene Cloud URL is configured for this project')
     console.log(await makeAccessToken())
   })
 
-program
-  .command('login')
+program.command('login')
   .description('Log in to Graphene Cloud or the configured database')
   .action(
     withTelemetry('login', async exit => {
@@ -251,8 +244,7 @@ program
   )
 
 function registerInstallBrowserCommand(program: Command) {
-  program
-    .command('install-browser')
+  program.command('install-browser')
     .description('Install the browser used by graphene run --headless screenshots')
     .option('--with-deps', 'Also install browser system dependencies where supported')
     .action(async (options: {withDeps?: boolean}) => {
@@ -271,7 +263,7 @@ async function readInput(arg: string | undefined): Promise<CliInput> {
     let contents = await new Promise<string>(resolve => {
       let data = ''
       process.stdin.setEncoding('utf-8')
-      process.stdin.on('data', chunk => (data += chunk))
+      process.stdin.on('data', chunk => data += chunk)
       process.stdin.on('end', () => resolve(data))
       process.stdin.resume()
     })

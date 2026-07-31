@@ -87,43 +87,60 @@ describe('lang', () => {
   })
 
   it('handles basic select query', async () => {
-    expect('from users select id, name where id = 1').toRenderSql('SELECT users.id as id, users.name as name from users as users WHERE users.id=1')
-    await expect('from users select id, name where id = 1').toReturnRows([1, 'Alice'])
+    expect('from users select id, name where id = 1')
+      .toRenderSql('SELECT users.id as id, users.name as name from users as users WHERE users.id=1')
+    await expect('from users select id, name where id = 1')
+      .toReturnRows([1, 'Alice'])
   })
 
   it('supports columns with leading underscores', () => {
     updateFile('table events (_id int, _source text)', 'underscore.gsql')
 
-    expect('from events select _id, events._source').toRenderSql('select events._id as _id, events._source as _source from events as events')
+    expect('from events select _id, events._source')
+      .toRenderSql('select events._id as _id, events._source as _source from events as events')
   })
 
   it('handles select 1 without from', async () => {
-    expect('select 1').toRenderSql('SELECT 1 as col_0')
-    await expect('select 1').toReturnRows([1])
+    expect('select 1')
+      .toRenderSql('SELECT 1 as col_0')
+    await expect('select 1')
+      .toReturnRows([1])
   })
 
   it('supports union, union all, and union distinct', async () => {
-    expect('select 1 as id union select 1 as id').toRenderSql('SELECT 1 as id UNION SELECT 1 as id')
-    await expect('select 1 as id union select 1 as id').toReturnRows([1])
+    expect('select 1 as id union select 1 as id')
+      .toRenderSql('SELECT 1 as id UNION SELECT 1 as id')
+    await expect('select 1 as id union select 1 as id')
+      .toReturnRows([1])
 
-    expect('select 1 as id union all select 1 as id').toRenderSql('SELECT 1 as id UNION ALL SELECT 1 as id')
-    await expect('select 1 as id union all select 1 as id').toReturnRows([1], [1])
+    expect('select 1 as id union all select 1 as id')
+      .toRenderSql('SELECT 1 as id UNION ALL SELECT 1 as id')
+    await expect('select 1 as id union all select 1 as id')
+      .toReturnRows([1], [1])
 
-    expect('select 1 as id union distinct select 1 as id').toRenderSql('SELECT 1 as id UNION DISTINCT SELECT 1 as id')
-    await expect('select 1 as id union distinct select 1 as id').toReturnRows([1])
+    expect('select 1 as id union distinct select 1 as id')
+      .toRenderSql('SELECT 1 as id UNION DISTINCT SELECT 1 as id')
+    await expect('select 1 as id union distinct select 1 as id')
+      .toReturnRows([1])
   })
 
   it('supports intersect and except', async () => {
-    expect('select 1 as id intersect select 1 as id').toRenderSql('SELECT 1 as id INTERSECT SELECT 1 as id')
-    await expect('select 1 as id intersect select 1 as id').toReturnRows([1])
+    expect('select 1 as id intersect select 1 as id')
+      .toRenderSql('SELECT 1 as id INTERSECT SELECT 1 as id')
+    await expect('select 1 as id intersect select 1 as id')
+      .toReturnRows([1])
 
-    expect('select 1 as id except select 2 as id').toRenderSql('SELECT 1 as id EXCEPT SELECT 2 as id')
-    await expect('select 1 as id except select 2 as id').toReturnRows([1])
+    expect('select 1 as id except select 2 as id')
+      .toRenderSql('SELECT 1 as id EXCEPT SELECT 2 as id')
+    await expect('select 1 as id except select 2 as id')
+      .toReturnRows([1])
   })
 
   it('supports set operations over analyzed queries', async () => {
-    expect('from users select id union from orders select user_id as id').toRenderSql('SELECT users.id as id FROM users as users UNION SELECT orders.user_id as id FROM orders as orders')
-    await expect('from users select id union all from orders select user_id as id').toReturnRows([1], [2], [1], [1], [2])
+    expect('from users select id union from orders select user_id as id')
+      .toRenderSql('SELECT users.id as id FROM users as users UNION SELECT orders.user_id as id FROM orders as orders')
+    await expect('from users select id union all from orders select user_id as id')
+      .toReturnRows([1], [2], [1], [1], [2])
   })
 
   it('suppresses implicit branch order by for aggregate set operations', () => {
@@ -131,15 +148,13 @@ describe('lang', () => {
       from users select name as label, sum(payments.amount) as amt
       union all
       from users select email as label, sum(payments.amount) as amt
-    `).toRenderSql(
-      'SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 UNION ALL SELECT users.email as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1',
-    )
+    `)
+      .toRenderSql('SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 UNION ALL SELECT users.email as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1')
   })
 
   it('keeps implicit order by for standalone aggregate queries', () => {
-    expect('from users select name as label, sum(payments.amount) as amt').toRenderSql(
-      'SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 ORDER BY 2 desc NULLS LAST',
-    )
+    expect('from users select name as label, sum(payments.amount) as amt')
+      .toRenderSql('SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 ORDER BY 2 desc NULLS LAST')
   })
 
   it('preserves implicit order by inside parenthesized set operands', () => {
@@ -147,24 +162,28 @@ describe('lang', () => {
       from users select name as label, sum(payments.amount) as amt
       union all
       (from users select email as label, sum(payments.amount) as amt)
-    `).toRenderSql(
-      'SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 UNION ALL ( SELECT users.email as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 ORDER BY 2 desc NULLS LAST )',
-    )
+    `)
+      .toRenderSql('SELECT users.name as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 UNION ALL ( SELECT users.email as label, sum(payments.amount) as amt FROM users as users LEFT JOIN payments as payments ON payments.user_id=users.id GROUP BY 1 ORDER BY 2 desc NULLS LAST )')
   })
 
   it('supports a leading parenthesized set-operation operand', async () => {
-    expect('(select 0 as id) union all (from users select id) order by id').toRenderSql('( SELECT 0 as id ) UNION ALL ( SELECT users.id as id FROM users as users ) ORDER BY 1 asc NULLS LAST')
-    await expect('(select 0 as id) union all (from users select id) order by id').toReturnRows([0], [1], [2])
+    expect('(select 0 as id) union all (from users select id) order by id')
+      .toRenderSql('( SELECT 0 as id ) UNION ALL ( SELECT users.id as id FROM users as users ) ORDER BY 1 asc NULLS LAST')
+    await expect('(select 0 as id) union all (from users select id) order by id')
+      .toReturnRows([0], [1], [2])
   })
 
   it('supports parenthesized set-operation operands in subqueries and ctes', () => {
-    expect('from (select 1 as id union all select 2 as id) nums select id').toRenderSql('SELECT nums.id as id FROM ( SELECT 1 as id UNION ALL SELECT 2 as id ) as nums')
+    expect('from (select 1 as id union all select 2 as id) nums select id')
+      .toRenderSql('SELECT nums.id as id FROM ( SELECT 1 as id UNION ALL SELECT 2 as id ) as nums')
 
-    expect('with nums as (select 1 as id union all select 2 as id) from nums select id').toRenderSql('WITH nums as ( SELECT 1 as id UNION ALL SELECT 2 as id ) SELECT nums.id as id FROM nums as nums')
+    expect('with nums as (select 1 as id union all select 2 as id) from nums select id')
+      .toRenderSql('WITH nums as ( SELECT 1 as id UNION ALL SELECT 2 as id ) SELECT nums.id as id FROM nums as nums')
   })
 
   it('applies outer order by and limit to the full set operation', () => {
-    expect('select 2 as id union select 1 as id order by id limit 1').toRenderSql('SELECT 2 as id UNION SELECT 1 as id ORDER BY 1 asc NULLS LAST LIMIT 1')
+    expect('select 2 as id union select 1 as id order by id limit 1')
+      .toRenderSql('SELECT 2 as id UNION SELECT 1 as id ORDER BY 1 asc NULLS LAST LIMIT 1')
   })
 
   it('executes aggregate set operations with an outer order by', async () => {
@@ -173,43 +192,46 @@ describe('lang', () => {
       union all
       from users select 'email:' || email as label, sum(payments.amount) as amt
       order by label
-    `).toReturnRows(['email:alice@example.com', 100], ['email:bob@example.com', 50], ['name:Alice', 100], ['name:Bob', 50])
+    `)
+      .toReturnRows(['email:alice@example.com', 100], ['email:bob@example.com', 50], ['name:Alice', 100], ['name:Bob', 50])
   })
 
   it('requires matching column counts across set-operation branches', () => {
-    expect('select 1 as id union select 1 as id, 2 as other').toHaveDiagnostic(/same number of columns/i)
+    expect('select 1 as id union select 1 as id, 2 as other')
+      .toHaveDiagnostic(/same number of columns/i)
   })
 
   it('renders unquoted identifiers for snowflake queries', () => {
     setGlobalConfig({dialect: 'snowflake', root: ''})
-    expect('from users select id, orders.amount as amt order by amt desc').toRenderSql(
-      'SELECT users.id as id, orders.amount as amt FROM USERS as users LEFT JOIN ORDERS as orders ON orders.user_id=users.id ORDER BY 2 desc NULLS LAST',
-    )
+    expect('from users select id, orders.amount as amt order by amt desc')
+      .toRenderSql('SELECT users.id as id, orders.amount as amt FROM USERS as users LEFT JOIN ORDERS as orders ON orders.user_id=users.id ORDER BY 2 desc NULLS LAST')
   })
 
   it('applies defaultNamespace to unqualified table paths', () => {
     setGlobalConfig({root: '', defaultNamespace: 'analytics'})
-    expect('from users select id').toRenderSql('select users.id as id from analytics.users as users')
+    expect('from users select id')
+      .toRenderSql('select users.id as id from analytics.users as users')
   })
 
   it('does not apply defaultNamespace to already-qualified table paths', () => {
     setGlobalConfig({root: '', defaultNamespace: 'analytics'})
     updateFile('table raw.users (id int)', 'namespaced.gsql')
-    expect('from raw.users select id').toRenderSql('select users.id as id from raw.users as users')
+    expect('from raw.users select id')
+      .toRenderSql('select users.id as id from raw.users as users')
   })
 
   it('applies defaultNamespace to unqualified table paths for clickhouse', () => {
     setGlobalConfig({dialect: 'clickhouse', root: '', defaultNamespace: 'default'})
     updateFile('table nyc_taxi (trip_id int)', 'clickhouse.gsql')
-    expect('from nyc_taxi select trip_id').toRenderSql('SELECT nyc_taxi.trip_id as trip_id FROM default.nyc_taxi as nyc_taxi')
+    expect('from nyc_taxi select trip_id')
+      .toRenderSql('SELECT nyc_taxi.trip_id as trip_id FROM default.nyc_taxi as nyc_taxi')
   })
 
   it('renders Athena SQL with its configured namespace', () => {
     setGlobalConfig({dialect: 'athena', root: '', defaultNamespace: 'graphene_test'})
     updateFile('table flights (carrier string, dep_delay int)', 'athena.gsql')
-    expect('from flights select carrier, sum(dep_delay) as total_delay order by 2 desc').toRenderSql(
-      'SELECT flights.carrier as carrier, sum(flights.dep_delay) as total_delay FROM graphene_test.flights as flights GROUP BY 1 ORDER BY 2 desc NULLS LAST',
-    )
+    expect('from flights select carrier, sum(dep_delay) as total_delay order by 2 desc')
+      .toRenderSql('SELECT flights.carrier as carrier, sum(flights.dep_delay) as total_delay FROM graphene_test.flights as flights GROUP BY 1 ORDER BY 2 desc NULLS LAST')
   })
 
   it('excludes readme.md and agents.md from workspace by default', async () => {
@@ -267,7 +289,8 @@ describe('lang', () => {
 
     // Snowflake table paths are uppercased by dialect formatting, while select aliases remain as authored.
     // Note: this skipped test documents nested join-chain behavior that may diverge from current defaults.
-    expect('from users_chain select orders_chain.order_item_view_chain.order_id').toRenderSql(
+    expect('from users_chain select orders_chain.order_item_view_chain.order_id')
+      .toRenderSql(
       `SELECT orders_chain_order_item_view_chain.ORDER_ID as orders_chain_order_item_view_chain_order_id
         from USERS_CHAIN as USERS_CHAIN LEFT JOIN ORDERS_CHAIN AS orders_chain ON orders_chain.USER_ID=USERS_CHAIN.ID
         LEFT JOIN ORDER_ITEM_VIEW_CHAIN AS orders_chain_order_item_view_chain ON orders_chain_order_item_view_chain.ORDER_ID=orders_chain.ID`,
@@ -276,40 +299,39 @@ describe('lang', () => {
   })
 
   it('expands plain wildcard', () => {
-    expect('from users select *').toRenderSql('select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users')
+    expect('from users select *')
+      .toRenderSql('select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users')
   })
 
   it('expands plain wildcard when mixed with other select items', () => {
-    expect('from users select *, email as contact').toRenderSql(
-      'select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age, users.email as contact from users as users',
-    )
+    expect('from users select *, email as contact')
+      .toRenderSql('select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age, users.email as contact from users as users')
   })
 
   it('expands wildcards on a specific join', () => {
-    expect('from orders select users.*').toRenderSql(
-      'select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from orders as orders left join users as users on users.id=orders.user_id',
-    )
+    expect('from orders select users.*')
+      .toRenderSql('select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from orders as orders left join users as users on users.id=orders.user_id')
   })
 
   it('excludes aggregates from wildcard expansion', () => {
     // especially if those aggs are indirectly an agg agg expression
-    expect('table t (amount int, sum(amount) / count() as weird_avg) from t select *').toRenderSql('select t.amount as amount from t as t')
+    expect('table t (amount int, sum(amount) / count() as weird_avg) from t select *')
+      .toRenderSql('select t.amount as amount from t as t')
   })
 
   it('expands dot-join syntax', () => {
-    expect('from orders select id, users.name').toRenderSql('select orders.id as id, users.name as name from orders as orders left join users as users on users.id=orders.user_id')
+    expect('from orders select id, users.name')
+      .toRenderSql('select orders.id as id, users.name as name from orders as orders left join users as users on users.id=orders.user_id')
   })
 
   it('handles column naming when mutliple columns have the same name', () => {
-    expect('from orders select users.id, order_items.id').toRenderSql(
-      'select users.id as users_id, order_items.id as order_items_id from orders as orders left join users as users on users.id=orders.user_id left join order_items as order_items on order_items.order_id=orders.id',
-    )
+    expect('from orders select users.id, order_items.id')
+      .toRenderSql('select users.id as users_id, order_items.id as order_items_id from orders as orders left join users as users on users.id=orders.user_id left join order_items as order_items on order_items.order_id=orders.id')
   })
 
   it('supports ad-hoc query joins', () => {
-    expect('from orders join users on users.id = orders.user_id select amount, users.name').toRenderSql(
-      'select orders.amount as amount, users.name as name from orders as orders inner join users as users on users.id=orders.user_id',
-    )
+    expect('from orders join users on users.id = orders.user_id select amount, users.name')
+      .toRenderSql('select orders.amount as amount, users.name as name from orders as orders inner join users as users on users.id=orders.user_id')
   })
 
   it('uses leaf names for unambiguous columns when joining aliased ctes', () => {
@@ -325,9 +347,8 @@ describe('lang', () => {
       select d.code, d.dep_delay, a.arr_delay
       from dep d inner join arr a on d.code = a.code
     `
-    expect(q).toRenderSql(
-      'with dep as ( select orders.user_id as code, avg(orders.amount) as dep_delay from orders as orders group by 1 order by 2 desc nulls last ), arr as ( select payments.user_id as code, avg(payments.amount) as arr_delay from payments as payments group by 1 order by 2 desc nulls last ) select d.code as code, d.dep_delay as dep_delay, a.arr_delay as arr_delay from dep as d inner join arr as a on d.code=a.code',
-    )
+    expect(q)
+      .toRenderSql('with dep as ( select orders.user_id as code, avg(orders.amount) as dep_delay from orders as orders group by 1 order by 2 desc nulls last ), arr as ( select payments.user_id as code, avg(payments.amount) as arr_delay from payments as payments group by 1 order by 2 desc nulls last ) select d.code as code, d.dep_delay as dep_delay, a.arr_delay as arr_delay from dep as d inner join arr as a on d.code=a.code')
     let [query] = analyze(q)
     expect(query.fields.map(field => field.name)).toEqual(['code', 'dep_delay', 'arr_delay'])
   })
@@ -345,23 +366,25 @@ describe('lang', () => {
       select d.code, a.code
       from dep d inner join arr a on d.code = a.code
     `
-    expect(q).toRenderSql(
-      'with dep as ( select orders.user_id as code, avg(orders.amount) as dep_delay from orders as orders group by 1 order by 2 desc nulls last ), arr as ( select payments.user_id as code, avg(payments.amount) as arr_delay from payments as payments group by 1 order by 2 desc nulls last ) select d.code as d_code, a.code as a_code from dep as d inner join arr as a on d.code=a.code',
-    )
+    expect(q)
+      .toRenderSql('with dep as ( select orders.user_id as code, avg(orders.amount) as dep_delay from orders as orders group by 1 order by 2 desc nulls last ), arr as ( select payments.user_id as code, avg(payments.amount) as arr_delay from payments as payments group by 1 order by 2 desc nulls last ) select d.code as d_code, a.code as a_code from dep as d inner join arr as a on d.code=a.code')
     let [query] = analyze(q)
     expect(query.fields.map(field => field.name)).toEqual(['d_code', 'a_code'])
   })
 
   it('reports diagnostics for duplicate final output names', () => {
-    expect('from orders join users on users.id = orders.user_id select amount as value, users.name as value').toHaveDiagnostic(/Duplicate output column name "value"/i)
+    expect('from orders join users on users.id = orders.user_id select amount as value, users.name as value')
+      .toHaveDiagnostic(/Duplicate output column name "value"/i)
   })
 
   it('supports cross join without an ON clause', () => {
-    expect('from orders cross join users select amount, users.name').toRenderSql('select orders.amount as amount, users.name as name from orders as orders cross join users as users')
+    expect('from orders cross join users select amount, users.name')
+      .toRenderSql('select orders.amount as amount, users.name as name from orders as orders cross join users as users')
   })
 
   it('rejects cross join with an ON clause', () => {
-    expect('from orders cross join users on users.id = orders.user_id select amount').toHaveDiagnostic(/cross join cannot have an on clause/i)
+    expect('from orders cross join users on users.id = orders.user_id select amount')
+      .toHaveDiagnostic(/cross join cannot have an on clause/i)
   })
 
   it('supports cross join unnest with scalar alias binding', async () => {
@@ -372,8 +395,10 @@ describe('lang', () => {
       select id, tag
       order by id, tag
     `
-    expect(q).toRenderSql('select events.id as id, tag as tag from events as events cross join unnest(events.tags) as tag(tag) order by 1 asc nulls last,2 asc nulls last')
-    await expect(q).toReturnRows([1, 'beta'], [1, 'vip'])
+    expect(q)
+      .toRenderSql('select events.id as id, tag as tag from events as events cross join unnest(events.tags) as tag(tag) order by 1 asc nulls last,2 asc nulls last')
+    await expect(q)
+      .toReturnRows([1, 'beta'], [1, 'vip'])
   })
 
   it('renders unnest per dialect', () => {
@@ -385,13 +410,16 @@ describe('lang', () => {
     `
 
     setGlobalConfig({root: '', bigquery: {}})
-    expect(q).toRenderSql('select events.id as id, tag as tag from `events` as events cross join unnest(events.tags) as tag')
+    expect(q)
+      .toRenderSql('select events.id as id, tag as tag from `events` as events cross join unnest(events.tags) as tag')
 
     setGlobalConfig({dialect: 'snowflake', root: ''})
-    expect(q).toRenderSql('select events.id as id, tag.value as tag from EVENTS as events , TABLE(FLATTEN(INPUT => events.tags)) AS tag')
+    expect(q)
+      .toRenderSql('select events.id as id, tag.value as tag from EVENTS as events , TABLE(FLATTEN(INPUT => events.tags)) AS tag')
 
     setGlobalConfig({dialect: 'clickhouse', root: ''})
-    expect(q).toRenderSql('SELECT events.id as id, tag as tag FROM events as events ARRAY JOIN events.tags AS tag')
+    expect(q)
+      .toRenderSql('SELECT events.id as id, tag as tag FROM events as events ARRAY JOIN events.tags AS tag')
   })
 
   it('rejects unsupported unnest join forms', () => {
@@ -400,21 +428,24 @@ describe('lang', () => {
       from events
       join unnest(tags) as tag
       select id, tag
-    `).toHaveDiagnostic(/bare join unnest is not supported/i)
+    `)
+      .toHaveDiagnostic(/bare join unnest is not supported/i)
 
     expect(`
       table events (id int, tags array<string>)
       from events
       inner join unnest(tags) as tag
       select id, tag
-    `).toHaveDiagnostic(/inner join unnest is not supported/i)
+    `)
+      .toHaveDiagnostic(/inner join unnest is not supported/i)
 
     expect(`
       table events (id int, tags array<string>)
       from events
       left join unnest(tags) as tag
       select id, tag
-    `).toHaveDiagnostic(/left join unnest is not supported/i)
+    `)
+      .toHaveDiagnostic(/left join unnest is not supported/i)
   })
 
   it('requires array input for unnest', () => {
@@ -423,33 +454,34 @@ describe('lang', () => {
       from events
       cross join unnest(id) as tag
       select tag
-    `).toHaveDiagnostic(/unnest requires an array expression/i)
+    `)
+      .toHaveDiagnostic(/unnest requires an array expression/i)
   })
 
   it('resolves bare refs across ad-hoc joins and errors on ambiguity', () => {
-    expect('from orders join users on users.id = orders.user_id select amount').toRenderSql('select orders.amount as amount from orders as orders inner join users as users on users.id=orders.user_id')
+    expect('from orders join users on users.id = orders.user_id select amount')
+      .toRenderSql('select orders.amount as amount from orders as orders inner join users as users on users.id=orders.user_id')
 
-    expect('from orders join users on users.id = orders.user_id select id').toHaveDiagnostic(/ambiguous field "id"/i)
+    expect('from orders join users on users.id = orders.user_id select id')
+      .toHaveDiagnostic(/ambiguous field "id"/i)
   })
 
   it('joins views and CTEs in queries', () => {
     updateFile('table user_totals as (from orders select user_id, sum(amount) as total)', 'user_totals.gsql')
 
-    expect('from users join user_totals on user_totals.user_id = users.id select name, user_totals.total').toRenderSql(
-      'with user_totals as ( select orders.user_id as user_id, sum(orders.amount) as total from orders as orders group by 1 order by 2 desc nulls last ) select users.name as name, user_totals.total as total from users as users inner join user_totals as user_totals on user_totals.user_id=users.id',
-    )
+    expect('from users join user_totals on user_totals.user_id = users.id select name, user_totals.total')
+      .toRenderSql('with user_totals as ( select orders.user_id as user_id, sum(orders.amount) as total from orders as orders group by 1 order by 2 desc nulls last ) select users.name as name, user_totals.total as total from users as users inner join user_totals as user_totals on user_totals.user_id=users.id')
 
-    expect('with active_users as (from users select id, name) from orders join active_users on active_users.id = orders.user_id select active_users.name').toRenderSql(
-      'with active_users as ( select users.id as id, users.name as name from users as users ) select active_users.name as name from orders as orders inner join active_users as active_users on active_users.id=orders.user_id',
-    )
+    expect('with active_users as (from users select id, name) from orders join active_users on active_users.id = orders.user_id select active_users.name')
+      .toRenderSql('with active_users as ( select users.id as id, users.name as name from users as users ) select active_users.name as name from orders as orders inner join active_users as active_users on active_users.id=orders.user_id')
   })
 
   it('expands measures', async () => {
-    expect('from users select name, total_orders').toRenderSql(
-      'select users.name as name, (count(orders.id)) as total_orders from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
-    )
+    expect('from users select name, total_orders')
+      .toRenderSql('select users.name as name, (count(orders.id)) as total_orders from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last')
 
-    await expect('from users select name, total_orders').toReturnRows(['Alice', 2], ['Bob', 1])
+    await expect('from users select name, total_orders')
+      .toReturnRows(['Alice', 2], ['Bob', 1])
   })
 
   it('ignores output fields when analyzing computed columns', () => {
@@ -464,29 +496,35 @@ describe('lang', () => {
       'sales.gsql',
     )
 
-    expect('from sales select revenue, gross_profit').toRenderSql('select (sum(sales.amount)) as revenue, ((sum(sales.amount))-(sum(sales.cost))) as gross_profit from sales as sales')
+    expect('from sales select revenue, gross_profit')
+      .toRenderSql('select (sum(sales.amount)) as revenue, ((sum(sales.amount))-(sum(sales.cost))) as gross_profit from sales as sales')
   })
 
   it('handles expressions with aggregates', async () => {
-    expect('from orders select user_id, avg_order_value').toRenderSql(
-      'select orders.user_id as user_id, (sum(orders.amount)/count(1)) as avg_order_value from orders as orders group by 1 order by 2 desc nulls last',
-    )
+    expect('from orders select user_id, avg_order_value')
+      .toRenderSql('select orders.user_id as user_id, (sum(orders.amount)/count(1)) as avg_order_value from orders as orders group by 1 order by 2 desc nulls last')
 
-    await expect('from orders select user_id, avg_order_value').toReturnRows([2, 40], [1, 30])
+    await expect('from orders select user_id, avg_order_value')
+      .toReturnRows([2, 40], [1, 30])
   })
 
   it('preserves parentheses in expressions for correct operator precedence', async () => {
-    expect('from users select (age + age) / (age + age) as result').toRenderSql('select (users.age+users.age)/(users.age+users.age) as result from users as users')
-    await expect('from users select (1 + 2) / (1 + 2) as result limit 1').toReturnRows([1])
+    expect('from users select (age + age) / (age + age) as result')
+      .toRenderSql('select (users.age+users.age)/(users.age+users.age) as result from users as users')
+    await expect('from users select (1 + 2) / (1 + 2) as result limit 1')
+      .toReturnRows([1])
   })
 
   it('supports || string concatenation', async () => {
-    expect("from users select name || ' suffix' as result").toRenderSql("select users.name||' suffix' as result from users as users")
-    await expect("from users select name || '!' as result limit 1").toReturnRows(['Alice!'])
+    expect("from users select name || ' suffix' as result")
+      .toRenderSql("select users.name||' suffix' as result from users as users")
+    await expect("from users select name || '!' as result limit 1")
+      .toReturnRows(['Alice!'])
   })
 
   it('reports type errors for || with non-string operands', () => {
-    expect('from users select age || name as result').toHaveDiagnostic('Expected string, got number')
+    expect('from users select age || name as result')
+      .toHaveDiagnostic('Expected string, got number')
   })
 
   it('supports window expressions with partition, order, and frame clauses', () => {
@@ -499,39 +537,38 @@ describe('lang', () => {
           order by id
           rows between 1 preceding and current row
         ) as running_total
-    `).toRenderSql(
-      'select orders.user_id as user_id, sum(orders.amount) OVER (PARTITION BY orders.user_id ORDER BY orders.id ASC ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) as running_total from orders as orders',
-    )
+    `)
+      .toRenderSql('select orders.user_id as user_id, sum(orders.amount) OVER (PARTITION BY orders.user_id ORDER BY orders.id ASC ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) as running_total from orders as orders')
   })
 
   it('supports window-only functions with over', () => {
-    expect('from users select row_number() over (order by id) as rn').toRenderSql('select row_number() OVER (ORDER BY users.id ASC) as rn from users as users')
+    expect('from users select row_number() over (order by id) as rn')
+      .toRenderSql('select row_number() OVER (ORDER BY users.id ASC) as rn from users as users')
   })
 
   it('supports empty over clause', () => {
-    expect('from users select row_number() over () as rn').toRenderSql('select row_number() OVER () as rn from users as users')
+    expect('from users select row_number() over () as rn')
+      .toRenderSql('select row_number() OVER () as rn from users as users')
   })
 
   it('rejects over on scalar functions', () => {
-    expect('from users select lower(name) over () as bad_window').toHaveDiagnostic(/only aggregate or window functions can use over/i)
+    expect('from users select lower(name) over () as bad_window')
+      .toHaveDiagnostic(/only aggregate or window functions can use over/i)
   })
 
   it('does not treat windowed aggregates as query aggregates', () => {
-    expect('from orders select id, sum(amount) over (order by id) as running_amount').toRenderSql(
-      'select orders.id as id, sum(orders.amount) OVER (ORDER BY orders.id ASC) as running_amount from orders as orders',
-    )
+    expect('from orders select id, sum(amount) over (order by id) as running_amount')
+      .toRenderSql('select orders.id as id, sum(orders.amount) OVER (ORDER BY orders.id ASC) as running_amount from orders as orders')
   })
 
   it('supports count(*) over partitioning', () => {
-    expect('from orders select id, count(*) over (partition by user_id) as flights_per_user').toRenderSql(
-      'select orders.id as id, count(1) OVER (PARTITION BY orders.user_id) as flights_per_user from orders as orders',
-    )
+    expect('from orders select id, count(*) over (partition by user_id) as flights_per_user')
+      .toRenderSql('select orders.id as id, count(1) OVER (PARTITION BY orders.user_id) as flights_per_user from orders as orders')
   })
 
   it('supports range frame with unbounded following', () => {
-    expect('from orders select id, sum(amount) over (order by id range between current row and unbounded following) as tail_sum').toRenderSql(
-      'select orders.id as id, sum(orders.amount) OVER (ORDER BY orders.id ASC RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) as tail_sum from orders as orders',
-    )
+    expect('from orders select id, sum(amount) over (order by id range between current row and unbounded following) as tail_sum')
+      .toRenderSql('select orders.id as id, sum(orders.amount) OVER (ORDER BY orders.id ASC RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) as tail_sum from orders as orders')
   })
 
   it('executes lag window functions correctly', async () => {
@@ -542,7 +579,8 @@ describe('lang', () => {
         amount,
         lag(amount, 1, 0) over (order by id) as prev_amount
       order by 1
-    `).toReturnRows([100, 20, 0], [101, 40, 20], [102, 40, 40])
+    `)
+      .toReturnRows([100, 20, 0], [101, 40, 20], [102, 40, 40])
   })
 
   it('preserves parentheses in measure composition', () => {
@@ -558,37 +596,38 @@ describe('lang', () => {
     )`,
       'models.gsql',
     )
-    expect('from orders select rate').toRenderSql('select (((sum(orders.amount))+(sum(orders.amount)/count(1)))/((sum(orders.amount))+(sum(orders.amount)/count(1)))) as rate from orders as orders')
+    expect('from orders select rate')
+      .toRenderSql('select (((sum(orders.amount))+(sum(orders.amount)/count(1)))/((sum(orders.amount))+(sum(orders.amount)/count(1)))) as rate from orders as orders')
   })
 
   it('supports percentile aggregates via pXX shorthand', async () => {
-    await expect('from orders select p10(amount) as min_amt, p50(amount) as median_amt, p999(amount) as max_amt').toReturnRows([24, 40, 40])
+    await expect('from orders select p10(amount) as min_amt, p50(amount) as median_amt, p999(amount) as max_amt')
+      .toReturnRows([24, 40, 40])
   })
 
   it('supports pXX over empty window', () => {
-    expect('from orders select id, p50(amount) over () as p50_all order by id').toRenderSql(
-      'select orders.id as id, quantile_cont(orders.amount, 0.5) OVER () as p50_all from orders as orders order by 1 asc nulls last',
-    )
+    expect('from orders select id, p50(amount) over () as p50_all order by id')
+      .toRenderSql('select orders.id as id, quantile_cont(orders.amount, 0.5) OVER () as p50_all from orders as orders order by 1 asc nulls last')
   })
 
   it('supports pXX over partition windows', () => {
-    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id').toRenderSql(
-      'select orders.id as id, quantile_cont(orders.amount, 0.5) OVER (PARTITION BY orders.user_id) as p50_by_user from orders as orders order by 1 asc nulls last',
-    )
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id')
+      .toRenderSql('select orders.id as id, quantile_cont(orders.amount, 0.5) OVER (PARTITION BY orders.user_id) as p50_by_user from orders as orders order by 1 asc nulls last')
   })
 
   it('does not treat windowed pXX as query aggregates', () => {
-    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user').toRenderSql(
-      'select orders.id as id, quantile_cont(orders.amount, 0.5) OVER (PARTITION BY orders.user_id) as p50_by_user from orders as orders',
-    )
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user')
+      .toRenderSql('select orders.id as id, quantile_cont(orders.amount, 0.5) OVER (PARTITION BY orders.user_id) as p50_by_user from orders as orders')
   })
 
   it('rejects pXX window ordering in v1', () => {
-    expect('from orders select p50(amount) over (order by id) as bad').toHaveDiagnostic(/pxx window form currently supports partition by only/i)
+    expect('from orders select p50(amount) over (order by id) as bad')
+      .toHaveDiagnostic(/pxx window form currently supports partition by only/i)
   })
 
   it('rejects pXX window frame clauses in v1', () => {
-    expect('from orders select p50(amount) over (partition by user_id rows between 1 preceding and current row) as bad').toHaveDiagnostic(/pxx window form currently supports partition by only/i)
+    expect('from orders select p50(amount) over (partition by user_id rows between 1 preceding and current row) as bad')
+      .toHaveDiagnostic(/pxx window form currently supports partition by only/i)
   })
 
   it('executes partitioned pXX windows correctly in duckdb', async () => {
@@ -599,28 +638,33 @@ describe('lang', () => {
         user_id,
         p50(amount) over (partition by user_id) as p50_by_user
       order by id
-    `).toReturnRows([100, 1, 30], [101, 1, 30], [102, 2, 40])
+    `)
+      .toReturnRows([100, 1, 30], [101, 1, 30], [102, 2, 40])
   })
 
   it('keeps pXX guardrails with windows', () => {
-    expect('from orders select p0(amount) over (partition by user_id)').toHaveDiagnostic(/p0 is not allowed/i)
-    expect('from orders select p100(amount) over (partition by user_id)').toHaveDiagnostic(/p100 is not allowed/i)
-    expect('from orders select p50(status) over (partition by user_id)').toHaveDiagnostic(/Expected number, got string/i)
+    expect('from orders select p0(amount) over (partition by user_id)')
+      .toHaveDiagnostic(/p0 is not allowed/i)
+    expect('from orders select p100(amount) over (partition by user_id)')
+      .toHaveDiagnostic(/p100 is not allowed/i)
+    expect('from orders select p50(status) over (partition by user_id)')
+      .toHaveDiagnostic(/Expected number, got string/i)
   })
 
   it.skip('handles complex joins with measures', () => {
-    expect('from products select name, category, total_sold where popular_item').toRenderSql(
-      'select products.name as name, products.category as category, (sum(orders.amount)) as total_sold from products as products left join orders as orders on orders.product_id=products.id group by 1, 2 having sum(orders.amount)>1000 order by 3 desc nulls last',
-    )
+    expect('from products select name, category, total_sold where popular_item')
+      .toRenderSql('select products.name as name, products.category as category, (sum(orders.amount)) as total_sold from products as products left join orders as orders on orders.product_id=products.id group by 1, 2 having sum(orders.amount)>1000 order by 3 desc nulls last')
   })
 
   it.skip('handles subqueries', () => {
-    expect('from (select id, name from users) select id, name').toRenderSql(`WITH __stage0 AS ( SELECT users.id as id, users.name as name from users as users )
+    expect('from (select id, name from users) select id, name')
+      .toRenderSql(`WITH __stage0 AS ( SELECT users.id as id, users.name as name from users as users )
       SELECT __stage0.id as id, __stage0.name as name from __stage0 as __stage0`)
   })
 
   it.skip('handles subqueries with alias', () => {
-    expect('from (select id, name from users) as u select id, name').toRenderSql(`WITH __stage0 AS ( SELECT users.id as id, users.name as name from users as users )
+    expect('from (select id, name from users) as u select id, name')
+      .toRenderSql(`WITH __stage0 AS ( SELECT users.id as id, users.name as name from users as users )
       SELECT __stage0.id as id, __stage0.name as name from __stage0 as __stage0`)
   })
 
@@ -647,9 +691,7 @@ describe('lang', () => {
       .toReturnRows([1, 60], [2, 40])
 
     expect('from users select name, ltv') // query the view indirectly, through a join
-      .toRenderSql(
-        'with __stage0 as ( select users.id as id, (coalesce(sum(orders.amount),0)) as ltv from users as users left join orders as orders on orders.user_id=users.id group by 1 ) select users.name as name, (user_facts.ltv) as ltv from users as users left join __stage0 as user_facts on user_facts.id=users.id',
-      )
+      .toRenderSql('with __stage0 as ( select users.id as id, (coalesce(sum(orders.amount),0)) as ltv from users as users left join orders as orders on orders.user_id=users.id group by 1 ) select users.name as name, (user_facts.ltv) as ltv from users as users left join __stage0 as user_facts on user_facts.id=users.id')
 
     await expect('select * from users') // wildcards should include ltv
       .toReturnRows([1, 'Alice', 60], [2, 'Bob', 40])
@@ -667,9 +709,8 @@ describe('lang', () => {
       'models.gsql',
     )
 
-    expect('from order_items select id, users.name').toRenderSql(
-      'select order_items.id as id, users.name as name from order_items as order_items left join users as users on users.id=order_items.user_id',
-    )
+    expect('from order_items select id, users.name')
+      .toRenderSql('select order_items.id as id, users.name as name from order_items as order_items left join users as users on users.id=order_items.user_id')
   })
 
   it('handles when the view is defined before the table', () => {
@@ -679,9 +720,8 @@ describe('lang', () => {
     updateFile('table user_facts as (from users select *)', 'facts.gsql')
     updateFile(testTables, 'models.gsql')
 
-    expect('from user_facts select id, email order by id').toRenderSql(
-      'with user_facts as ( select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users ) select user_facts.id as id, user_facts.email as email from user_facts as user_facts order by 1 asc nulls last',
-    )
+    expect('from user_facts select id, email order by id')
+      .toRenderSql('with user_facts as ( select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users ) select user_facts.id as id, user_facts.email as email from user_facts as user_facts order by 1 asc nulls last')
   })
 
   it('qualified joins default to table name alias', () => {
@@ -693,9 +733,8 @@ describe('lang', () => {
       'models.gsql',
     )
 
-    expect('from dataset.users select id, orders.id').toRenderSql(
-      'select users.id as id, orders.id as orders_id from dataset.users as users left join dataset.orders as orders on users.id=orders.user_id',
-    )
+    expect('from dataset.users select id, orders.id')
+      .toRenderSql('select users.id as id, orders.id as orders_id from dataset.users as users left join dataset.orders as orders on users.id=orders.user_id')
   })
 
   it('extends derived tables with additional measures', async () => {
@@ -707,7 +746,8 @@ describe('lang', () => {
       'models.gsql',
     )
 
-    await expect('from user_facts select id, total_orders, repeat_buyer order by id').toReturnRows([1, 2, true], [2, 1, false])
+    await expect('from user_facts select id, total_orders, repeat_buyer order by id')
+      .toReturnRows([1, 2, true], [2, 1, false])
   })
 
   it('emits CTE for views referenced through joins', async () => {
@@ -719,114 +759,129 @@ describe('lang', () => {
       'models.gsql',
     )
 
-    expect('from users select name, order_stats.total_spent order by name').toRenderSql(
-      'with order_stats as ( select orders.user_id as user_id, sum(orders.amount) as total_spent from orders as orders group by 1 order by 2 desc nulls last ) select users.name as name, order_stats.total_spent as total_spent from users as users left join order_stats as order_stats on order_stats.user_id=users.id order by 1 asc nulls last',
-    )
+    expect('from users select name, order_stats.total_spent order by name')
+      .toRenderSql('with order_stats as ( select orders.user_id as user_id, sum(orders.amount) as total_spent from orders as orders group by 1 order by 2 desc nulls last ) select users.name as name, order_stats.total_spent as total_spent from users as users left join order_stats as order_stats on order_stats.user_id=users.id order by 1 asc nulls last')
 
-    await expect('from users select name, order_stats.total_spent order by name').toReturnRows(['Alice', 60], ['Bob', 40])
+    await expect('from users select name, order_stats.total_spent order by name')
+      .toReturnRows(['Alice', 60], ['Bob', 40])
   })
 
   it('supports select distinct', () => {
-    expect('from users select distinct name, email').toRenderSql('select users.name as name, users.email as email from users as users group by 1,2 order by 1 asc nulls last')
+    expect('from users select distinct name, email')
+      .toRenderSql('select users.name as name, users.email as email from users as users group by 1,2 order by 1 asc nulls last')
   })
 
   it('supports count(distinct)', () => {
-    expect('from users select count(distinct name)').toRenderSql('select count(distinct users.name) as count from users as users')
+    expect('from users select count(distinct name)')
+      .toRenderSql('select count(distinct users.name) as count from users as users')
   })
 
   it('supports count without implicit distinct', () => {
-    expect('from users select count(name)').toRenderSql('select count(users.name) as count from users as users')
+    expect('from users select count(name)')
+      .toRenderSql('select count(users.name) as count from users as users')
   })
 
   it('adds groupBy to select if needed', () => {
-    expect('from users select count(orders.id) as total group by name').toRenderSql(
-      'select users.name as name, count(orders.id) as total from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
-    )
+    expect('from users select count(orders.id) as total group by name')
+      .toRenderSql('select users.name as name, count(orders.id) as total from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last')
   })
 
   it('doesnt duplicate groupBys', () => {
-    expect('from users select name, count(orders.id) group by name').toRenderSql(
-      'select users.name as name, count(orders.id) as count from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last',
-    )
+    expect('from users select name, count(orders.id) group by name')
+      .toRenderSql('select users.name as name, count(orders.id) as count from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last')
   })
 
   it('group by can refer to an alias', () => {
-    expect('from users select name as n group by n').toRenderSql('select users.name as n from users as users group by 1 order by 1 asc nulls last')
+    expect('from users select name as n group by n')
+      .toRenderSql('select users.name as n from users as users group by 1 order by 1 asc nulls last')
   })
 
   it('group by positional number', async () => {
-    expect('from users select name, email, avg(age) group by 2, 1').toRenderSql(
-      'select users.name as name, users.email as email, avg(users.age) as col_2 from users as users group by 2,1 order by 3 desc nulls last',
-    )
-    await expect('from users select name, email, avg(age) group by 2, 1').toReturnRows(['Bob', 'bob@example.com', 40], ['Alice', 'alice@example.com', 30])
+    expect('from users select name, email, avg(age) group by 2, 1')
+      .toRenderSql('select users.name as name, users.email as email, avg(users.age) as col_2 from users as users group by 2,1 order by 3 desc nulls last')
+    await expect('from users select name, email, avg(age) group by 2, 1')
+      .toReturnRows(['Bob', 'bob@example.com', 40], ['Alice', 'alice@example.com', 30])
   })
 
   it('supports having clause with aggregate', async () => {
-    await expect('from users select name, sum(payments.amount) as amt group by name having amt > 50').toReturnRows(['Alice', 100])
+    await expect('from users select name, sum(payments.amount) as amt group by name having amt > 50')
+      .toReturnRows(['Alice', 100])
   })
 
   it('supports post-agg filters without the need for "having"', async () => {
-    await expect('from users select name, sum(payments.amount) as amt where amt > 50 group by name').toReturnRows(['Alice', 100])
+    await expect('from users select name, sum(payments.amount) as amt where amt > 50 group by name')
+      .toReturnRows(['Alice', 100])
   })
 
   it('supports order by with direction', async () => {
-    await expect('from users select name, total_orders order by total_orders desc').toReturnRows(['Alice', 2], ['Bob', 1])
+    await expect('from users select name, total_orders order by total_orders desc')
+      .toReturnRows(['Alice', 2], ['Bob', 1])
   })
 
   it('order by positional number', () => {
-    expect('from users select name, email order by 2 asc, 1 desc').toRenderSql('select users.name as name, users.email as email from users as users order by 2 asc nulls last,1 desc nulls last')
+    expect('from users select name, email order by 2 asc, 1 desc')
+      .toRenderSql('select users.name as name, users.email as email from users as users order by 2 asc nulls last,1 desc nulls last')
   })
 
   it('order by nonexistent field produces diagnostic', () => {
-    expect('from users select name order by nonexistent').toHaveDiagnostic(/Unknown field in ORDER BY: nonexistent/i)
+    expect('from users select name order by nonexistent')
+      .toHaveDiagnostic(/Unknown field in ORDER BY: nonexistent/i)
   })
 
   it('supports limit clause', async () => {
-    await expect('from users select name order by name asc limit 1').toReturnRows(['Alice'])
+    await expect('from users select name order by name asc limit 1')
+      .toReturnRows(['Alice'])
   })
 
   it('supports is null/is not null', () => {
-    expect('from users select name where email is null').toRenderSql('select users.name as name from users as users where users.email is null')
+    expect('from users select name where email is null')
+      .toRenderSql('select users.name as name from users as users where users.email is null')
 
-    expect('from users select name where email is not null').toRenderSql('select users.name as name from users as users where users.email is not null')
+    expect('from users select name where email is not null')
+      .toRenderSql('select users.name as name from users as users where users.email is not null')
   })
 
   it('parses offset but reports diagnostic', () => {
-    expect('from users select name order by name asc limit 1 offset 1').toHaveDiagnostic(/offset is not supported/i)
+    expect('from users select name order by name asc limit 1 offset 1')
+      .toHaveDiagnostic(/offset is not supported/i)
   })
 
   it('supports in expressions', () => {
-    expect("from users select id where name in ('Alice','Bob')").toRenderSql("select users.id as id from users as users where users.name in ('Alice','Bob')")
-    expect("from users select id where name not in ('Alice','Bob')").toRenderSql("select users.id as id from users as users where users.name not in ('Alice','Bob')")
+    expect("from users select id where name in ('Alice','Bob')")
+      .toRenderSql("select users.id as id from users as users where users.name in ('Alice','Bob')")
+    expect("from users select id where name not in ('Alice','Bob')")
+      .toRenderSql("select users.id as id from users as users where users.name not in ('Alice','Bob')")
   })
 
   it('supports between expressions', () => {
-    expect('from users select id where age between 18 and 30').toRenderSql('select users.id as id from users as users where users.age BETWEEN 18 AND 30')
-    expect('from users select id where age not between 18 and 30').toRenderSql('select users.id as id from users as users where users.age NOT BETWEEN 18 AND 30')
-    expect('from users select id where age between 18 and 30 and email is not null').toRenderSql(
-      'select users.id as id from users as users where (users.age BETWEEN 18 AND 30 AND users.email IS NOT NULL)',
-    )
-    expect('from users select id where age between 18 and 30 or email is not null').toRenderSql(
-      'select users.id as id from users as users where (users.age BETWEEN 18 AND 30 OR users.email IS NOT NULL)',
-    )
+    expect('from users select id where age between 18 and 30')
+      .toRenderSql('select users.id as id from users as users where users.age BETWEEN 18 AND 30')
+    expect('from users select id where age not between 18 and 30')
+      .toRenderSql('select users.id as id from users as users where users.age NOT BETWEEN 18 AND 30')
+    expect('from users select id where age between 18 and 30 and email is not null')
+      .toRenderSql('select users.id as id from users as users where (users.age BETWEEN 18 AND 30 AND users.email IS NOT NULL)')
+    expect('from users select id where age between 18 and 30 or email is not null')
+      .toRenderSql('select users.id as id from users as users where (users.age BETWEEN 18 AND 30 OR users.email IS NOT NULL)')
   })
 
   it('supports case expressions', () => {
-    expect("from users select case when age > 35 then 'old' else 'young' end as bucket").toRenderSql("select case when (users.age>35) then 'old' else 'young' end as bucket from users as users")
+    expect("from users select case when age > 35 then 'old' else 'young' end as bucket")
+      .toRenderSql("select case when (users.age>35) then 'old' else 'young' end as bucket from users as users")
   })
 
   it('propagates isAgg through case expressions for GROUP BY', () => {
-    expect("from users select name, case when count() > 2 then 'many' else 'few' end as bucket").toRenderSql(
-      "select users.name as name, case WHEN (count(1)>2) THEN 'many' ELSE 'few' END as bucket from users as users group by 1 order by 2 desc nulls last",
-    )
+    expect("from users select name, case when count() > 2 then 'many' else 'few' end as bucket")
+      .toRenderSql("select users.name as name, case WHEN (count(1)>2) THEN 'many' ELSE 'few' END as bucket from users as users group by 1 order by 2 desc nulls last")
   })
 
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
-    expect('from users select id = >>;').toHaveDiagnostic(/syntax error/i)
+    expect('from users select id = >>;')
+      .toHaveDiagnostic(/syntax error/i)
   })
 
   it('reports syntax diagnostics on invalid table and still registers table name', () => {
-    expect('table t (a int, !! ) ; from t select a;').toHaveDiagnostic(/syntax error/i)
+    expect('table t (a int, !! ) ; from t select a;')
+      .toHaveDiagnostic(/syntax error/i)
   })
 
   it('parses metadata from comments on tables and fields (from testTables)', () => {
@@ -920,7 +975,8 @@ describe('lang', () => {
         weight int #unit=parsecs
         margin number #precision=1.5
       )
-    `).toHaveDiagnostic(/Invalid value "mont" for "#timeGrain"/)
+    `)
+      .toHaveDiagnostic(/Invalid value "mont" for "#timeGrain"/)
     expect(getDiagnostics().some(d => /Invalid value "ZZZ" for "#currency"/.test(d.message))).toBe(true)
     expect(getDiagnostics().some(d => /Invalid value "dow" for "#timeOrdinal"/.test(d.message))).toBe(true)
     expect(getDiagnostics().some(d => /Invalid value "1.5" for "#precision"/.test(d.message))).toBe(true)
@@ -946,7 +1002,8 @@ describe('lang', () => {
         ratio number #ratio=false
         pii text #pii="true"
       )
-    `).toHaveDiagnostic(/Metadata "#ratio" is a flag/)
+    `)
+      .toHaveDiagnostic(/Metadata "#ratio" is a flag/)
     expect(getDiagnostics().some(d => /Metadata "#pii" is a flag/.test(d.message))).toBe(true)
   })
 
@@ -1021,11 +1078,13 @@ describe('lang', () => {
     expect(`
       table foo (id int)
       table foo (id int)
-    `).toHaveDiagnostic(/table "foo" is already defined/i)
+    `)
+      .toHaveDiagnostic(/table "foo" is already defined/i)
   })
 
   it('reports diagnostics for duplicate column definitions', () => {
-    expect('table dup (id int, id text)').toHaveDiagnostic(/Table already has a field called "id"/i)
+    expect('table dup (id int, id text)')
+      .toHaveDiagnostic(/Table already has a field called "id"/i)
   })
 
   it('reports diagnostics for duplicate join definitions', () => {
@@ -1040,11 +1099,13 @@ describe('lang', () => {
         origin text
         destination text
       )
-    `).toHaveDiagnostic(/Table already has a field called "flights"/i)
+    `)
+      .toHaveDiagnostic(/Table already has a field called "flights"/i)
   })
 
   it('reports diagnostics for unsupported data types', () => {
-    expect('table invalid (id int, value hyperthing)').toHaveDiagnostic(/Unsupported data type: hyperthing/i)
+    expect('table invalid (id int, value hyperthing)')
+      .toHaveDiagnostic(/Unsupported data type: hyperthing/i)
   })
 
   it('supports array column types in table schemas', () => {
@@ -1057,18 +1118,23 @@ describe('lang', () => {
   })
 
   it('rejects nested array column types', () => {
-    expect('table invalid (tags array<array<string>>)').toHaveDiagnostic(/nested arrays are not supported/i)
+    expect('table invalid (tags array<array<string>>)')
+      .toHaveDiagnostic(/nested arrays are not supported/i)
   })
 
   it('reports syntax errors for incomplete array type syntax', () => {
-    expect('table invalid (tags array<>)').toHaveDiagnostic(/syntax error/i)
+    expect('table invalid (tags array<>)')
+      .toHaveDiagnostic(/syntax error/i)
     expect('from users select cast(name as array<string>)').toHaveNoErrors()
-    expect('from users select cast(name as array<string>)').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
-    expect('from users select cast(name as array<string)').toHaveDiagnostic(/syntax error/i)
+    expect('from users select cast(name as array<string>)')
+      .toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
+    expect('from users select cast(name as array<string)')
+      .toHaveDiagnostic(/syntax error/i)
   })
 
   it('reports diagnostics when redefining an existing workspace table', () => {
-    expect('table users (id int)').toHaveDiagnostic(/table "users" is already defined/i)
+    expect('table users (id int)')
+      .toHaveDiagnostic(/table "users" is already defined/i)
   })
 
   it('allows duplicate table names across different markdown files', () => {
@@ -1080,11 +1146,13 @@ describe('lang', () => {
   })
 
   it('reports diagnostics for unknown table in FROM', () => {
-    expect('from not_a_table select id').toHaveDiagnostic(/unknown table "not_a_table"/i)
+    expect('from not_a_table select id')
+      .toHaveDiagnostic(/unknown table "not_a_table"/i)
   })
 
   it('reports diagnostics for unknown column', () => {
-    expect('from orders select users.does_not_exist').toHaveDiagnostic(/unknown field "does_not_exist" on users/i)
+    expect('from orders select users.does_not_exist')
+      .toHaveDiagnostic(/unknown field "does_not_exist" on users/i)
   })
 
   it('reports diagnostics for unknown columns in table join conditions', () => {
@@ -1094,33 +1162,37 @@ describe('lang', () => {
         user_id int,
         join one users on users.does_not_exist = user_id
       )
-    `).toHaveDiagnostic(/unknown field "does_not_exist" on users/i)
+    `)
+      .toHaveDiagnostic(/unknown field "does_not_exist" on users/i)
   })
 
   it('reports not being able to find a join on a query', () => {
     expect(`
       table t (oid int, join one users as usr on usr.id = oid);
       from t select users.name
-    `).toHaveDiagnostic(/Could not find "users" on query/i)
+    `)
+      .toHaveDiagnostic(/Could not find "users" on query/i)
   })
 
   it('can create new tables from queries', () => {
     expect(`table completed_orders as (from orders where status = 'completed' select id)
-      from completed_orders select id`).toRenderSql(
-      "with completed_orders as ( select orders.id as id from orders as orders where orders.status='completed' ) select completed_orders.id as id from completed_orders as completed_orders",
-    )
+      from completed_orders select id`)
+        .toRenderSql("with completed_orders as ( select orders.id as id from orders as orders where orders.status='completed' ) select completed_orders.id as id from completed_orders as completed_orders")
   })
 
   it('can correctly count through a join', () => {
-    expect('from orders select count(users.id)').toRenderSql('select count(users.id) as count from orders as orders left join users as users on users.id=orders.user_id')
+    expect('from orders select count(users.id)')
+      .toRenderSql('select count(users.id) as count from orders as orders left join users as users on users.id=orders.user_id')
   })
 
   it('handles min/max through a join', () => {
-    expect('from orders select min(users.age)').toRenderSql('select min(users.age) as col_0 from orders as orders left join users as users on users.id=orders.user_id')
+    expect('from orders select min(users.age)')
+      .toRenderSql('select min(users.age) as col_0 from orders as orders left join users as users on users.id=orders.user_id')
   })
 
   it('supports function calling', () => {
-    expect("from users select coalesce(name, 'Unknown') as name2").toRenderSql("select coalesce(users.name,'Unknown') as name2 from users as users")
+    expect("from users select coalesce(name, 'Unknown') as name2")
+      .toRenderSql("select coalesce(users.name,'Unknown') as name2 from users as users")
   })
 
   it('supports duckdb json functions', () => {
@@ -1174,13 +1246,13 @@ describe('lang', () => {
   })
 
   it('supports agg function calling', () => {
-    expect('from users select age, string_agg(name)').toRenderSql('select users.age as age, string_agg(users.name) as col_1 from users as users group by 1 order by 2 desc nulls last')
+    expect('from users select age, string_agg(name)')
+      .toRenderSql('select users.age as age, string_agg(users.name) as col_1 from users as users group by 1 order by 2 desc nulls last')
   })
 
   it('supports duckdb json aggregate functions', () => {
-    expect("from users select json_group_array(name), json_group_object(id, name), json_group_structure(json_object('age', age))").toRenderSql(
-      "select json_group_array(users.name) as col_0, json_group_object(users.id,users.name) as col_1, json_group_structure(json_object('age',users.age)) as col_2 from users as users",
-    )
+    expect("from users select json_group_array(name), json_group_object(id, name), json_group_structure(json_object('age', age))")
+      .toRenderSql("select json_group_array(users.name) as col_0, json_group_object(users.id,users.name) as col_1, json_group_structure(json_object('age',users.age)) as col_2 from users as users")
   })
 
   it('supports callable duckdb list and array functions', () => {
@@ -1346,45 +1418,54 @@ describe('lang', () => {
   })
 
   it('rejects variadic functions called with 0 args', () => {
-    expect('from users select coalesce() as empty').toHaveDiagnostic(/wrong number of arguments/i)
+    expect('from users select coalesce() as empty')
+      .toHaveDiagnostic(/wrong number of arguments/i)
   })
 
   it('reports wrong number of arguments instead of unknown function', () => {
-    expect('from users select lpad(name, 5)').toHaveDiagnostic(/wrong number of arguments for lpad/i)
+    expect('from users select lpad(name, 5)')
+      .toHaveDiagnostic(/wrong number of arguments for lpad/i)
   })
 
   it('type-checks variadic args beyond the first', () => {
     // concat expects string... — passing a number as the 2nd arg should be caught
-    expect('from users select concat(name, age)').toHaveDiagnostic(/expected.*string/i)
+    expect('from users select concat(name, age)')
+      .toHaveDiagnostic(/expected.*string/i)
   })
 
   it('treats generic aggregate functions as aggregates', () => {
     // any_value returns T and is an aggregate - it should be treated as an aggregate
     // This test ensures generic return types with aggregate: true are properly marked as measures
     // When working correctly, it should generate SQL with group by (since it's an aggregate)
-    expect('from users select name, any_value(age) as sample_age').toRenderSql(
-      'select users.name as name, any_value(users.age) as sample_age from users as users group by 1 order by 2 desc nulls last',
-    )
+    expect('from users select name, any_value(age) as sample_age')
+      .toRenderSql('select users.name as name, any_value(users.age) as sample_age from users as users group by 1 order by 2 desc nulls last')
   })
 
   it.skip('supports malloy date functions', () => {
-    expect('from users select name, month(created_at)').toRenderSql('select users.name as name, extract(month from users.created_at) as month from users as users')
+    expect('from users select name, month(created_at)')
+      .toRenderSql('select users.name as name, extract(month from users.created_at) as month from users as users')
   })
 
   it('allows queries with semicolons', () => {
-    expect('table t (id int); select id, name from users;').toRenderSql('select users.id as id, users.name as name from users as users')
+    expect('table t (id int); select id, name from users;')
+      .toRenderSql('select users.id as id, users.name as name from users as users')
   })
 
   it('allows trailing commas in select/group/order/in lists and function args', () => {
-    expect('select id, name, from users').toRenderSql('select users.id as id, users.name as name from users as users')
+    expect('select id, name, from users')
+      .toRenderSql('select users.id as id, users.name as name from users as users')
 
-    expect('from users select count() group by name,').toRenderSql('select users.name as name, count(1) as count from users as users group by 1 order by 2 desc nulls last')
+    expect('from users select count() group by name,')
+      .toRenderSql('select users.name as name, count(1) as count from users as users group by 1 order by 2 desc nulls last')
 
-    expect('from users select name order by name asc,').toRenderSql('select users.name as name from users as users order by 1 asc nulls last')
+    expect('from users select name order by name asc,')
+      .toRenderSql('select users.name as name from users as users order by 1 asc nulls last')
 
-    expect("from users select id where name in ('Alice','Bob',)").toRenderSql("select users.id as id from users as users where users.name in ('Alice','Bob')")
+    expect("from users select id where name in ('Alice','Bob',)")
+      .toRenderSql("select users.id as id from users as users where users.name in ('Alice','Bob')")
 
-    expect("from users select coalesce(name, 'Unknown',) as name2").toRenderSql("select coalesce(users.name,'Unknown') as name2 from users as users")
+    expect("from users select coalesce(name, 'Unknown',) as name2")
+      .toRenderSql("select coalesce(users.name,'Unknown') as name2 from users as users")
   })
 
   it('allows optional commas between table items and semicolon terminators', () => {
@@ -1392,76 +1473,88 @@ describe('lang', () => {
       id int,
       name text
     );
-    from t select id, name`).toRenderSql('select t.id as id, t.name as name from t as t')
+    from t select id, name`)
+      .toRenderSql('select t.id as id, t.name as name from t as t')
 
     expect(`table completed_ids as (from users select id,) ;
-      from completed_ids select id`).toRenderSql('with completed_ids as ( select users.id as id from users as users ) select completed_ids.id as id from completed_ids as completed_ids')
+      from completed_ids select id`)
+        .toRenderSql('with completed_ids as ( select users.id as id from users as users ) select completed_ids.id as id from completed_ids as completed_ids')
   })
 
   it('supports count_if (function we added)', () => {
-    expect('from orders select count_if(amount > 100)').toRenderSql('select count_if(orders.amount>100) as col_0 from orders as orders')
+    expect('from orders select count_if(amount > 100)')
+      .toRenderSql('select count_if(orders.amount>100) as col_0 from orders as orders')
   })
 
   it('supports count_if alias for countif on BigQuery', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from orders select count_if(amount > 100)').toRenderSql('select countif(orders.amount>100) as col_0 from `orders` as orders')
+    expect('from orders select count_if(amount > 100)')
+      .toRenderSql('select countif(orders.amount>100) as col_0 from `orders` as orders')
   })
 
   it('supports BigQuery math functions', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from orders select abs(amount), sqrt(amount), round(amount, 2)').toRenderSql(
-      'select abs(orders.amount) as col_0, sqrt(orders.amount) as col_1, round(orders.amount,2) as col_2 from `orders` as orders',
-    )
+    expect('from orders select abs(amount), sqrt(amount), round(amount, 2)')
+      .toRenderSql('select abs(orders.amount) as col_0, sqrt(orders.amount) as col_1, round(orders.amount,2) as col_2 from `orders` as orders')
   })
 
   it('supports BigQuery string functions', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from users select lower(name), upper(name), length(name)').toRenderSql('select lower(users.name) as col_0, upper(users.name) as col_1, length(users.name) as col_2 from `users` as users')
+    expect('from users select lower(name), upper(name), length(name)')
+      .toRenderSql('select lower(users.name) as col_0, upper(users.name) as col_1, length(users.name) as col_2 from `users` as users')
   })
 
   it('supports functions with keyword args', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from users select timestamp_diff(created_at, created_at, day)').toRenderSql('select timestamp_diff(users.created_at,users.created_at,day) as col_0 from `users` as users')
+    expect('from users select timestamp_diff(created_at, created_at, day)')
+      .toRenderSql('select timestamp_diff(users.created_at,users.created_at,day) as col_0 from `users` as users')
   })
 
   it('renders BigQuery pXX windows via PERCENTILE_CONT', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id').toRenderSql(
-      'select orders.id as id, PERCENTILE_CONT(orders.amount, 0.5) OVER (PARTITION BY orders.user_id) as p50_by_user from `orders` as orders order by 1 asc nulls last',
-    )
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id')
+      .toRenderSql('select orders.id as id, PERCENTILE_CONT(orders.amount, 0.5) OVER (PARTITION BY orders.user_id) as p50_by_user from `orders` as orders order by 1 asc nulls last')
   })
 
   it('keeps existing BigQuery non-window pXX behavior', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from orders select p50(amount) as p50').toRenderSql('select approx_quantiles(orders.amount, 100)[OFFSET(50)] as p50 from `orders` as orders')
+    expect('from orders select p50(amount) as p50')
+      .toRenderSql('select approx_quantiles(orders.amount, 100)[OFFSET(50)] as p50 from `orders` as orders')
   })
 
   it('keeps BigQuery pXX limits for windows', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from orders select p999(amount) over (partition by user_id)').toHaveDiagnostic(/BigQuery only supports up to p99/i)
+    expect('from orders select p999(amount) over (partition by user_id)')
+      .toHaveDiagnostic(/BigQuery only supports up to p99/i)
   })
 
   it('treats date part keywords as literals only when allowed', () => {
     setGlobalConfig({root: '', bigquery: {}})
     updateFile('table calendar (created_at timestamp, day text, week text)', 'calendar.gsql')
 
-    expect('from calendar select week').toRenderSql('select calendar.week as week from `calendar` as calendar')
+    expect('from calendar select week')
+      .toRenderSql('select calendar.week as week from `calendar` as calendar')
 
-    expect('from calendar select timestamp_diff(created_at, created_at, week)').toRenderSql('select timestamp_diff(calendar.created_at,calendar.created_at,week) as col_0 from `calendar` as calendar')
+    expect('from calendar select timestamp_diff(created_at, created_at, week)')
+      .toRenderSql('select timestamp_diff(calendar.created_at,calendar.created_at,week) as col_0 from `calendar` as calendar')
 
-    expect('from calendar select date_trunc(created_at, week)').toRenderSql('select date_trunc(calendar.created_at,week) as week from `calendar` as calendar')
+    expect('from calendar select date_trunc(created_at, week)')
+      .toRenderSql('select date_trunc(calendar.created_at,week) as week from `calendar` as calendar')
   })
 
   it('supports date_trunc on date columns (as opposed to timestamp)', () => {
     setGlobalConfig({root: '', bigquery: {}})
     updateFile('table events (event_date date)', 'events.gsql')
-    expect('from events select date_trunc(event_date, month)').toRenderSql('select date_trunc(events.event_date,month) as month from `events` as events')
+    expect('from events select date_trunc(event_date, month)')
+      .toRenderSql('select date_trunc(events.event_date,month) as month from `events` as events')
 
     setGlobalConfig({root: ''}) // duckdb (default)
-    expect("from events select date_trunc('month', event_date)").toRenderSql("select date_trunc('month',events.event_date) as month from events as events")
+    expect("from events select date_trunc('month', event_date)")
+      .toRenderSql("select date_trunc('month',events.event_date) as month from events as events")
 
     setGlobalConfig({dialect: 'snowflake', root: ''})
-    expect("from events select date_trunc('month', event_date)").toRenderSql("select DATE_TRUNC('month',EVENTS.EVENT_DATE) as MONTH from EVENTS as EVENTS")
+    expect("from events select date_trunc('month', event_date)")
+      .toRenderSql("select DATE_TRUNC('month',EVENTS.EVENT_DATE) as MONTH from EVENTS as EVENTS")
 
     setGlobalConfig({root: ''})
     updateFile('table flown (dep_time timestamp)', 'flown.gsql')
@@ -1552,7 +1645,8 @@ describe('lang', () => {
   })
 
   it('supports extract expressions', () => {
-    expect('from users select extract(hour from created_at)').toRenderSql('select extract(hour from users.created_at) as hour from users as users')
+    expect('from users select extract(hour from created_at)')
+      .toRenderSql('select extract(hour from users.created_at) as hour from users as users')
   })
 
   it('supports backend-native temporal extraction shorthands', () => {
@@ -1615,106 +1709,127 @@ describe('lang', () => {
   })
 
   it('supports null and boolean literals', () => {
-    expect('from users select name, null, true, FALSE').toRenderSql('select users.name as name, null as col_1, true as col_2, false as col_3 from users as users')
+    expect('from users select name, null, true, FALSE')
+      .toRenderSql('select users.name as name, null as col_1, true as col_2, false as col_3 from users as users')
   })
 
   it('coerces string literals to timestamps in comparisons', () => {
-    expect("from users select id where created_at >= '2024-01-01'").toRenderSql("select users.id as id from users as users where users.created_at>=TIMESTAMP '2024-01-01 00:00:00'")
+    expect("from users select id where created_at >= '2024-01-01'")
+      .toRenderSql("select users.id as id from users as users where users.created_at>=TIMESTAMP '2024-01-01 00:00:00'")
   })
 
   it('coerces string literals to timestamps in IN lists', () => {
-    expect("from users select id where created_at in ('2024-01-01','2024-01-02')").toRenderSql(
-      "select users.id as id from users as users where users.created_at in (TIMESTAMP '2024-01-01 00:00:00',TIMESTAMP '2024-01-02 00:00:00')",
-    )
+    expect("from users select id where created_at in ('2024-01-01','2024-01-02')")
+      .toRenderSql("select users.id as id from users as users where users.created_at in (TIMESTAMP '2024-01-01 00:00:00',TIMESTAMP '2024-01-02 00:00:00')")
   })
 
   it('coerces string literals to timestamps in BETWEEN bounds', () => {
-    expect("from users select id where created_at between '2024-01-01' and '2024-01-31'").toRenderSql(
-      "select users.id as id from users as users where users.created_at BETWEEN TIMESTAMP '2024-01-01 00:00:00' AND TIMESTAMP '2024-01-31 00:00:00'",
-    )
+    expect("from users select id where created_at between '2024-01-01' and '2024-01-31'")
+      .toRenderSql("select users.id as id from users as users where users.created_at BETWEEN TIMESTAMP '2024-01-01 00:00:00' AND TIMESTAMP '2024-01-31 00:00:00'")
   })
 
   it('diagnoses string used where interval expected', () => {
-    expect("from users select created_at + 'many moons'").toHaveDiagnostic(/Invalid date arithmetic/i)
+    expect("from users select created_at + 'many moons'")
+      .toHaveDiagnostic(/Invalid date arithmetic/i)
   })
 
   it('diagnoses invalid timestamp literals', () => {
-    expect("from users select id where created_at >= 'soonish'").toHaveDiagnostic(/Cannot parse as timestamp/i)
+    expect("from users select id where created_at >= 'soonish'")
+      .toHaveDiagnostic(/Cannot parse as timestamp/i)
   })
 
   it('supports interval keyword with quoted string', () => {
-    expect("from users select created_at + interval '5 minutes' as shifted").toRenderSql('select users.created_at + interval 5 minute as shifted from users as users')
+    expect("from users select created_at + interval '5 minutes' as shifted")
+      .toRenderSql('select users.created_at + interval 5 minute as shifted from users as users')
   })
 
   it('supports interval keyword with unquoted number and unit', () => {
-    expect('from users select created_at + interval 5 minutes as shifted').toRenderSql('select users.created_at + interval 5 minute as shifted from users as users')
+    expect('from users select created_at + interval 5 minutes as shifted')
+      .toRenderSql('select users.created_at + interval 5 minute as shifted from users as users')
   })
 
   it('supports interval keyword with numeric field quantity', () => {
-    expect('from users select created_at - interval age minute as shifted').toRenderSql('select users.created_at - (users.age * (interval 1 minute)) as shifted from users as users')
+    expect('from users select created_at - interval age minute as shifted')
+      .toRenderSql('select users.created_at - (users.age * (interval 1 minute)) as shifted from users as users')
   })
 
   it('supports multiplied literal intervals in date arithmetic', () => {
-    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql('select users.created_at - (users.age * (interval 1 minute)) as shifted from users as users')
+    expect('from users select created_at - (age * interval 1 minute) as shifted')
+      .toRenderSql('select users.created_at - (users.age * (interval 1 minute)) as shifted from users as users')
   })
 
   it('supports multiplied literal intervals in computed columns', () => {
     updateFile('table flights (dep_time timestamp, dep_delay int, scheduled_dep_time: dep_time - (dep_delay * interval 1 minute))', 'flights.gsql')
-    expect('from flights select scheduled_dep_time').toRenderSql('select (flights.dep_time - (flights.dep_delay * (interval 1 minute))) as scheduled_dep_time from flights as flights')
+    expect('from flights select scheduled_dep_time')
+      .toRenderSql('select (flights.dep_time - (flights.dep_delay * (interval 1 minute))) as scheduled_dep_time from flights as flights')
   })
 
   it('diagnoses multiplied dynamic intervals', () => {
-    expect('from users select created_at - (age * interval id minute) as shifted').toHaveDiagnostic(/Only literal intervals can be multiplied/i)
+    expect('from users select created_at - (age * interval id minute) as shifted')
+      .toHaveDiagnostic(/Only literal intervals can be multiplied/i)
   })
 
   it('diagnoses standalone multiplied intervals', () => {
-    expect('from users select age * interval 1 minute as shifted').toHaveDiagnostic(/only supported inside date\/time arithmetic/i)
+    expect('from users select age * interval 1 minute as shifted')
+      .toHaveDiagnostic(/only supported inside date\/time arithmetic/i)
   })
 
   it('renders dynamic intervals for BigQuery', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from users select created_at - interval age minute as shifted').toRenderSql('select users.created_at - interval users.age minute as shifted from `users` as users')
-    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql('select users.created_at - interval users.age minute as shifted from `users` as users')
+    expect('from users select created_at - interval age minute as shifted')
+      .toRenderSql('select users.created_at - interval users.age minute as shifted from `users` as users')
+    expect('from users select created_at - (age * interval 1 minute) as shifted')
+      .toRenderSql('select users.created_at - interval users.age minute as shifted from `users` as users')
   })
 
   it('renders dynamic intervals for Snowflake via DATEADD', () => {
     setGlobalConfig({dialect: 'snowflake', root: ''})
-    expect('from users select created_at - interval age minute as shifted').toRenderSql('SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users')
-    expect('from users select created_at - (age * interval 1 minute) as shifted').toRenderSql('SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users')
+    expect('from users select created_at - interval age minute as shifted')
+      .toRenderSql('SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users')
+    expect('from users select created_at - (age * interval 1 minute) as shifted')
+      .toRenderSql('SELECT TIMESTAMPADD(minute, -(users.age), users.created_at) as shifted FROM USERS as users')
   })
 
   it('supports date keyword', () => {
-    expect("from users select date '2024-01-01' as d").toRenderSql("select DATE '2024-01-01' as d from users as users")
+    expect("from users select date '2024-01-01' as d")
+      .toRenderSql("select DATE '2024-01-01' as d from users as users")
   })
 
   it('allows temporal keywords as column names', () => {
     // Columns can be named 'date' or 'timestamp' even though these are also keywords for literals
     updateFile('table foo (id VARCHAR, date DATE, timestamp TIMESTAMP)', 'foo.gsql')
-    expect('from foo select id').toRenderSql('select foo.id as id from foo as foo')
+    expect('from foo select id')
+      .toRenderSql('select foo.id as id from foo as foo')
   })
 
   it('supports timestamp keyword', () => {
-    expect("from users select id where created_at >= timestamp '2024-01-01 12:00:00'").toRenderSql("select users.id as id from users as users where users.created_at>=TIMESTAMP '2024-01-01 12:00:00'")
+    expect("from users select id where created_at >= timestamp '2024-01-01 12:00:00'")
+      .toRenderSql("select users.id as id from users as users where users.created_at>=TIMESTAMP '2024-01-01 12:00:00'")
   })
 
   it('supports ::DATE cast syntax', () => {
-    expect("from users select '2024-01-01'::DATE as d").toRenderSql("select CAST('2024-01-01' AS DATE) as d from users as users")
+    expect("from users select '2024-01-01'::DATE as d")
+      .toRenderSql("select CAST('2024-01-01' AS DATE) as d from users as users")
   })
 
   it('diagnoses invalid date literal in date keyword', () => {
-    expect("from users select date 'not-a-date'").toHaveDiagnostic(/Invalid date/i)
+    expect("from users select date 'not-a-date'")
+      .toHaveDiagnostic(/Invalid date/i)
   })
 
   it('diagnoses invalid interval unit', () => {
-    expect('from users select created_at + interval 5 moons').toHaveDiagnostic(/Invalid interval unit/i)
+    expect('from users select created_at + interval 5 moons')
+      .toHaveDiagnostic(/Invalid interval unit/i)
   })
 
   it('diagnoses non-numeric interval quantities', () => {
-    expect('from users select created_at + interval name minute').toHaveDiagnostic(/Expected number, got string/i)
+    expect('from users select created_at + interval name minute')
+      .toHaveDiagnostic(/Expected number, got string/i)
   })
 
   it.skip('errors when aggregates are nested', () => {
-    expect('from users select name, sum(total_orders)').toHaveDiagnostic(/Aggregates cannot be nested/i)
+    expect('from users select name, sum(total_orders)')
+      .toHaveDiagnostic(/Aggregates cannot be nested/i)
   })
 
   it('rejects computed fields fanned out by a join many', () => {
@@ -1722,7 +1837,8 @@ describe('lang', () => {
       uid int
       join many users on users.id = uid
       user_age: users.age
-    )`).toHaveDiagnostic(/Expression is fanned out by join to table `users`; aggregate it first/i)
+    )`)
+      .toHaveDiagnostic(/Expression is fanned out by join to table `users`; aggregate it first/i)
   })
 
   it('reports a chasm trap when a measure mixes sibling join many grains', () => {
@@ -1733,7 +1849,8 @@ describe('lang', () => {
       weird: sum(orders.amount) / sum(payments.amount)
     )
     table orders (id int, user_id int, amount int)
-    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Join graph creates a chasm trap/i)
+    table payments (id int, user_id int, amount int)`)
+      .toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows a measure after each fanout grain is aggregated separately', () => {
@@ -1752,7 +1869,8 @@ describe('lang', () => {
   })
 
   it('reports a chasm trap when an aggregate query expression mixes sibling join many branches', () => {
-    expect('from users select name, orders.amount + payments.amount, count(id)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
+    expect('from users select name, orders.amount + payments.amount, count(id)')
+      .toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('reports a chasm trap when a computed field mixes sibling join many branches', () => {
@@ -1763,11 +1881,13 @@ describe('lang', () => {
       bad_expr: orders.amount + payments.amount
     )
     table orders (id int, user_id int, amount int)
-    table payments (id int, user_id int, amount int)`).toHaveDiagnostic(/Join graph creates a chasm trap/i)
+    table payments (id int, user_id int, amount int)`)
+      .toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows join expressions to refer to the alias', () => {
-    expect('table t (oid int, join one users as usr on usr.id = oid); from t select usr.name').toRenderSql('select usr.name as name from t as t left join users as usr on usr.id=t.oid')
+    expect('table t (oid int, join one users as usr on usr.id = oid); from t select usr.name')
+      .toRenderSql('select usr.name as name from t as t left join users as usr on usr.id=t.oid')
   })
 
   it('allows measures to refer to themselves', () => {
@@ -1805,7 +1925,8 @@ describe('lang', () => {
         current_timestamp(),
         current_timestamp(3),
         local_timestamp()
-    `).toRenderSql('select current_date() as col_0, current_time() as col_1, current_timestamp() as col_2, current_timestamp(3) as col_3, localtimestamp() as col_4 from users as users')
+    `)
+      .toRenderSql('select current_date() as col_0, current_time() as col_1, current_timestamp() as col_2, current_timestamp(3) as col_3, localtimestamp() as col_4 from users as users')
   })
 
   it('supports broader duckdb date and time functions', () => {
@@ -1880,13 +2001,13 @@ describe('lang', () => {
         localtime,
         local_timestamp,
         localtimestamp
-    `).toRenderSql(
-      'select current_date as current_date, current_time as current_time, current_timestamp as current_timestamp, localtime as localtime, localtimestamp as local_timestamp, localtimestamp as localtimestamp from users as users',
-    )
+    `)
+      .toRenderSql('select current_date as current_date, current_time as current_time, current_timestamp as current_timestamp, localtime as localtime, localtimestamp as local_timestamp, localtimestamp as localtimestamp from users as users')
   })
 
   it('type-checks duckdb date_trunc against time values', () => {
-    expect("select date_trunc('day', current_time)").toHaveDiagnostic(/Expected date or timestamp, got time/i)
+    expect("select date_trunc('day', current_time)")
+      .toHaveDiagnostic(/Expected date or timestamp, got time/i)
   })
 
   it('supports bigquery current datetime functions with optional args', () => {
@@ -1903,9 +2024,8 @@ describe('lang', () => {
           local_timestamp(),
           current_datetime(),
           current_datetime('UTC')
-      `).toRenderSql(
-        "select current_date() as col_0, current_date('America/Los_Angeles') as col_1, current_time() as col_2, current_time('UTC') as col_3, current_timestamp() as col_4, current_timestamp('America/Los_Angeles') as col_5, current_datetime() as col_6, current_datetime() as col_7, current_datetime('UTC') as col_8 from `users` as users",
-      )
+      `)
+        .toRenderSql("select current_date() as col_0, current_date('America/Los_Angeles') as col_1, current_time() as col_2, current_time('UTC') as col_3, current_timestamp() as col_4, current_timestamp('America/Los_Angeles') as col_5, current_datetime() as col_6, current_datetime() as col_7, current_datetime('UTC') as col_8 from `users` as users")
     } finally {
       setGlobalConfig({root: ''})
     }
@@ -1921,9 +2041,8 @@ describe('lang', () => {
           current_time,
           current_timestamp,
           local_timestamp
-      `).toRenderSql(
-        'select current_date as current_date, current_datetime as current_datetime, current_time as current_time, current_timestamp as current_timestamp, current_datetime as local_timestamp from `users` as users',
-      )
+      `)
+        .toRenderSql('select current_date as current_date, current_datetime as current_datetime, current_time as current_time, current_timestamp as current_timestamp, current_datetime as local_timestamp from `users` as users')
     } finally {
       setGlobalConfig({root: ''})
     }
@@ -1960,7 +2079,8 @@ describe('lang', () => {
           current_timestamp,
           localtime,
           localtimestamp
-      `).toRenderSql(
+      `)
+        .toRenderSql(
         'SELECT current_date as current_date, current_time as current_time, current_timestamp as current_timestamp, localtime as localtime, localtimestamp as localtimestamp FROM USERS as users',
         {preserveCase: true},
       )
@@ -1976,11 +2096,15 @@ describe('lang', () => {
         from users select
           current_date(),
           current_timestamp()
-      `).toRenderSql('SELECT current_date() as col_0, current_timestamp() as col_1 FROM users as users')
+      `)
+        .toRenderSql('SELECT current_date() as col_0, current_timestamp() as col_1 FROM users as users')
 
-      expect('from users select current_date').toHaveDiagnostic(/Unknown field "current_date" on users/i)
-      expect('from users select current_time()').toHaveDiagnostic(/Unknown function: current_time/i)
-      expect('from users select localtimestamp').toHaveDiagnostic(/Unknown field "localtimestamp" on users/i)
+      expect('from users select current_date')
+        .toHaveDiagnostic(/Unknown field "current_date" on users/i)
+      expect('from users select current_time()')
+        .toHaveDiagnostic(/Unknown function: current_time/i)
+      expect('from users select localtimestamp')
+        .toHaveDiagnostic(/Unknown field "localtimestamp" on users/i)
     } finally {
       setGlobalConfig({root: ''})
     }
@@ -1994,29 +2118,40 @@ describe('lang', () => {
           current_date(),
           current_timestamp,
           local_timestamp
-      `).toRenderSql('SELECT CURRENT_DATE as col_0, CURRENT_TIMESTAMP as current_timestamp, LOCALTIMESTAMP as local_timestamp FROM users as users', {preserveCase: true})
+      `)
+        .toRenderSql('SELECT CURRENT_DATE as col_0, CURRENT_TIMESTAMP as current_timestamp, LOCALTIMESTAMP as local_timestamp FROM users as users', {preserveCase: true})
 
-      expect("from users select date_trunc('month', created_at) as month_start, month(created_at) as month_num, date_part('dow', created_at)").toRenderSql(
+      expect("from users select date_trunc('month', created_at) as month_start, month(created_at) as month_num, date_part('dow', created_at)")
+        .toRenderSql(
         "SELECT DATE_TRUNC('month',users.created_at) as month_start, EXTRACT(month FROM users.created_at) as month_num, date_part('dow',users.created_at) as dayofweek FROM users as users",
         {preserveCase: true},
       )
 
       updateFile('table events (id int, tags array<string>)', 'events.gsql')
-      expect('from events cross join unnest(tags) as tag select id, tag').toRenderSql('SELECT events.id as id, tag as tag FROM events as events CROSS JOIN unnest(events.tags) AS tag(tag)')
-      expect('from users select p50(age) as median_age').toRenderSql('SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY users.age) as median_age FROM users as users', {preserveCase: true})
-      expect('from users select p50(age) over (partition by name)').toHaveDiagnostic(/Postgres does not support pXX as a window function/i)
-      expect('from users select count_if(age > 18) as adults').toRenderSql('SELECT COUNT(*) FILTER (WHERE users.age>18) as adults FROM users as users', {preserveCase: true})
-      expect('from users select cast(name as array<string>)').toRenderSql('SELECT CAST(users.name AS VARCHAR[]) as col_0 FROM users as users')
-      expect('from users select created_at - interval age minute as shifted').toRenderSql("SELECT users.created_at - (users.age * INTERVAL '1 minute') as shifted FROM users as users", {
+      expect('from events cross join unnest(tags) as tag select id, tag')
+        .toRenderSql('SELECT events.id as id, tag as tag FROM events as events CROSS JOIN unnest(events.tags) AS tag(tag)')
+      expect('from users select p50(age) as median_age')
+        .toRenderSql('SELECT PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY users.age) as median_age FROM users as users', {preserveCase: true})
+      expect('from users select p50(age) over (partition by name)')
+        .toHaveDiagnostic(/Postgres does not support pXX as a window function/i)
+      expect('from users select count_if(age > 18) as adults')
+        .toRenderSql('SELECT COUNT(*) FILTER (WHERE users.age>18) as adults FROM users as users', {preserveCase: true})
+      expect('from users select cast(name as array<string>)')
+        .toRenderSql('SELECT CAST(users.name AS VARCHAR[]) as col_0 FROM users as users')
+      expect('from users select created_at - interval age minute as shifted')
+        .toRenderSql("SELECT users.created_at - (users.age * INTERVAL '1 minute') as shifted FROM users as users", {
         preserveCase: true,
       })
-      expect('from users select created_at - created_at as seconds').toRenderSql('SELECT EXTRACT(EPOCH FROM (users.created_at - users.created_at)) as seconds FROM users as users', {
+      expect('from users select created_at - created_at as seconds')
+        .toRenderSql('SELECT EXTRACT(EPOCH FROM (users.created_at - users.created_at)) as seconds FROM users as users', {
         preserveCase: true,
       })
-      expect("from users select date '2024-01-01' - created_at as seconds").toRenderSql("SELECT EXTRACT(EPOCH FROM (DATE '2024-01-01' - users.created_at)) as seconds FROM users as users", {
+      expect("from users select date '2024-01-01' - created_at as seconds")
+        .toRenderSql("SELECT EXTRACT(EPOCH FROM (DATE '2024-01-01' - users.created_at)) as seconds FROM users as users", {
         preserveCase: true,
       })
-      expect('from users select list(name) as names').toRenderSql('SELECT array_agg(users.name) as names FROM users as users')
+      expect('from users select list(name) as names')
+        .toRenderSql('SELECT array_agg(users.name) as names FROM users as users')
     } finally {
       setGlobalConfig({root: ''})
     }
@@ -2025,22 +2160,38 @@ describe('lang', () => {
   it('supports broader clickhouse function coverage', () => {
     setGlobalConfig({dialect: 'clickhouse', root: ''})
     try {
-      expect('from users select count_if(age > 18) as adults').toRenderSql('SELECT countIf(users.age>18) as adults FROM users as users')
-      expect('from users select sum_if(age, age > 18) as adult_age_sum').toRenderSql('SELECT sumIf(users.age,users.age>18) as adult_age_sum FROM users as users')
-      expect("from users select startswith(name, 'A') as starts_a").toRenderSql("SELECT startsWith(users.name,'A') as starts_a FROM users as users")
-      expect("from users select format_datetime(created_at, '%Y-%m') as month_label").toRenderSql("SELECT formatDateTime(users.created_at,'%Y-%m') as month_label FROM users as users")
-      expect('from users select to_year(created_at) as year_num').toRenderSql('SELECT toYear(users.created_at) as year_num FROM users as users')
-      expect("from users select to_date(created_at, 'UTC') as d").toRenderSql("SELECT toDate(users.created_at,'UTC') as d FROM users as users")
-      expect("from users select to_datetime(created_at, 'UTC') as dt").toRenderSql("SELECT toDateTime(users.created_at,'UTC') as dt FROM users as users")
-      expect("from users select date_trunc('hour', created_at, 'UTC') as hour_start").toRenderSql("SELECT dateTrunc('hour',users.created_at,'UTC') as hour_start FROM users as users")
-      expect("from users select dateTrunc('hour', created_at, 'UTC') as hour_start").toRenderSql("SELECT dateTrunc('hour',users.created_at,'UTC') as hour_start FROM users as users")
-      expect("from users select format_datetime(created_at, '%Y-%m-%d', 'UTC') as day_label").toRenderSql("SELECT formatDateTime(users.created_at,'%Y-%m-%d','UTC') as day_label FROM users as users")
-      expect("from users select date_diff('hour', created_at, created_at, 'UTC') as hours").toRenderSql("SELECT date_diff('hour',users.created_at,users.created_at,'UTC') as hours FROM users as users")
-      expect("from users select parse_datetime_best_effort(name, 'UTC') as parsed").toRenderSql("SELECT parseDateTimeBestEffort(users.name,'UTC') as parsed FROM users as users")
-      expect("from users select now('UTC') as n").toRenderSql("SELECT now('UTC') as n FROM users as users")
-      expect("from users select to_day_of_week(created_at, 1, 'UTC') as dow").toRenderSql("SELECT toDayOfWeek(users.created_at,1,'UTC') as dow FROM users as users")
-      expect("from users select to_week(created_at, 1, 'UTC') as week_num").toRenderSql("SELECT toWeek(users.created_at,1,'UTC') as week_num FROM users as users")
-      expect("from users select to_start_of_week(created_at, 1, 'UTC') as week_start").toRenderSql("SELECT toStartOfWeek(users.created_at,1,'UTC') as week_start FROM users as users")
+      expect('from users select count_if(age > 18) as adults')
+        .toRenderSql('SELECT countIf(users.age>18) as adults FROM users as users')
+      expect('from users select sum_if(age, age > 18) as adult_age_sum')
+        .toRenderSql('SELECT sumIf(users.age,users.age>18) as adult_age_sum FROM users as users')
+      expect("from users select startswith(name, 'A') as starts_a")
+        .toRenderSql("SELECT startsWith(users.name,'A') as starts_a FROM users as users")
+      expect("from users select format_datetime(created_at, '%Y-%m') as month_label")
+        .toRenderSql("SELECT formatDateTime(users.created_at,'%Y-%m') as month_label FROM users as users")
+      expect('from users select to_year(created_at) as year_num')
+        .toRenderSql('SELECT toYear(users.created_at) as year_num FROM users as users')
+      expect("from users select to_date(created_at, 'UTC') as d")
+        .toRenderSql("SELECT toDate(users.created_at,'UTC') as d FROM users as users")
+      expect("from users select to_datetime(created_at, 'UTC') as dt")
+        .toRenderSql("SELECT toDateTime(users.created_at,'UTC') as dt FROM users as users")
+      expect("from users select date_trunc('hour', created_at, 'UTC') as hour_start")
+        .toRenderSql("SELECT dateTrunc('hour',users.created_at,'UTC') as hour_start FROM users as users")
+      expect("from users select dateTrunc('hour', created_at, 'UTC') as hour_start")
+        .toRenderSql("SELECT dateTrunc('hour',users.created_at,'UTC') as hour_start FROM users as users")
+      expect("from users select format_datetime(created_at, '%Y-%m-%d', 'UTC') as day_label")
+        .toRenderSql("SELECT formatDateTime(users.created_at,'%Y-%m-%d','UTC') as day_label FROM users as users")
+      expect("from users select date_diff('hour', created_at, created_at, 'UTC') as hours")
+        .toRenderSql("SELECT date_diff('hour',users.created_at,users.created_at,'UTC') as hours FROM users as users")
+      expect("from users select parse_datetime_best_effort(name, 'UTC') as parsed")
+        .toRenderSql("SELECT parseDateTimeBestEffort(users.name,'UTC') as parsed FROM users as users")
+      expect("from users select now('UTC') as n")
+        .toRenderSql("SELECT now('UTC') as n FROM users as users")
+      expect("from users select to_day_of_week(created_at, 1, 'UTC') as dow")
+        .toRenderSql("SELECT toDayOfWeek(users.created_at,1,'UTC') as dow FROM users as users")
+      expect("from users select to_week(created_at, 1, 'UTC') as week_num")
+        .toRenderSql("SELECT toWeek(users.created_at,1,'UTC') as week_num FROM users as users")
+      expect("from users select to_start_of_week(created_at, 1, 'UTC') as week_start")
+        .toRenderSql("SELECT toStartOfWeek(users.created_at,1,'UTC') as week_start FROM users as users")
       for (let fn of [
         'addDays',
         'addHours',
@@ -2065,10 +2216,13 @@ describe('lang', () => {
         'subtractWeeks',
         'subtractYears',
       ]) {
-        expect(`from users select ${fn}(created_at, 2) as shifted`).toRenderSql(`SELECT ${fn}(users.created_at,2) as shifted FROM users as users`)
+        expect(`from users select ${fn}(created_at, 2) as shifted`)
+          .toRenderSql(`SELECT ${fn}(users.created_at,2) as shifted FROM users as users`)
       }
-      expect('from users select add_days(created_at, 2) as shifted').toRenderSql('SELECT addDays(users.created_at,2) as shifted FROM users as users')
-      expect('from users select subtract_days(created_at, 2) as shifted').toRenderSql('SELECT subtractDays(users.created_at,2) as shifted FROM users as users')
+      expect('from users select add_days(created_at, 2) as shifted')
+        .toRenderSql('SELECT addDays(users.created_at,2) as shifted FROM users as users')
+      expect('from users select subtract_days(created_at, 2) as shifted')
+        .toRenderSql('SELECT subtractDays(users.created_at,2) as shifted FROM users as users')
     } finally {
       setGlobalConfig({root: ''})
     }
@@ -2085,18 +2239,21 @@ describe('lang', () => {
   })
 
   it('still errors for unknown bare names', () => {
-    expect('from users select definitely_not_a_function').toHaveDiagnostic(/Unknown field "definitely_not_a_function" on users/i)
+    expect('from users select definitely_not_a_function')
+      .toHaveDiagnostic(/Unknown field "definitely_not_a_function" on users/i)
   })
 
   it('does not add bare support for excluded functions', () => {
     setGlobalConfig({dialect: 'snowflake', root: ''})
     try {
-      expect('from users select sysdate').toHaveDiagnostic(/Unknown field "sysdate" on users/i)
+      expect('from users select sysdate')
+        .toHaveDiagnostic(/Unknown field "sysdate" on users/i)
     } finally {
       setGlobalConfig({root: ''})
     }
 
-    expect('from users select now').toHaveDiagnostic(/Unknown field "now" on users/i)
+    expect('from users select now')
+      .toHaveDiagnostic(/Unknown field "now" on users/i)
   })
 
   it.skip('applies parameters inside views', () => {
@@ -2116,7 +2273,8 @@ describe('lang', () => {
   })
 
   it('assumes * when no fields are selected', () => {
-    expect('from users').toRenderSql('select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users')
+    expect('from users')
+      .toRenderSql('select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users')
   })
 
   it('can analyze markdown files', () => {
@@ -2125,9 +2283,8 @@ describe('lang', () => {
         from users where age > 20
       \`\`\`
       <BarChart data="test" x="name" y="avg(age)" />
-    `).toRenderSql(
-      'with test as ( select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users where users.age>20 ) select test.name as name, avg(test.age) as col_1 from test as test group by 1 order by 2 desc nulls last',
-    )
+    `)
+      .toRenderSql('with test as ( select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users where users.age>20 ) select test.name as name, avg(test.age) as col_1 from test as test group by 1 order by 2 desc nulls last')
   })
 
   it('snowflake named markdown queries preserve lowercase aliases in component references', () => {
@@ -2137,7 +2294,8 @@ describe('lang', () => {
         from users select name as state_code, count() as num
       \`\`\`
       <BarChart data="by_state" x="state_code" y="num" />
-    `).toRenderSql(
+    `)
+      .toRenderSql(
       'WITH by_state as ( SELECT users.name as state_code, count(1) as num FROM USERS as users GROUP BY 1 ORDER BY 2 desc NULLS LAST ) SELECT by_state.state_code as state_code, by_state.num as num FROM by_state as by_state',
       {preserveCase: true},
     )
@@ -2175,9 +2333,8 @@ describe('lang', () => {
         from users where age > 20
       \`\`\`
       <BarChart data="test" x="name" y="avg(age)" title="Count > 0" />
-    `).toRenderSql(
-      'with test as ( select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users where users.age>20 ) select test.name as name, avg(test.age) as col_1 from test as test group by 1 order by 2 desc nulls last',
-    )
+    `)
+      .toRenderSql('with test as ( select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users where users.age>20 ) select test.name as name, avg(test.age) as col_1 from test as test group by 1 order by 2 desc nulls last')
   })
 
   it('validates unquoted chart attributes and extracts splitBy and sort fields', () => {
@@ -2186,9 +2343,8 @@ describe('lang', () => {
         from users select name, age, email, created_at
       \`\`\`
       <BarChart data=test x=name y=age splitBy=email sort="created_at asc" />
-    `).toRenderSql(
-      'with test as ( select users.name as name, users.age as age, users.email as email, users.created_at as created_at from users as users ) select test.name as name, test.age as age, test.email as email, test.created_at as created_at from test as test',
-    )
+    `)
+      .toRenderSql('with test as ( select users.name as name, users.age as age, users.email as email, users.created_at as created_at from users as users ) select test.name as name, test.age as age, test.email as email, test.created_at as created_at from test as test')
 
     analyze('<BarChart data=users x=name y=age sort="name asc" />', 'md')
     expect(getDiagnostics().filter(d => d.severity === 'error')).toEqual([])
@@ -2272,8 +2428,10 @@ describe('lang', () => {
     `,
       'cycle.gsql',
     )
-    expect('from alpha select count(*)').toRenderSql('select count(1) as count from alpha as alpha')
-    expect('from alpha select avg_num').toRenderSql('select (avg(beta.num)) as avg_num from alpha as alpha left join beta as beta on beta.alpha_id=alpha.id')
+    expect('from alpha select count(*)')
+      .toRenderSql('select count(1) as count from alpha as alpha')
+    expect('from alpha select avg_num')
+      .toRenderSql('select (avg(beta.num)) as avg_num from alpha as alpha left join beta as beta on beta.alpha_id=alpha.id')
     // expect('from beta select alpha.avg_num').toRenderSql('')
   })
 
@@ -2290,7 +2448,8 @@ describe('lang', () => {
       'models.gsql',
     )
 
-    expect('from users select name where is_adult').toRenderSql('select users.name as name from users as users where (users.age>=18)')
+    expect('from users select name where is_adult')
+      .toRenderSql('select users.name as name from users as users where (users.age>=18)')
   })
 
   it('has correct precedence between binary and logic expressions', () => {
@@ -2330,24 +2489,26 @@ describe('lang', () => {
   it('supports standard functions in bigquery', () => {
     // BigQuery uses a different dialect than the StandardSQL that many use in Malloy. Ensure that we're loading standard fns into bigquery
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from users select floor(age) as floored_age').toRenderSql('select floor(users.age) as floored_age from `users` as users')
+    expect('from users select floor(age) as floored_age')
+      .toRenderSql('select floor(users.age) as floored_age from `users` as users')
   })
 
   it('renders window order expressions with BigQuery identifiers', () => {
     setGlobalConfig({root: '', bigquery: {}})
-    expect('from orders select row_number() over (order by amount desc) as rn').toRenderSql('select row_number() OVER (ORDER BY orders.amount DESC) as rn from `orders` as orders')
+    expect('from orders select row_number() over (order by amount desc) as rn')
+      .toRenderSql('select row_number() OVER (ORDER BY orders.amount DESC) as rn from `orders` as orders')
   })
 
   it('renders window frames in Snowflake with unquoted identifiers', () => {
     setGlobalConfig({dialect: 'snowflake', root: ''})
-    expect('from orders select sum(amount) over (order by id rows between unbounded preceding and current row) as running_amount').toRenderSql(
-      'SELECT sum(orders.AMOUNT) OVER (ORDER BY orders.ID ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as running_amount FROM ORDERS as orders',
-    )
+    expect('from orders select sum(amount) over (order by id rows between unbounded preceding and current row) as running_amount')
+      .toRenderSql('SELECT sum(orders.AMOUNT) OVER (ORDER BY orders.ID ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as running_amount FROM ORDERS as orders')
   })
 
   it('renders Snowflake pXX partition windows', () => {
     setGlobalConfig({dialect: 'snowflake', root: ''})
-    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id').toRenderSql(
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id')
+      .toRenderSql(
       'SELECT orders.id as id, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY orders.amount) OVER (PARTITION BY orders.user_id) as p50_by_user FROM ORDERS as orders ORDER BY 1 asc NULLS LAST',
       {preserveCase: true},
     )
@@ -2355,35 +2516,46 @@ describe('lang', () => {
 
   it('renders clickhouse pXX aggregates and windows', () => {
     setGlobalConfig({dialect: 'clickhouse', root: ''})
-    expect('from orders select p50(amount) as median_amount').toRenderSql('SELECT quantile(0.5)(orders.amount) as median_amount FROM orders as orders')
-    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id').toRenderSql(
-      'SELECT orders.id as id, quantile(0.5)(orders.amount) OVER (PARTITION BY orders.user_id) as p50_by_user FROM orders as orders ORDER BY 1 asc NULLS LAST',
-    )
+    expect('from orders select p50(amount) as median_amount')
+      .toRenderSql('SELECT quantile(0.5)(orders.amount) as median_amount FROM orders as orders')
+    expect('from orders select id, p50(amount) over (partition by user_id) as p50_by_user order by id')
+      .toRenderSql('SELECT orders.id as id, quantile(0.5)(orders.amount) OVER (PARTITION BY orders.user_id) as p50_by_user FROM orders as orders ORDER BY 1 asc NULLS LAST')
   })
 
   it('supports cast() expressions', () => {
-    expect('from users select cast(age as varchar)').toRenderSql('select CAST(users.age AS VARCHAR) as col_0 from users as users')
-    expect('from users select cast(age as float64)').toRenderSql('select CAST(users.age AS FLOAT64) as col_0 from users as users')
-    expect('from users select cast(name as array<string>)').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
+    expect('from users select cast(age as varchar)')
+      .toRenderSql('select CAST(users.age AS VARCHAR) as col_0 from users as users')
+    expect('from users select cast(age as float64)')
+      .toRenderSql('select CAST(users.age AS FLOAT64) as col_0 from users as users')
+    expect('from users select cast(name as array<string>)')
+      .toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
 
     setGlobalConfig({dialect: 'clickhouse', root: ''})
-    expect('from users select cast(age as float64)').toRenderSql('SELECT CAST(users.age AS Float64) as col_0 FROM users as users')
-    expect('from users select cast(name as array<string>)').toRenderSql('SELECT CAST(users.name AS Array(VARCHAR)) as col_0 FROM users as users')
+    expect('from users select cast(age as float64)')
+      .toRenderSql('SELECT CAST(users.age AS Float64) as col_0 FROM users as users')
+    expect('from users select cast(name as array<string>)')
+      .toRenderSql('SELECT CAST(users.name AS Array(VARCHAR)) as col_0 FROM users as users')
   })
 
   it('supports :: cast syntax', () => {
-    expect('from users select age::VARCHAR').toRenderSql('select CAST(users.age AS VARCHAR) as col_0 from users as users')
-    expect('from users select name::int').toRenderSql('select CAST(users.name AS INT) as col_0 from users as users')
-    expect('from users select name::array<string>').toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
+    expect('from users select age::VARCHAR')
+      .toRenderSql('select CAST(users.age AS VARCHAR) as col_0 from users as users')
+    expect('from users select name::int')
+      .toRenderSql('select CAST(users.name AS INT) as col_0 from users as users')
+    expect('from users select name::array<string>')
+      .toRenderSql('select CAST(users.name AS ARRAY<STRING>) as col_0 from users as users')
   })
 
   it('reports diagnostic for invalid cast type', () => {
-    expect('from users select cast(age as invalidtype)').toHaveDiagnostic(/Unsupported cast type: invalidtype/i)
-    expect('from users select cast(name as array<array<string>>) ').toHaveDiagnostic(/nested arrays are not supported/i)
+    expect('from users select cast(age as invalidtype)')
+      .toHaveDiagnostic(/Unsupported cast type: invalidtype/i)
+    expect('from users select cast(name as array<array<string>>) ')
+      .toHaveDiagnostic(/nested arrays are not supported/i)
   })
 
   it('supports cast in expressions', () => {
-    expect('from users select cast(age as varchar) = name').toRenderSql('select CAST(users.age AS VARCHAR)=users.name as col_0 from users as users')
+    expect('from users select cast(age as varchar) = name')
+      .toRenderSql('select CAST(users.age AS VARCHAR)=users.name as col_0 from users as users')
   })
 
   it('normalizes clickhouse warehouse types for schema output', () => {
@@ -2441,7 +2613,8 @@ describe('lang', () => {
       -- this is a comment
       #currency=USD
       name STRING
-    ); from test select id`).toRenderSql('select test.id as id from test as test')
+    ); from test select id`)
+      .toRenderSql('select test.id as id from test as test')
   })
 
   it('allows a single join many aggregate and a join one aggregate', () => {
@@ -2469,11 +2642,13 @@ describe('lang', () => {
   })
 
   it('reports fanout when an aggregate query mixes base and joined grains', () => {
-    expect('from users select name, avg(age), sum(orders.amount)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
+    expect('from users select name, avg(age), sum(orders.amount)')
+      .toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
   })
 
   it('reports a chasm trap when a base-grain aggregate is combined with sibling join many aggregates', () => {
-    expect('from users select name, avg(age), sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
+    expect('from users select name, avg(age), sum(orders.amount), sum(payments.amount)')
+      .toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows the base and fanout grain query after separating the aggregates', () => {
@@ -2487,7 +2662,8 @@ describe('lang', () => {
   })
 
   it('reports a chasm trap when an aggregate query mixes sibling join many grains', () => {
-    expect('from users select name, sum(orders.amount), sum(payments.amount)').toHaveDiagnostic(/Join graph creates a chasm trap/i)
+    expect('from users select name, sum(orders.amount), sum(payments.amount)')
+      .toHaveDiagnostic(/Join graph creates a chasm trap/i)
   })
 
   it('allows the sibling fanout query after aggregating each branch separately', () => {
@@ -2505,19 +2681,18 @@ describe('lang', () => {
   })
 
   it('rejects aggregate query dimensions whose grain does not match the aggregates', () => {
-    expect('from users select orders.status, avg(age)').toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
+    expect('from users select orders.status, avg(age)')
+      .toHaveDiagnostic(/Aggregate expression `avg\(age\)` is fanned out by join to table `orders`/i)
   })
 
   it('reports a fanout diagnostic when an aggregate query mixes ancestor and descendant grains', () => {
-    expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
-      /Aggregate expression `sum\(orders\.amount\)` is fanned out by join to table `order_items`/i,
-    )
+    expect('from users select name, sum(orders.amount), sum(orders.order_items.quantity)')
+      .toHaveDiagnostic(/Aggregate expression `sum\(orders\.amount\)` is fanned out by join to table `order_items`/i)
   })
 
   it('reports join-graph fanout when a base-grain aggregate mixes with ancestor and descendant grains', () => {
-    expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)').toHaveDiagnostic(
-      /One or more aggregate expressions fanned out by join graph \(base, orders, orders\.order_items\)/i,
-    )
+    expect('from users select name, avg(age), sum(orders.amount), sum(orders.order_items.quantity)')
+      .toHaveDiagnostic(/One or more aggregate expressions fanned out by join graph \(base, orders, orders\.order_items\)/i)
   })
 
   it('allows the ancestor and descendant query after aggregating each grain separately', () => {
@@ -2531,7 +2706,8 @@ describe('lang', () => {
   })
 
   it('reports fanout when count(id) mixes with a fanout grain', () => {
-    expect('from users select name, count(id), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate expression `count\(id\)` is fanned out by join to table `order_items`/i)
+    expect('from users select name, count(id), sum(orders.order_items.quantity)')
+      .toHaveDiagnostic(/Aggregate expression `count\(id\)` is fanned out by join to table `order_items`/i)
   })
 
   it('treats count(distinct id) as distinct-safe when it mixes with a fanout grain', () => {
@@ -2539,7 +2715,8 @@ describe('lang', () => {
   })
 
   it('reports fanout when count(*) mixes with a fanout grain', () => {
-    expect('from users select name, count(*), sum(orders.order_items.quantity)').toHaveDiagnostic(/Aggregate expression `count\(\*\)` is fanned out by join to table `order_items`/i)
+    expect('from users select name, count(*), sum(orders.order_items.quantity)')
+      .toHaveDiagnostic(/Aggregate expression `count\(\*\)` is fanned out by join to table `order_items`/i)
   })
 
   it('does not apply fanout protection to explicit joins', () => {
@@ -2599,7 +2776,8 @@ describe('lang', () => {
       from events
       cross join unnest(tags) as tag
       select avg(id), sum(length(tag))
-    `).toHaveDiagnostic(/aggregate expression `avg\(id\)` is fanned out by join to table `tag`/i)
+    `)
+      .toHaveDiagnostic(/aggregate expression `avg\(id\)` is fanned out by join to table `tag`/i)
   })
 
   it('handles computed columns with chained joins', () => {
@@ -2614,9 +2792,8 @@ describe('lang', () => {
       'chain.gsql',
     )
 
-    expect('from orders select user_country').toRenderSql(
-      'select (users_countries.name) as user_country from orders as orders left join users as users on users.id=orders.user_id left join countries as users_countries on users_countries.id=users.country_id',
-    )
+    expect('from orders select user_country')
+      .toRenderSql('select (users_countries.name) as user_country from orders as orders left join users as users on users.id=orders.user_id left join countries as users_countries on users_countries.id=users.country_id')
   })
 
   // When the same table is joined multiple times with different aliases, each reference
@@ -2636,35 +2813,30 @@ describe('lang', () => {
       'multi_join.gsql',
     )
 
-    expect('from users select recent_orders.discounted, old_orders.discounted').toRenderSql(
-      'select (recent_orders.amount*0.9) as recent_orders_discounted, (old_orders.amount*0.9) as old_orders_discounted from users as users left join orders as recent_orders on recent_orders.user_id=users.id left join orders as old_orders on old_orders.user_id=users.id',
-    )
+    expect('from users select recent_orders.discounted, old_orders.discounted')
+      .toRenderSql('select (recent_orders.amount*0.9) as recent_orders_discounted, (old_orders.amount*0.9) as old_orders_discounted from users as users left join orders as recent_orders on recent_orders.user_id=users.id left join orders as old_orders on old_orders.user_id=users.id')
   })
 
   it('supports subqueries in FROM', () => {
-    expect('from (from users where age > 20 select id, name) as adults select name').toRenderSql(
-      'select adults.name as name from ( select users.id as id, users.name as name from users as users where users.age>20 ) as adults',
-    )
+    expect('from (from users where age > 20 select id, name) as adults select name')
+      .toRenderSql('select adults.name as name from ( select users.id as id, users.name as name from users as users where users.age>20 ) as adults')
   })
 
   it('supports subqueries in JOIN', () => {
     expect(`from users
       join (from orders select user_id, sum(amount) as total group by user_id) as order_totals on order_totals.user_id = users.id
-      select users.name as name, order_totals.total as total`).toRenderSql(
-      'select users.name as name, order_totals.total as total from users as users inner join ( select orders.user_id as user_id, sum(orders.amount) as total from orders as orders group by 1 order by 2 desc nulls last ) as order_totals on order_totals.user_id=users.id',
-    )
+      select users.name as name, order_totals.total as total`)
+        .toRenderSql('select users.name as name, order_totals.total as total from users as users inner join ( select orders.user_id as user_id, sum(orders.amount) as total from orders as orders group by 1 order by 2 desc nulls last ) as order_totals on order_totals.user_id=users.id')
   })
 
   it('supports subqueries in IN expressions', () => {
-    expect('from users where id in (from orders where amount > 10 select user_id) select id').toRenderSql(
-      'select users.id as id from users as users where users.id in (select orders.user_id as user_id from orders as orders where orders.amount>10)',
-    )
+    expect('from users where id in (from orders where amount > 10 select user_id) select id')
+      .toRenderSql('select users.id as id from users as users where users.id in (select orders.user_id as user_id from orders as orders where orders.amount>10)')
   })
 
   it('supports scalar subquery expressions in WHERE', () => {
-    expect('from users where age > (from users select avg(age)) select id').toRenderSql(
-      'select users.id as id from users as users where users.age>(select avg(users.age) as col_0 from users as users)',
-    )
+    expect('from users where age > (from users select avg(age)) select id')
+      .toRenderSql('select users.id as id from users as users where users.age>(select avg(users.age) as col_0 from users as users)')
   })
 
   it('supports CTEs', async () => {
@@ -2672,17 +2844,16 @@ describe('lang', () => {
       high_value as (from orders where amount >= 40 select id, user_id, amount),
       hv_users as (from high_value select user_id)
       from hv_users select user_id order by user_id`
-    expect(q).toRenderSql(
-      'with high_value as ( select orders.id as id, orders.user_id as user_id, orders.amount as amount from orders as orders where orders.amount>=40 ), hv_users as ( select high_value.user_id as user_id from high_value as high_value ) select hv_users.user_id as user_id from hv_users as hv_users order by 1 asc nulls last',
-    )
-    await expect(q).toReturnRows([1], [2])
+    expect(q)
+      .toRenderSql('with high_value as ( select orders.id as id, orders.user_id as user_id, orders.amount as amount from orders as orders where orders.amount>=40 ), hv_users as ( select high_value.user_id as user_id from high_value as high_value ) select hv_users.user_id as user_id from hv_users as hv_users order by 1 asc nulls last')
+    await expect(q)
+      .toReturnRows([1], [2])
   })
 
   it('CTE shadows existing table names', () => {
     // CTE named "orders" should shadow the real orders table
-    expect('with orders as (from users select id, name) from orders select id, name order by id').toRenderSql(
-      'with orders as ( select users.id as id, users.name as name from users as users ) select orders.id as id, orders.name as name from orders as orders order by 1 asc nulls last',
-    )
+    expect('with orders as (from users select id, name) from orders select id, name order by id')
+      .toRenderSql('with orders as ( select users.id as id, users.name as name from users as users ) select orders.id as id, orders.name as name from orders as orders order by 1 asc nulls last')
   })
 
   it('supports nested CTEs referencing earlier siblings', () => {

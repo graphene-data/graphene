@@ -45,7 +45,9 @@ async function runCli(args: string[], invocationConfig: Config, options: RunCliO
   let exitSpy = vi.spyOn(process, 'exit').mockImplementation(code => {
     throw new ProcessExit(Number(code || 0))
   })
-  let stdinSpy = options.stdin === undefined ? undefined : vi.spyOn(process, 'stdin', 'get').mockReturnValue(Readable.from([options.stdin]) as typeof process.stdin)
+  let stdinSpy = options.stdin === undefined
+    ? undefined
+    : vi.spyOn(process, 'stdin', 'get').mockReturnValue(Readable.from([options.stdin]) as typeof process.stdin)
 
   // Commander command instances retain option values between parse calls, so restore their declared defaults.
   for (let command of [program, ...program.commands]) {
@@ -56,7 +58,7 @@ async function runCli(args: string[], invocationConfig: Config, options: RunCliO
       command.setOptionValueWithSource(option.attributeName(), value, 'default')
     }
   }
-  program.configureOutput({writeOut: text => (stdout += text), writeErr: text => (stderr += text)}).exitOverride()
+  program.configureOutput({writeOut: text => stdout += text, writeErr: text => stderr += text}).exitOverride()
 
   let code = 0
   try {

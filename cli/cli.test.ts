@@ -344,7 +344,7 @@ function readRequestBody(req: IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let body = ''
     req.setEncoding('utf-8')
-    req.on('data', chunk => (body += chunk))
+    req.on('data', chunk => body += chunk)
     req.on('end', () => resolve(body))
     req.on('error', reject)
   })
