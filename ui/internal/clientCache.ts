@@ -17,17 +17,16 @@ export async function getHashes(): Promise<string[]> {
 
   let store = await getCache()
   let keys = await store.keys()
-  return keys
-    .map(k => {
+  let hashes = await Promise.all(
+    keys.map(async k => {
       let url = new URL(k.url)
       let expires = Number(url.searchParams.get('expires') || 0)
-      if (expires < Date.now()) {
-        store.delete(k)
-        return null
-      }
-      return url.pathname.replace(/^\//, '')
-    })
-    .filter(Boolean) as string[]
+      if (expires >= Date.now()) return url.pathname.replace(/^\//, '')
+      await store.delete(k)
+      return null
+    }),
+  )
+  return hashes.filter(Boolean) as string[]
 }
 
 export async function cacheRead(hash: string): Promise<QueryResult | null> {

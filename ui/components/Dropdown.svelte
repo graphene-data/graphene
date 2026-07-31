@@ -187,7 +187,7 @@
     if (isDisabled) return
     updateTriggerWidth()
     isOpen = true
-    if (focusSearch) focusSearchInput()
+    if (focusSearch) void focusSearchInput()
   }
 
   function closeMenu(focusTrigger: boolean) {
@@ -296,7 +296,7 @@
   }
 
   $effect(() => {
-    if (isOpen && activeIndex >= 0) tick().then(scrollActiveIntoView)
+    if (isOpen && activeIndex >= 0) void tick().then(scrollActiveIntoView)
   })
 
   $effect(() => {

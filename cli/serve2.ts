@@ -318,12 +318,12 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
 
         let mod = s.moduleGraph.getModuleById('\0virtual:nav')
         if (!mod) return
-        s.reloadModule(mod) // triggers HMR of any `virtual:nav` imports
+        await s.reloadModule(mod) // triggers HMR of any `virtual:nav` imports
       }
 
       s.watcher.add(['**/*.gsql', '**/*.md'])
       s.watcher.on('all', refresh)
-      refresh()
+      void refresh()
     },
   }
 }

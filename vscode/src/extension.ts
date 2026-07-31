@@ -36,7 +36,7 @@ export async function activate(context: vscode.ExtensionContext) {
   client.onNotification('graphene/analyzeError', () => {
     if (!showedErrorToast) {
       showedErrorToast = true
-      vscode.window.showWarningMessage('Graphene analyzer hit an internal error. See Output: Graphene Language Server.')
+      void vscode.window.showWarningMessage('Graphene analyzer hit an internal error. See Output: Graphene Language Server.')
     }
   })
 }

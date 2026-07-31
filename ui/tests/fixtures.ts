@@ -164,7 +164,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
           if (window.__inst) window.$GRAPHENE.svelte.unmount(window.__inst)
 
           // ensure fonts have loaded before we mount our component
-          document.fonts.load("12px 'Source Sans 3'")
+          await document.fonts.load("12px 'Source Sans 3'")
           await document.fonts.ready
 
           let container = document.getElementsByTagName('main')[0] || document.createElement('main')
