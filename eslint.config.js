@@ -16,6 +16,11 @@ export default [
   includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url))),
   {ignores: ['lang/parser.js']},
   {
+    files: ['**/*.{ts,svelte}'],
+    languageOptions: {parserOptions: {projectService: true}},
+    rules: {'@typescript-eslint/no-floating-promises': ['error', {checkThenables: true}]},
+  },
+  {
     files: ['scripts/**/*.js'],
     languageOptions: {
       ecmaVersion: 2021,

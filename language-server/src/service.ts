@@ -134,7 +134,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
 
           target.project.files = upsertFile(target.project.files, {path: target.path, contents: document.getText()})
           dirtyRoots.add(target.project.root)
-          analysis.invalidate()
+          void analysis.invalidate()
         })
 
         return {
@@ -167,7 +167,7 @@ export function createGrapheneService(server: ReturnType<typeof createServer>): 
           touched = true
         }
 
-        if (touched) analysis.invalidate()
+        if (touched) await analysis.invalidate()
       }
 
       function projectFromUri(uri: DocumentUri) {
@@ -339,7 +339,10 @@ function createWorkspaceAnalysis({load, analyze, delay}: {load: () => Promise<vo
           new Promise<void>(resolve => {
             handle = setTimeout(() => {
               handle = undefined
-              analyze().finally(resolve)
+              analyze().then(
+                () => resolve(),
+                () => resolve(),
+              )
             }, delay)
           }),
       )

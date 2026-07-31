@@ -69,7 +69,7 @@
       // a) when the right font loads, things will just slightly not line up with edges
       // b) test snapshots will differ, as they measure with whatever the system sans font is
       // c) screenshots taken by `graphene run` might have the wrong font
-      document.fonts.load("12px 'Source Sans 3'")
+      await document.fonts.load("12px 'Source Sans 3'")
       await document.fonts.ready
       if (blankForTests) return
 
