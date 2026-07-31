@@ -220,7 +220,7 @@ test('dropdown validates single and multiple defaults against loaded options', a
     page,
     `
     <Dropdown name="invalid_default" data="dropdown_options" value="code" label="label" title="Invalid Default" multiple=true defaultValue="AA, AS" />
-    <Dropdown name="valid_defaults" data="dropdown_options" value="code" label="label" title="Valid Defaults" multiple=true defaultValue={['AA', 'AS']} />
+    <Dropdown name="valid_defaults" data="dropdown_options" value="code" label="label" title="Valid Defaults" multiple=true defaultValue="['AA', 'AS']" />
   `,
   )
 
@@ -231,13 +231,13 @@ test('dropdown validates single and multiple defaults against loaded options', a
     .poll(() => page.evaluate(() => window.$GRAPHENE.getErrors().map(({message, componentId, severity}) => ({message, componentId, severity}))))
     .toEqual([
       {
-        message: 'Dropdown "invalid_default" default value is not present in its options: "AA, AS". For multiple defaults, pass an array rather than a comma-separated string.',
+        message: 'Dropdown "invalid_default" default value is not present in its options: "AA, AS". For multiple defaults, pass a JSON array string such as "[\'one\', \'two\']".',
         componentId: 'Dropdown defaultValue (name="invalid_default")',
         severity: 'warn',
       },
     ])
   expect(browserWarnings).toContain(
-    '[Graphene] Dropdown defaultValue (name="invalid_default"): Dropdown "invalid_default" default value is not present in its options: "AA, AS". For multiple defaults, pass an array rather than a comma-separated string.',
+    '[Graphene] Dropdown defaultValue (name="invalid_default"): Dropdown "invalid_default" default value is not present in its options: "AA, AS". For multiple defaults, pass a JSON array string such as "[\'one\', \'two\']".',
   )
 })
 

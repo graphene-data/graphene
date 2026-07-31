@@ -1,6 +1,6 @@
 <script lang="ts">
   import {onMount, setContext, tick, untrack, type Snippet} from 'svelte'
-  import {ensureArray, toBoolean} from '../component-utilities/inputUtils'
+  import {toBoolean} from '../component-utilities/inputUtils'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
 
   interface Option {
@@ -18,7 +18,7 @@
     title?: string
     placeholder?: string
     multiple?: boolean | string
-    defaultValue?: string | string[]
+    defaultValue?: string
     selectAllByDefault?: boolean | string
     noDefault?: boolean | string
     disableSelectAll?: boolean | string
@@ -94,6 +94,7 @@
   let hidePrint = $derived(toBoolean(hideDuringPrint))
   let isDisabled = $derived(toBoolean(disabled))
   let disableSelectAllButton = $derived(toBoolean(disableSelectAll))
+  let defaultValues = $derived(parseDefaultValue(defaultValue, multi))
 
   let resolvedLabelField = $derived(optionLabel || labelField || (label && data ? label : undefined))
   let resolvedTitle = $derived(title || (!data ? label : undefined))
@@ -300,8 +301,7 @@
   })
 
   $effect(() => {
-    let defaults = ensureArray(defaultValue)
-    let defaultParam = !hasNoDefault && defaults.length ? writeSelection(defaults) : null
+    let defaultParam = !hasNoDefault && defaultValues.length ? writeSelection(defaultValues) : null
     let unsub = window.$GRAPHENE.param(name, multi ? 'array' : 'scalar', defaultParam, value => {
       let nextSelection = readSelection(value)
       if (!sameSelection(selection, nextSelection)) setSelection(nextSelection, {persist: false})
@@ -358,14 +358,21 @@
     setSelection(nextSelection, {fromUser, persist: true})
   }
 
+  // Multiple defaults use an array serialized as a string because Markdown attributes cannot safely pass Svelte values.
+  function parseDefaultValue(value: string | undefined, multiple: boolean): any[] {
+    if (value === undefined) return []
+    if (!multiple || !value.trim().startsWith('[')) return [value]
+    return JSON.parse(value.replaceAll("'", '"'))
+  }
+
   // Warn once the complete queried or manual option set proves an authored default is invalid.
   function validateDefaultValue() {
-    let missing = ensureArray(defaultValue).filter(defaultItem => !valueMap.has(optionKey(defaultItem)))
+    let missing = defaultValues.filter(defaultItem => !valueMap.has(optionKey(defaultItem)))
     if (!missing.length) return defaultLogger.warn(null)
 
     let values = missing.map(item => `"${String(item)}"`).join(', ')
     let noun = missing.length === 1 ? 'value is' : 'values are'
-    let hint = multi && typeof defaultValue === 'string' && defaultValue.includes(',') ? ' For multiple defaults, pass an array rather than a comma-separated string.' : ''
+    let hint = multi && defaultValue?.includes(',') ? ' For multiple defaults, pass a JSON array string such as "[\'one\', \'two\']".' : ''
     defaultLogger.warn(`Dropdown "${name}" default ${noun} not present in its options: ${values}.${hint}`)
   }
 

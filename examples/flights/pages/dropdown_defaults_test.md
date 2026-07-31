@@ -21,7 +21,7 @@ select destination as code group by 1 order by 1
   <Dropdown title="Carrier" name="carrier" data="test_carrier_options" value="code" defaultValue="WN" />
   <Dropdown title="Origin" name="origin" data="test_origin_options" value="code" defaultValue="PHX" />
   <Dropdown title="Invalid comma default" name="excluded_invalid" data="test_destination_options" value="code" multiple=true defaultValue="LAX, LAS" />
-  <Dropdown title="Valid array default" name="excluded_valid" data="test_destination_options" value="code" multiple=true defaultValue={['LAX', 'LAS']} />
+  <Dropdown title="Valid array default" name="excluded_valid" data="test_destination_options" value="code" multiple=true defaultValue="['LAX', 'LAS']" />
   <Dropdown title="Year" name="year" defaultValue="2005">
     <DropdownOption value="2004" />
     <DropdownOption value="2005" />
