@@ -1,7 +1,8 @@
 ---
-title: Carrier Detail
 layout: dashboard
 ---
+
+# Carrier Detail
 
 <Dropdown name=carrier data=carriers value=code label=nickname title="Carrier" defaultValue="WN" />
 

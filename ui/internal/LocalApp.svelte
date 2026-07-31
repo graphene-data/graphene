@@ -56,7 +56,8 @@
     setErrorFor('compile', runtimeError)
   }
   let fileName = pathName.split('/').at(-1) + '.md'
-  let pageTitle = $derived(pageMeta.title || prettyPrintFilename(fileName))
+  let navTitle = $derived(navData.find(file => file.path == pathName + '.md')?.title)
+  let pageTitle = $derived(pageMeta.title || navTitle || prettyPrintFilename(fileName))
 
   $effect(() => {
     document.title = `${pageTitle} - ${projectName}`
@@ -111,9 +112,6 @@
   {#if blankForTests}
     <!-- render nothing, tests fill in this element -->
   {:else if Page}
-    {#if pageMeta.title}
-      <h1 class="page-title">{pageMeta.title}</h1>
-    {/if}
     <svelte:boundary onerror={handlePageError}>
       <Page />
       {#snippet failed()}
@@ -136,8 +134,4 @@
 
 <style>
   .page-error-heading { margin-top: 0; }
-
-  main h1:first-child {
-    margin-top: 12px;
-  }
 </style>

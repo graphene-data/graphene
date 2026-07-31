@@ -1,7 +1,8 @@
 ---
-title: NBA Stats
 layout: dashboard
 ---
+
+# NBA Stats
 
 This example explores NBA data from 2004-2022. Be sure to check out the sidebar for more page.
 

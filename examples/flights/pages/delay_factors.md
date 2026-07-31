@@ -1,7 +1,8 @@
 ---
-title: What makes your flight late?
 layout: notebook
 ---
+
+# What makes your flight late?
 
 Every frequent flyer has a pet theory. Pick the right airline. Avoid Chicago. Never fly a 20-year-old plane. These intuitions have just enough truth in them to survive, but they obscure which factors actually move the needle — and by how much.
 

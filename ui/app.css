@@ -325,7 +325,7 @@ main.pageContent.fullWidth {
   padding: 0;
 }
 
-main.pageContent > .page-title:first-child {
+main.pageContent > h1:first-child {
   margin-top: 12px;
 }
 

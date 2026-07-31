@@ -1,7 +1,8 @@
 ---
-title: NYC Yellow Taxi Overview
 layout: dashboard
 ---
+
+# NYC Yellow Taxi Overview
 
 January 2025 yellow taxi trips published by the [NYC Taxi and Limousine Commission](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page).
 

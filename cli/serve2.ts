@@ -14,7 +14,7 @@ import type {AnalysisResult, QueryField, WorkspaceFileInput} from '../lang/types
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
 import {runQuery} from './connections/index.ts'
-import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractPageTitle, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {missingMockFiles, mockFileMap} from './mockFiles.ts'
 import {runVitePlugin} from './run.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
@@ -288,7 +288,7 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
       if (process.env.NODE_ENV == 'test') {
         for (let [path, contents] of Object.entries(mockFileMap)) {
           if (missingMockFiles.has(path)) continue
-          let mockFile = {path, title: extractFrontmatter(contents).title}
+          let mockFile = {path, title: extractPageTitle(contents)}
           let idx = res.findIndex(file => file.path == path)
           if (idx >= 0) res.splice(idx, 1, mockFile)
           else res.push(mockFile)
@@ -313,7 +313,7 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
         await workspaceLoadPromise
 
         // store md file path/title so we can serve it as virtual:nav for the sidebar
-        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(f => ({path: f.path, title: extractFrontmatter(f.contents).title}))
+        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(f => ({path: f.path, title: extractPageTitle(f.contents)}))
 
         let mod = s.moduleGraph.getModuleById('\0virtual:nav')
         if (!mod) return

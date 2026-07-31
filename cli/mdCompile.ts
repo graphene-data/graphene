@@ -98,5 +98,15 @@ export function extractFrontmatter(contents: string): PageFrontmatter {
   return {title: raw?.title ? String(raw.title) : undefined}
 }
 
+// Resolve the nav title without compiling the page. Frontmatter wins; otherwise use the first static Markdown h1.
+export function extractPageTitle(contents: string) {
+  let frontmatterTitle = extractFrontmatter(contents).title
+  if (frontmatterTitle) return frontmatterTitle
+
+  let markdownTitle = contents.match(/^#[ \t]+(.+?)[ \t]*#*[ \t]*$/m)?.[1]?.trim()
+  if (!markdownTitle || /[<{]/.test(markdownTitle)) return
+  return markdownTitle
+}
+
 export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles]
 export const rehypePlugins: Array<Plugin> = []

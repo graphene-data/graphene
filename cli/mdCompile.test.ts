@@ -2,7 +2,7 @@
 import {compile} from 'mdsvex'
 import {compile as compileSvelte} from 'svelte/compiler'
 
-import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, extractPageTitle, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 
 async function compileMarkdownPage(src: string) {
   let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
@@ -25,6 +25,21 @@ describe('extractFrontmatter', () => {
 
   it('handles leading whitespace', () => {
     expect(extractFrontmatter('\n---\ntitle: Trimmed\n---')).toEqual({title: 'Trimmed'})
+  })
+})
+
+describe('extractPageTitle', () => {
+  it('uses frontmatter before a Markdown h1', () => {
+    expect(extractPageTitle('---\ntitle: Navigation title\n---\n# Page title')).toBe('Navigation title')
+  })
+
+  it('uses a Markdown h1 without frontmatter', () => {
+    expect(extractPageTitle('Intro\n\n# Page title\n\nContent')).toBe('Page title')
+  })
+
+  it('ignores dynamic and missing h1 titles', () => {
+    expect(extractPageTitle('# Report for {year}')).toBeUndefined()
+    expect(extractPageTitle('Content without a title')).toBeUndefined()
   })
 })
 

@@ -1,6 +1,4 @@
----
-title: NYC Taxi Tables
----
+# NYC Taxi Tables
 
 ## Yellow Trips
 

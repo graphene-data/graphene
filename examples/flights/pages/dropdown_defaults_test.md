@@ -1,7 +1,8 @@
 ---
-title: Dropdown Defaults Test
 layout: dashboard
 ---
+
+# Dropdown Defaults Test
 
 ```gsql test_carrier_options
 from flights select carrier as code group by 1 order by 1

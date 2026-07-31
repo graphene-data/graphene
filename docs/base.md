@@ -66,9 +66,10 @@ Graphene pages extend Markdown with the following:
 
 ````md
 ---
-title: My First Dashboard
 layout: dashboard
 ---
+
+# My First Dashboard
 
 ```sql sales_by_status
 select extract(year from created_at) AS year, status, revenue
@@ -92,10 +93,11 @@ Unsupported:
 - Automatic embedded/resource tags such as `<iframe>`, `<object>`, `<embed>`, `<link>`, `<meta>`, `<img>`, `<video>`, `<audio>`, `<svg>`, and `<math>`
 - Form controls such as `<form>`, `<input>`, `<button>`, `<textarea>`, and `<select>`
 
-## Page frontmatter
+## Page titles and frontmatter
+Use a Markdown h1 to display a page title. Automatically sets the page's title in the nav.
+
 You can add YAML frontmatter at the top of a page. The following attributes are supported:
-- `title`: title displayed at the top of the page
-  - DO NOT(!) put an h1 at the top of the page if you already set a title via frontmatter.
+- `title`: sets the title of the page in navigation. Used if the page has no h1, or to override the title used in the nav.
 - `layout`: `notebook` is the default, good for prose interspersed with charts. `dashboard` has a wider max-width, for chart-heavy pages with lots of `<Row>`s.
 
 ## Viz and display components

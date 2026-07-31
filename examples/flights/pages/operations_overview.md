@@ -1,7 +1,8 @@
 ---
-title: Flight Operations Overview
 layout: dashboard
 ---
+
+# Flight Operations Overview
 
 ```gsql flown
 -- most of our charts only show stats from flights that actually flew
