@@ -268,7 +268,7 @@ describe('runCreate', () => {
       defaultNamespace: 'reporting',
       postgres: {host: 'localhost', port: 5432, database: 'analytics', user: 'graphene_user'},
     })
-    expect(pkg.dependencies['pg']).toBe('8.13.3')
+    expect(pkg.dependencies['pg']).toBe('^8.13.3')
     expect(await readFile(path.join(root, 'postgres-app', '.env'), 'utf8')).toContain('POSTGRES_PASSWORD=secret')
     expect(postgresClientMock).toHaveBeenCalledWith(expect.objectContaining({host: 'localhost', port: 5432, database: 'analytics', user: 'graphene_user', password: 'secret', ssl: false}))
     expect(postgresQueryMock).toHaveBeenCalledWith('SELECT 1')
@@ -296,7 +296,7 @@ describe('runCreate', () => {
 
     let pkg = JSON.parse(await readFile(path.join(root, 'demo-app', 'package.json'), 'utf8'))
     expect(pkg.graphene).toEqual({dialect: 'duckdb'})
-    expect(pkg.dependencies['@duckdb/node-api']).toBe('1.5.3-r.3')
+    expect(pkg.dependencies['@duckdb/node-api']).toBe('^1.5.3-r.3')
     expect(await readFile(path.join(root, 'demo-app', 'AGENTS.md'), 'utf8')).toContain('npx graphene check')
     expect(textMock).not.toHaveBeenCalledWith(expect.objectContaining({message: 'Path to .duckdb file'}))
     let message = outroMock.mock.calls.at(-1)?.[0]
