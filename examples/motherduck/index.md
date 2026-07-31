@@ -1,7 +1,8 @@
 ---
-title: Air Quality
 layout: dashboard
 ---
+
+# Air Quality
 
 ```gsql measurements
 from ambient_air_quality where has_pm25

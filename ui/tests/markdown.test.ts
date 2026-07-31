@@ -7,9 +7,9 @@ test('loads markdown files', async ({server, page}) => {
     '/index.md',
     `
     ---
-    title: Flight Delay Analysis
     layout: dashboard
     ---
+    # Flight Delay Analysis
 
     \`\`\`gsql delays
     select carrier, avg(dep_delay) as delay from flights
@@ -415,14 +415,19 @@ test('allows collapsing and expanding folders', async ({server, page}) => {
   // Sidebar is hidden by default; reveal it by hovering the hamburger trigger.
   await page.getByRole('button', {name: 'Open navigation'}).hover()
   let nav = page.getByRole('navigation')
-  // The folder's index.md shows up as its own "Home" page routed to the folder path.
-  await expect(nav.locator('a[href="/other"]', {hasText: 'Home'})).toHaveAttribute('href', /\/other$/)
+  // The folder's index.md uses its h1 in the nav and routes to the folder path.
+  await expect(nav.locator('a[href="/other"]', {hasText: 'Other Folder'})).toHaveAttribute('href', /\/other$/)
+  await expect(page.getByRole('heading', {level: 1})).toHaveCount(0)
   let otherToggle = nav.locator('[data-folder-toggle="other"]')
   await otherToggle.click()
   await expect(nav.getByRole('link', {name: 'Third'})).toBeHidden()
   await otherToggle.click()
   await expect(nav.getByRole('link', {name: 'Third'})).toBeVisible()
   await expect(page).screenshot('expanded-nav')
+
+  await page.goto(server.url() + '/other')
+  await expect(page).toHaveTitle('Other Folder - example-flights')
+  await expect(page.getByRole('heading', {level: 1, name: 'Other Folder'})).toBeVisible()
 })
 
 test('renders gsql query errors clearly with file context', async ({server, page}) => {

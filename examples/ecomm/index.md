@@ -1,8 +1,9 @@
 ---
-title: E-commerce Overview
 layout: dashboard
 notes: This example uses [theLook eCommerce](https://console.cloud.google.com/marketplace/product/bigquery-public-data/thelook-ecommerce). To connect with Graphene, you'll need to set up [ADC local credentials](https://cloud.google.com/docs/authentication/set-up-adc-local-dev-environment)
 ---
+
+# E-commerce Overview
 
 [Product Explorer](product-explorer) | [Returns investigation](returns-investigation)
 

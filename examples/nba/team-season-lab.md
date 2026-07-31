@@ -1,7 +1,8 @@
 ---
-title: Team Season Lab
 layout: dashboard
 ---
+
+# Team Season Lab
 
 ```sql team_games
 select *

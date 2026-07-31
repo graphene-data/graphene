@@ -1,7 +1,8 @@
 ---
-title: NBA Top Teams, Last 5 Seasons
 layout: dashboard
 ---
+
+# NBA Top Teams, Last 5 Seasons
 
 ```sql recent_team_games
 select *

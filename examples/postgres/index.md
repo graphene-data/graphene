@@ -1,7 +1,8 @@
 ---
-title: Postgres Sales Overview
 layout: dashboard
 ---
+
+# Postgres Sales Overview
 
 Postgres sample dashboard over `public.customers`, `public.orders`, and `public.order_items`.
 

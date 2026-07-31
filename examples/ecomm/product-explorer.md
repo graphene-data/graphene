@@ -1,7 +1,8 @@
 ---
-title: Product Explorer
 layout: dashboard
 ---
+
+# Product Explorer
 
 Select filters to explore product performance by category, brand, and time.
 
