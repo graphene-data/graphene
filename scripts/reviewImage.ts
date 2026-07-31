@@ -133,7 +133,7 @@ if (!response.ok) {
   process.exit(1)
 }
 
-const data = (await response.json()) as ResponsePayload
+const data = await response.json() as ResponsePayload
 let output = data.output_text?.trim()
 
 if (!output && Array.isArray(data.output)) {

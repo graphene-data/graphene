@@ -15,7 +15,7 @@ export const sidebar = {
   leave() {
     clearTimeout(closeTimer)
     if (state.pinned) return
-    closeTimer = setTimeout(() => (state.open = false), 60)
+    closeTimer = setTimeout(() => state.open = false, 60)
   },
   pin() {
     clearTimeout(closeTimer)

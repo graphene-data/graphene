@@ -132,7 +132,6 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
       // This line makes it do that up-front, avoiding that reload jank. The packaged CLI also pre-bundles the `graphene` alias itself;
       // doing that from source causes trouble in examples/tests because the alias points outside node_modules.
       // `graphene` here is a special case: when packaged up it is considered a dependency, but in examples/tests, including it would cause errors.
-      // oxfmt-ignore
       include: [
         ...(packaged ? ['graphene'] : []),
         '@graphenedata/cli > svelte',

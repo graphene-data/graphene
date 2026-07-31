@@ -154,14 +154,10 @@ export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
       let lastAttr = previousAttr
       let selectEnd = lastAttr ? lastAttr.start + lastAttr.value.length : data.start + data.value.length
       let resetPoint = lastAttr ? lastAttr.start + lastAttr.value.length - 1 : data.start + data.value.length - 1
-      appendMapped(
-        ';\n',
-        (i: number) => {
-          if (i === 0) return selectEnd
-          return component.end
-        },
-        {reset: resetPoint},
-      )
+      appendMapped(';\n', (i: number) => {
+        if (i === 0) return selectEnd
+        return component.end
+      }, {reset: resetPoint})
     }
     cursor = component.end
   }

@@ -300,7 +300,7 @@ function fileUriPath(uri: DocumentUri): string | null {
 function upsertFile(files: WorkspaceFileInput[], next: WorkspaceFileInput) {
   let idx = files.findIndex(file => file.path == next.path)
   if (idx < 0) return [...files, next]
-  return files.map((file, fileIdx) => (fileIdx == idx ? next : file))
+  return files.map((file, fileIdx) => fileIdx == idx ? next : file)
 }
 
 function updateParsedFiles(files: WorkspaceFileInput[], analysis: AnalysisResult) {

@@ -227,9 +227,7 @@ function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], d
   let inner = args[0]?.sql || 'NULL'
   let sql: string
   switch (analyzer.config.dialect) {
-    case 'duckdb':
-      sql = `quantile_cont(${inner}, ${frac})`
-      break
+    case 'duckdb': sql = `quantile_cont(${inner}, ${frac})`; break
     case 'bigquery':
       if (opts.isWindow) {
         sql = `PERCENTILE_CONT(${inner}, ${frac})`
@@ -237,18 +235,10 @@ function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], d
         sql = `approx_quantiles(${inner}, 100)[OFFSET(${Math.round(frac * 100)})]`
       }
       break
-    case 'clickhouse':
-      sql = `quantile(${frac})(${inner})`
-      break
-    case 'snowflake':
-      sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`
-      break
-    case 'postgres':
-      sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`
-      break
-    case 'athena':
-      sql = `approx_percentile(${inner}, ${frac})`
-      break
+    case 'clickhouse': sql = `quantile(${frac})(${inner})`; break
+    case 'snowflake': sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`; break
+    case 'postgres': sql = `PERCENTILE_CONT(${frac}) WITHIN GROUP (ORDER BY ${inner})`; break
+    case 'athena': sql = `approx_percentile(${inner}, ${frac})`; break
     default:
       return analyzer.diag(node, `Percentile not supported for ${analyzer.config.dialect}`, {sql: 'NULL', type: scalarType('error')})
   }
