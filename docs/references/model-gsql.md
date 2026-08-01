@@ -2,30 +2,46 @@
 
 Conventions and patterns for writing production-quality `.gsql` semantic models. Make sure you've read `references/gsql.md` before proceeding.
 
-## New table workflow
+## Critical resources
 
-1. Generate a plain `.gsql` file first: `graphene schema {DB.SCHEMA.TABLE} > tables/{snake_case_table_name}.gsql`
-2. Add table and grain descriptions at the top of the file. If given a dbt project, look up the table's definition, lineage, and related metadata so that you have the full picture.
-3. Add join relationships.
-   - If no join documentation is provided, make an educated guess from PK/FK names.
-   - Use `graphene run <query>` to confirm the join works as expected: keys match, row counts are sane, and there is no fan-out.
-   - Model joins from boths sides (ie. add the join to each respective `table` statement)
+If not provided up front, ask the user for access to the following:
+- Any/all relevant repos: dbt, dataform, LookML, backend app logic, telemetry, etc. 
+- Example SQL. You can also check to see if you have access to the database's query history.
+- Materials about the company or topic area: website, product documentation, etc.
 
-4. Add dimensions and measures **ONLY** if a semantic model to migrate from has been provided.
-   - Compile-verify: `npx graphene compile "from TABLE select dimension1, dimension2, measure1, measure2"`
+These will **significantly** improve your understanding of the data, and thus the documentation and fidelity you can add to the Graphene project.
 
-5. Add descriptions to columns, dimensions, and measures via comments.
-   - Do not add a description if it already obvious from the name. For example, skip `is_debooked_opportunity BOOLEAN -- Whether the opportunity has been debooked`.
-   - Use example values for categorical columns: `graphene run "from TABLE select distinct col limit 10"`.
-   - Add synonyms, but only if provided. **DO NOT** guess them.
-   - Descriptions can be inlined or placed as a block comment on the line above.
+## Creating new .gsql files
 
-6. Add GSQL metadata annotations where applicable eg. `#ratio`, `#pct`, `#timeGrain=day`, etc.
-   - Use only annotations that Graphene recognizes (see `references/gsql.md`)
+- Generate a new plain `.gsql` file: `graphene schema {DB.SCHEMA.TABLE} > {snake_case_table_name}.gsql`
+- If no .gsql folder structure exists, consider dropping them into `tables/`, `semantics/`, or matching the db schema namespaces.
 
-## File structure
+## Joins
 
-Every `.gsql` file follows this section order:
+- If no join documentation is provided, test viable candidates with `graphene run <query>`. Check for fan-outs.
+- Model joins from boths sides (ie. add the join to each respective `table` statement)
+- Graphene does not yet support complex join predicates (anything that's not a=b). If needed, create a dimension as a synthetic join key.
+- Watch for polymorphism, role-playing dimensions, etc.
+
+## Dimensions and measures
+
+- D.R.Y. up dimension and measure code as much as possible by composing them.
+- For categorical columns and booleans, **watch out for nulls**. If nulls exist, consider hiding the column with `#hide` and creating a safe dimension in its place that replaces the nulls with a sensible sentinel eg. FALSE, 'Other'. This is to prevent footguns such as `status <> 'processing'` that implicitly filter nulls.
+- It's wise to test with actual GSQL queries instead of relying strictly on `graphene check`.
+
+## Code comments
+
+- Code comments will get attached to objects as description metadata if they are inlined, or written directly above the object. Separate comments from objects with a blank line if you do not intend to attach them.
+- Add table and grain descriptions above every `table` statement. Make note of any data quality issues.
+- Do not add a description to a field if it is already obvious from the name. For example, skip `is_debooked_opportunity BOOLEAN -- Whether the opportunity has been debooked`.
+- Use example values for categorical columns: `graphene run "from TABLE select distinct col limit 10"`.
+
+## Metadata
+
+Add GSQL metadata annotations where applicable eg. `#ratio`, `#pct`, `#timeGrain=day`, etc.
+- Use only annotations that Graphene recognizes (see `references/gsql.md`)
+
+## Example file
 
 ```sql
 -- One-sentence description of what this table contains.
@@ -36,7 +52,7 @@ table DATABASE.SCHEMA.TABLE_NAME (
 
   column_name TYPE -- A description and a #annotation
 
-  -- OR, descriptions/metadata for a field/dimension/measure can be on the lines above it
+  -- OR, descriptions/metadata for a field can be on the lines above it
   -- as long as there is NOT an empty line separating
   column_name2 TYPE
 
@@ -59,12 +75,3 @@ table DATABASE.SCHEMA.TABLE_NAME (
 select ...
 ;
 ```
-
-Section headers use `/* Header */` style. Section headers need a full newline following them or GSQL will assume the header is a comment decorator for the object on the line below it.
-
-## Compile-verify workflow
-
-Always verify after changes. A parse error in any `.gsql` file prevents all tables from loading. If you see "Unknown table" errors everywhere, check for syntax errors in recently modified files.
-
-You can syntax check the whole project with `graphene check`.
-
