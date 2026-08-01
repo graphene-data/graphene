@@ -305,6 +305,44 @@ test('expires browser cache entries from the cached result creation time', async
   await expect(page).screenshot('markdown-expired-warehouse-cache-status')
 })
 
+test('shares plain field reads from named queries but not model tables', async ({server, page}) => {
+  server.mockFile(
+    '/index.md',
+    `
+    # Shared named query
+
+    \`\`\`gsql base_values
+    select 'AA' as carrier, 12 as delay
+    \`\`\`
+
+    \`\`\`gsql shared_values
+    from base_values select carrier, delay
+    \`\`\`
+
+    <Value data="shared_values" column="carrier" />
+    <Value data="shared_values" column="delay" />
+    <Value data="shared_values" column="delay + 1" />
+
+    <Value data="carriers" column="code" />
+    <Value data="carriers" column="name" />
+  `,
+  )
+
+  let queryBodies: any[] = []
+  page.on('request', request => {
+    if (request.url().includes('/_api/query')) queryBodies.push(request.postDataJSON())
+  })
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+
+  expect(queryBodies).toHaveLength(4)
+  expect(queryBodies.filter(body => body.gsql.trim().endsWith('from base_values select carrier, delay'))).toHaveLength(1)
+  expect(queryBodies.filter(body => body.gsql.trim().endsWith('from shared_values select delay + 1'))).toHaveLength(1)
+  expect(queryBodies.filter(body => body.gsql.includes('from carriers select'))).toHaveLength(2)
+  await expect(page).screenshot('markdown-shared-named-query')
+})
+
 test('deduplicates chart query fields already used for sort', async ({server, page}) => {
   server.mockFile(
     '/index.md',
