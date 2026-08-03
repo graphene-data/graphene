@@ -11,6 +11,7 @@ export interface Config {
   telemetry?: boolean
   updateNotifier?: boolean
   port: number
+  csp?: 'all' | false
   cloud?: string
   envFile: string[] // array of paths where we can look for the env file
 
@@ -114,6 +115,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(),
     root,
     projectName: projectName || path.basename(root),
     port: cfg.port || Number(env.GRAPHENE_PORT) || 4000,
+    csp: cfg.csp ?? 'all',
     ignoredFiles: cfg.ignoredFiles || [],
     envFile,
   } as Config

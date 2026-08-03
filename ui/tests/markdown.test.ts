@@ -1,4 +1,5 @@
 import {scalarType} from '../../lang/types.ts'
+import {grapheneCsp} from '../csp.ts'
 import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
@@ -30,6 +31,14 @@ test('loads markdown files', async ({server, page}) => {
   await expect(page.locator('main svg').first()).toBeVisible()
   await expect(page.locator('main#content')).toHaveCSS('max-width', '1200px')
   await expect(page).screenshot('loads-markdown-files')
+})
+
+test('serves the cloud CSP unless disabled', async ({server, page}) => {
+  let response = await page.goto(server.url())
+  expect(response!.headers()['content-security-policy']).toBe(grapheneCsp)
+
+  response = await page.goto(server.url({csp: false}))
+  expect(response!.headers()['content-security-policy']).toBeUndefined()
 })
 
 test('shows a placeholder when a repo has no index page', async ({server, page}) => {

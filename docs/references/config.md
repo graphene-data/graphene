@@ -46,6 +46,14 @@ Path (or array of paths) to `.env` files Graphene should load before connecting 
 
 Port for the local dev server. Defaults to `4000`, or the value of the `GRAPHENE_PORT` environment variable.
 
+## `csp`
+
+Content Security Policy for locally served report pages. Defaults to `"all"`, which applies the same policy as Graphene Cloud so blocked scripts, connections, and other resources also fail during local development. Set to `false` to disable the policy:
+
+```json
+"csp": false
+```
+
 ## `cloud`
 
 Graphene Cloud URL to proxy queries through, e.g. `https://example.graphenedata.com/my-repo`. The URL path selects the repo to query.
