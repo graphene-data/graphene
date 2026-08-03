@@ -394,8 +394,12 @@ test('text input updates params and date range applies preset', async ({mount, s
   await expect(textInput).toHaveValue('alpha')
 
   await startParamTracking(sharedPage)
+  await textInput.fill('del')
+  await sharedPage.waitForTimeout(100)
   await textInput.fill('delta')
-  expect(await lastParamUpdate(sharedPage, 'search_text')).toEqual({name: 'search_text', value: 'delta'})
+  await sharedPage.waitForTimeout(150)
+  expect(await lastParamUpdate(sharedPage, 'search_text')).toBeNull()
+  await expect.poll(() => lastParamUpdate(sharedPage, 'search_text')).toEqual({name: 'search_text', value: 'delta'})
   await textInput.blur()
   await expect(sharedPage.locator('#component-test')).screenshot('text-input-basic')
 
@@ -477,6 +481,7 @@ test('inputs sync url state on load, change, and reload', {timeout: 20000}, asyn
   ).toBe(true)
 
   await page.getByLabel('Search Text').fill('omega')
+  await expect.poll(() => queryBodies.some(body => body.params.search_text === 'omega')).toBe(true)
   await page.getByRole('combobox', {name: 'Carriers'}).click()
   await page.getByRole('option', {name: 'DL'}).click()
   await page.locator('#daterange-window-start').evaluate((el: HTMLInputElement) => {
