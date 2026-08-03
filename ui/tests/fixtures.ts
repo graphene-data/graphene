@@ -32,7 +32,7 @@ export interface ChartFixture {
 }
 
 export interface ServerFixture {
-  url: (options?: Config) => string
+  url: (options?: Partial<Config>) => string
   mockFile: (path: string, content: string) => void
   mockMissingFile: (path: string) => void
   /** Update a mock file and trigger HMR, simulating a real file edit */

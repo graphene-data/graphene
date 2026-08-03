@@ -13,6 +13,7 @@ import type {AnalysisResult, QueryField, WorkspaceFileInput} from '../lang/types
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
+import {grapheneCsp} from '../ui/csp.ts'
 import {runQuery} from './connections/index.ts'
 import {extractPageTitle, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {missingMockFiles, mockFileMap} from './mockFiles.ts'
@@ -194,6 +195,7 @@ export function computeQueryHash(sql: string, fields: Pick<QueryField, 'name' | 
 
 async function handlePage(server: ViteDevServer, res: ServerResponse<IncomingMessage>) {
   res.setHeader('Content-Type', 'text/html')
+  if (config.csp !== false) res.setHeader('Content-Security-Policy', grapheneCsp)
 
   // Use a .html URL for transformIndexHtml so Vite doesn't run the svelte plugin on our HTML template.
   let html = await server.transformIndexHtml(
