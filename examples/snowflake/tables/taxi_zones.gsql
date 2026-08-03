@@ -1,0 +1,13 @@
+-- NYC TLC taxi zones used for yellow taxi pickup and dropoff locations.
+-- Each row is one taxi zone (location_id).
+table taxi_zones (
+  location_id NUMBER
+  borough TEXT
+  zone TEXT
+  service_zone TEXT -- Yellow Zone, Boro Zone, Airports, or N/A
+
+  /* Join relationships */
+
+  join many yellow_trips as pickup_trips on location_id = pickup_trips.pickup_location_id
+  join many yellow_trips as dropoff_trips on location_id = dropoff_trips.dropoff_location_id
+)

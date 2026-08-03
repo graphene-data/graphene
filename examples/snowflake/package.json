@@ -7,6 +7,7 @@
     "dev": "npm run graphene serve",
     "compile": "npm run graphene compile",
     "run": "npm run graphene run",
+    "seed": "node --env-file-if-exists=../../../.env seed.ts",
     "serve": "npm run dev"
   },
   "dependencies": {
@@ -18,7 +19,7 @@
   },
   "graphene": {
     "dialect": "snowflake",
-    "defaultNamespace": "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02",
+    "defaultNamespace": "NYC_TAXI_DATA.PUBLIC",
     "snowflake": {
       "account": "adarjvr-ve40413",
       "username": "demouser"

@@ -1,0 +1,48 @@
+-- NYC TLC yellow taxi trips picked up during January 2025.
+-- Each row is one trip; pickup and dropoff locations reference taxi_zones.
+table yellow_trips (
+  vendor_id NUMBER -- TPEP provider that submitted the trip record
+  pickup_datetime TIMESTAMP_NTZ
+  dropoff_datetime TIMESTAMP_NTZ
+  passenger_count NUMBER
+  trip_distance FLOAT -- Trip distance reported by the taximeter #unit=miles
+  rate_code_id NUMBER -- Final rate code in effect at the end of the trip
+  store_and_fwd_flag TEXT -- Whether the trip was stored before transmission: Y or N
+  pickup_location_id NUMBER
+  dropoff_location_id NUMBER
+  payment_type NUMBER -- TLC payment type code
+  fare_amount FLOAT #currency=USD
+  extra FLOAT #currency=USD
+  mta_tax FLOAT #currency=USD
+  tip_amount FLOAT #currency=USD
+  tolls_amount FLOAT #currency=USD
+  improvement_surcharge FLOAT #currency=USD
+  total_amount FLOAT #currency=USD
+  congestion_surcharge FLOAT #currency=USD
+  airport_fee FLOAT #currency=USD
+  cbd_congestion_fee FLOAT #currency=USD
+
+  /* Join relationships */
+
+  join one taxi_zones as pickup_zone on pickup_location_id = pickup_zone.location_id
+  join one taxi_zones as dropoff_zone on dropoff_location_id = dropoff_zone.location_id
+
+  /* Dimensions */
+
+  trip_minutes: datediff('second', pickup_datetime, dropoff_datetime) / 60 #unit=minutes
+  payment_method: case
+    when payment_type = 1 then 'Credit card'
+    when payment_type = 2 then 'Cash'
+    when payment_type = 3 then 'No charge'
+    when payment_type = 4 then 'Dispute'
+    when payment_type = 5 then 'Unknown'
+    when payment_type = 6 then 'Voided trip'
+    else 'Not reported'
+  end
+
+  /* Measures */
+
+  avg_total_amount: avg(total_amount) #currency=USD
+  median_total_amount: p50(total_amount) #currency=USD
+  avg_tip_amount: avg(tip_amount) #currency=USD
+)
