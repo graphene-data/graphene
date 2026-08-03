@@ -319,12 +319,6 @@ main.pageContent.dashboardLayout {
   max-width: var(--dashboard-width);
 }
 
-/* Embedded contexts such as chat previews and screenshots provide their own width and padding. */
-main.pageContent.fullWidth {
-  max-width: none;
-  padding: 0;
-}
-
 main.pageContent > h1:first-child {
   margin-top: 12px;
 }
