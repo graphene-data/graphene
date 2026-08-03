@@ -19,20 +19,32 @@
   untrack(() => logExtraProps(logger, 'TextInput', extraProps))
 
   let value = $state('')
+  let updateTimer: ReturnType<typeof setTimeout> | undefined
 
   let hidePrint = $derived(toBoolean(hideDuringPrint))
   let displayLabel = $derived(title || label)
 
   $effect(() => {
     let unsub = window.$GRAPHENE.param(name, 'scalar', defaultValue ?? null, next => {
+      clearTimeout(updateTimer)
+      updateTimer = undefined
       value = Array.isArray(next) ? String(next[0] ?? '') : String(next ?? '')
     })
-    return unsub
+    return () => {
+      clearTimeout(updateTimer)
+      unsub()
+    }
   })
 
+  // Update the visible value immediately, but wait until typing pauses before rerunning queries.
   function onInput(event: Event) {
     let next = (event.currentTarget as HTMLInputElement).value
-    window.$GRAPHENE.updateParam(name, next === '' ? null : next)
+    value = next
+    clearTimeout(updateTimer)
+    updateTimer = setTimeout(() => {
+      updateTimer = undefined
+      window.$GRAPHENE.updateParam(name, next === '' ? null : next)
+    }, 200)
   }
 </script>
 
