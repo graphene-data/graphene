@@ -11,8 +11,12 @@ export function setSnapshotDir(dir: string) {
   snapshotDir = dir
 }
 
+interface ScreenshotOptions {
+  fullPage?: boolean
+}
+
 const extendedExpect = baseExpect.extend({
-  async screenshot(subject: Page | Locator, snapshotName: string) {
+  async screenshot(subject: Page | Locator, snapshotName: string, options: ScreenshotOptions = {}) {
     if (!snapshotDir) throw new Error('Snapshot directory not configured. Call setSnapshotDir() in a setup file.')
     if (process.env.GRAPHENE_DEBUG) return {message: () => '', pass: true} // don't check screenshots when debugging (browser might not be the same size)
     let page = subject.constructor.name === 'Page' ? subject : (subject as Locator).page()
@@ -50,6 +54,7 @@ const extendedExpect = baseExpect.extend({
         caret: 'hide',
         scale: 'css',
         locator,
+        fullPage: options.fullPage,
         maxDiffPixelRatio: 0, // strict: no differing pixels allowed
         threshold: 0.01, // strict per-pixel color matching
         timeout: 5_000,
@@ -94,7 +99,7 @@ async function writeBuffer(filePath: string, data: Buffer) {
 }
 
 interface ScreenshotMatchers {
-  screenshot(snapshotName: string): Promise<void>
+  screenshot(snapshotName: string, options?: ScreenshotOptions): Promise<void>
 }
 
 type BaseMatchers<T> = ReturnType<typeof baseExpect<T>>
