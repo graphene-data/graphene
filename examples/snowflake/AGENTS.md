@@ -17,4 +17,4 @@
 
 # About this data
 
-This is a Graphene project covering restaurant and food service market data across North America, Europe, and Oceania. You can find the Graphene tables in @./tables.
+This project uses January 2025 yellow taxi trips and taxi zones published by the NYC Taxi and Limousine Commission. Terraform owns the Snowflake database and `@./seed.ts` downloads and loads the source snapshot.

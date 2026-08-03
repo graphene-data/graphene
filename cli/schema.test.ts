@@ -112,7 +112,7 @@ describe.skipIf(!process.env.SLOW_TEST)('motherduck', {timeout: 30_000}, () => {
 
 describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
   // Snowflake has a 3-level hierarchy: DATABASE.SCHEMA.TABLE
-  // The example is configured with namespace "FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA.V02"
+  // The example is configured with namespace "NYC_TAXI_DATA.PUBLIC"
 
   test('lists available databases', async ({runCli}) => {
     let res = await runCli(['schema'], await configFor(snowflakeDir))
@@ -122,15 +122,15 @@ describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
   })
 
   test('lists schemas when given a database name', async ({runCli}) => {
-    let res = await runCli(['schema', 'FOOD__BEVERAGE_ESTABLISHMENT__MENU_DATA'], await configFor(snowflakeDir))
+    let res = await runCli(['schema', 'NYC_TAXI_DATA'], await configFor(snowflakeDir))
     expectCliSuccess(res, 'schema list schemas (snowflake)')
     let schemas = parseSchemaOutput(res.stdout)
     expect(schemas.length).toBeGreaterThan(0)
-    expect(schemas).toContain('v02')
+    expect(schemas).toContain('public')
   })
 
   test('lists tables in the configured namespace using case-insensitive input', async ({runCli}) => {
-    let res = await runCli(['schema', 'food__beverage_establishment__menu_data.v02'], await configFor(snowflakeDir))
+    let res = await runCli(['schema', 'nyc_taxi_data.public'], await configFor(snowflakeDir))
     expectCliSuccess(res, 'schema list tables (snowflake)')
     let tables = parseSchemaOutput(res.stdout)
     expect(tables.length).toBeGreaterThan(0)
@@ -138,11 +138,11 @@ describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
   })
 
   test('describes a table from the namespace using case-insensitive input', async ({runCli}) => {
-    let res = await runCli(['schema', 'food__beverage_establishment__menu_data.v02.menus'], await configFor(snowflakeDir))
+    let res = await runCli(['schema', 'nyc_taxi_data.public.yellow_trips'], await configFor(snowflakeDir))
     expectCliSuccess(res, 'schema describe table (snowflake)')
     let output = res.stdout.toLowerCase()
-    expect(output).toContain('table food__beverage_establishment__menu_data.v02.menus (')
-    expect(output).toContain('menu_id')
+    expect(output).toContain('table nyc_taxi_data.public.yellow_trips (')
+    expect(output).toContain('pickup_datetime')
   })
 })
 
