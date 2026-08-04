@@ -22,6 +22,7 @@ interface QueryNode {
   error?: GrapheneError
   runAt?: number
   controller?: AbortController
+  response?: {gsql: string; result: QueryResult}
 }
 
 interface NamedQuery {
@@ -141,6 +142,7 @@ async function runNode(n: QueryNode, refresh = false) {
   n.loading = true
   n.result = undefined
   n.error = undefined
+  n.response = undefined
   updatePageCacheState()
 
   // build up the request body. Hashes is the list of ETag hashes currently in our browser cache. We send all of them,
@@ -156,6 +158,8 @@ async function runNode(n: QueryNode, refresh = false) {
     let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh, signal: controller.signal})
     if (generation !== queryGeneration) return
 
+    // Keep the raw response on its query node before component-specific field translation mutates it.
+    n.response = {gsql, result: structuredClone(res)}
     n.runAt = res.runAt
     let result = translateData(res, n)
     n.result = result
@@ -270,6 +274,15 @@ function errorResult(error: GrapheneError, componentId?: string): QueryResult {
 const isQueryLoading = () => !!nodes.find(node => node.loading)
 const getLoadingQueries = () => nodes.filter(node => node.loading).map(node => Array.from(node.subscribers.values()).find(Boolean) || node.source)
 
+// Package every rendered node's raw response by GSQL for standalone playback.
+function getQueryResponses() {
+  let responses: Record<string, QueryResult> = {}
+  nodes.forEach(node => {
+    if (node.response) responses[node.response.gsql] = structuredClone(node.response.result)
+  })
+  return responses
+}
+
 function updatePageCacheState() {
   let timestamps = nodes.map(node => node.runAt).filter(Boolean) as number[]
   queryState.set({
@@ -287,5 +300,6 @@ Object.assign(window.$GRAPHENE, {
   refreshQueries,
   isQueryLoading,
   getLoadingQueries,
+  getQueryResponses,
   queryResults,
 })
