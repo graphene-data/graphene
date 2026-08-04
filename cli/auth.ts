@@ -164,7 +164,7 @@ async function refreshAccessToken(staleAccessToken?: string) {
 
     let refresh_token = entry?.refresh_token
     let cloudOrigin = new URL(config.cloud!).origin
-    if (!refresh_token) throw new Error('No refresh token available; run `graphene login`')
+    if (!refresh_token) throw new Error('Not logged in to Graphene Cloud. Run `graphene login` and try again.')
     let res = await fetch(new URL('/_api/oauth2/token', cloudOrigin).toString(), {
       method: 'POST',
       headers: {'content-type': 'application/json'},
@@ -187,6 +187,11 @@ export async function makeAccessToken(): Promise<string> {
   return token
 }
 
+// Verifies Cloud credentials before commands that would otherwise fail later inside page/query requests.
+export async function checkCloudAuth(): Promise<void> {
+  await authenticatedFetch('/_api/nav', {headers: {accept: 'application/json'}})
+}
+
 // Makes an authenticated request using an explicitly delegated token or credentials from `graphene login`.
 export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
   let cloudOrigin = new URL(config.cloud!).origin
@@ -200,7 +205,7 @@ export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = 
   }
 
   let entry = await readEntry()
-  if (!entry) throw new Error('Not logged in; run `graphene login`')
+  if (!entry) throw new Error('Not logged in to Graphene Cloud. Run `graphene login` and try again.')
 
   // If we know the access token is no good, refresh it now.
   if (!entry.access_token || entry.expires_at < Date.now()) {
@@ -221,6 +226,13 @@ export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = 
       headers.set('authorization', `Bearer ${token}`)
       res = await fetch(url.toString(), {...init, headers})
     }
+  }
+
+  if (!res.ok) {
+    let json = await res.json()
+    let err = new Error(json.message || json.error || `Request failed with HTTP ${res.status}`)
+    Object.assign(err, json)
+    throw err
   }
   return res
 }

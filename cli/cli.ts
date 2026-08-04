@@ -10,7 +10,7 @@ import {config, loadConfig, setGlobalConfig} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import {rowsToCsv} from '../lang/csv.ts'
 import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
-import {loginPkce, makeAccessToken} from './auth.ts'
+import {checkCloudAuth, loginPkce, makeAccessToken} from './auth.ts'
 import {getGrapheneCache, runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
@@ -60,6 +60,8 @@ program.command('run')
         command.outputHelp()
         return exit(0)
       }
+
+      if (config.cloud) await checkCloudAuth()
 
       let cliInput = await readInput(input)
       let params = parseRunInputs(options.param || [], exit)
@@ -188,6 +190,7 @@ program.command('serve')
   .option('--bg', 'Run the server in the background')
   .action(
     withTelemetry('serve', async (exit, options: {bg?: boolean; port?: string}) => {
+      if (config.cloud) await checkCloudAuth()
       await stopGrapheneIfRunning()
       if (options.bg) {
         let url = await runServeInBackground({entryPoint: fileURLToPath(import.meta.url)})

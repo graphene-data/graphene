@@ -99,6 +99,19 @@ describe('cli serve', () => {
       await stopGrapheneIfRunning()
     }
   })
+
+  test('checks cloud auth before starting the server', async ({runCli}) => {
+    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-no-cloud-creds-'))
+    try {
+      let res = await runCli(['serve', '--bg'], configFor(tmpDir, {cloud: 'https://example.graphenedata.com/flights'}), {env: {GRAPHENE_TOKEN: ''}})
+
+      expect(res.code).toBe(1)
+      expect(res.stdout).toBe('')
+      expect(res.stderr).toBe('Not logged in to Graphene Cloud. Run `graphene login` and try again.\n')
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
+  })
 })
 
 describe('cli run', () => {
@@ -119,6 +132,19 @@ describe('cli run', () => {
     let res = await runCli(['run', 'from flights select count() as total'], flightConfig)
     expectCliSuccess(res, 'run query')
     expect(res.stdout.toLowerCase()).toContain('total')
+  })
+
+  test('checks cloud auth before running a query', async ({runCli}) => {
+    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-cli-no-cloud-creds-'))
+    try {
+      let res = await runCli(['run', 'from flights select count() as total'], configFor(tmpDir, {cloud: 'https://example.graphenedata.com/flights'}), {env: {GRAPHENE_TOKEN: ''}})
+
+      expect(res.code).toBe(1)
+      expect(res.stdout).toBe('')
+      expect(res.stderr).toBe('Not logged in to Graphene Cloud. Run `graphene login` and try again.\n')
+    } finally {
+      await fsp.rm(tmpDir, {recursive: true, force: true})
+    }
   })
 
   test('prints query diagnostics without a stack trace', async ({runCli}) => {
