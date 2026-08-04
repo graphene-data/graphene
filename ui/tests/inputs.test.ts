@@ -291,6 +291,25 @@ test('dropdown boolean-string attributes handle defaults and footer actions', as
   await expect(page.getByRole('listbox')).screenshot('dropdown-select-all-default-disable-button')
 })
 
+test('static dropdown options apply select-all as each option registers', async ({server, page}) => {
+  await loadDropdownPage(
+    server,
+    page,
+    `
+    <Dropdown name="all_books" title="All Books" multiple=true selectAllByDefault=true>
+      <DropdownOption value="open" valueLabel="Has open AR" />
+      <DropdownOption value="past_due" valueLabel="Has past due AR" />
+      <DropdownOption value="all" valueLabel="All customers" />
+    </Dropdown>
+  `,
+  )
+
+  await page.getByRole('combobox', {name: 'All Books'}).click()
+  await expect(page.getByRole('listbox').locator('.dropdown-option.is-selected')).toHaveCount(3)
+  await lockOpenDropdownWidth(page)
+  await expect(page.getByRole('listbox')).screenshot('dropdown-manual-select-all-default')
+})
+
 test('dropdown supports manual options and labelField mapping', async ({server, page}) => {
   server.mockFile(
     '/index.md',
