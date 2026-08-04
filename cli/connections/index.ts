@@ -72,7 +72,6 @@ export async function runQuery(sql: string, options: RunQueryOptions = {}): Prom
       body: JSON.stringify({sql, params, repoId}),
     })
     let json = await resp.json()
-    if (!resp.ok) throw new Error(json.message || json.error || `Query failed with HTTP ${resp.status}`)
     if (!Array.isArray(json.rows)) throw new Error('Query response did not include rows')
     return json
   }
