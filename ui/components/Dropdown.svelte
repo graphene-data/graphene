@@ -45,6 +45,8 @@
   let manualOptions: Option[] = $state([])
   let selection: any[] = $state([])
   let touched = false
+  let paramInitialized = false
+  let preserveInitialSelection = false
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
 
@@ -303,6 +305,10 @@
   $effect(() => {
     let defaultParam = !hasNoDefault && defaultValues.length ? writeSelection(defaultValues) : null
     let unsub = window.$GRAPHENE.param(name, multi ? 'array' : 'scalar', defaultParam, value => {
+      if (!paramInitialized) {
+        preserveInitialSelection = value != null
+        paramInitialized = true
+      }
       let nextSelection = readSelection(value)
       if (!sameSelection(selection, nextSelection)) setSelection(nextSelection, {persist: false})
     })
@@ -353,7 +359,9 @@
     }
     let nextSelection = selection.filter(val => valueMap.has(optionKey(val)))
     if (!fromUser) {
-      if (multi && selectAllDefault && !touched && !selection.length) nextSelection = opts.map(o => o.value)
+      // Manual options register one at a time, so keep expanding a select-all default until the user interacts.
+      // An explicit default or URL value remains authoritative.
+      if (multi && selectAllDefault && !touched && !preserveInitialSelection) nextSelection = opts.map(o => o.value)
     }
     setSelection(nextSelection, {fromUser, persist: true})
   }
