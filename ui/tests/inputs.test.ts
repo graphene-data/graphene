@@ -425,6 +425,39 @@ test('text input updates params and date range applies preset', async ({mount, s
   await expect(sharedPage.locator('#component-test')).screenshot('date-range-preset')
 })
 
+test('hidden input applies URL values and defaults without rendering a control', async ({server, page}) => {
+  let queryBodies: any[] = []
+  server.mockFile(
+    '/index.md',
+    `
+    # Hidden input
+
+    <Hidden name="carrier" defaultValue="AA" />
+
+    \`\`\`sql selected_flights
+    from flights select carrier where carrier = $carrier limit 5
+    \`\`\`
+
+    <Table data="selected_flights" />
+  `,
+  )
+  await page.route('**/_api/query', async route => {
+    queryBodies.push(route.request().postDataJSON())
+    await route.continue()
+  })
+
+  await page.goto(server.url() + '/?carrier=UA')
+  await waitForGrapheneLoad(page)
+  expect(queryBodies.some(body => body.params.carrier === 'UA')).toBe(true)
+  await expect(page.locator('main#content')).screenshot('hidden-input-url-param')
+
+  queryBodies = []
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  expect(queryBodies.some(body => body.params.carrier === 'AA')).toBe(true)
+  await expect(page.locator('main#content').locator('input, button, select')).toHaveCount(0)
+})
+
 test('inputs sync url state on load, change, and reload', {timeout: 20000}, async ({server, page}) => {
   let queryBodies: any[] = []
   server.mockFile(

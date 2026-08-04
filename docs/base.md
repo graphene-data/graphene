@@ -188,6 +188,15 @@ Collects freeform text. `name` is required; optional attributes are `title`, `pl
 
 For example, filter with `where email ilike concat('%', $search, '%')`.
 
+### `<Hidden>`
+Declares a URL parameter without displaying an input on the page. `name` is required and `defaultValue` is optional. Use it when a report should accept a value from its URL but users should not edit that value in the report.
+
+```md
+<Hidden name=account_id defaultValue="all" />
+```
+
+Reference the value as `$account_id` in GSQL. A URL such as `?account_id=123` overrides the default; the default is used when the parameter is absent.
+
 ### `<DateRange>`
 Collects start and end dates. `name` is required; optional attributes are `title`, `description`, `data` and `dates` (to infer the available date domain), `start`, `end`, `defaultValue`, and `presetRanges`.
 

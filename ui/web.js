@@ -14,6 +14,7 @@ import Dropdown from './components/Dropdown.svelte'
 import DropdownOption from './components/DropdownOption.svelte'
 import ECharts from './components/ECharts.svelte'
 import GrapheneQuery from './components/GrapheneQuery.svelte'
+import Hidden from './components/Hidden.svelte'
 import InlineDelta from './components/InlineDelta.svelte'
 import LineChart from './components/LineChart.svelte'
 import PieChart from './components/PieChart.svelte'
@@ -58,6 +59,7 @@ window.$GRAPHENE.components = {
   ECharts,
   ErrorChart,
   GrapheneQuery,
+  Hidden,
   InlineDelta,
   LineChart,
   PieChart,
