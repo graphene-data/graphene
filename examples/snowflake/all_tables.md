@@ -11,7 +11,7 @@ select
   trip_distance,
   payment_method,
   total_amount
-order by pickup_datetime
+order by pickup_datetime, pickup_zone, dropoff_zone, trip_distance, payment_method, total_amount desc
 limit 20
 ```
 
