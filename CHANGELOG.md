@@ -1,3 +1,28 @@
+## 0.0.25
+
+### Breaking changes
+
+- Local reports now enforce the Graphene Cloud Content Security Policy by default; set `csp: false` to disable it (`40cfffbe`).
+- Page titles now come from static Markdown headings, with frontmatter titles used only for navigation and browser-title overrides (`7ee7c80d`).
+- Multiple input `defaultValue` values must now use JSON strings instead of Svelte array syntax (`6b742d31`).
+
+### Added
+
+- Added ClickHouse JSON and Dynamic function support (`1cf6033a`).
+- Added `hideInNav` page frontmatter for hiding pages from sidebar navigation (`ab4bb4d7`).
+- Added schema inspection for Graphene Cloud projects through `graphene schema` (`d21d3a5b`).
+- Added a non-rendering `<Hidden />` input for URL parameters and optional defaults (`d9d09899`).
+- Added host APIs for resetting URL parameters and collecting raw query responses for standalone playback (`0af024d8`, `57b73590`).
+
+### Fixed
+
+- Fixed excess title spacing in horizontal bar charts (`e44f12fb`).
+- Fixed select-all defaults while static dropdown options register (`d59bbc5c`).
+- Fixed cloud-backed `graphene run` and `graphene serve` to fail early when authentication is missing or invalid (`3a02a4b9`).
+- Debounced text input updates to avoid rerunning dependent queries on every keystroke (`196e7507`).
+- Allowed components using the same named query to share one request and response (`f43b5be6`).
+- Allowed compatible newer versions of generated-project and CLI dependencies (`31432a64`).
+
 ## 0.0.24
 
 ### Breaking changes
