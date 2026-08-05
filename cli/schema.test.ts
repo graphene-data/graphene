@@ -4,6 +4,8 @@ import * as path from 'node:path'
 import {config, loadConfig, normalizeConfig, setGlobalConfig, type Config} from '../lang/config.ts'
 import {formatType, parseWarehouseFieldType} from '../lang/types.ts'
 import {localDbOptions as clickHouseOptions} from './connections/clickhouse.ts'
+import {type QueryConnection} from './connections/types.ts'
+import {inspectSchema} from './schemaInspection.ts'
 import {expect, test} from './testFixtures.ts'
 
 const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
@@ -36,6 +38,24 @@ function parseSchemaOutput(stdout: string): string[] {
     .map(line => line.trim())
     .filter(line => line && !line.endsWith(':')) // filter out headers like "Datasets available:"
 }
+
+describe('schema inspection', () => {
+  test('distinguishes Snowflake database schemas from namespace-qualified tables', async () => {
+    let connection = {
+      listDatasets: vi.fn().mockResolvedValue(['ANALYTICS']),
+      listTables: vi.fn().mockResolvedValue(['public.orders']),
+      describeTable: vi.fn().mockResolvedValue([{name: 'id', dataType: 'NUMBER'}]),
+      close: vi.fn(),
+      runQuery: vi.fn(),
+    } as QueryConnection
+    let context = {dialect: 'snowflake', defaultNamespace: 'ANALYTICS.PUBLIC'}
+
+    await expect(inspectSchema(connection, context, 'analytics.public')).resolves.toMatchObject({kind: 'tables'})
+    await expect(inspectSchema(connection, context, 'public.orders')).resolves.toMatchObject({kind: 'table'})
+    expect(connection.listTables).toHaveBeenCalledWith('ANALYTICS.public')
+    expect(connection.describeTable).toHaveBeenCalledWith('ANALYTICS.public.orders')
+  })
+})
 
 describe('duckdb', () => {
   test('uses DuckDB SQL semantics for MotherDuck config', () => {

@@ -14,12 +14,12 @@ export class BigQueryConnection implements QueryConnection {
   protected readonly projectId: string
   protected readonly defaultNamespace?: string
 
-  constructor(options: BigQueryOptions = {}) {
+  constructor(options: BigQueryOptions = {}, defaultNamespace = config.defaultNamespace) {
     options.projectId ||= config.bigquery?.projectId
     if (!options.projectId) throw new Error('projectId must be set in config or provided in service account credentials')
     this.projectId = options.projectId
     this.client = new BigQuery({...options, userAgent: 'Graphene'})
-    this.defaultNamespace = config.defaultNamespace
+    this.defaultNamespace = defaultNamespace
   }
 
   async runQuery(sql: string, options?: QueryOptions): Promise<QueryResult> {

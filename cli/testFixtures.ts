@@ -28,7 +28,7 @@ class ProcessExit extends Error {
 }
 
 // Runs the public Commander program in-process while capturing the same stdout, stderr, and exit code a user sees.
-async function runCli(args: string[], invocationConfig: Config, options: RunCliOptions = {}): Promise<RunCliResult> {
+export async function runCliCommand(args: string[], invocationConfig: Config, options: RunCliOptions = {}): Promise<RunCliResult> {
   let stdout = ''
   let stderr = ''
   let originalConfig = structuredClone(config)
@@ -85,5 +85,5 @@ afterEach(resetDuckDbInstanceForTests)
 
 export const test = base.extend<{runCli: RunCli}>({
   // eslint-disable-next-line no-empty-pattern
-  runCli: ({}, use) => use(runCli),
+  runCli: ({}, use) => use(runCliCommand),
 })

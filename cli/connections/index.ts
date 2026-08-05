@@ -64,12 +64,12 @@ export async function runQuery(sql: string, options: RunQueryOptions = {}): Prom
     if (cacheControl) headers['Cache-Control'] = cacheControl
 
     // A Cloud URL path selects the repo to query, e.g. https://example.graphenedata.com/nba proxies through the `nba` repo connection.
-    let repoId = new URL(config.cloud).pathname.replace(/^\/+|\/+$/g, '')
+    let repoSlug = new URL(config.cloud).pathname.replace(/^\/+|\/+$/g, '')
 
     let resp = await authenticatedFetch('/_api/query', {
       method: 'POST',
       headers,
-      body: JSON.stringify({sql, params, repoId}),
+      body: JSON.stringify({sql, params, repoSlug}),
     })
     let json = await resp.json()
     if (!Array.isArray(json.rows)) throw new Error('Query response did not include rows')
