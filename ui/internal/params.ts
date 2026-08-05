@@ -15,6 +15,11 @@ export function getParams() {
   return structuredClone(paramValues)
 }
 
+// Reset params from the URL when the host loads a new page without reloading its own runtime.
+export function resetParams() {
+  paramValues = readUrlParams()
+}
+
 // Subscribe to a param, providing a type and default (can be null). cb is called immediately with the current value, and when it changes
 export function param(name: string, type: ParamType, defaultValue: any, cb: ParamCallback) {
   if (subscribers[name]) throw new Error(`Param named ${name} already in use`)
@@ -95,4 +100,4 @@ function sameValue(left, right) {
   return left === right
 }
 
-Object.assign(window.$GRAPHENE, {param, updateParam})
+Object.assign(window.$GRAPHENE, {param, updateParam, resetParams})
