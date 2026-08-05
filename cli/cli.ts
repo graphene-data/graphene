@@ -15,8 +15,9 @@ import {getGrapheneCache, runServeInBackground, stopGrapheneIfRunning} from './b
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {installBrowser} from './installBrowser.ts'
+import {routeForPage} from './pageRouting.ts'
 import {formatError, printTable} from './printer.ts'
-import {pageUrlForMd, sendToPage} from './run.ts'
+import {sendToPage} from './run.ts'
 import {inspectSchema, printSchemaInspection, type SchemaInspection} from './schemaInspection.ts'
 import {CliTelemetry, getPresentFlags, type TelemetryCommand} from './telemetry/index.ts'
 import {checkForUpdate, showCachedUpdateNotice} from './updateNotifier.ts'
@@ -82,7 +83,8 @@ program.command('run')
         }
 
         // If `run` is requesting a md page, we need to run it in a browser
-        let resp = await sendToPage(cliInput.path, {params, chart: options.chart}, !!options.headless)
+        let pageRoute = routeForPage(cliInput.path, config.pagesPrefix, params)
+        let resp = await sendToPage(pageRoute, !!options.headless, {chart: options.chart})
         if (resp.errors?.length) console.log(formatError(resp.errors, {style: true}))
         if (resp.errors?.some(error => error.severity !== 'warn')) exit(1)
 
@@ -100,7 +102,7 @@ program.command('run')
           else printTable(resp.data.rows)
         }
 
-        console.log('Page available at', pageUrlForMd(cliInput.path, params))
+        console.log('Page available at', `http://localhost:${config.port}${pageRoute}`)
       } else {
         // otherwise, if we're just `run`ing a plain query, we can do it directly in this process, no browser needed.
         let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != 'input').concat({path: 'input', contents: cliInput.contents})}, 'input')
@@ -122,7 +124,8 @@ program.command('list')
       let cliInput = await readInput(fileArg)
       if (cliInput.kind != 'file' || !cliInput.path.endsWith('.md')) throw new Error('list requires a markdown file path')
 
-      let {componentIds = []} = await sendToPage(cliInput.path, {params: {}}, false)
+      let pageRoute = routeForPage(cliInput.path, config.pagesPrefix)
+      let {componentIds = []} = await sendToPage(pageRoute, false)
       componentIds.forEach(componentId => console.log(componentId))
     }),
   )

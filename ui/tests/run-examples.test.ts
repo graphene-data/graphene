@@ -37,7 +37,7 @@ function expectSuccess(step: string, result: RunResult) {
 }
 
 function toPageUrl(mdPath: string) {
-  let normalized = mdPath.replace(/\\/g, '/')
+  let normalized = mdPath.replace(/\\/g, '/').replace(/^pages\//, '')
   if (normalized === 'index.md') return '/'
   return '/' + normalized.replace(/\.md$/, '')
 }

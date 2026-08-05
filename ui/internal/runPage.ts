@@ -16,7 +16,6 @@ export interface SocketRegistration {
 export interface PageRequest {
   requestId?: string
   chart?: string
-  params?: Record<string, string | string[]>
 }
 
 export interface PageResponse {

@@ -132,7 +132,7 @@ select
   count(distinct destination) as destinations,
   round(avg(aircraft_age), 1) as avg_aircraft_age,
   round(avg(distance), 0) as avg_distance,
-  '/pages/carrier_detail?carrier=' || carriers.code as link
+  '/carrier_detail?carrier=' || carriers.code as link
 order by flights desc
 ```
 

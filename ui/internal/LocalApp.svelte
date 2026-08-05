@@ -17,19 +17,22 @@
   let navData = $state(navFiles)
   import.meta.hot?.accept('virtual:nav', mod => navData = mod.default)
 
-  let pathName = window.location.pathname.replace(/^\//, '').replace(/\/$/, '') || 'index'
-  let isRoot = pathName == 'index'
-  // Mirror the server-side folder redirect: if /foo.md doesn't exist but /foo/index.md does, load that.
-  if (!isRoot && !navFiles.some(f => f.path == pathName + '.md') && navFiles.some(f => f.path == pathName + '/index.md')) pathName += '/index'
+  let currentRoute = window.location.pathname.replace(/\/+$/, '') || '/'
+  let pathName = currentRoute.replace(/^\//, '') || 'index'
+  let isRoot = currentRoute == '/'
 
-  // We don't get 404s when we attempt to load a page that doesnt exist, so check the nav to let us differentiate a 404 from a compile error
-  let pageExists = navFiles.some(f => f.path == pathName + '.md')
+  // Each nav entry maps a browser route to its Markdown source file. This matters because routes
+  // omit details such as the pages/ folder and index.md. Use that mapping to find the module to
+  // import; no matching entry means the route is missing rather than the page failing to compile.
+  let activePage = $derived(navData.find(page => page.route == currentRoute))
+  let pageExists = $derived(!!activePage)
+  let navPages = $derived(navData.map(page => ({route: page.route, title: page.title, hideInNav: page.hideInNav})))
 
   // Track compile errors from both initial load and subsequent HMR failures.
   let compileError = $state<GrapheneError | null>(null)
   import.meta.hot?.on('vite:error', (payload) => {
     let path = String(payload.err.id || '').split('?')[0].replace(/^file:\/\//, '').replace(/\\/g, '/').replace(/^\/+/, '')
-    if (!path.endsWith(pathName + '.md')) return // ignore errors on md pages that are not this page
+    if (!activePage || !path.endsWith(activePage.path)) return // ignore errors on md pages that are not this page
 
     let line = Math.max(0, (payload.err.loc?.line || 1) - 1)
     let col = Math.max(0, payload.err.loc?.column || 0)
@@ -52,11 +55,11 @@
 
   // Convert errors thrown while creating the page component into the same useful display as compilation failures.
   function handlePageError(error: Error) {
-    runtimeError = {message: error.message, file: pathName + '.md'} as GrapheneError
+    runtimeError = {message: error.message, file: activePage?.path || pathName + '.md'} as GrapheneError
     setErrorFor('compile', runtimeError)
   }
-  let fileName = pathName.split('/').at(-1) + '.md'
-  let navTitle = $derived(navData.find(file => file.path == pathName + '.md')?.title)
+  let fileName = $derived(activePage?.path.split('/').at(-1) || pathName.split('/').at(-1) + '.md')
+  let navTitle = $derived(activePage?.title)
   let pageTitle = $derived(pageMeta.title || navTitle || prettyPrintFilename(fileName))
 
   $effect(() => {
@@ -78,8 +81,8 @@
         Page = ChartGallery
       } else if (pathName == '_styles') {
         Page = StyleGallery
-      } else if (pageExists) {
-        let mod = await import(/* @vite-ignore */ '/' + pathName + '.md')
+      } else if (activePage) {
+        let mod = await import(/* @vite-ignore */ '/' + activePage.path)
         Page = mod.default
         pageMeta = mod.metadata || {}
         compileError = null
@@ -88,7 +91,7 @@
     } catch {
       // async imports give us zero details on error. If we have a compile error from vite, use that, otherwise show something generic
       if (!compileError) {
-        let file = pathName + '.md'
+        let file = activePage?.path || pathName + '.md'
         compileError = {message: `Error loading ${file}`, file} as GrapheneError
         setErrorFor('compile', compileError)
       }
@@ -103,7 +106,7 @@
 
 <Sidebar>
   <div class="sb-content pretty-scrollbar">
-    <PageNavGroup files={navData} />
+    <PageNavGroup files={navPages} />
   </div>
 </Sidebar>
 <QueryCacheStatus />

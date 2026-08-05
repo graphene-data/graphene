@@ -74,10 +74,10 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
   )
 
   await page.goto(server.url() + '/mock')
-  await check({fileArg: 'mock.md', log})
+  await check({fileArg: 'pages/mock.md', log})
   expect(outputLines()).toEqual(
     `
-    ERROR: mock.md line 3: Unknown function: not_a_function
+    ERROR: pages/mock.md line 3: Unknown function: not_a_function
 from flights select 1 as origin, not_a_function() as explode
                                  ^^^^^^^^^^^^^^^^
   `.trim(),
@@ -122,7 +122,7 @@ test('cli run with md file reports unsupported chart wrapper props', async ({run
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(result.code).toBe(1)
   expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "yFmt" on BarChart.')
 })
@@ -145,7 +145,7 @@ test('cli run with md file reports unsupported ECharts top-level props', async (
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(result.code).toBe(1)
   expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "chartAreaHeight" on ECharts.')
 })
@@ -163,7 +163,7 @@ test('cli run with md file reports multiple unsupported chart props', async ({ru
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(result.code).toBe(1)
   expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.')
 })
@@ -187,7 +187,7 @@ test('cli run with md file reports runtime chart prop and render errors together
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(result.code).toBe(1)
   expect(outputLines(result.stdout + result.stderr)).toContain('Horizontal charts do not support a value or time-based x-axis')
 })
@@ -206,7 +206,7 @@ test('cli run with md file reports runtime query errors', async ({runCli, server
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('cannot take square root of a negative number')
 })
 
@@ -225,7 +225,7 @@ test('cli run handles page query with trailing column annotation', async ({runCl
   )
 
   server.url()
-  let result = await runCli(['run', 'index.md', '--headless'], config)
+  let result = await runCli(['run', 'pages/index.md', '--headless'], config)
   expect(result.code).toBe(0)
   await expectPngScreenshot(result.stdout)
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
@@ -250,7 +250,7 @@ test('cli run with md file reports runtime chart configuration errors', async ({
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('Horizontal charts do not support a value or time-based x-axis')
 })
 
@@ -267,7 +267,7 @@ test('cli run with md file reports table configuration errors', async ({runCli, 
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('not_a_column is not a column in the dataset')
 })
 
@@ -285,7 +285,7 @@ test('cli run with md file reports big value query errors', async ({runCli, serv
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('cannot take square root of a negative number')
 })
 
@@ -309,7 +309,7 @@ test('cli run with md file reports html compilation errors', async ({runCli, ser
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md'], config)
+  let result = await runCli(['run', 'pages/index.md'], config)
   expect(result.code).toBe(1)
   let output = outputLines(result.stdout + result.stderr)
   expect(output).toMatch(/ERROR: .*index\.md line \d+: `<p>` was left open/)
@@ -328,7 +328,7 @@ test('cli run with --chart captures a single chart screenshot', async ({runCli, 
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Distance'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Distance'], config)
   await expectPngScreenshot(result.stdout)
   expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
@@ -347,7 +347,7 @@ test('cli run with --headless captures a screenshot without an open page', async
   )
 
   server.url()
-  let result = await runCli(['run', 'index.md', '--headless', '--chart', 'Carrier Distance'], config)
+  let result = await runCli(['run', 'pages/index.md', '--headless', '--chart', 'Carrier Distance'], config)
   await expectPngScreenshot(result.stdout)
   expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
@@ -366,7 +366,7 @@ test('cli run with --chart captures a table screenshot by title', async ({runCli
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Totals'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Totals'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
@@ -384,7 +384,7 @@ test('cli run with --headless captures a table screenshot by title', async ({run
   )
 
   server.url()
-  let result = await runCli(['run', 'index.md', '--headless', '--chart', 'Carrier Totals'], config)
+  let result = await runCli(['run', 'pages/index.md', '--headless', '--chart', 'Carrier Totals'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
@@ -411,7 +411,7 @@ test('cli run with --input applies inputs to a full page run', async ({runCli, s
 
   await page.goto(server.url() + '/?carrier=AA')
   await waitForGrapheneLoad(page)
-  let result = await runCli(['run', 'index.md', '--param', 'carrier=AA'], config)
+  let result = await runCli(['run', 'pages/index.md', '--param', 'carrier=AA'], config)
 
   expect(result.code).toBe(0)
   expect(queryBodies.some(body => JSON.stringify(body.params) == JSON.stringify({carrier: 'AA'}))).toBe(true)
@@ -437,7 +437,7 @@ test('cli run with --chart captures an ECharts screenshot by title', async ({run
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Distance'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Distance'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
@@ -455,7 +455,7 @@ test('cli list prints chart component IDs', async ({runCli, server, page}) => {
   )
 
   await page.goto(server.url())
-  let result = await runCli(['list', 'index.md'], config)
+  let result = await runCli(['list', 'pages/index.md'], config)
   expect(result.code).toBe(0)
   expect(outputLines(result.stdout + result.stderr)).toEqual('BarChart (data="chart_data" x="carrier" y="total_distance")')
 })
@@ -473,7 +473,7 @@ test('cli list prints table component IDs', async ({runCli, server, page}) => {
   )
 
   await page.goto(server.url())
-  let result = await runCli(['list', 'index.md'], config)
+  let result = await runCli(['list', 'pages/index.md'], config)
   expect(result.code).toBe(0)
   expect(outputLines(result.stdout + result.stderr)).toEqual('DataTable (data="table_data")')
 })
@@ -491,7 +491,7 @@ test('cli run with --chart exports chart data as csv', async ({runCli, server, p
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Flights', '--format', 'csv'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Flights', '--format', 'csv'], config)
   expect(result.code).toBe(0)
   expect(result.stdout).toContain('carrier,total_flights\n')
   expect(result.stdout).toContain('AA,')
@@ -511,7 +511,7 @@ test('cli run with --headless formats chart data as csv', async ({runCli, server
   )
 
   server.url()
-  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Flights', '--format', 'csv', '--headless'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Flights', '--format', 'csv', '--headless'], config)
   expect(result.code).toBe(0)
   expect(result.stdout).toContain('carrier,total_flights\n')
   expect(result.stdout).toContain('AA,')
@@ -531,7 +531,7 @@ test('cli run with --chart exports table data as csv', async ({runCli, server, p
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md', '--chart', 'Carrier Totals', '--format', 'csv'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Totals', '--format', 'csv'], config)
   expect(result.code).toBe(0)
   expect(result.stdout).toContain('carrier,total_flights\n')
   expect(result.stdout).toContain('AA,')
@@ -551,7 +551,7 @@ test('cli run with --chart captures a chart screenshot by component ID', async (
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md', '--chart', 'BarChart (data="chart_data" x="carrier" y="total_distance")'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'BarChart (data="chart_data" x="carrier" y="total_distance")'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
@@ -569,7 +569,7 @@ test('cli run with --chart captures a table screenshot by component ID', async (
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md', '--chart', 'DataTable (data="table_data")'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'DataTable (data="table_data")'], config)
   expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
@@ -587,7 +587,7 @@ test('cli run with --chart reports when no chart title matches', async ({runCli,
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'index.md', '--chart', 'Missing Chart'], config)
+  let result = await runCli(['run', 'pages/index.md', '--chart', 'Missing Chart'], config)
   expect(result.code).toBe(1)
   expect(outputLines(result.stdout + result.stderr)).toContain('Could not find chart "Missing Chart"')
 })

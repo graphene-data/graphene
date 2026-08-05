@@ -17,6 +17,7 @@ import {grapheneCsp} from '../ui/csp.ts'
 import {runQuery} from './connections/index.ts'
 import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {missingMockFiles, mockFileMap} from './mockFiles.ts'
+import {routeForPage} from './pageRouting.ts'
 import {formatError} from './printer.ts'
 import {runVitePlugin} from './run.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
@@ -64,6 +65,7 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
     root: config.root,
     logLevel: process.env.NODE_ENV == 'test' ? 'silent' : 'info',
     plugins: [
+      mockFilesForTests(),
       svelte({
         configFile: false,
         extensions: ['.svelte', '.md'],
@@ -88,7 +90,6 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
       runVitePlugin(),
       handleRequestPlugin,
       updateWorkspacePlugin(telemetry),
-      mockFilesForTests(),
     ],
     publicDir: path.resolve(uiRoot, 'public'),
     // on the fence about this one. This would make it less likely we need to optimize when alternating between dev and tests.
@@ -272,7 +273,7 @@ function fixHmrForFailedModules() {
 // Also tracks all the md files in the workspace to populate the nav sidebar
 let workspaceLoadPromise: Promise<void> | undefined
 let workspaceFiles: WorkspaceFileInput[] = []
-let mdFiles: {path: string; title?: string; hideInNav?: boolean}[] = []
+let mdFiles: {path: string; route: string; title?: string; hideInNav?: boolean}[] = []
 function updateWorkspacePlugin(telemetry?: CliTelemetry) {
   return {
     name: 'updateWorkspace',
@@ -290,9 +291,9 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
       let pages = mdFiles.filter(file => !missingMockFiles.has(file.path))
       if (process.env.NODE_ENV == 'test') {
         for (let [path, contents] of Object.entries(mockFileMap)) {
-          if (missingMockFiles.has(path)) continue
-          let mockFile = {path, ...extractFrontmatter(contents)}
-          let idx = pages.findIndex(file => file.path == path)
+          if (missingMockFiles.has(path) || !path.endsWith('.md') || !path.startsWith(config.pagesPrefix)) continue
+          let mockFile = {path, route: routeForPage(path, config.pagesPrefix), ...extractFrontmatter(contents)}
+          let idx = pages.findIndex(file => file.route == mockFile.route)
           if (idx >= 0) pages.splice(idx, 1, mockFile)
           else pages.push(mockFile)
         }
@@ -316,7 +317,9 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
         await workspaceLoadPromise
 
         // Store every Markdown page and its navigation metadata for the app shell.
-        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(file => ({path: file.path, ...extractFrontmatter(file.contents)}))
+        mdFiles = workspaceFiles
+          .filter(file => file.path.endsWith('.md') && file.path.startsWith(config.pagesPrefix)) // only md files matching the pagePrefix (which can be blank)
+          .map(file => ({path: file.path, route: routeForPage(file.path, config.pagesPrefix), ...extractFrontmatter(file.contents)}))
 
         let mod = s.moduleGraph.getModuleById('\0virtual:nav')
         if (!mod) return
@@ -355,14 +358,14 @@ const handleRequestPlugin = {
         if (pathName) if (pathName == '/__ct' || pathName == '/_charts' || pathName == '/_styles') return await handlePage(s, res)
 
         if (!pathName || pathName == '/') pathName = 'index'
-        let relativeMdPath = pathName.replace(/^\//, '') + '.md'
-        let mdPath = path.join(config.root, relativeMdPath)
-        if (!mockFileMap[relativeMdPath] && !(await fs.exists(mdPath))) {
-          relativeMdPath = pathName.replace(/^\//, '') + '/index.md'
-          mdPath = path.join(config.root, relativeMdPath)
+        let pagePath = config.pagesPrefix + pathName.replace(/^\//, '') + '.md'
+        let mdPath = path.join(config.root, pagePath)
+        if (!mockFileMap[pagePath] && !(await fs.exists(mdPath))) {
+          pagePath = config.pagesPrefix + pathName.replace(/^\//, '') + '/index.md'
+          mdPath = path.join(config.root, pagePath)
         }
 
-        if (mockFileMap[relativeMdPath] || (await fs.exists(mdPath))) return await handlePage(s, res)
+        if (mockFileMap[pagePath] || (await fs.exists(mdPath))) return await handlePage(s, res)
 
         // Browser navigations still need the app shell so it can render a useful not-found state.
         if (req.headers.accept?.includes('text/html')) return await handlePage(s, res)
@@ -380,8 +383,7 @@ function mockFilesForTests() {
   if (process.env.NODE_ENV !== 'test') return null
 
   function toMockKey(id: string) {
-    // Handle both absolute paths (/wt/.../index.md) and root-relative paths (/index.md)
-    return id.replace(config.root + '/', '').replace(/^\//, '')
+    return id.replace(config.root, '').replace(/^\//, '')
   }
 
   return {
