@@ -9,14 +9,15 @@ import {fileURLToPath} from 'url'
 import {config, loadConfig, setGlobalConfig} from '../lang/config.ts'
 import {analyzeWorkspace, getFile, loadWorkspace, toSql, type Query} from '../lang/core.ts'
 import {rowsToCsv} from '../lang/csv.ts'
-import {parseWarehouseFieldType, type AnalysisResult} from '../lang/types.ts'
-import {checkCloudAuth, loginPkce, makeAccessToken} from './auth.ts'
+import {type AnalysisResult} from '../lang/types.ts'
+import {authenticatedFetch, checkCloudAuth, loginPkce, makeAccessToken} from './auth.ts'
 import {getGrapheneCache, runServeInBackground, stopGrapheneIfRunning} from './background.ts'
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {installBrowser} from './installBrowser.ts'
 import {printDiagnostics, printTable} from './printer.ts'
 import {pageUrlForMd, sendToPage} from './run.ts'
+import {inspectSchema, printSchemaInspection, type SchemaInspection} from './schemaInspection.ts'
 import {CliTelemetry, getPresentFlags, type TelemetryCommand} from './telemetry/index.ts'
 import {checkForUpdate, showCachedUpdateNotice} from './updateNotifier.ts'
 
@@ -131,57 +132,25 @@ program.command('schema')
   .argument('[schema | table]', 'Optional schema or table name to describe')
   .action(
     withTelemetry('schema', async (_exit, tableArg: string) => {
-      let connection = await getConnection()
-      try {
-        let datasets = await connection.listDatasets()
-        let matchedDataset = tableArg ? findCaseInsensitive(datasets, tableArg) : null
-
-        // If there's no configured namespace and more than one dataset, list the datasets.
-        if (!tableArg && !config.defaultNamespace && datasets.length > 1) {
-          return console.log(`Datasets available:\n${datasets.join('\n')}`)
-        }
-
-        // figure out if you're wanting to list tables in a schema/dataset
-        let dsToList: string | null = null
-        let parts = tableArg ? tableArg.split('.') : []
-
-        if (tableArg && connection.listSchemas && parts.length == 1 && matchedDataset) {
-          let schemas = await connection.listSchemas(matchedDataset)
-          return console.log(`Schemas in ${matchedDataset}:\n${schemas.join('\n')}`)
-        }
-
-        if (matchedDataset)
-          dsToList = matchedDataset // you gave the name of a dataset
-        else if (!tableArg && config.defaultNamespace)
-          dsToList = config.defaultNamespace // default namespace configured
-        else if (!tableArg && datasets.length == 1)
-          dsToList = datasets[0] // only one dataset, and no args
-        else if (!tableArg && config.dialect == 'duckdb') dsToList = '<default>'
-        else if (tableArg && config.motherduck && parts.length == 2) dsToList = tableArg
-        else if (tableArg && config.dialect == 'snowflake' && parts.length == 2) {
-          let db = findCaseInsensitive(datasets, parts[0]) || parts[0]
-          dsToList = `${db}.${parts.slice(1).join('.')}`
-        }
-
-        if (dsToList) {
-          let tables = await connection.listTables(dsToList)
-          return console.log(`Tables${dsToList ? ` in ${dsToList}` : ''}:\n${tables.join('\n')}`)
-        }
-
-        // otherwise, assume you're wanting to see tables
-        let cols = await connection.describeTable(tableArg)
-        let tableLabel = config.dialect == 'snowflake' ? String(tableArg || '').toLowerCase() : tableArg
-        if (!cols.length) return console.log(`Table ${tableLabel} not found`)
-        console.log(`table ${tableLabel} (`)
-        cols.forEach(col => {
-          let parsed = parseWarehouseFieldType(col.dataType)
-          let renderedType = parsed.displayType || col.dataType
-          console.log(`  ${col.name} ${renderedType}`)
+      let result: SchemaInspection
+      if (config.cloud) {
+        await checkCloudAuth()
+        let repoSlug = new URL(config.cloud).pathname.replace(/^\/+|\/+$/g, '')
+        let response = await authenticatedFetch('/_api/schema', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({repoSlug, table: tableArg}),
         })
-        console.log(')')
-      } finally {
-        await connection.close()
+        result = await response.json() as SchemaInspection
+      } else {
+        let connection = await getConnection()
+        try {
+          result = await inspectSchema(connection, config, tableArg)
+        } finally {
+          await connection.close()
+        }
       }
+      printSchemaInspection(result)
     }),
   )
 
@@ -320,10 +289,6 @@ function renderSql(query: Query, inputs: Record<string, string | string[]>, exit
     else console.error(String(err))
     return exit(1)
   }
-}
-
-function findCaseInsensitive(values: string[], needle: string): string | null {
-  return values.find(value => value.toLowerCase() == needle.toLowerCase()) || null
 }
 
 class CliExit {}
