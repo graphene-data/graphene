@@ -272,7 +272,7 @@ test('horizontal bar chart auto-expands height for many categories', async ({mou
     {name: 'value', type: scalarType('number')},
   ]
 
-  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'value', y: 'category'})
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'value', y: 'category', title: 'Values by Category'})
   await expect(chart.el).screenshot('horizontal-bar-chart-auto-height')
 })
 
