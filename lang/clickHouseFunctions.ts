@@ -129,8 +129,22 @@ function dateArithmeticFunctions(prefix: 'add' | 'subtract'): FunctionDef[] {
   })
 }
 
-// Keep the ClickHouse surface focused on mainstream analytics functions that map
-// cleanly to Graphene's type system and SQL lowering.
+// Defines compact entries for native functions whose SQL is a direct function call.
+function nativeFunction(sqlName: string, docs: string, args: FunctionDef['args'], returns: string, summary: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name: sqlName.toLowerCase(),
+    description: `${sqlName}()\n\n${summary}`,
+    url: `${click}/functions/${docs}#${sqlName.toLowerCase()}`,
+    args,
+    returns,
+    sqlName,
+    ...opts,
+  }
+}
+
+// Keep the ClickHouse surface focused on analytics functions that map cleanly to
+// Graphene's expression grammar and type system. Parameterized and lambda calls
+// remain syntax features rather than ordinary function definitions.
 export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // JSON and Dynamic Functions
@@ -264,6 +278,19 @@ export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // Aggregate Functions
   // ============================================================================
+  nativeFunction('argMax', '../aggregate-functions/reference/argmax', [{name: 'arg', type: 'T'}, {name: 'value', type: 'any'}], 'T', 'Returns the arg value associated with the maximum value.', {aggregate: true}),
+  nativeFunction('argMin', '../aggregate-functions/reference/argmin', [{name: 'arg', type: 'T'}, {name: 'value', type: 'any'}], 'T', 'Returns the arg value associated with the minimum value.', {aggregate: true}),
+  nativeFunction('corr', '../aggregate-functions/reference/corr', [{name: 'x', type: 'number'}, {name: 'y', type: 'number'}], 'number', 'Computes the Pearson correlation coefficient.', {aggregate: true}),
+  nativeFunction('covarPop', '../aggregate-functions/reference/covarpop', [{name: 'x', type: 'number'}, {name: 'y', type: 'number'}], 'number', 'Computes population covariance.', {aggregate: true, aliases: ['covar_pop']}),
+  nativeFunction('covarSamp', '../aggregate-functions/reference/covarsamp', [{name: 'x', type: 'number'}, {name: 'y', type: 'number'}], 'number', 'Computes sample covariance.', {aggregate: true, aliases: ['covar_samp']}),
+  nativeFunction('groupUniqArray', '../aggregate-functions/reference/groupuniqarray', [{name: 'arg', type: 'T'}], 'array', 'Collects distinct input values into an array.', {aggregate: true, aliases: ['group_uniq_array']}),
+  nativeFunction('retention', '../aggregate-functions/parametric-functions', [{name: 'conditions', type: 'boolean...'}], 'array<number>', 'Computes retention flags for a sequence of conditions.', {aggregate: true}),
+  nativeFunction('stddevPop', '../aggregate-functions/reference/stddevpop', [{name: 'arg', type: 'number'}], 'number', 'Computes population standard deviation.', {aggregate: true, aliases: ['stddev_pop']}),
+  nativeFunction('stddevSamp', '../aggregate-functions/reference/stddevsamp', [{name: 'arg', type: 'number'}], 'number', 'Computes sample standard deviation.', {aggregate: true, aliases: ['stddev_samp']}),
+  nativeFunction('uniqCombined', '../aggregate-functions/reference/uniqcombined', [{name: 'arg', type: 'any'}], 'number', 'Counts distinct values with the combined approximation algorithm.', {aggregate: true, fanoutSafe: true, aliases: ['uniq_combined']}),
+  nativeFunction('uniqCombined64', '../aggregate-functions/reference/uniqcombined64', [{name: 'arg', type: 'any'}], 'number', 'Counts distinct values using 64-bit hashes and the combined approximation algorithm.', {aggregate: true, fanoutSafe: true, aliases: ['uniq_combined64']}),
+  nativeFunction('varPop', '../aggregate-functions/reference/varpop', [{name: 'arg', type: 'number'}], 'number', 'Computes population variance.', {aggregate: true, aliases: ['var_pop']}),
+  nativeFunction('varSamp', '../aggregate-functions/reference/varsamp', [{name: 'arg', type: 'number'}], 'number', 'Computes sample variance.', {aggregate: true, aliases: ['var_samp']}),
   {
     name: 'any',
     description: trim(`
@@ -482,6 +509,12 @@ export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // Numeric Functions
   // ============================================================================
+  nativeFunction('exp', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns e raised to x.'),
+  nativeFunction('intDiv', 'arithmetic-functions', [{name: 'x', type: 'number'}, {name: 'y', type: 'number'}], 'number', 'Divides x by y and rounds down to an integer.', {aliases: ['int_div']}),
+  nativeFunction('log', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns the natural logarithm of x.'),
+  nativeFunction('log10', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns the base-10 logarithm of x.'),
+  nativeFunction('log2', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns the base-2 logarithm of x.'),
+  nativeFunction('sign', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns -1, 0, or 1 for the sign of x.'),
   {
     name: 'abs',
     description: trim(`
@@ -604,8 +637,70 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
 
   // ============================================================================
-  // String Functions
+  // Array, Map, and Tuple Functions
   // ============================================================================
+  nativeFunction('arrayConcat', 'array-functions', [{name: 'arrays', type: 'array...'}], 'array', 'Concatenates arrays.', {aliases: ['array_concat']}),
+  nativeFunction('arrayDistinct', 'array-functions', [{name: 'array', type: 'array'}], 'array', 'Returns the distinct values in an array.', {aliases: ['array_distinct']}),
+  nativeFunction('arrayElement', 'array-functions', [{name: 'collection', type: ['array', 'map']}, {name: 'index_or_key', type: 'any'}], 'array_element', 'Returns an array element by index or a map value by key.', {aliases: ['array_element']}),
+  nativeFunction('arrayElementOrNull', 'array-functions', [{name: 'array', type: 'array'}, {name: 'index', type: 'number'}], 'array_element', 'Returns an array element by index, or null when out of bounds.', {aliases: ['array_element_or_null']}),
+  nativeFunction('arrayIntersect', 'array-functions', [{name: 'arrays', type: 'array...'}], 'array', 'Returns values shared by all input arrays.', {aliases: ['array_intersect']}),
+  nativeFunction('arrayPopBack', 'array-functions', [{name: 'array', type: 'array'}], 'array', 'Removes the last array element.', {aliases: ['array_pop_back']}),
+  nativeFunction('arrayPopFront', 'array-functions', [{name: 'array', type: 'array'}], 'array', 'Removes the first array element.', {aliases: ['array_pop_front']}),
+  nativeFunction('arrayPushBack', 'array-functions', [{name: 'array', type: 'array'}, {name: 'value', type: 'any'}], 'array', 'Appends a value to an array.', {aliases: ['array_push_back']}),
+  nativeFunction('arrayPushFront', 'array-functions', [{name: 'array', type: 'array'}, {name: 'value', type: 'any'}], 'array', 'Prepends a value to an array.', {aliases: ['array_push_front']}),
+  nativeFunction('arrayResize', 'array-functions', [{name: 'array', type: 'array'}, {name: 'size', type: 'number'}, {name: 'extender', type: 'any?'}], 'array', 'Changes an array to the requested length.', {aliases: ['array_resize']}),
+  nativeFunction('arrayReverse', 'array-functions', [{name: 'array', type: 'array'}], 'array', 'Reverses an array.', {aliases: ['array_reverse']}),
+  nativeFunction('arrayShiftLeft', 'array-functions', [{name: 'array', type: 'array'}, {name: 'count', type: 'number'}, {name: 'default', type: 'any?'}], 'array', 'Shifts an array left by a number of positions.', {aliases: ['array_shift_left']}),
+  nativeFunction('arrayShiftRight', 'array-functions', [{name: 'array', type: 'array'}, {name: 'count', type: 'number'}, {name: 'default', type: 'any?'}], 'array', 'Shifts an array right by a number of positions.', {aliases: ['array_shift_right']}),
+  nativeFunction('arraySlice', 'array-functions', [{name: 'array', type: 'array'}, {name: 'offset', type: 'number'}, {name: 'length', type: 'number?'}], 'array', 'Returns a slice of an array.', {aliases: ['array_slice']}),
+  nativeFunction('arraySort', 'array-functions', [{name: 'array', type: 'array'}], 'array', 'Sorts an array in ascending order.', {aliases: ['array_sort']}),
+  nativeFunction('arrayUniq', 'array-functions', [{name: 'arrays', type: 'array...'}], 'number', 'Counts distinct array elements.', {aliases: ['array_uniq']}),
+  nativeFunction('empty', 'array-functions', [{name: 'collection', type: ['array', 'map', 'string']}], 'boolean', 'Returns whether a collection or string is empty.'),
+  nativeFunction('has', 'array-functions', [{name: 'array', type: 'array'}, {name: 'value', type: 'any'}], 'boolean', 'Returns whether an array contains a value.'),
+  nativeFunction('indexOf', 'array-functions', [{name: 'array', type: 'array'}, {name: 'value', type: 'any'}], 'number', 'Returns the one-based position of a value in an array, or zero.', {aliases: ['index_of']}),
+  nativeFunction('mapConcat', 'tuple-map-functions', [{name: 'maps', type: 'map...'}], 'map', 'Combines maps, keeping the first value for duplicate keys.', {aliases: ['map_concat']}),
+  nativeFunction('mapContainsKey', 'tuple-map-functions', [{name: 'map', type: 'map'}, {name: 'key', type: 'any'}], 'boolean', 'Returns whether a map contains a key.', {aliases: ['mapcontains', 'map_contains', 'map_contains_key']}),
+  nativeFunction('mapContainsKeyLike', 'tuple-map-functions', [{name: 'map', type: 'map'}, {name: 'pattern', type: 'string'}], 'boolean', 'Returns whether any string key matches a LIKE pattern.', {aliases: ['map_contains_key_like']}),
+  nativeFunction('mapContainsValue', 'tuple-map-functions', [{name: 'map', type: 'map'}, {name: 'value', type: 'any'}], 'boolean', 'Returns whether a map contains a value.', {aliases: ['map_contains_value']}),
+  nativeFunction('mapExtractKeyLike', 'tuple-map-functions', [{name: 'map', type: 'map'}, {name: 'pattern', type: 'string'}], 'map', 'Returns map entries whose string keys match a LIKE pattern.', {aliases: ['map_extract_key_like']}),
+  nativeFunction('mapKeys', 'tuple-map-functions', [{name: 'map', type: 'map'}], 'array<sql native>', 'Returns the keys of a map.', {aliases: ['map_keys']}),
+  nativeFunction('mapValues', 'tuple-map-functions', [{name: 'map', type: 'map'}], 'array<sql native>', 'Returns the values of a map.', {aliases: ['map_values']}),
+  nativeFunction('notEmpty', 'array-functions', [{name: 'collection', type: ['array', 'map', 'string']}], 'boolean', 'Returns whether a collection or string is non-empty.', {aliases: ['not_empty']}),
+  nativeFunction('tupleElement', 'tuple-functions', [{name: 'tuple', type: 'any'}, {name: 'index_or_name', type: ['number', 'string']}], 'T', 'Returns a tuple element by one-based index or name.', {aliases: ['tuple_element']}),
+
+  // ============================================================================
+  // String, URL, Hash, and Random Functions
+  // ============================================================================
+  nativeFunction('splitByString', 'splitting-merging-functions', [{name: 'separator', type: 'string'}, {name: 'string', type: 'string'}], 'array<string>', 'Splits a string using a multi-character separator.', {aliases: ['split_by_string']}),
+  nativeFunction('replaceRegexpAll', 'string-replace-functions', [{name: 'string', type: 'string'}, {name: 'pattern', type: 'string'}, {name: 'replacement', type: 'string'}], 'string', 'Replaces every regular-expression match.', {aliases: ['replace_regexp_all']}),
+  nativeFunction('reverse', 'string-functions', [{name: 'value', type: ['string', 'array']}], 'T', 'Reverses a string by bytes or reverses an array.'),
+  nativeFunction('domain', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts the hostname from a URL.'),
+  nativeFunction('domainWithoutWWW', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts the hostname and removes a leading www.', {aliases: ['domain_without_www']}),
+  nativeFunction('extractURLParameter', 'url-functions', [{name: 'url', type: 'string'}, {name: 'name', type: 'string'}], 'string', 'Extracts a named URL query parameter.', {aliases: ['extract_url_parameter']}),
+  nativeFunction('extractURLParameterNames', 'url-functions', [{name: 'url', type: 'string'}], 'array<string>', 'Returns URL query parameter names.', {aliases: ['extract_url_parameter_names']}),
+  nativeFunction('fragment', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts a URL fragment.'),
+  nativeFunction('path', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts a URL path without its query string.'),
+  nativeFunction('protocol', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts a URL protocol.'),
+  nativeFunction('queryString', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts a URL query string.', {aliases: ['query_string']}),
+  nativeFunction('topLevelDomain', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts a URL top-level domain.', {aliases: ['top_level_domain']}),
+  nativeFunction('cityHash64', 'hash-functions', [{name: 'values', type: 'any...'}], 'number', 'Computes a 64-bit CityHash.', {aliases: ['city_hash64']}),
+  nativeFunction('farmFingerprint64', 'hash-functions', [{name: 'values', type: 'any...'}], 'number', 'Computes a stable 64-bit FarmHash fingerprint.', {aliases: ['farm_fingerprint64']}),
+  nativeFunction('halfMD5', 'hash-functions', [{name: 'values', type: 'any...'}], 'number', 'Computes the first 8 bytes of an MD5 digest as an integer.', {aliases: ['half_md5']}),
+  nativeFunction('BLAKE3', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes a BLAKE3 digest.'),
+  nativeFunction('MD4', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes an MD4 digest.'),
+  nativeFunction('MD5', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes an MD5 digest.'),
+  nativeFunction('RIPEMD160', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes a RIPEMD-160 digest.'),
+  nativeFunction('SHA1', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes a SHA-1 digest.'),
+  nativeFunction('SHA224', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes a SHA-224 digest.'),
+  nativeFunction('SHA256', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes a SHA-256 digest.'),
+  nativeFunction('SHA384', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes a SHA-384 digest.'),
+  nativeFunction('SHA512', 'hash-functions', [{name: 'string', type: 'string'}], 'string', 'Computes a SHA-512 digest.'),
+  nativeFunction('sipHash64', 'hash-functions', [{name: 'values', type: 'any...'}], 'number', 'Computes a 64-bit SipHash.', {aliases: ['sip_hash64']}),
+  nativeFunction('xxHash64', 'hash-functions', [{name: 'values', type: 'any...'}], 'number', 'Computes a 64-bit xxHash.', {aliases: ['xx_hash64']}),
+  nativeFunction('rand', 'random-functions', [{name: 'ignored', type: 'any?'}], 'number', 'Returns a random 32-bit integer.'),
+  nativeFunction('rand64', 'random-functions', [{name: 'ignored', type: 'any?'}], 'number', 'Returns a random 64-bit integer.'),
+  nativeFunction('randCanonical', 'random-functions', [{name: 'ignored', type: 'any?'}], 'number', 'Returns a random floating-point value from zero through one.', {aliases: ['rand_canonical']}),
+
   {
     name: 'concat',
     description: trim(`
@@ -958,6 +1053,29 @@ export const clickHouseFunctions: FunctionDef[] = [
     args: [],
     returns: 'date',
   },
+  nativeFunction('fromUnixTimestamp', 'date-time-functions', [], 'timestamp', 'Converts Unix seconds to a timestamp.', {
+    overloads: [
+      {args: [{name: 'seconds', type: 'number'}], returns: 'timestamp'},
+      {args: [{name: 'seconds', type: 'number'}, {name: 'format', type: 'string'}], returns: 'string'},
+      {args: [{name: 'seconds', type: 'number'}, {name: 'format', type: 'string'}, {name: 'timezone', type: 'string'}], returns: 'string'},
+    ],
+    aliases: ['from_unix_timestamp'],
+  }),
+  nativeFunction('fromUnixTimestamp64Milli', 'type-conversion-functions', [{name: 'milliseconds', type: 'number'}, {name: 'timezone', type: 'string?'}], 'timestamp', 'Converts Unix milliseconds to a DateTime64 value.', {aliases: ['from_unix_timestamp64_milli']}),
+  nativeFunction('toDateTime64', 'type-conversion-functions', [{name: 'value', type: ['string', 'date', 'timestamp', 'number']}, {name: 'precision', type: 'number'}, {name: 'timezone', type: 'string?'}], 'timestamp', 'Converts a value to a timestamp with the requested fractional precision.', {aliases: ['to_datetime64']}),
+  nativeFunction('toString', 'type-conversion-functions', [{name: 'value', type: 'any'}], 'string', 'Converts a value to its text representation.', {
+    overloads: [
+      {args: [{name: 'value', type: 'any'}], returns: 'string'},
+      {args: [{name: 'value', type: ['date', 'timestamp']}, {name: 'timezone', type: 'string'}], returns: 'string'},
+    ],
+    aliases: ['to_string'],
+  }),
+  nativeFunction('toTypeName', 'other-functions', [{name: 'value', type: 'any'}], 'string', 'Returns the ClickHouse type name of a value.', {aliases: ['to_type_name']}),
+  nativeFunction('toUnixTimestamp', 'date-time-functions', [{name: 'value', type: ['string', 'date', 'timestamp']}, {name: 'timezone', type: 'string?'}], 'number', 'Converts a date or timestamp to Unix seconds.', {aliases: ['to_unix_timestamp']}),
+  nativeFunction('toUnixTimestamp64Micro', 'type-conversion-functions', [{name: 'timestamp', type: 'timestamp'}], 'number', 'Converts a timestamp to Unix microseconds.', {aliases: ['to_unix_timestamp64_micro']}),
+  nativeFunction('toUnixTimestamp64Milli', 'type-conversion-functions', [{name: 'timestamp', type: 'timestamp'}], 'number', 'Converts a timestamp to Unix milliseconds.', {aliases: ['to_unix_timestamp64_milli']}),
+  nativeFunction('toUnixTimestamp64Nano', 'type-conversion-functions', [{name: 'timestamp', type: 'timestamp'}], 'number', 'Converts a timestamp to Unix nanoseconds.', {aliases: ['to_unix_timestamp64_nano']}),
+  nativeFunction('toUnixTimestamp64Second', 'type-conversion-functions', [{name: 'timestamp', type: 'timestamp'}], 'number', 'Converts a timestamp to Unix seconds.', {aliases: ['to_unix_timestamp64_second']}),
   {
     name: 'todate',
     description: trim(`

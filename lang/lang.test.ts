@@ -2257,6 +2257,16 @@ describe('lang', () => {
         .toRenderSql('SELECT addDays(users.created_at,2) as shifted FROM users as users')
       expect('from users select subtract_days(created_at, 2) as shifted')
         .toRenderSql('SELECT subtractDays(users.created_at,2) as shifted FROM users as users')
+      expect("table events (properties map, tags array<string>, pair json) from events select mapKeys(properties), mapValues(properties), arrayElement(properties, 'path'), indexOf(tags, 'new'), tupleElement(pair, 1)")
+        .toRenderSql("SELECT mapKeys(events.properties) as col_0, mapValues(events.properties) as col_1, arrayElement(events.properties,'path') as col_2, indexOf(events.tags,'new') as col_3, tupleElement(events.pair,1) as col_4 FROM events as events")
+      expect("from users select splitByString('::', name), replaceRegexpAll(name, '[0-9]+', ''), reverse(name), domain(name), path(name), extractURLParameter(name, 'q')")
+        .toRenderSql("SELECT splitByString('::',users.name) as col_0, replaceRegexpAll(users.name,'[0-9]+','') as col_1, reverse(users.name) as col_2, domain(users.name) as col_3, path(users.name) as col_4, extractURLParameter(users.name,'q') as col_5 FROM users as users")
+      expect('from users select toUnixTimestamp(created_at), fromUnixTimestamp(age), toUnixTimestamp64Milli(created_at), toDateTime64(created_at, 3), toString(age), toTypeName(age)')
+        .toRenderSql('SELECT toUnixTimestamp(users.created_at) as col_0, fromUnixTimestamp(users.age) as col_1, toUnixTimestamp64Milli(users.created_at) as col_2, toDateTime64(users.created_at,3) as col_3, toString(users.age) as col_4, toTypeName(users.age) as col_5 FROM users as users')
+      expect('from users select intDiv(age, 2), exp(age), log(age), sign(age), cityHash64(name), rand()')
+        .toRenderSql('SELECT intDiv(users.age,2) as col_0, exp(users.age) as col_1, log(users.age) as col_2, sign(users.age) as col_3, cityHash64(users.name) as col_4, rand() as col_5 FROM users as users')
+      expect('from users select argMax(name, age), groupUniqArray(name), uniqCombined(name), stddevPop(age), corr(age, age), retention(age > 10, age > 20)')
+        .toRenderSql('SELECT argMax(users.name,users.age) as col_0, groupUniqArray(users.name) as col_1, uniqCombined(users.name) as col_2, stddevPop(users.age) as col_3, corr(users.age,users.age) as col_4, retention(users.age>10,users.age>20) as col_5 FROM users as users')
     } finally {
       setGlobalConfig({root: ''})
     }
