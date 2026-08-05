@@ -395,7 +395,8 @@ function computeTitleLegendAndGridPadding(config: NormalConfig) {
 
   if (title?.text) {
     legend.top = numericOffset(legend.top, 18)
-    grid.top = numericOffset(grid.top, 28)
+    // Horizontal bars are already inset from the grid boundary, so the standard title offset leaves a large visual gap.
+    grid.top = numericOffset(grid.top, isHorizontalBar(config) ? 12 : 28)
   }
 
   if (legend?.show) {
