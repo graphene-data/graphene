@@ -4,6 +4,7 @@ import path from 'node:path'
 import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
+import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {setGlobalConfig} from './config.ts'
 import {toSql} from './core.ts'
 import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
@@ -2152,6 +2153,39 @@ describe('lang', () => {
       })
       expect('from users select list(name) as names')
         .toRenderSql('SELECT array_agg(users.name) as names FROM users as users')
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('supports every function on ClickHouse JSON functions documentation page', () => {
+    let documentedFunctions = [
+      'JSONAllPaths', 'JSONAllPathsWithTypes', 'JSONAllValues', 'JSONArrayLength', 'JSONDynamicPaths', 'JSONDynamicPathsWithTypes',
+      'JSONExtract', 'JSONExtractArrayRaw', 'JSONExtractArrayRawCaseInsensitive', 'JSONExtractBool', 'JSONExtractBoolCaseInsensitive',
+      'JSONExtractCaseInsensitive', 'JSONExtractFloat', 'JSONExtractFloatCaseInsensitive', 'JSONExtractInt', 'JSONExtractIntCaseInsensitive',
+      'JSONExtractKeys', 'JSONExtractKeysAndValues', 'JSONExtractKeysAndValuesCaseInsensitive', 'JSONExtractKeysAndValuesRaw',
+      'JSONExtractKeysAndValuesRawCaseInsensitive', 'JSONExtractKeysCaseInsensitive', 'JSONExtractRaw', 'JSONExtractRawCaseInsensitive',
+      'JSONExtractString', 'JSONExtractStringCaseInsensitive', 'JSONExtractUInt', 'JSONExtractUIntCaseInsensitive', 'JSONHas', 'JSONKey',
+      'JSONLength', 'JSONMergePatch', 'JSONSharedDataPaths', 'JSONSharedDataPathsWithTypes', 'JSONType', 'JSON_EXISTS', 'JSON_QUERY',
+      'JSON_VALUE', 'dynamicElement', 'dynamicType', 'isDynamicElementInSharedData', 'isValidJSON', 'prettyPrintJSON', 'simpleJSONExtractBool',
+      'simpleJSONExtractFloat', 'simpleJSONExtractInt', 'simpleJSONExtractRaw', 'simpleJSONExtractString', 'simpleJSONExtractUInt', 'simpleJSONHas',
+      'toJSONString',
+    ]
+    let availableFunctions = new Set(clickHouseFunctions.map(fn => fn.sqlName || fn.name))
+    expect(documentedFunctions.filter(fn => !availableFunctions.has(fn))).toEqual([])
+  })
+
+  it('renders clickhouse JSON functions with native names and path arguments', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      let [jsonColumnQuery] = analyze('table events (metadata json) from events select JSONAllPathsWithTypes(metadata) as paths')
+      expect(toSql(jsonColumnQuery)).toBe('SELECT JSONAllPathsWithTypes(events.metadata) as paths FROM events as events')
+      expect('from users select JSONExtractInt(\'{"items": [42]}\', \'items\', 1) as item')
+        .toRenderSql('SELECT JSONExtractInt(\'{"items": [42]}\',\'items\',1) as item FROM users as users')
+      expect('from users select JSONMergePatch(\'{"a": 1}\', \'{"b": 2}\') as merged')
+        .toRenderSql('SELECT JSONMergePatch(\'{"a": 1}\',\'{"b": 2}\') as merged FROM users as users')
+      expect('from users select visitParamExtractString(\'{"name": "Ada"}\', \'name\') as name')
+        .toRenderSql('SELECT simpleJSONExtractString(\'{"name": "Ada"}\',\'name\') as name FROM users as users')
     } finally {
       setGlobalConfig({root: ''})
     }
