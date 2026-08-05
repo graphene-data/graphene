@@ -87,25 +87,30 @@ export function componentNames() {
   return cachedComponentNames || []
 }
 
-export type PageFrontmatter = {title?: string}
+export type PageFrontmatter = {title?: string; hideInNav?: boolean; layout?: string; scheduled?: string}
 
-// Parse YAML frontmatter from the --- delimited block at the top of a markdown file.
+// Extract supported frontmatter without compiling the page. When frontmatter omits a title,
+// use the first static Markdown h1 so callers get all page discovery metadata in one pass.
 const frontmatterRe = /^---\s*\n([\s\S]*?)\n---(?:\n|$)/
 export function extractFrontmatter(contents: string): PageFrontmatter {
   let match = contents.trimStart().match(frontmatterRe)
-  if (!match) return {}
-  let raw = yaml.safeLoad(match[1]) as Record<string, any> | undefined
-  return {title: raw?.title ? String(raw.title) : undefined}
-}
+  let lines = match?.[1].split(/\r?\n/) || []
+  let scheduledLines = lines.filter(line => /^scheduled\s*:/i.test(line))
+  if (scheduledLines.length > 1) throw new Error('Multiple scheduled fields are not supported')
+  let scheduled = scheduledLines[0]?.replace(/^scheduled\s*:\s*/i, '').trim()
+  let yamlContents = lines.filter(line => !/^scheduled\s*:/i.test(line)).join('\n')
+  let raw = yamlContents ? yaml.safeLoad(yamlContents) as Record<string, any> | undefined : undefined
+  let metadata: PageFrontmatter = {}
 
-// Resolve the nav title without compiling the page. Frontmatter wins; otherwise use the first static Markdown h1.
-export function extractPageTitle(contents: string) {
-  let frontmatterTitle = extractFrontmatter(contents).title
-  if (frontmatterTitle) return frontmatterTitle
-
-  let markdownTitle = contents.match(/^#[ \t]+(.+?)[ \t]*#*[ \t]*$/m)?.[1]?.trim()
-  if (!markdownTitle || /[<{]/.test(markdownTitle)) return
-  return markdownTitle
+  if (raw?.title) metadata.title = String(raw.title)
+  else {
+    let markdownTitle = contents.match(/^#[ \t]+(.+?)[ \t]*#*[ \t]*$/m)?.[1]?.trim()
+    if (markdownTitle && !/[<{]/.test(markdownTitle)) metadata.title = markdownTitle
+  }
+  if (raw?.hideInNav === true) metadata.hideInNav = true
+  if (raw?.layout) metadata.layout = String(raw.layout)
+  if (scheduled) metadata.scheduled = scheduled
+  return metadata
 }
 
 export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles]

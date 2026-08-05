@@ -93,6 +93,7 @@ Use a Markdown h1 to display a page title. Automatically sets the page's title i
 
 You can add YAML frontmatter at the top of a page. The following attributes are supported:
 - `title`: sets the title of the page in navigation. Used if the page has no h1, or to override the title used in the nav.
+- `hideInNav`: set to `true` to exclude the page from the sidebar. The page remains available at its normal URL, so other pages can link to it for detail or drill-down views.
 - `layout`: `notebook` is the default, good for prose interspersed with charts. `dashboard` has a wider max-width, for chart-heavy pages with lots of `<Row>`s.
 
 ## Viz and display components
