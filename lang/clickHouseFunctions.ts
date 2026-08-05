@@ -5,6 +5,91 @@ import {trimIndentation} from './util.ts'
 
 const trim = trimIndentation
 const click = 'https://clickhouse.com/docs/en/sql-reference'
+const jsonDocs = `${click}/functions/json-functions`
+
+// Defines a ClickHouse JSON function while preserving its native mixed-case SQL spelling.
+function jsonFunction(sqlName: string, signature: string, args: FunctionDef['args'], returns: string, summary: string, opts: Partial<FunctionDef> = {}): FunctionDef {
+  return {
+    name: sqlName.toLowerCase(),
+    description: trim(`
+      ${signature}
+
+      ${summary}
+    `),
+    url: `${jsonDocs}#${sqlName}`,
+    args,
+    returns,
+    sqlName,
+    ...opts,
+  }
+}
+
+const jsonString: FunctionDef['args'][number] = {name: 'json', type: ['json', 'string']}
+const jsonPathOverloads: NonNullable<FunctionDef['overloads']> = [
+  {args: [jsonString], returns: 'json'},
+  {args: [jsonString, {name: 'indices_or_keys', type: 'any...'}], returns: 'json'},
+]
+
+// ClickHouse's path extractors all accept a JSON value followed by zero or more string keys or integer indexes.
+function jsonPathFunction(sqlName: string, returns: string, summary: string): FunctionDef {
+  return jsonFunction(sqlName, `${sqlName}(json[, indices_or_keys, ...])`, [jsonString], returns, summary, {
+    overloads: jsonPathOverloads.map(overload => ({...overload, returns})),
+  })
+}
+
+const clickHouseJsonFunctions: FunctionDef[] = [
+  jsonFunction('JSONAllPaths', 'JSONAllPaths(json)', [{name: 'json', type: 'json'}], 'array<string>', 'Returns every path stored in a row of a JSON column.'),
+  jsonFunction('JSONAllPathsWithTypes', 'JSONAllPathsWithTypes(json)', [{name: 'json', type: 'json'}], 'map', 'Returns every stored JSON path and its ClickHouse data type.'),
+  jsonFunction('JSONAllValues', 'JSONAllValues(json)', [{name: 'json', type: 'json'}], 'array<string>', 'Returns all values in a JSON row as strings, ordered by path.'),
+  jsonFunction('JSONArrayLength', 'JSONArrayLength(json)', [jsonString], 'number', 'Returns the number of elements in the outermost JSON array.', {aliases: ['json_array_length']}),
+  jsonFunction('JSONDynamicPaths', 'JSONDynamicPaths(json)', [{name: 'json', type: 'json'}], 'array<string>', 'Returns JSON paths stored as dynamic subcolumns.'),
+  jsonFunction('JSONDynamicPathsWithTypes', 'JSONDynamicPathsWithTypes(json)', [{name: 'json', type: 'json'}], 'map', 'Returns dynamic JSON paths and their ClickHouse data types.'),
+  jsonFunction('JSONExtract', 'JSONExtract(json[, indices_or_keys, ...], return_type)', [jsonString, {name: 'argument', type: 'any'}, {name: 'arguments', type: 'any...'}], 'json', 'Extracts a JSON value using the requested ClickHouse return type.'),
+  jsonPathFunction('JSONExtractArrayRaw', 'array<string>', 'Returns JSON array elements as unparsed strings.'),
+  jsonPathFunction('JSONExtractArrayRawCaseInsensitive', 'array<string>', 'Returns JSON array elements as unparsed strings using case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractBool', 'boolean', 'Extracts a boolean value from JSON.'),
+  jsonPathFunction('JSONExtractBoolCaseInsensitive', 'boolean', 'Extracts a boolean value using case-insensitive key matching.'),
+  jsonFunction('JSONExtractCaseInsensitive', 'JSONExtractCaseInsensitive(json[, indices_or_keys, ...], return_type)', [jsonString, {name: 'argument', type: 'any'}, {name: 'arguments', type: 'any...'}], 'json', 'Extracts a value of the requested ClickHouse type using case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractFloat', 'number', 'Extracts a floating-point value from JSON.'),
+  jsonPathFunction('JSONExtractFloatCaseInsensitive', 'number', 'Extracts a floating-point value using case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractInt', 'number', 'Extracts a signed integer value from JSON.'),
+  jsonPathFunction('JSONExtractIntCaseInsensitive', 'number', 'Extracts a signed integer value using case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractKeys', 'array<string>', 'Returns the keys of a JSON object.'),
+  jsonFunction('JSONExtractKeysAndValues', 'JSONExtractKeysAndValues(json[, indices_or_keys, ...], value_type)', [jsonString, {name: 'argument', type: 'any'}, {name: 'arguments', type: 'any...'}], 'array', 'Extracts JSON object keys and values using the requested ClickHouse value type.'),
+  jsonFunction('JSONExtractKeysAndValuesCaseInsensitive', 'JSONExtractKeysAndValuesCaseInsensitive(json[, indices_or_keys, ...], value_type)', [jsonString, {name: 'argument', type: 'any'}, {name: 'arguments', type: 'any...'}], 'array', 'Extracts object keys and typed values using case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractKeysAndValuesRaw', 'array', 'Returns JSON object keys and unparsed values.'),
+  jsonPathFunction('JSONExtractKeysAndValuesRawCaseInsensitive', 'array', 'Returns object keys and unparsed values using case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractKeysCaseInsensitive', 'array<string>', 'Returns JSON object keys after navigating with case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractRaw', 'string', 'Returns part of a JSON document as an unparsed string.'),
+  jsonPathFunction('JSONExtractRawCaseInsensitive', 'string', 'Returns part of a JSON document as an unparsed string using case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractString', 'string', 'Extracts a string value from JSON.'),
+  jsonPathFunction('JSONExtractStringCaseInsensitive', 'string', 'Extracts a string value using case-insensitive key matching.'),
+  jsonPathFunction('JSONExtractUInt', 'number', 'Extracts an unsigned integer value from JSON.'),
+  jsonPathFunction('JSONExtractUIntCaseInsensitive', 'number', 'Extracts an unsigned integer value using case-insensitive key matching.'),
+  jsonPathFunction('JSONHas', 'boolean', 'Returns whether a value exists at the requested JSON path.'),
+  jsonPathFunction('JSONKey', 'string', 'Returns a JSON object field key by its one-based index.'),
+  jsonPathFunction('JSONLength', 'number', 'Returns the length of a JSON array or object.'),
+  jsonFunction('JSONMergePatch', 'JSONMergePatch(json1[, json2, ...])', [{name: 'json', type: 'string...'}], 'string', 'Merges JSON object strings using JSON Merge Patch semantics.', {aliases: ['jsonmergepatch']}),
+  jsonFunction('JSONSharedDataPaths', 'JSONSharedDataPaths(json)', [{name: 'json', type: 'json'}], 'array<string>', 'Returns paths stored in the shared data structure of a JSON column.'),
+  jsonFunction('JSONSharedDataPathsWithTypes', 'JSONSharedDataPathsWithTypes(json)', [{name: 'json', type: 'json'}], 'map', 'Returns shared-data JSON paths and their ClickHouse data types.'),
+  jsonPathFunction('JSONType', 'string', 'Returns the ClickHouse type name of a JSON value.'),
+  jsonFunction('JSON_EXISTS', 'JSON_EXISTS(json, path)', [jsonString, {name: 'path', type: 'string'}], 'boolean', 'Returns whether a SQL/JSON path exists in a JSON document.'),
+  jsonFunction('JSON_QUERY', 'JSON_QUERY(json, path)', [jsonString, {name: 'path', type: 'string'}], 'string', 'Extracts a JSON array or object using a SQL/JSON path.'),
+  jsonFunction('JSON_VALUE', 'JSON_VALUE(json, path)', [jsonString, {name: 'path', type: 'string'}], 'string', 'Extracts a scalar value using a SQL/JSON path.'),
+  jsonFunction('dynamicElement', 'dynamicElement(dynamic, type_name)', [{name: 'dynamic', type: 'any'}, {name: 'type_name', type: 'string'}], 'json', 'Extracts values of the requested type from a Dynamic column.'),
+  jsonFunction('dynamicType', 'dynamicType(dynamic)', [{name: 'dynamic', type: 'any'}], 'string', 'Returns the variant type name for values in a Dynamic column.'),
+  jsonFunction('isDynamicElementInSharedData', 'isDynamicElementInSharedData(dynamic)', [{name: 'dynamic', type: 'any'}], 'boolean', 'Returns whether a Dynamic value uses shared variant storage.'),
+  jsonFunction('isValidJSON', 'isValidJSON(json)', [jsonString], 'boolean', 'Returns whether a string contains valid JSON.'),
+  jsonFunction('prettyPrintJSON', 'prettyPrintJSON(json[, indent])', [jsonString, {name: 'indent', type: 'number?'}], 'string', 'Formats JSON with newlines and indentation.'),
+  jsonFunction('simpleJSONExtractBool', 'simpleJSONExtractBool(json, field_name)', [jsonString, {name: 'field_name', type: 'string'}], 'boolean', 'Extracts a top-level boolean field with ClickHouse\'s fast simple JSON parser.', {aliases: ['visitparamextractbool']}),
+  jsonFunction('simpleJSONExtractFloat', 'simpleJSONExtractFloat(json, field_name)', [jsonString, {name: 'field_name', type: 'string'}], 'number', 'Extracts a top-level floating-point field with the simple JSON parser.', {aliases: ['visitparamextractfloat']}),
+  jsonFunction('simpleJSONExtractInt', 'simpleJSONExtractInt(json, field_name)', [jsonString, {name: 'field_name', type: 'string'}], 'number', 'Extracts a top-level signed integer field with the simple JSON parser.', {aliases: ['visitparamextractint']}),
+  jsonFunction('simpleJSONExtractRaw', 'simpleJSONExtractRaw(json, field_name)', [jsonString, {name: 'field_name', type: 'string'}], 'string', 'Returns a top-level field as an unparsed string using the simple JSON parser.', {aliases: ['visitparamextractraw']}),
+  jsonFunction('simpleJSONExtractString', 'simpleJSONExtractString(json, field_name)', [jsonString, {name: 'field_name', type: 'string'}], 'string', 'Extracts a top-level string field with the simple JSON parser.', {aliases: ['visitparamextractstring']}),
+  jsonFunction('simpleJSONExtractUInt', 'simpleJSONExtractUInt(json, field_name)', [jsonString, {name: 'field_name', type: 'string'}], 'number', 'Extracts a top-level unsigned integer field with the simple JSON parser.', {aliases: ['visitparamextractuint']}),
+  jsonFunction('simpleJSONHas', 'simpleJSONHas(json, field_name)', [jsonString, {name: 'field_name', type: 'string'}], 'boolean', 'Returns whether a top-level field exists using the simple JSON parser.', {aliases: ['visitparamhas']}),
+  jsonFunction('toJSONString', 'toJSONString(value)', [{name: 'value', type: 'any'}], 'string', 'Serializes a value to its JSON representation.'),
+]
 
 const dateArithmeticUnits = [
   {name: 'Days', returns: 'T'},
@@ -47,6 +132,12 @@ function dateArithmeticFunctions(prefix: 'add' | 'subtract'): FunctionDef[] {
 // Keep the ClickHouse surface focused on mainstream analytics functions that map
 // cleanly to Graphene's type system and SQL lowering.
 export const clickHouseFunctions: FunctionDef[] = [
+  // ============================================================================
+  // JSON and Dynamic Functions
+  // https://clickhouse.com/docs/en/sql-reference/functions/json-functions
+  // ============================================================================
+  ...clickHouseJsonFunctions,
+
   // ============================================================================
   // Window Functions
   // ============================================================================
