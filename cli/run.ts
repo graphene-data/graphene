@@ -10,11 +10,11 @@ import {pollFor} from '../lang/util.ts'
 import {openInBrowser} from './auth.ts'
 import {ensureBackgroundServer} from './background.ts'
 
-// Starts the local server and invokes the page through either Playwright or an open tab's WebSocket.
-export async function sendToPage(mdPath, request: PageRequest, headless: boolean): Promise<PageResponse> {
+// Starts the local server and invokes a page route through either Playwright or an open tab's WebSocket.
+export async function sendToPage(pageRoute: string, headless: boolean, request: PageRequest = {}): Promise<PageResponse> {
   await ensureBackgroundServer()
 
-  let pageUrl = pageUrlForMd(mdPath, request.params)
+  let pageUrl = `http://localhost:${config.port}${pageRoute}`
   if (headless) {
     return await runHeadlessPageRequest(pageUrl, request)
   } else {
@@ -31,21 +31,6 @@ export async function sendToPage(mdPath, request: PageRequest, headless: boolean
 
     return resp
   }
-}
-
-// Computes the browser URL for a markdown page, matching the URL registered by open browser tabs.
-export function pageUrlForMd(mdPath: string, params: PageRequest['params'] = {}): string {
-  let host = `http://localhost:${config.port}`
-  let pagePath = '/' + mdPath.replace(/\.md$/, '').replace(/^\//, '').replace(/\\/g, '/')
-  if (pagePath === '/index') pagePath = ''
-
-  let search = new URLSearchParams()
-  Object.entries(params || {}).forEach(([name, value]) => {
-    if (Array.isArray(value)) value.forEach(item => search.append(name, item))
-    else search.append(name, value)
-  })
-  let query = search.toString()
-  return `${host}${pagePath || (query ? '/' : '')}${query ? `?${query}` : ''}`
 }
 
 // This sends the request to the Vite server, which in turn finds and appropriate page to forward the request to.
@@ -160,7 +145,8 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
   request.requestId = Math.random().toString(36).slice(2)
   res.setHeader('Content-Type', 'application/json')
 
-  let conn = await pollFor(() => browserConnections.find(conn => conn.url === pageUrl), 5000, 100)
+  let normalizedUrl = pageUrl.replace(/\/$/, '')
+  let conn = await pollFor(() => browserConnections.find(conn => conn.url === normalizedUrl), 5000, 100)
   if (!conn) {
     res.statusCode = 400
     res.end(JSON.stringify({error: 'no_tab'}))

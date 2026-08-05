@@ -38,8 +38,11 @@ async function createTelemetryProject(prefix: string) {
 }
 
 describe('cli package', () => {
-  test('derives the project name from package.json with a directory fallback', async () => {
-    expect((await loadConfig(flightDir, () => {})).projectName).toBe('example-flights')
+  test('derives local project settings without making config normalization filesystem-dependent', async () => {
+    let flightsConfig = await loadConfig(flightDir, () => {})
+    expect(flightsConfig.projectName).toBe('example-flights')
+    expect(flightsConfig.pagesPrefix).toBe('pages/')
+    expect(normalizeConfig({root: flightDir}).pagesPrefix).toBe('')
     expect(normalizeConfig({root: '/tmp/project-without-package'}).projectName).toBe('project-without-package')
   })
 

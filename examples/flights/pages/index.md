@@ -276,7 +276,7 @@ from flights select
 <h2 class="ed-section-title">Contents</h2>
 
 <div class="ed-plates">
-  <a class="ed-plate" href="/pages/operations_overview">
+  <a class="ed-plate" href="/operations_overview">
     <div class="ed-plate-img ed-plate-img-ops"></div>
     <div class="ed-plate-body">
       <span class="ed-plate-num">PLATE 01</span>
@@ -284,7 +284,7 @@ from flights select
       <p>Top-line KPIs, monthly volume, a delay heatmap by hour and day-of-week, and a ranked table of carriers.</p>
     </div>
   </a>
-  <a class="ed-plate" href="/pages/carrier_detail">
+  <a class="ed-plate" href="/carrier_detail">
     <div class="ed-plate-img ed-plate-img-carrier"></div>
     <div class="ed-plate-body">
       <span class="ed-plate-num">PLATE 02</span>
@@ -292,7 +292,7 @@ from flights select
       <p>Any airline's rank, fleet, delay distribution, and monthly trend measured against the rest of the industry.</p>
     </div>
   </a>
-  <a class="ed-plate" href="/pages/delay_factors">
+  <a class="ed-plate" href="/delay_factors">
     <div class="ed-plate-img ed-plate-img-delay"></div>
     <div class="ed-plate-body">
       <span class="ed-plate-num">PLATE 03</span>

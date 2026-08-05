@@ -7,7 +7,7 @@ import {onTestFinished} from 'vitest'
 import {missingMockFiles, mockFileMap} from '../../cli/mockFiles.ts'
 import {clearSvelteWarnings, serve2, svelteWarnings} from '../../cli/serve2.ts'
 import {test as base} from '../../cli/testFixtures.ts'
-import {type Config, setGlobalConfig} from '../../lang/config.ts'
+import {config, type Config, setGlobalConfig} from '../../lang/config.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
 import {playwrightExpect as expect} from './matchers.ts'
 
@@ -124,21 +124,22 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
           return `http://localhost:${port}`
         },
         mockFile: (filePath: string, content: string) => {
-          mockFileMap[filePath.replace(/^\//, '')] = trimIndentation(content)
+          let projectPath = config.pagesPrefix + filePath.replace(/^\//, '')
+          mockFileMap[projectPath] = trimIndentation(content)
         },
         mockMissingFile: (filePath: string) => {
-          let relativePath = filePath.replace(/^\//, '')
-          missingMockFiles.add(relativePath)
-          mockFileMap[relativePath] = 'Mock file not found'
+          let projectPath = config.pagesPrefix + filePath.replace(/^\//, '')
+          missingMockFiles.add(projectPath)
+          mockFileMap[projectPath] = 'Mock file not found'
           for (let graph of [server.moduleGraph, server.environments.client.moduleGraph] as any[]) {
             let navModule = graph?.getModuleById('\0virtual:nav')
             if (navModule) graph.invalidateModule(navModule)
           }
         },
         updateMockFile: (filePath: string, content: string) => {
-          let relativePath = filePath.replace(/^\//, '')
-          mockFileMap[relativePath] = trimIndentation(content)
-          let absPath = path.join(viteRoot, relativePath)
+          let projectPath = config.pagesPrefix + filePath.replace(/^\//, '')
+          mockFileMap[projectPath] = trimIndentation(content)
+          let absPath = path.join(config.root, projectPath)
           // Emit a watcher 'change' event so Vite runs the full HMR pipeline (including hotUpdate hooks)
           server.watcher.emit('change', absPath)
         },

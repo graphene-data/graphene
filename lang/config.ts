@@ -1,9 +1,10 @@
-import {existsSync} from 'node:fs'
+import {existsSync, statSync} from 'node:fs'
 import {readFile} from 'node:fs/promises'
 import path from 'path'
 
 export interface Config {
   root: string
+  pagesPrefix: string // path under which md files are. Either `` or `pages/`
   projectName: string
   dialect: string
   defaultNamespace?: string
@@ -71,7 +72,7 @@ export interface Config {
   }
 }
 
-export type ConfigInput = Omit<Config, 'root' | 'projectName' | 'dialect' | 'ignoredFiles' | 'envFile' | 'port'> & {
+export type ConfigInput = Omit<Config, 'root' | 'pagesPrefix' | 'projectName' | 'dialect' | 'ignoredFiles' | 'envFile' | 'port'> & {
   root?: string
   dialect?: Config['dialect']
   ignoredFiles?: Config['ignoredFiles']
@@ -85,7 +86,9 @@ export let config: Config = {dialect: 'duckdb', root: ''} as Config
 export function setGlobalConfig(cfg: ConfigInput | Config, projectName?: string) {
   Object.keys(config).forEach(key => delete config[key])
   if ('projectName' in cfg) projectName ||= cfg.projectName
-  Object.assign(config, normalizeConfig(cfg, process.cwd(), projectName))
+  let normalized = normalizeConfig(cfg, process.cwd(), projectName)
+  if (!('pagesPrefix' in cfg)) normalized.pagesPrefix = pagesPrefixForRoot(normalized.root)
+  Object.assign(config, normalized)
 }
 
 export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(), projectName?: string, env: NodeJS.ProcessEnv = process.env): Config {
@@ -113,6 +116,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(),
     ...cfg,
     dialect,
     root,
+    pagesPrefix: (input as Config).pagesPrefix || '',
     projectName: projectName || path.basename(root),
     port: cfg.port || Number(env.GRAPHENE_PORT) || 4000,
     csp: cfg.csp ?? 'all',
@@ -143,5 +147,12 @@ export async function loadConfig(dir: string, envLoader: (envFiles: string[]) =>
   envLoader(envFiles.map(file => path.resolve(configDir, file)))
 
   let cfg = normalizeConfig({...graphene, root: configDir}, configDir, pkgJson.name)
+  cfg.pagesPrefix = pagesPrefixForRoot(configDir)
   return cfg
+}
+
+// Local entry points detect the optional page root from the project filesystem.
+function pagesPrefixForRoot(root: string) {
+  let pagesDirectory = path.join(root, 'pages')
+  return existsSync(pagesDirectory) && statSync(pagesDirectory).isDirectory() ? 'pages/' : ''
 }

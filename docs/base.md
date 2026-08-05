@@ -58,6 +58,8 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 - `variant`, `object`, `record` types
 
 # Pages
+If a top-level `pages/` folder exists, all Graphene pages must be inside it.
+
 Graphene pages extend Markdown with the following:
 - GSQL queries in code fences
 - Visualization and input components

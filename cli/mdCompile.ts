@@ -90,7 +90,7 @@ export function componentNames() {
 export type PageFrontmatter = {title?: string; hideInNav?: boolean; layout?: string; scheduled?: string}
 
 // Extract supported frontmatter without compiling the page. When frontmatter omits a title,
-// use the first static Markdown h1 so callers get all page discovery metadata in one pass.
+// use the first static Markdown h1 so every caller gets the same page metadata.
 const frontmatterRe = /^---\s*\n([\s\S]*?)\n---(?:\n|$)/
 export function extractFrontmatter(contents: string): PageFrontmatter {
   let match = contents.trimStart().match(frontmatterRe)
