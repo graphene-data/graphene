@@ -18,7 +18,8 @@ export const colorPalette = [
 export function paletteForPath(pathname?: string) {
   if (import.meta.env.VITE_TEST) return [...colorPalette] // Keep screenshot baselines stable in UI tests.
 
-  let rawPath = pathname ?? location.pathname
+  // Cloud pages execute at /iframeShell.html, so prefer the logical page path sent by the host.
+  let rawPath = pathname ?? window.$GRAPHENE?.pagePath ?? location.pathname
   let key = String(rawPath)
     .split('?')[0]
     .split('#')[0]
