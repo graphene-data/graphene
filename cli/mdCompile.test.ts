@@ -2,7 +2,7 @@
 import {compile} from 'mdsvex'
 import {compile as compileSvelte} from 'svelte/compiler'
 
-import {extractFrontmatter, extractPageTitle, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 
 async function compileMarkdownPage(src: string) {
   let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
@@ -14,32 +14,37 @@ async function compileMarkdownPage(src: string) {
 }
 
 describe('extractFrontmatter', () => {
-  it('parses title', () => {
-    let fm = extractFrontmatter('---\ntitle: My Page\nlayout: dashboard\n---\n\n# Hello')
-    expect(fm).toEqual({title: 'My Page'})
+  it('uses frontmatter title and navigation visibility together', () => {
+    let metadata = extractFrontmatter('---\ntitle: My Page\nhideInNav: true\nlayout: dashboard\n---\n\n# Hello')
+    expect(metadata).toEqual({title: 'My Page', hideInNav: true, layout: 'dashboard'})
   })
 
-  it('returns empty object when no frontmatter', () => {
-    expect(extractFrontmatter('# Just a heading')).toEqual({})
+  it('only hides pages for the boolean true value', () => {
+    expect(extractFrontmatter('---\nhideInNav: false\n---')).toEqual({})
+    expect(extractFrontmatter('---\nhideInNav: "true"\n---')).toEqual({})
+  })
+
+  it('uses a static Markdown h1 without a frontmatter title', () => {
+    expect(extractFrontmatter('---\nhideInNav: true\n---\n# Detail Page')).toEqual({title: 'Detail Page', hideInNav: true})
+    expect(extractFrontmatter('Intro\n\n# Page title\n\nContent')).toEqual({title: 'Page title'})
+  })
+
+  it('extracts a scheduled value outside YAML parsing', () => {
+    let metadata = extractFrontmatter('---\nscheduled: "0 9 * * 1-5" @grant\n---\n# Report')
+    expect(metadata).toEqual({title: 'Report', scheduled: '"0 9 * * 1-5" @grant'})
+  })
+
+  it('rejects duplicate scheduled fields', () => {
+    expect(() => extractFrontmatter('---\nscheduled: "0 9 * * 1-5" @grant\nscheduled: "30 16 * * *" #operations\n---')).toThrow('Multiple scheduled fields are not supported')
   })
 
   it('handles leading whitespace', () => {
     expect(extractFrontmatter('\n---\ntitle: Trimmed\n---')).toEqual({title: 'Trimmed'})
   })
-})
-
-describe('extractPageTitle', () => {
-  it('uses frontmatter before a Markdown h1', () => {
-    expect(extractPageTitle('---\ntitle: Navigation title\n---\n# Page title')).toBe('Navigation title')
-  })
-
-  it('uses a Markdown h1 without frontmatter', () => {
-    expect(extractPageTitle('Intro\n\n# Page title\n\nContent')).toBe('Page title')
-  })
 
   it('ignores dynamic and missing h1 titles', () => {
-    expect(extractPageTitle('# Report for {year}')).toBeUndefined()
-    expect(extractPageTitle('Content without a title')).toBeUndefined()
+    expect(extractFrontmatter('# Report for {year}')).toEqual({})
+    expect(extractFrontmatter('Content without a title')).toEqual({})
   })
 })
 

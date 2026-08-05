@@ -20,6 +20,7 @@ test('loads markdown files', async ({server, page}) => {
   `,
   )
   server.mockFile('delays.md', '---\ntitle: Delay Deep-Dive\n---\n# Delays')
+  server.mockFile('flight-detail.md', '---\nhideInNav: true\n---\n# Flight Detail')
 
   await page.goto(server.url() + '/')
   await expect(page).toHaveTitle('Flight Delay Analysis - example-flights')
@@ -28,9 +29,17 @@ test('loads markdown files', async ({server, page}) => {
   await expect(nav).toBeVisible()
   await expect(nav.getByRole('link', {name: 'Flight Delay Analysis'})).toHaveAttribute('aria-current', 'page')
   await expect(nav.getByRole('link', {name: 'Delay Deep-Dive'})).toBeVisible()
+  await expect(nav.getByRole('link', {name: 'Flight Detail'})).toHaveCount(0)
   await expect(page.locator('main svg').first()).toBeVisible()
   await expect(page.locator('main#content')).toHaveCSS('max-width', '1200px')
   await expect(page).screenshot('loads-markdown-files')
+})
+
+test('routes pages hidden from navigation', async ({server, page}) => {
+  server.mockFile('flight-detail.md', '---\nhideInNav: true\n---\n# Flight Detail')
+
+  await page.goto(server.url() + '/flight-detail')
+  await expect(page.getByRole('heading', {level: 1, name: 'Flight Detail'})).toBeVisible()
 })
 
 test('serves the cloud CSP unless disabled', async ({server, page}) => {

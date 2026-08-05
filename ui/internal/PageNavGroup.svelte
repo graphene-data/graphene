@@ -14,13 +14,14 @@
   let treeSignature = $state('')
   let lastCurrent = $state('')
 
-  let normalizedFiles = $derived((files || []).map(f => f.path))
-  let titlesByPath = $derived(Object.fromEntries((files || []).filter(f => !!f.title).map(f => [f.path, f.title])))
+  let visibleFiles = $derived((files || []).filter(f => !f.hideInNav))
+  let normalizedFiles = $derived(visibleFiles.map(f => f.path))
+  let titlesByPath = $derived(Object.fromEntries(visibleFiles.filter(f => !!f.title).map(f => [f.path, f.title])))
 
   let normalizedCurrent = $derived(normalizedFiles.find(f => pathToRoute(f) === ($route.replace(/\/+$/, '') || '/')) || '')
 
   $effect(() => {
-    let nextSignature = (files || []).map(f => `${f.path}:${f.title || ''}`).join('|')
+    let nextSignature = visibleFiles.map(f => `${f.path}:${f.title || ''}`).join('|')
     if (nextSignature !== treeSignature) {
       treeSignature = nextSignature
       tree = buildTree(normalizedFiles, titlesByPath)

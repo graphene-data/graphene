@@ -15,7 +15,7 @@ import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
 import {grapheneCsp} from '../ui/csp.ts'
 import {runQuery} from './connections/index.ts'
-import {extractPageTitle, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {missingMockFiles, mockFileMap} from './mockFiles.ts'
 import {runVitePlugin} from './run.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
@@ -271,7 +271,7 @@ function fixHmrForFailedModules() {
 // Also tracks all the md files in the workspace to populate the nav sidebar
 let workspaceLoadPromise: Promise<void> | undefined
 let workspaceFiles: WorkspaceFileInput[] = []
-let mdFiles: {path: string; title?: string}[] = []
+let mdFiles: {path: string; title?: string; hideInNav?: boolean}[] = []
 function updateWorkspacePlugin(telemetry?: CliTelemetry) {
   return {
     name: 'updateWorkspace',
@@ -286,20 +286,20 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
       // in tests, inject mock files into the nav.
       // we do this on `load` as each test doesn't always refresh the workspace
       // TODO, we should prob inject these into `loadWorkspace`, then we wouldn't need this block at all
-      let res = mdFiles.filter(file => !missingMockFiles.has(file.path))
+      let pages = mdFiles.filter(file => !missingMockFiles.has(file.path))
       if (process.env.NODE_ENV == 'test') {
         for (let [path, contents] of Object.entries(mockFileMap)) {
           if (missingMockFiles.has(path)) continue
-          let mockFile = {path, title: extractPageTitle(contents)}
-          let idx = res.findIndex(file => file.path == path)
-          if (idx >= 0) res.splice(idx, 1, mockFile)
-          else res.push(mockFile)
+          let mockFile = {path, ...extractFrontmatter(contents)}
+          let idx = pages.findIndex(file => file.path == path)
+          if (idx >= 0) pages.splice(idx, 1, mockFile)
+          else pages.push(mockFile)
         }
       }
 
       return `
         export const projectName = ${JSON.stringify(config.projectName)};
-        export default ${JSON.stringify(res)}
+        export default ${JSON.stringify(pages)}
       `
     },
     configureServer: (s: ViteDevServer) => {
@@ -314,8 +314,8 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
         })()
         await workspaceLoadPromise
 
-        // store md file path/title so we can serve it as virtual:nav for the sidebar
-        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(f => ({path: f.path, title: extractPageTitle(f.contents)}))
+        // Store every Markdown page and its navigation metadata for the app shell.
+        mdFiles = workspaceFiles.filter(file => file.path.endsWith('.md')).map(file => ({path: file.path, ...extractFrontmatter(file.contents)}))
 
         let mod = s.moduleGraph.getModuleById('\0virtual:nav')
         if (!mod) return
