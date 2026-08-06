@@ -20,9 +20,9 @@ Changes to `package.json` are read once at startup, so restart the dev server (`
 
 ## `defaultNamespace`
 
-The schema/database used to resolve unqualified table names in GSQL. For BigQuery this is typically `project.dataset`; for Snowflake `DATABASE.SCHEMA`; for DuckDB usually `main`. Also accepted as `namespace`.
+The schema/database used to resolve unqualified table names in Graphene SQL. For BigQuery this is typically `project.dataset`; for Snowflake `DATABASE.SCHEMA`; for DuckDB usually `main`. Also accepted as `namespace`.
 
-Set `GRAPHENE_DEFAULT_NAMESPACE` to override this value temporarily. Connection environment variables are separate: for example, `CLICKHOUSE_DATABASE` changes the ClickHouse connection database but does not change GSQL table resolution.
+Set `GRAPHENE_DEFAULT_NAMESPACE` to override this value temporarily. Connection environment variables are separate: for example, `CLICKHOUSE_DATABASE` changes the ClickHouse connection database but does not change Graphene SQL table resolution.
 
 ## `ignoredFiles`
 
@@ -78,7 +78,7 @@ Exactly one of the following blocks should be present. The dialect is inferred f
 
 - `database` — MotherDuck database name to open with `md:<database>`. If omitted, Graphene opens `md:` and attaches all databases available to the token. Override with `MOTHERDUCK_DATABASE`.
 
-MotherDuck uses DuckDB SQL syntax, so Graphene analyzes GSQL with the DuckDB dialect. Store credentials in a `.env` file and include it with `envFile`:
+MotherDuck uses DuckDB SQL syntax, so Graphene analyzes Graphene SQL with the DuckDB dialect. Store credentials in a `.env` file and include it with `envFile`:
 
 ```env
 MOTHERDUCK_TOKEN=<your-token>
@@ -142,7 +142,7 @@ Connection fields can be overridden with `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USERNAM
 - `database` — default database for unqualified queries.
 - `requestTimeout` — per-request timeout in milliseconds.
 
-Override connection fields with `CLICKHOUSE_URL`, `CLICKHOUSE_USERNAME`, `CLICKHOUSE_DATABASE`, and `CLICKHOUSE_REQUEST_TIMEOUT`. `CLICKHOUSE_PASSWORD` supplies the password. Use `GRAPHENE_DEFAULT_NAMESPACE` separately when unqualified GSQL should also point at a different namespace.
+Override connection fields with `CLICKHOUSE_URL`, `CLICKHOUSE_USERNAME`, `CLICKHOUSE_DATABASE`, and `CLICKHOUSE_REQUEST_TIMEOUT`. `CLICKHOUSE_PASSWORD` supplies the password. Use `GRAPHENE_DEFAULT_NAMESPACE` separately when unqualified Graphene SQL should also point at a different namespace.
 
 ## `postgres`
 

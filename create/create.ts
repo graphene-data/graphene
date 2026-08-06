@@ -288,7 +288,7 @@ function renderAgents(answers: ScaffoldAnswers): string {
     [
       '## Graphene Reference',
       '',
-      `Assume all ${databaseLabel(answers.database)} functions are available when writing GSQL.`,
+      `Assume all ${databaseLabel(answers.database)} functions are available when writing Graphene SQL.`,
       '',
       'Common commands:',
       '',

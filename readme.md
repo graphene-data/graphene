@@ -29,14 +29,14 @@ Graphene is an everything-as-code analytics framework for SQL-based data explora
 
 It provides two critical pieces that allow coding agents to do better data work:
 
-1. **A semantic layer**, which yields more accurate queries. GSQL combines the power of SQL with the governance of metrics and modeled joins.
+1. **A semantic layer**, which yields more accurate queries. Graphene SQL combines the power of SQL with the governance of metrics and modeled joins.
 2. **A dashboard file type**, which yields more consistent and polished visuals compared to raw Python or Javascript.
 
 **Design goals**
 
 - Token efficiency. Languages are designed to be brief with minimal boilerplate.
 - Agent ergonomics. Graphene is controlled entirely via CLI. All documentation is inside our agent skill.
-- High ceilings. GSQL follows ANSI and supports over 170 functions; Graphene's visualizations support anything that can be expressed with ECharts.
+- High ceilings. Graphene SQL follows ANSI and supports over 170 functions; Graphene's visualizations support anything that can be expressed with ECharts.
 
 ### Versus traditional BI
 
@@ -65,9 +65,9 @@ Graphene pages support visualizations, input components for filtering and dynami
 
 Traditional semantic layers give you governance at the expense of capability. They tend to expose niche query APIs that agents aren't familiar with.
 
-GSQL's goal is to bring governance _without_ sacrificing capability. It behaves like regular SQL—with CTEs, subqueries, window functions, set operators, and more—but also adds in the concepts of measures and modeled joins from semantic layers.
+Graphene SQL's goal is to bring governance _without_ sacrificing capability. It behaves like regular SQL—with CTEs, subqueries, window functions, set operators, and more—but also adds in the concepts of measures and modeled joins from semantic layers.
 
-GSQL is inspired by [Malloy](https://github.com/malloydata/malloy), from the creators of LookML Lloyd Tabb and Michael Toy, but implements it as good old SQL for agent familiarity.
+Graphene SQL is inspired by [Malloy](https://github.com/malloydata/malloy), from the creators of LookML Lloyd Tabb and Michael Toy, but implements it as good old SQL for agent familiarity.
 
 ## Get started
 
@@ -80,13 +80,13 @@ Once your project is set up, simply start the dev server via `npm exec graphene 
 
 ## How it works
 
-Graphene itself is a CLI which can be installed via npm (or pnpm, yarn, etc.). The CLI can run and compile GSQL queries, render pages in the browser, check syntax, print screenshots, and more.
+Graphene itself is a CLI which can be installed via npm (or pnpm, yarn, etc.). The CLI can run and compile Graphene SQL queries, render pages in the browser, check syntax, print screenshots, and more.
 
 A Graphene project can either be a standalone repo or a directory within a larger codebase (such as dbt). It is comprised of _semantic models_ via .gsql files and _pages_ via .md files.
 
 <img alt="Architecture Diagram" src="./assets/marketecture.png"/>
 
-### GSQL and Graphene markdown
+### Graphene SQL and Graphene markdown
 
 Semantic models are defined like so:
 
@@ -165,7 +165,7 @@ Graphene's entire documentation ships as an agent skill in the Graphene npm pack
   <br/>
   You could! In fact a lot of the folks we’ve talked to have started down this route. The main problem you’ll run into is consistency. The look and feel of your dashboards and reports are all over the place, and in the worst case they end up using different formula to compute the same key metric.
   <br/><br/>
-  GSQL codifies metrics into deterministic objects you can directly invoke in queries. Not only does this ensure that every use of "EBITDA" will be the same, the metadata tags we attach can hint our charts into formatting data correctly.
+  Graphene SQL codifies metrics into deterministic objects you can directly invoke in queries. Not only does this ensure that every use of "EBITDA" will be the same, the metadata tags we attach can hint our charts into formatting data correctly.
   <br/><br/>
   Graphene raises the floor so that pages you generate with the help of an agent look beautiful by default, so you can move faster with less tokens.
 </details>

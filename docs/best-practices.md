@@ -1,11 +1,10 @@
 # Best practices
 - **Leverage models** - Use modeled joins, dimensions, and measures whenever possible
 - Use `check` when iterating on models, use `run` when iterating on pages
-- Use the `-c` flag on `run` after editing an ECharts component to view the screenshot
-- Use the `-q` flag on `run` for GSQL queries that live in pages, instead of `run "[GSQL]"`
+- Use the `-c` flag on `run` to view the data and screenshots of components you edit to check for correctness
 - Rely on Graphene's defaults for value formatting and chart styles before trying to override in SQL or ECharts
-- Keep numbers grounded - Use the `<Value/>` component in prose instead of hard-coding numbers 
-- When adding viz, think like Edward Tufte. What is _the_ most effective way to illustrate the data? 
+- Keep numbers grounded - Use the `<Value/>` component in prose instead of hard-coding numbers
+- When adding viz, think like Edward Tufte. What is _the_ most effective way to illustrate the data?
 - Use a horizontal bar chart when grouping by a categorical field with long values; use a vertical bar chart when grouping by a field with ordered values (time series, age groups, survey scales, etc.)
 
 If the user asks:

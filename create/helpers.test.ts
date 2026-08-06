@@ -60,7 +60,7 @@ describe('create helpers', () => {
     expect(files['AGENTS.md']).toContain('pnpm graphene check')
     expect(files['AGENTS.md']).toContain('pnpm graphene run index.md')
     expect(files['AGENTS.md']).toContain('pnpm graphene serve --bg')
-    expect(files['AGENTS.md']).toContain('Assume all DuckDB functions are available when writing GSQL.')
+    expect(files['AGENTS.md']).toContain('Assume all DuckDB functions are available when writing Graphene SQL.')
     expect(files['.gitignore']).toContain('*.duckdb')
     expect(files['.env']).toBeUndefined()
     expect(files['index.md']).toContain('configured for DuckDB')
@@ -154,7 +154,7 @@ allow_local_binding = true
     })
 
     expect(files['CLAUDE.md']).toContain('pnpm graphene check')
-    expect(files['CLAUDE.md']).toContain('Assume all DuckDB functions are available when writing GSQL.')
+    expect(files['CLAUDE.md']).toContain('Assume all DuckDB functions are available when writing Graphene SQL.')
     expect(files['AGENTS.md']).toBeUndefined()
     expect(files['.codex/config.toml']).toBeUndefined()
   })
@@ -197,7 +197,7 @@ allow_local_binding = true
       defaultNamespace: 'MY_DB.ANALYTICS',
       snowflake: {account: 'myorg-myaccount', username: 'graphene_user'},
     })
-    expect(files['AGENTS.md']).toContain('Assume all Snowflake functions are available when writing GSQL.')
+    expect(files['AGENTS.md']).toContain('Assume all Snowflake functions are available when writing Graphene SQL.')
     expect(pkg.dependencies['snowflake-sdk']).toBeTruthy()
     expect(files['.env']).toContain('SNOWFLAKE_PRI_KEY_PATH=/Users/me/.ssh/graphene_snowflake_key.p8')
     expect(files['.env']).toContain('SNOWFLAKE_PRI_PASSPHRASE=secret')
@@ -223,7 +223,7 @@ allow_local_binding = true
       defaultNamespace: 'my-project.analytics',
       bigquery: {projectId: 'my-project-123'},
     })
-    expect(files['AGENTS.md']).toContain('Assume all BigQuery functions are available when writing GSQL.')
+    expect(files['AGENTS.md']).toContain('Assume all BigQuery functions are available when writing Graphene SQL.')
     expect(pkg.dependencies['@google-cloud/bigquery']).toBe('^8.2.0')
     expect(files['.env']).toContain('GOOGLE_APPLICATION_CREDENTIALS=/Users/me/.ssh/graphene-bq-key.json')
   })
@@ -249,7 +249,7 @@ allow_local_binding = true
       defaultNamespace: 'default',
       clickhouse: {url: 'https://example.clickhouse.cloud:8443', username: 'default'},
     })
-    expect(files['AGENTS.md']).toContain('Assume all ClickHouse functions are available when writing GSQL.')
+    expect(files['AGENTS.md']).toContain('Assume all ClickHouse functions are available when writing Graphene SQL.')
     expect(pkg.dependencies['@clickhouse/client']).toBe('^1.18.2')
     expect(files['.env']).toContain('CLICKHOUSE_PASSWORD=secret')
     expect(files['index.md']).toContain('configured for ClickHouse')
@@ -279,7 +279,7 @@ allow_local_binding = true
       defaultNamespace: 'reporting',
       postgres: {host: 'localhost', port: 5432, database: 'analytics', user: 'graphene_user', ssl: true},
     })
-    expect(files['AGENTS.md']).toContain('Assume all Postgres functions are available when writing GSQL.')
+    expect(files['AGENTS.md']).toContain('Assume all Postgres functions are available when writing Graphene SQL.')
     expect(pkg.dependencies['pg']).toBe('^8.13.3')
     expect(files['.env']).toContain('POSTGRES_PASSWORD=secret')
     expect(files['index.md']).toContain('configured for Postgres')

@@ -12,7 +12,7 @@ Here's an example:
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| data | GSQL query or table name | true | query name | - |
+| data | Graphene SQL query or table name | true | query name | - |
 | rows | Number of rows to show in the table before paginating results. Use `"rows=all"` to show all rows in the table. | false | number, `all` | `10` |
 | title | Title for the table | false | string | - |
 | headerColor | Background color of the header row | false | Hex color code, css color name | - |
@@ -29,7 +29,7 @@ Here's an example:
 | formatColumnTitles | Enable auto-formatting of column titles. Turn off to show raw SQL column names | false | `true`, `false` | `true` |
 | wrapTitles | Wrap column titles | false | `true`, `false` | `false` |
 | compact | Enable a more compact table view that allows more content vertically and horizontally | false | `true`, `false` | `false` |
-| link | Makes each row of your table a clickable link. Accepts a column or expression containing the link to use for each row in your table | false | column name, stored expression name, GSQL expression | - |
+| link | Makes each row of your table a clickable link. Accepts a column or expression containing the link to use for each row in your table | false | column name, stored expression name, Graphene SQL expression | - |
 | showLinkCol | Whether to show the column supplied to the `link` attribute | false | `true`, `false` | `false` |
 | emptyMessage | Text to display when the table has no rows or fails to render | false | string | `"Unable to render table"` |
 
@@ -46,7 +46,7 @@ Any color attribute on `<Table>` or `<Column>` (e.g. `headerColor`, `barColor`, 
 
 | Attribute | Description | Required | Options | Default |
 |------|-------------|----------|---------|---------|
-| groupBy | Column or expression to use to create groups. Note that groups are currently limited to a single group column. | false | column name, stored expression name, GSQL expression | - |
+| groupBy | Column or expression to use to create groups. Note that groups are currently limited to a single group column. | false | column name, stored expression name, Graphene SQL expression | - |
 | groupType | How the groups are shown in the table. Can be accordion (expand/collapse) or section (group column values are merged across rows) | false | `accordion`, `section` | `accordion` |
 | subtotals | Whether to show aggregated totals for the groups | false | `true`, `false` | `false` |
 | groupsOpen | [groupType=accordion] Whether to show the accordions as open on page load | false | `true`, `false` | `true` |
@@ -140,4 +140,4 @@ Conditional formatting (`contentType=colorscale`)
 | colorMid | Set a midpoint for the scale | false | number | mid of column |
 | colorMax | Set a maximum for the scale. Any values above that maximum will appear in the highest color on the scale | false | number | max of column |
 | colorBreakpoints | List of numbers to use as breakpoints for each color in your color scale. Should line up with the colors you provide in `colorScale` | false | list of numbers | - |
-| scaleColumn | Column or expression to use to define the color scale range. Values in this column will have their cell color determined by the value in the scaleColumn | false | column name, stored expression name, GSQL expression | - |
+| scaleColumn | Column or expression to use to define the color scale range. Values in this column will have their cell color determined by the value in the scaleColumn | false | column name, stored expression name, Graphene SQL expression | - |

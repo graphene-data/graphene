@@ -1,12 +1,12 @@
-# Graphene SQL (GSQL)
+# Graphene SQL
 
-GSQL abstracts over the underlying database SQL. Graphene translates GSQL into database SQL when running queries.  
+Graphene SQL abstracts over the underlying database SQL. Graphene translates it into database SQL when running queries.
 
-GSQL is comprised of four primary statements: `table`, `select`, `table X as`, and `extend`.
+The language comprises four primary statements: `table`, `select`, `table X as`, and `extend`.
 
 ## `table` statements
 
-`table` statements declare tables that already exist in your database. Here's an example of two tables, `orders` and `users`, in GSQL.
+`table` statements declare tables that already exist in your database. Here's an example with two tables, `orders` and `users`.
 
 ```sql
 table orders (
@@ -53,7 +53,7 @@ We can break down a `table` statement into three parts: base columns, join relat
 
 The base column set is simply a reflection of the underlying database table's schema. Similar to `create table` statements in regular SQL DDL, you list each column's name and data type.
 
-For array columns, GSQL uses `array<T>` as the standard syntax:
+Array columns use `array<T>` as the standard syntax:
 
 ```sql
 table events (
@@ -67,7 +67,7 @@ table events (
 
 Join relationships in a `table` statement declare joins that can be used when querying them. This makes query writing easier and more foolproof.
 
-The other main difference about joins in GSQL vs. regular SQL is that you have to explain if there are many rows in the left table for each row in the right table, or vice versa. This additional bit of information allows Graphene to prevent incorrect aggregation as a result of row duplication (aka fan-out) through joins.
+The other main difference from regular SQL is that you have to explain if there are many rows in the left table for each row in the right table, or vice versa. This additional bit of information allows Graphene to prevent incorrect aggregation as a result of row duplication (aka fan-out) through joins.
 
 This information is provided with the two supported join types, `join one` and `join many`:
 - `join one` is used when each row in **this** table maps to at most one row in the **joined** table.
@@ -75,7 +75,7 @@ This information is provided with the two supported join types, `join one` and `
 
 In the example above with `orders` and `users`, the joins confirm that there are many orders per user, and only one user per order.
 
-Note that all joins in GSQL are left outer joins. There is no inner, right, or cross join.
+Note that all modeled joins are left outer joins. There is no inner, right, or cross join.
 
 #### Multiple join relationships between the same two tables
 
@@ -107,11 +107,11 @@ table users (
 
 ### Stored expressions
 
-**Stored expressions** are GSQL expressions (ie. any arbitrary combination of functions, operators, and column references) that you want to make reusable to queries. Stored expressions are great for canonizing metrics, segments, and other important business definitions.
+**Stored expressions** are arbitrary combinations of functions, operators, and column references that you want to make reusable in queries. Stored expressions are great for canonizing metrics, segments, and other important business definitions.
 
 A stored expression must be given a name via `name: expression` or `expression as name`. It can then be referenced by name in queries that use the table.
 
-Like expressions in regular SQL, expressions in GSQL are either scalar or aggregative. In BI parlance, these would be called dimensions and measures, respectively.
+Expressions are either scalar or aggregative. In BI parlance, these would be called dimensions and measures, respectively.
 
 Expressions can refer to other expressions, as from the example before:
 
@@ -161,7 +161,7 @@ from othertable
 
 ## `select` statements
 
-`select` in GSQL has been extended to leverage join relationships, dimensions, and measures.
+`select` has been extended to leverage join relationships, dimensions, and measures.
 
 ### Using join relationships
 

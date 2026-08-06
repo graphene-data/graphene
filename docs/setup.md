@@ -301,7 +301,7 @@ To set up Graphene on a MotherDuck connection you will need access to a MotherDu
 2. Navigate to **Settings > Integrations > Access Tokens**.
 3. Create a token with type "Read Scaling Token".
 
-MotherDuck uses DuckDB SQL syntax, so GSQL functions and expressions should follow the same rules as local DuckDB projects.
+MotherDuck uses DuckDB SQL syntax, so Graphene SQL functions and expressions should follow the same rules as local DuckDB projects.
 
 </details>
 
@@ -319,7 +319,7 @@ The installer will walk you through a short series of prompts, create your Graph
 
 # Install the IDE extension (optional)
 
-Graphene has extensions for VSCode and Cursor which add syntax highlighting, linting, and hover states to enrich the development experience when working with GSQL and Graphene markdown files.
+Graphene has extensions for VSCode and Cursor which add syntax highlighting, linting, and hover states to enrich the development experience when working with Graphene SQL and Graphene markdown files.
 
 The extension is called **Graphene VSCode Language Support** which you can search for and install in **View > Extensions** for both VSCode and Cursor.
 
@@ -327,7 +327,7 @@ The extension is called **Graphene VSCode Language Support** which you can searc
 
 Start a new agent session within the Graphene project. Tell your agent:
 
->Add .gsql files in a new folder ./tables for [tables you want exposed in Graphene] following the best practices outlined in model-gsql.md and gsql.md (in the Graphene skill).
+>Add .gsql files in a new folder ./tables for [tables you want exposed in Graphene] following the best practices outlined in modeling.md and graphene-sql.md (in the Graphene skill).
 
 Consider adding the following to the prompt when applicable:
 - A link or path to a dbt project

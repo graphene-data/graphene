@@ -346,6 +346,6 @@ from flights select
 
 </div>
 
-<p class="ed-colophon">Built with Graphene · GSQL models define the joins, dimensions, and measures used across every page.</p>
+<p class="ed-colophon">Built with Graphene · Graphene SQL models define the joins, dimensions, and measures used across every page.</p>
 
 </div>

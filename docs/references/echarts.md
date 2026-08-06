@@ -16,7 +16,7 @@ Example:
 
 | Attribute | Description | Required | Options | Default |
 |----------|-------------|----------|---------|---------|
-| data | GSQL query or table name | true | query/table name | - |
+| data | Graphene SQL query or table name | true | query/table name | - |
 | height | Chart height in px or CSS size string | false | number, string | `240px` |
 | width | Chart width in px or CSS size string | false | number, string | `100%` |
 | renderer | ECharts renderer | false | `svg`, `canvas` | `svg` |
