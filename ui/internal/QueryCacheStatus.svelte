@@ -3,6 +3,11 @@
   import RefreshCw from '@lucide/svelte/icons/refresh-cw'
   import {queryState, refreshQueries} from './queryEngine.ts'
 
+  // Defaults to the viewport corner, which is the page corner wherever the document itself
+  // scrolls. Hosts whose page area is a smaller box (the chat preview panel) override the
+  // positioning via `style`.
+  let {style = ''}: {style?: string} = $props()
+
   let oldestRunAt = $derived($queryState.oldestRunAt)
 
   // Update the age every minute
@@ -34,7 +39,7 @@
 
 <!-- oldestRunAt will be null if queries haven't finished yet -->
 {#if oldestRunAt}
-  <button class="query-cache-status" type="button" aria-label={refreshLabel} title={refreshLabel} aria-live="polite" onclick={() => refreshQueries()} disabled={$queryState.loading}>
+  <button class="query-cache-status" {style} type="button" aria-label={refreshLabel} title={refreshLabel} aria-live="polite" onclick={() => refreshQueries()} disabled={$queryState.loading}>
     <span>{ago}</span>
     <RefreshCw size={12} strokeWidth={1.5} aria-hidden="true" />
   </button>
