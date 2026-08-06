@@ -34,7 +34,7 @@
 
 - Added support for arbitrary HTML, CSS, and JavaScript in Markdown pages (`95d65050`).
 - Added `graphene make-token` and `GRAPHENE_TOKEN` support for short-lived Graphene Cloud access tokens (`820e3541`).
-- Added environment variable overrides for database connections and the default GSQL namespace (`4edd8c02`).
+- Added environment variable overrides for database connections and the default Graphene SQL namespace (`4edd8c02`).
 - Updated browser tab titles to use the current page and project titles (`66ef4393`).
 
 ### Fixed
@@ -81,7 +81,7 @@ None.
 
 ### Fixed
 
-- Fixed GSQL parsing for identifiers with leading underscores (`069629db`).
+- Fixed Graphene SQL parsing for identifiers with leading underscores (`069629db`).
 - Fixed sanitization of bare boolean props in Markdown components (`2178e132`).
 - Improved DuckDB connection reuse by sharing DuckDB instances across connections (`843907a8`).
 
@@ -212,7 +212,7 @@ None.
 
 - Added the `create` installer flow, package-manager detection, generated project instructions, and pnpm/yarn support (`2a6ecf6`, `0823490`, `615fd8b`).
 - Added ClickHouse warehouse support (`bd4675e`).
-- Added GSQL support for arrays, `unnest`, ANSI set operations, window functions, positional group bys, bare niladic functions, string concatenation, interval fields, and partition-only percentile windows (`3cb30a3`, `fed7ccd`, `be8ffb0`, `f1c8367`, `4c5a468`, `4c47a73`, `55fc01a`, `ef7e6aa`, `438bc03`).
+- Added Graphene SQL support for arrays, `unnest`, ANSI set operations, window functions, positional group bys, bare niladic functions, string concatenation, interval fields, and partition-only percentile windows (`3cb30a3`, `fed7ccd`, `be8ffb0`, `f1c8367`, `4c5a468`, `4c47a73`, `55fc01a`, `ef7e6aa`, `438bc03`).
 - Added fanout protection and smarter join analysis (`5a8e15b`).
 - Added language-server support for multiple Graphene projects, go-to-definition, and find-references (`98faa04`, `894c5f7`).
 - Added the `graphene list` command for chart and query ids (`231290e`).

@@ -38,8 +38,7 @@
       {
         "id": "graphene-sql",
         "aliases": [
-          "Graphene GSQL",
-          "GSQL"
+          "Graphene SQL"
         ],
         "extensions": [
           ".gsql"

@@ -9,11 +9,11 @@ graphene check path/to/file.gsql # Check for one specific gsql file
 graphene check path/to/page.md # Check for one specific markdown file
 
 # `run` is the primary command for iterating on queries and pages
-graphene run "from flights select count() as total" # Run inline GSQL and print results
+graphene run "from flights select count() as total" # Run inline Graphene SQL and print results
 graphene run "from flights select count() as total" --format csv # Print query results as CSV
 graphene run path/to/page.md # Open the page in your system browser and save a full-page screenshot
 graphene run path/to/page.md --param carrier=AA # Run the page with param values, overriding page defaults
-graphene run - # Read GSQL from stdin and print results
+graphene run - # Read Graphene SQL from stdin and print results
 
 # If `graphene run` works by opening and using existing browser tabs.
 # If it fails you may add the --headless flag to open a browser via Playwright, though this is usually not preferred.
@@ -32,12 +32,12 @@ graphene run path/to/page.md -c 'BarChart (data="query_name" x="category" y="tot
 # `--param` values are strings. Repeat the flag to pass multiple values for one param.
 graphene run path/to/page.md --param carrier=AA --param carrier=DL
 
-graphene compile "[GSQL]" # Show the compiled, dialect-specific SQL. Does not run a query.
+graphene compile "[QUERY]" # Show the compiled, dialect-specific SQL. Does not run a query.
 
-# `schema` is for implementation/migration purposes and is NOT for exploring GSQL models
+# `schema` is for implementation/migration purposes and is NOT for exploring Graphene SQL models
 graphene schema # List datasets/schemas in the connected database
 graphene schema my_dataset # List schemas (or tables) in a dataset
-graphene schema my_dataset.table # Print the GSQL table statement for a database table
+graphene schema my_dataset.table # Print the Graphene SQL table statement for a database table
 
 graphene serve # Start the local dev server (foreground)
 graphene serve --bg # Start the local dev server in the background

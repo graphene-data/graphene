@@ -1,7 +1,7 @@
 Graphene is a framework for doing data analysis and BI as code. Schema definitions and semantic models are in `.gsql` files, dashboards/notebooks (called pages) in `.md`.
 
-# GSQL
-GSQL extends ANSI SQL with dimensions, measures, and join relationships. Declare them in `table` statements:
+# Graphene SQL
+Graphene SQL extends ANSI SQL with dimensions, measures, and join relationships. Declare them in `table` statements:
 
 ```sql
 table orders (
@@ -33,17 +33,17 @@ Other statements:
 - Normal ANSI joins (`inner join`, `left join`, etc.) supported in `select` as well, if the join you need is not already modeled
 
 ### Dimension and measure expansion
-Dimensions and measures are like macros that expand inline when GSQL compiles to database SQL. For example, `from users select id, orders.revenue` automatically expands to `select users.id, sum(orders.amount) ...`
+Dimensions and measures are like macros that expand inline when Graphene SQL compiles to database SQL. For example, `from users select id, orders.revenue` automatically expands to `select users.id, sum(orders.amount) ...`
 - NEVER(!): `sum(revenue)` or `group by revenue` because `revenue` is already an agg expression
 - OK: `floor(revenue)`, `revenue / cost` 
 - OK: `sum(case when is_complete then 1 else 0 end)` or `group by is_complete` (because `is_complete` is a dimension, not a measure)
 
 ### Arrays
-- Array columns and casts use `array<T>` syntax in GSQL, for example `tags array<string>` or `cast(tags as array<string>)`
+- Array columns and casts use `array<T>` syntax in Graphene SQL, for example `tags array<string>` or `cast(tags as array<string>)`
 - Arrays can be expanded in queries with `cross join unnest(tags) as tag`
 
 ### Special features
-- `group by all` is implied when aggregates exist, and does not need to be put in GSQL
+- `group by all` is implied when aggregates exist, and does not need to be put in Graphene SQL
 - Agg function `pXX(column)` computes the XXth percentile (e.g., p50, p975, p9999)
 - `select`, `from`, `order by`, etc. in any order
 
@@ -61,7 +61,7 @@ Dimensions and measures are like macros that expand inline when GSQL compiles to
 If a top-level `pages/` folder exists, all Graphene pages must be inside it.
 
 Graphene pages extend Markdown with the following:
-- GSQL queries in code fences
+- Graphene SQL queries in code fences
 - Visualization and input components
 - Safe layout HTML such as `<div>`, `<span>`, semantic sections, lists, and tables
 - `<style>` blocks for page-level visual customization
@@ -112,8 +112,8 @@ You can add YAML frontmatter at the top of a page. The following attributes are 
 - Row (layout container, distributes children horizontally): No attributes
 
 Notes on common attributes:
-- `data` can also point at a modeled GSQL table.
-- Any attribute that accepts a column can also accept an arbitrary GSQL expression. These attributes are x, y, y2, splitBy, category, value, link, groupBy, scaleColumn
+- `data` can also point at a modeled Graphene SQL table.
+- Any attribute that accepts a column can also accept an arbitrary Graphene SQL expression. These attributes are x, y, y2, splitBy, category, value, link, groupBy, scaleColumn
 - `splitBy` creates a series for each distinct value in the column (long format data).
 - `y` can take a comma-separated list of columns/expressions, to map multiple fields to the same y-axis as separate series (wide format data).
 - `sort` takes a column name followed by `asc` or `desc`, eg. `my_col desc`. Useful when you want something sorted differently than its inherent alphanumeric ordering.
@@ -157,7 +157,7 @@ Unsupported:
 ```
 
 ## Input components
-Input values are referenced by their `name` as `$name` in GSQL and sync into the page URL query string, preserving state across reloads and shared links.
+Input values are referenced by their `name` as `$name` in Graphene SQL and sync into the page URL query string, preserving state across reloads and shared links.
 
 ### `<Dropdown>`
 Build options from a query using `data` and `value`; optionally use `label` as the displayed column. Other attributes are `title`, `description`, `defaultValue`, `multiple`, `selectAllByDefault`, `noDefault`, and `disableSelectAll`. `name` is required.
@@ -193,7 +193,7 @@ Declares a URL parameter without displaying an input on the page. `name` is requ
 <Hidden name=account_id defaultValue="all" />
 ```
 
-Reference the value as `$account_id` in GSQL. A URL such as `?account_id=123` overrides the default; the default is used when the parameter is absent.
+Reference the value as `$account_id` in Graphene SQL. A URL such as `?account_id=123` overrides the default; the default is used when the parameter is absent.
 
 ### `<DateRange>`
 Collects start and end dates. `name` is required; optional attributes are `title`, `description`, `data` and `dates` (to infer the available date domain), `start`, `end`, `defaultValue`, and `presetRanges`.

@@ -54,7 +54,7 @@ having count() > 100
 
 <Row>
   <!-- Graphene will have a built-in <Heatmap> component, but this serves as a great example of just
-       how much power and flexibility an agent has with gsql + ECharts.
+       how much power and flexibility an agent has with Graphene SQL + ECharts.
   -->
   <ECharts data=delay_heatmap height=520px>
     title: {text: 'Avg Departure Delay by Hour & Day of Week (min)'},

@@ -41,8 +41,8 @@ await esbuild({
 let referenceDocs = {
   'config.md': 'Project package.json configuration, including database connections, ignored files, env files, telemetry, and dev server settings.',
   'echarts.md': 'ECharts component usage for custom charts beyond the built-in Graphene chart components.',
-  'gsql.md': 'GSQL syntax reference for queries and tables.',
-  'model-gsql.md': 'Data modeling best practices when creating new GSQL tables.',
+  'graphene-sql.md': 'Graphene SQL syntax reference for queries and tables.',
+  'modeling.md': 'Data modeling best practices when creating new Graphene SQL tables.',
   'table.md': 'Table component options for rendering query results in pages.',
 }
 let referencesDir = path.resolve(__dirname, '../docs/references')
@@ -70,7 +70,7 @@ ${await readFile(path.resolve(__dirname, '../docs/cli.md'), 'utf8')}
 ${await readFile(path.resolve(__dirname, '../docs/best-practices.md'), 'utf8')}
 # Reference documentation
 Consult the reference documentation for more detailed information on using Graphene.
-For semantic modeling with GSQL references, read \`references/model-gsql.md\`.
+For semantic modeling with Graphene SQL references, read \`references/modeling.md\`.
 
 ${referenceFiles.map(f => `- references/${f} — ${referenceDocs[f]}`).join('\n')}
 `.trimStart(),

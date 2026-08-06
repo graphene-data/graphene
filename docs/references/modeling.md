@@ -1,6 +1,6 @@
-# Modeling GSQL
+# Modeling Graphene SQL
 
-Conventions and patterns for writing production-quality `.gsql` semantic models. Make sure you've read `references/gsql.md` before proceeding.
+Conventions and patterns for writing production-quality `.gsql` semantic models. Make sure you've read `references/graphene-sql.md` before proceeding.
 
 ## Critical resources
 
@@ -27,7 +27,7 @@ These will **significantly** improve your understanding of the data, and thus th
 
 - D.R.Y. up dimension and measure code as much as possible by composing them.
 - For categorical columns and booleans, **watch out for nulls**. If nulls exist, consider hiding the column with `#hide` and creating a safe dimension in its place that replaces the nulls with a sensible sentinel eg. FALSE, 'Other'. This is to prevent footguns such as `status <> 'processing'` that implicitly filter nulls.
-- It's wise to test with actual GSQL queries instead of relying strictly on `graphene check`.
+- It's wise to test with actual Graphene SQL queries instead of relying strictly on `graphene check`.
 
 ## Code comments
 
@@ -38,8 +38,8 @@ These will **significantly** improve your understanding of the data, and thus th
 
 ## Metadata
 
-Add GSQL metadata annotations where applicable eg. `#ratio`, `#pct`, `#timeGrain=day`, etc.
-- Use only annotations that Graphene recognizes (see `references/gsql.md`)
+Add Graphene SQL metadata annotations where applicable eg. `#ratio`, `#pct`, `#timeGrain=day`, etc.
+- Use only annotations that Graphene recognizes (see `references/graphene-sql.md`)
 
 ## Example file
 
