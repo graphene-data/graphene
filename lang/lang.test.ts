@@ -1043,8 +1043,9 @@ describe('lang', () => {
       'revenue.gsql',
     )
 
-    let [query] = analyze('from revenue select amount')
-    expect(query.fields[0].metadata).toMatchObject({currency: 'USD'})
+    let [query] = analyze('from revenue select amount, amount * 100 as scaled_amount')
+    expect(query.fields[0].metadata).toMatchObject({description: 'gross revenue', currency: 'USD'})
+    expect(query.fields[1].metadata).toBeUndefined()
   })
 
   it('preserves non-temporal field metadata through casts', () => {

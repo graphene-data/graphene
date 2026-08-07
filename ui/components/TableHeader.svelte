@@ -1,5 +1,6 @@
 <script lang="ts">
   import SortIcon from './SortIcon.svelte'
+  import Tooltip from './Tooltip.svelte'
   import {toBoolean} from '../component-utilities/inputUtils'
 
   interface Props {
@@ -104,9 +105,10 @@
         aria-sort={getAriaSortValue(column.id)}
       >
         <span class={`header-title__text ${wrapTitles || column.wrapTitle ? 'header-title__text--wrap' : ''}`}>
-          {resolveHeaderTitle(column)}
           {#if column.description}
-            <span class="header-title__info" title={column.description}>ⓘ</span>
+            <Tooltip text={column.description} placement="top">{resolveHeaderTitle(column)}</Tooltip>
+          {:else}
+            {resolveHeaderTitle(column)}
           {/if}
         </span>
         {#if sortObj.col === column.id}
@@ -195,12 +197,6 @@
     white-space: normal;
   }
 
-  .header-title__info {
-    margin-left: 4px;
-    cursor: help;
-    font-size: 0.75em;
-    color: var(--color-base-content-muted, #6b7280);
-  }
 
   .header-sort-indicator {
     position: absolute;

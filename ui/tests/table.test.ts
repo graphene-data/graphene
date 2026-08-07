@@ -274,7 +274,7 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
     {carrier: 'CO', flights: 7140, avg_delay: 6.013, max_delay: 716},
   ]
   let fields = [
-    {name: 'carrier', type: 'string'},
+    {name: 'carrier', type: 'string', metadata: {description: 'Two-letter airline carrier code'}},
     {name: 'flights', type: 'number'},
     {name: 'avg_delay', type: 'number'},
     {name: 'max_delay', type: 'number'},
@@ -294,7 +294,7 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
       backgroundColor: '#f8fafc',
     },
     columns: [
-      {id: 'carrier', title: 'Carrier', description: 'Carrier code', colGroup: 'Meta'},
+      {id: 'carrier', title: 'Carrier', colGroup: 'Meta'},
       {id: 'flights', title: 'Total Flights', colGroup: 'Metrics', align: 'right'},
       {id: 'avg_delay', title: 'Average Delay Minutes Across All Flight Records', colGroup: 'Metrics', wrapTitle: true},
       {id: 'max_delay', title: 'Peak Delay', colGroup: 'Metrics'},
@@ -304,6 +304,7 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
   let table = component.locator('table')
   await table.locator('tr:has(td)').first().waitFor()
   await expect(table.locator('tr:has(td)')).toHaveCount(4)
+  await table.getByRole('button', {name: 'Carrier'}).hover()
   await expect(component.locator('.table-container')).screenshot('attribute-groups-and-styling')
 })
 

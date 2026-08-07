@@ -1,6 +1,7 @@
 <script lang="ts">
   import {untrack} from 'svelte'
   import QueryLoad from './QueryLoad.svelte'
+  import Tooltip from './Tooltip.svelte'
   import {formatFromField} from '../component-utilities/format.ts'
   import type {QueryResult} from '../component-utilities/types.ts'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
@@ -16,18 +17,30 @@
   let logger = untrack(() => componentLogger('BigValue', {data: typeof data == 'string' ? data : undefined, value}))
   untrack(() => logExtraProps(logger, 'BigValue', extraProps))
 
+  function valueField(loaded: QueryResult) {
+    return loaded?.fields?.find(field => field.name === value)
+  }
+
   function formatValue(input: any, loaded: QueryResult) {
     if (input === null || input === undefined) return '—'
-    let field = loaded?.fields?.find((entry: any) => entry?.name === value)
-    return formatFromField(field as any, input)
+    return formatFromField(valueField(loaded), input)
   }
 </script>
 
 {#snippet bigValueContent(loaded: QueryResult)}
-  <div class="big-value">
-    {#if title}<div class="big-value__title">{title}</div>{/if}
-    <div class="big-value__value">{formatValue(loaded?.rows?.[row]?.[value], loaded)}</div>
-  </div>
+  {@const description = valueField(loaded)?.metadata?.description}
+  {#snippet content()}
+    <span class="big-value">
+      {#if title}<span class="big-value__title">{title}</span>{/if}
+      <span class="big-value__value">{formatValue(loaded?.rows?.[row]?.[value], loaded)}</span>
+    </span>
+  {/snippet}
+
+  {#if typeof description === 'string'}
+    <Tooltip text={description} label={`About ${title || value}`}>{@render content()}</Tooltip>
+  {:else}
+    {@render content()}
+  {/if}
 {/snippet}
 
 <QueryLoad {data} fields={{value}} children={bigValueContent} componentId={logger.id} />

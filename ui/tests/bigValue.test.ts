@@ -5,11 +5,15 @@ test.beforeEach(async ({sharedPage}) => {
   await sharedPage.setViewportSize({width: 1280, height: 720})
 })
 
-test('big value', async ({mount, sharedPage, chart}) => {
-  await mount('components/BigValue.svelte', {data: singleDim(), value: 'value', title: 'Sales'})
+test('big value', async ({mount, sharedPage}) => {
+  let data = singleDim()
+  data.fields.find(field => field.name === 'value')!.metadata!.description = 'Total sales across all product categories'
+  let component = await mount('components/BigValue.svelte', {data, value: 'value', title: 'Sales'})
+  await component.evaluate(element => element.style.minHeight = '120px')
   await expect(sharedPage.getByText('Sales')).toBeVisible()
   await expect(sharedPage.getByText('$611.1k')).toBeVisible()
-  await expect(chart.el).screenshot('big-value')
+  await sharedPage.getByRole('button', {name: 'About Sales'}).hover()
+  await expect(component).screenshot('big-value')
 })
 
 test('big value percent formatting', async ({mount, sharedPage}) => {
