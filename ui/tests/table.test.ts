@@ -304,7 +304,7 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
   let table = component.locator('table')
   await table.locator('tr:has(td)').first().waitFor()
   await expect(table.locator('tr:has(td)')).toHaveCount(4)
-  await table.getByRole('button', {name: 'Carrier'}).hover()
+  await table.getByText('Carrier', {exact: true}).hover()
   await expect(component.locator('.table-container')).screenshot('attribute-groups-and-styling')
 })
 

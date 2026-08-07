@@ -12,7 +12,7 @@ test('big value', async ({mount, sharedPage}) => {
   await component.evaluate(element => element.style.minHeight = '120px')
   await expect(sharedPage.getByText('Sales')).toBeVisible()
   await expect(sharedPage.getByText('$611.1k')).toBeVisible()
-  await sharedPage.getByRole('button', {name: 'About Sales'}).hover()
+  await sharedPage.getByText('Sales').hover()
   await expect(component).screenshot('big-value')
 })
 

@@ -37,7 +37,7 @@
   {/snippet}
 
   {#if typeof description === 'string'}
-    <Tooltip text={description} label={`About ${title || value}`}>{@render content()}</Tooltip>
+    <Tooltip text={description}>{@render content()}</Tooltip>
   {:else}
     {@render content()}
   {/if}
