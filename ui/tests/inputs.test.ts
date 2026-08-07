@@ -474,7 +474,7 @@ test('hidden input applies URL values and defaults without rendering a control',
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
   expect(queryBodies.some(body => body.params.carrier === 'AA')).toBe(true)
-  await expect(page.locator('main#content').locator('input, button, select')).toHaveCount(0)
+  await expect(page.locator('main#content .input-block')).toHaveCount(0)
 })
 
 test('inputs sync url state on load, change, and reload', {timeout: 20000}, async ({server, page}) => {

@@ -146,6 +146,7 @@
             defaultTitle: formatTitle(colName),
             type,
             field: resolvedField,
+            description: field?.metadata?.description,
             stats,
           })
         }
@@ -190,6 +191,7 @@
       defaultTitle: meta.defaultTitle ?? formatTitle(column.id),
       type: meta.type,
       field: meta.field,
+      description: column.description ?? meta.description,
       stats: meta.stats,
     }
   }))

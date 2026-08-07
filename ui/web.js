@@ -32,6 +32,7 @@ import TableRow from './components/TableRow.svelte'
 import TableSubtotalRow from './components/TableSubtotalRow.svelte'
 import TableTotalRow from './components/TableTotalRow.svelte'
 import TextInput from './components/TextInput.svelte'
+import Tooltip from './components/Tooltip.svelte'
 import Value from './components/Value.svelte'
 import ErrorChart from './internal/ErrorDisplay.svelte'
 import LocalApp from './internal/LocalApp.svelte'
@@ -77,6 +78,7 @@ window.$GRAPHENE.components = {
   TableSubtotalRow,
   TableTotalRow,
   TextInput,
+  Tooltip,
   Value,
 }
 
