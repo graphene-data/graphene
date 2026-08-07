@@ -59,6 +59,30 @@ describe('cli package', () => {
   })
 })
 
+describe('cli token', () => {
+  test('creates tokens with configurable lifetimes', async ({runCli}) => {
+    let ttlMinutes: number[] = []
+    let server = createServer(async (req, res) => {
+      ttlMinutes.push(JSON.parse(await readRequestBody(req)).ttlMinutes)
+      res.setHeader('content-type', 'application/json')
+      res.end(JSON.stringify({token: 'agent-token'}))
+    })
+
+    try {
+      let endpoint = await listen(server)
+      let cloudConfig = configFor(flightDir, {cloud: endpoint})
+      expect((await runCli(['token', '--ttl', '12h'], cloudConfig, {env: {GRAPHENE_TOKEN: 'login-token'}})).stdout).toBe('agent-token\n')
+      expect((await runCli(['make-token'], cloudConfig, {env: {GRAPHENE_TOKEN: 'login-token'}})).stdout).toBe('agent-token\n')
+      expect(ttlMinutes).toEqual([12 * 60, 30 * 24 * 60])
+
+      let invalid = await runCli(['token', '--ttl', '4m'], cloudConfig, {env: {GRAPHENE_TOKEN: 'login-token'}})
+      expect(invalid.stderr).toBe('TTL must be between 5m and 366d\n')
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+    }
+  })
+})
+
 describe('cli compile', () => {
   test('compiles a basic query (happy path)', async ({runCli}) => {
     let res = await runCli(['compile', 'from flights select carrier'], flightConfig)

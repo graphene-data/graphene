@@ -185,12 +185,14 @@ async function refreshAccessToken(staleAccessToken?: string) {
   await refreshPromise
 }
 
-// Refreshes the saved login and returns a full-lifetime access token for short-lived delegation.
-export async function makeAccessToken(): Promise<string> {
-  await refreshAccessToken()
-  let token = (await readEntry())?.access_token
-  if (!token) throw new Error('Failed to obtain access token')
-  return token
+// Asks Graphene Cloud to create a bearer token scoped to the authenticated user and organization.
+export async function makeAccessToken(ttlMinutes: number): Promise<string> {
+  let response = await authenticatedFetch('/_api/auth/token', {
+    method: 'POST',
+    headers: {'content-type': 'application/json'},
+    body: JSON.stringify({ttlMinutes}),
+  })
+  return (await response.json()).token
 }
 
 // Verifies Cloud credentials before commands that would otherwise fail later inside page/query requests.
