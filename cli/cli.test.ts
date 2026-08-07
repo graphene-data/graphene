@@ -147,6 +147,26 @@ describe('cli run', () => {
     }
   })
 
+  test('prints flattened Cloud transport failures', async ({runCli}) => {
+    let server = createServer((req, res) => {
+      res.setHeader('content-type', 'application/json')
+      if (req.url == '/_api/nav') return res.end('{}')
+      res.statusCode = 500
+      res.end(JSON.stringify({message: 'fetch failed (UND_ERR_SOCKET)'}))
+    })
+
+    try {
+      let endpoint = await listen(server)
+      let res = await runCli(['run', 'from flights select count() as total'], configFor(flightDir, {cloud: `${endpoint}/flights`}), {env: {GRAPHENE_TOKEN: 'test-token'}})
+
+      expect(res.code).toBe(1)
+      expect(res.stdout).toBe('')
+      expect(res.stderr).toBe('fetch failed (UND_ERR_SOCKET)\n')
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+    }
+  })
+
   test('prints query diagnostics without a stack trace', async ({runCli}) => {
     let res = await runCli(['run', 'from flights select carrier order by nope'], flightConfig)
     let output = res.stdout + res.stderr

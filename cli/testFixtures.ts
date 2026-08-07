@@ -5,6 +5,7 @@ import {afterEach, expect, test as base, vi} from 'vitest'
 import {config, setGlobalConfig, type Config} from '../lang/config.ts'
 import {program} from './cli.ts'
 import {resetDuckDbInstanceForTests} from './connections/index.ts'
+import {formatError} from './printer.ts'
 
 export {expect}
 
@@ -68,7 +69,7 @@ export async function runCliCommand(args: string[], invocationConfig: Config, op
     else if (err instanceof CommanderError) code = err.exitCode
     else {
       code = 1
-      stderr += (err instanceof Error ? err.message : String(err)) + '\n'
+      stderr += formatError(err) + '\n'
     }
   } finally {
     spies.forEach(spy => spy.mockRestore())

@@ -17,6 +17,7 @@ import {grapheneCsp} from '../ui/csp.ts'
 import {runQuery} from './connections/index.ts'
 import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {missingMockFiles, mockFileMap} from './mockFiles.ts'
+import {formatError} from './printer.ts'
 import {runVitePlugin} from './run.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
@@ -366,10 +367,10 @@ const handleRequestPlugin = {
         // Browser navigations still need the app shell so it can render a useful not-found state.
         if (req.headers.accept?.includes('text/html')) return await handlePage(s, res)
         next()
-      } catch (err: any) {
+      } catch (err) {
         if (process.env.NODE_ENV != 'test') console.error(err) // ignore in tests because they're noisy, and any unexpected errors should be captured by browserConsole.
         res.statusCode = 500
-        res.end(JSON.stringify({message: err.message, stack: err.stack}))
+        res.end(JSON.stringify({message: formatError(err), stack: err instanceof Error ? err.stack : undefined}))
       }
     })
   },
