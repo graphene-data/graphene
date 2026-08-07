@@ -7,7 +7,7 @@ import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace} from '../lang/core.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
-import {printDiagnostics} from './printer.ts'
+import {formatError} from './printer.ts'
 import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
 interface CheckOptions {
@@ -45,7 +45,7 @@ export async function check(options: CheckOptions): Promise<boolean> {
 
   let result = analyzeWorkspace({config, files})
   if (result.diagnostics.length > 0) {
-    printDiagnostics(result.diagnostics, log)
+    log(formatError(result.diagnostics, {style: true}))
     return false
   }
 

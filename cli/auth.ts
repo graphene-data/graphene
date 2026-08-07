@@ -5,6 +5,7 @@ import os from 'os'
 import path from 'path'
 
 import {config} from '../lang/config.ts'
+import {gFetch} from '../utils/index.ts'
 
 const TEST_AUTH_CLIENT_ID = 'connected-app-test-1e207553-009e-4382-9bc1-27aceac2a7a0'
 const LIVE_AUTH_CLIENT_ID = 'connected-app-live-8264d0af-df18-4021-af96-157482d17856'
@@ -136,7 +137,7 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
   if (!result.code) throw new Error('No authorization code received')
   if (result.state !== state) throw new Error('State mismatch')
 
-  let res = await fetch(`${cloudOrigin}/_api/oauth2/token`, {
+  let res = await gFetch(`${cloudOrigin}/_api/oauth2/token`, {
     method: 'POST',
     headers: {'content-type': 'application/json'},
     body: JSON.stringify({
@@ -147,7 +148,6 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
       code_verifier: verifier,
     }),
   })
-  if (!res.ok) throw new Error(`token exchange failed: ${res.status}`)
   let tokenResp = await res.json()
   await updateEntry(tokenResp)
 }
@@ -165,13 +165,19 @@ async function refreshAccessToken(staleAccessToken?: string) {
     let refresh_token = entry?.refresh_token
     let cloudOrigin = new URL(config.cloud!).origin
     if (!refresh_token) throw new Error('Not logged in to Graphene Cloud. Run `graphene login` and try again.')
-    let res = await fetch(new URL('/_api/oauth2/token', cloudOrigin).toString(), {
-      method: 'POST',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: authClientId()}),
-    })
-    if (!res.ok) throw new Error(`refresh failed: ${res.status}`)
-    await updateEntry(await res.json())
+    try {
+      let res = await gFetch(new URL('/_api/oauth2/token', cloudOrigin).toString(), {
+        method: 'POST',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify({grant_type: 'refresh_token', refresh_token, client_id: authClientId()}),
+      })
+      await updateEntry(await res.json())
+    } catch (error) {
+      if (error instanceof Error && (error as any).error === 'invalid_grant') {
+        throw new Error('Your Graphene Cloud session has expired. Run `graphene login` and try again.', {cause: error})
+      }
+      throw error
+    }
   })().finally(() => {
     refreshPromise = undefined
   })
@@ -201,7 +207,7 @@ export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = 
   let delegatedToken = process.env.GRAPHENE_TOKEN
   if (delegatedToken) {
     headers.set('authorization', `Bearer ${delegatedToken}`)
-    return fetch(url.toString(), {...init, headers})
+    return await gFetch(url.toString(), {...init, headers})
   }
 
   let entry = await readEntry()
@@ -216,23 +222,17 @@ export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = 
   if (!token) throw new Error('Failed to obtain access token')
 
   headers.set('authorization', `Bearer ${token}`)
-  let res = await fetch(url.toString(), {...init, headers})
-
-  // If the request failed, try refreshing our saved access token.
-  if (res.status === 401 || res.status === 403) {
-    await refreshAccessToken(token)
-    token = (await readEntry())?.access_token
-    if (token) {
-      headers.set('authorization', `Bearer ${token}`)
-      res = await fetch(url.toString(), {...init, headers})
-    }
+  try {
+    return await gFetch(url.toString(), {...init, headers})
+  } catch (error) {
+    let status = error instanceof Error ? (error as any).status : undefined
+    if (status !== 401 && status !== 403) throw error
   }
 
-  if (!res.ok) {
-    let json = await res.json()
-    let err = new Error(json.message || json.error || `Request failed with HTTP ${res.status}`)
-    Object.assign(err, json)
-    throw err
-  }
-  return res
+  // If the request rejected our access token, refresh it and try once more.
+  await refreshAccessToken(token)
+  token = (await readEntry())?.access_token
+  if (!token) throw new Error('Failed to obtain access token')
+  headers.set('authorization', `Bearer ${token}`)
+  return await gFetch(url.toString(), {...init, headers})
 }

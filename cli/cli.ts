@@ -15,7 +15,7 @@ import {getGrapheneCache, runServeInBackground, stopGrapheneIfRunning} from './b
 import {check} from './check.ts'
 import {getConnection, runQuery} from './connections/index.ts'
 import {installBrowser} from './installBrowser.ts'
-import {printDiagnostics, printTable} from './printer.ts'
+import {formatError, printTable} from './printer.ts'
 import {pageUrlForMd, sendToPage} from './run.ts'
 import {inspectSchema, printSchemaInspection, type SchemaInspection} from './schemaInspection.ts'
 import {CliTelemetry, getPresentFlags, type TelemetryCommand} from './telemetry/index.ts'
@@ -77,13 +77,13 @@ program.command('run')
         // First, analyze the specificed md file. If it has errors, no point spinning up a browser tab
         let analysis = analyzeWorkspace({config, files: files.filter(file => file.path != cliInput.path)}, cliInput.path)
         if (analysis.diagnostics.length > 0) {
-          printDiagnostics(analysis.diagnostics)
+          console.log(formatError(analysis.diagnostics, {style: true}))
           return exit(1)
         }
 
         // If `run` is requesting a md page, we need to run it in a browser
         let resp = await sendToPage(cliInput.path, {params, chart: options.chart}, !!options.headless)
-        printDiagnostics(resp.errors || [])
+        if (resp.errors?.length) console.log(formatError(resp.errors, {style: true}))
         if (resp.errors?.some(error => error.severity !== 'warn')) exit(1)
 
         if (resp.screenshot) {
@@ -250,7 +250,7 @@ async function readInput(arg: string | undefined): Promise<CliInput> {
 
 function validateInputQuery(analysis: AnalysisResult, exit: (code?: number) => never): Query[] {
   if (analysis.diagnostics.length) {
-    printDiagnostics(analysis.diagnostics)
+    console.log(formatError(analysis.diagnostics, {style: true}))
     return exit(1)
   }
 
@@ -348,7 +348,7 @@ export async function main() {
   try {
     await program.parseAsync(process.argv)
   } catch (err) {
-    console.error(err instanceof Error ? err.message : String(err))
+    console.error(formatError(err))
     process.exit(1)
   }
 }

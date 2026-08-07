@@ -12,18 +12,34 @@ const styleText = (style: string, text: string) => {
   }
 }
 
-export function printDiagnostics(diags: GrapheneError[], log?: any) {
-  log ||= console.log
-  let parts: string[] = []
-  for (let diag of diags) {
-    let sev = diag.severity === 'warn' ? 'yellow' : 'red'
-    let level = diag.severity === 'warn' ? 'WARN' : 'ERROR'
-    let line = diag.from ? diag.from.line + 1 : undefined
-    let where = diag.file ? `${diag.file}${line ? ` line ${line}` : ''}` : 'input'
-    let header = `${styleText(sev, level)}: ${where}: ${diag.message}`
-    parts.push(diag.frame ? `${header}\n${diag.frame}` : header)
+interface FormatErrorOptions {
+  message?: string
+  style?: boolean
+}
+
+// Formats regular errors, API failures, and diagnostics. Styled output adds diagnostic severity, location, and frames.
+export function formatError(error: unknown | unknown[], options: FormatErrorOptions = {}): string {
+  if (Array.isArray(error)) return error.map(item => formatError(item, options)).join('\n\n')
+  if (!error || typeof error != 'object') return options.message || String(error)
+
+  let root = error as GrapheneError & {code?: unknown}
+  let value: {code?: unknown; cause?: unknown} = root
+  let code = value.code
+  while (!code && value.cause && typeof value.cause == 'object') {
+    value = value.cause as typeof value
+    code = value.code
   }
-  if (parts.length) log(parts.join('\n\n'))
+
+  let message = options.message || root.message || String(error)
+  if (code && !message.includes(String(code))) message += ` (${code})`
+  if (!options.style) return message
+
+  let color = root.severity === 'warn' ? 'yellow' : 'red'
+  let level = root.severity === 'warn' ? 'WARN' : 'ERROR'
+  let line = root.from ? root.from.line + 1 : undefined
+  let where = root.file ? `${root.file}${line ? ` line ${line}` : ''}` : 'input'
+  let header = `${styleText(color, level)}: ${where}: ${message}`
+  return root.frame ? `${header}\n${root.frame}` : header
 }
 
 function formatValue(v: unknown): string {
