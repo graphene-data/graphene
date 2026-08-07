@@ -193,11 +193,20 @@ program.command('check')
     }),
   )
 
-program.command('make-token')
-  .description('Print a fresh short-lived Graphene Cloud access token')
-  .action(async () => {
+program.command('token')
+  .alias('make-token')
+  .description('Create a Graphene Cloud token for background agents')
+  .option('--ttl <duration>', 'Token lifetime (for example 12h or 30d)', '30d')
+  .action(async (options: {ttl: string}) => {
     if (!config.cloud) throw new Error('No Graphene Cloud URL is configured for this project')
-    console.log(await makeAccessToken())
+
+    let match = options.ttl.match(/^(\d+)(m|h|d)$/)
+    if (!match) throw new Error('TTL must be a whole number followed by m, h, or d (for example 12h or 30d)')
+    let multipliers = {m: 1, h: 60, d: 60 * 24}
+    let ttlMinutes = Number(match[1]) * multipliers[match[2] as keyof typeof multipliers]
+    if (ttlMinutes < 5 || ttlMinutes > 366 * 24 * 60) throw new Error('TTL must be between 5m and 366d')
+
+    console.log(await makeAccessToken(ttlMinutes))
   })
 
 program.command('login')

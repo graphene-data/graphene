@@ -42,12 +42,12 @@ test('authenticatedFetch uses GRAPHENE_TOKEN', async () => {
     let address = server.address()
     if (!address || typeof address == 'string') throw new Error('Failed to start auth test server')
     setGlobalConfig(normalizeConfig({root: '/tmp/delegated-token-test', clickhouse: {}, cloud: `http://127.0.0.1:${address.port}`}))
-    process.env.GRAPHENE_TOKEN = 'short-lived-support-token'
+    process.env.GRAPHENE_TOKEN = 'background-agent-token'
 
     let response = await authenticatedFetch('/query')
 
     expect(await response.text()).toBe('ok')
-    expect(authorization).toBe('Bearer short-lived-support-token')
+    expect(authorization).toBe('Bearer background-agent-token')
   } finally {
     await new Promise(resolve => server.close(resolve))
     setGlobalConfig(originalConfig)
