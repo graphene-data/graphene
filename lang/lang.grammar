@@ -1,3 +1,5 @@
+@dialects { backtickIdentifier, doubleQuotedIdentifier, doubleQuotedString }
+
 @top Program {
   (TableStatement ";"? | ViewStatement ";"? | ExtendStatement ";"? | queryWithSemi)* QueryStatement?
 }
@@ -411,7 +413,15 @@ SubqueryExpression {
 }
 
 Ref {
-  (Identifier ".")* Identifier
+  (Identifier ".")* (Identifier | QuotedIdentifier)
+}
+
+QuotedIdentifier {
+  backtickIdentifierToken | doubleQuotedIdentifierToken
+}
+
+String {
+  singleQuotedStringToken | doubleQuotedStringToken
 }
 
 Count {
@@ -454,11 +464,15 @@ Alias { Identifier }
   comment { "--" ![\n]* | "#" ![\n]* | "/*" ![*]* "*"+ (![/*] ![*]* "*"+)* "/" }
 
   Identifier { (@asciiLetter | "_") (@asciiLetter | @digit | "_")* }
+  backtickIdentifierToken[@dialect=backtickIdentifier] { "`" ![`]* "`" }
+  doubleQuotedIdentifierToken[@dialect=doubleQuotedIdentifier] { '"' !["]* '"' }
+  singleQuotedStringToken { "'" ![']* "'" }
+  doubleQuotedStringToken[@dialect=doubleQuotedString] { '"' !["]* '"' }
   Param { "$" (@asciiLetter | @digit | "_")+ }
   Number { @digit+ ("." @digit+)? }
-  String { "'" ![']* "'" | '"' !["]* '"' }
   "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">=" "::" "||"
 
+  @precedence { doubleQuotedIdentifierToken, doubleQuotedStringToken }
   @precedence { comment, "-" }
   @precedence { comment, "*" }
   @precedence { comment, "/" }

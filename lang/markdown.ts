@@ -1,7 +1,8 @@
+import type {LRParser} from '@lezer/lr'
+
 import type {ParsedFileArtifacts, ParsedFileDiagnostic, WorkspaceFileInput} from './types.ts'
 
 import {unsupportedChartProps} from './chartProps.ts'
-import {parser} from './parser.js'
 import {extractSveltishAttributes, type SveltishAttribute} from './sveltish.ts'
 
 // This parser turns Graphene md files into the equivalent gsql, and then parses that gsql.
@@ -50,7 +51,7 @@ interface ComponentMatch {
   diagnostics: ParsedFileDiagnostic[]
 }
 
-export function parseMarkdown(file: WorkspaceFileInput): ParsedFileArtifacts {
+export function parseMarkdown(file: WorkspaceFileInput, parser: LRParser): ParsedFileArtifacts {
   let source = file.contents
   let fences = collectFences(source)
   let gsqlFences = fences.filter(f => f.gsql)

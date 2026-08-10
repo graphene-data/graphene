@@ -1797,11 +1797,23 @@ describe('lang', () => {
       .toRenderSql("select DATE '2024-01-01' as d from users as users")
   })
 
-  it('allows temporal keywords as column names', () => {
-    // Columns can be named 'date' or 'timestamp' even though these are also keywords for literals
-    updateFile('table foo (id VARCHAR, date DATE, timestamp TIMESTAMP)', 'foo.gsql')
-    expect('from foo select id')
-      .toRenderSql('select foo.id as id from foo as foo')
+  it.each([
+    {dialect: 'duckdb', quoted: '"timestamp"'},
+    {dialect: 'snowflake', quoted: '"timestamp"'},
+    {dialect: 'postgres', quoted: '"timestamp"'},
+    {dialect: 'athena', quoted: '"timestamp"'},
+    {dialect: 'bigquery', quoted: '`timestamp`'},
+    {dialect: 'clickhouse', quoted: '"timestamp"'},
+  ])('uses $dialect identifier quotes for reserved column names', ({dialect, quoted}) => {
+    setGlobalConfig({dialect, root: ''})
+    updateFile('table foo (timestamp TIMESTAMP)', 'foo.gsql')
+    expect(`from foo select ${quoted}`).toHaveNoErrors()
+    if (dialect == 'clickhouse') expect('from foo select `timestamp`').toHaveNoErrors()
+  })
+
+  it('treats double quotes as strings in BigQuery', () => {
+    setGlobalConfig({dialect: 'bigquery', root: ''})
+    expect('select "hello" as greeting').toRenderSql("select 'hello' as greeting")
   })
 
   it('supports timestamp keyword', () => {
