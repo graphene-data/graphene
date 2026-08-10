@@ -31,7 +31,8 @@ These will **significantly** improve your understanding of the data, and thus th
 
 ## Code comments
 
-- Code comments will get attached to objects as description metadata if they are inlined, or written directly above the object. Separate comments from objects with a blank line if you do not intend to attach them.
+- Code comments should be viewed as the product, not a journal. They are a key vehicle for context engineering. What would an analyst agent need to know? What is unnecessary?
+- Code comments will get attached to objects as description metadata if they are inlined or written directly above the object. Separate comments from objects with a blank line if you do not intend to attach them.
 - Add table and grain descriptions above every `table` statement. Make note of any data quality issues.
 - Do not add a description to a field if it is already obvious from the name. For example, skip `is_debooked_opportunity BOOLEAN -- Whether the opportunity has been debooked`.
 - Use example values for categorical columns: `graphene run "from TABLE select distinct col limit 10"`.
