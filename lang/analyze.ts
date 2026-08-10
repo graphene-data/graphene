@@ -66,6 +66,13 @@ export function analyzeWorkspace(workspace: AnalysisWorkspace, targetPath?: stri
   return new AnalysisSession(workspace).analyze(targetPath)
 }
 
+// Match quoted strings and identifiers to the syntax accepted by each warehouse.
+function lezerDialect(dialect: string) {
+  if (dialect == 'bigquery') return 'backtickIdentifier doubleQuotedString'
+  if (dialect == 'clickhouse') return 'backtickIdentifier doubleQuotedIdentifier'
+  return 'doubleQuotedIdentifier'
+}
+
 export interface Analyzer {
   config: AnalysisConfig
   analyzeExpr(node: SyntaxNode, scope: Scope): Expr
@@ -80,9 +87,11 @@ class AnalysisSession implements Analyzer {
   filesByPath: Record<string, FileInfo> = {}
   computedColumnStack = new Set<Column>() // Track computed columns being analyzed to detect cycles
   viewStack = new Set<Table>() // Also detect view cycles
+  configuredParser: typeof parser
 
   constructor(workspace: AnalysisWorkspace) {
     this.config = workspace.config
+    this.configuredParser = parser.configure({dialect: lezerDialect(this.config.dialect)})
     this.files = workspace.files.map(file => this.createFile(file))
     this.filesByPath = Object.fromEntries(this.files.map(file => [file.path, file]))
   }
@@ -133,8 +142,8 @@ class AnalysisSession implements Analyzer {
 
   private parseFile(file: WorkspaceFileInput) {
     let kind = file.kind || (file.path.endsWith('.md') ? 'md' : 'gsql')
-    if (kind == 'md') return parseMarkdown(file)
-    return {tree: parser.parse(file.contents)}
+    if (kind == 'md') return parseMarkdown(file, this.configuredParser)
+    return {tree: this.configuredParser.parse(file.contents)}
   }
 
   private fileForPath(path: string) {
@@ -740,8 +749,9 @@ class AnalysisSession implements Analyzer {
 
       case 'Ref': {
         let pathNodes = node.getChildren('Identifier')
-        let fieldNode = pathNodes.pop()!
-        let fieldName = txt(fieldNode)
+        let quotedFieldNode = node.getChild('QuotedIdentifier')
+        let fieldNode = quotedFieldNode || pathNodes.pop()!
+        let fieldName = quotedFieldNode ? txt(fieldNode).slice(1, -1) : txt(fieldNode)
 
         // Check output fields first when we're at the query root (e.g. HAVING/post-agg filters).
         // Don't do this while resolving table expressions, or we can accidentally bind to sibling
@@ -1498,6 +1508,8 @@ class AnalysisSession implements Analyzer {
   private inferName(exprNode: SyntaxNode, scope: Scope, expr?: Expr): Pick<Query['fields'][number], 'name' | 'disambiguatedName'> {
     if (exprNode.name == 'Ref') {
       let names = exprNode.getChildren('Identifier').map(i => txt(i))
+      let quoted = exprNode.getChild('QuotedIdentifier')
+      if (quoted) names.push(txt(quoted).slice(1, -1))
       return {name: names.at(-1)!, disambiguatedName: names.join('_')}
     }
     let name = expr?.metadata?.defaultName || `col_${scope.query?.fields.length || 0}`
