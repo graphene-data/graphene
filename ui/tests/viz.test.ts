@@ -256,7 +256,7 @@ test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'year', y: 'flights', splitBy: 'status', arrange: 'stack', title: 'Flight Status by Year'})
-  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2, position: 'left'})
   await expect(chart.el).screenshot('bar-chart-numeric-year-domain')
 })
 
@@ -367,7 +367,7 @@ test('line chart respects precision metadata in tooltips', async ({mount, shared
   })
 
   expect(tooltip).toBe('12.75%')
-  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
   await expect(chart.el).screenshot('line-chart-tooltip-percent-precision')
 })
 
@@ -395,7 +395,7 @@ test('line chart uses unit metadata for axis and tooltip formatting', async ({mo
   })
 
   expect(formatted).toEqual({axis: '42 (minutes)', tooltip: '42 minutes'})
-  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
   await expect(chart.el).screenshot('line-chart-unit-metadata-axis-tooltip')
 })
 
@@ -413,7 +413,7 @@ test('time tooltip uses readable timeGrain formatting', async ({mount, chart}) =
   ]
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'period', y: 'value', title: 'Month Grain'})
-  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3, position: 'left'})
 
   await expect(chart.el).screenshot('line-chart-tooltip-time-month-grain')
 })
@@ -430,7 +430,7 @@ test('line chart tooltip formats calculated non-whole numbers', async ({mount, c
   ]
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'avg_delay', title: 'Average Delay'})
-  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
 
   await expect(chart.el).screenshot('line-chart-tooltip-calculated-non-whole')
 })
@@ -698,7 +698,7 @@ test('bar chart sorted stacked100 tooltips use values, not the sort column', asy
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'age_group', y: 'participants', splitBy: 'risk_count', arrange: 'stack100', sort: 'age_sort'})
-  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
   await expect(chart.el).screenshot('bar-chart-stacked100-sorted-tooltip')
 })
 
