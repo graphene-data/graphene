@@ -66,6 +66,7 @@ async function runHeadlessPageRequest(pageUrl: string, request: PageRequest): Pr
   for (let channel of channels) {
     try {
       browser = await chromium.launch({...launchOptions, ...channel})
+      lastError = undefined
       break
     } catch (err) {
       lastError = err
