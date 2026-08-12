@@ -6,7 +6,7 @@ layout: notebook
 
 Every frequent flyer has a pet theory. Pick the right airline. Avoid Chicago. Never fly a 20-year-old plane. These intuitions have just enough truth in them to survive, but they obscure which factors actually move the needle — and by how much.
 
-This is an analysis of FAA data covering roughly 345,000 U.S. commercial flights from 2000 to 2005. For each candidate factor — airline, origin airport, day of the week, and time of day — I measured how much of the variance in individual departure delays each one explains (η², or eta-squared). A high η² means knowing that factor genuinely helps predict whether _your_ flight will be late.
+This is an analysis of FAA data covering roughly 345,000 U.S. commercial flights from 2000 to 2005. For each candidate factor — airline, origin airport, day of the week, and time of day — I measured how much of the variance in individual departure delays each one explains. This statistic is called eta-squared. A high eta-squared value means knowing that factor genuinely helps predict whether _your_ flight will be late.
 
 ## One factor dwarfs the rest
 
@@ -51,7 +51,7 @@ order by eta_squared desc
   data=factor_importance
   x=eta_squared
   y=factor
-  title="Variance in departure delay explained by each factor (η²)"
+  title="Variance in departure delay explained by each factor (eta-squared)"
   height=240px
 />
 
