@@ -1,3 +1,22 @@
+## 0.0.26
+
+### Breaking changes
+
+- Graphene SQL string and identifier quotes now match the configured database dialect; double quotes are identifiers except in BigQuery, while backticks identify names in BigQuery and ClickHouse (`4c2fa37f`).
+
+### Added
+
+- Added authenticated CLI telemetry for Graphene Cloud projects; telemetry remains anonymous for other projects (`3208fdc6`).
+- Added configurable Graphene Cloud agent tokens through `graphene token --ttl`, with lifetimes from 5 minutes to 366 days (`786d3052`).
+- Added optional top-level `pages/` directories for keeping all Markdown pages out of the project root (`dd3da77c`).
+- Added hover tooltips for model column descriptions in tables and big values (`8ec82cc6`, `91dc0ee7`).
+- Expanded ClickHouse support for aggregate, numeric, collection, string, URL, hash, random, and conversion functions (`133645ac`).
+
+### Fixed
+
+- Improved CLI errors for network failures, API responses, and expired Graphene Cloud sessions (`e3bf04d1`).
+- Fixed hosted page color palettes to use the logical page path instead of the iframe shell path (`0d587082`).
+
 ## 0.0.25
 
 ### Breaking changes
