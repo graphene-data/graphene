@@ -1,7 +1,7 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
-import {formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
+import {formatFromField, formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {paletteForPath} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -45,6 +45,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, fields)
   timeFormatting(normalized)
+  addCartesianItemTooltips(normalized, fields)
   styleSecondaryAxisForSimpleBarLineLayout(normalized, fields)
   applyIntegerYAxisTicks(normalized, rows, fields)
   barLabelPositioning(normalized)
@@ -424,6 +425,46 @@ function valueFormatting(config: NormalConfig, fields: Field[]) {
     series.tooltip ||= {}
     if (series.tooltip?.formatter || series.tooltip.valueFormatter) continue
     series.tooltip.valueFormatter = makeValueFormatter(getSeriesValueFields(series, fields))
+  }
+}
+
+// Item-triggered cartesian tooltips retain the dimension as a header while showing only the hovered series.
+// ECharts' default item tooltip omits that context, making values ambiguous away from the axis labels.
+function addCartesianItemTooltips(config: NormalConfig, fields: Field[]) {
+  let tooltip = config.tooltip[0]
+  if (!tooltip || tooltip.trigger !== 'item' || tooltip.formatter != null) return
+  if (!config.series.every(series => series?.type === 'bar' || series?.type === 'line')) return
+  if (config.series.some(series => series?.tooltip?.formatter != null)) return
+
+  // Only install the formatter when every series exposes encoded fields; native configs may instead use data arrays.
+  let tooltipFields = config.series.map(series => {
+    let horizontalBar = series.type === 'bar' && config.yAxis[Number(series.yAxisIndex ?? 0)]?.type === 'category'
+    return {dimension: getEncodeField(series, fields, horizontalBar ? 'y' : 'x'), value: getEncodeField(series, fields, horizontalBar ? 'x' : 'y')}
+  })
+  if (tooltipFields.some(({dimension, value}) => !dimension || !value)) return
+
+  tooltip.formatter = (params: any) => {
+    let item = Array.isArray(params) ? params[0] : params
+    let series = config.series[item.seriesIndex]
+    let {dimension, value} = tooltipFields[item.seriesIndex]
+    let dimensionField = dimension as Field
+    let valueField = value as Field
+    let row = item.data as Record<string, any>
+    let dimensionValue = row[dimensionField.name]
+
+    // Axis tooltips receive timestamps, but item tooltips expose the original query date string.
+    // Parse it as a local calendar value so formatted labels do not shift across timezones.
+    let dateParts = typeof dimensionValue === 'string' ? dimensionValue.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}):(\d{2}))?/) : undefined
+    if (dateParts && (dimensionField.type === 'date' || dimensionField.type === 'timestamp')) {
+      dimensionValue = new Date(Number(dateParts[1]), Number(dateParts[2]) - 1, Number(dateParts[3]), Number(dateParts[4] || 0), Number(dateParts[5] || 0), Number(dateParts[6] || 0))
+    }
+
+    let dimensionLabel = dimensionField.metadata?.timeOrdinal ? formatTimeOrdinal(dimensionField, dimensionValue) : formatFromField(dimensionField, dimensionValue)
+    let valueLabel = series.tooltip?.valueFormatter ? series.tooltip.valueFormatter(row[valueField.name], item.dataIndex) : formatFromField(valueField, row[valueField.name])
+    let seriesLabel = item.seriesName || valueField.name
+
+    // ECharts supplies trusted marker HTML; everything derived from query data must be escaped.
+    return `${escapeHtml(dimensionLabel)}<br/>${item.marker || ''}${escapeHtml(seriesLabel)}<span style="float:right;margin-left:20px;font-weight:600">${escapeHtml(valueLabel)}</span>`
   }
 }
 
@@ -827,6 +868,11 @@ function getEncodeFields(series: SeriesWithGroupingHint | undefined, fields: Fie
 
 function getEncodeField(series: SeriesWithGroupingHint | undefined, fields: Field[], encodeProp: string): Field | undefined {
   return getEncodeFields(series, fields, encodeProp)[0]
+}
+
+// Tooltip formatters return HTML, so all labels sourced from query data must be escaped.
+function escapeHtml(value: unknown) {
+  return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;')
 }
 
 function inferDimensions(rows: Record<string, any>[]) {
