@@ -44,6 +44,15 @@ async function readEntry(): Promise<Cred | null> {
   return store[config.root]
 }
 
+// Returns existing Cloud credentials for telemetry without refreshing them or making telemetry affect CLI behavior.
+export async function getTelemetryAuthorization(): Promise<string | undefined> {
+  if (process.env.GRAPHENE_TOKEN) return `Bearer ${process.env.GRAPHENE_TOKEN}`
+
+  let entry = await readEntry()
+  if (!entry?.access_token || entry.expires_at < Date.now()) return
+  return `Bearer ${entry.access_token}`
+}
+
 async function updateEntry(cred: Cred) {
   let store = await readStore()
   cred.refresh_token ||= store[config.root]?.refresh_token
