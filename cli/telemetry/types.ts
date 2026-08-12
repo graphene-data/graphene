@@ -9,6 +9,7 @@ export interface TelemetryState {
 export interface CommonEventFields {
   install_id: string
   project_hash?: string
+  repo_slug?: string
   cli_version: string
   timestamp: string
   ci: boolean

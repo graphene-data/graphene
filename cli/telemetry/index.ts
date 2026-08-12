@@ -5,6 +5,7 @@ import path from 'node:path'
 
 import type {Config} from '../../lang/config.ts'
 import type {WorkspaceFileInput} from '../../lang/core.ts'
+import {getTelemetryAuthorization} from '../auth.ts'
 import type {TelemetryBatch, TelemetryCommand, TelemetryEvent, TelemetryEventName, TelemetryPayloads} from './types.ts'
 
 import {TelemetryStorage} from './storage.ts'
@@ -26,7 +27,7 @@ export class CliTelemetry {
   private cliVersion: string
   private endpoint: string
 
-  constructor(cfg: Config, cliVersion: string, endpoint = process.env.GRAPHENE_TELEMETRY_ENDPOINT || DEFAULT_TELEMETRY_ENDPOINT) {
+  constructor(cfg: Config, cliVersion: string, endpoint = process.env.GRAPHENE_TELEMETRY_ENDPOINT || telemetryEndpoint(cfg)) {
     this.cfg = cfg
     this.cliVersion = cliVersion
     this.endpoint = endpoint
@@ -62,6 +63,7 @@ export class CliTelemetry {
     return {
       install_id: this.installId,
       project_hash: this.projectHash,
+      repo_slug: this.cfg.cloud ? new URL(this.cfg.cloud).pathname.replace(/^\/+|\/+$/g, '') || undefined : undefined,
       cli_version: this.cliVersion,
       timestamp: new Date().toISOString(),
       ci: ci.isCI,
@@ -71,20 +73,27 @@ export class CliTelemetry {
   }
 
   private send(event: TelemetryEvent) {
-    let batch: TelemetryBatch = {events: [event]}
-    let controller = new AbortController()
-    let timeout = setTimeout(() => controller.abort(), 500)
-    timeout.unref?.()
+    void (async () => {
+      let batch: TelemetryBatch = {events: [event]}
+      let controller = new AbortController()
+      let timeout = setTimeout(() => controller.abort(), 500)
+      timeout.unref?.()
 
-    void fetch(this.endpoint, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(batch),
-      signal: controller.signal,
-    })
-      .catch(() => {})
-      .finally(() => clearTimeout(timeout))
+      let headers = new Headers({'Content-Type': 'application/json'})
+      let authorization = this.cfg.cloud ? await getTelemetryAuthorization() : undefined
+      if (authorization) headers.set('Authorization', authorization)
+
+      await fetch(this.endpoint, {method: 'POST', headers, body: JSON.stringify(batch), signal: controller.signal})
+        .catch(() => {})
+        .finally(() => clearTimeout(timeout))
+    })().catch(() => {})
   }
+}
+
+// Cloud projects report to their Cloud origin so the server can validate their existing credentials.
+function telemetryEndpoint(cfg: Config) {
+  if (!cfg.cloud) return DEFAULT_TELEMETRY_ENDPOINT
+  return new URL('/cli-telemetry', cfg.cloud).toString()
 }
 
 export function isTelemetryEnabled(config: Config, endpoint: string) {

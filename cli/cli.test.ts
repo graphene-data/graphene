@@ -287,22 +287,24 @@ test('cli check a single gsql file', async ({runCli}) => {
 })
 
 describe('cli telemetry', () => {
-  test('sends telemetry to the configured endpoint', async ({runCli}) => {
+  test('sends Cloud identity context to the configured endpoint', async ({runCli}) => {
     let tmpDir = await createTelemetryProject('graphene-cli-telemetry-')
     let batches: any[] = []
+    let authorizations: (string | undefined)[] = []
     let server = createServer(async (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
       let body = await readRequestBody(req)
       batches.push(JSON.parse(body))
+      authorizations.push(req.headers.authorization)
       res.statusCode = 204
       res.end()
     })
 
     try {
       let endpoint = await listen(server)
-      let res = await runCli(['compile', 'from flights select carrier'], configFor(tmpDir, {telemetry: true}), {
+      let res = await runCli(['compile', 'from flights select carrier'], configFor(tmpDir, {telemetry: true, cloud: `${endpoint}/flights`}), {
         env: {
           GRAPHENE_TELEMETRY_DISABLED: '0',
-          GRAPHENE_TELEMETRY_ENDPOINT: endpoint,
+          GRAPHENE_TOKEN: 'telemetry-token',
         },
       })
 
@@ -322,6 +324,8 @@ describe('cli telemetry', () => {
       expect(completed.command).toBe('compile')
       expect(completed.success).toBe(true)
       expect(completed.exit_code).toBe(0)
+      expect(events.every(event => event.repo_slug == 'flights')).toBe(true)
+      expect(authorizations.every(authorization => authorization == 'Bearer telemetry-token')).toBe(true)
 
       for (let batch of batches) {
         expect(batch).toMatchObject({events: expect.any(Array)})

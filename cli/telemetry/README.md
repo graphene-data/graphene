@@ -8,7 +8,7 @@ Telemetry is enabled when:
 - `GRAPHENE_TELEMETRY_DISABLED` is not set to `1`
 - `graphene.telemetry` is not set to `false` in project config
 
-The default endpoint is `https://app.graphenedata.com/cli-telemetry`. Tests and local development can override it with `GRAPHENE_TELEMETRY_ENDPOINT`.
+The default endpoint is `https://app.graphenedata.com/cli-telemetry`. Cloud projects use `/cli-telemetry` on their configured Cloud origin so Cloud can attribute authenticated events. Tests and local development can override it with `GRAPHENE_TELEMETRY_ENDPOINT`.
 
 Telemetry state persistence is best-effort. State is stored in the current project's `node_modules/.graphene/telemetry.json` when `node_modules` already exists. If the project cache cannot be read or written, command behavior should not change and install or upgrade lifecycle events are skipped.
 
@@ -18,6 +18,7 @@ Every event includes these fields:
 
 - `install_id`: A random UUID generated once and persisted in the local Graphene project cache. It identifies a project-local CLI installation, not a user account or machine owner.
 - `project_hash`: A SHA-256 hash of the nearest `package.json` `name`, prefixed with `graphene:` before hashing. This lets us distinguish projects without sending the raw package name.
+- `repo_slug`: For Cloud projects, the repo slug configured in the Cloud URL. Cloud resolves it only within the authenticated organization.
 - `cli_version`: The Graphene CLI version.
 - `timestamp`: The event time in ISO-8601 format.
 - `ci`: Whether the CLI appears to be running in CI.
@@ -121,6 +122,8 @@ Events are sent as HTTP `POST` requests with a JSON batch envelope:
 ```
 
 The client currently sends one event per request as `{events: [event]}`.
+
+Cloud projects attach an existing, unexpired login token or `GRAPHENE_TOKEN`. Telemetry never refreshes credentials or prompts for login. Cloud derives the user and organization from that token; missing or invalid credentials remain anonymous.
 
 Telemetry is best-effort:
 
