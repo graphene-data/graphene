@@ -30,6 +30,7 @@ export async function runServeInBackground(options: {entryPoint?: string} = {}):
   })
 
   if (!child.pid) throw new Error('Failed to start server process')
+  child.unref()
 
   return await new Promise<string>((resolve, reject) => {
     let settled = false
