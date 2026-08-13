@@ -29,14 +29,14 @@ function getStillLoading() {
   return loading
 }
 
-// Returns null once the page is stable, or the exact work pending when the timeout expires.
+// Returns immediately when already idle. If work was pending, waits for fonts and two stable frames once it clears.
 graphene.waitForLoad = async (timeout = 20_000) => {
+  if (getStillLoading().length == 0) return null
   let end = Date.now() + timeout
 
   while (Date.now() < end) {
     if (getStillLoading().length == 0) {
       if (document.fonts?.ready) await document.fonts.ready
-      await new Promise(resolve => setTimeout(resolve, 300))
       await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
       if (getStillLoading().length == 0) return null
     }
