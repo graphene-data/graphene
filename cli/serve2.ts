@@ -132,11 +132,10 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
       exclude: ['virtual:nav'], // provided by a plugin, so don't try and optimize it
       // Vite running in a user project will not naturally discover and optimize these transitive deps.
       // When you launch the server, your first page load will automatically refresh after a second or two as Vite now sees and optimizes these.
-      // This line makes it do that up-front, avoiding that reload jank. The packaged CLI also pre-bundles the `graphene` alias itself;
-      // doing that from source causes trouble in examples/tests because the alias points outside node_modules.
-      // `graphene` here is a special case: when packaged up it is considered a dependency, but in examples/tests, including it would cause errors.
+      // This line makes it do that up-front, avoiding that reload jank. The packaged CLI and tests also pre-bundle the `graphene` alias itself;
+      // tests repeatedly load the app from source, so bundling its stable module graph materially reduces each page navigation.
       include: [
-        ...(packaged ? ['graphene'] : []),
+        ...(packaged || process.env.NODE_ENV == 'test' ? ['graphene'] : []),
         '@graphenedata/cli > svelte',
         '@graphenedata/cli > chroma-js',
         '@graphenedata/cli > echarts',
