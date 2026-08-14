@@ -2,7 +2,6 @@ import {type Page, chromium, type Browser, type Locator} from '@playwright/test'
 import net from 'net'
 import path from 'path'
 import {fileURLToPath} from 'url'
-import {onTestFinished} from 'vitest'
 
 import {missingMockFiles, mockFileMap} from '../../cli/mockFiles.ts'
 import {clearSvelteWarnings, serve2, svelteWarnings} from '../../cli/serve2.ts'
@@ -37,6 +36,7 @@ export interface ServerFixture {
   mockMissingFile: (path: string) => void
   /** Update a mock file and trigger HMR, simulating a real file edit */
   updateMockFile: (path: string, content: string) => void
+  cleanup: () => void
 }
 
 const chromeConfig = {
@@ -48,7 +48,7 @@ const chromeConfig = {
   reducedMotion: 'reduce' as const,
 }
 
-export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page; server: ServerFixture; mount: MountFn; chart: ChartFixture}>({
+export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page; workerServer: ServerFixture; server: ServerFixture; mount: MountFn; chart: ChartFixture}>({
   browser: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
@@ -69,7 +69,9 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
     {scope: 'worker'},
   ],
 
-  page: async ({browser}, use) => {
+  // Depending on the test-scoped server ensures this context closes before its mock files are cleaned up.
+  page: async ({browser, server}, use) => {
+    void server
     let context = await browser.newContext(chromeConfig)
     let page = await context.newPage()
     trackBrowserConsole(page)
@@ -91,36 +93,36 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
     {scope: 'worker'},
   ],
 
-  // This boots up our cli server on a unique port for e2e tests.
-  server: [
+  // This boots one CLI server per worker; a test-scoped wrapper below owns mock cleanup.
+  workerServer: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use: (fixture: ServerFixture) => Promise<void>) => {
       let port = await getAvailablePort()
       let viteRoot = path.join(fileURLToPath(import.meta.url), '../../../examples/flights')
       process.env.GRAPHENE_PORT = String(port)
       setGlobalConfig({port, root: viteRoot}, 'example-flights')
-      let server = await serve2()
+      let viteServer = await serve2()
 
+      // Invalidate the mocked source and every derived Svelte module before removing its contents.
+      // We need this because we reuse vite between tests for performance, but we don't want a compiled mock from one test leaking in to other tests
       function cleanup() {
-        Object.keys(mockFileMap).forEach(key => delete mockFileMap[key])
-        missingMockFiles.clear()
-
-        // Vite caches our mocked files, so we need to clear them out after each test.
-        // Vite 7 has separate module graphs for server.moduleGraph and environments.client — invalidate both.
-        for (let graph of [server.moduleGraph, server.environments.client.moduleGraph] as any[]) {
+        let mockPaths = Object.keys(mockFileMap).flatMap(key => [path.join(config.root, key), '/' + key])
+        for (let graph of [viteServer.moduleGraph, viteServer.environments.client.moduleGraph] as any[]) {
           let keys: string[] = Array.from(graph?.idToModuleMap?.keys() || [])
-          let mockKeys = keys.filter(k => k.endsWith('?mock') || k == '\0virtual:nav')
-          mockKeys.forEach(k => {
-            let m = graph.getModuleById(k)
-            if (m) graph.invalidateModule(m)
+          let mockKeys = keys.filter(key => key == '\0virtual:nav' || key.includes('?mock') || mockPaths.some(mockPath => key.startsWith(mockPath)))
+          mockKeys.forEach(key => {
+            let module = graph.getModuleById(key)
+            if (module) graph.invalidateModule(module)
           })
         }
+        Object.keys(mockFileMap).forEach(key => delete mockFileMap[key])
+        missingMockFiles.clear()
       }
 
       await use({
+        cleanup,
         url: (options: Partial<Config> = {}) => {
           setGlobalConfig({...options, root: options.root || viteRoot, port} as any, options.projectName || 'example-flights')
-          onTestFinished(cleanup)
           return `http://localhost:${port}`
         },
         mockFile: (filePath: string, content: string) => {
@@ -131,7 +133,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
           let projectPath = config.pagesPrefix + filePath.replace(/^\//, '')
           missingMockFiles.add(projectPath)
           mockFileMap[projectPath] = 'Mock file not found'
-          for (let graph of [server.moduleGraph, server.environments.client.moduleGraph] as any[]) {
+          for (let graph of [viteServer.moduleGraph, viteServer.environments.client.moduleGraph] as any[]) {
             let navModule = graph?.getModuleById('\0virtual:nav')
             if (navModule) graph.invalidateModule(navModule)
           }
@@ -141,12 +143,19 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
           mockFileMap[projectPath] = trimIndentation(content)
           let absPath = path.join(config.root, projectPath)
           // Emit a watcher 'change' event so Vite runs the full HMR pipeline (including hotUpdate hooks)
-          server.watcher.emit('change', absPath)
+          viteServer.watcher.emit('change', absPath)
         },
       })
+      cleanup()
     },
     {scope: 'worker'} as any,
   ],
+
+  // Cleanup runs after fixtures that depend on the server, including the per-test page context.
+  server: async ({workerServer}, use) => {
+    await use(workerServer)
+    workerServer.cleanup()
+  },
 
   // mounts a given svelte component with props
   // This reuses an existing page, which is less isolated, but much faster

@@ -25,6 +25,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'ui',
+          isolate: false, // reuse each worker's browser, server, and Vite module graph across UI test files
           globalSetup: ['ui/tests/globalSetup.ts'],
           setupFiles: ['ui/tests/setup.ts'],
           include: ['ui/tests/*.test.ts'],
