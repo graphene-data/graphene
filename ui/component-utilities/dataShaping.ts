@@ -1,5 +1,8 @@
 import type {Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
+// Prefix for the synthetic fields stacked-100 charts are rewritten onto, which marks a series as one.
+export const STACK_PERCENTAGE_FIELD = '__graphene_stack_pct_'
+
 // Fill sparse grouped data so each split series has a value for each category.
 //
 // This only applies to split templates (`encode.splitBy`).
@@ -85,7 +88,7 @@ export function applyStackPercentage(config: NormalConfig, rows: Record<string, 
     if (stackGroup[0] !== entry) continue
 
     let valueFields = Array.from(new Set(stackGroup.map(candidate => valueOf(candidate)).filter(Boolean))) as string[]
-    let pctFieldByValue = Object.fromEntries(valueFields.map((field, index) => [field, `__graphene_stack_pct_${groupIndex}_${index}`])) as Record<string, string>
+    let pctFieldByValue = Object.fromEntries(valueFields.map((field, index) => [field, `${STACK_PERCENTAGE_FIELD}${groupIndex}_${index}`])) as Record<string, string>
 
     let totalsByCategory = new Map<string, number>()
     for (let row of rows) {
