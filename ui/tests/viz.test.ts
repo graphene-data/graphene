@@ -311,6 +311,25 @@ test('horizontal bar chart supports multiple x fields', async ({mount, chart}) =
   await expect(chart.el).screenshot('horizontal-bar-chart-multi-x')
 })
 
+test('horizontal bar chart stacked100', async ({mount, chart}) => {
+  let rows = [
+    {category: 'Alpha', segment: 'Current', value: 30},
+    {category: 'Alpha', segment: 'Previous', value: 70},
+    {category: 'Beta', segment: 'Current', value: 20},
+    {category: 'Gamma', segment: 'Current', value: 25},
+    {category: 'Gamma', segment: 'Previous', value: 75},
+  ]
+  let fields = [
+    {name: 'category', type: scalarType('string')},
+    {name: 'segment', type: scalarType('string')},
+    {name: 'value', type: scalarType('number')},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'value', y: 'category', splitBy: 'segment', arrange: 'stack100', title: 'Share by Category'})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 1, dataIndex: 2})
+  await expect(chart.el).screenshot('horizontal-bar-chart-stacked100')
+})
+
 test('stacked area chart', async ({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', splitBy: 'category', arrange: 'stack'})
   await expect(chart.el).screenshot('area-chart-stacked')

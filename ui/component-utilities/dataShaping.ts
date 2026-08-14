@@ -1,10 +1,10 @@
 import type {Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
-// Fill sparse grouped data so each split series has a value for each x bucket.
+// Fill sparse grouped data so each split series has a value for each category.
 //
 // This only applies to split templates (`encode.splitBy`).
-// We do not attempt to fabricate x values here; we only ensure a full Cartesian
-// product of existing x values and split values.
+// We do not attempt to fabricate category values here; we only ensure a full Cartesian
+// product of existing category and split values.
 //
 // Missing-value behavior by chart type (Evidence defaults):
 // - line (no area): null  -> visible line gaps
@@ -16,18 +16,15 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
   let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
-  // Horizontal bars put the categories on y and the values on x, so the roles below are swapped.
   let horizontal = isHorizontalBar(config)
   let groups = new Map<string, {categoryField: string; splitFields: string[]; fills: Map<string, any>}>()
 
   for (let entry of series) {
     let splitFields = getSplitFields(entry)
-    let xField = getSeriesXField(entry)
-    let yField = getSeriesYField(entry)
-    if (splitFields.length === 0 || !xField || !yField) continue
+    let categoryField = horizontal ? getSeriesYField(entry) : getSeriesXField(entry)
+    let valueField = horizontal ? getSeriesXField(entry) : getSeriesYField(entry)
+    if (splitFields.length === 0 || !categoryField || !valueField) continue
 
-    let categoryField = horizontal ? yField : xField
-    let valueField = horizontal ? xField : yField
     let key = `${categoryField}::${splitFields.join('::')}`
     if (!groups.has(key)) groups.set(key, {categoryField, splitFields, fills: new Map()})
 
@@ -42,20 +39,20 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
   }
 
   for (let group of groups.values()) {
-    let categories = distinctValues(rows, group.categoryField)
+    let categoryValues = distinctValues(rows, group.categoryField)
     let splitValues = group.splitFields.map(field => distinctValues(rows, field))
-    if (categories.length === 0 || splitValues.some(values => values.length === 0)) continue
+    if (categoryValues.length === 0 || splitValues.some(values => values.length === 0)) continue
 
     let existing = new Set<string>()
     for (let row of rows) {
       existing.add(compositeKey([row?.[group.categoryField], ...group.splitFields.map(field => row?.[field])]))
     }
 
-    for (let category of categories) {
+    for (let categoryValue of categoryValues) {
       for (let splitCombination of cartesianValues(splitValues)) {
-        if (existing.has(compositeKey([category, ...splitCombination]))) continue
+        if (existing.has(compositeKey([categoryValue, ...splitCombination]))) continue
 
-        let row: Record<string, any> = {[group.categoryField]: category}
+        let row: Record<string, any> = {[group.categoryField]: categoryValue}
         group.splitFields.forEach((field, index) => {
           row[field] = splitCombination[index]
         })
@@ -66,45 +63,48 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
   }
 }
 
-// Evidence stacked100 behavior: compute percentages per x-domain and rewrite series to synthetic pct fields.
+// Evidence stacked100 behavior: compute percentages per category and rewrite series to synthetic pct fields.
 export function applyStackPercentage(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
+  // Horizontal bars put the categories on y and the values on x, so the roles below are swapped.
+  let horizontal = isHorizontalBar(config)
+  let categoryOf = (entry?: SeriesWithGroupingHint) => (horizontal ? getSeriesYField(entry) : getSeriesXField(entry))
+  let valueOf = (entry?: SeriesWithGroupingHint) => (horizontal ? getSeriesXField(entry) : getSeriesYField(entry))
   let groupIndex = 0
 
   for (let entry of series) {
-    let xField = getSeriesXField(entry)
-    let yField = getSeriesYField(entry)
-    if (entry?.stackPercentage !== true || !entry?.stack || !xField || !yField || entry?.datasetId != null) continue
+    let categoryField = categoryOf(entry)
+    let valueField = valueOf(entry)
+    if (entry?.stackPercentage !== true || !entry?.stack || !categoryField || !valueField || entry?.datasetId != null) continue
 
     let stackGroup = series.filter(candidate => {
-      return candidate?.stack === entry.stack && getSeriesXField(candidate) === xField && getSeriesYField(candidate)
+      return candidate?.stack === entry.stack && categoryOf(candidate) === categoryField && valueOf(candidate)
     })
     if (stackGroup[0] !== entry) continue
 
-    let yFields = Array.from(new Set(stackGroup.map(candidate => getSeriesYField(candidate)).filter(Boolean))) as string[]
-    let pctFieldByY = Object.fromEntries(yFields.map((y, index) => [y, `__graphene_stack_pct_${groupIndex}_${index}`])) as Record<string, string>
+    let valueFields = Array.from(new Set(stackGroup.map(candidate => valueOf(candidate)).filter(Boolean))) as string[]
+    let pctFieldByValue = Object.fromEntries(valueFields.map((field, index) => [field, `__graphene_stack_pct_${groupIndex}_${index}`])) as Record<string, string>
 
-    let totalsByX = new Map<string, number>()
+    let totalsByCategory = new Map<string, number>()
     for (let row of rows) {
-      let xKey = valueKey(row?.[xField])
-      let rowTotal = yFields.reduce((sum, y) => sum + (Number(row?.[y]) || 0), 0)
-      totalsByX.set(xKey, (totalsByX.get(xKey) ?? 0) + rowTotal)
+      let categoryKey = valueKey(row?.[categoryField])
+      let rowTotal = valueFields.reduce((sum, field) => sum + (Number(row?.[field]) || 0), 0)
+      totalsByCategory.set(categoryKey, (totalsByCategory.get(categoryKey) ?? 0) + rowTotal)
     }
 
     for (let row of rows) {
-      let xKey = valueKey(row?.[xField])
-      let total = totalsByX.get(xKey) ?? 0
-      for (let y of yFields) row[pctFieldByY[y]] = total <= 0 ? 0 : (Number(row?.[y]) || 0) / total
+      let total = totalsByCategory.get(valueKey(row?.[categoryField])) ?? 0
+      for (let field of valueFields) row[pctFieldByValue[field]] = total <= 0 ? 0 : (Number(row?.[field]) || 0) / total
     }
 
-    for (let y of yFields) ensureField(fields, pctFieldByY[y], {metadata: {ratio: true}})
+    for (let field of valueFields) ensureField(fields, pctFieldByValue[field], {metadata: {ratio: true}})
 
     for (let candidate of stackGroup) {
-      let y = getSeriesYField(candidate)
-      if (!y) continue
-      candidate.encode = {...candidate.encode, y: pctFieldByY[y]}
+      let field = valueOf(candidate)
+      if (!field) continue
+      candidate.encode = {...candidate.encode, [horizontal ? 'x' : 'y']: pctFieldByValue[field]}
       delete candidate.stackPercentage
     }
 

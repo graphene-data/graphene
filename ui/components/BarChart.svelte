@@ -76,7 +76,8 @@
       tooltip: {trigger: 'item'},
       legend: {show: Boolean(splitBy || y2 || (!horizontal && yFields.length > 1) || (horizontal && xFields.length > 1))},
       xAxis: {},
-      yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{alignTicks: true}] : [])],
+      // The stack100 domain is pinned by an enrichment, since only it knows whether x or y holds the values.
+      yAxis: [{}, ...(y2 ? [{alignTicks: true}] : [])],
       series,
     }
   }
