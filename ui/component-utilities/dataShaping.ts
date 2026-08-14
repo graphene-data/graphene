@@ -1,10 +1,10 @@
 import type {Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
-// Fill sparse grouped data so each split series has a value for each x bucket.
+// Fill sparse grouped data so each split series has a value for each category.
 //
 // This only applies to split templates (`encode.splitBy`).
-// We do not attempt to fabricate x values here; we only ensure a full Cartesian
-// product of existing x values and split values.
+// We do not attempt to fabricate category values here; we only ensure a full Cartesian
+// product of existing category and split values.
 //
 // Missing-value behavior by chart type (Evidence defaults):
 // - line (no area): null  -> visible line gaps
@@ -16,46 +16,47 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
   let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
-  let groups = new Map<string, {xField: string; splitFields: string[]; fills: Map<string, any>}>()
+  let horizontal = isHorizontalBar(config)
+  let groups = new Map<string, {categoryField: string; splitFields: string[]; fills: Map<string, any>}>()
 
   for (let entry of series) {
     let splitFields = getSplitFields(entry)
-    let xField = getSeriesXField(entry)
-    let yField = getSeriesYField(entry)
-    if (splitFields.length === 0 || !xField || !yField) continue
+    let categoryField = horizontal ? getSeriesYField(entry) : getSeriesXField(entry)
+    let valueField = horizontal ? getSeriesXField(entry) : getSeriesYField(entry)
+    if (splitFields.length === 0 || !categoryField || !valueField) continue
 
-    let key = `${xField}::${splitFields.join('::')}`
-    if (!groups.has(key)) groups.set(key, {xField, splitFields, fills: new Map()})
+    let key = `${categoryField}::${splitFields.join('::')}`
+    if (!groups.has(key)) groups.set(key, {categoryField, splitFields, fills: new Map()})
 
     // This line is where chart-specific missing-value behavior is chosen.
     // See getMissingFillValueForSeries() below for the type mapping.
     let fillValue = getMissingFillValueForSeries(entry)
     let fills = groups.get(key)!.fills
 
-    // If multiple templates target the same y field, prefer zero over null.
+    // If multiple templates target the same value field, prefer zero over null.
     // (bar/area should win over plain line when mixed configs exist.)
-    if (!fills.has(yField) || fillValue === 0) fills.set(yField, fillValue)
+    if (!fills.has(valueField) || fillValue === 0) fills.set(valueField, fillValue)
   }
 
   for (let group of groups.values()) {
-    let xValues = distinctValues(rows, group.xField)
+    let categoryValues = distinctValues(rows, group.categoryField)
     let splitValues = group.splitFields.map(field => distinctValues(rows, field))
-    if (xValues.length === 0 || splitValues.some(values => values.length === 0)) continue
+    if (categoryValues.length === 0 || splitValues.some(values => values.length === 0)) continue
 
     let existing = new Set<string>()
     for (let row of rows) {
-      existing.add(compositeKey([row?.[group.xField], ...group.splitFields.map(field => row?.[field])]))
+      existing.add(compositeKey([row?.[group.categoryField], ...group.splitFields.map(field => row?.[field])]))
     }
 
-    for (let xValue of xValues) {
+    for (let categoryValue of categoryValues) {
       for (let splitCombination of cartesianValues(splitValues)) {
-        if (existing.has(compositeKey([xValue, ...splitCombination]))) continue
+        if (existing.has(compositeKey([categoryValue, ...splitCombination]))) continue
 
-        let row: Record<string, any> = {[group.xField]: xValue}
+        let row: Record<string, any> = {[group.categoryField]: categoryValue}
         group.splitFields.forEach((field, index) => {
           row[field] = splitCombination[index]
         })
-        for (let [yField, fillValue] of group.fills.entries()) row[yField] = fillValue
+        for (let [valueField, fillValue] of group.fills.entries()) row[valueField] = fillValue
         rows.push(row)
       }
     }
