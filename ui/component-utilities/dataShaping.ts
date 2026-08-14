@@ -16,7 +16,9 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
   let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
-  let groups = new Map<string, {xField: string; splitFields: string[]; fills: Map<string, any>}>()
+  // Horizontal bars put the categories on y and the values on x, so the roles below are swapped.
+  let horizontal = isHorizontalBar(config)
+  let groups = new Map<string, {categoryField: string; splitFields: string[]; fills: Map<string, any>}>()
 
   for (let entry of series) {
     let splitFields = getSplitFields(entry)
@@ -24,38 +26,40 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
     let yField = getSeriesYField(entry)
     if (splitFields.length === 0 || !xField || !yField) continue
 
-    let key = `${xField}::${splitFields.join('::')}`
-    if (!groups.has(key)) groups.set(key, {xField, splitFields, fills: new Map()})
+    let categoryField = horizontal ? yField : xField
+    let valueField = horizontal ? xField : yField
+    let key = `${categoryField}::${splitFields.join('::')}`
+    if (!groups.has(key)) groups.set(key, {categoryField, splitFields, fills: new Map()})
 
     // This line is where chart-specific missing-value behavior is chosen.
     // See getMissingFillValueForSeries() below for the type mapping.
     let fillValue = getMissingFillValueForSeries(entry)
     let fills = groups.get(key)!.fills
 
-    // If multiple templates target the same y field, prefer zero over null.
+    // If multiple templates target the same value field, prefer zero over null.
     // (bar/area should win over plain line when mixed configs exist.)
-    if (!fills.has(yField) || fillValue === 0) fills.set(yField, fillValue)
+    if (!fills.has(valueField) || fillValue === 0) fills.set(valueField, fillValue)
   }
 
   for (let group of groups.values()) {
-    let xValues = distinctValues(rows, group.xField)
+    let categories = distinctValues(rows, group.categoryField)
     let splitValues = group.splitFields.map(field => distinctValues(rows, field))
-    if (xValues.length === 0 || splitValues.some(values => values.length === 0)) continue
+    if (categories.length === 0 || splitValues.some(values => values.length === 0)) continue
 
     let existing = new Set<string>()
     for (let row of rows) {
-      existing.add(compositeKey([row?.[group.xField], ...group.splitFields.map(field => row?.[field])]))
+      existing.add(compositeKey([row?.[group.categoryField], ...group.splitFields.map(field => row?.[field])]))
     }
 
-    for (let xValue of xValues) {
+    for (let category of categories) {
       for (let splitCombination of cartesianValues(splitValues)) {
-        if (existing.has(compositeKey([xValue, ...splitCombination]))) continue
+        if (existing.has(compositeKey([category, ...splitCombination]))) continue
 
-        let row: Record<string, any> = {[group.xField]: xValue}
+        let row: Record<string, any> = {[group.categoryField]: category}
         group.splitFields.forEach((field, index) => {
           row[field] = splitCombination[index]
         })
-        for (let [yField, fillValue] of group.fills.entries()) row[yField] = fillValue
+        for (let [valueField, fillValue] of group.fills.entries()) row[valueField] = fillValue
         rows.push(row)
       }
     }
@@ -200,7 +204,7 @@ export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, 
   }
 
   for (let series of config.series) {
-    if (series?.type !== 'bar' || !series?.stack || series?.data != null) continue
+    if (series?.type !== 'bar' || series?.data != null) continue
 
     let xField = getSeriesXField(series)
     let yField = getSeriesYField(series)
@@ -209,6 +213,13 @@ export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, 
 
     let seriesRows = datasetRows(series.datasetId)
     if (!seriesRows) continue
+
+    // Unstacked bars stand alone, so their rows map straight through without aligning to shared categories.
+    if (!series.stack) {
+      series.data = seriesRows.map(row => ({...row, value: [row[xField], row[yField]]}))
+      delete series.datasetId
+      continue
+    }
 
     let rowByCategory = new Map<string, Record<string, any>>()
     for (let row of seriesRows) {
