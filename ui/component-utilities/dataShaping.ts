@@ -204,7 +204,7 @@ export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, 
   }
 
   for (let series of config.series) {
-    if (series?.type !== 'bar' || !series?.stack || series?.data != null) continue
+    if (series?.type !== 'bar' || series?.data != null) continue
 
     let xField = getSeriesXField(series)
     let yField = getSeriesYField(series)
@@ -213,6 +213,13 @@ export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, 
 
     let seriesRows = datasetRows(series.datasetId)
     if (!seriesRows) continue
+
+    // Unstacked bars stand alone, so their rows map straight through without aligning to shared categories.
+    if (!series.stack) {
+      series.data = seriesRows.map(row => ({...row, value: [row[xField], row[yField]]}))
+      delete series.datasetId
+      continue
+    }
 
     let rowByCategory = new Map<string, Record<string, any>>()
     for (let row of seriesRows) {

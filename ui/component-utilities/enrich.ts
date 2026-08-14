@@ -617,50 +617,48 @@ function addPieTooltips(config: NormalConfig, fields: Field[]) {
   }
 }
 
-// Round only the topmost (or rightmost for horizontal) visible non-zero bar in each stack slot.
+// Round the outermost visible non-zero bar in each stack slot, on both sides of the value axis.
+// Negative bars grow away from the baseline in the opposite direction, so their rounded corners flip too.
 function stackedBarCornerRadius(config: NormalConfig) {
   let horizontal = isHorizontalBar(config)
-  let cornerRadius = horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]
+  let positiveRadius = horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]
+  let negativeRadius = horizontal ? [3, 0, 0, 3] : [0, 0, 3, 3]
   let valueIndex = horizontal ? 0 : 1
   let selected = config.legend[0]?.selected || {}
   let stacks = new Map<string, SeriesWithGroupingHint[]>()
-
-  // Unstacked bars can use a single series-level radius.
-  for (let series of config.series) {
-    if (series?.type !== 'bar' || series?.stack || series?.itemStyle?.borderRadius != null) continue
-    series.itemStyle = {...series.itemStyle, borderRadius: cornerRadius}
-  }
 
   for (let [index, series] of config.series.entries()) {
     if (series?.type !== 'bar' || series?.itemStyle?.borderRadius != null || !Array.isArray(series.data)) continue
 
     let axisKey = `${Number(series.xAxisIndex ?? 0)}:${Number(series.yAxisIndex ?? 0)}`
-    let stackKey = series.stack ?? `__  graphene_unstacked_${index}`
+    let stackKey = series.stack ?? `__graphene_unstacked_${index}`
     let key = `${axisKey}::${stackKey}`
     let group = stacks.get(key) ?? []
     group.push(series)
     stacks.set(key, group)
   }
 
-  // For each stack slot, scan top-down and round the first visible non-zero segment.
+  // Positive and negative segments stack in opposite directions, so each side gets its own outermost segment.
+  // Scanning from the last series backwards finds it, since later series sit further from the baseline.
   for (let stackSeries of stacks.values()) {
     let maxPoints = Math.max(...stackSeries.map(series => (series.data as unknown[]).length), 0)
 
     for (let pointIndex = 0; pointIndex < maxPoints; pointIndex++) {
-      for (let seriesIndex = stackSeries.length - 1; seriesIndex >= 0; seriesIndex--) {
-        let series = stackSeries[seriesIndex]
-        if (selected[series.name || ''] === false) continue
+      let candidates = stackSeries
+        .map(series => ({series, point: (series.data as Record<string, any>[])[pointIndex]}))
+        .filter(({series, point}) => selected[series.name || ''] !== false && point && typeof point === 'object')
+        .map(entry => ({...entry, value: Number(entry.point?.value?.[valueIndex])}))
+        .filter(entry => Number.isFinite(entry.value) && entry.value !== 0)
+        .reverse()
 
-        let point = (series.data as unknown[])[pointIndex]
-        if (!point || typeof point !== 'object') continue
+      for (let sign of [1, -1]) {
+        let outermost = candidates.find(entry => Math.sign(entry.value) === sign)
+        if (!outermost) continue
 
-        let value = Number((point as Record<string, any>)?.value?.[valueIndex])
-        if (!Number.isFinite(value) || value === 0) continue
-
-        let typed = point as Record<string, any>
-        let existingItemStyle = typed.itemStyle && typeof typed.itemStyle === 'object' ? typed.itemStyle : {}
-        ;(series.data as Record<string, any>[])[pointIndex] = {...typed, itemStyle: {...existingItemStyle, borderRadius: cornerRadius}}
-        break
+        let {series, point} = outermost
+        let existingItemStyle = point.itemStyle && typeof point.itemStyle === 'object' ? point.itemStyle : {}
+        let borderRadius = sign > 0 ? positiveRadius : negativeRadius
+        ;(series.data as Record<string, any>[])[pointIndex] = {...point, itemStyle: {...existingItemStyle, borderRadius}}
       }
     }
   }
