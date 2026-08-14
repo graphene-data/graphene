@@ -10,9 +10,10 @@ test('big value', async ({mount, sharedPage}) => {
   data.fields.find(field => field.name === 'value')!.metadata!.description = 'Total sales across all product categories'
   let component = await mount('components/BigValue.svelte', {data, value: 'value', title: 'Sales'})
   await component.evaluate(element => element.style.minHeight = '120px')
-  await expect(sharedPage.getByText('Sales')).toBeVisible()
+  let title = sharedPage.getByText('Sales', {exact: true})
+  await expect(title).toBeVisible()
   await expect(sharedPage.getByText('$611.1k')).toBeVisible()
-  await sharedPage.getByText('Sales').hover()
+  await title.hover()
   await expect(component).screenshot('big-value')
 })
 

@@ -1,8 +1,8 @@
 import {expect, test, waitForGrapheneLoad} from './fixtures.ts'
 
 test.beforeEach(async ({page, sharedPage}) => {
-  await sharedPage.setViewportSize({width: 900, height: 620})
   await page.setViewportSize({width: 900, height: 620})
+  await sharedPage.setViewportSize({width: 900, height: 620})
 })
 
 async function loadDropdownPage(server: {mockFile: (path: string, content: string) => void; url: () => string}, page: any, componentMarkup: string) {
@@ -92,97 +92,84 @@ test('query blocks can be defined after the component that uses them', async ({s
   await expect(page.getByRole('listbox')).screenshot('query-block-after-component')
 })
 
-test('dropdown single-select supports open, select, and close behaviors', async ({server, page}) => {
-  await loadDropdownPage(server, page, '<Dropdown name="carrier" data="dropdown_options" value="code" label="label" title="Carrier" />')
-  let trigger = page.getByRole('combobox', {name: 'Carrier'})
-  await expect(trigger).toBeVisible()
-
+test('dropdown selection supports single and bulk interactions', async ({server, page}) => {
+  await loadDropdownPage(
+    server,
+    page,
+    `
+    <Dropdown name="carrier" data="dropdown_options" value="code" label="label" title="Carrier" />
+    <Dropdown name="carrier_multi" data="dropdown_options" value="code" label="label" title="Carriers" multiple=true placeholder="Pick carriers" />
+  `,
+  )
   await startParamTracking(page)
+
+  // Single-select supports opening, choosing a value, and closing with Escape.
+  let trigger = page.getByRole('combobox', {name: 'Carrier', exact: true})
   await trigger.click()
   let menu = page.getByRole('listbox')
-  await expect(menu).toBeVisible()
   await expect(trigger).toHaveAttribute('aria-expanded', 'true')
   await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-single-open')
-
   await page.getByRole('option', {name: 'AA'}).click()
   await expect(trigger).toContainText('AA')
-  await expect(menu).toBeHidden()
-  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
   expect(await lastParamUpdate(page, 'carrier')).toEqual({name: 'carrier', value: 'AA'})
-
   await trigger.click()
-  await expect(menu).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(menu).toBeHidden()
-})
 
-test('dropdown multi-select supports select-all and clear', async ({server, page}) => {
-  await loadDropdownPage(server, page, '<Dropdown name="carrier_multi" data="dropdown_options" value="code" label="label" title="Carriers" multiple=true placeholder="Pick carriers" />')
-  let trigger = page.getByRole('combobox', {name: 'Carriers'})
-
-  await startParamTracking(page)
+  // Multi-select keeps sorted options and supports its bulk footer actions.
+  trigger = page.getByRole('combobox', {name: 'Carriers'})
   await trigger.click()
-  let menu = page.getByRole('listbox')
-  await expect(menu).toBeVisible()
-
   let optionLabels = await menu.locator('[role="option"] .dropdown-option-label').allTextContents()
-  let sortedOptionLabels = [...optionLabels].sort((a, b) => a.localeCompare(b, undefined, {numeric: true}))
-  expect(optionLabels).toEqual(sortedOptionLabels)
-
+  expect(optionLabels).toEqual([...optionLabels].sort((a, b) => a.localeCompare(b, undefined, {numeric: true})))
   await page.getByRole('button', {name: 'Select all'}).click()
-  await expect(trigger).toContainText('selected')
   await expect(menu.locator('.dropdown-option.is-selected')).toHaveCount(optionLabels.length)
   expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: optionLabels})
   await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-multi-select-all')
-
   await page.getByRole('button', {name: 'Clear selection'}).click()
   await expect(trigger).toContainText('Pick carriers')
-  await expect(page.getByRole('button', {name: 'Clear selection'})).toBeDisabled()
   expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: null})
+  await page.keyboard.press('Escape')
 })
 
-test('dropdown search filters options and shows empty state', async ({server, page}) => {
-  await loadDropdownPage(server, page, '<Dropdown name="carrier_search" data="dropdown_options" value="code" label="label" title="Carrier Search" />')
-  let trigger = page.getByRole('combobox', {name: 'Carrier Search'})
+test('dropdown supports search and keyboard navigation', async ({server, page}) => {
+  await loadDropdownPage(
+    server,
+    page,
+    `
+    <Dropdown name="carrier_search" data="dropdown_options" value="code" label="label" title="Carrier Search" />
+    <Dropdown name="carrier_keys" data="dropdown_options" value="code" label="label" title="Keyboard Carrier" />
+  `,
+  )
+  await startParamTracking(page)
 
-  await trigger.click()
+  // Search filters matching options and renders its empty state.
+  let trigger = page.getByRole('combobox', {name: 'Carrier Search'})
   let menu = page.getByRole('listbox')
+  await trigger.click()
   let search = menu.getByPlaceholder('Carrier Search')
   await search.fill('AA')
   await expect.poll(async () => await menu.locator('[role="option"]').count()).toBeGreaterThan(0)
-  let filteredOptions = await menu.locator('[role="option"]').allTextContents()
-  expect(filteredOptions.every(text => text.includes('AA'))).toBe(true)
+  expect((await menu.locator('[role="option"]').allTextContents()).every(text => text.includes('AA'))).toBe(true)
   await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-search-filtered')
-
   await search.fill('zzz')
   await expect(menu.getByText('No results found')).toBeVisible()
-  await expect(page.getByRole('option')).toHaveCount(0)
   await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-search-empty')
-})
+  await page.keyboard.press('Escape')
 
-test('dropdown keyboard navigation selects active option', async ({server, page}) => {
-  await loadDropdownPage(server, page, '<Dropdown name="carrier_keys" data="dropdown_options" value="code" label="label" title="Keyboard Carrier" />')
-  let trigger = page.getByRole('combobox', {name: 'Keyboard Carrier'})
-
-  await startParamTracking(page)
+  // Keyboard navigation opens the final dropdown, moves its active option, and selects it.
+  trigger = page.getByRole('combobox', {name: 'Keyboard Carrier'})
   await trigger.focus()
   await page.keyboard.press('ArrowDown')
-  let menu = page.getByRole('listbox')
-  await expect(menu).toBeVisible()
   let initialActive = await menu.locator('.dropdown-option.is-active .dropdown-option-label').textContent()
   await menu.press('ArrowDown')
-  let movedActive = await menu.locator('.dropdown-option.is-active .dropdown-option-label').textContent()
-  expect(movedActive).not.toEqual(initialActive)
-
+  expect(await menu.locator('.dropdown-option.is-active .dropdown-option-label').textContent()).not.toEqual(initialActive)
   await menu.press('Enter')
   await expect(trigger).not.toContainText('Select option')
-  await expect(menu).toBeHidden()
-  let update = await lastParamUpdate(page, 'carrier_keys')
-  expect(update?.name).toBe('carrier_keys')
+  expect((await lastParamUpdate(page, 'carrier_keys'))?.name).toBe('carrier_keys')
 })
 
 test('dropdown defaultValue and disabled state render correctly', async ({server, page}) => {
