@@ -192,6 +192,25 @@ test('bar chart supports multiple y fields', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-multiple-y')
 })
 
+test('stacked bar chart rounds positive and negative outer corners', async ({mount, chart}) => {
+  let rows = [
+    {category: 'Positive', segment: 'Base', value: 12},
+    {category: 'Positive', segment: 'Outer', value: 5},
+    {category: 'Negative', segment: 'Base', value: -12},
+    {category: 'Negative', segment: 'Outer', value: -5},
+    {category: 'Both', segment: 'Base', value: 10},
+    {category: 'Both', segment: 'Outer', value: -6},
+  ]
+  let fields = [
+    {name: 'category', type: scalarType('string')},
+    {name: 'segment', type: scalarType('string')},
+    {name: 'value', type: scalarType('number')},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'category', y: 'value', splitBy: 'segment', arrange: 'stack'})
+  await expect(chart.el).screenshot('bar-chart-negative-stack-corners')
+})
+
 test('bar chart supports expression fields with commas', async ({mount, chart}) => {
   let data = {
     rows: [
