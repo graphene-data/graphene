@@ -109,33 +109,15 @@ test('check reports invalid metadata annotations', async () => {
   expect(outputLines()).toContain('ERROR: tmp_bad_metadata.gsql line 2: Metadata "#ratio" is a flag; use "#ratio" or "#ratio=true".')
 })
 
-test('cli run with md file reports unsupported chart wrapper props', async ({runCli, server, page}) => {
+test('cli run reports unsupported props across chart types', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Runtime Chart Prop Error
+    # Runtime Chart Prop Errors
     \`\`\`sql chart_data
     from flights select carrier, distance limit 25
     \`\`\`
-    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" />
-  `,
-  )
-
-  await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md'], config)
-  expect(result.code).toBe(1)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "yFmt" on BarChart.')
-})
-
-test('cli run with md file reports unsupported ECharts top-level props', async ({runCli, server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Runtime ECharts Prop Error
-    \`\`\`sql chart_data
-    from flights select carrier, distance limit 25
-    \`\`\`
-
+    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" emptySet="warn" />
     <ECharts data="chart_data" chartAreaHeight="240">
       xAxis: {},
       yAxis: {},
@@ -146,39 +128,23 @@ test('cli run with md file reports unsupported ECharts top-level props', async (
 
   await page.goto(server.url())
   let result = await runCli(['run', 'pages/index.md'], config)
+  let output = outputLines(result.stdout + result.stderr)
   expect(result.code).toBe(1)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "chartAreaHeight" on ECharts.')
+  expect(output).toContain('Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.')
+  expect(output).toContain('Unsupported prop "chartAreaHeight" on ECharts.')
 })
 
-test('cli run with md file reports multiple unsupported chart props', async ({runCli, server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Multiple Runtime Chart Prop Errors
-    \`\`\`sql chart_data
-    from flights select carrier, distance limit 25
-    \`\`\`
-    <BarChart data="chart_data" x="carrier" y="distance" yFmt="num0" emptySet="warn" />
-  `,
-  )
-
-  await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md'], config)
-  expect(result.code).toBe(1)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.')
-})
-
-test('cli run with md file reports runtime chart prop and render errors together', async ({runCli, server, page}) => {
+test('cli run with md file reports runtime chart render errors', async ({runCli, server, page}) => {
   expectConsoleError('Chart failed to render')
   server.mockFile(
     '/index.md',
     `
-    # Runtime Chart Prop And Render Error
+    # Runtime Chart Render Error
     \`\`\`sql chart_data
     from flights select dep_delay as x_value, dep_delay as bad_category limit 25
     \`\`\`
 
-    <ECharts data="chart_data" chartAreaHeight="240">
+    <ECharts data="chart_data">
       xAxis: {},
       yAxis: {type: "category"},
       series: [{type: "bar", encode: {x: "x_value", y: "bad_category"}}],
@@ -229,29 +195,6 @@ test('cli run handles page query with trailing column annotation', async ({runCl
   expect(result.code).toBe(0)
   await expectPngScreenshot(result.stdout)
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
-})
-
-test('cli run with md file reports runtime chart configuration errors', async ({runCli, server, page}) => {
-  expectConsoleError('Chart failed to render')
-  server.mockFile(
-    '/index.md',
-    `
-    # Runtime Chart Config Error
-    \`\`\`sql chart_data
-    from flights select dep_delay as x_value, dep_delay as bad_category limit 25
-    \`\`\`
-
-    <ECharts data="chart_data">
-      xAxis: {},
-      yAxis: {type: "category"},
-      series: [{type: "bar", encode: {x: "x_value", y: "bad_category"}}],
-    </ECharts>
-  `,
-  )
-
-  await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Horizontal charts do not support a value or time-based x-axis')
 })
 
 test('cli run with md file reports table configuration errors', async ({runCli, server, page}) => {
@@ -315,23 +258,35 @@ test('cli run with md file reports html compilation errors', async ({runCli, ser
   expect(output).toMatch(/ERROR: .*index\.md line \d+: `<p>` was left open/)
 })
 
-test('cli run with --chart captures a single chart screenshot', async ({runCli, server, page}) => {
+test('cli run selects chart, table, and ECharts screenshots by title', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Chart Screenshot
+    # Component Screenshots
     \`\`\`sql chart_data
     from flights select carrier, sum(distance) as total_distance
     \`\`\`
+    \`\`\`sql table_data
+    from flights select carrier, count() as total_flights group by 1 order by carrier limit 5
+    \`\`\`
     <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
+    <Table data="table_data" title="Carrier Totals" rows=5 />
+    <ECharts data="chart_data">
+      title: [{text: "ECharts Distance"}],
+      xAxis: {type: "category"},
+      yAxis: {},
+      series: [{type: "bar", encode: {x: "carrier", y: "total_distance"}}],
+    </ECharts>
   `,
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Distance'], config)
-  await expectPngScreenshot(result.stdout)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
+  for (let title of ['Carrier Distance', 'Carrier Totals', 'ECharts Distance']) {
+    let result = await runCli(['run', 'pages/index.md', '--chart', title], config)
+    await expectPngScreenshot(result.stdout)
+    expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+    expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
+  }
 })
 
 test('cli run with --headless captures a screenshot without an open page', async ({runCli, server}) => {
@@ -353,23 +308,7 @@ test('cli run with --headless captures a screenshot without an open page', async
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
 })
 
-test('cli run with --chart captures a table screenshot by title', async ({runCli, server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Table Screenshot
-    \`\`\`sql table_data
-    from flights select carrier, count() as total_flights group by 1 order by carrier limit 5
-    \`\`\`
-    <Table data="table_data" title="Carrier Totals" rows=5 />
-  `,
-  )
 
-  await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Totals'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
-})
 
 test('cli run with --headless captures a table screenshot by title', async ({runCli, server}) => {
   server.mockFile(
@@ -419,30 +358,9 @@ test('cli run with --input applies inputs to a full page run', async ({runCli, s
   expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>/?carrier=AA')
 })
 
-test('cli run with --chart captures an ECharts screenshot by title', async ({runCli, server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # ECharts Screenshot
-    \`\`\`sql chart_data
-    from flights select carrier, sum(distance) as total_distance
-    \`\`\`
-    <ECharts data="chart_data">
-      title: [{text: "Carrier Distance"}],
-      xAxis: {type: "category"},
-      yAxis: {},
-      series: [{type: "bar", encode: {x: "carrier", y: "total_distance"}}],
-    </ECharts>
-  `,
-  )
 
-  await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Distance'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
-})
 
-test('cli list prints chart component IDs', async ({runCli, server, page}) => {
+test('cli list prints chart and table component IDs', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
@@ -450,24 +368,10 @@ test('cli list prints chart component IDs', async ({runCli, server, page}) => {
     \`\`\`sql chart_data
     from flights select carrier, sum(distance) as total_distance
     \`\`\`
-    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
-  `,
-  )
-
-  await page.goto(server.url())
-  let result = await runCli(['list', 'pages/index.md'], config)
-  expect(result.code).toBe(0)
-  expect(outputLines(result.stdout + result.stderr)).toEqual('BarChart (data="chart_data" x="carrier" y="total_distance")')
-})
-
-test('cli list prints table component IDs', async ({runCli, server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Query List
     \`\`\`sql table_data
     from flights select carrier, count() as total_flights group by 1 order by carrier limit 5
     \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
     <Table data="table_data" title="Carrier Totals" rows=5 />
   `,
   )
@@ -475,27 +379,32 @@ test('cli list prints table component IDs', async ({runCli, server, page}) => {
   await page.goto(server.url())
   let result = await runCli(['list', 'pages/index.md'], config)
   expect(result.code).toBe(0)
-  expect(outputLines(result.stdout + result.stderr)).toEqual('DataTable (data="table_data")')
+  expect(outputLines(result.stdout + result.stderr)).toEqual(
+    'BarChart (data="chart_data" x="carrier" y="total_distance")\nDataTable (data="table_data")',
+  )
 })
 
-test('cli run with --chart exports chart data as csv', async ({runCli, server, page}) => {
+test('cli run exports chart and table data as csv', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Chart CSV
-    \`\`\`sql chart_data
+    # Component CSV
+    \`\`\`sql component_data
     from flights where carrier in ('AA', 'DL') select carrier, count() as total_flights group by 1 order by carrier
     \`\`\`
-    <BarChart data="chart_data" x="carrier" y="total_flights" title="Carrier Flights" />
+    <BarChart data="component_data" x="carrier" y="total_flights" title="Carrier Flights" />
+    <Table data="component_data" title="Carrier Totals" />
   `,
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Flights', '--format', 'csv'], config)
-  expect(result.code).toBe(0)
-  expect(result.stdout).toContain('carrier,total_flights\n')
-  expect(result.stdout).toContain('AA,')
-  expect(result.stdout).toContain('DL,')
+  for (let title of ['Carrier Flights', 'Carrier Totals']) {
+    let result = await runCli(['run', 'pages/index.md', '--chart', title, '--format', 'csv'], config)
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('carrier,total_flights\n')
+    expect(result.stdout).toContain('AA,')
+    expect(result.stdout).toContain('DL,')
+  }
 })
 
 test('cli run with --headless formats chart data as csv', async ({runCli, server}) => {
@@ -518,75 +427,31 @@ test('cli run with --headless formats chart data as csv', async ({runCli, server
   expect(result.stdout).toContain('DL,')
 })
 
-test('cli run with --chart exports table data as csv', async ({runCli, server, page}) => {
+
+
+test('cli run selects components by ID and reports an unknown selector', async ({runCli, server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Table CSV
-    \`\`\`sql table_data
-    from flights where carrier in ('AA', 'DL') select carrier, count() as total_flights group by 1 order by carrier
-    \`\`\`
-    <Table data="table_data" title="Carrier Totals" />
-  `,
-  )
-
-  await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Totals', '--format', 'csv'], config)
-  expect(result.code).toBe(0)
-  expect(result.stdout).toContain('carrier,total_flights\n')
-  expect(result.stdout).toContain('AA,')
-  expect(result.stdout).toContain('DL,')
-})
-
-test('cli run with --chart captures a chart screenshot by component ID', async ({runCli, server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Chart Screenshot
+    # Component Screenshots
     \`\`\`sql chart_data
     from flights select carrier, sum(distance) as total_distance
     \`\`\`
-    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
-  `,
-  )
-
-  await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md', '--chart', 'BarChart (data="chart_data" x="carrier" y="total_distance")'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
-})
-
-test('cli run with --chart captures a table screenshot by component ID', async ({runCli, server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Table Screenshot
     \`\`\`sql table_data
     from flights select carrier, count() as total_flights group by 1 order by carrier limit 5
     \`\`\`
+    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
     <Table data="table_data" title="Carrier Totals" rows=5 />
   `,
   )
 
   await page.goto(server.url())
-  let result = await runCli(['run', 'pages/index.md', '--chart', 'DataTable (data="table_data")'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
-})
+  for (let componentId of ['BarChart (data="chart_data" x="carrier" y="total_distance")', 'DataTable (data="table_data")']) {
+    let result = await runCli(['run', 'pages/index.md', '--chart', componentId], config)
+    expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
+    expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
+  }
 
-test('cli run with --chart reports when no chart title matches', async ({runCli, server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Chart Screenshot
-    \`\`\`sql chart_data
-    from flights select carrier, sum(distance) as total_distance
-    \`\`\`
-    <BarChart data="chart_data" x="carrier" y="total_distance" title="Carrier Distance" />
-  `,
-  )
-
-  await page.goto(server.url())
   let result = await runCli(['run', 'pages/index.md', '--chart', 'Missing Chart'], config)
   expect(result.code).toBe(1)
   expect(outputLines(result.stdout + result.stderr)).toContain('Could not find chart "Missing Chart"')

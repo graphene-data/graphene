@@ -526,59 +526,14 @@ test('renders generic server failures clearly', async ({server, page}) => {
   await expect(page).screenshot('reports-server-query-errors')
 })
 
-test('renders svelte control flow in markdown', async ({server, page}) => {
+test('renders Markdown framework syntax, HTML, and visual attributes', async ({server, page}) => {
   server.mockFile(
     '/index.md',
     `
-    # Test
+    # Markdown Syntax
     {#if true}<p>Visible</p>{/if}
-  `,
-  )
-
-  await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {level: 1, name: 'Test'})).toBeVisible()
-  await expect(page.getByText('Visible')).toBeVisible()
-})
-
-test('renders literal less-than characters', async ({server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Comparison
-    Profit is 1 < 2 and losses are 0 < 1.
-  `,
-  )
-
-  await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {level: 1, name: 'Comparison'})).toBeVisible()
-  await expect(page.locator('main')).toHaveText(/1 < 2/)
-})
-
-test('allows arbitrary html and framework directives', async ({server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Unsanitized
     <button id="danger" on:click={() => globalThis['__MD_CLICK__'] = true}>Danger</button>
     <iframe id="embed" title="Embed" src="javascript:alert('boom')"></iframe>
-  `,
-  )
-
-  await page.goto(server.url() + '/')
-  await expect(page.getByRole('heading', {level: 1, name: 'Unsanitized'})).toBeVisible()
-  await expect(page.locator('main button')).toBeVisible()
-  await expect(page.locator('iframe')).toBeAttached()
-
-  await page.locator('main button').click()
-  let clicked = await page.evaluate(() => (globalThis as any).__MD_CLICK__)
-  expect(clicked).toBe(true)
-})
-
-test('allows visual html attributes and inline styles', async ({server, page}) => {
-  server.mockFile(
-    '/index.md',
-    `
-    # Styled
     <div id="custom-layout" class="custom-layout" data-kind="visual" aria-label="Custom Layout" role="region" style="color: red">
       <span class="metric">Metric</span>
     </div>
@@ -587,6 +542,11 @@ test('allows visual html attributes and inline styles', async ({server, page}) =
 
   await page.goto(server.url() + '/')
   await waitForGrapheneLoad(page)
+  await expect(page.getByText('Visible')).toBeVisible()
+  await expect(page.locator('iframe')).toBeAttached()
+  await page.locator('#danger').click()
+  expect(await page.evaluate(() => (globalThis as any).__MD_CLICK__)).toBe(true)
+
   let layout = page.locator('#custom-layout')
   await expect(layout).toBeVisible()
   await expect(layout).toHaveAttribute('data-kind', 'visual')
@@ -594,4 +554,10 @@ test('allows visual html attributes and inline styles', async ({server, page}) =
   await expect(layout).toHaveAttribute('role', 'region')
   await expect(layout).toHaveAttribute('style', 'color: red')
   await expect(layout).toHaveCSS('color', 'rgb(255, 0, 0)')
+})
+
+test('renders literal less-than characters', async ({server, page}) => {
+  server.mockFile('/index.md', '# Comparison\nProfit is 1 < 2 and losses are 0 < 1.')
+  await page.goto(server.url() + '/')
+  await expect(page.locator('main')).toHaveText(/1 < 2/)
 })
