@@ -5,7 +5,7 @@
   interface Props {
     data: any
     tableProps?: Record<string, unknown>
-    columns?: Record<string, unknown>[]
+    columns?: ({id: string} & Record<string, unknown>)[]
     width?: number | string
   }
 

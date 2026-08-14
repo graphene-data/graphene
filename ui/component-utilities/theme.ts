@@ -1,5 +1,6 @@
-// @ts-expect-error ECharts CJS typings don't expose named exports cleanly, but bundling works.
-import {registerTheme} from 'echarts'
+import * as echarts from 'echarts'
+
+const {registerTheme} = echarts
 
 // ── Color tokens ────────────────────────────────────────────────────────
 // Palette C · Fjord Dusk

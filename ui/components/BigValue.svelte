@@ -8,12 +8,12 @@
 
   interface Props {
     data: string | QueryResult
-    value?: string
+    value: string
     title?: string
     row?: number
   }
 
-  let {data, value = undefined, title = undefined, row = 0, ...extraProps}: Props & Record<string, unknown> = $props()
+  let {data, value, title = undefined, row = 0, ...extraProps}: Props & Record<string, unknown> = $props()
   let logger = untrack(() => componentLogger('BigValue', {data: typeof data == 'string' ? data : undefined, value}))
   untrack(() => logExtraProps(logger, 'BigValue', extraProps))
 

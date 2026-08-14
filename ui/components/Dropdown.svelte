@@ -90,7 +90,7 @@
     return Array.from(map.values()).sort((a, b) => String(a.label ?? a.value ?? '').localeCompare(String(b.label ?? b.value ?? ''), undefined, {numeric: true}))
   }
 
-  let multi = $derived(toBoolean(multiple))
+  let multi = $derived(toBoolean(multiple) ?? false)
   let selectAllDefault = $derived(toBoolean(selectAllByDefault))
   let hasNoDefault = $derived(toBoolean(noDefault))
   let hidePrint = $derived(toBoolean(hideDuringPrint))
@@ -594,9 +594,6 @@
     flex-direction: column;
     gap: 4px;
     margin: 8px 0;
-  }
-  .hide-print {
-    /* Hide during print */
   }
   @media print {
     .hide-print {

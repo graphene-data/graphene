@@ -2,6 +2,7 @@
 **/out/**
 **/dist/**
 **/.vscode-test/**
+**/.svelte-check/**
 ui/tests/results
 
 cli/*.tgz

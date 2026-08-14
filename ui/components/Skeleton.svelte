@@ -1,8 +1,8 @@
 <script lang="ts">
-  let {height}: {height: number} = $props()
+  let {height = '100%'}: {height?: number | string} = $props()
 </script>
 
-<div class='ql-skeleton' style={`height:${height}px`} role="status" aria-live="polite">
+<div class='ql-skeleton' style:height={typeof height === 'number' ? `${height}px` : height} role="status" aria-live="polite">
   <span class="ql-skeleton__pulse"></span>
 </div>
 

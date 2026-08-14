@@ -1,3 +1,5 @@
+// ESLint handles rules that require JavaScript plugins or Svelte's template-aware parser.
+// Oxlint owns core JavaScript rules, TypeScript rules, and typechecking for ordinary source files.
 import {includeIgnoreFile} from '@eslint/compat'
 import pluginJs from '@eslint/js'
 import stylistic from '@stylistic/eslint-plugin'
@@ -6,35 +8,19 @@ import svelte from 'eslint-plugin-svelte'
 import globals from 'globals'
 import {fileURLToPath} from 'node:url'
 import tseslint from 'typescript-eslint'
-import * as zxGlobals from 'zx'
+
+const svelteFiles = ['**/*.svelte']
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
-  pluginJs.configs.recommended,
-  ...tseslint.configs.recommended,
+  {...pluginJs.configs.recommended, files: svelteFiles},
+  ...tseslint.configs.recommended.map(config => ({...config, files: svelteFiles})),
   ...svelte.configs.recommended,
   includeIgnoreFile(fileURLToPath(new URL('.gitignore', import.meta.url))),
   {ignores: ['lang/parser.js']},
   {
-    files: ['**/*.{ts,svelte}'],
-    languageOptions: {parserOptions: {projectService: true}},
-    rules: {'@typescript-eslint/no-floating-promises': ['error', {checkThenables: true}]},
-  },
-  {
-    files: ['scripts/**/*.js'],
-    languageOptions: {
-      ecmaVersion: 2021,
-      sourceType: 'module',
-      globals: {
-        ...globals.node,
-        // https://github.com/infrakiwi/kiwi-blog/blob/main/0014-zx-scripting-in-typescript/eslint.config.mjs
-        ...Object.fromEntries(Object.entries(zxGlobals).map(([key]) => [key, false])),
-      },
-    },
-    rules: {
-      'no-console': 'off', // allow console in scripts
-      'no-unused-expressions': 'off', // permit `$\`…\`` template tags
-    },
+    files: ['**/*.ts'],
+    languageOptions: {parser: tseslint.parser},
   },
   {
     files: ['**/*.svelte.ts'],
@@ -44,16 +30,14 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
-      globals: {
-        ...globals.browser,
-      },
+      globals: globals.browser,
     },
     rules: {
       'svelte/prefer-svelte-reactivity': 'off',
     },
   },
   {
-    files: ['**/*.svelte'],
+    files: svelteFiles,
     languageOptions: {
       parserOptions: {
         extraFileExtensions: ['.svelte'],
@@ -61,9 +45,7 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
-      globals: {
-        ...globals.browser,
-      },
+      globals: globals.browser,
     },
     plugins: {svelte},
     rules: {
@@ -82,39 +64,28 @@ export default [
     rules: {
       '@stylistic/quotes': ['error', 'single', {avoidEscape: true}],
       '@stylistic/semi': ['error', 'never'],
-      // 'curly': ['error', 'multi', 'consistent'],
-      'prefer-promise-reject-errors': ['error'],
-      'require-await': ['error'],
       '@stylistic/array-bracket-spacing': ['error', 'never'],
       '@stylistic/block-spacing': ['error', 'always'],
-      // 'brace-style': ['error', '1tbs', {allowSingleLine: true}], // mostly good, but I sometimes want newlines/comments above else-if statements
       '@stylistic/comma-dangle': ['error', 'always-multiline'],
       '@stylistic/comma-spacing': ['error'],
       '@stylistic/eol-last': ['error', 'always'],
       '@stylistic/function-call-spacing': ['error', 'never'],
-      // 'function-call-argument-newline': ['error', 'never'],
-      // 'function-paren-newline': ['error', 'never'],
       '@stylistic/keyword-spacing': ['error'],
-      'max-depth': ['error', 4],
-      'no-nested-ternary': ['error'],
-      'no-useless-assignment': 'off',
       '@stylistic/no-tabs': ['error'],
       '@stylistic/no-trailing-spaces': ['error'],
       '@stylistic/no-whitespace-before-property': ['error'],
-      '@typescript-eslint/no-unused-vars': ['error', {argsIgnorePattern: '^_', varsIgnorePattern: '^_'}],
-      '@typescript-eslint/consistent-type-imports': ['error', {prefer: 'type-imports', fixStyle: 'inline-type-imports'}],
       '@stylistic/padded-blocks': ['error', 'never'],
       '@stylistic/space-in-parens': ['error', 'never'],
       '@stylistic/object-curly-spacing': ['error', 'never'],
       '@stylistic/space-infix-ops': ['error'],
-      'no-duplicate-imports': ['error'],
-      // The Lucide barrel makes Vite dev/test load a huge icon graph before tree-shaking, which can timeout UI tests.
-      'no-restricted-imports': ['error', {paths: [{name: '@lucide/svelte', message: 'Import Lucide icons directly from @lucide/svelte/icons/<icon> so Vite tests do not load the full icon barrel.'}]}],
-      'no-var': ['error'],
-      'prefer-const': 'off',
       'prefer-let/prefer-let': ['error'],
-      '@typescript-eslint/no-explicit-any': 'off',
+      'prefer-const': 'off',
+      'no-useless-assignment': 'off',
       'no-case-declarations': 'off',
+      'no-empty-pattern': ['error'], // Keep existing eslint-disable comments meaningful while Oxlint also enforces this rule.
+      // Oxlint treats these legacy ESLint rules as parser checks rather than standalone rules.
+      'no-dupe-args': ['error'],
+      'no-octal': ['error'],
     },
   },
 ]

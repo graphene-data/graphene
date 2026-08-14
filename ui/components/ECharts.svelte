@@ -185,7 +185,7 @@
     <CsvDownload data={loaded} exportId={displayId} title={chartTitle} />
   {/if}
   {#if loaded?.error || chartError}
-    <ErrorDisplay error={loaded?.error || chartError} />
+    <ErrorDisplay error={loaded?.error || chartError?.message || 'Unknown chart error'} />
   {:else if !loaded}
     <Skeleton />
   {:else if loaded.rows.length == 0}
