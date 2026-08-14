@@ -96,6 +96,12 @@ async function runHeadlessPageRequest(pageUrl: string, request: PageRequest): Pr
 let browserConnections: {url: string; socket: WebSocket}[] = []
 let pendingRequests: Record<string, ServerResponse<IncomingMessage>> = {}
 
+// Identifies a browser page by its origin and route so URL parameters do not prevent tab reuse.
+export function normalizePageUrl(pageUrl: string) {
+  let url = new URL(pageUrl)
+  return url.origin + url.pathname.replace(/\/$/, '')
+}
+
 // This plugin allows us to proxy requests from the Graphene CLI to a Graphene page running in a browser.
 // It works because every Graphene tab opens a websocket connection back to the vite server. We keep track of each tab,
 // and forward requests to /_api/run to the appropriate tab.
@@ -114,7 +120,7 @@ export function runVitePlugin(): PluginOption {
         socket.on('message', data => {
           let message = JSON.parse(data.toString()) as SocketRegistration | PageResponse
           if ('type' in message && message.type === 'register') {
-            let normalizedUrl = message.url.replace(/\/$/, '')
+            let normalizedUrl = normalizePageUrl(message.url)
             browserConnections.push({url: normalizedUrl, socket})
           }
           if ('requestId' in message && message.requestId) {
@@ -146,7 +152,7 @@ export async function proxyRunRequest(req: IncomingMessage, res: ServerResponse<
   request.requestId = Math.random().toString(36).slice(2)
   res.setHeader('Content-Type', 'application/json')
 
-  let normalizedUrl = pageUrl.replace(/\/$/, '')
+  let normalizedUrl = normalizePageUrl(pageUrl)
   let conn = await pollFor(() => browserConnections.find(conn => conn.url === normalizedUrl), 5000, 100)
   if (!conn) {
     res.statusCode = 400
