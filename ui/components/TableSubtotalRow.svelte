@@ -20,10 +20,11 @@
   let {
     groupName = undefined, currentGroupData = [], rowColor = undefined,
     groupBy = undefined, groupType = undefined, rowNumbers: rowNumbersProp = undefined,
-    fontColor = undefined, orderedColumns = [], compact = undefined,
+    fontColor = undefined, orderedColumns = [], compact: compactProp = undefined,
   }: Props = $props()
 
   let rowNumbers = $derived(toBoolean(rowNumbersProp) ?? false)
+  let compact = $derived(toBoolean(compactProp))
 
   const SUPPORTED_METRICS: SummaryMetric[] = ['sum', 'mean', 'median', 'min', 'max', 'count', 'countDistinct']
 

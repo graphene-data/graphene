@@ -13,7 +13,7 @@
   import {getThemeStores} from '../component-utilities/themeStores'
   import {toBoolean} from '../component-utilities/inputUtils'
   import {componentLogger} from '../internal/telemetry.js'
-  import type {QueryResult} from '../component-utilities/types.ts'
+  import type {Field, QueryResult} from '../component-utilities/types.ts'
 
   interface Props {
     data?: QueryResult, rows?: number | string, title?: string, rowNumbers?: boolean | string
@@ -138,7 +138,7 @@
         for (let colName of Object.keys(inputRows[0])) {
           let field = inputFields.find(item => item?.name?.toLowerCase() === colName?.toLowerCase())
           let type = String(field?.type || '').toLowerCase()
-          let resolvedField = field ?? {name: colName, type}
+          let resolvedField: Field = field ?? {name: colName, type: type as Field['type']}
           let stats = type === 'number' ? summarizeColumn(inputRows, resolvedField, ['min', 'max']) : {}
 
           resultColumns.push({
@@ -232,7 +232,7 @@
     return String(value).toLowerCase()
   }
 
-  const getFinalColumnOrder = (columns: string[], priorityColumns: Array<string | undefined>): string[] => {
+  function getFinalColumnOrder(columns: string[], priorityColumns: Array<string | undefined>): string[] {
     let priorities = priorityColumns.filter(Boolean) as string[]
     let restColumns = columns.filter(key => !priorities.includes(key))
     return [...priorities, ...restColumns]

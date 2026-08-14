@@ -14,9 +14,11 @@ import type {Field as ApiField, QueryResult as ApiQueryResult} from '../../lang/
 
 type SingleOrArray<T> = T | T[]
 type SeriesEncode = Record<string, unknown>
+type OmitFromUnion<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
 
 export type Field = ApiField
-export type QueryResult = ApiQueryResult
+// Components also accept inline data, which has no query execution timestamp.
+export type QueryResult = Omit<ApiQueryResult, 'runAt'> & {runAt?: number}
 
 type CommonSeriesFields = {
   type?: string
@@ -26,6 +28,7 @@ type CommonSeriesFields = {
   datasetId?: string
   data?: unknown
   links?: unknown
+  layout?: string
   xAxisIndex?: number
   yAxisIndex?: number
   label?: Record<string, any>
@@ -40,7 +43,7 @@ type CommonSeriesFields = {
 // - `encode.splitBy: "field"` splits one template into one series per distinct field value.
 // - `encode.splitBy: ["groupBy", "stackBy"]` is bar-only grouped+stacked shorthand.
 // - with a single split field, use native `series.stack` to choose stacked vs grouped behavior.
-export type SeriesWithGroupingHint = Omit<SeriesOption, 'encode'> &
+export type SeriesWithGroupingHint = OmitFromUnion<SeriesOption, 'encode'> &
   CommonSeriesFields & {
     stackPercentage?: boolean
     encode?: SeriesEncode & {
