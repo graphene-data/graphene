@@ -41,7 +41,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   horizontalBarGuard(normalized, fields)
   computeTitleLegendAndGridPadding(normalized)
   applyLegendSelection(normalized)
-  hideStackPercentageValueAxis(normalized, fields)
+  stackPercentageValueAxis(normalized, fields)
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, fields)
   timeFormatting(normalized)
@@ -468,18 +468,21 @@ function addCartesianItemTooltips(config: NormalConfig, fields: Field[]) {
   }
 }
 
-// Hide value y-axes for stacked-100 charts, since values are percentages and labels are usually redundant.
-function hideStackPercentageValueAxis(config: NormalConfig, fields: Field[]) {
-  for (let [axisIndex, axis] of config.yAxis.entries()) {
-    if (!axis || axis.type !== 'value' || axis.show != null) continue
+// Stacked-100 charts always span 0-1, so pin the value axis domain and hide it, since percentage labels are usually redundant.
+// The value axis is x for horizontal bars and y everywhere else.
+function stackPercentageValueAxis(config: NormalConfig, fields: Field[]) {
+  let horizontal = isHorizontalBar(config)
 
-    let seriesOnAxis = config.series.filter(entry => Number(entry?.yAxisIndex ?? 0) === axisIndex)
-    if (seriesOnAxis.length === 0) continue
+  for (let [axisIndex, axis] of (horizontal ? config.xAxis : config.yAxis).entries()) {
+    if (!axis || axis.type !== 'value') continue
 
-    let yFields = seriesOnAxis.map(entry => getSeriesValueField(entry, fields)).filter((f): f is Field => !!f)
-    if (yFields.length === 0) continue
+    let seriesOnAxis = config.series.filter(entry => Number((horizontal ? entry?.xAxisIndex : entry?.yAxisIndex) ?? 0) === axisIndex)
+    let valueFields = seriesOnAxis.map(entry => getEncodeField(entry, fields, horizontal ? 'x' : 'y')).filter((f): f is Field => !!f)
+    if (valueFields.length === 0) continue
 
-    if (yFields.every(field => field.name.startsWith('__graphene_stack_pct_'))) axis.show = false
+    if (!valueFields.every(field => field.name.startsWith('__graphene_stack_pct_'))) continue
+    axis.max ??= 1
+    axis.show ??= false
   }
 }
 

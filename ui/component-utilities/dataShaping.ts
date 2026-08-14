@@ -62,45 +62,48 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
   }
 }
 
-// Evidence stacked100 behavior: compute percentages per x-domain and rewrite series to synthetic pct fields.
+// Evidence stacked100 behavior: compute percentages per category and rewrite series to synthetic pct fields.
 export function applyStackPercentage(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   let series = config.series
   if (series.length === 0 || rows.length === 0) return
 
+  // Horizontal bars put the categories on y and the values on x, so the roles below are swapped.
+  let horizontal = isHorizontalBar(config)
+  let categoryOf = (entry?: SeriesWithGroupingHint) => (horizontal ? getSeriesYField(entry) : getSeriesXField(entry))
+  let valueOf = (entry?: SeriesWithGroupingHint) => (horizontal ? getSeriesXField(entry) : getSeriesYField(entry))
   let groupIndex = 0
 
   for (let entry of series) {
-    let xField = getSeriesXField(entry)
-    let yField = getSeriesYField(entry)
-    if (entry?.stackPercentage !== true || !entry?.stack || !xField || !yField || entry?.datasetId != null) continue
+    let categoryField = categoryOf(entry)
+    let valueField = valueOf(entry)
+    if (entry?.stackPercentage !== true || !entry?.stack || !categoryField || !valueField || entry?.datasetId != null) continue
 
     let stackGroup = series.filter(candidate => {
-      return candidate?.stack === entry.stack && getSeriesXField(candidate) === xField && getSeriesYField(candidate)
+      return candidate?.stack === entry.stack && categoryOf(candidate) === categoryField && valueOf(candidate)
     })
     if (stackGroup[0] !== entry) continue
 
-    let yFields = Array.from(new Set(stackGroup.map(candidate => getSeriesYField(candidate)).filter(Boolean))) as string[]
-    let pctFieldByY = Object.fromEntries(yFields.map((y, index) => [y, `__graphene_stack_pct_${groupIndex}_${index}`])) as Record<string, string>
+    let valueFields = Array.from(new Set(stackGroup.map(candidate => valueOf(candidate)).filter(Boolean))) as string[]
+    let pctFieldByValue = Object.fromEntries(valueFields.map((field, index) => [field, `__graphene_stack_pct_${groupIndex}_${index}`])) as Record<string, string>
 
-    let totalsByX = new Map<string, number>()
+    let totalsByCategory = new Map<string, number>()
     for (let row of rows) {
-      let xKey = valueKey(row?.[xField])
-      let rowTotal = yFields.reduce((sum, y) => sum + (Number(row?.[y]) || 0), 0)
-      totalsByX.set(xKey, (totalsByX.get(xKey) ?? 0) + rowTotal)
+      let categoryKey = valueKey(row?.[categoryField])
+      let rowTotal = valueFields.reduce((sum, field) => sum + (Number(row?.[field]) || 0), 0)
+      totalsByCategory.set(categoryKey, (totalsByCategory.get(categoryKey) ?? 0) + rowTotal)
     }
 
     for (let row of rows) {
-      let xKey = valueKey(row?.[xField])
-      let total = totalsByX.get(xKey) ?? 0
-      for (let y of yFields) row[pctFieldByY[y]] = total <= 0 ? 0 : (Number(row?.[y]) || 0) / total
+      let total = totalsByCategory.get(valueKey(row?.[categoryField])) ?? 0
+      for (let field of valueFields) row[pctFieldByValue[field]] = total <= 0 ? 0 : (Number(row?.[field]) || 0) / total
     }
 
-    for (let y of yFields) ensureField(fields, pctFieldByY[y], {metadata: {ratio: true}})
+    for (let field of valueFields) ensureField(fields, pctFieldByValue[field], {metadata: {ratio: true}})
 
     for (let candidate of stackGroup) {
-      let y = getSeriesYField(candidate)
-      if (!y) continue
-      candidate.encode = {...candidate.encode, y: pctFieldByY[y]}
+      let field = valueOf(candidate)
+      if (!field) continue
+      candidate.encode = {...candidate.encode, [horizontal ? 'x' : 'y']: pctFieldByValue[field]}
       delete candidate.stackPercentage
     }
 
