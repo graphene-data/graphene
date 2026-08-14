@@ -62,9 +62,9 @@
     } else {
       // "wide" data, series are created for field listed in the y (or x, for horizontal) attribute
       if (horizontal) {
-        series = xFields.map(field => ({type: 'bar' as const, name: formatTitle(field), encode: {x: field, y, ...sortHint}, label: barLabel}))
+        series = xFields.map(field => ({type: 'bar' as const, name: formatTitle(field), encode: {x: field, y, ...sortHint}, stack, stackPercentage, label: barLabel}))
       } else {
-        series = yFields.map(field => ({type: 'bar' as const, name: formatTitle(field), encode: {x, y: field, ...sortHint}, label: barLabel}))
+        series = yFields.map(field => ({type: 'bar' as const, name: formatTitle(field), encode: {x, y: field, ...sortHint}, stack, stackPercentage, label: barLabel}))
       }
     }
 

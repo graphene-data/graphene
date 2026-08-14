@@ -188,8 +188,13 @@ test('chart download button exports raw csv rows', async ({mount, chart, sharedP
 })
 
 test('bar chart supports multiple y fields', async ({mount, chart}) => {
-  await mount('components/BarChart.svelte', {data: timeseriesWithMultipleY(), x: 'month', y: 'sales_usd0k,profit_usd0k,cost_usd0k'})
+  let wide = {data: timeseriesWithMultipleY(), x: 'month', y: 'sales_usd0k,profit_usd0k,cost_usd0k'}
+
+  await mount('components/BarChart.svelte', wide)
   await expect(chart.el).screenshot('bar-chart-multiple-y')
+
+  await mount('components/BarChart.svelte', {...wide, arrange: 'stack100'})
+  await expect(chart.el).screenshot('bar-chart-multiple-y-stacked100')
 })
 
 test('stacked bar chart rounds positive and negative outer corners', async ({mount, chart}) => {
@@ -306,8 +311,9 @@ test('horizontal bar chart supports multiple x fields', async ({mount, chart}) =
     {name: 'current', type: scalarType('number')},
     {name: 'previous', type: scalarType('number')},
   ]
+  let wide = {data: {rows, fields}, x: 'current,previous', y: 'category'}
 
-  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'current,previous', y: 'category'})
+  await mount('components/BarChart.svelte', wide)
   await expect(chart.el).screenshot('horizontal-bar-chart-multi-x')
 })
 
@@ -336,8 +342,13 @@ test('stacked area chart', async ({mount, chart}) => {
 })
 
 test('area chart supports multiple y fields', async ({mount, chart}) => {
-  await mount('components/AreaChart.svelte', {data: timeseriesWithMultipleY(), x: 'month', y: 'sales_usd0k,profit_usd0k,cost_usd0k'})
+  let wide = {data: timeseriesWithMultipleY(), x: 'month', y: 'sales_usd0k,profit_usd0k,cost_usd0k'}
+
+  await mount('components/AreaChart.svelte', wide)
   await expect(chart.el).screenshot('area-chart-multiple-y')
+
+  await mount('components/AreaChart.svelte', {...wide, arrange: 'stack100'})
+  await expect(chart.el).screenshot('area-chart-multiple-y-stacked100')
 })
 
 test('area chart supports secondary y axis line', async ({mount, chart}) => {
