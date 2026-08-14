@@ -6,6 +6,7 @@ import * as path from 'node:path'
 
 import {loadConfig, normalizeConfig, type Config, type ConfigInput} from '../lang/config.ts'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
+import {normalizePageUrl} from './run.ts'
 import {expect, test} from './testFixtures.ts'
 
 const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
@@ -142,6 +143,12 @@ describe('cli serve', () => {
 })
 
 describe('cli run', () => {
+  test('matches open browser tabs without considering URL parameters', () => {
+    expect(normalizePageUrl('http://localhost:4163/flights?carrier=AA')).toBe(normalizePageUrl('http://localhost:4163/flights?carrier=DL'))
+    expect(normalizePageUrl('http://localhost:4163/flights/')).toBe(normalizePageUrl('http://localhost:4163/flights'))
+    expect(normalizePageUrl('http://localhost:4163/delays?carrier=AA')).not.toBe(normalizePageUrl('http://localhost:4163/flights?carrier=AA'))
+  })
+
   test('prints help instead of reading stdin when no input is provided', async ({runCli}) => {
     let res = await runCli(['run'], flightConfig)
     expectCliSuccess(res, 'run help with no input')
