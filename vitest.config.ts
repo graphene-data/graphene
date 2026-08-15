@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     globals: true,
     testTimeout: process.env.GRAPHENE_DEBUG ? 0 : 10_000,
-    maxWorkers: process.env.CI ? 1 : 4, // as this gets higher, the first test in each worker takes longer until it exceeds the timeout
+    maxWorkers: 4, // match the CPUs available to test workers without startup contention
     environment: 'node',
     reporters: ['dot', 'json'],
     outputFile: 'node_modules/.testResults.json',
