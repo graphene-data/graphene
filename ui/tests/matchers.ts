@@ -118,10 +118,12 @@ export const playwrightExpect: ExpectWithScreenshot = extendedExpect as any
 
 export async function waitForAnimations(page: Page) {
   await page.evaluate(async () => {
+    let animations = document.getAnimations().filter(animation => animation.playState === 'running' || animation.pending)
+    if (!animations.length) return
     await nextPaint()
 
     while (true) {
-      let animations = document.getAnimations().filter(animation => animation.playState === 'running' || animation.pending)
+      animations = document.getAnimations().filter(animation => animation.playState === 'running' || animation.pending)
       if (!animations.length) break
 
       for (let animation of animations) {

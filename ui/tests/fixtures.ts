@@ -88,7 +88,6 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
       trackBrowserConsole(page)
       await use(page)
       if (process.env.GRAPHENE_DEBUG) await new Promise(() => {})
-      await context.close()
     },
     {scope: 'worker'},
   ],
