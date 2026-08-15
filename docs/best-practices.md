@@ -1,5 +1,5 @@
 # Best practices
-- **Leverage models** - Use modeled joins, dimensions, and measures whenever possible
+- **Leverage the semantic layer** - Use dimensions/measures and joins whenever possible in queries
 - Use `check` when iterating on models, use `run` when iterating on pages
 - Use the `-c` flag on `run` to view the data and screenshots of components you edit to check for correctness
 - Rely on Graphene's defaults for value formatting and chart styles before trying to override in SQL or ECharts

@@ -8,12 +8,12 @@ table orders (
   id bigint
   created_at datetime
   user_id bigint
-  amount float                          #currency=USD
+  amount float #currency=USD
   status string
-  join one users on user_id = users.id  -- many orders per user
-  is_complete: status = 'Complete'      -- dimension (scalar expression)
-  revenue: sum(amount)                  -- measure (agg expression) #currency=USD
-  avg_order: revenue / count(*)         -- measures can compose #currency=USD
+  join one users on user_id = users.id    -- many orders per user
+  is_complete: status = 'Complete'        -- dimension (scalar expression)
+  revenue: sum(amount) #currency=USD      -- measure (agg expression) 
+  aov: revenue / count(*) #currency=USD   -- measures can compose 
 )
 table users (
   id bigint
@@ -33,10 +33,17 @@ Other statements:
 - Normal ANSI joins (`inner join`, `left join`, etc.) supported in `select` as well, if the join you need is not already modeled
 
 ### Dimension and measure expansion
-Dimensions and measures are like macros that expand inline when Graphene SQL compiles to database SQL. For example, `from users select id, orders.revenue` automatically expands to `select users.id, sum(orders.amount) ...`
-- NEVER(!): `sum(revenue)` or `group by revenue` because `revenue` is already an agg expression
-- OK: `floor(revenue)`, `revenue / cost` 
-- OK: `sum(case when is_complete then 1 else 0 end)` or `group by is_complete` (because `is_complete` is a dimension, not a measure)
+Dimensions and measures are like macros that expand inline when Graphene SQL compiles to database SQL. For example, from the model above, `from users select id, orders.revenue` automatically compiles to `select users.id, sum(orders.amount) from users left join orders on users.id = orders.user_id group by users.id`
+
+NEVER(!):
+- `sum(revenue)`, because `revenue` contains an agg expression and expands to `sum(sum(amount))`
+- `group by revenue`, because it expands to `group by sum(amount)`
+
+OK:
+- `floor(revenue)`. Expands to `floor(sum(amount))`
+- `sum(case when is_complete then 1 else 0 end)` or `group by is_complete` (because `is_complete` is a scalar expression in the model above)
+
+Dimensions/measures aren't only limited to scalar and aggregate expressions. They can take any SQL (subqueries, window functions, etc.) and will faitfully expand inline when called in downstream queries.
 
 ### Arrays
 - Array columns and casts use `array<T>` syntax in Graphene SQL, for example `tags array<string>` or `cast(tags as array<string>)`
