@@ -50,7 +50,7 @@
       series = [{type: 'line' as const, areaStyle: {opacity: 0.2}, stack, stackPercentage, encode: {x, y: yFields[0], splitBy, ...sortHint}}]
     } else {
       // "wide" data, one area series per field listed in y
-      series = yFields.map(field => ({type: 'line' as const, name: formatTitle(field), areaStyle: {opacity: 0.2}, encode: {x, y: field, ...sortHint}}))
+      series = yFields.map(field => ({type: 'line' as const, name: formatTitle(field), areaStyle: {opacity: 0.2}, stack, stackPercentage, encode: {x, y: field, ...sortHint}}))
     }
 
     if (y2) series.push({type: 'line' as const, name: formatTitle(y2), yAxisIndex: 1, encode: {x, y: y2, ...sortHint}})
