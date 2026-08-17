@@ -29,9 +29,8 @@ function getStillLoading() {
   return loading
 }
 
-// Returns immediately when already idle. If work was pending, waits for fonts and two stable frames once it clears.
+// Returns once work is idle and fonts and layout have settled for two frames, or reports what timed out.
 graphene.waitForLoad = async (timeout = 20_000) => {
-  if (getStillLoading().length == 0) return null
   let end = Date.now() + timeout
 
   while (Date.now() < end) {
