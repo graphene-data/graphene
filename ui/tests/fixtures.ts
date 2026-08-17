@@ -102,10 +102,10 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
       setGlobalConfig({port, root: viteRoot}, 'example-flights')
       let viteServer = await serve2()
 
-      // Invalidate the mocked source and every derived Svelte module before removing its contents.
-      // We need this because we reuse vite between tests for performance, but we don't want a compiled mock from one test leaking in to other tests
-      function cleanup() {
-        let mockPaths = Object.keys(mockFileMap).flatMap(key => [path.join(config.root, key), '/' + key])
+      // Invalidate mocked sources and every derived Svelte module whenever a mock changes.
+      // Reusing Vite between tests is fast, but its compiled modules must not leak across mock boundaries.
+      function invalidateMockModules(projectPaths: string[]) {
+        let mockPaths = projectPaths.flatMap(projectPath => [path.join(config.root, projectPath), '/' + projectPath])
         for (let graph of [viteServer.moduleGraph, viteServer.environments.client.moduleGraph] as any[]) {
           let keys: string[] = Array.from(graph?.idToModuleMap?.keys() || [])
           let mockKeys = keys.filter(key => key == '\0virtual:nav' || key.includes('?mock') || mockPaths.some(mockPath => key.startsWith(mockPath)))
@@ -114,6 +114,10 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
             if (module) graph.invalidateModule(module)
           })
         }
+      }
+
+      function cleanup() {
+        invalidateMockModules(Object.keys(mockFileMap))
         Object.keys(mockFileMap).forEach(key => delete mockFileMap[key])
         missingMockFiles.clear()
       }
@@ -127,15 +131,13 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
         mockFile: (filePath: string, content: string) => {
           let projectPath = config.pagesPrefix + filePath.replace(/^\//, '')
           mockFileMap[projectPath] = trimIndentation(content)
+          invalidateMockModules([projectPath])
         },
         mockMissingFile: (filePath: string) => {
           let projectPath = config.pagesPrefix + filePath.replace(/^\//, '')
           missingMockFiles.add(projectPath)
           mockFileMap[projectPath] = 'Mock file not found'
-          for (let graph of [viteServer.moduleGraph, viteServer.environments.client.moduleGraph] as any[]) {
-            let navModule = graph?.getModuleById('\0virtual:nav')
-            if (navModule) graph.invalidateModule(navModule)
-          }
+          invalidateMockModules([projectPath])
         },
         updateMockFile: (filePath: string, content: string) => {
           let projectPath = config.pagesPrefix + filePath.replace(/^\//, '')
