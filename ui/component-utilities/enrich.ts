@@ -1,6 +1,6 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
-import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries} from './dataShaping.ts'
+import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries, STACK_PERCENTAGE_FIELD} from './dataShaping.ts'
 import {formatFromField, formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {paletteForPath} from './theme.ts'
 
@@ -468,7 +468,7 @@ function addCartesianItemTooltips(config: NormalConfig, fields: Field[]) {
   }
 }
 
-// Stacked-100 charts always span 0-1, so pin the value axis domain and hide it, since percentage labels are usually redundant.
+// Stacked-100 charts always span 0-1, so pin the value axis domain and label only its 0% and 100% endpoints.
 // The value axis is x for horizontal bars and y everywhere else.
 function stackPercentageValueAxis(config: NormalConfig, fields: Field[]) {
   let horizontal = isHorizontalBar(config)
@@ -480,9 +480,16 @@ function stackPercentageValueAxis(config: NormalConfig, fields: Field[]) {
     let valueFields = seriesOnAxis.map(entry => getEncodeField(entry, fields, horizontal ? 'x' : 'y')).filter((f): f is Field => !!f)
     if (valueFields.length === 0) continue
 
-    if (!valueFields.every(field => field.name.startsWith('__graphene_stack_pct_'))) continue
+    if (!valueFields.every(field => field.name.startsWith(STACK_PERCENTAGE_FIELD))) continue
+
+    // Every stack runs the full length of the axis, so intermediate ticks say nothing the segments don't.
+    // The endpoints are enough to show that the chart contains shares rather than totals.
     axis.max ??= 1
-    axis.show ??= false
+    axis.interval ??= 1
+
+    // Axis fields were resolved before the series were rewritten onto percentages, so it still points at
+    // the original values. Re-point it so the ticks are formatted as the shares they now are.
+    axis.field = valueFields[0]
   }
 }
 
@@ -629,6 +636,10 @@ function stackedBarCornerRadius(config: NormalConfig) {
 
   for (let [index, series] of config.series.entries()) {
     if (series?.type !== 'bar' || series?.itemStyle?.borderRadius != null || !Array.isArray(series.data)) continue
+
+    // Stacked-100 bars all run the full length of the axis, so rounding their ends would round the chart itself.
+    let valueField = horizontal ? series.encode?.x : series.encode?.y
+    if (typeof valueField === 'string' && valueField.startsWith(STACK_PERCENTAGE_FIELD)) continue
 
     let axisKey = `${Number(series.xAxisIndex ?? 0)}:${Number(series.yAxisIndex ?? 0)}`
     let stackKey = series.stack ?? `__graphene_unstacked_${index}`

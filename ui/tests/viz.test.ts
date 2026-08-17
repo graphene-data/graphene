@@ -317,7 +317,7 @@ test('horizontal bar chart supports multiple x fields', async ({mount, chart}) =
   await expect(chart.el).screenshot('horizontal-bar-chart-multi-x')
 })
 
-test('horizontal bar chart stacked100', async ({mount, chart}) => {
+test('horizontal bar chart stacked100 has percentage endpoints and square corners', async ({mount, chart}) => {
   let rows = [
     {category: 'Alpha', segment: 'Current', value: 30},
     {category: 'Alpha', segment: 'Previous', value: 70},
@@ -720,12 +720,12 @@ test('stacked area uses 0 for missing points', async ({mount, chart}) => {
 
 test.skip('unstacked area split-by was removed in the arrange API cutover', async () => {})
 
-test('area chart stacked100', async ({mount, chart}) => {
+test('area chart stacked100 has percentage endpoints', async ({mount, chart}) => {
   await mount('components/AreaChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', splitBy: 'category', arrange: 'stack100'})
   await expect(chart.el).screenshot('area-chart-stacked100')
 })
 
-test('bar chart stacked100', async ({mount, chart}) => {
+test('bar chart stacked100 has percentage endpoints and square corners', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: timeseriesGrouped(), x: 'month', y: 'sales_usd0k', splitBy: 'category', arrange: 'stack100'})
   await expect(chart.el).screenshot('bar-chart-stacked100')
 })
