@@ -197,6 +197,20 @@ test('bar chart supports multiple y fields', async ({mount, chart}) => {
   await expect(chart.el).screenshot('bar-chart-multiple-y-stacked100')
 })
 
+test('bar chart places positive and negative labels outside their bars', async ({mount, chart}) => {
+  let rows = [
+    {category: 'Growth', amount: 42},
+    {category: 'Decline', amount: -28},
+  ]
+  let fields = [
+    {name: 'category', type: scalarType('string')},
+    {name: 'amount', type: scalarType('number')},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'category', y: 'amount', label: true})
+  await expect(chart.el).screenshot('bar-chart-positive-negative-labels')
+})
+
 test('stacked bar chart rounds positive and negative outer corners', async ({mount, chart}) => {
   let rows = [
     {category: 'Positive', segment: 'Base', value: 12},
@@ -287,6 +301,20 @@ test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}
 test('horizontal bar chart', async ({mount, chart}) => {
   await mount('components/BarChart.svelte', {data: singleDim(), x: 'value', y: 'category'})
   await expect(chart.el).screenshot('horizontal-bar-chart')
+})
+
+test('horizontal bar chart places and formats positive and negative labels outside their bars', async ({mount, chart}) => {
+  let rows = [
+    {category: 'Growth', amount: 42},
+    {category: 'Decline', amount: -28},
+  ]
+  let fields = [
+    {name: 'category', type: scalarType('string')},
+    {name: 'amount', type: scalarType('number')},
+  ]
+
+  await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'amount', y: 'category', label: true})
+  await expect(chart.el).screenshot('horizontal-bar-chart-positive-negative-labels')
 })
 
 test('horizontal bar chart auto-expands height for many categories', async ({mount, chart}) => {

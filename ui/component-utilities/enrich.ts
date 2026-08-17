@@ -48,11 +48,13 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   addCartesianItemTooltips(normalized, fields)
   styleSecondaryAxisForSimpleBarLineLayout(normalized, fields)
   applyIntegerYAxisTicks(normalized, rows, fields)
-  barLabelPositioning(normalized)
   labelsUseYAxisFormat(normalized, fields)
   addPieTooltips(normalized, fields)
   inlineDataIntoSeries(normalized, rows)
   stackedBarCornerRadius(normalized)
+
+  // Runs last because it reads point values to place labels, which only exist once data is inlined.
+  barLabelPositioning(normalized)
   return normalized
 }
 
@@ -555,18 +557,41 @@ function applyIntegerYAxisTicks(config: NormalConfig, rows: Record<string, any>[
   if (values.every(value => Number.isInteger(value))) yAxis.minInterval = 1
 }
 
+// A negative bar's label sits past the end of the bar, which is where the category axis labels are.
+// Padding that end of the value axis keeps the two apart without moving the axis labels themselves.
+const NEGATIVE_LABEL_AXIS_GAP = '12%'
+
 // Keep bar labels readable by default: place them outside bars and avoid overlap when possible.
+// Negative bars extend the other way, so their labels move to the opposite side to stay outside the bar.
 function barLabelPositioning(config: NormalConfig) {
   let horizontal = isHorizontalBar(config)
+  let valueIndex = horizontal ? 0 : 1
+  let negativePosition = horizontal ? 'left' : 'bottom'
+  let axesNeedingRoom = new Set<number>()
 
   for (let series of config.series) {
     if (series?.type !== 'bar' || !series.label || series.label.show !== true) continue
 
-    if (series.label.position == null) series.label.position = horizontal ? 'right' : 'top'
+    let hasExplicitPosition = series.label.position != null
+    if (!hasExplicitPosition) series.label.position = horizontal ? 'right' : 'top'
     if (series.label.distance == null) series.label.distance = 4
     if (series.labelLayout == null || typeof series.labelLayout === 'function') series.labelLayout = {}
     let labelLayout = series.labelLayout as Record<string, any>
     if (labelLayout.hideOverlap == null) labelLayout.hideOverlap = true
+
+    // Position only varies by sign through point-level labels, so negative points override the series default.
+    if (hasExplicitPosition || !Array.isArray(series.data)) continue
+    for (let [pointIndex, point] of (series.data as Record<string, any>[]).entries()) {
+      if (!point || typeof point !== 'object' || !(Number(point.value?.[valueIndex]) < 0)) continue
+      series.data[pointIndex] = {...point, label: {...point.label, position: negativePosition}}
+      axesNeedingRoom.add(Number((horizontal ? series.xAxisIndex : series.yAxisIndex) ?? 0))
+    }
+  }
+
+  for (let axisIndex of axesNeedingRoom) {
+    let axis = (horizontal ? config.xAxis : config.yAxis)[axisIndex] as Record<string, any> | undefined
+    if (axis?.type !== 'value' || axis.min != null || axis.boundaryGap != null) continue
+    axis.boundaryGap = [NEGATIVE_LABEL_AXIS_GAP, 0]
   }
 }
 
@@ -574,14 +599,18 @@ function barLabelPositioning(config: NormalConfig) {
 // This keeps label formatting in sync with tooltips without asking callers to repeat it.
 // labelsUseYAxisFormat depends on valueFormatting running first so labels inherit axis formatting.
 function labelsUseYAxisFormat(config: NormalConfig, fields: Field[]) {
+  let horizontalChart = isHorizontalBar(config)
+
   for (let series of config.series) {
     // No-op when labels are off or already explicitly formatted.
     if (!series?.label || series.label.show !== true || series.label.formatter != null) continue
 
-    let valueField = getSeriesValueField(series, fields)
+    // Horizontal bars carry their values on x, so labels read and format that axis instead.
+    let horizontal = horizontalChart && series.type === 'bar'
+    let valueField = horizontal ? getEncodeField(series, fields, 'x') : getSeriesValueField(series, fields)
     let yField = valueField?.name
-    let axisIndex = Number(series.yAxisIndex ?? 0)
-    let axisFormatter = config.yAxis[axisIndex]?.axisLabel?.formatter
+    let axisIndex = Number((horizontal ? series.xAxisIndex : series.yAxisIndex) ?? 0)
+    let axisFormatter = (horizontal ? config.xAxis : config.yAxis)[axisIndex]?.axisLabel?.formatter
     let labelFormatter = valueField ? makeValueFormatter([valueField]) : axisFormatter
     if (typeof labelFormatter !== 'function') continue
 
