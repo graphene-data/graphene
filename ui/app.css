@@ -351,3 +351,26 @@ main.pageContent > h1:first-child {
 .pageContent > div + :is(p, ul, ol, blockquote, hr, table, pre) {
   margin-top: 1rem;
 }
+
+/* Wide markdown tables scroll within the page instead of widening the mobile viewport. */
+.pageContent > table {
+  display: block;
+  overflow-x: auto;
+}
+
+/* Keep the reading measure useful on phones without changing desktop reports. */
+@media (max-width: 600px) {
+  body { font-size: 16px; }
+
+  main.pageContent {
+    padding: 56px 1.25rem 48px;
+  }
+
+  h1 { font-size: 1.625rem; }
+  h2 { font-size: 1.25rem; }
+  h1, h2 { overflow-wrap: anywhere; }
+
+  pre {
+    padding: 1rem;
+  }
+}
