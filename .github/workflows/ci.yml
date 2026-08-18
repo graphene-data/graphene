@@ -109,7 +109,7 @@ jobs:
             ].join('\n'));
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: {persist-credentials: false}
@@ -127,8 +127,12 @@ jobs:
         run: pnpm lint
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    # Pin the full Playwright image digest: Chromium and its OS libraries are preinstalled, without trusting a mutable tag.
+    container: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:65cefd09a5e943921ecd3a6e5414c603db2eb161e9eb48f2e2ccc63486dc7dc0
     steps:
+      - name: Install CI system dependencies
+        run: apt-get update && apt-get install -y --no-install-recommends git-lfs lsof
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: {lfs: true, persist-credentials: false}
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
@@ -141,9 +145,6 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium
-        working-directory: ./ui
       - name: Lang tests
         run: pnpm -C lang test
       - name: CLI tests
@@ -160,7 +161,7 @@ jobs:
           path: ui/tests/results/**
 
   test-vscode:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: {persist-credentials: false}
@@ -180,8 +181,12 @@ jobs:
         run: xvfb-run -a pnpm -C vscode test:e2e
 
   test-install:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    # These tests share the same pinned browser image as the main test job.
+    container: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:65cefd09a5e943921ecd3a6e5414c603db2eb161e9eb48f2e2ccc63486dc7dc0
     steps:
+      - name: Install CI system dependencies
+        run: apt-get update && apt-get install -y --no-install-recommends git-lfs lsof
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { lfs: true, persist-credentials: false }
       - uses: ./.github/actions/setup
@@ -196,9 +201,12 @@ jobs:
 
 
   test-schema:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    container: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:65cefd09a5e943921ecd3a6e5414c603db2eb161e9eb48f2e2ccc63486dc7dc0
     environment: test
     steps:
+      - name: Install Git LFS
+        run: apt-get update && apt-get install -y --no-install-recommends git-lfs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { lfs: true, persist-credentials: false }
       - uses: ./.github/actions/setup
@@ -222,9 +230,12 @@ jobs:
 
 
   test-examples:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    container: mcr.microsoft.com/playwright:v1.58.2-noble@sha256:65cefd09a5e943921ecd3a6e5414c603db2eb161e9eb48f2e2ccc63486dc7dc0
     environment: test
     steps:
+      - name: Install Git LFS
+        run: apt-get update && apt-get install -y --no-install-recommends git-lfs
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with: { lfs: true, persist-credentials: false }
       - uses: ./.github/actions/setup
