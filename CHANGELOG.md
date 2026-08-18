@@ -1,3 +1,22 @@
+## 0.0.27
+
+### Breaking changes
+
+None.
+
+### Added
+
+- Expanded ClickHouse support for numeric and decimal conversions, collection and temporal functions, and aggregate combinators (`c0b67bcd`).
+
+### Fixed
+
+- Fixed stacked and 100%-stacked bar and area charts with horizontal or multiple-value layouts (`a28451c0`, `6f1c6469`, `d02c50e6`).
+- Fixed negative bar corner rounding and value-label placement (`125037b9`, `a3c8f7c4`).
+- Added clear percentage-axis endpoints and square outer corners to 100%-stacked charts (`61286463`).
+- Updated chart tooltips to identify the exact hovered series (`835933c9`).
+- Reduced standalone HTML size by embedding only Latin WOFF2 font files (`bfc033df`).
+- Reused open `graphene run` tabs when only URL parameters change (`daaba73a`).
+
 ## 0.0.26
 
 ### Breaking changes
