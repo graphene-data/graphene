@@ -2285,6 +2285,34 @@ describe('lang', () => {
     }
   })
 
+  it('supports ClickHouse conversion families and aggregate combinators', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    updateFile('table events (tags array<string>, values array<number>, properties map)', 'events.gsql')
+    try {
+      expect('from users select toInt8(name), toInt8OrZero(name), toInt8OrNull(name), toInt8OrDefault(name, 1), toDecimal64OrNull(name, 2)')
+        .toRenderSql('SELECT toInt8(users.name) as col_0, toInt8OrZero(users.name) as col_1, toInt8OrNull(users.name) as col_2, toInt8OrDefault(users.name,1) as col_3, toDecimal64OrNull(users.name,2) as col_4 FROM users as users')
+      expect('from users select toStartOfMinute(created_at), getSubcolumn(name, \'size0\')')
+        .toRenderSql('SELECT toStartOfMinute(users.created_at) as col_0, getSubcolumn(users.name,\'size0\') as col_1 FROM users as users')
+      expect('from events select arrayZip(tags, values)')
+        .toRenderSql('SELECT arrayZip(events.tags,events.values) as col_0 FROM events as events')
+      expect('from events select uniqArray(tags), sumForEach(values), sumMap(properties)')
+        .toRenderSql('SELECT uniqArray(events.tags) as col_0, sumForEach(events.values) as col_1, sumMap(events.properties) as col_2 FROM events as events')
+      expect('from users select countDistinctIf(name, age > 18), sumDistinctIf(age, age > 18), avgOrNull(age), maxArgMax(name, age)')
+        .toRenderSql('SELECT countDistinctIf(users.name,users.age>18) as col_0, sumDistinctIf(users.age,users.age>18) as col_1, avgOrNull(users.age) as col_2, maxArgMax(users.name,users.age) as col_3 FROM users as users')
+      expect('from users select toTypeName(uniqState(name)), toTypeName(sumSimpleState(age)), avgOrDefault(age), minArgMin(name, age)')
+        .toRenderSql('SELECT toTypeName(uniqState(users.name)) as col_0, toTypeName(sumSimpleState(users.age)) as col_1, avgOrDefault(users.age) as col_2, minArgMin(users.name,users.age) as col_3 FROM users as users')
+
+      expect('from users select unknownAggregateIf(age, age > 18)')
+        .toHaveDiagnostic(/Unknown function: unknownaggregateif/i)
+      for (let functionCall of ['median(age)', 'arrayMap(age)', 'topK(age)', '__applyFilter(age)']) {
+        expect(`from users select ${functionCall}`)
+          .toHaveDiagnostic(/Unknown function:/i)
+      }
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
   it('keeps column refs ahead of bare niladic functions', () => {
     let queries = analyze(`
       table t (

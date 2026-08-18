@@ -5,7 +5,7 @@ import type {FunctionDef, ArgDef} from './functionTypes.ts'
 
 import {athenaFunctions} from './athenaFunctions.ts'
 import {bigQueryFunctions} from './bigQueryFunctions.ts'
-import {clickHouseFunctions} from './clickHouseFunctions.ts'
+import {clickHouseFunctions, findClickHouseCombinatorOverloads} from './clickHouseFunctions.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
 import {postgresFunctions} from './postgresFunctions.ts'
@@ -13,10 +13,10 @@ import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {arrayOf, normalizeScalarType, scalarType, type Expr, type FieldMeta, type FieldType, isArrayType, isScalarType, type Scope, type TypeKind} from './types.ts'
 import {txt} from './util.ts'
 
-const ANY_TYPES: TypeKind[] = ['string', 'number', 'boolean', 'date', 'time', 'timestamp', 'json', 'interval', 'record', 'map', 'array']
+const ANY_TYPES: TypeKind[] = ['string', 'number', 'boolean', 'date', 'time', 'timestamp', 'json', 'interval', 'record', 'map', 'array', 'sql native']
 
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
-interface Overload {
+export interface Overload {
   params: {name: string; allowedTypes: {type: TypeKind; rawType?: string}[]; isVariadic?: boolean}[]
   returnType: {type: FieldType | 'generic' | 'array' | 'array_element'; expressionType?: 'aggregate' | 'scalar' | 'window'}
   fanoutSafe?: boolean
@@ -118,7 +118,10 @@ let dialectMaps: Record<string, Record<string, Overload[]>> = {
 
 function findOverloads(name: string, dialect: string): Overload[] {
   let map = dialectMaps[dialect] || dialectMaps['duckdb']
-  return map[name.toLowerCase()] || []
+  let normalizedName = name.toLowerCase()
+  let direct = map[normalizedName]
+  if (direct || dialect != 'clickhouse') return direct || []
+  return findClickHouseCombinatorOverloads(normalizedName, map)
 }
 
 // ============================================================================
@@ -159,11 +162,7 @@ function analyzeNamedFunction(analyzer: Analyzer, node: SyntaxNode, name: string
 
   // Analyze arguments and check types against overload
   let args = argNodes.map((argNode, idx) => {
-    let paramIdx = idx
-    if (overload && paramIdx >= overload.params.length) {
-      let lastParam = overload.params[overload.params.length - 1]
-      if (lastParam?.isVariadic) paramIdx = overload.params.length - 1
-    }
+    let paramIdx = overload ? parameterIndexForArgument(overload, idx, argNodes.length) : idx
     let firstType = overload?.params[paramIdx]?.allowedTypes[0]
     if (firstType?.type == 'sql native' && firstType?.rawType === 'kw') {
       return {sql: txt(argNode), type: scalarType('sql native')}
@@ -181,6 +180,16 @@ function analyzeNamedFunction(analyzer: Analyzer, node: SyntaxNode, name: string
   }
 
   return analyzeResolvedFunction(name, overload, args, scope, opts)
+}
+
+// Maps arguments around a variadic parameter, including ClickHouse combinators that append fixed arguments after it.
+function parameterIndexForArgument(overload: Overload, argumentIndex: number, argumentCount: number) {
+  let variadicIndex = overload.params.findIndex(param => param.isVariadic)
+  if (variadicIndex < 0 || argumentIndex < variadicIndex) return argumentIndex
+  let trailingCount = overload.params.length - variadicIndex - 1
+  let trailingStart = argumentCount - trailingCount
+  if (argumentIndex < trailingStart) return variadicIndex
+  return variadicIndex + 1 + argumentIndex - trailingStart
 }
 
 function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[], scope: Scope, opts: {isWindow?: boolean; bare?: boolean} = {}): Expr {
