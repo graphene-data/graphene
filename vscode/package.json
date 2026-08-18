@@ -16,8 +16,8 @@
     "build:e2e": "node ./tests/e2e/build.mjs",
     "test:e2e": "pnpm run build && pnpm run build:e2e && vscode-test",
     "vscode:prepublish": "pnpm run build",
-    "package": "rm -f -- *.vsix && npx vsce package --no-dependencies",
-    "publish-extension": "npx vsce publish && npx ovsx publish",
+    "package": "rm -f -- *.vsix && vsce package --no-dependencies",
+    "publish-extension": "vsce publish && ovsx publish",
     "install-cursor": "pnpm run package && cursor --install-extension *.vsix",
     "install-vscode": "pnpm run package && code --install-extension *.vsix"
   },
@@ -28,8 +28,10 @@
     "@types/vscode": "^1.110.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "3.9.2",
     "esbuild": "^0.28.1",
     "graphene-language-server": "workspace:*",
+    "ovsx": "1.1.1",
     "vscode-oniguruma": "^2.0.1",
     "vscode-textmate": "^9.3.2"
   },

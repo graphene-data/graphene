@@ -13,8 +13,8 @@ $.shell = 'bash'
 if (!process.env.OVSX_PAT) throw new Error('OVSX_PAT required')
 
 let vscodePublisher = await readPublisher('vscode/package.json')
-await $`npx vsce verify-pat ${vscodePublisher} --azure-credential`
-await $`npx ovsx verify-pat ${vscodePublisher}`
+await $`pnpm -C vscode exec vsce verify-pat ${vscodePublisher} --azure-credential`
+await $`pnpm -C vscode exec ovsx verify-pat ${vscodePublisher}`
 
 // package.json is authoritative for release version; published packages must match exactly.
 let rootVersion = await readVersion('package.json')
@@ -51,8 +51,8 @@ await $`pnpm -C cli build`
 await $`(cd cli && npm publish --access public)`
 await $`pnpm -C create build`
 await $`npm publish ./create`
-await $`(cd vscode && npx vsce publish --no-dependencies --azure-credential)`
-await $`(cd vscode && npx ovsx publish --no-dependencies)`
+await $`pnpm -C vscode exec vsce publish --no-dependencies --azure-credential`
+await $`pnpm -C vscode exec ovsx publish --no-dependencies`
 
 // Publish GitHub release notes from the matching changelog section.
 let changelog = await fs.readFile('CHANGELOG.md', 'utf8')

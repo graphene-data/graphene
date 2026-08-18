@@ -9,7 +9,9 @@ packages:
   - examples/*
 
 allowBuilds:
+  '@vscode/vsce-sign': true
   esbuild: true
+  keytar: false
 
 # avoid using a package that was released in the last 3 days, for security.
 # Use minimumReleaseAgeExclude to bump past a known vulnerability
