@@ -44,9 +44,11 @@ test('routes pages hidden from navigation', async ({server, page}) => {
 
 test('serves the cloud CSP unless disabled', async ({server, page}) => {
   let response = await page.goto(server.url())
+  await waitForGrapheneLoad(page)
   expect(response!.headers()['content-security-policy']).toBe(grapheneCsp)
 
   response = await page.goto(server.url({csp: false}))
+  await waitForGrapheneLoad(page)
   expect(response!.headers()['content-security-policy']).toBeUndefined()
 })
 

@@ -391,13 +391,13 @@ function mockFilesForTests() {
     resolveId(id: any) {
       let key = toMockKey(id)
       if (!mockFileMap[key]) return
-      // Always resolve to the absolute path so the module graph key matches
-      // what updateMockFile emits via server.watcher (needed for HMR to work).
-      return path.join(config.root, key) + '?mock'
+      // Keep mocks and real files under the same module ID. Svelte's virtual CSS lookup uses the
+      // filename without query parameters, so a `?mock` ID can lose its compiled CSS metadata.
+      return path.join(config.root, key)
     },
     load(id: any) {
-      if (!id.endsWith('?mock')) return null
-      let key = toMockKey(id.replace(/\?mock$/, ''))
+      let key = toMockKey(id)
+      if (!mockFileMap[key]) return null
       if (missingMockFiles.has(key)) throw new Error('Mock file not found')
       return mockFileMap[key]
     },
