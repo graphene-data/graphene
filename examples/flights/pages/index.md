@@ -247,6 +247,18 @@ layout: dashboard
   color: #78716c;
   text-align: center;
 }
+
+@media (max-width: 600px) {
+  .ed-masthead { padding: 24px 0 28px; }
+  .ed-masthead h1 { font-size: 42px; }
+  .ed-figures { grid-template-columns: repeat(2, 1fr); margin-bottom: 36px; }
+  .ed-figure { padding: 20px 8px; }
+  .ed-figure:nth-child(2) { border-right: none; }
+  .ed-figure:nth-child(-n + 2) { border-bottom: 1px solid #d6d3d1; }
+  .ed-figure-value { font-size: 34px; }
+  .ed-plates { grid-template-columns: 1fr; gap: 16px; margin-bottom: 40px; }
+  .ed-erd { overflow-x: auto; padding-bottom: 12px; }
+}
 </style>
 
 ```gsql totals

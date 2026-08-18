@@ -22,8 +22,14 @@ export const sidebar = {
     state.pinned = true
     state.open = true
   },
+  togglePin() {
+    clearTimeout(closeTimer)
+    state.pinned = !state.pinned
+    state.open = state.pinned
+  },
   unpin() {
+    clearTimeout(closeTimer)
     state.pinned = false
-    this.leave()
+    closeTimer = window.setTimeout(() => state.open = false, 60)
   },
 }

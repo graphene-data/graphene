@@ -13,4 +13,9 @@
     flex: 1 1 80px;
     min-width: 80px;
   }
+
+  /* Small charts and controls are more useful stacked than squeezed side-by-side on phones. */
+  @media (max-width: 600px) {
+    div > :global(*) { flex-basis: 100%; }
+  }
 </style>

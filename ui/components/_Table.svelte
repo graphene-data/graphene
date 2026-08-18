@@ -578,4 +578,10 @@
   .pagination__meta {
     margin-left: auto;
   }
+
+  @media (max-width: 600px) {
+    .pagination { flex-wrap: wrap; }
+    .pagination__status { margin: 0; }
+    .pagination__meta { flex-basis: 100%; margin-left: 0; }
+  }
 </style>

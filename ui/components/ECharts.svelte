@@ -198,6 +198,10 @@
     position: relative;
   }
 
+  @media (max-width: 600px) {
+    .echarts { max-width: 100%; }
+  }
+
   .empty-chart {
     width: 100%;
     height: 100%;

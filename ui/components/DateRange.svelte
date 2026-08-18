@@ -386,4 +386,9 @@
     font-family: var(--font-ui);
     font-synthesis: none;
   }
+
+  @media (max-width: 600px) {
+    .range-row { flex-wrap: wrap; }
+    .date-input { flex: 1; min-width: 120px; }
+  }
 </style>

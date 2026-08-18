@@ -1,7 +1,7 @@
 <script>
   // The persistent menu button: always fixed to the top-left corner of the viewport.
-  // Opens the sidebar on hover/click/focus. The sidebar stays open until the cursor
-  // crosses its right edge (onDocMouseMove in Sidebar.svelte), so no onmouseleave here.
+  // Opens the sidebar on hover/focus, while a click pins it for touch and keyboard use.
+  // The sidebar stays open until navigation or a second click when pinned.
   import Menu from '@lucide/svelte/icons/menu'
   import {sidebar} from './sidebar.svelte.ts'
 </script>
@@ -11,7 +11,7 @@
   type="button"
   aria-label="Open navigation"
   aria-expanded={sidebar.open}
-  onclick={sidebar.enter}
+  onclick={sidebar.togglePin}
   onmouseenter={sidebar.enter}
   onfocus={sidebar.enter}
   onblur={sidebar.leave}

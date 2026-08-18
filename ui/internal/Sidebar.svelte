@@ -15,9 +15,14 @@
     if (!sidebar.open || !navEl) return
     if (e.clientX > navEl.offsetLeft + navEl.offsetWidth) sidebar.leave()
   }
+
+  // Page navigation closes a click-pinned panel, which otherwise has no hover exit on touch screens.
+  function onDocClick(e) {
+    if (e.target instanceof Element && e.target.closest('#nav a')) sidebar.unpin()
+  }
 </script>
 
-<svelte:document onmousemove={onDocMouseMove} />
+<svelte:document onmousemove={onDocMouseMove} onclick={onDocClick} />
 
 <nav
   bind:this={navEl}
@@ -57,6 +62,14 @@
   .sb-panel[data-open='true'] {
     transform: translateX(0);
     pointer-events: auto;
+  }
+
+  @media (max-width: 600px) {
+    .sb-panel {
+      width: calc(100vw - 2 * var(--sb-inset, 0px));
+      max-width: var(--sb-w);
+      box-sizing: border-box;
+    }
   }
 
   .sb-panel :global(.sb-content) {
