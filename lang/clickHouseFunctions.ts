@@ -1,6 +1,8 @@
 import type {FunctionDef} from './functionTypes.ts'
+import type {Overload} from './functions.ts'
 
 import {inferTimeOrdinal, inferGrain} from './temporalMetadata.ts'
+import {scalarType, type TypeKind} from './types.ts'
 import {trimIndentation} from './util.ts'
 
 const trim = trimIndentation
@@ -142,9 +144,83 @@ function nativeFunction(sqlName: string, docs: string, args: FunctionDef['args']
   }
 }
 
-// Keep the ClickHouse surface focused on analytics functions that map cleanly to
-// Graphene's expression grammar and type system. Parameterized and lambda calls
-// remain syntax features rather than ordinary function definitions.
+function snakeCaseFunctionName(name: string) {
+  return name.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase()
+}
+
+// Defines ClickHouse's numeric conversion family, whose failure variants have distinct argument contracts but share a numeric result.
+function numericConversionFamily(target: string): FunctionDef[] {
+  let conversion = (suffix: string, args: FunctionDef['args'], summary: string) => {
+    let sqlName = `to${target}${suffix}`
+    return nativeFunction(sqlName, 'type-conversion-functions', args, 'number', summary, {aliases: [snakeCaseFunctionName(sqlName)]})
+  }
+  return [
+    conversion('', [{name: 'value', type: 'any'}], `Converts a numeric value or numeric string to ${target}.`),
+    conversion('OrZero', [{name: 'value', type: 'string'}], `Converts a string to ${target}, returning zero when parsing fails.`),
+    conversion('OrNull', [{name: 'value', type: 'string'}], `Converts a string to ${target}, returning null when parsing fails.`),
+    conversion('OrDefault', [{name: 'value', type: 'any'}, {name: 'default', type: 'number?'}], `Converts a value to ${target}, returning an optional default when parsing fails.`),
+  ]
+}
+
+// Decimal conversions additionally require a scale before the optional failure default.
+function decimalConversionFamily(bits: number): FunctionDef[] {
+  let target = `Decimal${bits}`
+  let conversion = (suffix: string, args: FunctionDef['args'], summary: string) => {
+    let sqlName = `to${target}${suffix}`
+    return nativeFunction(sqlName, 'type-conversion-functions', args, 'number', summary, {aliases: [snakeCaseFunctionName(sqlName)]})
+  }
+  return [
+    conversion('', [{name: 'value', type: 'any'}, {name: 'scale', type: 'number'}], `Converts a value to ${target} with the requested scale.`),
+    conversion('OrZero', [{name: 'value', type: 'string'}, {name: 'scale', type: 'number'}], `Converts a string to ${target}, returning zero when parsing fails.`),
+    conversion('OrNull', [{name: 'value', type: 'string'}, {name: 'scale', type: 'number'}], `Converts a string to ${target}, returning null when parsing fails.`),
+    conversion('OrDefault', [{name: 'value', type: 'string'}, {name: 'scale', type: 'number'}, {name: 'default', type: 'number?'}], `Converts a string to ${target}, returning an optional default when parsing fails.`),
+  ]
+}
+
+const clickHouseCombinators = ['SimpleState', 'OrDefault', 'Distinct', 'ForEach', 'ArgMax', 'ArgMin', 'OrNull', 'Array', 'Tuple', 'State', 'Merge', 'Map', 'If'] as const
+const clickHouseAnyTypes: TypeKind[] = ['string', 'number', 'boolean', 'date', 'time', 'timestamp', 'json', 'interval', 'record', 'map', 'array', 'sql native']
+
+// ClickHouse builds aggregate variants by recursively appending combinator suffixes instead of registering every resulting function name.
+export function findClickHouseCombinatorOverloads(name: string, map: Record<string, Overload[]>): Overload[] {
+  let direct = map[name]
+  if (direct) return direct
+
+  for (let suffix of clickHouseCombinators) {
+    if (!name.endsWith(suffix.toLowerCase())) continue
+    let nestedName = name.slice(0, -suffix.length)
+    let nested = findClickHouseCombinatorOverloads(nestedName, map).filter(overload => overload.returnType.expressionType == 'aggregate')
+    if (nested.length) return nested.map(overload => applyClickHouseCombinator(overload, suffix, overload.sqlName || nestedName))
+  }
+  return []
+}
+
+// Transforms the nested aggregate's signature while retaining the composed native SQL name.
+function applyClickHouseCombinator(overload: Overload, suffix: typeof clickHouseCombinators[number], nestedSqlName: string): Overload {
+  let transformed: Overload = {
+    ...overload,
+    params: overload.params.map(param => ({...param, allowedTypes: [...param.allowedTypes]})),
+    returnType: {...overload.returnType},
+    sqlName: `${nestedSqlName}${suffix}`,
+  }
+  let anyParam = (name: string) => ({name, allowedTypes: clickHouseAnyTypes.map(type => ({type}))})
+
+  if (suffix == 'If') transformed.params.push({name: 'condition', allowedTypes: [{type: 'boolean'}]})
+  if (suffix == 'ArgMax' || suffix == 'ArgMin') transformed.params.push(anyParam('key'))
+  if (suffix == 'Array' || suffix == 'ForEach') transformed.params = transformed.params.map(param => ({...param, allowedTypes: [{type: 'array'}, {type: 'sql native'}]}))
+  if (suffix == 'Map') transformed.params = transformed.params.map(param => ({...param, allowedTypes: [{type: 'map'}, {type: 'sql native'}]}))
+  if (suffix == 'Tuple') transformed.params = transformed.params.map(param => ({...param, allowedTypes: [{type: 'record'}, {type: 'sql native'}]}))
+
+  if (suffix == 'Array' && transformed.returnType.type == 'generic') transformed.returnType.type = 'array_element'
+  if (suffix == 'ForEach') transformed.returnType.type = 'array'
+  if (suffix == 'Map') transformed.returnType.type = scalarType('map')
+  if (suffix == 'Tuple') transformed.returnType.type = scalarType('record')
+  if (suffix == 'State' || suffix == 'SimpleState') transformed.returnType.type = scalarType('sql native')
+  if (suffix == 'Merge') transformed.params = [anyParam('state')]
+  if (suffix == 'Distinct') transformed.fanoutSafe = true
+  return transformed
+}
+
+// ClickHouse functions with ordinary call syntax. Parameterized double calls, lambda calls, internals, and native median remain unsupported.
 export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // JSON and Dynamic Functions
@@ -283,6 +359,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('corr', '../aggregate-functions/reference/corr', [{name: 'x', type: 'number'}, {name: 'y', type: 'number'}], 'number', 'Computes the Pearson correlation coefficient.', {aggregate: true}),
   nativeFunction('covarPop', '../aggregate-functions/reference/covarpop', [{name: 'x', type: 'number'}, {name: 'y', type: 'number'}], 'number', 'Computes population covariance.', {aggregate: true, aliases: ['covar_pop']}),
   nativeFunction('covarSamp', '../aggregate-functions/reference/covarsamp', [{name: 'x', type: 'number'}, {name: 'y', type: 'number'}], 'number', 'Computes sample covariance.', {aggregate: true, aliases: ['covar_samp']}),
+  nativeFunction('countDistinct', '../aggregate-functions/reference/count', [{name: 'values', type: 'any...'}], 'number', 'Counts distinct values using ClickHouse\'s configured implementation.', {aggregate: true, fanoutSafe: true}),
   nativeFunction('groupUniqArray', '../aggregate-functions/reference/groupuniqarray', [{name: 'arg', type: 'T'}], 'array', 'Collects distinct input values into an array.', {aggregate: true, aliases: ['group_uniq_array']}),
   nativeFunction('retention', '../aggregate-functions/parametric-functions', [{name: 'conditions', type: 'boolean...'}], 'array<number>', 'Computes retention flags for a sequence of conditions.', {aggregate: true}),
   nativeFunction('stddevPop', '../aggregate-functions/reference/stddevpop', [{name: 'arg', type: 'number'}], 'number', 'Computes population standard deviation.', {aggregate: true, aliases: ['stddev_pop']}),
@@ -507,6 +584,15 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
 
   // ============================================================================
+  // Type Conversion Functions
+  // ============================================================================
+  ...['Int8', 'Int16', 'Int32', 'Int64', 'Int128', 'Int256', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'UInt128', 'UInt256', 'Float32', 'Float64'].flatMap(numericConversionFamily),
+  ...[32, 64, 128, 256].flatMap(decimalConversionFamily),
+  nativeFunction('toBFloat16', 'type-conversion-functions', [{name: 'value', type: 'any'}], 'number', 'Converts a numeric value or numeric string to BFloat16.', {aliases: ['to_bfloat16']}),
+  nativeFunction('toBFloat16OrZero', 'type-conversion-functions', [{name: 'value', type: 'string'}], 'number', 'Converts a string to BFloat16, returning zero when parsing fails.', {aliases: ['to_bfloat16_or_zero']}),
+  nativeFunction('toBFloat16OrNull', 'type-conversion-functions', [{name: 'value', type: 'string'}], 'number', 'Converts a string to BFloat16, returning null when parsing fails.', {aliases: ['to_bfloat16_or_null']}),
+
+  // ============================================================================
   // Numeric Functions
   // ============================================================================
   nativeFunction('exp', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns e raised to x.'),
@@ -655,6 +741,8 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('arraySlice', 'array-functions', [{name: 'array', type: 'array'}, {name: 'offset', type: 'number'}, {name: 'length', type: 'number?'}], 'array', 'Returns a slice of an array.', {aliases: ['array_slice']}),
   nativeFunction('arraySort', 'array-functions', [{name: 'array', type: 'array'}], 'array', 'Sorts an array in ascending order.', {aliases: ['array_sort']}),
   nativeFunction('arrayUniq', 'array-functions', [{name: 'arrays', type: 'array...'}], 'number', 'Counts distinct array elements.', {aliases: ['array_uniq']}),
+  nativeFunction('arrayZip', 'array-functions', [{name: 'arrays', type: 'array...'}], 'array<record>', 'Combines corresponding array elements into tuples.', {aliases: ['array_zip']}),
+  nativeFunction('getSubcolumn', 'other-functions', [{name: 'value', type: 'any'}, {name: 'subcolumn', type: 'string'}], 'sql native', 'Extracts a named subcolumn from a nested value.', {aliases: ['get_subcolumn']}),
   nativeFunction('empty', 'array-functions', [{name: 'collection', type: ['array', 'map', 'string']}], 'boolean', 'Returns whether a collection or string is empty.'),
   nativeFunction('has', 'array-functions', [{name: 'array', type: 'array'}, {name: 'value', type: 'any'}], 'boolean', 'Returns whether an array contains a value.'),
   nativeFunction('indexOf', 'array-functions', [{name: 'array', type: 'array'}, {name: 'value', type: 'any'}], 'number', 'Returns the one-based position of a value in an array, or zero.', {aliases: ['index_of']}),
@@ -1255,6 +1343,20 @@ export const clickHouseFunctions: FunctionDef[] = [
     metadata: {timeGrain: 'day'},
     sqlName: 'toStartOfDay',
     aliases: ['to_start_of_day'],
+  },
+  {
+    name: 'tostartofminute',
+    description: trim(`
+      toStartOfMinute(datetime)
+
+      Truncates to the start of the minute.
+    `),
+    url: `${click}/functions/date-time-functions#tostartofminute`,
+    args: [{name: 'datetime', type: ['date', 'timestamp']}],
+    returns: 'timestamp',
+    metadata: {timeGrain: 'minute'},
+    sqlName: 'toStartOfMinute',
+    aliases: ['to_start_of_minute'],
   },
   {
     name: 'tostartofmonth',
