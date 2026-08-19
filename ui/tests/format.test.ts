@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {formatSingleValue} from '../component-utilities/format.ts'
+import {formatSingleValue, unitTickInterval} from '../component-utilities/format.ts'
 import type {Field} from '../component-utilities/types.ts'
 
 // Builds a numeric field carrying the metadata under test.
@@ -88,5 +88,17 @@ describe('unit formatting', () => {
     // 1500 minutes is only just over a day, so days would leave the rest of the set reading 0.059d.
     let ticks = [85, 350, 1500].map(value => formatSingleValue(value, minutes, {unitStyle: 'axis', scaleMax: 1500}))
     expect(ticks).toEqual(['1.42h', '5.83h', '25h'])
+  })
+
+  test('converted axes get a tick interval that is round in the displayed unit', () => {
+    // 1908 minutes of flight time: ECharts would tick every 500 minutes, which relabels to a ragged 8.33h.
+    // Six hours instead, expressed back in the declared unit.
+    expect(unitTickInterval(field({unit: 'minutes'}), 1908)).toBe(360)
+    expect(unitTickInterval(field({unit: 'meters'}), 15000)).toBe(2500)
+
+    // Nothing to fix when the axis already displays in the unit its values are declared in.
+    expect(unitTickInterval(field({unit: 'minutes'}), 90)).toBeUndefined()
+    expect(unitTickInterval(field({unit: 'parsecs'}), 1908)).toBeUndefined()
+    expect(unitTickInterval(field({unit: 'minutes', precision: 2}), 1908)).toBeUndefined()
   })
 })

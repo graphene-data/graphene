@@ -1,7 +1,7 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
 import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries, STACK_PERCENTAGE_FIELD} from './dataShaping.ts'
-import {formatFromField, formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
+import {formatFromField, formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter, unitTickInterval} from './format.ts'
 import {paletteForPath} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -44,6 +44,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   stackPercentageValueAxis(normalized, fields)
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, rows, fields)
+  unitAxisTicks(normalized, rows)
   timeFormatting(normalized)
   addCartesianItemTooltips(normalized, fields)
   styleSecondaryAxisForSimpleBarLineLayout(normalized, fields)
@@ -421,8 +422,8 @@ function valueFormatting(config: NormalConfig, rows: Record<string, any>[], fiel
   for (let axis of valueAxes) {
     if (axis.axisLabel?.formatter != null) continue
     // Ticks share one scale, so we hand the formatter the axis extent and it picks a single unit for every label.
-    let name = axis.field?.name
-    let scaleMax = name ? rows.reduce((max, row) => Math.max(max, Math.abs(Number(row?.[name])) || 0), 0) : 0
+    let extent = axis.field ? axisValueExtent(rows, axis.field) : {min: 0, max: 0}
+    let scaleMax = Math.max(Math.abs(extent.min), Math.abs(extent.max))
     axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [], {unitStyle: 'axis', scaleMax: scaleMax || undefined})}
   }
 
@@ -431,6 +432,35 @@ function valueFormatting(config: NormalConfig, rows: Record<string, any>[], fiel
     if (series.tooltip?.formatter || series.tooltip.valueFormatter) continue
     series.tooltip.valueFormatter = makeValueFormatter(getSeriesValueFields(series, fields))
   }
+}
+
+// ECharts picks tick values from the raw data, so an axis we relabel into another unit ends up with ticks that are
+// round in the declared unit and ragged in the displayed one - a round 500 minutes reads as "8.33h". When we are
+// converting, choose the interval ourselves so ticks land on round numbers in the unit the labels actually use.
+function unitAxisTicks(config: NormalConfig, rows: Record<string, any>[]) {
+  for (let axis of [...config.xAxis, ...config.yAxis]) {
+    // A pinned domain or an explicit interval is the caller's choice, and ordinals never carry a scalable unit.
+    if (axis?.type !== 'value' || !axis.field || axis.field.metadata?.timeOrdinal) continue
+    if (axis.interval != null || axis.min != null || axis.max != null || axis.scale) continue
+
+    let {min, max} = axisValueExtent(rows, axis.field)
+    let interval = unitTickInterval(axis.field, Math.max(Math.abs(min), Math.abs(max)))
+    if (!interval) continue
+
+    // The interval alone isn't enough: ECharts keeps its own extent, which leaves a ragged label at the top and,
+    // on a domain crossing zero, gridlines that miss it. Value axes include zero unless `scale` is set, which we
+    // bailed on above, so we snap that same domain out to whole intervals ourselves.
+    axis.interval = interval
+    axis.min = Math.floor(Math.min(0, min) / interval) * interval
+    axis.max = Math.ceil(Math.max(0, max) / interval) * interval
+  }
+}
+
+// The range an axis has to cover. Unit scaling and tick intervals are chosen from its widest side, and snapping the
+// domain to whole intervals needs both ends.
+function axisValueExtent(rows: Record<string, any>[], field: Field) {
+  let values = rows.map(row => Number(row?.[field.name])).filter(value => Number.isFinite(value))
+  return {min: values.length ? Math.min(...values) : 0, max: values.length ? Math.max(...values) : 0}
 }
 
 // Item-triggered cartesian tooltips retain the dimension as a header while showing only the hovered series.

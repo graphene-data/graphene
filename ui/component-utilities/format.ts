@@ -11,7 +11,7 @@ const yearMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 const titleCaseAcronyms = ['id', 'gdp']
 const titleCaseLowerWords = ['of', 'the', 'and', 'in', 'on']
 
-type UnitDef = {name: string; abbr: string; factor: number}
+type UnitDef = {name: string; abbr: string; factor: number; steps?: number[]}
 type UnitScale = {composite?: boolean; units: UnitDef[]}
 type ValueFormatterOptions = {unitStyle?: 'label' | 'axis'; scaleMax?: number}
 
@@ -21,8 +21,9 @@ type ValueFormatterOptions = {unitStyle?: 'label' | 'axis'; scaleMax?: number}
 // `m` meaning both minutes and meters is fine - the scale is known from the declared unit, so they can never collide in one formatter.
 const unitScales: UnitScale[] = [
   {composite: true, units: [
-    {name: 'milliseconds', abbr: 'ms', factor: 0.001}, {name: 'seconds', abbr: 's', factor: 1}, {name: 'minutes', abbr: 'm', factor: 60},
-    {name: 'hours', abbr: 'h', factor: 3600}, {name: 'days', abbr: 'd', factor: 86400}, {name: 'weeks', abbr: 'w', factor: 604800},
+    {name: 'milliseconds', abbr: 'ms', factor: 0.001}, {name: 'seconds', abbr: 's', factor: 1, steps: [1, 2, 5, 10, 15, 30]},
+    {name: 'minutes', abbr: 'm', factor: 60, steps: [1, 2, 5, 10, 15, 30]}, {name: 'hours', abbr: 'h', factor: 3600, steps: [1, 2, 3, 6, 12, 24]},
+    {name: 'days', abbr: 'd', factor: 86400, steps: [1, 2, 3, 7, 14]}, {name: 'weeks', abbr: 'w', factor: 604800},
   ]},
   {units: [{name: 'millimeters', abbr: 'mm', factor: 0.001}, {name: 'centimeters', abbr: 'cm', factor: 0.01}, {name: 'meters', abbr: 'm', factor: 1}, {name: 'kilometers', abbr: 'km', factor: 1000}]},
   {units: [{name: 'feet', abbr: 'ft', factor: 1}, {name: 'miles', abbr: 'mi', factor: 5280}]},
@@ -110,6 +111,24 @@ function formatInUnitScale(absolute: number, field: Field | undefined, options: 
   // and every other value in the set drops below 1 (0.24d, 0.059d) instead of reading cleanly (5.83h, 1.42h).
   let max = Math.abs(options.scaleMax) * unit.factor
   return withUnit(base, pickUnit(scale, max, 3), max)
+}
+
+// The tick interval, expressed in `field`'s declared unit, that lands axis labels on round numbers in the unit they
+// will actually display in. Returns undefined when we aren't converting, since ECharts' own ticks are already round.
+export function unitTickInterval(field: Field | undefined, extentMax: number) {
+  let declared = unitLookup.get(field?.metadata?.unit?.trim().toLowerCase() || '')
+  if (!declared || !extentMax || getPrecision(field) != null) return undefined
+
+  let base = Math.abs(extentMax) * declared.unit.factor
+  let target = pickUnit(declared.scale, base, 3)
+  if (target === declared.unit) return undefined
+
+  // Aim for roughly five intervals, then snap to the nearest step the target unit reads well in. Units that aren't
+  // decimal carry their own ladder, because hours want to step by 6 where kilometers want to step by 5.
+  let ideal = base / target.factor / 5
+  let ladder = target.steps || [1, 2, 2.5, 5, 10].map(step => step * Math.pow(10, Math.floor(Math.log10(ideal))))
+  let step = ladder.reduce((best, option) => (Math.abs(Math.log(option / ideal)) < Math.abs(Math.log(best / ideal)) ? option : best))
+  return (step * target.factor) / declared.unit.factor
 }
 
 // Join a scaled number to its abbreviation. A value that still needed generic compaction gets a space so the
