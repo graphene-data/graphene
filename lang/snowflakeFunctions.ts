@@ -6,7 +6,7 @@
 
 import type {FunctionDef} from './functionTypes.ts'
 
-import {inferTimeOrdinal, inferGrain} from './temporalMetadata.ts'
+import {inferTimeOrdinal, inferGrain, inferDuration} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const sf = 'https://docs.snowflake.com/en/sql-reference/functions'
@@ -1858,6 +1858,7 @@ export const snowflakeFunctions: FunctionDef[] = [
       {name: 'date_expr2', type: ['date', 'timestamp']},
     ],
     returns: 'number',
+    metadata: args => inferDuration(args[0]?.sql),
   },
   {
     name: 'dayname',

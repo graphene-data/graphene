@@ -28,6 +28,25 @@ export function inferGrain(rawPart?: string): FieldMeta | undefined {
   }
 }
 
+// Metadata for difference functions like date_diff/datediff. Unlike extraction, the result isn't a position within
+// a larger cycle - it's a count of one unit, so the part names the unit the number is already in, which is exactly
+// what `#unit` needs to abbreviate and scale it. Only parts that map to a recognized unit are worth inferring;
+// weeks and quarters would just append a word to every value.
+export function inferDuration(rawPart?: string): FieldMeta | undefined {
+  let normalized = normalizeTemporalPart(rawPart).replace(/s$/, '')
+
+  switch (normalized) {
+    case 'millisecond':
+    case 'second':
+    case 'minute':
+    case 'hour':
+    case 'day':
+    case 'month':
+    case 'year':
+      return {unit: `${normalized}s`}
+  }
+}
+
 // Metadata for extraction functions like extract/date_part/hour(...). Most extracted
 // values are bounded ordinals (month-of-year, day-of-week, etc). Year is the exception:
 // it is unbounded, so we treat it as a numeric value at year grain instead of an ordinal.

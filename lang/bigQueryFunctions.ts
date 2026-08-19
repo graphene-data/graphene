@@ -6,7 +6,7 @@
 
 import type {FunctionDef} from './functionTypes.ts'
 
-import {inferGrain} from './temporalMetadata.ts'
+import {inferGrain, inferDuration} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const bq = 'https://cloud.google.com/bigquery/docs/reference/standard-sql'
@@ -1928,6 +1928,7 @@ export const bigQueryFunctions: FunctionDef[] = [
       {name: 'date_part', type: 'string', description: 'The date part to use for the difference.'},
     ],
     returns: 'number',
+    metadata: args => inferDuration(args[2]?.sql),
   },
   {
     name: 'date_from_unix_date',
@@ -2148,6 +2149,7 @@ export const bigQueryFunctions: FunctionDef[] = [
       {name: 'part', type: 'string', description: 'The part to use for the difference.'},
     ],
     returns: 'number',
+    metadata: args => inferDuration(args[2]?.sql),
   },
   {
     name: 'datetime_sub',
@@ -2305,6 +2307,7 @@ export const bigQueryFunctions: FunctionDef[] = [
       {name: 'part', type: 'string', description: 'The part to use for the difference.'},
     ],
     returns: 'number',
+    metadata: args => inferDuration(args[2]?.sql),
   },
   {
     name: 'time_sub',
@@ -2462,6 +2465,7 @@ export const bigQueryFunctions: FunctionDef[] = [
       {name: 'date_part', type: 'kw', description: 'The date part to use for the difference.'},
     ],
     returns: 'number',
+    metadata: args => inferDuration(args[2]?.sql),
   },
   {
     name: 'timestamp_sub',

@@ -179,7 +179,7 @@ A simple heuristic to know which to use where is:
 - Numbers extracted from dates or datetimes: `#timeOrdinal`
 - Durations/intervals: `#unit` time family
 
-`#timeGrain` and `#timeOrdinal` can be inferred from Graphene SQL expressions if they use `date_trunc`, `date_bin`, casts, or `extract`.
+`#timeGrain` and `#timeOrdinal` can be inferred from Graphene SQL expressions if they use `date_trunc`, `date_bin`, casts, or `extract`. `#unit`'s time family is inferred the same way from `date_diff`/`datediff`, whose part names the unit its count is in, and from subtracting one date or timestamp from another. Like the others, the inference doesn't survive arithmetic or aggregation — `date_diff('second', a, b) / 60` is no longer a count of seconds, so annotate those yourself.
 
 ## `select` statements
 
