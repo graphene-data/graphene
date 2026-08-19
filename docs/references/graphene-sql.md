@@ -174,7 +174,7 @@ A few rules worth knowing:
 
 - Time is composite, since it isn't decimal: values render as up to two parts (`4d 10h`). Every other family scales by swapping the unit (`14.5km`, `2.5GB`).
 - We never convert between metric and imperial. `1500 meters` is `1.5km`, never `0.93mi`.
-- Shared scales pick one unit for the whole set, so axis ticks and table columns stay aligned rather than mixing `4d 10h` with `90m`.
+- Axes pick one unit for their whole extent, since ticks reading `4d 10h` / `4d 12h` / `4d 14h` are wide and hard to scan. Table columns do the same for prefix-scaled units, so a sorted column doesn't jump between `300 mi` and `1.5km`; durations still compose per cell.
 - `#precision` opts out of scaling: it means "this many decimals in the unit I declared".
 - Data units scale by 1000, not 1024.
 

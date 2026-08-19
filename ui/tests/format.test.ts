@@ -41,6 +41,7 @@ describe('unit formatting', () => {
   })
 
   test('decimal families scale by prefix rather than composing', () => {
+    expect(formatSingleValue(14512, field({unit: 'meters'}))).toBe('14.5km')
     expect(formatSingleValue(1500, field({unit: 'meters'}))).toBe('1.5km')
     expect(formatSingleValue(0.0005, field({unit: 'meters'}))).toBe('0.5mm')
     expect(formatSingleValue(1200, field({unit: 'grams'}))).toBe('1.2kg')
@@ -64,6 +65,12 @@ describe('unit formatting', () => {
     expect(formatSingleValue(1500, field({unit: 'knots'}), {unitStyle: 'axis'})).toBe('1.5k (knots)')
   })
 
+  test('time composes even on a shared scale, except on axes', () => {
+    let minutes = field({unit: 'minutes'})
+    // A table column shares a scale but still composes: 1h 25m beside 1d 1h reads better than 1.42h beside 25h.
+    expect([85, 350, 1500].map(value => formatSingleValue(value, minutes, {scaleMax: 1500}))).toEqual(['1h 25m', '5h 50m', '1d 1h'])
+  })
+
   test('shared scales pick one unit for the whole set', () => {
     let minutes = field({unit: 'minutes'})
     let ticks = [0, 1440, 2880, 4320].map(value => formatSingleValue(value, minutes, {unitStyle: 'axis', scaleMax: 4320}))
@@ -79,6 +86,7 @@ describe('unit formatting', () => {
   test('a shared scale steps down when its max barely fills a unit', () => {
     let minutes = field({unit: 'minutes'})
     // 1500 minutes is only just over a day, so days would leave the rest of the set reading 0.059d.
-    expect([85, 350, 1500].map(value => formatSingleValue(value, minutes, {scaleMax: 1500}))).toEqual(['1.4h', '5.8h', '25h'])
+    let ticks = [85, 350, 1500].map(value => formatSingleValue(value, minutes, {unitStyle: 'axis', scaleMax: 1500}))
+    expect(ticks).toEqual(['1.4h', '5.8h', '25h'])
   })
 })

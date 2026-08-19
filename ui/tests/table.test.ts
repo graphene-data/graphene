@@ -372,14 +372,22 @@ test('total row renders for ungrouped tables', async ({mount, sharedPage}) => {
   await expect(component.locator('.table-container')).screenshot('total-row-basic')
 })
 
-test('unit columns render one unit for the whole column', async ({mount}) => {
-  let rows = [{route: 'SFO-JFK', flight_time: 350}, {route: 'SFO-LAX', flight_time: 85}, {route: 'SFO-SEA', flight_time: 1500}]
-  let fields = [{name: 'route', type: 'string'}, {name: 'flight_time', type: 'number', metadata: {unit: 'minutes'}}] as any
+test('unit columns compose durations and share one unit for everything else', async ({mount}) => {
+  let rows = [
+    {route: 'SFO-JFK', flight_time: 350, distance: 2586},
+    {route: 'SFO-LAX', flight_time: 85, distance: 337},
+    {route: 'SFO-SEA', flight_time: 1500, distance: 679},
+  ]
+  let fields = [
+    {name: 'route', type: 'string'},
+    {name: 'flight_time', type: 'number', metadata: {unit: 'minutes'}},
+    {name: 'distance', type: 'number', metadata: {unit: 'miles'}},
+  ] as any
 
   let component = await mount('components/Table.svelte', {data: {rows, fields}, rows: 'all'})
-  let cells = component.locator('table tr:has(td) td:nth-child(2)')
-  // The column's extent runs into days, so every cell reads in hours rather than composing per-cell.
-  await expect(cells).toHaveText(['5.8h', '1.4h', '25h'])
+  await expect(component.locator('table tr:has(td) td:nth-child(2)')).toHaveText(['5h 50m', '1h 25m', '1d 1h'])
+  // Miles can't compose, so the column picks one unit from its extent instead.
+  await expect(component.locator('table tr:has(td) td:nth-child(3)')).toHaveText(['2.59k mi', '337 mi', '679 mi'])
 })
 
 test('row-level link behavior opens external destinations and hides link column', async ({mount, sharedPage}) => {
