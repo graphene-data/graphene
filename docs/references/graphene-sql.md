@@ -175,11 +175,9 @@ A few rules worth knowing:
 #### `#timeGrain` vs. `#timeOrdinal` vs. `#unit`'s time family
 
 A simple heuristic to know which to use where is:
-- Dates and datetimes: `#timeGrain`
-- Numbers extracted from dates or datetimes: `#timeOrdinal`
-- Durations/intervals: `#unit` time family
-
-`#timeGrain` and `#timeOrdinal` can be inferred from Graphene SQL expressions if they use `date_trunc`, `date_bin`, casts, or `extract`. `#unit`'s time family is inferred the same way from `date_diff`/`datediff`, whose part names the unit its count is in, and from subtracting one date or timestamp from another. Like the others, the inference doesn't survive arithmetic or aggregation — `date_diff('second', a, b) / 60` is no longer a count of seconds, so annotate those yourself.
+- Dates and datetimes: `#timeGrain`. Can be inferred `date_trunc`, `date_bin`, or casts.
+- Numbers extracted from dates or datetimes: `#timeOrdinal`. Can be inferred from `extract`.
+- Durations/intervals: `#unit` time family. Can be inferred from `date_diff`/`datediff` or `date - date`.
 
 ## `select` statements
 
