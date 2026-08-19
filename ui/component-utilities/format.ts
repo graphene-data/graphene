@@ -2,6 +2,7 @@ import type {Field} from './types.ts'
 
 const supportedCurrencyCodes = new Set(Intl.supportedValuesOf('currency'))
 const percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0})
+const grouped = new Intl.NumberFormat('en-US', {maximumFractionDigits: 20})
 const currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 const monthYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'})
 const monthDayYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
@@ -104,12 +105,12 @@ function formatInUnitScale(absolute: number, field: Field | undefined, options: 
   // single unit, since ticks like "4d 10h" / "4d 12h" are too wide and too samey to scan.
   if (scale.composite && options.unitStyle !== 'axis') return base ? formatComposite(scale, base) : `0${unit.abbr}`
 
-  if (options.scaleMax == null) return base ? withUnit(base, pickUnit(scale, base), base) : `0${unit.abbr}`
+  if (options.scaleMax == null) return base ? withUnit(base, pickUnit(scale, base)) : `0${unit.abbr}`
 
   // A shared scale needs its max to fill the chosen unit several times over: pick one the max only just reaches
   // and every other value in the set drops below 1 (0.24d, 0.059d) instead of reading cleanly (5.83h, 1.42h).
   let max = Math.abs(options.scaleMax) * unit.factor
-  return withUnit(base, pickUnit(scale, max, 3), max)
+  return withUnit(base, pickUnit(scale, max, 3))
 }
 
 // The unit a set of values reads best in, and what to multiply them by to get there. Undefined when the declared
@@ -123,12 +124,11 @@ export function displayUnitConversion(field: Field | undefined, extentMax: numbe
   return {unit: target.name, multiplier: declared.unit.factor / target.factor}
 }
 
-// Join a scaled number to its abbreviation. A value that still needed generic compaction gets a space so the
-// magnitude doesn't read as part of the abbreviation (1.5klb). `reference` decides that for the whole set, so a
-// shared scale never mixes "300mi" with "1k mi".
-function withUnit(base: number, target: UnitDef, reference: number) {
-  let separator = /[a-z]$/i.test(compactMagnitude(reference / target.factor)) ? ' ' : ''
-  return `${compactMagnitude(base / target.factor)}${separator}${target.abbr}`
+// Join a scaled number to its abbreviation. A number that already carries a unit never takes a magnitude prefix on
+// top of it: "2.5k m" is just kilometers spelled badly, and `m`/`u` for milli/micro collide with the abbreviations
+// outright ("0.4m km"). Group the thousands instead, and the abbreviation can always attach without a space.
+function withUnit(base: number, target: UnitDef) {
+  return `${grouped.format(Number(compactValue(base / target.factor)))}${target.abbr}`
 }
 
 // Time isn't decimal, so we spell it out as up to two parts: 1d 1h, 90m -> 1h 30m.
@@ -138,12 +138,12 @@ function formatComposite(scale: UnitScale, base: number) {
   let whole = Math.floor(base / primary.factor)
 
   // Below the scale's smallest unit we can't go any further down, so fall back to a fractional value there.
-  if (!whole) return `${compactMagnitude(base / primary.factor)}${primary.abbr}`
-  if (whole >= 1000) return `${compactMagnitude(whole)} ${primary.abbr}`
+  if (!whole) return withUnit(base, primary)
 
   let next = scale.units[scale.units.indexOf(primary) - 1]
   let remainder = next ? Math.floor((base - whole * primary.factor) / next.factor) : 0
-  return remainder ? `${whole}${primary.abbr} ${remainder}${next.abbr}` : `${whole}${primary.abbr}`
+  let leading = `${grouped.format(whole)}${primary.abbr}`
+  return remainder ? `${leading} ${remainder}${next.abbr}` : leading
 }
 
 // The largest unit the value fills `minCount` times over, flooring at the scale's smallest unit.
@@ -292,16 +292,14 @@ function pad2(value: number) {
   return String(value).padStart(2, '0')
 }
 
-// Round to three significant figures, then trim trailing zeros so a round 50 stays `50` rather than `50.0`.
-// Three rather than two because converting between units lands on numbers that aren't round (14512 meters is 14.512km).
+// Keep three significant figures, trimming trailing zeros so a round 50 stays `50` rather than `50.0`. Three rather
+// than two because converting between units lands on numbers that aren't round (14512 meters is 14.512km).
+// Values past three digits keep their whole-number precision, so a grouped 4243 reads 4,243 and not 4,240.
 function compactValue(num: number) {
-  let exponent = Math.floor(Math.log10(Math.abs(num)))
-  let scale = Math.pow(10, exponent - 2)
-  let rounded = Math.round(num / scale) * scale
-  if (!Number.isFinite(rounded)) return String(num)
-  let magnitude = Math.floor(Math.log10(rounded))
-  let decimals = Math.max(0, 2 - magnitude)
-  return rounded
+  if (!num || !Number.isFinite(num)) return String(num || 0)
+  let magnitude = Math.floor(Math.log10(Math.abs(num)))
+  let decimals = Math.min(20, Math.max(0, 2 - magnitude))
+  return num
     .toFixed(decimals)
     .replace(/\.0+$/, '')
     .replace(/(\.[0-9]*[1-9])0+$/, '$1')

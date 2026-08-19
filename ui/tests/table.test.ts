@@ -387,7 +387,7 @@ test('unit columns compose durations and share one unit for everything else', as
   let component = await mount('components/Table.svelte', {data: {rows, fields}, rows: 'all'})
   await expect(component.locator('table tr:has(td) td:nth-child(2)')).toHaveText(['5h 50m', '1h 25m', '1d 1h'])
   // Miles can't compose, so the column picks one unit from its extent instead.
-  await expect(component.locator('table tr:has(td) td:nth-child(3)')).toHaveText(['2.59k mi', '337 mi', '679 mi'])
+  await expect(component.locator('table tr:has(td) td:nth-child(3)')).toHaveText(['2,586mi', '337mi', '679mi'])
 })
 
 test('row-level link behavior opens external destinations and hides link column', async ({mount, sharedPage}) => {

@@ -52,7 +52,7 @@ describe('unit formatting', () => {
   test('never converts across measurement systems', () => {
     expect(formatSingleValue(1500, field({unit: 'meters'}))).toBe('1.5km')
     expect(formatSingleValue(10560, field({unit: 'feet'}))).toBe('2mi')
-    expect(formatSingleValue(1500, field({unit: 'pounds'}))).toBe('1.5k lb')
+    expect(formatSingleValue(1500, field({unit: 'pounds'}))).toBe('1,500lb')
   })
 
   test('precision opts out of scaling and keeps the declared unit', () => {
@@ -81,6 +81,23 @@ describe('unit formatting', () => {
 
     let meters = field({unit: 'meters'})
     expect([500, 15000].map(value => formatSingleValue(value, meters, {scaleMax: 15000}))).toEqual(['0.5km', '15km'])
+  })
+
+  test('a value carrying a unit never takes a magnitude prefix on top of it', () => {
+    // "2.5k m" is kilometers spelled badly, and milli/micro prefixes collide with the abbreviations outright.
+    let centimeters = field({unit: 'centimeters'})
+    let column = [0, 180, 250000, 0.4, -180].map(value => formatSingleValue(value, centimeters, {scaleMax: 250000}))
+    expect(column).toEqual(['0m', '1.8m', '2,500m', '0.004m', '-1.8m'])
+
+    // Grouped digits read as exact, so they keep whole-number precision rather than rounding to three figures.
+    expect(formatSingleValue(4243, field({unit: 'miles'}))).toBe('4,243mi')
+    expect(formatSingleValue(5e6, field({unit: 'pounds'}))).toBe('5,000,000lb')
+  })
+
+  test('abbreviations attach without a space, unrecognized unit words keep one', () => {
+    expect(formatSingleValue(1.2, field({unit: 'kilograms'}))).toBe('1.2kg')
+    expect(formatSingleValue(150, field({unit: 'pounds'}))).toBe('150lb')
+    expect(formatSingleValue(1500, field({unit: 'parsecs'}))).toBe('1.5k parsecs')
   })
 
   test('a shared scale steps down when its max barely fills a unit', () => {
