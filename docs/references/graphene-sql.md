@@ -152,7 +152,7 @@ from othertable
 | `#ratio` | no | Value is 0–1; rendered as `value × 100%` (e.g. `0.42` → `42%`) |
 | `#pct` | no | Value is already 0–100; rendered as `value%` (e.g. `42` → `42%`) |
 | `#currency=<code>` | no | Adds currency symbol and compacts to K/M/B. Accepts ISO 4217 currency codes like `USD`, `EUR`, and `JPY` |
-| `#unit=<unit>` | no | Labels values with their unit. Recognized units (below) are abbreviated and scaled; any other value is appended as-is (`"parsecs"`, or `"(parsecs)"` on axes) |
+| `#unit=<unit>` | no | Labels values with their unit. Recognized units (below) are abbreviated and scaled; any other value is appended as-is (`10 parsecs`) |
 | `#precision=<digits>` | no | Sets the number of decimal places to display for numbers. Can also be 0 to make `1M` become `$1,102,148`) |
 | `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats extracted time values as ordered positions. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
@@ -165,15 +165,16 @@ from othertable
 
 | Family | Units |
 |---|---|
-| Time | `milliseconds` (ms), `seconds` (s), `minutes` (m), `hours` (h), `days` (d), `weeks` (w) |
+| Time | `milliseconds` (ms), `seconds` (s), `minutes` (m), `hours` (h), `days` (d), `months` (mo), `years` (y) |
 | Distance | `millimeters` (mm), `centimeters` (cm), `meters` (m), `kilometers` (km), `feet` (ft), `miles` (mi) |
 | Mass | `grams` (g), `kilograms` (kg), `pounds` (lb) |
 | Data | `bytes` (B), `kilobytes` (KB), `megabytes` (MB), `gigabytes` (GB), `terabytes` (TB) |
 
 A few rules worth knowing:
 
-- Time is composite, since it isn't decimal: values render as up to two parts (`4d 10h`). Every other family scales by swapping the unit (`14.5km`, `2.5GB`).
-- We never convert between metric and imperial. `1500 meters` is `1.5km`, never `0.93mi`.
+- Time is composite, since it isn't decimal: values render as up to two parts (`4d 10h`). Every other family scales by swapping the unit (`14.5 km`, `2.5 GB`).
+- Durations step through months and years rather than weeks, which is how people usually say them. Converting at all needs both to be fixed-length, so a year is 365 days and a month is a twelfth of one — meaning 12 months reads back as exactly `1y`. `weeks` is not recognized.
+- We never convert between metric and imperial. `1500 meters` is `1.5 km`, never `0.93 mi`.
 - Axes pick one unit for their whole extent, since ticks reading `4d 10h` / `4d 12h` / `4d 14h` are wide and hard to scan. Table columns do the same for prefix-scaled units, so a sorted column doesn't jump between `300 mi` and `1.5km`; durations still compose per cell.
 - A chart converts its values into the unit it displays before rendering, so tick marks land on round numbers in that unit.
 - `#precision` opts out of scaling: it means "this many decimals in the unit I declared".

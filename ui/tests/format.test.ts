@@ -12,21 +12,31 @@ describe('unit formatting', () => {
   test('recognized units get an abbreviation instead of the raw word', () => {
     expect(formatSingleValue(10, field({unit: 'minutes'}))).toBe('10m')
     expect(formatSingleValue(45, field({unit: 'seconds'}))).toBe('45s')
-    expect(formatSingleValue(3, field({unit: 'miles'}))).toBe('3mi')
+    expect(formatSingleValue(3, field({unit: 'miles'}))).toBe('3 mi')
     expect(formatSingleValue(0, field({unit: 'minutes'}))).toBe('0m')
   })
 
   test('units are case-insensitive and accept singular forms', () => {
     expect(formatSingleValue(10, field({unit: 'Minutes'}))).toBe('10m')
     expect(formatSingleValue(10, field({unit: 'MINUTE'}))).toBe('10m')
-    expect(formatSingleValue(2, field({unit: 'kilogram'}))).toBe('2kg')
+    expect(formatSingleValue(2, field({unit: 'kilogram'}))).toBe('2 kg')
   })
 
   test('time scales into composite parts, capped at two', () => {
     expect(formatSingleValue(1500, field({unit: 'minutes'}))).toBe('1d 1h')
     expect(formatSingleValue(90, field({unit: 'minutes'}))).toBe('1h 30m')
     expect(formatSingleValue(3600, field({unit: 'seconds'}))).toBe('1h')
-    expect(formatSingleValue(2.5, field({unit: 'weeks'}))).toBe('2w 3d')
+
+    // Durations step through months and years rather than weeks, and both are fixed-length so they stay consistent:
+    // a month is a twelfth of a 365-day year, so 12 of them come back out as exactly one year.
+    expect(formatSingleValue(18, field({unit: 'months'}))).toBe('1y 6mo')
+    expect(formatSingleValue(12, field({unit: 'months'}))).toBe('1y')
+    expect(formatSingleValue(365, field({unit: 'days'}))).toBe('1y')
+    expect(formatSingleValue(45, field({unit: 'days'}))).toBe('1mo 14d')
+    expect(formatSingleValue(30, field({unit: 'days'}))).toBe('30d')
+
+    // Weeks aren't a step people say durations in, so they fall back like any other unrecognized unit.
+    expect(formatSingleValue(3, field({unit: 'weeks'}))).toBe('3 weeks')
   })
 
   test('time scales down, flooring at milliseconds', () => {
@@ -37,32 +47,33 @@ describe('unit formatting', () => {
 
   test('negatives keep their sign', () => {
     expect(formatSingleValue(-90, field({unit: 'minutes'}))).toBe('-1h 30m')
-    expect(formatSingleValue(-1500, field({unit: 'meters'}))).toBe('-1.5km')
+    expect(formatSingleValue(-1500, field({unit: 'meters'}))).toBe('-1.5 km')
   })
 
   test('decimal families scale by prefix rather than composing', () => {
-    expect(formatSingleValue(14512, field({unit: 'meters'}))).toBe('14.5km')
-    expect(formatSingleValue(1500, field({unit: 'meters'}))).toBe('1.5km')
-    expect(formatSingleValue(0.0005, field({unit: 'meters'}))).toBe('0.5mm')
-    expect(formatSingleValue(1200, field({unit: 'grams'}))).toBe('1.2kg')
-    expect(formatSingleValue(2500, field({unit: 'bytes'}))).toBe('2.5KB')
-    expect(formatSingleValue(2.5e9, field({unit: 'bytes'}))).toBe('2.5GB')
+    expect(formatSingleValue(14512, field({unit: 'meters'}))).toBe('14.5 km')
+    expect(formatSingleValue(1500, field({unit: 'meters'}))).toBe('1.5 km')
+    expect(formatSingleValue(0.0005, field({unit: 'meters'}))).toBe('0.5 mm')
+    expect(formatSingleValue(1200, field({unit: 'grams'}))).toBe('1.2 kg')
+    expect(formatSingleValue(2500, field({unit: 'bytes'}))).toBe('2.5 KB')
+    expect(formatSingleValue(2.5e9, field({unit: 'bytes'}))).toBe('2.5 GB')
   })
 
   test('never converts across measurement systems', () => {
-    expect(formatSingleValue(1500, field({unit: 'meters'}))).toBe('1.5km')
-    expect(formatSingleValue(10560, field({unit: 'feet'}))).toBe('2mi')
-    expect(formatSingleValue(1500, field({unit: 'pounds'}))).toBe('1,500lb')
+    expect(formatSingleValue(1500, field({unit: 'meters'}))).toBe('1.5 km')
+    expect(formatSingleValue(10560, field({unit: 'feet'}))).toBe('2 mi')
+    expect(formatSingleValue(1500, field({unit: 'pounds'}))).toBe('1,500 lb')
   })
 
   test('precision opts out of scaling and keeps the declared unit', () => {
     expect(formatSingleValue(1500, field({unit: 'minutes', precision: 2}))).toBe('1,500.00m')
-    expect(formatSingleValue(1500, field({unit: 'meters', precision: 0}))).toBe('1,500m')
+    expect(formatSingleValue(1500, field({unit: 'meters', precision: 0}))).toBe('1,500 m')
   })
 
   test('unrecognized units keep the current compaction and raw suffix', () => {
     expect(formatSingleValue(1500, field({unit: 'parsecs'}))).toBe('1.5k parsecs')
-    expect(formatSingleValue(1500, field({unit: 'knots'}), {unitStyle: 'axis'})).toBe('1.5k (knots)')
+    // Axes used to parenthesize the fallback, which only made it louder.
+    expect(formatSingleValue(10, field({unit: 'parsecs'}), {unitStyle: 'axis'})).toBe('10 parsecs')
   })
 
   test('time composes even on a shared scale, except on axes', () => {
@@ -80,23 +91,26 @@ describe('unit formatting', () => {
     expect(small).toEqual(['0m', '5m', '10m'])
 
     let meters = field({unit: 'meters'})
-    expect([500, 15000].map(value => formatSingleValue(value, meters, {scaleMax: 15000}))).toEqual(['0.5km', '15km'])
+    expect([500, 15000].map(value => formatSingleValue(value, meters, {scaleMax: 15000}))).toEqual(['0.5 km', '15 km'])
   })
 
   test('a value carrying a unit never takes a magnitude prefix on top of it', () => {
     // "2.5k m" is kilometers spelled badly, and milli/micro prefixes collide with the abbreviations outright.
     let centimeters = field({unit: 'centimeters'})
     let column = [0, 180, 250000, 0.4, -180].map(value => formatSingleValue(value, centimeters, {scaleMax: 250000}))
-    expect(column).toEqual(['0m', '1.8m', '2,500m', '0.004m', '-1.8m'])
+    expect(column).toEqual(['0 m', '1.8 m', '2,500 m', '0.004 m', '-1.8 m'])
 
     // Grouped digits read as exact, so they keep whole-number precision rather than rounding to three figures.
-    expect(formatSingleValue(4243, field({unit: 'miles'}))).toBe('4,243mi')
-    expect(formatSingleValue(5e6, field({unit: 'pounds'}))).toBe('5,000,000lb')
+    expect(formatSingleValue(4243, field({unit: 'miles'}))).toBe('4,243 mi')
+    expect(formatSingleValue(5e6, field({unit: 'pounds'}))).toBe('5,000,000 lb')
   })
 
-  test('abbreviations attach without a space, unrecognized unit words keep one', () => {
-    expect(formatSingleValue(1.2, field({unit: 'kilograms'}))).toBe('1.2kg')
-    expect(formatSingleValue(150, field({unit: 'pounds'}))).toBe('150lb')
+  test('durations render tight, every other unit is held apart from its value', () => {
+    // Inside a composite the space is already the separator between parts, so durations can't also use it here.
+    expect(formatSingleValue(90, field({unit: 'minutes'}))).toBe('1h 30m')
+    expect(formatSingleValue(45, field({unit: 'seconds'}))).toBe('45s')
+    expect(formatSingleValue(1.2, field({unit: 'kilograms'}))).toBe('1.2 kg')
+    expect(formatSingleValue(1.5, field({unit: 'pounds'}))).toBe('1.5 lb')
     expect(formatSingleValue(1500, field({unit: 'parsecs'}))).toBe('1.5k parsecs')
   })
 

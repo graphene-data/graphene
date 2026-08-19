@@ -20,10 +20,14 @@ type ValueFormatterOptions = {unitStyle?: 'label' | 'axis'; scaleMax?: number}
 // Metric and imperial units live in separate scales because we never convert across systems: 1500 meters is 1.5km, never 0.93mi.
 // Time is `composite` because it isn't decimal, so 1500 minutes should read as "1d 1h" rather than "1.5k minutes".
 // `m` meaning both minutes and meters is fine - the scale is known from the declared unit, so they can never collide in one formatter.
+// Durations step through years and months rather than weeks, which is how people usually say them. Both need a fixed
+// length to convert at all: a year is 365 days and a month is a twelfth of one, so 12 months is exactly a year.
+const YEAR_SECONDS = 365 * 86400
 const unitScales: UnitScale[] = [
   {composite: true, units: [
     {name: 'milliseconds', abbr: 'ms', factor: 0.001}, {name: 'seconds', abbr: 's', factor: 1}, {name: 'minutes', abbr: 'm', factor: 60},
-    {name: 'hours', abbr: 'h', factor: 3600}, {name: 'days', abbr: 'd', factor: 86400}, {name: 'weeks', abbr: 'w', factor: 604800},
+    {name: 'hours', abbr: 'h', factor: 3600}, {name: 'days', abbr: 'd', factor: 86400},
+    {name: 'months', abbr: 'mo', factor: YEAR_SECONDS / 12}, {name: 'years', abbr: 'y', factor: YEAR_SECONDS},
   ]},
   {units: [{name: 'millimeters', abbr: 'mm', factor: 0.001}, {name: 'centimeters', abbr: 'cm', factor: 0.01}, {name: 'meters', abbr: 'm', factor: 1}, {name: 'kilometers', abbr: 'km', factor: 1000}]},
   {units: [{name: 'feet', abbr: 'ft', factor: 1}, {name: 'miles', abbr: 'mi', factor: 5280}]},
@@ -84,12 +88,12 @@ export function formatSingleValue(value: any, field?: Field, options: ValueForma
   let absolute = Math.abs(amount)
 
   // `#precision` means "N decimals in the declared unit", so it opts out of unit scaling entirely.
-  if (precision != null) return addUnit(`${sign}${formatFixed(absolute, precision)}`, field, options)
+  if (precision != null) return addUnit(`${sign}${formatFixed(absolute, precision)}`, field)
 
   let scaled = formatInUnitScale(absolute, field, options)
   if (scaled) return `${sign}${scaled}`
-  if (amount === 0) return addUnit('0', field, options)
-  return addUnit(`${sign}${compactMagnitude(absolute)}`, field, options)
+  if (amount === 0) return addUnit('0', field)
+  return addUnit(`${sign}${compactMagnitude(absolute)}`, field)
 }
 
 // Render a value in the most readable unit of its declared unit's scale, or undefined when the unit isn't recognized.
@@ -103,14 +107,15 @@ function formatInUnitScale(absolute: number, field: Field | undefined, options: 
 
   // Composite time survives a shared scale - "45m" beside "1d 1h" still reads cleanly. Only axes force it into a
   // single unit, since ticks like "4d 10h" / "4d 12h" are too wide and too samey to scan.
-  if (scale.composite && options.unitStyle !== 'axis') return base ? formatComposite(scale, base) : `0${unit.abbr}`
+  if (scale.composite && options.unitStyle !== 'axis') return base ? formatComposite(scale, base) : withUnit(base, unit, scale)
 
-  if (options.scaleMax == null) return base ? withUnit(base, pickUnit(scale, base)) : `0${unit.abbr}`
+  // Zero has no magnitude to pick a unit from, so it stays in the one the field declared.
+  if (options.scaleMax == null) return withUnit(base, base ? pickUnit(scale, base) : unit, scale)
 
   // A shared scale needs its max to fill the chosen unit several times over: pick one the max only just reaches
   // and every other value in the set drops below 1 (0.24d, 0.059d) instead of reading cleanly (5.83h, 1.42h).
   let max = Math.abs(options.scaleMax) * unit.factor
-  return withUnit(base, pickUnit(scale, max, 3))
+  return withUnit(base, pickUnit(scale, max, 3), scale)
 }
 
 // The unit a set of values reads best in, and what to multiply them by to get there. Undefined when the declared
@@ -126,9 +131,11 @@ export function displayUnitConversion(field: Field | undefined, extentMax: numbe
 
 // Join a scaled number to its abbreviation. A number that already carries a unit never takes a magnitude prefix on
 // top of it: "2.5k m" is just kilometers spelled badly, and `m`/`u` for milli/micro collide with the abbreviations
-// outright ("0.4m km"). Group the thousands instead, and the abbreviation can always attach without a space.
-function withUnit(base: number, target: UnitDef) {
-  return `${grouped.format(Number(compactValue(base / target.factor)))}${target.abbr}`
+// outright ("0.4m km"). Group the thousands instead.
+// Durations are written tight, since inside a composite the space is already the separator between parts (1h 30m).
+// Everything else reads better held apart, and a family renders one way or the other so a column never mixes them.
+function withUnit(base: number, target: UnitDef, scale: UnitScale) {
+  return `${grouped.format(Number(compactValue(base / target.factor)))}${scale.composite ? '' : ' '}${target.abbr}`
 }
 
 // Time isn't decimal, so we spell it out as up to two parts: 1d 1h, 90m -> 1h 30m.
@@ -138,7 +145,7 @@ function formatComposite(scale: UnitScale, base: number) {
   let whole = Math.floor(base / primary.factor)
 
   // Below the scale's smallest unit we can't go any further down, so fall back to a fractional value there.
-  if (!whole) return withUnit(base, primary)
+  if (!whole) return withUnit(base, primary, scale)
 
   let next = scale.units[scale.units.indexOf(primary) - 1]
   let remainder = next ? Math.floor((base - whole * primary.factor) / next.factor) : 0
@@ -184,13 +191,12 @@ function formatFixed(value: number, precision?: number) {
   return new Intl.NumberFormat('en-US', {minimumFractionDigits: precision, maximumFractionDigits: precision}).format(value)
 }
 
-// Recognized units always render as their abbreviation; anything else keeps the raw string, parenthesized on axes.
-function addUnit(value: string, field: Field | undefined, options: ValueFormatterOptions) {
+// Recognized units render as their abbreviation; anything else keeps the raw string after the value.
+function addUnit(value: string, field: Field | undefined) {
   let unit = field?.metadata?.unit?.trim()
   if (!unit) return value
   let declared = unitLookup.get(unit.toLowerCase())
-  if (declared) return `${value}${declared.unit.abbr}`
-  return options.unitStyle === 'axis' ? `${value} (${unit})` : `${value} ${unit}`
+  return declared ? `${value}${declared.scale.composite ? '' : ' '}${declared.unit.abbr}` : `${value} ${unit}`
 }
 
 // Creates a formatter function that renders date/timestamp values based on field metadata.timeGrain.
