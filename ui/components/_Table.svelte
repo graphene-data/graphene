@@ -526,8 +526,8 @@
   }
 
   .table-title__headline {
-    font-weight: 600;
-    font-size: 14px;
+    font-weight: bold;
+    font-size: 15px;
     line-height: 1.3;
   }
 
