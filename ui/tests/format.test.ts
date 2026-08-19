@@ -87,6 +87,6 @@ describe('unit formatting', () => {
     let minutes = field({unit: 'minutes'})
     // 1500 minutes is only just over a day, so days would leave the rest of the set reading 0.059d.
     let ticks = [85, 350, 1500].map(value => formatSingleValue(value, minutes, {unitStyle: 'axis', scaleMax: 1500}))
-    expect(ticks).toEqual(['1.4h', '5.8h', '25h'])
+    expect(ticks).toEqual(['1.42h', '5.83h', '25h'])
   })
 })
