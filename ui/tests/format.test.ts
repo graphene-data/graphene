@@ -62,7 +62,7 @@ describe('unit formatting', () => {
   test('never converts across measurement systems', () => {
     expect(formatSingleValue(1500, field({unit: 'meters'}))).toBe('1.5 km')
     expect(formatSingleValue(10560, field({unit: 'feet'}))).toBe('2 mi')
-    expect(formatSingleValue(1500, field({unit: 'pounds'}))).toBe('1,500 lb')
+    expect(formatSingleValue(1500, field({unit: 'pounds'}))).toBe('1.5k lb')
   })
 
   test('precision opts out of scaling and keeps the declared unit', () => {
@@ -101,8 +101,19 @@ describe('unit formatting', () => {
     expect(column).toEqual(['0 m', '1.8 m', '2,500 m', '0.004 m', '-1.8 m'])
 
     // Grouped digits read as exact, so they keep whole-number precision rather than rounding to three figures.
-    expect(formatSingleValue(4243, field({unit: 'miles'}))).toBe('4,243 mi')
-    expect(formatSingleValue(5e6, field({unit: 'pounds'}))).toBe('5,000,000 lb')
+    expect(formatSingleValue(42195, field({unit: 'meters'}))).toBe('42.2 km')
+    expect(formatSingleValue(4243, field({unit: 'kilometers'}))).toBe('4.24k km')
+  })
+
+  test('a family with no larger unit left compacts rather than spelling the magnitude out', () => {
+    // Miles and pounds top out their families, so nothing can absorb the magnitude and there's no ambiguity in a
+    // prefix. 60,000,000 mi is unreadable anyway, and too wide for the axis gutter to hold.
+    expect(formatSingleValue(6e7, field({unit: 'miles'}))).toBe('60M mi')
+    expect(formatSingleValue(5e6, field({unit: 'pounds'}))).toBe('5M lb')
+
+    // Meters still has kilometers above it, so it converts rather than taking a prefix.
+    expect(formatSingleValue(2500, field({unit: 'meters'}))).toBe('2.5 km')
+    expect(formatSingleValue(250000, field({unit: 'centimeters'}), {scaleMax: 250000})).toBe('2,500 m')
   })
 
   test('durations render tight, every other unit is held apart from its value', () => {

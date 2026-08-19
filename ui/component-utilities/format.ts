@@ -129,13 +129,18 @@ export function displayUnitConversion(field: Field | undefined, extentMax: numbe
   return {unit: target.name, multiplier: declared.unit.factor / target.factor}
 }
 
-// Join a scaled number to its abbreviation. A number that already carries a unit never takes a magnitude prefix on
+// Join a scaled number to its abbreviation. A number that already carries a unit doesn't take a magnitude prefix on
 // top of it: "2.5k m" is just kilometers spelled badly, and `m`/`u` for milli/micro collide with the abbreviations
 // outright ("0.4m km"). Group the thousands instead.
+// The exception is a family that has run out of larger units, where there is nothing left to absorb the magnitude
+// and no ambiguity in saying so: 60,000,000 mi is both unreadable and too wide for the axis gutter, so "60M mi".
 // Durations are written tight, since inside a composite the space is already the separator between parts (1h 30m).
 // Everything else reads better held apart, and a family renders one way or the other so a column never mixes them.
 function withUnit(base: number, target: UnitDef, scale: UnitScale) {
-  return `${grouped.format(Number(compactValue(base / target.factor)))}${scale.composite ? '' : ' '}${target.abbr}`
+  let value = base / target.factor
+  let maxedOut = !scale.composite && target === scale.units[scale.units.length - 1] && value >= 1000
+  let formatted = maxedOut ? compactMagnitude(value) : grouped.format(Number(compactValue(value)))
+  return `${formatted}${scale.composite ? '' : ' '}${target.abbr}`
 }
 
 // Time isn't decimal, so we spell it out as up to two parts: 1d 1h, 90m -> 1h 30m.

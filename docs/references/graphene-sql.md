@@ -159,7 +159,7 @@ from othertable
 | `#description=<text>` | Description text for a table or field. `--` comments are also collected as descriptions |
 | `#pii` | Marks a field as containing personally identifiable information. |
 
-Recognized units render as a short abbreviation and are scaled into whichever unit of their family reads best, so `#unit=minutes` renders `1500` as `1d 1h` and `#unit=meters` renders `1500` as `1.5km`.
+Recognized units render as a short abbreviation and are scaled into whichever unit of their family reads best, so `#unit=minutes` renders `1500` as `1d 1h` and `#unit=meters` renders `1500` as `1.5 km`.
 
 | Family | Units |
 |---|---|
