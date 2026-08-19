@@ -4,7 +4,7 @@ name: Publish
 # commit has been merged to main. I chose to run this on push instead of on pull_request close to make it a bit
 # safer, but it means our logic to detect publishes is a little more complex.
 # In a nutshell, we need the commit to have [release] in the message, and then we check if there is a tag already for
-# the version in package.json.
+# the version in package.json. Manual workflow runs only retrieve the Marketplace identity ID.
 # The publish runs on the exact sha in the PR, _not_ whatever is on main, ensuring we don't inadvertantly publish changes.
 
 on:
