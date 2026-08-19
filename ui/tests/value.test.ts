@@ -19,8 +19,13 @@ describe('<Value/>', () => {
 
   test('unit formatting', async ({mount, sharedPage, chart}) => {
     await mount('components/Value.svelte', {data: unitData(), column: 'duration'})
-    await expect(sharedPage.getByText('42 minutes')).toBeVisible()
+    await expect(sharedPage.getByText('42m')).toBeVisible()
     await expect(chart.el).screenshot('unit-formatting')
+  })
+
+  test('unit formatting scales within its family', async ({mount, sharedPage}) => {
+    await mount('components/Value.svelte', {data: unitData(1500), column: 'duration'})
+    await expect(sharedPage.getByText('1d 1h')).toBeVisible()
   })
 
   test('null renders em dash', async ({mount, sharedPage}) => {
@@ -92,8 +97,8 @@ describe('<Value/>', () => {
     return {rows, fields}
   }
 
-  function unitData() {
-    let rows = [{duration: 42}] as any
+  function unitData(duration = 42) {
+    let rows = [{duration}] as any
     let fields = [{name: 'duration', type: 'number', metadata: {unit: 'minutes'}}] as any
     return {rows, fields}
   }

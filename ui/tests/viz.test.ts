@@ -471,9 +471,35 @@ test('line chart uses unit metadata for axis and tooltip formatting', async ({mo
     }
   })
 
-  expect(formatted).toEqual({axis: '42 (minutes)', tooltip: '42 minutes'})
+  expect(formatted).toEqual({axis: '42m', tooltip: '42m'})
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
   await expect(chart.el).screenshot('line-chart-unit-metadata-axis-tooltip')
+})
+
+test('value axis picks one unit for its whole extent while tooltips compose', async ({mount, sharedPage}) => {
+  let rows = [
+    {month: 'Jan', duration: 1500},
+    {month: 'Feb', duration: 5760},
+  ]
+
+  let fields = [
+    {name: 'month', type: scalarType('string')},
+    {name: 'duration', type: scalarType('number'), metadata: {unit: 'minutes'}},
+  ]
+
+  await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'duration'})
+  let formatted = await sharedPage.evaluate(() => {
+    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
+    let option = window.$GRAPHENE.getChart(domNode).getOption()
+    let yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    return {
+      axis: [yAxis.axisLabel.formatter(1440), yAxis.axisLabel.formatter(2880)],
+      tooltip: series.tooltip.valueFormatter(1500),
+    }
+  })
+
+  expect(formatted).toEqual({axis: ['1d', '2d'], tooltip: '1d 1h'})
 })
 
 test('time tooltip uses readable timeGrain formatting', async ({mount, chart}) => {

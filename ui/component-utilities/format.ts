@@ -11,7 +11,36 @@ const yearMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 const titleCaseAcronyms = ['id', 'gdp']
 const titleCaseLowerWords = ['of', 'the', 'and', 'in', 'on']
 
-type ValueFormatterOptions = {unitStyle?: 'label' | 'axis'}
+type UnitDef = {name: string; abbr: string; factor: number}
+type UnitScale = {composite?: boolean; units: UnitDef[]}
+type ValueFormatterOptions = {unitStyle?: 'label' | 'axis'; scaleMax?: number}
+
+// Recognized units, grouped into scales whose members we can convert between. Anything outside these tables keeps its raw string.
+// Metric and imperial units live in separate scales because we never convert across systems: 1500 meters is 1.5km, never 0.93mi.
+// Time is `composite` because it isn't decimal, so 1500 minutes should read as "1d 1h" rather than "1.5k minutes".
+// `m` meaning both minutes and meters is fine - the scale is known from the declared unit, so they can never collide in one formatter.
+const unitScales: UnitScale[] = [
+  {composite: true, units: [
+    {name: 'milliseconds', abbr: 'ms', factor: 0.001}, {name: 'seconds', abbr: 's', factor: 1}, {name: 'minutes', abbr: 'm', factor: 60},
+    {name: 'hours', abbr: 'h', factor: 3600}, {name: 'days', abbr: 'd', factor: 86400}, {name: 'weeks', abbr: 'w', factor: 604800},
+  ]},
+  {units: [{name: 'millimeters', abbr: 'mm', factor: 0.001}, {name: 'centimeters', abbr: 'cm', factor: 0.01}, {name: 'meters', abbr: 'm', factor: 1}, {name: 'kilometers', abbr: 'km', factor: 1000}]},
+  {units: [{name: 'feet', abbr: 'ft', factor: 1}, {name: 'miles', abbr: 'mi', factor: 5280}]},
+  {units: [{name: 'grams', abbr: 'g', factor: 1}, {name: 'kilograms', abbr: 'kg', factor: 1000}]},
+  {units: [{name: 'pounds', abbr: 'lb', factor: 1}]},
+  // Data uses 1000 rather than 1024 to match the rest of our compaction, and to sidestep the KiB debate.
+  {units: [{name: 'bytes', abbr: 'B', factor: 1}, {name: 'kilobytes', abbr: 'KB', factor: 1e3}, {name: 'megabytes', abbr: 'MB', factor: 1e6}, {name: 'gigabytes', abbr: 'GB', factor: 1e9}, {name: 'terabytes', abbr: 'TB', factor: 1e12}]},
+]
+
+// Units are matched case-insensitively, in either singular or plural form.
+const unitLookup = new Map<string, {scale: UnitScale; unit: UnitDef}>()
+for (let scale of unitScales) {
+  for (let unit of scale.units) {
+    unitLookup.set(unit.name, {scale, unit})
+    unitLookup.set(unit.name.replace(/s$/, ''), {scale, unit})
+  }
+}
+unitLookup.set('foot', unitLookup.get('feet')!)
 
 // Formats a raw column name into a readable title.
 export function formatTitle(column: string) {
@@ -50,24 +79,81 @@ export function formatSingleValue(value: any, field?: Field, options: ValueForma
     return `${sign}${formatCurrencySymbol(currency)}${formatted}`
   }
 
-  if (amount === 0) return addUnit(formatFixed(0, precision), field, options)
   let sign = amount < 0 ? '-' : ''
   let absolute = Math.abs(amount)
+
+  // `#precision` means "N decimals in the declared unit", so it opts out of unit scaling entirely.
   if (precision != null) return addUnit(`${sign}${formatFixed(absolute, precision)}`, field, options)
-  let formatted = ''
 
-  if (absolute >= 1e12) formatted = `${compactValue(absolute / 1e12)}T`
-  else if (absolute >= 1e9) formatted = `${compactValue(absolute / 1e9)}B`
-  else if (absolute >= 1e6) formatted = `${compactValue(absolute / 1e6)}M`
-  else if (absolute >= 1e3) formatted = `${compactValue(absolute / 1e3)}k`
-  else if (absolute >= 1) formatted = compactValue(absolute)
-  else if (absolute >= 1e-3) formatted = compactValue(absolute)
-  else if (absolute >= 1e-6) formatted = `${compactValue(absolute * 1e3)}m`
-  else if (absolute >= 1e-9) formatted = `${compactValue(absolute * 1e6)}u`
-  else if (absolute >= 1e-12) formatted = `${compactValue(absolute * 1e9)}n`
-  else formatted = compactValue(absolute)
+  let scaled = formatInUnitScale(absolute, field, options)
+  if (scaled) return `${sign}${scaled}`
+  if (amount === 0) return addUnit('0', field, options)
+  return addUnit(`${sign}${compactMagnitude(absolute)}`, field, options)
+}
 
-  return addUnit(`${sign}${formatted}`, field, options)
+// Render a value in the most readable unit of its declared unit's scale, or undefined when the unit isn't recognized.
+// Shared-scale contexts (axes, table columns) pass `scaleMax` so every value in the set renders in one unit - ticks
+// reading "4d 10h" / "4d 12h" are wide and unscannable, and a sorted table column would look jumpy.
+function formatInUnitScale(absolute: number, field: Field | undefined, options: ValueFormatterOptions) {
+  let declared = unitLookup.get(field?.metadata?.unit?.trim().toLowerCase() || '')
+  if (!declared) return undefined
+  let {scale, unit} = declared
+  let base = absolute * unit.factor
+
+  // Per-value contexts scale each value on its own, and time composes rather than taking on a prefix.
+  if (options.scaleMax == null) {
+    if (!base) return `0${unit.abbr}`
+    return scale.composite ? formatComposite(scale, base) : withUnit(base, pickUnit(scale, base), base)
+  }
+
+  // A shared scale needs its max to fill the chosen unit several times over: pick one the max only just reaches
+  // and every other value in the set drops below 1 (0.24d, 0.059d) instead of reading cleanly (5.8h, 1.4h).
+  let max = Math.abs(options.scaleMax) * unit.factor
+  return withUnit(base, pickUnit(scale, max, 3), max)
+}
+
+// Join a scaled number to its abbreviation. A value that still needed generic compaction gets a space so the
+// magnitude doesn't read as part of the abbreviation (1.5klb). `reference` decides that for the whole set, so a
+// shared scale never mixes "300mi" with "1k mi".
+function withUnit(base: number, target: UnitDef, reference: number) {
+  let separator = /[a-z]$/i.test(compactMagnitude(reference / target.factor)) ? ' ' : ''
+  return `${compactMagnitude(base / target.factor)}${separator}${target.abbr}`
+}
+
+// Time isn't decimal, so we spell it out as up to two parts: 1d 1h, 90m -> 1h 30m.
+// Capping at two keeps it scannable - "4d 10h 33m 12s" is worse than "4d 10h".
+function formatComposite(scale: UnitScale, base: number) {
+  let primary = pickUnit(scale, base)
+  let whole = Math.floor(base / primary.factor)
+
+  // Below the scale's smallest unit we can't go any further down, so fall back to a fractional value there.
+  if (!whole) return `${compactMagnitude(base / primary.factor)}${primary.abbr}`
+  if (whole >= 1000) return `${compactMagnitude(whole)} ${primary.abbr}`
+
+  let next = scale.units[scale.units.indexOf(primary) - 1]
+  let remainder = next ? Math.floor((base - whole * primary.factor) / next.factor) : 0
+  return remainder ? `${whole}${primary.abbr} ${remainder}${next.abbr}` : `${whole}${primary.abbr}`
+}
+
+// The largest unit the value fills `minCount` times over, flooring at the scale's smallest unit.
+function pickUnit(scale: UnitScale, base: number, minCount = 1) {
+  let chosen = scale.units[0]
+  for (let unit of scale.units) if (base >= unit.factor * minCount) chosen = unit
+  return chosen
+}
+
+// Our generic magnitude compaction, used for unrecognized units and for values already scaled into a unit.
+function compactMagnitude(absolute: number) {
+  if (!absolute) return '0'
+  if (absolute >= 1e12) return `${compactValue(absolute / 1e12)}T`
+  if (absolute >= 1e9) return `${compactValue(absolute / 1e9)}B`
+  if (absolute >= 1e6) return `${compactValue(absolute / 1e6)}M`
+  if (absolute >= 1e3) return `${compactValue(absolute / 1e3)}k`
+  if (absolute >= 1e-3) return compactValue(absolute)
+  if (absolute >= 1e-6) return `${compactValue(absolute * 1e3)}m`
+  if (absolute >= 1e-9) return `${compactValue(absolute * 1e6)}u`
+  if (absolute >= 1e-12) return `${compactValue(absolute * 1e9)}n`
+  return compactValue(absolute)
 }
 
 function formatCurrencySymbol(currency: string) {
@@ -87,9 +173,12 @@ function formatFixed(value: number, precision?: number) {
   return new Intl.NumberFormat('en-US', {minimumFractionDigits: precision, maximumFractionDigits: precision}).format(value)
 }
 
+// Recognized units always render as their abbreviation; anything else keeps the raw string, parenthesized on axes.
 function addUnit(value: string, field: Field | undefined, options: ValueFormatterOptions) {
   let unit = field?.metadata?.unit?.trim()
   if (!unit) return value
+  let declared = unitLookup.get(unit.toLowerCase())
+  if (declared) return `${value}${declared.unit.abbr}`
   return options.unitStyle === 'axis' ? `${value} (${unit})` : `${value} ${unit}`
 }
 
@@ -126,11 +215,11 @@ export function makeTimeFormatter(field?: Field) {
 }
 
 // Formats one value by selecting the right formatter from the field type.
-export function formatFromField(field: Field | undefined, value: unknown) {
+export function formatFromField(field: Field | undefined, value: unknown, options: ValueFormatterOptions = {}) {
   if (value === null || value === undefined) return '-'
 
   let type = String(field?.type || '').toLowerCase()
-  if (type === 'number') return formatSingleValue(value, field)
+  if (type === 'number') return formatSingleValue(value, field, options)
   if (type === 'date' || type === 'timestamp') return makeTimeFormatter(field)(value)
   return String(value)
 }

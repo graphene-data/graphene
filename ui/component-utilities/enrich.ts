@@ -43,7 +43,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   applyLegendSelection(normalized)
   stackPercentageValueAxis(normalized, fields)
   removeHiddenValueAxisPadding(normalized)
-  valueFormatting(normalized, fields)
+  valueFormatting(normalized, rows, fields)
   timeFormatting(normalized)
   addCartesianItemTooltips(normalized, fields)
   styleSecondaryAxisForSimpleBarLineLayout(normalized, fields)
@@ -416,11 +416,14 @@ function applyLegendSelection(config: NormalConfig) {
 
 // Set default value formatting for value axes and series tooltips.
 // We derive one formatter per field so axis labels and hover values stay consistent.
-function valueFormatting(config: NormalConfig, fields: Field[]) {
+function valueFormatting(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   let valueAxes = [...config.xAxis, ...config.yAxis].filter(axis => axis?.type === 'value' && !axis.field?.metadata?.timeOrdinal)
   for (let axis of valueAxes) {
     if (axis.axisLabel?.formatter != null) continue
-    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [], {unitStyle: 'axis'})}
+    // Ticks share one scale, so we hand the formatter the axis extent and it picks a single unit for every label.
+    let name = axis.field?.name
+    let scaleMax = name ? rows.reduce((max, row) => Math.max(max, Math.abs(Number(row?.[name])) || 0), 0) : 0
+    axis.axisLabel = {...axis.axisLabel, formatter: makeValueFormatter(axis.field ? [axis.field] : [], {unitStyle: 'axis', scaleMax: scaleMax || undefined})}
   }
 
   for (let series of config.series) {

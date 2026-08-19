@@ -152,12 +152,31 @@ from othertable
 | `#ratio` | no | Value is 0–1; rendered as `value × 100%` (e.g. `0.42` → `42%`) |
 | `#pct` | no | Value is already 0–100; rendered as `value%` (e.g. `42` → `42%`) |
 | `#currency=<code>` | no | Adds currency symbol and compacts to K/M/B. Accepts ISO 4217 currency codes like `USD`, `EUR`, and `JPY` |
-| `#unit=<unit>` | no | Appends the provided value to the end of labels in visualizations (e.g. `unit=minutes` appends "minutes", or "(minutes)" on axes). Any non-empty value is accepted |
+| `#unit=<unit>` | no | Labels values with their unit. Recognized units (below) are abbreviated and scaled; any other value is appended as-is (`"parsecs"`, or `"(parsecs)"` on axes) |
 | `#precision=<digits>` | no | Sets the number of decimal places to display for numbers. Can also be 0 to make `1M` become `$1,102,148`) |
 | `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
 | `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats extracted time values as ordered positions. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
 | `#description=<text>` | no | Description text for a table or field. `--` comments are also collected as descriptions |
 | `#pii` | no | Marks a field as containing personally identifiable information. |
+
+#### Recognized units
+
+`#unit` accepts these units (case-insensitive, singular or plural). Recognized units render as a short abbreviation and are scaled into whichever unit of their family reads best, so `#unit=minutes` renders `1500` as `1d 1h` and `#unit=meters` renders `1500` as `1.5km`.
+
+| Family | Units |
+|---|---|
+| Time | `milliseconds` (ms), `seconds` (s), `minutes` (m), `hours` (h), `days` (d), `weeks` (w) |
+| Distance | `millimeters` (mm), `centimeters` (cm), `meters` (m), `kilometers` (km), `feet` (ft), `miles` (mi) |
+| Mass | `grams` (g), `kilograms` (kg), `pounds` (lb) |
+| Data | `bytes` (B), `kilobytes` (KB), `megabytes` (MB), `gigabytes` (GB), `terabytes` (TB) |
+
+A few rules worth knowing:
+
+- Time is composite, since it isn't decimal: values render as up to two parts (`4d 10h`). Every other family scales by swapping the unit (`14.5km`, `2.5GB`).
+- We never convert between metric and imperial. `1500 meters` is `1.5km`, never `0.93mi`.
+- Shared scales pick one unit for the whole set, so axis ticks and table columns stay aligned rather than mixing `4d 10h` with `90m`.
+- `#precision` opts out of scaling: it means "this many decimals in the unit I declared".
+- Data units scale by 1000, not 1024.
 
 ## `select` statements
 

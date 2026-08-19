@@ -148,6 +148,8 @@
             field: resolvedField,
             description: field?.metadata?.description,
             stats,
+            // A column is a shared scale: every cell renders in one unit, so a sorted duration column doesn't jump between units.
+            scaleMax: Math.max(Math.abs(stats.min ?? 0), Math.abs(stats.max ?? 0)) || undefined,
           })
         }
       }
@@ -193,6 +195,7 @@
       field: meta.field,
       description: column.description ?? meta.description,
       stats: meta.stats,
+      scaleMax: meta.scaleMax,
     }
   }))
 
