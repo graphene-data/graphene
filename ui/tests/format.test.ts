@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'vitest'
 
-import {formatSingleValue, unitTickInterval} from '../component-utilities/format.ts'
+import {displayUnitConversion, formatSingleValue} from '../component-utilities/format.ts'
 import type {Field} from '../component-utilities/types.ts'
 
 // Builds a numeric field carrying the metadata under test.
@@ -90,15 +90,20 @@ describe('unit formatting', () => {
     expect(ticks).toEqual(['1.42h', '5.83h', '25h'])
   })
 
-  test('converted axes get a tick interval that is round in the displayed unit', () => {
-    // 1908 minutes of flight time: ECharts would tick every 500 minutes, which relabels to a ragged 8.33h.
-    // Six hours instead, expressed back in the declared unit.
-    expect(unitTickInterval(field({unit: 'minutes'}), 1908)).toBe(360)
-    expect(unitTickInterval(field({unit: 'meters'}), 15000)).toBe(2500)
+  test('charts convert their values into the unit they display in', () => {
+    // 1908 minutes of flight time reads in hours, so the rows become hours and ECharts ticks round hours itself.
+    expect(displayUnitConversion(field({unit: 'minutes'}), 1908)).toEqual({unit: 'hours', multiplier: 1 / 60})
+    expect(displayUnitConversion(field({unit: 'meters'}), 15000)).toEqual({unit: 'kilometers', multiplier: 1 / 1000})
 
-    // Nothing to fix when the axis already displays in the unit its values are declared in.
-    expect(unitTickInterval(field({unit: 'minutes'}), 90)).toBeUndefined()
-    expect(unitTickInterval(field({unit: 'parsecs'}), 1908)).toBeUndefined()
-    expect(unitTickInterval(field({unit: 'minutes', precision: 2}), 1908)).toBeUndefined()
+    // Nothing to convert when the values are already declared in the unit they'll display in.
+    expect(displayUnitConversion(field({unit: 'minutes'}), 90)).toBeUndefined()
+    expect(displayUnitConversion(field({unit: 'parsecs'}), 1908)).toBeUndefined()
+    expect(displayUnitConversion(field({unit: 'minutes', precision: 2}), 1908)).toBeUndefined()
+  })
+
+  test('converting leaves the rendered value unchanged', () => {
+    // Conversion only changes which unit carries the number, so the same physical value still formats the same way.
+    expect(formatSingleValue(1908, field({unit: 'minutes'}))).toBe(formatSingleValue(31.8, field({unit: 'hours'})))
+    expect(formatSingleValue(15000, field({unit: 'meters'}))).toBe(formatSingleValue(15, field({unit: 'kilometers'})))
   })
 })
