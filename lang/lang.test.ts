@@ -2439,6 +2439,23 @@ describe('lang', () => {
     expect(errors[0].to?.col).toBe(27)
   })
 
+  it('attaches metadata comments inside markdown fences to the right column', () => {
+    analyze(
+      trimIndentation(`## My analysis
+      \`\`\`gsql ages
+        from users select
+          name,
+          -- Average age #unit=years
+          avg(age) as avg_age
+      \`\`\`
+    `),
+      'md',
+    )
+    let columns = getTable('ages')!.columns
+    expect(columns.find(c => c.name === 'avg_age')!.metadata).toMatchObject({unit: 'years', description: 'Average age'})
+    expect(columns.find(c => c.name === 'name')!.metadata?.unit).toBeUndefined()
+  })
+
   it('marks markdown component attribute errors across the attribute value', () => {
     analyze('<BarChart data="users" x="code" y="age" />', 'md')
     let errors = getDiagnostics().filter(d => d.severity === 'error')
