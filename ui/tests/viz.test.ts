@@ -6,7 +6,7 @@ import fs from 'node:fs/promises'
 import {scalarType} from '../../lang/types.ts'
 import {expect, test} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
-import {categoricalSeries, denseTimeseries, ratioTimeseries, singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
+import {categoricalSeries, denseTimeseries, gappyMonthOfYearRows, gappyMonthRows, ratioTimeseries, singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
 
 function seededRandom(seed: number) {
   let state = seed
@@ -739,6 +739,21 @@ test('bar chart explicit numeric category sort handles sparse split data', async
 test('line chart sorts time axis, and shows gap for missing points', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: sparseGroupedMonthRows(), x: 'month', y: 'value', splitBy: 'metric', title: 'Line Missing + Sort'})
   await expect(chart.el).screenshot('line-chart-grouped-missing-sort')
+})
+
+test('line chart traces through zeros for missing time buckets', async ({mount, chart}) => {
+  await mount('components/LineChart.svelte', {data: gappyMonthRows(), x: 'month', y: 'value', splitBy: 'metric', title: 'Line Gap Fill'})
+  await expect(chart.el).screenshot('line-chart-time-gaps-filled')
+})
+
+test('area chart traces through zeros for missing time buckets', async ({mount, chart}) => {
+  await mount('components/AreaChart.svelte', {data: gappyMonthRows(), x: 'month', y: 'value', splitBy: 'metric', title: 'Area Gap Fill'})
+  await expect(chart.el).screenshot('area-chart-time-gaps-filled')
+})
+
+test('line chart fills the whole ordinal domain with zeros', async ({mount, chart}) => {
+  await mount('components/LineChart.svelte', {data: gappyMonthOfYearRows(), x: 'month_of_year', y: 'value', title: 'Ordinal Gap Fill'})
+  await expect(chart.el).screenshot('line-chart-ordinal-gaps-filled')
 })
 
 test('stacked area uses 0 for missing points', async ({mount, chart}) => {

@@ -66,6 +66,103 @@ export function applyMissingPointDefaults(config: NormalConfig, rows: Record<str
   }
 }
 
+// Fill gaps in a time x axis so line and area charts don't draw a straight line across buckets
+// that are simply absent from the query result, which reads as a false trend (issue #460).
+// Filled points get 0, one per split combination so grouped series stay aligned.
+export function fillTimeAxisGaps(config: NormalConfig, rows: Record<string, any>[]) {
+  let lineSeries = config.series.filter(entry => entry?.type === 'line' && getSeriesXField(entry) && getSeriesYField(entry))
+  if (lineSeries.length === 0 || rows.length === 0) return
+
+  let xField = config.xAxis[0]?.field
+  if (!xField || !lineSeries.some(entry => getSeriesXField(entry) === xField.name)) return
+
+  let missing = missingXValues(xField, rows)
+  if (missing.length === 0) return
+
+  // Every split combination present in the data needs its own zero point, otherwise the
+  // Cartesian fill that runs next would give the other series a null (gap) at the filled bucket.
+  let splitFields = Array.from(new Set(lineSeries.flatMap(entry => getSplitFields(entry))))
+  let splitCombinations = cartesianValues(splitFields.map(field => distinctValues(rows, field)))
+  let valueFields = Array.from(new Set(lineSeries.map(entry => getSeriesYField(entry)).filter(Boolean))) as string[]
+
+  for (let xValue of missing) {
+    for (let combination of splitCombinations) {
+      let row: Record<string, any> = {[xField.name]: xValue}
+      splitFields.forEach((field, index) => (row[field] = combination[index]))
+      for (let valueField of valueFields) row[valueField] = 0
+      rows.push(row)
+    }
+  }
+}
+
+// The x values the axis draws but the data doesn't have.
+// - date/timestamp fields step from the first to the last row by their timeGrain
+// - numeric years step by 1
+// - ordinals (month_of_year, etc) cover their whole domain, since the axis always draws all of it
+// Without one of those hints we can't know the bucket size, so we fill nothing.
+function missingXValues(field: Field, rows: Record<string, any>[], limit = 10_000): unknown[] {
+  let ordinal = field.metadata?.timeOrdinal
+  let grain = String(field.metadata?.timeGrain || '').toLowerCase()
+
+  if (ordinal || grain === 'year') {
+    let numbers = rows.map(row => Number(row?.[field.name])).filter(value => Number.isFinite(value))
+    if (numbers.length === 0) return []
+    let [from, to] = ordinal ? ordinalDomain(ordinal)! : [Math.min(...numbers), Math.max(...numbers)]
+    let present = new Set(numbers)
+    let missing: number[] = []
+    for (let value = from; value <= to; value++) if (!present.has(value)) missing.push(value)
+    return missing
+  }
+
+  if (!grain || (field.type !== 'date' && field.type !== 'timestamp')) return []
+
+  let timestamps = rows.map(row => dateValue(row?.[field.name])).filter(value => value != null) as number[]
+  if (timestamps.length === 0) return []
+
+  let present = new Set(timestamps)
+  let missing: Date[] = []
+  let last = Math.max(...timestamps)
+  let buckets = 0
+  for (let cursor = new Date(Math.min(...timestamps)); cursor.getTime() <= last; cursor = nextBucket(cursor, grain)) {
+    // Bail out rather than walking an absurd number of buckets (e.g. second-grain data spanning a year).
+    if (++buckets > limit) return []
+    if (!present.has(cursor.getTime())) missing.push(cursor)
+  }
+  return missing
+}
+
+function nextBucket(date: Date, grain: string) {
+  let next = new Date(date.getTime())
+  if (grain === 'quarter') next.setUTCMonth(next.getUTCMonth() + 3)
+  else if (grain === 'month') next.setUTCMonth(next.getUTCMonth() + 1)
+  else if (grain === 'week') next.setUTCDate(next.getUTCDate() + 7)
+  else if (grain === 'day') next.setUTCDate(next.getUTCDate() + 1)
+  else if (grain === 'hour') next.setUTCHours(next.getUTCHours() + 1)
+  else if (grain === 'minute') next.setUTCMinutes(next.getUTCMinutes() + 1)
+  else if (grain === 'second') next.setUTCSeconds(next.getUTCSeconds() + 1)
+  else throw new Error(`Unsupported time grain: ${grain}`)
+  return next
+}
+
+function dateValue(value: unknown) {
+  if (value instanceof Date) return value.getTime()
+  if (typeof value !== 'string' && typeof value !== 'number') return undefined
+  let timestamp = new Date(value).getTime()
+  return Number.isFinite(timestamp) ? timestamp : undefined
+}
+
+// The natural numeric domain of an ordinal field (month_of_year is always 1-12, and so on).
+export function ordinalDomain(ordinal: string | undefined): [number, number] | undefined {
+  if (ordinal === 'hour_of_day') return [0, 23]
+  if (ordinal === 'day_of_month') return [1, 31]
+  if (ordinal === 'day_of_year') return [1, 366]
+  if (ordinal === 'week_of_year') return [1, 53]
+  if (ordinal === 'month_of_year') return [1, 12]
+  if (ordinal === 'quarter_of_year') return [1, 4]
+  if (ordinal === 'dow_0s') return [0, 6]
+  if (ordinal === 'dow_1s' || ordinal === 'dow_1m') return [1, 7]
+}
+
 // Evidence stacked100 behavior: compute percentages per category and rewrite series to synthetic pct fields.
 export function applyStackPercentage(config: NormalConfig, rows: Record<string, any>[], fields: Field[]) {
   let series = config.series

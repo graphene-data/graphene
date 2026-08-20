@@ -1,6 +1,6 @@
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
-import {applyMissingPointDefaults, applySorting, applyStackPercentage, inlineDataIntoSeries, STACK_PERCENTAGE_FIELD} from './dataShaping.ts'
+import {applyMissingPointDefaults, applySorting, applyStackPercentage, fillTimeAxisGaps, inlineDataIntoSeries, ordinalDomain, STACK_PERCENTAGE_FIELD} from './dataShaping.ts'
 import {formatFromField, formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {paletteForPath} from './theme.ts'
 
@@ -26,6 +26,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   extendValueAxisDomainsForBars(normalized)
 
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
+  fillTimeAxisGaps(normalized, rows)
   applyMissingPointDefaults(normalized, rows)
   applyStackPercentage(normalized, rows, fields)
   applySorting(normalized, rows, fields)
@@ -863,14 +864,7 @@ function temporalValueDomain(field: Field, rows: Record<string, any>[]): [number
     return [Math.min(...values), Math.max(...values)]
   }
 
-  if (ordinal === 'hour_of_day') return [0, 23]
-  if (ordinal === 'day_of_month') return [1, 31]
-  if (ordinal === 'day_of_year') return [1, 366]
-  if (ordinal === 'week_of_year') return [1, 53]
-  if (ordinal === 'month_of_year') return [1, 12]
-  if (ordinal === 'quarter_of_year') return [1, 4]
-  if (ordinal === 'dow_0s') return [0, 6]
-  if (ordinal === 'dow_1s' || ordinal === 'dow_1m') return [1, 7]
+  return ordinalDomain(ordinal)
 }
 
 // Series sometimes encode their value field as `y` and sometimes as `value` (pie, funnel, etc).

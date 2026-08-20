@@ -63,6 +63,41 @@ export function sparseGroupedMonthRows(): TableRows {
   return withFields(rows, fields)
 }
 
+// Monthly data where whole months are missing from the result set, not just one series.
+export function gappyMonthRows(): TableRows {
+  let rows = [
+    {month: '2024-01-01', metric: 'A', value: 10},
+    {month: '2024-02-01', metric: 'A', value: 20},
+    {month: '2024-04-01', metric: 'A', value: 40},
+    {month: '2024-07-01', metric: 'A', value: 30},
+    {month: '2024-01-01', metric: 'B', value: 15},
+    {month: '2024-02-01', metric: 'B', value: 18},
+    {month: '2024-07-01', metric: 'B', value: 35},
+    // March and June are missing for both metrics, April for B only.
+  ]
+  let fields: Field[] = [
+    {name: 'month', type: 'date', metadata: {timeGrain: 'month'}},
+    {name: 'metric', type: 'string'},
+    {name: 'value', type: 'number'},
+  ]
+  return withFields(rows, fields)
+}
+
+// A month_of_year ordinal axis with most months absent.
+export function gappyMonthOfYearRows(): TableRows {
+  let rows = [
+    {month_of_year: 1, value: 12},
+    {month_of_year: 2, value: 18},
+    {month_of_year: 6, value: 30},
+    {month_of_year: 11, value: 22},
+  ]
+  let fields: Field[] = [
+    {name: 'month_of_year', type: 'number', metadata: {timeOrdinal: 'month_of_year'}},
+    {name: 'value', type: 'number'},
+  ]
+  return withFields(rows, fields)
+}
+
 export function timeseriesWithDateSeries(): TableRows {
   let rows = [
     {quarter: '2021-01-01', category: 'Widgets', sales: 100},
