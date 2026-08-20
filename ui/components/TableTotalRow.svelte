@@ -72,7 +72,7 @@
           chip={column.chip}
         />
       {:else}
-        {formatFromField(column.field, getAggregateValue(data, column, totalAgg))}
+        {formatFromField(column.field, getAggregateValue(data, column, totalAgg), {scaleMax: column.scaleMax})}
       {/if}
     </TableCell>
   {/each}

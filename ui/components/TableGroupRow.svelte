@@ -92,7 +92,7 @@
             chip={column.chip}
           />
         {:else}
-          {formatFromField(column.field, getAggregateValue(currentGroupData, column))}
+          {formatFromField(column.field, getAggregateValue(currentGroupData, column), {scaleMax: column.scaleMax})}
         {/if}
       </TableCell>
     {:else}

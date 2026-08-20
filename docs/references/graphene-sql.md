@@ -147,17 +147,37 @@ from othertable
 
 #### Recognized metadata
 
-| Key | Inferrable? | Effect |
-|---|---|---|
-| `#ratio` | no | Value is 0–1; rendered as `value × 100%` (e.g. `0.42` → `42%`) |
-| `#pct` | no | Value is already 0–100; rendered as `value%` (e.g. `42` → `42%`) |
-| `#currency=<code>` | no | Adds currency symbol and compacts to K/M/B. Accepts ISO 4217 currency codes like `USD`, `EUR`, and `JPY` |
-| `#unit=<unit>` | no | Appends the provided value to the end of labels in visualizations (e.g. `unit=minutes` appends "minutes", or "(minutes)" on axes). Any non-empty value is accepted |
-| `#precision=<digits>` | no | Sets the number of decimal places to display for numbers. Can also be 0 to make `1M` become `$1,102,148`) |
-| `#timeGrain=<grain>` | yes (from `date_trunc`, `date_bin`, casts) | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
-| `#timeOrdinal=<ordinal>` | yes (from `extract`) | Treats extracted time values as ordered positions. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
-| `#description=<text>` | no | Description text for a table or field. `--` comments are also collected as descriptions |
-| `#pii` | no | Marks a field as containing personally identifiable information. |
+| Key | Effect |
+|---|---|
+| `#ratio` | Value is 0–1; rendered as `value × 100%` (e.g. `0.42` → `42%`) |
+| `#pct` | Value is already 0–100; rendered as `value%` (e.g. `42` → `42%`) |
+| `#currency=<code>` | Adds currency symbol and compacts to K/M/B where appropriate. Accepts ISO 4217 currency codes like `USD`, `EUR`, and `JPY` |
+| `#unit=<unit>` | Displays the unit alongside the value. Recognized units (below) are abbreviated and scaled where appropriate; any other value is appended as-is (`10 parsecs`) |
+| `#precision=<digits>` | Sets the number of decimal places to display for numbers. Can also be 0 to make `1M` become `$1,102,148`) |
+| `#timeGrain=<grain>` | Controls time axis label format. Values: `year`, `quarter`, `month`, `week`, `day`, `hour`, `minute`, `second` |
+| `#timeOrdinal=<ordinal>` | Treats extracted time values as ordered positions. Values: `hour_of_day`, `day_of_month`, `day_of_year`, `week_of_year`, `month_of_year`, `quarter_of_year`, `dow_0s` (0=Sun), `dow_1s` (1=Sun), `dow_1m` (1=Mon) |
+| `#description=<text>` | Description text for a table or field. `--` comments are also collected as descriptions |
+| `#pii` | Marks a field as containing personally identifiable information. |
+
+Recognized units render as a short abbreviation and are scaled into whichever unit of their family reads best, so `#unit=minutes` renders `1500` as `1d 1h` and `#unit=meters` renders `1500` as `1.5 km`.
+
+| Family | Units |
+|---|---|
+| Time | `milliseconds` (ms), `seconds` (s), `minutes` (m), `hours` (h), `days` (d), `months` (mo), `years` (y) |
+| Distance | `millimeters` (mm), `centimeters` (cm), `meters` (m), `kilometers` (km), `feet` (ft), `miles` (mi) |
+| Mass | `grams` (g), `kilograms` (kg), `pounds` (lb) |
+| Data | `bytes` (B), `kilobytes` (KB), `megabytes` (MB), `gigabytes` (GB), `terabytes` (TB) |
+
+A few rules worth knowing:
+- `#precision` opts out of scaling: it means "this many decimals in the unit I declared".
+- Data units scale by 1000, not 1024.
+
+#### `#timeGrain` vs. `#timeOrdinal` vs. `#unit`'s time family
+
+A simple heuristic to know which to use where is:
+- Dates and datetimes: `#timeGrain`. Can be inferred `date_trunc`, `date_bin`, or casts.
+- Numbers extracted from dates or datetimes: `#timeOrdinal`. Can be inferred from `extract`.
+- Durations/intervals: `#unit` time family. Can be inferred from `date_diff`/`datediff` or `date - date`.
 
 ## `select` statements
 

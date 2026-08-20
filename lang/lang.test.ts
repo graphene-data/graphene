@@ -1583,6 +1583,43 @@ describe('lang', () => {
     expect(clickhouse.fields[0].metadata).toEqual({timeGrain: 'week', defaultName: 'week'})
   })
 
+  it('infers a duration unit from date_diff across dialects', () => {
+    updateFile('table events (started_at timestamp, ended_at timestamp, event_date date)', 'events.gsql')
+
+    setGlobalConfig({root: ''})
+    let [duckDb] = analyze("from events select date_diff('minute', started_at, ended_at) as elapsed")
+    expect(duckDb.fields[0].metadata).toEqual({unit: 'minutes'})
+
+    let [alias] = analyze("from events select datediff('hour', started_at, ended_at) as elapsed")
+    expect(alias.fields[0].metadata).toEqual({unit: 'hours'})
+
+    // The part names a cycle position for extraction but a count for a difference, so weeks and quarters have no
+    // unit to infer - they'd only append a word to every value.
+    let [unrecognized] = analyze("from events select date_diff('week', started_at, ended_at) as elapsed")
+    expect(unrecognized.fields[0].metadata).toBeUndefined()
+
+    setGlobalConfig({dialect: 'snowflake', root: ''})
+    let [snowflake] = analyze("from events select datediff('day', started_at, ended_at) as elapsed")
+    expect(snowflake.fields[0].metadata).toEqual({unit: 'days'})
+
+    // BigQuery takes the part last rather than first.
+    setGlobalConfig({root: '', bigquery: {}})
+    let [bigQuery] = analyze('from events select timestamp_diff(ended_at, started_at, second) as elapsed')
+    expect(bigQuery.fields[0].metadata).toEqual({unit: 'seconds'})
+  })
+
+  it('infers a duration unit from subtracting one date from another', () => {
+    updateFile('table events (started_at timestamp, ended_at timestamp, start_date date, end_date date)', 'events.gsql')
+    setGlobalConfig({root: ''})
+
+    // Timestamps lower to a second count and plain dates to a day count, so each says which one it is.
+    let [timestamps] = analyze('from events select ended_at - started_at as elapsed')
+    expect(timestamps.fields[0].metadata).toEqual({unit: 'seconds'})
+
+    let [dates] = analyze('from events select end_date - start_date as elapsed')
+    expect(dates.fields[0].metadata).toEqual({unit: 'days'})
+  })
+
   it('propagates temporal grain through refs and replaces it with extraction metadata for reshaping expressions', () => {
     updateFile(
       `

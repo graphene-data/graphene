@@ -1,7 +1,7 @@
 import type {FunctionDef} from './functionTypes.ts'
 import type {Overload} from './functions.ts'
 
-import {inferTimeOrdinal, inferGrain} from './temporalMetadata.ts'
+import {inferTimeOrdinal, inferGrain, inferDuration} from './temporalMetadata.ts'
 import {scalarType, type TypeKind} from './types.ts'
 import {trimIndentation} from './util.ts'
 
@@ -1067,6 +1067,7 @@ export const clickHouseFunctions: FunctionDef[] = [
       {name: 'timezone', type: 'string?'},
     ],
     returns: 'number',
+    metadata: args => inferDuration(args[0]?.sql),
   },
   {
     name: 'date_trunc',

@@ -2,6 +2,7 @@ import type {Field} from './types.ts'
 
 const supportedCurrencyCodes = new Set(Intl.supportedValuesOf('currency'))
 const percent = new Intl.NumberFormat('en-US', {maximumFractionDigits: 0})
+const grouped = new Intl.NumberFormat('en-US', {maximumFractionDigits: 20})
 const currencyCompact = new Intl.NumberFormat('en-US', {notation: 'compact', maximumFractionDigits: 1})
 const monthYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'long', year: 'numeric'})
 const monthDayYearFormatter = new Intl.DateTimeFormat('en-US', {month: 'short', day: 'numeric', year: 'numeric'})
@@ -11,7 +12,40 @@ const yearMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep
 const titleCaseAcronyms = ['id', 'gdp']
 const titleCaseLowerWords = ['of', 'the', 'and', 'in', 'on']
 
-type ValueFormatterOptions = {unitStyle?: 'label' | 'axis'}
+type UnitDef = {name: string; abbr: string; factor: number}
+type UnitScale = {composite?: boolean; units: UnitDef[]}
+type ValueFormatterOptions = {unitStyle?: 'label' | 'axis'; scaleMax?: number}
+
+// Recognized units, grouped into scales whose members we can convert between. Anything outside these tables keeps its raw string.
+// Metric and imperial units live in separate scales because we never convert across systems: 1500 meters is 1.5km, never 0.93mi.
+// Time is `composite` because it isn't decimal, so 1500 minutes should read as "1d 1h" rather than "1.5k minutes".
+// `m` meaning both minutes and meters is fine - the scale is known from the declared unit, so they can never collide in one formatter.
+// Durations step through years and months rather than weeks, which is how people usually say them. Both need a fixed
+// length to convert at all: a year is 365 days and a month is a twelfth of one, so 12 months is exactly a year.
+const YEAR_SECONDS = 365 * 86400
+const unitScales: UnitScale[] = [
+  {composite: true, units: [
+    {name: 'milliseconds', abbr: 'ms', factor: 0.001}, {name: 'seconds', abbr: 's', factor: 1}, {name: 'minutes', abbr: 'm', factor: 60},
+    {name: 'hours', abbr: 'h', factor: 3600}, {name: 'days', abbr: 'd', factor: 86400},
+    {name: 'months', abbr: 'mo', factor: YEAR_SECONDS / 12}, {name: 'years', abbr: 'y', factor: YEAR_SECONDS},
+  ]},
+  {units: [{name: 'millimeters', abbr: 'mm', factor: 0.001}, {name: 'centimeters', abbr: 'cm', factor: 0.01}, {name: 'meters', abbr: 'm', factor: 1}, {name: 'kilometers', abbr: 'km', factor: 1000}]},
+  {units: [{name: 'feet', abbr: 'ft', factor: 1}, {name: 'miles', abbr: 'mi', factor: 5280}]},
+  {units: [{name: 'grams', abbr: 'g', factor: 1}, {name: 'kilograms', abbr: 'kg', factor: 1000}]},
+  {units: [{name: 'pounds', abbr: 'lb', factor: 1}]},
+  // Data uses 1000 rather than 1024 to match the rest of our compaction, and to sidestep the KiB debate.
+  {units: [{name: 'bytes', abbr: 'B', factor: 1}, {name: 'kilobytes', abbr: 'KB', factor: 1e3}, {name: 'megabytes', abbr: 'MB', factor: 1e6}, {name: 'gigabytes', abbr: 'GB', factor: 1e9}, {name: 'terabytes', abbr: 'TB', factor: 1e12}]},
+]
+
+// Units are matched case-insensitively, in either singular or plural form.
+const unitLookup = new Map<string, {scale: UnitScale; unit: UnitDef}>()
+for (let scale of unitScales) {
+  for (let unit of scale.units) {
+    unitLookup.set(unit.name, {scale, unit})
+    unitLookup.set(unit.name.replace(/s$/, ''), {scale, unit})
+  }
+}
+unitLookup.set('foot', unitLookup.get('feet')!)
 
 // Formats a raw column name into a readable title.
 export function formatTitle(column: string) {
@@ -50,24 +84,99 @@ export function formatSingleValue(value: any, field?: Field, options: ValueForma
     return `${sign}${formatCurrencySymbol(currency)}${formatted}`
   }
 
-  if (amount === 0) return addUnit(formatFixed(0, precision), field, options)
   let sign = amount < 0 ? '-' : ''
   let absolute = Math.abs(amount)
-  if (precision != null) return addUnit(`${sign}${formatFixed(absolute, precision)}`, field, options)
-  let formatted = ''
 
-  if (absolute >= 1e12) formatted = `${compactValue(absolute / 1e12)}T`
-  else if (absolute >= 1e9) formatted = `${compactValue(absolute / 1e9)}B`
-  else if (absolute >= 1e6) formatted = `${compactValue(absolute / 1e6)}M`
-  else if (absolute >= 1e3) formatted = `${compactValue(absolute / 1e3)}k`
-  else if (absolute >= 1) formatted = compactValue(absolute)
-  else if (absolute >= 1e-3) formatted = compactValue(absolute)
-  else if (absolute >= 1e-6) formatted = `${compactValue(absolute * 1e3)}m`
-  else if (absolute >= 1e-9) formatted = `${compactValue(absolute * 1e6)}u`
-  else if (absolute >= 1e-12) formatted = `${compactValue(absolute * 1e9)}n`
-  else formatted = compactValue(absolute)
+  // `#precision` means "N decimals in the declared unit", so it opts out of unit scaling entirely.
+  if (precision != null) return addUnit(`${sign}${formatFixed(absolute, precision)}`, field)
 
-  return addUnit(`${sign}${formatted}`, field, options)
+  let scaled = formatInUnitScale(absolute, field, options)
+  if (scaled) return `${sign}${scaled}`
+  if (amount === 0) return addUnit('0', field)
+  return addUnit(`${sign}${compactMagnitude(absolute)}`, field)
+}
+
+// Render a value in the most readable unit of its declared unit's scale, or undefined when the unit isn't recognized.
+// Callers that share one scale across many values (axes, table columns) pass `scaleMax` so the whole set renders
+// in the unit their extent suits, rather than each value picking its own and making the set jumpy.
+function formatInUnitScale(absolute: number, field: Field | undefined, options: ValueFormatterOptions) {
+  let declared = unitLookup.get(field?.metadata?.unit?.trim().toLowerCase() || '')
+  if (!declared) return undefined
+  let {scale, unit} = declared
+  let base = absolute * unit.factor
+
+  // Composite time survives a shared scale - "45m" beside "1d 1h" still reads cleanly. Only axes force it into a
+  // single unit, since ticks like "4d 10h" / "4d 12h" are too wide and too samey to scan.
+  if (scale.composite && options.unitStyle !== 'axis') return base ? formatComposite(scale, base) : withUnit(base, unit, scale)
+
+  // Zero has no magnitude to pick a unit from, so it stays in the one the field declared.
+  if (options.scaleMax == null) return withUnit(base, base ? pickUnit(scale, base) : unit, scale)
+
+  // A shared scale needs its max to fill the chosen unit several times over: pick one the max only just reaches
+  // and every other value in the set drops below 1 (0.24d, 0.059d) instead of reading cleanly (5.83h, 1.42h).
+  let max = Math.abs(options.scaleMax) * unit.factor
+  return withUnit(base, pickUnit(scale, max, 3), scale)
+}
+
+// The unit a set of values reads best in, and what to multiply them by to get there. Undefined when the declared
+// unit is already the right one, so callers can leave the values alone.
+export function displayUnitConversion(field: Field | undefined, extentMax: number) {
+  let declared = unitLookup.get(field?.metadata?.unit?.trim().toLowerCase() || '')
+  if (!declared || !extentMax || getPrecision(field) != null) return undefined
+
+  let target = pickUnit(declared.scale, Math.abs(extentMax) * declared.unit.factor, 3)
+  if (target === declared.unit) return undefined
+  return {unit: target.name, multiplier: declared.unit.factor / target.factor}
+}
+
+// Join a scaled number to its abbreviation. A number that already carries a unit doesn't take a magnitude prefix on
+// top of it: "2.5k m" is just kilometers spelled badly, and `m`/`u` for milli/micro collide with the abbreviations
+// outright ("0.4m km"). Group the thousands instead.
+// The exception is a family that has run out of larger units, where there is nothing left to absorb the magnitude
+// and no ambiguity in saying so: 60,000,000 mi is both unreadable and too wide for the axis gutter, so "60M mi".
+// Durations are written tight, since inside a composite the space is already the separator between parts (1h 30m).
+// Everything else reads better held apart, and a family renders one way or the other so a column never mixes them.
+function withUnit(base: number, target: UnitDef, scale: UnitScale) {
+  let value = base / target.factor
+  let maxedOut = !scale.composite && target === scale.units[scale.units.length - 1] && value >= 1000
+  let formatted = maxedOut ? compactMagnitude(value) : grouped.format(Number(compactValue(value)))
+  return `${formatted}${scale.composite ? '' : ' '}${target.abbr}`
+}
+
+// Time isn't decimal, so we spell it out as up to two parts: 1d 1h, 90m -> 1h 30m.
+// Capping at two keeps it scannable - "4d 10h 33m 12s" is worse than "4d 10h".
+function formatComposite(scale: UnitScale, base: number) {
+  let primary = pickUnit(scale, base)
+  let whole = Math.floor(base / primary.factor)
+
+  // Below the scale's smallest unit we can't go any further down, so fall back to a fractional value there.
+  if (!whole) return withUnit(base, primary, scale)
+
+  let next = scale.units[scale.units.indexOf(primary) - 1]
+  let remainder = next ? Math.floor((base - whole * primary.factor) / next.factor) : 0
+  let leading = `${grouped.format(whole)}${primary.abbr}`
+  return remainder ? `${leading} ${remainder}${next.abbr}` : leading
+}
+
+// The largest unit the value fills `minCount` times over, flooring at the scale's smallest unit.
+function pickUnit(scale: UnitScale, base: number, minCount = 1) {
+  let chosen = scale.units[0]
+  for (let unit of scale.units) if (base >= unit.factor * minCount) chosen = unit
+  return chosen
+}
+
+// Our generic magnitude compaction, used for unrecognized units and for values already scaled into a unit.
+function compactMagnitude(absolute: number) {
+  if (!absolute) return '0'
+  if (absolute >= 1e12) return `${compactValue(absolute / 1e12)}T`
+  if (absolute >= 1e9) return `${compactValue(absolute / 1e9)}B`
+  if (absolute >= 1e6) return `${compactValue(absolute / 1e6)}M`
+  if (absolute >= 1e3) return `${compactValue(absolute / 1e3)}k`
+  if (absolute >= 1e-3) return compactValue(absolute)
+  if (absolute >= 1e-6) return `${compactValue(absolute * 1e3)}m`
+  if (absolute >= 1e-9) return `${compactValue(absolute * 1e6)}u`
+  if (absolute >= 1e-12) return `${compactValue(absolute * 1e9)}n`
+  return compactValue(absolute)
 }
 
 function formatCurrencySymbol(currency: string) {
@@ -87,10 +196,12 @@ function formatFixed(value: number, precision?: number) {
   return new Intl.NumberFormat('en-US', {minimumFractionDigits: precision, maximumFractionDigits: precision}).format(value)
 }
 
-function addUnit(value: string, field: Field | undefined, options: ValueFormatterOptions) {
+// Recognized units render as their abbreviation; anything else keeps the raw string after the value.
+function addUnit(value: string, field: Field | undefined) {
   let unit = field?.metadata?.unit?.trim()
   if (!unit) return value
-  return options.unitStyle === 'axis' ? `${value} (${unit})` : `${value} ${unit}`
+  let declared = unitLookup.get(unit.toLowerCase())
+  return declared ? `${value}${declared.scale.composite ? '' : ' '}${declared.unit.abbr}` : `${value} ${unit}`
 }
 
 // Creates a formatter function that renders date/timestamp values based on field metadata.timeGrain.
@@ -126,11 +237,11 @@ export function makeTimeFormatter(field?: Field) {
 }
 
 // Formats one value by selecting the right formatter from the field type.
-export function formatFromField(field: Field | undefined, value: unknown) {
+export function formatFromField(field: Field | undefined, value: unknown, options: ValueFormatterOptions = {}) {
   if (value === null || value === undefined) return '-'
 
   let type = String(field?.type || '').toLowerCase()
-  if (type === 'number') return formatSingleValue(value, field)
+  if (type === 'number') return formatSingleValue(value, field, options)
   if (type === 'date' || type === 'timestamp') return makeTimeFormatter(field)(value)
   return String(value)
 }
@@ -192,14 +303,14 @@ function pad2(value: number) {
   return String(value).padStart(2, '0')
 }
 
+// Keep three significant figures, trimming trailing zeros so a round 50 stays `50` rather than `50.0`. Three rather
+// than two because converting between units lands on numbers that aren't round (14512 meters is 14.512km).
+// Values past three digits keep their whole-number precision, so a grouped 4243 reads 4,243 and not 4,240.
 function compactValue(num: number) {
-  let exponent = Math.floor(Math.log10(Math.abs(num)))
-  let scale = Math.pow(10, exponent - 1)
-  let rounded = Math.round(num / scale) * scale
-  if (!Number.isFinite(rounded)) return String(num)
-  let magnitude = Math.floor(Math.log10(rounded))
-  let decimals = Math.max(0, 1 - magnitude)
-  return rounded
+  if (!num || !Number.isFinite(num)) return String(num || 0)
+  let magnitude = Math.floor(Math.log10(Math.abs(num)))
+  let decimals = Math.min(20, Math.max(0, 2 - magnitude))
+  return num
     .toFixed(decimals)
     .replace(/\.0+$/, '')
     .replace(/(\.[0-9]*[1-9])0+$/, '$1')

@@ -1,7 +1,30 @@
 import type {Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
 
+import {displayUnitConversion} from './format.ts'
+
 // Prefix for the synthetic fields stacked-100 charts are rewritten onto, which marks a series as one.
 export const STACK_PERCENTAGE_FIELD = '__graphene_stack_pct_'
+
+// Convert values whose declared unit isn't the one we'll display them in - 1908 minutes of flight time reads as
+// hours. ECharts derives tick values from the dataset, so converting the payload is what makes those ticks round
+// in the unit the labels use; relabeling minutes as hours after the fact leaves a tick every 500 minutes, or
+// "8.33h". It also leaves ECharts' own tick logic in charge, so `alignTicks` still lines up a second axis.
+// Rows and fields are already cloned by the time enrichment sees them, so this never touches the query result.
+export function applyUnitScaling(rows: Record<string, any>[], fields: Field[]) {
+  for (let field of fields) {
+    if (String(field.type || '').toLowerCase() !== 'number') continue
+
+    let extent = rows.reduce((max, row) => Math.max(max, Math.abs(Number(row?.[field.name])) || 0), 0)
+    let conversion = displayUnitConversion(field, extent)
+    if (!conversion) continue
+
+    for (let row of rows) {
+      let value = Number(row[field.name])
+      if (Number.isFinite(value)) row[field.name] = value * conversion.multiplier
+    }
+    field.metadata = {...field.metadata, unit: conversion.unit}
+  }
+}
 
 // Fill sparse grouped data so each split series has a value for each category.
 //

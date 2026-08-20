@@ -177,12 +177,12 @@
             >
               {#if column.linkLabel != undefined}
                 {#if row[column.linkLabel] != undefined}
-                  {formatFromField(columnLookup[column.linkLabel]?.field, row[column.linkLabel])}
+                  {formatFromField(columnLookup[column.linkLabel]?.field, row[column.linkLabel], {scaleMax: columnLookup[column.linkLabel]?.scaleMax})}
                 {:else}
                   {column.linkLabel}
                 {/if}
               {:else}
-                {formatFromField(column.field, row[column.id])}
+                {formatFromField(column.field, row[column.id], {scaleMax: column.scaleMax})}
               {/if}
             </a>
           {/if}
@@ -199,7 +199,7 @@
             chip={column.chip}
           />
         {:else}
-          {formatFromField(column.field, row[column.id])}
+          {formatFromField(column.field, row[column.id], {scaleMax: column.scaleMax})}
         {/if}
       </TableCell>
     {/each}

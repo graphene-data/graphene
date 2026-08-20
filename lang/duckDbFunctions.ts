@@ -6,7 +6,7 @@
 
 import type {FunctionDef} from './functionTypes.ts'
 
-import {inferTimeOrdinal, inferGrain} from './temporalMetadata.ts'
+import {inferTimeOrdinal, inferGrain, inferDuration} from './temporalMetadata.ts'
 import {trimIndentation} from './util.ts'
 
 const duck = 'https://duckdb.org/docs/stable/sql/functions'
@@ -2078,6 +2078,7 @@ export const duckDbFunctions: FunctionDef[] = [
       {name: 'enddate', type: dateTimeTimestampTypes},
     ],
     returns: 'number',
+    metadata: args => inferDuration(args[0]?.sql),
   },
   dateTimeFunction(
     'datediff',
@@ -2092,7 +2093,7 @@ export const duckDbFunctions: FunctionDef[] = [
 
       Alias for date_diff.
     `,
-    {url: `${duck}/date#date_diffpart-startdate-enddate`},
+    {url: `${duck}/date#date_diffpart-startdate-enddate`, metadata: args => inferDuration(args[0]?.sql)},
   ),
   {
     name: 'date_part',

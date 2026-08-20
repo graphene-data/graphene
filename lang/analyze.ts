@@ -1095,13 +1095,17 @@ class AnalysisSession implements Analyzer {
     if ((isScalarType(left.type, 'date') || isScalarType(left.type, 'timestamp')) && (isScalarType(right.type, 'date') || isScalarType(right.type, 'timestamp'))) {
       if (op != '-') return this.diag(node, 'Can only subtract dates', {sql: 'NULL', type: scalarType('error')})
       let unit = isScalarType(left.type, 'timestamp') || isScalarType(right.type, 'timestamp') ? 'SECOND' : 'DAY'
-      if (this.config.dialect == 'bigquery') return {...merged, sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: scalarType('number')}
-      if (this.config.dialect == 'snowflake') return {...merged, sql: `TIMESTAMPDIFF(${unit}, ${right.sql}, ${left.sql})`, type: scalarType('number')}
+
+      // The difference is a duration counted in whichever unit we lowered to, so label it. The operands' own grain
+      // describes dates rather than the gap between them, so it doesn't carry over.
+      let duration = {...merged, metadata: {...this.withoutTimeGrain(merged.metadata), unit: unit == 'DAY' ? 'days' : 'seconds'}}
+      if (this.config.dialect == 'bigquery') return {...duration, sql: `TIMESTAMP_DIFF(${left.sql}, ${right.sql}, ${unit})`, type: scalarType('number')}
+      if (this.config.dialect == 'snowflake') return {...duration, sql: `TIMESTAMPDIFF(${unit}, ${right.sql}, ${left.sql})`, type: scalarType('number')}
       if (this.config.dialect == 'postgres') {
         let sql = unit == 'DAY' ? `(${left.sql} - ${right.sql})` : `EXTRACT(EPOCH FROM (${left.sql} - ${right.sql}))`
-        return {...merged, sql, type: scalarType('number')}
+        return {...duration, sql, type: scalarType('number')}
       }
-      return {...merged, sql: `DATE_DIFF('${unit.toLowerCase()}', ${right.sql}, ${left.sql})`, type: scalarType('number')}
+      return {...duration, sql: `DATE_DIFF('${unit.toLowerCase()}', ${right.sql}, ${left.sql})`, type: scalarType('number')}
     }
 
     // date +/- interval
