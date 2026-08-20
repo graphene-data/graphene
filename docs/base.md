@@ -68,7 +68,7 @@ Dimensions/measures aren't only limited to scalar and aggregate expressions. The
 If a top-level `pages/` folder exists, all Graphene pages must be inside it.
 
 Graphene pages extend Markdown with the following:
-- Graphene SQL queries in code fences
+- Graphene SQL queries in `sql` (or `gsql`) code fences
 - Visualization and input components
 - Safe layout HTML such as `<div>`, `<span>`, semantic sections, lists, and tables
 - `<style>` blocks for page-level visual customization
@@ -91,6 +91,8 @@ where status <> 'cancelled'
 ````
 
 Queries can be referenced by other queries in the `from` or `join` to form DAGs of data logic within the page.
+
+Only `sql` and `gsql` fences become queries. A fence in any other language (or with no language at all) renders as a normal, syntax-highlighted code block.
 
 ## HTML, CSS, and Javascript
 Pages can use HTML and Svelte markup for custom behavior, layout, and styling. This includes `<style>` blocks, inline styles, framework directives, and inline `<script>` blocks.

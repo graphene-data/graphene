@@ -15,7 +15,7 @@ import {config} from '../lang/config.ts'
 import {analyzeWorkspace, loadWorkspace, toSql} from '../lang/core.ts'
 import {grapheneCsp} from '../ui/csp.ts'
 import {runQuery} from './connections/index.ts'
-import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, injectComponentImports, mdsvexOptions} from './mdCompile.ts'
 import {missingMockFiles, mockFileMap} from './mockFiles.ts'
 import {routeForPage} from './pageRouting.ts'
 import {formatError} from './printer.ts'
@@ -71,11 +71,7 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
         extensions: ['.svelte', '.md'],
         preprocess: [
           vitePreprocess(),
-          mdsvex({
-            extensions: ['.md'],
-            remarkPlugins,
-            rehypePlugins,
-          }) as any,
+          mdsvex(mdsvexOptions) as any,
           injectComponentImports(),
         ],
         onwarn(warning, defaultHandler) {

@@ -34,11 +34,21 @@ export function liftInlineEChartsConfig(content: string) {
   })
 }
 
-// Turn code fences into <GrapheneQuery> tags, which register those queries
+// Turn gsql code fences into <GrapheneQuery> tags, which register those queries.
+// Fences in any other language (```python, ```json, a bare ```) are left alone so they render as code blocks.
+export function isQueryFence(lang: unknown) {
+  let language = typeof lang === 'string' ? lang.trim().toLowerCase() : ''
+  return language == 'sql' || language == 'gsql'
+}
+
 export function extractQueries() {
   return function transformer(tree: any) {
-    visit(tree, 'code', (node, index, parent) => {
+    visit(tree, 'code', (node: any, index, parent) => {
       if (index === null) return
+      if (!isQueryFence(node.lang)) {
+        node.lang ||= 'text' // otherwise mdsvex emits class="language-undefined"
+        return
+      }
       let name = typeof node.meta === 'string' ? node.meta : ''
       let code = typeof node.value === 'string' ? node.value.trim() : ''
       parent.children[index] = {type: 'html', value: `<GrapheneQuery name="${svelteStringAttr(name)}" code="${svelteStringAttr(code)}" />`}
@@ -115,3 +125,8 @@ export function extractFrontmatter(contents: string): PageFrontmatter {
 
 export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles]
 export const rehypePlugins: Array<Plugin> = []
+
+// mdsvex's `optimise` mode emits code blocks as {@html `...`}, where a backslash in the code
+// (a regex like \d+, a windows path) becomes a JS escape and fails the page's svelte compile.
+// Plain markup renders the same highlighted html without that hazard.
+export const mdsvexOptions = {extensions: ['.md'], remarkPlugins, rehypePlugins, highlight: {optimise: false}}

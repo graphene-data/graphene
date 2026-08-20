@@ -2,10 +2,10 @@
 import {compile} from 'mdsvex'
 import {compile as compileSvelte} from 'svelte/compiler'
 
-import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, injectComponentImports, mdsvexOptions} from './mdCompile.ts'
 
 async function compileMarkdownPage(src: string) {
-  let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+  let out = await compile(src, {...mdsvexOptions, filename: '/tmp/repro.md'})
   if (!out) throw new Error('Expected mdsvex compile output')
   let preprocessed = injectComponentImports().markup({content: String(out.code), filename: '/tmp/repro.md'})
   if (!preprocessed) throw new Error('Expected preprocess output')
@@ -58,7 +58,7 @@ from flights
 \`\`\`
 `
 
-    let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+    let out = await compile(src, {...mdsvexOptions, filename: '/tmp/repro.md'})
     if (!out) throw new Error('Expected mdsvex compile output')
     let code = String(out.code)
 
@@ -74,7 +74,7 @@ where created_at >= coalesce($daterange_start, created_at)
 \`\`\`
 `
 
-    let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+    let out = await compile(src, {...mdsvexOptions, filename: '/tmp/repro.md'})
     if (!out) throw new Error('Expected mdsvex compile output')
     let code = String(out.code)
 
@@ -122,6 +122,60 @@ where created_at >= coalesce($daterange_start, created_at)
     expect(code).toContain('.hero { color: red; }')
     expect(code).toContain('on:click={() => count += 1}')
     expect(code).toContain('<iframe id="embed" src="javascript:alert(\'boom\')"></iframe>')
+  })
+
+  it('renders non-gsql fences as code blocks instead of queries', async () => {
+    let code = await compileMarkdownPage(`
+\`\`\`python
+def total(rows):
+    return {"n": len(rows)}
+\`\`\`
+
+\`\`\`sql repro
+from flights
+\`\`\`
+`)
+
+    expect(code).toContain('<pre class="language-python">')
+    expect(code).toContain('def')
+    expect(code).toContain('<GrapheneQuery name="{`repro`}"')
+    expect(code).not.toContain('<GrapheneQuery name="{``}"')
+  })
+
+  it('treats sql and gsql fences as queries regardless of case', async () => {
+    let code = await compileMarkdownPage(`
+\`\`\`GSQL upper_case
+from flights
+\`\`\`
+`)
+
+    expect(code).toContain('<GrapheneQuery name="{`upper_case`}"')
+    expect(code).not.toContain('<pre')
+  })
+
+  it('labels fences without a language instead of leaving it undefined', async () => {
+    let code = await compileMarkdownPage(`
+\`\`\`
+plain <b>text</b> {braces}
+\`\`\`
+`)
+
+    expect(code).toContain('<pre class="language-text">')
+    expect(code).not.toContain('language-undefined')
+    expect(code).toContain('&lt;b&gt;text&lt;/b&gt; &#123;braces&#125;')
+  })
+
+  it('renders code blocks containing backslash escapes without breaking the page', async () => {
+    let code = await compileMarkdownPage(`
+\`\`\`js
+let re = /\\d+\\u0041/g
+let dir = 'C:\\\\Users\\\\me'
+\`\`\`
+`)
+
+    expect(code).toContain('/\\d+\\u0041/g')
+    expect(code).toContain("'C:\\\\Users\\\\me'")
+    expect(code).not.toContain('{@html')
   })
 
   it('keeps generated query and echarts expressions', async () => {
