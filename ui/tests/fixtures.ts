@@ -203,12 +203,12 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
       await sharedPage.waitForFunction(() => {
-        let charts = window.$GRAPHENE.components
-        return charts && Object.keys(charts).length > 0
+        let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
+        return domNode && window.$GRAPHENE.getChart(domNode)
       })
       return await sharedPage.evaluate(source => {
-        let chart = Object.values(window.$GRAPHENE.components)[0] as any
-        let option = chart.getModel().getOption()
+        let domNode = document.querySelector('#component-test .echarts') as HTMLElement
+        let option = window.$GRAPHENE.getChart(domNode).getModel().getOption()
         try {
           let fn = new Function('config', `return (${source})(config)`)
           return fn(option)

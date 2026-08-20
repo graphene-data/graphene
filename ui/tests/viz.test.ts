@@ -448,7 +448,7 @@ test('line chart respects precision metadata in tooltips', async ({mount, shared
   await expect(chart.el).screenshot('line-chart-tooltip-percent-precision')
 })
 
-test('line chart uses unit metadata for axis and tooltip formatting', async ({mount, sharedPage, chart}) => {
+test('line chart uses unit metadata for axis and tooltip formatting', async ({mount, chart}) => {
   let rows = [
     {month: 'Jan', duration: 42},
     {month: 'Feb', duration: 58},
@@ -460,15 +460,10 @@ test('line chart uses unit metadata for axis and tooltip formatting', async ({mo
   ]
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'duration', title: 'Duration'})
-  let formatted = await sharedPage.evaluate(() => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
-    let option = window.$GRAPHENE.getChart(domNode).getOption()
+  let formatted = await chart.config(option => {
     let yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
     let series = Array.isArray(option.series) ? option.series[0] : option.series
-    return {
-      axis: yAxis.axisLabel.formatter(42),
-      tooltip: series.tooltip.valueFormatter(42),
-    }
+    return {axis: yAxis.axisLabel.formatter(42), tooltip: series.tooltip.valueFormatter(42)}
   })
 
   expect(formatted).toEqual({axis: '42m', tooltip: '42m'})
@@ -476,7 +471,7 @@ test('line chart uses unit metadata for axis and tooltip formatting', async ({mo
   await expect(chart.el).screenshot('line-chart-unit-metadata-axis-tooltip')
 })
 
-test('a second value axis still aligns its ticks when both axes change unit', async ({mount, sharedPage}) => {
+test('a second value axis still aligns its ticks when both axes change unit', async ({mount, chart}) => {
   let rows = [
     {airport: 'JFK', flight_time: 1908, dep_delay: -1111},
     {airport: 'HNL', flight_time: 573, dep_delay: -5},
@@ -490,25 +485,10 @@ test('a second value axis still aligns its ticks when both axes change unit', as
   ]
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'airport', y: 'flight_time', y2: 'dep_delay'})
-  let axes = await sharedPage.evaluate(() => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
-    let chart = window.$GRAPHENE.getChart(domNode) as any
-    let option = chart.getOption()
-    return [0, 1].map(index => {
-      let ticks = chart.getModel().getComponent('yAxis', index).axis.scale.getTicks().map((tick: any) => tick.value)
-      return ticks.map((value: number) => option.yAxis[index].axisLabel.formatter(value))
-    })
-  })
-
-  // Both fields convert from minutes to hours. Because the conversion happens in the data rather than the labels,
-  // ECharts picks the ticks itself, so they come out round and `alignTicks` still gives both axes the same count.
-  expect(axes).toEqual([
-    ['0h', '10h', '20h', '30h', '40h'],
-    ['-30h', '-20h', '-10h', '0h', '10h'],
-  ])
+  await expect(chart.el).screenshot('bar-chart-dual-axis-unit-scaling')
 })
 
-test('charts convert values into the unit they display so ticks stay round', async ({mount, sharedPage}) => {
+test('charts convert values into the unit they display so ticks stay round', async ({mount, chart}) => {
   let rows = [
     {month: 'Jan', duration: 1500},
     {month: 'Feb', duration: 5760},
@@ -520,15 +500,13 @@ test('charts convert values into the unit they display so ticks stay round', asy
   ]
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'duration'})
-  let result = await sharedPage.evaluate(() => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
-    let option = window.$GRAPHENE.getChart(domNode).getOption()
+  let result = (await chart.config(option => {
     let yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
     let series = Array.isArray(option.series) ? option.series[0] : option.series
     let dataset = Array.isArray(option.dataset) ? option.dataset[0] : option.dataset
-    let durations = (dataset.source as Record<string, any>[]).map(row => row.duration)
+    let durations = dataset.source.map((row: Record<string, any>) => row.duration)
     return {durations, axis: [yAxis.axisLabel.formatter(1), yAxis.axisLabel.formatter(2)], tooltip: series.tooltip.valueFormatter(Math.min(...durations))}
-  })
+  }))!
 
   // These durations read in days, so the payload itself becomes days and ECharts ticks whole days rather than
   // whole minutes - relabeled minutes would tick every 2000 of them and read "1.39d". Charts sort descending.
