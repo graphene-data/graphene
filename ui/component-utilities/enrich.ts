@@ -250,7 +250,7 @@ function buildSplitSeries(template: SeriesWithGroupingHint, datasetId: string, n
 // This gives later enrichments an axis target to infer into, and avoids
 // ECharts runtime errors like `xAxis "0" not found`.
 function ensureAxes(config: NormalConfig) {
-  let cartesianSeriesTypes = new Set(['line', 'bar', 'scatter', 'candlestick', 'heatmap', 'boxplot', 'effectScatter'])
+  let cartesianSeriesTypes = new Set(['line', 'bar', 'pictorialBar', 'scatter', 'candlestick', 'heatmap', 'boxplot', 'effectScatter'])
   let needsCartesianAxes = config.series.some(series => series?.type != null && cartesianSeriesTypes.has(series.type))
   if (!needsCartesianAxes) return
 
@@ -647,13 +647,16 @@ function addPieTooltips(config: NormalConfig, fields: Field[]) {
 
   tooltip.trigger = 'item'
   tooltip.formatter = (params: any) => {
+    let series = config.series[Number(params?.seriesIndex ?? 0)]
+    let valueField = getSeriesValueField(series, fields)
     let value = params?.value
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      let series = config.series[Number(params?.seriesIndex ?? 0)]
-      let yField = getSeriesValueField(series, fields)?.name
-      value = yField && value[yField] != null ? value[yField] : value.value
+      value = valueField && value[valueField.name] != null ? value[valueField.name] : value.value
     }
-    return `${params?.name ?? ''}: ${value ?? ''} (${params?.percent ?? 0}%)`
+
+    // Reuse the series' own formatter so slices read the same as the rest of the chart's values.
+    let formatted = series?.tooltip?.valueFormatter ? series.tooltip.valueFormatter(value, params?.dataIndex) : formatFromField(valueField, value)
+    return `${escapeHtml(params?.name ?? '')}: ${escapeHtml(formatted)} (${params?.percent ?? 0}%)`
   }
 }
 
@@ -882,21 +885,21 @@ function getSeriesValueField(series: SeriesWithGroupingHint | undefined, fields:
   return getEncodeField(series, fields, 'y') ?? getEncodeField(series, fields, 'value')
 }
 
-// The field(s) to format in a series' tooltip. Depends on series type since scatter/bar put the numeric value in different encode props.
+// The field(s) to format in a series' tooltip. Depends on series type since series put the numeric value in different encode props.
 function getSeriesValueFields(series: SeriesWithGroupingHint, fields: Field[]) {
   switch (series.type) {
     case 'scatter':
     case 'effectScatter':
       return [getEncodeField(series, fields, 'x'), getEncodeField(series, fields, 'y')].filter((f): f is Field => !!f)
-    case 'bar': {
-      let xField = getEncodeField(series, fields, 'x')
-      let yField = getEncodeField(series, fields, 'y')
-      return xField?.type == 'number' ? [xField] : [yField].filter((f): f is Field => !!f)
-    }
     case 'heatmap':
       return [getEncodeField(series, fields, 'value')].filter((f): f is Field => !!f)
-    default:
-      return [getEncodeField(series, fields, 'y')].filter((f): f is Field => !!f)
+    default: {
+      // Everything else names its value `y`, `value` (pie, funnel, treemap, sankey), or - when it runs horizontally,
+      // like a bar or pictorialBar on a category y-axis - `x`. Prefer whichever of those is numeric, since that is
+      // the one carrying the metadata worth formatting.
+      let candidates = [getEncodeField(series, fields, 'y'), getEncodeField(series, fields, 'value'), getEncodeField(series, fields, 'x')]
+      return [candidates.find(field => field?.type === 'number') ?? candidates.find(Boolean)].filter((f): f is Field => !!f)
+    }
   }
 }
 

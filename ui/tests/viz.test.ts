@@ -682,6 +682,47 @@ test('pie chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('pie-chart-tooltip')
 })
 
+test('value-encoded series format their values from field metadata', async ({mount, chart}) => {
+  // pie/funnel/treemap name their value `value` rather than `y`, so this checks that metadata still reaches them.
+  let data = singleDim() // `value` carries currency: USD
+
+  await mount('components/ECharts.svelte', {data, config: {series: [{type: 'pie', encode: {itemName: 'category', value: 'value'}}]}})
+  let pie = await chart.config(option => {
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    let tooltip = Array.isArray(option.tooltip) ? option.tooltip[0] : option.tooltip
+    return {value: series.tooltip.valueFormatter(4200), tooltip: tooltip.formatter({seriesIndex: 0, dataIndex: 0, name: 'Bikes', percent: 33, value: {category: 'Bikes', value: 4200}})}
+  })
+  expect(pie).toEqual({value: '$4.2k', tooltip: 'Bikes: $4.2k (33%)'})
+
+  await mount('components/ECharts.svelte', {data, config: {series: [{type: 'funnel', encode: {itemName: 'category', value: 'value'}}]}})
+  let funnel = await chart.config(option => {
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    return series.tooltip.valueFormatter(4200)
+  })
+  expect(funnel).toBe('$4.2k')
+})
+
+test('horizontal bar-like series format the value on their x axis', async ({mount, chart}) => {
+  let rows = [
+    {carrier: 'AA', delay: 42},
+    {carrier: 'DL', delay: 58},
+  ]
+  let fields = [
+    {name: 'carrier', type: scalarType('string')},
+    {name: 'delay', type: scalarType('number'), metadata: {unit: 'minutes'}},
+  ]
+
+  // pictorialBar isn't a type we special-case, but it still carries its value on x when the y axis is categorical.
+  await mount('components/ECharts.svelte', {data: {rows, fields}, config: {yAxis: {type: 'category'}, series: [{type: 'pictorialBar', symbol: 'rect', symbolRepeat: false, encode: {x: 'delay', y: 'carrier'}}]}})
+  let formatted = await chart.config(option => {
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    let xAxis = Array.isArray(option.xAxis) ? option.xAxis[0] : option.xAxis
+    return {axis: xAxis.axisLabel.formatter(42), tooltip: series.tooltip.valueFormatter(42)}
+  })
+
+  expect(formatted).toEqual({axis: '42m', tooltip: '42m'})
+})
+
 test.skip('can provide a list of colors for different series', async () => {})
 
 test.skip('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
