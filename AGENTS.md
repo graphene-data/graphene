@@ -1,25 +1,18 @@
 Graphene is data framework that allows you to define everything in code.
 
-Dashboards and reports can be built in mdx with components like <BarChart>. Queries and semantic models are written in a language we call gsql, which is mostly like sql with some special features like symmetric aggregates, synthetic columns for code reuse, and automatic join traversal. If you need to know more about Graphene's features, read @docs/base.md.
+Dashboards and reports can be built in mdx with components like <BarChart>. Queries and semantic models are written in a language we call Graphene SQL, which is mostly like SQL with some special features like symmetric aggregates, synthetic columns for code reuse, and automatic join traversal.
 
 # Repo structure
 
+- /docs - how to use Graphene (key docs are docs/base.md and docs/cli.md).
 - /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
+- /create - `create-graphene`, the `npm create graphene` scaffolder for new projects.
 - /examples - a series of example datasets and graphene code. `flights` is the go-to as it's local, fast, and doesn't require auth.
-- /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
+- /lang - parses our custom sql, analyzes it for errors, and transforms it to dialect-specific SQL.
+- /language-server - Volar-based LSP server built on /lang; powers diagnostics for /vscode and other editors.
 - /ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
 - /vscode - an extension that provides syntax highlighting and diagnostics on queries.
-
-# Graphene CLI commands
-
-Graphene provides a CLI that users (and agents) use to do data work.
-You can run any of these cli commands within all of our examples. It's important that your cwd is an example folder (like `/examples/flights`).
-
-`pnpm graphene check <mdFile>` - Checks the project for syntax and analysis errors in gsql files. `mdFile` is optional, but if provided it will load that page in a browser, check for runtime errors, and write a screenshot out to a file.
-`pnpm graphene serve --bg` - Starts (or restarts) the Graphene dev server. You should rarely need to call this, the server is started automatically by `check`, and because it's a vite server most files will hot-reload. You only need this if you've changed something about the server's config. Always run it with the --bg option.
-`pnpm graphene run <gsql>` - Runs a given gsql query against the configured database.
-`pnpm graphene compile <gsql>` - Compiles gsql to the underlying database sql and prints it out.
-`pnpm graphene schema <dataset_or_table>` - Prints out tables within a database/schema, or the columns of a given table.
+- /integrations - editor grammars for GSQL outside VS Code, e.g. the Tree-sitter grammar used by Zed.
 
 # Tech stack
 
