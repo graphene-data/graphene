@@ -1,0 +1,87 @@
+==================
+Model declaration
+==================
+
+table users (
+  id bigint
+  name varchar
+  total: round(sum(amount))
+)
+
+---
+
+(source_file
+  (model_declaration
+    (declaration_keyword)
+    (identifier)
+    (parenthesized_expression
+      (identifier)
+      (builtin_type)
+      (identifier)
+      (builtin_type)
+      (identifier)
+      (punctuation)
+      (function_call
+        (identifier)
+        (function_call
+          (identifier)
+          (identifier))))))
+
+==================
+Query
+==================
+
+from flights
+select carrier.name, sum(dep_delay) as total_delay
+where dep_delay > :minimum_delay
+
+---
+
+(source_file
+  (keyword)
+  (identifier)
+  (keyword)
+  (member_access
+    (identifier)
+    (identifier))
+  (punctuation)
+  (function_call
+    (identifier)
+    (identifier))
+  (keyword)
+  (identifier)
+  (keyword)
+  (identifier)
+  (operator)
+  (parameter))
+
+==================
+Comments, strings, and arrays
+==================
+
+table events (
+  #pii #description="User event"
+  tags array<string>
+  label: coalesce('unknown', `fallback`)
+)
+
+---
+
+(source_file
+  (model_declaration
+    (declaration_keyword)
+    (identifier)
+    (parenthesized_expression
+      (comment)
+      (identifier)
+      (builtin_type)
+      (operator)
+      (builtin_type)
+      (operator)
+      (identifier)
+      (punctuation)
+      (function_call
+        (identifier)
+        (string)
+        (punctuation)
+        (string)))))
