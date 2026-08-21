@@ -342,7 +342,6 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    margin: 8px 0;
   }
   @media print {
     .hide-print {
