@@ -1,0 +1,2 @@
+# Zed checks out and compiles Tree-sitter grammars here when installing the dev extension.
+/grammars/

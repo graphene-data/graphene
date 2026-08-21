@@ -1,11 +1,18 @@
 /// <reference types="vitest/globals" />
 import {readFile} from 'node:fs/promises'
+import {createRequire} from 'node:module'
 import path from 'node:path'
 import {loadWASM, OnigScanner, OnigString} from 'vscode-oniguruma'
 import {INITIAL, Registry} from 'vscode-textmate'
 
 let grammarPath = path.join(__dirname, '..', 'gsql.tmLanguage.json')
 let wasmPath = path.join(__dirname, '..', 'node_modules', 'vscode-oniguruma', 'release', 'onig.wasm')
+let {keywords, types, operators, punctuation} = createRequire(__filename)('../../integrations/zed/grammar/tokens.js') as {
+  keywords: string[]
+  types: string[]
+  operators: string[]
+  punctuation: string[]
+}
 
 let onigLib = (async () => {
   await loadWASM(await readFile(wasmPath))
@@ -49,6 +56,23 @@ function findToken(tokens: {text: string; scopes: string[]}[], text: string) {
 }
 
 describe('gsql tmLanguage', () => {
+  it('covers every token recognized by the Zed grammar', async () => {
+    let groups = [
+      {tokens: keywords, scope: 'keyword.control.gsql'},
+      {tokens: types, scope: 'storage.type.gsql'},
+      {tokens: operators, scope: 'keyword.operator.'},
+      {tokens: punctuation, scope: 'punctuation.'},
+    ]
+
+    for (let group of groups) {
+      for (let text of group.tokens) {
+        let [line] = await tokenize(text == 'array' ? 'array<string>' : text)
+        let matchingTokens = line.filter(token => token.text.toLowerCase() == text)
+        expect(matchingTokens.some(token => token.scopes.some(scope => scope.startsWith(group.scope))), `Missing ${group.scope} scope for ${JSON.stringify(text)}`).toBe(true)
+      }
+    }
+  })
+
   it('keeps table declaration scope after function calls in measures', async () => {
     let lines = await tokenize(
       `

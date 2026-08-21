@@ -1,0 +1,12 @@
+id = "graphene-data"
+name = "Graphene SQL"
+description = "Graphene SQL language support"
+version = "0.0.1"
+schema_version = 1
+authors = ["Graphene Systems, Inc."]
+repository = "https://github.com/graphene-data/graphene"
+
+[grammars.gsql]
+repository = "https://github.com/graphene-data/graphene"
+rev = "ce442c12a8835f9cd7a618a94e6cdbaeabe8dd75"
+path = "integrations/zed/grammar"
