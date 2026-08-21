@@ -1952,6 +1952,19 @@ describe('lang', () => {
     expect(toSql(queries[0], {name: 'Alice'})).toMatch(/WHERE users\.name='Alice'/)
   })
 
+  it('renders adaptive list params with include mode by default', () => {
+    let included = analyze(`${testTables}\nfrom users select id where name in ($names)`)[0]
+    let excluded = analyze(`${testTables}\nfrom users select id where name not in ($names)`)[0]
+    expect(toSql(included, {names: ['Alice']})).toContain("(('include'='include' AND users.name IN ('Alice')) OR ('include'='exclude' AND users.name NOT IN ('Alice')))")
+    expect(toSql(included, {names: {values: ['Alice']}})).toContain("'include'='include'")
+    expect(toSql(included, {names: {mode: 'exclude', values: ['Alice']}})).toContain("(('exclude'='include' AND users.name IN ('Alice')) OR ('exclude'='exclude' AND users.name NOT IN ('Alice')))")
+    expect(toSql(excluded, {names: {mode: 'exclude', values: ['Alice']}})).toContain("(('exclude'='include' AND users.name NOT IN ('Alice')) OR ('exclude'='exclude' AND users.name IN ('Alice')))")
+
+    setGlobalConfig({dialect: 'bigquery', root: ''})
+    included = analyze(`${testTables}\nfrom users select id where name in ($names)`)[0]
+    expect(toSql(included, {names: []})).toContain('users.name IN (SELECT CAST(NULL AS STRING) WHERE FALSE)')
+  })
+
   it('does not treat $word inside single-quoted strings as params', () => {
     let queries = analyze(`${testTables}
       from users select id where name = '$test'

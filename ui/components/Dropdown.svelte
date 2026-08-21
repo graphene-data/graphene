@@ -44,9 +44,9 @@
   let queryOptions: Option[] = $state([])
   let manualOptions: Option[] = $state([])
   let selection: any[] = $state([])
-  let touched = false
+  // Multiselect params store whichever side of the selection is smaller; selection remains the full UI state.
+  let paramList: {mode: 'include' | 'exclude'; values: any[]} = $state({mode: 'include', values: []})
   let paramInitialized = false
-  let preserveInitialSelection = false
   let queryHandler: ((res: {rows?: any[]; error?: any}) => void) | null = null
   let queryKey = ''
 
@@ -302,15 +302,20 @@
     if (isOpen && activeIndex >= 0) void tick().then(scrollActiveIntoView)
   })
 
+  // Register the URL/query param and expand its compact list into the options displayed as selected.
   $effect(() => {
-    let defaultParam = !hasNoDefault && defaultValues.length ? writeSelection(defaultValues) : null
-    let unsub = window.$GRAPHENE.param(name, multi ? 'array' : 'scalar', defaultParam, value => {
-      if (!paramInitialized) {
-        preserveInitialSelection = value != null
-        paramInitialized = true
+    let listDefault = !hasNoDefault && defaultValues.length ? {mode: 'include', values: writeSelection(defaultValues)} : {mode: selectAllDefault ? 'exclude' : 'include', values: []}
+    let defaultParam = multi ? listDefault : (!hasNoDefault && defaultValues.length ? writeSelection(defaultValues) : null)
+    let unsub = window.$GRAPHENE.param(name, multi ? 'list' : 'scalar', defaultParam, value => {
+      paramInitialized = true
+      if (multi) {
+        paramList = value
+        let nextSelection = selectionFromList(value)
+        if (!sameSelection(selection, nextSelection)) setSelection(nextSelection, {persist: false})
+        return
       }
-      let nextSelection = readSelection(value)
-      if (!sameSelection(selection, nextSelection)) setSelection(nextSelection, {persist: false})
+      let paramSelection = readSelection(value)
+      if (!sameSelection(selection, paramSelection)) setSelection(paramSelection, {persist: false})
     })
     return unsub
   })
@@ -348,22 +353,18 @@
   })
 
   function syncSelection(fromUser: boolean) {
-    // Reconcile selection with the current option set. Query-derived defaults like
-    // select-all are applied once options are available and before the user interacts.
+    // Reconcile selection with the current option set. Multiselects retain their compact param
+    // while asynchronous or nested options register, then expand it against all available options.
     let opts = availableOptions
     if (!opts.length) {
-      // Keep the bound param initialized even before options load.
-      // This prevents $param references from throwing "Missing param" on first render.
-      updateInputPayload(selection)
+      if (!multi) updateInputPayload(selection)
       return
     }
-    let nextSelection = selection.filter(val => valueMap.has(optionKey(val)))
-    if (!fromUser) {
-      // Manual options register one at a time, so keep expanding a select-all default until the user interacts.
-      // An explicit default or URL value remains authoritative.
-      if (multi && selectAllDefault && !touched && !preserveInitialSelection) nextSelection = opts.map(o => o.value)
+    if (multi) {
+      setSelection(selectionFromList(paramList), {fromUser, persist: false})
+      return
     }
-    setSelection(nextSelection, {fromUser, persist: true})
+    setSelection(selection.filter(val => valueMap.has(optionKey(val))), {fromUser, persist: true})
   }
 
   // Multiple defaults use an array serialized as a string because Markdown attributes cannot safely pass Svelte values.
@@ -398,7 +399,7 @@
   }
 
   function writeSelection(values: any[]) {
-    if (multi) return values.length ? [...values] : null
+    if (multi) return [...values]
     return values.length ? values[0] : null
   }
 
@@ -408,12 +409,26 @@
       return
     }
     selection = values
-    if (fromUser) touched = true
     if (persist) updateInputPayload(selection)
   }
 
+  // Persist the smaller side of a multiselect so large select-all controls keep URLs and requests short.
   function updateInputPayload(values: any[]) {
+    if (!paramInitialized) return
+    if (multi) {
+      let excluded = availableOptions.filter(option => !values.some(selected => optionKey(selected) === optionKey(option.value))).map(option => option.value)
+      let nextList = values.length <= excluded.length ? {mode: 'include' as const, values: [...values]} : {mode: 'exclude' as const, values: excluded}
+      paramList = nextList
+      window.$GRAPHENE.updateParam(name, nextList)
+      return
+    }
     window.$GRAPHENE.updateParam(name, writeSelection(values))
+  }
+
+  // Convert the compact included/excluded set back into the selected options displayed by the control.
+  function selectionFromList(list: {mode: 'include' | 'exclude'; values: any[]}) {
+    if (list.mode == 'include') return list.values.filter(value => valueMap.has(optionKey(value)))
+    return availableOptions.filter(option => !list.values.some(excluded => optionKey(excluded) === optionKey(option.value))).map(option => option.value)
   }
 
   function selectAll() {
