@@ -84,6 +84,7 @@ class AnalysisSession implements Analyzer {
   config: AnalysisConfig
   files: FileInfo[]
   diagnostics: GrapheneError[] = []
+  paramTypes: Record<string, FieldType> = {}
   filesByPath: Record<string, FileInfo> = {}
   computedColumnStack = new Set<Column>() // Track computed columns being analyzed to detect cycles
   viewStack = new Set<Table>() // Also detect view cycles
@@ -398,7 +399,7 @@ class AnalysisSession implements Analyzer {
   }
 
   private analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, parentScope: Scope, ctes: Map<string, CteTable>, opts: {suppressImplicitOrderBy?: boolean} = {}): Query | void {
-    let query: Query = {sql: '', fields: [], joins: [], filters: [], groupBy: [], orderBy: []}
+    let query: Query = {sql: '', fields: [], dialect: this.config.dialect, paramTypes: this.paramTypes, joins: [], filters: [], groupBy: [], orderBy: []}
     let scope: Scope = {...parentScope, query}
     let isAgg = false
     let fanoutExprs: {node: SyntaxNode; expr: Expr}[] = []
@@ -604,6 +605,8 @@ class AnalysisSession implements Analyzer {
     let query: Query = {
       sql: '',
       fields,
+      dialect: this.config.dialect,
+      paramTypes: this.paramTypes,
       joins: [],
       filters: [],
       groupBy: [],
@@ -982,7 +985,8 @@ class AnalysisSession implements Analyzer {
           return {sql: `${expr.sql} ${not ? 'NOT IN' : 'IN'} (${subquery.sql})`, type: scalarType('boolean'), isAgg: expr.isAgg, fanout: expr.fanout}
         }
         if (!valueList) return this.diag(node, 'IN expression must provide either values or a subquery', {sql: 'NULL', type: scalarType('error')})
-        let values = valueList.getChildren('Expression').map(valueNode => {
+        let valueNodes = valueList.getChildren('Expression')
+        let values = valueNodes.map(valueNode => {
           let value = this.analyzeExpr(valueNode, scope)
           // Coerce string literals to temporal types if needed
           if ((isScalarType(expr.type, 'date') || isScalarType(expr.type, 'timestamp')) && isScalarType(value.type, 'string')) {
@@ -990,7 +994,17 @@ class AnalysisSession implements Analyzer {
           }
           return value.sql
         })
-        return {sql: `${expr.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`, type: scalarType('boolean'), isAgg: expr.isAgg, fanout: expr.fanout}
+        let sql = `${expr.sql} ${not ? 'NOT IN' : 'IN'} (${values.join(',')})`
+
+        // A list param may contain either selected or unselected values. Emit both static branches so
+        // runtime filling only chooses a mode literal and never has to rewrite the generated SQL structure.
+        if (valueNodes.length == 1 && valueNodes[0].name == 'Param') {
+          let name = txt(valueNodes[0]).slice(1)
+          let mode = `$__graphene_list_mode_${name}`
+          this.paramTypes[name] = expr.type
+          sql = `((${mode}='include' AND ${sql}) OR (${mode}='exclude' AND ${expr.sql} ${not ? 'IN' : 'NOT IN'} (${values[0]})))`
+        }
+        return {sql, type: scalarType('boolean'), isAgg: expr.isAgg, fanout: expr.fanout}
       }
 
       case 'BetweenExpression': {
