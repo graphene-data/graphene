@@ -723,6 +723,53 @@ test('horizontal bar-like series format the value on their x axis', async ({moun
   expect(formatted).toEqual({axis: '42m', tooltip: '42m'})
 })
 
+test('encoding a column by dimension index formats like encoding it by name', async ({mount, chart}) => {
+  let rows = [
+    {carrier: 'AA', delay: 42},
+    {carrier: 'DL', delay: 58},
+  ]
+  let fields = [
+    {name: 'carrier', type: scalarType('string')},
+    {name: 'delay', type: scalarType('number'), metadata: {unit: 'minutes'}},
+  ]
+
+  await mount('components/ECharts.svelte', {data: {rows, fields}, config: {series: [{type: 'bar', encode: {x: 0, y: 1}}]}})
+  let byIndex = await chart.config(option => {
+    let xAxis = Array.isArray(option.xAxis) ? option.xAxis[0] : option.xAxis
+    let yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    return {x: xAxis.type, y: yAxis.type, axis: yAxis.axisLabel.formatter(42), tooltip: series.tooltip.valueFormatter(42)}
+  })
+
+  expect(byIndex).toEqual({x: 'category', y: 'value', axis: '42m', tooltip: '42m'})
+})
+
+test('dimension indexes resolve against the dataset the config declared', async ({mount, chart}) => {
+  let rows = [
+    {carrier: 'AA', delay: 42},
+    {carrier: 'DL', delay: 58},
+  ]
+  let fields = [
+    {name: 'carrier', type: scalarType('string')},
+    {name: 'delay', type: scalarType('number'), metadata: {unit: 'minutes'}},
+  ]
+
+  // Dimensions here are the reverse of the field order, so an index read off the fields would pick the wrong column.
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    config: {dataset: [{source: rows, dimensions: ['delay', 'carrier']}], series: [{type: 'bar', encode: {x: 1, y: 0}}]},
+  })
+  let encode = (await chart.config(option => {
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    let yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
+    return {encode: series.encode, axis: yAxis.axisLabel.formatter(42)}
+  }))!
+
+  expect(encode.encode.x).toBe('carrier')
+  expect(encode.encode.y).toBe('delay')
+  expect(encode.axis).toBe('42m')
+})
+
 test.skip('can provide a list of colors for different series', async () => {})
 
 test.skip('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
