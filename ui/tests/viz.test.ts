@@ -770,6 +770,37 @@ test('dimension indexes resolve against the dataset the config declared', async 
   expect(encode.axis).toBe('42m')
 })
 
+test('dimension indexes use the series datasetIndex and inherited dimensions', async ({mount, chart}) => {
+  let rows = [
+    {carrier: 'AA', delay: 42},
+    {carrier: 'DL', delay: 58},
+  ]
+  let fields = [
+    {name: 'carrier', type: scalarType('string')},
+    {name: 'delay', type: scalarType('number'), metadata: {unit: 'minutes'}},
+  ]
+
+  // Dataset 2 inherits dataset 1's reversed dimensions. Falling back to dataset 0 or field order swaps x and y.
+  await mount('components/ECharts.svelte', {
+    data: {rows, fields},
+    config: {
+      dataset: [
+        {id: 'other', source: rows, dimensions: ['carrier', 'delay']},
+        {id: 'source', source: rows, dimensions: ['delay', 'carrier']},
+        {fromDatasetId: 'source', transform: {type: 'filter', config: {dimension: 'carrier', '=': 'AA'}}},
+      ],
+      series: [{type: 'bar', datasetIndex: 2, encode: {x: 1, y: 0}}],
+    },
+  })
+  let formatted = await chart.config(option => {
+    let series = Array.isArray(option.series) ? option.series[0] : option.series
+    let yAxis = Array.isArray(option.yAxis) ? option.yAxis[0] : option.yAxis
+    return {encode: series.encode, axis: yAxis.axisLabel.formatter(42), tooltip: series.tooltip.valueFormatter(42)}
+  })
+
+  expect(formatted).toEqual({encode: {x: 'carrier', y: 'delay'}, axis: '42m', tooltip: '42m'})
+})
+
 test.skip('can provide a list of colors for different series', async () => {})
 
 test.skip('line chart seriesLabelFmt formats date series names', async ({mount, chart}) => {
