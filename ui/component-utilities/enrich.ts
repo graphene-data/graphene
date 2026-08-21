@@ -416,6 +416,14 @@ function computeTitleLegendAndGridPadding(config: NormalConfig) {
     scrollLegend.type ||= 'scroll'
     scrollLegend.animationDurationUpdate ??= 0
     grid.top = numericOffset(grid.top, 24)
+
+    // ECharts centers end-positioned names over each axis line. Align them outward in the same direction as
+    // their tick labels instead, making each side read as one axis.
+    for (let [axisIndex, axis] of config.yAxis.entries()) {
+      if (axis?.show === false || !axis?.name || (axis.nameLocation != null && axis.nameLocation !== 'end') || axis.nameRotate != null) continue
+      let onRight = axis.position === 'right' || (axis.position == null && axisIndex > 0)
+      axis.nameTextStyle = {align: onRight ? 'left' : 'right', ...axis.nameTextStyle}
+    }
   }
 }
 
