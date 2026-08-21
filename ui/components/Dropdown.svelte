@@ -593,7 +593,6 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
-    margin: 8px 0;
   }
   @media print {
     .hide-print {
