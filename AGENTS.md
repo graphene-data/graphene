@@ -6,10 +6,13 @@ Dashboards and reports can be built in mdx with components like <BarChart>. Quer
 
 - /docs - how to use Graphene (key docs are docs/base.md and docs/cli.md).
 - /cli - wrapper for transforming or executing queries. Can also run a "dev mode" server that locally hosts your reports.
+- /create - `create-graphene`, the `npm create graphene` scaffolder for new projects.
 - /examples - a series of example datasets and graphene code. `flights` is the go-to as it's local, fast, and doesn't require auth.
-- /lang - language server that can parse our custom sql, generate diagnostics, and transform to dialect-specific SQL.
+- /lang - parses our custom sql, analyzes it for errors, and transforms it to dialect-specific SQL.
+- /language-server - Volar-based LSP server built on /lang; powers diagnostics for /vscode and other editors.
 - /ui - the frontend that wraps rendered user md files, as well as the components that can be used in md.
 - /vscode - an extension that provides syntax highlighting and diagnostics on queries.
+- /integrations - editor grammars for GSQL outside VS Code, e.g. the Tree-sitter grammar used by Zed.
 
 # Tech stack
 
