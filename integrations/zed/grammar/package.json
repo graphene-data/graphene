@@ -1,0 +1,7 @@
+{
+  "name": "tree-sitter-gsql",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Highlighting-oriented Tree-sitter grammar for Graphene SQL",
+  "main": "bindings/node"
+}

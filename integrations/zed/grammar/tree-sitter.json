@@ -1,0 +1,18 @@
+{
+  "grammars": [
+    {
+      "name": "gsql",
+      "scope": "source.gsql",
+      "path": ".",
+      "file-types": ["gsql"]
+    }
+  ],
+  "metadata": {
+    "version": "0.0.1",
+    "license": "Elastic-2.0",
+    "description": "Highlighting-oriented Tree-sitter grammar for Graphene SQL",
+    "authors": [{"name": "Graphene Systems, Inc."}],
+    "links": {"repository": "https://github.com/graphene-data/graphene"}
+  },
+  "bindings": {"c": true}
+}
