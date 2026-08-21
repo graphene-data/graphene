@@ -40,13 +40,6 @@ You don't need to configure these — Graphene applies them by default:
 
 Your config typically only needs to specify the series `type`, `encode` mappings, and any explicit overrides to the above.
 
-Metadata formatting follows the `encode` mapping, so it needs the value column named there - `y` for a vertical
-cartesian series, `x` for a horizontal one, and `value` for the types that use it (pie, funnel, treemap, sankey,
-themeRiver). A series that carries its numbers in a literal `series.data` array, or encodes them by dataset
-dimension index (`encode: {y: 1}`), has no column to read metadata from, so those values render unformatted.
-Anything you set yourself wins over the default, so `axisLabel.formatter`, `series.tooltip.valueFormatter`,
-`tooltip.formatter`, and `label.formatter` are all still yours to override.
-
 ## Encode fields by series type
 
 Each series type maps columns via `encode`. Graphene accepts:

@@ -16,6 +16,7 @@ import {paletteForPath} from './theme.ts'
 // Run enrichment in a fixed order so defaults stay predictable.
 export function enrich(config: EChartsConfig, rows: Record<string, any>[], fields: Field[]) {
   let normalized = normalize(config)
+  nameEncodedDimensions(normalized, fields)
   ensureAxes(normalized)
   ensureTooltip(normalized)
   ensureColors(normalized)
@@ -244,6 +245,37 @@ function buildSplitSeries(template: SeriesWithGroupingHint, datasetId: string, n
     delete next.encode.splitBy
   }
   return next
+}
+
+// ECharts lets a series encode a column either by name or by its position in the dataset's dimensions, so
+// `encode: {y: 1}` and `encode: {y: 'revenue'}` mean the same thing to it. Every enrichment that reads metadata
+// looks columns up by name, so rewrite the positional form into the name it refers to and they all keep working.
+// Indices we can't place - no dimensions to read, or a position outside them - are left alone for ECharts to
+// resolve as it normally would.
+function nameEncodedDimensions(config: NormalConfig, fields: Field[]) {
+  for (let series of config.series) {
+    if (!series?.encode) continue
+    let dimensions = datasetDimensions(config, series) ?? fields.map(field => field.name)
+    let encode = series.encode as Record<string, unknown>
+
+    for (let [prop, value] of Object.entries(encode)) {
+      encode[prop] = Array.isArray(value) ? value.map(entry => dimensionName(entry, dimensions)) : dimensionName(value, dimensions)
+    }
+  }
+}
+
+// The dimension names a series reads through its dataset. Undefined when the config didn't declare any, since
+// the dataset we build ourselves doesn't exist yet at this point in enrichment.
+function datasetDimensions(config: NormalConfig, series: SeriesWithGroupingHint) {
+  let dataset = series.datasetId != null ? config.dataset.find(entry => entry?.id === series.datasetId) : config.dataset.find(entry => entry?.source != null)
+  let dimensions = dataset?.dimensions
+  if (!Array.isArray(dimensions)) return undefined
+  return dimensions.map(dimension => (typeof dimension === 'string' ? dimension : (dimension as {name?: string})?.name))
+}
+
+function dimensionName(value: unknown, dimensions: (string | undefined)[]) {
+  if (typeof value !== 'number' || !Number.isInteger(value)) return value
+  return dimensions[value] ?? value
 }
 
 // Ensure cartesian series always have at least one x/y axis object.
