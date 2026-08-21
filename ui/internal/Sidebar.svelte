@@ -80,7 +80,7 @@
     gap: 0;
     margin-top: 10px;
     padding: 0.25rem 0;
-    overflow-y: auto;
+    overflow: hidden auto;
     font-family: var(--font-ui);
     -webkit-mask-image: var(--fade-edges);
     mask-image: var(--fade-edges);
@@ -104,6 +104,10 @@
   .sb-panel :global(.sb-group-label) {
     width: 100%;
     padding: 0.375rem 0.5rem 0.25rem;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: var(--color-muted);
     font-size: 0.6875rem;
     font-weight: 700;
