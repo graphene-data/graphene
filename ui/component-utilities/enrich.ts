@@ -403,8 +403,27 @@ function computeTitleLegendAndGridPadding(config: NormalConfig) {
     grid.top = numericOffset(grid.top, isHorizontalBar(config) ? 12 : 28)
   }
 
-  if (legend?.show) {
+  let legendVisible = config.legend.length > 0 && legend?.show !== false
+  if (legendVisible) grid.top = numericOffset(grid.top, 24)
+
+  // A y-axis name at its default "end" location sits above the grid. Reserve its own row instead of
+  // letting it occupy the same row as the legend.
+  let hasTopYAxisName = config.yAxis.some(axis => axis?.show !== false && axis?.name && (axis.nameLocation == null || axis.nameLocation === 'end'))
+  if (legendVisible && hasTopYAxisName) {
+    // ECharts selects the plain/scroll legend implementation before applying theme defaults, so the theme's
+    // scroll type is too late. Its runtime scroll option also has an update animation omitted from the public type.
+    let scrollLegend = legend as typeof legend & {animationDurationUpdate?: number}
+    scrollLegend.type ||= 'scroll'
+    scrollLegend.animationDurationUpdate ??= 0
     grid.top = numericOffset(grid.top, 24)
+
+    // ECharts centers end-positioned names over each axis line. Align them outward in the same direction as
+    // their tick labels instead, making each side read as one axis.
+    for (let [axisIndex, axis] of config.yAxis.entries()) {
+      if (axis?.show === false || !axis?.name || (axis.nameLocation != null && axis.nameLocation !== 'end') || axis.nameRotate != null) continue
+      let onRight = axis.position === 'right' || (axis.position == null && axisIndex > 0)
+      axis.nameTextStyle = {align: onRight ? 'left' : 'right', ...axis.nameTextStyle}
+    }
   }
 }
 

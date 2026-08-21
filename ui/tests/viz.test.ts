@@ -32,6 +32,21 @@ function timeseriesWithMultipleY() {
   return data
 }
 
+function dualAxisLegendData() {
+  let rows = [
+    {month: '2024-01-01', revenue: 105000, response_time: 14},
+    {month: '2024-02-01', revenue: 118000, response_time: 12},
+    {month: '2024-03-01', revenue: 126000, response_time: 10},
+    {month: '2024-04-01', revenue: 121000, response_time: 8},
+  ]
+  let fields = [
+    {name: 'month', type: scalarType('date'), metadata: {timeGrain: 'month'}},
+    {name: 'revenue', type: scalarType('number'), metadata: {currency: 'USD'}},
+    {name: 'response_time', type: scalarType('number')},
+  ]
+  return {rows, fields}
+}
+
 function scatterData() {
   let rows = [
     {segment: 'SMB', efficiency: 42, growth: 28, quality: 55},
@@ -413,6 +428,45 @@ test('line chart supports secondary y axis', async ({mount, chart}) => {
   data.fields.push({name: 'profit_usd0k', type: scalarType('number'), metadata: {currency: 'USD'}})
   await mount('components/LineChart.svelte', {data, x: 'month', y: 'sales_usd0k', y2: 'profit_usd0k'})
   await expect(chart.el).screenshot('line-chart-dual-axis')
+})
+
+test('line chart dual-axis legend stays on one row above the top tick labels', async ({mount, chart}) => {
+  await mount('components/LineChart.svelte', {data: dualAxisLegendData(), x: 'month', y: 'revenue', y2: 'response_time', width: '480px'})
+  await expect(chart.el).screenshot('line-chart-dual-axis-single-row-legend')
+})
+
+test('direct echarts leaves room between a single-row legend and top y-axis names', async ({mount, chart}) => {
+  await mount('components/ECharts.svelte', {
+    data: dualAxisLegendData(),
+    width: '480px',
+    config: {
+      legend: {},
+      xAxis: {},
+      yAxis: [{name: 'Revenue'}, {name: 'Response time', alignTicks: true}],
+      series: [
+        {type: 'line', name: 'Revenue', encode: {x: 'month', y: 'revenue'}},
+        {type: 'line', name: 'Response time', yAxisIndex: 1, encode: {x: 'month', y: 'response_time'}},
+      ],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-dual-axis-legend-axis-name-spacing')
+})
+
+test('direct echarts paginates a long legend above top y-axis names', async ({mount, chart}) => {
+  await mount('components/ECharts.svelte', {
+    data: dualAxisLegendData(),
+    width: '400px',
+    config: {
+      legend: {},
+      xAxis: {},
+      yAxis: [{name: 'Revenue'}, {name: 'Response time', alignTicks: true}],
+      series: [
+        {type: 'line', name: 'Net Revenue After Refunds', encode: {x: 'month', y: 'revenue'}},
+        {type: 'line', name: 'Average Customer Support Response Time in Hours', yAxisIndex: 1, encode: {x: 'month', y: 'response_time'}},
+      ],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-dual-axis-long-legend-axis-name-spacing')
 })
 
 test('line charts hide markers on timeseries', async ({mount, chart}) => {
