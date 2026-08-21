@@ -139,7 +139,7 @@
       "patterns": [
         {
           "name": "keyword.control.gsql",
-          "match": "(?i)\\b(SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|ALTER|DROP|TRUNCATE|REPLACE|VIEW|TABLE|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|UNIQUE|NOT|NULL|DEFAULT|CHECK|AND|OR|XOR|CASE|WHEN|THEN|ELSE|END|AS|ON|JOIN\\s+ONE|JOIN\\s+MANY|JOIN|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|UNNEST|NATURAL|USING|DISTINCT|ALL|UNION|EXCEPT|INTERSECT|WITH|RECURSIVE|OVER|PARTITION|RANGE|ROWS|BETWEEN|UNBOUNDED|PRECEDING|FOLLOWING|CURRENT|ROW|LIKE|ILIKE|SIMILAR|IN|IS|TRUE|FALSE|UNKNOWN|ESCAPE|ROLLUP|CUBE|FILTER|WITHIN|GROUP|QUALIFY|TOP)\\b"
+          "match": "(?i)\\b(SELECT|FROM|WHERE|GROUP|BY|HAVING|ORDER|LIMIT|OFFSET|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|ALTER|DROP|TRUNCATE|REPLACE|VIEW|TABLE|EXTEND|INDEX|PRIMARY|KEY|FOREIGN|REFERENCES|CONSTRAINT|UNIQUE|NOT|NULL|DEFAULT|CHECK|AND|OR|XOR|CASE|WHEN|THEN|ELSE|END|AS|ON|JOIN\\s+ONE|JOIN\\s+MANY|JOIN|ONE|MANY|INNER|LEFT|RIGHT|FULL|OUTER|CROSS|UNNEST|NATURAL|USING|DISTINCT|ALL|UNION|EXCEPT|INTERSECT|WITH|RECURSIVE|OVER|PARTITION|RANGE|ROWS|BETWEEN|UNBOUNDED|PRECEDING|FOLLOWING|CURRENT|ROW|LIKE|ILIKE|SIMILAR|IN|IS|TRUE|FALSE|UNKNOWN|ESCAPE|ROLLUP|CUBE|FILTER|WITHIN|GROUP|QUALIFY|TOP)\\b"
         }
       ]
     },
@@ -261,7 +261,8 @@
         {"name": "keyword.operator.arithmetic.gsql", "match": "[+\\-*/%]"},
         {"name": "keyword.operator.comparison.gsql", "match": "=|<>|!=|<=|>=|<|>"},
         {"name": "keyword.operator.logical.gsql", "match": "(?i)\\b(NOT|AND|OR|XOR)\\b|\\|\\||&&|!"},
-        {"name": "keyword.operator.concatenation.gsql", "match": "\\|\\|"}
+        {"name": "keyword.operator.concatenation.gsql", "match": "\\|\\|"},
+        {"name": "keyword.operator.cast.gsql", "match": "::"}
       ]
     },
     "member-access": {
@@ -283,6 +284,8 @@
       "patterns": [
         {"name": "punctuation.separator.comma.gsql", "match": ","},
         {"name": "punctuation.terminator.statement.gsql", "match": ";"},
+        {"name": "punctuation.separator.colon.gsql", "match": ":"},
+        {"name": "punctuation.accessor.dot.gsql", "match": "\\."},
         {"name": "punctuation.section.parens.begin.gsql", "match": "\\("},
         {"name": "punctuation.section.parens.end.gsql", "match": "\\)"}
       ]
