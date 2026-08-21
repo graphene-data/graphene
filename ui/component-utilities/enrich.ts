@@ -403,9 +403,13 @@ function computeTitleLegendAndGridPadding(config: NormalConfig) {
     grid.top = numericOffset(grid.top, isHorizontalBar(config) ? 12 : 28)
   }
 
-  if (legend?.show) {
-    grid.top = numericOffset(grid.top, 24)
-  }
+  let legendVisible = config.legend.length > 0 && legend?.show !== false
+  if (legendVisible) grid.top = numericOffset(grid.top, 24)
+
+  // A y-axis name at its default "end" location sits above the grid. Reserve its own row instead of
+  // letting it occupy the same row as the legend.
+  let hasTopYAxisName = config.yAxis.some(axis => axis?.show !== false && axis?.name && (axis.nameLocation == null || axis.nameLocation === 'end'))
+  if (legendVisible && hasTopYAxisName) grid.top = numericOffset(grid.top, 24)
 }
 
 // When you toggle a series in the legend, we re-render the chart.
