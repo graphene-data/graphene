@@ -264,13 +264,18 @@ function nameEncodedDimensions(config: NormalConfig, fields: Field[]) {
   }
 }
 
-// The dimension names a series reads through its dataset. Undefined when the config didn't declare any, since
-// the dataset we build ourselves doesn't exist yet at this point in enrichment.
+// The dimension names a series reads through its dataset. Follow the same id/index selection ECharts uses, then
+// walk through transforms because filtered and sorted datasets inherit their source dataset's dimensions.
 function datasetDimensions(config: NormalConfig, series: SeriesWithGroupingHint) {
-  let dataset = series.datasetId != null ? config.dataset.find(entry => entry?.id === series.datasetId) : config.dataset.find(entry => entry?.source != null)
-  let dimensions = dataset?.dimensions
-  if (!Array.isArray(dimensions)) return undefined
-  return dimensions.map(dimension => (typeof dimension === 'string' ? dimension : (dimension as {name?: string})?.name))
+  let dataset = series.datasetId != null ? config.dataset.find(entry => entry?.id === series.datasetId) : config.dataset[Number(series.datasetIndex ?? 0)]
+
+  while (dataset) {
+    if (Array.isArray(dataset.dimensions)) return dataset.dimensions.map(dimension => (typeof dimension === 'string' ? dimension : (dimension as {name?: string})?.name))
+    let sourceId = dataset.fromDatasetId
+    if (sourceId != null) dataset = config.dataset.find(entry => entry?.id === sourceId)
+    else if (dataset.fromDatasetIndex != null) dataset = config.dataset[Number(dataset.fromDatasetIndex)]
+    else return undefined
+  }
 }
 
 function dimensionName(value: unknown, dimensions: (string | undefined)[]) {
