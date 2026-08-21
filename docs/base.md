@@ -168,7 +168,7 @@ Unsupported:
 Input values are referenced by their `name` as `$name` in Graphene SQL and sync into the page URL query string, preserving state across reloads and shared links.
 
 ### `<Dropdown>`
-Build options from a query using `data` and `value`; optionally use `label` as the displayed column. Other attributes are `title`, `description`, `defaultValue`, `multiple`, `selectAllByDefault`, `noDefault`, and `disableSelectAll`. `name` is required.
+`name` is required. Build options from a query with `data` and `value`; use `label` to display a different column. Optional attributes include `title`, `description`, `defaultValue`, `multiple`, `selectAllByDefault`, `noDefault`, and `disableSelectAll`.
 
 ````md
 ```sql statuses
@@ -181,7 +181,12 @@ select * from orders where status = $status
 ```
 ````
 
-For `multiple=true`, the input produces a list; filter with `where status in ($status)`. Pass multiple defaults as a JSON array string: `<Dropdown name=status multiple=true defaultValue="['Complete', 'Pending']" />`.
+Set `multiple=true` to select a list of values. Multiple defaults use a JSON array:
+
+```md
+<Dropdown name=status multiple=true defaultValue="['Complete', 'Pending']" />
+```
+Filter either kind of multiselect with `WHERE status IN ($status)`. Graphene sends whichever is shorter—the selected or unselected values—and applies `IN` or `NOT IN` automatically. The URL prefixes that compact list with `i:` or `e:`; URLs without a mode use `include`. `selectAllByDefault=true` only changes the initial selection. Empty lists are handled automatically.
 
 Static options can be nested inside the dropdown as `<DropdownOption value="complete" valueLabel="Complete" />`; `value` is required and `valueLabel` defaults to it.
 

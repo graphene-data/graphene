@@ -34,7 +34,7 @@ from flights
 where carrier = $carrier
   and origin = $origin
   and extract(year from dep_time) = cast($year as integer)
-  and destination not in ($excluded_invalid)
+  and destination in ($excluded_invalid)
 select destination, count() as flights
 order by flights desc, destination
 limit 10
@@ -45,7 +45,7 @@ from flights
 where carrier = $carrier
   and origin = $origin
   and extract(year from dep_time) = cast($year as integer)
-  and destination not in ($excluded_valid)
+  and destination in ($excluded_valid)
 select destination, count() as flights
 order by flights desc, destination
 limit 10

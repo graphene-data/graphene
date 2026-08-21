@@ -124,12 +124,12 @@ test('dropdown selection supports single and bulk interactions', async ({server,
   expect(optionLabels).toEqual([...optionLabels].sort((a, b) => a.localeCompare(b, undefined, {numeric: true})))
   await page.getByRole('button', {name: 'Select all'}).click()
   await expect(menu.locator('.dropdown-option.is-selected')).toHaveCount(optionLabels.length)
-  expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: optionLabels})
+  expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: {mode: 'exclude', values: []}})
   await lockOpenDropdownWidth(page)
   await expect(menu).screenshot('dropdown-multi-select-all')
   await page.getByRole('button', {name: 'Clear selection'}).click()
   await expect(trigger).toContainText('Pick carriers')
-  expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: null})
+  expect(await lastParamUpdate(page, 'carrier_multi')).toEqual({name: 'carrier_multi', value: {mode: 'include', values: []}})
   await page.keyboard.press('Escape')
 })
 
@@ -295,6 +295,91 @@ test('static dropdown options apply select-all as each option registers', async 
   await expect(page.getByRole('listbox').locator('.dropdown-option.is-selected')).toHaveCount(3)
   await lockOpenDropdownWidth(page)
   await expect(page.getByRole('listbox')).screenshot('dropdown-manual-select-all-default')
+})
+
+test('multiselect URL state escapes commas inside values', async ({server, page}) => {
+  await loadDropdownPage(
+    server,
+    page,
+    `
+    <Dropdown name="markets" title="Markets" multiple=true>
+      <DropdownOption value="North, East" />
+      <DropdownOption value="South" />
+    </Dropdown>
+  `,
+  )
+
+  await page.getByRole('combobox', {name: 'Markets'}).click()
+  await page.getByRole('option', {name: 'North, East'}).click()
+  await expect.poll(() => readSearchParams(page)).toEqual({markets: 'i:North\\, East'})
+
+  await page.reload()
+  await waitForGrapheneLoad(page)
+  await page.getByRole('combobox', {name: 'Markets'}).click()
+  await expect(page.getByRole('option', {name: 'North, East'})).toHaveAttribute('aria-selected', 'true')
+})
+
+test('multiselects choose compact URL modes and apply them to query results', async ({server, page}) => {
+  let queryBodies: any[] = []
+  server.mockFile(
+    '/index.md',
+    `
+    # Multiselect filters
+
+    \`\`\`sql carrier_options
+    from flights select carrier as code group by 1 order by 1
+    \`\`\`
+
+    <Dropdown name=included_carriers data=carrier_options value=code title="Included carriers" multiple=true />
+    <Dropdown name=allowed_carriers data=carrier_options value=code title="Allowed carriers" multiple=true selectAllByDefault=true />
+
+    \`\`\`sql filtered_carriers
+    from flights
+    where carrier in ($included_carriers) and carrier in ($allowed_carriers)
+    select carrier, count() as flights group by 1 order by 1
+    \`\`\`
+
+    <BarChart title="Filtered carriers" data=filtered_carriers x=carrier y=flights />
+  `,
+  )
+  await page.route('**/_api/query', async route => {
+    queryBodies.push(route.request().postDataJSON())
+    await route.continue()
+  })
+
+  let filteredRequests = () => queryBodies.filter(body => body.gsql.includes('carrier in ($included_carriers)'))
+
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  await expect.poll(() => filteredRequests().at(-1)?.params).toEqual({included_carriers: {mode: 'include', values: []}, allowed_carriers: {mode: 'exclude', values: []}})
+  await expect.poll(() => readSearchParams(page)).toEqual({})
+
+  await page.getByRole('combobox', {name: 'Included carriers'}).click()
+  await page.getByRole('option', {name: 'AA'}).click()
+  await page.keyboard.press('Escape')
+  await expect.poll(() => readSearchParams(page)).toEqual({included_carriers: 'i:AA'})
+  await expect.poll(() => filteredRequests().at(-1)?.params).toEqual({included_carriers: {mode: 'include', values: ['AA']}, allowed_carriers: {mode: 'exclude', values: []}})
+
+  await page.getByRole('combobox', {name: 'Included carriers'}).click()
+  await page.getByRole('option', {name: 'DL'}).click()
+  await page.keyboard.press('Escape')
+
+  await page.getByRole('combobox', {name: 'Allowed carriers'}).click()
+  await page.getByRole('option', {name: 'AA'}).click()
+  await page.keyboard.press('Escape')
+  await expect.poll(() => readSearchParams(page)).toEqual({included_carriers: 'i:AA,DL', allowed_carriers: 'e:AA'})
+  await expect.poll(() => filteredRequests().at(-1)?.params).toEqual({included_carriers: {mode: 'include', values: ['AA', 'DL']}, allowed_carriers: {mode: 'exclude', values: ['AA']}})
+  await expect(page.locator('.echarts')).screenshot('dropdown-multiselect-exclude-mode')
+
+  // Once only a few values remain selected, the select-all dropdown switches to the smaller inclusion list.
+  await page.getByRole('combobox', {name: 'Allowed carriers'}).click()
+  await page.getByRole('button', {name: 'Clear selection'}).click()
+  await expect.poll(() => filteredRequests().at(-1)?.params.allowed_carriers).toEqual({mode: 'include', values: []})
+  await page.getByRole('option', {name: 'AA'}).click()
+  await expect.poll(() => readSearchParams(page)).toEqual({included_carriers: 'i:AA,DL', allowed_carriers: 'i:AA'})
+  await expect.poll(() => filteredRequests().at(-1)?.params).toEqual({included_carriers: {mode: 'include', values: ['AA', 'DL']}, allowed_carriers: {mode: 'include', values: ['AA']}})
+  await page.getByRole('combobox', {name: 'Allowed carriers'}).click()
+  await expect(page.locator('.echarts')).screenshot('dropdown-multiselect-include-mode')
 })
 
 test('dropdown supports manual options and labelField mapping', async ({server, page}) => {
@@ -477,12 +562,14 @@ test('inputs sync url state on load, change, and reload', {timeout: 20000}, asyn
 
     <TextInput name="search_text" title="Search Text" defaultValue="alpha" />
     <Dropdown name="carrier_multi" data="carrier_options" value="code" label="label" title="Carriers" multiple=true />
+    <Dropdown name="carrier_all" data="carrier_options" value="code" label="label" title="All Carriers" multiple=true selectAllByDefault=true />
     <DateRange name="window" title="Window" start="2024-01-01" end="2024-01-31" />
 
     \`\`\`sql filtered_flights
     from flights select carrier
     where ($search_text is null or carrier = carrier)
       and ($carrier_multi is null or carrier in ($carrier_multi))
+      and carrier in ($carrier_all)
       and ($window_start is null or dep_time >= $window_start)
       and ($window_end is null or dep_time < $window_end)
     limit 5
@@ -501,37 +588,38 @@ test('inputs sync url state on load, change, and reload', {timeout: 20000}, asyn
   await waitForGrapheneLoad(page)
 
   await expect(page.getByLabel('Search Text')).toHaveValue('delta')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('AA')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('UA')
+  await expect(page.getByRole('combobox', {name: 'Carriers', exact: true})).toContainText('AA')
+  await expect(page.getByRole('combobox', {name: 'Carriers', exact: true})).toContainText('UA')
+  await expect(page.getByRole('combobox', {name: 'All Carriers'})).toContainText('selected')
+  expect(await page.evaluate(() => new URLSearchParams(location.search).has('carrier_all'))).toBe(false)
   await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-05')
   await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-12')
   await expect(page.locator('.preset-select')).toHaveValue('Last 7 Days')
   expect(
-    queryBodies.some(
-      body =>
-        JSON.stringify(body.params) ===
-        JSON.stringify({
-          search_text: 'delta',
-          carrier_multi: ['AA', 'UA'],
-          window_start: '2024-01-05',
-          window_end: '2024-01-12',
-        }),
-    ),
+    queryBodies.some(body =>
+      body.params.search_text == 'delta' && body.params.carrier_multi?.mode == 'include' && body.params.carrier_multi?.values.join(',') == 'AA,UA' &&
+      body.params.carrier_all?.mode == 'exclude' && body.params.carrier_all?.values.length == 0 &&
+      body.params.window_start == '2024-01-05' && body.params.window_end == '2024-01-12'),
   ).toBe(true)
 
   await page.getByLabel('Search Text').fill('omega')
   await expect.poll(() => queryBodies.some(body => body.params.search_text === 'omega')).toBe(true)
-  await page.getByRole('combobox', {name: 'Carriers'}).click()
+  await page.getByRole('combobox', {name: 'Carriers', exact: true}).click()
   await page.getByRole('option', {name: 'DL'}).click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('combobox', {name: 'All Carriers'}).click()
+  await page.getByRole('option', {name: 'AA'}).click()
   await page.locator('#daterange-window-start').evaluate((el: HTMLInputElement) => {
     el.value = '2024-01-08'
     el.dispatchEvent(new Event('change', {bubbles: true}))
   })
+  await expect.poll(() => queryBodies.some(body => JSON.stringify(body.params.carrier_all) === JSON.stringify({mode: 'exclude', values: ['AA']}))).toBe(true)
   await expect
     .poll(() => readSearchParams(page))
     .toEqual({
       search_text: 'omega',
-      carrier_multi: ['AA', 'UA', 'DL'],
+      carrier_multi: 'i:AA,UA,DL',
+      carrier_all: 'e:AA',
       window_start: '2024-01-08',
       window_end: '2024-01-12',
     })
@@ -539,9 +627,12 @@ test('inputs sync url state on load, change, and reload', {timeout: 20000}, asyn
   await page.reload()
   await waitForGrapheneLoad(page)
   await expect(page.getByLabel('Search Text')).toHaveValue('omega')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('AA')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('UA')
-  await expect(page.getByRole('combobox', {name: 'Carriers'})).toContainText('DL')
+  await expect(page.getByRole('combobox', {name: 'Carriers', exact: true})).toContainText('AA')
+  await expect(page.getByRole('combobox', {name: 'Carriers', exact: true})).toContainText('UA')
+  await expect(page.getByRole('combobox', {name: 'Carriers', exact: true})).toContainText('DL')
+  await page.getByRole('combobox', {name: 'All Carriers'}).click()
+  await expect(page.getByRole('option', {name: 'AA'})).toHaveAttribute('aria-selected', 'false')
+  await expect(page.getByRole('option', {name: 'UA'})).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('#daterange-window-start')).toHaveValue('2024-01-08')
   await expect(page.locator('#daterange-window-end')).toHaveValue('2024-01-12')
 })
@@ -595,7 +686,7 @@ test('inputs resync from url changes after navigation events', async ({server, p
     .poll(() => queryBodies[queryBodies.length - 1]?.params)
     .toEqual({
       search_text: 'sigma',
-      carrier_multi: ['DL'],
+      carrier_multi: {mode: 'include', values: ['DL']},
       window_start: '2024-01-10',
       window_end: '2024-01-20',
     })

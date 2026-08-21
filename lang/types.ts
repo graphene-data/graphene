@@ -279,6 +279,8 @@ export interface QueryJoin {
 export interface Query {
   sql: string // the complete SQL string
   fields: QueryField[] // SELECT columns
+  dialect?: string // dialect used to generate SQL and fill dialect-specific parameter values
+  paramTypes?: Record<string, FieldType> // types inferred where parameters are compared with fields
   joins: QueryJoin[] // JOINs needed for this query
   filters: Filter[] // WHERE/HAVING conditions
   groupBy: string[] // field names for GROUP BY
