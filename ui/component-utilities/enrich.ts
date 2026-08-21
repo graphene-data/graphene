@@ -409,7 +409,14 @@ function computeTitleLegendAndGridPadding(config: NormalConfig) {
   // A y-axis name at its default "end" location sits above the grid. Reserve its own row instead of
   // letting it occupy the same row as the legend.
   let hasTopYAxisName = config.yAxis.some(axis => axis?.show !== false && axis?.name && (axis.nameLocation == null || axis.nameLocation === 'end'))
-  if (legendVisible && hasTopYAxisName) grid.top = numericOffset(grid.top, 24)
+  if (legendVisible && hasTopYAxisName) {
+    // ECharts selects the plain/scroll legend implementation before applying theme defaults, so the theme's
+    // scroll type is too late. Its runtime scroll option also has an update animation omitted from the public type.
+    let scrollLegend = legend as typeof legend & {animationDurationUpdate?: number}
+    scrollLegend.type ||= 'scroll'
+    scrollLegend.animationDurationUpdate ??= 0
+    grid.top = numericOffset(grid.top, 24)
+  }
 }
 
 // When you toggle a series in the legend, we re-render the chart.

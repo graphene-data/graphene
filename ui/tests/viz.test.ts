@@ -452,6 +452,23 @@ test('direct echarts leaves room between a single-row legend and top y-axis name
   await expect(chart.el).screenshot('echarts-dual-axis-legend-axis-name-spacing')
 })
 
+test('direct echarts paginates a long legend above top y-axis names', async ({mount, chart}) => {
+  await mount('components/ECharts.svelte', {
+    data: dualAxisLegendData(),
+    width: '400px',
+    config: {
+      legend: {},
+      xAxis: {},
+      yAxis: [{name: 'Revenue'}, {name: 'Response time', alignTicks: true}],
+      series: [
+        {type: 'line', name: 'Net Revenue After Refunds', encode: {x: 'month', y: 'revenue'}},
+        {type: 'line', name: 'Average Customer Support Response Time in Hours', yAxisIndex: 1, encode: {x: 'month', y: 'response_time'}},
+      ],
+    },
+  })
+  await expect(chart.el).screenshot('echarts-dual-axis-long-legend-axis-name-spacing')
+})
+
 test('line charts hide markers on timeseries', async ({mount, chart}) => {
   await mount('components/LineChart.svelte', {data: denseTimeseries(), x: 'ts', y: 'value', title: 'Dense Time Axis'})
   await expect(chart.el).screenshot('line-chart-timeseries-hide-markers')
