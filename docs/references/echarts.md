@@ -36,6 +36,7 @@ You don't need to configure these — Graphene applies them by default:
 - Axes: created if missing, types inferred from field metadata (time, category, value), tick formatting applied
 - Layout: grid padding computed to prevent title/legend overlap
 - Style: color palette, fonts, axis borders, split lines, and series marker defaults (via the Graphene theme)
+- Values: axis ticks, tooltips, and bar labels formatted from the column's metadata (`#currency`, `#unit`, `#ratio`, `#pct`, `#precision`, `#timeGrain`, `#timeOrdinal`)
 
 Your config typically only needs to specify the series `type`, `encode` mappings, and any explicit overrides to the above.
 
@@ -45,7 +46,7 @@ Each series type maps columns via `encode`. Graphene accepts:
 
 | Series type | Encode fields |
 |-------------|---------------|
-| `bar`, `line`, `scatter`, `candlestick`, `heatmap`, `effectScatter` | `x`, `y`, `splitBy` |
+| `bar`, `pictorialBar`, `line`, `scatter`, `candlestick`, `heatmap`, `effectScatter` | `x`, `y`, `splitBy` |
 | `pie`, `funnel` | `itemName`, `value` |
 | `treemap` | `itemName`, `value` |
 | `sankey`, `chord` | `source`, `target`, `value` |
