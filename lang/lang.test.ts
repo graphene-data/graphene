@@ -1055,6 +1055,40 @@ describe('lang', () => {
     expect(query.fields[1].metadata).toBeUndefined()
   })
 
+  it('infers metadata from common function kinds', () => {
+    updateFile(
+      `table metrics (
+        issue_year int -- Issue year #timeGrain=year #source=warehouse
+        revenue int -- Revenue #currency=USD #unit=dollars #ratio #pii
+        cost int -- Cost #currency=USD #unit=dollars #ratio
+        foreign_cost int -- Foreign cost #currency=EUR #unit=dollars
+      )`,
+      'metrics.gsql',
+    )
+
+    let [idempotent] = analyze('from metrics select min(issue_year) as earliest_year, avg(issue_year) as average_year, median(issue_year) as median_year, p50(issue_year) as percentile_year, floor(issue_year) as floored_year, round(issue_year) as rounded_year')
+    for (let field of idempotent.fields) expect(field.metadata).toMatchObject({timeGrain: 'year', source: 'warehouse'})
+
+    let [additive] = analyze('from metrics select sum(revenue) as total_revenue')
+    expect(additive.fields[0].metadata).toMatchObject({currency: 'USD', unit: 'dollars', pii: 'true'})
+    expect(additive.fields[0].metadata?.ratio).toBeUndefined()
+    expect(additive.fields[0].metadata?.description).toBeUndefined()
+
+    let [selection] = analyze('from metrics select least(revenue, cost) as usd_value, least(revenue, foreign_cost) as mixed_currency')
+    expect(selection.fields[0].metadata).toMatchObject({currency: 'USD', unit: 'dollars', ratio: 'true', pii: 'true'})
+    expect(selection.fields[1].metadata).toMatchObject({unit: 'dollars'})
+    expect(selection.fields[1].metadata?.currency).toBeUndefined()
+  })
+
+  it('preserves inferred function metadata through window expressions', () => {
+    updateFile(`table events (
+      issue_year int -- Issue year #timeGrain=year
+    )`, 'events.gsql')
+
+    let [query] = analyze('from events select min(issue_year) over () as earliest_year')
+    expect(query.fields[0].metadata).toMatchObject({timeGrain: 'year'})
+  })
+
   it('preserves non-temporal field metadata through casts', () => {
     updateFile(
       `table revenue (

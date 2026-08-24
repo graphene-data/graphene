@@ -1,6 +1,7 @@
 // Type definitions for SQL function references
 // These are used to define functions in a human-readable format that gets converted to overloads for type checking
 
+import type {MetadataKind} from './metadata.ts'
 import {type Expr, type FieldMeta} from './types.ts'
 
 export type SQLType = 'string' | 'number' | 'boolean' | 'date' | 'time' | 'timestamp' | 'json' | 'any' | 'bytes'
@@ -44,7 +45,7 @@ export interface FunctionDef {
   // For functions with multiple overloads (e.g., string_agg with/without separator)
   // When present, `args` and `returns` are ignored in favor of overloads
   overloads?: FunctionOverload[]
-  // Metadata automatically attached to the result of this function.
-  // Can be static or computed from analyzed args.
-  metadata?: FieldMeta | ((args: Expr[]) => FieldMeta | undefined)
+  // Metadata automatically attached to the result. A kind applies Graphene's shared
+  // propagation rules; an object or callback explicitly derives the complete metadata.
+  metadata?: MetadataKind | FieldMeta | ((args: Expr[]) => FieldMeta | undefined)
 }

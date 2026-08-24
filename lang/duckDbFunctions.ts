@@ -106,6 +106,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'lag',
+    metadata: 'idempotent',
     description: trim('lag(expr, offset, default) returns a prior row value within the window partition.'),
     url: `${duck}/window_functions.html#lagexpr-offset-default-order-by-ordering-ignore-nulls`,
     args: [
@@ -118,6 +119,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'lead',
+    metadata: 'idempotent',
     description: trim('lead(expr, offset, default) returns a following row value within the window partition.'),
     url: `${duck}/window_functions.html#leadexpr-offset-default-order-by-ordering-ignore-nulls`,
     args: [
@@ -130,6 +132,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'first_value',
+    metadata: 'idempotent',
     description: trim('first_value(expr) returns the first value in the window frame.'),
     url: `${duck}/window_functions.html#first_valueexpr-order-by-ordering-ignore-nulls`,
     args: [{name: 'expr', type: 'T'}],
@@ -138,6 +141,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'last_value',
+    metadata: 'idempotent',
     description: trim('last_value(expr) returns the last value in the window frame.'),
     url: `${duck}/window_functions.html#last_valueexpr-order-by-ordering-ignore-nulls`,
     args: [{name: 'expr', type: 'T'}],
@@ -146,6 +150,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'nth_value',
+    metadata: 'idempotent',
     description: trim('nth_value(expr, nth) returns the nth value in the window frame.'),
     url: `${duck}/window_functions.html#nth_valueexpr-nth-order-by-ordering-ignore-nulls`,
     args: [
@@ -179,6 +184,7 @@ export const duckDbFunctions: FunctionDef[] = [
 
   {
     name: 'any_value',
+    metadata: 'idempotent',
     description: trim(`
       any_value(arg)
 
@@ -192,6 +198,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'arg_max',
+    metadata: 'idempotent',
     description: trim(`
       arg_max(arg, val)
 
@@ -207,6 +214,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'arg_min',
+    metadata: 'idempotent',
     description: trim(`
       arg_min(arg, val)
 
@@ -222,6 +230,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'avg',
+    metadata: 'idempotent',
     description: trim(`
       avg(arg)
 
@@ -270,6 +279,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'bool_and',
+    metadata: 'idempotent',
     description: trim(`
       bool_and(arg)
 
@@ -283,6 +293,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'bool_or',
+    metadata: 'idempotent',
     description: trim(`
       bool_or(arg)
 
@@ -296,6 +307,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'count',
+    metadata: 'counting',
     description: trim(`
       count(arg)
 
@@ -308,6 +320,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'first',
+    metadata: 'idempotent',
     description: trim(`
       first(arg)
 
@@ -320,6 +333,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'last',
+    metadata: 'idempotent',
     description: trim(`
       last(arg)
 
@@ -344,6 +358,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'max',
+    metadata: 'idempotent',
     description: trim(`
       max(arg)
 
@@ -357,6 +372,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'min',
+    metadata: 'idempotent',
     description: trim(`
       min(arg)
 
@@ -398,6 +414,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'sum',
+    metadata: 'additive',
     description: trim(`
       sum(arg)
 
@@ -497,6 +514,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'median',
+    metadata: 'idempotent',
     description: trim(`
       median(x)
 
@@ -509,6 +527,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'mode',
+    metadata: 'idempotent',
     description: trim(`
       mode(x)
 
@@ -521,6 +540,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'quantile_cont',
+    metadata: 'idempotent',
     description: trim(`
       quantile_cont(x, pos)
 
@@ -536,6 +556,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'quantile_disc',
+    metadata: 'idempotent',
     description: trim(`
       quantile_disc(x, pos)
 
@@ -764,6 +785,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'approx_quantile',
+    metadata: 'idempotent',
     description: trim(`
       approx_quantile(x, pos)
 
@@ -779,6 +801,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'reservoir_quantile',
+    metadata: 'idempotent',
     description: trim(`
       reservoir_quantile(x, quantile, sample_size)
 
@@ -801,6 +824,7 @@ export const duckDbFunctions: FunctionDef[] = [
 
   {
     name: 'abs',
+    metadata: 'idempotent',
     description: trim(`
       abs(x)
 
@@ -914,6 +938,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'ceil',
+    metadata: 'idempotent',
     description: trim(`
       ceil(x)
 
@@ -925,6 +950,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'ceiling',
+    metadata: 'idempotent',
     description: trim(`
       ceiling(x)
 
@@ -1002,6 +1028,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'floor',
+    metadata: 'idempotent',
     description: trim(`
       floor(x)
 
@@ -1038,6 +1065,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'greatest',
+    metadata: 'selection',
     description: trim(`
       greatest(x1, x2, ...)
 
@@ -1096,6 +1124,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'least',
+    metadata: 'selection',
     description: trim(`
       least(x1, x2, ...)
 
@@ -1223,6 +1252,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'round',
+    metadata: 'idempotent',
     description: trim(`
       round(v, s)
 
@@ -1303,6 +1333,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'trunc',
+    metadata: 'idempotent',
     description: trim(`
       trunc(x)
 
@@ -3465,6 +3496,7 @@ export const duckDbFunctions: FunctionDef[] = [
 
   {
     name: 'coalesce',
+    metadata: 'selection',
     description: trim(`
       coalesce(expr, ...)
 
@@ -3476,6 +3508,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'ifnull',
+    metadata: 'selection',
     description: trim(`
       ifnull(expr, alt)
 
@@ -3490,6 +3523,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'nullif',
+    metadata: 'idempotent',
     description: trim(`
       nullif(expr1, expr2)
 
@@ -3684,6 +3718,7 @@ export const duckDbFunctions: FunctionDef[] = [
   },
   {
     name: 'count_if',
+    metadata: 'counting',
     description: trim(`
       count_if(condition)
 

@@ -1,6 +1,12 @@
 import type {SyntaxNode} from '@lezer/common'
 
+import type {Expr, FieldMeta} from './types.ts'
+
 import {getFile} from './util.ts'
+
+// Describes how a function relates its result to input values, allowing each metadata key's
+// behavior to stay centralized instead of being repeated across every function definition.
+export type MetadataKind = 'idempotent' | 'selection' | 'additive' | 'counting'
 
 let embeddedMetadataPair = /(^|\s)(#)([A-Za-z0-9_-]+)(?:\s*=\s*("(?:[^"\\]|\\.)*"|[^\s#]+)|(?=(?:\s*(?:#|--|$))))/g
 
@@ -23,6 +29,35 @@ export type MetadataDiagnostic = {
 }
 
 let isoCurrencyCodes = new Set(Intl.supportedValuesOf('currency').map(code => code.toLowerCase()))
+
+// Infer result metadata from the semantic relationship between a function and its inputs.
+// Idempotent/additive functions use their primary argument; selections reconcile all candidates.
+export function resultingMetadata(kind: MetadataKind, args: Expr[]): FieldMeta | undefined {
+  if (kind == 'counting') return
+
+  let metadata = kind == 'selection' ? sharedMetadata(args) : {...args[0]?.metadata}
+
+  // Addition keeps measurement units and sensitivity, but other claims may no longer describe the result.
+  if (kind == 'additive') {
+    for (let key of Object.keys(metadata)) {
+      if (!['currency', 'unit', 'precision', 'pii'].includes(key)) delete metadata[key]
+    }
+  }
+  return Object.keys(metadata).length ? metadata : undefined
+}
+
+// A selection may return any candidate, so only claims shared by every candidate remain true.
+function sharedMetadata(args: Expr[]): FieldMeta {
+  let metadata = {...args[0]?.metadata}
+  for (let key of Object.keys(metadata)) {
+    if (!args.slice(1).every(arg => arg.metadata?.[key] == metadata[key])) delete metadata[key]
+  }
+
+  // Sensitivity follows any possible source rather than requiring every candidate to agree.
+  let pii = args.find(arg => arg.metadata?.pii)?.metadata?.pii
+  if (pii) metadata.pii = pii
+  return metadata
+}
 
 let metadataKeyRules = {
   ratio: {kind: 'flag'},

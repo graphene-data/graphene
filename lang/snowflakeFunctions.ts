@@ -53,6 +53,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'lag',
+    metadata: 'idempotent',
     description: trim('LAG(expr, offset, default) accesses data from a previous row in the window.'),
     url: `${sf}/lag`,
     args: [
@@ -65,6 +66,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'lead',
+    metadata: 'idempotent',
     description: trim('LEAD(expr, offset, default) accesses data from a following row in the window.'),
     url: `${sf}/lead`,
     args: [
@@ -77,6 +79,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'first_value',
+    metadata: 'idempotent',
     description: trim('FIRST_VALUE(expr) returns the first value in the window frame.'),
     url: `${sf}/first_value`,
     args: [{name: 'expr', type: 'T'}],
@@ -85,6 +88,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'last_value',
+    metadata: 'idempotent',
     description: trim('LAST_VALUE(expr) returns the last value in the window frame.'),
     url: `${sf}/last_value`,
     args: [{name: 'expr', type: 'T'}],
@@ -93,6 +97,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'nth_value',
+    metadata: 'idempotent',
     description: trim('NTH_VALUE(expr, n) returns the nth value in the window frame.'),
     url: `${sf}/nth_value`,
     args: [
@@ -126,6 +131,7 @@ export const snowflakeFunctions: FunctionDef[] = [
 
   {
     name: 'any_value',
+    metadata: 'idempotent',
     description: trim(`
       ANY_VALUE( [ DISTINCT ] <expr> )
 
@@ -153,6 +159,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'avg',
+    metadata: 'idempotent',
     description: trim(`
       AVG( [ DISTINCT ] <expr> )
 
@@ -180,6 +187,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'count',
+    metadata: 'counting',
     description: trim(`
       COUNT( [ DISTINCT ] <expr> )
       COUNT(*)
@@ -195,6 +203,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'count_if',
+    metadata: 'counting',
     description: trim(`
       COUNT_IF( <condition> )
 
@@ -252,6 +261,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'max',
+    metadata: 'idempotent',
     description: trim(`
       MAX( <expr> )
 
@@ -265,6 +275,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'max_by',
+    metadata: 'idempotent',
     description: trim(`
       MAX_BY( <value_expr>, <order_expr> )
 
@@ -280,6 +291,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'median',
+    metadata: 'idempotent',
     description: trim(`
       MEDIAN( <expr> )
 
@@ -292,6 +304,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'min',
+    metadata: 'idempotent',
     description: trim(`
       MIN( <expr> )
 
@@ -305,6 +318,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'min_by',
+    metadata: 'idempotent',
     description: trim(`
       MIN_BY( <value_expr>, <order_expr> )
 
@@ -320,6 +334,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'mode',
+    metadata: 'idempotent',
     description: trim(`
       MODE( <expr> )
 
@@ -368,6 +383,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'sum',
+    metadata: 'additive',
     description: trim(`
       SUM( [ DISTINCT ] <expr> )
 
@@ -692,6 +708,7 @@ export const snowflakeFunctions: FunctionDef[] = [
 
   {
     name: 'abs',
+    metadata: 'idempotent',
     description: trim(`
       ABS( <num_expr> )
 
@@ -794,6 +811,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'ceil',
+    metadata: 'idempotent',
     description: trim(`
       CEIL( <input_expr> [, <scale_expr> ] )
 
@@ -902,6 +920,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'floor',
+    metadata: 'idempotent',
     description: trim(`
       FLOOR( <input_expr> [, <scale_expr> ] )
 
@@ -1017,6 +1036,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'round',
+    metadata: 'idempotent',
     description: trim(`
       ROUND( <input_expr> [, <scale_expr> ] [, <rounding_mode> ] )
 
@@ -1108,6 +1128,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'trunc',
+    metadata: 'idempotent',
     description: trim(`
       TRUNC( <input_expr> [, <scale_expr> ] )
       TRUNCATE( <input_expr> [, <scale_expr> ] )
@@ -2138,6 +2159,7 @@ export const snowflakeFunctions: FunctionDef[] = [
 
   {
     name: 'coalesce',
+    metadata: 'selection',
     description: trim(`
       COALESCE( <expr1>, <expr2> [, <exprN> ... ] )
 
@@ -2178,6 +2200,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'greatest',
+    metadata: 'selection',
     description: trim(`
       GREATEST( <expr1> [, <expr2> ... ] )
 
@@ -2204,6 +2227,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'ifnull',
+    metadata: 'selection',
     description: trim(`
       IFNULL( <expr1>, <expr2> )
 
@@ -2218,6 +2242,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'least',
+    metadata: 'selection',
     description: trim(`
       LEAST( <expr1> [, <expr2> ... ] )
 
@@ -2229,6 +2254,7 @@ export const snowflakeFunctions: FunctionDef[] = [
   },
   {
     name: 'nullif',
+    metadata: 'idempotent',
     description: trim(`
       NULLIF( <expr1>, <expr2> )
 
