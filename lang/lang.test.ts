@@ -1981,6 +1981,21 @@ describe('lang', () => {
     expect(sql).toMatch(/\$literal/)
   })
 
+  it('rejects structured values inside array params', () => {
+    let queries = analyze(`${testTables}
+      from users select id where age = $ages
+    `)
+    expect(() => toSql(queries[0], {ages: [['0); DROP TABLE users; --']]})).toThrow(/Unsupported param value for \$ages/)
+  })
+
+  it('escapes ClickHouse backslashes before quoting params', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    let queries = analyze(`${testTables}
+      from users select id where name = $name
+    `)
+    expect(toSql(queries[0], {name: "\\'; DROP TABLE users; --"})).toContain("'\\\\''; DROP TABLE users; --'")
+  })
+
   it('supports duckdb current datetime functions', () => {
     expect(`
       from users select
