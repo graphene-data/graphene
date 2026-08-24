@@ -227,7 +227,9 @@ function renderFunctionSql(fnName: string, overload: Overload, args: Expr[]) {
 }
 
 function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], digits: string, scope: Scope, opts: {isWindow?: boolean} = {}): Expr {
-  let frac = Number(`0.${digits}`)
+  // Pad to at least 2 digits so single-digit shorthand (p1, p5) means the 1st/5th percentile
+  // (0.01, 0.05), not tenths (0.1, 0.5). Digits beyond 2 (e.g. p975) add sub-percentile precision.
+  let frac = Number(`0.${digits.padStart(2, '0')}`)
   if (Number(digits) == 100) return analyzer.diag(node, 'p100 is not allowed', {sql: 'NULL', type: scalarType('error')})
   if (Number(digits) == 0) return analyzer.diag(node, 'p0 is not allowed', {sql: 'NULL', type: scalarType('error')})
   if (analyzer.config.dialect == 'bigquery' && frac > 0.99) return analyzer.diag(node, 'BigQuery only supports up to p99', {sql: 'NULL', type: scalarType('error')})
