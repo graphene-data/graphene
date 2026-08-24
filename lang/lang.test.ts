@@ -606,6 +606,13 @@ describe('lang', () => {
       .toReturnRows([24, 40, 40])
   })
 
+  it('parses single-digit pXX shorthand as the Nth percentile, not tenths', () => {
+    expect('from orders select p5(amount) as p5, p1(amount) as p1, p25(amount) as p25, p975(amount) as p975')
+      .toRenderSql(
+        'select quantile_cont(orders.amount, 0.05) as p5, quantile_cont(orders.amount, 0.01) as p1, quantile_cont(orders.amount, 0.25) as p25, quantile_cont(orders.amount, 0.975) as p975 from orders as orders',
+      )
+  })
+
   it('supports pXX over empty window', () => {
     expect('from orders select id, p50(amount) over () as p50_all order by id')
       .toRenderSql('select orders.id as id, quantile_cont(orders.amount, 0.5) OVER () as p50_all from orders as orders order by 1 asc nulls last')
