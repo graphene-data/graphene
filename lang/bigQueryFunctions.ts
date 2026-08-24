@@ -53,6 +53,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'lag',
+    metadata: 'idempotent',
     description: trim('LAG(value_expression, offset, default_expression) returns data from a previous row in a window.'),
     url: `${bq}/navigation_functions#lag`,
     args: [
@@ -65,6 +66,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'lead',
+    metadata: 'idempotent',
     description: trim('LEAD(value_expression, offset, default_expression) returns data from a following row in a window.'),
     url: `${bq}/navigation_functions#lead`,
     args: [
@@ -77,6 +79,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'first_value',
+    metadata: 'idempotent',
     description: trim('FIRST_VALUE(value_expression) returns the first value in the current window frame.'),
     url: `${bq}/navigation_functions#first_value`,
     args: [{name: 'value_expression', type: 'T'}],
@@ -85,6 +88,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'last_value',
+    metadata: 'idempotent',
     description: trim('LAST_VALUE(value_expression) returns the last value in the current window frame.'),
     url: `${bq}/navigation_functions#last_value`,
     args: [{name: 'value_expression', type: 'T'}],
@@ -93,6 +97,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'nth_value',
+    metadata: 'idempotent',
     description: trim('NTH_VALUE(value_expression, constant_integer_expression) returns the nth value in the frame.'),
     url: `${bq}/navigation_functions#nth_value`,
     args: [
@@ -126,6 +131,7 @@ export const bigQueryFunctions: FunctionDef[] = [
 
   {
     name: 'any_value',
+    metadata: 'idempotent',
     description: trim(`
       ANY_VALUE(expression [HAVING {MAX | MIN} having_expression]) [OVER over_clause]
 
@@ -178,6 +184,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'avg',
+    metadata: 'idempotent',
     description: trim(`
       AVG([DISTINCT] expression) [OVER over_clause]
 
@@ -245,6 +252,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'count',
+    metadata: 'counting',
     description: trim(`
       COUNT(*) [OVER over_clause]
       COUNT([DISTINCT] expression) [OVER over_clause]
@@ -268,6 +276,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'countif',
+    metadata: 'counting',
     aliases: ['count_if'],
     description: trim(`
       COUNTIF([DISTINCT] expression) [OVER over_clause]
@@ -289,6 +298,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'logical_and',
+    metadata: 'idempotent',
     description: trim(`
       LOGICAL_AND(expression)
 
@@ -305,6 +315,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'logical_or',
+    metadata: 'idempotent',
     description: trim(`
       LOGICAL_OR(expression)
 
@@ -321,6 +332,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'max',
+    metadata: 'idempotent',
     description: trim(`
       MAX(expression) [OVER over_clause]
 
@@ -341,6 +353,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'max_by',
+    metadata: 'idempotent',
     description: trim(`
       MAX_BY(x, y)
 
@@ -367,6 +380,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'min',
+    metadata: 'idempotent',
     description: trim(`
       MIN(expression) [OVER over_clause]
 
@@ -387,6 +401,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'min_by',
+    metadata: 'idempotent',
     description: trim(`
       MIN_BY(x, y)
 
@@ -433,6 +448,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'sum',
+    metadata: 'additive',
     description: trim(`
       SUM([DISTINCT] expression) [OVER over_clause]
 
@@ -461,6 +477,7 @@ export const bigQueryFunctions: FunctionDef[] = [
 
   {
     name: 'abs',
+    metadata: 'idempotent',
     description: trim(`
       ABS(X)
 
@@ -590,6 +607,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'ceil',
+    metadata: 'idempotent',
     description: trim(`
       CEIL(X)
 
@@ -604,6 +622,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'ceiling',
+    metadata: 'idempotent',
     description: trim(`
       CEILING(X)
 
@@ -733,6 +752,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'floor',
+    metadata: 'idempotent',
     description: trim(`
       FLOOR(X)
 
@@ -747,6 +767,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'greatest',
+    metadata: 'selection',
     description: trim(`
       GREATEST(X1,...,XN)
 
@@ -789,6 +810,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'least',
+    metadata: 'selection',
     description: trim(`
       LEAST(X1,...,XN)
 
@@ -913,6 +935,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'round',
+    metadata: 'idempotent',
     description: trim(`
       ROUND(X [, N])
 
@@ -1124,6 +1147,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'trunc',
+    metadata: 'idempotent',
     description: trim(`
       TRUNC(X [, N])
 
@@ -1783,6 +1807,7 @@ export const bigQueryFunctions: FunctionDef[] = [
 
   {
     name: 'coalesce',
+    metadata: 'selection',
     description: trim(`
       COALESCE(expr[, ...])
 
@@ -1815,6 +1840,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'ifnull',
+    metadata: 'selection',
     description: trim(`
       IFNULL(expr, null_result)
 
@@ -1833,6 +1859,7 @@ export const bigQueryFunctions: FunctionDef[] = [
   },
   {
     name: 'nullif',
+    metadata: 'idempotent',
     description: trim(`
       NULLIF(expr1, expr2)
 

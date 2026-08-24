@@ -828,7 +828,7 @@ class AnalysisSession implements Analyzer {
         if (isScalarType(base.type, 'error')) return base
         if (!base.canWindow) return this.diag(baseNode, 'Only aggregate or window functions can use OVER', {sql: 'NULL', type: scalarType('error')})
         let over = this.renderOverClause(node.getChild('OverClause')!, scope)
-        return {sql: `${base.sql} OVER (${over})`, type: base.type, isAgg: false}
+        return {sql: `${base.sql} OVER (${over})`, type: base.type, metadata: base.metadata, isAgg: false}
       }
 
       case 'Parenthetical': {

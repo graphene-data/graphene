@@ -281,6 +281,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'lag',
+    metadata: 'idempotent',
     description: trim(`
       lag(expr, offset, default)
 
@@ -297,6 +298,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'lead',
+    metadata: 'idempotent',
     description: trim(`
       lead(expr, offset, default)
 
@@ -313,6 +315,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'first_value',
+    metadata: 'idempotent',
     description: trim(`
       first_value(expr)
 
@@ -325,6 +328,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'last_value',
+    metadata: 'idempotent',
     description: trim(`
       last_value(expr)
 
@@ -337,6 +341,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'nth_value',
+    metadata: 'idempotent',
     description: trim(`
       nth_value(expr, nth)
 
@@ -370,6 +375,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('varSamp', '../aggregate-functions/reference/varsamp', [{name: 'arg', type: 'number'}], 'number', 'Computes sample variance.', {aggregate: true, aliases: ['var_samp']}),
   {
     name: 'any',
+    metadata: 'idempotent',
     description: trim(`
       any(arg)
 
@@ -382,6 +388,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'anylast',
+    metadata: 'idempotent',
     description: trim(`
       anyLast(arg)
 
@@ -396,6 +403,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'avg',
+    metadata: 'idempotent',
     description: trim(`
       avg(arg)
 
@@ -408,6 +416,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'avgif',
+    metadata: 'idempotent',
     description: trim(`
       avgIf(arg, condition)
 
@@ -425,6 +434,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'count',
+    metadata: 'counting',
     description: trim(`
       count(arg)
 
@@ -437,6 +447,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'countif',
+    metadata: 'counting',
     description: trim(`
       countIf(condition)
 
@@ -465,6 +476,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'max',
+    metadata: 'idempotent',
     description: trim(`
       max(arg)
 
@@ -478,6 +490,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'maxif',
+    metadata: 'idempotent',
     description: trim(`
       maxIf(arg, condition)
 
@@ -496,6 +509,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'min',
+    metadata: 'idempotent',
     description: trim(`
       min(arg)
 
@@ -509,6 +523,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'minif',
+    metadata: 'idempotent',
     description: trim(`
       minIf(arg, condition)
 
@@ -527,6 +542,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'sum',
+    metadata: 'additive',
     description: trim(`
       sum(arg)
 
@@ -539,6 +555,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'sumif',
+    metadata: 'additive',
     description: trim(`
       sumIf(arg, condition)
 
@@ -603,6 +620,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('sign', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns -1, 0, or 1 for the sign of x.'),
   {
     name: 'abs',
+    metadata: 'idempotent',
     description: trim(`
       abs(x)
 
@@ -614,6 +632,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'ceil',
+    metadata: 'idempotent',
     description: trim(`
       ceil(x)
 
@@ -625,6 +644,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'ceiling',
+    metadata: 'idempotent',
     description: trim(`
       ceiling(x)
 
@@ -637,6 +657,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'floor',
+    metadata: 'idempotent',
     description: trim(`
       floor(x)
 
@@ -648,6 +669,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'greatest',
+    metadata: 'selection',
     description: trim(`
       greatest(x, ...)
 
@@ -659,6 +681,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'least',
+    metadata: 'selection',
     description: trim(`
       least(x, ...)
 
@@ -698,6 +721,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'round',
+    metadata: 'idempotent',
     description: trim(`
       round(x, precision)
 
@@ -957,6 +981,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   {
     name: 'coalesce',
+    metadata: 'selection',
     description: trim(`
       coalesce(expr, ...)
 
@@ -983,6 +1008,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'ifnull',
+    metadata: 'selection',
     description: trim(`
       ifNull(x, alt)
 
@@ -1011,6 +1037,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
   {
     name: 'nullif',
+    metadata: 'idempotent',
     description: trim(`
       nullIf(x, y)
 

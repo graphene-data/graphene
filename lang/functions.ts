@@ -8,6 +8,7 @@ import {bigQueryFunctions} from './bigQueryFunctions.ts'
 import {clickHouseFunctions, findClickHouseCombinatorOverloads} from './clickHouseFunctions.ts'
 import {duckDbFunctions} from './duckDbFunctions.ts'
 import {extendFanoutPath, mergeFanoutPaths, mergeSensitiveFanouts, normalizeExprFanout} from './fanout.ts'
+import {resultingMetadata} from './metadata.ts'
 import {postgresFunctions} from './postgresFunctions.ts'
 import {snowflakeFunctions} from './snowflakeFunctions.ts'
 import {arrayOf, normalizeScalarType, scalarType, type Expr, type FieldMeta, type FieldType, isArrayType, isScalarType, type Scope, type TypeKind} from './types.ts'
@@ -256,6 +257,7 @@ function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], d
   return {
     sql,
     type: scalarType('number'),
+    metadata: resultingMetadata('idempotent', args),
     isAgg: true,
     canWindow: true,
     fanout: normalizeExprFanout({
@@ -265,9 +267,11 @@ function analyzePercentile(analyzer: Analyzer, node: SyntaxNode, args: Expr[], d
   }
 }
 
+// Resolve explicit function metadata or apply a shared propagation policy for its metadata kind.
 function inferFunctionFieldMetadata(overload: Overload, args: Expr[]): FieldMeta | undefined {
   if (!overload.metadata) return
   if (typeof overload.metadata == 'function') return overload.metadata(args)
+  if (typeof overload.metadata == 'string') return resultingMetadata(overload.metadata, args)
   return overload.metadata
 }
 
