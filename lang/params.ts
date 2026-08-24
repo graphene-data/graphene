@@ -15,21 +15,25 @@ function replaceParams(sql: string, params: Record<string, any>, dialect?: strin
     if (name.startsWith('__graphene_list_mode_')) return `'${listParam(params[name.slice('__graphene_list_mode_'.length)]).mode}'`
     let value = listParam(params[name]).values
     if (value === undefined) throw new Error(`Missing param $${name}`)
-    if (value === null) return 'NULL'
-    if (typeof value === 'string') return `'${value.replace(/'/g, "''")}'`
-    if (typeof value === 'number') return value.toString()
-    if (typeof value === 'boolean') return value ? 'true' : 'false'
     if (Array.isArray(value)) {
       if (!value.length) return emptyArraySql(dialect, paramTypes[name])
-      return value
-        .map(v => {
-          if (typeof v === 'string') return `'${v.replace(/'/g, "''")}'`
-          return String(v)
-        })
-        .join(',')
+      return value.map(item => renderParam(item, name, dialect)).join(',')
     }
-    throw new Error(`Unsupported param type for $${name}: ${typeof value}`)
+    return renderParam(value, name, dialect)
   })
+}
+
+// Render only scalar JSON values. Coercing nested arrays or objects with String() would put
+// their contents into SQL without quoting and allow them to change the query structure.
+function renderParam(value: unknown, name: string, dialect?: string): string {
+  if (value === null) return 'NULL'
+  if (typeof value === 'string') {
+    let escaped = dialect == 'clickhouse' ? value.replace(/\\/g, '\\\\').replace(/'/g, "''") : value.replace(/'/g, "''")
+    return `'${escaped}'`
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) return value.toString()
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+  throw new Error(`Unsupported param value for $${name}`)
 }
 
 // List params carry a compact-set mode; ordinary values remain include-mode params for compatibility.
