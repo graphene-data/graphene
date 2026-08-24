@@ -21,7 +21,8 @@ Every event includes these fields:
 - `repo_slug`: For Cloud projects, the repo slug configured in the Cloud URL. Cloud resolves it only within the authenticated organization.
 - `cli_version`: The Graphene CLI version.
 - `timestamp`: The event time in ISO-8601 format.
-- `ci`: Whether the CLI appears to be running in CI.
+- `agent`: The known agent harness that invoked the CLI, when one can be detected from inherited environment markers. Unknown explicit agent names are reported as `other`; raw environment values and agent session IDs are never sent.
+- `ci`: `1` when the CLI appears to be running in CI, otherwise `0`. CI does not disable telemetry.
 - `node_platform`: The Node platform, such as `darwin` or `linux`.
 - `node_version`: The Node runtime version.
 
