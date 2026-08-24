@@ -48,7 +48,10 @@ export function extractLeadingMetadata(node: SyntaxNode): Record<string, string>
 }
 
 export function extractLeadingMetadataDetails(node: SyntaxNode): {metadata: Record<string, string>; entries: MetadataEntry[]} {
-  let src = getFile(node).contents
+  // Node offsets are in the file's parsed document, which for Markdown pages is the virtual gsql we build
+  // from its fences and components - not the Markdown itself.
+  let file = getFile(node)
+  let src = file.virtualContents ?? file.contents
   if (!src) return {metadata: {}, entries: []}
 
   let pos = node.from

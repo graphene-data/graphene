@@ -26,6 +26,7 @@ type CommonSeriesFields = {
   color?: string
   stack?: string
   datasetId?: string
+  datasetIndex?: number
   data?: unknown
   links?: unknown
   layout?: string
