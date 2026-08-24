@@ -3,7 +3,7 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
-import {getPresentFlags, getProjectHash, getWorkspaceScanCounts, isTelemetryEnabled} from './telemetry/index.ts'
+import {getAgent, getCI, getPresentFlags, getProjectHash, getWorkspaceScanCounts, isTelemetryEnabled} from './telemetry/index.ts'
 import {TelemetryStorage} from './telemetry/storage.ts'
 
 describe('cli telemetry', () => {
@@ -16,6 +16,22 @@ describe('cli telemetry', () => {
     ]
 
     expect(getWorkspaceScanCounts(files)).toEqual({gsql_file_count: 2, md_file_count: 1})
+  })
+
+  it('detects agent harnesses without returning environment values', () => {
+    expect(getAgent({CLAUDECODE: '1'})).toBe('claude-code')
+    expect(getAgent({CLAUDECODE: '1', CLAUDE_CODE_IS_COWORK: '1'})).toBe('claude-cowork')
+    expect(getAgent({CODEX_THREAD_ID: 'private-session-id'})).toBe('codex')
+    expect(getAgent({AI_AGENT: 'github-copilot-cli@1.0'})).toBe('github-copilot')
+    expect(getAgent({AI_AGENT: 'internal-agent-with-sensitive-name'})).toBe('other')
+    expect(getAgent({})).toBeUndefined()
+  })
+
+  it('detects CI without returning provider or environment values', () => {
+    expect(getCI({GITHUB_ACTIONS: 'true'})).toBe(1)
+    expect(getCI({JENKINS_URL: 'https://private.example.com', BUILD_ID: 'secret-build-id'})).toBe(1)
+    expect(getCI({CI: 'false', GITHUB_ACTIONS: 'true'})).toBe(0)
+    expect(getCI({})).toBe(0)
   })
 
   it('tracks only safe flag names, not values', () => {

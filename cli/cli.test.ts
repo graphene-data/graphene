@@ -312,6 +312,7 @@ describe('cli telemetry', () => {
         env: {
           GRAPHENE_TELEMETRY_DISABLED: '0',
           GRAPHENE_TOKEN: 'telemetry-token',
+          CLAUDECODE: '1',
         },
       })
 
@@ -343,6 +344,7 @@ describe('cli telemetry', () => {
         expect(event.install_id).toBeTruthy()
         expect(event.cli_version).toBeTruthy()
         expect(typeof event.ci).toBe('boolean')
+        expect(event.agent).toBe('claude-code')
         expect(event.node_platform).toBeTruthy()
         expect(event.node_version).toBeTruthy()
         expect(typeof event.timestamp).toBe('string')

@@ -12,7 +12,8 @@ export interface CommonEventFields {
   repo_slug?: string
   cli_version: string
   timestamp: string
-  ci: boolean
+  agent?: string
+  ci: 0 | 1
   node_platform: NodeJS.Platform
   node_version: string
 }
