@@ -3,23 +3,13 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
+import {Command} from 'commander'
+
 import type {Config} from '../lang/config.ts'
 
-import {getAgent, getCI, getPresentFlags, getProjectHash, getWorkspaceScanCounts, isTelemetryEnabled} from './telemetry/index.ts'
-import {TelemetryStorage} from './telemetry/storage.ts'
+import {getAgent, getCI, getInstallId, getPresentFlags, getProjectHash, isTelemetryEnabled} from './telemetry.ts'
 
 describe('cli telemetry', () => {
-  it('summarizes workspace scans as file type counts', () => {
-    let files = [
-      {path: 'tables/flights.gsql', contents: 'from flights'},
-      {path: 'tables/carriers.gsql', contents: 'from carriers'},
-      {path: 'reports/index.md', contents: '# Report'},
-      {path: 'README.txt', contents: 'ignore me'},
-    ]
-
-    expect(getWorkspaceScanCounts(files)).toEqual({gsql_file_count: 2, md_file_count: 1})
-  })
-
   it('detects agent harnesses without returning environment values', () => {
     expect(getAgent({CLAUDECODE: '1'})).toBe('claude-code')
     expect(getAgent({CLAUDECODE: '1', CLAUDE_CODE_IS_COWORK: '1'})).toBe('claude-cowork')
@@ -36,16 +26,15 @@ describe('cli telemetry', () => {
     expect(getCI({})).toBe(false)
   })
 
-  it('tracks only safe flag names, not values', () => {
-    expect(getPresentFlags('run', ['run', 'report.md', '--headless', '--query', 'weekly_trends', '--chart', 'Revenue by Region', '--input', 'carrier=AA', '--port', '4170'])).toEqual([
-      'chart',
-      'headless',
-      'input',
-      'port',
-      'query',
-    ])
-    expect(getPresentFlags('serve', ['serve', '--bg', '--port', '4170'])).toEqual(['bg', 'port'])
-    expect(getPresentFlags('schema', ['schema', 'analytics.orders'])).toEqual([])
+  it('derives explicitly passed flag names from Commander', () => {
+    let command = new Command()
+      .option('-c, --chart <chart>', 'Chart to capture')
+      .option('--format <format>', 'Output format', 'table')
+      .option('--headless', 'Run headlessly')
+      .option('--future-option <value>', 'Any newly declared option is tracked automatically')
+    command.parse(['--headless', '--chart', 'Revenue by Region', '--future-option', 'private-value'], {from: 'user'})
+
+    expect(getPresentFlags(command)).toEqual(['chart', 'futureOption', 'headless'])
   })
 
   it('hashes project and sanitized database identity', async () => {
@@ -82,16 +71,13 @@ describe('cli telemetry', () => {
 
     try {
       await fsp.mkdir(path.join(tmpDir, 'node_modules'))
-      let storage = new TelemetryStorage({projectRoot: tmpDir})
-      await storage.init()
-      let firstInstallId = storage.installId
+      let firstInstallId = await getInstallId(tmpDir)
       let telemetryFile = path.join(tmpDir, 'node_modules/.graphene/telemetry.json')
       await fsp.writeFile(telemetryFile, JSON.stringify({installId: firstInstallId, installSeenVersions: ['0.0.27'], lastSeenVersion: '0.0.27'}))
 
-      let nextStorage = new TelemetryStorage({projectRoot: tmpDir})
-      await nextStorage.init()
+      let nextInstallId = await getInstallId(tmpDir)
       expect(firstInstallId).toBeTruthy()
-      expect(nextStorage.installId).toBe(firstInstallId)
+      expect(nextInstallId).toBe(firstInstallId)
       expect(JSON.parse(await fsp.readFile(telemetryFile, 'utf-8'))).toEqual({installId: firstInstallId})
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
@@ -105,9 +91,7 @@ describe('cli telemetry', () => {
       await fsp.mkdir(path.join(tmpDir, 'node_modules'))
       await fsp.writeFile(path.join(tmpDir, 'node_modules/.graphene'), '')
 
-      let storage = new TelemetryStorage({projectRoot: tmpDir})
-      await storage.init()
-      expect(storage.installId).toBeTruthy()
+      expect(await getInstallId(tmpDir)).toBeTruthy()
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
@@ -117,9 +101,7 @@ describe('cli telemetry', () => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-telemetry-no-node-modules-'))
 
     try {
-      let storage = new TelemetryStorage({projectRoot: tmpDir})
-      await storage.init()
-      expect(storage.installId).toBeTruthy()
+      expect(await getInstallId(tmpDir)).toBeTruthy()
       await expect(fsp.access(path.join(tmpDir, 'node_modules'))).rejects.toBeTruthy()
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})

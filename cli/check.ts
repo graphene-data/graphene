@@ -8,12 +8,10 @@ import {analyzeWorkspace, loadWorkspace} from '../lang/core.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {formatError} from './printer.ts'
-import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
 interface CheckOptions {
   fileArg?: string
   log?: (...args: any[]) => void
-  telemetry?: CliTelemetry
 }
 
 export async function check(options: CheckOptions): Promise<boolean> {
@@ -26,7 +24,6 @@ export async function check(options: CheckOptions): Promise<boolean> {
   }
 
   let files = await loadWorkspace(config.root, !targetFile, config.ignoredFiles)
-  options.telemetry?.event('workspace_scanned', {command: 'check', ...getWorkspaceScanCounts(files)})
   if (process.env.NODE_ENV == 'test') {
     for (let [path, contents] of Object.entries(mockFileMap)) {
       if (targetFile && path != targetFile) continue

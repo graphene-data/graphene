@@ -317,21 +317,11 @@ describe('cli telemetry', () => {
       })
 
       expectCliSuccess(res, 'telemetry compile')
-      await waitFor(() => batches.length >= 2)
+      await waitFor(() => batches.length >= 1)
 
       let events = batches.flatMap(batch => batch.events)
-
-      let names = events.map(event => event.event).sort()
-      expect(names).toEqual(['cli_command_completed', 'cli_command_started'])
-
-      let started = events.find(event => event.event == 'cli_command_started')
-      let completed = events.find(event => event.event == 'cli_command_completed')
-
-      expect(started.command).toBe('compile')
-      expect(started.flags).toEqual([])
-      expect(completed.command).toBe('compile')
-      expect(completed.success).toBe(true)
-      expect(completed.exit_code).toBe(0)
+      expect(events).toHaveLength(1)
+      expect(events[0]).toMatchObject({event: 'compile', flags: [], success: true, exit_code: 0})
       expect(events.every(event => event.repo_slug == 'flights')).toBe(true)
       expect(authorizations.every(authorization => authorization == 'Bearer telemetry-token')).toBe(true)
 
