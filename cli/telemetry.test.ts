@@ -3,6 +3,8 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 
+import type {Config} from '../lang/config.ts'
+
 import {getAgent, getCI, getPresentFlags, getProjectHash, getWorkspaceScanCounts, isTelemetryEnabled} from './telemetry/index.ts'
 import {TelemetryStorage} from './telemetry/storage.ts'
 
@@ -28,10 +30,10 @@ describe('cli telemetry', () => {
   })
 
   it('detects CI without returning provider or environment values', () => {
-    expect(getCI({GITHUB_ACTIONS: 'true'})).toBe(1)
-    expect(getCI({JENKINS_URL: 'https://private.example.com', BUILD_ID: 'secret-build-id'})).toBe(1)
-    expect(getCI({CI: 'false', GITHUB_ACTIONS: 'true'})).toBe(0)
-    expect(getCI({})).toBe(0)
+    expect(getCI({GITHUB_ACTIONS: 'true'})).toBe(true)
+    expect(getCI({JENKINS_URL: 'https://private.example.com', BUILD_ID: 'secret-build-id'})).toBe(true)
+    expect(getCI({CI: 'false', GITHUB_ACTIONS: 'true'})).toBe(false)
+    expect(getCI({})).toBe(false)
   })
 
   it('tracks only safe flag names, not values', () => {
@@ -46,20 +48,19 @@ describe('cli telemetry', () => {
     expect(getPresentFlags('schema', ['schema', 'analytics.orders'])).toEqual([])
   })
 
-  it('hashes the nearest package name and never returns it raw', async () => {
-    let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-telemetry-hash-'))
-    let nestedDir = path.join(tmpDir, 'a/b/c')
-    await fsp.mkdir(nestedDir, {recursive: true})
-    await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify({name: 'My-App'}))
-
-    try {
-      let hash = await getProjectHash(nestedDir)
-      expect(hash).toMatch(/^[a-f0-9]{64}$/)
-      expect(hash).not.toContain('My-App')
-      expect(hash).not.toContain('my-app')
-    } finally {
-      await fsp.rm(tmpDir, {recursive: true, force: true})
+  it('hashes project and sanitized database identity', async () => {
+    let cfg: Config = {
+      dialect: 'postgres', envFile: ['.env'], ignoredFiles: [], root: '/tmp', pagesPrefix: '', projectName: 'My-App', port: 4000,
+      postgres: {connectionString: 'postgres://private-user:private-password@db.example.com:5432/analytics?sslmode=require'},
     }
+    let hash = await getProjectHash(cfg)
+    let sameDestination = await getProjectHash({...cfg, postgres: {connectionString: 'postgres://other-user:other-password@db.example.com:5432/analytics?application_name=graphene'}})
+    let otherDatabase = await getProjectHash({...cfg, postgres: {connectionString: 'postgres://private-user:private-password@db.example.com:5432/warehouse'}})
+
+    expect(hash).toMatch(/^[a-f0-9]{64}$/)
+    expect(hash).toBe(sameDestination)
+    expect(hash).not.toBe(otherDatabase)
+    expect(hash).not.toContain('private')
   })
 
   it('respects environment and config opt-out', () => {
@@ -76,7 +77,7 @@ describe('cli telemetry', () => {
     }
   })
 
-  it('persists install and upgrade state', async () => {
+  it('persists a project-local install ID', async () => {
     let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-telemetry-state-'))
 
     try {
@@ -84,32 +85,14 @@ describe('cli telemetry', () => {
       let storage = new TelemetryStorage({projectRoot: tmpDir})
       await storage.init()
       let firstInstallId = storage.installId
-      expect(firstInstallId).toBeTruthy()
-
-      let initialSuccess = await storage.markSuccessfulInvocation('0.0.15')
-      expect(initialSuccess).toEqual({shouldSendInstallSeen: true, fromVersion: undefined})
-      expect(storage.installId).toBe(firstInstallId)
-
-      let repeatSuccess = await storage.markSuccessfulInvocation('0.0.15')
-      expect(repeatSuccess).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
-      expect(storage.installId).toBe(firstInstallId)
-
-      let upgradeSuccess = await storage.markSuccessfulInvocation('0.0.16')
-      expect(upgradeSuccess).toEqual({shouldSendInstallSeen: false, fromVersion: '0.0.15'})
-      expect(storage.installId).toBe(firstInstallId)
-
-      let repeatUpgradeVersion = await storage.markSuccessfulInvocation('0.0.16')
-      expect(repeatUpgradeVersion).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
-      expect(storage.installId).toBe(firstInstallId)
+      let telemetryFile = path.join(tmpDir, 'node_modules/.graphene/telemetry.json')
+      await fsp.writeFile(telemetryFile, JSON.stringify({installId: firstInstallId, installSeenVersions: ['0.0.27'], lastSeenVersion: '0.0.27'}))
 
       let nextStorage = new TelemetryStorage({projectRoot: tmpDir})
       await nextStorage.init()
+      expect(firstInstallId).toBeTruthy()
       expect(nextStorage.installId).toBe(firstInstallId)
-      expect(await nextStorage.markSuccessfulInvocation('0.0.17')).toEqual({shouldSendInstallSeen: false, fromVersion: '0.0.16'})
-
-      let switchBackVersion = await storage.markSuccessfulInvocation('0.0.15')
-      expect(switchBackVersion).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
-      expect(storage.installId).toBe(firstInstallId)
+      expect(JSON.parse(await fsp.readFile(telemetryFile, 'utf-8'))).toEqual({installId: firstInstallId})
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
@@ -125,8 +108,6 @@ describe('cli telemetry', () => {
       let storage = new TelemetryStorage({projectRoot: tmpDir})
       await storage.init()
       expect(storage.installId).toBeTruthy()
-      expect(await storage.markSuccessfulInvocation('0.0.15')).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
-      expect(await storage.markSuccessfulInvocation('0.0.16')).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
@@ -139,7 +120,6 @@ describe('cli telemetry', () => {
       let storage = new TelemetryStorage({projectRoot: tmpDir})
       await storage.init()
       expect(storage.installId).toBeTruthy()
-      expect(await storage.markSuccessfulInvocation('0.0.15')).toEqual({shouldSendInstallSeen: false, fromVersion: undefined})
       await expect(fsp.access(path.join(tmpDir, 'node_modules'))).rejects.toBeTruthy()
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})

@@ -308,7 +308,7 @@ class CliExit {}
 function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number) => never, ...args: any[]) => Promise<void>) {
   return async (...args: any[]) => {
     telemetry = new CliTelemetry(config, libPkg.version)
-    await telemetry.init(config.root)
+    await telemetry.init()
 
     let startedAt = Date.now()
     let exitCode = 0
@@ -335,11 +335,6 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
         caughtError = err
       }
     } finally {
-      if (success) {
-        let {shouldSendInstallSeen, fromVersion} = await telemetry.markSuccessfulInvocation()
-        if (shouldSendInstallSeen) telemetry.event('cli_install_seen')
-        if (fromVersion) telemetry.event('cli_upgraded', {from_version: fromVersion, to_version: libPkg.version})
-      }
       telemetry.event('cli_command_completed', {command, success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
       await checkForUpdate({config, currentVersion: libPkg.version, packageIsPrivate: libPkg.private})
     }
