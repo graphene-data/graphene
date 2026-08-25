@@ -1,3 +1,5 @@
+// Persists the random, project-local install ID used to correlate telemetry across CLI invocations.
+// Storage is best-effort and only uses node_modules when that directory already exists.
 import {randomUUID} from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import path from 'node:path'
@@ -9,9 +11,9 @@ interface TelemetryStorageOptions {
 }
 
 export class TelemetryStorage {
-  private state = defaultState()
-  private options: TelemetryStorageOptions
+  private state: TelemetryState = {installId: randomUUID()}
   private nodeModulesPath?: string
+  private options: TelemetryStorageOptions
 
   constructor(options: TelemetryStorageOptions = {}) {
     this.options = options
@@ -20,68 +22,47 @@ export class TelemetryStorage {
   async init() {
     this.nodeModulesPath = await getNodeModulesPath(this.options)
     let filePath = this.telemetryFilePath()
+    if (!filePath) return
 
     try {
-      if (filePath) this.state = normalizeState(JSON.parse(await fs.readFile(filePath, 'utf-8')), this.state)
+      let stored = JSON.parse(await fs.readFile(filePath, 'utf-8'))
+      if (typeof stored.installId == 'string' && stored.installId) this.state.installId = stored.installId
+      if (Object.keys(stored).some(key => key != 'installId')) await this.write()
+      return
     } catch {
-      // Telemetry storage is best-effort; corrupt or unreadable state should not affect commands.
+      // Missing, corrupt, or unreadable state is replaced when the project cache is writable.
     }
-  }
 
-  read(): TelemetryState {
-    return this.state
+    await this.write()
   }
 
   get installId() {
     return this.state.installId
   }
 
-  async markSuccessfulInvocation(cliVersion: string) {
-    let state = this.read()
-    let hasSeenVersion = state.installSeenVersions.includes(cliVersion)
-    let shouldSendInstallSeen = !state.lastSeenVersion && state.installSeenVersions.length == 0
-    let fromVersion = !hasSeenVersion && state.lastSeenVersion && state.lastSeenVersion != cliVersion ? state.lastSeenVersion : undefined
-
-    let nextState = {
-      ...state,
-      lastSeenVersion: cliVersion,
-      installSeenVersions: [...new Set([...state.installSeenVersions, cliVersion])],
-    }
-    if (!(await this.write(nextState))) return {shouldSendInstallSeen: false, fromVersion: undefined}
-
-    return {shouldSendInstallSeen, fromVersion}
-  }
-
-  private async write(state: TelemetryState) {
+  private async write() {
     let filePath = this.telemetryFilePath()
-    if (!filePath) return false
+    if (!filePath) return
 
     let tmpPath = `${filePath}.tmp-${randomUUID()}`
     try {
-      // Do not create node_modules solely for telemetry; only use the project cache if it already exists.
-      if (this.nodeModulesPath && !(await fs.stat(this.nodeModulesPath)).isDirectory()) return false
+      // Do not create node_modules solely for telemetry; only use the project cache if it still exists.
+      if (this.nodeModulesPath && !(await fs.stat(this.nodeModulesPath)).isDirectory()) return
       await fs.mkdir(path.dirname(filePath), {recursive: true})
-      await fs.writeFile(tmpPath, JSON.stringify(state, null, 2) + '\n')
+      await fs.writeFile(tmpPath, JSON.stringify(this.state, null, 2) + '\n')
       await fs.rename(tmpPath, filePath)
-      this.state = state
-      return true
     } catch {
       try {
         await fs.unlink(tmpPath)
       } catch {
         // Nothing to clean up if the temp file was never created.
       }
-      return false
     }
   }
 
   private telemetryFilePath() {
     if (this.nodeModulesPath) return path.join(this.nodeModulesPath, '.graphene', 'telemetry.json')
   }
-}
-
-function defaultState(): TelemetryState {
-  return {installId: randomUUID(), installSeenVersions: []}
 }
 
 async function getNodeModulesPath(options: TelemetryStorageOptions) {
@@ -95,12 +76,4 @@ async function getNodeModulesPath(options: TelemetryStorageOptions) {
   }
 
   return nodeModules
-}
-
-function normalizeState(state: Partial<TelemetryState>, fallback: TelemetryState): TelemetryState {
-  return {
-    installId: typeof state.installId == 'string' && state.installId ? state.installId : fallback.installId,
-    installSeenVersions: Array.isArray(state.installSeenVersions) ? state.installSeenVersions.filter(version => typeof version == 'string') : fallback.installSeenVersions,
-    ...(typeof state.lastSeenVersion == 'string' ? {lastSeenVersion: state.lastSeenVersion} : {}),
-  }
 }

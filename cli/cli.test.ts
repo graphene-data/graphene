@@ -317,12 +317,12 @@ describe('cli telemetry', () => {
       })
 
       expectCliSuccess(res, 'telemetry compile')
-      await waitFor(() => batches.length >= 3)
+      await waitFor(() => batches.length >= 2)
 
       let events = batches.flatMap(batch => batch.events)
 
       let names = events.map(event => event.event).sort()
-      expect(names).toEqual(['cli_command_completed', 'cli_command_started', 'cli_install_seen'])
+      expect(names).toEqual(['cli_command_completed', 'cli_command_started'])
 
       let started = events.find(event => event.event == 'cli_command_started')
       let completed = events.find(event => event.event == 'cli_command_completed')
@@ -350,46 +350,6 @@ describe('cli telemetry', () => {
         expect(typeof event.timestamp).toBe('string')
         expect(JSON.stringify(event)).not.toContain('from flights select carrier')
       }
-    } finally {
-      await new Promise(resolve => server.close(resolve))
-      await fsp.rm(tmpDir, {recursive: true, force: true})
-    }
-  })
-
-  test('only sends cli_install_seen on the first run for an install', async ({runCli}) => {
-    let tmpDir = await createTelemetryProject('graphene-cli-telemetry-install-seen-')
-    let batches: any[] = []
-    let server = createServer(async (req: IncomingMessage, res: ServerResponse<IncomingMessage>) => {
-      let body = await readRequestBody(req)
-      batches.push(JSON.parse(body))
-      res.statusCode = 204
-      res.end()
-    })
-
-    try {
-      let endpoint = await listen(server)
-      let env = {
-        GRAPHENE_TELEMETRY_DISABLED: '0',
-        GRAPHENE_TELEMETRY_ENDPOINT: endpoint,
-      }
-
-      let first = await runCli(['compile', 'from flights select carrier'], configFor(tmpDir, {telemetry: true}), {env})
-      expectCliSuccess(first, 'telemetry first compile')
-      await waitFor(() => batches.length >= 3)
-      let events = batches.flatMap(batch => batch.events)
-      expect(events.filter(event => event.event == 'cli_install_seen')).toHaveLength(1)
-
-      batches.length = 0
-
-      let second = await runCli(['compile', 'from flights select carrier'], configFor(tmpDir, {telemetry: true}), {env})
-      expectCliSuccess(second, 'telemetry second compile')
-      await waitFor(() => batches.length >= 2)
-
-      events = batches.flatMap(batch => batch.events)
-
-      let names = events.map(event => event.event).sort()
-      expect(names).toEqual(['cli_command_completed', 'cli_command_started'])
-      expect(events.filter(event => event.event == 'cli_install_seen')).toHaveLength(0)
     } finally {
       await new Promise(resolve => server.close(resolve))
       await fsp.rm(tmpDir, {recursive: true, force: true})

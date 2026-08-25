@@ -1,7 +1,7 @@
 // Collects a deliberately small, privacy-safe description of CLI usage and sends it best-effort.
 // Environment detection emits only known agent names and binary CI state, never raw environment values.
 import {createHash} from 'node:crypto'
-import {access, constants, readFile} from 'node:fs/promises'
+import {readdir} from 'node:fs/promises'
 import path from 'node:path'
 
 import type {Config} from '../../lang/config.ts'
@@ -70,13 +70,13 @@ export class CliTelemetry {
     this.storage = new TelemetryStorage({projectRoot: cfg.root})
   }
 
-  async init(cwd = process.cwd()) {
+  async init() {
     this.enabled = isTelemetryEnabled(this.cfg, this.endpoint)
     if (!this.enabled) return
 
     await this.storage.init()
     this.installId = this.storage.installId
-    this.projectHash = await getProjectHash(cwd)
+    this.projectHash = await getProjectHash(this.cfg)
   }
 
   event<K extends TelemetryEventName>(event: K, ...args: TelemetryPayloads[K] extends undefined ? [] : [payload: TelemetryPayloads[K]]) {
@@ -88,11 +88,6 @@ export class CliTelemetry {
 
     let payload = args[0] || {}
     this.send({...this.commonFields(), event, ...payload} as TelemetryEvent)
-  }
-
-  async markSuccessfulInvocation() {
-    if (!this.enabled) return {shouldSendInstallSeen: false, fromVersion: undefined}
-    return await this.storage.markSuccessfulInvocation(this.cliVersion)
   }
 
   private commonFields() {
@@ -176,39 +171,49 @@ export function getWorkspaceScanCounts(files: Pick<WorkspaceFileInput, 'path'>[]
   }
 }
 
-export async function getProjectHash(startDir: string) {
-  let packageJsonPath = await findNearestPackageJson(startDir)
-  if (!packageJsonPath) return undefined
-
-  try {
-    let raw = await readFile(packageJsonPath, 'utf-8')
-    let pkg = JSON.parse(raw)
-    if (typeof pkg.name != 'string') return undefined
-    let normalized = pkg.name.trim().toLowerCase()
-    if (!normalized) return undefined
-    return createHash('sha256').update(`graphene:${normalized}`).digest('hex')
-  } catch {
-    return undefined
-  }
+// Hashes the project name with its effective database destination so copies using different data remain distinct.
+// Connection credentials, usernames, and URL query parameters are deliberately excluded from the input.
+export async function getProjectHash(cfg: Config, env: NodeJS.ProcessEnv = process.env) {
+  let project = cfg.projectName.trim().toLowerCase()
+  let database = await getDatabaseIdentity(cfg, env)
+  return createHash('sha256').update(JSON.stringify(['graphene', project, database])).digest('hex')
 }
 
-async function findNearestPackageJson(startDir: string) {
-  let current = path.resolve(startDir)
-  while (true) {
-    let candidate = path.join(current, 'package.json')
-    if (await pathExists(candidate)) return candidate
-
-    let parent = path.dirname(current)
-    if (parent == current) return null
-    current = parent
+async function getDatabaseIdentity(cfg: Config, env: NodeJS.ProcessEnv) {
+  if (cfg.cloud) return `cloud:${urlLocation(cfg.cloud)}`
+  if (cfg.motherduck) return `motherduck:${env.MOTHERDUCK_DATABASE || cfg.motherduck.database || ''}`
+  if (cfg.dialect == 'bigquery') return `bigquery:${env.BIGQUERY_PROJECT_ID || env.GOOGLE_CLOUD_PROJECT || env.GCLOUD_PROJECT || cfg.bigquery?.projectId || ''}:${cfg.defaultNamespace || ''}`
+  if (cfg.dialect == 'snowflake') return `snowflake:${env.SNOWFLAKE_ACCOUNT || cfg.snowflake?.account || ''}:${env.SNOWFLAKE_DATABASE || cfg.snowflake?.database || ''}`
+  if (cfg.dialect == 'clickhouse') {
+    let url = env.CLICKHOUSE_URL || cfg.clickhouse?.url
+    let database = env.CLICKHOUSE_DATABASE || cfg.clickhouse?.database || cfg.defaultNamespace || 'default'
+    return `clickhouse:${url ? urlLocation(url) : ''}:${database}`
   }
+  if (cfg.dialect == 'postgres') {
+    if (cfg.postgres?.inMemory) return 'postgres:in-memory'
+    let connectionString = env.POSTGRES_URL || env.DATABASE_URL || cfg.postgres?.connectionString
+    if (connectionString) return `postgres:${urlLocation(connectionString)}`
+    let host = env.PGHOST || env.POSTGRES_HOST || cfg.postgres?.host || ''
+    let port = env.PGPORT || env.POSTGRES_PORT || cfg.postgres?.port || 5432
+    let database = env.PGDATABASE || env.POSTGRES_DATABASE || cfg.postgres?.database || ''
+    return `postgres:${host.toLowerCase()}:${port}/${database}`
+  }
+  if (cfg.dialect == 'athena') {
+    let region = env.AWS_REGION || env.AWS_DEFAULT_REGION || cfg.athena?.region || ''
+    let catalog = env.ATHENA_CATALOG || cfg.athena?.catalog || ''
+    let database = env.ATHENA_DATABASE || cfg.athena?.database || cfg.defaultNamespace || ''
+    return `athena:${region}:${catalog}:${database}`
+  }
+
+  let dbPath = env.DUCKDB_PATH || cfg.duckdb?.path
+  if (!dbPath) dbPath = (await readdir(cfg.root)).sort().find(file => file.endsWith('.duckdb'))
+  if (!dbPath) return 'duckdb:'
+  let absolutePath = path.resolve(cfg.root, dbPath)
+  let relativePath = path.relative(cfg.root, absolutePath)
+  return `duckdb:${relativePath.startsWith(`..${path.sep}`) ? path.basename(absolutePath) : relativePath}`
 }
 
-async function pathExists(filePath: string) {
-  try {
-    await access(filePath, constants.F_OK)
-    return true
-  } catch {
-    return false
-  }
+function urlLocation(raw: string) {
+  let url = new URL(raw)
+  return `${url.hostname.toLowerCase()}${url.port ? `:${url.port}` : ''}${url.pathname.replace(/\/$/, '')}`
 }

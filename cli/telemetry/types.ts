@@ -2,8 +2,6 @@ export type TelemetryCommand = 'check' | 'compile' | 'list' | 'login' | 'run' | 
 
 export interface TelemetryState {
   installId: string
-  installSeenVersions: string[]
-  lastSeenVersion?: string
 }
 
 export interface CommonEventFields {
@@ -13,17 +11,12 @@ export interface CommonEventFields {
   cli_version: string
   timestamp: string
   agent?: string
-  ci: 0 | 1
+  ci: boolean
   node_platform: NodeJS.Platform
   node_version: string
 }
 
 export interface TelemetryPayloads {
-  cli_install_seen: undefined
-  cli_upgraded: {
-    from_version: string
-    to_version: string
-  }
   workspace_scanned: {
     command: 'check' | 'compile' | 'list' | 'run' | 'serve'
     gsql_file_count: number
@@ -45,8 +38,6 @@ export type TelemetryEventName = keyof TelemetryPayloads
 export type TelemetryEventFor<K extends TelemetryEventName> = CommonEventFields & {event: K} & (TelemetryPayloads[K] extends undefined ? object : TelemetryPayloads[K])
 export type TelemetryEvent = {[K in TelemetryEventName]: TelemetryEventFor<K>}[TelemetryEventName]
 
-export type CliInstallSeenEvent = TelemetryEventFor<'cli_install_seen'>
-export type CliUpgradedEvent = TelemetryEventFor<'cli_upgraded'>
 export type WorkspaceScannedEvent = TelemetryEventFor<'workspace_scanned'>
 export type CliCommandStartedEvent = TelemetryEventFor<'cli_command_started'>
 export type CliCommandCompletedEvent = TelemetryEventFor<'cli_command_completed'>
