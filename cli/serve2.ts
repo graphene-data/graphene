@@ -20,7 +20,6 @@ import {missingMockFiles, mockFileMap} from './mockFiles.ts'
 import {routeForPage} from './pageRouting.ts'
 import {formatError} from './printer.ts'
 import {runVitePlugin} from './run.ts'
-import {getWorkspaceScanCounts, type CliTelemetry} from './telemetry/index.ts'
 
 // Collect Svelte compiler warnings for test assertions
 export type SvelteWarning = {code: string; message: string; filename?: string}
@@ -35,8 +34,8 @@ const QUERY_VERSION = 3
 let uiRoot: string
 let nodeRequire = createRequire(import.meta.url)
 
-export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
-  let server = await createServer(await createConfig(telemetry))
+export async function serve2(): Promise<ViteDevServer> {
+  let server = await createServer(await createConfig())
   // I originally added this to avoid the page refreshing immediately on load.
   // We def don't want to run it in tests, because its not safe to do in parallel.
   // I'm not sure it's still needed, now that we explicitly list out `optimizeDeps.includes`, refreshes should be rare
@@ -47,7 +46,7 @@ export async function serve2(telemetry?: CliTelemetry): Promise<ViteDevServer> {
   return server
 }
 
-async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
+async function createConfig(): Promise<InlineConfig> {
   uiRoot = path.join(fileURLToPath(import.meta.url), '../../ui')
   let port = config.port
   let svelteRoot = path.dirname(nodeRequire.resolve('svelte/package.json'))
@@ -89,7 +88,7 @@ async function createConfig(telemetry?: CliTelemetry): Promise<InlineConfig> {
       fixHmrForFailedModules(),
       runVitePlugin(),
       handleRequestPlugin,
-      updateWorkspacePlugin(telemetry),
+      updateWorkspacePlugin(),
     ],
     publicDir: path.resolve(uiRoot, 'public'),
     // on the fence about this one. This would make it less likely we need to optimize when alternating between dev and tests.
@@ -273,7 +272,7 @@ function fixHmrForFailedModules() {
 let workspaceLoadPromise: Promise<void> | undefined
 let workspaceFiles: WorkspaceFileInput[] = []
 let mdFiles: {path: string; route: string; title?: string; hideInNav?: boolean}[] = []
-function updateWorkspacePlugin(telemetry?: CliTelemetry) {
+function updateWorkspacePlugin() {
   return {
     name: 'updateWorkspace',
     resolveId(id: string) {
@@ -307,7 +306,6 @@ function updateWorkspacePlugin(telemetry?: CliTelemetry) {
       let refresh = async () => {
         workspaceLoadPromise = (async () => {
           let loaded = await loadWorkspace(config.root, true, config.ignoredFiles)
-          telemetry?.event('workspace_scanned', {command: 'serve', ...getWorkspaceScanCounts(loaded)})
           workspaceFiles = loaded.map(file => {
             let existing = workspaceFiles.find(existing => existing.path == file.path && existing.contents == file.contents)
             return existing?.parsed ? {...file, parsed: existing.parsed} : file

@@ -1,9 +1,10 @@
-import ci from 'ci-info'
 import {randomUUID} from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import path from 'node:path'
 
 import type {Config} from '../lang/config.ts'
+
+import {getCI} from './telemetry.ts'
 
 // The update notifier periodically checks for the latest Graphene version and caches
 // that state in `node_modules/.graphene/update-check.json`. We keep state so every
@@ -267,8 +268,7 @@ function isStrictSemver(version: string) {
 }
 
 function isCiEnv(env: NodeJS.ProcessEnv) {
-  if (env === process.env) return ci.isCI
-  return env.CI == 'true' || env.CI == '1' || !!env.GITHUB_ACTIONS || !!env.BUILDKITE || !!env.CIRCLECI
+  return getCI(env)
 }
 
 function ancestorDirs(startDir: string) {

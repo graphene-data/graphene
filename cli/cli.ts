@@ -19,7 +19,7 @@ import {routeForPage} from './pageRouting.ts'
 import {formatError, printTable} from './printer.ts'
 import {sendToPage} from './run.ts'
 import {inspectSchema, printSchemaInspection, type SchemaInspection} from './schemaInspection.ts'
-import {CliTelemetry, getPresentFlags, type TelemetryCommand} from './telemetry/index.ts'
+import {getPresentFlags, sendTelemetry, type TelemetryCommand} from './telemetry.ts'
 import {checkForUpdate, showCachedUpdateNotice} from './updateNotifier.ts'
 
 export const program = new Command()
@@ -33,8 +33,6 @@ const pkgPath = fs.existsSync(path.join(__dirname, 'package.json'))
 const libPkg = fs.readJsonSync(pkgPath)
 program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
 registerInstallBrowserCommand(program)
-
-let telemetry: CliTelemetry
 
 program.command('compile')
   .description('Translate a query to SQL and print it')
@@ -170,7 +168,7 @@ program.command('serve')
         return exit(0)
       } else {
         let mod = await import('./serve2.ts') // load dynamically, so we're not pulling in a bunch of deps we might not need
-        await mod.serve2(telemetry)
+        await mod.serve2()
       }
     }),
   )
@@ -188,7 +186,7 @@ program.command('check')
   .argument('[file]', 'Optional markdown or gsql file to check')
   .action(
     withTelemetry('check', async (exit, fileArg: string | undefined) => {
-      let res = await check({fileArg, telemetry})
+      let res = await check({fileArg})
       return exit(res ? 0 : 1) // if we started the server in the background, just returning won't actually exit the process.
     }),
   )
@@ -307,16 +305,13 @@ class CliExit {}
 
 function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number) => never, ...args: any[]) => Promise<void>) {
   return async (...args: any[]) => {
-    telemetry = new CliTelemetry(config, libPkg.version)
-    await telemetry.init()
-
     let startedAt = Date.now()
+    let flags = getPresentFlags(args.at(-1) as Command)
     let exitCode = 0
     let success = true
     let exitCalled = false
     let caughtError: unknown
 
-    telemetry.event('cli_command_started', {command, flags: getPresentFlags(command, (program as any).rawArgs || process.argv.slice(2))})
     await showCachedUpdateNotice({config, currentVersion: libPkg.version, packageIsPrivate: libPkg.private})
 
     let exit = (code: number = 0): never => {
@@ -335,7 +330,7 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
         caughtError = err
       }
     } finally {
-      telemetry.event('cli_command_completed', {command, success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
+      await sendTelemetry(config, libPkg.version, command, {flags, success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
       await checkForUpdate({config, currentVersion: libPkg.version, packageIsPrivate: libPkg.private})
     }
 
