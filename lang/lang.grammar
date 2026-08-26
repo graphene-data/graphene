@@ -44,8 +44,12 @@ SelectClause {
 }
 
 SelectItem {
-  expression (Kw<"as">? Alias)? |
+  expression (Kw<"as">? SelectAlias)? |
   Wildcard
+}
+
+SelectAlias {
+  Identifier | QuotedIdentifier
 }
 
 Wildcard {
@@ -97,7 +101,7 @@ OrderByClause {
 }
 
 OrderItem {
-  (Identifier | Number) (Kw<"asc"> | Kw<"desc">)?
+  (Identifier | QuotedIdentifier | Number) (Kw<"asc"> | Kw<"desc">)?
 }
 
 LimitClause {
