@@ -5,6 +5,8 @@ import path from 'node:path'
 import {Writable} from 'node:stream'
 import {afterEach, describe, expect, it, vi} from 'vitest'
 
+import {deindent} from '../lang/util.ts'
+
 let textMock = vi.fn()
 let selectMock = vi.fn()
 let confirmMock = vi.fn()
@@ -182,7 +184,7 @@ describe('runCreate', () => {
     let pkg = JSON.parse(await readFile(path.join(root, 'my-analytics', 'package.json'), 'utf8'))
     expect(pkg.graphene.snowflake).toEqual({account: 'good-account', username: 'good_user'})
     expect(await readFile(path.join(root, 'my-analytics', '.env'), 'utf8')).toContain(`SNOWFLAKE_PRI_KEY_PATH=${goodKeyPath}`)
-    expect(logErrorMock).toHaveBeenCalledWith(expect.stringContaining('Invalid key'), expect.any(Object))
+    expect(logErrorMock.mock.calls[0]?.[0]).toBe('Snowflake credential validation failed: Invalid key')
   })
 
   it('continues with warehouse credentials when validation fails and the user ignores it', async () => {
@@ -202,7 +204,7 @@ describe('runCreate', () => {
 
     let pkg = JSON.parse(await readFile(path.join(root, 'my-analytics', 'package.json'), 'utf8'))
     expect(pkg.graphene.snowflake).toEqual({account: 'myorg-myaccount', username: 'graphene_user'})
-    expect(logErrorMock).toHaveBeenCalledWith(expect.stringContaining('JWT failed'), expect.any(Object))
+    expect(logErrorMock.mock.calls[0]?.[0]).toBe('Snowflake credential validation failed: JWT failed')
   })
 
   it('skips credential validation when requested', async () => {
@@ -300,10 +302,19 @@ describe('runCreate', () => {
     expect(await readFile(path.join(root, 'demo-app', 'AGENTS.md'), 'utf8')).toContain('npx graphene check')
     expect(textMock).not.toHaveBeenCalledWith(expect.objectContaining({message: 'Path to .duckdb file'}))
     let message = outroMock.mock.calls.at(-1)?.[0]
-    expect(message).toContain('\u001b[36m.duckdb\u001b[39m')
-    expect(message).toContain('"graphene": {')
-    expect(message).toContain('"duckdb": {')
-    expect(message).toContain('"path": "/path/to/example')
+    expect(message).toBe(deindent(`
+      Done!
+
+      For DuckDB, copy your \u001b[36m.duckdb\u001b[39m file into the \u001b[35mdemo-app\u001b[39m folder so Graphene can discover it.
+
+      If the duckdb file lives elsewhere, set the path in \u001b[35mpackage.json\u001b[39m:
+
+      \u001b[90m"graphene": {\u001b[39m
+      \u001b[90m  "duckdb": {\u001b[39m
+      \u001b[90m    "path": "/path/to/example.duckdb"\u001b[39m
+      \u001b[90m  }\u001b[39m
+      \u001b[90m}\u001b[39m
+    `))
   })
 
   it('streams install output into the task log and keeps line breaks on success', async () => {

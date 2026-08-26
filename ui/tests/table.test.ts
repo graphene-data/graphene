@@ -421,7 +421,7 @@ test('row-level link behavior opens external destinations and hides link column'
   let popupPromise = sharedPage.waitForEvent('popup')
   await table.locator('tr.table-row').first().click()
   let popup = await popupPromise
-  await expect.poll(() => popup.url()).toContain('https://example.com/alpha')
+  await expect.poll(() => popup.url()).toBe('https://example.com/alpha')
   await popup.close()
 })
 
@@ -456,7 +456,7 @@ test('colorscale and link content columns render together', async ({mount, share
   let popupPromise = sharedPage.waitForEvent('popup')
   await table.locator('a.table-link').first().click()
   let popup = await popupPromise
-  await expect.poll(() => popup.url()).toContain('https://example.com')
+  await expect.poll(() => popup.url()).toBe('https://example.com/')
   await popup.close()
 })
 

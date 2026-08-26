@@ -3,6 +3,7 @@ import {Readable} from 'node:stream'
 import {afterEach, expect, test as base, vi} from 'vitest'
 
 import {config, setGlobalConfig, type Config} from '../lang/config.ts'
+import {deindent} from '../lang/util.ts'
 import {program} from './cli.ts'
 import {resetDuckDbInstanceForTests} from './connections/index.ts'
 import {formatError} from './printer.ts'
@@ -21,6 +22,13 @@ export interface RunCliOptions {
 }
 
 export type RunCli = (args: string[], invocationConfig: Config, options?: RunCliOptions) => Promise<RunCliResult>
+
+// Compares every user-visible part of a CLI result. Multiline expectations can stay indented with their test.
+export function expectCliOutput(result: RunCliResult, expected: string | {code?: number; stdout?: string; stderr?: string}) {
+  let output = typeof expected === 'string' ? {stdout: expected} : expected
+  let format = (value = '') => value ? deindent(value) + '\n' : ''
+  expect(result).toEqual({code: output.code ?? 0, stdout: format(output.stdout), stderr: format(output.stderr)})
+}
 
 class ProcessExit extends Error {
   constructor(readonly code: number) {

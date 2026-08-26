@@ -5,6 +5,7 @@ import * as path from 'node:path'
 import {expect} from 'vitest'
 
 import {setGlobalConfig} from '../lang/config.ts'
+import {deindent} from '../lang/util.ts'
 import {runServeInBackground} from './background.ts'
 
 describe('background server', () => {
@@ -33,8 +34,14 @@ describe('background server', () => {
       }
 
       expect(error).toBeInstanceOf(Error)
-      expect((error as Error).message).toMatch(/listen EPERM: operation not permitted 127\.0\.0\.1:4000/)
-      expect((error as Error).message).toMatch(/node_modules\/\.graphene\/serve\.log/)
+      expect((error as Error).message.replace(tmpDir, '<project>')).toBe(deindent(`
+        Graphene server exited before startup finished (code 1).
+
+        Last output from <project>/node_modules/.graphene/serve.log:
+        Starting Graphene server...
+        Failed to start Graphene server
+        listen EPERM: operation not permitted 127.0.0.1:4000
+      `))
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }

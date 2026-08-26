@@ -9,7 +9,7 @@ import {setGlobalConfig} from './config.ts'
 import {toSql} from './core.ts'
 import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
 import {formatType, parseWarehouseFieldType} from './types.ts'
-import {trimIndentation} from './util.ts'
+import {deindent, trimIndentation} from './util.ts'
 
 const testTables = `
   table users (
@@ -62,6 +62,14 @@ const testTables = `
   )
 
 `
+
+test('deindent removes code indentation while preserving relative indentation', () => {
+  expect(deindent(`
+    first
+      second
+    third
+  `)).toBe(['first', '  second', 'third'].join('\n'))
+})
 
 describe('lang', () => {
   beforeAll(async () => {

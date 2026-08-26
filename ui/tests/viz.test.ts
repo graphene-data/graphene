@@ -4,6 +4,7 @@
 import fs from 'node:fs/promises'
 
 import {scalarType} from '../../lang/types.ts'
+import {deindent} from '../../lang/util.ts'
 import {expect, test} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 import {categoricalSeries, denseTimeseries, ratioTimeseries, singleDim, sparseGroupedMonthRows, timeseries, timeseriesGrouped, timeseriesWithDateSeries, yearlyCounts} from './testData.ts'
@@ -194,7 +195,11 @@ test('chart download button exports raw csv rows', async ({mount, chart, sharedP
     let csv = await fs.readFile((await download.path())!, 'utf-8')
 
     expect(download.suggestedFilename()).toBe('download-test.csv')
-    expect(csv).toBe(['category,value', '"A, Inc",10', '"B ""Team""",12'].join('\n'))
+    expect(csv).toBe(deindent(`
+      category,value
+      "A, Inc",10
+      "B ""Team""",12
+    `))
   } finally {
     await sharedPage.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
   }

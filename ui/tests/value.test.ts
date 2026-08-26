@@ -12,9 +12,10 @@ describe('<Value/>', () => {
     await expect(chart.el).screenshot('currency-formatting')
   })
 
-  test('percent formatting', async ({mount, sharedPage}) => {
+  test('percent formatting', async ({mount, sharedPage, chart}) => {
     await mount('components/Value.svelte', {data: percentData(), column: 'ratio'})
     await expect(sharedPage.getByText('31%')).toBeVisible()
+    await expect(chart.el).screenshot('percent-formatting')
   })
 
   test('unit formatting', async ({mount, sharedPage, chart}) => {
@@ -23,14 +24,16 @@ describe('<Value/>', () => {
     await expect(chart.el).screenshot('unit-formatting')
   })
 
-  test('unit formatting scales within its family', async ({mount, sharedPage}) => {
+  test('unit formatting scales within its family', async ({mount, sharedPage, chart}) => {
     await mount('components/Value.svelte', {data: unitData(1500), column: 'duration'})
     await expect(sharedPage.getByText('1d 1h')).toBeVisible()
+    await expect(chart.el).screenshot('unit-formatting-scaled')
   })
 
-  test('null renders em dash', async ({mount, sharedPage}) => {
+  test('null renders em dash', async ({mount, sharedPage, chart}) => {
     await mount('components/Value.svelte', {data: nullValueData(), column: 'value'})
     await expect(sharedPage.getByText('—')).toBeVisible()
+    await expect(chart.el).screenshot('null-formatting')
   })
 
   test('renders loading state while query is pending', async ({sharedPage, server, chart}) => {

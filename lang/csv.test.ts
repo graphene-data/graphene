@@ -3,6 +3,7 @@ import {expect} from 'vitest'
 
 import {rowsToCsv} from './csv.ts'
 import {scalarType} from './types.ts'
+import {deindent} from './util.ts'
 
 describe('rowsToCsv', () => {
   it('serializes headers and rows with csv escaping', () => {
@@ -11,7 +12,12 @@ describe('rowsToCsv', () => {
       {name: 'Bob', note: null, bio: undefined},
     ]
 
-    expect(rowsToCsv(rows)).toBe(['name,note,bio', 'Alice,"hello, ""world""","line 1\nline 2"', 'Bob,,'].join('\n'))
+    expect(rowsToCsv(rows)).toBe(deindent(`
+      name,note,bio
+      Alice,"hello, ""world""","line 1
+      line 2"
+      Bob,,
+    `))
   })
 
   it('uses field order and resolves row keys case-insensitively', () => {
@@ -20,13 +26,19 @@ describe('rowsToCsv', () => {
       {name: 'total', type: scalarType('number')},
     ]
 
-    expect(rowsToCsv([{CARRIER: 'AA', TOTAL: 12}], fields)).toBe(['carrier,total', 'AA,12'].join('\n'))
+    expect(rowsToCsv([{CARRIER: 'AA', TOTAL: 12}], fields)).toBe(deindent(`
+      carrier,total
+      AA,12
+    `))
   })
 
   it('serializes arrays, objects, dates, and bigint values', () => {
     let rows = [{id: 1n, tags: ['a', 'b'], payload: {ok: true}, created_at: new Date('2024-01-02T03:04:05.000Z')}]
 
-    expect(rowsToCsv(rows)).toBe(['id,tags,payload,created_at', '1,"[""a"",""b""]","{""ok"":true}",2024-01-02T03:04:05.000Z'].join('\n'))
+    expect(rowsToCsv(rows)).toBe(deindent(`
+      id,tags,payload,created_at
+      1,"[""a"",""b""]","{""ok"":true}",2024-01-02T03:04:05.000Z
+    `))
   })
 
   it('can emit a header-only csv for empty results with known fields', () => {
