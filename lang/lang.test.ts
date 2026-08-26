@@ -1907,6 +1907,16 @@ describe('lang', () => {
     if (dialect == 'clickhouse') expect('from foo select `timestamp`').toHaveNoErrors()
   })
 
+  it('supports quoted select aliases', () => {
+    expect('from users select name as "Customer name" order by "Customer name"')
+      .toRenderSql('select users.name as "Customer name" from users as users order by 1 asc nulls last')
+
+    setGlobalConfig({dialect: 'bigquery', root: ''})
+    expect('from users select name as `Current`, age as `1-59 days late`')
+      .toRenderSql('select users.name as `Current`, users.age as `1-59 days late` from `users` as users')
+    expect('from users select name as "Current"').toHaveDiagnostic('Syntax error')
+  })
+
   it('treats double quotes as strings in BigQuery', () => {
     setGlobalConfig({dialect: 'bigquery', root: ''})
     expect('select "hello" as greeting').toRenderSql("select 'hello' as greeting")

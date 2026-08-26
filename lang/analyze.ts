@@ -29,6 +29,7 @@ import {
   type AnalysisWorkspace,
   type FileInfo,
   type Query,
+  type QueryField,
   type Table,
   type QueryJoin,
   type Column,
@@ -481,10 +482,10 @@ class AnalysisSession implements Analyzer {
         this.expandColumns(targetScope.table, targetScope.alias, query, targetScope)
       } else {
         let exprNode = select.getChild('Expression')!
-        let aliasNode = select.getChild('Alias')
+        let alias = this.readSelectAlias(select)
         let expr = this.analyzeExpr(exprNode, scope)
         if (isScalarType(expr.type, 'interval') && expr.interval?.form == 'scaled') this.diag(exprNode, 'Multiplied intervals are only supported inside date/time arithmetic')
-        let {name, disambiguatedName} = aliasNode ? {name: txt(aliasNode), disambiguatedName: undefined} : this.inferName(exprNode, scope, expr)
+        let {name, disambiguatedName} = alias ? {name: alias.name, disambiguatedName: undefined} : this.inferName(exprNode, scope, expr)
         let metadata: FieldMeta | undefined = {...expr.metadata, ...this.extractMetadata(select)}
         if (Object.keys(metadata).length === 0) metadata = undefined
         isAgg ||= !!expr.isAgg
@@ -496,8 +497,9 @@ class AnalysisSession implements Analyzer {
           metadata,
           isAgg: expr.isAgg,
           fanout: expr.fanout,
-          definitionLocation: this.locationForNode(aliasNode || exprNode),
-          diagNode: aliasNode || exprNode,
+          quotedAlias: alias?.quoted,
+          definitionLocation: this.locationForNode(alias?.node || exprNode),
+          diagNode: alias?.node || exprNode,
         })
         fanoutExprs.push({node: exprNode, expr})
       }
@@ -518,7 +520,7 @@ class AnalysisSession implements Analyzer {
     let groupBys = simpleNode.getChild('GroupByClause')?.getChildren('SelectItem') || []
     for (let groupBy of groupBys) {
       let exprNode = groupBy.getChild('Expression')!
-      let alias = txt(groupBy.getChild('Alias'))
+      let alias = this.readSelectAlias(groupBy)
 
       // Positional GROUP BY (e.g. `group by 2, 1`) references the current SELECT list.
       if (exprNode.name == 'Number' && !alias) {
@@ -536,13 +538,13 @@ class AnalysisSession implements Analyzer {
         // If it's not in there, add it to the select.
         if (!existing) {
           let field = {
-            ...(groupBy.getChild('Alias') ? {name: txt(groupBy.getChild('Alias')), disambiguatedName: undefined} : this.inferName(exprNode, scope, expr)),
+            ...(alias ? {name: alias.name, disambiguatedName: undefined, quotedAlias: alias.quoted} : this.inferName(exprNode, scope, expr)),
             sql: expr.sql,
             type: expr.type,
             metadata: expr.metadata,
             fanout: expr.fanout,
-            definitionLocation: this.locationForNode(groupBy.getChild('Alias') || exprNode),
-            diagNode: groupBy.getChild('Alias') || exprNode,
+            definitionLocation: this.locationForNode(alias?.node || exprNode),
+            diagNode: alias?.node || exprNode,
           }
           this.addQueryField(query, field, {prepend: true})
           query.groupBy.push(field.name)
@@ -640,7 +642,9 @@ class AnalysisSession implements Analyzer {
     let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
     let orderBy: {idx: number; desc: boolean}[] = []
     for (let orderItem of orderBys) {
-      let fieldRef = txt(orderItem.getChild('Identifier')) || txt(orderItem.getChild('Number'))
+      let fieldNode = orderItem.getChild('Identifier') || orderItem.getChild('QuotedIdentifier') || orderItem.getChild('Number')
+      let fieldRef = txt(fieldNode)
+      if (orderItem.getChild('QuotedIdentifier')) fieldRef = fieldRef.slice(1, -1)
       let desc = txt(orderItem.getChild('Kw')).toLowerCase() == 'desc'
       let idx = Number(fieldRef) || query.fields.findIndex(field => field.name == fieldRef) + 1
       if (idx > 0) orderBy.push({idx, desc})
@@ -651,6 +655,20 @@ class AnalysisSession implements Analyzer {
     let limit = limitNodes[0] ? Number(txt(limitNodes[0])) : undefined
     if (limitNodes[1]) this.diag(limitNodes[1], 'OFFSET is not supported')
     return {orderBy, limit}
+  }
+
+  // Select aliases retain their logical name separately from the quoting needed by the target warehouse.
+  private readSelectAlias(selectItem: SyntaxNode) {
+    let node = selectItem.getChild('SelectAlias')
+    if (!node) return undefined
+    let raw = txt(node)
+    let quoted = raw.startsWith('"') || raw.startsWith('`')
+    return {node, name: quoted ? raw.slice(1, -1) : raw, quoted}
+  }
+
+  private formatSelectAlias(field: QueryField) {
+    if (!field.quotedAlias) return field.name
+    return this.config.dialect == 'bigquery' ? `\`${field.name}\`` : `"${field.name}"`
   }
 
   // Assemble query parts into final SQL
@@ -693,7 +711,7 @@ class AnalysisSession implements Analyzer {
       return sql
     }
 
-    let selectParts = query.fields.map(field => `${field.sql} as ${field.name}`)
+    let selectParts = query.fields.map(field => `${field.sql} as ${this.formatSelectAlias(field)}`)
     let baseJoin = query.joins.find(join => join.source == 'from')
 
     // No FROM clause (e.g. `select 1`)
