@@ -66,13 +66,17 @@ async function updateEntry(cred: Cred) {
   }
 }
 
+// Opens an authentication URL with the operating system's browser without passing OAuth parameters through a shell.
 export function openInBrowser(url: string) {
   try {
-    let plat = process.platform
     let cmd = 'xdg-open'
-    if (plat == 'darwin') cmd = 'open'
-    if (plat == 'win32') cmd = 'start'
-    let p = spawn(cmd, [url], {stdio: 'ignore', shell: plat === 'win32'})
+    let args = [url]
+    if (process.platform == 'darwin') cmd = 'open'
+    if (process.platform == 'win32') {
+      cmd = 'rundll32'
+      args = ['url.dll,FileProtocolHandler', url]
+    }
+    let p = spawn(cmd, args, {stdio: 'ignore'})
     p.unref()
   } catch {
     console.log(`Open this URL to authenticate:\n${url}`)

@@ -1,12 +1,29 @@
 /// <reference types="vitest/globals" />
 // Covers CLI requests with delegated tokens and renewable credentials saved by `graphene login`.
 
+import {spawn} from 'child_process'
 import fs from 'node:fs/promises'
 import {createServer} from 'node:http'
 
 import {config, normalizeConfig, setGlobalConfig} from '../lang/config.ts'
 import {gFetch} from '../utils/index.ts'
-import {authenticatedFetch} from './auth.ts'
+import {authenticatedFetch, openInBrowser} from './auth.ts'
+
+vi.mock('child_process', () => ({spawn: vi.fn()}))
+
+// Windows OAuth URLs must bypass cmd.exe, which treats each `&`-delimited parameter as a separate command.
+test('openInBrowser preserves the complete OAuth URL on Windows', () => {
+  let url = 'https://app.graphenedata.com/authenticate?redirect_uri=http%3A%2F%2F127.0.0.1%3A5054%2Fcallback&client_id=connected-app-live&state=login-state'
+  let unref = vi.fn()
+  vi.mocked(spawn).mockReturnValue({unref} as any)
+  vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+
+  openInBrowser(url)
+
+  expect(spawn).toHaveBeenCalledWith('rundll32', ['url.dll,FileProtocolHandler', url], {stdio: 'ignore'})
+  expect(unref).toHaveBeenCalled()
+  vi.restoreAllMocks()
+})
 
 test('gFetch decodes JSON and plain-text error responses', async () => {
   let server = createServer((req, res) => {

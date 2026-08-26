@@ -160,6 +160,20 @@ jobs:
           name: UI test diffs
           path: ui/tests/results/**
 
+  windows-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with: {lfs: true, persist-credentials: false}
+      - uses: ./.github/actions/setup
+      - name: Local dev server
+        run: pnpm test cli/cli.test.ts -t "starts and stops the server in the background"
+      - name: Cloud browser login
+        if: always() # Keep the independent login signal when local server coverage finds a Windows-specific failure.
+        run: pnpm test cli/auth.windows.test.ts
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/graphene-config
+
   test-vscode:
     runs-on: blacksmith-4vcpu-ubuntu-2204
     steps:

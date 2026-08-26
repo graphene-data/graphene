@@ -3,13 +3,14 @@ import * as fsp from 'node:fs/promises'
 import {createServer, type IncomingMessage, type ServerResponse} from 'node:http'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import {fileURLToPath} from 'node:url'
 
 import {loadConfig, normalizeConfig, type Config, type ConfigInput} from '../lang/config.ts'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
 import {normalizePageUrl} from './run.ts'
 import {expect, test} from './testFixtures.ts'
 
-const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
+const dir = path.dirname(fileURLToPath(import.meta.url))
 const flightDir = path.resolve(dir, '../examples/flights')
 const TEST_PORT = 4163
 const flightConfig = configFor(flightDir, {port: TEST_PORT})
@@ -112,7 +113,7 @@ describe('cli compile', () => {
 
 describe('cli serve', () => {
   test('starts and stops the server in the background', async ({runCli}) => {
-    await stopGrapheneIfRunning()
+    await stopGrapheneIfRunning(TEST_PORT)
 
     try {
       let start = await runCli(['serve', '--bg'], flightConfig)
@@ -124,7 +125,7 @@ describe('cli serve', () => {
       expectCliSuccess(stop, 'serve stop')
       expect(await isServerRunning(TEST_PORT)).toBe(false)
     } finally {
-      await stopGrapheneIfRunning()
+      await stopGrapheneIfRunning(TEST_PORT)
     }
   })
 
