@@ -82,7 +82,7 @@ describe('<Value/>', () => {
     let errorIcon = sharedPage.getByRole('button', {name: 'Query failed'})
     await errorIcon.hover()
     await expect(sharedPage.getByText('Could not resolve column "value"')).toBeVisible()
-    await expect(sharedPage).screenshot('inline-error-tooltip')
+    await expect(sharedPage).screenshot('inline-error-tooltip', {mouseHover: true})
   })
 
   function percentData() {

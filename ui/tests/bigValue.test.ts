@@ -14,7 +14,7 @@ test('big value', async ({mount, sharedPage}) => {
   await expect(title).toBeVisible()
   await expect(sharedPage.getByText('$611.1k')).toBeVisible()
   await title.hover()
-  await expect(component).screenshot('big-value')
+  await expect(component).screenshot('big-value', {mouseHover: true})
 })
 
 test('big value percent formatting', async ({mount, sharedPage}) => {
