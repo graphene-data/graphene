@@ -95,8 +95,9 @@ function sendSignal(pid: number, signal: NodeJS.Signals): boolean {
   return true
 }
 
-export async function stopGrapheneIfRunning(): Promise<void> {
-  let port = config.port
+// Stops the background server listening on the configured or explicitly supplied port.
+export async function stopGrapheneIfRunning(portOverride?: number): Promise<void> {
+  let port = portOverride ?? config.port
   let pid = await getPidOnPort(port)
   if (!pid) return
 
