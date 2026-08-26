@@ -150,7 +150,7 @@ This example creates a stacked bar chart with a purple x-axis.
 
 Use `encode` to map objects to the columns of the data source. In Graphene, `encode` also accepts `splitBy` which automatically expands one template into multiple series. For bar charts, `splitBy` can be a two-item list (`[groupBy, stackBy]`) for grouped+stacked bars.
 
-Graphene will handle axes, layout, and styles for you, so you can omit those configurations unless you explicitly want to override them.
+Graphene will handle axes, layout, and styles for you, so you can omit those configurations unless you explicitly want to override them. Don't forget `alignTicks: true` when using multiple y-axes.
 
 Unsupported:
 - `{@colName}` formatter templates (but `{a}`, `{b}`, `{c}` work)
