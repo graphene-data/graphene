@@ -276,7 +276,7 @@ UnaryExpression[@isGroup=Expression]<T> {
 
 ComparisonOp {
   "=" | "!=" | "<>" | "<" | ">" | "<=" | ">=" |
-  Kw<"like"> | Kw<"not"> Kw<"like">
+  Kw<"like"> | Kw<"ilike"> | Kw<"not"> (Kw<"like"> | Kw<"ilike">)
 }
 
 AddOp { "+" | "-" | "||" }

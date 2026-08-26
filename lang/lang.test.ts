@@ -841,6 +841,24 @@ describe('lang', () => {
       .toReturnRows(['Alice'])
   })
 
+  it('supports like and ilike comparisons', async () => {
+    expect("from users select name where name like 'A%'")
+      .toRenderSql("select users.name as name from users as users where users.name LIKE 'A%'")
+    expect("from users select name where name not like 'A%'")
+      .toRenderSql("select users.name as name from users as users where users.name NOT LIKE 'A%'")
+    expect("from users select name where name ilike 'a%'")
+      .toRenderSql("select users.name as name from users as users where users.name ILIKE 'a%'")
+    expect("from users select name where name not ilike 'a%'")
+      .toRenderSql("select users.name as name from users as users where users.name NOT ILIKE 'a%'")
+    await expect("from users select name where name ilike 'alice'").toReturnRows(['Alice'])
+
+    setGlobalConfig({dialect: 'bigquery', root: ''})
+    expect("from users select name where name ilike 'a%'")
+      .toRenderSql("select users.name as name from `users` as users where LOWER(users.name) LIKE LOWER('a%')")
+    expect("from users select name where name not ilike 'a%'")
+      .toRenderSql("select users.name as name from `users` as users where NOT (LOWER(users.name) LIKE LOWER('a%'))")
+  })
+
   it('supports is null/is not null', () => {
     expect('from users select name where email is null')
       .toRenderSql('select users.name as name from users as users where users.email is null')
