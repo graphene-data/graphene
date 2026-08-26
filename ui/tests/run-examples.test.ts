@@ -97,10 +97,7 @@ async function runExample(exampleName: string, page: Page, {suppressScreenshot =
       console.log(`[run-examples] running ${exampleName}/${mdPath}`)
       await page.goto(`http://localhost:${port}${toPageUrl(mdPath)}`)
       await waitForGrapheneLoad(page, 120_000)
-      if (!suppressScreenshot) {
-        await page.mouse.move(-1, -1)
-        await expect(page).screenshot(`example-${exampleName}-${mdPath.replace(/\.md$/, '').replace(/[^a-z0-9]+/gi, '-')}`)
-      }
+      if (!suppressScreenshot) await expect(page).screenshot(`example-${exampleName}-${mdPath.replace(/\.md$/, '').replace(/[^a-z0-9]+/gi, '-')}`)
 
       let runResult = await runCli(['run', mdPath], exampleDir, childEnv)
       expectSuccess(`run ${exampleName}/${mdPath}`, runResult)

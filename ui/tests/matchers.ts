@@ -13,6 +13,7 @@ export function setSnapshotDir(dir: string) {
 
 interface ScreenshotOptions {
   fullPage?: boolean
+  mouseHover?: boolean // Preserve the pointer when the hover state is part of the snapshot.
 }
 
 const extendedExpect = baseExpect.extend({
@@ -23,6 +24,9 @@ const extendedExpect = baseExpect.extend({
     let locator = subject.constructor.name === 'Page' ? undefined : subject
     let testPath = vitestExpect.getState().testPath || ''
     let testFile = path.basename(testPath)
+
+    // Hover state is usually incidental and can differ between local and CI browsers.
+    if (!options.mouseHover) await (page as Page).mouse.move(-1, -1)
 
     // Wait for fonts, Graphene renders, and animations to settle before comparing pixels.
     let stillLoading = await (page as Page).evaluate(async () => {

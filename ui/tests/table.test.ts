@@ -305,7 +305,7 @@ test('table attributes render grouped headers, wrapped titles, and row styling o
   await table.locator('tr:has(td)').first().waitFor()
   await expect(table.locator('tr:has(td)')).toHaveCount(4)
   await table.getByText('Carrier', {exact: true}).hover()
-  await expect(component.locator('.table-container')).screenshot('attribute-groups-and-styling')
+  await expect(component.locator('.table-container')).screenshot('attribute-groups-and-styling', {mouseHover: true})
 })
 
 test('headers align with their cells with and without wrapped titles', async ({mount}) => {

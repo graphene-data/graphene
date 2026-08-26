@@ -70,7 +70,6 @@ function scatterData() {
 
 test.beforeEach(async ({sharedPage}) => {
   await sharedPage.setViewportSize({width: 680, height: 400})
-  await sharedPage.mouse.move(-1, -1)
 })
 
 test('echarts query error state', async ({mount, chart}) => {
@@ -160,7 +159,7 @@ test('echarts heatmap supports numeric values on explicit category axis', async 
     },
   })
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
-  await expect(chart.el).screenshot('echarts-heatmap-numeric-category-axis')
+  await expect(chart.el).screenshot('echarts-heatmap-numeric-category-axis', {mouseHover: true})
 })
 
 test('bar chart', async ({mount, chart}) => {
@@ -198,7 +197,6 @@ test('chart download button exports raw csv rows', async ({mount, chart, sharedP
     expect(csv).toBe(['category,value', '"A, Inc",10', '"B ""Team""",12'].join('\n'))
   } finally {
     await sharedPage.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
-    await sharedPage.mouse.move(-1, -1)
   }
 })
 
@@ -310,7 +308,7 @@ test('bar chart bounds numeric year x axis from metadata', async ({mount, chart}
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'year', y: 'flights', splitBy: 'status', arrange: 'stack', title: 'Flight Status by Year'})
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2, position: 'left'})
-  await expect(chart.el).screenshot('bar-chart-numeric-year-domain')
+  await expect(chart.el).screenshot('bar-chart-numeric-year-domain', {mouseHover: true})
 })
 
 test('horizontal bar chart', async ({mount, chart}) => {
@@ -376,7 +374,7 @@ test('horizontal bar chart stacked100 has percentage endpoints and square corner
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'value', y: 'category', splitBy: 'segment', arrange: 'stack100', title: 'Share by Category'})
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 1, dataIndex: 2})
-  await expect(chart.el).screenshot('horizontal-bar-chart-stacked100')
+  await expect(chart.el).screenshot('horizontal-bar-chart-stacked100', {mouseHover: true})
 })
 
 test('stacked area chart', async ({mount, chart}) => {
@@ -499,7 +497,7 @@ test('line chart respects precision metadata in tooltips', async ({mount, shared
 
   expect(tooltip).toBe('12.75%')
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
-  await expect(chart.el).screenshot('line-chart-tooltip-percent-precision')
+  await expect(chart.el).screenshot('line-chart-tooltip-percent-precision', {mouseHover: true})
 })
 
 test('line chart uses unit metadata for axis and tooltip formatting', async ({mount, chart}) => {
@@ -522,7 +520,7 @@ test('line chart uses unit metadata for axis and tooltip formatting', async ({mo
 
   expect(formatted).toEqual({axis: '42m', tooltip: '42m'})
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
-  await expect(chart.el).screenshot('line-chart-unit-metadata-axis-tooltip')
+  await expect(chart.el).screenshot('line-chart-unit-metadata-axis-tooltip', {mouseHover: true})
 })
 
 test('a second value axis still aligns its ticks when both axes change unit', async ({mount, chart}) => {
@@ -585,7 +583,7 @@ test('time tooltip uses readable timeGrain formatting', async ({mount, chart}) =
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'period', y: 'value', title: 'Month Grain'})
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3, position: 'left'})
 
-  await expect(chart.el).screenshot('line-chart-tooltip-time-month-grain')
+  await expect(chart.el).screenshot('line-chart-tooltip-time-month-grain', {mouseHover: true})
 })
 
 test('line chart tooltip formats calculated non-whole numbers', async ({mount, chart}) => {
@@ -602,7 +600,7 @@ test('line chart tooltip formats calculated non-whole numbers', async ({mount, c
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'avg_delay', title: 'Average Delay'})
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
 
-  await expect(chart.el).screenshot('line-chart-tooltip-calculated-non-whole')
+  await expect(chart.el).screenshot('line-chart-tooltip-calculated-non-whole', {mouseHover: true})
 })
 
 test('hour_of_day ordinal axis labels and tooltip formatting', async ({mount, chart, sharedPage}) => {
@@ -624,7 +622,7 @@ test('hour_of_day ordinal axis labels and tooltip formatting', async ({mount, ch
     chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2})
   })
 
-  await expect(chart.el).screenshot('line-chart-hour-of-day-ordinal-tooltip')
+  await expect(chart.el).screenshot('line-chart-hour-of-day-ordinal-tooltip', {mouseHover: true})
 })
 
 test('day_of_week ordinal axis labels and tooltip formatting', async ({mount, chart, sharedPage}) => {
@@ -648,7 +646,7 @@ test('day_of_week ordinal axis labels and tooltip formatting', async ({mount, ch
     chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
   })
 
-  await expect(chart.el).screenshot('bar-chart-day-of-week-ordinal-tooltip')
+  await expect(chart.el).screenshot('bar-chart-day-of-week-ordinal-tooltip', {mouseHover: true})
 })
 
 test('month_of_year ordinal axis labels and tooltip formatting', async ({mount, chart, sharedPage}) => {
@@ -672,7 +670,7 @@ test('month_of_year ordinal axis labels and tooltip formatting', async ({mount, 
     chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 2})
   })
 
-  await expect(chart.el).screenshot('line-chart-month-of-year-ordinal-tooltip')
+  await expect(chart.el).screenshot('line-chart-month-of-year-ordinal-tooltip', {mouseHover: true})
 })
 
 test('quarter_of_year ordinal axis labels and tooltip formatting', async ({mount, chart, sharedPage}) => {
@@ -694,7 +692,7 @@ test('quarter_of_year ordinal axis labels and tooltip formatting', async ({mount
     chart?.dispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 1})
   })
 
-  await expect(chart.el).screenshot('bar-chart-quarter-of-year-ordinal-tooltip')
+  await expect(chart.el).screenshot('bar-chart-quarter-of-year-ordinal-tooltip', {mouseHover: true})
 })
 
 test('line chart hides markers at 30 categorical points', async ({mount, chart}) => {
@@ -725,7 +723,7 @@ test('scatter tooltip preserves high precision values on hover', async ({mount, 
   })
 
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 1})
-  await expect(chart.el).screenshot('scatter-tooltip-high-precision')
+  await expect(chart.el).screenshot('scatter-tooltip-high-precision', {mouseHover: true})
 })
 
 test('pie chart', async ({mount, chart}) => {
@@ -733,7 +731,7 @@ test('pie chart', async ({mount, chart}) => {
   await expect(chart.el).screenshot('pie-chart')
 
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0})
-  await expect(chart.el).screenshot('pie-chart-tooltip')
+  await expect(chart.el).screenshot('pie-chart-tooltip', {mouseHover: true})
 })
 
 test('value-encoded series format their values from field metadata', async ({mount, chart}) => {
@@ -988,7 +986,7 @@ test('bar chart sorted stacked100 tooltips use values, not the sort column', asy
 
   await mount('components/BarChart.svelte', {data: {rows, fields}, x: 'age_group', y: 'participants', splitBy: 'risk_count', arrange: 'stack100', sort: 'age_sort'})
   await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 0, position: 'right'})
-  await expect(chart.el).screenshot('bar-chart-stacked100-sorted-tooltip')
+  await expect(chart.el).screenshot('bar-chart-stacked100-sorted-tooltip', {mouseHover: true})
 })
 
 test.skip('area chart supports stepped markers and hidden line', async ({chart}) => {
