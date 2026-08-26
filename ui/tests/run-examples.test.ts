@@ -102,6 +102,7 @@ async function runExample(exampleName: string, page: Page, {suppressScreenshot =
       let runResult = await runCli(['run', mdPath], exampleDir, childEnv)
       expectSuccess(`run ${exampleName}/${mdPath}`, runResult)
 
+      // Live warehouse data can change; assert the stable CLI framing while the screenshot covers the rendered result.
       let output = stripAnsi(runResult.stdout + runResult.stderr)
       expect(output).toContain('Screenshot saved to')
       expect(output).toContain('Page available at')

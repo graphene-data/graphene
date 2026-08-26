@@ -75,6 +75,16 @@ export function compact<T>(obj: T): T {
   return Object.fromEntries(Object.entries(obj as any).filter(([_, v]) => v !== undefined)) as T
 }
 
+// Lets multiline template strings follow surrounding code indentation without including it in their value.
+export function deindent(str: string) {
+  let lines = str.split('\n')
+  if (lines[0]?.trim() === '') lines.shift()
+  if (lines.at(-1)?.trim() === '') lines.pop()
+  let indentation = lines.filter(line => line.trim()).map(line => line.match(/^\s*/)![0].length)
+  let toRemove = Math.min(...indentation)
+  return lines.map(line => line.trim() ? line.slice(toRemove) : '').join('\n')
+}
+
 export function trimIndentation(str: string) {
   let lines = str.trim().split('\n')
   let indent = lines

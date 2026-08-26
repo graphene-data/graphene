@@ -6,7 +6,7 @@ import {formatType, parseWarehouseFieldType} from '../lang/types.ts'
 import {localDbOptions as clickHouseOptions} from './connections/clickhouse.ts'
 import {type QueryConnection} from './connections/types.ts'
 import {inspectSchema} from './schemaInspection.ts'
-import {expect, test} from './testFixtures.ts'
+import {expect, expectCliOutput, test} from './testFixtures.ts'
 
 const dir = path.resolve(import.meta.url.replace('file://', ''), '../')
 const flightDir = path.resolve(dir, '../examples/flights')
@@ -86,20 +86,38 @@ describe('duckdb', () => {
 
   test('lists available tables when no argument is provided', async ({runCli}) => {
     let res = await runCli(['schema'], await configFor(flightDir))
-    expectCliSuccess(res, 'schema list tables')
-    let lines = res.stdout.trim().split(/\r?\n/).filter(Boolean)
-    expect(lines.length).toBeGreaterThan(0)
-    let normalized = lines.map(line => line.trim())
-    expect(normalized.some(line => line === 'flights')).toBe(true)
+    expectCliOutput(res, `
+      Tables in <default>:
+      aircraft
+      aircraft_models
+      airports
+      carriers
+      flights
+    `)
   })
 
   test('describes the requested table columns', async ({runCli}) => {
     let res = await runCli(['schema', 'flights'], await configFor(flightDir))
-    expectCliSuccess(res, 'schema describe table')
-    let output = res.stdout.toLowerCase()
-    expect(output).toContain('table flights (')
-    expect(output).toContain('carrier varchar')
-    expect(output.trim().endsWith(')')).toBe(true)
+    expectCliOutput(res, `
+      table flights (
+        carrier VARCHAR
+        origin VARCHAR
+        destination VARCHAR
+        flight_num VARCHAR
+        flight_time BIGINT
+        tail_num VARCHAR
+        dep_time TIMESTAMP
+        arr_time TIMESTAMP
+        dep_delay BIGINT
+        arr_delay BIGINT
+        taxi_out BIGINT
+        taxi_in BIGINT
+        distance BIGINT
+        cancelled VARCHAR
+        diverted VARCHAR
+        id2 BIGINT
+      )
+    `)
   })
 
   test('normalizes warehouse array types for schema output', () => {
@@ -113,6 +131,7 @@ describe('duckdb', () => {
   })
 })
 
+// Live warehouse schemas evolve outside this repository, so slow integrations assert stable invariants rather than complete output.
 describe.skipIf(!process.env.SLOW_TEST)('motherduck', {timeout: 30_000}, () => {
   test('lists tables in the configured namespace', async ({runCli}) => {
     let res = await runCli(['schema'], await configFor(motherduckDir))

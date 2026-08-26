@@ -186,6 +186,7 @@ limit 10
     await page.waitForTimeout(500)
     await expect(page).screenshot('packaged-cli-check-index-' + packageManager.name)
 
+    // Package managers add version-specific wrapper output; assert Graphene's stable lines while the screenshot covers the rendered page.
     let [checkCommand, checkArgs] = packageManager.graphene(['check'])
     let checkResult = await run(checkCommand, checkArgs, projectDir, childEnv)
     expectSuccess('graphene check', checkResult)

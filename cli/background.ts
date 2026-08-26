@@ -151,6 +151,8 @@ async function getPidOnPort(port: number): Promise<number | undefined> {
       })
     }
   } catch (e: any) {
+    // findstr exits with code 1 when no process matches, which is the normal "server is stopped" result.
+    if (process.platform === 'win32' && e.code === 1) return undefined
     console.warn('Failed to check for server:', e.message)
     return undefined
   }

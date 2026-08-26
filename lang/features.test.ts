@@ -2,6 +2,7 @@ import {expect} from 'vitest'
 
 /// <reference types="vitest/globals" />
 import {analyze, getDefinition, getHover, getReferences, clearWorkspace, updateFile} from './testHelpers.ts'
+import {deindent} from './util.ts'
 
 function simple(location: ReturnType<typeof getDefinition>) {
   if (!location) return null
@@ -34,7 +35,11 @@ describe('hover', () => {
     from users select id, name`)
 
     let hover = getHover('input', 4, 33)
-    expect(hover).toBe('#### users.name\n\nfirst and last')
+    expect(hover).toBe(deindent(`
+      #### users.name
+
+      first and last
+    `))
   })
 
   it('returns table info when hovering a table', () => {
@@ -45,7 +50,11 @@ describe('hover', () => {
 
     // Hover over 'f' in 'from' (line 4, col 0)
     let hover = getHover('input', 3, 12)
-    expect(hover).toBe('#### users\n\nall the users in our system')
+    expect(hover).toBe(deindent(`
+      #### users
+
+      all the users in our system
+    `))
   })
 })
 

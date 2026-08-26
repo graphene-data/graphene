@@ -4,6 +4,7 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 
 import type {Config} from '../lang/config.ts'
+import {deindent} from '../lang/util.ts'
 
 import {checkForUpdate, detectPackageManager, getUpgradeCommand, isNewerVersion, isUpdateNotifierEnabled, showCachedUpdateNotice} from './updateNotifier.ts'
 
@@ -73,9 +74,11 @@ describe('cli update notifier', () => {
       expect(fetchCalls).toBe(1)
 
       await showCachedUpdateNotice({config: cfg, currentVersion: '0.0.17', env, statePath, stderr, now: 2_000})
-      expect(stderr.output).toContain('Graphene 0.0.18 is available. You are using 0.0.17.')
-      expect(stderr.output).toContain('Update: npm install @graphenedata/cli@latest')
-      expect(stderr.output).toContain('Release notes: https://github.com/graphene-data/graphene/releases/tag/v0.0.18')
+      expect(stderr.output).toBe(deindent(`
+        Graphene 0.0.18 is available. You are using 0.0.17.
+        Update: npm install @graphenedata/cli@latest
+        Release notes: https://github.com/graphene-data/graphene/releases/tag/v0.0.18
+      `) + '\n')
 
       stderr.output = ''
       await showCachedUpdateNotice({config: cfg, currentVersion: '0.0.17', env, statePath, stderr, now: 3_000})
@@ -94,7 +97,11 @@ describe('cli update notifier', () => {
         },
       })
       await showCachedUpdateNotice({config: cfg, currentVersion: '0.0.17', env, statePath, stderr, now: 4_000})
-      expect(stderr.output).toContain('Graphene 0.0.19 is available. You are using 0.0.17.')
+      expect(stderr.output).toBe(deindent(`
+        Graphene 0.0.19 is available. You are using 0.0.17.
+        Update: npm install @graphenedata/cli@latest
+        Release notes: https://github.com/graphene-data/graphene/releases/tag/v0.0.19
+      `) + '\n')
       expect(fetchCalls).toBe(2)
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})

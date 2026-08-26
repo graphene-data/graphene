@@ -8,7 +8,7 @@ import {fileURLToPath} from 'node:url'
 import {loadConfig, normalizeConfig, type Config, type ConfigInput} from '../lang/config.ts'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
 import {normalizePageUrl} from './run.ts'
-import {expect, test} from './testFixtures.ts'
+import {expect, expectCliOutput, test} from './testFixtures.ts'
 
 const dir = path.dirname(fileURLToPath(import.meta.url))
 const flightDir = path.resolve(dir, '../examples/flights')
@@ -73,12 +73,12 @@ describe('cli token', () => {
     try {
       let endpoint = await listen(server)
       let cloudConfig = configFor(flightDir, {cloud: endpoint})
-      expect((await runCli(['token', '--ttl', '12h'], cloudConfig, {env: {GRAPHENE_TOKEN: 'login-token'}})).stdout).toBe('agent-token\n')
-      expect((await runCli(['make-token'], cloudConfig, {env: {GRAPHENE_TOKEN: 'login-token'}})).stdout).toBe('agent-token\n')
+      expectCliOutput(await runCli(['token', '--ttl', '12h'], cloudConfig, {env: {GRAPHENE_TOKEN: 'login-token'}}), 'agent-token')
+      expectCliOutput(await runCli(['make-token'], cloudConfig, {env: {GRAPHENE_TOKEN: 'login-token'}}), 'agent-token')
       expect(ttlMinutes).toEqual([12 * 60, 30 * 24 * 60])
 
       let invalid = await runCli(['token', '--ttl', '4m'], cloudConfig, {env: {GRAPHENE_TOKEN: 'login-token'}})
-      expect(invalid.stderr).toBe('TTL must be between 5m and 366d\n')
+      expectCliOutput(invalid, {code: 1, stderr: 'TTL must be between 5m and 366d'})
     } finally {
       await new Promise(resolve => server.close(resolve))
     }
@@ -88,9 +88,7 @@ describe('cli token', () => {
 describe('cli compile', () => {
   test('compiles a basic query (happy path)', async ({runCli}) => {
     let res = await runCli(['compile', 'from flights select carrier'], flightConfig)
-    expectCliSuccess(res, 'compile basic query')
-    expect(res.stdout.toLowerCase()).toContain('from flights')
-    expect(res.stdout.toLowerCase()).toContain('select')
+    expectCliOutput(res, 'SELECT flights.carrier as carrier FROM flights as flights')
   })
 
   test('errors if the nearest package.json does not have graphene config', async () => {
@@ -106,8 +104,11 @@ describe('cli compile', () => {
 
   test('errors on invalid function (error path)', async ({runCli}) => {
     let res = await runCli(['compile', 'from flights select not_a_function()'], flightConfig)
-    expect(res.code).not.toBe(0)
-    expect((res.stdout + res.stderr).toLowerCase()).toContain('unknown function')
+    expectCliOutput(res, {code: 1, stdout: `
+      ERROR: input line 1: Unknown function: not_a_function
+      from flights select not_a_function()
+                          ^^^^^^^^^^^^^^^^
+    `})
   })
 })
 
@@ -117,12 +118,11 @@ describe('cli serve', () => {
 
     try {
       let start = await runCli(['serve', '--bg'], flightConfig)
-      expectCliSuccess(start, 'serve start')
-      expect(start.stdout).toContain(`Server running at http://localhost:${TEST_PORT}`)
+      expectCliOutput(start, `Server running at http://localhost:${TEST_PORT}`)
       expect(await isServerRunning(TEST_PORT)).toBe(true)
 
       let stop = await runCli(['stop'], flightConfig)
-      expectCliSuccess(stop, 'serve stop')
+      expectCliOutput({...stop, stdout: stop.stdout.replace(/\d+/, '<pid>')}, 'Stopping server (<pid>)')
       expect(await isServerRunning(TEST_PORT)).toBe(false)
     } finally {
       await stopGrapheneIfRunning(TEST_PORT)
@@ -134,9 +134,7 @@ describe('cli serve', () => {
     try {
       let res = await runCli(['serve', '--bg'], configFor(tmpDir, {cloud: 'https://example.graphenedata.com/flights'}), {env: {GRAPHENE_TOKEN: ''}})
 
-      expect(res.code).toBe(1)
-      expect(res.stdout).toBe('')
-      expect(res.stderr).toBe('Not logged in to Graphene Cloud. Run `graphene login` and try again.\n')
+      expectCliOutput(res, {code: 1, stderr: 'Not logged in to Graphene Cloud. Run `graphene login` and try again.'})
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
@@ -152,21 +150,43 @@ describe('cli run', () => {
 
   test('prints help instead of reading stdin when no input is provided', async ({runCli}) => {
     let res = await runCli(['run'], flightConfig)
-    expectCliSuccess(res, 'run help with no input')
-    expect(res.stdout).toContain('Usage: graphene run [options] [input]')
-    expect(res.stdout).toContain('Path to file, a raw string, or "-" for stdin')
+    expectCliOutput(res, `
+      Usage: graphene run [options] [input]
+
+      Run a query or screenshot a Graphene page
+
+      Arguments:
+        input                                  Path to file, a raw string, or "-" for stdin
+
+      Options:
+        -c, --chart <chartTitleOrComponentId>  Title or component ID of a specific chart or table to capture
+        --param <key=value>                    Query parameters; repeat for multiple values (default: [])
+        --format <format>                      Output format for query or chart data: table or csv (default: "table")
+        --headless                             Run markdown pages in a headless browser instead of opening the system browser
+        -h, --help                             display help for command
+    `)
   })
 
   test('reads a query from stdin when input is "-"', async ({runCli}) => {
     let res = await runCli(['run', '-'], flightConfig, {stdin: 'from flights select count() as total'})
-    expectCliSuccess(res, 'run query from stdin')
-    expect(res.stdout.toLowerCase()).toContain('total')
+    expectCliOutput(res, `
+      ┌────────┐
+      │ total  │
+      ├────────┤
+      │ 344827 │
+      └────────┘
+    `)
   })
 
   test('runs a query against flights.duckdb (happy path)', async ({runCli}) => {
     let res = await runCli(['run', 'from flights select count() as total'], flightConfig)
-    expectCliSuccess(res, 'run query')
-    expect(res.stdout.toLowerCase()).toContain('total')
+    expectCliOutput(res, `
+      ┌────────┐
+      │ total  │
+      ├────────┤
+      │ 344827 │
+      └────────┘
+    `)
   })
 
   test('checks cloud auth before running a query', async ({runCli}) => {
@@ -174,9 +194,7 @@ describe('cli run', () => {
     try {
       let res = await runCli(['run', 'from flights select count() as total'], configFor(tmpDir, {cloud: 'https://example.graphenedata.com/flights'}), {env: {GRAPHENE_TOKEN: ''}})
 
-      expect(res.code).toBe(1)
-      expect(res.stdout).toBe('')
-      expect(res.stderr).toBe('Not logged in to Graphene Cloud. Run `graphene login` and try again.\n')
+      expectCliOutput(res, {code: 1, stderr: 'Not logged in to Graphene Cloud. Run `graphene login` and try again.'})
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
@@ -194,9 +212,7 @@ describe('cli run', () => {
       let endpoint = await listen(server)
       let res = await runCli(['run', 'from flights select count() as total'], configFor(flightDir, {cloud: `${endpoint}/flights`}), {env: {GRAPHENE_TOKEN: 'test-token'}})
 
-      expect(res.code).toBe(1)
-      expect(res.stdout).toBe('')
-      expect(res.stderr).toBe('fetch failed (UND_ERR_SOCKET)\n')
+      expectCliOutput(res, {code: 1, stderr: 'fetch failed (UND_ERR_SOCKET)'})
     } finally {
       await new Promise(resolve => server.close(resolve))
     }
@@ -204,57 +220,75 @@ describe('cli run', () => {
 
   test('prints query diagnostics without a stack trace', async ({runCli}) => {
     let res = await runCli(['run', 'from flights select carrier order by nope'], flightConfig)
-    let output = res.stdout + res.stderr
-
-    expect(res.code).toBe(1)
-    expect(output).toContain('Unknown field in ORDER BY: nope')
-    expect(output).not.toContain('TypeError')
-    expect(output).not.toContain('validateInputQuery')
-    expect(output).not.toContain('at file://')
+    expectCliOutput(res, {code: 1, stdout: `
+      ERROR: input line 1: Unknown field in ORDER BY: nope
+      from flights select carrier order by nope
+                                           ^^^^
+    `})
   })
 
   test('normalizes DuckDB timestamp with time zone values', async ({runCli}) => {
     let res = await runCli(['run', 'select now() as ts'], flightConfig)
-    expectCliSuccess(res, 'run timestamptz query')
-    expect(res.stdout).toMatch(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+    expectCliOutput({...res, stdout: res.stdout.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z/, '<timestamp>')}, `
+      ┌──────────────────────────┐
+      │ ts                       │
+      ├──────────────────────────┤
+      │ <timestamp> │
+      └──────────────────────────┘
+    `)
   })
 
   test('prints csv for an inline query with --format csv', async ({runCli}) => {
     let res = await runCli(['run', "select 'a,b' as name, 2 as total", '--format', 'csv'], flightConfig)
-    expectCliSuccess(res, 'run query as csv')
-    expect(res.stdout).toBe('name,total\n"a,b",2\n')
+    expectCliOutput(res, `
+      name,total
+      "a,b",2
+    `)
   })
 
   test('runs an inline parameterized query with --param', async ({runCli}) => {
     let res = await runCli(['run', 'from flights where carrier = $carrier select carrier, count() as total group by 1', '--param', 'carrier=AA'], flightConfig)
-    expectCliSuccess(res, 'run parameterized query')
-    expect(res.stdout).toContain('AA')
-    expect(res.stdout.toLowerCase()).toContain('total')
+    expectCliOutput(res, `
+      ┌─────────┬───────┐
+      │ carrier │ total │
+      ├─────────┼───────┤
+      │ AA      │ 34577 │
+      └─────────┴───────┘
+    `)
   })
 
   test('uses the configured project root when running a query', async ({runCli}) => {
     let res = await runCli(['run', 'from flights select count() as total'], flightConfig)
-    expectCliSuccess(res, 'run query from nested directory')
-    expect(res.stdout.toLowerCase()).toContain('total')
+    expectCliOutput(res, `
+      ┌────────┐
+      │ total  │
+      ├────────┤
+      │ 344827 │
+      └────────┘
+    `)
   })
 
   test('treats repeated --param values as an array', async ({runCli}) => {
     let res = await runCli(['run', 'from flights where carrier in ($carrier) select carrier group by 1 order by 1', '--param', 'carrier=AA', '--param', 'carrier=DL'], flightConfig)
-    expectCliSuccess(res, 'run repeated input query')
-    expect(res.stdout).toContain('AA')
-    expect(res.stdout).toContain('DL')
+    expectCliOutput(res, `
+      ┌─────────┐
+      │ carrier │
+      ├─────────┤
+      │ AA      │
+      ├─────────┤
+      │ DL      │
+      └─────────┘
+    `)
   })
 
   test('rejects --param without key=value syntax', async ({runCli}) => {
     let res = await runCli(['run', 'from flights select count()', '--param', 'carrier'], flightConfig)
-    expect(res.code).toBe(1)
-    expect(res.stderr).toContain('Invalid --param "carrier". Expected key=value.')
+    expectCliOutput(res, {code: 1, stderr: 'Invalid --param "carrier". Expected key=value.'})
   })
 
   test('rejects --param with an empty key', async ({runCli}) => {
     let res = await runCli(['run', 'from flights select count()', '--param', '=AA'], flightConfig)
-    expect(res.code).toBe(1)
-    expect(res.stderr).toContain('Invalid --param "=AA". Expected key=value.')
+    expectCliOutput(res, {code: 1, stderr: 'Invalid --param "=AA". Expected key=value.'})
   })
 
   test('uses a configured duckdb path when present', async ({runCli}) => {
@@ -274,8 +308,13 @@ describe('cli run', () => {
       await fsp.writeFile(path.join(tmpDir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n')
       await fsp.cp(path.join(flightDir, 'tables'), path.join(tmpDir, 'tables'), {recursive: true})
       let res = await runCli(['run', 'from flights select count() as total'], configFor(tmpDir, {duckdb: {path: path.join(flightDir, 'flights.duckdb')}}))
-      expectCliSuccess(res, 'run query with configured duckdb path')
-      expect(res.stdout.toLowerCase()).toContain('total')
+      expectCliOutput(res, `
+      ┌────────┐
+      │ total  │
+      ├────────┤
+      │ 344827 │
+      └────────┘
+    `)
     } finally {
       await fsp.rm(tmpDir, {recursive: true, force: true})
     }
@@ -283,15 +322,13 @@ describe('cli run', () => {
 
   test('rejects passing a gsql file path', async ({runCli}) => {
     let res = await runCli(['run', 'tables/flights.gsql'], flightConfig)
-    expect(res.code).toBe(1)
-    expect((res.stdout + res.stderr).toLowerCase()).toContain('running .gsql files is no longer supported')
+    expectCliOutput(res, {code: 1, stderr: 'Running .gsql files is no longer supported'})
   })
 })
 
 test('cli check a single gsql file', async ({runCli}) => {
   let res = await runCli(['check', 'tables/flights.gsql'], flightConfig)
-  expectCliSuccess(res, 'check gsql file')
-  expect(res.stdout).toContain('No errors found')
+  expectCliOutput(res, 'No errors found 💎')
 })
 
 describe('cli telemetry', () => {

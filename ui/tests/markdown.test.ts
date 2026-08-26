@@ -40,6 +40,7 @@ test('routes pages hidden from navigation', async ({server, page}) => {
 
   await page.goto(server.url() + '/flight-detail')
   await expect(page.getByRole('heading', {level: 1, name: 'Flight Detail'})).toBeVisible()
+  await expect(page).screenshot('hidden-navigation-page')
 })
 
 test('serves the cloud CSP unless disabled', async ({server, page}) => {
@@ -402,6 +403,7 @@ test('decodes html entities in inline echarts config strings', async ({server, p
   await waitForGrapheneLoad(page)
   await expect(page.locator('.echarts')).toHaveAttribute('data-chart-title', 'This & That')
   await expect(page.locator('.echarts')).not.toHaveAttribute('data-chart-title', 'This &amp; That')
+  await expect(page).screenshot('echarts-html-entity-title')
 })
 
 test('charts resize when shrunk', async ({server, page}) => {
@@ -556,10 +558,12 @@ test('renders Markdown framework syntax, HTML, and visual attributes', async ({s
   await expect(layout).toHaveAttribute('role', 'region')
   await expect(layout).toHaveAttribute('style', 'color: red')
   await expect(layout).toHaveCSS('color', 'rgb(255, 0, 0)')
+  await expect(page).screenshot('markdown-framework-html-attributes')
 })
 
 test('renders literal less-than characters', async ({server, page}) => {
   server.mockFile('/index.md', '# Comparison\nProfit is 1 < 2 and losses are 0 < 1.')
   await page.goto(server.url() + '/')
   await expect(page.locator('main')).toHaveText(/1 < 2/)
+  await expect(page).screenshot('markdown-literal-less-than')
 })

@@ -10,14 +10,17 @@ test('valid → invalid → valid via HMR', {timeout: 20000}, async ({server, pa
 
   await page.goto(server.url())
   await expect(page.getByRole('heading', {name: 'Working Page'})).toBeVisible()
+  await expect(page).screenshot('hmr-working-page')
 
   // Break the file — should show error
   await server.updateMockFile('/index.md', '# Broken\n{#if true}<p>oops')
   await expect(page.getByRole('heading', {name: 'Error loading page'})).toBeVisible({timeout: 5000})
+  await expect(page).screenshot('hmr-broken-page')
 
   // Fix the file — should recover via HMR
   await server.updateMockFile('/index.md', '# Fixed Page')
   await expect(page.getByRole('heading', {name: 'Fixed Page'})).toBeVisible({timeout: 5000})
+  await expect(page).screenshot('hmr-fixed-page')
 })
 
 test('load broken page, fix via HMR', async ({server, page}) => {
@@ -36,6 +39,7 @@ test('load broken page, fix via HMR', async ({server, page}) => {
   // Fix the file — should recover via HMR
   await server.updateMockFile('/index.md', '# Now Working')
   await expect(page.getByRole('heading', {name: 'Now Working'})).toBeVisible({timeout: 5000})
+  await expect(page).screenshot('hmr-recovered-page')
 })
 
 test('shows an error when a page uses an unknown component', async ({server, page}) => {

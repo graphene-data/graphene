@@ -1,10 +1,11 @@
 import {readFile} from 'node:fs/promises'
 import stripAnsi from 'strip-ansi'
+import {expect as vitestExpect} from 'vitest'
 
 import {check} from '../../cli/check.ts'
 import {mockFileMap} from '../../cli/mockFiles.ts'
 import {config} from '../../lang/config.ts'
-import {trimIndentation} from '../../lang/util.ts'
+import {deindent, trimIndentation} from '../../lang/util.ts'
 import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
 import {expectConsoleError} from './logWatcher.ts'
 
@@ -29,6 +30,70 @@ function outputLines(output = logs) {
   return stripAnsi(normalized.trim())
 }
 
+const carrierDistanceOutput = deindent(`
+  Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  ┌─────────┬────────────────┐
+  │ carrier │ total_distance │
+  ├─────────┼────────────────┤
+  │ WN      │ 54619152       │
+  ├─────────┼────────────────┤
+  │ UA      │ 38882934       │
+  ├─────────┼────────────────┤
+  │ AA      │ 37684885       │
+  ├─────────┼────────────────┤
+  │ NW      │ 33376503       │
+  ├─────────┼────────────────┤
+  │ US      │ 23721642       │
+  ├─────────┼────────────────┤
+  │ DL      │ 21547874       │
+  ├─────────┼────────────────┤
+  │ RU      │ 7676766        │
+  ├─────────┼────────────────┤
+  │ AS      │ 7072451        │
+  ├─────────┼────────────────┤
+  │ B6      │ 6452288        │
+  ├─────────┼────────────────┤
+  │ HP      │ 6441707        │
+  ├─────────┼────────────────┤
+  │ CO      │ 5794572        │
+  ├─────────┼────────────────┤
+  │ MQ      │ 4251459        │
+  ├─────────┼────────────────┤
+  │ EV      │ 3172376        │
+  ├─────────┼────────────────┤
+  │ TZ      │ 2645227        │
+  ├─────────┼────────────────┤
+  │ OH      │ 1997359        │
+  └─────────┴────────────────┘
+  Page available at http://localhost:<port>/
+`)
+
+const carrierTotalsOutput = deindent(`
+  Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  ┌─────────┬───────────────┐
+  │ carrier │ total_flights │
+  ├─────────┼───────────────┤
+  │ AA      │ 34577         │
+  ├─────────┼───────────────┤
+  │ AS      │ 8453          │
+  ├─────────┼───────────────┤
+  │ B6      │ 4842          │
+  ├─────────┼───────────────┤
+  │ CO      │ 7139          │
+  ├─────────┼───────────────┤
+  │ DL      │ 32130         │
+  └─────────┴───────────────┘
+  Page available at http://localhost:<port>/
+`)
+
+const carrierCsvOutput = deindent(`
+  Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+  carrier,total_flights
+  AA,34577
+  DL,32130
+  Page available at http://localhost:<port>/
+`)
+
 test.beforeEach(() => {
   logs = ''
   Object.keys(mockFileMap).forEach(key => delete mockFileMap[key])
@@ -42,13 +107,11 @@ test('check defaults to analyzing the whole workspace', async () => {
   `
 
   await check({log})
-  expect(outputLines()).toEqual(
-    `
+  expect(outputLines()).toBe(deindent(`
     ERROR: tmp_bad.gsql line 3: Unknown function: not_a_function
-      from flights select not_a_function()
-                          ^^^^^^^^^^^^^^^^
-  `.trim(),
-  )
+          from flights select not_a_function()
+                              ^^^^^^^^^^^^^^^^
+  `))
 })
 
 test('check with mdFile reports analysis errors', async ({server, page}) => {
@@ -75,13 +138,11 @@ test('check with mdFile reports analysis errors', async ({server, page}) => {
 
   await page.goto(server.url() + '/mock')
   await check({fileArg: 'pages/mock.md', log})
-  expect(outputLines()).toEqual(
-    `
+  expect(outputLines()).toBe(deindent(`
     ERROR: pages/mock.md line 3: Unknown function: not_a_function
-from flights select 1 as origin, not_a_function() as explode
-                                 ^^^^^^^^^^^^^^^^
-  `.trim(),
-  )
+    from flights select 1 as origin, not_a_function() as explode
+                                     ^^^^^^^^^^^^^^^^
+  `))
 })
 
 test('check with mdFile reports unsupported chart wrapper props', async () => {
@@ -94,7 +155,11 @@ test('check with mdFile reports unsupported chart wrapper props', async () => {
 
   let result = await check({fileArg: 'mock.md', log})
   expect(result).toBe(false)
-  expect(outputLines()).toContain('ERROR: mock.md line 4: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.')
+  vitestExpect(outputLines()).toBe(deindent(`
+    ERROR: mock.md line 4: Unsupported prop "yFmt" on BarChart. Use field metadata or ECharts for custom formatting.
+    <BarChart data=chart_data x=carrier y=distance yFmt=num0 />
+                                                   ^^^^
+  `))
 })
 
 test('check reports invalid metadata annotations', async () => {
@@ -106,7 +171,11 @@ test('check reports invalid metadata annotations', async () => {
 
   let result = await check({fileArg: 'tmp_bad_metadata.gsql', log})
   expect(result).toBe(false)
-  expect(outputLines()).toContain('ERROR: tmp_bad_metadata.gsql line 2: Metadata "#ratio" is a flag; use "#ratio" or "#ratio=true".')
+  vitestExpect(outputLines()).toBe(deindent(`
+    ERROR: tmp_bad_metadata.gsql line 2: Metadata "#ratio" is a flag; use "#ratio" or "#ratio=true".
+      rate number #ratio=false
+                         ^^^^^
+  `))
 })
 
 test('cli run reports unsupported props across chart types', async ({runCli, server, page}) => {
@@ -130,8 +199,11 @@ test('cli run reports unsupported props across chart types', async ({runCli, ser
   let result = await runCli(['run', 'pages/index.md'], config)
   let output = outputLines(result.stdout + result.stderr)
   expect(result.code).toBe(1)
-  expect(output).toContain('Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.')
-  expect(output).toContain('Unsupported prop "chartAreaHeight" on ECharts.')
+  vitestExpect(output).toBe(deindent(`
+    ERROR: input: Unsupported prop "yFmt" on BarChart. Unsupported prop "emptySet" on BarChart.
+
+    ERROR: input: Unsupported prop "chartAreaHeight" on ECharts.
+  `))
 })
 
 test('cli run with md file reports runtime chart render errors', async ({runCli, server, page}) => {
@@ -155,7 +227,7 @@ test('cli run with md file reports runtime chart render errors', async ({runCli,
   await page.goto(server.url())
   let result = await runCli(['run', 'pages/index.md'], config)
   expect(result.code).toBe(1)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Horizontal charts do not support a value or time-based x-axis')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe('ERROR: input: Horizontal charts do not support a value or time-based x-axis')
 })
 
 test('cli run with md file reports runtime query errors', async ({runCli, server, page}) => {
@@ -173,7 +245,7 @@ test('cli run with md file reports runtime query errors', async ({runCli, server
 
   await page.goto(server.url())
   let result = await runCli(['run', 'pages/index.md'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('cannot take square root of a negative number')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe('ERROR: input: Out of Range Error: cannot take square root of a negative number')
 })
 
 test('cli run handles page query with trailing column annotation', async ({runCli, server}) => {
@@ -194,7 +266,10 @@ test('cli run handles page query with trailing column annotation', async ({runCl
   let result = await runCli(['run', 'pages/index.md', '--headless'], config)
   expect(result.code).toBe(0)
   await expectPngScreenshot(result.stdout)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe(deindent(`
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+    Page available at http://localhost:<port>/
+  `))
 })
 
 test('cli run with md file reports table configuration errors', async ({runCli, server, page}) => {
@@ -211,7 +286,7 @@ test('cli run with md file reports table configuration errors', async ({runCli, 
 
   await page.goto(server.url())
   let result = await runCli(['run', 'pages/index.md'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('not_a_column is not a column in the dataset')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe('ERROR: input: not_a_column is not a column in the dataset. sort should contain one column name and optionally a direction (asc or desc).')
 })
 
 test('cli run with md file reports big value query errors', async ({runCli, server, page}) => {
@@ -229,7 +304,7 @@ test('cli run with md file reports big value query errors', async ({runCli, serv
 
   await page.goto(server.url())
   let result = await runCli(['run', 'pages/index.md'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('cannot take square root of a negative number')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe('ERROR: input: Out of Range Error: cannot take square root of a negative number')
 })
 
 test('cli run reports a missing markdown file', async ({runCli}) => {
@@ -255,7 +330,14 @@ test('cli run with md file reports html compilation errors', async ({runCli, ser
   let result = await runCli(['run', 'pages/index.md'], config)
   expect(result.code).toBe(1)
   let output = outputLines(result.stdout + result.stderr)
-  expect(output).toMatch(/ERROR: .*index\.md line \d+: `<p>` was left open/)
+  vitestExpect(output.replace(/ERROR: .*index\.md line \d+:/, 'ERROR: <path>/index.md line <line>:')).toBe(deindent(`
+    ERROR: <path>/index.md line <line>: \`<p>\` was left open
+     5 |  <h1>Test</h1>
+     6 |  {#if true}
+     7 |  <p>oops
+           ^
+     8 |
+  `))
 })
 
 test('cli run selects chart, table, and ECharts screenshots by title', async ({runCli, server, page}) => {
@@ -281,12 +363,13 @@ test('cli run selects chart, table, and ECharts screenshots by title', async ({r
   )
 
   await page.goto(server.url())
+  let outputs: string[] = []
   for (let title of ['Carrier Distance', 'Carrier Totals', 'ECharts Distance']) {
     let result = await runCli(['run', 'pages/index.md', '--chart', title], config)
     await expectPngScreenshot(result.stdout)
-    expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-    expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
+    outputs.push(outputLines(result.stdout + result.stderr))
   }
+  vitestExpect(outputs).toEqual([carrierDistanceOutput, carrierTotalsOutput, carrierDistanceOutput])
 })
 
 test('cli run with --headless captures a screenshot without an open page', async ({runCli, server}) => {
@@ -304,8 +387,7 @@ test('cli run with --headless captures a screenshot without an open page', async
   server.url()
   let result = await runCli(['run', 'pages/index.md', '--headless', '--chart', 'Carrier Distance'], config)
   await expectPngScreenshot(result.stdout)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe(carrierDistanceOutput)
 })
 
 
@@ -324,8 +406,7 @@ test('cli run with --headless captures a table screenshot by title', async ({run
 
   server.url()
   let result = await runCli(['run', 'pages/index.md', '--headless', '--chart', 'Carrier Totals'], config)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe(carrierTotalsOutput)
 })
 
 test('cli run with --input applies inputs to a full page run', async ({runCli, server, page}) => {
@@ -354,8 +435,10 @@ test('cli run with --input applies inputs to a full page run', async ({runCli, s
 
   expect(result.code).toBe(0)
   expect(queryBodies.some(body => JSON.stringify(body.params) == JSON.stringify({carrier: 'AA'}))).toBe(true)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-  expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>/?carrier=AA')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe(deindent(`
+    Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png
+    Page available at http://localhost:<port>/?carrier=AA
+  `))
 })
 
 
@@ -379,9 +462,10 @@ test('cli list prints chart and table component IDs', async ({runCli, server, pa
   await page.goto(server.url())
   let result = await runCli(['list', 'pages/index.md'], config)
   expect(result.code).toBe(0)
-  expect(outputLines(result.stdout + result.stderr)).toEqual(
-    'BarChart (data="chart_data" x="carrier" y="total_distance")\nDataTable (data="table_data")',
-  )
+  expect(outputLines(result.stdout + result.stderr)).toBe(deindent(`
+    BarChart (data="chart_data" x="carrier" y="total_distance")
+    DataTable (data="table_data")
+  `))
 })
 
 test('cli run exports chart and table data as csv', async ({runCli, server, page}) => {
@@ -398,13 +482,13 @@ test('cli run exports chart and table data as csv', async ({runCli, server, page
   )
 
   await page.goto(server.url())
+  let outputs: string[] = []
   for (let title of ['Carrier Flights', 'Carrier Totals']) {
     let result = await runCli(['run', 'pages/index.md', '--chart', title, '--format', 'csv'], config)
     expect(result.code).toBe(0)
-    expect(result.stdout).toContain('carrier,total_flights\n')
-    expect(result.stdout).toContain('AA,')
-    expect(result.stdout).toContain('DL,')
+    outputs.push(outputLines(result.stdout + result.stderr))
   }
+  vitestExpect(outputs).toEqual([carrierCsvOutput, carrierCsvOutput])
 })
 
 test('cli run with --headless formats chart data as csv', async ({runCli, server}) => {
@@ -422,9 +506,7 @@ test('cli run with --headless formats chart data as csv', async ({runCli, server
   server.url()
   let result = await runCli(['run', 'pages/index.md', '--chart', 'Carrier Flights', '--format', 'csv', '--headless'], config)
   expect(result.code).toBe(0)
-  expect(result.stdout).toContain('carrier,total_flights\n')
-  expect(result.stdout).toContain('AA,')
-  expect(result.stdout).toContain('DL,')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe(carrierCsvOutput)
 })
 
 
@@ -446,13 +528,14 @@ test('cli run selects components by ID and reports an unknown selector', async (
   )
 
   await page.goto(server.url())
+  let outputs: string[] = []
   for (let componentId of ['BarChart (data="chart_data" x="carrier" y="total_distance")', 'DataTable (data="table_data")']) {
     let result = await runCli(['run', 'pages/index.md', '--chart', componentId], config)
-    expect(outputLines(result.stdout + result.stderr)).toContain('Screenshot saved to <project>/node_modules/.graphene/screenshots/<timestamp>.png')
-    expect(outputLines(result.stdout + result.stderr)).toContain('Page available at http://localhost:<port>')
+    outputs.push(outputLines(result.stdout + result.stderr))
   }
+  vitestExpect(outputs).toEqual([carrierDistanceOutput, carrierTotalsOutput])
 
   let result = await runCli(['run', 'pages/index.md', '--chart', 'Missing Chart'], config)
   expect(result.code).toBe(1)
-  expect(outputLines(result.stdout + result.stderr)).toContain('Could not find chart "Missing Chart"')
+  vitestExpect(outputLines(result.stdout + result.stderr)).toBe('ERROR: input: Could not find chart "Missing Chart"')
 })
