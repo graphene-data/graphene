@@ -98,6 +98,7 @@ async function runExample(exampleName: string, page: Page, {suppressScreenshot =
       await page.goto(`http://localhost:${port}${toPageUrl(mdPath)}`)
       await waitForGrapheneLoad(page, 120_000)
       if (!suppressScreenshot) {
+        await page.mouse.move(-1, -1)
         await expect(page).screenshot(`example-${exampleName}-${mdPath.replace(/\.md$/, '').replace(/[^a-z0-9]+/gi, '-')}`)
       }
 

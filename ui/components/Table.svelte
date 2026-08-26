@@ -2,6 +2,7 @@
   import {untrack, type Snippet} from 'svelte'
   import type {QueryResult} from '../component-utilities/types.ts'
   import {componentLogger} from '../internal/telemetry.ts'
+  import CommentButton from './CommentButton.svelte'
   import QueryLoad from './QueryLoad.svelte'
   import TableInner from './_Table.svelte'
 
@@ -27,5 +28,11 @@
 {/snippet}
 
 <div class="table-component" data-component-id={logger.id} data-component-title={componentTitle} data-chart-title={componentTitle}>
+  <div class="component-actions"><CommentButton componentId={logger.id} title={componentTitle} /></div>
   <QueryLoad {data} children={tableContent} componentId={logger.id} />
 </div>
+
+<style>
+  .table-component { position: relative; }
+  .component-actions { position: absolute; z-index: 2; top: -.25rem; right: 1rem; display: flex; align-items: center; }
+</style>

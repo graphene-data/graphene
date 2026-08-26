@@ -1,5 +1,6 @@
 // Keeps input values synchronized between the URL, rendered components, and query requests.
 // List params use the smaller included/excluded set in one escaped URL value.
+import {replaceState} from './router.ts'
 
 let paramValues: Record<string, any> = readUrlParams()
 let subscribers: Record<string, {type: ParamType; defaultValue: any; cb: ParamCallback}> = {}
@@ -82,7 +83,7 @@ function writeUrlParams() {
   let nextSearch = search.toString()
   let currentSearch = window.location.search.replace(/^\?/, '')
   if (nextSearch === currentSearch) return
-  window.history.replaceState(window.history.state, '', window.location.pathname + (nextSearch ? `?${nextSearch}` : '') + window.location.hash)
+  replaceState(window.location.pathname + (nextSearch ? `?${nextSearch}` : '') + window.location.hash)
 }
 
 // Normalize legacy arrays as include lists; explicit i:/e: URLs preserve adaptive list mode.

@@ -70,7 +70,7 @@ function scatterData() {
 
 test.beforeEach(async ({sharedPage}) => {
   await sharedPage.setViewportSize({width: 680, height: 400})
-  await sharedPage.mouse.move(679, 399)
+  await sharedPage.mouse.move(-1, -1)
 })
 
 test('echarts query error state', async ({mount, chart}) => {
@@ -198,7 +198,7 @@ test('chart download button exports raw csv rows', async ({mount, chart, sharedP
     expect(csv).toBe(['category,value', '"A, Inc",10', '"B ""Team""",12'].join('\n'))
   } finally {
     await sharedPage.evaluate(() => (document.activeElement as HTMLElement | null)?.blur())
-    await sharedPage.mouse.move(679, 399)
+    await sharedPage.mouse.move(-1, -1)
   }
 })
 
