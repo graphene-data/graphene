@@ -1,6 +1,7 @@
 <script lang="ts">
   import {rowsToCsv} from '../../lang/csv.ts'
   import type {QueryResult} from '../component-utilities/types.ts'
+  import ActionButton from './ActionButton.svelte'
 
   interface Props {
     data: QueryResult
@@ -40,58 +41,10 @@
   }
 </script>
 
-<button class="csv-download" type="button" aria-label="Download chart data as CSV" title="Download chart data as CSV" onclick={downloadCsv}>
+<ActionButton type="button" aria-label="Download chart data as CSV" title="Download chart data as CSV" onclick={downloadCsv}>
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path d="M12 3v12" />
     <path d="m7 10 5 5 5-5" />
     <path d="M5 21h14" />
   </svg>
-</button>
-
-<style>
-  .csv-download {
-    position: absolute;
-    top: -0.375rem;
-    right: 1rem;
-    z-index: 2;
-    display: grid;
-    place-items: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    padding: 0;
-    color: #6b7280;
-    background: transparent;
-    border: 0;
-    border-radius: 0.375rem;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 120ms ease, color 120ms ease;
-  }
-
-  :global(.echarts:hover) .csv-download,
-  :global(.echarts:focus-within) .csv-download,
-  .csv-download:hover,
-  .csv-download:focus-visible {
-    opacity: 1;
-  }
-
-  .csv-download:hover,
-  .csv-download:focus-visible {
-    color: #111827;
-  }
-
-  .csv-download:focus-visible {
-    outline: 2px solid #2563eb;
-    outline-offset: 2px;
-  }
-
-  .csv-download svg {
-    width: 1rem;
-    height: 1rem;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 2;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-</style>
+</ActionButton>

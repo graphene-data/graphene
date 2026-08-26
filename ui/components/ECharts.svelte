@@ -6,6 +6,7 @@
   import {enrich, horizontalBarCount} from '../component-utilities/enrich.ts'
   import type {EChartsConfig, NormalConfig, QueryResult} from '../component-utilities/types.ts'
   import '../component-utilities/theme.ts'
+  import CommentButton from './CommentButton.svelte'
   import CsvDownload from './CsvDownload.svelte'
   import Skeleton from './Skeleton.svelte'
 
@@ -181,9 +182,10 @@
 </script>
 
 <div class="echarts" bind:this={node} style={chartSizeStyle} data-component-id={mountedComponentId} data-chart-title={chartTitle}>
-  {#if loaded && !loaded.error && !chartError}
-    <CsvDownload data={loaded} exportId={displayId} title={chartTitle} />
-  {/if}
+  <div class="component-actions">
+    <CommentButton componentId={mountedComponentId || displayId} title={chartTitle} />
+    {#if loaded && !loaded.error && !chartError}<CsvDownload data={loaded} exportId={displayId} title={chartTitle} />{/if}
+  </div>
   {#if loaded?.error || chartError}
     <ErrorDisplay error={loaded?.error || chartError?.message || 'Unknown chart error'} />
   {:else if !loaded}
@@ -194,9 +196,8 @@
 </div>
 
 <style>
-  .echarts {
-    position: relative;
-  }
+  .echarts { position: relative; }
+  .component-actions { position: absolute; z-index: 2; top: -.25rem; right: 1rem; display: flex; align-items: center; gap: 0; }
 
   @media (max-width: 600px) {
     .echarts { max-width: 100%; }
