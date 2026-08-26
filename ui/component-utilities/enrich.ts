@@ -47,6 +47,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, rows, fields)
   timeFormatting(normalized)
+  tooltipTriggerForSeriesCount(normalized)
   addCartesianItemTooltips(normalized, fields)
   styleSecondaryAxisForSimpleBarLineLayout(normalized, fields)
   applyIntegerYAxisTicks(normalized, rows, fields)
@@ -298,7 +299,7 @@ function ensureAxes(config: NormalConfig) {
 // Ensure we always have exactly one top-level tooltip object in normalized config.
 function ensureTooltip(config: NormalConfig) {
   if (config.tooltip.length > 0) return
-  config.tooltip.push({trigger: 'axis'})
+  config.tooltip.push({})
 }
 
 // Ensure we have a color palette set for the chart.
@@ -480,6 +481,20 @@ function valueFormatting(config: NormalConfig, rows: Record<string, any>[], fiel
     if (series.tooltip?.formatter || series.tooltip.valueFormatter) continue
     series.tooltip.valueFormatter = makeValueFormatter(getSeriesValueFields(series, fields))
   }
+}
+
+// Axis tooltips are the friendlier default: hover anywhere in a column and you get every series at that dimension
+// value without hunting for an exact point. They fall apart once a chart has many series though - the list stops
+// fitting in a default-height chart, and it's impossible to tell which series the cursor is actually near - so past
+// the limit we switch to item tooltips, which name a single point. Bars and lines are the only types with an item
+// tooltip worth reading (see addCartesianItemTooltips), so everything else stays on axis.
+const AXIS_TOOLTIP_SERIES_LIMIT = 6
+function tooltipTriggerForSeriesCount(config: NormalConfig) {
+  let tooltip = config.tooltip[0]
+  if (!tooltip || tooltip.trigger != null) return
+
+  let barsAndLines = config.series.every(series => series?.type === 'bar' || series?.type === 'line')
+  tooltip.trigger = barsAndLines && config.series.length > AXIS_TOOLTIP_SERIES_LIMIT ? 'item' : 'axis'
 }
 
 // Item-triggered cartesian tooltips retain the dimension as a header while showing only the hovered series.

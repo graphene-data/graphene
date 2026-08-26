@@ -48,6 +48,18 @@ function dualAxisLegendData() {
   return {rows, fields}
 }
 
+// Monthly revenue split into `seriesCount` regions, for charts where the number of series is what's under test.
+function seriesCountData(seriesCount: number) {
+  let months = ['2024-01-01', '2024-02-01', '2024-03-01', '2024-04-01', '2024-05-01', '2024-06-01']
+  let rows = Array.from({length: seriesCount}, (_, group) => months.map((month, index) => ({month, region: `Region ${group + 1}`, revenue: 120000 + group * 26000 + Math.round(Math.sin(index + group) * 19000)}))).flat()
+  let fields = [
+    {name: 'month', type: scalarType('date'), metadata: {timeGrain: 'month'}},
+    {name: 'region', type: scalarType('string')},
+    {name: 'revenue', type: scalarType('number'), metadata: {currency: 'USD'}},
+  ]
+  return {rows, fields}
+}
+
 function scatterData() {
   let rows = [
     {segment: 'SMB', efficiency: 42, growth: 28, quality: 55},
@@ -570,6 +582,18 @@ test('charts convert values into the unit they display so ticks stay round', asy
   expect(result.durations.map(duration => Math.round(duration * 1000) / 1000)).toEqual([4, 1.042])
   expect(result.axis).toEqual(['1d', '2d'])
   expect(result.tooltip).toBe('1d 1h')
+})
+
+test('few-series charts show every series at the hovered dimension value', async ({mount, chart}) => {
+  await mount('components/LineChart.svelte', {data: seriesCountData(6), x: 'month', y: 'revenue', splitBy: 'region', title: 'Revenue by Region'})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3})
+  await expect(chart.el).screenshot('line-chart-axis-tooltip-six-series', {mouseHover: true})
+})
+
+test('many-series charts fall back to a single-point tooltip', async ({mount, chart}) => {
+  await mount('components/LineChart.svelte', {data: seriesCountData(7), x: 'month', y: 'revenue', splitBy: 'region', title: 'Revenue by Region'})
+  await chart.chartDispatchAction({type: 'showTip', seriesIndex: 0, dataIndex: 3})
+  await expect(chart.el).screenshot('line-chart-item-tooltip-seven-series', {mouseHover: true})
 })
 
 test('time tooltip uses readable timeGrain formatting', async ({mount, chart}) => {

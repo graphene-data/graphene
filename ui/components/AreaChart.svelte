@@ -57,7 +57,6 @@
 
     return {
       title: title ? {text: title} : undefined,
-      tooltip: {trigger: 'item'},
       legend: {show: Boolean(splitBy || y2 || yFields.length > 1)},
       xAxis: {},
       yAxis: [{max: stackPercentage ? 1 : undefined}, ...(y2 ? [{alignTicks: true}] : [])],
