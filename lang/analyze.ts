@@ -870,6 +870,7 @@ class AnalysisSession implements Analyzer {
         let left = this.analyzeExpr(node.firstChild!, scope)
         let right = this.analyzeExpr(node.lastChild!, scope)
         let op = txt(node.firstChild?.nextSibling).toLowerCase()
+        let patternOp = op.replace(/^not\s+/, '')
 
         // Type coercion for dates
         if ((isScalarType(left.type, 'date') || isScalarType(left.type, 'timestamp')) && isScalarType(right.type, 'string')) {
@@ -895,7 +896,7 @@ class AnalysisSession implements Analyzer {
           this.checkTypes(left, ['number'], node.firstChild!)
           this.checkTypes(right, ['number'], node.lastChild!)
         }
-        if (op == 'like' || op == 'ilike') {
+        if (patternOp == 'like' || patternOp == 'ilike') {
           this.checkTypes(left, ['string'], node.firstChild!)
           this.checkTypes(right, ['string'], node.lastChild!)
         }
@@ -905,18 +906,20 @@ class AnalysisSession implements Analyzer {
         }
 
         let resultType = left.type
-        if (['and', 'or', '<', '<=', '>', '>=', '=', '!=', '<>', 'like', 'ilike'].includes(op)) resultType = scalarType('boolean')
+        if (['and', 'or', '<', '<=', '>', '>=', '=', '!=', '<>', 'like', 'ilike'].includes(patternOp)) resultType = scalarType('boolean')
         if (op == '||') resultType = scalarType('string')
         if (op == '<>') op = '!='
 
-        // ILIKE handling for BigQuery
+        // BigQuery lacks ILIKE, so lower both operands while preserving NOT semantics.
         let sql: string
-        if (op == 'ilike' && this.config.dialect == 'bigquery') {
-          sql = `LOWER(${left.sql}) LIKE LOWER(${right.sql})`
+        let negatedPattern = op.startsWith('not ')
+        if (patternOp == 'ilike' && this.config.dialect == 'bigquery') {
+          let loweredLike = `LOWER(${left.sql}) LIKE LOWER(${right.sql})`
+          sql = negatedPattern ? `NOT (${loweredLike})` : loweredLike
         } else if (op == 'and' || op == 'or') {
           sql = `(${left.sql} ${op.toUpperCase()} ${right.sql})`
-        } else if (op == 'like' || op == 'ilike') {
-          sql = `${left.sql} ${op.toUpperCase()} ${right.sql}`
+        } else if (patternOp == 'like' || patternOp == 'ilike') {
+          sql = `${left.sql} ${negatedPattern ? 'NOT ' : ''}${patternOp.toUpperCase()} ${right.sql}`
         } else {
           sql = `${left.sql}${op}${right.sql}`
         }
