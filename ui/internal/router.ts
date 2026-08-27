@@ -1,12 +1,14 @@
-// Shared browser URL state. `route` drives app routing by pathname; `url` identifies a report view by pathname and query.
+// Shared browser URL state. `route` drives app routing, `url` identifies a report view, and `hash` tracks host UI state.
 import {readable} from 'svelte/store'
 
 const getPathname = () => window.location.pathname || '/'
 const getUrl = () => getPathname() + window.location.search
-const getHistoryUrl = () => getUrl() + window.location.hash
+const getHash = () => window.location.hash
+const getHistoryUrl = () => getUrl() + getHash()
 
 let setPathname: ((value: string) => void) | null = null
 let setUrl: ((value: string) => void) | null = null
+let setHash: ((value: string) => void) | null = null
 
 export const route = readable<string>(typeof window === 'undefined' ? '/' : getPathname(), set => {
   if (typeof window === 'undefined') return
@@ -34,6 +36,21 @@ export const url = readable<string>(typeof window === 'undefined' ? '/' : getUrl
   }
 })
 
+export const hash = readable<string>(typeof window === 'undefined' ? '' : getHash(), set => {
+  if (typeof window === 'undefined') return
+  setHash = set
+  set(getHash())
+
+  let update = () => set(getHash())
+  window.addEventListener('popstate', update)
+  window.addEventListener('hashchange', update)
+  return () => {
+    window.removeEventListener('popstate', update)
+    window.removeEventListener('hashchange', update)
+    setHash = null
+  }
+})
+
 // Push same-origin navigation through the SPA; external URLs use ordinary browser navigation.
 export function go(value: string) {
   if (!value) return
@@ -50,7 +67,7 @@ export function go(value: string) {
   publishUrl()
 }
 
-// Replace the current same-origin history entry and publish pathname/query changes to subscribers.
+// Replace the current same-origin history entry and publish URL changes to subscribers.
 export function replaceState(value: string) {
   if (!value) return
 
@@ -69,4 +86,5 @@ export function replaceState(value: string) {
 function publishUrl() {
   setPathname?.(getPathname())
   setUrl?.(getUrl())
+  setHash?.(getHash())
 }

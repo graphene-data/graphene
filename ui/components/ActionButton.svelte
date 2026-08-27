@@ -16,7 +16,7 @@
   :global(body.standalone) button { display: none; }
   :global([data-component-id]:hover) button, button:focus-visible, button.active { opacity: 1; }
   button:hover, button:focus-visible { color: var(--color-tertiary); background: var(--color-hover); }
-  button.active { color: var(--color-tertiary); background: var(--color-surface); }
+  button.active { color: var(--color-tertiary); }
   button:focus-visible { outline: 2px solid var(--color-primary-strong); outline-offset: 2px; }
   button :global(svg) { width: .875rem; height: .875rem; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 </style>
