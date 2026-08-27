@@ -3,7 +3,7 @@
   // so scroll containers do not clip it.
   import {tick, type Snippet} from 'svelte'
 
-  let {text, children, placement = 'auto'}: {text: string; children: Snippet; placement?: 'auto' | 'top'} = $props()
+  let {text, content, children, placement = 'auto'}: {text?: string; content?: Snippet; children: Snippet; placement?: 'auto' | 'top'} = $props()
 
   let trigger: HTMLElement
   let popup = $state<HTMLElement>()
@@ -31,6 +31,12 @@
     top = Math.min(Math.max(8, preferredTop), maxTop)
   }
 
+  // Render popups under body so transformed or clipped ancestors cannot constrain viewport positioning.
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node)
+    return {destroy: () => node.remove()}
+  }
+
   // Keep the shifted position valid while its anchor or viewport moves.
   $effect(() => {
     if (!visible) return
@@ -44,13 +50,13 @@
   })
 </script>
 
-<span class="tooltip-trigger" role="presentation" bind:this={trigger} onmouseenter={show} onmouseleave={() => visible = false}>
+<span class="tooltip-trigger" role="presentation" bind:this={trigger} onmouseenter={show} onmouseleave={() => visible = false} onfocusin={show} onfocusout={() => visible = false}>
   {@render children()}
 </span>
 
 {#if visible}
-  <span bind:this={popup} class={`tooltip-popup tooltip-popup--${renderedPlacement}`} role="tooltip" style={`left:${left}px;top:${top}px;--arrow-offset:${arrowLeft}px`}>
-    {text}
+  <span use:portal bind:this={popup} class={`tooltip-popup tooltip-popup--${renderedPlacement}`} role="tooltip" style={`left:${left}px;top:${top}px;--arrow-offset:${arrowLeft}px`}>
+    {#if content}{@render content()}{:else}{text}{/if}
   </span>
 {/if}
 

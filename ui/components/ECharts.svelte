@@ -183,8 +183,8 @@
 
 <div class="echarts" bind:this={node} style={chartSizeStyle} data-component-id={mountedComponentId} data-chart-title={chartTitle}>
   <div class="component-actions">
-    <CommentButton componentId={mountedComponentId || displayId} title={chartTitle} />
     {#if loaded && !loaded.error && !chartError}<CsvDownload data={loaded} exportId={displayId} title={chartTitle} />{/if}
+    <CommentButton componentId={mountedComponentId || displayId} title={chartTitle} />
   </div>
   {#if loaded?.error || chartError}
     <ErrorDisplay error={loaded?.error || chartError?.message || 'Unknown chart error'} />
