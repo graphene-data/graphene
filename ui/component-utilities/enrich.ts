@@ -493,8 +493,13 @@ function tooltipTriggerForSeriesCount(config: NormalConfig, fields: Field[]) {
   let tooltip = config.tooltip[0]
   if (!tooltip || tooltip.trigger != null) return
 
-  let itemTooltipWorks = cartesianTooltipFields(config, fields) != null
-  tooltip.trigger = itemTooltipWorks && config.series.length > AXIS_TOOLTIP_SERIES_LIMIT ? 'item' : 'axis'
+  // ECharts fires item tooltips from the point marker rather than the line, so a line whose markers we hid
+  // (lineSeriesMarkerVisibility, past 30 x values) can't be hovered at all. Those are the charts where aiming at a
+  // point was hopeless anyway - the points are pixels apart - so they keep axis tooltips however many series they have.
+  let hoverable = config.series.every(series => series.type !== 'line' || series.showSymbol !== false)
+  let formattable = cartesianTooltipFields(config, fields) != null
+
+  tooltip.trigger = hoverable && formattable && config.series.length > AXIS_TOOLTIP_SERIES_LIMIT ? 'item' : 'axis'
 }
 
 // The dimension and value field behind each cartesian series, which both tooltip enrichments need.

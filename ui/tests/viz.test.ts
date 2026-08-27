@@ -1,6 +1,7 @@
 // Tests that various echarts render as expected.
 // When writing these tests, prefer just using a screenshot, and avoid adding assertions that check things already visible in the screenshot.
 
+import type {Page} from '@playwright/test'
 import fs from 'node:fs/promises'
 
 import {scalarType} from '../../lang/types.ts'
@@ -596,11 +597,36 @@ test('many-series charts fall back to a single-point tooltip', async ({mount, ch
   await expect(chart.el).screenshot('line-chart-item-tooltip-seven-series', {mouseHover: true})
 })
 
+// Item tooltips fire from a point marker, so charts drawn without markers must stay on axis tooltips
+// no matter how many series they have. Both tests below cover a way a chart ends up with nothing to hover.
+async function tooltipTrigger(sharedPage: Page) {
+  return await sharedPage.evaluate(() => {
+    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
+    let option = window.$GRAPHENE.getChart(domNode).getOption()
+    return (Array.isArray(option.tooltip) ? option.tooltip[0] : option.tooltip)?.trigger
+  })
+}
+
+test('many-series charts keep axis tooltips once markers are hidden', async ({mount, sharedPage}) => {
+  // Past 30 x values lineSeriesMarkerVisibility drops the markers, and points that close together were never
+  // worth aiming at anyway.
+  let days = Array.from({length: 40}, (_, index) => `day-${index}`)
+  let rows = Array.from({length: 7}, (_, group) => days.map((day, index) => ({day, region: `Region ${group + 1}`, revenue: 120 + group * 26 + index}))).flat()
+  let fields = [
+    {name: 'day', type: scalarType('string')},
+    {name: 'region', type: scalarType('string')},
+    {name: 'revenue', type: scalarType('number')},
+  ]
+
+  await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'day', y: 'revenue', splitBy: 'region'})
+  expect(await tooltipTrigger(sharedPage)).toBe('axis')
+})
+
 test('many-series charts keep axis tooltips when series hold their own data', async ({mount, sharedPage}) => {
   let months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
 
-  // A native config can put values in series data instead of encoding fields. There's no field to label a point
-  // with then, and no symbol to hover either, so the series count can't pull these charts onto item tooltips.
+  // A native config can put values in series data instead of encoding fields, which leaves no field to label a
+  // point with, and (via lineSeriesMarkerVisibility) no marker to hover either.
   await mount('components/ECharts.svelte', {
     data: {rows: months.map(month => ({month})), fields: [{name: 'month', type: scalarType('string')}]},
     config: {
@@ -610,12 +636,7 @@ test('many-series charts keep axis tooltips when series hold their own data', as
     },
   })
 
-  let trigger = await sharedPage.evaluate(() => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
-    let option = window.$GRAPHENE.getChart(domNode).getOption()
-    return (Array.isArray(option.tooltip) ? option.tooltip[0] : option.tooltip)?.trigger
-  })
-  expect(trigger).toBe('axis')
+  expect(await tooltipTrigger(sharedPage)).toBe('axis')
 })
 
 test('time tooltip uses readable timeGrain formatting', async ({mount, chart}) => {
