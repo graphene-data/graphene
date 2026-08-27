@@ -1,3 +1,30 @@
+## 0.0.28
+
+### Breaking changes
+
+None.
+
+### Added
+
+- Added `ILIKE` and `NOT ILIKE` comparisons, including portable BigQuery rendering (`712793fc`).
+- Added Graphene SQL syntax highlighting and a Tree-sitter grammar for Zed (`1f8e2981`, `ce442c12`).
+- Added component comment actions, comment deep links, and keyboard-shortcut hints for Graphene Cloud reports (`cd0e026b`, `6361ec87`).
+- Added detected CI and coding-agent context to CLI telemetry while simplifying command and project metadata collection (`188b5bc9`, `6aae7ed1`, `2aff1a13`).
+- Added automatic scaling and abbreviations for time, distance, mass, and data units (`eddbcfe8`).
+
+### Fixed
+
+- Prevented SQL injection through query parameters by rejecting structured array values and escaping ClickHouse backslashes (`f2d4269e`).
+- Fixed Windows CLI login URLs containing ampersands (`95f54d30`).
+- Fixed single-digit percentile shorthand such as `p1` and `p5` returning values ten times too large (`f14f38f8`).
+- Fixed quoted aliases to use each database dialect's native identifier quoting (`ce459191`).
+- Preserved metadata through common functions, aggregates, and window expressions (`6993ca25`).
+- Fixed metadata formatting for value-encoded ECharts series, positional dimensions, pie tooltips, and pictorial bars (`c228cd70`).
+- Kept long chart legends clear of top y-axis names and enabled pagination when needed (`b151a556`, `5634ab3b`).
+- Shortened multiselect URLs and requests by encoding whichever is smaller: selected or excluded values (`1a9b659f`).
+- Fixed sidebar overflow, input spacing, and table title styling (`72be1ada`, `7d31d3de`, `52773336`).
+- Simplified CLI update checks and tailored update notices for detected coding agents (`bf68577c`).
+
 ## 0.0.27
 
 ### Breaking changes
