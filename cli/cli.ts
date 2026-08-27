@@ -20,18 +20,10 @@ import {formatError, printTable} from './printer.ts'
 import {sendToPage} from './run.ts'
 import {inspectSchema, printSchemaInspection, type SchemaInspection} from './schemaInspection.ts'
 import {getPresentFlags, sendTelemetry, type TelemetryCommand} from './telemetry.ts'
-import {checkForUpdate, showCachedUpdateNotice} from './updateNotifier.ts'
+import {cliVersion, notifyAboutUpdate} from './updateNotifier.ts'
 
 export const program = new Command()
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-// Look at the graphene library's package.json (as opposed to the project using graphene) to get the version
-// in dev: cli/cli.ts -> cli/package.json. in dist: cli/dist/cli/cli.js -> cli/package.json
-const pkgPath = fs.existsSync(path.join(__dirname, 'package.json'))
-  ? path.join(__dirname, 'package.json')
-  : path.join(__dirname, '../../package.json')
-const libPkg = fs.readJsonSync(pkgPath)
-program.name('graphene').description('Graphene CLI').version(libPkg.version, '-v, --version')
+program.name('graphene').description('Graphene CLI').version(cliVersion, '-v, --version')
 registerInstallBrowserCommand(program)
 
 program.command('compile')
@@ -312,8 +304,6 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
     let exitCalled = false
     let caughtError: unknown
 
-    await showCachedUpdateNotice({config, currentVersion: libPkg.version, packageIsPrivate: libPkg.private})
-
     let exit = (code: number = 0): never => {
       exitCalled = true
       exitCode = code
@@ -330,8 +320,7 @@ function withTelemetry(command: TelemetryCommand, action: (exit: (code?: number)
         caughtError = err
       }
     } finally {
-      await sendTelemetry(config, libPkg.version, command, {flags, success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
-      await checkForUpdate({config, currentVersion: libPkg.version, packageIsPrivate: libPkg.private})
+      await sendTelemetry(config, cliVersion, command, {flags, success, exit_code: exitCode, duration_ms: Date.now() - startedAt})
     }
 
     if (caughtError) throw caughtError
@@ -345,6 +334,7 @@ export async function main() {
   if (process.argv[2] != 'install-browser') {
     let cfg = await loadConfig(process.cwd(), envFiles => dotenv.config({quiet: true, path: envFiles}))
     setGlobalConfig(cfg)
+    void notifyAboutUpdate().catch(() => {})
   }
 
   try {
