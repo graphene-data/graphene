@@ -47,6 +47,7 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   removeHiddenValueAxisPadding(normalized)
   valueFormatting(normalized, rows, fields)
   timeFormatting(normalized)
+  tooltipTriggerForSeriesCount(normalized, fields)
   addCartesianItemTooltips(normalized, fields)
   styleSecondaryAxisForSimpleBarLineLayout(normalized, fields)
   applyIntegerYAxisTicks(normalized, rows, fields)
@@ -298,7 +299,7 @@ function ensureAxes(config: NormalConfig) {
 // Ensure we always have exactly one top-level tooltip object in normalized config.
 function ensureTooltip(config: NormalConfig) {
   if (config.tooltip.length > 0) return
-  config.tooltip.push({trigger: 'axis'})
+  config.tooltip.push({})
 }
 
 // Ensure we have a color palette set for the chart.
@@ -482,20 +483,49 @@ function valueFormatting(config: NormalConfig, rows: Record<string, any>[], fiel
   }
 }
 
+// Axis tooltips are the friendlier default: hover anywhere in a column and you get every series at that dimension
+// value without hunting for an exact point. They fall apart once a chart has many series though - the list stops
+// fitting in a default-height chart, and it's impossible to tell which series the cursor is actually near - so past
+// the limit we switch to item tooltips, which name a single point.
+// Charts we can't build an item tooltip for stay on axis, since a chart nobody can hover is worse than a long list.
+const AXIS_TOOLTIP_SERIES_LIMIT = 6
+function tooltipTriggerForSeriesCount(config: NormalConfig, fields: Field[]) {
+  let tooltip = config.tooltip[0]
+  if (!tooltip || tooltip.trigger != null) return
+
+  // ECharts fires item tooltips from the point marker rather than the line, so a line whose markers we hid
+  // (lineSeriesMarkerVisibility, past 30 x values) can't be hovered at all. Those are the charts where aiming at a
+  // point was hopeless anyway - the points are pixels apart - so they keep axis tooltips however many series they have.
+  let hoverable = config.series.every(series => series.type !== 'line' || series.showSymbol !== false)
+  let formattable = cartesianTooltipFields(config, fields) != null
+
+  tooltip.trigger = hoverable && formattable && config.series.length > AXIS_TOOLTIP_SERIES_LIMIT ? 'item' : 'axis'
+}
+
+// The dimension and value field behind each cartesian series, which both tooltip enrichments need.
+// Undefined when the chart isn't bars and lines, or when any series lacks encoded fields: native configs can
+// hold their values in data arrays instead, which leaves nothing to label a point with, and no symbols to hover.
+function cartesianTooltipFields(config: NormalConfig, fields: Field[]) {
+  if (!config.series.every(series => series?.type === 'bar' || series?.type === 'line')) return undefined
+
+  let tooltipFields = config.series.map(series => {
+    let horizontalBar = series.type === 'bar' && config.yAxis[Number(series.yAxisIndex ?? 0)]?.type === 'category'
+    return {dimension: getEncodeField(series, fields, horizontalBar ? 'y' : 'x'), value: getEncodeField(series, fields, horizontalBar ? 'x' : 'y')}
+  })
+
+  if (tooltipFields.some(({dimension, value}) => !dimension || !value)) return undefined
+  return tooltipFields
+}
+
 // Item-triggered cartesian tooltips retain the dimension as a header while showing only the hovered series.
 // ECharts' default item tooltip omits that context, making values ambiguous away from the axis labels.
 function addCartesianItemTooltips(config: NormalConfig, fields: Field[]) {
   let tooltip = config.tooltip[0]
   if (!tooltip || tooltip.trigger !== 'item' || tooltip.formatter != null) return
-  if (!config.series.every(series => series?.type === 'bar' || series?.type === 'line')) return
   if (config.series.some(series => series?.tooltip?.formatter != null)) return
 
-  // Only install the formatter when every series exposes encoded fields; native configs may instead use data arrays.
-  let tooltipFields = config.series.map(series => {
-    let horizontalBar = series.type === 'bar' && config.yAxis[Number(series.yAxisIndex ?? 0)]?.type === 'category'
-    return {dimension: getEncodeField(series, fields, horizontalBar ? 'y' : 'x'), value: getEncodeField(series, fields, horizontalBar ? 'x' : 'y')}
-  })
-  if (tooltipFields.some(({dimension, value}) => !dimension || !value)) return
+  let tooltipFields = cartesianTooltipFields(config, fields)
+  if (!tooltipFields) return
 
   tooltip.formatter = (params: any) => {
     let item = Array.isArray(params) ? params[0] : params

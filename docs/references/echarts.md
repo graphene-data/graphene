@@ -37,6 +37,7 @@ You don't need to configure these — Graphene applies them by default:
 - Layout: grid padding computed to prevent title/legend overlap
 - Style: color palette, fonts, axis borders, split lines, and series marker defaults (via the Graphene theme)
 - Values: axis ticks, tooltips, and bar labels formatted from the column's metadata (`#currency`, `#unit`, `#ratio`, `#pct`, `#precision`, `#timeGrain`, `#timeOrdinal`)
+- Tooltips: `trigger` defaults to `axis`, so hovering a column lists every series at that value, and switches to `item` on bar/line charts with more than 6 series. Set `tooltip.trigger` to pick one yourself
 
 Your config typically only needs to specify the series `type`, `encode` mappings, and any explicit overrides to the above.
 

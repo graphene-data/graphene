@@ -73,7 +73,6 @@
 
     return {
       title: title ? {text: title} : undefined,
-      tooltip: {trigger: 'item'},
       legend: {show: Boolean(splitBy || y2 || (!horizontal && yFields.length > 1) || (horizontal && xFields.length > 1))},
       xAxis: {},
       // The stack100 domain is pinned by an enrichment, since only it knows whether x or y holds the values.
