@@ -109,7 +109,7 @@
     <PageNavGroup files={navPages} />
   </div>
 </Sidebar>
-<QueryCacheStatus />
+<div class="query-cache-status-position"><QueryCacheStatus /></div>
 
 <main id="content" class={{pageContent: !pageExists || !!compileError || !!Page, dashboardLayout: pageMeta.layout == 'dashboard'}}>
   {#if blankForTests}
@@ -136,5 +136,7 @@
 </main>
 
 <style>
+  /* Position global controls around the viewport; the components only style their own contents. */
+  .query-cache-status-position { position: fixed; z-index: 30; top: 10px; right: 10px; }
   .page-error-heading { margin-top: 0; }
 </style>

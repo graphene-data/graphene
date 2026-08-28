@@ -41,12 +41,7 @@
 {/if}
 
 <style>
-  /* Top-right counterpart to the floating menu button (top-left). */
   .query-cache-status {
-    position: fixed;
-    right: 10px;
-    top: 10px;
-    z-index: 30;
     display: flex;
     align-items: center;
     gap: 0.25rem;
