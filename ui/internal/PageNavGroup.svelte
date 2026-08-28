@@ -1,10 +1,8 @@
 <!-- Builds the shared local/Cloud page sidebar from canonical routes. Routes determine both link targets and folder hierarchy. -->
 <script>
-  import Folder from '@lucide/svelte/icons/folder'
-  import FolderOpen from '@lucide/svelte/icons/folder-open'
-  import FileChartColumnIncreasing from '@lucide/svelte/icons/file-chart-column-increasing'
   import {SvelteSet, SvelteMap} from 'svelte/reactivity'
   import {route} from './router.ts'
+  import PageTree from './PageTree.svelte'
   import {prettyPrintFilename} from './utils.ts'
 
   let {files = [], onNavigate = undefined, baseRoute = '', projectName = ''} = $props()
@@ -144,50 +142,5 @@
   {#if projectName}
     <div class="sb-group-label">{projectName}</div>
   {/if}
-  <ul class="sb-menu">
-    {#each tree as node (node.path)}
-      {@render Row(node)}
-    {/each}
-  </ul>
+  <PageTree nodes={tree} {openFolders} currentPath={currentTreePath} onFolder={toggleFolder} onFile={handleLinkClick} />
 </div>
-
-{#snippet FolderIcon(open)}
-  {#if open}<FolderOpen size={15} strokeWidth={1.8} />{:else}<Folder size={15} strokeWidth={1.8} />{/if}
-{/snippet}
-
-{#snippet Row(node)}
-  <li data-folder={node.type === 'folder' ? node.path : undefined}>
-    {#if node.type === 'folder'}
-      {@const open = openFolders.has(node.path)}
-      <button
-        class="sb-item"
-        type="button"
-        title={node.label}
-        data-folder-toggle={node.path}
-        aria-expanded={open}
-        onclick={() => toggleFolder(node.path)}
-      >
-        <span class="sb-icon">{@render FolderIcon(open)}</span>
-        <span class="sb-label">{node.label}</span>
-      </button>
-      {#if open && node.children?.length}
-        <ul class="sb-sub">
-          {#each node.children as child (child.path)}
-            {@render Row(child)}
-          {/each}
-        </ul>
-      {/if}
-    {:else}
-      <a
-        class={node.path === currentTreePath ? 'sb-item active' : 'sb-item'}
-        href={node.route}
-        title={node.label}
-        aria-current={node.path === currentTreePath ? 'page' : undefined}
-        onclick={(e) => handleLinkClick(e, node.route)}
-      >
-        <span class="sb-icon"><FileChartColumnIncreasing size={15} strokeWidth={1.8} /></span>
-        <span class="sb-label">{node.label}</span>
-      </a>
-    {/if}
-  </li>
-{/snippet}
