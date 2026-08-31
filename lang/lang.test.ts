@@ -3094,6 +3094,10 @@ describe('lang', () => {
       .toReturnRows([1], [2])
   })
 
+  it('reports an error when a CTE has no outer query', () => {
+    expect('with high_value as (from orders select id)').toHaveDiagnostic('Expected query after WITH clause')
+  })
+
   it('CTE shadows existing table names', () => {
     // CTE named "orders" should shadow the real orders table
     expect('with orders as (from users select id, name) from orders select id, name order by id')

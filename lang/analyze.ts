@@ -396,7 +396,9 @@ class AnalysisSession implements Analyzer {
     }
 
     if (queryNode.getChildren('SetOperator').length) return this.analyzeSetQuery(queryNode, scope, ctes)
-    return this.analyzeSimpleQuery(queryNode.getChild('SimpleQuery')!, queryNode, scope, ctes)
+    let simpleQuery = queryNode.getChild('SimpleQuery')
+    if (!simpleQuery) return this.diag(queryNode, 'Expected query after WITH clause')
+    return this.analyzeSimpleQuery(simpleQuery, queryNode, scope, ctes)
   }
 
   private analyzeSimpleQuery(simpleNode: SyntaxNode, queryNode: SyntaxNode, parentScope: Scope, ctes: Map<string, CteTable>, opts: {suppressImplicitOrderBy?: boolean} = {}): Query | void {
