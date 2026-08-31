@@ -29,14 +29,15 @@ function getStillLoading() {
   return loading
 }
 
-// Returns once work is idle and fonts and layout have settled for two frames, or reports what timed out.
+// Returns once work is idle and fonts and layout have settled, or reports what timed out.
 graphene.waitForLoad = async (timeout = 20_000) => {
   let end = Date.now() + timeout
 
   while (Date.now() < end) {
     if (getStillLoading().length == 0) {
       if (document.fonts?.ready) await document.fonts.ready
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+      // Chrome suspends animation frames in background tabs, so only settle frames when visible.
+      if (!document.hidden) await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
       if (getStillLoading().length == 0) return null
     }
     await new Promise(resolve => setTimeout(resolve, 100))
