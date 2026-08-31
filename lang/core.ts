@@ -10,7 +10,7 @@ import {type AnalysisResult, type Location, type Query, type WorkspaceFileInput}
 import {getSourceOffset} from './util.ts'
 
 export {analyzeWorkspace}
-export type {GrapheneError} from './index.d.ts'
+export {GrapheneError} from './util.ts'
 export type {AnalysisResult, AnalysisWorkspace, FileInfo, Query, Table, WorkspaceFileInput} from './types.ts'
 
 export const defaultIgnoredFiles = ['node_modules/**', '**/.*/**', '**/readme.md', '**/agents.md', '**/claude.md', '**/slack.md', '**/web.md', '**/mcp.md']

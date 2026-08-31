@@ -6,7 +6,7 @@ import {expect} from 'vitest'
 /// <reference types="vitest/globals" />
 import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {setGlobalConfig} from './config.ts'
-import {toSql} from './core.ts'
+import {GrapheneError, toSql} from './core.ts'
 import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
 import {formatType, parseWarehouseFieldType} from './types.ts'
 import {deindent, trimIndentation} from './util.ts'
@@ -2042,6 +2042,12 @@ describe('lang', () => {
     expect(toSql(included, {names: []})).toContain('users.name IN (SELECT CAST(NULL AS STRING) WHERE FALSE)')
   })
 
+  it('returns missing query params as Graphene errors', () => {
+    let query = analyze(`${testTables}\nfrom users select id where name = $name`)[0]
+    expect(() => toSql(query)).toThrow(GrapheneError)
+    expect(() => toSql(query)).toThrow('Missing param $name')
+  })
+
   it('does not treat $word inside single-quoted strings as params', () => {
     let queries = analyze(`${testTables}
       from users select id where name = '$test'
@@ -3096,6 +3102,7 @@ describe('lang', () => {
 
   it('reports an error when a CTE has no outer query', () => {
     expect('with high_value as (from orders select id)').toHaveDiagnostic('Expected query after WITH clause')
+    expect(getDiagnostics()[0]).toBeInstanceOf(GrapheneError)
   })
 
   it('CTE shadows existing table names', () => {
