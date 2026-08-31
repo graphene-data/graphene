@@ -17,7 +17,7 @@
     "@graphenedata/html2canvas": "^1.4.1",
     "@lucide/svelte": "^1.20.0",
     "chroma-js": "^2.4.2",
-    "echarts": "^6.0.0",
+    "echarts": "^6.1.0",
     "svelte": "^5.55.7"
   },
   "devDependencies": {
