@@ -863,6 +863,10 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
       axis.max ??= domain[1]
     }
 
+    // ECharts 6.1's shape containment expands numeric bar domains by a full bucket.
+    // These integer time axes are discrete, so disable it to avoid excessive edge padding.
+    if (field.metadata?.timeGrain === 'year' || field.metadata?.timeOrdinal) axis.containShape ??= false
+
     if (field.metadata?.timeGrain === 'year') {
       // Pin year ticks to evenly-spaced integers so a domain like [2000, 2005]
       // doesn't end up with the 2000/2002/2004/2005 stub-label pattern.
@@ -879,9 +883,8 @@ function inferAxisFromField(field: Field | undefined, rows: Record<string, any>[
     }
 
     if (field.metadata?.timeOrdinal) {
-      // Ordinal values are numeric so we use a value axis with a fixed domain, but
-      // visually they are discrete buckets. Pin tick positions to evenly-spaced
-      // integers so we never get a stub boundary label (e.g. weeks 1, 14, 27, 40, 53).
+      // Ordinal values are numeric so we use a value axis with a fixed domain, but visually they are discrete buckets.
+      // Pin ticks to evenly-spaced integers so we never get a stub boundary label (e.g. weeks 1, 14, 27, 40, 53).
       let ticks = domain ? niceIntegerTicks(domain[0], domain[1]) : []
       axis.axisLabel = {...axis.axisLabel}
       axis.axisLabel.hideOverlap ??= true
