@@ -70,6 +70,14 @@ function readSearchParams(page: any): Promise<Record<string, string | string[]>>
   })
 }
 
+test('returns missing query parameters as Graphene errors', async ({server, page}) => {
+  let response = await page.request.post(server.url() + '/_api/query', {
+    data: {gsql: 'from flights select carrier where carrier = $carrier limit 1', params: {}, hashes: []},
+  })
+  expect(response.status()).toBe(400)
+  expect(await response.json()).toEqual({message: 'Missing param $carrier', severity: 'error'})
+})
+
 test('query blocks can be defined after the component that uses them', async ({server, page}) => {
   server.mockFile(
     '/index.md',

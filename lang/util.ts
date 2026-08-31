@@ -1,6 +1,30 @@
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 
+import type {GrapheneError as GrapheneErrorShape} from './index.d.ts'
 import type {FileInfo} from './types.ts'
+
+// A serializable diagnostic that later processing phases can throw for API boundaries to recognize.
+export class GrapheneError extends Error implements GrapheneErrorShape {
+  cause?: unknown
+  componentId?: string
+  file?: string
+  frame?: string
+  from?: GrapheneErrorShape['from']
+  severity?: GrapheneErrorShape['severity']
+  to?: GrapheneErrorShape['to']
+
+  constructor(error: string | GrapheneErrorShape) {
+    let diagnostic = typeof error == 'string' ? {message: error, severity: 'error' as const} : error
+    super(diagnostic.message)
+    Object.defineProperty(this, 'name', {value: 'GrapheneError'})
+    Object.assign(this, diagnostic)
+  }
+
+  // Error.message is non-enumerable, so include it explicitly in HTTP JSON responses.
+  toJSON(): GrapheneErrorShape {
+    return {...this, message: this.message}
+  }
+}
 
 function markdownOffset(offset: number, file: FileInfo) {
   let map = file.virtualToMarkdownOffset

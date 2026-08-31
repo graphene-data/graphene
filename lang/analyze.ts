@@ -1,7 +1,5 @@
 import {type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
-import type {GrapheneError} from './index.d.ts'
-
 import {
   aggregateFanoutMessage,
   normalizeExprFanout,
@@ -48,7 +46,7 @@ import {
   type TypeKind,
   type WorkspaceFileInput,
 } from './types.ts'
-import {buildFrame, txt, getFile, getPosition, toRelativePath} from './util.ts'
+import {buildFrame, GrapheneError, txt, getFile, getPosition, toRelativePath} from './util.ts'
 
 // Analyze is the heart of gsql processing. It works in 2 phases:
 // 1. walk the parse tree looking for tables, views, and extend blocks.
@@ -1576,7 +1574,7 @@ class AnalysisSession implements Analyzer {
     for (let diagnostic of diagnostics) {
       let from = this.sourcePosition(diagnostic.from, fi)
       let to = this.sourcePosition(diagnostic.to, fi)
-      this.diagnostics.push({severity: 'error', message: diagnostic.message, file: toRelativePath(fi.path), from, to, frame: buildFrame(from, to)})
+      this.diagnostics.push(new GrapheneError({severity: 'error', message: diagnostic.message, file: toRelativePath(fi.path), from, to, frame: buildFrame(from, to)}))
     }
   }
 
@@ -1604,7 +1602,7 @@ class AnalysisSession implements Analyzer {
   private diagRange(file: FileInfo, fromOffset: number, toOffset: number, message: string) {
     let from = getPosition(fromOffset, file)
     let to = getPosition(toOffset, file)
-    this.diagnostics.push({severity: 'error', message, file: toRelativePath(file.path), from, to, frame: buildFrame(from, to)})
+    this.diagnostics.push(new GrapheneError({severity: 'error', message, file: toRelativePath(file.path), from, to, frame: buildFrame(from, to)}))
   }
 
   checkTypes(expr: Expr, expected: TypeKind[], node: SyntaxNode) {

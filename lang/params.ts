@@ -1,4 +1,5 @@
 import type {FieldType, Query} from './types.ts'
+import {GrapheneError} from './util.ts'
 
 // Converts analyzed $params into SQL literals without changing the generated query structure.
 // Adaptive list predicates already contain both mode branches; synthetic mode params select one at runtime.
@@ -14,7 +15,7 @@ function replaceParams(sql: string, params: Record<string, any>, dialect?: strin
     if (!name) return match
     if (name.startsWith('__graphene_list_mode_')) return `'${listParam(params[name.slice('__graphene_list_mode_'.length)]).mode}'`
     let value = listParam(params[name]).values
-    if (value === undefined) throw new Error(`Missing param $${name}`)
+    if (value === undefined) throw new GrapheneError(`Missing param $${name}`)
     if (Array.isArray(value)) {
       if (!value.length) return emptyArraySql(dialect, paramTypes[name])
       return value.map(item => renderParam(item, name, dialect)).join(',')
@@ -33,13 +34,13 @@ function renderParam(value: unknown, name: string, dialect?: string): string {
   }
   if (typeof value === 'number' && Number.isFinite(value)) return value.toString()
   if (typeof value === 'boolean') return value ? 'true' : 'false'
-  throw new Error(`Unsupported param value for $${name}`)
+  throw new GrapheneError(`Unsupported param value for $${name}`)
 }
 
 // List params carry a compact-set mode; ordinary values remain include-mode params for compatibility.
 function listParam(value: any): {mode: 'include' | 'exclude'; values: any} {
   if (!value || typeof value != 'object' || Array.isArray(value)) return {mode: 'include', values: value}
-  if ((value.mode && value.mode != 'include' && value.mode != 'exclude') || !Array.isArray(value.values)) throw new Error('List param requires include/exclude mode and array values')
+  if ((value.mode && value.mode != 'include' && value.mode != 'exclude') || !Array.isArray(value.values)) throw new GrapheneError('List param requires include/exclude mode and array values')
   return {mode: value.mode || 'include', values: value.values}
 }
 
