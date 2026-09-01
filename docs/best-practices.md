@@ -6,6 +6,7 @@
 - Keep numbers grounded - Use the `<Value/>` component in prose instead of hard-coding numbers
 - When adding viz, think like Edward Tufte. What is _the_ most effective way to illustrate the data?
 - Use a horizontal bar chart when grouping by a categorical field with long values; use a vertical bar chart when grouping by a field with ordered values (time series, age groups, survey scales, etc.)
+- NEVER use data visualization tools (such as `mcp__visualize__*`, `read_me`, `show_widget`) or any other charting/diagramming/mockup MCP module or skill (e.g. `dataviz`, `artifact-design`, the `Artifact` tool, `design`) besides Graphene when working in a Graphene project. All visualization must be done inside a Graphene `.md` page.
 
 If the user asks:
 - An open-ended question => notebook
