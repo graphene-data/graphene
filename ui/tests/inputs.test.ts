@@ -78,6 +78,18 @@ test('returns missing query parameters as Graphene errors', async ({server, page
   expect(await response.json()).toEqual({message: 'Missing param $carrier', severity: 'error'})
 })
 
+test('returns warehouse query rejection details', async ({server, page}) => {
+  let response = await page.request.post(server.url() + '/_api/query', {
+    data: {gsql: 'from flights select sqrt(dep_delay) as boom', params: {}, hashes: []},
+  })
+  let body = await response.json()
+  expect({status: response.status(), message: body.message, hasStack: typeof body.stack == 'string'}).toEqual({
+    status: 500,
+    message: 'Out of Range Error: cannot take square root of a negative number',
+    hasStack: true,
+  })
+})
+
 test('query blocks can be defined after the component that uses them', async ({server, page}) => {
   server.mockFile(
     '/index.md',
