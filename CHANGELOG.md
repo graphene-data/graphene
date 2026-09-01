@@ -1,3 +1,21 @@
+## 0.0.29
+
+### Breaking changes
+
+None.
+
+### Added
+
+- Updated coding-agent guidance for multi-axis ECharts and requiring visualizations to be built in Graphene pages (`31de0eea`, `8863bdad`).
+
+### Fixed
+
+- Made chart tooltips easy to open across small, dense, and many-series charts by choosing axis or item tooltips based on chart shape (`2bb3b13b`).
+- Fixed numeric time-axis padding after upgrading to ECharts 6.1 (`8b1dc52e`).
+- Fixed page-load waits hanging in hidden browser tabs (`9b4d304c`).
+- Reported incomplete CTEs as diagnostics instead of crashing (`0f1c919a`).
+- Returned useful client errors for missing or invalid query parameters instead of silent server errors (`401e875d`).
+
 ## 0.0.28
 
 ### Breaking changes
