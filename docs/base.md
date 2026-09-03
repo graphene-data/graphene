@@ -216,3 +216,6 @@ Collects start and end dates. `name` is required; optional attributes are `title
 ```
 
 Use the selected bounds as `$date_filter_start` and `$date_filter_end`, for example `where date >= $date_filter_start and date < $date_filter_end`. Built-in presets include the last 7/30/90/365 days, last month/year, month/year to date or today, and all time. Custom `Last N Days` and `Last N Months` presets are supported; override the menu with a comma-separated `presetRanges` value.
+
+## Troubleshooting
+For troubleshooting, Graphene's source code is available at github.com/graphene-data/graphene. It is open to issues submitted by the community.
