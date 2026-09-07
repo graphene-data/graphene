@@ -4,7 +4,8 @@ import path from 'path'
 import type {WorkspaceFileInput} from '../lang/types.ts'
 
 import {config} from '../lang/config.ts'
-import {analyzeWorkspace, loadWorkspace} from '../lang/core.ts'
+import {analyzeWorkspace, GrapheneError, loadWorkspace} from '../lang/core.ts'
+import {extractFrontmatter} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {formatError} from './printer.ts'
@@ -41,6 +42,16 @@ export async function check(options: CheckOptions): Promise<boolean> {
   }
 
   let result = analyzeWorkspace({config, files})
+
+  // Markdown analysis handles embedded queries; validate page frontmatter separately so metadata errors include the source file.
+  for (let file of files.filter(file => file.path.toLowerCase().endsWith('.md'))) {
+    try {
+      extractFrontmatter(file.contents)
+    } catch (err:any) {
+      result.diagnostics.push(new GrapheneError({file: file.path, message: err.message}))
+    }
+  }
+
   if (result.diagnostics.length > 0) {
     log(formatError(result.diagnostics, {style: true}))
     return false

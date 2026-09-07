@@ -104,7 +104,21 @@ You can add YAML frontmatter at the top of a page. The following attributes are 
 - `title`: sets the title of the page in navigation. Used if the page has no h1, or to override the title used in the nav.
 - `hideInNav`: set to `true` to exclude the page from the sidebar. The page remains available at its normal URL, so other pages can link to it for detail or drill-down views.
 - `layout`: `notebook` is the default, good for prose interspersed with charts. `dashboard` has a wider max-width, for chart-heavy pages with lots of `<Row>`s.
-- `scheduled`: sends the page to Slack users/channels on a UTC cron schedule: `scheduled: "0 14 * * 1-5" @someuser #somechannel #otherchannel`. Only works with Graphene Cloud. Be sure to clarify the timezone and convert to UTC as needed.
+- `scheduled`: sends the page to Slack users/channels on a UTC cron schedule. Only works with Graphene Cloud. Be sure to clarify the timezone and convert to UTC as needed.
+
+Use one string for a single delivery time:
+
+```yaml
+scheduled: "0 14 * * 1-5 @someuser #somechannel #otherchannel"
+```
+
+Use a YAML list for multiple delivery times:
+
+```yaml
+scheduled:
+  - "0 14 * * 1-5 @someuser"
+  - "30 16 * * * #somechannel"
+```
 
 ## Viz and display components
 - LineChart: title, data, x, y, y2, splitBy, sort, height, width

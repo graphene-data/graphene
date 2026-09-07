@@ -2,10 +2,10 @@
 import {compile} from 'mdsvex'
 import {compile as compileSvelte} from 'svelte/compiler'
 
-import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, frontmatterOptions, injectComponentImports, parseScheduledFrontmatter, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 
 async function compileMarkdownPage(src: string) {
-  let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+  let out = await compile(src, {extensions: ['.md'], frontmatter: frontmatterOptions, remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
   if (!out) throw new Error('Expected mdsvex compile output')
   let preprocessed = injectComponentImports().markup({content: String(out.code), filename: '/tmp/repro.md'})
   if (!preprocessed) throw new Error('Expected preprocess output')
@@ -29,13 +29,36 @@ describe('extractFrontmatter', () => {
     expect(extractFrontmatter('Intro\n\n# Page title\n\nContent')).toEqual({title: 'Page title'})
   })
 
-  it('extracts a scheduled value outside YAML parsing', () => {
-    let metadata = extractFrontmatter('---\nscheduled: "0 9 * * 1-5" @grant\n---\n# Report')
-    expect(metadata).toEqual({title: 'Report', scheduled: '"0 9 * * 1-5" @grant'})
+  it('extracts and validates a one-line scheduled report', () => {
+    let contents = '---\nscheduled: "0 9 * * 1-5 @grant"\n---\n# Report'
+    expect(extractFrontmatter(contents)).toEqual({title: 'Report', scheduled: '0 9 * * 1-5 @grant'})
+    expect(parseScheduledFrontmatter(contents)).toEqual([{cron: '0 9 * * 1-5', remainder: '@grant'}])
   })
 
-  it('rejects duplicate scheduled fields', () => {
-    expect(() => extractFrontmatter('---\nscheduled: "0 9 * * 1-5" @grant\nscheduled: "30 16 * * *" #operations\n---')).toThrow('Multiple scheduled fields are not supported')
+  it('leaves delivery syntax to the schedule consumer', () => {
+    let contents = '---\nscheduled: "0 9 * * 1-5 deliver however Cloud likes"\n---'
+    expect(parseScheduledFrontmatter(contents)).toEqual([{cron: '0 9 * * 1-5', remainder: 'deliver however Cloud likes'}])
+  })
+
+  it('supports a YAML list of delivery times', () => {
+    let contents = '---\nscheduled:\n  - "0 9 * * 1-5 @grant"\n  - "30 16 * * * #operations"\n---'
+    expect(extractFrontmatter(contents)).toEqual({scheduled: '0 9 * * 1-5 @grant'})
+    expect(parseScheduledFrontmatter(contents)).toEqual([
+      {cron: '0 9 * * 1-5', remainder: '@grant'},
+      {cron: '30 16 * * *', remainder: '#operations'},
+    ])
+  })
+
+  it('rewrites repeated legacy scheduled fields before parsing YAML', () => {
+    let contents = '---\nscheduled: "0 9 * * 1-5" @grant\nscheduled: "30 16 * * *" #operations\n---'
+    expect(parseScheduledFrontmatter(contents)).toEqual([
+      {cron: '0 9 * * 1-5', remainder: '@grant'},
+      {cron: '30 16 * * *', remainder: '#operations'},
+    ])
+  })
+
+  it('rejects invalid scheduled fields', () => {
+    expect(() => extractFrontmatter('---\nscheduled: "0 9 * *"\n---')).toThrow('expected a five-field cron')
   })
 
   it('handles leading whitespace', () => {
@@ -49,6 +72,11 @@ describe('extractFrontmatter', () => {
 })
 
 describe('markdown compilation', () => {
+  it('compiles legacy scheduled frontmatter through the shared YAML parser', async () => {
+    let code = await compileMarkdownPage('---\nscheduled: "0 9 * * 1-5" @grant\n---\n# Report')
+    expect(code).toContain('>Report</h1>')
+  })
+
   it('keeps query code braces inside string literals', async () => {
     let src = `
 \`\`\`sql repro
@@ -58,7 +86,7 @@ from flights
 \`\`\`
 `
 
-    let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+    let out = await compile(src, {extensions: ['.md'], frontmatter: frontmatterOptions, remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
     if (!out) throw new Error('Expected mdsvex compile output')
     let code = String(out.code)
 
@@ -74,7 +102,7 @@ where created_at >= coalesce($daterange_start, created_at)
 \`\`\`
 `
 
-    let out = await compile(src, {extensions: ['.md'], remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
+    let out = await compile(src, {extensions: ['.md'], frontmatter: frontmatterOptions, remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
     if (!out) throw new Error('Expected mdsvex compile output')
     let code = String(out.code)
 
