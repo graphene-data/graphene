@@ -88,28 +88,107 @@ export function componentNames() {
 }
 
 export type PageFrontmatter = {title?: string; hideInNav?: boolean; layout?: string; scheduled?: string}
+export interface ScheduledFrontmatter {cron: string; remainder: string}
+
+const frontmatterRe = /^---\s*\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/
+const legacyScheduleRe = /^scheduled\s*:\s*"([^"\r\n]+)"\s+([^\r\n]+)$/gim
+
+// Load standard YAML after rewriting the former `scheduled: "<cron>" <delivery>` extension into its valid YAML equivalent.
+function parseFrontmatterYaml(frontmatter: string): Record<string, any> {
+  let legacySchedules = [...frontmatter.matchAll(legacyScheduleRe)].map(match => `${match[1]} ${match[2].trim()}`)
+  if (legacySchedules.length) {
+    let replacement = legacySchedules.length === 1
+      ? `scheduled: ${JSON.stringify(legacySchedules[0])}`
+      : `scheduled:\n${legacySchedules.map(value => `  - ${JSON.stringify(value)}`).join('\n')}`
+    let replacedFirst = false
+    frontmatter = frontmatter.replace(legacyScheduleRe, () => {
+      if (replacedFirst) return ''
+      replacedFirst = true
+      return replacement
+    })
+  }
+
+  let raw = yaml.safeLoad(frontmatter)
+  if (raw === undefined) return {}
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Frontmatter must be a YAML object')
+  return raw as Record<string, any>
+}
+
+function parseFrontmatter(contents: string): Record<string, any> {
+  let frontmatter = contents.trimStart().match(frontmatterRe)?.[1]
+  return frontmatter ? parseFrontmatterYaml(frontmatter) : {}
+}
+
+// mdsvex uses the same parser so legacy schedules remain renderable while all other frontmatter follows YAML.
+export const frontmatterOptions = {type: 'yaml', marker: '-', parse: parseFrontmatterYaml}
+
+// Parse all schedules from a page after normalizing its frontmatter.
+export function parseScheduledFrontmatter(contents: string): ScheduledFrontmatter[] {
+  return parseScheduledValue(parseFrontmatter(contents).scheduled)
+}
+
+// Parse one schedule string or a YAML list. Core validates the five-field cron and leaves any trailing syntax to Cloud.
+function parseScheduledValue(scheduled: unknown): ScheduledFrontmatter[] {
+  if (scheduled === undefined) return []
+  let values: unknown[] = Array.isArray(scheduled) ? scheduled : [scheduled]
+  if (!values.every((value): value is string => typeof value === 'string')) throw new Error('Scheduled reports must be strings')
+
+  return values.map(value => {
+    let parts = value.trim().split(/\s+/)
+    if (parts.length < 5) throw new Error('Invalid scheduled report: expected a five-field cron')
+    let cron = parts.slice(0, 5).join(' ')
+    parseCronFieldSet(cron)
+    return {cron, remainder: parts.slice(5).join(' ')}
+  })
+}
+
+// Parse cron fields once for both frontmatter validation and Cloud's UTC schedule matching.
+export function parseCronFieldSet(cron: string) {
+  let fields = cron.trim().split(/\s+/)
+  if (fields.length !== 5) throw new Error(`Invalid cron "${cron}": expected five fields`)
+  return [
+    parseCronField(fields[0], 0, 59),
+    parseCronField(fields[1], 0, 23),
+    parseCronField(fields[2], 1, 31),
+    parseCronField(fields[3], 1, 12),
+    parseCronField(fields[4], 0, 7, true),
+  ] as const
+}
+
+function parseCronField(field: string, min: number, max: number, sunday = false) {
+  let values = new Set<number>()
+  for (let part of field.split(',')) {
+    if (!/^(?:\*|\d+|\d+-\d+)(?:\/\d+)?$/.test(part)) throw new Error(`Invalid cron field "${field}"`)
+    let [range, rawStep] = part.split('/')
+    let step = rawStep === undefined ? 1 : Number(rawStep)
+    if (!Number.isInteger(step) || step < 1) throw new Error(`Invalid cron field "${field}"`)
+
+    let start: number
+    let end: number
+    if (range === '*') [start, end] = [min, max]
+    else if (range.includes('-')) [start, end] = range.split('-').map(Number)
+    else [start, end] = [Number(range), rawStep === undefined ? Number(range) : max]
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < min || end > max || start > end) throw new Error(`Invalid cron field "${field}"`)
+    for (let value = start; value <= end; value += step) values.add(sunday && value === 7 ? 0 : value)
+  }
+  return {values, restricted: values.size !== (sunday ? 7 : max - min + 1)}
+}
 
 // Extract supported frontmatter without compiling the page. When frontmatter omits a title,
 // use the first static Markdown h1 so every caller gets the same page metadata.
-const frontmatterRe = /^---\s*\n([\s\S]*?)\n---(?:\n|$)/
 export function extractFrontmatter(contents: string): PageFrontmatter {
-  let match = contents.trimStart().match(frontmatterRe)
-  let lines = match?.[1].split(/\r?\n/) || []
-  let scheduledLines = lines.filter(line => /^scheduled\s*:/i.test(line))
-  if (scheduledLines.length > 1) throw new Error('Multiple scheduled fields are not supported')
-  let scheduled = scheduledLines[0]?.replace(/^scheduled\s*:\s*/i, '').trim()
-  let yamlContents = lines.filter(line => !/^scheduled\s*:/i.test(line)).join('\n')
-  let raw = yamlContents ? yaml.safeLoad(yamlContents) as Record<string, any> | undefined : undefined
+  let raw = parseFrontmatter(contents)
+  let schedules = parseScheduledValue(raw.scheduled)
   let metadata: PageFrontmatter = {}
 
-  if (raw?.title) metadata.title = String(raw.title)
+  if (raw.title) metadata.title = String(raw.title)
   else {
     let markdownTitle = contents.match(/^#[ \t]+(.+?)[ \t]*#*[ \t]*$/m)?.[1]?.trim()
     if (markdownTitle && !/[<{]/.test(markdownTitle)) metadata.title = markdownTitle
   }
-  if (raw?.hideInNav === true) metadata.hideInNav = true
-  if (raw?.layout) metadata.layout = String(raw.layout)
-  if (scheduled) metadata.scheduled = scheduled
+  if (raw.hideInNav === true) metadata.hideInNav = true
+  if (raw.layout) metadata.layout = String(raw.layout)
+  if (schedules.length) metadata.scheduled = Array.isArray(raw.scheduled) ? raw.scheduled[0] : raw.scheduled
   return metadata
 }
 
