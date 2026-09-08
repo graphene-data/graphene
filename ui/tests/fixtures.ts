@@ -174,10 +174,6 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
         async ({compName, props}) => {
           if (window.__inst) window.$GRAPHENE.svelte.unmount(window.__inst)
 
-          // ensure fonts have loaded before we mount our component
-          await document.fonts.load("12px 'Source Sans 3'")
-          await document.fonts.ready
-
           let container = document.getElementsByTagName('main')[0] || document.createElement('main')
           if (!container.isConnected) document.body.appendChild(container)
           container.innerHTML = ''
@@ -203,11 +199,11 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
       if (typeof selector !== 'function') throw new Error('chartConfig selector must be a function')
       let selectorSource = selector.toString()
       await sharedPage.waitForFunction(() => {
-        let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
+        let domNode = document.querySelector('#component-test .chart-renderer') as HTMLElement | null
         return domNode && window.$GRAPHENE.getChart(domNode)
       })
       return await sharedPage.evaluate(source => {
-        let domNode = document.querySelector('#component-test .echarts') as HTMLElement
+        let domNode = document.querySelector('#component-test .chart-renderer') as HTMLElement
         let option = window.$GRAPHENE.getChart(domNode).getModel().getOption()
         try {
           let fn = new Function('config', `return (${source})(config)`)
@@ -221,7 +217,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
 
     let chartDispatchAction = async (action: any) => {
       await sharedPage.evaluate(async chartAction => {
-        let domNode = document.querySelector('#component-test .echarts') as HTMLElement | null
+        let domNode = document.querySelector('#component-test .chart-renderer') as HTMLElement | null
         let chart = domNode ? window.$GRAPHENE.getChart(domNode) : null
         chart?.dispatchAction(chartAction)
         await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
