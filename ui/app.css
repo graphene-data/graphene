@@ -122,20 +122,16 @@ ol {
   margin-block-start: 0;
 }
 
-/* Lists */
+/* Lists — keep normal list layout. A flex container blockifies its items, which
+   moves or drops the ::marker outside Blink and stops margins collapsing inside
+   an item, so loose lists and multi-paragraph items lose the prose rhythm. */
 ul {
   list-style: disc;
   padding-inline-start: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 ol {
   list-style: decimal;
   padding-inline-start: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 ul ul {
   list-style: circle;
@@ -159,6 +155,9 @@ ol ol {
 li {
   list-style: inherit;
   text-align: -webkit-match-parent;
+}
+li + li {
+  margin-top: 0.5rem;
 }
 li::marker {
   color: var(--color-primary-strong);
