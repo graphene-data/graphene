@@ -1,11 +1,11 @@
 <script lang="ts">
   import {init} from 'echarts'
-  import {onDestroy, onMount, untrack} from 'svelte'
+  import {onDestroy, onMount, tick, untrack} from 'svelte'
   import ErrorDisplay from '../internal/ErrorDisplay.svelte'
   import {componentLogger, logExtraProps} from '../internal/telemetry.ts'
   import {enrich, horizontalBarCount} from '../component-utilities/enrich.ts'
   import type {EChartsConfig, NormalConfig, QueryResult} from '../component-utilities/types.ts'
-  import '../component-utilities/theme.ts'
+  import {chartFontFamily} from '../component-utilities/theme.ts'
   import CommentButton from './CommentButton.svelte'
   import CsvDownload from './CsvDownload.svelte'
   import Skeleton from './Skeleton.svelte'
@@ -42,6 +42,7 @@
   let resizeObserver: ResizeObserver | null = null
 
   // Use `raw` because data can be big, and there's little upside to making it reactive
+  let fontsReady = $state(false)
   let loaded = $state.raw<QueryResult | null>(null)
   let chartError: Error | null = $state(null)
   let mountedComponentId: string | null = $state(displayId)
@@ -53,6 +54,35 @@
     loaded = res || null
     if (res?.error) chartLogger.error(res.error, {...res.error, componentId: displayId})
   }
+
+  // ECharts caches text widths, so load theme fonts before any chart measurement. A broken or
+  // stalled font must not prevent rendering: after two seconds we accept fallback-font layout.
+  onMount(() => {
+    let renderId = window.$GRAPHENE.renderStart?.()
+    let disposed = false
+    let timer: ReturnType<typeof setTimeout>
+    let deadline = new Promise<void>(resolve => { timer = setTimeout(resolve, 2_000) })
+
+    async function loadFonts() {
+      let fonts = Promise.all([
+        document.fonts.load(`400 13px ${chartFontFamily}`, 'ECharts labels 0123456789'),
+        document.fonts.load(`600 13px ${chartFontFamily}`, 'ECharts labels 0123456789'),
+      ])
+      // Font requests can reject (offline, CSP, missing assets); render with the browser fallback.
+      await Promise.race([deadline, fonts]).catch(() => {})
+      clearTimeout(timer)
+      if (disposed) return
+      fontsReady = true
+      await tick() // Register the chart's own pending render before releasing the font wait.
+      window.$GRAPHENE.renderComplete?.(renderId)
+    }
+    void loadFonts()
+    return () => {
+      disposed = true
+      clearTimeout(timer)
+      window.$GRAPHENE.renderComplete?.(renderId)
+    }
+  })
 
   // If `data` is just a string, kick off a query to fetch the data.
   // This maybe could be an effect, but we'd have to ensure we don't double-subscribe.
@@ -79,7 +109,7 @@
   })
 
   $effect(() => {
-    if (chartError) return
+    if (chartError || !fontsReady) return
 
     if (!loaded || loaded.error || loaded.rows.length == 0) {
       destroyChart()
@@ -181,7 +211,9 @@
 
 </script>
 
-<div class="echarts" bind:this={node} style={chartSizeStyle} data-component-id={mountedComponentId} data-chart-title={chartTitle}>
+<div class="echarts" style={chartSizeStyle} data-component-id={mountedComponentId} data-chart-title={chartTitle}>
+  <!-- ECharts clears its container on dispose. Keep Svelte-owned controls and states outside it. -->
+  <div class="chart-renderer" bind:this={node}></div>
   <div class="component-actions">
     {#if loaded && !loaded.error && !chartError}<CsvDownload data={loaded} exportId={displayId} title={chartTitle} />{/if}
     <CommentButton componentId={mountedComponentId || displayId} title={chartTitle} />
@@ -197,6 +229,7 @@
 
 <style>
   .echarts { position: relative; }
+  .chart-renderer { position: absolute; inset: 0; }
   .component-actions { position: absolute; z-index: 2; top: -.25rem; right: 1rem; display: flex; align-items: center; gap: 0; }
 
   @media (max-width: 600px) {

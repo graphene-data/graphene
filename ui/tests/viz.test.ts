@@ -507,7 +507,7 @@ test('line chart respects precision metadata in tooltips', async ({mount, shared
 
   await mount('components/LineChart.svelte', {data: {rows, fields}, x: 'month', y: 'win_pct', title: 'Win Rate'})
   let tooltip = await sharedPage.evaluate(() => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
+    let domNode = document.querySelector('#component-test .chart-renderer') as HTMLElement
     let option = window.$GRAPHENE.getChart(domNode).getOption()
     let series = Array.isArray(option.series) ? option.series[0] : option.series
     return series.tooltip.valueFormatter(12.75)
@@ -601,7 +601,7 @@ test('many-series charts fall back to a single-point tooltip', async ({mount, ch
 // no matter how many series they have. Both tests below cover a way a chart ends up with nothing to hover.
 async function tooltipTrigger(sharedPage: Page) {
   return await sharedPage.evaluate(() => {
-    let domNode = document.querySelector('#component-test .echarts') as HTMLElement
+    let domNode = document.querySelector('#component-test .chart-renderer') as HTMLElement
     let option = window.$GRAPHENE.getChart(domNode).getOption()
     return (Array.isArray(option.tooltip) ? option.tooltip[0] : option.tooltip)?.trigger
   })
