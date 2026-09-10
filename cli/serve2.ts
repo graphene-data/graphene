@@ -15,7 +15,7 @@ import {config} from '../lang/config.ts'
 import {analyzeWorkspace, GrapheneError, loadWorkspace, toSql} from '../lang/core.ts'
 import {grapheneCsp} from '../ui/csp.ts'
 import {runQuery} from './connections/index.ts'
-import {extractFrontmatter, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {extractFrontmatter, frontmatterOptions, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {missingMockFiles, mockFileMap} from './mockFiles.ts'
 import {routeForPage} from './pageRouting.ts'
 import {runVitePlugin} from './run.ts'
@@ -71,6 +71,7 @@ async function createConfig(): Promise<InlineConfig> {
           vitePreprocess(),
           mdsvex({
             extensions: ['.md'],
+            frontmatter: frontmatterOptions,
             remarkPlugins,
             rehypePlugins,
           }) as any,

@@ -1,6 +1,7 @@
 import * as echarts from 'echarts'
 
 const {registerTheme} = echarts
+export const chartFontFamily = "'Source Sans 3', sans-serif"
 
 // ── Color tokens ────────────────────────────────────────────────────────
 // Palette C · Fjord Dusk
@@ -63,7 +64,7 @@ registerTheme('graphene-theme', {
   color: colorPalette,
   backgroundColor: 'transparent',
   textStyle: {
-    fontFamily: "'Source Sans 3', sans-serif",
+    fontFamily: chartFontFamily,
     color: clr.textMid,
     fontSize: 13,
   },
