@@ -1,5 +1,8 @@
+// Athena queries run asynchronously; results are read from the API after execution finishes.
+// Credentials may be explicit local keys or a refreshing provider supplied by Cloud.
 import {
   AthenaClient,
+  type AthenaClientConfig,
   GetQueryExecutionCommand,
   GetQueryResultsCommand,
   GetTableMetadataCommand,
@@ -20,6 +23,7 @@ export interface AthenaOptions {
   accessKeyId?: string
   secretAccessKey?: string
   sessionToken?: string
+  credentials?: AthenaClientConfig['credentials']
 }
 
 // Athena is serverless SQL over external data, usually S3 files registered in Glue.
@@ -35,8 +39,8 @@ export class AthenaConnection implements QueryConnection {
   constructor(opts: AthenaOptions = {}) {
     if (!opts.region) throw new Error('Athena requires a region in config or AWS_REGION')
 
-    let clientConfig: any = {region: opts.region}
-    if (opts.accessKeyId && opts.secretAccessKey) clientConfig.credentials = {accessKeyId: opts.accessKeyId, secretAccessKey: opts.secretAccessKey, sessionToken: opts.sessionToken}
+    let clientConfig: AthenaClientConfig = {region: opts.region, credentials: opts.credentials}
+    if (!opts.credentials && opts.accessKeyId && opts.secretAccessKey) clientConfig.credentials = {accessKeyId: opts.accessKeyId, secretAccessKey: opts.secretAccessKey, sessionToken: opts.sessionToken}
 
     this.client = new AthenaClient(clientConfig)
     this.catalog = opts.catalog || 'AwsDataCatalog'
