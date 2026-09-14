@@ -8,7 +8,7 @@
 </div>
 
 <p align="center">
-  <b>Graphene</b> is a data analytics framework built for agents.
+  <b>Graphene</b> is a data analytics framework built for coding agents.
   <br/>
   Ask questions and build visualizations 10x faster when agents do the work.
 </p>
@@ -36,7 +36,7 @@ It provides two critical pieces that allow coding agents to do better data work:
 
 - Token efficiency. Languages are designed to be brief with minimal boilerplate.
 - Agent ergonomics. Graphene is controlled entirely via CLI. All documentation is inside our agent skill.
-- High ceilings. Graphene SQL follows ANSI and supports over 170 functions; Graphene's visualizations support anything that can be expressed with ECharts.
+- High ceilings. Graphene SQL follows ANSI and supports over 170 functions; Graphene pages support anything that can be expressed with HTML, CSS, Javascript, and ECharts.
 
 ### Versus traditional BI
 
@@ -161,7 +161,7 @@ Graphene's entire documentation ships as an agent skill in the Graphene npm pack
   Data teams are going to be focused on guiding agents on how to approach the trickiest and most nebulous data questions at a company. Questions that still require a data expert’s taste to get a good solution.
 </details>
 
-<details><summary><b>Can’t I just vibe code dashboards?</b></summary>
+<details><summary><b>Can’t I just use React? Or python notebooks?</b></summary>
   <br/>
   You could! In fact a lot of the folks we’ve talked to have started down this route. The main problem you’ll run into is consistency. The look and feel of your dashboards and reports are all over the place, and in the worst case they end up using different formula to compute the same key metric.
   <br/><br/>
