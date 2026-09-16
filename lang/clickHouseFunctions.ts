@@ -788,6 +788,7 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('reverse', 'string-functions', [{name: 'value', type: ['string', 'array']}], 'T', 'Reverses a string by bytes or reverses an array.'),
   nativeFunction('domain', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts the hostname from a URL.'),
   nativeFunction('domainWithoutWWW', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts the hostname and removes a leading www.', {aliases: ['domain_without_www']}),
+  nativeFunction('encodeURLComponent', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Takes a regular string and converts it into a URL-encoded (percent-encoded) format where special characters are replaced with their percent-encoded equivalents.'),
   nativeFunction('extractURLParameter', 'url-functions', [{name: 'url', type: 'string'}, {name: 'name', type: 'string'}], 'string', 'Extracts a named URL query parameter.', {aliases: ['extract_url_parameter']}),
   nativeFunction('extractURLParameterNames', 'url-functions', [{name: 'url', type: 'string'}], 'array<string>', 'Returns URL query parameter names.', {aliases: ['extract_url_parameter_names']}),
   nativeFunction('fragment', 'url-functions', [{name: 'url', type: 'string'}], 'string', 'Extracts a URL fragment.'),
