@@ -2359,6 +2359,8 @@ describe('lang', () => {
         .toRenderSql('SELECT countIf(users.age>18) as adults FROM users as users')
       expect('from users select sum_if(age, age > 18) as adult_age_sum')
         .toRenderSql('SELECT sumIf(users.age,users.age>18) as adult_age_sum FROM users as users')
+      expect("from users select concat('/errorDetails?error=', encodeURLComponent(name)) as link")
+        .toRenderSql("SELECT concat('/errorDetails?error=',encodeURLComponent(users.name)) as link FROM users as users")
       expect("from users select startswith(name, 'A') as starts_a")
         .toRenderSql("SELECT startsWith(users.name,'A') as starts_a FROM users as users")
       expect("from users select format_datetime(created_at, '%Y-%m') as month_label")
