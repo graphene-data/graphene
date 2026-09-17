@@ -7,6 +7,7 @@ import {expect} from 'vitest'
 import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {setGlobalConfig} from './config.ts'
 import {GrapheneError, toSql} from './core.ts'
+import {parser} from './parser.js'
 import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
 import {formatType, parseWarehouseFieldType} from './types.ts'
 import {deindent, trimIndentation} from './util.ts'
@@ -83,7 +84,7 @@ describe('lang', () => {
   })
 
   it('imports all keywords as tokens', async () => {
-    // Every keyword used via Kw<"..."> in the grammar must be in the specializeIdentifier keyword map in tokens.js.
+    // Every keyword used via Kw/SoftKw in the grammar must be in the keyword map in tokens.js.
     // Without this, those keywords would only parse in lowercase (the inline spec_Identifier table is exact-match).
     // We have a test because it's easy to add keywords and forget to add them to tokens, causing the parsing to break if you use the uppercase version of a keyword
     let fs = await import('fs')
@@ -92,7 +93,44 @@ describe('lang', () => {
     let grammarKeywords = new Set([...grammar.matchAll(/Kw<"(\w+)">/g)].map(m => m[1]))
     let tokenKeywords = new Set([...tokens.matchAll(/^\s+(\w+):/gm)].map(m => m[1]))
     let missing = [...grammarKeywords].filter(k => !tokenKeywords.has(k))
-    expect(missing, 'Keywords in grammar but missing from tokens.js specializeIdentifier').toEqual([])
+    expect(missing, 'Keywords in grammar but missing from tokens.js').toEqual([])
+    // The external case-insensitive tokenizer must agree with the grammar's hard/soft split.
+    let {specializeIdentifier, extendIdentifier} = await import('./tokens.js')
+    for (let [, isSoft, keyword] of grammar.matchAll(/\b(Soft)?Kw<"(\w+)">/g)) {
+      let hard = specializeIdentifier(keyword.toUpperCase())
+      let soft = extendIdentifier(keyword.toUpperCase())
+      expect(hard >= 0, keyword).toBe(!isSoft)
+      expect(soft >= 0, keyword).toBe(!!isSoft)
+    }
+  })
+
+  it('accepts soft keywords as identifiers', () => {
+    updateFile('table t (x int, y int, date date, rows int, timestamp timestamp, interval interval, count int)', 'keywords.gsql')
+    expect('select x as date, y as rows from t')
+      .toRenderSql('select t.x as date, t.y as rows from t as t')
+    expect('select date, rows, timestamp, interval, count from t')
+      .toRenderSql('select t.date as date, t.rows as rows, t.timestamp as timestamp, t.interval as interval, t.count as count from t as t')
+    expect('SELECT x AS DATE, y AS ROWS FROM t')
+      .toRenderSql('select t.x as DATE, t.y as ROWS from t as t')
+    expect('select one.col_0 from (select 1) one')
+      .toRenderSql('select one.col_0 as col_0 from ( select 1 as col_0 ) as one')
+    expect(parser.parse('select range(3)').toString())
+      .toBe('Program(QueryStatement(QueryExpression(SimpleQuery(SelectClause(Kw(select),SelectItem(FunctionCall(FunctionName(Identifier),Number)))))))')
+    analyze('select range(3)')
+    expect(getDiagnostics().map(d => d.message)).toEqual(['Unknown function: range'])
+  })
+
+  it('prefers soft keyword syntax over identifier alternatives', () => {
+    expect("select date '2024-01-01', interval 3 day")
+      .toRenderSql("select DATE '2024-01-01' as col_0, INTERVAL 3 DAY as col_1")
+    expect('from orders select sum(amount) over (order by id rows between 1 preceding and current row) as total')
+      .toRenderSql('select sum(orders.amount) OVER (ORDER BY orders.id ASC ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) as total from orders as orders')
+    expect('from users full join orders on users.id = orders.user_id select users.id')
+      .toRenderSql('select users.id as id from users as users full join orders as orders on users.id=orders.user_id')
+    // The shared model has both join one and join many, plus count() measures.
+    analyze()
+    expect(getDiagnostics()).toEqual([])
+    expect('from orders select count()').toRenderSql('select count(1) as count from orders as orders')
   })
 
   it('handles basic select query', async () => {
@@ -2956,6 +2994,24 @@ describe('lang', () => {
       <BarChart data="test" x="name" y="avg(age)" />
     `)
       .toRenderSql('with test as ( select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users where users.age>20 ) select test.name as name, avg(test.age) as col_1 from test as test group by 1 order by 2 desc nulls last')
+  })
+
+  it('supports markdown query blocks named full and rows', () => {
+    let queries = analyze(`
+      \`\`\`gsql full
+        from users select name, age
+      \`\`\`
+      \`\`\`gsql rows
+        from full
+      \`\`\`
+      <BarChart data="full" x="name" y="age" />
+      <BarChart data="rows" x="name" y="age" />
+    `, 'md')
+    expect(getDiagnostics()).toEqual([])
+    expect(queries.map(q => toSql(q).replace(/\s+/g, ' ').trim().toLowerCase())).toEqual([
+      'with full as ( select users.name as name, users.age as age from users as users ) select full.name as name, full.age as age from full as full',
+      'with rows as ( with full as ( select users.name as name, users.age as age from users as users ) select full.name as name, full.age as age from full as full ) select rows.name as name, rows.age as age from rows as rows',
+    ])
   })
 
   it('snowflake named markdown queries preserve lowercase aliases in component references', () => {
