@@ -37,6 +37,7 @@ function parseArgType(typeStr: string): {type: TypeKind; rawType?: string}[] {
   return [{type: normalizeTypeKind(base)}]
 }
 
+// The first union member determines optional/variadic arity; suffixes on later members do not.
 function getArgInfo(arg: ArgDef): {name: string; type: string} {
   let [name, type] = Array.isArray(arg) ? [arg[0], arg[1]] : [arg.name, arg.type]
   return {name, type: Array.isArray(type) ? type[0] : type}
@@ -44,7 +45,8 @@ function getArgInfo(arg: ArgDef): {name: string; type: string} {
 
 function parseArgTypes(arg: ArgDef): {type: TypeKind; rawType?: string}[] {
   let type = Array.isArray(arg) ? arg[1] : arg.type
-  if (Array.isArray(type)) return type.map(t => ({type: normalizeTypeKind(t)}))
+  // Normalize every union member's base type; getArgInfo reads arity only from the first member.
+  if (Array.isArray(type)) return type.flatMap(parseArgType)
   return parseArgType(type)
 }
 

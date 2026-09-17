@@ -2435,6 +2435,374 @@ describe('lang', () => {
     }
   })
 
+  it('renders ClickHouse text families with native names, optional and variadic arguments', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      for (let [call, sql] of [
+        ["concat_ws('|', name, age)", "concatWithSeparator('|',users.name,users.age)"],
+        ["format('{}', name)", "format('{}',users.name)"],
+        ["format('{}:{}', name, age)", "format('{}:{}',users.name,users.age)"],
+        ['leftUTF8(name, 2)', 'leftUTF8(users.name,2)'], ['rightUTF8(name, 2)', 'rightUTF8(users.name,2)'],
+        ["leftPadUTF8(name, 8, '.')", "leftPadUTF8(users.name,8,'.')"],
+        ["trimBoth(name, 'x')", "trimBoth(users.name,'x')"], ['trim(name)', 'trimBoth(users.name)'],
+        ["replaceAll(name, 'a', 'b')", "replaceAll(users.name,'a','b')"],
+        ["substring_index(name, '/', 2)", "substringIndex(users.name,'/',2)"],
+        ["locate('a', name, 2)", "locate('a',users.name,2)"],
+        ["countSubstringsCaseInsensitiveUTF8(name, 'a', 2)", "countSubstringsCaseInsensitiveUTF8(users.name,'a',2)"],
+        ["regexp_extract(name, '(a)', 0)", "regexpExtract(users.name,'(a)',0)"],
+        ["overlayUTF8(name, 'a', 2, 3)", "overlayUTF8(users.name,'a',2,3)"],
+        ['char_length(name)', 'lengthUTF8(users.name)'], ['to_base64(name)', 'base64Encode(users.name)'],
+        ['levenshteinDistanceUTF8(name, name)', 'editDistanceUTF8(users.name,users.name)'],
+        ['compareSubstrings(name, name, 0, 1, 2)', 'compareSubstrings(users.name,users.name,0,1,2)'],
+        ['sparseGramsHashesUTF8(name, 3, 8)', 'sparseGramsHashesUTF8(users.name,3,8)'],
+        ["tokens(name, 'ngram', 2)", "tokens(users.name,'ngram',2)"],
+      ]) expect(`from users select ${call} as result`).toRenderSql(`SELECT ${sql} as result FROM users as users`, {preserveCase: true})
+      expect("table text_input (s varchar, patterns array<string>) from text_input select multiFuzzyMatchAllIndices(s, 2, patterns), multiSearchAnyUTF8(s, patterns), tokens(s, 'split', patterns), arrayStringConcat(patterns, ',')")
+        .toRenderSql("SELECT multiFuzzyMatchAllIndices(text_input.s,2,text_input.patterns) as col_0, multiSearchAnyUTF8(text_input.s,text_input.patterns) as col_1, tokens(text_input.s,'split',text_input.patterns) as col_2, arrayStringConcat(text_input.patterns,',') as col_3 FROM text_input as text_input", {preserveCase: true})
+      let [query] = analyze("table text_types (s varchar) from text_types select isValidUTF8(s), hasTokenOrNull(s, 'a'), CRC64(s), base58Decode(s), extractGroups(s, '(a)'), extractAllGroupsVertical(s, '(a)')")
+      expect(query.fields.map(field => formatType(field.type))).toEqual(['boolean', 'boolean', 'number', 'string', 'array<string>', 'array'])
+      for (let call of ["format('{}')", 'compareSubstrings(name, name)', 'leftPad(name)', 'countMatches(name)', 'regexpExtract(name, name, 0, 1)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Wrong number of arguments/i)
+      }
+      for (let call of ['base64Encode(age)', 'leftPad(name, name)', 'multiMatchAny(name, name)', 'tokens(name, name, true)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Expected .*got/i)
+      }
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('renders ClickHouse encoding, hash, random and scalar conversion families', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      for (let fn of ['farmHash64', 'gccMurmurHash', 'kafkaMurmurHash', 'metroHash64', 'murmurHash2_32', 'murmurHash2_64', 'murmurHash3_32', 'murmurHash3_64', 'xxh3', 'xxHash32', 'sipHash128', 'sipHash128Reference', 'murmurHash3_128']) {
+        expect(`from users select ${fn}(name, age) as result`).toRenderSql(`SELECT ${fn}(users.name,users.age) as result FROM users as users`, {preserveCase: true})
+      }
+      for (let prefix of ['ngram', 'wordShingle']) {
+        for (let suffix of ['', 'CaseInsensitive', 'UTF8', 'CaseInsensitiveUTF8']) {
+          for (let mode of ['MinHash', 'MinHashArg']) {
+            let fn = `${prefix}${mode}${suffix}`
+            expect(`from users select ${fn}(name, 3, 6) as result`).toRenderSql(`SELECT ${fn}(users.name,3,6) as result FROM users as users`, {preserveCase: true})
+          }
+          let fn = `${prefix}SimHash${suffix}`
+          expect(`from users select ${fn}(name, 3) as result`).toRenderSql(`SELECT ${fn}(users.name,3) as result FROM users as users`, {preserveCase: true})
+        }
+      }
+      for (let [call, sql] of [
+        ["concat_ws('|')", "concatWithSeparator('|')"],
+        ['bech32Encode(name, name)', 'bech32Encode(users.name,users.name)'],
+        ['bech32Encode(name, name, 0)', 'bech32Encode(users.name,users.name,0)'],
+        ['hilbertEncode(1, 2)', 'hilbertEncode(1,2)'],
+        ['hilbertEncode(tuple(1, 2), 1, 2)', 'hilbertEncode(tuple(1,2),1,2)'],
+        ['mortonEncode(1, 2, 3, 4, 5, 6, 7, 8)', 'mortonEncode(1,2,3,4,5,6,7,8)'],
+        ['mortonDecode(tuple(1, 2), 3)', 'mortonDecode(tuple(1,2),3)'],
+        ['sipHash64Keyed(tuple(1, 2), name, age)', 'sipHash64Keyed(tuple(1,2),users.name,users.age)'],
+        ['randUniform(0, 1, id)', 'randUniform(0,1,users.id)'],
+        ['randBernoulli(0.5)', 'randBernoulli(0.5)'],
+        ['randBernoulli(0.5, id)', 'randBernoulli(0.5,users.id)'],
+        ['randomPrintableASCII(8, id)', 'randomPrintableASCII(8,users.id)'],
+        ['sqid(1, 2)', 'sqidEncode(1,2)'],
+        ['format_bytes(age)', 'formatReadableSize(users.age)'],
+        ["formatReadableTimeDelta(age, 'days', 'minutes')", "formatReadableTimeDelta(users.age,'days','minutes')"],
+        ['MACNumToString(age)', 'MACNumToString(users.age)'],
+        ['toDateOrNull(name)', 'toDateOrNull(users.name)'],
+        ['toDecimalString(age, 2)', 'toDecimalString(users.age,2)'],
+        ['geoDistance(1, 2, 3, 4)', 'geoDistance(1,2,3,4)'],
+        ["isIPAddressInRange(name, '192.168.0.0/16')", "isIPAddressInRange(users.name,'192.168.0.0/16')"],
+      ]) expect(`from users select ${call} as result`).toRenderSql(`SELECT ${sql} as result FROM users as users`, {preserveCase: true})
+      let [query] = analyze('table encoded (s varchar, n int) from encoded select bech32Decode(s), hex(n), unhex(s), sipHash128(s), ngramMinHash(s), ngramSimHash(s), sqidDecode(s), bitPositionsToArray(n), toBool(s), toDateOrZero(s), parseReadableSizeOrNull(s), randomFixedString(n)')
+      expect(query.fields.map(field => formatType(field.type))).toEqual(['record', 'string', 'string', 'string', 'record', 'number', 'array<number>', 'array<number>', 'boolean', 'date', 'number', 'string'])
+      for (let call of ['randUniform(1)', 'randBernoulli()', 'randomFixedString(2, id)', 'hilbertEncode(1, 2, 3, 4)', 'toDateOrNull(name, name)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Wrong number of arguments/i)
+      }
+      for (let call of ['bech32Encode(name, age)', 'mortonDecode(name, age)', 'sipHash64Keyed(name, age)', 'toDateOrZero(age)', 'hilbertEncode(1, 2, 3)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Expected .*got/i)
+      }
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('renders ClickHouse context, container and aggregate-state functions', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      for (let [call, sql] of [
+        ['currentSchemas(true)', 'currentSchemas(true)'], ['hostName()', 'hostName()'],
+        ['addressToLineWithInlines(age)', 'addressToLineWithInlines(users.age)'],
+        ["encrypt('aes-128-ecb', name, name)", "encrypt('aes-128-ecb',users.name,users.name)"],
+        ["file(name, '')", "file(users.name,'')"], ['detectLanguageMixed(name)', 'detectLanguageMixed(users.name)'],
+        ['tupleNames(tuple(name, age))', 'tupleNames(tuple(users.name,users.age))'],
+        ['mapPopulateSeries(map(age, age), 10)', 'mapPopulateSeries(map(users.age,users.age),10)'],
+        ['mapPopulateSeries(h3GetRes0Indexes(), h3GetRes0Indexes(), 10)', 'mapPopulateSeries(h3GetRes0Indexes(),h3GetRes0Indexes(),10)'],
+        ["dictGetAll('dictionary', 'attribute', name, 2)", "dictGetAll('dictionary','attribute',users.name,2)"],
+        ['numericIndexedVectorToMap(numericIndexedVectorBuild(map(age, age)))', 'numericIndexedVectorToMap(numericIndexedVectorBuild(map(users.age,users.age)))'],
+        ['numericIndexedVectorGetValue(numericIndexedVectorBuild(map(age, age)), age)', 'numericIndexedVectorGetValue(numericIndexedVectorBuild(map(users.age,users.age)),users.age)'],
+        ['numericIndexedVectorPointwiseAdd(numericIndexedVectorBuild(map(age, age)), 1)', 'numericIndexedVectorPointwiseAdd(numericIndexedVectorBuild(map(users.age,users.age)),1)'],
+        ["toDateTime64OrDefault(name, 3, 'UTC')", "toDateTime64OrDefault(users.name,3,'UTC')"],
+        ['toUUIDOrDefault(name)', 'toUUIDOrDefault(users.name)'],
+        ['xor(true, age, false)', 'xor(true,users.age,false)'],
+        ['notLike(name, name)', 'notLike(users.name,users.name)'],
+        ['uniqUpTo(name, age)', 'uniqUpTo(users.name,users.age)'],
+        ["filesystemAvailable('default')", "filesystemAvailable('default')"],
+        ['globalIn(age, tuple(1, 2))', 'globalIn(users.age,tuple(1,2))'],
+        ['corrMatrix(age, id)', 'corrMatrix(users.age,users.id)'],
+        ['kolmogorovSmirnovTest(age, id)', 'kolmogorovSmirnovTest(users.age,users.id)'],
+        ['estimateCompressionRatio(name)', 'estimateCompressionRatio(users.name)'],
+        ['stochasticLinearRegression(age, id)', 'stochasticLinearRegression(users.age,users.id)'],
+        ['approx_top_count(name)', 'approx_top_k(users.name)'],
+        ['quantileExactWeighted(age, id)', 'quantileExactWeighted(users.age,users.id)'],
+        ['medianTimingWeighted(age, id)', 'quantileTimingWeighted(users.age,users.id)'],
+        ['groupNumericIndexedVectorState(id, age)', 'groupNumericIndexedVectorState(users.id,users.age)'],
+        ['quantileExactHighIf(age, true)', 'quantileExactHighIf(users.age,true)'],
+      ]) expect(`from users select ${call} as result`).toRenderSql(`SELECT ${sql} as result FROM users as users`, {preserveCase: true})
+      for (let [call, type] of [
+        ['currentProfiles()', 'array<string>'], ['showCertificate()', 'map'], ['transactionID()', 'record'],
+        ['colorSRGBToOKLCH(tuple(n,n,n))', 'record'], ['dictGetAll(s,s,n)', 'array'], ['tupleNames(tuple(n))', 'array<string>'],
+        ['mapPopulateSeries(map(n,n))', 'map'], ['numericIndexedVectorToMap(numericIndexedVectorBuild(map(n,n)))', 'map'],
+        ['numericIndexedVectorCardinality(numericIndexedVectorBuild(map(n,n)))', 'number'], ['seriesDecomposeSTL(h3GetRes0Indexes(), 2)', 'array'],
+      ]) {
+        let [query] = analyze(`table extra (s varchar, n int) from extra select ${call}`)
+        expect(formatType(query.fields[0].type), call).toEqual(type)
+      }
+      for (let call of ['xor(name, true)', 'numericIndexedVectorGetValue(name, age)', 'mapPopulateSeries(h3GetRes0Indexes(), h3GetRes0Indexes())', 'quantileExactWeighted(name, age)', 'stochasticLinearRegression(age, name)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Expected .*got/i)
+      }
+      for (let call of ['corrMatrix()', 'dictGetAll(name, name)', 'encrypt(name, name)', 'map(age)', 'toDateTime64OrDefault(name)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Wrong number of arguments/i)
+      }
+      expect('from users select age, GROUPING(age) as mask').toRenderSql('SELECT users.age as age, GROUPING(users.age) as mask FROM users as users GROUP BY 1 ORDER BY 2 desc NULLS LAST', {preserveCase: true})
+      expect('from users select seriesOutliersDetectTukey(h3GetRes0Indexes(), 0.25)').toHaveDiagnostic(/Wrong number of arguments/i)
+      let [aggregates] = analyze('table agtypes (n int) from agtypes select corrMatrix(n), stochasticLinearRegression(n,n), approx_top_k(n), quantileExactHigh(n), groupNumericIndexedVectorState(n,n), groupArrayLast(n)')
+      expect(aggregates.fields.map(field => formatType(field.type))).toEqual(['array', 'array<number>', 'array<record>', 'number', 'sql native', 'array'])
+      expect('from users select lagInFrame(age) over () as result').toRenderSql('SELECT lagInFrame(users.age) OVER () as result FROM users as users', {preserveCase: true})
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('type-checks ClickHouse mixed variadic arguments and ordinary unions', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      expect("from users select printf('%s:%d:%s', name, age, name) as result").toRenderSql("SELECT printf('%s:%d:%s',users.name,users.age,users.name) as result FROM users as users", {preserveCase: true})
+      expect("from users select printf('literal') as result").toRenderSql("SELECT printf('literal') as result FROM users as users", {preserveCase: true})
+      for (let argument of ['true', 'tuple(age)', 'map(name, age)', 'h3GetRes0Indexes()']) {
+        expect(`from users select printf('%s', name, ${argument})`).toHaveDiagnostic(/Expected .*got/i)
+        expect(`from users select toIntervalDay(${argument})`).toHaveDiagnostic(/Expected .*got/i)
+      }
+      for (let argument of ['name', 'age']) {
+        expect(`from users select toIntervalDay(${argument}) as result`).toRenderSql(`SELECT toIntervalDay(users.${argument}) as result FROM users as users`, {preserveCase: true})
+      }
+      expect('from users select printf(age, name)').toHaveDiagnostic(/Expected .*got/i)
+      for (let [call, sql] of [['reverse(name)', 'reverse(users.name)'], ['reverse(h3GetRes0Indexes())', 'reverse(h3GetRes0Indexes())'], ['tupleElement(tuple(age), 1)', 'tupleElement(tuple(users.age),1)'], ["tupleElement(tuple(age), '1')", "tupleElement(tuple(users.age),'1')"]]) {
+        expect(`from users select ${call} as result`).toRenderSql(`SELECT ${sql} as result FROM users as users`, {preserveCase: true})
+      }
+      expect('from users select reverse(age)').toHaveDiagnostic(/Expected .*got/i)
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('renders ClickHouse parsing, identifier and geography families', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      for (let [call, sql] of [
+        ["parseDateTime64BestEffortUSOrNull(name, 6, 'UTC')", "parseDateTime64BestEffortUSOrNull(users.name,6,'UTC')"],
+        ["parseDateTime64InJodaSyntaxOrZero(name, 'yyyy-MM-dd', 'UTC')", "parseDateTime64InJodaSyntaxOrZero(users.name,'yyyy-MM-dd','UTC')"],
+        ['toDateTime64OrNull(name)', 'toDateTime64OrNull(users.name)'],
+        ['toIntervalDay(age)', 'toIntervalDay(users.age)'],
+        ["toInterval(age, 'day')", "toInterval(users.age,'day')"],
+        ['reinterpretAsUInt128(name)', 'reinterpretAsUInt128(users.name)'],
+        ['IPv6NumToString(IPv4ToIPv6(age))', 'IPv6NumToString(IPv4ToIPv6(users.age))'],
+        ['IPv6CIDRToRange(toIPv6(name), 64)', 'IPv6CIDRToRange(toIPv6(users.name),64)'],
+        ['generateSnowflakeID(id, 1)', 'generateSnowflakeID(users.id,1)'],
+        ["snowflakeIDToDateTime64(age, 0, 'UTC')", "snowflakeIDToDateTime64(users.age,0,'UTC')"],
+        ['UUIDNumToString(UUIDToNum(generateUUIDv7()))', 'UUIDNumToString(UUIDToNum(generateUUIDv7()))'],
+        ['geoToH3(37.7, -122.4, 8)', 'geoToH3(37.7,-(122.4),8)'],
+        ['geohashEncode(1, 2, 5)', 'geohashEncode(1,2,5)'],
+        ['h3GetRes0Indexes()', 'h3GetRes0Indexes()'],
+        ['h3ToChildren(age, 10)', 'h3ToChildren(users.age,10)'],
+        ['s2RectUnion(1, 2, 3, 4)', 's2RectUnion(1,2,3,4)'],
+        ['pointInEllipses(1, 2, 3, 4, 5, 6)', 'pointInEllipses(1,2,3,4,5,6)'],
+        ['WKT(readWKTPolygon(name))', 'wkt(readWKTPolygon(users.name))'],
+        ['wkt(readWKTPoint(name))', 'wkt(readWKTPoint(users.name))'],
+        ['polygonsIntersectionCartesian(readWKTPolygon(name), readWKTPolygon(name))', 'polygonsIntersectionCartesian(readWKTPolygon(users.name),readWKTPolygon(users.name))'],
+      ]) expect(`from users select ${call} as result`).toRenderSql(`SELECT ${sql} as result FROM users as users`, {preserveCase: true})
+      for (let [call, type] of [
+        ['parseDateTime64OrNull(s)', 'timestamp'], ['toIntervalMonth(n)', 'interval'], ['toIPv4(s)', 'string'],
+        ['IPv4CIDRToRange(toIPv4(s), 16)', 'record'], ['generateUUIDv4()', 'string'], ['generateSnowflakeID()', 'number'],
+        ['h3IsValid(n)', 'boolean'], ['h3ToGeo(n)', 'record'], ['h3ToGeoBoundary(n)', 'array<record>'],
+        ['h3GetFaces(n)', 'array<number>'], ['readWKTPolygon(s)', 'array'], ['readWKTLineString(s)', 'array<record>'],
+      ]) {
+        let [query] = analyze(`table geotypes (s varchar, n int) from geotypes select ${call}`)
+        expect(formatType(query.fields[0].type), call).toEqual(type)
+      }
+      for (let call of ['toDateTime64OrNull(age)', 'toDate32OrNull(age)', 'geoToH3(name, age, age)', 'h3ToChildren(name, 1)', 'polygonsEqualsCartesian(name, name)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Expected .*got/i)
+      }
+      for (let call of ['geoToH3(1, 2)', 's2RectUnion(1, 2, 3)', 'pointInEllipses(1, 2)', 'toIntervalDay()', 'snowflakeToDateTime(age, 0, name)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Wrong number of arguments/i)
+      }
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('renders ClickHouse math, URL and default-parameter aggregates', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      // Every function in these families renders under its native ClickHouse name.
+      let unaryNumbers = [
+        'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh',
+        'exp2', 'exp10', 'intExp2', 'intExp10', 'cbrt', 'erf', 'erfc', 'lgamma', 'tgamma', 'log1p', 'sigmoid', 'degrees', 'radians', 'factorial',
+        'roundBankers', 'truncate', 'roundAge', 'roundDuration', 'roundToExp2',
+        'stddevPopStable', 'stddevSampStable', 'varPopStable', 'varSampStable', 'sumWithOverflow', 'groupBitAnd', 'groupBitOr', 'groupBitXor', 'quantileTiming',
+      ]
+      let unaryStrings = [
+        'decodeURLComponent', 'encodeURLFormComponent', 'decodeURLFormComponent', 'domainRFC', 'domainWithoutWWWRFC', 'topLevelDomainRFC',
+        'firstSignificantSubdomain', 'firstSignificantSubdomainRFC', 'cutToFirstSignificantSubdomain', 'cutToFirstSignificantSubdomainRFC',
+        'cutToFirstSignificantSubdomainWithWWW', 'cutToFirstSignificantSubdomainWithWWWRFC', 'netloc', 'pathFull', 'queryStringAndFragment',
+        'cutWWW', 'cutQueryString', 'cutFragment', 'cutQueryStringAndFragment',
+      ]
+      for (let fn of unaryNumbers) expect(`from users select ${fn}(age) as result`).toRenderSql(`SELECT ${fn}(users.age) as result FROM users as users`, {preserveCase: true})
+      for (let fn of unaryStrings) expect(`from users select ${fn}(name) as result`).toRenderSql(`SELECT ${fn}(users.name) as result FROM users as users`, {preserveCase: true})
+      for (let fn of ['extractURLParameters', 'URLHierarchy', 'URLPathHierarchy']) {
+        expect(`from users select ${fn}(name) as result`).toRenderSql(`SELECT ${fn}(users.name) as result FROM users as users`)
+      }
+      for (let fn of [
+        'firstSignificantSubdomainCustom', 'firstSignificantSubdomainCustomRFC', 'cutToFirstSignificantSubdomainCustom',
+        'cutToFirstSignificantSubdomainCustomRFC', 'cutToFirstSignificantSubdomainCustomWithWWW', 'cutToFirstSignificantSubdomainCustomWithWWWRFC',
+      ]) expect(`from users select ${fn}(name, 'public_suffix_list') as result`).toRenderSql(`SELECT ${fn}(users.name,'public_suffix_list') as result FROM users as users`)
+      for (let fn of ['pi', 'e', 'queryID', 'initialQueryID', 'getOSKernelVersion', 'tcpPort', 'shardNum', 'shardCount', 'zookeeperSessionUptime', 'initialQueryStartTime']) {
+        expect(`from users select ${fn}() as result`).toRenderSql(`SELECT ${fn}() as result FROM users as users`)
+      }
+      for (let fn of ['atan2', 'hypot', 'avgWeighted', 'corrStable', 'covarPopStable', 'covarSampStable']) {
+        expect(`from users select ${fn}(age, 2) as result`).toRenderSql(`SELECT ${fn}(users.age,2) as result FROM users as users`)
+      }
+      for (let fn of ['port', 'portRFC']) {
+        expect(`from users select ${fn}(name), ${fn}(name, 443)`).toRenderSql(`SELECT ${fn}(users.name) as col_0, ${fn}(users.name,443) as col_1 FROM users as users`)
+      }
+      for (let fn of ['dictGetChildren', 'dictGetHierarchy', 'dictGetDescendants']) {
+        expect(`from users select ${fn}('hierarchy', age) as result`).toRenderSql(`SELECT ${fn}('hierarchy',users.age) as result FROM users as users`)
+      }
+      expect("from users select dictHas('d', age), dictIsIn('d', age, 1), dictGetDescendants('d', age, 2)")
+        .toRenderSql("SELECT dictHas('d',users.age) as col_0, dictIsIn('d',users.age,1) as col_1, dictGetDescendants('d',users.age,2) as col_2 FROM users as users")
+      expect("from users select dictHas('range_dict', id, created_at)")
+        .toRenderSql("SELECT dictHas('range_dict',users.id,users.created_at) as col_0 FROM users as users", {preserveCase: true})
+      expect("table urls (url varchar, names array<string>) from urls select cutURLParameter(url, 'q'), cutURLParameter(url, names)")
+        .toRenderSql("SELECT cutURLParameter(urls.url,'q') as col_0, cutURLParameter(urls.url,urls.names) as col_1 FROM urls as urls")
+      expect('from users select WIDTH_BUCKET(age, 0, 100, 10), roundBankers(age, 2), trunc(age, 1)')
+        .toRenderSql('SELECT widthBucket(users.age,0,100,10) as col_0, roundBankers(users.age,2) as col_1, truncate(users.age,1) as col_2 FROM users as users')
+      expect('table ranges (n int, bounds array<number>) from ranges select roundDown(n, bounds), groupArrayIntersect(bounds)')
+        .toRenderSql('SELECT roundDown(ranges.n,ranges.bounds) as col_0, groupArrayIntersect(ranges.bounds) as col_1 FROM ranges as ranges GROUP BY 1 ORDER BY 2 DESC NULLS LAST')
+      expect("from users select proportionsZTest(10, 11, 100, 101, 0.95, 'unpooled'), anova(age, 1)")
+        .toRenderSql("SELECT proportionsZTest(10,11,100,101,0.95,'unpooled') as col_0, analysisOfVariance(users.age,1) as col_1 FROM users as users GROUP BY 1 ORDER BY 2 DESC NULLS LAST")
+
+      // Default aggregate parameters stay in native ordinary-call form, including composed combinators.
+      expect('from users select anyHeavy(name), uniqHLL12(name, age), uniqHLL12If(name, age, age > 18), topK(name), topKWeighted(name, age)')
+        .toRenderSql('SELECT anyHeavy(users.name) as col_0, uniqHLL12(users.name,users.age) as col_1, uniqHLL12If(users.name,users.age,users.age>18) as col_2, topK(users.name) as col_3, topKWeighted(users.name,users.age) as col_4 FROM users as users')
+      expect('from users select median(age), medianExact(age), medianTDigest(age), medianDeterministic(age, id), medianTiming(age), quantileIf(age, age > 18)')
+        .toRenderSql('SELECT quantile(users.age) as col_0, quantileExact(users.age) as col_1, quantileTDigest(users.age) as col_2, quantileDeterministic(users.age,users.id) as col_3, quantileTiming(users.age) as col_4, quantileIf(users.age,users.age>18) as col_5 FROM users as users', {preserveCase: true})
+      expect('from users select groupArrayMovingAvg(age), groupArrayMovingSum(age), groupArrayInsertAt(name, id)')
+        .toRenderSql('SELECT groupArrayMovingAvg(users.age) as col_0, groupArrayMovingSum(users.age) as col_1, groupArrayInsertAt(users.name,users.id) as col_2 FROM users as users')
+      for (let [call, type] of [
+        ['quantile(n)', 'number'], ['quantile(d)', 'date'], ['quantile(t)', 'timestamp'], ['quantileDeterministic(t, n)', 'timestamp'],
+        ['topK(s)', 'array'], ['anyHeavy(s)', 'string'], ["dictGetDescendants('d', n)", 'array<number>'],
+        ['initialQueryStartTime()', 'timestamp'], ["proportionsZTest(1, 1, 2, 2, 0.95, 'pooled')", 'record'],
+      ]) {
+        let [query] = analyze(`table measurements (n int, s varchar, d date, t timestamp) from measurements select ${call}`)
+        expect(formatType(query.fields[0].type), call).toEqual(type)
+      }
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('preserves ClickHouse map and array types through ordinary calls', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    updateFile('table map_events (properties map, keys array<string>, values array<number>)', 'map-events.gsql')
+    try {
+      for (let fn of ['arrayCount', 'arrayAll', 'arrayExists']) {
+        expect(`from map_events select ${fn}(values) as result`).toRenderSql(`SELECT ${fn}(map_events.values) as result FROM map_events as map_events`, {preserveCase: true})
+        expect(`from map_events select ${fn}(values, values)`).toHaveDiagnostic(/Wrong number of arguments/i)
+        expect(`from map_events select ${fn}(properties)`).toHaveDiagnostic(/Expected array, got map/i)
+      }
+      let [predicates] = analyze('table predicates (flags array<number>) from predicates select arrayCount(flags), arrayAll(flags), arrayExists(flags)')
+      expect(predicates.fields.map(field => formatType(field.type))).toEqual(['number', 'boolean', 'boolean'])
+      for (let fn of ['mapSort', 'mapReverseSort']) {
+        expect(`from map_events select ${fn}(properties) as result`).toRenderSql(`SELECT ${fn}(map_events.properties) as result FROM map_events as map_events`)
+      }
+      for (let fn of ['mapPartialSort', 'mapPartialReverseSort']) {
+        expect(`from map_events select ${fn}(2, properties) as result`).toRenderSql(`SELECT ${fn}(2,map_events.properties) as result FROM map_events as map_events`)
+      }
+      expect("from map_events select map_from_arrays(keys, values), mapUpdate(properties, properties), mapContainsValueLike(properties, 'a%'), mapExtractValueLike(properties, 'a%')")
+        .toRenderSql("SELECT mapFromArrays(map_events.keys,map_events.values) as col_0, mapUpdate(map_events.properties,map_events.properties) as col_1, mapContainsValueLike(map_events.properties,'a%') as col_2, mapExtractValueLike(map_events.properties,'a%') as col_3 FROM map_events as map_events")
+      for (let fn of ['mapAdd', 'mapSubtract']) {
+        expect(`from map_events select ${fn}(properties, properties), ${fn}(properties, properties, properties)`)
+          .toRenderSql(`SELECT ${fn}(map_events.properties,map_events.properties) as col_0, ${fn}(map_events.properties,map_events.properties,map_events.properties) as col_1 FROM map_events as map_events`)
+        expect(`from map_events select ${fn}(sumMap(keys, values), sumMap(keys, values)) as result`)
+          .toRenderSql(`SELECT ${fn}(sumMap(map_events.keys,map_events.values),sumMap(map_events.keys,map_events.values)) as result FROM map_events as map_events`)
+      }
+      expect('from map_events select sumMap(properties), sumMap(keys, values), sumMapWithOverflow(keys, values), sumMappedArrays(keys, values, values)')
+        .toRenderSql('SELECT sumMap(map_events.properties) as col_0, sumMap(map_events.keys,map_events.values) as col_1, sumMapWithOverflow(map_events.keys,map_events.values) as col_2, sumMap(map_events.keys,map_events.values,map_events.values) as col_3 FROM map_events as map_events', {preserveCase: true})
+      let [query] = analyze('table map_types (m map, k array<string>, v array<number>) from map_types select mapAdd(m, m), mapSubtract(m, m), sumMap(m), sumMap(k, v), mapAdd(sumMap(k, v), sumMap(k, v)), topK(v), groupArrayInsertAt(v, 0)')
+      expect(query.fields.map(field => formatType(field.type))).toEqual(['map', 'map', 'map', 'record', 'record', 'array', 'array'])
+      for (let fn of ['extractKeyValuePairs', 'extractKeyValuePairsWithEscaping']) {
+        for (let args of ["'a:1'", "'a:1',':'", "'a:1',':',','", "'a:1',':',',','\"'", "'a:1',':',',','\"','promote'"]) {
+          expect(`from users select ${fn}(${args}) as result`).toRenderSql(`SELECT ${fn}(${args}) as result FROM users as users`)
+        }
+      }
+      expect('from users select str_to_map(name), mapFromString(name)')
+        .toRenderSql('SELECT extractKeyValuePairs(users.name) as col_0, extractKeyValuePairs(users.name) as col_1 FROM users as users')
+      for (let call of ['sin()', 'pi(1)', 'port(name, 80, 90)', 'cutURLParameter(name)', 'widthBucket(age, 0, 100)', 'topK(age, 3)', 'quantile(age, 0.9)', 'dictGetDescendants(name)', 'uniqHLL12()']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Wrong number of arguments/i)
+      }
+      for (let call of ['sin(name)', 'port(name, name)', 'roundDown(age, age)', 'dictIsIn(name, name, age)']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Expected .*got/i)
+      }
+      expect('from map_events select mapPartialSort(properties, 2)').toHaveDiagnostic(/Expected number, got map/i)
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('rejects excluded ClickHouse names and unsupported syntax', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      for (let call of [
+        'histogram(age)', 'sequenceMatch(age)', 'windowFunnel(age)', 'sumResample(age)', 'quantiles(age)', 'quantileGK(age)', 'groupArraySample(age)',
+        'arrayMap(age)', 'arrayFilter(age)', 'arrayFold(age)', 'mapApply(age)', 'mapFilter(age)', 'mapAll(map(age, age))', 'mapExists(map(age, age))', 'arrayJoin(age)',
+        'catboostEvaluate(name, age)', 'finalizeAggregation(groupBitmapState(age))', 'stringCompare(name, name)',
+      ]) expect(`from users select ${call}`).toHaveDiagnostic(/Unknown function/i)
+      for (let call of ['like(name, name)', 'ilike(name, name)', 'left(name, 2)', 'right(name, 2)', 'quantile(0.9)(age)', 'arrayCount(x -> x > 0, tuple(age))', 'mapSort((k, v) -> v, map(name, age))']) {
+        expect(`from users select ${call}`).toHaveDiagnostic(/Syntax error/i)
+      }
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
+  it('limits ClickHouse window boundaries to native UInt32 inputs', () => {
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    try {
+      for (let name of ['tumbleStart', 'tumbleEnd', 'hopStart', 'hopEnd']) {
+        expect(`from users select ${name}(toUInt32(age)) as boundary`).toRenderSql(`SELECT ${name}(toUInt32(users.age)) as boundary FROM users as users`, {preserveCase: true})
+        for (let value of ['now()', 'created_at', 'tuple(created_at, created_at)']) {
+          expect(`from users select ${name}(${value})`).toHaveDiagnostic(/Expected number, got/i)
+        }
+        let args = name.startsWith('hop') ? 'now(), toIntervalMonth(1), toIntervalMonth(2)' : 'now(), toIntervalMonth(1)'
+        expect(`from users select ${name}(${args})`).toHaveDiagnostic(/Wrong number of arguments/i)
+        expect(`from users select dateTimeToUUIDv7(${name}(${args}))`).toHaveDiagnostic(/Wrong number of arguments/i)
+        let [query] = analyze(`table boundaries (n int) from boundaries select ${name}(toUInt32(n))`)
+        expect(formatType(query.fields[0].type)).toEqual('timestamp')
+      }
+      // Window tuples remain valid coarse records; we do not claim their element types.
+      let [query] = analyze('table windows (t timestamp) from windows select tumble(t, toIntervalMonth(1)), hop(t, toIntervalDay(1), toIntervalDay(2))')
+      expect(query.fields.map(field => formatType(field.type))).toEqual(['record', 'record'])
+    } finally {
+      setGlobalConfig({root: ''})
+    }
+  })
+
   it('supports ClickHouse conversion families and aggregate combinators', () => {
     setGlobalConfig({dialect: 'clickhouse', root: ''})
     updateFile('table events (tags array<string>, values array<number>, properties map)', 'events.gsql')
@@ -2454,7 +2822,7 @@ describe('lang', () => {
 
       expect('from users select unknownAggregateIf(age, age > 18)')
         .toHaveDiagnostic(/Unknown function: unknownaggregateif/i)
-      for (let functionCall of ['median(age)', 'arrayMap(age)', 'topK(age)', '__applyFilter(age)']) {
+      for (let functionCall of ['histogram(age)', 'arrayMap(age)', 'sumResample(age)', '__applyFilter(age)']) {
         expect(`from users select ${functionCall}`)
           .toHaveDiagnostic(/Unknown function:/i)
       }
