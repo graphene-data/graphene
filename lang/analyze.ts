@@ -1,3 +1,5 @@
+// Resolve GSQL models and queries into typed expressions and warehouse SQL.
+// Keep logical identifier names intact; apply dialect quoting only when emitting SQL.
 import {type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import {
@@ -18,6 +20,7 @@ import {analyzeBareFunction, analyzeFunction} from './functions.ts'
 import {parseMarkdown} from './markdown.ts'
 import {extractLeadingMetadataDetails, validateMetadataEntries} from './metadata.ts'
 import {parser} from './parser.js'
+import {isKeyword} from './tokens.js'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval} from './temporal.ts'
 import {inferTimeOrdinal} from './temporalMetadata.ts'
 import {
@@ -364,7 +367,7 @@ class AnalysisSession implements Analyzer {
       } else {
         this.addQueryField(query, {
           name: outName,
-          sql: `${alias}.${col.name}`,
+          sql: `${this.quoteIdent(alias)}.${this.quoteIdent(col.name)}`,
           type: col.type,
           metadata: col.metadata,
           fanout: normalizeExprFanout({path: scope.fanoutPath}),
@@ -682,34 +685,43 @@ class AnalysisSession implements Analyzer {
     return {node, name: quoted ? raw.slice(1, -1) : raw, quoted}
   }
 
+  // Quote keywords so they mean what the unquoted spelling would have meant.
+  // Explicitly user-quoted aliases keep their exact case instead of folding.
+  private quoteIdent(name: string, quoted = false): string {
+    if (!quoted && !isKeyword(name)) return name
+    if (!quoted && this.config.dialect == 'snowflake') name = name.toUpperCase()
+    if (!quoted && this.config.dialect == 'postgres') name = name.toLowerCase()
+    return this.config.dialect == 'bigquery' ? `\`${name}\`` : `"${name}"`
+  }
+
   private formatSelectAlias(field: QueryField) {
-    if (!field.quotedAlias) return field.name
-    return this.config.dialect == 'bigquery' ? `\`${field.name}\`` : `"${field.name}"`
+    return this.quoteIdent(field.name, field.quotedAlias)
   }
 
   // Assemble query parts into final SQL
   // Format a table path for the current dialect
   private formatTablePath(path: string): string {
     if (this.config.dialect === 'bigquery') return `\`${path}\``
-    if (this.config.dialect === 'snowflake') return path.toUpperCase()
-    return path
+    if (this.config.dialect === 'snowflake') path = path.toUpperCase()
+    return path.split('.').map(part => this.quoteIdent(part)).join('.')
   }
 
   private renderUnnestValueSql(alias: string): string {
-    return this.config.dialect == 'snowflake' ? `${alias}.value` : alias
+    return this.config.dialect == 'snowflake' ? `${this.quoteIdent(alias)}.value` : this.quoteIdent(alias)
   }
 
   private renderUnnestJoinClause(join: QueryJoin): string {
     if (!join.unnestExpr || !join.joinType) return ''
     let exprSql = join.unnestExpr.sql
-    if (this.config.dialect == 'bigquery') return `CROSS JOIN UNNEST(${exprSql}) AS ${join.alias}`
-    if (this.config.dialect == 'clickhouse') return `ARRAY JOIN ${exprSql} AS ${join.alias}`
-    if (this.config.dialect == 'snowflake') return `, TABLE(FLATTEN(INPUT => ${exprSql})) AS ${join.alias}`
-    return `CROSS JOIN unnest(${exprSql}) AS ${join.alias}(${join.alias})`
+    let alias = this.quoteIdent(join.alias)
+    if (this.config.dialect == 'bigquery') return `CROSS JOIN UNNEST(${exprSql}) AS ${alias}`
+    if (this.config.dialect == 'clickhouse') return `ARRAY JOIN ${exprSql} AS ${alias}`
+    if (this.config.dialect == 'snowflake') return `, TABLE(FLATTEN(INPUT => ${exprSql})) AS ${alias}`
+    return `CROSS JOIN unnest(${exprSql}) AS ${alias}(${alias})`
   }
 
   private buildSql(query: Query, cteMap: Map<string, CteTable>): string {
-    let ctes: string[] = [...cteMap.values()].map(cte => `${cte.name} as ( ${cte.query.sql} )`)
+    let ctes: string[] = [...cteMap.values()].map(cte => `${this.quoteIdent(cte.name)} as ( ${cte.query.sql} )`)
 
     if (query.setOp) {
       let branches = (query.branches || []).map(branch => {
@@ -735,9 +747,11 @@ class AnalysisSession implements Analyzer {
 
     let renderTableRef = (table: Table): string => {
       if (table.type === 'view') {
-        if (!ctes.some(cte => cte.startsWith(table.name + ' '))) ctes.push(`${table.name} as ( ${table.query.sql} )`)
-        return table.name
+        let name = this.quoteIdent(table.name)
+        if (!ctes.some(cte => cte.startsWith(name + ' '))) ctes.push(`${name} as ( ${table.query.sql} )`)
+        return name
       }
+      if (table.type === 'cte') return this.quoteIdent(table.name)
       if (table.type === 'subquery') return `( ${table.query.sql} )`
       return this.formatTablePath(table.tablePath)
     }
@@ -750,8 +764,8 @@ class AnalysisSession implements Analyzer {
         if (!join.table || !join.joinType) return ''
         let tablePath = renderTableRef(join.table)
         let keyword = join.joinType.toUpperCase() + ' JOIN'
-        if (join.joinType == 'cross') return `${keyword} ${tablePath} as ${join.alias}`
-        return `${keyword} ${tablePath} as ${join.alias} ON ${join.onClause}`
+        if (join.joinType == 'cross') return `${keyword} ${tablePath} as ${this.quoteIdent(join.alias)}`
+        return `${keyword} ${tablePath} as ${this.quoteIdent(join.alias)} ON ${join.onClause}`
       })
       .filter(Boolean)
 
@@ -759,7 +773,7 @@ class AnalysisSession implements Analyzer {
     let havingFilters = query.filters.filter(filter => filter.isAgg).map(filter => filter.sql)
     let groupByIndices = query.groupBy.map(group => query.fields.findIndex(field => field.name == group) + 1)
 
-    let sql = `SELECT ${selectParts.join(', ')} FROM ${fromTable} as ${baseJoin.alias}`
+    let sql = `SELECT ${selectParts.join(', ')} FROM ${fromTable} as ${this.quoteIdent(baseJoin.alias)}`
     if (joinClauses.length) sql += ' ' + joinClauses.join(' ')
     if (whereFilters.length) sql += ` WHERE ${whereFilters.join(' AND ')}`
     if (groupByIndices.length) sql += ` GROUP BY ${groupByIndices.join(',')}`
@@ -838,7 +852,7 @@ class AnalysisSession implements Analyzer {
         this.addReference('column', fieldNode, col.symbolId)
 
         // Simple case: this is just a regular column on a table
-        if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
+        if (!col.exprNode) return {sql: `${this.quoteIdent(alias)}.${this.quoteIdent(col.name)}`, type: col.type, metadata: col.metadata, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
 
         // Computed column: analyze its expression in the matched table's scope
         if (this.computedColumnStack.has(col)) return this.diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: scalarType('error')})
