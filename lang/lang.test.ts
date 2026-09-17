@@ -839,9 +839,68 @@ describe('lang', () => {
       .toRenderSql('select users.name as name, users.email as email from users as users order by 2 asc nulls last,1 desc nulls last')
   })
 
+  it('order by accepts qualified and non-selected columns', async () => {
+    expect('from users as t select name order by t.id')
+      .toRenderSql('select t.name as name from users as t order by t.id asc nulls last')
+    expect('from users select name order by created_at')
+      .toRenderSql('select users.name as name from users as users order by users.created_at asc nulls last')
+    await expect('from users as t select name order by t.id desc').toReturnRows(['Bob'], ['Alice'])
+  })
+
+  it('order by accepts arithmetic and aggregate expressions', () => {
+    expect('from orders select id order by amount - user_id desc')
+      .toRenderSql('select orders.id as id from orders as orders order by orders.amount-orders.user_id desc nulls last')
+    expect('from orders select user_id, sum(amount) as total order by sum(amount) desc')
+      .toRenderSql('select orders.user_id as user_id, sum(orders.amount) as total from orders as orders group by 1 order by sum(orders.amount) desc nulls last')
+    expect('from users select name order by 1 + 2')
+      .toRenderSql('select users.name as name from users as users order by 1+2 asc nulls last')
+  })
+
+  it('order by accepts case expressions and scalar subqueries', () => {
+    expect('from users select name order by case when age > 30 then 0 else 1 end')
+      .toRenderSql('select users.name as name from users as users order by case WHEN (users.age>30) THEN 0 ELSE 1 END asc nulls last')
+    expect('from users select name order by (select 1)')
+      .toRenderSql('select users.name as name from users as users order by (select 1 as col_0) asc nulls last')
+  })
+
+  it('order by positions work with implicit select star', () => {
+    expect('from orders order by 2')
+      .toRenderSql("select orders.id as id, orders.user_id as user_id, orders.amount as amount, orders.status as status, orders.status='completed' as completed from orders as orders order by 2 asc nulls last")
+  })
+
+  it('order by aliases shadow source columns', () => {
+    expect('from users select name as age order by age')
+      .toRenderSql('select users.name as age from users as users order by 1 asc nulls last')
+    expect('from users select name as "age" order by "age"')
+      .toRenderSql('select users.name as "age" from users as users order by 1 asc nulls last')
+  })
+
+  it('order by quoted numeric aliases are not positions', () => {
+    expect('from users select name as "2" order by "2"')
+      .toRenderSql('select users.name as "2" from users as users order by 1 asc nulls last')
+  })
+
+  it('order by expressions introduce declared joins', () => {
+    updateFile('table carriers (code text, name text) table flights (carrier text, join one carriers as airline on carrier = airline.code)', 'flights.gsql')
+    expect('from flights select carrier order by airline.name')
+      .toRenderSql('select flights.carrier as carrier from flights as flights left join carriers as airline on flights.carrier=airline.code order by airline.name asc nulls last')
+  })
+
+  it.each(['0', '3', '1.5'])('order by invalid position %s produces diagnostic', position => {
+    expect(`from users select name, email order by ${position}`)
+      .toHaveDiagnostic(`No field at index ${position}`)
+  })
+
+  it('order by set operations only accepts output aliases and positions', () => {
+    expect('select 2 as id union select 1 as id order by 1')
+      .toRenderSql('select 2 as id union select 1 as id order by 1 asc nulls last')
+    expect('select 2 as id union select 1 as id order by id + 1')
+      .toHaveDiagnostic('ORDER BY in a set operation must reference an output column or position')
+  })
+
   it('order by nonexistent field produces diagnostic', () => {
     expect('from users select name order by nonexistent')
-      .toHaveDiagnostic(/Unknown field in ORDER BY: nonexistent/i)
+      .toHaveDiagnostic('Unknown field "nonexistent" on users')
   })
 
   it('supports limit clause', async () => {
