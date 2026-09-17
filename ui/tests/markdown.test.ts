@@ -480,6 +480,33 @@ test('renders gsql query errors clearly with file context', async ({server, page
   await expect(page).screenshot('reports-analysis-query-errors')
 })
 
+test('collects an unrelated named-query failure once for all affected components', async ({server, page}) => {
+  expectConsoleError('Failed to load resource')
+  server.mockFile('/index.md', `
+\`\`\`gsql healthy
+select 1 as num
+\`\`\`
+
+\`\`\`gsql broken
+select not_a_function() as boom
+\`\`\`
+
+<Value data=healthy column=num />
+<BigValue data=healthy value=num />
+<Value data=flights column=dep_delay />
+<BigValue data=flights value=arr_delay />
+`)
+  await page.goto(server.url() + '/')
+  await waitForGrapheneLoad(page)
+  let errors = await page.evaluate(() => window.$GRAPHENE.getErrors().map(({stack: _stack, frame: _frame, ...error}) => error))
+  expect(errors).toEqual([{
+    message: 'Unknown function: not_a_function', severity: 'error', file: 'input',
+    componentId: 'Value (data="healthy" column="num"), BigValue (data="healthy" value="num"), Value (data="flights" column="dep_delay") and 1 more',
+    from: {offset: 62, line: 4, col: 7, lineStart: 55, lineText: 'select not_a_function() as boom'},
+    to: {offset: 78, line: 4, col: 23, lineStart: 55, lineText: 'select not_a_function() as boom'},
+  }])
+})
+
 test('renders database query failures clearly', async ({server, page}) => {
   expectConsoleError('Failed to load resource')
   server.mockFile(
