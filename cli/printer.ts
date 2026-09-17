@@ -3,6 +3,7 @@ import Table from 'cli-table3'
 import {styleText as nodeStyleText} from 'node:util'
 
 import {type GrapheneError} from '../lang/core.ts'
+import {formatFrame} from '../lang/util.ts'
 
 const styleText = (style: string, text: string) => {
   try {
@@ -39,7 +40,8 @@ export function formatError(error: unknown | unknown[], options: FormatErrorOpti
   let line = root.from ? root.from.line + 1 : undefined
   let where = root.file ? `${root.file}${line ? ` line ${line}` : ''}` : 'input'
   let header = `${styleText(color, level)}: ${where}: ${message}`
-  return root.frame ? `${header}\n${root.frame}` : header
+  let frame = formatFrame(root)
+  return frame ? `${header}\n${frame}` : header
 }
 
 function formatValue(v: unknown): string {
