@@ -72,6 +72,14 @@ function lezerDialect(dialect: string) {
   return 'doubleQuotedIdentifier'
 }
 
+function hasSyntaxError(node: SyntaxNode) {
+  let found = false
+  node.cursor().iterate(child => {
+    if (child.type.isError) found = true
+  })
+  return found
+}
+
 export interface Analyzer {
   config: AnalysisConfig
   analyzeExpr(node: SyntaxNode, scope: Scope): Expr
@@ -104,18 +112,15 @@ class AnalysisSession implements Analyzer {
     })
     this.files.forEach(file => this.applyExtends(file))
 
-    if (targetPath) {
-      let target = this.fileForPath(targetPath)
-      if (!target) return {files: this.files, diagnostics: this.diagnostics}
-      target.tables.forEach(table => this.analyzeTableFully(table))
-      let nodes = target.tree!.topNode.getChildren('QueryStatement') || []
-      target.queries = nodes.map(node => this.analyzeQuery(node)).filter((query): query is Query => !!query)
-      return {files: this.files, diagnostics: this.diagnostics}
-    }
+    // The target may be absent from the workspace (e.g. cli run on an md file), in which case only declarations are analyzed
+    let files = targetPath ? this.files.filter(file => file.path == targetPath) : this.files
 
-    this.files.flatMap(file => file.tables).forEach(table => this.analyzeTableFully(table))
-    this.files.forEach(file => {
-      let nodes = file.tree!.topNode.getChildren('QueryStatement') || []
+    // first, analyze all the tables so they exist for queries to reference them
+    files.flatMap(file => file.tables).forEach(table => this.analyzeTableFully(table))
+
+    files.forEach(file => {
+      // don't try to semantically analyze queries with syntax errors. They'll throw misleading errors
+      let nodes = file.tree!.topNode.getChildren('QueryStatement').filter(node => !hasSyntaxError(node))
       file.queries = nodes.map(node => this.analyzeQuery(node)).filter((query): query is Query => !!query)
     })
 

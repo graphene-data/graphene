@@ -913,6 +913,15 @@ describe('lang', () => {
       .toHaveDiagnostic(/syntax error/i)
   })
 
+  it.each(['target', 'workspace'])('skips malformed query statements but analyzes valid siblings (%s analysis)', mode => {
+    let contents = 'from users select missing where;\nfrom users select name;'
+    updateFile(contents, 'input')
+    let queries = analyze(mode == 'target' ? contents : undefined)
+
+    expect(getDiagnostics().map(diagnostic => diagnostic.message)).toEqual(['Syntax error'])
+    expect(queries.map(query => query.sql)).toEqual(['SELECT users.name as name FROM users as users'])
+  })
+
   it('reports syntax diagnostics on invalid table and still registers table name', () => {
     expect('table t (a int, !! ) ; from t select a;')
       .toHaveDiagnostic(/syntax error/i)
@@ -3471,7 +3480,7 @@ describe('lang', () => {
   })
 
   it('reports an error when a CTE has no outer query', () => {
-    expect('with high_value as (from orders select id)').toHaveDiagnostic('Expected query after WITH clause')
+    expect('with high_value as (from orders select id)').toHaveDiagnostic('Syntax error')
     expect(getDiagnostics()[0]).toBeInstanceOf(GrapheneError)
   })
 
