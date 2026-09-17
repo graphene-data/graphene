@@ -564,9 +564,6 @@ class AnalysisSession implements Analyzer {
       query.groupBy = nonAggFields.map(field => field.name)
     }
 
-    // ORDER BY
-    let {orderBy, limit} = this.analyzeOrderAndLimit(queryNode, query)
-
     // Implicit `select *` if nothing selected (only when we have a base table)
     let baseJoin = query.joins.find(join => join.source == 'from')
     if (query.fields.length == 0 && baseJoin?.table) {
@@ -574,11 +571,14 @@ class AnalysisSession implements Analyzer {
       this.expandColumns(hasAdHoc ? null : baseJoin.table, baseJoin.alias, query, scope)
     }
 
+    // ORDER BY needs the complete output list, including an implicit SELECT *.
+    let {orderBy, limit} = this.analyzeOrderAndLimit(queryNode, query, scope)
+
     // Default ORDER BY for aggregate queries
     if (!opts.suppressImplicitOrderBy && orderBy.length == 0 && query.groupBy.length > 0) {
       let firstAggIdx = query.fields.findIndex(field => field.isAgg)
-      if (firstAggIdx >= 0) orderBy.push({idx: firstAggIdx + 1, desc: true})
-      else orderBy.push({idx: 1, desc: false}) // SELECT DISTINCT
+      if (firstAggIdx >= 0) orderBy.push({sql: String(firstAggIdx + 1), desc: true})
+      else orderBy.push({sql: '1', desc: false}) // SELECT DISTINCT
     }
 
     query.orderBy = orderBy
@@ -643,17 +643,28 @@ class AnalysisSession implements Analyzer {
     }
   }
 
-  private analyzeOrderAndLimit(queryNode: SyntaxNode, query: Query) {
+  // Resolve output positions and aliases first, then expressions in the query's scope.
+  // Set operations have no input scope, so they can only order by their output fields.
+  private analyzeOrderAndLimit(queryNode: SyntaxNode, query: Query, scope?: Scope) {
     let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
-    let orderBy: {idx: number; desc: boolean}[] = []
+    let orderBy: Query['orderBy'] = []
     for (let orderItem of orderBys) {
-      let fieldNode = orderItem.getChild('Identifier') || orderItem.getChild('QuotedIdentifier') || orderItem.getChild('Number')
-      let fieldRef = txt(fieldNode)
-      if (orderItem.getChild('QuotedIdentifier')) fieldRef = fieldRef.slice(1, -1)
+      let exprNode = orderItem.getChild('Expression')!
       let desc = txt(orderItem.getChild('Kw')).toLowerCase() == 'desc'
-      let idx = Number(fieldRef) || query.fields.findIndex(field => field.name == fieldRef) + 1
-      if (idx > 0) orderBy.push({idx, desc})
-      else if (fieldRef && isNaN(Number(fieldRef))) this.diag(orderItem, `Unknown field in ORDER BY: ${fieldRef}`)
+      if (exprNode.name == 'Number') {
+        let idx = Number(txt(exprNode))
+        if (!Number.isInteger(idx) || idx < 1 || idx > query.fields.length) this.diag(orderItem, 'No field at index ' + txt(exprNode))
+        else orderBy.push({sql: String(idx), desc})
+        continue
+      }
+
+      // Only a bare reference can name an output alias; qualified refs remain expressions.
+      let fieldNode = exprNode.name == 'Ref' && !exprNode.firstChild?.nextSibling ? exprNode.firstChild : null
+      let fieldRef = fieldNode?.name == 'QuotedIdentifier' ? txt(fieldNode).slice(1, -1) : txt(fieldNode)
+      let idx = fieldNode ? query.fields.findIndex(field => field.name == fieldRef) + 1 : 0
+      if (idx > 0) orderBy.push({sql: String(idx), desc})
+      else if (scope) orderBy.push({sql: this.analyzeExpr(exprNode, scope).sql, desc})
+      else this.diag(orderItem, 'ORDER BY in a set operation must reference an output column or position')
     }
 
     let limitNodes = queryNode.getChild('LimitClause')?.getChildren('Number') || []
@@ -708,7 +719,7 @@ class AnalysisSession implements Analyzer {
       let op = query.setOp.toUpperCase()
       let sql = branches.join(` ${op} `)
       if (query.orderBy.length) {
-        let parts = query.orderBy.map(order => `${order.idx} ${order.desc ? 'desc' : 'asc'} NULLS LAST`)
+        let parts = query.orderBy.map(order => `${order.sql} ${order.desc ? 'desc' : 'asc'} NULLS LAST`)
         sql += ` ORDER BY ${parts.join(',')}`
       }
       if (query.limit) sql += ` LIMIT ${query.limit}`
@@ -754,7 +765,7 @@ class AnalysisSession implements Analyzer {
     if (groupByIndices.length) sql += ` GROUP BY ${groupByIndices.join(',')}`
     if (havingFilters.length) sql += ` HAVING ${havingFilters.join(' AND ')}`
     if (query.orderBy.length) {
-      let parts = query.orderBy.map(order => `${order.idx} ${order.desc ? 'desc' : 'asc'} NULLS LAST`)
+      let parts = query.orderBy.map(order => `${order.sql} ${order.desc ? 'desc' : 'asc'} NULLS LAST`)
       sql += ` ORDER BY ${parts.join(',')}`
     }
     if (query.limit) sql += ` LIMIT ${query.limit}`

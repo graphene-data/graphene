@@ -221,7 +221,7 @@ describe('cli run', () => {
   test('prints query diagnostics without a stack trace', async ({runCli}) => {
     let res = await runCli(['run', 'from flights select carrier order by nope'], flightConfig)
     expectCliOutput(res, {code: 1, stdout: `
-      ERROR: input line 1: Unknown field in ORDER BY: nope
+      ERROR: input line 1: Unknown field "nope" on flights
       from flights select carrier order by nope
                                            ^^^^
     `})

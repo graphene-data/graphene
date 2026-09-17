@@ -101,7 +101,7 @@ OrderByClause {
 }
 
 OrderItem {
-  (Identifier | QuotedIdentifier | Number) (Kw<"asc"> | Kw<"desc">)?
+  expression (Kw<"asc"> | Kw<"desc">)?
 }
 
 LimitClause {
