@@ -1,5 +1,6 @@
 <script lang="ts">
   import type {GrapheneError} from '../../lang/index.d.ts'
+  import {formatFrame} from '../../lang/util.ts'
 
   interface Props {
     error: GrapheneError | string
@@ -18,7 +19,8 @@
       let line = error.from?.line != null ? error.from.line + 1 : undefined
       details.push(line ? `${file}:${line}` : file)
     }
-    if (error.frame) details.push(error.frame)
+    let frame = formatFrame(error)
+    if (frame) details.push(frame)
 
     return {message, details}
   })
