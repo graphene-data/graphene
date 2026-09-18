@@ -1331,7 +1331,7 @@ class AnalysisSession implements Analyzer {
 
     // If scope is at the root of the table (ie scope.table == null), then the first part of the path could point at
     // the alias of any table in the FROM or JOIN clauses of a query.
-    // But it could also refer to a join _on_ one of those tables (assuming the name is unique).
+    // Otherwise, it must refer to a join on the FROM table.
     if (!scope.table) {
       // This could be a ref to an existing FROM/JOIN alias
       let existing = scope.query!.joins.find(join => join.alias == name)
@@ -1341,11 +1341,9 @@ class AnalysisSession implements Analyzer {
         scope = {...scope, file: this.fileForPath(existing.table.filePath), table: existing.table, alias: existing.alias, fanoutPath: existing.fanoutPath}
         pathNodes.shift()
       } else {
-        // otherwise, this might be referring to a join _on_ one of those FROM/JOIN tables
-        let matches = scope.query!.joins.filter(join => join.table && join.table.joins.some(next => next.alias == name))
-        if (matches.length > 1) return this.diag(part, `"${name}" matches multiple possible joins in this query`, null)
-        if (matches.length == 0) return this.diag(part, `Could not find "${name}" on query`, null)
-        scope = {...scope, file: this.fileForPath(matches[0].table!.filePath), table: matches[0].table!, alias: matches[0].alias, fanoutPath: matches[0].fanoutPath}
+        let from = scope.query!.joins.find(join => join.source == 'from')
+        if (!from) return this.diag(part, `Could not find "${name}" on query`, null)
+        scope = {...scope, file: this.fileForPath(from.table!.filePath), table: from.table!, alias: from.alias, fanoutPath: from.fanoutPath}
       }
     }
 
