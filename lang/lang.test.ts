@@ -122,6 +122,18 @@ describe('lang', () => {
     expect(getDiagnostics()).toEqual([])
   })
 
+  it.each(['duckdb', 'bigquery', 'snowflake', 'clickhouse', 'postgres'] as const)('preserves scientific notation numbers in %s', dialect => {
+    setGlobalConfig({dialect, root: ''})
+    expect('select 1e6 as x, 1.5E-3 as y, 2e+2 as z')
+      .toRenderSql('SELECT 1e6 as x, 1.5E-3 as y, 2e+2 as z', {preserveCase: true})
+    expect('select 1e6').toRenderSql('select 1e6 as col_0')
+  })
+
+  it('executes scientific notation numbers', async () => {
+    await expect('select 1e6 as x, 1.5E-3 as y, 2e+2 as z').toReturnRows([1000000, 0.0015, 200])
+    await expect('select 1e6').toReturnRows([1000000])
+  })
+
   it.each(['clickhouse', 'duckdb'] as const)('analyzes numeric range series in %s', dialect => {
     setGlobalConfig({dialect, root: ''})
     for (let call of ['range(30)', 'range(1, 30)', 'range(1, 30, 2)']) {
