@@ -1121,6 +1121,11 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('mapContainsValueLike', 'tuple-map-functions', [['map', 'map'], ['pattern', 'string']], 'boolean', 'Tests whether a string map value matches a LIKE pattern.'),
   nativeFunction('mapExtractValueLike', 'tuple-map-functions', [['map', 'map'], ['pattern', 'string']], 'map', 'Returns entries whose string values match a LIKE pattern.'),
   ...['extractKeyValuePairs', 'extractKeyValuePairsWithEscaping'].map(name => nativeFunction(name, 'tuple-map-functions', [['data', 'string'], ['key_value_delimiter', 'string?'], ['pair_delimiters', 'string?'], ['quoting_character', 'string?'], ['unexpected_quoting_character_strategy', 'string?']], 'map', 'Parses noisy key/value text into a string map. Defaults: colon, space/comma/semicolon, double quote. WithEscaping interprets escape sequences.')),
+  nativeFunction('range', 'array-functions', [['stop', 'number']], 'array<number>', 'Returns an array from start to stop (exclusive), defaulting to start 0 and step 1.', {overloads: [
+    {args: [['stop', 'number']], returns: 'array<number>'},
+    {args: [['start', 'number'], ['stop', 'number']], returns: 'array<number>'},
+    {args: [['start', 'number'], ['stop', 'number'], ['step', 'number']], returns: 'array<number>'},
+  ]}),
   nativeFunction('arrayConcat', 'array-functions', [{name: 'arrays', type: 'array...'}], 'array', 'Concatenates arrays.', {aliases: ['array_concat']}),
   nativeFunction('arrayDistinct', 'array-functions', [{name: 'array', type: 'array'}], 'array', 'Returns the distinct values in an array.', {aliases: ['array_distinct']}),
   nativeFunction('arrayElement', 'array-functions', [{name: 'collection', type: ['array', 'map']}, {name: 'index_or_key', type: 'any'}], 'array_element', 'Returns an array element by index or a map value by key.', {aliases: ['array_element']}),
