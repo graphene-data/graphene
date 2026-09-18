@@ -81,6 +81,7 @@ await mkdir(path.resolve(__dirname, 'dist/lang'), {recursive: true})
 await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 'dist/index.d.ts'))
 await cp(path.resolve(__dirname, '../lang/index.d.ts'), path.resolve(__dirname, 'dist/lang/index.d.ts'))
 await cp(path.resolve(__dirname, '../lang/csv.ts'), path.resolve(__dirname, 'dist/lang/csv.ts'))
+await cp(path.resolve(__dirname, '../lang/util.ts'), path.resolve(__dirname, 'dist/lang/util.ts')) // ErrorDisplay.svelte imports formatFrame
 await transpileSvelteModules(path.resolve(__dirname, 'dist/ui'))
 await rm(path.resolve(__dirname, 'dist/ui/node_modules'), {recursive: true, force: true})
 await rm(path.resolve(__dirname, 'dist/ui/package.json'))
