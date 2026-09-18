@@ -52,7 +52,7 @@ Dimensions/measures aren't only limited to scalar and aggregate expressions. The
 ### Special features
 - `group by all` is implied when aggregates exist, and does not need to be put in Graphene SQL
 - Agg function `pXX(column)` computes the XXth percentile (e.g., p50, p975, p9999)
-- `select`, `from`, `order by`, etc. in any order
+- `select`, `from`, `order by`, etc. in any order (except `join`, which must directly follow `from`)
 
 ### Supported
 - All scalar, agg, and window functions of the connected database
