@@ -20,7 +20,7 @@ export type ArgDef = [name: string, type: string | string[]] | {name: string; ty
 // A single function signature (for functions with multiple overloads)
 export interface FunctionOverload {
   args: ArgDef[]
-  returns: string // SQLType, 'T', 'array', 'array<SQLType>', or 'array_element'
+  returns: string // SQLType, 'T', 'array', 'array<SQLType>', 'array_element', or 'numeric_container' (numeric array / tuple record)
 }
 
 export interface FunctionDef {

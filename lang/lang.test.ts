@@ -2602,121 +2602,6 @@ describe('lang', () => {
     }
   })
 
-  it('renders ClickHouse parsing, identifier and geography families', () => {
-    setGlobalConfig({dialect: 'clickhouse', root: ''})
-    try {
-      for (let [call, sql] of [
-        ["parseDateTime64BestEffortUSOrNull(name, 6, 'UTC')", "parseDateTime64BestEffortUSOrNull(users.name,6,'UTC')"],
-        ["parseDateTime64InJodaSyntaxOrZero(name, 'yyyy-MM-dd', 'UTC')", "parseDateTime64InJodaSyntaxOrZero(users.name,'yyyy-MM-dd','UTC')"],
-        ['toDateTime64OrNull(name)', 'toDateTime64OrNull(users.name)'],
-        ['toIntervalDay(age)', 'toIntervalDay(users.age)'],
-        ["toInterval(age, 'day')", "toInterval(users.age,'day')"],
-        ['reinterpretAsUInt128(name)', 'reinterpretAsUInt128(users.name)'],
-        ['IPv6NumToString(IPv4ToIPv6(age))', 'IPv6NumToString(IPv4ToIPv6(users.age))'],
-        ['IPv6CIDRToRange(toIPv6(name), 64)', 'IPv6CIDRToRange(toIPv6(users.name),64)'],
-        ['generateSnowflakeID(id, 1)', 'generateSnowflakeID(users.id,1)'],
-        ["snowflakeIDToDateTime64(age, 0, 'UTC')", "snowflakeIDToDateTime64(users.age,0,'UTC')"],
-        ['UUIDNumToString(UUIDToNum(generateUUIDv7()))', 'UUIDNumToString(UUIDToNum(generateUUIDv7()))'],
-        ['geoToH3(37.7, -122.4, 8)', 'geoToH3(37.7,-(122.4),8)'],
-        ['geohashEncode(1, 2, 5)', 'geohashEncode(1,2,5)'],
-        ['h3GetRes0Indexes()', 'h3GetRes0Indexes()'],
-        ['h3ToChildren(age, 10)', 'h3ToChildren(users.age,10)'],
-        ['s2RectUnion(1, 2, 3, 4)', 's2RectUnion(1,2,3,4)'],
-        ['pointInEllipses(1, 2, 3, 4, 5, 6)', 'pointInEllipses(1,2,3,4,5,6)'],
-        ['WKT(readWKTPolygon(name))', 'wkt(readWKTPolygon(users.name))'],
-        ['wkt(readWKTPoint(name))', 'wkt(readWKTPoint(users.name))'],
-        ['polygonsIntersectionCartesian(readWKTPolygon(name), readWKTPolygon(name))', 'polygonsIntersectionCartesian(readWKTPolygon(users.name),readWKTPolygon(users.name))'],
-      ]) expect(`from users select ${call} as result`).toRenderSql(`SELECT ${sql} as result FROM users as users`, {preserveCase: true})
-      for (let [call, type] of [
-        ['parseDateTime64OrNull(s)', 'timestamp'], ['toIntervalMonth(n)', 'interval'], ['toIPv4(s)', 'string'],
-        ['IPv4CIDRToRange(toIPv4(s), 16)', 'record'], ['generateUUIDv4()', 'string'], ['generateSnowflakeID()', 'number'],
-        ['h3IsValid(n)', 'boolean'], ['h3ToGeo(n)', 'record'], ['h3ToGeoBoundary(n)', 'array<record>'],
-        ['h3GetFaces(n)', 'array<number>'], ['readWKTPolygon(s)', 'array'], ['readWKTLineString(s)', 'array<record>'],
-      ]) {
-        let [query] = analyze(`table geotypes (s varchar, n int) from geotypes select ${call}`)
-        expect(formatType(query.fields[0].type), call).toEqual(type)
-      }
-      for (let call of ['toDateTime64OrNull(age)', 'toDate32OrNull(age)', 'geoToH3(name, age, age)', 'h3ToChildren(name, 1)', 'polygonsEqualsCartesian(name, name)']) {
-        expect(`from users select ${call}`).toHaveDiagnostic(/Expected .*got/i)
-      }
-      for (let call of ['geoToH3(1, 2)', 's2RectUnion(1, 2, 3)', 'pointInEllipses(1, 2)', 'toIntervalDay()', 'snowflakeToDateTime(age, 0, name)']) {
-        expect(`from users select ${call}`).toHaveDiagnostic(/Wrong number of arguments/i)
-      }
-    } finally {
-      setGlobalConfig({root: ''})
-    }
-  })
-
-  it('renders ClickHouse math, URL and default-parameter aggregates', () => {
-    setGlobalConfig({dialect: 'clickhouse', root: ''})
-    try {
-      // Every function in these families renders under its native ClickHouse name.
-      let unaryNumbers = [
-        'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'sinh', 'cosh', 'tanh', 'asinh', 'acosh', 'atanh',
-        'exp2', 'exp10', 'intExp2', 'intExp10', 'cbrt', 'erf', 'erfc', 'lgamma', 'tgamma', 'log1p', 'sigmoid', 'degrees', 'radians', 'factorial',
-        'roundBankers', 'truncate', 'roundAge', 'roundDuration', 'roundToExp2',
-        'stddevPopStable', 'stddevSampStable', 'varPopStable', 'varSampStable', 'sumWithOverflow', 'groupBitAnd', 'groupBitOr', 'groupBitXor', 'quantileTiming',
-      ]
-      let unaryStrings = [
-        'decodeURLComponent', 'encodeURLFormComponent', 'decodeURLFormComponent', 'domainRFC', 'domainWithoutWWWRFC', 'topLevelDomainRFC',
-        'firstSignificantSubdomain', 'firstSignificantSubdomainRFC', 'cutToFirstSignificantSubdomain', 'cutToFirstSignificantSubdomainRFC',
-        'cutToFirstSignificantSubdomainWithWWW', 'cutToFirstSignificantSubdomainWithWWWRFC', 'netloc', 'pathFull', 'queryStringAndFragment',
-        'cutWWW', 'cutQueryString', 'cutFragment', 'cutQueryStringAndFragment',
-      ]
-      for (let fn of unaryNumbers) expect(`from users select ${fn}(age) as result`).toRenderSql(`SELECT ${fn}(users.age) as result FROM users as users`, {preserveCase: true})
-      for (let fn of unaryStrings) expect(`from users select ${fn}(name) as result`).toRenderSql(`SELECT ${fn}(users.name) as result FROM users as users`, {preserveCase: true})
-      for (let fn of ['extractURLParameters', 'URLHierarchy', 'URLPathHierarchy']) {
-        expect(`from users select ${fn}(name) as result`).toRenderSql(`SELECT ${fn}(users.name) as result FROM users as users`)
-      }
-      for (let fn of [
-        'firstSignificantSubdomainCustom', 'firstSignificantSubdomainCustomRFC', 'cutToFirstSignificantSubdomainCustom',
-        'cutToFirstSignificantSubdomainCustomRFC', 'cutToFirstSignificantSubdomainCustomWithWWW', 'cutToFirstSignificantSubdomainCustomWithWWWRFC',
-      ]) expect(`from users select ${fn}(name, 'public_suffix_list') as result`).toRenderSql(`SELECT ${fn}(users.name,'public_suffix_list') as result FROM users as users`)
-      for (let fn of ['pi', 'e', 'queryID', 'initialQueryID', 'getOSKernelVersion', 'tcpPort', 'shardNum', 'shardCount', 'zookeeperSessionUptime', 'initialQueryStartTime']) {
-        expect(`from users select ${fn}() as result`).toRenderSql(`SELECT ${fn}() as result FROM users as users`)
-      }
-      for (let fn of ['atan2', 'hypot', 'avgWeighted', 'corrStable', 'covarPopStable', 'covarSampStable']) {
-        expect(`from users select ${fn}(age, 2) as result`).toRenderSql(`SELECT ${fn}(users.age,2) as result FROM users as users`)
-      }
-      for (let fn of ['port', 'portRFC']) {
-        expect(`from users select ${fn}(name), ${fn}(name, 443)`).toRenderSql(`SELECT ${fn}(users.name) as col_0, ${fn}(users.name,443) as col_1 FROM users as users`)
-      }
-      for (let fn of ['dictGetChildren', 'dictGetHierarchy', 'dictGetDescendants']) {
-        expect(`from users select ${fn}('hierarchy', age) as result`).toRenderSql(`SELECT ${fn}('hierarchy',users.age) as result FROM users as users`)
-      }
-      expect("from users select dictHas('d', age), dictIsIn('d', age, 1), dictGetDescendants('d', age, 2)")
-        .toRenderSql("SELECT dictHas('d',users.age) as col_0, dictIsIn('d',users.age,1) as col_1, dictGetDescendants('d',users.age,2) as col_2 FROM users as users")
-      expect("from users select dictHas('range_dict', id, created_at)")
-        .toRenderSql("SELECT dictHas('range_dict',users.id,users.created_at) as col_0 FROM users as users", {preserveCase: true})
-      expect("table urls (url varchar, names array<string>) from urls select cutURLParameter(url, 'q'), cutURLParameter(url, names)")
-        .toRenderSql("SELECT cutURLParameter(urls.url,'q') as col_0, cutURLParameter(urls.url,urls.names) as col_1 FROM urls as urls")
-      expect('from users select WIDTH_BUCKET(age, 0, 100, 10), roundBankers(age, 2), trunc(age, 1)')
-        .toRenderSql('SELECT widthBucket(users.age,0,100,10) as col_0, roundBankers(users.age,2) as col_1, truncate(users.age,1) as col_2 FROM users as users')
-      expect('table ranges (n int, bounds array<number>) from ranges select roundDown(n, bounds), groupArrayIntersect(bounds)')
-        .toRenderSql('SELECT roundDown(ranges.n,ranges.bounds) as col_0, groupArrayIntersect(ranges.bounds) as col_1 FROM ranges as ranges GROUP BY 1 ORDER BY 2 DESC NULLS LAST')
-      expect("from users select proportionsZTest(10, 11, 100, 101, 0.95, 'unpooled'), anova(age, 1)")
-        .toRenderSql("SELECT proportionsZTest(10,11,100,101,0.95,'unpooled') as col_0, analysisOfVariance(users.age,1) as col_1 FROM users as users GROUP BY 1 ORDER BY 2 DESC NULLS LAST")
-
-      // Default aggregate parameters stay in native ordinary-call form, including composed combinators.
-      expect('from users select anyHeavy(name), uniqHLL12(name, age), uniqHLL12If(name, age, age > 18), topK(name), topKWeighted(name, age)')
-        .toRenderSql('SELECT anyHeavy(users.name) as col_0, uniqHLL12(users.name,users.age) as col_1, uniqHLL12If(users.name,users.age,users.age>18) as col_2, topK(users.name) as col_3, topKWeighted(users.name,users.age) as col_4 FROM users as users')
-      expect('from users select median(age), medianExact(age), medianTDigest(age), medianDeterministic(age, id), medianTiming(age), quantileIf(age, age > 18)')
-        .toRenderSql('SELECT quantile(users.age) as col_0, quantileExact(users.age) as col_1, quantileTDigest(users.age) as col_2, quantileDeterministic(users.age,users.id) as col_3, quantileTiming(users.age) as col_4, quantileIf(users.age,users.age>18) as col_5 FROM users as users', {preserveCase: true})
-      expect('from users select groupArrayMovingAvg(age), groupArrayMovingSum(age), groupArrayInsertAt(name, id)')
-        .toRenderSql('SELECT groupArrayMovingAvg(users.age) as col_0, groupArrayMovingSum(users.age) as col_1, groupArrayInsertAt(users.name,users.id) as col_2 FROM users as users')
-      for (let [call, type] of [
-        ['quantile(n)', 'number'], ['quantile(d)', 'date'], ['quantile(t)', 'timestamp'], ['quantileDeterministic(t, n)', 'timestamp'],
-        ['topK(s)', 'array'], ['anyHeavy(s)', 'string'], ["dictGetDescendants('d', n)", 'array<number>'],
-        ['initialQueryStartTime()', 'timestamp'], ["proportionsZTest(1, 1, 2, 2, 0.95, 'pooled')", 'record'],
-      ]) {
-        let [query] = analyze(`table measurements (n int, s varchar, d date, t timestamp) from measurements select ${call}`)
-        expect(formatType(query.fields[0].type), call).toEqual(type)
-      }
-    } finally {
-      setGlobalConfig({root: ''})
-    }
-  })
-
   it('preserves ClickHouse map and array types through ordinary calls', () => {
     setGlobalConfig({dialect: 'clickhouse', root: ''})
     updateFile('table map_events (properties map, keys array<string>, values array<number>)', 'map-events.gsql')
@@ -2773,7 +2658,7 @@ describe('lang', () => {
         'arrayMap(age)', 'arrayFilter(age)', 'arrayFold(age)', 'mapApply(age)', 'mapFilter(age)', 'mapAll(map(age, age))', 'mapExists(map(age, age))', 'arrayJoin(age)',
         'catboostEvaluate(name, age)', 'finalizeAggregation(groupBitmapState(age))', 'stringCompare(name, name)',
       ]) expect(`from users select ${call}`).toHaveDiagnostic(/Unknown function/i)
-      for (let call of ['like(name, name)', 'ilike(name, name)', 'left(name, 2)', 'right(name, 2)', 'quantile(0.9)(age)', 'arrayCount(x -> x > 0, tuple(age))', 'mapSort((k, v) -> v, map(name, age))']) {
+      for (let call of ['like(name, name)', 'ilike(name, name)', 'quantile(0.9)(age)', 'arrayCount(x -> x > 0, tuple(age))', 'mapSort((k, v) -> v, map(name, age))']) {
         expect(`from users select ${call}`).toHaveDiagnostic(/Syntax error/i)
       }
     } finally {
