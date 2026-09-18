@@ -1,3 +1,4 @@
+// Converts dialect catalogs into arity-selected overloads, then renders calls and infers their result types.
 import {type SyntaxNode} from '@lezer/common'
 
 import type {Analyzer} from './analyze.ts'
@@ -19,7 +20,7 @@ const ANY_TYPES: TypeKind[] = ['string', 'number', 'boolean', 'date', 'time', 't
 // The shape that analyzeFunction works with. Converted from FunctionDef at startup.
 export interface Overload {
   params: {name: string; allowedTypes: {type: TypeKind; rawType?: string}[]; isVariadic?: boolean}[]
-  returnType: {type: FieldType | 'generic' | 'array' | 'array_element'; expressionType?: 'aggregate' | 'scalar' | 'window'}
+  returnType: {type: FieldType | 'generic' | 'array' | 'array_element' | 'numeric_container'; expressionType?: 'aggregate' | 'scalar' | 'window'}
   fanoutSafe?: boolean
   sqlName?: string
   sqlTemplate?: string
@@ -83,7 +84,8 @@ function convertDef(def: FunctionDef): Overload[] {
   })
 }
 
-function normalizeReturnType(type: string): FieldType | 'array' | 'array_element' {
+function normalizeReturnType(type: string): FieldType | 'array' | 'array_element' | 'numeric_container' {
+  if (type == 'numeric_container') return type
   if (type == 'array') return 'array'
   if (type == 'array_element') return 'array_element'
   let arrayMatch = type.match(/^array<(.+)>$/)
@@ -200,6 +202,8 @@ function analyzeResolvedFunction(name: string, overload: Overload, args: Expr[],
   if (overload.returnType.type == 'generic') returnType = args[0]?.type || scalarType('string')
   if (overload.returnType.type == 'array') returnType = inferArrayReturnType(args)
   if (overload.returnType.type == 'array_element') returnType = inferArrayElementReturnType(args)
+  // Normalization changes array elements to numbers, while tuples retain the coarse record shape.
+  if (overload.returnType.type == 'numeric_container') returnType = isArrayType(args[0].type) ? arrayOf(scalarType('number')) : scalarType('record')
 
   let isAgg = overload.returnType.expressionType == 'aggregate' || args.some(a => a.isAgg)
   let canWindow = overload.returnType.expressionType == 'aggregate' || overload.returnType.expressionType == 'window'

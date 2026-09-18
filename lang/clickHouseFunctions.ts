@@ -137,9 +137,11 @@ function dateArithmeticFunctions(prefix: 'add' | 'subtract'): FunctionDef[] {
   })
 }
 
-// Aliases for individual members of generated families; explicit entry options can override these.
+// Snapshot alias_to additions live here, merged into compact and legacy definitions after construction.
+// Inline aliases retain existing public spellings (Graphene conveniences and previously shipped native aliases);
+// keep them stable, and add newly reconciled runtime aliases here rather than duplicating them inline.
 const clickHouseAliases: Record<string, string[]> = {
-  fqdn: ['fullhostname'], currentUser: ['user', 'current_user'], connectionId: ['connection_id'],
+  fqdn: ['fullhostname'], currentUser: ['user', 'current_user', 'session_user'], connectionId: ['connection_id'],
   tuplePlus: ['vectorsum'], tupleMinus: ['vectordifference'],
   quantileExactHigh: ['medianexacthigh'], quantileExactLow: ['medianexactlow'],
   formatReadableSize: ['format_bytes'], parseDateTimeOrNull: ['str_to_date'],
@@ -149,6 +151,39 @@ const clickHouseAliases: Record<string, string[]> = {
   leftPad: ['lpad'], rightPad: ['rpad'], trimLeft: ['ltrim'], trimRight: ['rtrim'],
   substringIndex: ['substring_index'], concatWithSeparator: ['concat_ws'], alphaTokens: ['splitbyalpha'],
   kostikConsistentHash: ['yandexconsistenthash'], extractKeyValuePairs: ['str_to_map', 'mapfromstring'],
+  // Additional aliases from the complete 26.10.1.20 runtime, including aliases absent from generated docs.
+  arrayFlatten: ['flatten'],
+  groupBitAnd: ['bit_and'], groupBitOr: ['bit_or'], groupBitXor: ['bit_xor'],
+  length: ['cardinality', 'octet_length'], currentDatabase: ['database', 'schema', 'current_database'],
+  formatDateTime: ['date_format'], toDayOfMonth: ['day', 'dayofmonth'], toDayOfWeek: ['dayofweek'], toDayOfYear: ['dayofyear'],
+  fromDaysSinceYearZero: ['from_days'], fromUnixTimestamp: ['from_unixtime'], toLastDayOfMonth: ['last_day'],
+  toHour: ['hour'], toMinute: ['minute'], toMonth: ['month'], toQuarter: ['quarter'], toSecond: ['second'],
+  toMicrosecond: ['microsecond'], toMillisecond: ['millisecond'], toNanosecond: ['nanosecond'],
+  naturalSortKey: ['natural_sort_key'], match: ['regexp_matches'], replaceRegexpAll: ['regexp_replace'], regexpExtract: ['regexp_substr'],
+  stddevPop: ['std'], stddevSamp: ['stddev'], MVTEncodeGeom: ['st_asmvtgeom'],
+  readWKBLineString: ['st_linefromwkb'], readWKBMultiLineString: ['st_mlinefromwkb'], readWKBMultiPoint: ['st_mpointfromwkb'],
+  readWKBMultiPolygon: ['st_mpolyfromwkb'], readWKBPoint: ['st_pointfromwkb'], readWKBPolygon: ['st_polyfromwkb'],
+  toStartOfInterval: ['date_bin', 'time_bucket'], dateDiff: ['timestamp_diff', 'timestampdiff'], toDaysSinceYearZero: ['to_days'], parseDateTime: ['to_unixtime'], UTCTimestamp: ['utc_timestamp'],
+  anyLast_respect_nulls: ['anylastrespectnulls', 'lastvaluerespectnulls', 'last_value_respect_nulls'],
+  any_respect_nulls: ['anyrespectnulls', 'anyvaluerespectnulls', 'any_value_respect_nulls', 'firstvaluerespectnulls', 'first_value_respect_nulls'],
+  any: ['any_value'], arrayROCAUC: ['arrayauc'], arrayAUCPR: ['arrayprauc'], groupArray: ['array_agg'], arrayRemove: ['array_remove'],
+  arrayStringConcat: ['array_to_string'], authenticatedUser: ['authuser'], substring: ['byteslice', 'mid', 'substr'],
+  multiIf: ['casewithoutexpr', 'casewithoutexpression'], today: ['curdate'], currentQueryID: ['current_query_id'],
+  cosineDistance: ['distancecosine'], cosineDistanceTransposed: ['distancecosinetransposed'],
+  L1Distance: ['distancel1'], L2Distance: ['distancel2'], L2SquaredDistance: ['distancel2squared'],
+  L2DistanceTransposed: ['distancel2transposed'], LinfDistance: ['distancelinf'], LpDistance: ['distancelp'],
+  fromUTCTimestamp: ['from_utc_timestamp'], groupConcat: ['group_concat', 'string_agg'],
+  hasAllTokens: ['hasalltoken'], hasAnyTokens: ['hasanytoken'], initialQueryID: ['initial_query_id'], initialQueryStartTime: ['initial_query_start_time'],
+  positionCaseInsensitive: ['instr'], isValidASCII: ['isascii'], lower: ['lcase'], log: ['ln'], now: ['localtimestamp'], hasPhrase: ['matchphrase'],
+  argMax: ['max_by'], argMin: ['min_by'], quantileBFloat16: ['medianbfloat16'], byteHammingDistance: ['mismatches'],
+  modulo: ['mod'], moduloOrNull: ['modornull'], L1Norm: ['norml1'], L2Norm: ['norml2'], L2SquaredNorm: ['norml2squared'],
+  LinfNorm: ['normlinf'], LpNorm: ['normlp'], L1Normalize: ['normalizel1'], L2Normalize: ['normalizel2'],
+  LinfNormalize: ['normalizelinf'], LpNormalize: ['normalizelp'], pgGetUserById: ['pg_get_userbyid'], pgTableIsVisible: ['pg_table_is_visible'],
+  positiveModulo: ['pmod', 'positive_modulo'], positiveModuloOrNull: ['pmodornull', 'positive_modulo_or_null'],
+  queryID: ['query_id'], rand: ['rand32'], regexpPosition: ['regexpinstr', 'regexp_instr'], removeDiacriticsUTF8: ['removeaccentsutf8'],
+  dotProduct: ['scalarproduct'], dotProductTransposed: ['scalarproducttransposed'], timeSeriesIdToGroup: ['timeseriesidtotagsgroup'],
+  timeSeriesGroupToTags: ['timeseriestagsgrouptotags'], toStartOfFiveMinutes: ['tostartoffiveminute'], toUTCTimestamp: ['to_utc_timestamp'],
+  upper: ['ucase'], toWeek: ['week'], toYearWeek: ['yearweek'],
 }
 
 // Defines compact entries for native functions whose SQL is a direct function call.
@@ -156,7 +191,6 @@ function nativeFunction(sqlName: string, docs: string, args: FunctionDef['args']
   return {
     name: sqlName.toLowerCase(),
     description: `${sqlName}()\n\n${summary}`,
-    aliases: clickHouseAliases[sqlName],
     url: `${click}/functions/${docs}#${sqlName.toLowerCase()}`,
     args,
     returns,
@@ -241,39 +275,52 @@ function applyClickHouseCombinator(overload: Overload, suffix: typeof clickHouse
   return transformed
 }
 
-// Audited ClickHouse (v25.8) ordinary calls are listed below. What is NOT listed, and why:
-// - Upstream documentation error: stringCompare was renamed to compareSubstrings (five required arguments)
-//   before v25.8; the stale documented name is not registered by the server.
+// Every name in the complete ClickHouse 26.10.1.20 runtime (system.functions, aliases included) is either listed
+// below or has an explicit exclusion; lang.test.ts pins all 1,921 names and the per-name exclusion ledger.
+// Resolution is not full overload support: results must fit the existing fixed, generic or container
+// type-inference contracts. What is NOT listed, and why:
 //
 // Needs syntax gsql doesn't have:
-// - fn(parameters)(arguments) is mandatory: histogram, sequenceMatch/Count/MatchEvents/NextNode, windowFunnel,
-//   sumMapFiltered(WithOverflow), exponentialMovingAverage, exponentialTimeDecayedAvg/Count/Max/Sum,
-//   groupArraySample, groupArraySorted, largestTriangleThreeBuckets, meanZTest, sparkbar, quantileGK, quantilesGK,
-//   quantiles, quantilesExactExclusive/Inclusive, quantilesTimingWeighted, and every -Resample combinator.
+// - Mandatory fn(parameters)(arguments): histogram, sequenceMatch/Count/MatchEvents/NextNode, windowFunnel,
+//   sumMapFiltered(WithOverflow), exponentialMovingAverage, exponentialTimeDecayed*, groupArraySample/Sorted,
+//   largestTriangleThreeBuckets, meanZTest, sparkbar, groupFormat, MVTEncode/ST_AsMVT, hierarchicalKMeans,
+//   quantileGK/DD, every quantiles* variant, every timeSeries*ToGrid, and every -Resample combinator.
 //   Aggregates whose parameters are optional (quantile*, topK, uniqUpTo, groupArrayMoving*, stochastic*Regression…)
 //   ARE listed, but only with their default parameters.
-// - Required lambdas: arrayMap, arrayFilter, arrayFold, mapApply, mapFilter. Lambda-taking overloads of
-//   arraySort, arrayCount, arrayAll, arrayExists and map sorting are also unavailable, but their ordinary
-//   forms are listed: array sorting, UInt8-array predicates/counting, and key-ordered map sorting.
-//   mapAll/mapExists are different: their optional-lambda documentation is misleading; the native map
-//   adapter supplies Array(Tuple), which the no-lambda UInt8 predicate rejects. They require a lambda.
-// - Names the parser treats as operators/keywords: and, or, not, in, like, ilike, left, right. Use the operator,
-//   or the callable variants notLike/notILike/leftUTF8/rightUTF8.
-// - Row/column expansion, not scalar expressions: arrayJoin, untuple. GROUPING is listed, but ROLLUP/CUBE/
-//   GROUPING SETS are not.
+// - Required lambdas: arrayMap/Filter/Fold, arrayFill/ReverseFill, arrayFirst/Last(Index/OrNull), arraySplit/ReverseSplit,
+//   mapApply, mapFilter. Lambda-taking overloads of arraySort, arrayCount, arrayAll, arrayExists and map sorting are
+//   also unavailable, but their ordinary forms are listed. mapAll/mapExists are different: their optional-lambda
+//   documentation is misleading; the native map adapter supplies Array(Tuple), which the no-lambda UInt8 predicate
+//   rejects. They require a lambda.
+// - Reserved operator names (and, or, not, in, like, ilike) use operators or callable variants.
+//   Soft keywords such as row/range/left/right remain ordinary callable identifiers in lang.grammar.
+// - Row expansion, not scalar expressions: arrayJoin/unnest; historical untuple expands tuple columns. GROUPING is listed, but ROLLUP/CUBE/GROUPING SETS are not.
 //
-// Result type can't be expressed with a fixed type or first-argument generic T (would need literal- or
+// Result type can't be expressed with the existing fixed, generic or container contracts (would need literal- or
 // config-dependent inference, not new syntax):
-// - Type chosen by a type-name string: CAST, accurateCast(OrNull/OrDefault), reinterpret, defaultValueOfTypeName,
-//   variantElement.
+// - Type chosen by a type-name string: CAST, accurateCast(OrNull/OrDefault), reinterpret, defaultValueOfTypeName, variantElement.
 // - Type chosen by server config: dictGet(OrNull/OrDefault), joinGet(OrNull), getSetting(OrDefault),
-//   getServerSetting, getMergeTreeSetting, globalVariable, catboostEvaluate.
-// - Type chosen by the aggregate inside a state: finalizeAggregation, initializeAggregation, runningAccumulate.
+//   getServerSetting, getMergeTreeSetting, globalVariable.
+// - Type chosen by the aggregate inside a state or named by a string: finalizeAggregation, initializeAggregation,
+//   runningAccumulate, arrayReduce.
+// Known outer arrays with unknown elements use array<sql native>, not an exclusion or first-array inference:
+// dictGetKeys, arrayReduceInRanges, arrayFlatten/flatten and ranked enumeration.
+//
+// Internal, not public SQL API: registry-marked planner helpers (_CAST, __*, caseWithExpression/caseWithExpr, nested,
+// validateNestedArraySizes), *InIgnoreSet type-analysis variants, nothing/nothingNull/nothingUInt64 placeholder
+// aggregates, and kql* lowering helpers (kqlDateTimeBinAt has a documented fixed-result contract and is listed).
+// Historical/build-dependent catboostEvaluate also needs model-dependent result inference. It and
+// untuple are absent from this baseline, so are not in its exclusion ledger. stringCompare was renamed compareSubstrings.
 //
 // Listed with a partial signature for the same reason (see each entry's summary): mapPopulateSeries (no two-array
 // form), transform (no four-argument form), dictGetAll (single attribute only). tumble/hop Start/End expose
 // only UInt32 boundaries: standalone DateTime is rejected natively; tuple and interval-based forms need
 // Date-versus-timestamp result inference. Metadata can annotate results but cannot select their type.
+// Other partial contracts: toStartOfInterval/date_bin/time_bucket require an explicit timestamp origin (no-origin
+// month/year results are Date, unlike day/hour DateTime results); addDate/subDate and tuple-of-interval arithmetic
+// expose timestamp inputs only. Numeric forms of plus/minus/midpoint/clamp/firstNonDefault/arrayWithConstant/
+// icebergTruncate avoid same-arity argument-pair or second-argument result inference. Typed dictionary getters
+// expose single attributes. Tag-group functions accept additional tags through their array/map containers.
 export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // JSON and Dynamic Functions
@@ -290,6 +337,20 @@ export const clickHouseFunctions: FunctionDef[] = [
   ...['hostName', 'fqdn', 'buildId', 'currentDatabase', 'currentUser', 'displayName', 'version'].map(name => nativeFunction(name, 'other-functions', [], 'string', `Returns the server ${name} value.`)),
   ...['blockNumber', 'blockSize', 'connectionId', 'filesystemAvailable', 'filesystemCapacity', 'filesystemUnreserved', 'revision', 'rowNumberInAllBlocks', 'rowNumberInBlock', 'transactionLatestSnapshot', 'transactionOldestSnapshot', 'uptime'].map(name => nativeFunction(name, 'other-functions', name.startsWith('filesystem') ? [['disk', 'string?']] : [], 'number', `Returns ${name} for the executing server, block or transaction. Filesystem calls optionally select a configured disk.`)),
   ...['currentProfiles', 'currentRoles', 'defaultProfiles', 'defaultRoles', 'enabledProfiles', 'enabledRoles'].map(name => nativeFunction(name, 'other-functions', [], 'array<string>', `Returns ${name} for the current user.`)),
+  ...[['authenticatedUser', 'Returns the authenticated user.'], ['currentHandler', 'Returns the request handler name.'], ['currentQueryID', 'Returns the executing query ID.'], ['currentRequestURL', 'Returns the HTTP request URL.']].map(([name, summary]) => nativeFunction(name, 'other-functions', [], 'string', summary)),
+  nativeFunction('digits', 'other-functions', [['value', 'number'], ['offset', 'number'], ['length', 'number?']], 'number', 'Extracts decimal digits of an integer as an unsigned integer.'),
+  ...['colorOKLABToSRGB', 'colorSRGBToOKLAB'].map(name => nativeFunction(name, 'other-functions', [['color', 'record'], ['gamma', 'number?']], 'record', 'Converts an RGB/OKLAB three-component color tuple, with optional gamma.')),
+  ...['fuzzQuery', 'parseQueryToJSON'].map(name => nativeFunction(name, 'other-functions', [['query', 'string']], 'string', name == 'fuzzQuery' ? 'Returns a fuzzed SQL query without executing it.' : 'Returns a SQL query AST as JSON without executing it.')),
+  nativeFunction('formatQueryFromJSON', 'other-functions', [['json', 'string'], ['original_query', 'string?']], 'string', 'Formats a JSON SQL AST, optionally preserving original query formatting.'),
+  ...['highlightQuery', 'tokenizeQuery'].map(name => nativeFunction(name, 'other-functions', [['query', 'string']], 'array<record>', 'Returns query token ranges as named (begin, end, type) tuples.')),
+  nativeFunction('obfuscateQuery', 'other-functions', [['query', 'string'], ['tag', 'any?']], 'string', 'Obfuscates SQL identifiers and literals; the optional tag prevents common-subexpression reuse.'),
+  nativeFunction('obfuscateQueryWithSeed', 'other-functions', [['query', 'string'], ['seed', ['number', 'string']]], 'string', 'Obfuscates SQL deterministically using a seed.'),
+  nativeFunction('parseISO8601Duration', 'other-functions', [['duration', 'string']], 'number', 'Returns the number of seconds in an ISO 8601 duration.'),
+  nativeFunction('generateSerialID', 'other-functions', [['series', 'string'], ['start_value', 'number?']], 'number', 'Allocates a serial number using ClickHouse Keeper; start_value applies only when the series is created.'),
+  nativeFunction('icebergBucket', 'other-functions', [['buckets', 'number'], ['value', 'any']], 'number', 'Returns the Iceberg bucket number for a supported scalar value.'),
+  nativeFunction('icebergTruncate', 'other-functions', [['width', 'number'], ['value', 'number']], 'number', 'Applies Iceberg truncation to a number. String forms need result inference from the second argument.'),
+  nativeFunction('pgGetUserById', 'other-functions', [['oid', 'number']], 'string', 'Returns the current user for PostgreSQL compatibility; oid is ignored.'),
+  nativeFunction('pgTableIsVisible', 'other-functions', [['oid', 'number']], 'boolean', 'Returns true for PostgreSQL compatibility; oid is ignored.'),
   nativeFunction('currentSchemas', 'other-functions', [['include_implicit', 'boolean']], 'array<string>', 'Returns the current database as a single-element array.', {aliases: ['current_schemas']}),
   nativeFunction('showCertificate', 'other-functions', [], 'map', 'Returns configured SSL certificate attributes.'),
   nativeFunction('transactionID', 'other-functions', [], 'record', 'Returns (start_csn, local_tid, host_id) for the current transaction.'),
@@ -300,9 +361,12 @@ export const clickHouseFunctions: FunctionDef[] = [
   ...['dumpColumnStructure', 'toColumnTypeName'].map(name => nativeFunction(name, 'other-functions', [['value', 'any']], 'string', 'Describes the internal column representation.')),
   ...['getSizeOfEnumType', 'lowCardinalityIndices', 'visibleWidth'].map(name => nativeFunction(name, 'other-functions', [['value', 'any']], 'number', `Returns ${name}; enum/cardinality functions require the corresponding native column type.`)),
   nativeFunction('getTypeSerializationStreams', 'other-functions', [['value', 'any']], 'array<string>', 'Returns serialization substream paths for a column or type-name string.'),
-  ...['identity', 'materialize', 'defaultValueOfArgumentType', 'lowCardinalityKeys'].map(name => nativeFunction(name, 'other-functions', [['value', 'T']], 'T', 'Returns a value of the input logical type; materialize removes constness, defaultValueOfArgumentType returns its default, lowCardinalityKeys exposes dictionary keys.')),
-  ...['byteSize', 'blockSerializedSize'].map(name => nativeFunction(name, 'other-functions', [['value', 'any'], ['rest', 'any...']], 'number', 'Estimates the in-memory or serialized size of the supplied values.')),
-  ...['ignore', 'indexHint'].map(name => nativeFunction(name, 'other-functions', [], 'number', 'Accepts arbitrary expressions, returning zero for ignore or one for indexHint.', {overloads: [{args: [], returns: 'number'}, {args: [['values', 'any...']], returns: 'number'}]})),
+  ...[
+    ['identity', 'Returns its argument unchanged.'], ['materialize', 'Turns a constant into a full column, preserving its logical type.'],
+    ['defaultValueOfArgumentType', 'Returns the default value of the argument type.'], ['lowCardinalityKeys', 'Exposes native LowCardinality dictionary keys.'],
+  ].map(([name, summary]) => nativeFunction(name, 'other-functions', [['value', 'T']], 'T', summary)),
+  ...['byteSize', 'blockSerializedSize'].map(name => nativeFunction(name, 'other-functions', [['value', 'any'], ['rest', 'any...']], 'number', name == 'byteSize' ? 'Returns the in-memory byte size of the supplied values.' : 'Returns the serialized block byte size of the supplied values.')),
+  ...['ignore', 'indexHint'].map(name => nativeFunction(name, 'other-functions', [], 'number', name == 'ignore' ? 'Accepts arbitrary expressions and returns zero.' : 'Supplies index hints and returns one without evaluating its arguments.', {overloads: [{args: [], returns: 'number'}, {args: [['values', 'any...']], returns: 'number'}]})),
   nativeFunction('partitionID', 'other-functions', [['value', 'any'], ['rest', 'any...']], 'string', 'Computes a partition identifier for the supplied values.'),
   nativeFunction('isConstant', 'other-functions', [['value', 'any']], 'boolean', 'Tests whether the expression is constant.'),
   nativeFunction('isDecimalOverflow', 'other-functions', [['value', 'number'], ['precision', 'number?']], 'boolean', 'Tests whether a native Decimal exceeds its own or the supplied precision.'),
@@ -332,33 +396,80 @@ export const clickHouseFunctions: FunctionDef[] = [
   ...['detectCharset', 'detectLanguage', 'detectLanguageUnknown', 'detectProgrammingLanguage'].map(name => nativeFunction(name, 'nlp-functions', [['text', 'string']], 'string', `Returns ${name} for the text; requires the corresponding native NLP build support.`)),
   nativeFunction('detectLanguageMixed', 'nlp-functions', [['text', 'string']], 'map', 'Returns language codes and their proportions.'),
   nativeFunction('detectTonality', 'nlp-functions', [['text', 'string']], 'number', 'Returns average text sentiment.'),
-  ...['stem', 'lemmatize'].map(name => nativeFunction(name, 'nlp-functions', [['language', 'string'], ['word', 'string']], 'string', 'Stems or lemmatizes a lowercase word using the named language.')),
+  ...['stem', 'lemmatize'].map(name => nativeFunction(name, 'nlp-functions', [['language', 'string'], ['word', 'string']], 'string', name == 'stem' ? 'Stems a lowercase word using the named language.' : 'Lemmatizes a lowercase word using the named language.')),
   nativeFunction('synonyms', 'nlp-functions', [['extension', 'string'], ['word', 'string']], 'array<string>', 'Looks up synonyms in a configured extension.'),
   nativeFunction('file', 'files', [['path', 'string'], ['default', 'string?']], 'string', 'Reads bytes relative to user_files_path, optionally returning a default on failure.'),
 
-  ...['notLike', 'notILike'].map(name => nativeFunction(name, 'string-search-functions', [['value', 'string'], ['pattern', 'string']], 'boolean', 'Tests a SQL LIKE pattern; ILike is case-insensitive, not variants negate the result.')),
-  nativeFunction('xor', 'logical-functions', [['first', ['number', 'boolean']], ['second', ['number', 'boolean']], ['rest', ['number...', 'boolean']]], 'boolean', 'Returns logical exclusive OR of numeric/boolean arguments.'),
-  ...['globalIn', 'globalNotIn', 'notIn'].map(name => nativeFunction(name, 'in-functions', [['value', 'any'], ['set', 'record']], 'boolean', 'Tests membership in a native tuple set; global variants distribute the set to remote servers.')),
-  nativeFunction('tumble', 'time-window-functions', [['time', 'timestamp'], ['interval', 'interval'], ['timezone', 'string?']], 'record', 'Returns a tumbling window tuple; interval must be positive. Tuple elements are Date or DateTime depending on interval kind.'),
-  nativeFunction('hop', 'time-window-functions', [['time', 'timestamp'], ['hop', 'interval'], ['window', 'interval'], ['timezone', 'string?']], 'record', 'Returns a hopping window tuple; intervals must be positive. Tuple elements are Date or DateTime depending on interval kind.'),
-  ...['tumbleStart', 'tumbleEnd', 'hopStart', 'hopEnd'].map(name => nativeFunction(name, 'time-window-functions', [['window', 'number']], 'timestamp', 'Converts a native UInt32 boundary to DateTime. Standalone DateTime is invalid. Tuple and interval-based overloads are omitted because their result may be Date or DateTime.')),
-  nativeFunction('timeSeriesRange', 'time-series-functions', [['start', 'timestamp'], ['end', 'timestamp'], ['step', 'number']], 'array<timestamp>', 'Returns a regular timestamp grid using a positive step in seconds.'),
-  nativeFunction('timeSeriesFromGrid', 'time-series-functions', [['start', 'timestamp'], ['end', 'timestamp'], ['step', 'number'], ['values', 'array']], 'array<record>', 'Pairs grid timestamps with values, skipping null values; grid length must match the values.'),
+  // Time-series tag groups are query-local UInt64 handles, not aggregate states.
+  nativeFunction('timeSeriesCopyTag', 'time-series-functions', [['destination', 'number'], ['source', 'number'], ['tag', 'string']], 'number', 'Copies one tag between groups.'),
+  nativeFunction('timeSeriesCopyTags', 'time-series-functions', [['destination', 'number'], ['source', 'number'], ['tags', 'array']], 'number', 'Copies named tags between groups.'),
+  nativeFunction('timeSeriesExtractTag', 'time-series-functions', [['group', 'number'], ['tag', 'string']], 'string', 'Returns the named tag value or null.'),
+  nativeFunction('timeSeriesGroupToSamplingKey', 'time-series-functions', [['group', 'number']], 'number', 'Returns a stable sampling hash of a tag group.'),
+  nativeFunction('timeSeriesGroupToTags', 'time-series-functions', [['group', 'number']], 'array<record>', 'Returns sorted (name, value) tag pairs.'),
+  nativeFunction('timeSeriesIdToGroup', 'time-series-functions', [['id', 'any']], 'number', 'Returns the group previously stored for a series ID.'),
+  nativeFunction('timeSeriesIdToTags', 'time-series-functions', [['id', 'any']], 'array<record>', 'Returns sorted tag pairs previously stored for a series ID.'),
+  nativeFunction('timeSeriesJoinTags', 'time-series-functions', [['group', 'number'], ['destination_tag', 'string'], ['separator', 'string'], ['source_tags', 'array']], 'number', 'Adds a tag by joining the values of named source tags.'),
+  nativeFunction('timeSeriesMetricTypeToSuffixes', 'time-series-functions', [['type', 'string']], 'array<string>', 'Returns Prometheus family suffixes for a metric type.'),
+  nativeFunction('timeSeriesPrometheusValueToString', 'time-series-functions', [['value', 'number']], 'string', 'Formats a floating-point sample using Prometheus conventions.'),
+  nativeFunction('timeSeriesRemoveTag', 'time-series-functions', [['group', 'number'], ['tag', 'string']], 'number', 'Removes a named tag from a group.'),
+  ...['timeSeriesRemoveTags', 'timeSeriesRemoveAllTagsExcept'].map(name => nativeFunction(name, 'time-series-functions', [['group', 'number'], ['tags', 'array']], 'number', 'Removes named tags or retains only named tags.')),
+  nativeFunction('timeSeriesReplaceTag', 'time-series-functions', [['group', 'number'], ['destination', 'string'], ['replacement', 'string'], ['source', 'string'], ['regex', 'string']], 'number', 'Adds or replaces a tag using a regular-expression substitution.'),
+  nativeFunction('timeSeriesStoreTags', 'time-series-functions', [['id', 'T'], ['tags', 'array']], 'T', 'Associates tag pairs with an ID and returns the ID. Additional name/value pairs can be supplied inside the array.'),
+  nativeFunction('timeSeriesTagsToGroup', 'time-series-functions', [['tags', 'array']], 'number', 'Interns an array of tag pairs as a query-local group. Extra tags can be supplied in the array.'),
+  nativeFunction('timeSeriesTagsToMap', 'time-series-functions', [['tags', ['array', 'map']]], 'map', 'Normalizes tag pairs or a tag map into a sorted map. Extra tags can be supplied in the container.'),
+  nativeFunction('timeSeriesThrowDuplicateSeriesIf', 'time-series-functions', [['condition', 'boolean'], ['group', 'number']], 'number', 'Throws for duplicate series when condition is true; otherwise returns zero.'),
   nativeFunction('seriesDecomposeSTL', 'time-series-analysis-functions', [['series', 'array'], ['period', 'number']], 'array<sql native>', 'Decomposes numeric samples into seasonal, trend, residual and baseline arrays.'),
   nativeFunction('seriesPeriodDetectFFT', 'time-series-analysis-functions', [['series', 'array']], 'number', 'Estimates the period of numeric samples using FFT.'),
   nativeFunction('seriesOutliersDetectTukey', 'time-series-analysis-functions', [], 'array<number>', 'Scores Tukey outliers; either omit all tuning arguments (0.25, 0.75, 1.5) or supply all three.', {overloads: [{args: [['series', 'array']], returns: 'array<number>'}, {args: [['series', 'array'], ['min_percentile', 'number'], ['max_percentile', 'number'], ['k', 'number']], returns: 'array<number>'}]}),
 
+  // Native AI calls require server-side credentials/configuration; catalog tests never execute external requests.
+  ...['aiClassify', 'aiRedact'].map(name => nativeFunction(name, 'ai-functions', [['text', 'string'], ['categories', 'array'], ['params', 'map?']], 'string', 'Classifies or redacts text using constant category labels and optional model parameters.')),
+  ...['aiExtract', 'aiTranslate'].map(name => nativeFunction(name, 'ai-functions', [['text', 'string'], ['instruction_or_language', 'string'], ['params', 'map?']], 'string', 'Extracts information or translates text through a configured AI model.')),
+  nativeFunction('aiGenerate', 'ai-functions', [['prompt', 'string'], ['params', 'map?']], 'string', 'Generates text using a configured AI model.'),
+  nativeFunction('aiFilter', 'ai-functions', [['text', 'string'], ['condition', 'string'], ['params', 'map?']], 'boolean', 'Tests a natural-language condition through a configured AI model.'),
+  nativeFunction('aiEmbed', 'ai-functions', [['text', 'string'], ['model', 'string'], ['params', 'map?']], 'array<number>', 'Returns the numeric embedding of text from a configured model.'),
+  nativeFunction('aiSimilarity', 'ai-functions', [['first', 'string'], ['second', 'string'], ['model', 'string'], ['params', 'map?']], 'number', 'Returns embedding cosine similarity using a configured AI model.'),
+  nativeFunction('assignCentroid', 'machine-learning-functions', [['vector', 'array'], ['centroids', ['array', 'string']]], 'number', 'Returns the closest centroid ID from constant nested vectors or a centroid dictionary.'),
+  ...[['naiveBayesClassifier', 'number'], ['naiveBayesClassifierWithProb', 'record'], ['naiveBayesClassifierWithAllProbs', 'array<record>']].map(([name, returns]) => nativeFunction(name, 'machine-learning-functions', [['dictionary', 'string'], ['text', 'string']], returns, 'Classifies text using a NAIVE_BAYES dictionary, optionally returning probabilities.')),
+  ...['quantizeBFloat16ToInt8', 'dequantizeInt8ToBFloat16'].map(name => nativeFunction(name, 'qbit-functions', [['value', ['number', 'array', 'sql native']]], 'T', 'Quantizes or reconstructs numeric values, arrays, or native QBit vectors, preserving the coarse container type.')),
   nativeFunction('evalMLMethod', 'machine-learning-functions', [['model', 'sql native'], ['feature', 'number'], ['features', 'number...']], 'number', 'Predicts with a native stochastic linear/logistic regression state.'),
 
   // Numeric indexed vectors and uniqTheta sketches are aggregate states, typed `sql native` like -State results.
+  nativeFunction('bitmapBuild', 'bitmap-functions', [['array', 'array']], 'sql native', 'Builds an AggregateFunction(groupBitmap, T) state from an integer array.'),
+  ...['bitmapAnd', 'bitmapOr', 'bitmapXor', 'bitmapAndnot'].map(name => nativeFunction(name, 'bitmap-functions', [['first', 'sql native'], ['second', 'sql native']], 'sql native', 'Combines groupBitmap states with the named set operation.')),
+  ...['bitmapAndCardinality', 'bitmapOrCardinality', 'bitmapXorCardinality', 'bitmapAndnotCardinality'].map(name => nativeFunction(name, 'bitmap-functions', [['first', 'sql native'], ['second', 'sql native']], 'number', 'Returns the cardinality of the named bitmap set operation.')),
+  ...['bitmapCardinality', 'bitmapMin', 'bitmapMax'].map(name => nativeFunction(name, 'bitmap-functions', [['bitmap', 'sql native']], 'number', 'Returns the bitmap cardinality or an unsigned extremal element.')),
+  ...['bitmapHasAll', 'bitmapHasAny'].map(name => nativeFunction(name, 'bitmap-functions', [['first', 'sql native'], ['second', 'sql native']], 'boolean', 'Tests bitmap subset or intersection membership.')),
+  nativeFunction('bitmapContains', 'bitmap-functions', [['bitmap', 'sql native'], ['value', 'number']], 'boolean', 'Tests whether an integer is present in a bitmap.'),
+  nativeFunction('bitmapToArray', 'bitmap-functions', [['bitmap', 'sql native']], 'array<number>', 'Returns the integer elements of a groupBitmap state.'),
+  ...['bitmapSubsetInRange', 'bitmapSubsetLimit', 'subBitmap'].map(name => nativeFunction(name, 'bitmap-functions', [['bitmap', 'sql native'], ['start', 'number'], ['end_or_limit', 'number']], 'sql native', 'Extracts a bitmap by value range, starting value and count, or zero-based offset and count, respectively.')),
+  nativeFunction('bitmapTransform', 'bitmap-functions', [['bitmap', 'sql native'], ['from', 'array'], ['to', 'array']], 'sql native', 'Replaces bitmap elements according to two integer mapping arrays.'),
   nativeFunction('numericIndexedVectorBuild', 'numeric-indexed-vector-functions', [['map', 'map']], 'sql native', 'Builds a numeric indexed vector aggregate state from a numeric map.'),
   ...[['numericIndexedVectorToMap', 'map'], ['numericIndexedVectorCardinality', 'number'], ['numericIndexedVectorAllValueSum', 'number'], ['numericIndexedVectorShortDebugString', 'string']].map(([name, returns]) => nativeFunction(name, 'numeric-indexed-vector-functions', [['state', 'sql native']], returns, 'Inspects a native numeric indexed vector state.')),
   nativeFunction('numericIndexedVectorGetValue', 'numeric-indexed-vector-functions', [['state', 'sql native'], ['index', 'number']], 'number', 'Retrieves a value from a numeric indexed vector.'),
   ...['Add', 'Subtract', 'Multiply', 'Divide', 'Equal', 'NotEqual', 'Greater', 'GreaterEqual', 'Less', 'LessEqual'].map(operation => nativeFunction(`numericIndexedVectorPointwise${operation}`, 'numeric-indexed-vector-functions', [['state', 'sql native'], ['operand', ['sql native', 'number']]], 'sql native', 'Applies pointwise arithmetic/comparison to numeric indexed vectors or a numeric constant; vector index/value types must match.')),
   ...['uniqThetaUnion', 'uniqThetaIntersect', 'uniqThetaNot'].map(name => nativeFunction(name, 'uniqtheta-functions', [['left', 'sql native'], ['right', 'sql native']], 'sql native', 'Combines native uniqTheta aggregate sketches.')),
 
-  // Dictionary lookups whose result type doesn't depend on dictionary config.
+  // Dictionary lookups whose outer result type doesn't depend on dictionary config.
+  nativeFunction('dictGetKeys', 'ext-dict-functions', [['dictionary', 'string'], ['attribute', 'string'], ['value', 'any']], 'array<sql native>', 'Returns dictionary keys matching an attribute value. Keys may be scalars or tuples; their element type depends on dictionary configuration.'),
   nativeFunction('dictGetAll', 'ext-dict-functions', [['dictionary', 'string'], ['attribute', 'string'], ['key', 'any'], ['limit', 'number?']], 'array<sql native>', 'Returns matching attribute values from a regexp-tree dictionary. Tuple-of-attribute names (tuple-of-arrays result) is not supported by this signature.'),
+  // Typed dictionary getters have fixed results; only single-attribute forms are exposed.
+  ...['Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'Float32', 'Float64', 'String', 'Date', 'DateTime', 'UUID', 'IPv4', 'IPv6'].flatMap(type => {
+    let returns = 'number'
+    if (type == 'Date') returns = 'date'
+    if (type == 'DateTime') returns = 'timestamp'
+    if (['String', 'UUID', 'IPv4', 'IPv6'].includes(type)) returns = 'string'
+    let args: FunctionDef['args'] = [['dictionary', 'string'], ['attribute', 'string'], ['key', 'any']]
+    return [
+      nativeFunction(`dictGet${type}`, 'ext-dict-functions', args, returns, `Looks up one ${type} dictionary attribute; absent keys use its configured null value.`),
+      nativeFunction(`dictGet${type}OrDefault`, 'ext-dict-functions', [...args, ['default', returns]], returns, `Looks up one ${type} dictionary attribute with an explicit fallback.`),
+    ]
+  }),
+  nativeFunction('dictGetRoot', 'ext-dict-functions', [['dictionary', 'string'], ['key', 'number']], 'number', 'Returns the topmost ancestor in a hierarchical dictionary (26.7+).'),
+  ...['Area', 'City', 'Continent', 'Country', 'District', 'Population', 'TopContinent'].map(part => nativeFunction(`regionTo${part}`, 'ym-dict-functions', [['id', 'number'], ['geobase', 'string?']], 'number', 'Looks up a region in the configured embedded geographical dictionary.')),
+  nativeFunction('regionHierarchy', 'ym-dict-functions', [['id', 'number'], ['geobase', 'string?']], 'array<number>', 'Returns a region and its ancestor IDs from an embedded geographical dictionary.'),
+  nativeFunction('regionIn', 'ym-dict-functions', [['region', 'number'], ['ancestor', 'number'], ['geobase', 'string?']], 'boolean', 'Tests geographical region membership.'),
+  nativeFunction('regionToName', 'ym-dict-functions', [['id', 'number'], ['language', 'string?']], 'string', 'Returns the geographical region name in the requested language.'),
   nativeFunction('dictHas', 'ext-dict-functions', [], 'boolean', 'Tests for a dictionary key. Dictionary name must be constant; key must match the configured simple or composite key type. Range dictionaries additionally require a range value convertible to Int64.', {overloads: [
     {args: [['dictionary', 'string'], ['key', 'any']], returns: 'boolean'},
     {args: [['dictionary', 'string'], ['key', 'any'], ['range', ['number', 'date', 'timestamp']]], returns: 'boolean'},
@@ -544,6 +655,32 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('groupNumericIndexedVector', 'numeric-indexed-vector-functions', [['index', 'number'], ['value', 'number']], 'number', 'Aggregates indexed numeric values and returns their sum; -State exposes the numeric indexed vector.', {aggregate: true}),
   ...['stochasticLinearRegression', 'stochasticLogisticRegression'].map(name => nativeFunction(name, `../aggregate-functions/reference/${name.toLowerCase()}`, [['target', 'number'], ['feature', 'number'], ['features', 'number...']], 'array<number>', 'Fits a regression model with native default optimizer parameters; -State returns a model for evalMLMethod.', {aggregate: true})),
   nativeFunction('timeSeriesGroupArray', '../aggregate-functions/reference/timeSeriesGroupArray', [['timestamp', ['number', 'timestamp', 'array']], ['value', ['number', 'array']]], 'array<record>', 'Collects sorted timestamp/value pairs, retaining the greatest value for duplicate timestamps. Inputs are UInt32/DateTime/DateTime64 and Float32/64, or two arrays of those types.', {aggregate: true}),
+  // Registry-only aggregate names and ordinary default-parameter variants.
+  ...['any_respect_nulls', 'anyLast_respect_nulls'].map(name => nativeFunction(name, '../aggregate-functions/reference/any', [['value', 'T']], 'T', 'Returns the first or last encountered value, including nulls.', {aggregate: true})),
+  ...['argAndMax', 'argAndMin'].map(name => nativeFunction(name, `../aggregate-functions/reference/${name.toLowerCase()}`, [['arg', 'any'], ['value', 'any']], 'record', 'Returns a tuple of the argument and its extremal comparison value.', {aggregate: true})),
+  ...['gini', 'sumKahan'].map(name => nativeFunction(name, `../aggregate-functions/reference/${name.toLowerCase()}`, [['value', 'number']], 'number', 'Computes the Gini coefficient of finite nonnegative values, or a compensated numeric sum, respectively.', {aggregate: true})),
+  nativeFunction('sumCount', '../aggregate-functions/reference/sumcount', [['value', 'number']], 'record', 'Returns the (sum, non-null count) tuple.', {aggregate: true}),
+  nativeFunction('boundingRatio', '../aggregate-functions/reference/boundingratio', [['x', 'number'], ['y', 'number']], 'number', 'Returns the slope between the leftmost and rightmost points.', {aggregate: true}),
+  nativeFunction('categoricalInformationValue', '../aggregate-functions/reference/categoricalinformationvalue', [['category', 'number'], ['categories', 'number...'], ['tag', 'number']], 'array<number>', 'Returns information values for categorical UInt8 features relative to a binary UInt8 target.', {aggregate: true}),
+  nativeFunction('deltaSumTimestamp', '../aggregate-functions/reference/deltasumtimestamp', [['value', 'number'], ['timestamp', ['number', 'date', 'timestamp']]], 'number', 'Sums nonnegative changes in numeric values ordered by timestamp.', {aggregate: true}),
+  nativeFunction('intervalLengthSum', '../aggregate-functions/reference/intervallengthsum', [['start', ['number', 'date', 'timestamp']], ['end', ['number', 'date', 'timestamp']]], 'number', 'Returns the total length of the union of intervals.', {aggregate: true}),
+  nativeFunction('groupBitmapAnd', '../aggregate-functions/reference/groupbitmapand', [['state', 'sql native']], 'number', 'Returns the cardinality of the intersection of groupBitmap states.', {aggregate: true}),
+  nativeFunction('groupArrayArray', '../aggregate-functions/combinators', [['array', 'array']], 'array', 'Concatenates input arrays through the groupArray Array combinator.', {aggregate: true, aliases: ['array_concat_agg']}),
+  nativeFunction('groupConcat', '../aggregate-functions/reference/groupconcat', [['value', 'string'], ['delimiter', 'string?']], 'string', 'Concatenates strings with an optional delimiter; explicit element limits require parameterized syntax.', {aggregate: true}),
+  ...['maxMappedArrays', 'minMappedArrays'].map(name => nativeFunction(name, `../aggregate-functions/reference/${name.toLowerCase()}`, [], 'record', 'Computes extremal values for each array key, returning sorted key and value arrays.', {aggregate: true, overloads: [
+    {args: [['pair', 'record']], returns: 'record'}, {args: [['keys', 'array'], ['values', 'array'], ['rest', 'array...']], returns: 'record'},
+  ]})),
+  nativeFunction('mergedJSONPatch', '../aggregate-functions/reference/mergedjsonpatch', [['json', 'json'], ['sort_key', 'any']], 'json', 'Merges JSON objects with the largest sort key winning for each path.', {aggregate: true}),
+  ...['avgx', 'avgy', 'count', 'intercept', 'r2', 'slope', 'sxx', 'sxy', 'syy'].map(part => nativeFunction(`regr_${part}`, `../aggregate-functions/reference/regr_${part}`, [['y', 'number'], ['x', 'number']], 'number', 'Computes the named regression statistic over non-null (dependent, independent) pairs.', {aggregate: true})),
+  nativeFunction('quantileBFloat16', '../aggregate-functions/reference/quantilebfloat16', [['value', ['number', 'date', 'timestamp']]], 'T', 'Computes the default median using a BFloat16 histogram, preserving the coarse numeric or temporal type.', {aggregate: true}),
+  nativeFunction('quantilePrometheusHistogram', '../aggregate-functions/reference/quantileprometheushistogram', [['bucket_upper_bound', 'number'], ['cumulative_bucket_value', 'number']], 'number', 'Computes the default 0.5 quantile of Prometheus cumulative histogram buckets.', {aggregate: true}),
+  nativeFunction('studentTTestOneSample', '../aggregate-functions/reference/studentttestonesample', [['sample', 'number'], ['population_mean', 'number']], 'record', 'Returns the one-sample t-statistic and p-value without explicit confidence parameters.', {aggregate: true}),
+  nativeFunction('uniqTheta', '../aggregate-functions/reference/uniqtheta', [['values', 'any...']], 'number', 'Estimates the number of distinct input tuples using a Theta sketch.', {aggregate: true, fanoutSafe: true}),
+  ...['cume_dist', 'denseRank', 'percentRank'].map(name => nativeFunction(name, '../window-functions', [], 'number', 'Returns the cumulative distribution, dense rank, or relative rank within a window.', {window: true})),
+  nativeFunction('ntile', '../window-functions/ntile', [['buckets', 'number']], 'number', 'Assigns the window row to one of the requested buckets.', {window: true}),
+  nativeFunction('timeSeriesLastTwoSamples', '../aggregate-functions/reference/timeserieslasttwosamples', [['timestamp', ['number', 'timestamp']], ['value', 'number']], 'record', 'Returns the two latest timestamps and corresponding values as a pair of arrays.', {aggregate: true}),
+  ...['timeSeriesTopKMasks', 'timeSeriesBottomKMasks'].map(name => nativeFunction(name, `../aggregate-functions/reference/${name.toLowerCase()}`, [['k', ['number', 'array']], ['key', 'number'], ['values', 'array']], 'array<record>', 'Returns selected series IDs with their per-step selection masks.', {aggregate: true})),
+  nativeFunction('timeSeriesLimitKMasks', '../aggregate-functions/reference/timeserieslimitkmasks', [['k', ['number', 'array']], ['key', 'number'], ['sampling_key', 'number'], ['values', 'array']], 'array<record>', 'Returns sampled series IDs with per-step masks ordered by key.', {aggregate: true}),
   nativeFunction('approx_top_k', '../aggregate-functions/reference/approxtopk', [['value', 'any']], 'array<record>', 'Returns approximate top values and counts using the default ten entries.', {aggregate: true, aliases: ['approx_top_count']}),
   nativeFunction('approx_top_sum', '../aggregate-functions/reference/approxtopsum', [['value', 'any'], ['weight', 'number']], 'array<record>', 'Returns approximate top weighted values/counts using the default ten entries.', {aggregate: true}),
   nativeFunction('aggThrow', '../aggregate-functions/reference/aggthrow', [], 'number', 'Tests aggregate exception safety with default throw probability zero. Explicit probability requires aggregate parameters; ordinary arguments are ignored.', {aggregate: true, overloads: [{args: [], returns: 'number'}, {args: [['values', 'any...']], returns: 'number'}]}),
@@ -834,6 +971,11 @@ export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // Type Conversion Functions
   // ============================================================================
+  nativeFunction('toDateTime32', 'type-conversion-functions', [['value', ['number', 'string', 'date', 'time', 'timestamp']], ['timezone', 'string?']], 'timestamp', 'Converts a value to DateTime.'),
+  nativeFunction('toTime', 'type-conversion-functions', [['value', ['number', 'string', 'timestamp']]], 'time', 'Converts seconds, text or a timestamp to Time (25.6+).'),
+  nativeFunction('toTime64', 'type-conversion-functions', [['value', ['number', 'string', 'timestamp']], ['scale', 'number']], 'time', 'Converts a value to Time64 at the requested fractional precision (25.6+).'),
+  ...['toTimeOrNull', 'toTimeOrZero'].map(name => nativeFunction(name, 'type-conversion-functions', [['value', 'string']], 'time', 'Parses Time text, returning null or zero on failure.')),
+  ...['toTime64OrNull', 'toTime64OrZero'].map(name => nativeFunction(name, 'type-conversion-functions', [['value', 'string'], ['precision', 'number?']], 'time', 'Parses Time64 text, returning null or zero on failure.')),
   ...['toDateOrDefault', 'toDate32OrDefault'].map(name => nativeFunction(name, 'type-conversion-functions', [['value', 'any'], ['default', 'date?']], 'date', 'Casts to a native date, returning the supplied date or the type default on failure.')),
   nativeFunction('toDateTimeOrDefault', 'type-conversion-functions', [['value', 'any'], ['timezone', 'string?'], ['default', 'timestamp?']], 'timestamp', 'Casts to DateTime with optional timezone and fallback timestamp.'),
   nativeFunction('toDateTime64OrDefault', 'type-conversion-functions', [['value', 'any'], ['scale', 'number'], ['timezone', 'string?'], ['default', 'timestamp?']], 'timestamp', 'Casts to DateTime64 at a constant precision, optionally selecting timezone and fallback timestamp.'),
@@ -886,6 +1028,18 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('e', 'math-functions', [], 'number', 'Returns Euler\'s number.'),
   nativeFunction('atan2', 'math-functions', [['y', 'number'], ['x', 'number']], 'number', 'Returns the angle to (x, y) in radians.'),
   nativeFunction('hypot', 'math-functions', [['x', 'number'], ['y', 'number']], 'number', 'Returns the hypotenuse length without intermediate overflow or underflow.'),
+  // numeric_container produces numeric array elements or a coarse tuple record, without same-arity overload dispatch.
+  ...['L1Norm', 'L2Norm', 'L2SquaredNorm', 'LinfNorm'].map(name => nativeFunction(name, 'distance-functions', [['vector', ['array', 'record']]], 'number', 'Returns the named norm of a numeric array or tuple.')),
+  ...['L1Distance', 'L2Distance', 'L2SquaredDistance', 'LinfDistance', 'cosineDistance', 'arrayDotProduct', 'dotProduct'].map(name => nativeFunction(name, 'distance-functions', [['first', ['array', 'record']], ['second', ['array', 'record']]], 'number', 'Returns a numeric vector distance or dot product; vectors must have equal lengths and compatible numeric element types.')),
+  ...['L1Normalize', 'L2Normalize', 'LinfNormalize'].map(name => nativeFunction(name, 'distance-functions', [['vector', ['array', 'record']]], 'numeric_container', 'Returns a unit-norm vector as a numeric array or tuple.')),
+  nativeFunction('LpNorm', 'distance-functions', [['vector', ['array', 'record']], ['power', 'number']], 'number', 'Returns the p-norm of a numeric vector, for finite p >= 1.'),
+  nativeFunction('LpNormalize', 'distance-functions', [['vector', ['array', 'record']], ['power', 'number']], 'numeric_container', 'Normalizes a vector to unit p-norm, returning a numeric array or tuple.'),
+  nativeFunction('LpDistance', 'distance-functions', [['first', ['array', 'record']], ['second', ['array', 'record']], ['power', 'number']], 'number', 'Returns the p-norm distance between numeric vectors.'),
+  ...['L2DistanceTransposed', 'cosineDistanceTransposed', 'dotProductTransposed', 'L2DistanceTransposedQuantized', 'cosineDistanceTransposedQuantized', 'dotProductTransposedQuantized'].map(name => nativeFunction(name, 'distance-functions', [['vectors', 'sql native'], ['reference', 'array'], ['bits', 'number'], ['used_dims', 'number?']], 'number', 'Compares native QBit vectors against a numeric reference array. Requires 25.10+ (L2), 26.1+ (cosine), or 26.7+ (dot product and quantized forms).')),
+  nativeFunction('financialInternalRateOfReturn', 'financial-functions', [['cashflows', 'array'], ['guess', 'number?']], 'number', 'Returns IRR for numeric cashflows at regular intervals (25.7+); default guess is 0.1.'),
+  nativeFunction('financialInternalRateOfReturnExtended', 'financial-functions', [['cashflows', 'array'], ['dates', 'array'], ['guess', 'number?'], ['daycount', 'string?']], 'number', 'Returns XIRR for numeric cashflows and sorted unique Date values (25.7+).'),
+  nativeFunction('financialNetPresentValue', 'financial-functions', [['rate', 'number'], ['cashflows', 'array'], ['start_from_zero', 'boolean?']], 'number', 'Returns NPV for numeric cashflows at regular intervals (25.7+). Period numbering starts at zero by default.'),
+  nativeFunction('financialNetPresentValueExtended', 'financial-functions', [['rate', 'number'], ['cashflows', 'array'], ['dates', 'array'], ['daycount', 'string?']], 'number', 'Returns XNPV for numeric cashflows and sorted unique Date values (25.7+).'),
   nativeFunction('widthBucket', 'math-functions', [['operand', 'number'], ['low', 'number'], ['high', 'number'], ['count', 'number']], 'number', 'Returns the equal-width histogram bucket; count must be a positive unsigned integer.', {aliases: ['width_bucket']}),
   nativeFunction('proportionsZTest', 'math-functions', [['successes_x', 'number'], ['successes_y', 'number'], ['trials_x', 'number'], ['trials_y', 'number'], ['conf_level', 'number'], ['pool_type', 'string']], 'record', 'Returns (z statistic, p value, lower confidence bound, upper confidence bound). Pool type is pooled or unpooled; successes/trials are UInt64.'),
   nativeFunction('roundBankers', 'rounding-functions', [['x', 'number'], ['precision', 'number?']], 'number', 'Rounds to the nearest even value on ties; integer precision defaults to zero.'),
@@ -895,6 +1049,21 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('roundToExp2', 'rounding-functions', [['x', 'number']], 'number', 'Rounds down to a power of two, or zero below one.'),
   nativeFunction('roundDown', 'rounding-functions', [['x', 'number'], ['bounds', 'array']], 'number', 'Rounds down to a numeric array boundary, returning the lowest boundary if x is below all boundaries.'),
   nativeFunction('exp', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns e raised to x.'),
+  // Numeric ordinary calls; plus/minus expose numeric forms only because temporal results need argument-pair dispatch.
+  ...['plus', 'minus', 'multiply', 'divide', 'divideOrNull', 'intDivOrNull', 'intDivOrZero', 'modulo', 'moduloOrNull', 'moduloOrZero', 'moduloLegacy', 'positiveModulo', 'positiveModuloOrNull', 'gcd', 'lcm', 'min2', 'max2', 'avg2', 'ifNotFinite'].map(name => nativeFunction(name, 'arithmetic-functions', [['x', 'number'], ['y', 'number']], 'number', 'Applies native numeric arithmetic. Integer, decimal and floating-point domain restrictions are checked by ClickHouse.')),
+  ...[['negate', 'Negates a number.'], ['byteSwap', 'Reverses the bytes of an integer.'], ['sqr', 'Squares a number (26.7+).']].map(([name, summary]) => nativeFunction(name, 'arithmetic-functions', [['x', 'number']], 'number', summary)),
+  ...['divideDecimal', 'multiplyDecimal'].map(name => nativeFunction(name, 'arithmetic-functions', [['x', 'number'], ['y', 'number'], ['result_scale', 'number?']], 'number', 'Computes Decimal256 arithmetic with an optional constant result scale. Inputs must be decimals.')),
+  nativeFunction('midpoint', 'arithmetic-functions', [['values', 'number...']], 'number', 'Returns the average of numeric arguments (25.11+). Temporal forms are not exposed because their common result needs argument-dependent inference.'),
+  ...['isFinite', 'isInfinite', 'isNaN'].map(name => nativeFunction(name, 'arithmetic-functions', [['x', 'number']], 'boolean', 'Tests a floating-point value for finiteness, infinity, or NaN.')),
+  nativeFunction('isPrime', 'math-functions', [['x', 'number']], 'boolean', 'Tests whether an integer is prime (26.5+).'),
+  nativeFunction('isProbablePrime', 'math-functions', [['x', 'number'], ['rounds', 'number?']], 'boolean', 'Tests probable primality with an optional number of Miller-Rabin rounds (26.5+).'),
+  ...['bitAnd', 'bitOr', 'bitXor', 'bitHammingDistance', 'bitRotateLeft', 'bitRotateRight'].map(name => nativeFunction(name, 'bit-functions', [['x', 'number'], ['y', 'number']], 'number', 'Applies the named bitwise operation to numeric inputs. Rotations require integers.')),
+  nativeFunction('bitCount', 'bit-functions', [['x', 'number']], 'number', 'Counts set bits without sign extension.'),
+  nativeFunction('bitNot', 'bit-functions', [['x', ['number', 'string']]], 'T', 'Inverts numeric or string bits, preserving the coarse input type.'),
+  ...['bitShiftLeft', 'bitShiftRight'].map(name => nativeFunction(name, 'bit-functions', [['x', ['number', 'string']], ['count', 'number']], 'T', 'Shifts integer or string bits, preserving the coarse input type.')),
+  nativeFunction('bitSlice', 'bit-functions', [['value', 'string'], ['offset', 'number'], ['length', 'number?']], 'string', 'Extracts a one-based bit slice, padded to whole bytes.'),
+  nativeFunction('bitTest', 'bit-functions', [['x', 'number'], ['index', 'number']], 'boolean', 'Tests a zero-based bit position.'),
+  ...['bitTestAll', 'bitTestAny'].map(name => nativeFunction(name, 'bit-functions', [['x', 'number'], ['index', 'number'], ['indexes', 'number...']], 'boolean', 'Tests whether all or any specified zero-based bit positions are set.')),
   nativeFunction('intDiv', 'arithmetic-functions', [{name: 'x', type: 'number'}, {name: 'y', type: 'number'}], 'number', 'Divides x by y and rounds down to an integer.', {aliases: ['int_div']}),
   nativeFunction('log', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns the natural logarithm of x.'),
   nativeFunction('log10', 'math-functions', [{name: 'x', type: 'number'}], 'number', 'Returns the base-10 logarithm of x.'),
@@ -1031,6 +1200,21 @@ export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // UUID, IP, and Geography (native subtypes use coarse strings/records/arrays)
   // ============================================================================
+  nativeFunction('flipCoordinates', 'other-functions', [['geometry', ['record', 'array', 'sql native']]], 'T', 'Swaps geometry coordinates, preserving the native container type.'),
+  nativeFunction('MGRSToGeo', 'geo/coordinates', [['mgrs', 'string']], 'record', 'Decodes an MGRS reference to a longitude/latitude tuple.'),
+  nativeFunction('geoToMGRS', 'geo/coordinates', [['longitude', 'number'], ['latitude', 'number'], ['precision', 'number?']], 'string', 'Encodes longitude/latitude as an MGRS reference.'),
+  nativeFunction('geoToUTM', 'geo/coordinates', [['longitude', 'number'], ['latitude', 'number'], ['zone', 'number?']], 'record', 'Returns UTM easting, northing, zone and latitude band.'),
+  nativeFunction('UTMToGeo', 'geo/coordinates', [['easting', 'number'], ['northing', 'number'], ['zone', 'number'], ['hemisphere', ['number', 'string']]], 'record', 'Decodes UTM coordinates to longitude/latitude; hemisphere is a flag or MGRS band letter.'),
+  ...['MVTBoundingBox', 'MVTBoundingBoxMercator'].map(name => nativeFunction(name, 'geo/polygon', [['zoom', 'number'], ['tile_x', 'number'], ['tile_y', 'number'], ['margin', 'number?']], 'record', 'Returns a tile bounding box as a four-coordinate tuple, in degrees or Web Mercator.')),
+  nativeFunction('MVTEncodeGeom', 'geo/polygon', [['geometry', ['record', 'array', 'sql native']], ['zoom', 'number'], ['tile_x', 'number'], ['tile_y', 'number'], ['extent', 'number?'], ['buffer', 'number?'], ['clip', 'number?']], 'sql native', 'Clips a named native geometry to tile space, returning the native Geometry variant, not an inferred coordinate shape.'),
+  ...['areaCartesian', 'areaSpherical', 'perimeterCartesian', 'perimeterSpherical'].map(name => nativeFunction(name, 'geo/polygon', [['geometry', ['record', 'array', 'sql native']]], 'number', 'Measures area or perimeter of a named native geometry.')),
+  ...['geometryIntersectCartesian', 'geometryIntersectSpherical'].map(name => nativeFunction(name, 'geo/polygon', [['first', ['record', 'array', 'sql native']], ['second', ['record', 'array', 'sql native']]], 'boolean', 'Tests geometry intersection in Cartesian or spherical coordinates.')),
+  nativeFunction('h3PolygonToCells', 'geo/h3', [['geometry', ['array', 'sql native']], ['resolution', 'number']], 'array<number>', 'Returns H3 cell indexes covering a polygon.'),
+  nativeFunction('h3PolygonToCellsWithContainment', 'geo/h3', [['geometry', ['array', 'sql native']], ['resolution', 'number'], ['flags', 'number']], 'array<number>', 'Returns H3 cell indexes covering a polygon using the requested containment flags.'),
+  nativeFunction('svg', 'geo/polygon', [['geometry', ['record', 'array', 'sql native']], ['style', 'string?']], 'string', 'Serializes a named native geometry to SVG with optional CSS style.'),
+  nativeFunction('wkb', 'geo/polygon', [['geometry', ['record', 'array', 'sql native']]], 'string', 'Serializes a named native geometry to WKB. Plain Tuple/Array values need a geometry type annotation.'),
+  ...['readWKT', 'readWKB'].map(name => nativeFunction(name, 'geo/polygon', [['value', 'string']], 'sql native', 'Parses a geometry into the native Geometry variant (the result type is fixed, not selected by the text).')),
+  ...['readWKTMultiPoint', 'readWKBMultiPoint'].map(name => nativeFunction(name, 'geo/polygon', [['value', 'string']], 'array<record>', 'Parses a multipoint into an array of coordinate tuples.')),
   ...['geoDistance', 'greatCircleAngle', 'greatCircleDistance'].map(name => nativeFunction(name, 'geo/coordinates', [['longitude1', 'number'], ['latitude1', 'number'], ['longitude2', 'number'], ['latitude2', 'number']], 'number', 'Compares two longitude/latitude pairs in degrees. Distance variants return meters; greatCircleAngle returns degrees. Longitude must be -180..180 and latitude -90..90.')),
   ...['isIPv4String', 'isIPv6String'].map(name => nativeFunction(name, 'ip-address-functions', [['address', 'string']], 'boolean', 'Tests whether a string is a valid address of the indicated IP version.')),
   nativeFunction('isIPAddressInRange', 'ip-address-functions', [['address', 'string'], ['prefix', 'string']], 'boolean', 'Tests membership of an IPv4/IPv6 address in a CIDR prefix; differing IP versions return false.'),
@@ -1097,7 +1281,8 @@ export const clickHouseFunctions: FunctionDef[] = [
   // Array, Map, and Tuple Functions
   // ============================================================================
   // Tuples are `record`; nested native arrays are `array<sql native>`.
-  ...['flattenTuple', 'tupleNegate'].map(name => nativeFunction(name, 'tuple-functions', [['tuple', 'record']], 'record', 'Flattens a nested named tuple or negates numeric tuple elements.')),
+  ...[['flattenTuple', 'Flattens a nested named tuple.'], ['tupleNegate', 'Negates numeric tuple elements.']].map(([name, summary]) => nativeFunction(name, 'tuple-functions', [['tuple', 'record']], 'record', summary)),
+  nativeFunction('tuplePositiveModuloByNumber', 'tuple-functions', [['values', 'record'], ['divisor', 'number']], 'record', 'Computes nonnegative remainders for a tuple of numbers.'),
   ...['tupleDivide', 'tupleIntDiv', 'tupleIntDivOrZero', 'tupleMinus', 'tupleModulo', 'tupleMultiply', 'tuplePlus'].map(name => nativeFunction(name, 'tuple-functions', [['left', 'record'], ['right', 'record']], 'record', 'Applies arithmetic elementwise to equal-sized numeric tuples.')),
   ...['tupleDivideByNumber', 'tupleIntDivByNumber', 'tupleIntDivOrZeroByNumber', 'tupleModuloByNumber', 'tupleMultiplyByNumber'].map(name => nativeFunction(name, 'tuple-functions', [['tuple', 'record'], ['number', 'number']], 'record', 'Applies scalar arithmetic to each numeric tuple element.')),
   nativeFunction('tupleConcat', 'tuple-functions', [['tuple', 'record'], ['rest', 'record...']], 'record', 'Concatenates tuples.'),
@@ -1121,11 +1306,49 @@ export const clickHouseFunctions: FunctionDef[] = [
   nativeFunction('mapContainsValueLike', 'tuple-map-functions', [['map', 'map'], ['pattern', 'string']], 'boolean', 'Tests whether a string map value matches a LIKE pattern.'),
   nativeFunction('mapExtractValueLike', 'tuple-map-functions', [['map', 'map'], ['pattern', 'string']], 'map', 'Returns entries whose string values match a LIKE pattern.'),
   ...['extractKeyValuePairs', 'extractKeyValuePairsWithEscaping'].map(name => nativeFunction(name, 'tuple-map-functions', [['data', 'string'], ['key_value_delimiter', 'string?'], ['pair_delimiters', 'string?'], ['quoting_character', 'string?'], ['unexpected_quoting_character_strategy', 'string?']], 'map', 'Parses noisy key/value text into a string map. Defaults: colon, space/comma/semicolon, double quote. WithEscaping interprets escape sequences.')),
-  nativeFunction('range', 'array-functions', [['stop', 'number']], 'array<number>', 'Returns an array from start to stop (exclusive), defaulting to start 0 and step 1.', {overloads: [
-    {args: [['stop', 'number']], returns: 'array<number>'},
-    {args: [['start', 'number'], ['stop', 'number']], returns: 'array<number>'},
-    {args: [['start', 'number'], ['stop', 'number'], ['step', 'number']], returns: 'array<number>'},
+  nativeFunction('range', 'array-functions', [], 'array<number>', 'Returns integers from start (default zero) up to but excluding end, using step (default one). Arguments must be Int8/16/32/64 or UInt8/16/32/64; native range size and null-value restrictions apply.', {overloads: [
+    {args: [['end', 'number']], returns: 'array<number>'},
+    {args: [['start', 'number'], ['end', 'number']], returns: 'array<number>'},
+    {args: [['start', 'number'], ['end', 'number'], ['step', 'number']], returns: 'array<number>'},
   ]}),
+  // Runtime-generated array families; optional lambdas are deliberately omitted from these ordinary forms.
+  ...['Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'Float32', 'Float64'].map(type => nativeFunction(`emptyArray${type}`, 'array-functions', [], 'array<number>', `Returns an empty ${type} array.`)),
+  ...[['Date', 'date'], ['DateTime', 'timestamp'], ['String', 'string']].map(([type, returns]) => nativeFunction(`emptyArray${type}`, 'array-functions', [], `array<${returns}>`, `Returns an empty ${type} array.`)),
+  nativeFunction('arrayWithConstant', 'array-functions', [['length', 'number'], ['value', 'number']], 'array<number>', 'Repeats a numeric value length times. Only the numeric form is exposed: other results require inference from the second argument.'),
+  ...['arrayCumSum', 'arrayCumSumNonNegative', 'arrayDifference'].map(name => nativeFunction(name, 'array-functions', [['array', 'array']], 'array<number>', 'Computes running sums or adjacent differences of a numeric array. Only the no-lambda form is exposed.')),
+  ...['arrayAvg', 'arrayProduct', 'arraySum'].map(name => nativeFunction(name, 'array-functions', [['array', 'array']], 'number', 'Reduces a numeric array without a lambda.')),
+  ...['arrayMax', 'arrayMin'].map(name => nativeFunction(name, 'array-functions', [['array', 'array']], 'array_element', 'Returns the greatest or least array element without a lambda.')),
+  ...[['arrayCompact', 'Removes consecutive duplicate array elements.'], ['arrayReverseSort', 'Sorts array elements in descending order.'], ['emptyArrayToSingle', 'Replaces an empty array with one default element.']].map(([name, summary]) => nativeFunction(name, 'array-functions', [['array', 'array']], 'array', summary)),
+  ...['arrayEnumerate', 'arrayEnumerateDense'].map(name => nativeFunction(name, 'array-functions', [['array', 'array']], 'array<number>', 'Returns one-based element indexes or first-occurrence ranks.')),
+  nativeFunction('arrayEnumerateUniq', 'array-functions', [['arrays', 'array...']], 'array<number>', 'Returns occurrence ranks, comparing tuples of corresponding elements when multiple arrays are supplied.'),
+  nativeFunction('arrayExcept', 'array-functions', [['source', 'array'], ['except', 'array']], 'array', 'Removes elements present in the second array, preserving source order and duplicates.'),
+  ...['arrayUnion', 'arraySymmetricDifference'].map(name => nativeFunction(name, 'array-functions', [['arrays', 'array...']], 'array', 'Returns the union or symmetric difference of arrays with a common element supertype.')),
+  nativeFunction('arrayRemove', 'array-functions', [['array', 'array'], ['value', 'any']], 'array', 'Removes all occurrences of a value (25.11+).'),
+  ...['arrayPartialSort', 'arrayPartialReverseSort', 'arrayTopK', 'arrayBottomK'].map(name => nativeFunction(name, 'array-functions', [['limit', 'number'], ['array', 'array']], 'array', 'Sorts the requested prefix or returns the top/bottom K elements, without a lambda. TopK/BottomK require 26.6+.')),
+  ...['arrayRotateLeft', 'arrayRotateRight', 'arrayRandomSample'].map(name => nativeFunction(name, 'array-functions', [['array', 'array'], ['count', 'number']], 'array', 'Rotates array elements or samples the requested number of elements.')),
+  nativeFunction('arrayShuffle', 'array-functions', [['array', 'array'], ['seed', 'number?']], 'array', 'Shuffles an array, optionally with a reproducible seed.'),
+  nativeFunction('arrayPartialShuffle', 'array-functions', [['array', 'array'], ['limit', 'number?'], ['seed', 'number?']], 'array', 'Partially shuffles an array, with optional limit and seed.'),
+  nativeFunction('arrayShingles', 'array-functions', [['array', 'array'], ['length', 'number']], 'array<sql native>', 'Returns consecutive sub-arrays of the requested length. Inner arrays retain their native element type; the nested shape is opaque like other nested-array results.'),
+  nativeFunction('arrayTranspose', 'array-functions', [['array', 'array']], 'T', 'Transposes a rectangular two-dimensional array (26.4+), preserving its nested element type.'),
+  // These functions have a known outer array, but leaf types or nesting cannot be inferred statically.
+  nativeFunction('arrayFlatten', 'array-functions', [['array', 'array']], 'array<sql native>', 'Flattens all nested array dimensions to an array of leaf values; leaf types remain opaque.'),
+  nativeFunction('arrayReduceInRanges', 'array-functions', [['aggregate_name', 'string'], ['ranges', 'array'], ['array', 'array'], ['more_arrays', 'array...']], 'array<sql native>', 'Applies a constant aggregate-name string to each (start, length) range over the input arrays. Returns an array of aggregate results, which may themselves be arrays or tuples.'),
+  ...['arrayEnumerateDenseRanked', 'arrayEnumerateUniqRanked'].map(name => nativeFunction(name, 'array-functions', [], 'array<sql native>', `${name == 'arrayEnumerateDenseRanked' ? 'Enumerates distinct values by first occurrence' : 'Counts occurrences of equal values'} while preserving array dimensions. Supports (array) and (clear_depth, array, max_array_depth); ambiguous two-argument forms are not exposed.`, {overloads: [
+    {args: [['array', 'array']], returns: 'array<sql native>'},
+    {args: [['clear_depth', 'number'], ['array', 'array'], ['max_array_depth', 'number']], returns: 'array<sql native>'},
+  ]})),
+  nativeFunction('arrayFlattenedLength', 'array-functions', [['array', 'array']], 'number', 'Counts leaf elements after recursively flattening an array (26.9+).'),
+  nativeFunction('arrayAutocorrelation', 'array-functions', [['array', 'array'], ['max_lag', 'number?']], 'array<number>', 'Returns the autocorrelation of a numeric array (26.4+).'),
+  nativeFunction('randomHadamardTransform', 'array-functions', [['vector', 'array'], ['seed', 'number?'], ['output_dims', 'number?']], 'array<number>', 'Applies a norm-preserving randomized Hadamard transform to a floating-point vector (26.7+).'),
+  ...['arrayJaccardIndex', 'arrayLevenshteinDistance'].map(name => nativeFunction(name, 'array-functions', [['first', 'array'], ['second', 'array']], 'number', 'Computes array Jaccard similarity or Levenshtein edit distance.')),
+  ...['arrayLevenshteinDistanceWeighted', 'arraySimilarity'].map(name => nativeFunction(name, 'array-functions', [['first', 'array'], ['second', 'array'], ['first_weights', 'array'], ['second_weights', 'array']], 'number', 'Computes weighted array edit distance or similarity. Weight arrays must be numeric.')),
+  nativeFunction('arrayNormalizedGini', 'array-functions', [['predicted', 'array'], ['label', 'array']], 'record', 'Returns predicted, normalized and relative Gini coefficients as a tuple.'),
+  nativeFunction('arrayAUCPR', 'array-functions', [['scores', 'array'], ['labels', 'array'], ['partial_offsets', 'array?']], 'number', 'Computes precision-recall AUC, optionally using partial distributed offsets.'),
+  nativeFunction('arrayROCAUC', 'array-functions', [['scores', 'array'], ['labels', 'array'], ['scale', 'boolean?'], ['partial_offsets', 'array?']], 'number', 'Computes ROC AUC, optionally normalized and with distributed offsets.'),
+  nativeFunction('arrayZipUnaligned', 'array-functions', [['arrays', 'array...']], 'array<record>', 'Zips unequal-length arrays into tuples, filling absent positions with null.'),
+  ...['countEqual', 'indexOfAssumeSorted'].map(name => nativeFunction(name, 'array-functions', [['array', 'array'], ['value', 'any']], 'number', 'Counts matching elements or finds the first one-based index in an ascending sorted array.')),
+  ...['hasAll', 'hasAny', 'hasSubstr'].map(name => nativeFunction(name, 'array-functions', [['first', 'array'], ['second', 'array']], 'boolean', 'Tests array subset, intersection, or contiguous subsequence membership.')),
+  nativeFunction('notHas', 'array-functions', [['collection', ['array', 'map', 'json']], ['value', 'any']], 'boolean', 'Negates array element, map key or JSON path membership (26.8+).'),
   nativeFunction('arrayConcat', 'array-functions', [{name: 'arrays', type: 'array...'}], 'array', 'Concatenates arrays.', {aliases: ['array_concat']}),
   nativeFunction('arrayDistinct', 'array-functions', [{name: 'array', type: 'array'}], 'array', 'Returns the distinct values in an array.', {aliases: ['array_distinct']}),
   nativeFunction('arrayElement', 'array-functions', [{name: 'collection', type: ['array', 'map']}, {name: 'index_or_key', type: 'any'}], 'array_element', 'Returns an array element by index or a map value by key.', {aliases: ['array_element']}),
@@ -1230,6 +1453,21 @@ export const clickHouseFunctions: FunctionDef[] = [
   ...['hasSubsequence', 'hasSubsequenceUTF8', 'hasSubsequenceCaseInsensitive', 'hasSubsequenceCaseInsensitiveUTF8', 'hasToken', 'hasTokenOrNull', 'hasTokenCaseInsensitive', 'hasTokenCaseInsensitiveOrNull'].map(name => nativeFunction(name, 'string-search-functions', [['haystack', 'string'], ['needle', 'string']], 'boolean', 'Tests for a subsequence or an ASCII-delimited token. Token must be constant; OrNull variants return null for malformed tokens.')),
   ...['ngramDistance', 'ngramSearch'].flatMap(base => ['', 'CaseInsensitive', 'UTF8', 'CaseInsensitiveUTF8'].map(suffix => nativeFunction(`${base}${suffix}`, 'string-search-functions', [['haystack', 'string'], ['needle', 'string']], 'number', 'Compares n-gram multisets; Distance returns symmetric distance, Search the asymmetric match score. Constant strings exceeding 32 KiB throw.'))),
   nativeFunction('extract', 'string-search-functions', [['haystack', 'string'], ['pattern', 'string']], 'string', 'Returns the first RE2 match, or the first capturing group if present.'),
+  ...['left', 'right'].map(name => nativeFunction(name, 'string-functions', [['value', 'string'], ['length', 'number']], 'string', 'Returns the requested byte prefix or suffix; negative lengths omit bytes from the opposite end.')),
+  ...[['caseFoldUTF8', 'Applies Unicode case folding.'], ['normalizeUTF8NFKCCasefold', 'Applies Unicode NFKC normalization and case folding.'], ['removeDiacriticsUTF8', 'Removes Unicode diacritics.'], ['naturalSortKey', 'Produces a key for natural string sorting.']].map(([name, summary]) => nativeFunction(name, 'string-functions', [['value', 'string']], 'string', summary)),
+  nativeFunction('isValidASCII', 'string-functions', [['value', 'string']], 'boolean', 'Tests whether all bytes are ASCII.'),
+  nativeFunction('conv', 'string-functions', [['value', ['string', 'number']], ['from_base', 'number'], ['to_base', 'number']], 'string', 'Converts a number between bases 2 through 36.'),
+  ...['startsWithCaseInsensitive', 'startsWithCaseInsensitiveUTF8', 'endsWithCaseInsensitive', 'endsWithCaseInsensitiveUTF8', 'matchCaseInsensitive', 'notMatch', 'notMatchCaseInsensitive'].map(name => nativeFunction(name, 'string-search-functions', [['value', 'string'], ['pattern', 'string']], 'boolean', 'Tests a case-insensitive prefix/suffix or a regular-expression match/non-match.')),
+  nativeFunction('regexpPosition', 'string-search-functions', [['value', 'string'], ['pattern', 'string'], ['position', 'number?'], ['occurrence', 'number?'], ['return_option', 'number?'], ['flags', 'string?'], ['subexpression', 'number?']], 'number', 'Returns the one-based byte position of a regular-expression match, or zero.'),
+  ...['hasAllTokens', 'hasAnyTokens'].map(name => nativeFunction(name, 'string-search-functions', [['input', ['string', 'array']], ['needles', ['string', 'array']], ['tokenizer', 'string?']], 'boolean', 'Tests all or any search tokens using an optional constant tokenizer specification.')),
+  nativeFunction('hasPhrase', 'string-search-functions', [['input', 'string'], ['phrase', 'string'], ['tokenizer', 'string?']], 'boolean', 'Tests for a consecutive token sequence.'),
+  nativeFunction('highlight', 'string-search-functions', [], 'string', 'Wraps matched constant search terms in HTML tags; custom opening and closing tags must both be supplied.', {overloads: [
+    {args: [['input', 'string'], ['needles', 'array']], returns: 'string'},
+    {args: [['input', 'string'], ['needles', 'array'], ['open_tag', 'string'], ['close_tag', 'string']], returns: 'string'},
+  ]}),
+  nativeFunction('tokensForLikePattern', 'splitting-merging-functions', [['value', 'string'], ['tokenizer', 'string?'], ['tokenizer_argument', ['number?', 'array']], ['max_length', 'number?'], ['min_cutoff_length', 'number?']], 'array<string>', 'Extracts searchable tokens from a LIKE pattern. Optional tokenizer arguments specify n-gram sizes or separator arrays.'),
+  nativeFunction('naiveBayesNgrams', 'splitting-merging-functions', [['text', 'string'], ['n', 'number'], ['mode', 'string'], ['start_token', 'string?'], ['end_token', 'string?']], 'array<string>', 'Splits text into byte, codepoint or token n-grams with optional boundary padding.'),
+  nativeFunction('reverseBySeparator', 'splitting-merging-functions', [['value', 'string'], ['separator', 'string?']], 'string', 'Reverses separator-delimited components; default separator is a dot.'),
   nativeFunction('regexpExtract', 'string-search-functions', [['haystack', 'string'], ['pattern', 'string'], ['index', 'number?']], 'string', 'Extracts a group from a constant regular expression; index defaults to 1 and zero selects the whole match.', {aliases: ['regexp_extract']}),
   ...['extractAll', 'extractGroups'].map(name => nativeFunction(name, 'string-search-functions', [['haystack', 'string'], ['pattern', 'string']], 'array<string>', name == 'extractAll' ? 'Returns all matches (or first capturing groups) of a regular expression.' : 'Returns capturing groups from the first match; pattern must contain a group.')),
   ...['extractAllGroupsHorizontal', 'extractAllGroupsVertical'].map(name => nativeFunction(name, 'string-search-functions', [['haystack', 'string'], ['pattern', 'string']], 'array<sql native>', 'Returns nested arrays of captures grouped horizontally by group or vertically by match; pattern must contain groups.')),
@@ -1301,6 +1539,10 @@ export const clickHouseFunctions: FunctionDef[] = [
   ...['randomString', 'randomPrintableASCII'].map(name => nativeFunction(name, 'random-functions', [['length', 'number'], ['ignored', 'any?']], 'string', 'Returns an unsigned byte length of random bytes or printable ASCII characters.')),
   ...['randomFixedString', 'randomStringUTF8'].map(name => nativeFunction(name, 'random-functions', [['length', 'number']], 'string', 'Returns random data of the requested unsigned length; UTF8 counts code points, FixedString counts bytes.')),
   nativeFunction('fuzzBits', 'random-functions', [['value', 'string'], ['probability', 'number']], 'string', 'Flips each input bit with the specified constant probability between zero and one.'),
+  nativeFunction('HMAC', 'encryption-functions', [['mode', 'string'], ['message', 'string'], ['key', 'string']], 'string', 'Returns a binary keyed hash digest using the specified algorithm.'),
+  nativeFunction('icebergHash', 'hash-functions', [['value', 'any']], 'number', 'Returns the Iceberg-compatible 32-bit Murmur3 hash of a supported scalar value.'),
+  nativeFunction('xxHash64Spark', 'hash-functions', [['value', 'string']], 'number', 'Returns the Spark-compatible xxHash64 of a string.'),
+  nativeFunction('xxh3_128', 'hash-functions', [['values', 'any...']], 'number', 'Returns a 128-bit xxh3 hash of the input expressions.'),
   nativeFunction('cityHash64', 'hash-functions', [{name: 'values', type: 'any...'}], 'number', 'Computes a 64-bit CityHash.', {aliases: ['city_hash64']}),
   nativeFunction('farmFingerprint64', 'hash-functions', [{name: 'values', type: 'any...'}], 'number', 'Computes a stable 64-bit FarmHash fingerprint.', {aliases: ['farm_fingerprint64']}),
   nativeFunction('halfMD5', 'hash-functions', [{name: 'values', type: 'any...'}], 'number', 'Computes the first 8 bytes of an MD5 digest as an integer.', {aliases: ['half_md5']}),
@@ -1351,10 +1593,10 @@ export const clickHouseFunctions: FunctionDef[] = [
     description: trim(`
       length(s)
 
-      Returns the length of the string.
+      Returns string byte length, array element count, or native QBit dimension.
     `),
     url: `${click}/functions/string-functions#length`,
-    args: [{name: 's', type: 'string'}],
+    args: [{name: 's', type: ['string', 'array', 'sql native']}],
     returns: 'number',
   },
   {
@@ -1486,8 +1728,21 @@ export const clickHouseFunctions: FunctionDef[] = [
   },
 
   // ============================================================================
-  // Conditional and Null Functions
+  // Conditional, Comparison and Null Functions
   // ============================================================================
+  ...['notLike', 'notILike'].map(name => nativeFunction(name, 'string-search-functions', [['value', 'string'], ['pattern', 'string']], 'boolean', name == 'notLike' ? 'Tests that a string does not match a SQL LIKE pattern.' : 'Tests that a string does not match a SQL LIKE pattern, ignoring case.')),
+  nativeFunction('xor', 'logical-functions', [['first', ['number', 'boolean']], ['second', ['number', 'boolean']], ['rest', ['number...', 'boolean']]], 'boolean', 'Returns logical exclusive OR of numeric/boolean arguments.'),
+  ...[
+    ['globalIn', 'Tests membership in a tuple set distributed to remote servers.'],
+    ['globalNotIn', 'Tests non-membership in a tuple set distributed to remote servers.'], ['notIn', 'Tests non-membership in a native tuple set.'],
+  ].map(([name, summary]) => nativeFunction(name, 'in-functions', [['value', 'any'], ['set', 'record']], 'boolean', summary)),
+  ...[['equals', 'Tests equality.'], ['notEquals', 'Tests inequality.'], ['less', 'Tests whether the first value is less.'], ['lessOrEquals', 'Tests whether the first value is less or equal.'], ['greater', 'Tests whether the first value is greater.'], ['greaterOrEquals', 'Tests whether the first value is greater or equal.'], ['isDistinctFrom', 'Tests inequality, treating nulls as comparable.'], ['isNotDistinctFrom', 'Tests equality, treating nulls as comparable.']].map(([name, summary]) => nativeFunction(name, 'comparison-functions', [['first', 'any'], ['second', 'any']], 'boolean', summary)),
+  ...[['nullIn', 'Tests membership, treating nulls as comparable.'], ['notNullIn', 'Tests non-membership, treating nulls as comparable.'], ['globalNullIn', 'Tests membership, treating nulls as comparable and distributing the set.'], ['globalNotNullIn', 'Tests non-membership, treating nulls as comparable and distributing the set.']].map(([name, summary]) => nativeFunction(name, 'in-functions', [['value', 'any'], ['set', 'record']], 'boolean', summary)),
+  ...[['assumeNotNull', 'Removes native nullability; the result for null input is arbitrary.'], ['toNullable', 'Adds native nullability, preserving the coarse input type. Native restrictions on nullable compound types apply.']].map(([name, summary]) => nativeFunction(name, 'functions-for-nulls', [['value', 'T']], 'T', summary)),
+  ...[['isNull', 'Tests whether a value is null.'], ['isNotNull', 'Tests whether a value is non-null.'], ['isNullable', 'Tests whether the native type is nullable.']].map(([name, summary]) => nativeFunction(name, 'functions-for-nulls', [['value', 'any']], 'boolean', summary)),
+  nativeFunction('isZeroOrNull', 'functions-for-nulls', [['value', 'number']], 'boolean', 'Tests whether a numeric value is zero or null.'),
+  nativeFunction('firstNonDefault', 'functions-for-nulls', [['values', 'number...']], 'number', 'Returns the first non-default numeric value (25.9+). Other common-supertype forms require multi-argument result inference.'),
+  nativeFunction('clamp', 'conditional-functions', [['value', 'number'], ['min', 'number'], ['max', 'number']], 'number', 'Restricts a number to the supplied bounds. Non-numeric common-supertype forms are not exposed.'),
   {
     name: 'coalesce',
     metadata: 'selection',
@@ -1564,6 +1819,11 @@ export const clickHouseFunctions: FunctionDef[] = [
   // ============================================================================
   // Date and Time Functions
   // ============================================================================
+  nativeFunction('tumble', 'time-window-functions', [['time', 'timestamp'], ['interval', 'interval'], ['timezone', 'string?']], 'record', 'Returns a tumbling window tuple; interval must be positive. Tuple elements are Date or DateTime depending on interval kind.'),
+  nativeFunction('hop', 'time-window-functions', [['time', 'timestamp'], ['hop', 'interval'], ['window', 'interval'], ['timezone', 'string?']], 'record', 'Returns a hopping window tuple; intervals must be positive. Tuple elements are Date or DateTime depending on interval kind.'),
+  ...['tumbleStart', 'tumbleEnd', 'hopStart', 'hopEnd'].map(name => nativeFunction(name, 'time-window-functions', [['window', 'number']], 'timestamp', 'Converts a native UInt32 boundary to DateTime. Standalone DateTime is invalid. Tuple and interval-based overloads are omitted because their result may be Date or DateTime.')),
+  nativeFunction('timeSeriesRange', 'time-series-functions', [['start', 'timestamp'], ['end', 'timestamp'], ['step', 'number']], 'array<timestamp>', 'Returns a regular timestamp grid using a positive step in seconds.'),
+  nativeFunction('timeSeriesFromGrid', 'time-series-functions', [['start', 'timestamp'], ['end', 'timestamp'], ['step', 'number'], ['values', 'array']], 'array<record>', 'Pairs grid timestamps with values, skipping null values; grid length must match the values.'),
   ...dateArithmeticFunctions('add'),
   ...dateArithmeticFunctions('subtract'),
   {
@@ -1696,6 +1956,55 @@ export const clickHouseFunctions: FunctionDef[] = [
     aliases: ['to_string'],
   }),
   nativeFunction('toTypeName', 'other-functions', [{name: 'value', type: 'any'}], 'string', 'Returns the ClickHouse type name of a value.', {aliases: ['to_type_name']}),
+  // Generated date/time registry families. All timestamp precisions collapse to the timestamp type.
+  ...['YYYYMMDDToDate', 'YYYYMMDDToDate32', 'fromDaysSinceYearZero', 'fromDaysSinceYearZero32'].map(name => nativeFunction(name, 'date-time-functions', [['value', 'number']], 'date', 'Constructs a date from a numeric YYYYMMDD value or a count of days since year zero.')),
+  nativeFunction('YYYYMMDDhhmmssToDateTime', 'date-time-functions', [['value', 'number'], ['timezone', 'string?']], 'timestamp', 'Converts numeric YYYYMMDDhhmmss to a timestamp.'),
+  nativeFunction('YYYYMMDDhhmmssToDateTime64', 'date-time-functions', [['value', 'number'], ['precision', 'number?'], ['timezone', 'string?']], 'timestamp', 'Converts numeric YYYYMMDDhhmmss to a timestamp with optional fractional precision.'),
+  ...['makeDate', 'makeDate32'].map(name => nativeFunction(name, 'date-time-functions', [['year', 'number'], ['month_or_day_of_year', 'number'], ['day', 'number?']], 'date', 'Constructs a date from year and day-of-year, or year, month and day.')),
+  nativeFunction('makeDateTime', 'date-time-functions', [['year', 'number'], ['month', 'number'], ['day', 'number'], ['hour', 'number'], ['minute', 'number'], ['second', 'number'], ['timezone', 'string?']], 'timestamp', 'Constructs a timestamp from calendar and clock components.'),
+  nativeFunction('makeDateTime64', 'date-time-functions', [['year', 'number'], ['month', 'number'], ['day', 'number'], ['hour', 'number'], ['minute', 'number'], ['second', 'number'], ['fraction', 'number?'], ['precision', 'number?'], ['timezone', 'string?']], 'timestamp', 'Constructs a timestamp with optional fractional seconds and precision.'),
+  ...['now64', 'nowInBlock64'].map(name => nativeFunction(name, 'date-time-functions', [['scale', 'number?'], ['timezone', 'string?']], 'timestamp', name == 'now64' ? 'Returns the query-analysis timestamp with optional fractional precision.' : 'Returns the block-processing timestamp with optional fractional precision.')),
+  nativeFunction('nowInBlock', 'date-time-functions', [['timezone', 'string?']], 'timestamp', 'Returns the current timestamp at block processing time.'),
+  nativeFunction('UTCTimestamp', 'date-time-functions', [], 'timestamp', 'Returns the current UTC timestamp at query analysis time.'),
+  nativeFunction('localtime', 'date-time-functions', [], 'time', 'Returns the current time of day (26.7+).'),
+  nativeFunction('yesterday', 'date-time-functions', [], 'date', 'Returns the date of yesterday.'),
+  ...['timezone', 'serverTimezone'].map(name => nativeFunction(name, 'date-time-functions', [], 'string', name == 'timezone' ? 'Returns the session time zone name.' : 'Returns the server time zone name.')),
+  nativeFunction('timezoneOf', 'date-time-functions', [['datetime', 'timestamp']], 'string', 'Returns the timezone attached to a timestamp.'),
+  nativeFunction('timezoneOffset', 'date-time-functions', [['datetime', 'timestamp']], 'number', 'Returns the timestamp timezone offset from UTC, in seconds.'),
+  ...[
+    ['toTimezone', 'Changes the timezone annotation without changing the Unix timestamp.'],
+    ['toUTCTimestamp', 'Converts local wall-clock time in the named timezone to UTC.'], ['fromUTCTimestamp', 'Converts UTC to local wall-clock time in the named timezone.'],
+  ].map(([name, summary]) => nativeFunction(name, 'date-time-functions', [['datetime', 'timestamp'], ['timezone', 'string']], 'timestamp', summary)),
+  ...['dateDiff', 'age'].map(name => nativeFunction(name, 'date-time-functions', [['unit', 'string'], ['start', ['date', 'timestamp']], ['end', ['date', 'timestamp']], ['timezone', 'string?']], 'number', name == 'dateDiff' ? 'Counts unit boundaries between two temporal values.' : 'Counts complete units between two temporal values.')),
+  nativeFunction('timeDiff', 'date-time-functions', [['start', ['date', 'timestamp']], ['end', ['date', 'timestamp']]], 'number', 'Returns the temporal difference in seconds.'),
+  nativeFunction('dateName', 'date-time-functions', [['part', 'string'], ['datetime', ['date', 'timestamp']], ['timezone', 'string?']], 'string', 'Returns the requested date component as text.'),
+  nativeFunction('monthName', 'date-time-functions', [['datetime', ['date', 'timestamp']]], 'string', 'Returns the month name.'),
+  nativeFunction('formatDateTimeInJodaSyntax', 'date-time-functions', [['datetime', ['date', 'timestamp']], ['format', 'string'], ['timezone', 'string?']], 'string', 'Formats a temporal value using Joda pattern syntax.'),
+  nativeFunction('fromUnixTimestampInJodaSyntax', 'date-time-functions', [], 'timestamp', 'Converts a Unix timestamp, or formats it using Joda syntax when a format is supplied.', {overloads: [
+    {args: [['value', ['number', 'date', 'timestamp']]], returns: 'timestamp'},
+    {args: [['value', ['number', 'date', 'timestamp']], ['format', 'string'], ['timezone', 'string?']], returns: 'string'},
+  ]}),
+  ...['addDate', 'subDate'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', 'timestamp'], ['interval', 'interval']], 'timestamp', 'Adds or subtracts an interval. Only timestamp input is exposed: Date results can become timestamps depending on the interval unit.')),
+  ...['addTupleOfIntervals', 'subtractTupleOfIntervals'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', 'timestamp'], ['intervals', 'record']], 'timestamp', 'Applies a tuple of intervals to a timestamp. Date-input promotion requires interval-dependent result inference.')),
+  ...['addInterval', 'subtractInterval'].map(name => nativeFunction(name, 'date-time-functions', [['first', ['interval', 'record']], ['second', 'interval']], 'record', 'Combines intervals into a tuple, adding or subtracting matching units.')),
+  ...['changeDay', 'changeMonth', 'changeYear'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', ['date', 'timestamp']], ['value', 'number']], 'T', 'Replaces a calendar component, preserving the input temporal type.')),
+  ...['changeHour', 'changeMinute', 'changeSecond'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', ['date', 'timestamp']], ['value', 'number']], 'timestamp', 'Replaces a clock component, promoting Date inputs to timestamps.')),
+  ...['toDaysInMonth', 'toISOYear', 'toMonthNumSinceEpoch', 'toYearNumSinceEpoch', ...['Day', 'Hour', 'Minute', 'Month', 'Quarter', 'Second', 'Week', 'Year'].map(unit => `toRelative${unit}Num`)].map(name => nativeFunction(name, 'date-time-functions', [['datetime', ['date', 'timestamp']]], 'number', 'Returns the named calendar quantity or relative unit number. Relative epochs are implementation details.')),
+  ...['toDaysSinceYearZero', 'toISOWeek', 'toYYYYMM', 'toYYYYMMDD', 'toYYYYMMDDhhmmss'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', ['date', 'timestamp']], ['timezone', 'string?']], 'number', 'Returns the named numeric representation of a date or timestamp.')),
+  ...['toMicrosecond', 'toMillisecond', 'toNanosecond'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', 'timestamp']], 'number', 'Returns the fractional-second component of a timestamp. Microsecond and nanosecond extraction require DateTime64.')),
+  ...['toLastDayOfMonth', 'toMonday', 'toStartOfISOYear'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', ['date', 'timestamp']]], 'date', 'Returns the corresponding month-end, Monday, or ISO-year-start date.')),
+  nativeFunction('toLastDayOfWeek', 'date-time-functions', [['datetime', ['date', 'timestamp']], ['mode', 'number?'], ['timezone', 'string?']], 'date', 'Rounds up to the nearest week-ending date according to the requested mode.'),
+  nativeFunction('toYearWeek', 'date-time-functions', [['datetime', ['date', 'timestamp']], ['mode', 'number?'], ['timezone', 'string?']], 'number', 'Returns the combined year and week number.'),
+  nativeFunction('year', 'date-time-functions', [['datetime', ['date?', 'timestamp']]], 'number', 'Returns the year of a temporal value, or the current year when omitted.'),
+  ...['toStartOfHour', 'toStartOfFiveMinutes', 'toStartOfTenMinutes', 'toStartOfFifteenMinutes'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', 'timestamp']], 'timestamp', 'Rounds down to the corresponding clock boundary.')),
+  ...['toStartOfSecond', 'toStartOfMicrosecond', 'toStartOfMillisecond', 'toStartOfNanosecond', 'toTimeWithFixedDate', 'timeSlot'].map(name => nativeFunction(name, 'date-time-functions', [['datetime', 'timestamp'], ['timezone', 'string?']], 'timestamp', 'Truncates timestamp precision, extracts a fixed-date time, or rounds to a half-hour slot. Subsecond truncation requires DateTime64.')),
+  // Without an origin, month/year intervals return Date but day/hour intervals return DateTime.
+  // The origin overload always returns a timestamp; do not conflate its third argument with the timezone form.
+  nativeFunction('toStartOfInterval', 'date-time-functions', [['datetime', 'timestamp'], ['interval', 'interval'], ['origin', 'timestamp'], ['timezone', 'string?']], 'timestamp', 'Rounds a timestamp to an interval aligned to an explicit timestamp origin. The no-origin forms need interval-dependent result inference and are not exposed.'),
+  nativeFunction('timeSlots', 'date-time-functions', [['start', 'timestamp'], ['duration', ['number', 'timestamp']], ['size', ['number?', 'timestamp']]], 'array<timestamp>', 'Returns timestamp slots covering the requested interval.'),
+  ...['fromModifiedJulianDay', 'fromModifiedJulianDayOrNull'].map(name => nativeFunction(name, 'date-time-functions', [['day', 'number']], 'string', 'Converts a Modified Julian Day number to a date string, optionally returning null on failure.')),
+  ...['toModifiedJulianDay', 'toModifiedJulianDayOrNull'].map(name => nativeFunction(name, 'date-time-functions', [['date', 'string']], 'number', 'Converts a date string to a Modified Julian Day number, optionally returning null on failure.')),
+  nativeFunction('kqlDateTimeBinAt', 'arithmetic-functions', [['value', 'timestamp'], ['bin_size', 'interval'], ['fixed_point', 'timestamp']], 'timestamp', 'Rounds a DateTime64 to a timespan multiple counted from a DateTime64 fixed point (26.8+); Date and DateTime are rejected natively.'),
   nativeFunction('toUnixTimestamp', 'date-time-functions', [{name: 'value', type: ['string', 'date', 'timestamp']}, {name: 'timezone', type: 'string?'}], 'number', 'Converts a date or timestamp to Unix seconds.', {aliases: ['to_unix_timestamp']}),
   nativeFunction('toUnixTimestamp64Micro', 'type-conversion-functions', [{name: 'timestamp', type: 'timestamp'}], 'number', 'Converts a timestamp to Unix microseconds.', {aliases: ['to_unix_timestamp64_micro']}),
   nativeFunction('toUnixTimestamp64Milli', 'type-conversion-functions', [{name: 'timestamp', type: 'timestamp'}], 'number', 'Converts a timestamp to Unix milliseconds.', {aliases: ['to_unix_timestamp64_milli']}),
@@ -1970,3 +2279,10 @@ export const clickHouseFunctions: FunctionDef[] = [
     aliases: ['to_year'],
   },
 ]
+
+// Merge native runtime aliases for both compact and legacy definitions without replacing their existing gsql aliases.
+for (let [name, aliases] of Object.entries(clickHouseAliases)) {
+  for (let def of clickHouseFunctions.filter(def => (def.sqlName || def.name).toLowerCase() == name.toLowerCase())) {
+    def.aliases = [...new Set([...(def.aliases || []), ...aliases])]
+  }
+}
