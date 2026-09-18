@@ -119,7 +119,41 @@ describe('lang', () => {
     expect(parser.parse('select range(3)').toString())
       .toBe('Program(QueryStatement(QueryExpression(SimpleQuery(SelectClause(Kw(select),SelectItem(FunctionCall(FunctionName(Identifier),Number)))))))')
     analyze('select range(3)')
-    expect(getDiagnostics().map(d => d.message)).toEqual(['Unknown function: range'])
+    expect(getDiagnostics()).toEqual([])
+  })
+
+  it.each(['clickhouse', 'duckdb'] as const)('analyzes numeric range series in %s', dialect => {
+    setGlobalConfig({dialect, root: ''})
+    for (let call of ['range(30)', 'range(1, 30)', 'range(1, 30, 2)']) {
+      let [query] = analyze(`select n from (select 1) as x cross join unnest(${call}) as n`)
+      expect(getDiagnostics()).toEqual([])
+      expect(query.fields.map(field => [field.name, formatType(field.type)])).toEqual([['n', 'number']])
+    }
+    expect('select range()').toHaveDiagnostic(/Wrong number of arguments/)
+    expect('select range(1, 2, 3, 4)').toHaveDiagnostic(/Wrong number of arguments/)
+  })
+
+  it('executes numeric and temporal series with exclusive range and inclusive generate_series endpoints', async () => {
+    await expect('select n from (select 1) as x cross join unnest(range(3)) as n order by n').toReturnRows([0], [1], [2])
+    await expect('select n from (select 1) as x cross join unnest(range(1, 3)) as n order by n').toReturnRows([1], [2])
+    await expect('select n from (select 1) as x cross join unnest(range(1, 6, 2)) as n order by n').toReturnRows([1], [3], [5])
+    await expect('select n from (select 1) as x cross join unnest(generate_series(3)) as n order by n').toReturnRows([0], [1], [2], [3])
+    await expect('select n from (select 1) as x cross join unnest(generate_series(1, 3)) as n order by n').toReturnRows([1], [2], [3])
+    await expect('select n from (select 1) as x cross join unnest(generate_series(1, 5, 2)) as n order by n').toReturnRows([1], [3], [5])
+    let [query] = analyze('select n from (select 1) as x cross join unnest(generate_series(1, 3)) as n')
+    expect(getDiagnostics()).toEqual([])
+    expect(query.fields.map(field => [field.name, formatType(field.type)])).toEqual([['n', 'number']])
+
+    for (let [call, type, rows] of [
+      ["generate_series(date '2024-01-01', date '2024-01-03', interval 1 day)", 'date', ['2024-01-01T00:00:00.000Z', '2024-01-02T00:00:00.000Z', '2024-01-03T00:00:00.000Z']],
+      ["range(timestamp '2024-01-01 12:00:00', timestamp '2024-01-03 12:00:00', interval 1 day)", 'timestamp', ['2024-01-01T12:00:00.000Z', '2024-01-02T12:00:00.000Z']],
+    ] as const) {
+      let sql = `select d from (select 1) as x cross join unnest(${call}) as d order by d`
+      await expect(sql).toReturnRows(...rows.map(value => [value]))
+      let [query] = analyze(sql)
+      expect(getDiagnostics()).toEqual([])
+      expect(query.fields.map(field => [field.name, formatType(field.type)])).toEqual([['d', type]])
+    }
   })
 
   it.each(['duckdb', 'bigquery', 'snowflake', 'clickhouse', 'postgres'] as const)('quotes keyword CTEs, aliases and columns for %s', dialect => {

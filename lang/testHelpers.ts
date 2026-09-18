@@ -209,7 +209,8 @@ vitestExpect.extend({
 
     try {
       let reader = await conn.runAndReadAll(sql)
-      let actualRows: any[][] = reader.getRowObjects().map(r => {
+      // Convert temporal values to JS Dates so row comparisons serialize them as ISO strings.
+      let actualRows: any[][] = reader.getRowObjectsJS().map(r => {
         return Object.keys(r).map(k => (typeof r[k] === 'bigint' ? Number(r[k]) : r[k]))
       })
 
