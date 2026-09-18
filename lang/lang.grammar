@@ -379,11 +379,11 @@ WindowSpec {
 }
 
 WindowPartitionClause {
-  Kw<"partition"> Kw<"by"> expression ("," expression)* ","?
+  Kw<"partition"> Kw<"by"> expression ("," expression)* ","? ~rangeCall
 }
 
 WindowOrderByClause {
-  Kw<"order"> Kw<"by"> WindowOrderItem ("," WindowOrderItem)* ","?
+  Kw<"order"> Kw<"by"> WindowOrderItem ("," WindowOrderItem)* ","? ~rangeCall
 }
 
 WindowOrderItem {
@@ -444,8 +444,9 @@ FunctionCall {
   FunctionName "(" (expression ("," expression)* ","?)? ")"
 }
 
+// After window partition/order trailing commas, '(' distinguishes a range call from a RANGE frame.
 FunctionName {
-  Identifier | Kw<"row">
+  Identifier | Kw<"row"> | Kw<"left"> | Kw<"right"> | ~rangeCall Kw<"range">
 }
 
 literal {
