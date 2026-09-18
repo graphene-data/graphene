@@ -446,6 +446,14 @@ describe('lang', () => {
       .toRenderSql('select orders.id as id, users.name as name from orders as orders left join users as users on users.id=orders.user_id')
   })
 
+  it('resolves bare join references from the FROM table only', () => {
+    // `users` exists on both orders and the implicitly joined order_items.orders; the FROM table wins
+    expect('from orders select order_items.orders.id, users.name')
+      .toRenderSql('select order_items_orders.id as id, users.name as name from orders as orders left join order_items as order_items on order_items.order_id=orders.id left join orders as order_items_orders on order_items_orders.id=order_items.order_id left join users as users on users.id=orders.user_id')
+    expect('from order_items select orders.id, users.name').toHaveDiagnostic('Unknown join "users" on order_items')
+    expect('select users.name').toHaveDiagnostic('Could not find "users" on query')
+  })
+
   it('handles column naming when mutliple columns have the same name', () => {
     expect('from orders select users.id, order_items.id')
       .toRenderSql('select users.id as users_id, order_items.id as order_items_id from orders as orders left join users as users on users.id=orders.user_id left join order_items as order_items on order_items.order_id=orders.id')
@@ -1424,7 +1432,7 @@ describe('lang', () => {
       table t (oid int, join one users as usr on usr.id = oid);
       from t select users.name
     `)
-      .toHaveDiagnostic(/Could not find "users" on query/i)
+      .toHaveDiagnostic(/Unknown join "users" on t/i)
   })
 
   it('can create new tables from queries', () => {
