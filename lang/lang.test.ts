@@ -7,6 +7,7 @@ import {expect} from 'vitest'
 import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {setGlobalConfig} from './config.ts'
 import {GrapheneError, toSql} from './core.ts'
+import {parser} from './parser.js'
 import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
 import {formatType, parseWarehouseFieldType} from './types.ts'
 import {deindent, trimIndentation} from './util.ts'
@@ -83,7 +84,7 @@ describe('lang', () => {
   })
 
   it('imports all keywords as tokens', async () => {
-    // Every keyword used via Kw<"..."> in the grammar must be in the specializeIdentifier keyword map in tokens.js.
+    // Every keyword used via Kw/SoftKw in the grammar must be in the keyword map in tokens.js.
     // Without this, those keywords would only parse in lowercase (the inline spec_Identifier table is exact-match).
     // We have a test because it's easy to add keywords and forget to add them to tokens, causing the parsing to break if you use the uppercase version of a keyword
     let fs = await import('fs')
@@ -92,7 +93,119 @@ describe('lang', () => {
     let grammarKeywords = new Set([...grammar.matchAll(/Kw<"(\w+)">/g)].map(m => m[1]))
     let tokenKeywords = new Set([...tokens.matchAll(/^\s+(\w+):/gm)].map(m => m[1]))
     let missing = [...grammarKeywords].filter(k => !tokenKeywords.has(k))
-    expect(missing, 'Keywords in grammar but missing from tokens.js specializeIdentifier').toEqual([])
+    expect(missing, 'Keywords in grammar but missing from tokens.js').toEqual([])
+    // The external case-insensitive tokenizer must agree with the grammar's hard/soft split.
+    let {specializeIdentifier, extendIdentifier, isKeyword} = await import('./tokens.js')
+    expect(isKeyword('constructor')).toBe(false)
+    for (let [, isSoft, keyword] of grammar.matchAll(/\b(Soft)?Kw<"(\w+)">/g)) {
+      expect(isKeyword(keyword.toUpperCase()), keyword).toBe(true)
+      let hard = specializeIdentifier(keyword.toUpperCase())
+      let soft = extendIdentifier(keyword.toUpperCase())
+      expect(hard >= 0, keyword).toBe(!isSoft)
+      expect(soft >= 0, keyword).toBe(!!isSoft)
+    }
+  })
+
+  it('accepts soft keywords as identifiers', () => {
+    updateFile('table t (x int, y int, date date, rows int, timestamp timestamp, interval interval, count int)', 'keywords.gsql')
+    expect('select x as date, y as rows from t')
+      .toRenderSql('select t.x as "date", t.y as "rows" from t as t')
+    expect('select date, rows, timestamp, interval, count from t')
+      .toRenderSql('select t."date" as "date", t."rows" as "rows", t."timestamp" as "timestamp", t."interval" as "interval", t."count" as "count" from t as t')
+    expect('SELECT x AS DATE, y AS ROWS FROM t')
+      .toRenderSql('SELECT t.x as "DATE", t.y as "ROWS" FROM t as t', {preserveCase: true})
+    expect('select one.col_0 from (select 1) one')
+      .toRenderSql('select "one".col_0 as col_0 from ( select 1 as col_0 ) as "one"')
+    expect(parser.parse('select range(3)').toString())
+      .toBe('Program(QueryStatement(QueryExpression(SimpleQuery(SelectClause(Kw(select),SelectItem(FunctionCall(FunctionName(Identifier),Number)))))))')
+    analyze('select range(3)')
+    expect(getDiagnostics()).toEqual([])
+  })
+
+  it.each(['clickhouse', 'duckdb'] as const)('analyzes numeric range series in %s', dialect => {
+    setGlobalConfig({dialect, root: ''})
+    for (let call of ['range(30)', 'range(1, 30)', 'range(1, 30, 2)']) {
+      let [query] = analyze(`select n from (select 1) as x cross join unnest(${call}) as n`)
+      expect(getDiagnostics()).toEqual([])
+      expect(query.fields.map(field => [field.name, formatType(field.type)])).toEqual([['n', 'number']])
+    }
+    expect('select range()').toHaveDiagnostic(/Wrong number of arguments/)
+    expect('select range(1, 2, 3, 4)').toHaveDiagnostic(/Wrong number of arguments/)
+  })
+
+  it('executes numeric and temporal series with exclusive range and inclusive generate_series endpoints', async () => {
+    await expect('select n from (select 1) as x cross join unnest(range(3)) as n order by n').toReturnRows([0], [1], [2])
+    await expect('select n from (select 1) as x cross join unnest(range(1, 3)) as n order by n').toReturnRows([1], [2])
+    await expect('select n from (select 1) as x cross join unnest(range(1, 6, 2)) as n order by n').toReturnRows([1], [3], [5])
+    await expect('select n from (select 1) as x cross join unnest(generate_series(3)) as n order by n').toReturnRows([0], [1], [2], [3])
+    await expect('select n from (select 1) as x cross join unnest(generate_series(1, 3)) as n order by n').toReturnRows([1], [2], [3])
+    await expect('select n from (select 1) as x cross join unnest(generate_series(1, 5, 2)) as n order by n').toReturnRows([1], [3], [5])
+    let [query] = analyze('select n from (select 1) as x cross join unnest(generate_series(1, 3)) as n')
+    expect(getDiagnostics()).toEqual([])
+    expect(query.fields.map(field => [field.name, formatType(field.type)])).toEqual([['n', 'number']])
+
+    for (let [call, type, rows] of [
+      ["generate_series(date '2024-01-01', date '2024-01-03', interval 1 day)", 'date', ['2024-01-01T00:00:00.000Z', '2024-01-02T00:00:00.000Z', '2024-01-03T00:00:00.000Z']],
+      ["range(timestamp '2024-01-01 12:00:00', timestamp '2024-01-03 12:00:00', interval 1 day)", 'timestamp', ['2024-01-01T12:00:00.000Z', '2024-01-02T12:00:00.000Z']],
+    ] as const) {
+      let sql = `select d from (select 1) as x cross join unnest(${call}) as d order by d`
+      await expect(sql).toReturnRows(...rows.map(value => [value]))
+      let [query] = analyze(sql)
+      expect(getDiagnostics()).toEqual([])
+      expect(query.fields.map(field => [field.name, formatType(field.type)])).toEqual([['d', type]])
+    }
+  })
+
+  it.each(['duckdb', 'bigquery', 'snowflake', 'clickhouse', 'postgres'] as const)('quotes keyword CTEs, aliases and columns for %s', dialect => {
+    setGlobalConfig({dialect, root: ''})
+    let query = `
+      table full as (from users select id as date)
+      table rows as (from full select *)
+      from full full join rows on full.date = rows.date
+      select full.date as date, rows.date as rows order by rows desc
+    `
+    let sql = `WITH "full" as ( SELECT users.id as "date" FROM users as users ),
+      "rows" as ( WITH "full" as ( SELECT users.id as "date" FROM users as users ) SELECT "full"."date" as "date" FROM "full" as "full" )
+      SELECT "full"."date" as "date", "rows"."date" as "rows"
+      FROM "full" as "full" FULL JOIN "rows" as "rows" ON "full"."date"="rows"."date" ORDER BY 2 desc NULLS LAST`
+    if (dialect == 'bigquery') sql = sql.replaceAll('"', '`').replaceAll('FROM users', 'FROM `users`')
+    if (dialect == 'snowflake') sql = sql.replaceAll('FROM users', 'FROM USERS').replace(/"\w+"/g, name => name.toUpperCase())
+    expect(query).toRenderSql(sql, {preserveCase: true})
+
+    let quote = dialect == 'bigquery' ? '`' : '"'
+    let full = dialect == 'snowflake' ? 'FULL' : 'full'
+    let date = dialect == 'snowflake' ? 'DATE' : 'date'
+    expect('with full as (select 1 as date) from full select date')
+      .toRenderSql(`WITH ${quote}${full}${quote} as ( SELECT 1 as ${quote}${date}${quote} ) SELECT ${quote}${full}${quote}.${quote}${date}${quote} as ${quote}${date}${quote} FROM ${quote}${full}${quote} as ${quote}${full}${quote}`, {preserveCase: true})
+  })
+
+  it.each(['snowflake', 'postgres'] as const)('preserves keyword resolution and explicit alias case for %s', dialect => {
+    setGlobalConfig({dialect, root: ''})
+    updateFile('table Full (DaTe int)', 'keywords.gsql')
+    let table = dialect == 'snowflake' ? 'FULL' : 'full'
+    let column = dialect == 'snowflake' ? 'DATE' : 'date'
+    let alias = dialect == 'snowflake' ? 'ROWS' : 'rows'
+    expect('from Full select DaTe as RoWs, DaTe as "DaTe"')
+      .toRenderSql(`SELECT "${table}"."${column}" as "${alias}", "${table}"."${column}" as "DaTe" FROM "${table}" as "${table}"`, {preserveCase: true})
+  })
+
+  it('quotes keyword table paths and cross join aliases', () => {
+    updateFile('table full (date int)', 'keywords.gsql')
+    expect('from full cross join full as rows select full.date')
+      .toRenderSql('SELECT "full"."date" as "date" FROM "full" as "full" CROSS JOIN "full" as "rows"')
+  })
+
+  it('prefers soft keyword syntax over identifier alternatives', () => {
+    expect("select date '2024-01-01', interval 3 day")
+      .toRenderSql("select DATE '2024-01-01' as col_0, INTERVAL 3 DAY as col_1")
+    expect('from orders select sum(amount) over (order by id rows between 1 preceding and current row) as total')
+      .toRenderSql('select sum(orders.amount) OVER (ORDER BY orders.id ASC ROWS BETWEEN 1 PRECEDING AND CURRENT ROW) as total from orders as orders')
+    expect('from users full join orders on users.id = orders.user_id select users.id')
+      .toRenderSql('select users.id as id from users as users full join orders as orders on users.id=orders.user_id')
+    // The shared model has both join one and join many, plus count() measures.
+    analyze()
+    expect(getDiagnostics()).toEqual([])
+    expect('from orders select count()').toRenderSql('select count(1) as "count" from orders as orders')
   })
 
   it('handles basic select query', async () => {
@@ -333,6 +446,14 @@ describe('lang', () => {
       .toRenderSql('select orders.id as id, users.name as name from orders as orders left join users as users on users.id=orders.user_id')
   })
 
+  it('resolves bare join references from the FROM table only', () => {
+    // `users` exists on both orders and the implicitly joined order_items.orders; the FROM table wins
+    expect('from orders select order_items.orders.id, users.name')
+      .toRenderSql('select order_items_orders.id as id, users.name as name from orders as orders left join order_items as order_items on order_items.order_id=orders.id left join orders as order_items_orders on order_items_orders.id=order_items.order_id left join users as users on users.id=orders.user_id')
+    expect('from order_items select orders.id, users.name').toHaveDiagnostic('Unknown join "users" on order_items')
+    expect('select users.name').toHaveDiagnostic('Could not find "users" on query')
+  })
+
   it('handles column naming when mutliple columns have the same name', () => {
     expect('from orders select users.id, order_items.id')
       .toRenderSql('select users.id as users_id, order_items.id as order_items_id from orders as orders left join users as users on users.id=orders.user_id left join order_items as order_items on order_items.order_id=orders.id')
@@ -410,25 +531,28 @@ describe('lang', () => {
       .toReturnRows([1, 'beta'], [1, 'vip'])
   })
 
-  it('renders unnest per dialect', () => {
+  it('renders unnest with keyword aliases per dialect', async () => {
     let q = `
       table events (id int, tags array<string>)
       from events
-      cross join unnest(tags) as tag
-      select id, tag
+      cross join unnest(tags) as rows
+      select id, rows order by id, rows
     `
+
+    expect(q).toRenderSql('SELECT events.id as id, "rows" as "rows" FROM events as events CROSS JOIN unnest(events.tags) AS "rows"("rows") ORDER BY 1 asc NULLS LAST,2 asc NULLS LAST')
+    await expect(q).toReturnRows([1, 'beta'], [1, 'vip'])
 
     setGlobalConfig({root: '', bigquery: {}})
     expect(q)
-      .toRenderSql('select events.id as id, tag as tag from `events` as events cross join unnest(events.tags) as tag')
+      .toRenderSql('select events.id as id, `rows` as `rows` from `events` as events cross join unnest(events.tags) as `rows` ORDER BY 1 asc NULLS LAST,2 asc NULLS LAST')
 
     setGlobalConfig({dialect: 'snowflake', root: ''})
     expect(q)
-      .toRenderSql('select events.id as id, tag.value as tag from EVENTS as events , TABLE(FLATTEN(INPUT => events.tags)) AS tag')
+      .toRenderSql('SELECT events.id as id, "ROWS".value as "ROWS" FROM EVENTS as events , TABLE(FLATTEN(INPUT => events.tags)) AS "ROWS" ORDER BY 1 asc NULLS LAST,2 asc NULLS LAST', {preserveCase: true})
 
     setGlobalConfig({dialect: 'clickhouse', root: ''})
     expect(q)
-      .toRenderSql('SELECT events.id as id, tag as tag FROM events as events ARRAY JOIN events.tags AS tag')
+      .toRenderSql('SELECT events.id as id, "rows" as "rows" FROM events as events ARRAY JOIN events.tags AS "rows" ORDER BY 1 asc NULLS LAST,2 asc NULLS LAST')
   })
 
   it('rejects unsupported unnest join forms', () => {
@@ -789,12 +913,12 @@ describe('lang', () => {
 
   it('supports count(distinct)', () => {
     expect('from users select count(distinct name)')
-      .toRenderSql('select count(distinct users.name) as count from users as users')
+      .toRenderSql('select count(distinct users.name) as "count" from users as users')
   })
 
   it('supports count without implicit distinct', () => {
     expect('from users select count(name)')
-      .toRenderSql('select count(users.name) as count from users as users')
+      .toRenderSql('select count(users.name) as "count" from users as users')
   })
 
   it('adds groupBy to select if needed', () => {
@@ -804,7 +928,7 @@ describe('lang', () => {
 
   it('doesnt duplicate groupBys', () => {
     expect('from users select name, count(orders.id) group by name')
-      .toRenderSql('select users.name as name, count(orders.id) as count from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last')
+      .toRenderSql('select users.name as name, count(orders.id) as "count" from users as users left join orders as orders on orders.user_id=users.id group by 1 order by 2 desc nulls last')
   })
 
   it('group by can refer to an alias', () => {
@@ -839,9 +963,68 @@ describe('lang', () => {
       .toRenderSql('select users.name as name, users.email as email from users as users order by 2 asc nulls last,1 desc nulls last')
   })
 
+  it('order by accepts qualified and non-selected columns', async () => {
+    expect('from users as t select name order by t.id')
+      .toRenderSql('select t.name as name from users as t order by t.id asc nulls last')
+    expect('from users select name order by created_at')
+      .toRenderSql('select users.name as name from users as users order by users.created_at asc nulls last')
+    await expect('from users as t select name order by t.id desc').toReturnRows(['Bob'], ['Alice'])
+  })
+
+  it('order by accepts arithmetic and aggregate expressions', () => {
+    expect('from orders select id order by amount - user_id desc')
+      .toRenderSql('select orders.id as id from orders as orders order by orders.amount-orders.user_id desc nulls last')
+    expect('from orders select user_id, sum(amount) as total order by sum(amount) desc')
+      .toRenderSql('select orders.user_id as user_id, sum(orders.amount) as total from orders as orders group by 1 order by sum(orders.amount) desc nulls last')
+    expect('from users select name order by 1 + 2')
+      .toRenderSql('select users.name as name from users as users order by 1+2 asc nulls last')
+  })
+
+  it('order by accepts case expressions and scalar subqueries', () => {
+    expect('from users select name order by case when age > 30 then 0 else 1 end')
+      .toRenderSql('select users.name as name from users as users order by case WHEN (users.age>30) THEN 0 ELSE 1 END asc nulls last')
+    expect('from users select name order by (select 1)')
+      .toRenderSql('select users.name as name from users as users order by (select 1 as col_0) asc nulls last')
+  })
+
+  it('order by positions work with implicit select star', () => {
+    expect('from orders order by 2')
+      .toRenderSql("select orders.id as id, orders.user_id as user_id, orders.amount as amount, orders.status as status, orders.status='completed' as completed from orders as orders order by 2 asc nulls last")
+  })
+
+  it('order by aliases shadow source columns', () => {
+    expect('from users select name as age order by age')
+      .toRenderSql('select users.name as age from users as users order by 1 asc nulls last')
+    expect('from users select name as "age" order by "age"')
+      .toRenderSql('select users.name as "age" from users as users order by 1 asc nulls last')
+  })
+
+  it('order by quoted numeric aliases are not positions', () => {
+    expect('from users select name as "2" order by "2"')
+      .toRenderSql('select users.name as "2" from users as users order by 1 asc nulls last')
+  })
+
+  it('order by expressions introduce declared joins', () => {
+    updateFile('table carriers (code text, name text) table flights (carrier text, join one carriers as airline on carrier = airline.code)', 'flights.gsql')
+    expect('from flights select carrier order by airline.name')
+      .toRenderSql('select flights.carrier as carrier from flights as flights left join carriers as airline on flights.carrier=airline.code order by airline.name asc nulls last')
+  })
+
+  it.each(['0', '3', '1.5'])('order by invalid position %s produces diagnostic', position => {
+    expect(`from users select name, email order by ${position}`)
+      .toHaveDiagnostic(`No field at index ${position}`)
+  })
+
+  it('order by set operations only accepts output aliases and positions', () => {
+    expect('select 2 as id union select 1 as id order by 1')
+      .toRenderSql('select 2 as id union select 1 as id order by 1 asc nulls last')
+    expect('select 2 as id union select 1 as id order by id + 1')
+      .toHaveDiagnostic('ORDER BY in a set operation must reference an output column or position')
+  })
+
   it('order by nonexistent field produces diagnostic', () => {
     expect('from users select name order by nonexistent')
-      .toHaveDiagnostic(/Unknown field in ORDER BY: nonexistent/i)
+      .toHaveDiagnostic('Unknown field "nonexistent" on users')
   })
 
   it('supports limit clause', async () => {
@@ -911,6 +1094,15 @@ describe('lang', () => {
   it('reports syntax diagnostics on invalid query and still analyzes others', () => {
     expect('from users select id = >>;')
       .toHaveDiagnostic(/syntax error/i)
+  })
+
+  it.each(['target', 'workspace'])('skips malformed query statements but analyzes valid siblings (%s analysis)', mode => {
+    let contents = 'from users select missing where;\nfrom users select name;'
+    updateFile(contents, 'input')
+    let queries = analyze(mode == 'target' ? contents : undefined)
+
+    expect(getDiagnostics().map(diagnostic => diagnostic.message)).toEqual(['Syntax error'])
+    expect(queries.map(query => query.sql)).toEqual(['SELECT users.name as name FROM users as users'])
   })
 
   it('reports syntax diagnostics on invalid table and still registers table name', () => {
@@ -1240,7 +1432,7 @@ describe('lang', () => {
       table t (oid int, join one users as usr on usr.id = oid);
       from t select users.name
     `)
-      .toHaveDiagnostic(/Could not find "users" on query/i)
+      .toHaveDiagnostic(/Unknown join "users" on t/i)
   })
 
   it('can create new tables from queries', () => {
@@ -1251,7 +1443,7 @@ describe('lang', () => {
 
   it('can correctly count through a join', () => {
     expect('from orders select count(users.id)')
-      .toRenderSql('select count(users.id) as count from orders as orders left join users as users on users.id=orders.user_id')
+      .toRenderSql('select count(users.id) as "count" from orders as orders left join users as users on users.id=orders.user_id')
   })
 
   it('handles min/max through a join', () => {
@@ -1525,7 +1717,7 @@ describe('lang', () => {
       .toRenderSql('select users.id as id, users.name as name from users as users')
 
     expect('from users select count() group by name,')
-      .toRenderSql('select users.name as name, count(1) as count from users as users group by 1 order by 2 desc nulls last')
+      .toRenderSql('select users.name as name, count(1) as "count" from users as users group by 1 order by 2 desc nulls last')
 
     expect('from users select name order by name asc,')
       .toRenderSql('select users.name as name from users as users order by 1 asc nulls last')
@@ -2890,6 +3082,24 @@ describe('lang', () => {
       .toRenderSql('with test as ( select users.id as id, users.name as name, users.email as email, users.created_at as created_at, users.age as age from users as users where users.age>20 ) select test.name as name, avg(test.age) as col_1 from test as test group by 1 order by 2 desc nulls last')
   })
 
+  it('supports markdown query blocks named full and rows', () => {
+    let queries = analyze(`
+      \`\`\`gsql full
+        from users select name, age
+      \`\`\`
+      \`\`\`gsql rows
+        from full
+      \`\`\`
+      <BarChart data="full" x="name" y="age" />
+      <BarChart data="rows" x="name" y="age" />
+    `, 'md')
+    expect(getDiagnostics()).toEqual([])
+    expect(queries.map(q => toSql(q).replace(/\s+/g, ' ').trim().toLowerCase())).toEqual([
+      'with "full" as ( select users.name as name, users.age as age from users as users ) select "full".name as name, "full".age as age from "full" as "full"',
+      'with "rows" as ( with "full" as ( select users.name as name, users.age as age from users as users ) select "full".name as name, "full".age as age from "full" as "full" ) select "rows".name as name, "rows".age as age from "rows" as "rows"',
+    ])
+  })
+
   it('snowflake named markdown queries preserve lowercase aliases in component references', () => {
     setGlobalConfig({dialect: 'snowflake', root: ''})
     expect(`
@@ -3049,7 +3259,7 @@ describe('lang', () => {
       'cycle.gsql',
     )
     expect('from alpha select count(*)')
-      .toRenderSql('select count(1) as count from alpha as alpha')
+      .toRenderSql('select count(1) as "count" from alpha as alpha')
     expect('from alpha select avg_num')
       .toRenderSql('select (avg(beta.num)) as avg_num from alpha as alpha left join beta as beta on beta.alpha_id=alpha.id')
     // expect('from beta select alpha.avg_num').toRenderSql('')
@@ -3471,7 +3681,7 @@ describe('lang', () => {
   })
 
   it('reports an error when a CTE has no outer query', () => {
-    expect('with high_value as (from orders select id)').toHaveDiagnostic('Expected query after WITH clause')
+    expect('with high_value as (from orders select id)').toHaveDiagnostic('Syntax error')
     expect(getDiagnostics()[0]).toBeInstanceOf(GrapheneError)
   })
 

@@ -1,3 +1,4 @@
+// Keyword classification shared by the parser and SQL identifier emission.
 // Import token IDs from the generated parser
 import {
   select,
@@ -134,7 +135,22 @@ const keywords = {
   unbounded: unbounded,
 }
 
+// Hard keywords (grammar `Kw`) are always keywords. Everything else in `keywords` is a soft keyword (grammar `SoftKw`)
+// that may also be an identifier. lang.test.ts checks this list matches the grammar's Kw/SoftKw usage.
+const reserved = new Set('select from where group by order join on and or not as in is like ilike between case when then else end union intersect except distinct with limit asc desc true false null unnest exists having'.split(' '))
+
+// Include both hard and soft keywords, independent of identifier casing.
+export function isKeyword(name) {
+  return Object.hasOwn(keywords, name.toLowerCase())
+}
+
 export function specializeIdentifier(value) {
   let lower = value.toLowerCase()
-  return keywords[lower] || -1
+  return reserved.has(lower) ? keywords[lower] : -1
+}
+
+// Soft keywords: the parser considers both the keyword and Identifier readings.
+export function extendIdentifier(value) {
+  let lower = value.toLowerCase()
+  return reserved.has(lower) ? -1 : keywords[lower] || -1
 }

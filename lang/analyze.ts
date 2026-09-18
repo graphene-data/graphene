@@ -1,3 +1,5 @@
+// Resolve GSQL models and queries into typed expressions and warehouse SQL.
+// Keep logical identifier names intact; apply dialect quoting only when emitting SQL.
 import {type SyntaxNode, type SyntaxNodeRef} from '@lezer/common'
 
 import {
@@ -18,6 +20,7 @@ import {analyzeBareFunction, analyzeFunction} from './functions.ts'
 import {parseMarkdown} from './markdown.ts'
 import {extractLeadingMetadataDetails, validateMetadataEntries} from './metadata.ts'
 import {parser} from './parser.js'
+import {isKeyword} from './tokens.js'
 import {parseTemporalLiteral, parseIntervalLiteral, parseIntervalUnit, renderTemporalArithmetic, renderStandaloneInterval} from './temporal.ts'
 import {inferTimeOrdinal} from './temporalMetadata.ts'
 import {
@@ -72,6 +75,14 @@ function lezerDialect(dialect: string) {
   return 'doubleQuotedIdentifier'
 }
 
+function hasSyntaxError(node: SyntaxNode) {
+  let found = false
+  node.cursor().iterate(child => {
+    if (child.type.isError) found = true
+  })
+  return found
+}
+
 export interface Analyzer {
   config: AnalysisConfig
   analyzeExpr(node: SyntaxNode, scope: Scope): Expr
@@ -104,18 +115,15 @@ class AnalysisSession implements Analyzer {
     })
     this.files.forEach(file => this.applyExtends(file))
 
-    if (targetPath) {
-      let target = this.fileForPath(targetPath)
-      if (!target) return {files: this.files, diagnostics: this.diagnostics}
-      target.tables.forEach(table => this.analyzeTableFully(table))
-      let nodes = target.tree!.topNode.getChildren('QueryStatement') || []
-      target.queries = nodes.map(node => this.analyzeQuery(node)).filter((query): query is Query => !!query)
-      return {files: this.files, diagnostics: this.diagnostics}
-    }
+    // The target may be absent from the workspace (e.g. cli run on an md file), in which case only declarations are analyzed
+    let files = targetPath ? this.files.filter(file => file.path == targetPath) : this.files
 
-    this.files.flatMap(file => file.tables).forEach(table => this.analyzeTableFully(table))
-    this.files.forEach(file => {
-      let nodes = file.tree!.topNode.getChildren('QueryStatement') || []
+    // first, analyze all the tables so they exist for queries to reference them
+    files.flatMap(file => file.tables).forEach(table => this.analyzeTableFully(table))
+
+    files.forEach(file => {
+      // don't try to semantically analyze queries with syntax errors. They'll throw misleading errors
+      let nodes = file.tree!.topNode.getChildren('QueryStatement').filter(node => !hasSyntaxError(node))
       file.queries = nodes.map(node => this.analyzeQuery(node)).filter((query): query is Query => !!query)
     })
 
@@ -359,7 +367,7 @@ class AnalysisSession implements Analyzer {
       } else {
         this.addQueryField(query, {
           name: outName,
-          sql: `${alias}.${col.name}`,
+          sql: `${this.quoteIdent(alias)}.${this.quoteIdent(col.name)}`,
           type: col.type,
           metadata: col.metadata,
           fanout: normalizeExprFanout({path: scope.fanoutPath}),
@@ -559,9 +567,6 @@ class AnalysisSession implements Analyzer {
       query.groupBy = nonAggFields.map(field => field.name)
     }
 
-    // ORDER BY
-    let {orderBy, limit} = this.analyzeOrderAndLimit(queryNode, query)
-
     // Implicit `select *` if nothing selected (only when we have a base table)
     let baseJoin = query.joins.find(join => join.source == 'from')
     if (query.fields.length == 0 && baseJoin?.table) {
@@ -569,11 +574,14 @@ class AnalysisSession implements Analyzer {
       this.expandColumns(hasAdHoc ? null : baseJoin.table, baseJoin.alias, query, scope)
     }
 
+    // ORDER BY needs the complete output list, including an implicit SELECT *.
+    let {orderBy, limit} = this.analyzeOrderAndLimit(queryNode, query, scope)
+
     // Default ORDER BY for aggregate queries
     if (!opts.suppressImplicitOrderBy && orderBy.length == 0 && query.groupBy.length > 0) {
       let firstAggIdx = query.fields.findIndex(field => field.isAgg)
-      if (firstAggIdx >= 0) orderBy.push({idx: firstAggIdx + 1, desc: true})
-      else orderBy.push({idx: 1, desc: false}) // SELECT DISTINCT
+      if (firstAggIdx >= 0) orderBy.push({sql: String(firstAggIdx + 1), desc: true})
+      else orderBy.push({sql: '1', desc: false}) // SELECT DISTINCT
     }
 
     query.orderBy = orderBy
@@ -638,17 +646,28 @@ class AnalysisSession implements Analyzer {
     }
   }
 
-  private analyzeOrderAndLimit(queryNode: SyntaxNode, query: Query) {
+  // Resolve output positions and aliases first, then expressions in the query's scope.
+  // Set operations have no input scope, so they can only order by their output fields.
+  private analyzeOrderAndLimit(queryNode: SyntaxNode, query: Query, scope?: Scope) {
     let orderBys = queryNode.getChild('OrderByClause')?.getChildren('OrderItem') || []
-    let orderBy: {idx: number; desc: boolean}[] = []
+    let orderBy: Query['orderBy'] = []
     for (let orderItem of orderBys) {
-      let fieldNode = orderItem.getChild('Identifier') || orderItem.getChild('QuotedIdentifier') || orderItem.getChild('Number')
-      let fieldRef = txt(fieldNode)
-      if (orderItem.getChild('QuotedIdentifier')) fieldRef = fieldRef.slice(1, -1)
+      let exprNode = orderItem.getChild('Expression')!
       let desc = txt(orderItem.getChild('Kw')).toLowerCase() == 'desc'
-      let idx = Number(fieldRef) || query.fields.findIndex(field => field.name == fieldRef) + 1
-      if (idx > 0) orderBy.push({idx, desc})
-      else if (fieldRef && isNaN(Number(fieldRef))) this.diag(orderItem, `Unknown field in ORDER BY: ${fieldRef}`)
+      if (exprNode.name == 'Number') {
+        let idx = Number(txt(exprNode))
+        if (!Number.isInteger(idx) || idx < 1 || idx > query.fields.length) this.diag(orderItem, 'No field at index ' + txt(exprNode))
+        else orderBy.push({sql: String(idx), desc})
+        continue
+      }
+
+      // Only a bare reference can name an output alias; qualified refs remain expressions.
+      let fieldNode = exprNode.name == 'Ref' && !exprNode.firstChild?.nextSibling ? exprNode.firstChild : null
+      let fieldRef = fieldNode?.name == 'QuotedIdentifier' ? txt(fieldNode).slice(1, -1) : txt(fieldNode)
+      let idx = fieldNode ? query.fields.findIndex(field => field.name == fieldRef) + 1 : 0
+      if (idx > 0) orderBy.push({sql: String(idx), desc})
+      else if (scope) orderBy.push({sql: this.analyzeExpr(exprNode, scope).sql, desc})
+      else this.diag(orderItem, 'ORDER BY in a set operation must reference an output column or position')
     }
 
     let limitNodes = queryNode.getChild('LimitClause')?.getChildren('Number') || []
@@ -666,34 +685,43 @@ class AnalysisSession implements Analyzer {
     return {node, name: quoted ? raw.slice(1, -1) : raw, quoted}
   }
 
+  // Quote keywords so they mean what the unquoted spelling would have meant.
+  // Explicitly user-quoted aliases keep their exact case instead of folding.
+  private quoteIdent(name: string, quoted = false): string {
+    if (!quoted && !isKeyword(name)) return name
+    if (!quoted && this.config.dialect == 'snowflake') name = name.toUpperCase()
+    if (!quoted && this.config.dialect == 'postgres') name = name.toLowerCase()
+    return this.config.dialect == 'bigquery' ? `\`${name}\`` : `"${name}"`
+  }
+
   private formatSelectAlias(field: QueryField) {
-    if (!field.quotedAlias) return field.name
-    return this.config.dialect == 'bigquery' ? `\`${field.name}\`` : `"${field.name}"`
+    return this.quoteIdent(field.name, field.quotedAlias)
   }
 
   // Assemble query parts into final SQL
   // Format a table path for the current dialect
   private formatTablePath(path: string): string {
     if (this.config.dialect === 'bigquery') return `\`${path}\``
-    if (this.config.dialect === 'snowflake') return path.toUpperCase()
-    return path
+    if (this.config.dialect === 'snowflake') path = path.toUpperCase()
+    return path.split('.').map(part => this.quoteIdent(part)).join('.')
   }
 
   private renderUnnestValueSql(alias: string): string {
-    return this.config.dialect == 'snowflake' ? `${alias}.value` : alias
+    return this.config.dialect == 'snowflake' ? `${this.quoteIdent(alias)}.value` : this.quoteIdent(alias)
   }
 
   private renderUnnestJoinClause(join: QueryJoin): string {
     if (!join.unnestExpr || !join.joinType) return ''
     let exprSql = join.unnestExpr.sql
-    if (this.config.dialect == 'bigquery') return `CROSS JOIN UNNEST(${exprSql}) AS ${join.alias}`
-    if (this.config.dialect == 'clickhouse') return `ARRAY JOIN ${exprSql} AS ${join.alias}`
-    if (this.config.dialect == 'snowflake') return `, TABLE(FLATTEN(INPUT => ${exprSql})) AS ${join.alias}`
-    return `CROSS JOIN unnest(${exprSql}) AS ${join.alias}(${join.alias})`
+    let alias = this.quoteIdent(join.alias)
+    if (this.config.dialect == 'bigquery') return `CROSS JOIN UNNEST(${exprSql}) AS ${alias}`
+    if (this.config.dialect == 'clickhouse') return `ARRAY JOIN ${exprSql} AS ${alias}`
+    if (this.config.dialect == 'snowflake') return `, TABLE(FLATTEN(INPUT => ${exprSql})) AS ${alias}`
+    return `CROSS JOIN unnest(${exprSql}) AS ${alias}(${alias})`
   }
 
   private buildSql(query: Query, cteMap: Map<string, CteTable>): string {
-    let ctes: string[] = [...cteMap.values()].map(cte => `${cte.name} as ( ${cte.query.sql} )`)
+    let ctes: string[] = [...cteMap.values()].map(cte => `${this.quoteIdent(cte.name)} as ( ${cte.query.sql} )`)
 
     if (query.setOp) {
       let branches = (query.branches || []).map(branch => {
@@ -703,7 +731,7 @@ class AnalysisSession implements Analyzer {
       let op = query.setOp.toUpperCase()
       let sql = branches.join(` ${op} `)
       if (query.orderBy.length) {
-        let parts = query.orderBy.map(order => `${order.idx} ${order.desc ? 'desc' : 'asc'} NULLS LAST`)
+        let parts = query.orderBy.map(order => `${order.sql} ${order.desc ? 'desc' : 'asc'} NULLS LAST`)
         sql += ` ORDER BY ${parts.join(',')}`
       }
       if (query.limit) sql += ` LIMIT ${query.limit}`
@@ -719,9 +747,11 @@ class AnalysisSession implements Analyzer {
 
     let renderTableRef = (table: Table): string => {
       if (table.type === 'view') {
-        if (!ctes.some(cte => cte.startsWith(table.name + ' '))) ctes.push(`${table.name} as ( ${table.query.sql} )`)
-        return table.name
+        let name = this.quoteIdent(table.name)
+        if (!ctes.some(cte => cte.startsWith(name + ' '))) ctes.push(`${name} as ( ${table.query.sql} )`)
+        return name
       }
+      if (table.type === 'cte') return this.quoteIdent(table.name)
       if (table.type === 'subquery') return `( ${table.query.sql} )`
       return this.formatTablePath(table.tablePath)
     }
@@ -734,8 +764,8 @@ class AnalysisSession implements Analyzer {
         if (!join.table || !join.joinType) return ''
         let tablePath = renderTableRef(join.table)
         let keyword = join.joinType.toUpperCase() + ' JOIN'
-        if (join.joinType == 'cross') return `${keyword} ${tablePath} as ${join.alias}`
-        return `${keyword} ${tablePath} as ${join.alias} ON ${join.onClause}`
+        if (join.joinType == 'cross') return `${keyword} ${tablePath} as ${this.quoteIdent(join.alias)}`
+        return `${keyword} ${tablePath} as ${this.quoteIdent(join.alias)} ON ${join.onClause}`
       })
       .filter(Boolean)
 
@@ -743,13 +773,13 @@ class AnalysisSession implements Analyzer {
     let havingFilters = query.filters.filter(filter => filter.isAgg).map(filter => filter.sql)
     let groupByIndices = query.groupBy.map(group => query.fields.findIndex(field => field.name == group) + 1)
 
-    let sql = `SELECT ${selectParts.join(', ')} FROM ${fromTable} as ${baseJoin.alias}`
+    let sql = `SELECT ${selectParts.join(', ')} FROM ${fromTable} as ${this.quoteIdent(baseJoin.alias)}`
     if (joinClauses.length) sql += ' ' + joinClauses.join(' ')
     if (whereFilters.length) sql += ` WHERE ${whereFilters.join(' AND ')}`
     if (groupByIndices.length) sql += ` GROUP BY ${groupByIndices.join(',')}`
     if (havingFilters.length) sql += ` HAVING ${havingFilters.join(' AND ')}`
     if (query.orderBy.length) {
-      let parts = query.orderBy.map(order => `${order.idx} ${order.desc ? 'desc' : 'asc'} NULLS LAST`)
+      let parts = query.orderBy.map(order => `${order.sql} ${order.desc ? 'desc' : 'asc'} NULLS LAST`)
       sql += ` ORDER BY ${parts.join(',')}`
     }
     if (query.limit) sql += ` LIMIT ${query.limit}`
@@ -822,7 +852,7 @@ class AnalysisSession implements Analyzer {
         this.addReference('column', fieldNode, col.symbolId)
 
         // Simple case: this is just a regular column on a table
-        if (!col.exprNode) return {sql: `${alias}.${col.name}`, type: col.type, metadata: col.metadata, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
+        if (!col.exprNode) return {sql: `${this.quoteIdent(alias)}.${this.quoteIdent(col.name)}`, type: col.type, metadata: col.metadata, fanout: normalizeExprFanout({path: matches[0].fanoutPath})}
 
         // Computed column: analyze its expression in the matched table's scope
         if (this.computedColumnStack.has(col)) return this.diag(col.exprNode, 'Cycles are not allowed between computed columns', {sql: 'NULL', type: scalarType('error')})
@@ -1301,7 +1331,7 @@ class AnalysisSession implements Analyzer {
 
     // If scope is at the root of the table (ie scope.table == null), then the first part of the path could point at
     // the alias of any table in the FROM or JOIN clauses of a query.
-    // But it could also refer to a join _on_ one of those tables (assuming the name is unique).
+    // Otherwise, it must refer to a join on the FROM table.
     if (!scope.table) {
       // This could be a ref to an existing FROM/JOIN alias
       let existing = scope.query!.joins.find(join => join.alias == name)
@@ -1311,11 +1341,9 @@ class AnalysisSession implements Analyzer {
         scope = {...scope, file: this.fileForPath(existing.table.filePath), table: existing.table, alias: existing.alias, fanoutPath: existing.fanoutPath}
         pathNodes.shift()
       } else {
-        // otherwise, this might be referring to a join _on_ one of those FROM/JOIN tables
-        let matches = scope.query!.joins.filter(join => join.table && join.table.joins.some(next => next.alias == name))
-        if (matches.length > 1) return this.diag(part, `"${name}" matches multiple possible joins in this query`, null)
-        if (matches.length == 0) return this.diag(part, `Could not find "${name}" on query`, null)
-        scope = {...scope, file: this.fileForPath(matches[0].table!.filePath), table: matches[0].table!, alias: matches[0].alias, fanoutPath: matches[0].fanoutPath}
+        let from = scope.query!.joins.find(join => join.source == 'from')
+        if (!from) return this.diag(part, `Could not find "${name}" on query`, null)
+        scope = {...scope, file: this.fileForPath(from.table!.filePath), table: from.table!, alias: from.alias, fanoutPath: from.fanoutPath}
       }
     }
 

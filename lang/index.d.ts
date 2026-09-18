@@ -53,6 +53,7 @@ export interface GrapheneError {
   file?: string
   from?: Position
   to?: Position
+  // Deprecated: still populated so older CLIs reading cloud API errors keep working; render from `from`/`to` instead.
   frame?: string
 }
 

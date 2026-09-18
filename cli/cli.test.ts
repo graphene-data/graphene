@@ -221,7 +221,7 @@ describe('cli run', () => {
   test('prints query diagnostics without a stack trace', async ({runCli}) => {
     let res = await runCli(['run', 'from flights select carrier order by nope'], flightConfig)
     expectCliOutput(res, {code: 1, stdout: `
-      ERROR: input line 1: Unknown field in ORDER BY: nope
+      ERROR: input line 1: Unknown field "nope" on flights
       from flights select carrier order by nope
                                            ^^^^
     `})
@@ -243,6 +243,19 @@ describe('cli run', () => {
     expectCliOutput(res, `
       name,total
       "a,b",2
+    `)
+  })
+
+  test('executes keyword CTEs and aliases against flights DuckDB', async ({runCli}) => {
+    let query = `
+      table full as (from flights where carrier = 'AA' select carrier as date, count() as rows)
+      table rows as (from full select *)
+      from full full join rows on full.date = rows.date
+      select full.date as date, rows.rows as rows order by rows desc
+    `
+    expectCliOutput(await runCli(['run', query, '--format', 'csv'], flightConfig), `
+      date,rows
+      AA,34577
     `)
   })
 

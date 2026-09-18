@@ -3101,6 +3101,40 @@ export const duckDbFunctions: FunctionDef[] = [
 
   // ============================================================================
   // Nested List, Array, Struct, and Map Functions
+  {
+    name: 'range',
+    description: trim(`
+      range(stop)
+      range(start, stop[, step])
+
+      Returns a list from start to stop (exclusive). Numbers default to start 0 and step 1; date/timestamp bounds require an interval step.
+    `),
+    url: `${duckList}#range`,
+    args: [{name: 'stop', type: 'number'}],
+    returns: 'array',
+    overloads: [
+      {args: [{name: 'stop', type: 'number'}], returns: 'array'},
+      {args: [{name: 'start', type: ['number', 'date', 'timestamp']}, {name: 'stop', type: ['number', 'date', 'timestamp']}], returns: 'array'},
+      {args: [{name: 'start', type: ['number', 'date', 'timestamp']}, {name: 'stop', type: ['number', 'date', 'timestamp']}, {name: 'step', type: ['number', 'interval']}], returns: 'array'},
+    ],
+  },
+  {
+    name: 'generate_series',
+    description: trim(`
+      generate_series(stop)
+      generate_series(start, stop[, step])
+
+      Returns a list from start to stop (inclusive). Numbers default to start 0 and step 1; date/timestamp bounds require an interval step.
+    `),
+    url: `${duckList}#generate_series`,
+    args: [{name: 'stop', type: 'number'}],
+    returns: 'array',
+    overloads: [
+      {args: [{name: 'stop', type: 'number'}], returns: 'array'},
+      {args: [{name: 'start', type: ['number', 'date', 'timestamp']}, {name: 'stop', type: ['number', 'date', 'timestamp']}], returns: 'array'},
+      {args: [{name: 'start', type: ['number', 'date', 'timestamp']}, {name: 'stop', type: ['number', 'date', 'timestamp']}, {name: 'step', type: ['number', 'interval']}], returns: 'array'},
+    ],
+  },
   // https://duckdb.org/docs/stable/sql/functions/list
   // https://duckdb.org/docs/stable/sql/functions/struct
   // https://duckdb.org/docs/stable/sql/functions/map

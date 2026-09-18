@@ -341,10 +341,9 @@ Another way of thinking about this is that measures are "self-aggregating."
 
 ### Other miscellaneous details
 
-- The clauses in a `select` statement (`select`, `from`, `join`, `group by`, etc.) can be written in any order. They cannot be repeated, however.
+- The clauses in a `select` statement (`select`, `from`, `where`, `group by`, etc.) can be written in any order. They cannot be repeated, however. The exception is `join`, which must directly follow the `from` clause.
 - `group by all` is implied if aggregative and scalar expressions are both present in the `select` clause. This means that `group by` can be omitted and the query will still effectively execute the `group by all`.
 - Expressions in `group by` are implicitly selected, so `from orders select avg(amount) group by user_id` will return two columns.
-- `count` is a reserved word. Do not alias your columns as `count`.
 - Inline window functions are supported using ANSI-style `OVER (...)` clauses. Query-level named windows (`WINDOW w AS (...)`) are not supported.
 - Percentiles can be computed easily using Graphene's special functions `pXX(col)` (e.g., p50, p975, p9999).
 - Graphene supports almost all functions of the connected data warehouse. Check package.json to see which database you're connected to.

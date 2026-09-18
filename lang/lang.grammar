@@ -26,7 +26,7 @@ SimpleQuery {
 }
 
 SetOperator {
-  Kw<"union"> (Kw<"all"> | Kw<"distinct">)? |
+  Kw<"union"> (SoftKw<"all"> | Kw<"distinct">)? |
   Kw<"intersect"> |
   Kw<"except">
 }
@@ -77,7 +77,7 @@ Subquery {
 }
 
 JoinClause {
-  (Kw<"inner"> | Kw<"left"> | Kw<"right"> | Kw<"full"> | Kw<"cross">)? Kw<"join"> joinPrimary (Kw<"on"> expression)?
+  (SoftKw<"inner"> | SoftKw<"left"> | SoftKw<"right"> | SoftKw<"full"> | SoftKw<"cross">)? Kw<"join"> joinPrimary (Kw<"on"> expression)?
 }
 
 UnnestSource {
@@ -101,23 +101,23 @@ OrderByClause {
 }
 
 OrderItem {
-  (Identifier | QuotedIdentifier | Number) (Kw<"asc"> | Kw<"desc">)?
+  expression (Kw<"asc"> | Kw<"desc">)?
 }
 
 LimitClause {
-  Kw<"limit"> Number (Kw<"offset"> Number)?
+  Kw<"limit"> Number (SoftKw<"offset"> Number)?
 }
 
 TableStatement {
-  Kw<"table"> Ref "(" (tableItem ","?)+ ")"
+  SoftKw<"table"> Ref "(" (tableItem ","?)+ ")"
 }
 
 ViewStatement {
-  Kw<"table"> Ref Kw<"as"> "(" QueryExpression ")"
+  SoftKw<"table"> Ref Kw<"as"> "(" QueryExpression ")"
 }
 
 ExtendStatement {
-  Kw<"extend"> Ref "(" (extendItem ","?)+ ")"
+  SoftKw<"extend"> Ref "(" (extendItem ","?)+ ")"
 }
 
 tableItem {
@@ -128,17 +128,16 @@ extendItem {
   (JoinDef | ComputedDef)
 }
 
-// Allow temporal keywords as column names (date, timestamp, interval are common column names in SQL)
 ColumnDef {
   ColumnName DataType PrimaryKey?
 }
 
 ColumnName {
-  Identifier | Kw<"date"> | Kw<"timestamp"> | Kw<"interval">
+  Identifier
 }
 
 PrimaryKey {
-  Kw<"primary_key">
+  SoftKw<"primary_key">
 }
 
 JoinDef {
@@ -146,7 +145,7 @@ JoinDef {
 }
 
 JoinType {
-  Kw<"join"> (Kw<"one"> | Kw<"many">)
+  Kw<"join"> (SoftKw<"one"> | SoftKw<"many">)
 }
 
 ComputedDef {
@@ -154,7 +153,6 @@ ComputedDef {
   Alias ":" expression
 }
 
-// Allow temporal keywords as data types (date, timestamp, interval are valid SQL types)
 DataType {
   TypeName
 }
@@ -164,11 +162,11 @@ TypeName {
 }
 
 ScalarType {
-  Identifier | Kw<"date"> | Kw<"timestamp"> | Kw<"interval">
+  Identifier
 }
 
 ArrayType {
-  Kw<"array"> "<" TypeName ">"
+  SoftKw<"array"> "<" TypeName ">"
 }
 
 // Ideally we could just use `expression` as the join condition, but that introduces ambiguity when parsing, since we don't know when the expression ends and new ComputedDef begins.
@@ -203,14 +201,13 @@ castTier<T> { TypeCastExpression<T> | T }
 
 // Casting: supports both CAST(x AS type) and x::type syntaxes
 CastExpression {
-  Kw<"cast"> "(" expression Kw<"as"> CastType ")"
+  SoftKw<"cast"> "(" expression Kw<"as"> CastType ")"
 }
 
 TypeCastExpression[@isGroup=Expression]<T> {
   castTier<T> !cast "::" CastType
 }
 
-// Allow temporal keywords as cast targets (date, timestamp, interval are valid SQL types)
 CastType {
   TypeName
 }
@@ -242,11 +239,11 @@ tableBaseExpression {
 
 // Interval: supports `interval '1 day'`, `interval 1 day`, or `interval field_name day`
 IntervalExpression {
-  Kw<"interval"> (String | intervalQuantity IntervalUnit)
+  SoftKw<"interval"> (String | intervalQuantity IntervalUnit)
 }
 
 IntervalExpressionNoRef {
-  Kw<"interval"> (String | Number IntervalUnit)
+  SoftKw<"interval"> (String | Number IntervalUnit)
 }
 
 intervalQuantity[@isGroup=Expression] {
@@ -260,12 +257,12 @@ IntervalUnit {
 
 // Date: supports `date '2025-01-01'`
 DateExpression {
-  Kw<"date"> String
+  SoftKw<"date"> String
 }
 
 // Timestamp: supports `timestamp '2025-01-01 12:00:00'`
 TimestampExpression {
-  Kw<"timestamp"> String
+  SoftKw<"timestamp"> String
 }
 
 // parenExpression includes all expression starts that ARE parentheses.
@@ -368,8 +365,8 @@ WindowExpression[@isGroup=Expression] {
 }
 
 OverClause {
-  Kw<"over"> "(" ")" |
-  Kw<"over"> "(" WindowSpec ")"
+  SoftKw<"over"> "(" ")" |
+  SoftKw<"over"> "(" WindowSpec ")"
 }
 
 WindowSpec {
@@ -379,7 +376,7 @@ WindowSpec {
 }
 
 WindowPartitionClause {
-  Kw<"partition"> Kw<"by"> expression ("," expression)* ","?
+  SoftKw<"partition"> Kw<"by"> expression ("," expression)* ","?
 }
 
 WindowOrderByClause {
@@ -391,7 +388,7 @@ WindowOrderItem {
 }
 
 WindowFrameClause {
-  (Kw<"rows"> | Kw<"range">) (WindowFrameBetween | WindowFrameStart)
+  (SoftKw<"rows"> | SoftKw<"range">) (WindowFrameBetween | WindowFrameStart)
 }
 
 WindowFrameStart {
@@ -403,9 +400,9 @@ WindowFrameBetween {
 }
 
 WindowFrameBound {
-  Kw<"unbounded"> (Kw<"preceding"> | Kw<"following">) |
-  Kw<"current"> Kw<"row"> |
-  expression (Kw<"preceding"> | Kw<"following">)
+  SoftKw<"unbounded"> (SoftKw<"preceding"> | SoftKw<"following">) |
+  SoftKw<"current"> SoftKw<"row"> |
+  expression (SoftKw<"preceding"> | SoftKw<"following">)
 }
 
 Parenthetical {
@@ -429,11 +426,11 @@ String {
 }
 
 Count {
-  Kw<"count"> "(" ("*"? | Kw<"distinct">? expression) ")"
+  SoftKw<"count"> "(" ("*"? | Kw<"distinct">? expression) ")"
 }
 
 ExtractExpression {
-  Kw<"extract"> "(" ExtractUnit Kw<"from"> expression ")"
+  SoftKw<"extract"> "(" ExtractUnit Kw<"from"> expression ")"
 }
 
 ExtractUnit {
@@ -445,7 +442,7 @@ FunctionCall {
 }
 
 FunctionName {
-  Identifier | Kw<"row">
+  Identifier
 }
 
 literal {
@@ -458,7 +455,12 @@ literal {
 Boolean { Kw<"true"> | Kw<"false"> }
 Null { Kw<"null"> }
 
+// Kw is a hard (reserved) keyword: clause/operator words like select, from, and.
 Kw<term> { @specialize[@name={term}]<Identifier, term> }
+// SoftKw is a keyword that may also be used as an identifier (e.g. `as date`, a column named `rows`, `range(3)`).
+// The parser tries both readings; @dynamicPrecedence prefers the keyword when both parse (count(), full join, current row).
+// @name=Kw keeps the node name identical so the analyzer doesn't distinguish the two.
+SoftKw[@name=Kw, @dynamicPrecedence=1]<term> { @extend[@name={term}]<Identifier, term> }
 Alias { Identifier }
 
 @skip { whitespace | comment }
@@ -485,4 +487,7 @@ Alias { Identifier }
 }
 
 @external specialize {Identifier} specializeIdentifier from "./tokens.js" {
+}
+
+@external extend {Identifier} extendIdentifier from "./tokens.js" {
 }

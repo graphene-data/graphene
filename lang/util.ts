@@ -1,3 +1,4 @@
+// Shared source-position, diagnostic formatting, and text utilities for language analysis and its consumers.
 import type {SyntaxNode, SyntaxNodeRef} from '@lezer/common'
 
 import type {GrapheneError as GrapheneErrorShape} from './index.d.ts'
@@ -8,6 +9,7 @@ export class GrapheneError extends Error implements GrapheneErrorShape {
   cause?: unknown
   componentId?: string
   file?: string
+  // Deprecated: still populated so older CLIs reading cloud API errors keep working; render from `from`/`to` instead.
   frame?: string
   from?: GrapheneErrorShape['from']
   severity?: GrapheneErrorShape['severity']
@@ -131,6 +133,12 @@ export function toRelativePath(path: string): string {
     .replace(/^file:\/\//, '')
     .replace(/\\/g, '/')
     .replace(/^\/+/, '')
+}
+
+// Render source positions for humans; Vite errors lack source text, so retain their preformatted frame.
+export function formatFrame(error: GrapheneErrorShape): string | undefined {
+  if (error.from?.lineText === undefined) return error.frame
+  return buildFrame(error.from, error.to || error.from)
 }
 
 export function buildFrame(from: {line: number; col: number; lineText?: string}, to: {line: number; col: number}) {

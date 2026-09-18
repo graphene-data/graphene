@@ -285,7 +285,7 @@ export interface Query {
   joins: QueryJoin[] // JOINs needed for this query
   filters: Filter[] // WHERE/HAVING conditions
   groupBy: string[] // field names for GROUP BY
-  orderBy: {idx: number; desc: boolean}[] // ORDER BY (1-indexed field indices)
+  orderBy: {sql: string; desc: boolean}[] // ORDER BY (1-based output positions or expression SQL)
   limit?: number
   setOp?: 'union' | 'union all' | 'union distinct' | 'intersect' | 'except'
   branches?: {query: Query; parenthesized?: boolean}[]

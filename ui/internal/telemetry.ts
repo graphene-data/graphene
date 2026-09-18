@@ -1,3 +1,5 @@
+// Collects page errors for the CLI/screenshot Lambda. Each component records its latest error; getErrors() groups
+// identical errors (e.g. one broken named query failing every component) into a single entry listing the components.
 import {onDestroy} from 'svelte'
 
 import type {GrapheneError} from '../../lang/index.d.ts'
@@ -67,8 +69,18 @@ export function logExtraProps(logger: ReturnType<typeof componentLogger>, compon
   if (unsupported.length) logger.error(unsupported.map(prop => `Unsupported prop "${prop}" on ${componentName}.`).join(' '))
 }
 
+// Group identical errors across components so a shared failure is reported once, with up to three component ids.
 export function getErrors(): GrapheneError[] {
-  return staticErrors.concat(Array.from(componentErrors.values()))
+  let groups = new Map<string, {error: GrapheneError; components: string[]}>()
+  for (let error of componentErrors.values()) {
+    let key = JSON.stringify([error.message, error.from?.offset, error.to?.offset, error.file, error.severity])
+    if (!groups.has(key)) groups.set(key, {error, components: []})
+    if (error.componentId) groups.get(key)!.components.push(error.componentId)
+  }
+  return staticErrors.concat(Array.from(groups.values(), ({error, components}) => ({
+    ...error,
+    componentId: components.length ? components.slice(0, 3).join(', ') + (components.length > 3 ? ` and ${components.length - 3} more` : '') : undefined,
+  })))
 }
 
 export function computeComponentId(componentName: string, identifiers: Record<string, unknown> = {}) {

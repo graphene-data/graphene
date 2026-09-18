@@ -16,7 +16,7 @@ import {
   toSql,
 } from './core.ts'
 import {type AnalysisResult, type WorkspaceFileInput} from './types.ts'
-import {trimIndentation} from './util.ts'
+import {formatFrame, trimIndentation} from './util.ts'
 
 const ECOMM_SETUP = `
   create table users (
@@ -80,7 +80,10 @@ const ECOMM_SETUP = `
 
 function formatDiagnostics(_source: string, diagnostics: GrapheneError[]): string {
   if (!diagnostics.length) return ''
-  return diagnostics.map((d, i) => `#${i + 1}: ${d.message}${d.frame ? `\n${d.frame}` : ''}`).join('\n\n')
+  return diagnostics.map((d, i) => {
+    let frame = formatFrame(d)
+    return `#${i + 1}: ${d.message}${frame ? `\n${frame}` : ''}`
+  }).join('\n\n')
 }
 
 let conn: DuckDBConnection
@@ -206,7 +209,8 @@ vitestExpect.extend({
 
     try {
       let reader = await conn.runAndReadAll(sql)
-      let actualRows: any[][] = reader.getRowObjects().map(r => {
+      // Convert temporal values to JS Dates so row comparisons serialize them as ISO strings.
+      let actualRows: any[][] = reader.getRowObjectsJS().map(r => {
         return Object.keys(r).map(k => (typeof r[k] === 'bigint' ? Number(r[k]) : r[k]))
       })
 
