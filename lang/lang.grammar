@@ -475,7 +475,7 @@ Alias { Identifier }
   singleQuotedStringToken { "'" ![']* "'" }
   doubleQuotedStringToken[@dialect=doubleQuotedString] { '"' !["]* '"' }
   Param { "$" (@asciiLetter | @digit | "_")+ }
-  Number { @digit+ ("." @digit+)? }
+  Number { @digit+ ("." @digit+)? ($[eE] ("+"|"-")? @digit+)? }
   "*" "+" "-" "/" "%" "=" "!=" "<>" "<" ">" "<=" ">=" "::" "||"
 
   @precedence { doubleQuotedIdentifierToken, doubleQuotedStringToken }
