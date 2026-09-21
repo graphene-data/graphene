@@ -2168,9 +2168,22 @@ describe('lang', () => {
       .toHaveDiagnostic(/Expected number, got string/i)
   })
 
-  it.skip('errors when aggregates are nested', () => {
-    expect('from users select name, sum(total_orders)')
-      .toHaveDiagnostic(/Aggregates cannot be nested/i)
+  it.each(['duckdb', 'clickhouse'] as const)('errors when aggregates are nested (%s)', dialect => {
+    setGlobalConfig({dialect, root: ''})
+    for (let expression of ['sum(total_orders)', 'count(total_orders)', 'count(distinct total_orders)', 'p50(total_orders)']) {
+      let name = expression.slice(0, expression.indexOf('('))
+      expect(`from users select name, ${expression}`)
+        .toHaveDiagnostic(`"total_orders" is already an aggregate measure or expression; reference it directly instead of wrapping it in ${name}()`)
+    }
+    expect('from orders select sum(coalesce(total_revenue, 0))')
+      .toHaveDiagnostic(/"coalesce\(total_revenue, 0\)" is already an aggregate measure or expression; reference it directly instead of wrapping it in sum\(\)/)
+    expect('from orders select sum(sum(amount))')
+      .toHaveDiagnostic(/"sum\(amount\)" is already an aggregate measure or expression; reference it directly instead of wrapping it in sum\(\)/)
+    expect('with cmp as (from orders select amount as total_actual, amount as total_fc) from cmp select sum(total_actual) as total_actual, sum(total_actual)/sum(total_fc) as attainment').toHaveDiagnostic(/"total_actual" is already an aggregate measure or expression; reference it directly instead of wrapping it in sum\(\)/)
+    expect('from orders select total_revenue, coalesce(total_revenue, 0), count(distinct amount)').toHaveNoErrors()
+    expect('from orders select sum(sum(amount)) over (), count(sum(amount)) over (), p50(sum(amount)) over ()').toHaveNoErrors()
+    expect('from orders select sum(sum(sum(amount))) over ()')
+      .toHaveDiagnostic(/"sum\(amount\)" is already an aggregate measure or expression; reference it directly instead of wrapping it in sum\(\)/)
   })
 
   it('rejects computed fields fanned out by a join many', () => {
