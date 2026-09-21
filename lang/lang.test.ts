@@ -267,6 +267,41 @@ describe('lang', () => {
       .toReturnRows([1])
   })
 
+  it('suffixes colliding inferred output names but rejects duplicate explicit aliases', async () => {
+    expect('from orders select count(*), count(distinct user_id)')
+      .toRenderSql('SELECT count(1) as "count", count(distinct orders.user_id) as count_2 FROM orders as orders')
+    await expect('from orders select count(*), count(distinct user_id)')
+      .toReturnRows([3, 2])
+    expect('from orders select count(*) as count_2, count(*), count(distinct user_id)')
+      .toRenderSql('SELECT count(1) as count_2, count(1) as "count", count(distinct orders.user_id) as count_3 FROM orders as orders')
+    expect('from orders select user_id, user_id')
+      .toRenderSql('SELECT orders.user_id as user_id, orders.user_id as user_id_2 FROM orders as orders')
+    expect('from orders select sum(amount), sum(user_id)')
+      .toRenderSql('SELECT sum(orders.amount) as col_0, sum(orders.user_id) as col_1 FROM orders as orders')
+    expect('select 1 as value, 2 as value').toHaveDiagnostic(/Duplicate output column name "value"/i)
+    expect('select 1 as a, 2 as b union all select 3 as value, 4 as value')
+      .toHaveDiagnostic(/Duplicate output column name "value"/i)
+
+    let query = `select action, events, workspaces from (
+      select 'Search performed' as action, count(*) as events, count(distinct user_id) as workspaces from orders
+      union all select 'Bulk approve', count(*), count(distinct user_id) from orders
+    )`
+    expect(query).toRenderSql(`SELECT subquery.action as action, subquery.events as events, subquery.workspaces as workspaces FROM (
+      SELECT 'Search performed' as action, count(1) as events, count(distinct orders.user_id) as workspaces FROM orders as orders GROUP BY 1
+      UNION ALL SELECT 'Bulk approve' as col_0, count(1) as "count", count(distinct orders.user_id) as count_2 FROM orders as orders GROUP BY 1
+    ) as subquery`)
+    await expect(query).toReturnRows(['Search performed', 3, 2], ['Bulk approve', 3, 2])
+
+    expect('(from orders select count(*), count(distinct user_id)) union all select 3, 2')
+      .toRenderSql('( SELECT count(1) as "count", count(distinct orders.user_id) as count_2 FROM orders as orders ) UNION ALL SELECT 3 as col_0, 2 as col_1')
+
+    setGlobalConfig({dialect: 'clickhouse', root: ''})
+    expect(query.replaceAll('distinct user_id', 'distinct toString(user_id)')).toRenderSql(`SELECT subquery.action as action, subquery.events as events, subquery.workspaces as workspaces FROM (
+        SELECT 'Search performed' as action, count(1) as events, count(distinct toString(orders.user_id)) as workspaces FROM orders as orders GROUP BY 1
+        UNION ALL SELECT 'Bulk approve' as col_0, count(1) as "count", count(distinct toString(orders.user_id)) as count_2 FROM orders as orders GROUP BY 1
+      ) as subquery`)
+  })
+
   it('supports intersect and except', async () => {
     expect('select 1 as id intersect select 1 as id')
       .toRenderSql('SELECT 1 as id INTERSECT SELECT 1 as id')

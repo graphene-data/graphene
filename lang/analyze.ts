@@ -1548,7 +1548,13 @@ class AnalysisSession implements Analyzer {
       if (this.renameInferredFields(conflicts, taken)) return this.insertQueryField(query, field, opts)
     }
 
-    if (field.diagNode) this.diag(field.diagNode, `Duplicate output column name "${field.name}"`)
+    // Fall back to suffixes for inferred names, keeping emitted aliases unique too.
+    // Explicit aliases retain their SelectAlias node and must not be silently renamed.
+    if (field.diagNode?.name != 'SelectAlias') {
+      let name = field.name
+      let suffix = 2
+      while (query.fields.some(existing => existing.name == field.name)) field.name = `${name}_${suffix++}`
+    } else if (field.diagNode) this.diag(field.diagNode, `Duplicate output column name "${field.name}"`)
     this.insertQueryField(query, field, opts)
   }
 
