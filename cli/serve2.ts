@@ -15,7 +15,7 @@ import {config} from '../lang/config.ts'
 import {analyzeWorkspace, GrapheneError, loadWorkspace, toSql} from '../lang/core.ts'
 import {grapheneCsp} from '../ui/csp.ts'
 import {runQuery} from './connections/index.ts'
-import {extractFrontmatter, frontmatterOptions, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {parseFrontmatter, frontmatterOptions, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 import {missingMockFiles, mockFileMap} from './mockFiles.ts'
 import {routeForPage} from './pageRouting.ts'
 import {runVitePlugin} from './run.ts'
@@ -290,7 +290,7 @@ function updateWorkspacePlugin() {
       if (process.env.NODE_ENV == 'test') {
         for (let [path, contents] of Object.entries(mockFileMap)) {
           if (missingMockFiles.has(path) || !path.endsWith('.md') || !path.startsWith(config.pagesPrefix)) continue
-          let mockFile = {path, route: routeForPage(path, config.pagesPrefix), ...extractFrontmatter(contents)}
+          let mockFile = {path, route: routeForPage(path, config.pagesPrefix), ...parseFrontmatter(contents)}
           let idx = pages.findIndex(file => file.route == mockFile.route)
           if (idx >= 0) pages.splice(idx, 1, mockFile)
           else pages.push(mockFile)
@@ -316,7 +316,7 @@ function updateWorkspacePlugin() {
         // Store every Markdown page and its navigation metadata for the app shell.
         mdFiles = workspaceFiles
           .filter(file => file.path.endsWith('.md') && file.path.startsWith(config.pagesPrefix)) // only md files matching the pagePrefix (which can be blank)
-          .map(file => ({path: file.path, route: routeForPage(file.path, config.pagesPrefix), ...extractFrontmatter(file.contents)}))
+          .map(file => ({path: file.path, route: routeForPage(file.path, config.pagesPrefix), ...parseFrontmatter(file.contents)}))
 
         let mod = s.moduleGraph.getModuleById('\0virtual:nav')
         if (!mod) return

@@ -2,7 +2,7 @@
 import {compile} from 'mdsvex'
 import {compile as compileSvelte} from 'svelte/compiler'
 
-import {extractFrontmatter, frontmatterOptions, injectComponentImports, parseScheduledFrontmatter, remarkPlugins, rehypePlugins} from './mdCompile.ts'
+import {parseFrontmatter, frontmatterOptions, injectComponentImports, remarkPlugins, rehypePlugins} from './mdCompile.ts'
 
 async function compileMarkdownPage(src: string) {
   let out = await compile(src, {extensions: ['.md'], frontmatter: frontmatterOptions, remarkPlugins, rehypePlugins, filename: '/tmp/repro.md'})
@@ -13,61 +13,56 @@ async function compileMarkdownPage(src: string) {
   return preprocessed.code
 }
 
-describe('extractFrontmatter', () => {
+describe('parseFrontmatter', () => {
   it('uses frontmatter title and navigation visibility together', () => {
-    let metadata = extractFrontmatter('---\ntitle: My Page\nhideInNav: true\nlayout: dashboard\n---\n\n# Hello')
+    let metadata = parseFrontmatter('---\ntitle: My Page\nhideInNav: true\nlayout: dashboard\n---\n\n# Hello')
     expect(metadata).toEqual({title: 'My Page', hideInNav: true, layout: 'dashboard'})
   })
 
-  it('only hides pages for the boolean true value', () => {
-    expect(extractFrontmatter('---\nhideInNav: false\n---')).toEqual({})
-    expect(extractFrontmatter('---\nhideInNav: "true"\n---')).toEqual({})
+  it('preserves raw YAML values and custom keys', () => {
+    expect(parseFrontmatter('---\nhideInNav: false\ncustom: [one, two]\n---')).toEqual({hideInNav: false, custom: ['one', 'two']})
+    expect(parseFrontmatter('---\nhideInNav: "true"\n---')).toEqual({hideInNav: 'true'})
   })
 
   it('uses a static Markdown h1 without a frontmatter title', () => {
-    expect(extractFrontmatter('---\nhideInNav: true\n---\n# Detail Page')).toEqual({title: 'Detail Page', hideInNav: true})
-    expect(extractFrontmatter('Intro\n\n# Page title\n\nContent')).toEqual({title: 'Page title'})
+    expect(parseFrontmatter('---\nhideInNav: true\n---\n# Detail Page')).toEqual({title: 'Detail Page', hideInNav: true})
+    expect(parseFrontmatter('Intro\n\n# Page title\n\nContent')).toEqual({title: 'Page title'})
   })
 
-  it('extracts and validates a one-line scheduled report', () => {
+  it('parses a one-line scheduled report', () => {
     let contents = '---\nscheduled: "0 9 * * 1-5 @grant"\n---\n# Report'
-    expect(extractFrontmatter(contents)).toEqual({title: 'Report', scheduled: '0 9 * * 1-5 @grant'})
-    expect(parseScheduledFrontmatter(contents)).toEqual([{cron: '0 9 * * 1-5', remainder: '@grant'}])
+    expect(parseFrontmatter(contents)).toEqual({title: 'Report', scheduled: '0 9 * * 1-5 @grant'})
   })
 
-  it('leaves delivery syntax to the schedule consumer', () => {
-    let contents = '---\nscheduled: "0 9 * * 1-5 deliver however Cloud likes"\n---'
-    expect(parseScheduledFrontmatter(contents)).toEqual([{cron: '0 9 * * 1-5', remainder: 'deliver however Cloud likes'}])
+  it('leaves schedule validation to the consumer', () => {
+    expect(parseFrontmatter('---\nscheduled: "0 9 * *"\n---')).toEqual({scheduled: '0 9 * *'})
+    expect(parseFrontmatter('---\nscheduled: "0 9 * * 1-5 deliver however Cloud likes"\n---')).toEqual({scheduled: '0 9 * * 1-5 deliver however Cloud likes'})
   })
 
   it('supports a YAML list of delivery times', () => {
     let contents = '---\nscheduled:\n  - "0 9 * * 1-5 @grant"\n  - "30 16 * * * #operations"\n---'
-    expect(extractFrontmatter(contents)).toEqual({scheduled: '0 9 * * 1-5 @grant'})
-    expect(parseScheduledFrontmatter(contents)).toEqual([
-      {cron: '0 9 * * 1-5', remainder: '@grant'},
-      {cron: '30 16 * * *', remainder: '#operations'},
-    ])
+    expect(parseFrontmatter(contents)).toEqual({scheduled: ['0 9 * * 1-5 @grant', '30 16 * * * #operations']})
   })
 
-  it('rewrites repeated legacy scheduled fields before parsing YAML', () => {
+  it('rewrites single and repeated legacy scheduled fields before parsing YAML', () => {
+    expect(parseFrontmatter('---\nscheduled: "0 9 * * 1-5" @grant\n---')).toEqual({scheduled: '0 9 * * 1-5 @grant'})
     let contents = '---\nscheduled: "0 9 * * 1-5" @grant\nscheduled: "30 16 * * *" #operations\n---'
-    expect(parseScheduledFrontmatter(contents)).toEqual([
-      {cron: '0 9 * * 1-5', remainder: '@grant'},
-      {cron: '30 16 * * *', remainder: '#operations'},
-    ])
+    expect(parseFrontmatter(contents)).toEqual({scheduled: ['0 9 * * 1-5 @grant', '30 16 * * * #operations']})
   })
 
-  it('rejects invalid scheduled fields', () => {
-    expect(() => extractFrontmatter('---\nscheduled: "0 9 * *"\n---')).toThrow('expected a five-field cron')
+  it('handles leading whitespace and empty YAML', () => {
+    expect(parseFrontmatter('\n---\ntitle: Trimmed\n---')).toEqual({title: 'Trimmed'})
+    expect(parseFrontmatter('---\n\n---')).toEqual({})
   })
 
-  it('handles leading whitespace', () => {
-    expect(extractFrontmatter('\n---\ntitle: Trimmed\n---')).toEqual({title: 'Trimmed'})
+  it('rejects non-object YAML', () => {
+    expect(() => parseFrontmatter('---\n- item\n---')).toThrow('Frontmatter must be a YAML object')
   })
 
   it('ignores dynamic and missing h1 titles', () => {
-    expect(extractFrontmatter('# Report for {year}')).toEqual({})
-    expect(extractFrontmatter('Content without a title')).toEqual({})
+    expect(parseFrontmatter('# Report for {year}')).toEqual({})
+    expect(parseFrontmatter('# Report <span>title</span>')).toEqual({})
+    expect(parseFrontmatter('Content without a title')).toEqual({})
   })
 })
 

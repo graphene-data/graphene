@@ -5,7 +5,7 @@ import type {WorkspaceFileInput} from '../lang/types.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, GrapheneError, loadWorkspace} from '../lang/core.ts'
-import {extractFrontmatter} from './mdCompile.ts'
+import {parseFrontmatter, parseCronFieldSet} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {formatError} from './printer.ts'
@@ -46,7 +46,13 @@ export async function check(options: CheckOptions): Promise<boolean> {
   // Markdown analysis handles embedded queries; validate page frontmatter separately so metadata errors include the source file.
   for (let file of files.filter(file => file.path.toLowerCase().endsWith('.md'))) {
     try {
-      extractFrontmatter(file.contents)
+      let fm = parseFrontmatter(file.contents)
+      for (let value of ([] as string[]).concat(fm.scheduled ?? [])) {
+        if (typeof value !== 'string') throw new Error('Scheduled reports must be strings')
+        let parts = value.trim().split(/\s+/)
+        if (parts.length < 5) throw new Error('Invalid scheduled report: expected a five-field cron')
+        parseCronFieldSet(parts.slice(0, 5).join(' '))
+      }
     } catch (err:any) {
       result.diagnostics.push(new GrapheneError({file: file.path, message: err.message}))
     }
