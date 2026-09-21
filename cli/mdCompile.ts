@@ -1,3 +1,4 @@
+// Shared Markdown metadata parsing and compilation plugins for CLI and Cloud rendering.
 import type {Plugin} from 'unified'
 
 import {decodeHTML} from 'entities'
@@ -87,14 +88,16 @@ export function componentNames() {
   return cachedComponentNames || []
 }
 
-export type PageFrontmatter = {title?: string; hideInNav?: boolean; layout?: string; scheduled?: string}
-export interface ScheduledFrontmatter {cron: string; remainder: string}
+export type PageFrontmatter = {title?: string; hideInNav?: boolean; layout?: string; scheduled?: string | string[]}
 
 const frontmatterRe = /^---\s*\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/
 const legacyScheduleRe = /^scheduled\s*:\s*"([^"\r\n]+)"\s+([^\r\n]+)$/gim
 
-// Load standard YAML after rewriting the former `scheduled: "<cron>" <delivery>` extension into its valid YAML equivalent.
-function parseFrontmatterYaml(frontmatter: string): Record<string, any> {
+// Parse page metadata, normalizing legacy schedules and falling back to a static Markdown h1 title.
+export function parseFrontmatter(contents: string): PageFrontmatter {
+  let frontmatter = contents.trimStart().match(frontmatterRe)?.[1] ?? ''
+
+  // An early version of scheduled reports used invalid yaml. Find and rewrite them to be valid yaml
   let legacySchedules = [...frontmatter.matchAll(legacyScheduleRe)].map(match => `${match[1]} ${match[2].trim()}`)
   if (legacySchedules.length) {
     let replacement = legacySchedules.length === 1
@@ -108,39 +111,22 @@ function parseFrontmatterYaml(frontmatter: string): Record<string, any> {
     })
   }
 
-  let raw = yaml.safeLoad(frontmatter)
-  if (raw === undefined) return {}
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Frontmatter must be a YAML object')
-  return raw as Record<string, any>
+  let parsed = yaml.safeLoad(frontmatter)
+  if (parsed === undefined) parsed = {}
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Frontmatter must be a YAML object')
+  let raw = parsed as PageFrontmatter
+
+  // If no title is in the frontmatter, we'll use the first h1 as the title
+  if (!raw.title) {
+    let markdownTitle = contents.match(/^#[ \t]+(.+?)[ \t]*#*[ \t]*$/m)?.[1]?.trim()
+    if (markdownTitle && !/[<{]/.test(markdownTitle)) raw.title = markdownTitle
+  }
+
+  return raw
 }
 
-function parseFrontmatter(contents: string): Record<string, any> {
-  let frontmatter = contents.trimStart().match(frontmatterRe)?.[1]
-  return frontmatter ? parseFrontmatterYaml(frontmatter) : {}
-}
-
-// mdsvex uses the same parser so legacy schedules remain renderable while all other frontmatter follows YAML.
-export const frontmatterOptions = {type: 'yaml', marker: '-', parse: parseFrontmatterYaml}
-
-// Parse all schedules from a page after normalizing its frontmatter.
-export function parseScheduledFrontmatter(contents: string): ScheduledFrontmatter[] {
-  return parseScheduledValue(parseFrontmatter(contents).scheduled)
-}
-
-// Parse one schedule string or a YAML list. Core validates the five-field cron and leaves any trailing syntax to Cloud.
-function parseScheduledValue(scheduled: unknown): ScheduledFrontmatter[] {
-  if (scheduled === undefined) return []
-  let values: unknown[] = Array.isArray(scheduled) ? scheduled : [scheduled]
-  if (!values.every((value): value is string => typeof value === 'string')) throw new Error('Scheduled reports must be strings')
-
-  return values.map(value => {
-    let parts = value.trim().split(/\s+/)
-    if (parts.length < 5) throw new Error('Invalid scheduled report: expected a five-field cron')
-    let cron = parts.slice(0, 5).join(' ')
-    parseCronFieldSet(cron)
-    return {cron, remainder: parts.slice(5).join(' ')}
-  })
-}
+// mdsvex passes only the YAML body, so restore delimiters for the shared page parser.
+export const frontmatterOptions = {type: 'yaml', marker: '-', parse: (body: string) => parseFrontmatter('---\n' + body + '\n---')}
 
 // Parse cron fields once for both frontmatter validation and Cloud's UTC schedule matching.
 export function parseCronFieldSet(cron: string) {
@@ -172,24 +158,6 @@ function parseCronField(field: string, min: number, max: number, sunday = false)
     for (let value = start; value <= end; value += step) values.add(sunday && value === 7 ? 0 : value)
   }
   return {values, restricted: values.size !== (sunday ? 7 : max - min + 1)}
-}
-
-// Extract supported frontmatter without compiling the page. When frontmatter omits a title,
-// use the first static Markdown h1 so every caller gets the same page metadata.
-export function extractFrontmatter(contents: string): PageFrontmatter {
-  let raw = parseFrontmatter(contents)
-  let schedules = parseScheduledValue(raw.scheduled)
-  let metadata: PageFrontmatter = {}
-
-  if (raw.title) metadata.title = String(raw.title)
-  else {
-    let markdownTitle = contents.match(/^#[ \t]+(.+?)[ \t]*#*[ \t]*$/m)?.[1]?.trim()
-    if (markdownTitle && !/[<{]/.test(markdownTitle)) metadata.title = markdownTitle
-  }
-  if (raw.hideInNav === true) metadata.hideInNav = true
-  if (raw.layout) metadata.layout = String(raw.layout)
-  if (schedules.length) metadata.scheduled = Array.isArray(raw.scheduled) ? raw.scheduled[0] : raw.scheduled
-  return metadata
 }
 
 export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles]
