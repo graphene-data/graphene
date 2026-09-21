@@ -16,7 +16,7 @@ import {
   multiGrainMessage,
   uniqueFanoutPaths,
 } from './fanout.ts'
-import {analyzeBareFunction, analyzeFunction} from './functions.ts'
+import {analyzeBareFunction, analyzeFunction, checkAggregateArgument} from './functions.ts'
 import {parseMarkdown} from './markdown.ts'
 import {extractLeadingMetadataDetails, validateMetadataEntries} from './metadata.ts'
 import {parser} from './parser.js'
@@ -888,6 +888,7 @@ class AnalysisSession implements Analyzer {
         let inner = node.getChild('Expression')
         if (inner) {
           let expr = this.analyzeExpr(inner, scope)
+          if (node.parent?.name != 'WindowExpression') checkAggregateArgument(this, inner, expr, 'count')
           let isDistinct = node.getChildren('Kw').some(keyword => txt(keyword).toLowerCase() == 'distinct')
           let sensitivePaths = isDistinct ? expr.fanout?.sensitivePaths : mergeSensitiveFanouts(expr.fanout?.sensitivePaths, [expr.fanout?.path || extendFanoutPath(scope.fanoutPath)])
           return {

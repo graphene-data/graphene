@@ -153,6 +153,7 @@ function analyzeNamedFunction(analyzer: Analyzer, node: SyntaxNode, name: string
   if (percentileMatch) {
     let args = argNodes.map(n => analyzer.analyzeExpr(n, scope))
     if (args[0]) analyzer.checkTypes(args[0], ['number'], argNodes[0])
+    if (!opts.isWindow) args.forEach((arg, idx) => checkAggregateArgument(analyzer, argNodes[idx], arg, name))
     return analyzePercentile(analyzer, node, args, percentileMatch[1], scope, opts)
   }
 
@@ -184,7 +185,17 @@ function analyzeNamedFunction(analyzer: Analyzer, node: SyntaxNode, name: string
     return analyzer.diag(node, `Wrong number of arguments for ${name}: expected ${expected}, got ${argNodes.length}`, {sql: 'NULL', type: scalarType('error')})
   }
 
+  // A window aggregate consumes grouped results, so an aggregate argument is legal there.
+  if (overload.returnType.expressionType == 'aggregate' && !opts.isWindow) {
+    args.forEach((arg, idx) => checkAggregateArgument(analyzer, argNodes[idx], arg, name))
+  }
   return analyzeResolvedFunction(name, overload, args, scope, opts)
+}
+
+// Shared by regular aggregates, percentile shorthand, and COUNT's dedicated syntax.
+export function checkAggregateArgument(analyzer: Analyzer, node: SyntaxNode, expr: Expr, name: string) {
+  if (!expr.isAgg) return
+  analyzer.diag(node, `"${txt(node)}" is already an aggregate measure or expression; reference it directly instead of wrapping it in ${name}()`)
 }
 
 // Maps arguments around a variadic parameter, including ClickHouse combinators that append fixed arguments after it.
