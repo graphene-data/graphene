@@ -1,11 +1,12 @@
 /// <reference types="vitest/globals" />
 import * as fsp from 'node:fs/promises'
+import {parseEval} from './evals.ts'
 import {createServer, type IncomingMessage, type ServerResponse} from 'node:http'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import {fileURLToPath} from 'node:url'
 
-import {loadConfig, normalizeConfig, type Config, type ConfigInput} from '../lang/config.ts'
+import {config, loadConfig, normalizeConfig, setGlobalConfig, type Config, type ConfigInput} from '../lang/config.ts'
 import {isServerRunning, stopGrapheneIfRunning} from './background.ts'
 import {normalizePageUrl} from './run.ts'
 import {expect, expectCliOutput, test} from './testFixtures.ts'
@@ -48,6 +49,27 @@ describe('cli package', () => {
     expect(normalizeConfig({root: '/tmp/project-without-package'}).projectName).toBe('project-without-package')
   })
 
+  test.each([
+    [' https://example.graphenedata.com/my-project/// ', 'https://example.graphenedata.com', 'my-project'],
+    ['http://localhost:4321/my-project/', 'http://localhost:4321', 'my-project'],
+    ['http://127.0.0.1:4321', 'http://127.0.0.1:4321', ''],
+  ])('normalizes Cloud URL %s without changing input', (cloud, origin, repoSlug) => {
+    let input = {root: flightDir, cloud}
+    let normalized = normalizeConfig(input)
+    expect(normalized.cloud).toEqual({origin, repoSlug})
+    expect(input).toEqual({root: flightDir, cloud})
+    expect(normalizeConfig(normalized)).toEqual(normalized)
+    expect(JSON.parse(JSON.stringify(normalized))).toEqual(normalized)
+    let previous = structuredClone(config)
+    try {
+      setGlobalConfig(normalized)
+      setGlobalConfig(config)
+      expect(config).toEqual(normalized)
+    } finally {
+      setGlobalConfig(previous)
+    }
+  })
+
   test('directly includes every lang and ui runtime dependency with the exact same spec', async () => {
     let cli = JSON.parse(await fsp.readFile(path.resolve(dir, '../cli/package.json'), 'utf8'))
     let lang = JSON.parse(await fsp.readFile(path.resolve(dir, '../lang/package.json'), 'utf8'))
@@ -82,6 +104,59 @@ describe('cli token', () => {
     } finally {
       await new Promise(resolve => server.close(resolve))
     }
+  })
+})
+
+describe('cli results', () => {
+  test('reads repo-scoped lists and evidence as JSON without Git, launches or polling', async ({runCli}) => {
+    let root = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-results-'))
+    let requests: string[] = []
+    let evaluation = {id: 'eval-1', repoSlug: 'my-project', day: '2026-01-05', file: 'evals/first.yaml', sha: 'a'.repeat(40), sessionId: 'eval-session', grade: false, reason: 'Wrong aggregation', status: 'SUCCESS', error: null}
+    let review = {id: 'review-1', sessionId: 'session-1', findings: []}
+    let results = [[evaluation], {...evaluation, session: {id: 'eval-session', messages: [{role: 'user', content: 'Eval evidence'}]}},
+      [review], {...review, session: {id: 'session-1', messages: [{role: 'user', content: 'Review evidence'}]}}]
+    let server = createServer((req, res) => {
+      res.setHeader('content-type', 'application/json')
+      requests.push(`${req.method} ${req.url}`)
+      expect(req.headers.authorization).toBe('Bearer test-token')
+      res.end(JSON.stringify(results[(requests.length - 1) % results.length]))
+    })
+    try {
+      let endpoint = await listen(server)
+      await fsp.writeFile(path.join(root, 'package.json'), JSON.stringify({graphene: {cloud: ` ${endpoint}/my-project/// `, telemetry: false, updateNotifier: false}}))
+      let cfg = await loadConfig(root, () => {})
+      let env = {GRAPHENE_TOKEN: 'test-token'}
+      for (let [index, args] of [['evals'], ['evals', 'eval/1'], ['reviews'], ['reviews', 'session/1']].entries()) {
+        expectCliOutput(await runCli(args, cfg, {env}), JSON.stringify(results[index], null, 2))
+      }
+      for (let [index, args] of [['evals'], ['evals', 'eval/1'], ['reviews'], ['reviews', 'session/1']].entries()) {
+        expectCliOutput(await runCli([...args, '--days', '30'], cfg, {env}), JSON.stringify(results[index], null, 2))
+      }
+      for (let command of ['evals', 'reviews']) for (let value of ['0', '-1', '1.5', 'abc', '1e2', '2days', '', '9007199254740992']) {
+        expectCliOutput(await runCli([command, '--days', value], cfg, {env}), {code: 1, stderr: 'days must be a positive integer'})
+      }
+      expect(requests).toEqual([
+        'GET /_api/evals?repoSlug=my-project&days=7', 'GET /_api/evals/eval%2F1?repoSlug=my-project',
+        'GET /_api/sessionReviews?repoSlug=my-project&completed=true&days=7', 'GET /_api/sessionReviews/session%2F1?repoSlug=my-project&completed=true',
+        'GET /_api/evals?repoSlug=my-project&days=30', 'GET /_api/evals/eval%2F1?repoSlug=my-project',
+        'GET /_api/sessionReviews?repoSlug=my-project&completed=true&days=30', 'GET /_api/sessionReviews/session%2F1?repoSlug=my-project&completed=true',
+      ])
+      expectCliOutput(await runCli(['evals'], configFor(root)), {code: 1, stderr: 'Results require a Graphene Cloud project'})
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+      await fsp.rm(root, {recursive: true, force: true})
+    }
+  })
+
+  test('parses one YAML eval and rejects missing, empty or executable fields', () => {
+    expect(parseEval({path: 'evals/revenue/monthly.yaml', contents: 'question: |\n  Show monthly revenue\nrubric: Use refunded sales'})).toEqual(
+      {name: 'revenue/monthly', question: 'Show monthly revenue\n', rubric: 'Use refunded sales'},
+    )
+    expect(parseEval({path: 'evals/foo.yml', contents: 'question: hi\nrubric: okay'})).toEqual({name: 'foo', question: 'hi', rubric: 'okay'})
+    for (let contents of ['', '[]', 'question: hi', 'question: " "\nrubric: okay', 'question: hi\nrubric: 7']) {
+      expect(() => parseEval({path: 'evals/foo.yaml', contents})).toThrow('evals/foo.yaml: expected question and rubric strings')
+    }
+    expect(() => parseEval({path: 'evals/foo.yaml', contents: 'question: hi\nrubric: okay\ncommand: rm'})).toThrow('only question and rubric')
   })
 })
 

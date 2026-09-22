@@ -9,7 +9,7 @@ import type {Command} from 'commander'
 import type {Config} from '../lang/config.ts'
 import {getTelemetryAuthorization} from './auth.ts'
 
-export type TelemetryCommand = 'check' | 'compile' | 'list' | 'login' | 'run' | 'schema' | 'serve' | 'stop'
+export type TelemetryCommand = 'check' | 'compile' | 'evals' | 'reviews' | 'list' | 'login' | 'run' | 'schema' | 'serve' | 'stop'
 
 export interface CliTelemetryEvent {
   event: TelemetryCommand
@@ -76,7 +76,7 @@ export async function sendTelemetry(
     event: command,
     install_id: await getInstallId(cfg.root),
     project_hash: await getProjectHash(cfg),
-    repo_slug: cfg.cloud ? new URL(cfg.cloud).pathname.replace(/^\/+|\/+$/g, '') || undefined : undefined,
+    repo_slug: cfg.cloud?.repoSlug || undefined,
     cli_version: cliVersion,
     timestamp: new Date().toISOString(),
     agent: getAgent(process.env),
@@ -104,7 +104,7 @@ export async function sendTelemetry(
 // Cloud projects report to their Cloud origin so the server can validate their existing credentials.
 function telemetryEndpoint(cfg: Config) {
   if (!cfg.cloud) return DEFAULT_TELEMETRY_ENDPOINT
-  return new URL('/cli-telemetry', cfg.cloud).toString()
+  return new URL('/cli-telemetry', cfg.cloud.origin).toString()
 }
 
 export function isTelemetryEnabled(config: Config, endpoint: string) {
@@ -149,7 +149,7 @@ export async function getProjectHash(cfg: Config) {
 }
 
 async function getDatabaseIdentity(cfg: Config) {
-  if (cfg.cloud) return `cloud:${urlLocation(cfg.cloud)}`
+  if (cfg.cloud) return `cloud:${urlLocation(cfg.cloud.origin)}${cfg.cloud.repoSlug ? `/${cfg.cloud.repoSlug}` : ''}`
   if (cfg.motherduck) return `motherduck:${cfg.motherduck.database || ''}`
   if (cfg.dialect == 'bigquery') return `bigquery:${cfg.bigquery?.projectId || ''}:${cfg.defaultNamespace || ''}`
   if (cfg.dialect == 'snowflake') return `snowflake:${cfg.snowflake?.account || ''}:${cfg.snowflake?.database || ''}`

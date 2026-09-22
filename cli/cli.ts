@@ -120,6 +120,37 @@ program.command('list')
     }),
   )
 
+// Results are admin-only Cloud reads; neither command needs Git or starts model execution.
+program.command('evals')
+  .description('Read evals as JSON (Cloud admins only)')
+  .argument('[eval-id]', 'Inspect results and evidence')
+  .option('--days <N>', 'List results from the last N days (positive integer; ignored with an ID)', parseResultDays, 7)
+  .action(withTelemetry('evals', async (_exit, id: string | undefined, options: {days: number}) => {
+    if (!config.cloud) throw new Error('Results require a Graphene Cloud project')
+    let query = new URLSearchParams({repoSlug: config.cloud.repoSlug})
+    if (!id) query.set('days', String(options.days))
+    let response = await authenticatedFetch(`/_api/evals${id ? `/${encodeURIComponent(id)}` : ''}?${query}`)
+    console.log(JSON.stringify(await response.json(), null, 2))
+  }))
+
+program.command('reviews')
+  .description('Read reviews as JSON (Cloud admins only)')
+  .argument('[session-id]', 'Inspect results and evidence')
+  .option('--days <N>', 'List results from the last N days (positive integer; ignored with an ID)', parseResultDays, 7)
+  .action(withTelemetry('reviews', async (_exit, id: string | undefined, options: {days: number}) => {
+    if (!config.cloud) throw new Error('Results require a Graphene Cloud project')
+    let query = new URLSearchParams({repoSlug: config.cloud.repoSlug, completed: 'true'})
+    if (!id) query.set('days', String(options.days))
+    let response = await authenticatedFetch(`/_api/sessionReviews${id ? `/${encodeURIComponent(id)}` : ''}?${query}`)
+    console.log(JSON.stringify(await response.json(), null, 2))
+  }))
+
+// Reject partial numbers and unsafe integers before making any Cloud request.
+function parseResultDays(value: string) {
+  if (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || Number(value) < 1) throw new Error('days must be a positive integer')
+  return Number(value)
+}
+
 program.command('schema')
   .description('Inspect database tables or describe a table')
   .argument('[schema | table]', 'Optional schema or table name to describe')
@@ -128,7 +159,7 @@ program.command('schema')
       let result: SchemaInspection
       if (config.cloud) {
         await checkCloudAuth()
-        let repoSlug = new URL(config.cloud).pathname.replace(/^\/+|\/+$/g, '')
+        let {repoSlug} = config.cloud
         let response = await authenticatedFetch('/_api/schema', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
