@@ -131,7 +131,7 @@ export async function loginPkce(opener?: (url: string) => Promise<void>) {
   let redirect_uri = `${loop.url}/callback`
 
   // Build authorize URL (merge with provided URL if present)
-  let cloudOrigin = new URL(config.cloud!).origin
+  let cloudOrigin = config.cloud!.origin
   let authorizeUrl = new URL(`${cloudOrigin}/authenticate`)
   authorizeUrl.search = new URLSearchParams({
     redirect_uri,
@@ -176,7 +176,7 @@ async function refreshAccessToken(staleAccessToken?: string) {
     if (staleAccessToken && entry?.access_token != staleAccessToken) return
 
     let refresh_token = entry?.refresh_token
-    let cloudOrigin = new URL(config.cloud!).origin
+    let cloudOrigin = config.cloud!.origin
     if (!refresh_token) throw new Error('Not logged in to Graphene Cloud. Run `graphene login` and try again.')
     try {
       let res = await gFetch(new URL('/_api/oauth2/token', cloudOrigin).toString(), {
@@ -215,7 +215,7 @@ export async function checkCloudAuth(): Promise<void> {
 
 // Makes an authenticated request using an explicitly delegated token or credentials from `graphene login`.
 export async function authenticatedFetch(pathOrUrl: string, init: RequestInit = {}): Promise<Response> {
-  let cloudOrigin = new URL(config.cloud!).origin
+  let cloudOrigin = config.cloud!.origin
   let url = new URL(pathOrUrl, cloudOrigin)
   let headers = new Headers(init.headers || {})
 

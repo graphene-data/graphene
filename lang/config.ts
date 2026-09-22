@@ -1,3 +1,4 @@
+// Normalize package.json settings into runtime config, including Cloud origin and repository identity.
 import {existsSync, statSync} from 'node:fs'
 import {readFile} from 'node:fs/promises'
 import path from 'path'
@@ -13,7 +14,7 @@ export interface Config {
   updateNotifier?: boolean
   port: number
   csp?: 'all' | false
-  cloud?: string
+  cloud?: {origin: string; repoSlug: string}
   envFile: string[] // array of paths where we can look for the env file
 
   bigquery?: {
@@ -72,7 +73,8 @@ export interface Config {
   }
 }
 
-export type ConfigInput = Omit<Config, 'root' | 'pagesPrefix' | 'projectName' | 'dialect' | 'ignoredFiles' | 'envFile' | 'port'> & {
+export type ConfigInput = Omit<Config, 'root' | 'pagesPrefix' | 'projectName' | 'dialect' | 'ignoredFiles' | 'envFile' | 'port' | 'cloud'> & {
+  cloud?: string | Config['cloud']
   root?: string
   dialect?: Config['dialect']
   ignoredFiles?: Config['ignoredFiles']
@@ -84,15 +86,21 @@ export type ConfigInput = Omit<Config, 'root' | 'pagesPrefix' | 'projectName' | 
 export let config: Config = {dialect: 'duckdb', root: ''} as Config
 
 export function setGlobalConfig(cfg: ConfigInput | Config, projectName?: string) {
-  Object.keys(config).forEach(key => delete config[key])
   if ('projectName' in cfg) projectName ||= cfg.projectName
   let normalized = normalizeConfig(cfg, process.cwd(), projectName)
   if (!('pagesPrefix' in cfg)) normalized.pagesPrefix = pagesPrefixForRoot(normalized.root)
+  Object.keys(config).forEach(key => delete config[key])
   Object.assign(config, normalized)
 }
 
+// Accept raw settings or already-normalized config without mutating the input.
 export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(), projectName?: string, env: NodeJS.ProcessEnv = process.env): Config {
   let cfg = {...input}
+  let cloud = cfg.cloud
+  if (typeof cloud == 'string' && cloud) {
+    let url = new URL(cloud.trim())
+    cloud = {origin: url.origin, repoSlug: url.pathname.replace(/^\/+|\/+$/g, '')}
+  }
   let root = path.resolve(cfg.root || defaultRoot)
   if (cfg.namespace && !cfg.defaultNamespace) cfg.defaultNamespace = cfg.namespace
 
@@ -114,6 +122,7 @@ export function normalizeConfig(input: ConfigInput, defaultRoot = process.cwd(),
 
   return {
     ...cfg,
+    cloud: cloud || undefined,
     dialect,
     root,
     pagesPrefix: (input as Config).pagesPrefix || '',
