@@ -109,7 +109,7 @@ You can add YAML frontmatter at the top of a page. The following attributes are 
 Use one string for a single delivery time:
 
 ```yaml
-scheduled: "0 14 * * 1-5 @someuser #somechannel #otherchannel"
+scheduled: "0 14 * * 1-5 @someuser @'other user' #somechannel #otherchannel"
 ```
 
 Use a YAML list for multiple delivery times:
