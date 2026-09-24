@@ -1,3 +1,4 @@
+// Stores Cloud login credentials, refreshes rotating tokens, and authenticates CLI requests.
 import {spawn} from 'child_process'
 import http from 'http'
 import fs from 'node:fs/promises'
@@ -188,6 +189,9 @@ async function refreshAccessToken(staleAccessToken?: string) {
     } catch (error) {
       if (error instanceof Error && (error as any).error === 'invalid_grant') {
         throw new Error('Your Graphene Cloud session has expired. Run `graphene login` and try again.', {cause: error})
+      }
+      if (error instanceof Error && (error as any).error === 'invalid_request') {
+        throw new Error(`Unable to refresh your Graphene Cloud session. Run \`graphene login\` and try again. (${error.message})`, {cause: error})
       }
       throw error
     }

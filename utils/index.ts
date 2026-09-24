@@ -13,7 +13,7 @@ export async function gFetch(input: RequestInfo | URL, init?: RequestInit): Prom
   } catch {
     // Proxies and load balancers often return plain text or HTML even when the API normally returns JSON.
   }
-  let message = typeof body == 'string' ? body : body?.message || body?.error
+  let message = typeof body == 'string' ? body : body?.message || body?.error_description || body?.error
   let error = new Error(message || `Request failed with HTTP ${response.status}`)
   if (body && typeof body == 'object') Object.assign(error, body)
   Object.assign(error, {status: response.status})
