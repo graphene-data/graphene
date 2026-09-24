@@ -59,6 +59,7 @@
     id={`text-input-${name}`}
     class="text-input"
     type="text"
+    disabled={window.$GRAPHENE.readonly}
     value={value}
     placeholder={placeholder}
     oninput={onInput}
