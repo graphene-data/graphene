@@ -7,7 +7,9 @@ let subscribers: Record<string, {type: ParamType; defaultValue: any; cb: ParamCa
 
 window.addEventListener('popstate', () => applyParams(readUrlParams(), false))
 
-type ParamType = 'scalar' | 'array' | 'list'
+export type ParamValue = string | number | boolean | null | Array<string | number | boolean> | ListParam
+
+export type ParamType = 'scalar' | 'array' | 'list'
 type ParamCallback = (value: any) => void
 
 // A list describes a selected set using either its included values or its excluded complement.
@@ -20,6 +22,11 @@ export function getParams() {
   return structuredClone(paramValues)
 }
 
+// Replace current values before components subscribe, without reading or rewriting the URL.
+export function setParams(values: ReturnType<typeof getParams>) {
+  paramValues = structuredClone(values)
+}
+
 // Reset params from the URL when the host loads a new page without reloading its own runtime.
 export function resetParams() {
   paramValues = readUrlParams()
@@ -29,13 +36,15 @@ export function resetParams() {
 export function param(name: string, type: ParamType, defaultValue: any, cb: ParamCallback) {
   if (subscribers[name]) throw new Error(`Param named ${name} already in use`)
   subscribers[name] = {type, defaultValue, cb}
-  paramValues[name] = normalizeParamValue(type, paramValues[name] ?? defaultValue ?? null)
+  // Captured null is a selection too; do not replace it with an authored default during playback.
+  let value = window.$GRAPHENE.readonly && Object.hasOwn(paramValues, name) ? paramValues[name] : paramValues[name] ?? defaultValue ?? null
+  paramValues[name] = normalizeParamValue(type, value)
   cb(paramValues[name])
   return () => delete subscribers[name]
 }
 
 export function updateParam(name: string, value: any) {
-  if (sameValue(paramValues[name], value)) return
+  if (window.$GRAPHENE.readonly || sameValue(paramValues[name], value)) return
   let next = structuredClone(paramValues)
   next[name] = value
   applyParams(next, true)
@@ -43,6 +52,7 @@ export function updateParam(name: string, value: any) {
 
 // Update values, notify input components, optionally rewrite the URL, and rerun dependent queries.
 function applyParams(next: any, updateUrl = false) {
+  if (window.$GRAPHENE.readonly) return
   Object.entries(subscribers).forEach(([name, sub]) => {
     next[name] = normalizeParamValue(sub.type, next[name] ?? sub.defaultValue ?? null)
   })
