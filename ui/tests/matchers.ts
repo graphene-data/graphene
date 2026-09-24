@@ -1,3 +1,4 @@
+// Shared core/cloud screenshot assertions: settle rendering without changing the user's scroll destination.
 import type {Locator, Page} from 'playwright'
 
 import {expect as baseExpect} from '@playwright/test'
@@ -28,7 +29,7 @@ const extendedExpect = baseExpect.extend({
     // Hover state is usually incidental and can differ between local and CI browsers.
     if (!options.mouseHover) await (page as Page).mouse.move(-1, -1)
 
-    // Wait for fonts, Graphene renders, and animations to settle before comparing pixels.
+    // Wait for fonts, Graphene renders, animations, and scrolling before comparing pixels.
     let stillLoading = await (page as Page).evaluate(async () => {
       await document.fonts.ready
       return await (window as any).$GRAPHENE?.waitForLoad?.()
@@ -108,15 +109,22 @@ interface ExpectWithScreenshot {
 
 export const playwrightExpect: ExpectWithScreenshot = extendedExpect as any
 
+// Finish Web Animations as before, but let native smooth scrolling reach its actual destination.
 export async function waitForAnimations(page: Page) {
   await page.evaluate(async () => {
-    let animations = document.getAnimations().filter(animation => animation.playState === 'running' || animation.pending)
-    if (!animations.length) return
-    await nextPaint()
-
-    while (true) {
-      animations = document.getAnimations().filter(animation => animation.playState === 'running' || animation.pending)
-      if (!animations.length) break
+    let positions = scrollPositions()
+    let idlePaints = 0
+    while (idlePaints < 2) {
+      // Cross paints even on animation-free pages: a compositor scroll may not have moved yet.
+      await nextPaint()
+      let current = scrollPositions()
+      let animations = document.getAnimations().filter(animation => animation.playState === 'running' || animation.pending)
+      let scrolling = current.size !== positions.size || [...current].some(([element, [x, y]]) => {
+        let previous = positions.get(element)
+        return !previous || previous[0] !== x || previous[1] !== y
+      })
+      idlePaints = scrolling || animations.length ? 0 : idlePaints + 1
+      positions = current
 
       for (let animation of animations) {
         if (Number.isFinite(animation.effect?.getComputedTiming().endTime)) animation.finish()
@@ -127,8 +135,17 @@ export async function waitForAnimations(page: Page) {
       }
 
       // Let finish/cancel events and any animations they trigger run before checking again.
-      await new Promise(resolve => setTimeout(resolve))
-      await nextPaint()
+      if (animations.length) await new Promise(resolve => setTimeout(resolve))
+    }
+
+    // Include the document scroller and nested scrollers, even for locator screenshots.
+    // Zero offsets need no entry; starting/stopping at zero still changes the map.
+    function scrollPositions() {
+      let positions = new Map<Element, [number, number]>()
+      for (let element of document.querySelectorAll('*')) {
+        if (element.scrollLeft || element.scrollTop) positions.set(element, [element.scrollLeft, element.scrollTop])
+      }
+      return positions
     }
 
     function nextPaint() {
