@@ -74,13 +74,18 @@ test('authenticatedFetch uses GRAPHENE_TOKEN', async () => {
 })
 
 // An expired Cloud session should tell the user how to authenticate again instead of exposing the token endpoint error.
-test('authenticatedFetch explains how to recover when the Cloud session expires', async () => {
+test.each([
+  [{error: 'invalid_grant'}, 'Your Graphene Cloud session has expired. Run `graphene login` and try again.'],
+  [{error: 'invalid_request'}, 'Unable to refresh your Graphene Cloud session. Run `graphene login` and try again. (invalid_request)'],
+  [{error: 'invalid_request', error_description: 'Refresh token is invalid'}, 'Unable to refresh your Graphene Cloud session. Run `graphene login` and try again. (Refresh token is invalid)'],
+  [{error: 'server_error', error_description: 'Service unavailable'}, 'Service unavailable'],
+])('authenticatedFetch explains refresh failures: %j', async (body, message) => {
   let originalConfig = structuredClone(config)
   let originalToken = process.env.GRAPHENE_TOKEN
   let server = createServer((req, res) => {
     expect(req.url).toBe('/_api/oauth2/token')
     res.writeHead(400, {'content-type': 'application/json'})
-    res.end(JSON.stringify({error: 'invalid_grant'}))
+    res.end(JSON.stringify(body))
   })
 
   try {
@@ -95,7 +100,7 @@ test('authenticatedFetch explains how to recover when the Cloud session expires'
       [root]: {access_token: 'expired-access-token', refresh_token: 'expired-refresh-token', expires_at: 0},
     }))
 
-    await expect(authenticatedFetch('/query')).rejects.toThrow('Your Graphene Cloud session has expired. Run `graphene login` and try again.')
+    await expect(authenticatedFetch('/query')).rejects.toMatchObject({message})
   } finally {
     vi.restoreAllMocks()
     await new Promise(resolve => server.close(resolve))
