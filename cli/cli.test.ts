@@ -107,6 +107,74 @@ describe('cli token', () => {
   })
 })
 
+describe('cli export', () => {
+  test('exports synced Cloud paths with repeated parameters, without reading local contents', async ({runCli}) => {
+    let root = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-export-'))
+    let requests: unknown[] = []
+    let html = '<!doctype html><html><body>Cloud report</body></html>'
+    let server = createServer(async (req, res) => {
+      expect(`${req.method} ${req.url}`).toBe('POST /_api/export')
+      expect(req.headers.authorization).toBe('Bearer test-token')
+      requests.push(JSON.parse(await readRequestBody(req)))
+      res.setHeader('content-type', 'text/html; charset=utf-8')
+      res.end(html)
+    })
+    let defaultOutput = path.join(process.cwd(), 'cli-export-test.html')
+    try {
+      let cfg = configFor(root, {cloud: `${await listen(server)}/flights`})
+      let env = {GRAPHENE_TOKEN: 'test-token'}
+      let output = path.join(root, 'report.html')
+      await fsp.writeFile(path.join(root, 'local.md'), '{broken local markdown')
+      expectCliOutput(await runCli(['export', 'local.md', '--param', 'carrier=AA', '--param', 'carrier=A&B=+ #é', '--param', 'empty=', '--param', '__proto__=safe', '--output', output], cfg, {env}), `Report saved to ${output}`)
+      expect(await fsp.readFile(output, 'utf8')).toBe(html)
+      expectCliOutput(await runCli(['export', path.join(root, 'cli-export-test.md')], cfg, {env}), 'Report saved to cli-export-test.html')
+      expect(await fsp.readFile(defaultOutput, 'utf8')).toBe(html)
+      expect(requests).toEqual([
+        {repoSlug: 'flights', path: 'local.md', params: JSON.parse('{"carrier":["AA","A&B=+ #é"],"empty":"","__proto__":"safe"}')},
+        {repoSlug: 'flights', path: 'cli-export-test.md', params: {}},
+      ])
+      expectCliOutput(await runCli(['export', path.join(root, 'missing.md'), '--param', 'bad'], cfg, {env}), {code: 1, stderr: 'Invalid --param "bad". Expected key=value.'})
+      for (let file of ['model.gsql', '../outside.md']) {
+        expectCliOutput(await runCli(['export', file], cfg, {env}), {code: 1, stderr: 'Export requires a Markdown file path inside the project'})
+      }
+      expectCliOutput(await runCli(['export', 'report.md'], configFor(root)), {code: 1, stderr: 'Export requires a Graphene Cloud project with a repository slug'})
+      expectCliOutput(await runCli(['export', path.join(root, 'missing.md')], cfg, {env: {GRAPHENE_TOKEN: ''}}), {code: 1, stderr: 'Not logged in to Graphene Cloud. Run `graphene login` and try again.'})
+      expect(requests).toHaveLength(2)
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+      await fsp.rm(defaultOutput, {force: true})
+      await fsp.rm(root, {recursive: true, force: true})
+    }
+  })
+
+  test('does not create or overwrite output on HTTP or invalid response failures', async ({runCli}) => {
+    let root = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-export-errors-'))
+    let status = 500
+    let server = createServer((_req, res) => {
+      res.statusCode = status
+      res.setHeader('content-type', 'application/json')
+      res.end(JSON.stringify({message: 'Export failed'}))
+    })
+    try {
+      let cfg = configFor(root, {cloud: `${await listen(server)}/flights`})
+      let output = path.join(root, 'report.html')
+      let args = ['export', path.join(root, 'report.md'), '--output', output]
+      let options = {env: {GRAPHENE_TOKEN: 'test-token'}}
+      expectCliOutput(await runCli(args, cfg, options), {code: 1, stderr: 'Export failed'})
+      expect(await fsp.stat(output).catch(() => null)).toBeNull()
+      await fsp.writeFile(output, 'previous report')
+      for (let code of [401, 403, 404, 500, 200]) {
+        status = code
+        expectCliOutput(await runCli(args, cfg, options), {code: 1, stderr: code === 200 ? 'Expected a standalone HTML response from Graphene Cloud' : 'Export failed'})
+        expect(await fsp.readFile(output, 'utf8')).toBe('previous report')
+      }
+    } finally {
+      await new Promise(resolve => server.close(resolve))
+      await fsp.rm(root, {recursive: true, force: true})
+    }
+  })
+})
+
 describe('cli results', () => {
   test('reads repo-scoped lists and evidence as JSON without Git, launches or polling', async ({runCli}) => {
     let root = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-results-'))
