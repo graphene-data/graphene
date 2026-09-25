@@ -9,7 +9,7 @@ import type {Command} from 'commander'
 import type {Config} from '../lang/config.ts'
 import {getTelemetryAuthorization} from './auth.ts'
 
-export type TelemetryCommand = 'check' | 'compile' | 'evals' | 'reviews' | 'list' | 'login' | 'run' | 'schema' | 'serve' | 'stop'
+export type TelemetryCommand = 'check' | 'compile' | 'export' | 'evals' | 'reviews' | 'list' | 'login' | 'run' | 'schema' | 'serve' | 'stop'
 
 export interface CliTelemetryEvent {
   event: TelemetryCommand

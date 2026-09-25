@@ -44,6 +44,17 @@ graphene serve --bg # Start the local dev server in the background
 graphene stop # Stop the background dev server
 ```
 
+## Standalone report export (Cloud)
+
+```bash
+graphene export report.md --param carrier=AA --output report.html
+graphene export pages/report.md # Writes report.html in the current directory
+```
+
+Exports the **synced Cloud file**, never local contents. Requires `graphene.cloud` with a repository slug and `graphene login` or `GRAPHENE_TOKEN`; no local browser. HTML opens offline with captured results and frozen inputs. Repeat `--param key=value` for multiple string values. Output defaults to basename `.html` in cwd; failed exports leave it untouched.
+
+Paths must be inside the project. Existing cwd-relative paths win, then existing project-root paths; missing local paths resolve from cwd. Use an absolute path to disambiguate. Cloud rejects shadowed files and unsupported URL paths (percent escapes, query/fragment delimiters, controls, dot segments or trailing spaces). Export waits for rendering without publishing local changes.
+
 ## Weekly evals and session reviews (Cloud)
 
 Publish eval definitions under `evals/` in your project. Each `.yaml` or `.yml` file contains one question and rubric; its full project-relative path identifies the eval. Nested folders work.

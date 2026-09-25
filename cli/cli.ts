@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+// Defines the `graphene` CLI. Most commands (check, compile, run, serve) work on the local workspace at config.root;
+// Cloud commands (login, token, export, evals, reviews) call the Cloud API for the project in config.cloud via authenticatedFetch.
 
 import {Command} from 'commander'
 import dotenv from 'dotenv'
@@ -105,6 +107,31 @@ program.command('run')
       }
     }),
   )
+
+// Cloud renders the *synced* copy of the file through its Lambda exporter; local contents are never read or uploaded.
+program.command('export')
+  .description('Export a synced Cloud Markdown report as standalone HTML (not local contents)')
+  .argument('<file>', 'Markdown path relative to cwd or the project root; need not exist locally')
+  .option('--param <key=value>', 'Query parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
+  .option('-o, --output <path>', 'Output file (default: file basename with .html in cwd)')
+  .action(withTelemetry('export', async (exit, file: string, options: {param: string[]; output?: string}) => {
+    if (!config.cloud?.repoSlug) throw new Error('Export requires a Graphene Cloud project with a repository slug')
+    let candidates = [path.resolve(process.cwd(), file), path.resolve(config.root, file)]
+    let absolutePath = candidates.find(p => fs.existsSync(p)) || candidates[0]
+    let cloudPath = path.relative(config.root, absolutePath).split(path.sep).join('/')
+    if (!cloudPath.endsWith('.md') || cloudPath.startsWith('../') || path.isAbsolute(cloudPath)) throw new Error('Export requires a Markdown file path inside the project')
+    let params = parseRunInputs(options.param, exit)
+    let response = await authenticatedFetch('/_api/export', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({repoSlug: config.cloud.repoSlug, path: cloudPath, params}),
+    })
+    // authenticatedFetch throws on non-2xx, so a failed export never touches an existing output file.
+    if (response.headers.get('content-type')?.split(';')[0] !== 'text/html') throw new Error('Expected a standalone HTML response from Graphene Cloud')
+    let html = Buffer.from(await response.arrayBuffer())
+    let output = options.output || path.basename(cloudPath, '.md') + '.html'
+    await fs.writeFile(output, html)
+    console.log('Report saved to', output)
+  }))
 
 program.command('list')
   .description('List the component IDs for charts and tables on a markdown page')
@@ -296,7 +323,7 @@ function validateInputQuery(analysis: AnalysisResult, exit: (code?: number) => n
 }
 
 function parseRunInputs(values: string[], exit: (code?: number) => never): Record<string, string | string[]> {
-  let inputs = {} as Record<string, string | string[]>
+  let inputs = Object.create(null) as Record<string, string | string[]>
   for (let value of values) {
     let index = value.indexOf('=')
     let key = index >= 0 ? value.slice(0, index) : ''
