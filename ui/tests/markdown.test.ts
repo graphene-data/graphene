@@ -1,3 +1,4 @@
+// Markdown rendering and browser-policy regressions through the real CLI server.
 import {scalarType} from '../../lang/types.ts'
 import {grapheneCsp} from '../csp.ts'
 import {test, expect, waitForGrapheneLoad} from './fixtures.ts'
@@ -47,6 +48,7 @@ test('serves the cloud CSP unless disabled', async ({server, page}) => {
   let response = await page.goto(server.url())
   await waitForGrapheneLoad(page)
   expect(response!.headers()['content-security-policy']).toBe(grapheneCsp)
+  expect(await page.evaluate(async () => (await document.fonts.load('400 16px Fraunces', 'CONTENTS')).map(face => face.status))).toEqual(['loaded'])
 
   response = await page.goto(server.url({csp: false}))
   await waitForGrapheneLoad(page)
