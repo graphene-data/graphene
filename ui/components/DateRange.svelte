@@ -100,7 +100,7 @@
       values.sort()
       domainStart = values[0]
       domainEnd = values[values.length - 1]
-      if (!touched && !currentStart && !currentEnd) {
+      if (!window.$GRAPHENE.readonly && !touched && !currentStart && !currentEnd) {
         let startCandidate = domainStart
         let endCandidate = domainEnd ? addDaysString(domainEnd, 1) : null
         setRange(startCandidate, endCandidate, currentPreset, {markTouched: false, persist: true})
@@ -323,12 +323,12 @@
     <div class="input-description">{description}</div>
   {/if}
   <div class="range-row">
-    <input id={`daterange-${name}-start`} class="date-input" type="date" value={currentStart || ''} onchange={onStartChange} />
+    <input id={`daterange-${name}-start`} class="date-input" type="date" disabled={window.$GRAPHENE.readonly} value={currentStart || ''} onchange={onStartChange} />
     <span class="range-separator">to</span>
-    <input id={`daterange-${name}-end`} class="date-input" type="date" value={currentEnd || ''} onchange={onEndChange} />
+    <input id={`daterange-${name}-end`} class="date-input" type="date" disabled={window.$GRAPHENE.readonly} value={currentEnd || ''} onchange={onEndChange} />
   </div>
   {#if presetList.length}
-    <select class="preset-select" onchange={onPresetChange}>
+    <select class="preset-select" disabled={window.$GRAPHENE.readonly} onchange={onPresetChange}>
       <option value="">Custom range</option>
       {#each presetList as preset (preset)}
         <option value={preset} selected={preset === currentPreset}>{preset}</option>

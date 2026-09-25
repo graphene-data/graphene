@@ -94,7 +94,7 @@
   let selectAllDefault = $derived(toBoolean(selectAllByDefault))
   let hasNoDefault = $derived(toBoolean(noDefault))
   let hidePrint = $derived(toBoolean(hideDuringPrint))
-  let isDisabled = $derived(toBoolean(disabled))
+  let isDisabled = $derived(window.$GRAPHENE.readonly || toBoolean(disabled))
   let disableSelectAllButton = $derived(toBoolean(disableSelectAll))
   let defaultValues = $derived(parseDefaultValue(defaultValue, multi))
 
@@ -364,7 +364,7 @@
       setSelection(selectionFromList(paramList), {fromUser, persist: false})
       return
     }
-    setSelection(selection.filter(val => valueMap.has(optionKey(val))), {fromUser, persist: true})
+    if (!window.$GRAPHENE.readonly) setSelection(selection.filter(val => valueMap.has(optionKey(val))), {fromUser, persist: true})
   }
 
   // Multiple defaults use an array serialized as a string because Markdown attributes cannot safely pass Svelte values.
@@ -414,7 +414,7 @@
 
   // Persist the smaller side of a multiselect so large select-all controls keep URLs and requests short.
   function updateInputPayload(values: any[]) {
-    if (!paramInitialized) return
+    if (window.$GRAPHENE.readonly || !paramInitialized) return
     if (multi) {
       let excluded = availableOptions.filter(option => !values.some(selected => optionKey(selected) === optionKey(option.value))).map(option => option.value)
       let nextList = values.length <= excluded.length ? {mode: 'include' as const, values: [...values]} : {mode: 'exclude' as const, values: excluded}
