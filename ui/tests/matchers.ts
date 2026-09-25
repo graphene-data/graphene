@@ -1,5 +1,6 @@
-// Shared core/cloud screenshot assertions: settle rendering without changing the user's scroll destination.
-import type {Locator, Page} from 'playwright'
+// Browser helpers shared by core and cloud tests: stable example font CSS and screenshot matching against LFS PNGs.
+// Settle rendering without changing the user's scroll destination; write expected/actual/diff PNGs on mismatch.
+import type {BrowserContext, Locator, Page} from 'playwright'
 
 import {expect as baseExpect} from '@playwright/test'
 import fs from 'node:fs/promises'
@@ -10,6 +11,17 @@ import {expect as vitestExpect} from 'vitest'
 let snapshotDir: string | undefined
 export function setSnapshotDir(dir: string) {
   snapshotDir = dir
+}
+
+export const exampleFontCssUrl = 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap'
+
+// Google serves different @font-face URLs for the same CSS request over time, which shifted glyphs in screenshots.
+// Serve a captured copy of the flights example's CSS so the same gstatic font files load every run; the font
+// requests themselves still go over the network under the real CSP.
+export async function useExampleFontCss(context: BrowserContext) {
+  await context.route(url => url.href === exampleFontCssUrl, route => route.fulfill({
+    contentType: 'text/css', path: path.join(import.meta.dirname, 'example-fonts.css'),
+  }))
 }
 
 interface ScreenshotOptions {

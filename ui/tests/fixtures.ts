@@ -1,3 +1,4 @@
+// Core browser fixtures share a worker browser/server, with isolated report contexts and a reusable component page.
 import {type Page, chromium, type Browser, type Locator} from '@playwright/test'
 import net from 'net'
 import path from 'path'
@@ -8,7 +9,7 @@ import {clearSvelteWarnings, serve2, svelteWarnings} from '../../cli/serve2.ts'
 import {test as base} from '../../cli/testFixtures.ts'
 import {config, type Config, setGlobalConfig} from '../../lang/config.ts'
 import {trackBrowserConsole} from './logWatcher.ts'
-import {playwrightExpect as expect} from './matchers.ts'
+import {playwrightExpect as expect, useExampleFontCss} from './matchers.ts'
 
 export {expect}
 
@@ -73,6 +74,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
   page: async ({browser, server}, use) => {
     void server
     let context = await browser.newContext(chromeConfig)
+    await useExampleFontCss(context)
     let page = await context.newPage()
     trackBrowserConsole(page)
     await use(page)
@@ -83,6 +85,7 @@ export const test = base.extend<{browser: Browser; page: Page; sharedPage: Page;
   sharedPage: [
     async ({browser}, use) => {
       let context = await browser.newContext(chromeConfig)
+      await useExampleFontCss(context)
       let page = await context.newPage()
       await page.setViewportSize({width: 680, height: 400})
       trackBrowserConsole(page)
