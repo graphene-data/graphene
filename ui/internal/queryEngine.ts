@@ -156,7 +156,7 @@ async function runNode(n: QueryNode, refresh = false) {
     if (controller.signal.aborted) return
 
     let res = await queryFetcher({params, gsql, hashes, repoId: window.$GRAPHENE?.repoId}, {refresh, signal: controller.signal})
-    if (generation !== queryGeneration) return
+    if (controller.signal.aborted || generation !== queryGeneration) return
 
     // Keep the raw response on its query node before component-specific field translation mutates it.
     n.response = {gsql, result: structuredClone(res)}
@@ -209,13 +209,14 @@ async function fetchWithCache(req: QueryRequest, options: {refresh?: boolean; si
   return await response.json()
 }
 
+// Coalesce synchronous param updates, not changes arriving during a request. A later
+// update starts a new run, aborting the old one so its params cannot win the race.
 function runAll() {
   if (runPending) return runPending
-  let pending = Promise.resolve()
-    .then(_runAll)
-    .finally(() => {
-      if (runPending === pending) runPending = null
-    })
+  let pending = Promise.resolve().then(() => {
+    if (runPending === pending) runPending = null
+    return _runAll()
+  })
   runPending = pending
   return pending
 }
