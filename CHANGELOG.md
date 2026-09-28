@@ -1,3 +1,32 @@
+## 0.0.30
+
+### Breaking changes
+
+- Bare relationship references now resolve only from the `FROM` table or existing query aliases. References through another relationship must use an explicit path such as `contracts.vendors.name` (`f391f65`).
+
+### Added
+
+- Added `graphene export` to save synced Cloud reports as standalone offline HTML, with captured parameters and frozen inputs (`6ba9e23`, `d0b0bd3`).
+- Added `graphene evals` and `graphene reviews` to retrieve Cloud evaluation and session-review results as JSON (`8b33418`).
+- Expanded ClickHouse support with hundreds of functions and native aliases, including `encodeURLComponent` (`b3a033f`, `aa538cc`, `ba4b750`).
+- Added `range` for ClickHouse and DuckDB, and `generate_series` for DuckDB (`55790df`).
+- Allowed expressions in query `ORDER BY`, including non-selected columns and aggregates (`4191279`).
+- Allowed contextual keywords as identifiers and scientific notation in numeric literals (`949bf97`, `0909832`).
+- Added valid YAML schedule strings and lists in report frontmatter, retaining legacy schedule support (`633c0f1`).
+- Allowed Athena connections to use automatically refreshing credential providers (`ea46d06`).
+
+### Fixed
+
+- Quoted keyword identifiers correctly in generated SQL (`cdbffa7`).
+- Suffixed duplicate inferred output names with `_2`, `_3`, etc., including unaliased aggregate `UNION` branches; duplicate explicit aliases still report errors (`349a3ae`).
+- Fixed positional ordering with implicit `SELECT *` (`4191279`).
+- Unified frontmatter parsing to preserve metadata and schedules, and report invalid YAML and cron expressions during checks (`633c0f1`, `ae05439`).
+- Improved nested-aggregate diagnostics and avoided follow-on semantic errors for malformed queries (`64295f1`, `4b4178b`).
+- Deduplicated errors caused by upstream queries (`00e6b12`).
+- Preserved OAuth refresh error descriptions and suggested logging in again when appropriate (`27d67a5`).
+- Included the error-display utility in the published CLI package (`01ead21`).
+- Waited for fonts before rendering ECharts, including charts outside the local app (`1b3f9e7`).
+
 ## 0.0.29
 
 ### Breaking changes
