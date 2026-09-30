@@ -30,7 +30,7 @@ export function unsupportedChartProps(componentName: string, props: Record<strin
   let allowed = CHART_COMPONENT_PROPS[componentName]
   if (!allowed) return []
 
-  let allowedSet = new Set(allowed)
+  let allowedSet = new Set(['id', ...allowed])
   return Object.keys(props)
     .filter(prop => !INTERNAL_PROPS.has(prop) && !allowedSet.has(prop))
     .map(prop => ({componentName, prop, message: unsupportedChartPropMessage(componentName, prop, props[prop])}))

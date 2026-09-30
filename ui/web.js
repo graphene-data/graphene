@@ -5,6 +5,8 @@ import {getInstanceByDom} from 'echarts'
 import {mount, unmount} from 'svelte'
 
 import './app.css'
+import {createAlertStore} from './internal/alerts.ts'
+import Alert from './components/Alert.svelte'
 import AreaChart from './components/AreaChart.svelte'
 import BarChart from './components/BarChart.svelte'
 import BigValue from './components/BigValue.svelte'
@@ -49,7 +51,9 @@ window.$GRAPHENE.getChart = domNode => {
   return getInstanceByDom(domNode)
 }
 
+window.$GRAPHENE.createAlertStore = createAlertStore
 window.$GRAPHENE.components = {
+  Alert,
   AreaChart,
   BarChart,
   BigValue,

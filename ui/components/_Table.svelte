@@ -429,6 +429,7 @@
             {/if}
             {#if groupType === 'section' || groupToggleStates[groupName]}
               <TableRow
+                {componentId}
                 displayedData={sortedGroupedData[groupName]}
                 rowShading={rowShadingBool}
                 {link}
@@ -461,6 +462,7 @@
           {/each}
         {:else}
           <TableRow
+            {componentId}
             displayedData={displayedRows}
             rowShading={rowShadingBool}
             {link}

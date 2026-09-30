@@ -9,6 +9,8 @@ import {fillInParams} from './params.ts'
 import {type AnalysisResult, type Location, type Query, type WorkspaceFileInput} from './types.ts'
 import {getSourceOffset} from './util.ts'
 
+export {parseAlerts, type ParsedAlert} from './markdown.ts'
+export {normalizeCron, parseCronFieldSet, cronMatches} from './cron.ts'
 export {analyzeWorkspace}
 export {GrapheneError} from './util.ts'
 export type {AnalysisResult, AnalysisWorkspace, FileInfo, Query, Table, WorkspaceFileInput} from './types.ts'

@@ -1,5 +1,7 @@
+<!-- Render table body rows, retaining raw column values for links, formatting, and alert-key matching. -->
 <script lang="ts">
   import chroma from 'chroma-js'
+  import {getAlertStore} from '../internal/alerts.ts'
   import InlineDelta from './InlineDelta.svelte'
   import TableCell from './TableCell.svelte'
   import {formatFromField} from '../component-utilities/format.ts'
@@ -7,6 +9,7 @@
 
   interface Props {
     displayedData?: any[]
+    componentId?: string
     rowShading?: boolean | string
     link?: string
     rowNumbers?: boolean | string
@@ -23,13 +26,17 @@
   }
 
   let {
-    displayedData = [], rowShading: rowShadingProp = undefined, link = undefined,
+    displayedData = [], componentId = '', rowShading: rowShadingProp = undefined, link = undefined,
     rowNumbers: rowNumbersProp = undefined, rowLines: rowLinesProp = undefined, index = 0,
     columnLookup = {}, grouped = false, groupType = undefined, groupColumn = undefined,
     rowSpan = 1, groupNamePosition = 'middle', orderedColumns = [], compact: compactProp = undefined,
   }: Props = $props()
 
   const {theme} = getThemeStores()
+  const alerts = getAlertStore()
+  let triggeredRules = $derived(($alerts[componentId] || []).filter(alert => alert.triggeredKeys?.length).map(alert => ({
+    columns: alert.key!.split(',').map(key => key.trim()), keys: new Set(alert.triggeredKeys!.map(key => JSON.stringify(key))),
+  })))
 
   const computeColorScale = (
     column: any,
@@ -111,6 +118,7 @@
   {@const clickable = link && row[link]}
   <tr
     class="table-row"
+    class:triggered={triggeredRules.some(rule => rule.keys.has(JSON.stringify(rule.columns.map(column => row[column]))))}
     class:table-row--shaded={shaded}
     class:table-row--lined={rowLines}
     class:table-row--clickable={clickable}
@@ -221,6 +229,8 @@
 {/each}
 
 <style>
+  .table-row.triggered { background: color-mix(in srgb, var(--color-danger) 8%, var(--color-surface)); color: var(--color-danger); }
+  .table-row.triggered :global(td:first-child) { box-shadow: inset 3px 0 var(--color-danger); }
   .table-row {
     transition: background-color 0.15s ease-in-out;
   }

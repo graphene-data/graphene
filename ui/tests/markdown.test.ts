@@ -36,6 +36,66 @@ test('loads markdown files', async ({server, page}) => {
   await expect(page).screenshot('loads-markdown-files')
 })
 
+test('alert hover bells follow page-scoped targets', async ({server, page}) => {
+  server.mockFile('/index.md', `
+    # Revenue alerts
+    \`\`\`gsql revenue
+    select 'Monday' as day, 8000 as revenue
+    \`\`\`
+    <BarChart id=revenue data=revenue x=day y=revenue height=220 />
+    <Alert for=revenue above=10000 every=hourly to="#finance" />
+    <Table id=rows data=revenue />
+    <Alert for=rows key=day value=revenue above=10000 every=daily to="#finance" />
+    <BigValue id=total data=revenue value=revenue title="Revenue" />
+    <Alert for=total above=10000 every=weekly to="#finance" />
+  `)
+  server.mockFile('/other.md', '# No alerts\n```gsql revenue\nselect 1 as revenue\n```\n<BigValue id=total data=revenue value=revenue />')
+  await page.goto(server.url())
+  await waitForGrapheneLoad(page)
+  await page.locator('[data-component-id="revenue"]').first().hover()
+  await page.getByRole('button', {name: 'Alert: above 10,000 hourly → #finance', exact: true}).hover()
+  await expect(page).screenshot('alerts-hover', {mouseHover: true, fullPage: true})
+  await page.getByRole('button', {name: 'Open navigation'}).click()
+  await page.getByRole('link', {name: 'No alerts', exact: true}).click()
+  await waitForGrapheneLoad(page)
+  await expect(page.getByRole('button', {name: /^Alert:/})).toHaveCount(0)
+})
+
+test('renders triggered alerts and clears highlights on recovery', async ({server, page}) => {
+  server.mockFile('/index.md', `
+    <script>
+      const alerts = window.$GRAPHENE.createAlertStore({
+        bars: {triggeredKeys: [['Monday', 'US'], ['Tuesday', 'UK']], lastError: null},
+        points: {triggeredKeys: [['Tuesday', 'UK']], lastError: null},
+        rows: {triggeredKeys: [['Monday', 'US'], ['Tuesday', 'UK']], lastError: null},
+        total: {triggeredKeys: [[]], lastError: null},
+      })
+    </script>
+    # Triggered alerts
+    \`\`\`gsql revenue
+    select 'Monday' as day, 'US' as region, 12000 as revenue
+    union all select 'Monday', 'UK', 8000
+    union all select 'Tuesday', 'US', 7000
+    union all select 'Tuesday', 'UK', 14000
+    \`\`\`
+    <BarChart id=bars data=revenue x=day y=revenue splitBy=region arrange=group height=220 />
+    <Alert for=bars above=10000 every=hourly to="#finance" />
+    <LineChart id=points data=revenue x=day y=revenue splitBy=region height=220 />
+    <Alert for=points above=13000 every=hourly to="#finance" />
+    <Table id=rows data=revenue sort="revenue desc" />
+    <Alert for=rows key="day,region" value=revenue above=10000 every=daily to="#finance" />
+    <BigValue id=total data=revenue value=revenue title="Revenue" />
+    <Alert for=total below=15000 every=weekly to="#finance" />
+    <button onclick={() => alerts.update(state => Object.fromEntries(Object.entries(state).map(([id, rules]) => [id, rules.map(rule => ({...rule, triggeredKeys: []}))])))}>Recover</button>
+  `)
+  await page.goto(server.url())
+  await waitForGrapheneLoad(page)
+  await expect(page).screenshot('alerts-triggered', {fullPage: true})
+  await page.getByRole('button', {name: 'Recover', exact: true}).click()
+  await waitForGrapheneLoad(page)
+  await expect(page).screenshot('alerts-recovered', {fullPage: true})
+})
+
 test('routes pages hidden from navigation', async ({server, page}) => {
   server.mockFile('flight-detail.md', '---\nhideInNav: true\n---\n# Flight Detail')
 
