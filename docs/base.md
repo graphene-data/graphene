@@ -120,6 +120,20 @@ scheduled:
   - "30 16 * * * #somechannel"
 ```
 
+## Threshold alerts
+All charts, Table, and BigValue accept an optional page-unique `id`, also used as their `data-component-id`. Attach an alert to that id:
+
+```html
+<LineChart id=revenue data=daily_revenue x=day y=revenue />
+<Alert for=revenue above=10000 every=hourly to="#finance @grant" />
+```
+
+`Alert` requires `for`, exactly one numeric `above`/`below`, `every`, and Slack recipients in `to`. Schedules are UTC: `hourly`, `daily` (midnight), `weekly` (Monday midnight), or a five-field cron. These aliases also work in `scheduled:`. Cloud evaluates and sends alerts; locally, a hover bell shows the definition.
+
+Charts infer `key` from `x` plus `splitBy`, and `value` from `y`; multiple y columns or `y2` require an explicit `value`. Multiple x columns require both explicit `key` and `value`. PieChart uses `category`/`value`. Table and ECharts require explicit `key` and `value` (comma-separated keys are supported). BigValue uses its `value` and only its selected `row` (default 0), with no key columns.
+
+Attributes must be static, and target queries must not use inputs. Alert `id` defaults to `for`; set distinct alert ids for multiple alerts on one target. **Exclude the current incomplete period in your query** to avoid alerting on partial data.
+
 ## Viz and display components
 - LineChart: title, data, x, y, y2, splitBy, sort, height, width
 - AreaChart: title, data, x, y, y2, splitBy, arrange (`stack` (default) or `stack100`), sort, height, width

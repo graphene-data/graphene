@@ -6,11 +6,127 @@ import {expect} from 'vitest'
 /// <reference types="vitest/globals" />
 import {clickHouseFunctions} from './clickHouseFunctions.ts'
 import {setGlobalConfig} from './config.ts'
-import {GrapheneError, toSql} from './core.ts'
+import {parseAlerts, normalizeCron, cronMatches, GrapheneError, toSql} from './core.ts'
 import {parser} from './parser.js'
 import {prepareEcommerceTables, clearWorkspace, getTable, analyze, getDiagnostics, updateFile, loadWorkspace, getFile} from './testHelpers.ts'
 import {formatType, parseWarehouseFieldType} from './types.ts'
 import {deindent, trimIndentation} from './util.ts'
+
+describe('markdown alerts', () => {
+  let chart = '<LineChart id=revenue data=q x=day y=revenue splitBy=region />'
+  let alert = '<Alert for=revenue above=10000 every=hourly to="#finance" />'
+
+  it('resolves static targets, schedules, and one-based lines', () => {
+    expect(parseAlerts(`${chart}\n${alert}`)).toEqual({alerts: [{id: 'revenue', for: 'revenue', data: 'q', keyColumns: ['day', 'region'], valueColumn: 'revenue', above: 10000, every: '0 * * * *', to: '#finance', line: 2}], diagnostics: []})
+  })
+
+  it.each([
+    ['<PieChart id=revenue data=q category=day value=revenue />', '', ['day'], 'revenue', undefined],
+    ['<BigValue id=revenue data=q value=revenue row=2 />', '', [], 'revenue', 2],
+    ['<BigValue id=revenue data=q value=revenue />', '', [], 'revenue', 0],
+    ['<Table id=revenue data=q />', 'key="day, region" value=revenue', ['day', 'region'], 'revenue', undefined],
+    ['<ECharts id=revenue data=q config={{series: []}}></ECharts>', 'key=day value=revenue', ['day'], 'revenue', undefined],
+    ['<LineChart id=revenue data=q x=day y="revenue,cost" />', 'value=cost', ['day'], 'cost', undefined],
+    ['<LineChart id=revenue data=q x=day y=revenue y2=cost />', 'value=cost', ['day'], 'cost', undefined],
+    ['<BarChart id=revenue data=q x="revenue,cost" y=region />', 'key=region value=revenue', ['region'], 'revenue', undefined],
+  ])('infers or overrides fields for %s', (target, props, keys, value, row) => {
+    let result = parseAlerts(`${target}\n<Alert id=custom for=revenue below=0 every=weekly to="@grant" ${props} />`)
+    expect(result.diagnostics).toEqual([])
+    expect(result.alerts).toEqual([{id: 'custom', for: 'revenue', data: 'q', keyColumns: keys, valueColumn: value, below: 0, every: '0 0 * * 1', to: '@grant', line: 2, ...(row === undefined ? {} : {row})}])
+  })
+
+  it.each([
+    [chart, '<Alert above=1 every=hourly to="#ops" />', ['Alert for references unknown id ""']],
+    [chart, alert.replace('revenue', 'unknown'), ['Alert for references unknown id "unknown"']],
+    [chart, alert.replace('above=10000', ''), ['Alert requires exactly one of above or below', 'Alert threshold must be numeric']],
+    [chart, alert.replace('above=10000', 'above=1 below=2'), ['Alert requires exactly one of above or below']],
+    [chart, alert.replace('10000', 'nope'), ['Alert threshold must be numeric']],
+    [chart, alert.replace('hourly', 'never'), ['Alert every must be hourly, daily, weekly, or a valid five-field cron']],
+    [chart, alert.replace('every=hourly', ''), ['Alert every must be hourly, daily, weekly, or a valid five-field cron']],
+    [chart, alert.replace('10000', 'Infinity'), ['Alert threshold must be numeric']],
+    [chart, alert.replace('10000', '""'), ['Alert threshold must be numeric']],
+    [chart, '<Alert/>', ['Alert for references unknown id ""']],
+    [chart, alert.replace('to="#finance"', ''), ['Alert requires to recipients']],
+    [chart, alert.replace('10000', '{threshold + 1}'), ['Alert above must be static', 'Alert threshold must be numeric']],
+    ['<Table id=revenue data=q />', alert, ['Alert for Table requires key and value', 'Alert requires key columns', 'Alert requires a value column']],
+    ['<ECharts id=revenue data=q />', alert, ['Alert for ECharts requires key and value', 'Alert requires key columns', 'Alert requires a value column']],
+    ['<LineChart id=revenue data=q x=day y="a,b" />', alert, ['Alert value is ambiguous; specify value for a multi-value chart', 'Alert requires a value column']],
+    ['<LineChart id=revenue data=q x=day y=a y2=b />', alert, ['Alert value is ambiguous; specify value for a multi-value chart', 'Alert requires a value column']],
+    ['<BarChart id=revenue data=q x="a,b" y=region />', alert, ['Alert for a multi-x chart requires explicit key and value']],
+    ['<BarChart id=revenue data=q x="a,b" y=region />', alert.replace('/>', 'key=region />'), ['Alert for a multi-x chart requires explicit key and value']],
+    ['<BarChart id=revenue data=q x="a,b" y=region />', alert.replace('/>', 'value=a />'), ['Alert for a multi-x chart requires explicit key and value']],
+    ['<LineChart id=revenue data={query} x=day y=a />', alert, ['Alert target data must be static']],
+    ['<BigValue id=revenue data=q value=revenue row=-1 />', alert, ['Alert target row must be a nonnegative integer']],
+    ['<LineChart id=revenue x=day y=revenue />', alert, ['Alert target requires data']],
+    ['<LineChart id=revenue data=q y=revenue />', alert, ['Alert requires key columns']],
+    ['<BigValue id=revenue data=q />', alert, ['Alert requires a value column']],
+    ['<LineChart id=revenue data=q x={day} y=revenue />', alert, ['Alert target x must be static']],
+  ])('diagnoses invalid definitions: %s %s', (target, definition, messages) => {
+    expect(parseAlerts(target + definition)).toEqual({alerts: [], diagnostics: messages.map(message => ({message, from: target.length, to: target.length + definition.length}))})
+  })
+
+  it('rejects dynamic component ids and their unresolved alerts', () => {
+    let target = '<LineChart id={dynamic} data=q x=day y=revenue />'
+    expect(parseAlerts(target + alert)).toEqual({alerts: [], diagnostics: [
+      {message: 'Alert component ids must be static', from: 0, to: target.length},
+      {message: 'Alert for references unknown id "revenue"', from: target.length, to: target.length + alert.length},
+    ]})
+  })
+
+  it('rejects alerts referencing duplicate component ids, regardless of declaration order', () => {
+    for (let source of [chart + chart + alert, alert + chart + chart]) {
+      let duplicateStart = source.lastIndexOf(chart)
+      let alertStart = source.indexOf(alert)
+      expect(parseAlerts(source)).toEqual({alerts: [], diagnostics: [
+        {message: 'Duplicate component id "revenue"', from: duplicateStart, to: duplicateStart + chart.length},
+        {message: 'Alert for references duplicate id "revenue"', from: alertStart, to: alertStart + alert.length},
+      ]})
+    }
+  })
+
+  it('rejects all definitions sharing an alert id', () => {
+    expect(parseAlerts(chart + alert + alert)).toEqual({alerts: [], diagnostics: [
+      {message: 'Duplicate alert id "revenue"', from: chart.length + alert.length, to: chart.length + 2 * alert.length},
+    ]})
+  })
+
+  it('still validates component ids on pages without alerts', () => {
+    expect(parseAlerts(chart)).toEqual({alerts: [], diagnostics: []})
+    expect(parseAlerts(chart + chart)).toEqual({alerts: [], diagnostics: [
+      {message: 'Duplicate component id "revenue"', from: chart.length, to: 2 * chart.length},
+    ]})
+  })
+
+  it('detects direct and transitive input dependencies but ignores strings and comments', () => {
+    let fence = (name: string, code: string) => `\n\`\`\`gsql ${name}\n${code}\n\`\`\`\n`
+    for (let code of ['select $input as revenue', 'from dependency']) {
+      let source = fence('dependency', 'select $input as revenue') + fence('q', code) + chart + alert
+      expect(parseAlerts(source)).toEqual({alerts: [], diagnostics: [
+        {message: 'Alert cannot target queries that use inputs', from: source.length - alert.length, to: source.length},
+      ]})
+    }
+    expect(parseAlerts(fence('q', "select '$input' as revenue -- $ignored") + chart + alert).diagnostics).toEqual([])
+    expect(parseAlerts(fence('q', 'from dependency') + fence('dependency', 'from q') + chart + alert).diagnostics).toEqual([])
+  })
+
+  it('ignores component examples in code fences and exposes diagnostics through analysis', () => {
+    expect(parseAlerts(`\`\`\`html\n${chart}\n${alert}\n\`\`\``)).toEqual({alerts: [], diagnostics: []})
+    analyze('<Alert for=missing above=1 every=hourly to="#ops" />', 'md')
+    expect(getDiagnostics().map(d => ({message: d.message, line: d.from?.line, col: d.from?.col}))).toEqual([
+      {message: 'Alert for references unknown id "missing"', line: 0, col: 0},
+    ])
+  })
+
+  it('shares UTC cron validation and matching with schedule aliases', () => {
+    expect(normalizeCron('daily')).toBe('0 0 * * *')
+    expect(cronMatches('weekly', new Date('2026-04-06T00:00:00Z'))).toBe(true)
+    expect(cronMatches('hourly', new Date('2026-04-06T00:01:00Z'))).toBe(false)
+    expect(cronMatches('0 9 * * 1-5', new Date('2026-04-06T09:00:00Z'))).toBe(true)
+    expect(cronMatches('*/15 9-17 * * 0,7', new Date('2026-04-05T09:30:00Z'))).toBe(true)
+    expect(cronMatches('0 0 1 * 1', new Date('2026-04-06T00:00:00Z'))).toBe(true)
+    for (let cron of ['60 * * * *', '* * *', '*/0 * * * *', '5-2 * * * *']) expect(() => normalizeCron(cron)).toThrow()
+  })
+})
 
 const testTables = `
   table users (

@@ -1,7 +1,9 @@
+// Turn concise chart configs and query rows into complete ECharts options, including page alert overlays.
 import type {EChartsConfig, Field, NormalConfig, SeriesWithGroupingHint} from './types.ts'
+import type {PageAlert} from '../internal/alerts.ts'
 
 import {applyMissingPointDefaults, applySorting, applyStackPercentage, applyUnitScaling, inlineDataIntoSeries, STACK_PERCENTAGE_FIELD} from './dataShaping.ts'
-import {formatFromField, formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
+import {displayUnitConversion, formatFromField, formatSingleValue, formatTimeOrdinal, makeTimeFormatter, makeValueFormatter} from './format.ts'
 import {paletteForPath} from './theme.ts'
 
 // Enrichment is the process through which we take an echarts config and add in some defaults to make it really nice.
@@ -14,7 +16,7 @@ import {paletteForPath} from './theme.ts'
 // Avoid creating new helpers unless the logic is used in several places.
 
 // Run enrichment in a fixed order so defaults stay predictable.
-export function enrich(config: EChartsConfig, rows: Record<string, any>[], fields: Field[]) {
+export function enrich(config: EChartsConfig, rows: Record<string, any>[], fields: Field[], alerts: PageAlert[] = [], dangerColor = '#b42318') {
   let normalized = normalize(config)
   nameEncodedDimensions(normalized, fields)
   ensureAxes(normalized)
@@ -25,6 +27,8 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   inferAxesFromEncodedFields(normalized, fields, rows)
   hideDimensionAxisChrome(normalized)
   extendValueAxisDomainsForBars(normalized)
+
+  let alertRules = prepareChartAlerts(normalized, rows, fields, alerts)
 
   // Mutate row/field data before dataset creation so synthesized fields are reflected in dataset dimensions.
   applyUnitScaling(rows, fields)
@@ -53,12 +57,80 @@ export function enrich(config: EChartsConfig, rows: Record<string, any>[], field
   applyIntegerYAxisTicks(normalized, rows, fields)
   labelsUseYAxisFormat(normalized, fields)
   addPieTooltips(normalized, fields)
-  inlineDataIntoSeries(normalized, rows)
+  inlineDataIntoSeries(normalized, rows, alertRules.length > 0)
+  applyChartAlerts(normalized, fields, alertRules, dangerColor)
   stackedBarCornerRadius(normalized)
 
   // Runs last because it reads point values to place labels, which only exist once data is inlined.
   barLabelPositioning(normalized)
   return normalized
+}
+
+// Alert matches retain raw row references so later display-unit conversions also update overlay coordinates.
+interface ChartAlert {
+  keyColumns: string[]
+  valueColumn: string
+  matchingRows: Record<string, any>[]
+  threshold: number
+}
+
+// Match warehouse keys before row shaping, and convert thresholds to the same display units as their values.
+function prepareChartAlerts(config: NormalConfig, rows: Record<string, any>[], fields: Field[], alerts: PageAlert[]): ChartAlert[] {
+  return alerts.filter(alert => alert.triggeredKeys?.length).flatMap(alert => config.series.flatMap(series => {
+    let horizontal = series.type === 'bar' && config.yAxis[Number(series.yAxisIndex ?? 0)]?.type === 'category'
+    let valueField = horizontal ? getEncodeField(series, fields, 'x') : getSeriesValueField(series, fields)
+    if (!valueField || (alert.value && alert.value !== valueField.name)) return []
+    let keyColumns = alert.key?.split(',').map(key => key.trim()) || [
+      ...getEncodeFields(series, fields, series.type === 'pie' ? 'itemName' : 'x'), ...getEncodeFields(series, fields, 'splitBy'),
+    ].map(field => field.name)
+    let keys = new Set(alert.triggeredKeys!.map(key => JSON.stringify(key)))
+    let matchingRows = rows.filter(row => keys.has(JSON.stringify(keyColumns.map(column => row[column]))))
+    let extent = rows.reduce((max, row) => Math.max(max, Math.abs(Number(row[valueField.name])) || 0), 0)
+    let multiplier = displayUnitConversion(valueField, extent)?.multiplier ?? 1
+    return [{keyColumns, valueColumn: valueField.name, matchingRows, threshold: Number(alert.above ?? alert.below) * multiplier}]
+  }))
+}
+
+// Add threshold lines and danger-colored marks without altering query results or ordinary series colors.
+function applyChartAlerts(config: NormalConfig, fields: Field[], alertRules: ChartAlert[], dangerColor: string) {
+  for (let series of config.series) {
+    let horizontal = series.type === 'bar' && config.yAxis[Number(series.yAxisIndex ?? 0)]?.type === 'category'
+    let valueColumn = (horizontal ? getEncodeField(series, fields, 'x') : getSeriesValueField(series, fields))?.name
+    let rules = alertRules.filter(rule => rule.valueColumn === valueColumn)
+    if (!rules.length) continue
+
+    if (series.type === 'line' || series.type === 'scatter' || series.type === 'bar') {
+      let thresholds = [...new Set(rules.map(rule => rule.threshold))]
+      series.markLine = {silent: true, symbol: 'none', lineStyle: {color: dangerColor, type: 'dashed'}, label: {color: dangerColor, position: 'insideEndTop'}, ...series.markLine,
+        data: [...(series.markLine?.data || []), ...thresholds.map(threshold => horizontal ? {xAxis: threshold} : {yAxis: threshold})]}
+    }
+
+    // Style the series' own marks so ECharts places highlights correctly even on stacked bars/areas.
+    if (series.type === 'bar' || series.type === 'pie' || series.type === 'line' || series.type === 'scatter') {
+      let keyColumns = [...new Set(rules.flatMap(rule => rule.keyColumns))]
+      let keys = new Set(rules.flatMap(rule => rule.matchingRows).map(row => JSON.stringify(keyColumns.map(column => row[column]))))
+      let isTriggered = (row: Record<string, unknown>) => keys.has(JSON.stringify(keyColumns.map(column => row[column])))
+      let originalColor = series.itemStyle?.color
+      let palette = config.color as string[]
+      let seriesIndex = config.series.indexOf(series)
+      series.itemStyle = {...series.itemStyle, color: (params: any) => {
+        if (isTriggered(params.data)) return dangerColor
+        if (typeof originalColor === 'function') return originalColor(params)
+        return originalColor ?? palette[(series.type === 'pie' ? params.dataIndex : seriesIndex) % palette.length]
+      }}
+      if (series.type === 'line' || series.type === 'scatter') {
+        // Hollow line symbols use the line stroke; override only triggered points with filled, outlined circles.
+        series.data = (series.data as any[])?.map(point => isTriggered(point)
+          ? {...point, symbol: 'circle', symbolSize: 10, itemStyle: {...point.itemStyle, color: dangerColor, borderColor: '#fff', borderWidth: 2}}
+          : point)
+        // Dense lines normally hide symbols; point-level sizes reveal only triggered points.
+        if (series.type === 'line' && series.showSymbol === false) {
+          series.showSymbol = true
+          series.symbolSize = 0
+        }
+      }
+    }
+  }
 }
 
 // For horizontal bars, count distinct category values so wrappers can size containers.

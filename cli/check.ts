@@ -5,7 +5,8 @@ import type {WorkspaceFileInput} from '../lang/types.ts'
 
 import {config} from '../lang/config.ts'
 import {analyzeWorkspace, GrapheneError, loadWorkspace} from '../lang/core.ts'
-import {parseFrontmatter, parseCronFieldSet} from './mdCompile.ts'
+import {normalizeCron, scheduleAliases} from '../lang/cron.ts'
+import {parseFrontmatter} from './mdCompile.ts'
 import {mockFileMap} from './mockFiles.ts'
 import {normalizeFile} from './normalizeFile.ts'
 import {formatError} from './printer.ts'
@@ -50,8 +51,9 @@ export async function check(options: CheckOptions): Promise<boolean> {
       for (let value of ([] as string[]).concat(fm.scheduled ?? [])) {
         if (typeof value !== 'string') throw new Error('Scheduled reports must be strings')
         let parts = value.trim().split(/\s+/)
-        if (parts.length < 5) throw new Error('Invalid scheduled report: expected a five-field cron')
-        parseCronFieldSet(parts.slice(0, 5).join(' '))
+        let count = Object.hasOwn(scheduleAliases, parts[0]) ? 1 : 5
+        if (parts.length < count) throw new Error('Invalid scheduled report: expected a five-field cron')
+        normalizeCron(parts.slice(0, count).join(' '))
       }
     } catch (err:any) {
       result.diagnostics.push(new GrapheneError({file: file.path, message: err.message}))

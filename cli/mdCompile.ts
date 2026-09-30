@@ -60,7 +60,7 @@ export function escapeAngles() {
 
 // We don't want users to have to manually import components in their md files, so we auto-import them.
 export function injectComponentImports() {
-  let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components`
+  let imp = `const {${componentNames().join(', ')}} = window.$GRAPHENE.components; window.$GRAPHENE.createAlertStore()`
 
   return {
     markup: ({content, filename}: {content: string; filename: string}) => {
@@ -127,38 +127,6 @@ export function parseFrontmatter(contents: string): PageFrontmatter {
 
 // mdsvex passes only the YAML body, so restore delimiters for the shared page parser.
 export const frontmatterOptions = {type: 'yaml', marker: '-', parse: (body: string) => parseFrontmatter('---\n' + body + '\n---')}
-
-// Parse cron fields once for both frontmatter validation and Cloud's UTC schedule matching.
-export function parseCronFieldSet(cron: string) {
-  let fields = cron.trim().split(/\s+/)
-  if (fields.length !== 5) throw new Error(`Invalid cron "${cron}": expected five fields`)
-  return [
-    parseCronField(fields[0], 0, 59),
-    parseCronField(fields[1], 0, 23),
-    parseCronField(fields[2], 1, 31),
-    parseCronField(fields[3], 1, 12),
-    parseCronField(fields[4], 0, 7, true),
-  ] as const
-}
-
-function parseCronField(field: string, min: number, max: number, sunday = false) {
-  let values = new Set<number>()
-  for (let part of field.split(',')) {
-    if (!/^(?:\*|\d+|\d+-\d+)(?:\/\d+)?$/.test(part)) throw new Error(`Invalid cron field "${field}"`)
-    let [range, rawStep] = part.split('/')
-    let step = rawStep === undefined ? 1 : Number(rawStep)
-    if (!Number.isInteger(step) || step < 1) throw new Error(`Invalid cron field "${field}"`)
-
-    let start: number
-    let end: number
-    if (range === '*') [start, end] = [min, max]
-    else if (range.includes('-')) [start, end] = range.split('-').map(Number)
-    else [start, end] = [Number(range), rawStep === undefined ? Number(range) : max]
-    if (!Number.isInteger(start) || !Number.isInteger(end) || start < min || end > max || start > end) throw new Error(`Invalid cron field "${field}"`)
-    for (let value = start; value <= end; value += step) values.add(sunday && value === 7 ? 0 : value)
-  }
-  return {values, restricted: values.size !== (sunday ? 7 : max - min + 1)}
-}
 
 export const remarkPlugins: Array<Plugin> = [extractQueries, escapeAngles]
 export const rehypePlugins: Array<Plugin> = []

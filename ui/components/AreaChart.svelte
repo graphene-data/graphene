@@ -7,6 +7,7 @@
   import {parseCommaList} from '../component-utilities/inputUtils.ts'
 
   interface Props {
+    id?: string
     data: string | QueryResult
     x: string
     y: string
@@ -20,6 +21,7 @@
   }
 
   let {
+    id = undefined,
     data,
     x,
     y,
@@ -65,4 +67,4 @@
   }
 </script>
 
-<ECharts data={data} config={buildConfig()} {height} {width} componentId={logger.id} />
+<ECharts data={data} config={buildConfig()} {height} {width} componentId={id || logger.id} />

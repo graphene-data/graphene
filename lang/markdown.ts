@@ -2,6 +2,8 @@ import type {LRParser} from '@lezer/lr'
 
 import type {ParsedFileArtifacts, ParsedFileDiagnostic, WorkspaceFileInput} from './types.ts'
 
+import {parser as gsqlParser} from './parser.js'
+import {normalizeCron} from './cron.ts'
 import {unsupportedChartProps} from './chartProps.ts'
 import {extractSveltishAttributes, type SveltishAttribute} from './sveltish.ts'
 
@@ -44,6 +46,8 @@ interface FenceMatch {
 }
 
 interface ComponentMatch {
+  name: string
+  attrs: Record<string, SveltishAttribute>
   start: number
   end: number
   data: SveltishAttribute | null
@@ -57,7 +61,7 @@ export function parseMarkdown(file: WorkspaceFileInput, parser: LRParser): Parse
   let gsqlFences = fences.filter(f => f.gsql)
   let components = collectComponents(source, fences)
   let events = [...gsqlFences, ...components].sort((a, b) => a.start - b.start)
-  let diagnostics = components.flatMap(component => component.diagnostics)
+  let diagnostics = [...components.flatMap(component => component.diagnostics), ...resolveAlerts(source, fences, components).diagnostics]
 
   let virtual: string[] = []
   let mapping: number[] = []
@@ -174,7 +178,8 @@ export function parseMarkdown(file: WorkspaceFileInput, parser: LRParser): Parse
   }
 }
 
-function collectFences(source: string): FenceMatch[] {
+// Collect code fences with their query names and source positions.
+export function collectFences(source: string): FenceMatch[] {
   let matches: FenceMatch[] = []
   FENCE.lastIndex = 0
   let match: RegExpExecArray | null
@@ -203,27 +208,31 @@ function collectComponents(source: string, fences: FenceMatch[]): ComponentMatch
     if (!end) break
 
     let fragment = source.slice(tagStart, end)
-    let componentName = fragment.match(/^<([A-Z][A-Za-z0-9]*)\s/)?.[1]
+    let componentName = fragment.match(/^<([A-Z][A-Za-z0-9]*)(?=[\s/>])/)?.[1]
     start = end
-    if (!componentName || !fragment.endsWith('/>') || isInsideFence(tagStart, fences)) continue
+    if (!componentName || isInsideFence(tagStart, fences)) continue
 
     let attrs = extractSveltishAttributes(fragment, tagStart)
     let attributeMatches: Partial<Record<ComponentAttributeKey, SveltishAttribute>> = {}
     for (let key of fieldAttributeKeys(componentName)) {
       if (attrs[key]) attributeMatches[key] = normalizeFieldAttribute(key, attrs[key])
     }
-    matches.push({start: tagStart, end, data: attrs.data || null, attributes: attributeMatches, diagnostics: validateChartProps(componentName, attrs)})
+    matches.push({name: componentName, attrs, start: tagStart, end, data: attrs.data || null, attributes: attributeMatches, diagnostics: validateChartProps(componentName, attrs)})
   }
   return matches
 }
 
 function findTagEnd(source: string, start: number) {
   let quote = ''
+  let braces = 0
   for (let i = start; i < source.length; i++) {
     let ch = source[i]
-    if (quote && ch == quote) quote = ''
+    if (quote && ch == '\\') i++
+    else if (quote && ch == quote) quote = ''
     else if (!quote && (ch == '"' || ch == "'")) quote = ch
-    else if (!quote && ch == '>') return i + 1
+    else if (!quote && ch == '{') braces++
+    else if (!quote && ch == '}') braces--
+    else if (!quote && !braces && ch == '>') return i + 1
   }
   return 0
 }
@@ -256,6 +265,120 @@ function validateChartProps(componentName: string, attrs: Record<string, Sveltis
 
 function isInsideFence(offset: number, fences: FenceMatch[]) {
   return fences.some(f => offset >= f.start && offset < f.end)
+}
+
+// Static alert definitions are shared by editor diagnostics and Cloud evaluation. `line` is one-based;
+// `row` is present only for BigValue, whose key is always the empty tuple.
+export type ParsedAlert = {
+  id: string; for: string; data: string; keyColumns: string[]; valueColumn: string
+  every: string; to: string; line: number; row?: number
+} & ({above: number; below?: never} | {below: number; above?: never})
+
+// Resolve alerts against page components, rejecting definitions Cloud cannot evaluate statically.
+export function parseAlerts(markdown: string): {alerts: ParsedAlert[]; diagnostics: ParsedFileDiagnostic[]} {
+  let fences = collectFences(markdown)
+  return resolveAlerts(markdown, fences, collectComponents(markdown, fences))
+}
+
+// Reuse Markdown's collected tags/fences; pages without alerts only need component-id validation.
+function resolveAlerts(source: string, fences: FenceMatch[], components: ComponentMatch[]): {alerts: ParsedAlert[]; diagnostics: ParsedFileDiagnostic[]} {
+  let diagnostics: ParsedFileDiagnostic[] = []
+  let alerts: ParsedAlert[] = []
+  let targets = new Map<string, ComponentMatch>()
+  let duplicateTargetIds = new Set<string>()
+  let alertIds = new Set<string>()
+  let duplicateAlertIds = new Set<string>()
+  let supported = ['BarChart', 'LineChart', 'AreaChart', 'ScatterPlot', 'PieChart', 'ECharts', 'Table', 'BigValue']
+  let report = (component: ComponentMatch, message: string) => diagnostics.push({message, from: component.start, to: component.end})
+
+  for (let component of components.filter(c => supported.includes(c.name))) {
+    let id = component.attrs.id
+    if (!id) continue
+    if (id.dynamic) { report(component, 'Alert component ids must be static'); continue }
+    if (targets.has(id.value)) {
+      report(component, `Duplicate component id "${id.value}"`)
+      duplicateTargetIds.add(id.value)
+    }
+    targets.set(id.value, component)
+  }
+  let alertComponents = components.filter(c => c.name === 'Alert')
+  if (!alertComponents.length) return {alerts, diagnostics}
+
+  // Parse fence dependencies once. Walking actual syntax avoids treating comments/string literals as inputs.
+  let queries = new Map<string, {inputs: boolean; dependencies: string[]}>()
+  for (let fence of fences.filter(f => f.gsql && f.name)) {
+    let query = {inputs: false, dependencies: [] as string[]}
+    gsqlParser.parse(fence.content).iterate({enter(node) {
+      if (node.name === 'Param') query.inputs = true
+      if (node.name === 'TableName') query.dependencies.push(fence.content.slice(node.from, node.to))
+    }})
+    queries.set(fence.name!, query)
+  }
+  // Follow fenced-query dependencies without looping on recursive or invalid definitions.
+  function usesInputs(name: string, visited = new Set<string>()): boolean {
+    if (visited.has(name)) return false
+    visited.add(name)
+    let query = queries.get(name)
+    return !!query && (query.inputs || query.dependencies.some(dep => usesInputs(dep, visited)))
+  }
+
+  for (let component of alertComponents) {
+    let before = diagnostics.length
+    let attrs = component.attrs
+    let props = Object.fromEntries(Object.entries(attrs).map(([key, attr]) => [key, attr.value]))
+    for (let attr of Object.values(attrs)) {
+      if (attr.dynamic) report(component, `Alert ${attr.key} must be static`)
+    }
+    if (duplicateTargetIds.has(props.for)) { report(component, `Alert for references duplicate id "${props.for}"`); continue }
+    let target = targets.get(props.for)
+    if (!target) { report(component, `Alert for references unknown id "${props.for || ''}"`); continue }
+    let t = Object.fromEntries(Object.entries(target.attrs).map(([key, attr]) => [key, attr.value]))
+    for (let key of ['data', 'x', 'y', 'y2', 'splitBy', 'category', 'value', 'row']) {
+      if (target.attrs[key]?.dynamic) report(component, `Alert target ${key} must be static`)
+    }
+    let id = props.id || props.for
+    if (alertIds.has(id)) {
+      report(component, `Duplicate alert id "${id}"`)
+      duplicateAlertIds.add(id)
+    }
+    alertIds.add(id)
+    if (('above' in props) === ('below' in props)) report(component, 'Alert requires exactly one of above or below')
+    let threshold = Number(props.above ?? props.below)
+    if (!(props.above ?? props.below)?.trim() || !Number.isFinite(threshold)) report(component, 'Alert threshold must be numeric')
+    let every = ''
+    try { every = normalizeCron(props.every || '') } catch { report(component, 'Alert every must be hourly, daily, weekly, or a valid five-field cron') }
+    if (!props.to?.trim()) report(component, 'Alert requires to recipients')
+    if (!t.data?.trim()) report(component, 'Alert target requires data')
+
+    // Explicit columns override inference; BigValue always evaluates a single row with an empty key.
+    let key = props.key
+    let value = props.value
+    let row: number | undefined
+    if (target.name === 'Table' || target.name === 'ECharts') {
+      if (!key?.trim() || !value?.trim()) report(component, `Alert for ${target.name} requires key and value`)
+    } else if (target.name === 'BigValue') {
+      key = ''
+      value ||= t.value
+      row = Number(t.row ?? 0)
+      if (!Number.isInteger(row) || row < 0) report(component, 'Alert target row must be a nonnegative integer')
+    } else if (target.name === 'PieChart') {
+      key ||= t.category
+      value ||= t.value
+    } else {
+      if (t.x?.includes(',') && (!key?.trim() || !value?.trim())) report(component, 'Alert for a multi-x chart requires explicit key and value')
+      key ||= [t.x, t.splitBy].filter(Boolean).join(',')
+      if (!value && (t.y?.includes(',') || t.y2)) report(component, 'Alert value is ambiguous; specify value for a multi-value chart')
+      else value ||= t.y
+    }
+    if (target.name !== 'BigValue' && !key?.trim()) report(component, 'Alert requires key columns')
+    if (!value?.trim()) report(component, 'Alert requires a value column')
+    if (usesInputs(t.data)) report(component, 'Alert cannot target queries that use inputs')
+    if (diagnostics.length !== before) continue
+    alerts.push({id, for: props.for, data: t.data, keyColumns: (key || '').split(',').map(k => k.trim()).filter(Boolean), valueColumn: value!,
+      ...('above' in props ? {above: threshold} : {below: threshold}), every, to: props.to,
+      line: source.slice(0, component.start).split('\n').length, ...(row === undefined ? {} : {row})})
+  }
+  return {alerts: alerts.filter(alert => !duplicateAlertIds.has(alert.id)), diagnostics}
 }
 
 function isFence(event: FenceMatch | ComponentMatch): event is FenceMatch {

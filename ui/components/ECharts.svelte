@@ -1,3 +1,4 @@
+<!-- Query-backed ECharts renderer. Page alerts enrich the same options as chart defaults. -->
 <script lang="ts">
   import {init} from 'echarts'
   import {onDestroy, onMount, tick, untrack} from 'svelte'
@@ -7,10 +8,13 @@
   import type {EChartsConfig, NormalConfig, QueryResult} from '../component-utilities/types.ts'
   import {chartFontFamily} from '../component-utilities/theme.ts'
   import CommentButton from './CommentButton.svelte'
+  import AlertBell from './_AlertBell.svelte'
+  import {getAlertStore} from '../internal/alerts.ts'
   import CsvDownload from './CsvDownload.svelte'
   import Skeleton from './Skeleton.svelte'
 
   interface Props {
+    id?: string
     config: EChartsConfig
     data: string | QueryResult
     height?: string | number
@@ -20,6 +24,7 @@
   }
 
   let {
+    id = undefined,
     config = {},
     data,
     height = undefined,
@@ -30,10 +35,11 @@
   }: Props & Record<string, unknown> = $props()
 
   config ||= {}
+  const alerts = getAlertStore()
 
   let queryFieldsForLogger = untrack(() => typeof data == 'string' ? queryFields(config) : {})
   let chartLogger = untrack(() => componentLogger(componentId || 'ECharts', componentId ? {} : {data: typeof data == 'string' ? data : undefined, ...queryFieldsForLogger}))
-  let displayId = untrack(() => componentId || chartLogger.id)
+  let displayId = untrack(() => id || componentId || chartLogger.id)
   untrack(() => logExtraProps(chartLogger, 'ECharts', extraProps))
 
   // not state, because we don't want `$effect` to run when they change
@@ -144,7 +150,7 @@
     let rows = structuredClone(loaded.rows || [])
     let fields = structuredClone(loaded.fields || [])
     cloned.legendSelection = chart.getOption()?.legend?.[0]?.selected
-    let enriched = enrich(cloned, rows, fields)
+    let enriched = enrich(cloned, rows, fields, $alerts[displayId] || [], getComputedStyle(node!).getPropertyValue('--color-danger').trim())
 
     chartTitle = enriched.title.find(t => t?.text)?.text
     chartSizeStyle = calculateChartSize(enriched, rows, fields)
@@ -215,6 +221,7 @@
   <!-- ECharts clears its container on dispose. Keep Svelte-owned controls and states outside it. -->
   <div class="chart-renderer" bind:this={node}></div>
   <div class="component-actions">
+    <AlertBell componentId={displayId} />
     {#if loaded && !loaded.error && !chartError}<CsvDownload data={loaded} exportId={displayId} title={chartTitle} />{/if}
     <CommentButton componentId={mountedComponentId || displayId} title={chartTitle} />
   </div>

@@ -482,12 +482,14 @@ describe('cli run', () => {
   })
 })
 
-test('cli check surfaces invalid Markdown frontmatter with its filename', async ({runCli}) => {
+test('cli check validates Markdown schedules and accepts aliases', async ({runCli}) => {
   let tmpDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-check-frontmatter-'))
   try {
     await fsp.writeFile(path.join(tmpDir, 'report.md'), '---\nscheduled: "0 4 * *"\n---\n# Report')
     let res = await runCli(['check'], configFor(tmpDir))
     expectCliOutput(res, {code: 1, stdout: 'ERROR: report.md: Invalid scheduled report: expected a five-field cron'})
+    await fsp.writeFile(path.join(tmpDir, 'report.md'), '---\nscheduled: ["hourly #finance", "daily @grant", "weekly #ops"]\n---\n# Report')
+    expectCliOutput(await runCli(['check'], configFor(tmpDir)), 'No errors found 💎')
   } finally {
     await fsp.rm(tmpDir, {recursive: true, force: true})
   }

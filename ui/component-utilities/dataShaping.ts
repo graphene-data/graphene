@@ -188,9 +188,8 @@ export function applySorting(config: NormalConfig, rows: Record<string, any>[], 
   sortCategoriesByValue(rows, primaryXField.name, row => Number(row?.[firstY]) || 0, 'desc')
 }
 
-// Materialize dataset-backed bar series into explicit point arrays so later enrichments can mutate points.
-// This is needed to round the corners of bars, which can only be done with point-level item styles.
-export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, any>[]) {
+// Materialize bars (and optionally line/scatter points for alerts) so enrichments can set point-level styles.
+export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, any>[], inlinePoints = false) {
   let horizontal = isHorizontalBar(config)
   let datasetsById = new Map<string, Record<string, any>>()
   for (let dataset of config.dataset) {
@@ -230,7 +229,7 @@ export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, 
   }
 
   for (let series of config.series) {
-    if (series?.type !== 'bar' || series?.data != null) continue
+    if (series?.data != null || !(series?.type === 'bar' || (inlinePoints && (series?.type === 'line' || series?.type === 'scatter')))) continue
 
     let xField = getSeriesXField(series)
     let yField = getSeriesYField(series)
@@ -241,7 +240,7 @@ export function inlineDataIntoSeries(config: NormalConfig, rows: Record<string, 
     if (!seriesRows) continue
 
     // Unstacked bars stand alone, so their rows map straight through without aligning to shared categories.
-    if (!series.stack) {
+    if (series.type !== 'bar' || !series.stack) {
       series.data = seriesRows.map(row => ({...row, value: [row[xField], row[yField]]}))
       delete series.datasetId
       continue
