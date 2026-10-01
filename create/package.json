@@ -30,7 +30,7 @@
     "@duckdb/node-api": "1.5.3-r.3",
     "@google-cloud/bigquery": "^8.3.1",
     "pg": "8.13.3",
-    "snowflake-sdk": "3.1.0"
+    "snowflake-sdk": "3.4.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"
