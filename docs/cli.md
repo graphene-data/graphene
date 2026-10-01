@@ -37,7 +37,7 @@ graphene compile "[QUERY]" # Show the compiled, dialect-specific SQL. Does not r
 # `schema` is for implementation/migration purposes and is NOT for exploring Graphene SQL models
 graphene schema # List datasets/schemas in the connected database
 graphene schema my_dataset # List schemas (or tables) in a dataset
-graphene schema my_dataset.table # Print the Graphene SQL table statement for a database table
+graphene schema my_dataset.table # Print the Graphene SQL table statement for a database table. Tables in defaultNamespace are printed without that qualifier, so the statement name matches unqualified queries.
 
 graphene serve # Start the local dev server (foreground)
 graphene serve --bg # Start the local dev server in the background
