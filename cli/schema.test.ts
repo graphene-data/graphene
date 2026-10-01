@@ -51,9 +51,25 @@ describe('schema inspection', () => {
     let context = {dialect: 'snowflake', defaultNamespace: 'ANALYTICS.PUBLIC'}
 
     await expect(inspectSchema(connection, context, 'analytics.public')).resolves.toMatchObject({kind: 'tables'})
-    await expect(inspectSchema(connection, context, 'public.orders')).resolves.toMatchObject({kind: 'table'})
+    await expect(inspectSchema(connection, context, 'public.orders')).resolves.toMatchObject({kind: 'table', table: 'orders'})
+    await expect(inspectSchema(connection, context, 'OTHER_DB.PUBLIC.ORDERS')).resolves.toMatchObject({kind: 'table', table: 'other_db.public.orders'})
     expect(connection.listTables).toHaveBeenCalledWith('ANALYTICS.public')
     expect(connection.describeTable).toHaveBeenCalledWith('ANALYTICS.public.orders')
+  })
+
+  test('drops defaultNamespace from generated table names and keeps other qualifiers', async () => {
+    let connection = {
+      listDatasets: vi.fn().mockResolvedValue([]),
+      describeTable: vi.fn().mockResolvedValue([{name: 'id', dataType: 'BIGINT'}]),
+      close: vi.fn(),
+      runQuery: vi.fn(),
+    } as QueryConnection
+
+    await expect(inspectSchema(connection, {dialect: 'duckdb', defaultNamespace: 'main'}, 'main.reviews')).resolves.toMatchObject({kind: 'table', table: 'reviews'})
+    await expect(inspectSchema(connection, {dialect: 'duckdb', defaultNamespace: 'main'}, 'reviews')).resolves.toMatchObject({kind: 'table', table: 'reviews'})
+    await expect(inspectSchema(connection, {dialect: 'duckdb', defaultNamespace: 'main'}, 'other.reviews')).resolves.toMatchObject({kind: 'table', table: 'other.reviews'})
+    await expect(inspectSchema(connection, {dialect: 'postgres', defaultNamespace: 'public'}, 'public.customers')).resolves.toMatchObject({kind: 'table', table: 'customers'})
+    await expect(inspectSchema(connection, {dialect: 'duckdb'}, 'main.reviews')).resolves.toMatchObject({kind: 'table', table: 'main.reviews'})
   })
 })
 
@@ -144,7 +160,7 @@ describe.skipIf(!process.env.SLOW_TEST)('motherduck', {timeout: 30_000}, () => {
     let res = await runCli(['schema', 'sample_data.who.ambient_air_quality'], await configFor(motherduckDir))
     expectCliSuccess(res, 'schema describe table (motherduck)')
     let output = res.stdout.toLowerCase()
-    expect(output).toContain('table sample_data.who.ambient_air_quality (')
+    expect(output).toContain('table ambient_air_quality (')
     expect(output).toContain('pm25_concentration double')
   })
 })
@@ -180,7 +196,7 @@ describe.skipIf(!process.env.SLOW_TEST)('snowflake', () => {
     let res = await runCli(['schema', 'nyc_taxi_data.public.yellow_trips'], await configFor(snowflakeDir))
     expectCliSuccess(res, 'schema describe table (snowflake)')
     let output = res.stdout.toLowerCase()
-    expect(output).toContain('table nyc_taxi_data.public.yellow_trips (')
+    expect(output).toContain('table yellow_trips (')
     expect(output).toContain('pickup_datetime')
   })
 })
@@ -219,10 +235,13 @@ describe.skipIf(!process.env.SLOW_TEST)('bigquery', () => {
     if (tables.length === 0) throw new Error('No tables found in bigquery namespace')
 
     let tableName = tables[0]
-    let res = await runCli(['schema', tableName], await configFor(ecommDir))
+    let cfg = await configFor(ecommDir)
+    let res = await runCli(['schema', tableName], cfg)
     expectCliSuccess(res, 'schema describe table (bigquery)')
     let output = res.stdout.toLowerCase()
-    expect(output).toContain(`table ${tableName.toLowerCase()} (`)
+    let namespace = cfg.defaultNamespace?.toLowerCase()
+    let modelName = namespace && tableName.toLowerCase().startsWith(`${namespace}.`) ? tableName.slice(namespace.length + 1) : tableName
+    expect(output).toContain(`table ${modelName.toLowerCase()} (`)
   })
 })
 
@@ -249,7 +268,7 @@ describe.skipIf(!process.env.SLOW_TEST)('postgres', () => {
     let res = await runCli(['schema', 'public.customers'], await configFor(postgresDir))
     expectCliSuccess(res, 'schema describe schema-qualified table (postgres)')
     let output = res.stdout.toLowerCase()
-    expect(output).toContain('table public.customers (')
+    expect(output).toContain('table customers (')
     expect(output).toContain('tags array<string>')
   })
 })
