@@ -42,8 +42,7 @@ export async function inspectSchema(connection: QueryConnection, context: Schema
 
   let target = qualifyTable(tableArg || '', context)
   let columns = await connection.describeTable(target)
-  let table = context.dialect == 'snowflake' ? String(tableArg || '').toLowerCase() : String(tableArg || '')
-  return {kind: 'table', table, columns}
+  return {kind: 'table', table: modelTableName(tableArg || '', target, context), columns}
 }
 
 // Render structured inspection results in the established gsql-like CLI format.
@@ -59,6 +58,25 @@ export function printSchemaInspection(result: SchemaInspection): void {
     console.log(`  ${column.name} ${parsed.displayType || column.dataType}`)
   })
   console.log(')')
+}
+
+// The name in a generated `table` statement is the name queries use. Drop defaultNamespace so
+// `graphene schema main.reviews` emits `table reviews`, which compiles back to main.reviews.
+// Keep a qualifier that is outside the configured namespace.
+function modelTableName(tableArg: string, qualifiedTarget: string, context: SchemaContext): string {
+  let display = context.dialect == 'snowflake' ? tableArg.toLowerCase() : tableArg
+  let namespace = context.defaultNamespace
+  if (!namespace) return display
+
+  let prefix = `${namespace}.`
+  let qualified = context.dialect == 'snowflake' ? qualifiedTarget.toLowerCase() : qualifiedTarget
+  if (!qualified.toLowerCase().startsWith(prefix.toLowerCase())) return display
+
+  let remainder = qualified.slice(prefix.length)
+  if (context.dialect == 'snowflake') return remainder
+  if (display.toLowerCase() == remainder.toLowerCase()) return display
+  if (display.toLowerCase().endsWith(`.${remainder.toLowerCase()}`)) return display.slice(display.length - remainder.length)
+  return remainder
 }
 
 // Apply the configured namespace when connectors cannot infer it from an unqualified table name.
