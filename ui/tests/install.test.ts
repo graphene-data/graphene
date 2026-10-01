@@ -5,6 +5,7 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import {fileURLToPath} from 'node:url'
+import {stripVTControlCharacters} from 'node:util'
 
 import {test, expect, waitForGrapheneLoad, getAvailablePort} from './fixtures.ts'
 
@@ -123,8 +124,24 @@ async function installGrapheneAndUseIt(packageManager: PackageManagerTest, page:
     let cliTarball = await copyTarballToTemp(parseTarballPath(packCli, cliDir), tempRoot)
 
     let [createCommand, createArgs] = packageManager.create(createTarball)
-    let scaffold = await run(createCommand, createArgs, tempRoot, childEnv)
-    expectSuccess(`${packageManager.name} create-graphene`, scaffold)
+    // Exercise CI formatting even locally: Yarn emits colors and GitHub log-group markers.
+    let notice = await run(createCommand, createArgs, tempRoot, {...childEnv, CI: 'true', GITHUB_ACTIONS: 'true', FORCE_COLOR: '1'})
+    expectSuccess(`${packageManager.name} create-graphene`, notice)
+    // Exclude package-manager installation logs; assert the initializer's entire output.
+    let noticeOutput = stripVTControlCharacters(getOutput(notice)).split('\n').filter(line => !/^(Progress:|Packages:|\+$|➤|::group::|::endgroup::)/.test(line)).join('\n').trim()
+    expect(noticeOutput).toBe('create-graphene is deprecated.\n\nHave your agent follow these instructions:\nhttps://github.com/graphene-data/graphene/blob/main/docs/setup.md')
+    expect(await fsp.readdir(tempRoot)).not.toContain('demo-app')
+
+    // Follow the agent-led setup: create a project explicitly, then install the CLI and the selected database client.
+    let cliManifest = JSON.parse(await fsp.readFile(path.join(cliDir, 'package.json'), 'utf8'))
+    await fsp.mkdir(projectDir)
+    await fsp.writeFile(path.join(projectDir, 'package.json'), JSON.stringify({
+      name: 'demo-app',
+      version: '0.0.1',
+      scripts: {graphene: 'graphene'},
+      dependencies: {'@duckdb/node-api': cliManifest.peerDependencies['@duckdb/node-api']},
+      graphene: {duckdb: {path: './data.duckdb'}, defaultNamespace: 'main'},
+    }, null, 2))
     await expectNoSvelteDependency(projectDir)
 
     let [installCommand, installArgs] = packageManager.install(cliTarball)
@@ -228,9 +245,6 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with pnpm', {ti
     {
       name: 'pnpm',
       create: tarball => ['pnpm', ['dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
-      // pnpm resolves the existing package.json before applying `add <tarball>`, so an unpublished
-      // release version scaffolded by create-graphene would fail to resolve from npm. Naming the
-      // dependency in the add spec lets pnpm replace the manifest entry directly with the local tarball.
       install: tarball => ['pnpm', ['add', '--config.minimumReleaseAge=0', '--allow-build=esbuild', `@graphenedata/cli@file:${tarball}`]],
       graphene: args => ['pnpm', ['run', 'graphene', '--', ...args]],
     },
