@@ -1,6 +1,46 @@
-This document describes the process for creating a new Graphene project from scratch, connected to your data. If you just want to take Graphene for a quick spin on some demo data, check out our [example project](https://github.com/graphene-data/example-flights).
+# Set up Graphene
 
-# Prepare database access
+Give your coding agent this document and ask it to set up Graphene connected to your data. These instructions are written for the agent, but you can also follow them yourself.
+
+If you just want demo data, use our [example project](https://github.com/graphene-data/example-flights).
+
+If you're operating in a monorepo, create a new folder called `analytics` and follow the remaining steps inside that folder.
+
+## 1. Install the latest Graphene
+
+Use the preferred package manager to install Graphene:
+
+```bash
+npm install @graphenedata/cli@latest
+pnpm add @graphenedata/cli@latest
+yarn add @graphenedata/cli@latest
+bun add @graphenedata/cli@latest
+```
+
+Throughout this guide, `graphene` means the locally installed CLI: `npx graphene`, `pnpm exec graphene`, `yarn graphene`, or `bun run graphene`, respectively.
+
+## 2. Identify the database
+
+Inspect existing project configuration and documentation for the database and connection details. If the source, database/schema, or credentials are unclear, ask the user; do not guess or silently use demo data. For CSV/XLSX files, use local DuckDB. Confirm which tables and business questions the user wants to start with.
+
+Install only the client for the chosen database, using the same package manager. Use a version compatible with the installed CLI's `peerDependencies` in `node_modules/@graphenedata/cli/package.json`:
+
+| Database | Client package |
+| --- | --- |
+| DuckDB or MotherDuck | `@duckdb/node-api` |
+| Postgres | `pg` |
+| Snowflake | `snowflake-sdk` |
+| BigQuery | `@google-cloud/bigquery` |
+| ClickHouse | `@clickhouse/client` |
+| Athena | `@aws-sdk/client-athena` |
+
+For example, for Postgres: `npm install pg` (or the equivalent `add` command). If the package manager requires approval for dependency build scripts, approve the scripts needed by the chosen client and CLI, not all dependencies indiscriminately.
+
+## 3. Prepare database access
+
+Reuse suitable existing read-only access when available. Otherwise, walk the user through the relevant instructions below. Ask before creating accounts, changing permissions, or provisioning cloud resources. Keep passwords and tokens out of chat, committed files, and command output; have the user enter them locally into an ignored `.env` file or their existing secret store. Ignore private keys and credential JSON files too.
+
+Only follow the section for the chosen database.
 
 <details>
 <summary><h2>XLSX, CSV, etc. via DuckDB</h2></summary>
@@ -13,7 +53,7 @@ Graphene can operate over any local data as long as it is converted into a singl
 
 Graphene can connect to any Postgres-compatible database that is reachable from your machine over the standard Postgres protocol. This includes local databases, databases reached through an SSH tunnel or proxy, and hosted Postgres services like Neon, AWS RDS, or Supabase when you already have the host, port, database, user, password, schema, and SSL setting needed to connect.
 
-Provider-specific setup, such as creating an RDS security group rule, starting a tunnel, configuring a cloud SQL proxy, or setting up IAM-based database authentication, should be handled before running the Graphene installer. Graphene stores non-secret connection settings in `package.json` and writes the password to `.env`.
+Provider-specific setup, such as creating an RDS security group rule, starting a tunnel, configuring a cloud SQL proxy, or setting up IAM-based database authentication, should be handled before validating the Graphene connection. Store non-secret connection settings in `package.json` and the password in an ignored `.env`.
 
 To set up Graphene on a Postgres connection you will need the following:
 
@@ -190,7 +230,7 @@ To set up Graphene on a ClickHouse connection you will need the following:
 <details>
 <summary><h2>Athena</h2></summary>
 
-Graphene can query data cataloged in AWS Glue and run through Amazon Athena. The Graphene installer does not currently have built-in support for Athena, so the connection needs to be configured by hand.
+Graphene can query data cataloged in AWS Glue and run through Amazon Athena.
 
 To set up Graphene on an Athena connection you will need the following:
 
@@ -269,7 +309,7 @@ To set up Graphene on an Athena connection you will need the following:
     The Glue statement needs the `catalog` ARN alongside the database and table ARNs, because Athena requires permissions on a resource *and all of its ancestors* in the Data Catalog. The `glue:GetPartition*` actions are only needed for partitioned tables. If either bucket is encrypted with SSE-KMS, also grant `kms:Decrypt` on the key (plus `kms:Encrypt` and `kms:GenerateDataKey` for the results bucket).
 
 2. Create (or reuse) an S3 bucket for Athena query results, and note its URI (e.g. `s3://graphene-athena-results-staging/`).
-3. Because the installer has no Athena option, pick any database when you create your project below, then replace the connection block it writes with an `athena` block under the `graphene` key in `package.json`:
+3. Add an `athena` block under the `graphene` key in `package.json`:
 
     ```json
     "athena": {
@@ -306,16 +346,49 @@ MotherDuck uses DuckDB SQL syntax, so Graphene SQL functions and expressions sho
 </details>
 
 
-# Set up your Graphene project
+## 4. Configure the project
 
-1. In the terminal, navigate to where you want the Graphene project to live. It can be a standalone project or a folder within an existing repo.
-2. Run the Graphene installer with npm, yarn, or pnpm:
+Read the [configuration reference](references/config.md) and merge a `graphene` object into the project's `package.json`. Add exactly one connection block for the chosen database and set `defaultNamespace` to the schema/dataset used for unqualified table names. Do not overwrite existing scripts or dependencies.
 
-   ```bash
-   npm create graphene
-   ```
+For example, a local DuckDB project:
 
-The installer will walk you through a short series of prompts, create your Graphene project, and test to make sure the database connection is working.
+```json
+{
+  "scripts": {
+    "graphene": "graphene",
+    "serve": "graphene serve"
+  },
+  "graphene": {
+    "duckdb": {"path": "./data.duckdb"},
+    "defaultNamespace": "main"
+  }
+}
+```
+
+For other databases, use the matching connection block and environment variables from the reference. Make sure `.gitignore` includes `node_modules`, `.env`, and any local database or credential files before writing secrets.
+
+### Give the agent the Graphene skill
+
+The CLI ships the Graphene skill at `node_modules/@graphenedata/cli/dist/skills/graphene`. Link it into the agent's skills directory so the references stay current when Graphene is updated. For Codex and agents that use `.agents`:
+
+```bash
+mkdir -p .agents/skills
+ln -s ../../node_modules/@graphenedata/cli/dist/skills/graphene .agents/skills/graphene
+```
+
+For Claude, use `.claude/skills` instead. Preserve existing skills and agent settings. If the agent doesn't support skill discovery, point it directly to the installed `SKILL.md`. Read that skill before modeling or writing reports.
+
+Add a short Graphene section to `AGENTS.md` (or `CLAUDE.md`) with the database dialect, model locations, and local commands for `graphene schema`, `graphene check`, `graphene run index.md`, and `graphene serve --bg`. For sandboxed agents, ask the user to permit database access and local server binding if needed; do not broaden permissions without approval.
+
+## 5. Validate the connection
+
+Run `graphene schema` to confirm the connection works and inspect the accessible tables. For Snowflake browser/OAuth authentication, run `graphene login` first and let the user complete login. If access fails, resolve the credentials, networking, or grants with the user before proceeding. Do not treat `graphene check` alone as a connection test.
+
+## 6. Build and verify a first report
+
+Use the installed skill's `references/modeling.md` and `references/graphene-sql.md` to model a small set of relevant tables in `tables/*.gsql`. Reuse existing dbt models, LookML, or an ERD when available. Create `index.md` with a query and visualization answering one of the user's questions.
+
+Run `graphene check`, then `graphene run index.md` to execute the report and inspect the resulting screenshot. Start the local server with `graphene serve --bg` and give the user the page URL. Summarize what was configured, which data is accessible, and any steps still requiring their action.
 
 # Install the IDE extension (optional)
 
@@ -323,24 +396,18 @@ Graphene has extensions for VSCode and Cursor which add syntax highlighting, lin
 
 The extension is called **Graphene VSCode Language Support** which you can search for and install in **View > Extensions** for both VSCode and Cursor.
 
-# Create your semantic model
+# Expand your semantic model
 
-Start a new agent session within the Graphene project. Tell your agent:
+After the first report works, add models for the remaining tables the user wants exposed. Follow `modeling.md` and `graphene-sql.md` in the installed Graphene skill.
 
->Add .gsql files in a new folder ./tables for [tables you want exposed in Graphene] following the best practices outlined in modeling.md and graphene-sql.md (in the Graphene skill).
-
-Consider adding the following to the prompt when applicable:
-- A link or path to a dbt project
-- A link or path to a semantic model eg. LookML
-- An entity-relationship diagram (ERD)
-- This can be a token-heavy process, so consider working on a small batch first, reviewing the output, and then having your agent delegate to parallel subagents for the remainder. This way, you can catch any errors or stylistic preferences up front.
+Ask for any existing dbt project, semantic model (e.g. LookML), or entity-relationship diagram (ERD). Work in small batches and review the output with the user before expanding to the rest of the schema.
 
 # Add additional context
 
 For best results, we recommend that you add the following to your agent context.
 
 ## AGENTS.md (or CLAUDE.md)
-In addition to the information that the Graphene installer adds, consider adding the following:
+In addition to the Graphene section above, consider adding the following:
   - Short description of your business/use case
   - Short description of the scope of the data available in the project, and where the .gsql files are located
   - A glossary of internal jargon and acronyms

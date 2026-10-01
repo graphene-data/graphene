@@ -49,7 +49,6 @@ await $`git push origin ${tag}`
 // Publish package artifacts.
 await $`pnpm -C cli build`
 await $`(cd cli && npm publish --access public)`
-await $`pnpm -C create build`
 await $`npm publish ./create`
 await $`pnpm -C vscode exec vsce publish --no-dependencies --azure-credential`
 await $`pnpm -C vscode exec ovsx publish --no-dependencies`
