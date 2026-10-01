@@ -71,8 +71,8 @@
     "@types/ws": "^8.18.1",
     "esbuild": "^0.28.1",
     "pg": "^8.13.3",
-    "snowflake-sdk": "^3.1.0",
-    "vitest": "^4.1.10",
+    "snowflake-sdk": "^3.4.0",
+    "vitest": "^4.1.11",
     "vscode-languageserver-types": "^3.17.0"
   },
   "peerDependencies": {

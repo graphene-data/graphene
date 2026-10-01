@@ -244,7 +244,8 @@ test.skipIf(!process.env.SLOW_TEST)('install graphene and use it with pnpm', {ti
   await installGrapheneAndUseIt(
     {
       name: 'pnpm',
-      create: tarball => ['pnpm', ['dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
+      // dlx runs outside the workspace and misses its release-age exceptions; match the install step below.
+      create: tarball => ['pnpm', ['--config.minimumReleaseAge=0', 'dlx', '--package', tarball, 'create-graphene', 'demo-app', '--yes', '--no-install']],
       install: tarball => ['pnpm', ['add', '--config.minimumReleaseAge=0', '--allow-build=esbuild', `@graphenedata/cli@file:${tarball}`]],
       graphene: args => ['pnpm', ['run', 'graphene', '--', ...args]],
     },
