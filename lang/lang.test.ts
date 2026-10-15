@@ -2416,7 +2416,8 @@ describe('lang', () => {
 
     setGlobalConfig({dialect: 'bigquery', root: ''})
     included = analyze(`${testTables}\nfrom users select id where name in ($names)`)[0]
-    expect(toSql(included, {names: []})).toContain('users.name IN (SELECT CAST(NULL AS STRING) WHERE FALSE)')
+    expect(toSql(included, {names: []})).toContain('users.name IN (SELECT CAST(NULL AS STRING) FROM UNNEST([1]) WHERE FALSE)')
+    expect(toSql(included, {names: {mode: 'exclude', values: []}})).toContain('users.name NOT IN (SELECT CAST(NULL AS STRING) FROM UNNEST([1]) WHERE FALSE)')
   })
 
   it('returns missing query params as Graphene errors', () => {
