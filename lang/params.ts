@@ -44,9 +44,9 @@ function listParam(value: any): {mode: 'include' | 'exclude'; values: any} {
   return {mode: value.mode || 'include', values: value.values}
 }
 
-// Generate a typed zero-row subquery where the dialect requires one for IN comparisons.
+// Generate a zero-row subquery for IN comparisons. BigQuery needs a typed column, and rejects WHERE without FROM.
 function emptyArraySql(dialect: string | undefined, type: FieldType | undefined) {
-  if (dialect != 'bigquery' || typeof type != 'string') return 'SELECT NULL WHERE FALSE'
-  let bigQueryType = {string: 'STRING', number: 'FLOAT64', boolean: 'BOOL', date: 'DATE', time: 'TIME', timestamp: 'TIMESTAMP'}[type]
-  return bigQueryType ? `SELECT CAST(NULL AS ${bigQueryType}) WHERE FALSE` : 'SELECT NULL WHERE FALSE'
+  if (dialect != 'bigquery') return 'SELECT NULL WHERE FALSE'
+  let bigQueryType = typeof type == 'string' && {string: 'STRING', number: 'FLOAT64', boolean: 'BOOL', date: 'DATE', time: 'TIME', timestamp: 'TIMESTAMP'}[type]
+  return `SELECT ${bigQueryType ? `CAST(NULL AS ${bigQueryType})` : 'NULL'} FROM UNNEST([1]) WHERE FALSE`
 }
