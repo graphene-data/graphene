@@ -60,6 +60,7 @@ describe('schema inspection', () => {
   test('drops defaultNamespace from generated table names and keeps other qualifiers', async () => {
     let connection = {
       listDatasets: vi.fn().mockResolvedValue([]),
+      listTables: vi.fn().mockResolvedValue([]),
       describeTable: vi.fn().mockResolvedValue([{name: 'id', dataType: 'BIGINT'}]),
       close: vi.fn(),
       runQuery: vi.fn(),
