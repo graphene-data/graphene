@@ -1,18 +1,4 @@
 #!/usr/bin/env node
 
-import {access} from 'node:fs/promises'
-import {dirname, join} from 'node:path'
-import {fileURLToPath} from 'node:url'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const devCli = join(__dirname, 'cli.ts')
-
-let hasDevCli = await access(devCli).then(
-  () => true,
-  () => false,
-)
-if (hasDevCli) {
-  await import('./cli.ts')
-} else {
-  await import('./dist/cli.js')
-}
+// The retired initializer directs humans and agents to the current setup instructions; it never changes files.
+console.log('create-graphene is deprecated.\n\nHave your agent follow these instructions:\nhttps://github.com/graphene-data/graphene/blob/main/docs/setup.md')

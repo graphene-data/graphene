@@ -1,6 +1,6 @@
 # Configuration
 
-Graphene reads its configuration from the `graphene` object in your project's `package.json`. The installer (`npm create graphene`) generates a starter config; this page lists every supported field.
+Graphene reads its configuration from the `graphene` object in your project's `package.json`. Follow the [setup instructions](../setup.md) to configure a new project; this page lists every supported field.
 
 ```json
 {
