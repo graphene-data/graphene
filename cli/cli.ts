@@ -108,27 +108,25 @@ program.command('run')
     }),
   )
 
-// Cloud renders the *synced* copy of the file through its Lambda exporter; local contents are never read or uploaded.
+// Uploads the local Markdown to Cloud, which renders it through its Lambda exporter. Models are not uploaded; queries use the synced ones.
 program.command('export')
-  .description('Export a synced Cloud Markdown report as standalone HTML (not local contents)')
-  .argument('<file>', 'Markdown path relative to cwd or the project root; need not exist locally')
+  .description('Export a local Markdown page as standalone HTML via Graphene Cloud (uses synced models)')
+  .argument('<file>', 'Markdown file to export')
   .option('--param <key=value>', 'Query parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .option('-o, --output <path>', 'Output file (default: file basename with .html in cwd)')
   .action(withTelemetry('export', async (exit, file: string, options: {param: string[]; output?: string}) => {
     if (!config.cloud?.repoSlug) throw new Error('Export requires a Graphene Cloud project with a repository slug')
-    let candidates = [path.resolve(process.cwd(), file), path.resolve(config.root, file)]
-    let absolutePath = candidates.find(p => fs.existsSync(p)) || candidates[0]
-    let cloudPath = path.relative(config.root, absolutePath).split(path.sep).join('/')
-    if (!cloudPath.endsWith('.md') || cloudPath.startsWith('../') || path.isAbsolute(cloudPath)) throw new Error('Export requires a Markdown file path inside the project')
+    if (!file.endsWith('.md')) throw new Error('Export requires a Markdown file')
+    let md = await fs.readFile(file, 'utf8')
     let params = parseRunInputs(options.param, exit)
     let response = await authenticatedFetch('/_api/export', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({repoSlug: config.cloud.repoSlug, path: cloudPath, params}),
+      body: JSON.stringify({repoSlug: config.cloud.repoSlug, md, params}),
     })
     // authenticatedFetch throws on non-2xx, so a failed export never touches an existing output file.
     if (response.headers.get('content-type')?.split(';')[0] !== 'text/html') throw new Error('Expected a standalone HTML response from Graphene Cloud')
     let html = Buffer.from(await response.arrayBuffer())
-    let output = options.output || path.basename(cloudPath, '.md') + '.html'
+    let output = options.output || path.basename(file, '.md') + '.html'
     await fs.writeFile(output, html)
     console.log('Report saved to', output)
   }))
