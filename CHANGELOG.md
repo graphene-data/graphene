@@ -1,3 +1,20 @@
+## 0.0.31
+
+### Breaking changes
+
+- `create-graphene` no longer scaffolds projects; it prints a link to the agent-led setup instructions in `docs/setup.md` (`0436f40`).
+
+### Added
+
+- Added `<Alert>` for threshold alerts on charts, `Table`, and `BigValue`, with page-unique component `id`s and `hourly`/`daily`/`weekly` schedule aliases (also accepted in `scheduled:` frontmatter) (`d2d8c0c`).
+- `graphene export` now uploads the local Markdown file instead of exporting the synced Cloud copy. Queries still run against models synced to Cloud (`af3e1f9`).
+
+### Fixed
+
+- `graphene schema` omits `defaultNamespace` from generated table names so they match unqualified queries (`09c0e49`).
+- Fixed empty list parameters in BigQuery `IN`/`NOT IN` filters (`9449a07`).
+- Rerun queries when parameters change while a request is in flight, ignoring stale responses (`55c8d5c`).
+
 ## 0.0.30
 
 ### Breaking changes
