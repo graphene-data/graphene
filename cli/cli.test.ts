@@ -108,7 +108,7 @@ describe('cli token', () => {
 })
 
 describe('cli export', () => {
-  test('uploads local Markdown with repeated parameters', async ({runCli}) => {
+  test('uploads local Markdown pages with repeated parameters and canonical routes', async ({runCli}) => {
     let root = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-export-'))
     let requests: unknown[] = []
     let html = '<!doctype html><html><body>Cloud report</body></html>'
@@ -123,22 +123,27 @@ describe('cli export', () => {
     try {
       let cfg = configFor(root, {cloud: `${await listen(server)}/flights`})
       let env = {GRAPHENE_TOKEN: 'test-token'}
-      let output = path.join(root, 'report.html'), local = path.join(root, 'local.md')
-      await fsp.writeFile(local, '# Local report')
-      await fsp.writeFile(path.join(root, 'cli-export-test.md'), '# Default output')
-      expectCliOutput(await runCli(['export', local, '--param', 'carrier=AA', '--param', 'carrier=A&B=+ #é', '--param', 'empty=', '--param', '__proto__=safe', '--output', output], cfg, {env}), `Report saved to ${output}`)
+      let output = path.join(root, 'report.html')
+      await fsp.writeFile(path.join(root, 'local.md'), '# Local report')
+      await fsp.writeFile(path.join(root, 'cli-export-test.md'), '# Second report')
+      expectCliOutput(await runCli(['export', 'local.md', '--param', 'carrier=AA', '--param', 'carrier=A&B=+ #é', '--param', 'empty=', '--param', '__proto__=safe', '--output', output], cfg, {env}), `Report saved to ${output}`)
       expect(await fsp.readFile(output, 'utf8')).toBe(html)
       expectCliOutput(await runCli(['export', path.join(root, 'cli-export-test.md')], cfg, {env}), 'Report saved to cli-export-test.html')
       expect(await fsp.readFile(defaultOutput, 'utf8')).toBe(html)
+      expectCliOutput(await runCli(['export', path.join(root, 'local.md'), path.join(root, 'cli-export-test.md'), '-o', output], cfg, {env}), `Report saved to ${output}`)
       expect(requests).toEqual([
-        {repoSlug: 'flights', md: '# Local report', params: JSON.parse('{"carrier":["AA","A&B=+ #é"],"empty":"","__proto__":"safe"}')},
-        {repoSlug: 'flights', md: '# Default output', params: {}},
+        {repoSlug: 'flights', pages: [{path: 'local.md', route: '/local', md: '# Local report'}], params: JSON.parse('{"carrier":["AA","A&B=+ #é"],"empty":"","__proto__":"safe"}')},
+        {repoSlug: 'flights', pages: [{path: 'cli-export-test.md', route: '/cli-export-test', md: '# Second report'}], params: {}},
+        {repoSlug: 'flights', pages: [{path: 'local.md', route: '/local', md: '# Local report'}, {path: 'cli-export-test.md', route: '/cli-export-test', md: '# Second report'}], params: {}},
       ])
-      expectCliOutput(await runCli(['export', local, '--param', 'bad'], cfg, {env}), {code: 1, stderr: 'Invalid --param "bad". Expected key=value.'})
-      expectCliOutput(await runCli(['export', 'model.gsql'], cfg, {env}), {code: 1, stderr: 'Export requires a Markdown file'})
-      expectCliOutput(await runCli(['export', local], configFor(root)), {code: 1, stderr: 'Export requires a Graphene Cloud project with a repository slug'})
-      expectCliOutput(await runCli(['export', local], cfg, {env: {GRAPHENE_TOKEN: ''}}), {code: 1, stderr: 'Not logged in to Graphene Cloud. Run `graphene login` and try again.'})
-      expect(requests).toHaveLength(2)
+      expectCliOutput(await runCli(['export', path.join(root, 'local.md'), path.join(root, 'local.md')], cfg, {env}), {code: 1, stderr: 'Export pages must have distinct routes'})
+      expectCliOutput(await runCli(['export', path.join(root, 'missing.md'), '--param', 'bad'], cfg, {env}), {code: 1, stderr: 'Invalid --param "bad". Expected key=value.'})
+      for (let file of ['model.gsql', '../outside.md']) {
+        expectCliOutput(await runCli(['export', file], cfg, {env}), {code: 1, stderr: 'Export requires a Markdown file path inside the project'})
+      }
+      expectCliOutput(await runCli(['export', 'local.md'], configFor(root)), {code: 1, stderr: 'Export requires a Graphene Cloud project with a repository slug'})
+      expectCliOutput(await runCli(['export', path.join(root, 'local.md')], cfg, {env: {GRAPHENE_TOKEN: ''}}), {code: 1, stderr: 'Not logged in to Graphene Cloud. Run `graphene login` and try again.'})
+      expect(requests).toHaveLength(3)
     } finally {
       await new Promise(resolve => server.close(resolve))
       await fsp.rm(defaultOutput, {force: true})
@@ -157,8 +162,8 @@ describe('cli export', () => {
     try {
       let cfg = configFor(root, {cloud: `${await listen(server)}/flights`})
       let output = path.join(root, 'report.html')
-      let args = ['export', path.join(root, 'report.md'), '--output', output]
       await fsp.writeFile(path.join(root, 'report.md'), '# Report')
+      let args = ['export', path.join(root, 'report.md'), '--output', output]
       let options = {env: {GRAPHENE_TOKEN: 'test-token'}}
       expectCliOutput(await runCli(args, cfg, options), {code: 1, stderr: 'Export failed'})
       expect(await fsp.stat(output).catch(() => null)).toBeNull()
