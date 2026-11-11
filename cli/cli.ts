@@ -108,25 +108,31 @@ program.command('run')
     }),
   )
 
-// Uploads the local Markdown to Cloud, which renders it through its Lambda exporter. Models are not uploaded; queries use the synced ones.
+// Upload local Markdown pages together; Cloud supplies synced models and builds one standalone HTML file.
 program.command('export')
-  .description('Export a local Markdown page as standalone HTML via Graphene Cloud (uses synced models)')
-  .argument('<file>', 'Markdown file to export')
+  .description('Export local Markdown pages as one standalone HTML file via Cloud (uses synced models)')
+  .argument('<files...>', 'Markdown files relative to cwd or the project root')
   .option('--param <key=value>', 'Query parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
-  .option('-o, --output <path>', 'Output file (default: file basename with .html in cwd)')
-  .action(withTelemetry('export', async (exit, file: string, options: {param: string[]; output?: string}) => {
+  .option('-o, --output <path>', 'Output file (default: page basename.html, or report.html for multiple pages)')
+  .action(withTelemetry('export', async (exit, files: string[], options: {param: string[]; output?: string}) => {
     if (!config.cloud?.repoSlug) throw new Error('Export requires a Graphene Cloud project with a repository slug')
-    if (!file.endsWith('.md')) throw new Error('Export requires a Markdown file')
-    let md = await fs.readFile(file, 'utf8')
     let params = parseRunInputs(options.param, exit)
+    let pages = await Promise.all(files.map(async file => {
+      let candidates = [path.resolve(process.cwd(), file), path.resolve(config.root, file)]
+      let absolutePath = candidates.find(p => fs.existsSync(p)) || candidates[0]
+      let pagePath = path.relative(config.root, absolutePath).split(path.sep).join('/')
+      if (!pagePath.endsWith('.md') || pagePath.startsWith('../') || path.isAbsolute(pagePath)) throw new Error('Export requires a Markdown file path inside the project')
+      return {path: pagePath, route: routeForPage(pagePath, config.pagesPrefix).replace(/\/+$/, '') || '/', md: await fs.readFile(absolutePath, 'utf8')}
+    }))
+    if (new Set(pages.map(page => page.route)).size !== pages.length) throw new Error('Export pages must have distinct routes')
     let response = await authenticatedFetch('/_api/export', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({repoSlug: config.cloud.repoSlug, md, params}),
+      body: JSON.stringify({repoSlug: config.cloud.repoSlug, pages, params}),
     })
     // authenticatedFetch throws on non-2xx, so a failed export never touches an existing output file.
     if (response.headers.get('content-type')?.split(';')[0] !== 'text/html') throw new Error('Expected a standalone HTML response from Graphene Cloud')
     let html = Buffer.from(await response.arrayBuffer())
-    let output = options.output || path.basename(file, '.md') + '.html'
+    let output = options.output || (pages.length === 1 ? path.basename(pages[0].path, '.md') + '.html' : 'report.html')
     await fs.writeFile(output, html)
     console.log('Report saved to', output)
   }))
