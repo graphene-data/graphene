@@ -115,7 +115,9 @@ describe('cli export', () => {
     let server = createServer(async (req, res) => {
       expect(`${req.method} ${req.url}`).toBe('POST /_api/export')
       expect(req.headers.authorization).toBe('Bearer test-token')
-      requests.push(JSON.parse(await readRequestBody(req)))
+      let request = JSON.parse(await readRequestBody(req))
+      requests.push(request)
+      if (request.excludeQueries) res.setHeader('X-Graphene-Queries-Excluded', 'true')
       res.setHeader('content-type', 'text/html; charset=utf-8')
       res.end(html)
     })
@@ -130,11 +132,11 @@ describe('cli export', () => {
       expect(await fsp.readFile(output, 'utf8')).toBe(html)
       expectCliOutput(await runCli(['export', path.join(root, 'cli-export-test.md')], cfg, {env}), 'Report saved to cli-export-test.html')
       expect(await fsp.readFile(defaultOutput, 'utf8')).toBe(html)
-      expectCliOutput(await runCli(['export', path.join(root, 'local.md'), path.join(root, 'cli-export-test.md'), '-o', output], cfg, {env}), `Report saved to ${output}`)
+      expectCliOutput(await runCli(['export', path.join(root, 'local.md'), path.join(root, 'cli-export-test.md'), '--exclude-queries', '-o', output], cfg, {env}), `Report saved to ${output}`)
       expect(requests).toEqual([
         {repoSlug: 'flights', pages: [{path: 'local.md', route: '/local', md: '# Local report'}], params: JSON.parse('{"carrier":["AA","A&B=+ #é"],"empty":"","__proto__":"safe"}')},
         {repoSlug: 'flights', pages: [{path: 'cli-export-test.md', route: '/cli-export-test', md: '# Second report'}], params: {}},
-        {repoSlug: 'flights', pages: [{path: 'local.md', route: '/local', md: '# Local report'}, {path: 'cli-export-test.md', route: '/cli-export-test', md: '# Second report'}], params: {}},
+        {repoSlug: 'flights', pages: [{path: 'local.md', route: '/local', md: '# Local report'}, {path: 'cli-export-test.md', route: '/cli-export-test', md: '# Second report'}], params: {}, excludeQueries: true},
       ])
       expectCliOutput(await runCli(['export', path.join(root, 'local.md'), path.join(root, 'local.md')], cfg, {env}), {code: 1, stderr: 'Export pages must have distinct routes'})
       expectCliOutput(await runCli(['export', path.join(root, 'missing.md'), '--param', 'bad'], cfg, {env}), {code: 1, stderr: 'Invalid --param "bad". Expected key=value.'})
@@ -153,10 +155,10 @@ describe('cli export', () => {
 
   test('does not create or overwrite output on HTTP or invalid response failures', async ({runCli}) => {
     let root = await fsp.mkdtemp(path.join(os.tmpdir(), 'graphene-export-errors-'))
-    let status = 500
+    let status = 500, contentType = 'application/json'
     let server = createServer((_req, res) => {
       res.statusCode = status
-      res.setHeader('content-type', 'application/json')
+      res.setHeader('content-type', contentType)
       res.end(JSON.stringify({message: 'Export failed'}))
     })
     try {
@@ -173,6 +175,10 @@ describe('cli export', () => {
         expectCliOutput(await runCli(args, cfg, options), {code: 1, stderr: code === 200 ? 'Expected a standalone HTML response from Graphene Cloud' : 'Export failed'})
         expect(await fsp.readFile(output, 'utf8')).toBe('previous report')
       }
+      status = 200
+      contentType = 'text/html'
+      expectCliOutput(await runCli([...args, '--exclude-queries'], cfg, options), {code: 1, stderr: 'Cloud did not confirm a query-free export; update Graphene Cloud before using --exclude-queries'})
+      expect(await fsp.readFile(output, 'utf8')).toBe('previous report')
     } finally {
       await new Promise(resolve => server.close(resolve))
       await fsp.rm(root, {recursive: true, force: true})

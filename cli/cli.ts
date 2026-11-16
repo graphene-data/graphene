@@ -112,9 +112,10 @@ program.command('run')
 program.command('export')
   .description('Export local Markdown pages as one standalone HTML file via Cloud (uses synced models)')
   .argument('<files...>', 'Markdown files relative to cwd or the project root')
+  .option('--exclude-queries', 'Omit SQL/GSQL source; requires static props and plain column aliases')
   .option('--param <key=value>', 'Query parameters; repeat for multiple values', (value, previous: string[]) => previous.concat(value), [])
   .option('-o, --output <path>', 'Output file (default: page basename.html, or report.html for multiple pages)')
-  .action(withTelemetry('export', async (exit, files: string[], options: {param: string[]; output?: string}) => {
+  .action(withTelemetry('export', async (exit, files: string[], options: {param: string[]; output?: string; excludeQueries?: boolean}) => {
     if (!config.cloud?.repoSlug) throw new Error('Export requires a Graphene Cloud project with a repository slug')
     let params = parseRunInputs(options.param, exit)
     let pages = await Promise.all(files.map(async file => {
@@ -127,10 +128,11 @@ program.command('export')
     if (new Set(pages.map(page => page.route)).size !== pages.length) throw new Error('Export pages must have distinct routes')
     let response = await authenticatedFetch('/_api/export', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({repoSlug: config.cloud.repoSlug, pages, params}),
+      body: JSON.stringify({repoSlug: config.cloud.repoSlug, pages, params, ...(options.excludeQueries && {excludeQueries: true})}),
     })
     // authenticatedFetch throws on non-2xx, so a failed export never touches an existing output file.
     if (response.headers.get('content-type')?.split(';')[0] !== 'text/html') throw new Error('Expected a standalone HTML response from Graphene Cloud')
+    if (options.excludeQueries && response.headers.get('X-Graphene-Queries-Excluded') !== 'true') throw new Error('Cloud did not confirm a query-free export; update Graphene Cloud before using --exclude-queries')
     let html = Buffer.from(await response.arrayBuffer())
     let output = options.output || (pages.length === 1 ? path.basename(pages[0].path, '.md') + '.html' : 'report.html')
     await fs.writeFile(output, html)
