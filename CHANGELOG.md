@@ -1,3 +1,18 @@
+## 0.0.32
+
+### Breaking changes
+
+None.
+
+### Added
+
+- `graphene export` bundles multiple local Markdown pages into one standalone HTML file with offline navigation (`ab3515d`).
+- Added `graphene export --exclude-queries` to omit SQL/GSQL source from exported HTML, requiring Cloud confirmation before saving. Embedded result data remains included; this is not data redaction (`b05a530`).
+
+### Fixed
+
+None.
+
 ## 0.0.31
 
 ### Breaking changes
