@@ -50,11 +50,14 @@ graphene stop # Stop the background dev server
 graphene export report.md --param carrier=AA --output report.html
 graphene export pages/report.md # Writes report.html in the current directory
 graphene export pages/index.md pages/revenue.md pages/costs.md -o quarterly.html
+graphene export pages/report.md --exclude-queries -o shared.html
 ```
 
 Uploads **local Markdown files** and renders them in Graphene Cloud using **synced models**; local `.gsql` changes are not uploaded. Requires `graphene.cloud` with a repository slug and `graphene login` or `GRAPHENE_TOKEN`; no local browser. Paths must be inside the project. Existing cwd-relative paths win, then existing project-root paths. Use an absolute path to disambiguate.
 
 Multiple pages share one HTML runtime with navigation limited to the exported pages, in argument order. Each page captures its own data and input defaults; `--param key=value` applies to every page and can be repeated. Inputs are frozen, while local table/chart interactions remain available. Included page links navigate offline; links to omitted pages point to Cloud. Relative images and downloads are not embedded automatically. Without JavaScript, only the first page's static fallback is shown.
+
+`--exclude-queries` removes GSQL declarations, source bindings, warehouse SQL, and non-display field metadata from the HTML. Cloud renders an opaque-data version of the page, so queries never enter either playback code or the static fallback. Chart interactions and local table sorting/pagination remain available. This mode requires static component props and plain column aliases; move inline expressions such as `y="sum(amount)"` into a named query and use its alias instead. Authored scripts, event handlers, dynamic markup, and embedded documents are rejected rather than exported unsafely. Query-only URL parameters are omitted from playback; `Hidden` parameters are rejected, so pass private parameters with `--param` instead. Displayed text, column names, result values, visible input selections, and formatting labels are still included—this is not a general-purpose redactor.
 
 Output defaults to the page basename `.html` in cwd, or `report.html` for multiple pages. Export waits for every page to render; failed exports leave existing output untouched. Anyone with the HTML can access all embedded page data.
 
